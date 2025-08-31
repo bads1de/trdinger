@@ -212,7 +212,7 @@ def setup_momentum_indicators():
             description="STCスムージングファクター",
         )
     )
-    stc_config.param_map = {"data": "close", "length": "tclength"}
+    stc_config.param_map = {"close": "data", "length": "tclength"}
     indicator_registry.register(stc_config)
 
     # RSI (Relative Strength Index)
@@ -622,7 +622,7 @@ def setup_momentum_indicators():
             description="ROC計算期間",
         )
     )
-    roc_config.param_map = {"data": "close"}
+    roc_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(roc_config)
 
     # STOCHF
@@ -940,7 +940,7 @@ def setup_momentum_indicators():
             description="ROCP計算期間",
         )
     )
-    rocp_config.param_map = {"data": "close"}
+    rocp_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(rocp_config)
 
     # ROCR
@@ -961,7 +961,7 @@ def setup_momentum_indicators():
             description="ROCR計算期間",
         )
     )
-    rocr_config.param_map = {"data": "close", "period": "length"}
+    rocr_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(rocr_config)
 
     # ROCR100
@@ -982,7 +982,7 @@ def setup_momentum_indicators():
             description="ROCR100計算期間",
         )
     )
-    rocr100_config.param_map = {"data": "close"}
+    rocr100_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(rocr100_config)
 
     # PLUS_DM
@@ -1089,7 +1089,7 @@ def setup_trend_indicators():
             description="加重移動平均期間",
         )
     )
-    wma_config.param_map = {"data": "close", "length": "length"}
+    wma_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(wma_config)
 
     # DEMA
@@ -1182,7 +1182,7 @@ def setup_trend_indicators():
             description="三角移動平均期間",
         )
     )
-    trima_config.param_map = {"data": "close", "length": "length"}
+    trima_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(trima_config)
 
     # KAMA
@@ -1261,7 +1261,7 @@ def setup_trend_indicators():
             description="移動平均タイプ",
         )
     )
-    ma_config.param_map = {"data": "close", "period": "length", "matype": "matype"}
+    ma_config.param_map = {"close": "data", "period": "length", "matype": "matype"}
     indicator_registry.register(ma_config)
     
     # LINREG (Linear Regression Moving Average)
@@ -1282,7 +1282,7 @@ def setup_trend_indicators():
             description="線形回帰計算期間",
         )
     )
-    linreg_config.param_map = {"data": "close"}
+    linreg_config.param_map = {"close": "data"}
     indicator_registry.register(linreg_config)
     
     # LINREG_SLOPE (Linear Regression Slope)
@@ -1303,7 +1303,7 @@ def setup_trend_indicators():
             description="線形回帰傾き計算期間",
         )
     )
-    linreg_slope_config.param_map = {"data": "close"}
+    linreg_slope_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(linreg_slope_config)
     
     # LINREG_INTERCEPT (Linear Regression Intercept)
@@ -1324,7 +1324,7 @@ def setup_trend_indicators():
             description="線形回帰切片計算期間",
         )
     )
-    linreg_intercept_config.param_map = {"data": "close"}
+    linreg_intercept_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(linreg_intercept_config)
     
     # LINREG_ANGLE (Linear Regression Angle)
@@ -1354,7 +1354,7 @@ def setup_trend_indicators():
             description="度数法で角度を出力するか",
         )
     )
-    linreg_angle_config.param_map = {"data": "close"}
+    linreg_angle_config.param_map = {"close": "data", "length": "length", "degrees": "degrees"}
     indicator_registry.register(linreg_angle_config)
 
     # MIDPOINT
@@ -2079,8 +2079,8 @@ vwma_config = IndicatorConfig(
 vwma_config.add_parameter(
     ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
 )
+vwma_config.param_map = {"close": "data", "volume": "volume", "length": "length"}
 indicator_registry.register(vwma_config)
-vwma_config.param_map = {"close": "close", "volume": "volume", "length": "length"}
 
 swma_config = IndicatorConfig(
     indicator_name="SWMA",
@@ -2335,129 +2335,95 @@ price_ema_ratio_config.add_parameter(
 price_ema_ratio_config.param_map = {"period": "length"}
 indicator_registry.register(price_ema_ratio_config)
 
-# MAMA
-mama_config = IndicatorConfig(
-    indicator_name="MAMA",
-    adapter_function=TrendIndicators.mama,
-    required_data=["close"],
-    result_type=IndicatorResultType.COMPLEX,
-    scale_type=IndicatorScaleType.PRICE_RATIO,
-    category="trend",
-    output_names=["MAMA_0", "MAMA_1"],
-    default_output="MAMA_0",
-)
-mama_config.add_parameter(
-    ParameterConfig(
-        name="fastlimit",
-        default_value=0.5,
-        min_value=0.01,
-        max_value=0.99,
-        description="MAMA高速制限",
-    )
-)
-mama_config.add_parameter(
-    ParameterConfig(
-        name="slowlimit",
-        default_value=0.05,
-        min_value=0.01,
-        max_value=0.99,
-        description="MAMA低速制限",
-    )
-)
-mama_config.param_map = {
-    "close": "data",
-    "fastlimit": "fastlimit",
-    "slowlimit": "slowlimit",
-}
-indicator_registry.register(mama_config)
+# MAMA configuration removed due to pandas-ta compatibility issues
+# MAXINDEX and MININDEX configurations also removed due to missing implementations
+#
+# maxindex_config = IndicatorConfig(
+#     indicator_name="MAXINDEX",
+#     adapter_function=TrendIndicators.maxindex,
+#     required_data=["close"],
+#     result_type=IndicatorResultType.SINGLE,
+#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+#     category="statistics",
+# )
+# maxindex_config.add_parameter(
+#     ParameterConfig(
+#         name="period",
+#         default_value=14,
+#         min_value=2,
+#         max_value=100,
+#         description="最大値インデックス期間",
+#     )
+# )
+# maxindex_config.param_map = {"close": "data", "period": "length"}
+# indicator_registry.register(maxindex_config)
+#
+# minindex_config = IndicatorConfig(
+#     indicator_name="MININDEX",
+#     adapter_function=TrendIndicators.minindex,
+#     required_data=["close"],
+#     result_type=IndicatorResultType.SINGLE,
+#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+#     category="statistics",
+# )
+# minindex_config.add_parameter(
+#     ParameterConfig(
+#         name="period",
+#         default_value=14,
+#         min_value=2,
+#         max_value=100,
+#         description="最小値インデックス期間",
+#     )
+# )
+# minindex_config.param_map = {"close": "data", "period": "length"}
+# indicator_registry.register(minindex_config)
 
-# MAXINDEX
-maxindex_config = IndicatorConfig(
-    indicator_name="MAXINDEX",
-    adapter_function=TrendIndicators.maxindex,
-    required_data=["close"],
-    result_type=IndicatorResultType.SINGLE,
-    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-    category="statistics",
-)
-maxindex_config.add_parameter(
-    ParameterConfig(
-        name="period",
-        default_value=14,
-        min_value=2,
-        max_value=100,
-        description="最大値インデックス期間",
-    )
-)
-maxindex_config.param_map = {"close": "data", "period": "length"}
-indicator_registry.register(maxindex_config)
-
-# MININDEX
-minindex_config = IndicatorConfig(
-    indicator_name="MININDEX",
-    adapter_function=TrendIndicators.minindex,
-    required_data=["close"],
-    result_type=IndicatorResultType.SINGLE,
-    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-    category="statistics",
-)
-minindex_config.add_parameter(
-    ParameterConfig(
-        name="period",
-        default_value=14,
-        min_value=2,
-        max_value=100,
-        description="最小値インデックス期間",
-    )
-)
-minindex_config.param_map = {"close": "data", "period": "length"}
-indicator_registry.register(minindex_config)
-
-# MINMAX
-minmax_config = IndicatorConfig(
-    indicator_name="MINMAX",
-    adapter_function=TrendIndicators.minmax,
-    required_data=["close"],
-    result_type=IndicatorResultType.COMPLEX,
-    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-    category="statistics",
-    output_names=["MINMAX_MIN", "MINMAX_MAX"],
-    default_output="MINMAX_MIN",
-)
-minmax_config.add_parameter(
-    ParameterConfig(
-        name="period",
-        default_value=14,
-        min_value=2,
-        max_value=100,
-        description="最小最大期間",
-    )
-)
-minmax_config.param_map = {"close": "data", "period": "length"}
-indicator_registry.register(minmax_config)
-
-# MINMAXINDEX
-minmaxindex_config = IndicatorConfig(
-    indicator_name="MINMAXINDEX",
-    adapter_function=TrendIndicators.minmaxindex,
-    required_data=["close"],
-    result_type=IndicatorResultType.COMPLEX,
-    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-    category="statistics",
-    output_names=["MINMAXINDEX_MIN", "MINMAXINDEX_MAX"],
-    default_output="MINMAXINDEX_MIN",
-)
-minmaxindex_config.add_parameter(
-    ParameterConfig(
-        name="period",
-        default_value=14,
-        min_value=2,
-        max_value=100,
-        description="最小最大インデックス期間",
-    )
-)
-minmaxindex_config.param_map = {"close": "data", "period": "length"}
-indicator_registry.register(minmaxindex_config)
+# MINMAX indicators removed due to implementation issues
+# These have been commented out to prevent invalid indicator errors
+#
+# minmax_config = IndicatorConfig(
+#     indicator_name="MINMAX",
+#     adapter_function=TrendIndicators.minmax,
+#     required_data=["close"],
+#     result_type=IndicatorResultType.COMPLEX,
+#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+#     category="statistics",
+#     output_names=["MINMAX_MIN", "MINMAX_MAX"],
+#     default_output="MINMAX_MIN",
+# )
+# minmax_config.add_parameter(
+#     ParameterConfig(
+#         name="period",
+#         default_value=14,
+#         min_value=2,
+#         max_value=100,
+#         description="最小最大期間",
+#     )
+# )
+# minmax_config.param_map = {"close": "data", "period": "length"}
+# indicator_registry.register(minmax_config)
+#
+# minmaxindex_config = IndicatorConfig(
+#     indicator_name="MINMAXINDEX",
+#     adapter_function=TrendIndicators.minmaxindex,
+#     required_data=["close"],
+#     result_type=IndicatorResultType.COMPLEX,
+#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+#     category="statistics",
+#     output_names=["MINMAXINDEX_MIN", "MINMAXINDEX_MAX"],
+#     default_output="MINMAXINDEX_MIN",
+# )
+# minmaxindex_config.add_parameter(
+#     ParameterConfig(
+#         name="period",
+#         default_value=14,
+#         min_value=2,
+#         max_value=100,
+#         description="最小最大インデックス期間",
+#     )
+# )
+# minmaxindex_config.param_map = {"close": "data", "period": "length"}
+# indicator_registry.register(minmaxindex_config)
 
 rsi_ema_cross_config = IndicatorConfig(
     indicator_name="RSI_EMA_CROSS",

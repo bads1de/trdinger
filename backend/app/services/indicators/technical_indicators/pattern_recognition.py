@@ -18,8 +18,6 @@
 - cdl_spinning_top
 """
 
-from typing import Union
-
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
@@ -44,404 +42,432 @@ class PatternRecognitionIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def cdl_doji(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Doji（重要パターンのためエラーハンドリング付き）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="doji",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def cdl_hammer(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Hammer（重要パターンのためエラーハンドリング付き）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="hammer",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     def cdl_hanging_man(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Hanging Man（軽量実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="hangingman",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     def cdl_shooting_star(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Shooting Star（軽量実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="shootingstar",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def cdl_engulfing(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Engulfing Pattern（重要パターンのためエラーハンドリング付き）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         if not TA_LIB_AVAILABLE:
-            return np.zeros(len(open_series))
+            return pd.Series(np.zeros(len(open_data)), index=open_data.index)
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="engulfing",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     def cdl_harami(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Harami Pattern（軽量実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         if not TA_LIB_AVAILABLE:
-            return np.zeros(len(open_series))
+            return pd.Series(np.zeros(len(open_data)), index=open_data.index)
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="harami",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     def cdl_piercing(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Piercing Pattern（軽量実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="piercing",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     def cdl_dark_cloud_cover(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Dark Cloud Cover"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="darkcloudcover",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def cdl_morning_star(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Morning Star（重要パターンのためエラーハンドリング付き）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="morningstar",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def cdl_evening_star(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Evening Star（重要パターンのためエラーハンドリング付き）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="eveningstar",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     def cdl_three_black_crows(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Three Black Crows（軽量実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         if not TA_LIB_AVAILABLE:
-            return np.zeros(len(open_series))
+            return pd.Series(np.zeros(len(open_data)), index=open_data.index)
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="3blackcrows",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     @staticmethod
     def cdl_three_white_soldiers(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Three White Soldiers（軽量実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         if not TA_LIB_AVAILABLE:
-            return np.zeros(len(open_series))
+            return pd.Series(np.zeros(len(open_data)), index=open_data.index)
 
         result = ta.cdl_pattern(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_data,
+            high=high,
+            low=low,
+            close=close,
             name="3whitesoldiers",
         )
         return (
-            result.iloc[:, 0].values
+            result.iloc[:, 0]
             if result is not None and not result.empty
-            else np.zeros(len(open_series))
+            else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
     # 簡易実装（pandas-taにない場合のフォールバック）
     @staticmethod
     def cdl_marubozu(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Marubozu（簡易実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         # 簡易Marubozu判定（実体が全体の90%以上）
-        body = np.abs(close_series - open_series)
-        range_hl = high_series - low_series
+        body = np.abs(close - open_data)
+        range_hl = high - low
 
         # ゼロ除算を避ける
-        range_hl = np.where(range_hl == 0, 1e-10, range_hl)
+        range_hl = range_hl.where(range_hl != 0, 1e-10)
 
         marubozu = np.where(
-            body / range_hl > 0.9, np.where(close_series > open_series, 100, -100), 0
+            body / range_hl > 0.9, np.where(close > open_data, 100, -100), 0
         )
 
-        return marubozu
+        return pd.Series(marubozu, index=open_data.index)
 
     @staticmethod
     def cdl_spinning_top(
-        open_data: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_data: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Spinning Top（簡易実装）"""
-        open_series = (
-            pd.Series(open_data) if isinstance(open_data, np.ndarray) else open_data
-        )
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_data, pd.Series):
+            raise TypeError("open_data must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         # 簡易Spinning Top判定（小さな実体と長いヒゲ）
-        body = np.abs(close_series - open_series)
-        upper_shadow = high_series - np.maximum(open_series, close_series)
-        lower_shadow = np.minimum(open_series, close_series) - low_series
+        body = np.abs(close - open_data)
+        upper_shadow = high - pd.concat([open_data, close], axis=1).max(axis=1)
+        lower_shadow = pd.concat([open_data, close], axis=1).min(axis=1) - low
 
         # 実体が小さく、上下のヒゲが長い
         spinning_top = np.where(
@@ -452,7 +478,7 @@ class PatternRecognitionIndicators:
             0,
         )
 
-        return spinning_top
+        return pd.Series(spinning_top, index=open_data.index)
 
     # 後方互換性のためのエイリアス
     @staticmethod

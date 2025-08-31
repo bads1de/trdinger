@@ -8,6 +8,7 @@ import logging
 from typing import Any, Dict, Tuple, Union
 
 import numpy as np
+import pandas as pd
 
 from app.services.indicators import TechnicalIndicatorService
 
@@ -33,7 +34,7 @@ class IndicatorCalculator:
 
     def calculate_indicator(
         self, data, indicator_type: str, parameters: Dict[str, Any]
-    ) -> Union[np.ndarray, Tuple[np.ndarray, ...], None]:
+    ) -> Union[np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None]:
         """
         指標計算
 
@@ -43,7 +44,8 @@ class IndicatorCalculator:
             parameters: パラメータ
 
         Returns:
-            計算結果（numpy配列）
+            計算結果（numpy配列またはpandas Series、またはそのtuple）
+            pandasオンリー移行対応により、pd.SeriesとTuple[pd.Series, ...]も返却可能。
         """
         from app.utils.error_handler import safe_operation
 

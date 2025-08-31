@@ -29,7 +29,7 @@
 - SQUEEZE_PRO (Squeeze Pro)
 """
 
-from typing import Tuple, Union
+from typing import Tuple
 import logging
 
 import numpy as np
@@ -45,369 +45,351 @@ class MomentumIndicators:
     """
 
     @staticmethod
-    def rsi(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+    def rsi(data: pd.Series, length: int = 14) -> pd.Series:
         """相対力指数"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
 
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.rsi(series, length=length)
+        result = ta.rsi(data, length=length)
         if result is None:
-            return np.full(len(series), np.nan)
-        return result.values
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     def macd(
-        data: Union[np.ndarray, pd.Series],
+        data: pd.Series,
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """MACD"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.macd(series, fast=fast, slow=slow, signal=signal)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+
+        result = ta.macd(data, fast=fast, slow=slow, signal=signal)
 
         if result is None or result.empty:
             # フォールバック: NaN配列を返す
-            n = len(series)
-            return (
-                np.full(n, np.nan),
-                np.full(n, np.nan),
-                np.full(n, np.nan),
-            )
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return (nan_series, nan_series, nan_series)
 
         return (
-            result.iloc[:, 0].values,  # MACD
-            result.iloc[:, 1].values,  # Signal
-            result.iloc[:, 2].values,  # Histogram
+            result.iloc[:, 0],  # MACD
+            result.iloc[:, 1],  # Signal
+            result.iloc[:, 2],  # Histogram
         )
 
     @staticmethod
     def stoch(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         k: int = 14,
         d: int = 3,
         smooth_k: int = 3,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """ストキャスティクス"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.stoch(
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            high=high,
+            low=low,
+            close=close,
             k=k,
             d=d,
             smooth_k=smooth_k,
         )
 
         if result is None or result.empty:
-            n = len(high_series)
-            return np.full(n, np.nan), np.full(n, np.nan)
-        return (result.iloc[:, 0].values, result.iloc[:, 1].values)
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+        return (result.iloc[:, 0], result.iloc[:, 1])
 
     @staticmethod
     def willr(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """ウィリアムズ%R"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.willr(
-            high=high_series, low=low_series, close=close_series, length=length
-        )
+        result = ta.willr(high=high, low=low, close=close, length=length)
         if result is None:
-            return np.full(len(high_series), np.nan)
-        return result.values
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def cci(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 20,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """商品チャネル指数"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        # データ品質チェック
-        if len(high_series) < length or len(low_series) < length or len(close_series) < length:
-            raise ValueError(f"CCI calculation requires at least {length} data points, "
-                           f"but received high: {len(high_series)}, low: {len(low_series)}, close: {len(close_series)}")
-
-        if length <= 0:
-            raise ValueError(f"CCI length must be positive, got: {length}")
-
-        # NaN値チェック
-        if high_series.isna().all() or low_series.isna().all() or close_series.isna().all():
-            raise ValueError("CCI input data contains only NaN values")
-
-        # 負または不正な価格値チェック
-        if (high_series <= 0).any() or (low_series <= 0).any() or (close_series <= 0).any():
-            # 警告ログだけを出して続行（トレーディングデータではマイナス価格はあり得ない）
-            logger.warning(f"CCI detected non-positive price values - High: {high_series.min():.6f}, "
-                         f"Low: {low_series.min():.6f}, Close: {close_series.min():.6f}")
-
-        # 妥当性チェック: high >= close >= low
-        # インデックスを揃えて比較
-        high_aligned, close_aligned = high_series.align(close_series, join='inner')
-        close_aligned2, low_aligned = close_series.align(low_series, join='inner')
-
-        invalid_high_close = ~(high_aligned >= close_aligned)
-        invalid_close_low = ~(close_aligned2 >= low_aligned)
-
-        if invalid_high_close.any() or invalid_close_low.any():
-            invalid_count = invalid_high_close.sum() + invalid_close_low.sum()
-            logger.warning(f"CCI detected invalid OHLC relationship in {invalid_count} data points")
-
-            # 問題のあるデータを修正（簡易的な手法）
-            # 両方の比較で問題がない点を除外しながら修正
-            valid_indices = ~(invalid_high_close | invalid_close_low.reindex(high_aligned.index))
-
-            if valid_indices.any():
-                # 有効なデータポイントで修正
-                high_corr = high_series.where(valid_indices, np.maximum(high_series, close_series))
-                low_corr = low_series.where(valid_indices, np.minimum(low_series, close_series))
-                high_series = high_corr
-                low_series = low_corr
-
-        # infまたは極端な値のチェック
-        for name, series in [("high", high_series), ("low", low_series), ("close", close_series)]:
-            if np.isinf(series).any():
-                raise ValueError(f"CCI {name} data contains infinite values")
-            if (series > 1e10).any() or (series < 1e-10).any():
-                logger.warning(f"CCI {name} data contains extreme values (>{series.max():.2e} or <{series.min():.2e})")
-
-        try:
-            result = ta.cci(
-                high=high_series, low=low_series, close=close_series, length=length
-            )
-
-            if result is None:
-                raise ValueError(f"ta.cci returned None with parameters: "
-                               f"high.shape={high_series.shape}, low.shape={low_series.shape}, "
-                               f"close.shape={close_series.shape}, length={length}")
-
-            if result.isna().all():
-                raise ValueError(f"ta.cci returned all NaN values with parameters: "
-                               f"high.shape={high_series.shape}, low.shape={low_series.shape}, "
-                               f"close.shape={close_series.shape}, length={length}")
-
-            return result.values
-
-        except Exception as e:
-            # TA-Lib特有のエラーハンドリング
-            error_msg = str(e).lower()
-            if "bad parameter" in error_msg or "invalid parameter" in error_msg:
-                logger.error(f"CCI TA-Lib parameter error: {e}")
-                logger.error(f"Parameters passed to ta.cci: length={length}")
-                logger.error(f"Data shapes - high: {high_series.shape}, low: {low_series.shape}, close: {close_series.shape}")
-                logger.error(f"Data types - high: {type(high_series.iloc[0]) if len(high_series) > 0 else 'empty'}, "
-                           f"low: {type(low_series.iloc[0]) if len(low_series) > 0 else 'empty'}, "
-                           f"close: {type(close_series.iloc[0]) if len(close_series) > 0 else 'empty'}")
-                raise ValueError(f"CCI calculation failed due to invalid parameters: {e}")
-
-            # その他の例外はそのまま再発生
-            raise
+        result = ta.cci(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def roc(
-        data: Union[np.ndarray, pd.Series],
+        data: pd.Series,
         length: int = 10,
-        close: Union[np.ndarray, pd.Series] = None,
-    ) -> np.ndarray:
+        close: pd.Series = None,
+    ) -> pd.Series:
         """変化率"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         # dataが提供されない場合はcloseを使用
         if data is None and close is not None:
             data = close
         elif data is None:
             raise ValueError("Either 'data' or 'close' must be provided")
 
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.roc(series, length=length)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+
+        result = ta.roc(data, length=length)
         if result is None or result.empty:
-            return np.full(len(series), np.nan)
-        return result.values
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
-    def mom(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    def mom(data: pd.Series, length: int = 10) -> pd.Series:
         """モメンタム"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.mom(series, length=length)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+
+        result = ta.mom(data, length=length)
         if result is None or result.empty:
-            return np.full(len(series), np.nan)
-        return result.values
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     def adx(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """平均方向性指数"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.adx(
-            high=high_series, low=low_series, close=close_series, length=length
-        )
-        return result.iloc[:, 0].values  # ADX列
+        result = ta.adx(high=high, low=low, close=close, length=length)
+        if result is None or result.empty:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result.iloc[:, 0]  # ADX列
 
     @staticmethod
     def aroon(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
         length: int = 14,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """アルーン"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
 
-        result = ta.aroon(high=high_series, low=low_series, length=length)
-        return result.iloc[:, 0].values, result.iloc[:, 1].values
+        result = ta.aroon(high=high, low=low, length=length)
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     def mfi(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-        volume: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """マネーフローインデックス"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
-        volume_series = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
 
-        return ta.mfi(
-            high=high_series,
-            low=low_series,
-            close=close_series,
-            volume=volume_series,
+        result = ta.mfi(
+            high=high,
+            low=low,
+            close=close,
+            volume=volume,
             length=length,
-        ).values
-
-
+        )
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def uo(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         fast: int = 7,
         medium: int = 14,
         slow: int = 28,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """アルティメットオシレーター"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        return ta.uo(
-            high=high_series,
-            low=low_series,
-            close=close_series,
+        result = ta.uo(
+            high=high,
+            low=low,
+            close=close,
             fast=fast,
             medium=medium,
             slow=slow,
-        ).values
+        )
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
-    def apo(
-        data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26
-    ) -> np.ndarray:
+    def apo(data: pd.Series, fast: int = 12, slow: int = 26) -> pd.Series:
         """Absolute Price Oscillator"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
-        result = ta.apo(series, fast=fast, slow=slow)
+        result = ta.apo(data, fast=fast, slow=slow)
         if result is None or result.empty:
             # フォールバック: 簡易実装 (EMAの差分)
-            ema_fast = ta.ema(series, length=fast)
-            ema_slow = ta.ema(series, length=slow)
+            ema_fast = ta.ema(data, length=fast)
+            ema_slow = ta.ema(data, length=slow)
             if ema_fast is not None and ema_slow is not None:
-                return (ema_fast - ema_slow).values
+                return ema_fast - ema_slow
             else:
-                return np.full(len(series), np.nan)
-        return result.values
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
-    def ao(
-        high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]
-    ) -> np.ndarray:
+    def ao(high: pd.Series, low: pd.Series) -> pd.Series:
         """Awesome Oscillator"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
 
-        result = ta.ao(high=high_series, low=low_series)
+        result = ta.ao(high=high, low=low)
         if result is None or result.empty:
             # フォールバック: 簡易実装 (SMAの差分)
-            sma5 = ta.sma((high_series + low_series) / 2, length=5)
-            sma34 = ta.sma((high_series + low_series) / 2, length=34)
+            sma5 = ta.sma((high + low) / 2, length=5)
+            sma34 = ta.sma((high + low) / 2, length=34)
             if sma5 is not None and sma34 is not None:
-                return (sma5 - sma34).values
+                return sma5 - sma34
             else:
-                return np.full(len(high_series), np.nan)
-        return result.values
+                return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     # 後方互換性のためのエイリアス
     @staticmethod
-    def macdext(data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9):
+    def macdext(data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
         """MACD拡張版（標準MACDで代替）"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         return MomentumIndicators.macd(data, fast=fast, slow=slow, signal=signal)
 
     @staticmethod
-    def macdfix(data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9):
+    def macdfix(data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
         """MACD固定版（標準MACDで代替）"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         return MomentumIndicators.macd(data, fast=fast, slow=slow, signal=signal)
 
     @staticmethod
-    def stochf(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series], k: int = 14, d: int = 3, smooth_k: int = 3):
+    def stochf(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        k: int = 14,
+        d: int = 3,
+        smooth_k: int = 3,
+    ):
         """高速ストキャスティクス（標準ストキャスティクスで代替）"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
         return MomentumIndicators.stoch(high, low, close, k=k, d=d, smooth_k=smooth_k)
 
     @staticmethod
-    def cmo(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+    def cmo(data: pd.Series, length: int = 14) -> pd.Series:
         """チェンジモメンタムオシレーター"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         try:
-            result = ta.cmo(series, length=length)
-            if result is None or (hasattr(result, 'empty') and result.empty):
-                return np.full(len(series), np.nan)
-            return result.values
+            result = ta.cmo(data, length=length)
+            if result is None or (hasattr(result, "empty") and result.empty):
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return result
         except (AttributeError, TypeError):
-            return np.full(len(series), np.nan)
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
     @staticmethod
-    def trix(data: Union[np.ndarray, pd.Series], length: int = 30) -> np.ndarray:
+    def trix(data: pd.Series, length: int = 30) -> pd.Series:
         """TRIX"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.trix(series, length=length)
-        return result.iloc[:, 0].values if len(result.columns) > 1 else result.values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.trix(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result.iloc[:, 0] if len(result.columns) > 1 else result
 
     @staticmethod
     def kdj(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         k: int = 14,
         d: int = 3,
         j_scalar: float = 3.0,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """KDJ指標（ストキャスティクスベース）"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
         # ストキャスティクスを計算してKDJを導出
         stoch_k, stoch_d = MomentumIndicators.stoch(high, low, close, k=k, d=d)
         j_vals = j_scalar * stoch_k - 2 * stoch_d
@@ -415,96 +397,118 @@ class MomentumIndicators:
 
     @staticmethod
     def stochrsi(
-        data: Union[np.ndarray, pd.Series],
+        data: pd.Series,
         length: int = 14,
         k_period: int = 5,
         d_period: int = 3,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """ストキャスティクスRSI"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.stochrsi(
-            series, length=length, k_period=k_period, d_period=d_period
-        )
-        return result.iloc[:, 0].values, result.iloc[:, 1].values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.stochrsi(data, length=length, k_period=k_period, d_period=d_period)
+        if result is None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     def ppo(
-        data: Union[np.ndarray, pd.Series],
+        data: pd.Series,
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Price Oscillator"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.ppo(series, fast=fast, slow=slow, signal=signal)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
+        if result is None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series, nan_series
         return (
-            result.iloc[:, 0].values,  # PPO
-            result.iloc[:, 1].values,  # Histogram
-            result.iloc[:, 2].values,  # Signal
+            result.iloc[:, 0],  # PPO
+            result.iloc[:, 1],  # Histogram
+            result.iloc[:, 2],  # Signal
         )
 
     @staticmethod
     def rvgi(
-        open_: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        open_: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """Relative Vigor Index"""
-        open_series = pd.Series(open_) if isinstance(open_, np.ndarray) else open_
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.rvgi(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_,
+            high=high,
+            low=low,
+            close=close,
             length=length,
         )
-        return result.iloc[:, 0].values, result.iloc[:, 1].values
+        if result is None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
-    def qqe(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+    def qqe(data: pd.Series, length: int = 14) -> pd.Series:
         """Qualitative Quantitative Estimation"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.qqe(series, length=length)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.qqe(data, length=length)
 
         if result is None or result.empty:
             # フォールバック: RSIを返す
-            return ta.rsi(series, length=length).values
+            rsi_result = ta.rsi(data, length=length)
+            return (
+                rsi_result
+                if rsi_result is not None
+                else pd.Series(np.full(len(data), np.nan), index=data.index)
+            )
 
         # QQEの主要な列を返す（通常はRSIMA列）
-        return (
-            result.iloc[:, 1].values
-            if result.shape[1] > 1
-            else result.iloc[:, 0].values
-        )
+        return result.iloc[:, 1] if result.shape[1] > 1 else result.iloc[:, 0]
 
     @staticmethod
     def smi(
-        data: Union[np.ndarray, pd.Series],
+        data: pd.Series,
         fast: int = 13,
         slow: int = 25,
         signal: int = 2,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """Stochastic Momentum Index"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
         try:
-            result = ta.smi(series, fast=fast, slow=slow, signal=signal)
-            return result.iloc[:, 0].values, result.iloc[:, 1].values
+            result = ta.smi(data, fast=fast, slow=slow, signal=signal)
+            if result is None:
+                nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+                return nan_series, nan_series
+            return result.iloc[:, 0], result.iloc[:, 1]
         except Exception:
             # フォールバック: RSIとそのEMAシグナル
-            rsi = ta.rsi(series, length=max(5, min(slow, len(series) - 1)))
+            rsi = ta.rsi(data, length=max(5, min(slow, len(data) - 1)))
+            if rsi is None:
+                nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+                return nan_series, nan_series
             signal_ema = rsi.ewm(span=signal).mean()
-            return rsi.values, signal_ema.values
+            return rsi, signal_ema
 
     @staticmethod
     def kst(
-        data: Union[np.ndarray, pd.Series],
+        data: pd.Series,
         r1: int = 10,
         r2: int = 15,
         r3: int = 20,
@@ -514,11 +518,12 @@ class MomentumIndicators:
         n3: int = 10,
         n4: int = 15,
         signal: int = 9,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """Know Sure Thing"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         result = ta.kst(
-            series,
+            data,
             r1=r1,
             r2=r2,
             r3=r3,
@@ -529,303 +534,346 @@ class MomentumIndicators:
             n4=n4,
             signal=signal,
         )
-        return result.iloc[:, 0].values, result.iloc[:, 1].values
+        if result is None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     def stc(
-        data: Union[np.ndarray, pd.Series],
+        data: pd.Series,
         tclength: int = 10,
         fast: int = 23,
         slow: int = 50,
         factor: float = 0.5,
-        **kwargs
-    ) -> np.ndarray:
+        **kwargs,
+    ) -> pd.Series:
         """Schaff Trend Cycle"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
         try:
             result = ta.stc(
-                series, tclength=tclength, fast=fast, slow=slow, factor=factor
+                data, tclength=tclength, fast=fast, slow=slow, factor=factor
             )
             if result is not None:
-                return result.values
+                return result
         except Exception:
             pass
 
         # フォールバック: EMAベースの簡易実装
-        if len(series) < max(tclength, fast, slow):
-            return np.full(len(series), np.nan)
+        if len(data) < max(tclength, fast, slow):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # EMAの組み合わせで近似
-        ema_fast = ta.ema(series, length=fast)
-        ema_slow = ta.ema(series, length=slow)
+        ema_fast = ta.ema(data, length=fast)
+        ema_slow = ta.ema(data, length=slow)
 
         if ema_fast is None or ema_slow is None:
-            return np.full(len(series), np.nan)
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # MACDのようなシグナルを生成
-        stc_values = np.full(len(series), np.nan)
+        stc_values = np.full(len(data), np.nan)
         macd = ema_fast - ema_slow
         signal = ta.ema(macd, length=tclength)
 
         if signal is not None:
             # スケーリング（0-100の範囲に収める）
-            macd_signal_ratio = (macd - signal) / series.std()
+            macd_signal_ratio = (macd - signal) / data.std()
             stc_values = 50 + 50 * np.tanh(macd_signal_ratio)
 
-        return stc_values
+        return pd.Series(stc_values, index=data.index)
 
     @staticmethod
     def aroonosc(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """アルーンオシレーター"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
 
-        result = ta.aroon(high=high_series, low=low_series, length=length)
+        result = ta.aroon(high=high, low=low, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
         # アルーンオシレーター = アルーンアップ - アルーンダウン
-        return (result.iloc[:, 1] - result.iloc[:, 0]).values
+        return result.iloc[:, 1] - result.iloc[:, 0]
 
     @staticmethod
     def dx(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Directional Movement Index (DX)"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.adx(
-            high=high_series, low=low_series, close=close_series, length=length
-        )
+        result = ta.adx(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
         # DX列を探す
         dx_col = next((col for col in result.columns if "DX" in col), None)
         if dx_col:
-            return result[dx_col].values
+            return result[dx_col]
         else:
             # フォールバック: DMP - DMNの差分
             dmp_col = next((col for col in result.columns if "DMP" in col), None)
             dmn_col = next((col for col in result.columns if "DMN" in col), None)
             if dmp_col and dmn_col:
-                return (result[dmp_col] - result[dmn_col]).values
+                return result[dmp_col] - result[dmn_col]
             else:
-                return np.full(len(high_series), np.nan)
+                return pd.Series(np.full(len(high), np.nan), index=high.index)
 
     @staticmethod
-    def plus_di(high, low, close, length: int = 14) -> np.ndarray:
+    def plus_di(high, low, close, length: int = 14) -> pd.Series:
         """Plus Directional Indicator (DI)"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.adx(
-            high=high_series, low=low_series, close=close_series, length=length
-        )
+        result = ta.adx(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
         dmp_col = next(
             (col for col in result.columns if "DMP" in col), result.columns[1]
         )
-        return result[dmp_col].values
+        return result[dmp_col]
 
     @staticmethod
-    def minus_di(high, low, close, length: int = 14) -> np.ndarray:
+    def minus_di(high, low, close, length: int = 14) -> pd.Series:
         """Minus Directional Indicator (DI)"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.adx(
-            high=high_series, low=low_series, close=close_series, length=length
-        )
+        result = ta.adx(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
         dmn_col = next(
             (col for col in result.columns if "DMN" in col), result.columns[2]
         )
-        return result[dmn_col].values
+        return result[dmn_col]
 
     @staticmethod
-    def plus_dm(high, low, length: int = 14) -> np.ndarray:
+    def plus_dm(high, low, length: int = 14) -> pd.Series:
         """Plus Directional Movement (DM)"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
 
-        result = ta.dm(high=high_series, low=low_series, length=length)
+        result = ta.dm(high=high, low=low, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
         dmp_col = next(
             (col for col in result.columns if "DMP" in col), result.columns[0]
         )
-        return result[dmp_col].values
+        return result[dmp_col]
 
     @staticmethod
-    def minus_dm(high, low, length: int = 14) -> np.ndarray:
+    def minus_dm(high, low, length: int = 14) -> pd.Series:
         """Minus Directional Movement (DM)"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
 
-        result = ta.dm(high=high_series, low=low_series, length=length)
+        result = ta.dm(high=high, low=low, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
         dmn_col = next(
             (col for col in result.columns if "DMN" in col), result.columns[1]
         )
-        return result[dmn_col].values
+        return result[dmn_col]
 
     @staticmethod
     def ultosc(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         fast: int = 7,
         medium: int = 14,
         slow: int = 28,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Ultimate Oscillator"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.uo(
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            high=high,
+            low=low,
+            close=close,
             fast=fast,
             medium=medium,
             slow=slow,
         )
         if result is None or result.empty:
             # フォールバック: 簡易実装 (weighted average of different periods)
-            n = len(high_series)
+            n = len(high)
             if n < slow:
-                return np.full(n, np.nan)
+                return pd.Series(np.full(n, np.nan), index=high.index)
 
             # 単純な加重平均で近似
             weights = np.array([1, 2, 4])  # fast, medium, slowの重み
             weights = weights / weights.sum()
 
-            fast_ma = ta.sma(close_series, length=fast)
-            medium_ma = ta.sma(close_series, length=medium)
-            slow_ma = ta.sma(close_series, length=slow)
+            fast_ma = ta.sma(close, length=fast)
+            medium_ma = ta.sma(close, length=medium)
+            slow_ma = ta.sma(close, length=slow)
 
             if fast_ma is not None and medium_ma is not None and slow_ma is not None:
                 # 単純な平均で代替
-                return ((fast_ma + medium_ma + slow_ma) / 3).values
+                return (fast_ma + medium_ma + slow_ma) / 3
             else:
-                return np.full(n, np.nan)
-        return result.values
+                return pd.Series(np.full(n, np.nan), index=high.index)
+        return result
 
     @staticmethod
     def bop(
-        open_: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
-    ) -> np.ndarray:
+        open_: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
         """Balance of Power"""
-        open_series = pd.Series(open_) if isinstance(open_, np.ndarray) else open_
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         try:
             result = ta.bop(
-                open_=open_series,
-                high=high_series,
-                low=low_series,
-                close=close_series,
+                open_=open_,
+                high=high,
+                low=low,
+                close=close,
                 scalar=1,
             )
         except TypeError:
             result = ta.bop(
-                open_=open_series,
-                high=high_series,
-                low=low_series,
-                close=close_series,
+                open_=open_,
+                high=high,
+                low=low,
+                close=close,
             )
-        return result.values
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def adxr(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """ADX評価"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         try:
-            result = ta.adxr(
-                high=high_series, low=low_series, close=close_series, length=length
-            )
-            return result.values
+            result = ta.adxr(high=high, low=low, close=close, length=length)
+            if result is None:
+                return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return result
         except Exception:
             # フォールバック: ADXを返す
-            result = ta.adx(
-                high=high_series, low=low_series, close=close_series, length=length
-            )
+            result = ta.adx(high=high, low=low, close=close, length=length)
+            if result is None:
+                return pd.Series(np.full(len(high), np.nan), index=high.index)
             adx_col = next(
                 (col for col in result.columns if "ADX" in col), result.columns[0]
             )
-            return result[adx_col].values
+            return result[adx_col]
 
     # 残りの必要なメソッド（簡素化版）
     @staticmethod
-    def rocp(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    def rocp(data: pd.Series, length: int = 10) -> pd.Series:
         """変化率（%）"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         try:
-            return ta.rocp(series, length=length).values
+            return ta.rocp(data, length=length)
         except AttributeError:
-            return ta.roc(series, length=length).values
+            return ta.roc(data, length=length)
 
     @staticmethod
-    def rocr(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    def rocr(data: pd.Series, length: int = 10) -> pd.Series:
         """変化率（比率）"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         try:
-            return ta.rocr(series, length=length).values
+            return ta.rocr(data, length=length)
         except AttributeError:
-            shifted = series.shift(length)
-            return (series / shifted).values
+            shifted = data.shift(length)
+            return data / shifted
 
     @staticmethod
-    def rocr100(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    def rocr100(data: pd.Series, length: int = 10) -> pd.Series:
         """変化率（比率100スケール）"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
         try:
-            return ta.rocr(series, length=length, scalar=100).values
+            return ta.rocr(data, length=length, scalar=100)
         except AttributeError:
-            shifted = series.shift(length)
-            return ((series / shifted) * 100).values
+            shifted = data.shift(length)
+            return (data / shifted) * 100
 
     @staticmethod
     def rsi_ema_cross(
-        data: Union[np.ndarray, pd.Series], rsi_length: int = 14, ema_length: int = 9, **kwargs
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        data: pd.Series, rsi_length: int = 14, ema_length: int = 9, **kwargs
+    ) -> Tuple[pd.Series, pd.Series]:
         """RSI EMAクロス"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
         try:
-            rsi = ta.rsi(series, length=rsi_length)
+            rsi = ta.rsi(data, length=rsi_length)
             if rsi is not None:
                 ema = ta.ema(rsi, length=ema_length)
                 if ema is not None:
-                    return rsi.values, ema.values
+                    return rsi, ema
         except Exception:
             pass
 
         # フォールバック: 簡易実装
-        n = len(series)
+        n = len(data)
         if n < max(rsi_length, ema_length):
-            return np.full(n, np.nan), np.full(n, np.nan)
+            return pd.Series(np.full(n, np.nan), index=data.index), pd.Series(
+                np.full(n, np.nan), index=data.index
+            )
 
         # RSIの簡易計算
         rsi_values = np.full(n, np.nan)
         for i in range(rsi_length - 1, n):
-            window = series.iloc[i - rsi_length + 1 : i + 1]
+            window = data.iloc[i - rsi_length + 1 : i + 1]
             gains = window.diff()[1:]
             avg_gain = gains[gains > 0].mean() if len(gains[gains > 0]) > 0 else 0
             avg_loss = -gains[gains < 0].mean() if len(gains[gains < 0]) > 0 else 0
@@ -846,96 +894,116 @@ class MomentumIndicators:
             if not np.isnan(rsi_values[i]):
                 ema_values[i] = alpha * rsi_values[i] + (1 - alpha) * ema_values[i - 1]
 
-        return rsi_values, ema_values
+        return pd.Series(rsi_values, index=data.index), pd.Series(
+            ema_values, index=data.index
+        )
 
     @staticmethod
-    def tsi(
-        data: Union[np.ndarray, pd.Series], fast: int = 13, slow: int = 25
-    ) -> np.ndarray:
+    def tsi(data: pd.Series, fast: int = 13, slow: int = 25) -> pd.Series:
         """True Strength Index"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.tsi(series, fast=fast, slow=slow)
-        return result.values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.tsi(data, fast=fast, slow=slow)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result.iloc[:, 0]
 
     @staticmethod
     def rvi(
-        open_: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        open_: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Relative Volatility Index"""
+        if not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
         # RVIの簡易実装（RSIベース）
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
-        return ta.rsi(close_series, length=length).values
+        return ta.rsi(close, length=length)
 
     @staticmethod
     def pvo(
-        volume: Union[np.ndarray, pd.Series],
+        volume: pd.Series,
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """Price Volume Oscillator"""
-        volume_series = pd.Series(volume) if isinstance(volume, np.ndarray) else volume
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
 
         # PVOの簡易実装（ボリュームのMACD）
-        result = ta.macd(volume_series, fast=fast, slow=slow, signal=signal)
-        return result.iloc[:, 0].values, result.iloc[:, 1].values
+        result = ta.macd(volume, fast=fast, slow=slow, signal=signal)
+        if result is None:
+            nan_series = pd.Series(np.full(len(volume), np.nan), index=volume.index)
+            return nan_series, nan_series
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
-    def cfo(data: Union[np.ndarray, pd.Series], length: int = 9) -> np.ndarray:
+    def cfo(data: pd.Series, length: int = 9) -> pd.Series:
         """Chande Forecast Oscillator"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
         try:
-            result = ta.cfo(series, length=length)
+            result = ta.cfo(data, length=length)
             if result is not None and not result.isna().all():
-                return result.values if hasattr(result, 'values') else np.array(result)
+                return result if pd.Series(result) else pd.Series(result)
         except Exception:
             pass
 
         # フォールバック実装: CFOの簡易計算 (トレンド方向の変化率)
-        if len(series) < length:
-            return np.full(len(series), np.nan)
+        if len(data) < length:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # CFOの近似: 価格変化をSMAで平滑化した指標
-        price_change = series.pct_change()
-        ema_pc = ta.ema(price_change, length=length//2)  # 価格変化のEMA
-        cfo_values = np.full(len(series), np.nan)
+        price_change = data.pct_change()
+        ema_pc = ta.ema(price_change, length=length // 2)  # 価格変化のEMA
+        cfo_values = np.full(len(data), np.nan)
 
         if ema_pc is not None:
             # CFOの概念: トレンド方向の積分
-            cfo_values[length:] = (ema_pc * series.shift(length//2))[:len(series)-length]
+            cfo_values[length:] = (ema_pc * data.shift(length // 2))[
+                : len(data) - length
+            ]
             # 100スケールに正規化 (CFOの標準範囲)
-            cfo_values = (cfo_values - np.nanmean(cfo_values)) / np.nanstd(cfo_values) * 100
+            cfo_values = (
+                (cfo_values - np.nanmean(cfo_values)) / np.nanstd(cfo_values) * 100
+            )
 
-        return cfo_values
+        return pd.Series(cfo_values, index=data.index)
 
     @staticmethod
-    def cti(data: Union[np.ndarray, pd.Series], length: int = 20) -> np.ndarray:
+    def cti(data: pd.Series, length: int = 20) -> pd.Series:
         """Chande Trend Index"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
         try:
-            result = ta.cti(series, length=length)
+            result = ta.cti(data, length=length)
             if result is not None and not result.isna().all():
-                return result.values if hasattr(result, 'values') else np.array(result)
+                return result if pd.Series(result) else pd.Series(result)
         except Exception:
             pass
 
         # フォールバック実装: RSIベースのCTI近似 (トレンド方向の相関係数)
-        if len(series) < length:
-            return np.full(len(series), np.nan)
+        if len(data) < length:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # CTIの概念: 過去データとの相関係数ベースのアプローチ
-        cti_values = np.full(len(series), np.nan)
+        cti_values = np.full(len(data), np.nan)
 
-        for i in range(length, len(series)):
+        for i in range(length, len(data)):
             # 現在値と過去値の相関係数を計算
-            recent_values = series.iloc[i-length:i].values
-            reference_values = series.iloc[0:length].values
+            recent_values = data.iloc[i - length : i].values
+            reference_values = data.iloc[0:length].values
 
             if len(recent_values) == len(reference_values):
                 correlation = np.corrcoef(recent_values, reference_values)[0, 1]
@@ -943,223 +1011,269 @@ class MomentumIndicators:
                     # 相関係数をCTIスコアに変換 (-100 to 100)
                     cti_values[i] = correlation * 100
 
-        return cti_values
+        return pd.Series(cti_values, index=data.index)
 
     @staticmethod
     def rmi(
-        data: Union[np.ndarray, pd.Series] = None,
+        data: pd.Series = None,
         length: int = 20,
         mom: int = 20,
-        close: Union[np.ndarray, pd.Series] = None,
-    ) -> np.ndarray:
+        close: pd.Series = None,
+    ) -> pd.Series:
         """Relative Momentum Index"""
-        # dataが提供されない場合はcloseを使用
-        if data is None and close is not None:
+        if not isinstance(data, pd.Series) and close is not None:
             data = close
-        elif data is None:
-            raise ValueError("Either 'data' or 'close' must be provided")
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
         # RMIの簡易実装（RSIベース）
-        return ta.rsi(series, length=length).values
+        return ta.rsi(data, length=length)
 
     @staticmethod
     def dpo(
-        data: Union[np.ndarray, pd.Series] = None,
+        data: pd.Series = None,
         length: int = 20,
-        close: Union[np.ndarray, pd.Series] = None,
-    ) -> np.ndarray:
+        close: pd.Series = None,
+    ) -> pd.Series:
         """Detrended Price Oscillator"""
-        # dataが提供されない場合はcloseを使用
-        if data is None and close is not None:
+        if not isinstance(data, pd.Series) and close is not None:
             data = close
-        elif data is None:
-            raise ValueError("Either 'data' or 'close' must be provided")
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
 
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        result = ta.dpo(series, length=length)
-        return result.values
+        result = ta.dpo(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     def chop(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Choppiness Index"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.chop(
-            high=high_series, low=low_series, close=close_series, length=length
-        )
-        return result.values
+        result = ta.chop(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def vortex(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """Vortex Indicator"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.vortex(
-            high=high_series, low=low_series, close=close_series, length=length
-        )
-        return result.iloc[:, 0].values, result.iloc[:, 1].values
+        result = ta.vortex(high=high, low=low, close=close, length=length)
+        if result is None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
-    def bias(data: Union[np.ndarray, pd.Series], length: int = 26) -> np.ndarray:
+    def bias(data: pd.Series, length: int = 26) -> pd.Series:
         """Bias"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.bias(series, length=length).values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.bias(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     def brar(
-        open_: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        open_: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 26,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """BRAR Index"""
-        open_series = pd.Series(open_) if isinstance(open_, np.ndarray) else open_
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.brar(
-            open_=open_series,
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            open_=open_,
+            high=high,
+            low=low,
+            close=close,
             length=length,
         )
-        return result.values
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
-    def cg(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    def cg(data: pd.Series, length: int = 10) -> pd.Series:
         """Center of Gravity"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.cg(series, length=length).values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.cg(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     def coppock(
-        data: Union[np.ndarray, pd.Series], length: int = 10, fast: int = 11, slow: int = 14
-    ) -> np.ndarray:
+        data: pd.Series, length: int = 10, fast: int = 11, slow: int = 14
+    ) -> pd.Series:
         """Coppock Curve"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.coppock(series, length=length, fast=fast, slow=slow).values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.coppock(data, length=length, fast=fast, slow=slow)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
-    def er(data: Union[np.ndarray, pd.Series], length: int = 10) -> np.ndarray:
+    def er(data: pd.Series, length: int = 10) -> pd.Series:
         """Efficiency Ratio"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.er(series, length=length).values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.er(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     def eri(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 13,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Elder Ray Index"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.eri(high=high_series, low=low_series, close=close_series, length=length)
-        return result.values
+        result = ta.eri(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def fisher(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
         length: int = 9,
         signal: int = 1,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """Fisher Transform"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
 
-        result = ta.fisher(high=high_series, low=low_series, length=length, signal=signal)
-        return result.iloc[:, 0].values, result.iloc[:, 1].values
+        result = ta.fisher(high=high, low=low, length=length, signal=signal)
+        if result is None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     def inertia(
-        close: Union[np.ndarray, pd.Series],
-        high: Union[np.ndarray, pd.Series] = None,
-        low: Union[np.ndarray, pd.Series] = None,
+        close: pd.Series,
+        high: pd.Series = None,
+        low: pd.Series = None,
         length: int = 20,
         rvi_length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Inertia"""
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) and high is not None else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) and low is not None else low
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.inertia(
-            close=close_series,
-            high=high_series,
-            low=low_series,
+            close=close,
+            high=high,
+            low=low,
             length=length,
             rvi_length=rvi_length,
         )
-        return result.values
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
 
     @staticmethod
     def pgo(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         length: int = 14,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Pretty Good Oscillator"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        return ta.pgo(
-            high=high_series, low=low_series, close=close_series, length=length
-        ).values
+        result = ta.pgo(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def psl(
-        close: Union[np.ndarray, pd.Series],
-        open_: Union[np.ndarray, pd.Series] = None,
+        close: pd.Series,
+        open_: pd.Series = None,
         length: int = 12,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Psychological Line"""
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
-        open_series = pd.Series(open_) if isinstance(open_, np.ndarray) and open_ is not None else open_
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
-        result = ta.psl(close=close_series, open_=open_series, length=length)
+        result = ta.psl(close=close, open_=open_, length=length)
         if result is None or result.empty:
             # フォールバック: 簡易実装 (close > openの割合)
-            if open_series is not None:
-                return ((close_series > open_series).rolling(length).mean() * 100).values
+            if open_ is not None:
+                return (close > open_).rolling(length).mean() * 100
             else:
-                return np.full(len(close_series), np.nan)
-        return result.values
+                return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
 
     @staticmethod
-    def rsx(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+    def rsx(data: pd.Series, length: int = 14) -> pd.Series:
         """RSX"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return ta.rsx(series, length=length).values
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        result = ta.rsx(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     def squeeze(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         bb_length: int = 20,
         bb_std: float = 2.0,
         kc_length: int = 20,
@@ -1167,16 +1281,19 @@ class MomentumIndicators:
         mom_length: int = 12,
         mom_smooth: int = 6,
         use_tr: bool = True,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Squeeze"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.squeeze(
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            high=high,
+            low=low,
+            close=close,
             bb_length=bb_length,
             bb_std=bb_std,
             kc_length=kc_length,
@@ -1185,13 +1302,15 @@ class MomentumIndicators:
             mom_smooth=mom_smooth,
             use_tr=use_tr,
         )
-        return result.values
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
 
     @staticmethod
     def squeeze_pro(
-        high: Union[np.ndarray, pd.Series],
-        low: Union[np.ndarray, pd.Series],
-        close: Union[np.ndarray, pd.Series],
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
         bb_length: int = 20,
         bb_std: float = 2.0,
         kc_length: int = 20,
@@ -1201,16 +1320,19 @@ class MomentumIndicators:
         mom_length: int = 12,
         mom_smooth: int = 6,
         use_tr: bool = True,
-    ) -> np.ndarray:
+    ) -> pd.Series:
         """Squeeze Pro"""
-        high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
-        low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
-        close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
 
         result = ta.squeeze_pro(
-            high=high_series,
-            low=low_series,
-            close=close_series,
+            high=high,
+            low=low,
+            close=close,
             bb_length=bb_length,
             bb_std=bb_std,
             kc_length=kc_length,
@@ -1221,4 +1343,6 @@ class MomentumIndicators:
             mom_smooth=mom_smooth,
             use_tr=use_tr,
         )
-        return result.values
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result

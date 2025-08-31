@@ -118,11 +118,12 @@ class TechnicalIndicatorService:
 
     def calculate_indicator(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-    ) -> Union[np.ndarray, tuple]:
+    ) -> Union[np.ndarray, pd.Series, tuple, tuple[pd.Series, ...]]:
         """
         指定された指標を計算
 
         pandas-taを動的に使用し、設定ベースの効率的な実装。
+        pandasオンリー移行対応により、pd.Seriesとtuple[pd.Series, ...]も返却可能。
         """
         try:
             # 1. pandas-ta動的処理を試行

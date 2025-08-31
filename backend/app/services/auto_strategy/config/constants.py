@@ -154,7 +154,6 @@ TREND_INDICATORS = [
     "DEMA",  # 二重指数移動平均線 (Double Exponential Moving Average)
     "ALMA",  # アルノー・ルグー移動平均線 (Arnaud Legoux Moving Average)
     "T3",  # T3移動平均線 (Tillson's T3 Moving Average)
-    "MAMA",  # MESA適応移動平均線 (MESA Adaptive Moving Average)
     "HMA",  # ハル移動平均線 (Hull Moving Average)
     "RMA",  # 平滑化移動平均線 (Smoothed Moving Average)
     "SWMA",  # 対称加重移動平均線 (Symmetric Weighted Moving Average)
@@ -345,7 +344,6 @@ MOVING_AVERAGE_INDICATORS = {
     "DEMA",
     "ALMA",
     "T3",
-    "MAMA",
     "HMA",
     "RMA",
     "SWMA",
@@ -361,7 +359,7 @@ MOVING_AVERAGE_INDICATORS = {
 }
 
 # 優先的な移動平均指標（MA系を2本以上生成する場合の候補）
-PREFERRED_MA_INDICATORS = {"SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"}
+PREFERRED_MA_INDICATORS = {"SMA", "EMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"}
 
 # periodパラメータが必要な移動平均指標
 MA_INDICATORS_NEEDING_PERIOD = {
@@ -668,7 +666,6 @@ INDICATOR_CHARACTERISTICS = {
         "price_comparison": True,
         "trend_following": True,
     },
-    "MAMA": {"type": "trend", "price_comparison": True, "adaptive": True},
     "ADX": {
         "type": "trend",
         "range": (0, 100),

@@ -423,7 +423,7 @@ class RandomGeneGenerator:
                 except Exception:
                     pass
 
-            # 成立性の底上げ: 少なくとも1つはトレンド系（SMA/EMA/MAMA/MAのいずれか）を含める
+            # 成立性の底上げ: 少なくとも1つはトレンド系（SMA/EMA/MAのいずれか）を含める
             try:
 
                 def _is_trend(name: str) -> bool:
@@ -506,7 +506,7 @@ class RandomGeneGenerator:
                 # レジストリ取得が失敗しても安全にSMAを追加（ただしavailable_indicatorsにSMAが含まれる場合のみ）
                 if (
                     any(
-                        ind.type in ("SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA")
+                        ind.type in ("SMA", "EMA", "MA", "HMA", "ALMA", "VIDYA")
                         for ind in indicators
                     )
                     or "SMA" not in self.available_indicators

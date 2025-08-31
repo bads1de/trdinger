@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict, List, Union
 
-import numpy as np
+import pandas as pd
 
 from ..models.strategy_models import Condition, ConditionGroup
 
@@ -113,9 +113,9 @@ class ConditionEvaluator:
             elif condition.operator == "<=":
                 result = left_value <= right_value
             elif condition.operator == "==":
-                result = bool(np.isclose(left_value, right_value))
+                result = abs(left_value - right_value) < 1e-8
             elif condition.operator == "!=":
-                result = not bool(np.isclose(left_value, right_value))
+                result = abs(left_value - right_value) >= 1e-8
             else:
                 logger.warning(f"未対応の演算子: {condition.operator}")
                 return False
@@ -135,19 +135,17 @@ class ConditionEvaluator:
     def _get_final_value(self, value) -> float:
         """配列/シーケンスから末尾の有限値を取得（pandas-ta対応）"""
         try:
-            # numpy配列またはシーケンスの場合
-            if hasattr(value, '__getitem__') and not isinstance(value, (str, bytes)):
-                import numpy as np
-                arr = np.asarray(value, dtype=float)
-                # 末尾から有限値を検索
-                for v in arr[::-1]:
-                    if np.isfinite(v):
-                        return float(v)
-                return 0.0
+            # pandas Series の場合
+            if isinstance(value, pd.Series):
+                return value.iloc[-1]  # pandas Seriesの末尾値
+            # リスト/array対応
+            elif hasattr(value, '__getitem__') and not isinstance(value, (str, bytes)):
+                val = float(value[-1])
+                return val if pd.notna(val) else 0.0
             # スカラー値の場合
-            import numpy as np
-            val = float(value)
-            return val if np.isfinite(val) else 0.0
+            else:
+                val = float(value)
+                return val if pd.notna(val) else 0.0
         except Exception:
             try:
                 return float(value)

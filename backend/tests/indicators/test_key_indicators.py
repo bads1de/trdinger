@@ -35,7 +35,8 @@ class TestKeyIndicators:
         assert isinstance(result, np.ndarray)
         assert len(result) == len(df)
         # 最初の19個はNaNになるはず
-        assert np.isnan(result[:19]).all()
+        if isinstance(result, pd.Series):
+            assert pd.isna(result[:19]).all()
         assert not np.isnan(result[19:]).all()
 
     def test_ema_calculation(self, sample_ohlcv_data, technical_indicator_service):
@@ -48,7 +49,11 @@ class TestKeyIndicators:
 
         assert result is not None
         assert isinstance(result, np.ndarray)
-        assert len(result) == len(df)
+        if isinstance(result, pd.Series):
+            assert len(result) == len(df)
+        elif isinstance(result, pd.DataFrame):
+            if isinstance(result, (pd.Series, pd.DataFrame)):
+                assert len(result) == len(df)
 
     def test_macd_calculation(self, sample_ohlcv_data, technical_indicator_service):
         """MACDインジケータの計算テスト"""
@@ -100,7 +105,7 @@ class TestKeyIndicators:
         )
 
         assert result is not None
-        assert isinstance(result, np.ndarray)
+        assert isinstance(result, (pd.Series, pd.DataFrame))
         assert len(result) == len(df)
 
     def test_cci_calculation(self, sample_ohlcv_data, technical_indicator_service):

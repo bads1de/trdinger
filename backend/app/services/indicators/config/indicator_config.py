@@ -205,7 +205,6 @@ class IndicatorConfigRegistry:
             "TEMA": "EMA",
             "DEMA": "EMA",
             "T3": "EMA",
-            "MAMA": "EMA",
             "ZLEMA": "EMA",
             "MIDPOINT": "SMA",
             "MIDPRICE": "SMA",

@@ -19,12 +19,12 @@ class PandasTAError(Exception):
     """pandas-ta関連のエラー"""
 
 
-def validate_input(data: Union[np.ndarray, pd.Series], period: int) -> None:
+def validate_input(data: pd.Series, period: int) -> None:
     """
-    入力データの基本検証（numpy配列・pandas.Series対応版）
+    入力データの基本検証（pandas.Series専用）
 
     Args:
-        data: 検証対象のデータ（numpy配列またはpandas.Series）
+        data: 検証対象のデータ（pandas.Series）
         period: 期間パラメータ
 
     Raises:
@@ -33,9 +33,9 @@ def validate_input(data: Union[np.ndarray, pd.Series], period: int) -> None:
     if data is None:
         raise PandasTAError("入力データがNoneです")
 
-    if not isinstance(data, (np.ndarray, pd.Series)):
+    if not isinstance(data, pd.Series):
         raise PandasTAError(
-            f"入力データはnumpy配列またはpandas.Seriesである必要があります。実際の型: {type(data)}"
+            f"入力データはpandas.Seriesである必要があります。実際の型: {type(data)}"
         )
 
     if len(data) == 0:
@@ -47,17 +47,11 @@ def validate_input(data: Union[np.ndarray, pd.Series], period: int) -> None:
     if len(data) < period:
         raise PandasTAError(f"データ長({len(data)})が期間({period})より短いです")
 
-    # NaNや無限大の値をチェック
-    if isinstance(data, pd.Series):
-        if bool(data.isna().any()):
-            logger.warning("入力データにNaN値が含まれています")
-        if np.isinf(data).any():
-            raise PandasTAError("入力データに無限大の値が含まれています")
-    else:  # numpy配列の場合
-        if np.any(np.isnan(data)):
-            logger.warning("入力データにNaN値が含まれています")
-        if np.any(np.isinf(data)):
-            raise PandasTAError("入力データに無限大の値が含まれています")
+    # NaNや無限大の値をチェック (pandas.Series専用)
+    if bool(data.isna().any()):
+        logger.warning("入力データにNaN値が含まれています")
+    if np.isinf(data).any():
+        raise PandasTAError("入力データに無限大の値が含まれています")
 
 
 def handle_pandas_ta_errors(func):
@@ -102,48 +96,3 @@ def handle_pandas_ta_errors(func):
     return wrapper
 
 
-def validate_numpy_input(
-    data: Union[np.ndarray, pd.Series, list, float, int], min_length: int = 1
-) -> np.ndarray:
-    """入力データの検証とnumpy配列への変換"""
-    # pandas.Seriesの場合はnumpy配列に変換
-    if isinstance(data, pd.Series):
-        data = data.to_numpy()
-    elif not isinstance(data, np.ndarray):
-        data = np.array(data, dtype=float)
-
-    # スカラー(ndim==0)はブロードキャスト前提で許容
-    if isinstance(data, np.ndarray) and getattr(data, "ndim", 1) == 0:
-        return data
-
-    # 通常の長さチェック
-    if len(data) < min_length:
-        raise ValueError(f"データ長が不足: 必要{min_length}, 実際{len(data)}")
-
-    return data
-
-
-def validate_numpy_dual_input(
-    data0: Union[np.ndarray, pd.Series], data1: Union[np.ndarray, pd.Series]
-) -> None:
-    """2つの入力データの長さ一致確認（スカラー許容）"""
-
-    def _len_or_none(x):
-        if isinstance(x, pd.Series):
-            return len(x)
-        if isinstance(x, np.ndarray):
-            return None if x.ndim == 0 else len(x)
-        try:
-            return len(x)  # list等
-        except Exception:
-            return None
-
-    len0 = _len_or_none(data0)
-    len1 = _len_or_none(data1)
-
-    # いずれかがスカラー（長さ不定）の場合はブロードキャスト前提で許容
-    if len0 is None or len1 is None:
-        return
-
-    if len0 != len1:
-        raise ValueError(f"データの長さが一致しません。Data0: {len0}, Data1: {len1}")

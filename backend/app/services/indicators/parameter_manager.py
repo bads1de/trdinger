@@ -66,7 +66,6 @@ NO_LENGTH_INDICATORS = {
     "SMI",
     "UO",
     "PVO",
-    "MAMA",
     "TRANGE",
     "BB",
     "ACOS",
