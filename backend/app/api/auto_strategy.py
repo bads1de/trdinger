@@ -80,28 +80,6 @@ class GAResultResponse(BaseModel):
     timestamp: str
 
 
-class StrategyTestRequest(BaseModel):
-    """戦略テストリクエスト"""
-
-    strategy_gene: Dict[str, Any] = Field(..., description="戦略遺伝子")
-    backtest_config: Dict[str, Any] = Field(..., description="バックテスト設定")
-
-
-class StrategyTestResponse(BaseModel):
-    """戦略テストレスポンス"""
-
-    success: bool
-    result: Optional[Dict[str, Any]] = None
-    errors: Optional[List[str]] = None
-    message: str
-
-
-class DefaultConfigResponse(BaseModel):
-    config: Dict[str, Any]
-
-
-class PresetsResponse(BaseModel):
-    presets: Dict[str, Any]
 
 
 class StopExperimentResponse(BaseModel):
@@ -211,46 +189,6 @@ async def stop_experiment(
             )
 
     return await ErrorHandler.safe_execute_async(_stop_experiment)
-
-
-@router.post("/test-strategy", response_model=StrategyTestResponse)
-async def test_strategy(
-    request: StrategyTestRequest,
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
-):
-    """
-    単一戦略のテスト実行
-
-    指定された戦略遺伝子から戦略を生成し、バックテストを実行します。
-    GA実行前の戦略検証に使用できます。
-    """
-
-    async def _test_strategy():
-        result = await auto_strategy_service.test_strategy(request)
-
-        return StrategyTestResponse(
-            success=result["success"],
-            result=result.get("result"),
-            errors=result.get("errors"),
-            message=result["message"],
-        )
-
-    return await ErrorHandler.safe_execute_async(_test_strategy)
-
-
-@router.get("/config/default", response_model=DefaultConfigResponse)
-async def get_default_config():
-    """
-    デフォルトGA設定を取得
-
-    推奨されるGA設定のデフォルト値を返します。
-    """
-
-    async def _get_default_config():
-        default_config = GAConfig.create_default()
-        return DefaultConfigResponse(config=default_config.to_dict())
-
-    return await ErrorHandler.safe_execute_async(_get_default_config)
 
 
 
