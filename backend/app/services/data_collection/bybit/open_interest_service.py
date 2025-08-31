@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import get_open_interest_config
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ class BybitOpenInterestService(BybitService):
         オープンインタレスト履歴を取得
         """
         self._validate_parameters(symbol, limit)
-        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, "bybit")
+        normalized_symbol = symbol
         return await self._handle_ccxt_errors(
             f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
             self.exchange.fetch_open_interest_history,

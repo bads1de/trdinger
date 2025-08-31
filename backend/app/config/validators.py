@@ -8,7 +8,6 @@
 import logging
 from typing import Dict, List
 
-from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 
@@ -63,14 +62,16 @@ class MarketDataValidator:
             ValueError: サポートされていないシンボルの場合
         """
         try:
-            # 大文字に変換し、空白を除去してから統一サービスに渡す
+            # 大文字に変換し、空白を除去してからマッピングと検証を行う
             cleaned_symbol = symbol.strip().upper()
-            return SymbolNormalizationService.normalize_symbol(
-                cleaned_symbol,
-                provider="generic",
-                symbol_mapping=symbol_mapping,
-                supported_symbols=supported_symbols
-            )
+            mapped_symbol = symbol_mapping.get(cleaned_symbol, cleaned_symbol)
+            if mapped_symbol in supported_symbols:
+                return mapped_symbol
+            else:
+                raise ValueError(
+                    f"サポートされていないシンボルです: '{cleaned_symbol}'。"
+                    f"サポートされているシンボルは {', '.join(supported_symbols)} です。"
+                )
         except ValueError as e:
             raise ValueError(
                 f"サポートされていないシンボルです: '{symbol}'。"

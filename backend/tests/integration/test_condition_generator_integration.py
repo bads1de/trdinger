@@ -241,3 +241,56 @@ class TestConditionGeneratorIntegration:
         # Disabled indicators should not appear in any category
         total_categorized = sum(len(indicators) for indicators in categorized.values())
         assert total_categorized == 0
+
+    def test_long_short_balance_different_indicators_strategy(self, generator, mock_indicator_registry):
+        """Different Indicators戦略でのロング・ショートバランス検証 (修正検証)"""
+        # 統計指標のみの場合
+        statistics_only = [
+            IndicatorGene(type="RSI", enabled=True),
+            IndicatorGene(type="STOCH", enabled=True),
+        ]
+
+        long_cond, short_cond, exit_cond = generator.generate_balanced_conditions(statistics_only)
+
+        print("\n=== 統計指標のみ生成テスト ===")
+        print(f"ロング条件数: {len(long_cond)}")
+        print(f"ショート条件数: {len(short_cond)}")
+
+        # 統計指標でもショート条件が生成されるようになったはず
+        assert len(long_cond) > 0, "統計指標でロング条件が生成されない"
+        assert len(short_cond) > 0, "統計指標でショート条件が生成されない"
+
+        # パターン指標のみの場合
+        pattern_only = [
+            IndicatorGene(type="CDL_HAMMER", enabled=True),
+            IndicatorGene(type="CDL_ENGULFING", enabled=True),
+        ]
+
+        long_cond, short_cond, exit_cond = generator.generate_balanced_conditions(pattern_only)
+
+        print("\n=== パターン指標のみ生成テスト ===")
+        print(f"ロング条件数: {len(long_cond)}")
+        print(f"ショート条件数: {len(short_cond)}")
+
+        # パターン指標でもショート条件が生成されるようになったはず
+        assert len(long_cond) > 0, "パターン指標でロング条件が生成されない"
+        assert len(short_cond) > 0, "パターン指標でショート条件が生成されない"
+
+        # 混合戦略テスト
+        mixed_indicators = [
+            IndicatorGene(type="RSI", enabled=True),    # STATISTICS (ショート生成)
+            IndicatorGene(type="SMA", enabled=True),    # TREND (ショート生成)
+            IndicatorGene(type="ROC", enabled=True),    # MOMENTUM (ショート生成)
+            IndicatorGene(type="CDL_HAMMER", enabled=True),  # PATTERN (ショート生成)
+        ]
+
+        long_cond, short_cond, exit_cond = generator.generate_balanced_conditions(mixed_indicators)
+
+        print("\n=== 混合指標生成テスト ===")
+        print(f"ロング条件数: {len(long_cond)}")
+        print(f"ショート条件数: {len(short_cond)}")
+
+        # 混合でもバランス良く生成される
+        assert len(long_cond) > 0 and len(short_cond) > 0, "混合指標でロング・ショート条件がバランス良く生成されない"
+        assert len(long_cond) >= 2, "混合指標でロング条件が十分に生成されない"
+        assert len(short_cond) >= 2, "混合指標でショート条件が十分に生成されない"

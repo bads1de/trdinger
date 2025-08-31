@@ -17,7 +17,7 @@ export const BaseBacktestConfigForm: React.FC<BaseBacktestConfigFormProps> = ({
   onConfigChange,
   isOptimization = false,
 }) => {
-  const symbolOptions = [{ value: "BTC/USDT", label: "BTC/USDT" }];
+  const symbolOptions = [{ value: "BTC/USDT:USDT", label: "BTC/USDT:USDT" }];
 
   return (
     <div className="space-y-4">

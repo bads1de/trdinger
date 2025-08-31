@@ -110,6 +110,7 @@ class ConditionGenerator:
 
             # 戦略タイプを選択
             strategy_type = self._select_strategy_type(indicators)
+            self.logger.info(f"生成戦略タイプ: {strategy_type.name}")
 
             # 選択された戦略に基づいて条件を生成
             if strategy_type == StrategyType.DIFFERENT_INDICATORS:
@@ -129,6 +130,10 @@ class ConditionGenerator:
                 )
             else:
                 longs, shorts, exits = self._generate_fallback_conditions()
+
+            self.logger.info(f"生成条件数 - ロング: {len(longs)}, ショート: {len(shorts)}, エグジット: {len(exits)}")
+            self.logger.debug(f"ロング条件詳細: {[c.left_operand if hasattr(c, 'left_operand') else str(c) for c in longs][:5]}")
+            self.logger.debug(f"ショート条件詳細: {[c.left_operand if hasattr(c, 'left_operand') else str(c) for c in shorts][:5]}")
 
             # 簡素化: 条件数を2個以内に制限
             if len(longs) > 2:
@@ -272,6 +277,7 @@ class ConditionGenerator:
         try:
             # 指標をタイプ別に分類（未特性化はレジストリから動的分類）
             indicators_by_type = self._dynamic_classify(indicators)
+            self.logger.debug(f"指標分類: {[f'{k.name}:{len(v)}' for k, v in indicators_by_type.items() if v]}")
 
             # トレンド系 + モメンタム系の組み合わせを優先
             long_conditions: List[Union[Condition, ConditionGroup]] = []
@@ -281,14 +287,17 @@ class ConditionGenerator:
             ml_indicators = [
                 ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
             ]
+            self.logger.debug(f"ML指標数: {len(ml_indicators)}")
 
             # 簡素化: 利用可能な指標タイプから1つずつ条件を生成
+            self.logger.debug("ロング条件生成開始")
             if indicators_by_type[IndicatorType.TREND]:
                 long_conditions.extend(
                     self._create_trend_long_conditions(
                         random.choice(indicators_by_type[IndicatorType.TREND])
                     )
                 )
+                self.logger.debug(f"トレンド指標からロング条件追加: {len(long_conditions)}")
 
             if indicators_by_type[IndicatorType.MOMENTUM]:
                 long_conditions.extend(
@@ -296,6 +305,7 @@ class ConditionGenerator:
                         random.choice(indicators_by_type[IndicatorType.MOMENTUM])
                     )
                 )
+                self.logger.debug(f"モメンタム指標からロング条件追加: {len(long_conditions)}")
 
             if indicators_by_type[IndicatorType.STATISTICS]:
                 long_conditions.extend(
@@ -303,18 +313,22 @@ class ConditionGenerator:
                         random.choice(indicators_by_type[IndicatorType.STATISTICS])
                     )
                 )
+                self.logger.debug(f"統計指標からロング条件追加: {len(long_conditions)}")
 
             # ML指標がある場合は追加
             if ml_indicators:
                 long_conditions.extend(self._create_ml_long_conditions(ml_indicators))
+                self.logger.debug(f"ML指標からロング条件追加: {len(long_conditions)}")
 
             # ショート条件の簡素化
+            self.logger.debug("ショート条件生成開始")
             if indicators_by_type[IndicatorType.TREND]:
                 short_conditions.extend(
                     self._create_trend_short_conditions(
                         random.choice(indicators_by_type[IndicatorType.TREND])
                     )
                 )
+                self.logger.debug(f"トレンド指標からショート条件追加: {len(short_conditions)}")
 
             if indicators_by_type[IndicatorType.MOMENTUM]:
                 short_conditions.extend(
@@ -322,6 +336,16 @@ class ConditionGenerator:
                         random.choice(indicators_by_type[IndicatorType.MOMENTUM])
                     )
                 )
+                self.logger.debug(f"モメンタム指標からショート条件追加: {len(short_conditions)}")
+
+            # 統計指標のショート条件を追加
+            if indicators_by_type[IndicatorType.STATISTICS]:
+                short_conditions.extend(
+                    self._create_statistics_short_conditions(
+                        random.choice(indicators_by_type[IndicatorType.STATISTICS])
+                    )
+                )
+                self.logger.debug(f"統計指標からショート条件追加: {len(short_conditions)}")
 
             # ML指標がある場合の対向条件
             if ml_indicators and len(ml_indicators) >= 2:
@@ -331,6 +355,15 @@ class ConditionGenerator:
                             left_operand="ML_DOWN_PROB", operator=">", right_operand=0.6
                         )
                     )
+
+            # パターン指標のショート条件を追加
+            if indicators_by_type[IndicatorType.PATTERN_RECOGNITION]:
+                short_conditions.extend(
+                    self._create_pattern_short_conditions(
+                        random.choice(indicators_by_type[IndicatorType.PATTERN_RECOGNITION])
+                    )
+                )
+                self.logger.debug(f"パターン指標からショート条件追加: {len(short_conditions)}")
 
             # 最低条件数の保証（簡素化）
             if not long_conditions:
@@ -849,3 +882,73 @@ class ConditionGenerator:
         except Exception as e:
             self.logger.error(f"YAMLテストエラー: {e}")
             return {"error": str(e)}
+
+
+def run_diagnostic():
+    """ロング・ショートバランス診断実行"""
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+
+    print("="*60)
+    print("ConditionGenerator ロング・ショートバランス診断")
+    print("="*60)
+
+    generator = ConditionGenerator(enable_smart_generation=True)
+
+    # 診断ケース実行
+    test_cases = [
+        ("統計指標 (RSI/STOCH)", [
+            IndicatorGene(type="RSI", enabled=True),
+            IndicatorGene(type="STOCH", enabled=True),
+        ]),
+        ("パターン指標 (CDLシリーズ)", [
+            IndicatorGene(type="CDL_HAMMER", enabled=True),
+            IndicatorGene(type="CDL_ENGULFING", enabled=True),
+        ]),
+        ("トレンド指標 (SMA/EMA)", [
+            IndicatorGene(type="SMA", enabled=True),
+            IndicatorGene(type="EMA", enabled=True),
+        ]),
+        ("モメンタム指標 (ROC/MFI)", [
+            IndicatorGene(type="ROC", enabled=True),
+            IndicatorGene(type="MFI", enabled=True),
+        ]),
+        ("混合指標 (RSI+SMA+ROC)", [
+            IndicatorGene(type="RSI", enabled=True),
+            IndicatorGene(type="SMA", enabled=True),
+            IndicatorGene(type="ROC", enabled=True),
+        ]),
+    ]
+
+    for name, indicators in test_cases:
+        print(f"\n{name} テスト:")
+        print("-"*40)
+
+        try:
+            long_conds, short_conds, exit_conds = generator.generate_balanced_conditions(indicators)
+
+            print(f"ロング条件数: {len(long_conds)}")
+            print(f"ショート条件数: {len(short_conds)}")
+            print(f"エグジット条件数: {len(exit_conds)}")
+
+            # 戦略タイプ確認
+            strategy_type = generator._select_strategy_type(indicators)
+            print(f"選択戦略: {strategy_type.name}")
+
+            # 問題検出
+            if len(long_conds) > 0 and len(short_conds) == 0:
+                print("⚠️  CRITICAL: ショート条件が生成されていない!")
+            elif len(long_conds) == 0 and len(short_conds) == 0:
+                print("❌ ERROR: 両方の条件が生成されていない")
+            elif len(long_conds) > 0 and len(short_conds) > 0:
+                print("✅ OK: ロング・ショート条件がバランスよく生成")
+
+            # 指標分類表示
+            categorized = generator._dynamic_classify(indicators)
+            print(f"指標分類: " + ", ".join([f"{k.name}:{len(v)}" for k, v in categorized.items() if v]))
+
+        except Exception as e:
+            print(f"❌ テスト失敗: {e}")
+
+    print("\n" + "="*60)
+    print("診断完了")

@@ -17,7 +17,6 @@ from app.utils.error_handler import (
 )
 from database.connection import get_db
 from app.config.unified_config import unified_config
-from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,6 @@ class BybitService(ABC):
             }
         )
 
-    # normalize_symbol method removed - using SymbolNormalizationService instead
 
     def _validate_symbol(self, symbol: str) -> None:
         """
@@ -533,21 +531,21 @@ class BybitService(ABC):
         Returns:
             差分更新結果を含む辞書
         """
-        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, provider="bybit")
-
         # データベースから最新タイムスタンプを取得
         latest_timestamp = await self._get_latest_timestamp_from_db(
             repository_class=config.repository_class,
             get_timestamp_method_name=config.get_timestamp_method_name,
-            symbol=normalized_symbol,
+            symbol=symbol,
         )
 
         # 履歴取得メソッドを取得
+        # シンボルを正規化
+        normalized_symbol = symbol if ":" in symbol else f"{symbol}:USDT" if symbol.endswith("/USDT") else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
         fetch_history_method = getattr(self.exchange, config.fetch_history_method_name)
 
         if latest_timestamp:
             logger.info(
-                f"{config.log_prefix}差分データ収集開始: {normalized_symbol} (since: {latest_timestamp})"
+                f"{config.log_prefix}差分データ収集開始: {symbol} (since: {latest_timestamp})"
             )
             # 最新タイムスタンプより新しいデータを取得
             if config.fetch_history_method_name == "fetch_open_interest_history":
@@ -565,7 +563,7 @@ class BybitService(ABC):
                 history_data = await self._handle_ccxt_errors(
                     f"{config.log_prefix}差分履歴取得",
                     fetch_history_method,
-                    normalized_symbol,
+                    symbol,
                     latest_timestamp,
                     1000,
                     kwargs,
@@ -576,14 +574,14 @@ class BybitService(ABC):
                 item for item in history_data if item["timestamp"] > latest_timestamp
             ]
         else:
-            logger.info(f"{config.log_prefix}初回データ収集開始: {normalized_symbol}")
+            logger.info(f"{config.log_prefix}初回データ収集開始: {symbol}")
             # データがない場合は最新データを取得
             if config.fetch_history_method_name == "fetch_open_interest_history":
                 interval = kwargs.get("intervalTime", "1h")
                 history_data = await self._handle_ccxt_errors(
                     f"{config.log_prefix}初回履歴取得",
                     fetch_history_method,
-                    normalized_symbol,
+                    symbol,
                     interval,  # timeframe
                     None,  # since
                     config.default_limit,
@@ -640,14 +638,14 @@ class BybitService(ABC):
         Returns:
             取得・保存結果を含む辞書
         """
-        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, provider="bybit")
-
+        # シンボルを正規化
+        normalized_symbol = symbol if ":" in symbol else f"{symbol}:USDT" if symbol.endswith("/USDT") else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
         if fetch_all:
             # 全期間データを取得
             latest_timestamp = await self._get_latest_timestamp_from_db(
                 repository_class=config.repository_class,
                 get_timestamp_method_name=config.get_timestamp_method_name,
-                symbol=normalized_symbol,
+                symbol=symbol,
             )
 
             fetch_history_method = getattr(
@@ -733,7 +731,7 @@ class BybitService(ABC):
         converter_method = getattr(
             config.data_converter_class, config.converter_method_name
         )
-        records = converter_method(history_data, SymbolNormalizationService.normalize_symbol(symbol, provider="bybit"))
+        records = converter_method(history_data, symbol)
 
         logger.info(f"データ変換完了: {len(records)}件のレコードをDB挿入開始...")
 

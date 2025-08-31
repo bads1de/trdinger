@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import get_funding_rate_config
 from database.repositories.funding_rate_repository import FundingRateRepository
-from app.utils.normalization_service import SymbolNormalizationService
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ class BybitFundingRateService(BybitService):
         Returns:
             現在のファンディングレートデータ
         """
-        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, "bybit")
+        normalized_symbol = symbol
         return await self._handle_ccxt_errors(
             f"現在のファンディングレート取得: {normalized_symbol}",
             self.exchange.fetch_funding_rate,
@@ -69,7 +68,7 @@ class BybitFundingRateService(BybitService):
             ファンディングレート履歴データのリスト
         """
         self._validate_parameters(symbol, limit)
-        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, "bybit")
+        normalized_symbol = symbol
         return await self._handle_ccxt_errors(
             f"ファンディングレート履歴取得: {normalized_symbol}, limit={limit}",
             self.exchange.fetch_funding_rate_history,
@@ -88,7 +87,7 @@ class BybitFundingRateService(BybitService):
         Returns:
             全期間のファンディングレート履歴データのリスト
         """
-        normalized_symbol = SymbolNormalizationService.normalize_symbol(symbol, "bybit")
+        normalized_symbol = symbol
         latest_timestamp = await self._get_latest_timestamp_from_db(
             repository_class=self.config.repository_class,
             get_timestamp_method_name=self.config.get_timestamp_method_name,

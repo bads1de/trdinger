@@ -12,9 +12,7 @@ from fastapi import BackgroundTasks
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
-from app.utils.normalization_service import (
-    normalize_symbol as normalize_symbol_unified,
-)
+from ..config.constants import DEFAULT_SYMBOL
 
 from .experiment_manager import ExperimentManager
 from ..config import GAConfig, get_default_config
@@ -128,11 +126,9 @@ class AutoStrategyService:
 
         ga_config = _validate_ga_config()
 
-        # 2. バックテスト設定のシンボル正規化
+        # 2. バックテスト設定のシンボル設定
         backtest_config = backtest_config_dict.copy()
-        backtest_config["symbol"] = normalize_symbol_unified(
-            backtest_config.get("symbol"), "generic"
-        )
+        backtest_config["symbol"] = backtest_config.get("symbol", DEFAULT_SYMBOL)
 
         # 3. 実験を作成（統合版）
         # フロントエンドから送信されたexperiment_idを使用
@@ -357,11 +353,9 @@ class AutoStrategyService:
                 request.strategy_gene, StrategyGene
             )
 
-            # バックテスト設定の正規化
+            # バックテスト設定の設定
             backtest_config = request.backtest_config.copy()
-            backtest_config["symbol"] = normalize_symbol_unified(
-                backtest_config.get("symbol"), "generic"
-            )
+            backtest_config["symbol"] = backtest_config.get("symbol", DEFAULT_SYMBOL)
 
             # 戦略遺伝子からバックテスト設定を作成
             from ..generators.strategy_factory import StrategyFactory

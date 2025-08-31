@@ -42,7 +42,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   const [config, setConfig] = useState<GAConfigType>(() => {
     const baseBacktestConfig: BacktestConfigType = {
       strategy_name: "GA_STRATEGY",
-      symbol: "BTC/USDT",
+      symbol: "BTC/USDT:USDT",
       timeframe: "1h",
       start_date: "2020-01-01",
       end_date: "2020-12-31",

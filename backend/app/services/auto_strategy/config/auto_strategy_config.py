@@ -741,6 +741,52 @@ class GAConfig(BaseConfig):
     # 参照設定（AutoStrategyConfig統合用）
     auto_strategy_config: Optional[AutoStrategyConfig] = None
 
+    # 基本GA設定
+    population_size: int = GA_DEFAULT_CONFIG["population_size"]
+    generations: int = GA_DEFAULT_CONFIG["generations"]
+    crossover_rate: float = GA_DEFAULT_CONFIG["crossover_rate"]
+    mutation_rate: float = GA_DEFAULT_CONFIG["mutation_rate"]
+    elite_size: int = GA_DEFAULT_CONFIG["elite_size"]
+    max_indicators: int = GA_DEFAULT_CONFIG["max_indicators"]
+
+    # 戦略生成制約
+    min_indicators: int = 1
+    min_conditions: int = 1
+    max_conditions: int = 3
+
+    # パラメータ範囲
+    parameter_ranges: Dict[str, List] = field(
+        default_factory=lambda: GA_PARAMETER_RANGES.copy()
+    )
+    threshold_ranges: Dict[str, List[float]] = field(
+        default_factory=lambda: GA_THRESHOLD_RANGES.copy()
+    )
+
+    # フィットネス設定
+    fitness_weights: Dict[str, float] = field(
+        default_factory=lambda: DEFAULT_FITNESS_WEIGHTS.copy()
+    )
+    fitness_constraints: Dict[str, Any] = field(
+        default_factory=lambda: DEFAULT_FITNESS_CONSTRAINTS.copy()
+    )
+
+    # フィットネス共有設定
+    fitness_sharing: Dict[str, Any] = field(
+        default_factory=lambda: GA_DEFAULT_FITNESS_SHARING.copy()
+    )
+    enable_fitness_sharing: bool = GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
+    sharing_radius: float = GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
+    sharing_alpha: float = GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
+
+    # 多目的最適化設定
+    enable_multi_objective: bool = False
+    objectives: List[str] = field(
+        default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy()
+    )
+    objective_weights: List[float] = field(
+        default_factory=lambda: DEFAULT_GA_OBJECTIVE_WEIGHTS.copy()
+    )
+
     # 評価設定拡張（単一目的最適化用）
     primary_metric: str = "sharpe_ratio"
 
