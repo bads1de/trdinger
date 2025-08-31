@@ -56,11 +56,11 @@ def test_strategy_condition_balance():
             ]
         },
         {
-            "name": "統計指標含む",
+            "name": "追加指標含む",
             "indicators": [
                 IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True),
-                IndicatorGene(type="CORREL", parameters={}, enabled=True),
+                IndicatorGene(type="MACD", parameters={}, enabled=True),
             ]
         },
         {

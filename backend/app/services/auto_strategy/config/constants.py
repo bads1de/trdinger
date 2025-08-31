@@ -15,7 +15,6 @@ class IndicatorType(str, Enum):
     MOMENTUM = "momentum"  # モメンタム系
     TREND = "trend"  # トレンド系
     VOLATILITY = "volatility"  # ボラティリティ系
-    STATISTICS = "statistics"  # 統計系
     PATTERN_RECOGNITION = "pattern_recognition"  # パターン認識系
 
 
@@ -174,7 +173,6 @@ TREND_INDICATORS = [
     "MIDPOINT",  # 期間中間点 (MidPoint over period)
     "MIDPRICE",  # 期間中間価格 (MidPrice over period)
     "SAR",  # パラボリックSAR (Parabolic SAR)
-    "HT_TRENDLINE",  # ヒルベルト変換即時トレンドライン (Hilbert Transform Instantaneous Trendline)
     "PRICE_EMA_RATIO",  # 価格-EMA比率 (Price to EMA Ratio)
     "SMA_SLOPE",  # SMA勾配 (SMA Slope)
     "VWMA",  # 出来高加重移動平均線 (Volume Weighted Moving Average)
@@ -212,30 +210,8 @@ VOLATILITY_INDICATORS = [
     "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
 ]
 
-# 統計系指標
-STATISTICS_INDICATORS = [
-    "BETA",  # ベータ係数 (Beta)
-    "CORREL",  # 相関係数 (Correlation)
-    "LINEARREG",  # 線形回帰 (Linear Regression)
-    "LINEARREG_ANGLE",  # 線形回帰角度 (Linear Regression Angle)
-    "LINEARREG_INTERCEPT",  # 線形回帰切片 (Linear Regression Intercept)
-    "LINEARREG_SLOPE",  # 線形回帰傾き (Linear Regression Slope)
-    "STDDEV",  # 標準偏差 (Standard Deviation)
-    "TSF",  # 時系列予測 (Time Series Forecast)
-    "VAR",  # 分散 (Variance)
-    "ZSCORE",  # Zスコア (Z-Score)
-    "ENTROPY",  # エントロピー (Entropy)
-    "KURTOSIS",  # 歪度 (Kurtosis)
-    "MAD",  # 平均絶対偏差 (Mean Absolute Deviation)
-    "MEDIAN",  # 中央値 (Median)
-    "QUANTILE",  # 分位数 (Quantile)
-    "SKEW",  # 歪度 (Skewness)
-    "TOS_STDEVALL",  # 全標準偏差 (Standard Deviation All)
-    "MAXINDEX",  # 最大値インデックス (Max Index)
-    "MININDEX",  # 最小値インデックス (Min Index)
-    "MINMAX",  # 最小最大値 (Min Max)
-    "MINMAXINDEX",  # 最小最大値インデックス (Min Max Index)
-]
+# 統計系指標（削除済み）
+STATISTICS_INDICATORS = []
 
 # パターン認識系指標
 PATTERN_RECOGNITION_INDICATORS = [
@@ -259,15 +235,6 @@ PATTERN_RECOGNITION_INDICATORS = [
     "EVENING_STAR",  # 弱気転換の夕方の明星パターン (Evening Star)
 ]
 
-# Hilbert Transform系指標
-HILBERT_TRANSFORM_INDICATORS = [
-    "HT_DCPERIOD",  # ヒルベルト変換周期スイング連続時間 (Hilbert Transform Dominant Cycle Period)
-    "HT_DCPHASE",  # ヒルベルト変換周期位相 (Hilbert Transform Dominant Cycle Phase)
-    "HT_PHASOR",  # ヒルベルト変換フェイサー (Hilbert Transform Phasor)
-    "HT_SINE",  # ヒルベルト変換正弦波 (Hilbert Transform Sine Wave)
-    "HT_TRENDMODE",  # ヒルベルト変換トレンドモード (Hilbert Transform Trendline)
-]
-
 # 複合指標
 COMPOSITE_INDICATORS = [
     "ICHIMOKU",  # 一目均衡表 (Ichimoku Kinko Hyo)
@@ -283,7 +250,6 @@ VALID_INDICATOR_TYPES = (
     + VOLATILITY_INDICATORS
     + STATISTICS_INDICATORS
     + PATTERN_RECOGNITION_INDICATORS
-    + HILBERT_TRANSFORM_INDICATORS
     + COMPOSITE_INDICATORS
 )
 
@@ -299,16 +265,13 @@ CURATED_TECHNICAL_INDICATORS = {
     # トレンド系（移動平均等）
     "SMA", "EMA", "WMA", "TRIMA", "KAMA", "TEMA", "DEMA", "ALMA",
     "T3", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA",
-    "JMA", "MCGD", "VIDYA", "SAR", "HT_TRENDLINE",
+    "JMA", "MCGD", "VIDYA", "SAR",
 
     # ボラティリティ系
     "ATR", "BBANDS", "DONCHIAN", "KELTNER", "SUPERTREND", "NATR", "TRANGE",
     "ACCBANDS", "ABERRATION", "HWC", "MASSI", "PDIST", "THERMO",
 
-    # 統計系
-    "BETA", "CORREL", "STDDEV", "VAR", "LINEARREG", "LINEARREG_ANGLE",
-    "LINEARREG_INTERCEPT", "LINEARREG_SLOPE", "TSF", "ZSCORE", "MEDIAN",
-    "QUANTILE", "ENTROPY", "KURTOSIS", "MAD", "SKEW",
+    # 統計系（削除済み）
 
     # パターン認識系
     "CDL_DOJI", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_SHOOTING_STAR",
@@ -636,57 +599,6 @@ INDICATOR_CHARACTERISTICS = {
     "ATR": {
         "type": "volatility",
         "range": (0, None),
-        "volatility_measure": True,
-    },
-    "BETA": {
-        "type": "statistics",
-        "range": (-2, 2),  # 一般的なベータ値範囲
-        "correlation_measure": True,
-        "zero_cross": True,
-    },
-    "CORREL": {
-        "type": "statistics",
-        "range": (-1, 1),  # 相関係数
-        "correlation_measure": True,
-        "zero_cross": True,
-    },
-    "LINEARREG": {
-        "type": "statistics",
-        "range": None,  # 価格依存
-        "price_comparison": True,
-        "trend_following": True,
-    },
-    "LINEARREG_ANGLE": {
-        "type": "statistics",
-        "range": (-90, 90),  # 角度
-        "zero_cross": True,
-        "trend_strength": True,
-    },
-    "LINEARREG_INTERCEPT": {
-        "type": "statistics",
-        "range": None,  # 価格依存
-        "price_comparison": True,
-    },
-    "LINEARREG_SLOPE": {
-        "type": "statistics",
-        "range": None,  # 価格変化率依存
-        "zero_cross": True,
-        "trend_strength": True,
-    },
-    "STDDEV": {
-        "type": "statistics",
-        "range": (0, None),  # 常に正値
-        "volatility_measure": True,
-    },
-    "TSF": {
-        "type": "statistics",
-        "range": None,  # 価格依存
-        "price_comparison": True,
-        "trend_following": True,
-    },
-    "VAR": {
-        "type": "statistics",
-        "range": (0, None),  # 常に正値
         "volatility_measure": True,
     },
     "CDL_DOJI": {

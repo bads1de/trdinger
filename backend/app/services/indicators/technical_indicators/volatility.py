@@ -294,14 +294,17 @@ class VolatilityIndicators:
     @handle_pandas_ta_errors
     def hwc(
         close: Union[np.ndarray, pd.Series],
-        na: float = 0.2,
-        nb: float = 0.1,
-        nc: float = 3.0,
-        nd: float = 0.3,
-        scalar: float = 2.0,
+        **kwargs
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Holt-Winter Channel: returns (upper, middle, lower)"""
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
+
+        # Extract parameters from kwargs (needed for parameter compatibility)
+        na = kwargs.get('na', 0.2)
+        nb = kwargs.get('nb', 0.1)
+        nc = kwargs.get('nc', 3.0)
+        nd = kwargs.get('nd', 0.3)
+        scalar = kwargs.get('scalar', 2.0)
 
         result = ta.hwc(close=close_series, na=na, nb=nb, nc=nc, nd=nd, scalar=scalar)
         if result is None:

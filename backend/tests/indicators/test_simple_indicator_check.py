@@ -112,6 +112,57 @@ def test_rsi_indicator():
         return False
 
 
+def test_hlc3_indicator():
+    """HLC3インジケータのテスト"""
+    from app.services.indicators.indicator_orchestrator import TechnicalIndicatorService
+
+    df = test_sample_data_creation()
+    service = TechnicalIndicatorService()
+
+    try:
+        result = service.calculate_indicator(df, "HLC3", {})
+
+        if result is not None:
+            print("HLC3 calculation successful")
+            assert isinstance(result, np.ndarray)
+            assert len(result) == len(df)
+            return True
+        else:
+            print("HLC3 calculation returned None")
+            return False
+
+    except Exception as e:
+        print(f"HLC3 calculation failed: {e}")
+        return False
+
+
+def test_vp_indicator():
+    """VPインジケータのテスト"""
+    from app.services.indicators.indicator_orchestrator import TechnicalIndicatorService
+
+    df = test_sample_data_creation()
+    service = TechnicalIndicatorService()
+
+    try:
+        result = service.calculate_indicator(df, "VP", {"width": 10})
+
+        if result is not None:
+            print("VP calculation successful")
+            assert isinstance(result, tuple)
+            assert len(result) == 6  # VP returns 6 arrays
+            for arr in result:
+                assert isinstance(arr, np.ndarray)
+                assert len(arr) == len(df)
+            return True
+        else:
+            print("VP calculation returned None")
+            return False
+
+    except Exception as e:
+        print(f"VP calculation failed: {e}")
+        return False
+
+
 if __name__ == "__main__":
     print("Running indicator tests...")
 
@@ -119,6 +170,8 @@ if __name__ == "__main__":
         test_basic_indicator_service()
         test_stc_indicator()
         test_rsi_indicator()
+        test_hlc3_indicator()
+        test_vp_indicator()
         print("All tests completed successfully!")
 
     except Exception as e:

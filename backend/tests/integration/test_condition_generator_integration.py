@@ -59,7 +59,7 @@ class TestConditionGeneratorIntegration:
             IndicatorGene(type="RSI", enabled=True, parameters={"period": 14}),
             IndicatorGene(type="SMA", enabled=True, parameters={"period": 20}),
             IndicatorGene(type="MACD", enabled=True, parameters={"fast": 12, "slow": 26}),
-            IndicatorGene(type="CORREL", enabled=True, parameters={"period": 20}),
+            # IndicatorGene(type="CORREL", enabled=True, parameters={"period": 20}),  # 統計指標は削除済み
             IndicatorGene(type="CDL_HAMMER", enabled=True, parameters={}),
         ]
 
@@ -113,16 +113,16 @@ class TestConditionGeneratorIntegration:
         assert long_conditions[0].operator == "<"
         assert long_conditions[0].right_operand == 35  # RSI売られすぎ（デフォルトbase=60, 60-25=35）
 
-    def test_statistics_conditions(self, generator):
-        """統計条件生成テスト"""
-        stats_gene = IndicatorGene(type="CORREL", enabled=True, parameters={"period": 20})
-
-        # Test long condition
-        long_conditions = generator._create_statistics_long_conditions(stats_gene)
-        assert len(long_conditions) > 0
-        assert long_conditions[0].left_operand == "CORREL"
-        assert long_conditions[0].operator == ">"
-        assert isinstance(long_conditions[0].right_operand, float)
+    # def test_statistics_conditions(self, generator):
+    #     """統計条件生成テスト - 統計指標は削除済み"""
+    #     stats_gene = IndicatorGene(type="CORREL", enabled=True, parameters={"period": 20})
+    #
+    #     # Test long condition
+    #     long_conditions = generator._create_statistics_long_conditions(stats_gene)
+    #     assert len(long_conditions) > 0
+    #     assert long_conditions[0].left_operand == "CORREL"
+    #     assert long_conditions[0].operator == ">"
+    #     assert isinstance(long_conditions[0].right_operand, float)
 
     def test_pattern_conditions(self, generator):
         """パターン認識条件生成テスト"""
@@ -185,7 +185,7 @@ class TestConditionGeneratorIntegration:
         # Check categorization
         assert IndicatorType.MOMENTUM in categorized
         assert IndicatorType.TREND in categorized
-        assert IndicatorType.STATISTICS in categorized
+        # assert IndicatorType.STATISTICS in categorized  # 統計指標は削除済み
         assert IndicatorType.PATTERN_RECOGNITION in categorized
 
         # RSI should be in momentum
@@ -243,22 +243,22 @@ class TestConditionGeneratorIntegration:
         assert total_categorized == 0
 
     def test_long_short_balance_different_indicators_strategy(self, generator, mock_indicator_registry):
-        """Different Indicators戦略でのロング・ショートバランス検証 (修正検証)"""
-        # 統計指標のみの場合
-        statistics_only = [
+        """Different Indicators戦略でのロング・ショートバランス検証 (修正検証、統計指標は除外)"""
+        # モメンタム指標のみの場合（統計指標は削除済み）
+        momentum_only = [
             IndicatorGene(type="RSI", enabled=True),
             IndicatorGene(type="STOCH", enabled=True),
         ]
 
-        long_cond, short_cond, exit_cond = generator.generate_balanced_conditions(statistics_only)
+        long_cond, short_cond, exit_cond = generator.generate_balanced_conditions(momentum_only)
 
-        print("\n=== 統計指標のみ生成テスト ===")
+        print("\n=== モメンタム指標のみ生成テスト ===")
         print(f"ロング条件数: {len(long_cond)}")
         print(f"ショート条件数: {len(short_cond)}")
 
-        # 統計指標でもショート条件が生成されるようになったはず
-        assert len(long_cond) > 0, "統計指標でロング条件が生成されない"
-        assert len(short_cond) > 0, "統計指標でショート条件が生成されない"
+        # モメンタム指標でもショート条件が生成される
+        assert len(long_cond) > 0, "モメンタム指標でロング条件が生成されない"
+        assert len(short_cond) > 0, "モメンタム指標でショート条件が生成されない"
 
         # パターン指標のみの場合
         pattern_only = [
@@ -278,7 +278,7 @@ class TestConditionGeneratorIntegration:
 
         # 混合戦略テスト
         mixed_indicators = [
-            IndicatorGene(type="RSI", enabled=True),    # STATISTICS (ショート生成)
+            IndicatorGene(type="RSI", enabled=True),    # MOMENTUM (ショート生成)
             IndicatorGene(type="SMA", enabled=True),    # TREND (ショート生成)
             IndicatorGene(type="ROC", enabled=True),    # MOMENTUM (ショート生成)
             IndicatorGene(type="CDL_HAMMER", enabled=True),  # PATTERN (ショート生成)

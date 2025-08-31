@@ -177,13 +177,13 @@ def analyze_indicator_failures():
                 result = service.calculate_indicator(df.copy(), indicator_name, params)
 
                 if result is not None:
-                    print("   計算結果: ✅ 成功"                    success_count += 1
+                    print("   計算結果: ✅ 成功\n"                    success_count += 1
                     test_results[indicator_name] = {
                         'status': 'success',
                         'result_info': result.info if hasattr(result, 'info') else 'No info'
                     }
                 else:
-                    print("   計算結果: ❌ 失敗 (結果がNone)"                    failure_count += 1
+                    print("   計算結果: ❌ 失敗 (結果がNone)\n"                    failure_count += 1
                     test_results[indicator_name] = {'status': 'calc_failed', 'error': '計算失敗 (None結果)'}
 
             except Exception as e:

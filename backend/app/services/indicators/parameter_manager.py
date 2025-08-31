@@ -26,6 +26,9 @@ NO_LENGTH_INDICATORS = {
     "ADOSC",
     "AO",
     "ICHIMOKU",
+    "PVT",
+    "PVOL",
+    "PVR",
     "PPO",
     "APO",
     "ULTOSC",
@@ -91,6 +94,14 @@ NO_LENGTH_INDICATORS = {
     "HT_SINE",
     "HT_TRENDMODE",
     "WCP",
+    "HLC3",
+    "HL2",
+    "OHLC4",
+    "VP",
+    "AOBV",
+    "HWC",
+    "WCP",
+    "HT_TRENDLINE",
 }
 
 
@@ -294,6 +305,11 @@ def normalize_params(
         "RSI_EMA_CROSS": {
             "param_map": {"close": "data"},
         },
+        # VP: period -> width, lengthパラメータを除外
+        "VP": {
+            "param_map": {"period": "width"},
+            "exclude_params": {"length"},
+        },
     }
 
     # 特殊処理が必要な指標の場合
@@ -330,7 +346,7 @@ def normalize_params(
         return converted_params
 
     # パラメータを一切受け取らない指標（ボリューム系指標）
-    volume_indicators = {"NVI", "PVI", "PVT", "AD"}
+    volume_indicators = {"NVI", "PVI", "PVT", "AD", "PVR"}
     if indicator_type in volume_indicators:
         # period や length などのパラメータを除外
         for key, value in params.items():

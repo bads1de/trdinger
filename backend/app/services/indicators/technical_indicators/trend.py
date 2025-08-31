@@ -12,7 +12,6 @@
 - T3 (Tillson's T3 Moving Average)
 - SAR (Parabolic SAR)
 - SAREXT (Extended Parabolic SAR)
-- HT_TRENDLINE (Hilbert Transform - Instantaneous Trendline)
 - MA (Moving Average with Type)
 - MAVP (Moving Average Variable Period)
 - MIDPOINT (MidPoint over period)
@@ -42,12 +41,20 @@
 """
 
 from typing import Union, Tuple
+import warnings
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
 from ..utils import handle_pandas_ta_errors
+
+# PandasのSeries位置アクセス警告を抑制 (pandas-taとの互換性のため)
+warnings.filterwarnings(
+    "ignore",
+    message="Series.__getitem__ treating keys as positions is deprecated",
+    category=FutureWarning,
+)
 
 
 class TrendIndicators:
@@ -93,10 +100,15 @@ class TrendIndicators:
             result = ta.ema(series, length=length)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
-                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                result_values = (
+                    result.values if hasattr(result, "values") else np.array(result)
+                )
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length - 1
-                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                if (
+                    start_idx < len(result_values)
+                    and not np.isnan(result_values[start_idx:]).all()
+                ):
                     return result_values
         except Exception:
             pass
@@ -115,16 +127,26 @@ class TrendIndicators:
             ema_values[i] = alpha * series.iloc[i] + (1 - alpha) * ema_values[i - 1]
 
         return ema_values
+
     @staticmethod
     @handle_pandas_ta_errors
-    def ppo(data: Union[np.ndarray, pd.Series], fast: int = 12, slow: int = 26, signal: int = 9):
+    def ppo(
+        data: Union[np.ndarray, pd.Series],
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9,
+    ):
         """Percentage Price Oscillator with pandas-ta fallback"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
 
         try:
             result = ta.ppo(series, fast=fast, slow=slow, signal=signal)
             if result is not None and not result.empty:
-                return result.iloc[:, 0].values, result.iloc[:, 1].values, result.iloc[:, 2].values
+                return (
+                    result.iloc[:, 0].values,
+                    result.iloc[:, 1].values,
+                    result.iloc[:, 2].values,
+                )
         except Exception:
             pass
 
@@ -149,7 +171,7 @@ class TrendIndicators:
         low: Union[np.ndarray, pd.Series],
         close: Union[np.ndarray, pd.Series],
         length: int = 14,
-        fast_length: int = 3
+        fast_length: int = 3,
     ):
         """Stochastic Fast with pandas-ta fallback"""
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
@@ -162,7 +184,7 @@ class TrendIndicators:
                 low=low_series,
                 close=close_series,
                 fastk_length=fast_length,
-                fastd_length=length
+                fastd_length=length,
             )
             if result is not None and not result.empty:
                 return result.iloc[:, 0].values, result.iloc[:, 1].values
@@ -170,7 +192,11 @@ class TrendIndicators:
             pass
 
         # フォールバック実装 (シンプルなストキャスティクス計算)
-        raw_k = 100 * (close_series - low_series.rolling(length).min()) / (high_series.rolling(length).max() - low_series.rolling(length).min())
+        raw_k = (
+            100
+            * (close_series - low_series.rolling(length).min())
+            / (high_series.rolling(length).max() - low_series.rolling(length).min())
+        )
         fast_k = raw_k.rolling(fast_length).mean()
 
         return fast_k.values, fast_k.values
@@ -182,17 +208,25 @@ class TrendIndicators:
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
 
         # 第一優先: pandas-ta
+
     @staticmethod
     @handle_pandas_ta_errors
-    def stc(data: Union[np.ndarray, pd.Series], length: int = 10, fast_length: int = 23, slow_length: int = 50):
+    def stc(
+        data: Union[np.ndarray, pd.Series],
+        length: int = 10,
+        fast_length: int = 23,
+        slow_length: int = 50,
+    ):
         """Schaff Trend Cycle with pandas-ta fallback"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
 
         # 第一優先: pandas-ta
         try:
-            result = ta.stc(series, length=length, fastLength=fast_length, slowLength=slow_length)
+            result = ta.stc(
+                series, length=length, fastLength=fast_length, slowLength=slow_length
+            )
             if result is not None and not result.isna().all():
-                return result.values if hasattr(result, 'values') else np.array(result)
+                return result.values if hasattr(result, "values") else np.array(result)
         except Exception:
             pass
 
@@ -218,11 +252,18 @@ class TrendIndicators:
             # 基本的なサイクル計算 (簡易: MACDのノーマライズ)
             if len(macd) >= valid_start + length:
                 # MACDのグサイクルをトレンドサイクルに変換
-                cycle = ((macd - macd.rolling(slow_length).min()) /
-                        (macd.rolling(slow_length).max() - macd.rolling(slow_length).min())) * 100
+                cycle = (
+                    (macd - macd.rolling(slow_length).min())
+                    / (
+                        macd.rolling(slow_length).max()
+                        - macd.rolling(slow_length).min()
+                    )
+                ) * 100
 
                 # 最終的なSTC値
-                stc_values[valid_start:] = TrendIndicators.ema(cycle[valid_start:], length)
+                stc_values[valid_start:] = TrendIndicators.ema(
+                    cycle[valid_start:], length
+                )
 
             return stc_values
 
@@ -232,10 +273,15 @@ class TrendIndicators:
             result = ta.tema(series, length=length)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
-                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                result_values = (
+                    result.values if hasattr(result, "values") else np.array(result)
+                )
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length * 3 - 1
-                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                if (
+                    start_idx < len(result_values)
+                    and not np.isnan(result_values[start_idx:]).all()
+                ):
                     return result_values
         except Exception:
             pass
@@ -257,7 +303,11 @@ class TrendIndicators:
         # TEMA = 3*EMA1 - 3*EMA2 + EMA3
         tema_values = 3 * ema1_series - 3 * ema2_series + ema3_series
 
-        return tema_values.values if hasattr(tema_values, 'values') else np.array(tema_values)
+        return (
+            tema_values.values
+            if hasattr(tema_values, "values")
+            else np.array(tema_values)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -270,10 +320,15 @@ class TrendIndicators:
             result = ta.dema(series, length=length)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
-                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                result_values = (
+                    result.values if hasattr(result, "values") else np.array(result)
+                )
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length * 2 - 1
-                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                if (
+                    start_idx < len(result_values)
+                    and not np.isnan(result_values[start_idx:]).all()
+                ):
                     return result_values
         except Exception:
             pass
@@ -292,7 +347,11 @@ class TrendIndicators:
         # DEMA = 2*EMA1 - EMA2
         dema_values = 2 * ema1_series - ema2_series
 
-        return dema_values.values if hasattr(dema_values, 'values') else np.array(dema_values)
+        return (
+            dema_values.values
+            if hasattr(dema_values, "values")
+            else np.array(dema_values)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -403,15 +462,6 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def ht_trendline(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
-        """Hilbert Transform - Instantaneous Trendline"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
-
-        # pandas-taにht_trendlineがあれば使用、なければEMAで代替
-        if hasattr(ta, "ht_trendline"):
-            return ta.ht_trendline(series).values
-        else:
-            return TrendIndicators.ema(series, length=3)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -518,10 +568,15 @@ class TrendIndicators:
             result = ta.hma(series, length=length)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
-                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                result_values = (
+                    result.values if hasattr(result, "values") else np.array(result)
+                )
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = int(length * 1.5) - 1  # HMAはより多くのデータを必要とする
-                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                if (
+                    start_idx < len(result_values)
+                    and not np.isnan(result_values[start_idx:]).all()
+                ):
                     return result_values
         except Exception:
             pass
@@ -537,6 +592,7 @@ class TrendIndicators:
         # 4. 結果を sqrt(n)でWMA
 
         import math
+
         hma_length = int(length / 2)
         sqrt_length = int(math.floor(math.sqrt(length)))
 
@@ -615,10 +671,15 @@ class TrendIndicators:
             result = ta.swma(series, length=length)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
-                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                result_values = (
+                    result.values if hasattr(result, "values") else np.array(result)
+                )
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length - 1
-                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                if (
+                    start_idx < len(result_values)
+                    and not np.isnan(result_values[start_idx:]).all()
+                ):
                     return result_values
         except Exception:
             pass
@@ -631,15 +692,17 @@ class TrendIndicators:
         swma_values = np.full(len(series), np.nan)
 
         # 重み計算 (三角形分布)
-        weights = np.concatenate([
-            np.arange(1, length//2 + 1),  # 上昇部分
-            np.arange(length//2, 0, -1)   # 下降部分
-        ][:length])
+        weights = np.concatenate(
+            [
+                np.arange(1, length // 2 + 1),  # 上昇部分
+                np.arange(length // 2, 0, -1),  # 下降部分
+            ][:length]
+        )
         weights = weights[:length]  # 長さに合わせる
         weights = weights / weights.sum()  # 正規化
 
         for i in range(length - 1, len(series)):
-            window = series.iloc[i - length + 1:i + 1].values
+            window = series.iloc[i - length + 1 : i + 1].values
             swma_values[i] = np.sum(window * weights)
 
         return swma_values
@@ -660,10 +723,15 @@ class TrendIndicators:
             result = ta.alma(series, length=length, sigma=sigma, offset=offset)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
-                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                result_values = (
+                    result.values if hasattr(result, "values") else np.array(result)
+                )
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length - 1
-                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                if (
+                    start_idx < len(result_values)
+                    and not np.isnan(result_values[start_idx:]).all()
+                ):
                     return result_values
         except Exception:
             pass
@@ -673,6 +741,7 @@ class TrendIndicators:
             return np.full(len(series), np.nan)
 
         import math
+
         # ガウシアンダistributionによる重み計算
         weights = np.zeros(length)
         m = offset * (length - 1)  # 調整係数
@@ -685,7 +754,7 @@ class TrendIndicators:
         # 重み付き移動平均計算
         alma_values = np.full(len(series), np.nan)
         for i in range(length - 1, len(series)):
-            window = series.iloc[i - length + 1:i + 1].values
+            window = series.iloc[i - length + 1 : i + 1].values
             alma_values[i] = np.sum(window * weights)
 
         return alma_values
@@ -844,7 +913,7 @@ class TrendIndicators:
         try:
             result = ta.fwma(series, length=length)
             if result is not None and not result.isna().all():
-                return result.values if hasattr(result, 'values') else np.array(result)
+                return result.values if hasattr(result, "values") else np.array(result)
         except Exception:
             pass
 
@@ -860,14 +929,22 @@ class TrendIndicators:
         # 重み付き移動平均計算
         fwma_values = np.full(len(series), np.nan)
         for i in range(length - 1, len(series)):
-            window = series.iloc[i - length + 1:i + 1].values
+            window = series.iloc[i - length + 1 : i + 1].values
             fwma_values[i] = np.sum(window * weights)
 
         return fwma_values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def hilo(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series] = None, high_length=None, low_length=None, length: int = 14, **kwargs) -> np.ndarray:
+    def hilo(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series] = None,
+        high_length=None,
+        low_length=None,
+        length: int = 14,
+        **kwargs,
+    ) -> np.ndarray:
         """Gann High-Low Activator"""
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
@@ -877,12 +954,22 @@ class TrendIndicators:
         hl = high_length if high_length is not None else length
         ll = low_length if low_length is not None else length
 
-        result = ta.hilo(high=high_series, low=low_series, close=close_series, high_length=hl, low_length=ll)
-        return result.values if result is not None else np.full(len(high_series), np.nan)
+        result = ta.hilo(
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            high_length=hl,
+            low_length=ll,
+        )
+        return (
+            result.values if result is not None else np.full(len(high_series), np.nan)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def hl2(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    def hl2(
+        high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series]
+    ) -> np.ndarray:
         """High-Low Average"""
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
@@ -890,7 +977,11 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def hlc3(high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    def hlc3(
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+    ) -> np.ndarray:
         """High-Low-Close Average"""
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
@@ -907,7 +998,12 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def jma(data: Union[np.ndarray, pd.Series], length: int = 7, phase: float = 0.0, power: float = 2.0) -> np.ndarray:
+    def jma(
+        data: Union[np.ndarray, pd.Series],
+        length: int = 7,
+        phase: float = 0.0,
+        power: float = 2.0,
+    ) -> np.ndarray:
         """Jurik Moving Average"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         result = ta.jma(series, length=length, phase=phase, power=power)
@@ -927,14 +1023,23 @@ class TrendIndicators:
         k = 0.6  # 調整係数
 
         for i in range(length, len(series)):
-            ratio = series.iloc[i] / mcgd_values[i-1] if mcgd_values[i-1] != 0 else 1
-            mcgd_values[i] = mcgd_values[i-1] + (series.iloc[i] - mcgd_values[i-1]) / (k * length * (ratio ** 4))
+            ratio = (
+                series.iloc[i] / mcgd_values[i - 1] if mcgd_values[i - 1] != 0 else 1
+            )
+            mcgd_values[i] = mcgd_values[i - 1] + (
+                series.iloc[i] - mcgd_values[i - 1]
+            ) / (k * length * (ratio**4))
 
         return mcgd_values
 
     @staticmethod
     @handle_pandas_ta_errors
-    def ohlc4(open_: Union[np.ndarray, pd.Series], high: Union[np.ndarray, pd.Series], low: Union[np.ndarray, pd.Series], close: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    def ohlc4(
+        open_: Union[np.ndarray, pd.Series],
+        high: Union[np.ndarray, pd.Series],
+        low: Union[np.ndarray, pd.Series],
+        close: Union[np.ndarray, pd.Series],
+    ) -> np.ndarray:
         """Open-High-Low-Close Average"""
         open_series = pd.Series(open_) if isinstance(open_, np.ndarray) else open_
         high_series = pd.Series(high) if isinstance(high, np.ndarray) else high
@@ -968,18 +1073,29 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def vidya(data: Union[np.ndarray, pd.Series], length: int = 14, adjust: bool = True) -> np.ndarray:
+    def vidya(
+        data: Union[np.ndarray, pd.Series], length: int = 14, adjust: bool = True
+    ) -> np.ndarray:
         """Variable Index Dynamic Average"""
-        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        series = (
+            pd.Series(data, dtype=float)
+            if isinstance(data, np.ndarray)
+            else data.astype(float)
+        )
 
         # 第一優先: pandas-ta
         try:
             result = ta.vidya(series, length=length, adjust=adjust)
             if result is not None and not result.isna().all():
-                result_values = result.values if hasattr(result, 'values') else np.array(result)
+                result_values = (
+                    result.values if hasattr(result, "values") else np.array(result)
+                )
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length * 2 - 1  # VIDYAはより多くのデータを必要とする
-                if start_idx < len(result_values) and not np.isnan(result_values[start_idx:]).all():
+                if (
+                    start_idx < len(result_values)
+                    and not np.isnan(result_values[start_idx:]).all()
+                ):
                     return result_values
         except Exception:
             pass
@@ -991,7 +1107,7 @@ class TrendIndicators:
         vidya_values = np.full(len(series), np.nan)
 
         # 最初の値をSMAで初期化
-        vidya_values[length * 2 - 1] = series.iloc[:length*2].mean()
+        vidya_values[length * 2 - 1] = series.iloc[: length * 2].mean()
 
         # VIDYA計算: アルファは標準化されたChande Momentum Oscillator (CMO)に基づく
         for i in range(length * 2, len(series)):
@@ -1013,7 +1129,7 @@ class TrendIndicators:
                 alpha *= 0.8  # 標準調整
 
             # VIDYA更新
-            vidya_values[i] = alpha * series.iloc[i] + (1 - alpha) * vidya_values[i-1]
+            vidya_values[i] = alpha * series.iloc[i] + (1 - alpha) * vidya_values[i - 1]
 
         return vidya_values
 
@@ -1022,4 +1138,4 @@ class TrendIndicators:
     def wcp(data: Union[np.ndarray, pd.Series]) -> np.ndarray:
         """Weighted Closing Price"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
-        return series.values  # WCP is essentially the close price itself
+        return series.values

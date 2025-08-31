@@ -309,13 +309,13 @@ class ConditionGenerator:
                     f"モメンタム指標からロング条件追加: {len(long_conditions)}"
                 )
 
-            if indicators_by_type[IndicatorType.STATISTICS]:
-                long_conditions.extend(
-                    self._create_statistics_long_conditions(
-                        random.choice(indicators_by_type[IndicatorType.STATISTICS])
-                    )
-                )
-                self.logger.debug(f"統計指標からロング条件追加: {len(long_conditions)}")
+            # if indicators_by_type[IndicatorType.STATISTICS]:  # 統計指標は削除済み
+            #     long_conditions.extend(
+            #         self._create_statistics_long_conditions(
+            #             random.choice(indicators_by_type[IndicatorType.STATISTICS])
+            #         )
+            #     )
+            #     self.logger.debug(f"統計指標からロング条件追加: {len(long_conditions)}")
 
             # ML指標がある場合は追加
             if ml_indicators:
@@ -344,16 +344,16 @@ class ConditionGenerator:
                     f"モメンタム指標からショート条件追加: {len(short_conditions)}"
                 )
 
-            # 統計指標のショート条件を追加
-            if indicators_by_type[IndicatorType.STATISTICS]:
-                short_conditions.extend(
-                    self._create_statistics_short_conditions(
-                        random.choice(indicators_by_type[IndicatorType.STATISTICS])
-                    )
-                )
-                self.logger.debug(
-                    f"統計指標からショート条件追加: {len(short_conditions)}"
-                )
+            # 統計指標のショート条件を追加（削除済み）
+            # if indicators_by_type[IndicatorType.STATISTICS]:
+            #     short_conditions.extend(
+            #         self._create_statistics_short_conditions(
+            #             random.choice(indicators_by_type[IndicatorType.STATISTICS])
+            #         )
+            #     )
+            #     self.logger.debug(
+            #         f"統計指標からショート条件追加: {len(short_conditions)}"
+            #     )
 
             # ML指標がある場合の対向条件
             if ml_indicators and len(ml_indicators) >= 2:
@@ -489,17 +489,7 @@ class ConditionGenerator:
         """統合されたモメンタム系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
 
-    def _create_statistics_long_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """統合された統計系ロング条件生成"""
-        return self._create_type_based_conditions(indicator, "long")
 
-    def _create_statistics_short_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """統合された統計系ショート条件生成"""
-        return self._create_type_based_conditions(indicator, "short")
 
     def _create_pattern_long_conditions(
         self, indicator: IndicatorGene
@@ -599,11 +589,11 @@ class ConditionGenerator:
                     elif indicator_type == IndicatorType.TREND:
                         long_conds = self._create_trend_long_conditions(indicator)
                         short_conds = self._create_trend_short_conditions(indicator)
-                    elif indicator_type == IndicatorType.STATISTICS:
-                        long_conds = self._create_statistics_long_conditions(indicator)
-                        short_conds = self._create_statistics_short_conditions(
-                            indicator
-                        )
+                    # elif indicator_type == IndicatorType.STATISTICS:  # 統計指標は削除済み
+                    #     long_conds = self._create_statistics_long_conditions(indicator)
+                    #     short_conds = self._create_statistics_short_conditions(
+                    #         indicator
+                    #     )
                     elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
                         long_conds = self._create_pattern_long_conditions(indicator)
                         short_conds = self._create_pattern_short_conditions(indicator)
@@ -721,8 +711,8 @@ class ConditionGenerator:
                     return IndicatorType.MOMENTUM
                 elif type_str == "trend":
                     return IndicatorType.TREND
-                elif type_str == "statistics":
-                    return IndicatorType.STATISTICS
+                # elif type_str == "statistics":  # 統計指標は削除済み
+                #     return IndicatorType.STATISTICS
                 elif type_str == "pattern_recognition":
                     return IndicatorType.PATTERN_RECOGNITION
                 elif type_str == "volatility":
@@ -735,8 +725,8 @@ class ConditionGenerator:
                     return IndicatorType.MOMENTUM
                 elif cat == "trend":
                     return IndicatorType.TREND
-                elif cat == "statistics":
-                    return IndicatorType.STATISTICS
+                # elif cat == "statistics":  # 統計指標は削除済み
+                #     return IndicatorType.STATISTICS
                 elif cat == "pattern_recognition":
                     return IndicatorType.PATTERN_RECOGNITION
 
@@ -757,7 +747,6 @@ class ConditionGenerator:
             IndicatorType.MOMENTUM: [],
             IndicatorType.TREND: [],
             IndicatorType.VOLATILITY: [],
-            IndicatorType.STATISTICS: [],
             IndicatorType.PATTERN_RECOGNITION: [],
         }
 
@@ -777,8 +766,7 @@ class ConditionGenerator:
                         categorized[IndicatorType.TREND].append(ind)
                     elif cat == "volatility":
                         categorized[IndicatorType.VOLATILITY].append(ind)
-                    elif cat == "statistics":
-                        categorized[IndicatorType.STATISTICS].append(ind)
+                    # elif cat == "statistics":  # 統計指標は削除済み
                     elif cat == "pattern_recognition":
                         categorized[IndicatorType.PATTERN_RECOGNITION].append(ind)
                     else:
@@ -837,13 +825,13 @@ class ConditionGenerator:
                     short_conditions.extend(
                         self._create_trend_short_conditions(indicator)
                     )
-                elif indicator_type == IndicatorType.STATISTICS:
-                    long_conditions.extend(
-                        self._create_statistics_long_conditions(indicator)
-                    )
-                    short_conditions.extend(
-                        self._create_statistics_short_conditions(indicator)
-                    )
+                # elif indicator_type == IndicatorType.STATISTICS:  # 統計指標は削除済み
+                #     long_conditions.extend(
+                #         self._create_statistics_long_conditions(indicator)
+                #     )
+                #     short_conditions.extend(
+                #         self._create_statistics_short_conditions(indicator)
+                #     )
                 elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
                     long_conditions.extend(
                         self._create_pattern_long_conditions(indicator)

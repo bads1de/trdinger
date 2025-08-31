@@ -49,20 +49,20 @@ class TestIndicatorParameterFix:
         assert result["r3"] == 20
         assert result["r4"] == 30
 
-    def test_linearreg_period_to_length_conversion(self):
-        """LINEARREGがperiodパラメータをlengthに変換することを確認"""
-        config = self._create_mock_config("LINEARREG")
+    # def test_linearreg_period_to_length_conversion(self):
+    #     """LINEARREGがperiodパラメータをlengthに変換することを確認 - 統計指標は削除済み"""
+    #     config = self._create_mock_config("LINEARREG")
 
-        # LINEARREGのパラメータ（periodパラメータをlengthに変換）
-        params = {"period": 14}
+    #     # LINEARREGのパラメータ（periodパラメータをlengthに変換）
+    #     params = {"period": 14}
 
-        # normalize_paramsをテスト
-        result = normalize_params("LINEARREG", params, config)
+    #     # normalize_paramsをテスト
+    #     result = normalize_params("LINEARREG", params, config)
 
-        # period -> length 変換が行われていることを確認
-        assert "length" in result
-        assert result["length"] == 14
-        assert "period" not in result  # periodは削除される
+    #     # period -> length 変換が行われていることを確認
+    #     assert "length" in result
+    #     assert result["length"] == 14
+    #     assert "period" not in result  # periodは削除される
 
     def test_macd_no_length_parameter(self):
         """MACD系指標がlengthパラメータを受け付けないことを確認"""

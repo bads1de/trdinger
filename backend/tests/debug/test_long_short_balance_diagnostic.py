@@ -134,7 +134,7 @@ class TestLongShortBalanceDiagnostic:
             print(f"  - {[ind.type for ind in indicators]}")
 
         # 分類された指標があることを確認
-        assert categorized[IndicatorType.STATISTICS], "統計指標が分類されていない"
+        # assert categorized[IndicatorType.STATISTICS], "統計指標が分類されていない"  # 統計指標は削除済み
         assert categorized[IndicatorType.TREND], "トレンド指標が分類されていない"
         assert categorized[IndicatorType.PATTERN_RECOGNITION], "パターン指標が分類されていない"
         assert categorized[IndicatorType.MOMENTUM], "モメンタム指標が分類されていない"

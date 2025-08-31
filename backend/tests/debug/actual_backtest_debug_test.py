@@ -218,7 +218,7 @@ def create_test_strategy(indicator_combination: List[str]) -> StrategyGene:
         'EMA': {'type': 'EMA', 'parameters': {'period': 50}},
         'STOCH': {'type': 'STOCH', 'parameters': {}},
         'MACD': {'type': 'MACD', 'parameters': {}},
-        'CORREL': {'type': 'CORREL', 'parameters': {}},
+        # 'CORREL': {'type': 'CORREL', 'parameters': {}},  # 統計指標は削除済み、MACDに置き換え
         'CDL_HAMMER': {'type': 'CDL_HAMMER', 'parameters': {}},
         'BB': {'type': 'BB', 'parameters': {'period': 20}}
     }

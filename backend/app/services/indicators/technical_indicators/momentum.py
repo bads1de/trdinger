@@ -30,10 +30,13 @@
 """
 
 from typing import Tuple, Union
+import logging
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+
+logger = logging.getLogger(__name__)
 
 
 class MomentumIndicators:
@@ -138,9 +141,85 @@ class MomentumIndicators:
         low_series = pd.Series(low) if isinstance(low, np.ndarray) else low
         close_series = pd.Series(close) if isinstance(close, np.ndarray) else close
 
-        return ta.cci(
-            high=high_series, low=low_series, close=close_series, length=length
-        ).values
+        # データ品質チェック
+        if len(high_series) < length or len(low_series) < length or len(close_series) < length:
+            raise ValueError(f"CCI calculation requires at least {length} data points, "
+                           f"but received high: {len(high_series)}, low: {len(low_series)}, close: {len(close_series)}")
+
+        if length <= 0:
+            raise ValueError(f"CCI length must be positive, got: {length}")
+
+        # NaN値チェック
+        if high_series.isna().all() or low_series.isna().all() or close_series.isna().all():
+            raise ValueError("CCI input data contains only NaN values")
+
+        # 負または不正な価格値チェック
+        if (high_series <= 0).any() or (low_series <= 0).any() or (close_series <= 0).any():
+            # 警告ログだけを出して続行（トレーディングデータではマイナス価格はあり得ない）
+            logger.warning(f"CCI detected non-positive price values - High: {high_series.min():.6f}, "
+                         f"Low: {low_series.min():.6f}, Close: {close_series.min():.6f}")
+
+        # 妥当性チェック: high >= close >= low
+        # インデックスを揃えて比較
+        high_aligned, close_aligned = high_series.align(close_series, join='inner')
+        close_aligned2, low_aligned = close_series.align(low_series, join='inner')
+
+        invalid_high_close = ~(high_aligned >= close_aligned)
+        invalid_close_low = ~(close_aligned2 >= low_aligned)
+
+        if invalid_high_close.any() or invalid_close_low.any():
+            invalid_count = invalid_high_close.sum() + invalid_close_low.sum()
+            logger.warning(f"CCI detected invalid OHLC relationship in {invalid_count} data points")
+
+            # 問題のあるデータを修正（簡易的な手法）
+            # 両方の比較で問題がない点を除外しながら修正
+            valid_indices = ~(invalid_high_close | invalid_close_low.reindex(high_aligned.index))
+
+            if valid_indices.any():
+                # 有効なデータポイントで修正
+                high_corr = high_series.where(valid_indices, np.maximum(high_series, close_series))
+                low_corr = low_series.where(valid_indices, np.minimum(low_series, close_series))
+                high_series = high_corr
+                low_series = low_corr
+
+        # infまたは極端な値のチェック
+        for name, series in [("high", high_series), ("low", low_series), ("close", close_series)]:
+            if np.isinf(series).any():
+                raise ValueError(f"CCI {name} data contains infinite values")
+            if (series > 1e10).any() or (series < 1e-10).any():
+                logger.warning(f"CCI {name} data contains extreme values (>{series.max():.2e} or <{series.min():.2e})")
+
+        try:
+            result = ta.cci(
+                high=high_series, low=low_series, close=close_series, length=length
+            )
+
+            if result is None:
+                raise ValueError(f"ta.cci returned None with parameters: "
+                               f"high.shape={high_series.shape}, low.shape={low_series.shape}, "
+                               f"close.shape={close_series.shape}, length={length}")
+
+            if result.isna().all():
+                raise ValueError(f"ta.cci returned all NaN values with parameters: "
+                               f"high.shape={high_series.shape}, low.shape={low_series.shape}, "
+                               f"close.shape={close_series.shape}, length={length}")
+
+            return result.values
+
+        except Exception as e:
+            # TA-Lib特有のエラーハンドリング
+            error_msg = str(e).lower()
+            if "bad parameter" in error_msg or "invalid parameter" in error_msg:
+                logger.error(f"CCI TA-Lib parameter error: {e}")
+                logger.error(f"Parameters passed to ta.cci: length={length}")
+                logger.error(f"Data shapes - high: {high_series.shape}, low: {low_series.shape}, close: {close_series.shape}")
+                logger.error(f"Data types - high: {type(high_series.iloc[0]) if len(high_series) > 0 else 'empty'}, "
+                           f"low: {type(low_series.iloc[0]) if len(low_series) > 0 else 'empty'}, "
+                           f"close: {type(close_series.iloc[0]) if len(close_series) > 0 else 'empty'}")
+                raise ValueError(f"CCI calculation failed due to invalid parameters: {e}")
+
+            # その他の例外はそのまま再発生
+            raise
 
     @staticmethod
     def roc(
@@ -459,6 +538,7 @@ class MomentumIndicators:
         fast: int = 23,
         slow: int = 50,
         factor: float = 0.5,
+        **kwargs
     ) -> np.ndarray:
         """Schaff Trend Cycle"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data

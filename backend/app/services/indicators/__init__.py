@@ -9,7 +9,6 @@ from .indicator_orchestrator import TechnicalIndicatorService
 
 from .technical_indicators.momentum import MomentumIndicators
 from .technical_indicators.pattern_recognition import PatternRecognitionIndicators
-from .technical_indicators.statistics import StatisticsIndicators
 from .technical_indicators.trend import TrendIndicators
 from .technical_indicators.volatility import VolatilityIndicators
 from .technical_indicators.volume import VolumeIndicators
@@ -24,7 +23,6 @@ __all__ = [
     "MomentumIndicators",
     "VolatilityIndicators",
     "VolumeIndicators",
-    "StatisticsIndicators",
     "PatternRecognitionIndicators",
     "PandasTAError",
     "validate_input",
