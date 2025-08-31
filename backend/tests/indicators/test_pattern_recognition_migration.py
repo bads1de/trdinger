@@ -249,13 +249,6 @@ class TestPatternRecognitionMigration:
         result_pd = PatternRecognitionIndicators.cdl_doji(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
         assert isinstance(result_pd, pd.Series)
 
-    def test_alias_functions(self, sample_data):
-        """エイリアス関数のテスト"""
-        # 元の関数と結果が一致することを確認
-        original = PatternRecognitionIndicators.cdl_doji(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-        alias = PatternRecognitionIndicators.doji(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-
-        pd.testing.assert_series_equal(original, alias)
 
     def test_all_functions_work_with_pandas(self, sample_data):
         """全関数がpandas入力で動作することを確認"""
@@ -414,29 +407,6 @@ class TestPatternRecognitionMigration:
         with pytest.raises(PandasTAError, match="close must be pandas Series"):
             PatternRecognitionIndicators.cdl_doji(open_data, high, low, "invalid_close")
 
-    def test_alias_comprehensive_test(self, sample_data):
-        """エイリアス関数の総合テスト"""
-        dq1 = PatternRecognitionIndicators.cdl_doji(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-        dq2 = PatternRecognitionIndicators.doji(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-
-        hm1 = PatternRecognitionIndicators.cdl_hammer(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-        hm2 = PatternRecognitionIndicators.hammer(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-
-        eg1 = PatternRecognitionIndicators.cdl_engulfing(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-        eg2 = PatternRecognitionIndicators.engulfing_pattern(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-
-        ms1 = PatternRecognitionIndicators.cdl_morning_star(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-        ms2 = PatternRecognitionIndicators.morning_star(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-
-        es1 = PatternRecognitionIndicators.cdl_evening_star(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-        es2 = PatternRecognitionIndicators.evening_star(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])
-
-        # すべてのエイリアスがオリジナルと一致することを確認
-        pd.testing.assert_series_equal(dq1, dq2)
-        pd.testing.assert_series_equal(hm1, hm2)
-        pd.testing.assert_series_equal(eg1, eg2)
-        pd.testing.assert_series_equal(ms1, ms2)
-        pd.testing.assert_series_equal(es1, es2)
 
     def test_return_value_consistency(self, sample_data):
         """戻り値のプロパティ整合性チェック"""

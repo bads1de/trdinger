@@ -1031,7 +1031,7 @@ class TrendIndicators:
         data: pd.Series, length: int = 14, adjust: bool = True
     ) -> pd.Series:
         """Variable Index Dynamic Average"""
-        series = data.astype(float)
+        series = data.astype(np.float64).copy()
 
         # 第一優先: pandas-ta
         try:

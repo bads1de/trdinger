@@ -93,12 +93,11 @@ POSITIONAL_DATA_FUNCTIONS = {
     "chop",
     "vortex",
     "BBANDS",
-    "hilo",  # HILO指標を位置引数関数に追加
-    # Volume indicators that need positional arguments
-    "ad",  # Accumulation/Distribution
-    "eom",  # Ease of Movement
-    "kvo",  # Klinger Volume Oscillator
-    "cmf",  # Chaikin Money Flow
+    "hilo",
+    "ad",
+    "eom",
+    "kvo",
+    "cmf",
 }
 
 
@@ -295,10 +294,7 @@ class TechnicalIndicatorService:
                 required_data[data_key] = df[column_name]
 
         # パラメータ正規化
-
-        from .parameter_manager import normalize_params
-
-        converted_params = normalize_params(indicator_type, params, config)
+        converted_params = config.normalize_params(params)
 
         # param_map を使用してパラメータ名をマッピング
         if (

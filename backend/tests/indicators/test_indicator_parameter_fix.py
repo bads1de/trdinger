@@ -10,7 +10,6 @@ import numpy as np
 import inspect
 from unittest.mock import Mock, patch
 
-from app.services.indicators.parameter_manager import normalize_params
 from app.services.indicators.config.indicator_config import IndicatorConfig, IndicatorResultType, IndicatorScaleType
 
 
@@ -25,7 +24,7 @@ class TestIndicatorParameterFix:
         params = {"fastk_period": 5, "fastd_period": 3}
 
         # normalize_paramsをテスト
-        result = normalize_params("STOCHF", params, config)
+        result = config.normalize_params(params)
 
         # lengthパラメータが追加されていないことを確認
         assert "length" not in result
@@ -40,7 +39,7 @@ class TestIndicatorParameterFix:
         params = {"r1": 10, "r2": 15, "r3": 20, "r4": 30}
 
         # normalize_paramsをテスト
-        result = normalize_params("KST", params, config)
+        result = config.normalize_params(params)
 
         # lengthパラメータが追加されていないことを確認
         assert "length" not in result
@@ -73,7 +72,7 @@ class TestIndicatorParameterFix:
             params = {"fast": 12, "slow": 26, "signal": 9}
 
             # normalize_paramsをテスト
-            result = normalize_params(indicator, params, config)
+            result = config.normalize_params(params)
 
             # lengthパラメータが追加されていないことを確認
             assert "length" not in result
@@ -89,7 +88,7 @@ class TestIndicatorParameterFix:
         params = {"period": 14, "fastk_period": 5, "fastd_period": 3}
 
         # normalize_paramsをテスト
-        result = normalize_params("STOCHRSI", params, config)
+        result = config.normalize_params(params)
 
         # period -> length 変換が行われていることを確認
         assert "length" in result
@@ -99,11 +98,12 @@ class TestIndicatorParameterFix:
         assert result["fastd_period"] == 3
 
     def _create_mock_config(self, indicator_name: str) -> IndicatorConfig:
-        """モック設定を作成"""
-        config = Mock(spec=IndicatorConfig)
-        config.indicator_name = indicator_name
-        config.parameters = {}
-        config.param_map = {}
+        """設定を作成"""
+        config = IndicatorConfig(
+            indicator_name=indicator_name,
+            parameters={},
+            param_map={}
+        )
         return config
 
 

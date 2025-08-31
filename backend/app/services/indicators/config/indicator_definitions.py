@@ -1924,7 +1924,7 @@ def setup_pattern_recognition_indicators():
     # DOJI - 同事
     doji_config = IndicatorConfig(
         indicator_name="CDL_DOJI",
-        adapter_function=PatternRecognitionIndicators.doji,
+        adapter_function=PatternRecognitionIndicators.cdl_doji,
         required_data=["open_data", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PATTERN_BINARY,
@@ -1935,7 +1935,7 @@ def setup_pattern_recognition_indicators():
     # HAMMER - ハンマー
     hammer_config = IndicatorConfig(
         indicator_name="HAMMER",
-        adapter_function=PatternRecognitionIndicators.hammer,
+        adapter_function=PatternRecognitionIndicators.cdl_hammer,
         required_data=["open_data", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PATTERN_BINARY,
@@ -1946,7 +1946,7 @@ def setup_pattern_recognition_indicators():
     # ENGULFING_PATTERN - 包み足
     engulfing_config = IndicatorConfig(
         indicator_name="ENGULFING_PATTERN",
-        adapter_function=PatternRecognitionIndicators.engulfing_pattern,
+        adapter_function=PatternRecognitionIndicators.cdl_engulfing,
         required_data=["open_data", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PATTERN_BINARY,
@@ -1957,7 +1957,7 @@ def setup_pattern_recognition_indicators():
     # MORNING_STAR - 明けの明星
     morning_star_config = IndicatorConfig(
         indicator_name="MORNING_STAR",
-        adapter_function=PatternRecognitionIndicators.morning_star,
+        adapter_function=PatternRecognitionIndicators.cdl_morning_star,
         required_data=["open", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PATTERN_BINARY,
@@ -1969,7 +1969,7 @@ def setup_pattern_recognition_indicators():
     # EVENING_STAR - 宵の明星
     evening_star_config = IndicatorConfig(
         indicator_name="EVENING_STAR",
-        adapter_function=PatternRecognitionIndicators.evening_star,
+        adapter_function=PatternRecognitionIndicators.cdl_evening_star,
         required_data=["open", "high", "low", "close"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PATTERN_BINARY,

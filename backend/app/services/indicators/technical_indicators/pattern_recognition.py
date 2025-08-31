@@ -47,7 +47,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Doji（重要パターンのためエラーハンドリング付き）"""
+        """Doji"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -78,7 +78,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Hammer（重要パターンのためエラーハンドリング付き）"""
+        """Hammer"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -108,7 +108,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Hanging Man（軽量実装）"""
+        """Hanging Man"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -138,7 +138,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Shooting Star（軽量実装）"""
+        """Shooting Star"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -169,7 +169,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Engulfing Pattern（重要パターンのためエラーハンドリング付き）"""
+        """Engulfing Pattern"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -202,7 +202,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Harami Pattern（軽量実装）"""
+        """Harami Pattern"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -235,7 +235,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Piercing Pattern（軽量実装）"""
+        """Piercing Pattern"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -296,7 +296,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Morning Star（重要パターンのためエラーハンドリング付き）"""
+        """Morning Star"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -327,7 +327,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Evening Star（重要パターンのためエラーハンドリング付き）"""
+        """Evening Star"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -357,7 +357,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Three Black Crows（軽量実装）"""
+        """Three Black Crows"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -390,7 +390,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Three White Soldiers（軽量実装）"""
+        """Three White Soldiers"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -416,7 +416,7 @@ class PatternRecognitionIndicators:
             else pd.Series(np.zeros(len(open_data)), index=open_data.index)
         )
 
-    # 簡易実装（pandas-taにない場合のフォールバック）
+    # 簡易実装
     @staticmethod
     def cdl_marubozu(
         open_data: pd.Series,
@@ -424,7 +424,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Marubozu（簡易実装）"""
+        """Marubozu"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -454,7 +454,7 @@ class PatternRecognitionIndicators:
         low: pd.Series,
         close: pd.Series,
     ) -> pd.Series:
-        """Spinning Top（簡易実装）"""
+        """Spinning Top"""
         if not isinstance(open_data, pd.Series):
             raise TypeError("open_data must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -480,28 +480,3 @@ class PatternRecognitionIndicators:
 
         return pd.Series(spinning_top, index=open_data.index)
 
-    # 後方互換性のためのエイリアス
-    @staticmethod
-    def doji(*args, **kwargs):
-        """Dojiのエイリアス"""
-        return PatternRecognitionIndicators.cdl_doji(*args, **kwargs)
-
-    @staticmethod
-    def hammer(*args, **kwargs):
-        """Hammerのエイリアス"""
-        return PatternRecognitionIndicators.cdl_hammer(*args, **kwargs)
-
-    @staticmethod
-    def engulfing_pattern(*args, **kwargs):
-        """Engulfing Patternのエイリアス"""
-        return PatternRecognitionIndicators.cdl_engulfing(*args, **kwargs)
-
-    @staticmethod
-    def morning_star(*args, **kwargs):
-        """Morning Starのエイリアス"""
-        return PatternRecognitionIndicators.cdl_morning_star(*args, **kwargs)
-
-    @staticmethod
-    def evening_star(*args, **kwargs):
-        """Evening Starのエイリアス"""
-        return PatternRecognitionIndicators.cdl_evening_star(*args, **kwargs)

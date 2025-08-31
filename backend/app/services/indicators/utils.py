@@ -7,7 +7,7 @@
 
 import logging
 from functools import wraps
-from typing import Union
+
 
 import numpy as np
 import pandas as pd
@@ -94,5 +94,3 @@ def handle_pandas_ta_errors(func):
             raise PandasTAError(f"{func.__name__} 計算エラー: {e}")
 
     return wrapper
-
-
