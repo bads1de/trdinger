@@ -144,10 +144,13 @@ TREND_PREF = (
     "HMA",
     "WMA",
     "RMA",
-    "HT_TRENDLINE",
     "FWMA",
     "SWMA",
     "VIDYA",
+    "LINREG",
+    "LINREG_SLOPE",
+    "LINREG_INTERCEPT",
+    "LINREG_ANGLE",
 )  # MAMA除外: 条件右オペランド未サポート
 
 

@@ -10,6 +10,7 @@ from app.services.indicators.technical_indicators.momentum import (
 from app.services.indicators.technical_indicators.pattern_recognition import (
     PatternRecognitionIndicators,
 )
+
 # StatisticsIndicators import removed
 from app.services.indicators.technical_indicators.trend import TrendIndicators
 from app.services.indicators.technical_indicators.volatility import (
@@ -28,7 +29,7 @@ from .indicator_config import (
 
 
 def setup_momentum_indicators():
-    """モメンタム系インジケーターの設定（オートストラテジー最適化版）"""
+    """モメンタム系インジケーターの設定"""
 
     # STOCH
     stoch_config = IndicatorConfig(
@@ -1233,17 +1234,6 @@ def setup_trend_indicators():
     )
     indicator_registry.register(sar_config)
 
-    # HT_TRENDLINE
-    ht_trendline_config = IndicatorConfig(
-        indicator_name="HT_TRENDLINE",
-        adapter_function=TrendIndicators.ht_trendline,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="trend",
-    )
-    indicator_registry.register(ht_trendline_config)
-
     # MA
     ma_config = IndicatorConfig(
         indicator_name="MA",
@@ -1273,6 +1263,99 @@ def setup_trend_indicators():
     )
     ma_config.param_map = {"data": "close", "period": "length", "matype": "matype"}
     indicator_registry.register(ma_config)
+    
+    # LINREG (Linear Regression Moving Average)
+    linreg_config = IndicatorConfig(
+        indicator_name="LINREG",
+        adapter_function=TrendIndicators.linreg,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    linreg_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="線形回帰計算期間",
+        )
+    )
+    linreg_config.param_map = {"data": "close"}
+    indicator_registry.register(linreg_config)
+    
+    # LINREG_SLOPE (Linear Regression Slope)
+    linreg_slope_config = IndicatorConfig(
+        indicator_name="LINREG_SLOPE",
+        adapter_function=TrendIndicators.linreg_slope,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="trend",
+    )
+    linreg_slope_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="線形回帰傾き計算期間",
+        )
+    )
+    linreg_slope_config.param_map = {"data": "close"}
+    indicator_registry.register(linreg_slope_config)
+    
+    # LINREG_INTERCEPT (Linear Regression Intercept)
+    linreg_intercept_config = IndicatorConfig(
+        indicator_name="LINREG_INTERCEPT",
+        adapter_function=TrendIndicators.linreg_intercept,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="trend",
+    )
+    linreg_intercept_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="線形回帰切片計算期間",
+        )
+    )
+    linreg_intercept_config.param_map = {"data": "close"}
+    indicator_registry.register(linreg_intercept_config)
+    
+    # LINREG_ANGLE (Linear Regression Angle)
+    linreg_angle_config = IndicatorConfig(
+        indicator_name="LINREG_ANGLE",
+        adapter_function=TrendIndicators.linreg_angle,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="trend",
+    )
+    linreg_angle_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="線形回帰角度計算期間",
+        )
+    )
+    linreg_angle_config.add_parameter(
+        ParameterConfig(
+            name="degrees",
+            default_value=False,
+            min_value=False,
+            max_value=True,
+            description="度数法で角度を出力するか",
+        )
+    )
+    linreg_angle_config.param_map = {"data": "close"}
+    indicator_registry.register(linreg_angle_config)
 
     # MIDPOINT
     midpoint_config = IndicatorConfig(
@@ -1538,7 +1621,14 @@ def setup_volatility_indicators():
             description="HWCチャンネル幅乗数",
         )
     )
-    hwc_config.param_map = {"close": "close", "na": "na", "nb": "nb", "nc": "nc", "nd": "nd", "scalar": "scalar"}
+    hwc_config.param_map = {
+        "close": "close",
+        "na": "na",
+        "nb": "nb",
+        "nc": "nc",
+        "nd": "nd",
+        "scalar": "scalar",
+    }
     indicator_registry.register(hwc_config)
 
     # MASSI
@@ -1704,7 +1794,14 @@ def setup_volume_indicators():
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.VOLUME,
         category="volume",
-        output_names=["VP_LOW", "VP_MEAN", "VP_HIGH", "VP_POS_VOL", "VP_NEG_VOL", "VP_TOTAL_VOL"],
+        output_names=[
+            "VP_LOW",
+            "VP_MEAN",
+            "VP_HIGH",
+            "VP_POS_VOL",
+            "VP_NEG_VOL",
+            "VP_TOTAL_VOL",
+        ],
         default_output="VP_TOTAL_VOL",
     )
     vp_config.add_parameter(
@@ -1718,7 +1815,6 @@ def setup_volume_indicators():
     )
     vp_config.param_map = {"period": "width"}
     indicator_registry.register(vp_config)
-
 
     # 統計指標の設定は削除済み
 
@@ -1930,16 +2026,12 @@ def setup_pattern_recognition_indicators():
     indicator_registry.register(evening_star_cdl_config)
 
 
-
-
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
     setup_momentum_indicators()
     setup_trend_indicators()
     setup_volatility_indicators()
     setup_volume_indicators()
-
-    # setup_statistics_indicators()  # 統計指標は削除済み
     setup_pattern_recognition_indicators()
 
 
@@ -2384,7 +2476,7 @@ rsi_ema_cross_config.add_parameter(
 rsi_ema_cross_config.param_map = {
     "close": "data",
     "rsi_length": "rsi_length",
-    "ema_length": "ema_length"
+    "ema_length": "ema_length",
 }
 indicator_registry.register(rsi_ema_cross_config)
 
@@ -2464,7 +2556,9 @@ eom_cfg.add_parameter(
     ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
 )
 eom_cfg.add_parameter(
-    ParameterConfig(name="divisor", default_value=100000000, min_value=1, max_value=1000000000)
+    ParameterConfig(
+        name="divisor", default_value=100000000, min_value=1, max_value=1000000000
+    )
 )
 eom_cfg.add_parameter(
     ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)
@@ -2542,9 +2636,7 @@ aobv_config.add_parameter(
 aobv_config.add_parameter(
     ParameterConfig(name="min_lookback", default_value=2, min_value=1, max_value=10)
 )
-aobv_config.add_parameter(
-    ParameterConfig(name="mamode", default_value="ema")
-)
+aobv_config.add_parameter(ParameterConfig(name="mamode", default_value="ema"))
 indicator_registry.register(aobv_config)
 
 # EFI (Elder's Force Index)
@@ -2559,9 +2651,7 @@ efi_config = IndicatorConfig(
 efi_config.add_parameter(
     ParameterConfig(name="length", default_value=13, min_value=2, max_value=100)
 )
-efi_config.add_parameter(
-    ParameterConfig(name="mamode", default_value="ema")
-)
+efi_config.add_parameter(ParameterConfig(name="mamode", default_value="ema"))
 efi_config.add_parameter(
     ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)
 )
@@ -2649,7 +2739,7 @@ hilo_config.param_map = {
     "low_length": "low_length",
     "high": "high",
     "low": "low",
-    "close": "close"
+    "close": "close",
 }
 indicator_registry.register(hilo_config)
 
@@ -2708,7 +2798,12 @@ jma_config.add_parameter(
 jma_config.add_parameter(
     ParameterConfig(name="power", default_value=2.0, min_value=1.0, max_value=10.0)
 )
-jma_config.param_map = {"close": "data", "length": "length", "phase": "phase", "power": "power"}
+jma_config.param_map = {
+    "close": "data",
+    "length": "length",
+    "phase": "phase",
+    "power": "power",
+}
 indicator_registry.register(jma_config)
 
 # MCGD (McGinley Dynamic)
@@ -2735,7 +2830,12 @@ ohlc4_config = IndicatorConfig(
     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
     category="trend",
 )
-ohlc4_config.param_map = {"open": "open_", "high": "high", "low": "low", "close": "close"}
+ohlc4_config.param_map = {
+    "open": "open_",
+    "high": "high",
+    "low": "low",
+    "close": "close",
+}
 indicator_registry.register(ohlc4_config)
 
 # PWMA (Pascal's Weighted Moving Average)

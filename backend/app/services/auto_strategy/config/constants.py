@@ -91,16 +91,6 @@ VOLUME_INDICATORS = [
     "AOBV",  # アーチャー・オンバランス・ボリューム (Archer On-Balance Volume)
 ]
 
-# 数学演算子
-MATH_OPERATORS = [
-    "ADD",  # 加算 (Addition)
-    "DIV",  # 除算 (Division)
-    "MULT",  # 乗算 (Multiplication)
-    "SUB",  # 減算 (Subtraction)
-    "MAX",  # 最大値 (Maximum)
-    "MIN",  # 最小値 (Minimum)
-    "SUM",  # 合計 (Sum)
-]
 
 # モメンタム系指標
 MOMENTUM_INDICATORS = [
@@ -189,6 +179,10 @@ TREND_INDICATORS = [
     "SSF",  # エーラー・スーパー・スムーサー (Ehler's Super Smoother Filter)
     "VIDYA",  # 可変指数動的平均線 (Variable Index Dynamic Average)
     "WCP",  # 加重終値価格 (Weighted Closing Price)
+    "LINREG",  # 線形回帰移動平均線 (Linear Regression Moving Average)
+    "LINREG_SLOPE",  # 線形回帰傾き (Linear Regression Slope)
+    "LINREG_INTERCEPT",  # 線形回帰切片 (Linear Regression Intercept)
+    "LINREG_ANGLE",  # 線形回帰角度 (Linear Regression Angle)
 ]
 
 # ボラティリティ系指標
@@ -244,11 +238,9 @@ COMPOSITE_INDICATORS = [
 # 全テクニカル指標（indicator_registryに登録されているもの）
 VALID_INDICATOR_TYPES = (
     VOLUME_INDICATORS
-    + MATH_OPERATORS
     + MOMENTUM_INDICATORS
     + TREND_INDICATORS
     + VOLATILITY_INDICATORS
-    + STATISTICS_INDICATORS
     + PATTERN_RECOGNITION_INDICATORS
     + COMPOSITE_INDICATORS
 )
@@ -256,46 +248,143 @@ VALID_INDICATOR_TYPES = (
 # テクニカルオンリー時のおすすめ指標セット（成立性が高い指標を厳選）
 CURATED_TECHNICAL_INDICATORS = {
     # モメンタム系（オシレーター）
-    "MACD", "MACDFIX", "MACDEXT", "RSI", "STOCH", "STOCHRSI",
-    "CCI", "ADX", "MFI", "WILLR", "AROON", "AROONOSC", "BOP",
-    "MOM", "ROC", "TRIX", "TSI", "ULTOSC", "CMO", "DX", "MINUS_DI", "PLUS_DI",
-    "CFO", "CHOP", "CTI", "DPO", "RMI", "RVI", "RVGI", "SMI", "STC",
-    "QQE", "VORTEX", "PVO",
-
+    "MACD",
+    "MACDFIX",
+    "MACDEXT",
+    "RSI",
+    "STOCH",
+    "STOCHRSI",
+    "CCI",
+    "ADX",
+    "MFI",
+    "WILLR",
+    "AROON",
+    "AROONOSC",
+    "BOP",
+    "MOM",
+    "ROC",
+    "TRIX",
+    "TSI",
+    "ULTOSC",
+    "CMO",
+    "DX",
+    "MINUS_DI",
+    "PLUS_DI",
+    "CFO",
+    "CHOP",
+    "CTI",
+    "DPO",
+    "RMI",
+    "RVI",
+    "RVGI",
+    "SMI",
+    "STC",
+    "QQE",
+    "VORTEX",
+    "PVO",
     # トレンド系（移動平均等）
-    "SMA", "EMA", "WMA", "TRIMA", "KAMA", "TEMA", "DEMA", "ALMA",
-    "T3", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA",
-    "JMA", "MCGD", "VIDYA", "SAR",
-
+    "SMA",
+    "EMA",
+    "WMA",
+    "TRIMA",
+    "KAMA",
+    "TEMA",
+    "DEMA",
+    "ALMA",
+    "T3",
+    "HMA",
+    "RMA",
+    "SWMA",
+    "ZLMA",
+    "VWMA",
+    "FWMA",
+    "HWMA",
+    "JMA",
+    "MCGD",
+    "VIDYA",
+    "LINREG",
+    "LINREG_SLOPE",
+    "LINREG_INTERCEPT",
+    "LINREG_ANGLE",
+    "SAR",
     # ボラティリティ系
-    "ATR", "BBANDS", "DONCHIAN", "KELTNER", "SUPERTREND", "NATR", "TRANGE",
-    "ACCBANDS", "ABERRATION", "HWC", "MASSI", "PDIST", "THERMO",
-
-    # 統計系（削除済み）
-
+    "ATR",
+    "BBANDS",
+    "DONCHIAN",
+    "KELTNER",
+    "SUPERTREND",
+    "NATR",
+    "TRANGE",
+    "ACCBANDS",
+    "ABERRATION",
+    "HWC",
+    "MASSI",
+    "PDIST",
+    "THERMO",
     # パターン認識系
-    "CDL_DOJI", "CDL_HAMMER", "CDL_HANGING_MAN", "CDL_SHOOTING_STAR",
-    "CDL_ENGULFING", "CDL_HARAMI", "CDL_PIERCING", "CDL_THREE_BLACK_CROWS",
-    "CDL_THREE_WHITE_SOLDIERS", "CDL_DARK_CLOUD_COVER",
+    "CDL_DOJI",
+    "CDL_HAMMER",
+    "CDL_HANGING_MAN",
+    "CDL_SHOOTING_STAR",
+    "CDL_ENGULFING",
+    "CDL_HARAMI",
+    "CDL_PIERCING",
+    "CDL_THREE_BLACK_CROWS",
+    "CDL_THREE_WHITE_SOLDIERS",
+    "CDL_DARK_CLOUD_COVER",
 }
 
 # 移動平均系指標の定数
 MOVING_AVERAGE_INDICATORS = {
-    "SMA", "EMA", "WMA", "TRIMA", "KAMA", "TEMA", "DEMA", "ALMA",
-    "T3", "MAMA", "HMA", "RMA", "SWMA", "ZLMA", "MA", "VWMA",
-    "FWMA", "HWMA", "JMA", "MCGD", "VIDYA", "WCP"
+    "SMA",
+    "EMA",
+    "WMA",
+    "TRIMA",
+    "KAMA",
+    "TEMA",
+    "DEMA",
+    "ALMA",
+    "T3",
+    "MAMA",
+    "HMA",
+    "RMA",
+    "SWMA",
+    "ZLMA",
+    "MA",
+    "VWMA",
+    "FWMA",
+    "HWMA",
+    "JMA",
+    "MCGD",
+    "VIDYA",
+    "WCP",
 }
 
 # 優先的な移動平均指標（MA系を2本以上生成する場合の候補）
-PREFERRED_MA_INDICATORS = {
-    "SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"
-}
+PREFERRED_MA_INDICATORS = {"SMA", "EMA", "MAMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"}
 
 # periodパラメータが必要な移動平均指標
 MA_INDICATORS_NEEDING_PERIOD = {
-    "SMA", "EMA", "WMA", "TRIMA", "KAMA", "TEMA", "DEMA", "ALMA",
-    "T3", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA",
-    "JMA", "MCGD", "VIDYA", "WCP"
+    "SMA",
+    "EMA",
+    "WMA",
+    "TRIMA",
+    "KAMA",
+    "TEMA",
+    "DEMA",
+    "ALMA",
+    "T3",
+    "HMA",
+    "RMA",
+    "SWMA",
+    "ZLMA",
+    "VWMA",
+    "FWMA",
+    "HWMA",
+    "JMA",
+    "MCGD",
+    "VIDYA",
+    "WCP",
 }
 
 # === ML指標定数 ===
@@ -448,7 +537,6 @@ def get_id_to_indicator_mapping(indicator_ids: Dict[str, int]) -> Dict[int, str]
     return {v: k for k, v in indicator_ids.items()}
 
 
-
 # 基本的な移動平均インジケータ名のリスト（存在チェックなどに使用）
 BASIC_MA_INDICATORS: List[str] = [
     "SMA",
@@ -470,6 +558,10 @@ BASIC_MA_INDICATORS: List[str] = [
     "MCGD",
     "VIDYA",
     "WCP",
+    "LINREG",  # 線形回帰移動平均線
+    "LINREG_SLOPE",  # 線形回帰傾き
+    "LINREG_INTERCEPT",  # 線形回帰切片
+    "LINREG_ANGLE",  # 線形回帰角度
 ]
 
 
@@ -723,6 +815,33 @@ INDICATOR_CHARACTERISTICS = {
         "trend_following": True,
         "adaptive_smoothing": True,  # 適応的スムージング
         "volatility_adaptive": True,  # ボラティリティ適応型
+    },
+    "LINREG": {
+        "type": "trend",
+        "price_comparison": True,
+        "trend_following": True,
+        "regression_based": True,  # 回帰ベース
+        "linear_regression": True,  # 線形回帰
+    },
+    "LINREG_SLOPE": {
+        "type": "trend",
+        "range": None,  # 価格トレンドに応じた値
+        "regression_based": True,
+        "slope_tracking": True,  # 勾配追跡
+        "momentum_like": True,  # モメンタム様
+    },
+    "LINREG_INTERCEPT": {
+        "type": "trend",
+        "price_comparison": True,
+        "regression_based": True,
+        "trend_following": True,
+    },
+    "LINREG_ANGLE": {
+        "type": "trend",
+        "range": (-90, 90),  # 角度範囲
+        "angle_tracking": True,  # 角度追跡
+        "trend_strength": True,  # トレンド強度を示唆
+        "oscillator_like": True,  # オシレーター様
     },
 }
 

@@ -88,11 +88,6 @@ NO_LENGTH_INDICATORS = {
     "SUB",
     "MULT",
     "DIV",
-    "HT_DCPERIOD",
-    "HT_DCPHASE",
-    "HT_PHASOR",
-    "HT_SINE",
-    "HT_TRENDMODE",
     "WCP",
     "HLC3",
     "HL2",
@@ -100,8 +95,6 @@ NO_LENGTH_INDICATORS = {
     "VP",
     "AOBV",
     "HWC",
-    "WCP",
-    "HT_TRENDLINE",
 }
 
 

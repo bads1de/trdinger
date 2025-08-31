@@ -38,6 +38,10 @@
 - SSF (Ehler's Super Smoother Filter)
 - VIDYA (Variable Index Dynamic Average)
 - WCP (Weighted Closing Price)
+- LINREG (Linear Regression Moving Average)
+- LINREG_SLOPE (Linear Regression Slope)
+- LINREG_INTERCEPT (Linear Regression Intercept)
+- LINREG_ANGLE (Linear Regression Angle)
 """
 
 from typing import Union, Tuple
@@ -1139,3 +1143,34 @@ class TrendIndicators:
         """Weighted Closing Price"""
         series = pd.Series(data) if isinstance(data, np.ndarray) else data
         return series.values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def linreg(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """Linear Regression Moving Average"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.linreg(series, length=length).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def linreg_slope(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """Linear Regression Slope"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.linreg(series, length=length, slope=True).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def linreg_intercept(data: Union[np.ndarray, pd.Series], length: int = 14) -> np.ndarray:
+        """Linear Regression Intercept"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        return ta.linreg(series, length=length, intercept=True).values
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def linreg_angle(data: Union[np.ndarray, pd.Series], length: int = 14, degrees: bool = False) -> np.ndarray:
+        """Linear Regression Angle"""
+        series = pd.Series(data) if isinstance(data, np.ndarray) else data
+        if degrees:
+            return ta.linreg(series, length=length, degrees=True).values
+        else:
+            return ta.linreg(series, length=length, angle=True).values
