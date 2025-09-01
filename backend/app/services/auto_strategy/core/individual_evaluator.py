@@ -7,9 +7,8 @@
 import logging
 from typing import Any, Dict
 
-from app.services.backtest.backtest_service import BacktestService
-
 from ..config.auto_strategy_config import GAConfig
+from app.services.backtest.backtest_service import BacktestService
 
 logger = logging.getLogger(__name__)
 

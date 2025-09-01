@@ -421,11 +421,11 @@ def setup_momentum_indicators():
     # MFI
     mfi_config = IndicatorConfig(
         indicator_name="MFI",
-        adapter_function=MomentumIndicators.mfi,
+        adapter_function=VolumeIndicators.mfi,
         required_data=["high", "low", "close", "volume"],
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
-        category="momentum",
+        category="volume",
     )
     mfi_config.add_parameter(
         ParameterConfig(

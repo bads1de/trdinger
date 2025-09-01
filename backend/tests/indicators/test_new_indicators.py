@@ -50,6 +50,172 @@ def test_new_indicators():
         except Exception as e:
             print(f'{indicator_name}: ERROR - {e}')
 
+def test_new_technical_indicators():
+    """ROC, STC, VI, CFOの新規テクニカル指標テスト"""
+    print("=== Testing New Technical Indicators ===")
+
+    # Test data generation
+    np.random.seed(42)
+    dates = pd.date_range(start='2024-01-01', periods=100, freq='1H')
+    base_price = 50000
+    price_changes = np.random.normal(0, 0.02, 99)
+    close_prices = [base_price]
+    for change in price_changes:
+        new_price = close_prices[-1] * (1 + change)
+        close_prices.append(new_price)
+
+    # Create OHLCV data
+    df = pd.DataFrame({
+        'timestamp': dates,
+        'open': [price * (1 + np.random.normal(0, 0.005)) for price in close_prices],
+        'high': [price * (1 + abs(np.random.normal(0, 0.01))) for price in close_prices],
+        'low': [price * (1 - abs(np.random.normal(0, 0.01))) for price in close_prices],
+        'close': close_prices,
+        'volume': np.random.uniform(1000000, 10000000, 100)
+    })
+    df = df.set_index('timestamp')
+
+    service = TechnicalIndicatorService()
+
+    # New indicators to test
+    new_indicators = [
+        ("ROC", {'length': 10}),
+        ("STC", {'tclength': 10, 'fast': 23, 'slow': 50, 'factor': 0.5}),
+        ("VORTEX", {'length': 14}),
+        ("CFO", {'length': 9})
+    ]
+
+    for indicator_name, params in new_indicators:
+        print(f"\nTesting {indicator_name} with params: {params}")
+        try:
+            result = service.calculate_indicator(df, indicator_name, params)
+            if result is not None:
+                result_df = result.iloc[-20:]  # Last 20 results for inspection
+                print(f"✓ {indicator_name}: SUCCESS - Result shape: {result_df.shape}")
+                print(f"  Sample values: {result_df.dropna().head(3).values.flatten()[:5]}")
+                # Check for NaN behavior
+                nan_count = result_df.isna().sum().sum() if hasattr(result_df, 'isna') else 0
+                print(f"  NaN count in sample: {nan_count}")
+            else:
+                print(f"✗ {indicator_name}: FAILED - None result")
+        except Exception as e:
+            print(f"✗ {indicator_name}: ERROR - {str(e)}")
+
+def test_extended_threshold_conditions():
+    """拡張thresholdテスト - range, combo条件など"""
+    print("\n=== Testing Extended Threshold Conditions ===")
+
+    # Test data
+    np.random.seed(42)
+    dates = pd.date_range(start='2024-01-01', periods=20, freq='1H')
+    closes = np.array([100, 102, 101, 105, 103, 107, 106, 110, 108, 112,
+                       111, 115, 114, 118, 116, 120, 119, 123, 121, 125])
+    df = pd.DataFrame({
+        'timestamp': dates,
+        'close': closes
+    }).set_index('timestamp')
+
+    service = TechnicalIndicatorService()
+
+    # Test ROC with extended thresholds
+    try:
+        result = service.calculate_indicator(df, "ROC", {'length': 10})
+        if result is not None:
+            recent_values = result.iloc[-10:].dropna().values
+            print("ROC Extended Threshold Tests:")
+
+            # Range threshold: check if ROC values are within certain ranges
+            range_tests = [
+                ("Very Oversold", lambda x: x < -5, "values < -5"),
+                ("Neutral", lambda x: -5 <= x <= 5, "values in [-5, 5]"),
+                ("Very Overbought", lambda x: x > 5, "values > 5"),
+                ("Aggressive Oversold", lambda x: x < -8, "values < -8"),
+                ("Conservative Overbought", lambda x: x > 8, "values > 8")
+            ]
+
+            for test_name, condition, desc in range_tests:
+                matching_values = [v for v in recent_values.flatten() if condition(v)]
+                count = len(matching_values)
+                print(f"  {test_name}: {count}/{len(recent_values.flatten())} {desc}")
+
+            # Combo conditions: multiple conditions combined
+            combo_conditions = [
+                ("Strong Bullish", lambda x: x > 3 and x < 10, "3 < ROC and ROC < 10"),
+                ("Strong Bearish", lambda x: x < -3 and x > -10, "-3 > ROC and ROC > -10"),
+                ("Extreme Move", lambda x: abs(x) > 8, "|ROC| > 8"),
+                ("Slowing Momentum", lambda x: -2 <= x <= 2, "Slow momentum range")
+            ]
+
+            print("\n  Combo Conditions:")
+            for test_name, condition, desc in combo_conditions:
+                combo_matches = [v for v in recent_values.flatten() if condition(v)]
+                combo_count = len(combo_matches)
+                print(f"    {test_name}: {combo_count}/{len(recent_values.flatten())} {desc}")
+        else:
+            print("  ✗ ROC test failed - no result")
+    except Exception as e:
+        print(f"  ✗ ROC extended threshold test ERROR - {str(e)}")
+
+def test_threshold_extremes():
+    """thresholdの極端な値でのテスト"""
+    print("\n=== Testing Threshold Extremes ===")
+
+    # Generate test data with extreme moves
+    np.random.seed(42)
+    dates = pd.date_range(start='2024-01-01', periods=30, freq='1H')
+
+    # Create data with sharp moves to test indicators at extremes
+    base = 100
+    closes = [base]
+    for i in range(29):
+        if i % 5 == 0:
+            # Sharp move
+            change = np.random.choice([-0.05, 0.05]) * np.random.uniform(1, 3)
+        else:
+            change = np.random.normal(0, 0.01)
+        new_price = closes[-1] * (1 + change)
+        closes.append(max(new_price, 10))  # Prevent negative prices
+
+    df = pd.DataFrame({
+        'timestamp': dates,
+        'close': closes
+    }).set_index('timestamp')
+
+    service = TechnicalIndicatorService()
+
+    indicators = ["ROC", "STC", "CFO"]
+    params = {
+        "ROC": {'length': 5},
+        "STC": {'tclength': 5, 'fast': 12, 'slow': 26, 'factor': 0.5},
+        "CFO": {'length': 5}
+    }
+
+    for indicator in indicators:
+        try:
+            result = service.calculate_indicator(df, indicator, params[indicator])
+            if result is not None:
+                values = result.dropna().values.flatten()
+                max_val = float(np.max(values))
+                min_val = float(np.min(values))
+                std_val = float(np.std(values))
+                print(f"  {indicator} Extremes - Max: {max_val:.2f}, Min: {min_val:.2f}, Std: {std_val:.2f}")
+
+                # Check for extreme threshold scenarios
+                if abs(max_val) > 50 or abs(min_val) > 50:
+                    print(f"    ✓ Extreme values detected (>{50})")
+                if std_val < 0.1:
+                    print(f"    ⚠ Low volatility detected in {indicator}")
+            else:
+                print(f"  ✗ {indicator} - No result at extremes")
+        except Exception as e:
+            print(f"  ✗ {indicator} extremes test ERROR - {str(e)}")
+
+if __name__ == "__main__":
+    test_new_indicators()
+    test_new_technical_indicators()
+    test_extended_threshold_conditions()
+    test_threshold_extremes()
+
 def test_cci_error_handling():
     """CCI関数のエラーハンドリングテスト"""
     print("=== CCI Error Handling Tests ===")

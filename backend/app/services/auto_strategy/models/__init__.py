@@ -4,12 +4,11 @@
 戦略遺伝子、GA設定、フィットネス評価などのモデルを定義します。
 """
 
-from ..config.auto_strategy_config import GAConfig
+
 from .strategy_models import Condition, IndicatorGene, StrategyGene
 
 __all__ = [
     "StrategyGene",
     "IndicatorGene",
     "Condition",
-    "GAConfig",
 ]

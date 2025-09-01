@@ -7,9 +7,9 @@
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Any
 
-from ..config.auto_strategy_config import GAConfig
+
 from ..models.strategy_models import (
     Condition,
     IndicatorGene,
@@ -35,7 +35,7 @@ class GeneratorType(Enum):
 class BaseGeneGenerator(ABC):
     """遺伝子生成器の基底クラス"""
 
-    def __init__(self, config: GAConfig):
+    def __init__(self, config: Any):
         self.config = config
 
     @abstractmethod
@@ -121,7 +121,7 @@ class BaseGeneGenerator(ABC):
 class SmartGeneGenerator(BaseGeneGenerator):
     """スマート遺伝子生成器"""
 
-    def __init__(self, config: GAConfig):
+    def __init__(self, config: Any):
         super().__init__(config)
         self._smart_generator = None
 
@@ -231,7 +231,7 @@ class GeneGeneratorFactory:
     """遺伝子生成器ファクトリー"""
 
     @staticmethod
-    def create_generator(generator_type: GeneratorType, config: GAConfig):
+    def create_generator(generator_type: GeneratorType, config: Any):
         """生成器タイプに応じた生成器を作成"""
         if generator_type == GeneratorType.RANDOM:
             # 実際のRandomGeneGeneratorを使用（型チェックなし）

@@ -10,6 +10,7 @@ import pandas as pd
 import pandas_ta as ta
 
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from app.services.indicators.technical_indicators.volume import VolumeIndicators
 
 
 class TestMomentumMigration:
@@ -103,7 +104,7 @@ class TestMomentumMigration:
             ('roc', lambda: MomentumIndicators.roc(sample_data['close'])),
             ('mom', lambda: MomentumIndicators.mom(sample_data['close'])),
             ('adx', lambda: MomentumIndicators.adx(sample_data['high'], sample_data['low'], sample_data['close'])),
-            ('mfi', lambda: MomentumIndicators.mfi(sample_data['high'], sample_data['low'], sample_data['close'], sample_data['volume'])),
+            ('mfi', lambda: VolumeIndicators.mfi(sample_data['high'], sample_data['low'], sample_data['close'], sample_data['volume'])),
             ('uo', lambda: MomentumIndicators.uo(sample_data['high'], sample_data['low'], sample_data['close'])),
             ('apo', lambda: MomentumIndicators.apo(sample_data['close'])),
             ('ao', lambda: MomentumIndicators.ao(sample_data['high'], sample_data['low'])),

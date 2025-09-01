@@ -342,3 +342,33 @@ class VolumeIndicators:
         else:
             # 空の結果を返す
             return pd.Series([], dtype=float), pd.Series([], dtype=float), pd.Series([], dtype=float), pd.Series([], dtype=float), pd.Series([], dtype=float), pd.Series([], dtype=float)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def mfi(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
+        length: int = 14,
+    ) -> pd.Series:
+        """マネーフローインデックス"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+
+        result = ta.mfi(
+            high=high,
+            low=low,
+            close=close,
+            volume=volume,
+            length=length,
+        )
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result

@@ -7,6 +7,7 @@ constants.pyに統合された定数を基に、構造化された設定クラ�
 
 import json
 import logging
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast

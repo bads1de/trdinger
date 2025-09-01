@@ -7,12 +7,12 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 
 import logging
 import random
-from typing import Dict, List, Union, cast
+from typing import Dict, List, Union, cast, Any
 
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
-from ..config import GAConfig
+
 from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import (
     Condition,
@@ -51,7 +51,7 @@ class RandomGeneGenerator:
 
     def __init__(
         self,
-        config: GAConfig,
+        config: Any,
         enable_smart_generation: bool = True,
         smart_context: dict | None = None,
     ):
@@ -250,7 +250,7 @@ class RandomGeneGenerator:
                 metadata={"generated_by": "Fallback"},
             )
 
-    def _setup_indicators_by_mode(self, config: GAConfig) -> List[str]:
+    def _setup_indicators_by_mode(self, config: Any) -> List[str]:
         """
         指標モードに応じて利用可能な指標を設定
 
@@ -785,10 +785,10 @@ class RandomGeneGenerator:
             生成されたTP/SL遺伝子
         """
         try:
-            # GAConfigの設定範囲内でランダムなTP/SL遺伝子を生成
+            # Anyの設定範囲内でランダムなTP/SL遺伝子を生成
             tpsl_gene = create_random_tpsl_gene()
 
-            # GAConfigの制約を適用（設定されている場合）
+            # Anyの制約を適用（設定されている場合）
             if hasattr(self.config, "tpsl_method_constraints"):
                 # 許可されたメソッドのみを使用
                 allowed_methods = self.config.tpsl_method_constraints

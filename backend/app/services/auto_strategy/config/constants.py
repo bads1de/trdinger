@@ -3,7 +3,8 @@ Auto Strategy 共通定数
 
 """
 
-from typing import Dict, List
+from typing import Dict, List, Any
+import os
 
 # === 指標タイプ定義 ===
 from enum import Enum
@@ -77,6 +78,7 @@ VOLUME_INDICATORS = [
     "AD",  # 累積/配分線 (Accumulation/Distribution)
     "ADOSC",  # チャイキン・オシレーター (Chaikin A/D Oscillator)
     "OBV",  # 残高売買高 (On-Balance Volume)
+    "MFI",  # マネー・フロウ指数 (Money Flow Index)
     "EOM",  # 動きやすさ (Ease of Movement)
     "KVO",  # クリンガー・ボリューム・オシレーター (Klinger Volume Oscillator)
     "CMF",  # チャイキン・マネーフロー (Chaikin Money Flow)
@@ -107,7 +109,6 @@ MOMENTUM_INDICATORS = [
     "CTI",  # チャンド・トレンド指数 (Chande Trend Index)
     "DPO",  # デトレンド価格オシレーター (Detrended Price Oscillator)
     "DX",  # 方向性指数 (Directional Movement Index)
-    "MFI",  # マネー・フロウ指数 (Money Flow Index)
     "MINUS_DI",  # マイナスマイナス方向性指数 (Minus Directional Indicator)
     "MINUS_DM",  # マイナスマイナス方向性変動 (Minus Directional Movement)
     "PLUS_DI",  # プラス方向性指数 (Plus Directional Indicator)
@@ -920,3 +921,14 @@ GA_DEFAULT_FITNESS_SHARING = {
     "sharing_radius": 0.1,
     "sharing_alpha": 1.0,
 }
+
+
+# === YAMLベースの特性動的生成処理 ===
+
+# YAML設定に基づいて特性を生成してマージ
+def _get_merged_characteristics(original):
+    # Late import to avoid circular imports
+    from app.services.auto_strategy.utils.ind_yaml_utils import initialize_yaml_based_characteristics
+    return initialize_yaml_based_characteristics(original)
+
+INDICATOR_CHARACTERISTICS = _get_merged_characteristics(INDICATOR_CHARACTERISTICS)

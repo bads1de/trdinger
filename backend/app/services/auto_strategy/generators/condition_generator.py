@@ -1,7 +1,6 @@
 import logging
 import random
 import copy
-from pathlib import Path
 from typing import List, Tuple, Union, Dict, Any, Optional
 from app.services.auto_strategy.config.constants import (
     INDICATOR_CHARACTERISTICS,
@@ -9,9 +8,11 @@ from app.services.auto_strategy.config.constants import (
     StrategyType,
 )
 from app.services.indicators.config import indicator_registry
-from app.services.auto_strategy.utils.common_utils import (
-    YamlLoadUtils,
-    YamlTestUtils,
+from app.services.auto_strategy.utils.ind_yaml_utils import (
+    load_yaml_config_for_indicators,
+    get_indicator_config_from_yaml,
+    get_threshold_from_yaml,
+    test_yaml_conditions_with_generator,
 )
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
@@ -42,7 +43,7 @@ class ConditionGenerator:
         self.logger = logger
 
         # YAML設定を読み込み
-        self.yaml_config = self._load_yaml_config()
+        self.yaml_config = load_yaml_config_for_indicators()
 
         # 生成時の相場・実行コンテキスト（timeframeやsymbol）+ML統合
         self.context = {
@@ -54,15 +55,6 @@ class ConditionGenerator:
 
         # geneに含まれる指標一覧をオプションで保持
         self.indicators: List[IndicatorGene] | None = None
-
-    def _load_yaml_config(self) -> Dict[str, Any]:
-        """技術指標のYAML設定を読み込み"""
-        config_path = (
-            Path(__file__).parent.parent / "config" / "technical_indicators_config.yaml"
-        )
-        # YamlLoadUtilsを使用して読み込み
-        config = YamlLoadUtils.load_yaml_config(config_path)
-        return config
 
     def set_context(
         self,
@@ -231,10 +223,12 @@ class ConditionGenerator:
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ロング条件生成"""
         self.logger.debug(f"Generating long conditions for {ind.type}")
-        config = self._get_indicator_config_from_yaml(ind.type)
+        config = get_indicator_config_from_yaml(self.yaml_config, ind.type)
         self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
-            threshold = self._get_threshold_from_yaml(config, "long")
+            threshold = get_threshold_from_yaml(
+                self.yaml_config, config, "long", self.context
+            )
             if threshold is not None:
                 self.logger.debug(f"Using threshold {threshold} for {ind.type}")
                 return [
@@ -248,10 +242,12 @@ class ConditionGenerator:
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ショート条件生成"""
         self.logger.debug(f"Generating short conditions for {ind.type}")
-        config = self._get_indicator_config_from_yaml(ind.type)
+        config = get_indicator_config_from_yaml(self.yaml_config, ind.type)
         self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
-            threshold = self._get_threshold_from_yaml(config, "short")
+            threshold = get_threshold_from_yaml(
+                self.yaml_config, config, "short", self.context
+            )
             if threshold is not None:
                 self.logger.debug(f"Using threshold {threshold} for {ind.type}")
                 return [
@@ -316,15 +312,6 @@ class ConditionGenerator:
                 self.logger.debug(
                     f"モメンタム指標からロング条件追加: {len(long_conditions)}"
                 )
-
-            # if indicators_by_type[IndicatorType.STATISTICS]:  # 統計指標は削除済み
-            #     long_conditions.extend(
-            #         self._create_statistics_long_conditions(
-            #             random.choice(indicators_by_type[IndicatorType.STATISTICS])
-            #         )
-            #     )
-            #     self.logger.debug(f"統計指標からロング条件追加: {len(long_conditions)}")
-
             # ML指標がある場合は追加
             if ml_indicators:
                 long_conditions.extend(self._create_ml_long_conditions(ml_indicators))
@@ -351,17 +338,6 @@ class ConditionGenerator:
                 self.logger.debug(
                     f"モメンタム指標からショート条件追加: {len(short_conditions)}"
                 )
-
-            # 統計指標のショート条件を追加（削除済み）
-            # if indicators_by_type[IndicatorType.STATISTICS]:
-            #     short_conditions.extend(
-            #         self._create_statistics_short_conditions(
-            #             random.choice(indicators_by_type[IndicatorType.STATISTICS])
-            #         )
-            #     )
-            #     self.logger.debug(
-            #         f"統計指標からショート条件追加: {len(short_conditions)}"
-            #     )
 
             # ML指標がある場合の対向条件
             if ml_indicators and len(ml_indicators) >= 2:
@@ -412,9 +388,11 @@ class ConditionGenerator:
         self, indicator: IndicatorGene, side: str
     ) -> List[Condition]:
         """統合された型別条件生成 - YAML設定またはデフォルト"""
-        config = self._get_indicator_config_from_yaml(indicator.type)
+        config = get_indicator_config_from_yaml(self.yaml_config, indicator.type)
         if config:
-            threshold = self._get_threshold_from_yaml(config, side)
+            threshold = get_threshold_from_yaml(
+                self.yaml_config, config, side, self.context
+            )
             if threshold is not None:
                 return [
                     Condition(
@@ -496,8 +474,6 @@ class ConditionGenerator:
     ) -> List[Condition]:
         """統合されたモメンタム系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
-
-
 
     def _create_pattern_long_conditions(
         self, indicator: IndicatorGene
@@ -671,77 +647,16 @@ class ConditionGenerator:
             self.logger.error(f"MLロング条件生成エラー: {e}")
             return []
 
-    def _get_indicator_config_from_yaml(
-        self, indicator_name: str
-    ) -> Optional[Dict[str, Any]]:
-        """YAMLから指標設定を取得"""
-        self.logger.debug(f"Looking for indicator config: {indicator_name}")
-        indicators_config = self.yaml_config.get("indicators", {})
-        self.logger.debug(f"Indicators config keys: {list(indicators_config.keys())}")
-        config = indicators_config.get(indicator_name)
-        if config is None:
-            self.logger.warning(f"No config found for indicator: {indicator_name}")
-        else:
-            self.logger.debug(f"Found config for {indicator_name}: {config}")
-        return config
-
-    def _get_threshold_from_yaml(self, config: Dict[str, Any], side: str) -> Any:
-        """YAMLから閾値取得"""
-        if not config:
-            self.logger.debug("YAML config is None")
-            return None
-
-        thresholds = config.get("thresholds", {})
-        if not thresholds:
-            self.logger.debug("thresholds not found in config")
-            return None
-
-        profile = self.context.get("threshold_profile", "normal")
-        self.logger.debug(f"Using profile: {profile}, side: {side}")
-
-        if profile in thresholds and thresholds[profile]:
-            profile_config = thresholds[profile]
-            self.logger.debug(f"Found profile_config: {profile_config}")
-            if side == "long" and (
-                "long_gt" in profile_config or "long_lt" in profile_config
-            ):
-                threshold = profile_config.get("long_gt", profile_config.get("long_lt"))
-                self.logger.debug(f"Long threshold: {threshold}")
-                return threshold
-            elif side == "short" and (
-                "short_lt" in profile_config or "short_gt" in profile_config
-            ):
-                threshold = profile_config.get("short_lt", profile_config.get("short_gt"))
-                self.logger.debug(f"Short threshold: {threshold}")
-                return threshold
-
-        if "all" in thresholds and thresholds["all"]:
-            all_config = thresholds["all"]
-            self.logger.debug(f"Using 'all' config: {all_config}")
-            if side == "long":
-                threshold = all_config.get("pos_threshold")
-                self.logger.debug(f"Long threshold from all: {threshold}")
-                return threshold
-            else:
-                threshold = all_config.get("neg_threshold")
-                self.logger.debug(f"Short threshold from all: {threshold}")
-                return threshold
-
-        self.logger.debug("No threshold found")
-        return None
-
     def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
         """指標のタイプを取得"""
         try:
-            config = self._get_indicator_config_from_yaml(indicator.type)
+            config = get_indicator_config_from_yaml(self.yaml_config, indicator.type)
             if config and "type" in config:
                 type_str = config["type"]
                 if type_str == "momentum":
                     return IndicatorType.MOMENTUM
                 elif type_str == "trend":
                     return IndicatorType.TREND
-                # elif type_str == "statistics":  # 統計指標は削除済み
-                #     return IndicatorType.STATISTICS
                 elif type_str == "pattern_recognition":
                     return IndicatorType.PATTERN_RECOGNITION
                 elif type_str == "volatility":
@@ -754,8 +669,6 @@ class ConditionGenerator:
                     return IndicatorType.MOMENTUM
                 elif cat == "trend":
                     return IndicatorType.TREND
-                # elif cat == "statistics":  # 統計指標は削除済み
-                #     return IndicatorType.STATISTICS
                 elif cat == "pattern_recognition":
                     return IndicatorType.PATTERN_RECOGNITION
 
@@ -854,13 +767,6 @@ class ConditionGenerator:
                     short_conditions.extend(
                         self._create_trend_short_conditions(indicator)
                     )
-                # elif indicator_type == IndicatorType.STATISTICS:  # 統計指標は削除済み
-                #     long_conditions.extend(
-                #         self._create_statistics_long_conditions(indicator)
-                #     )
-                #     short_conditions.extend(
-                #         self._create_statistics_short_conditions(indicator)
-                #     )
                 elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
                     long_conditions.extend(
                         self._create_pattern_long_conditions(indicator)
@@ -903,9 +809,8 @@ class ConditionGenerator:
     ) -> Dict[str, Any]:
         """YAMLベースの条件生成テスト"""
         try:
-            return YamlTestUtils.test_yaml_based_conditions(
+            return test_yaml_conditions_with_generator(
                 yaml_config=self.yaml_config,
-                condition_generator_class=ConditionGenerator,
                 test_indicators=test_indicators,
             )
         except Exception as e:
@@ -993,7 +898,7 @@ def run_diagnostic():
             # 指標分類表示
             categorized = generator._dynamic_classify(indicators)
             print(
-                f"指標分類: "
+                "指標分類: "
                 + ", ".join([f"{k.name}:{len(v)}" for k, v in categorized.items() if v])
             )
 
