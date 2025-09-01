@@ -115,9 +115,6 @@ class BaseGeneGenerator(ABC):
         )
 
 
-# RandomGeneGeneratorはrandom_gene_generator.pyで定義されたものを使用
-
-
 class SmartGeneGenerator(BaseGeneGenerator):
     """スマート遺伝子生成器"""
 
@@ -130,9 +127,7 @@ class SmartGeneGenerator(BaseGeneGenerator):
         if self._smart_generator is None:
             from ..generators.condition_generator import ConditionGenerator
 
-            self._smart_generator = ConditionGenerator(
-                enable_smart_generation=True
-            )
+            self._smart_generator = ConditionGenerator(enable_smart_generation=True)
         return self._smart_generator
 
     def generate_indicators(self) -> List[IndicatorGene]:

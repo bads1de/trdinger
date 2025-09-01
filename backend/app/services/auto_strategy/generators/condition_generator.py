@@ -218,7 +218,9 @@ class ConditionGenerator:
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ロング条件生成"""
         self.logger.debug(f"Generating long conditions for {ind.type}")
-        config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, ind.type)
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+            self.yaml_config, ind.type
+        )
         self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
             threshold = YamlIndicatorUtils.get_threshold_from_yaml(
@@ -237,7 +239,9 @@ class ConditionGenerator:
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ショート条件生成"""
         self.logger.debug(f"Generating short conditions for {ind.type}")
-        config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, ind.type)
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+            self.yaml_config, ind.type
+        )
         self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
             threshold = YamlIndicatorUtils.get_threshold_from_yaml(
@@ -383,7 +387,9 @@ class ConditionGenerator:
         self, indicator: IndicatorGene, side: str
     ) -> List[Condition]:
         """統合された型別条件生成 - YAML設定またはデフォルト"""
-        config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, indicator.type)
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+            self.yaml_config, indicator.type
+        )
         if config:
             threshold = YamlIndicatorUtils.get_threshold_from_yaml(
                 self.yaml_config, config, side, self.context
@@ -568,11 +574,6 @@ class ConditionGenerator:
                     elif indicator_type == IndicatorType.TREND:
                         long_conds = self._create_trend_long_conditions(indicator)
                         short_conds = self._create_trend_short_conditions(indicator)
-                    # elif indicator_type == IndicatorType.STATISTICS:  # 統計指標は削除済み
-                    #     long_conds = self._create_statistics_long_conditions(indicator)
-                    #     short_conds = self._create_statistics_short_conditions(
-                    #         indicator
-                    #     )
                     elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
                         long_conds = self._create_pattern_long_conditions(indicator)
                         short_conds = self._create_pattern_short_conditions(indicator)
@@ -645,7 +646,9 @@ class ConditionGenerator:
     def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
         """指標のタイプを取得"""
         try:
-            config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, indicator.type)
+            config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+                self.yaml_config, indicator.type
+            )
             if config and "type" in config:
                 type_str = config["type"]
                 if type_str == "momentum":
@@ -799,18 +802,30 @@ class ConditionGenerator:
             if original_context is not None:
                 self.context = original_context
 
-    def _generate_yaml_based_conditions(self, indicator: IndicatorGene, side: str) -> List[Condition]:
+    def _generate_yaml_based_conditions(
+        self, indicator: IndicatorGene, side: str
+    ) -> List[Condition]:
         """YAML設定に基づいて条件を生成"""
         try:
-            config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, indicator.type)
+            config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+                self.yaml_config, indicator.type
+            )
             if config:
                 threshold = YamlIndicatorUtils.get_threshold_from_yaml(
                     self.yaml_config, config, side, self.context
                 )
                 if threshold is not None:
                     operator = ">" if side == "long" else "<"
-                    return [Condition(left_operand=indicator.type, operator=operator, right_operand=threshold)]
-            return [Condition(left_operand=indicator.type, operator=">", right_operand=0)]
+                    return [
+                        Condition(
+                            left_operand=indicator.type,
+                            operator=operator,
+                            right_operand=threshold,
+                        )
+                    ]
+            return [
+                Condition(left_operand=indicator.type, operator=">", right_operand=0)
+            ]
         except Exception as e:
             self.logger.error(f"YAML条件生成エラー: {e}")
             return []
@@ -827,94 +842,3 @@ class ConditionGenerator:
         except Exception as e:
             self.logger.error(f"YAMLテストエラー: {e}")
             return {"error": str(e)}
-
-
-def run_diagnostic():
-    """ロング・ショートバランス診断実行"""
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    print("=" * 60)
-    print("ConditionGenerator ロング・ショートバランス診断")
-    print("=" * 60)
-
-    generator = ConditionGenerator(enable_smart_generation=True)
-
-    # 診断ケース実行
-    test_cases = [
-        (
-            "統計指標 (RSI/STOCH)",
-            [
-                IndicatorGene(type="RSI", enabled=True),
-                IndicatorGene(type="STOCH", enabled=True),
-            ],
-        ),
-        (
-            "パターン指標 (CDLシリーズ)",
-            [
-                IndicatorGene(type="CDL_HAMMER", enabled=True),
-                IndicatorGene(type="CDL_ENGULFING", enabled=True),
-            ],
-        ),
-        (
-            "トレンド指標 (SMA/EMA)",
-            [
-                IndicatorGene(type="SMA", enabled=True),
-                IndicatorGene(type="EMA", enabled=True),
-            ],
-        ),
-        (
-            "モメンタム指標 (ROC/MFI)",
-            [
-                IndicatorGene(type="ROC", enabled=True),
-                IndicatorGene(type="MFI", enabled=True),
-            ],
-        ),
-        (
-            "混合指標 (RSI+SMA+ROC)",
-            [
-                IndicatorGene(type="RSI", enabled=True),
-                IndicatorGene(type="SMA", enabled=True),
-                IndicatorGene(type="ROC", enabled=True),
-            ],
-        ),
-    ]
-
-    for name, indicators in test_cases:
-        print(f"\n{name} テスト:")
-        print("-" * 40)
-
-        try:
-            long_conds, short_conds, exit_conds = (
-                generator.generate_balanced_conditions(indicators)
-            )
-
-            print(f"ロング条件数: {len(long_conds)}")
-            print(f"ショート条件数: {len(short_conds)}")
-            print(f"エグジット条件数: {len(exit_conds)}")
-
-            # 戦略タイプ確認
-            strategy_type = generator._select_strategy_type(indicators)
-            print(f"選択戦略: {strategy_type.name}")
-
-            # 問題検出
-            if len(long_conds) > 0 and len(short_conds) == 0:
-                print("⚠️  CRITICAL: ショート条件が生成されていない!")
-            elif len(long_conds) == 0 and len(short_conds) == 0:
-                print("❌ ERROR: 両方の条件が生成されていない")
-            elif len(long_conds) > 0 and len(short_conds) > 0:
-                print("✅ OK: ロング・ショート条件がバランスよく生成")
-
-            # 指標分類表示
-            categorized = generator._dynamic_classify(indicators)
-            print(
-                "指標分類: "
-                + ", ".join([f"{k.name}:{len(v)}" for k, v in categorized.items() if v])
-            )
-
-        except Exception as e:
-            print(f"❌ テスト失敗: {e}")
-
-    print("\n" + "=" * 60)
-    print("診断完了")
