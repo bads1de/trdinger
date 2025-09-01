@@ -26,7 +26,7 @@ from ..models.strategy_models import (
     create_random_tpsl_gene,
 )
 
-from ..utils.operand_grouping import operand_grouping_system
+from ..core.operand_grouping import operand_grouping_system
 from ..config.constants import (
     OPERATORS,
     DATA_SOURCES,
@@ -37,7 +37,6 @@ from ..config.constants import (
     MA_INDICATORS_NEEDING_PERIOD
 )
 from .condition_generator import ConditionGenerator
-from ..core.indicator_policies import PriceTrendPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +47,18 @@ class RandomGeneGenerator:
 
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
+    # トレンド系指標の優先順位
+    TREND_PREF = (
+        "SMA",
+        "EMA",
+        "MA",
+        "HMA",
+        "VIDYA",
+        "LINREG",
+        "LINREG_SLOPE",
+        "LINREG_INTERCEPT",
+        "LINREG_ANGLE",
+    )  # MAMA除外: 条件右オペランド未サポート
 
     def __init__(
         self,
@@ -127,8 +138,22 @@ class RandomGeneGenerator:
         - フォールバック（価格 vs トレンド or open）の注入
         - 1件なら素条件のまま、2件以上なら OR グルーピング
         """
-        # フォールバック
-        trend_name = PriceTrendPolicy.pick_trend_name(indicators)
+        # フォールバック (PriceTrendPolicyのロジックを直接実装)
+        trend_pool = []
+        for ind in indicators or []:
+            if not getattr(ind, "enabled", True):
+                continue
+            cfg = indicator_registry.get_indicator_config(ind.type)
+            if cfg and getattr(cfg, "category", None) == "trend":
+                trend_pool.append(ind.type)
+        # 優先候補
+        pref = [n for n in trend_pool if n in self.TREND_PREF]
+        if pref:
+            trend_name = random.choice(pref)
+        elif trend_pool:
+            trend_name = random.choice(trend_pool)
+        else:
+            trend_name = random.choice(self.TREND_PREF)
         fallback = Condition(
             left_operand="close",
             operator=">" if side == "long" else "<",

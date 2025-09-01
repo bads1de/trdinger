@@ -10,7 +10,7 @@ def test_new_indicators():
     """新しい指標のテスト"""
     try:
         # オペランドグループングシステムのテスト
-        from app.services.auto_strategy.utils.operand_grouping import operand_grouping_system
+        from app.services.auto_strategy.core.operand_grouping import operand_grouping_system
         print("=== オペランドグループングシステムテスト ===")
 
         # 新しい指標のグループマッピングテスト

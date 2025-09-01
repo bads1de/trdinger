@@ -5,5 +5,16 @@
 """
 
 from .genetic_operators import crossover_strategy_genes, mutate_strategy_gene
+from .operand_grouping import (
+    OperandGroup,
+    OperandGroupingSystem,
+    operand_grouping_system,
+)
 
-__all__ = ["crossover_strategy_genes", "mutate_strategy_gene"]
+__all__ = [
+    "crossover_strategy_genes",
+    "mutate_strategy_gene",
+    "OperandGroup",
+    "OperandGroupingSystem",
+    "operand_grouping_system",
+]

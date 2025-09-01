@@ -40,7 +40,7 @@ def test_indicator_imports():
 
         # オペランドグループテスト
         print("\nオペランドグループテスト...")
-        from app.services.auto_strategy.utils.operand_grouping import operand_grouping_system
+        from app.services.auto_strategy.core.operand_grouping import operand_grouping_system
 
         test_indicators = ["CMO", "TRIX", "ULTOSC", "BOP", "APO", "PPO", "ROCP", "ROCR", "ROCR100", "STOCHRSI", "SMI", "PVO"]
         for indicator in test_indicators:

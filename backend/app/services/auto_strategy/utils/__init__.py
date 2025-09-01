@@ -46,7 +46,7 @@ from .metrics import (
 )
 
 # Operand Grouping
-from .operand_grouping import (
+from ..core.operand_grouping import (
     OperandGroup,
     OperandGroupingSystem,
     operand_grouping_system,
