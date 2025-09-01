@@ -142,7 +142,9 @@ class DataCollectionConfig(BaseSettings):
     # Bybit API設定
     bybit_timeout: int = Field(default=30, description="APIタイムアウト（秒）")
     bybit_page_limit: int = Field(default=200, description="ページング時の制限")
-    bybit_max_pages: int = Field(default=500, description="最大ページ数（2020年からのデータを取得可能に拡張）")
+    bybit_max_pages: int = Field(
+        default=500, description="最大ページ数（2020年からのデータを取得可能に拡張）"
+    )
 
     # メモリ管理
     memory_warning_threshold: int = Field(default=8000, description="メモリ警告閾値")
@@ -188,7 +190,9 @@ class AutoStrategyConfig(BaseSettings):
     fitness_sharing_radius: float = Field(default=0.1, description="共有半径")
 
     # 戦略API設定
-    default_strategies_limit: int = Field(default=20, description="戦略取得デフォルト件数")
+    default_strategies_limit: int = Field(
+        default=20, description="戦略取得デフォルト件数"
+    )
     max_strategies_limit: int = Field(default=100, description="戦略取得最大件数")
 
     # ボラティリティTP/SL設定
@@ -199,18 +203,24 @@ class AutoStrategyConfig(BaseSettings):
     max_sl_pct: float = Field(default=0.1, description="最大SLパーセンテージ")
     min_tp_pct: float = Field(default=0.01, description="最小TPパーセンテージ")
     max_tp_pct: float = Field(default=0.2, description="最大TPパーセンテージ")
-    regime_lookback: int = Field(default=50, description="ボラティリティレジーム判定期間")
+    regime_lookback: int = Field(
+        default=50, description="ボラティリティレジーム判定期間"
+    )
     estimated_atr_pct: float = Field(default=0.02, description="推定ATRパーセンテージ")
     default_atr_mean: float = Field(default=0.02, description="デフォルトATR平均")
     default_atr_std: float = Field(default=0.01, description="デフォルトATR標準偏差")
 
     # ポジションサイジング設定
     default_atr_multiplier: float = Field(default=0.02, description="デフォルトATR倍率")
-    fallback_atr_multiplier: float = Field(default=0.04, description="フォールバックATR倍率")
+    fallback_atr_multiplier: float = Field(
+        default=0.04, description="フォールバックATR倍率"
+    )
     assumed_win_rate: float = Field(default=0.55, description="想定勝率")
     assumed_avg_win: float = Field(default=0.02, description="想定平均勝ち額")
     assumed_avg_loss: float = Field(default=0.015, description="想定平均負け額")
-    default_position_ratio: float = Field(default=0.1, description="デフォルトポジション比率")
+    default_position_ratio: float = Field(
+        default=0.1, description="デフォルトポジション比率"
+    )
 
     # ボラティリティレジーム閾値
     very_low_threshold: float = Field(default=-1.5, description="非常に低い閾値")
@@ -225,127 +235,7 @@ class AutoStrategyConfig(BaseSettings):
 class IndicatorConfig(BaseSettings):
     """指標設定"""
 
-    # RSI 閾値（プロファイル別）
-    rsi_long_lt_aggressive: int = Field(default=51)
-    rsi_short_gt_aggressive: int = Field(default=49)
-    rsi_long_lt_normal: int = Field(default=54)
-    rsi_short_gt_normal: int = Field(default=46)
-    rsi_long_lt_conservative: int = Field(default=57)
-    rsi_short_gt_conservative: int = Field(default=43)
-
-    # ADX 閾値（プロファイル別）
-    adx_trend_min_aggressive: int = Field(default=15)
-    adx_trend_min_normal: int = Field(default=18)
-    adx_trend_min_conservative: int = Field(default=22)
-
-    # MFI 閾値（プロファイル別）
-    mfi_long_lt_aggressive: int = Field(default=48)
-    mfi_short_gt_aggressive: int = Field(default=52)
-    mfi_long_lt_normal: int = Field(default=45)
-    mfi_short_gt_normal: int = Field(default=55)
-    mfi_long_lt_conservative: int = Field(default=42)
-    mfi_short_gt_conservative: int = Field(default=58)
-
-    # CCI 閾値（プロファイル別）
-    cci_abs_limit_aggressive: int = Field(default=120)
-    cci_abs_limit_normal: int = Field(default=100)
-    cci_abs_limit_conservative: int = Field(default=80)
-
-    # Williams %R 閾値（プロファイル別）
-    willr_long_lt_aggressive: int = Field(default=52)
-    willr_short_gt_aggressive: int = Field(default=48)
-    willr_long_lt_normal: int = Field(default=55)
-    willr_short_gt_normal: int = Field(default=45)
-    willr_long_lt_conservative: int = Field(default=58)
-    willr_short_gt_conservative: int = Field(default=42)
-
-    # Ultimate Oscillator 閾値（プロファイル別）
-    ultosc_long_gt_aggressive: int = Field(default=52)
-    ultosc_short_lt_aggressive: int = Field(default=48)
-    ultosc_long_gt_normal: int = Field(default=55)
-    ultosc_short_lt_normal: int = Field(default=45)
-    ultosc_long_gt_conservative: int = Field(default=58)
-    ultosc_short_lt_conservative: int = Field(default=42)
-
-    # ROC 閾値（プロファイル別）
-    roc_long_lt_aggressive: int = Field(default=-5)
-    roc_short_gt_aggressive: int = Field(default=5)
-    roc_long_lt_normal: int = Field(default=-2)
-    roc_short_gt_normal: int = Field(default=2)
-    roc_long_lt_conservative: int = Field(default=-1)
-    roc_short_gt_conservative: int = Field(default=1)
-
-    # MOM 閾値（プロファイル別）
-    mom_long_lt_aggressive: float = Field(default=-0.5)
-    mom_short_gt_aggressive: float = Field(default=0.5)
-    mom_long_lt_normal: float = Field(default=-0.2)
-    mom_short_gt_normal: float = Field(default=0.2)
-    mom_long_lt_conservative: float = Field(default=-0.1)
-    mom_short_gt_conservative: float = Field(default=0.1)
-
-    # STOCH 閾値（プロファイル別）
-    stoch_long_lt_aggressive: int = Field(default=25)
-    stoch_short_gt_aggressive: int = Field(default=75)
-    stoch_long_lt_normal: int = Field(default=30)
-    stoch_short_gt_normal: int = Field(default=70)
-    stoch_long_lt_conservative: int = Field(default=35)
-    stoch_short_gt_conservative: int = Field(default=65)
-
-    # CMO 閾値（プロファイル別）
-    cmo_long_lt_aggressive: int = Field(default=-30)
-    cmo_short_gt_aggressive: int = Field(default=30)
-    cmo_long_lt_normal: int = Field(default=-20)
-    cmo_short_gt_normal: int = Field(default=20)
-    cmo_long_lt_conservative: int = Field(default=-10)
-    cmo_short_gt_conservative: int = Field(default=10)
-
-    # TRIX 閾値（プロファイル別）
-    trix_long_lt_aggressive: float = Field(default=-0.005)
-    trix_short_gt_aggressive: float = Field(default=0.005)
-    trix_long_lt_normal: float = Field(default=0.000)
-    trix_short_gt_normal: float = Field(default=0.000)
-    trix_long_lt_conservative: float = Field(default=0.002)
-    trix_short_gt_conservative: float = Field(default=-0.002)
-
-    # BOP 閾値（プロファイル別）
-    bop_long_gt_aggressive: float = Field(default=-0.1)
-    bop_short_lt_aggressive: float = Field(default=0.1)
-    bop_long_gt_normal: float = Field(default=-0.05)
-    bop_short_lt_normal: float = Field(default=0.05)
-    bop_long_gt_conservative: float = Field(default=-0.02)
-    bop_short_lt_conservative: float = Field(default=0.02)
-
-    # APO 閾値（プロファイル別）
-    apo_long_gt_aggressive: float = Field(default=-1.0)
-    apo_short_lt_aggressive: float = Field(default=1.0)
-    apo_long_gt_normal: float = Field(default=-0.5)
-    apo_short_lt_normal: float = Field(default=0.5)
-    apo_long_gt_conservative: float = Field(default=-0.2)
-    apo_short_lt_conservative: float = Field(default=0.2)
-
-    # FWMA 閾値（プロファイル別）
-    fwma_long_gt_aggressive: float = Field(default=0.5)
-    fwma_short_lt_aggressive: float = Field(default=-0.5)
-    fwma_long_gt_normal: float = Field(default=0.2)
-    fwma_short_lt_normal: float = Field(default=-0.2)
-    fwma_long_gt_conservative: float = Field(default=0.1)
-    fwma_short_lt_conservative: float = Field(default=-0.1)
-
-    # SWMA 閾値（プロファイル別）
-    swma_long_gt_aggressive: float = Field(default=0.5)
-    swma_short_lt_aggressive: float = Field(default=-0.5)
-    swma_long_gt_normal: float = Field(default=0.2)
-    swma_short_lt_normal: float = Field(default=-0.2)
-    swma_long_gt_conservative: float = Field(default=0.1)
-    swma_short_lt_conservative: float = Field(default=-0.1)
-
-    # VIDYA 閾値（プロファイル別）
-    vidya_long_gt_aggressive: float = Field(default=0.5)
-    vidya_short_lt_aggressive: float = Field(default=-0.5)
-    vidya_long_gt_normal: float = Field(default=0.2)
-    vidya_short_lt_normal: float = Field(default=-0.2)
-    vidya_long_gt_conservative: float = Field(default=0.1)
-    vidya_short_lt_conservative: float = Field(default=-0.1)
+    # (Removed per-profile threshold fields — consolidated or unused)
 
     class Config:
         env_prefix = "INDICATOR_"

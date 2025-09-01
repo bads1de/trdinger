@@ -37,7 +37,6 @@ def setup_momentum_indicators():
         adapter_function=MomentumIndicators.stoch,
         required_data=["high", "low", "close"],
         result_type=IndicatorResultType.COMPLEX,
-        result_handler="stoch_handler",
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
         output_names=["STOCH_0", "STOCH_1"],  # %K, %D

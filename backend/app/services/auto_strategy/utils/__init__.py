@@ -12,16 +12,13 @@ from .common_utils import (
     ValidationUtils,
     PerformanceUtils,
     LoggingUtils,
-    CacheUtils,
     YamlLoadUtils,
     YamlTestUtils,
     create_default_strategy_gene,
     normalize_parameter,
 )
 
-# Data Coverage
-from .data_coverage_analyzer import DataCoverageAnalyzer
-
+# Data Coverage section removed as DataCoverageAnalyzer is unused
 # Decorators
 from .decorators import (
     auto_strategy_operation,
@@ -33,16 +30,6 @@ from .decorators import (
 from .error_handling import (
     AutoStrategyErrorHandler,
     ErrorContext,
-)
-
-# Metrics and Statistics
-from .metrics import (
-    SuccessStats,
-    QualityMetrics,
-    aggregate_success,
-    score_strategy_quality,
-    passes_quality_threshold,
-    filter_and_rank_strategies,
 )
 
 # Operand Grouping
@@ -73,14 +60,12 @@ __all__ = [
     "ValidationUtils",
     "PerformanceUtils",
     "LoggingUtils",
-    "CacheUtils",
     "YamlLoadUtils",
     "YamlTestUtils",
     "create_default_strategy_gene",
     "normalize_parameter",
 
-    # Data Coverage
-    "DataCoverageAnalyzer",
+    # Data Coverage section removed
 
     # Decorators
     "auto_strategy_operation",
@@ -90,14 +75,6 @@ __all__ = [
     # Error Handling
     "AutoStrategyErrorHandler",
     "ErrorContext",
-
-    # Metrics and Statistics
-    "SuccessStats",
-    "QualityMetrics",
-    "aggregate_success",
-    "score_strategy_quality",
-    "passes_quality_threshold",
-    "filter_and_rank_strategies",
 
     # Operand Grouping
     "OperandGroup",

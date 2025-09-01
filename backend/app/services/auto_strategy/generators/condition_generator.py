@@ -8,12 +8,7 @@ from app.services.auto_strategy.config.constants import (
     StrategyType,
 )
 from app.services.indicators.config import indicator_registry
-from app.services.auto_strategy.utils.ind_yaml_utils import (
-    load_yaml_config_for_indicators,
-    get_indicator_config_from_yaml,
-    get_threshold_from_yaml,
-    test_yaml_conditions_with_generator,
-)
+from ..utils.common_utils import YamlIndicatorUtils
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
 
@@ -43,7 +38,7 @@ class ConditionGenerator:
         self.logger = logger
 
         # YAML設定を読み込み
-        self.yaml_config = load_yaml_config_for_indicators()
+        self.yaml_config = YamlIndicatorUtils.load_yaml_config_for_indicators()
 
         # 生成時の相場・実行コンテキスト（timeframeやsymbol）+ML統合
         self.context = {
@@ -223,10 +218,10 @@ class ConditionGenerator:
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ロング条件生成"""
         self.logger.debug(f"Generating long conditions for {ind.type}")
-        config = get_indicator_config_from_yaml(self.yaml_config, ind.type)
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, ind.type)
         self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
-            threshold = get_threshold_from_yaml(
+            threshold = YamlIndicatorUtils.get_threshold_from_yaml(
                 self.yaml_config, config, "long", self.context
             )
             if threshold is not None:
@@ -242,10 +237,10 @@ class ConditionGenerator:
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ショート条件生成"""
         self.logger.debug(f"Generating short conditions for {ind.type}")
-        config = get_indicator_config_from_yaml(self.yaml_config, ind.type)
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, ind.type)
         self.logger.debug(f"Config for {ind.type}: {config}")
         if config:
-            threshold = get_threshold_from_yaml(
+            threshold = YamlIndicatorUtils.get_threshold_from_yaml(
                 self.yaml_config, config, "short", self.context
             )
             if threshold is not None:
@@ -388,9 +383,9 @@ class ConditionGenerator:
         self, indicator: IndicatorGene, side: str
     ) -> List[Condition]:
         """統合された型別条件生成 - YAML設定またはデフォルト"""
-        config = get_indicator_config_from_yaml(self.yaml_config, indicator.type)
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, indicator.type)
         if config:
-            threshold = get_threshold_from_yaml(
+            threshold = YamlIndicatorUtils.get_threshold_from_yaml(
                 self.yaml_config, config, side, self.context
             )
             if threshold is not None:
@@ -650,7 +645,7 @@ class ConditionGenerator:
     def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
         """指標のタイプを取得"""
         try:
-            config = get_indicator_config_from_yaml(self.yaml_config, indicator.type)
+            config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, indicator.type)
             if config and "type" in config:
                 type_str = config["type"]
                 if type_str == "momentum":
@@ -804,12 +799,28 @@ class ConditionGenerator:
             if original_context is not None:
                 self.context = original_context
 
+    def _generate_yaml_based_conditions(self, indicator: IndicatorGene, side: str) -> List[Condition]:
+        """YAML設定に基づいて条件を生成"""
+        try:
+            config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, indicator.type)
+            if config:
+                threshold = YamlIndicatorUtils.get_threshold_from_yaml(
+                    self.yaml_config, config, side, self.context
+                )
+                if threshold is not None:
+                    operator = ">" if side == "long" else "<"
+                    return [Condition(left_operand=indicator.type, operator=operator, right_operand=threshold)]
+            return [Condition(left_operand=indicator.type, operator=">", right_operand=0)]
+        except Exception as e:
+            self.logger.error(f"YAML条件生成エラー: {e}")
+            return []
+
     def test_yaml_conditions(
         self, test_indicators: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """YAMLベースの条件生成テスト"""
         try:
-            return test_yaml_conditions_with_generator(
+            return YamlIndicatorUtils.test_yaml_conditions_with_generator(
                 yaml_config=self.yaml_config,
                 test_indicators=test_indicators,
             )

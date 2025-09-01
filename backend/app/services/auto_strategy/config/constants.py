@@ -928,7 +928,7 @@ GA_DEFAULT_FITNESS_SHARING = {
 # YAML設定に基づいて特性を生成してマージ
 def _get_merged_characteristics(original):
     # Late import to avoid circular imports
-    from app.services.auto_strategy.utils.ind_yaml_utils import initialize_yaml_based_characteristics
-    return initialize_yaml_based_characteristics(original)
+    from app.services.auto_strategy.utils.common_utils import YamlIndicatorUtils
+    return YamlIndicatorUtils.initialize_yaml_based_characteristics(original)
 
 INDICATOR_CHARACTERISTICS = _get_merged_characteristics(INDICATOR_CHARACTERISTICS)
