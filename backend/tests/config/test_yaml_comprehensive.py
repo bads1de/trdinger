@@ -73,7 +73,7 @@ def test_new_indicators_verification():
             "AO", "ATR", "ICHIMOKU", "SUPERTREND",
             "TSI", "RMI", "KELTNER", "DONCHIAN",
             "MASSI", "VIC", "CHANE", "RSX",
-            "REX", "RVGI", "PVO"
+            "REX", "RVGI"
         ]
 
         all_present = True

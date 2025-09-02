@@ -533,66 +533,6 @@ class MomentumIndicators:
             return nan_series, nan_series
         return result.iloc[:, 0], result.iloc[:, 1]
 
-    @staticmethod
-    def ppo(
-        data: pd.Series,
-        fast: int = 12,
-        slow: int = 26,
-        signal: int = 9,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """Percentage Price Oscillator with enhanced fallback"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-
-        # 強化されたパラメータチェックとデータ長検証
-        if fast <= 0 or slow <= 0 or signal <= 0:
-            raise ValueError(f"Parameters must be positive: fast={fast}, slow={slow}, signal={signal}")
-
-        # データ長チェック: 最低必要なデータ長
-        min_length = max(fast, slow) + signal + 2  # 適切なバッファ
-        if len(data) < min_length:
-            logger.warning(f"PPO: insufficient data length {len(data)}, required {min_length}")
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series, nan_series
-
-        # pandas-ta試行
-        try:
-            result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
-            if result is not None and not result.empty and not result.isna().all().all():
-                return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
-        except Exception as e:
-            logger.warning(f"PPO pandas-ta call failed: {e}")
-
-        # 強化されたフォールバック実装: 手動計算
-        try:
-            # EMA計算
-            ema_fast = ta.ema(data, length=fast)
-            ema_slow = ta.ema(data, length=slow)
-
-            if ema_fast is not None and ema_slow is not None:
-                # PPO = (EMA_fast - EMA_slow) / EMA_slow * 100
-                ppo_line = (ema_fast - ema_slow) / ema_slow * 100
-
-                # シグナルライン: PPOのEMA
-                ppo_signal = ta.ema(ppo_line, length=signal)
-
-                if ppo_signal is not None:
-                    # ヒストグラム: PPO - Signal
-                    ppo_histogram = ppo_line - ppo_signal
-
-                    # NaNの補間
-                    ppo_line = ppo_line.fillna(method='bfill').fillna(method='ffill').fillna(0)
-                    ppo_signal = ppo_signal.fillna(method='bfill').fillna(method='ffill').fillna(0)
-                    ppo_histogram = ppo_histogram.fillna(method='bfill').fillna(method='ffill').fillna(0)
-
-                    return ppo_line, ppo_histogram, ppo_signal
-
-        except Exception as e:
-            logger.warning(f"PPO fallback calculation failed: {e}")
-
-        # 最終フォールバック: NaN
-        nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-        return nan_series, nan_series, nan_series
 
     @staticmethod
     def rvgi(
@@ -1271,23 +1211,6 @@ class MomentumIndicators:
             # 最終フォールバック: RSIベース
             return ta.rsi(close, length=min(length, len(close) - 1))
 
-    @staticmethod
-    def pvo(
-        volume: pd.Series,
-        fast: int = 12,
-        slow: int = 26,
-        signal: int = 9,
-    ) -> Tuple[pd.Series, pd.Series]:
-        """Price Volume Oscillator"""
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
-
-        # PVOの簡易実装（ボリュームのMACD）
-        result = ta.macd(volume, fast=fast, slow=slow, signal=signal)
-        if result is None:
-            nan_series = pd.Series(np.full(len(volume), np.nan), index=volume.index)
-            return nan_series, nan_series
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     def cfo(data: pd.Series, length: int = 9) -> pd.Series:

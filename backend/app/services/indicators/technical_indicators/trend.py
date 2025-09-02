@@ -110,62 +110,97 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def ema(data: pd.Series, period: int) -> pd.Series:
+    def ema(data: pd.Series, length: int) -> pd.Series:
         """指数移動平均"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        if period <= 0:
-            raise ValueError(f"period must be positive: {period}")
-        length = period
+        if length <= 0:
+            raise ValueError(f"period must be positive: {length}")
 
-        logger.debug(f"EMA: data length={len(data)}, period={period}, data_type={data.dtype}")
-        logger.debug(f"EMA: data head={data.head().values}")
-        logger.debug(f"EMA: data tail={data.tail().values}")
-        logger.debug(f"EMA: data NaN count={data.isna().sum()}")
+        logger.info(f"EMA: data length={len(data)}, period={length}, data_type={data.dtype}")
+        logger.info(f"EMA: data head={data.head().values}")
+        logger.info(f"EMA: data tail={data.tail().values}")
+        logger.info(f"EMA: data NaN count={data.isna().sum()}")
 
         # データチェック
         if len(data) == 0:
             return pd.Series(np.full(0, np.nan), index=data.index)
         if data.isna().sum() > len(data) * 0.5:
-            logger.debug(f"EMA: Too many NaN values ({data.isna().sum()}/{len(data)}), returning NaN")
+            logger.info(f"EMA: Too many NaN values ({data.isna().sum()}/{len(data)}), returning NaN")
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # 第一優先: pandas-ta
         try:
-            logger.debug(f"EMA: Calling ta.ema with window={length}")
+            logger.info(f"EMA: Calling ta.ema with window={length}")
             result = ta.ema(data, window=length)
-            logger.debug(f"EMA: ta.ema result={result}")
-            if result is not None and isinstance(result, pd.Series):
-                logger.debug(f"EMA: ta.ema result shape={len(result)}, all NaN={result.isna().all()}")
+            logger.info(f"EMA: ta.ema result type={type(result)}")
+            if result is None:
+                logger.info(f"EMA: ta.ema returned None")
+            elif not isinstance(result, pd.Series):
+                logger.info(f"EMA: ta.ema returned {type(result)}, expected pd.Series")
+            else:
+                logger.info(f"EMA: ta.ema result shape={len(result)}, all NaN={result.isna().all()}")
+                logger.info(f"EMA: ta.ema last 5 values: {result.tail(5).values}")
+                na_count = result.isna().sum()
+                logger.info(f"EMA: ta.ema NaN count: {na_count}/{len(result)}")
+
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length - 1
-                if start_idx < len(result) and not result.iloc[start_idx:].isna().all():
-                    logger.debug(f"EMA: Using pandas-ta result")
-                    return result
+                logger.info(f"EMA: start_idx={start_idx}, valid_check_idx_from={start_idx} to {len(result)}")
+                if start_idx < len(result):
+                    valid_from_start = result.iloc[start_idx:]
+                    all_nan_from_start = valid_from_start.isna().all()
+                    logger.info(f"EMA: values from start_idx all NaN: {all_nan_from_start}")
+                    logger.info(f"EMA: sample values from start_idx: {valid_from_start.head(5).values}")
+                    if not all_nan_from_start:
+                        logger.info(f"EMA: Using pandas-ta result with {len(valid_from_start) - valid_from_start.isna().sum()} valid values")
+                        return result
+                    else:
+                        logger.info(f"EMA: pandas-ta result is all NaN from start_idx, using fallback")
                 else:
-                    logger.debug(f"EMA: pandas-ta result is all NaN, using fallback")
+                    logger.info(f"EMA: start_idx >= len(result), falling back")
         except Exception as e:
-            logger.debug(f"EMA: pandas-ta failed with error: {e}")
+            logger.info(f"EMA: pandas-ta failed with error: {e}", exc_info=True)
 
         # フォールバック実装: numpyベース -> pandas.Seriesに変更
-        logger.debug(f"EMA: Using fallback calculation")
+        logger.info(f"EMA: Using fallback calculation")
         if len(data) < length:
-            logger.debug(f"EMA: Data length {len(data)} < period {length}, returning NaN")
+            logger.info(f"EMA: Data length {len(data)} < period {length}, returning NaN")
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # EMA計算用変数
         alpha = 2.0 / (length + 1)
+        logger.info(f"EMA: Fallback calculated alpha: {alpha}")
+
         ema_values = np.full(len(data), np.nan, dtype=float)
-        ema_values[length - 1] = data.iloc[:length].mean()  # 初期値はSMA
-        logger.debug(f"EMA: Fallback initial value: {ema_values[length - 1]}")
+        if len(data) >= length:
+            initial_sma = data.iloc[:length].mean()
+            ema_values[length - 1] = initial_sma  # 初期値はSMA
+            logger.info(f"EMA: Fallback initial SMA: {initial_sma} at index {length - 1}")
+        else:
+            logger.info(f"EMA: Cannot calculate initial SMA: data length {len(data)} < period {length}")
 
         # ループでEMA計算
+        logger.info(f"EMA: Starting fallback calculation loop from {length} to {len(data)}")
         for i in range(length, len(data)):
-            ema_values[i] = alpha * data.iloc[i] + (1 - alpha) * ema_values[i - 1]
+            current_price = data.iloc[i]
+            prev_ema = ema_values[i - 1]
+            new_ema = alpha * current_price + (1 - alpha) * prev_ema
+            ema_values[i] = new_ema
+            if i < length + 5 or i > len(data) - 5:  # 最初と最後の5ステップのみログ
+                logger.info(f"EMA: Step {i}: price={current_price}, prev_ema={prev_ema}, new_ema={new_ema}")
+
+            # NaNチェック
+            if np.isnan(new_ema):
+                logger.warning(f"EMA: NaN generated at step {i}: price={current_price}, prev={prev_ema}")
 
         result_series = pd.Series(ema_values, index=data.index)
-        logger.debug(f"EMA: Fallback result all NaN: {result_series.isna().all()}")
+        valid_count = result_series.notna().sum()
+        logger.info(f"EMA: Fallback result valid count: {valid_count}/{len(result_series)}")
+        logger.info(f"EMA: Fallback result all NaN: {result_series.isna().all()}")
+        logger.info(f"EMA: Fallback result first 5: {result_series.head(5).values}")
+        logger.info(f"EMA: Fallback result last 5: {result_series.tail(5).values}")
         return result_series
 
     @staticmethod

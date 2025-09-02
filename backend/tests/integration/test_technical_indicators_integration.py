@@ -28,7 +28,7 @@ class TestTechnicalIndicatorsIntegration:
     # テスト対象指標リスト（親タスクで指定された17個）
     TEST_INDICATORS = [
         'AROON', 'KST', 'ICHIMOKU', 'MI', 'MIDPRICE',
-        'T3', 'TLB', 'ZLMA', 'PVOL', 'CMF', 'EFI', 'KVO', 'TSI',
+        'T3', 'TLB', 'ZLMA', 'PVOL', 'CMF', 'EFI', 'TSI',
         'SUPERTREND', 'VWMA', 'VP'
     ]
 
@@ -182,7 +182,6 @@ class TestTechnicalIndicatorsIntegration:
             'TSI': lambda data: ta.tsi(data['close']),
             'VWMA': lambda data: ta.vwma(data['close'], data['volume']),
             'CMF': lambda data: ta.cmf(data['high'], data['low'], data['close'], data['volume']),
-            'KVO': lambda data: ta.kvo(data['high'], data['low'], data['close'], data['volume']),
             'SUPERTREND': lambda data: ta.supertrend(data['high'], data['low'], data['close']),
             'ZLMA': lambda data: ta.zlma(data['close']),
             'T3': lambda data: ta.t3(data['close']),

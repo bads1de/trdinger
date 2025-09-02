@@ -133,10 +133,10 @@ def get_all_registered_indicators():
             logger.warning("インジケータレジストリが空です")
             return []
 
-        # STCおよびTHERMOインジケーターを除外（タスク要件により削除済み）
-        indicators = [ind for ind in indicators if ind not in ['STC', 'THERMO']]
+        # STC、THERMO、RSI_EMA_CROSS、AOBV、HWC、RVGI、PPO、PVO、KVOインジケーターを除外（タスク要件により削除済み）
+        indicators = [ind for ind in indicators if ind not in ['STC', 'THERMO', 'RSI_EMA_CROSS', 'AOBV', 'HWC', 'RVGI', 'PPO', 'PVO', 'KVO']]
 
-        logger.info(f"全{len(indicators)}個のインジケーターを取得しました（STC, THERMO除外）")
+        logger.info(f"全{len(indicators)}個のインジケーターを取得しました（STC, THERMO, AOBV, HWC, RVGI, PPO, PVO, KVO除外）")
         return indicators
     except Exception as e:
         logger.error(f"インジケーター一覧取得エラー: {e}")
@@ -225,7 +225,20 @@ def test_indicator_calculation(df: DataFrame, indicator_name: str) -> Tuple[Test
             return TestResultCategory.SUCCESS, result, f"{valid_count}/{total_count} 個の値が有効"
 
         elif isinstance(result, tuple):
-            valid_counts = [np.sum(~np.isnan(arr)) for arr in result if isinstance(arr, np.ndarray)]
+            valid_counts = []
+            for arr in result:
+                if isinstance(arr, np.ndarray):
+                    valid_count = np.sum(~np.isnan(arr))
+                    valid_counts.append(valid_count)
+                elif hasattr(arr, 'notna'):  # pandas Series/DataFrame
+                    valid_count = arr.notna().sum()
+                    if hasattr(arr, 'shape') and len(arr.shape) > 1:
+                        # DataFrameの場合は全要素数を考慮
+                        total_elements = arr.shape[0] * arr.shape[1] if hasattr(arr.shape, '__len__') and len(arr.shape) > 1 else arr.shape[0]
+                        valid_counts.append(valid_count)
+                    else:
+                        valid_counts.append(valid_count)
+
             if not valid_counts:
                 return TestResultCategory.ALL_NAN, None, "すべての配列が無効"
 
@@ -418,7 +431,7 @@ def main():
     print("=== 全テクニカルインジケータ総合テスト実行開始 ===")
 
     try:
-        # 全インジケーター取得（STC除外済み）
+        # 全インジケーター取得（STC、PPO、PVO、KVO除外済み）
         indicators = get_all_registered_indicators()
         if not indicators:
             print("ERROR: インジケーターが登録されていません")
@@ -426,11 +439,15 @@ def main():
 
         print(f"INFO: {len(indicators)}個のインジケーターに対してテストを実行")
 
-        # STCの除外確認
-        if 'STC' in indicators:
-            print("WARNING: STCインジケーターがまだテスト対象に含まれています")
-        else:
-            print("SUCCESS: STCインジケーターが完全に除外されました")
+        # STC、AOBV、HWC、RVGI、PPO、PVO、KVOの除外確認
+        excluded_indicators = ['STC', 'AOBV', 'HWC', 'RVGI', 'PPO', 'PVO', 'KVO']
+        all_excluded = True
+        for indicator in excluded_indicators:
+            if indicator in indicators:
+                print(f"WARNING: {indicator}インジケーターがまだテスト対象に含まれています")
+                all_excluded = False
+        if all_excluded:
+            print("SUCCESS: STC、AOBV、HWC、RVGI、PPO、PVO、KVOインジケーターが完全に除外されました")
 
         # バッチテスト実行
         report = execute_batch_tests(indicators, max_workers=4)
@@ -438,8 +455,8 @@ def main():
         # レポート生成と表示
         import os
         # レポート出力先のディレクトリ作成
-        os.makedirs(os.path.dirname("backend/tests/indicators/comprehensive_all_indicators_report.txt"), exist_ok=True)
-        output_file = "backend/tests/indicators/comprehensive_all_indicators_report.txt"
+        os.makedirs("backend/reports", exist_ok=True)
+        output_file = "backend/reports/comprehensive_all_indicators_report.txt"
         full_report = generate_test_report(report, output_file)
 
         print("\n" + "="*50)

@@ -401,26 +401,6 @@ def setup_momentum_indicators():
     mom_config.param_map = {"close": "data", "period": "length"}
     indicator_registry.register(mom_config)
 
-    # RVGI (Relative Vigor Index)
-    rvgi_config = IndicatorConfig(
-        indicator_name="RVGI",
-        adapter_function=MomentumIndicators.rvgi,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="momentum",
-    )
-    rvgi_config.add_parameter(
-        ParameterConfig(
-            name="period",
-            default_value=10,
-            min_value=2,
-            max_value=50,
-            description="RVGI計算期間",
-        )
-    )
-    rvgi_config.param_map = {"open": "open_", "period": "length"}
-    indicator_registry.register(rvgi_config)
 
     # ADX
     adx_config = IndicatorConfig(
@@ -589,49 +569,6 @@ def setup_momentum_indicators():
     minus_di_config.param_map = {"period": "length"}
     indicator_registry.register(minus_di_config)
 
-    # PPO
-    ppo_config = IndicatorConfig(
-        indicator_name="PPO",
-        adapter_function=MomentumIndicators.ppo,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="momentum",
-    )
-    ppo_config.add_parameter(
-        ParameterConfig(
-            name="fastperiod",
-            default_value=12,
-            min_value=2,
-            max_value=100,
-            description="高速期間",
-        )
-    )
-    ppo_config.add_parameter(
-        ParameterConfig(
-            name="slowperiod",
-            default_value=26,
-            min_value=2,
-            max_value=200,
-            description="低速期間",
-        )
-    )
-    ppo_config.add_parameter(
-        ParameterConfig(
-            name="matype",
-            default_value=0,
-            min_value=0,
-            max_value=8,
-            description="移動平均タイプ",
-        )
-    )
-    ppo_config.param_map = {
-        "data": "close",
-        "fastperiod": "fast",
-        "slowperiod": "slow",
-        "matype": "signal",
-    }
-    indicator_registry.register(ppo_config)
 
     # ROC
     roc_config = IndicatorConfig(
@@ -1543,71 +1480,6 @@ def setup_volatility_indicators():
     accbands_config.param_map = {"length": "length"}
     indicator_registry.register(accbands_config)
 
-    # HWC
-    hwc_config = IndicatorConfig(
-        indicator_name="HWC",
-        adapter_function=VolatilityIndicators.hwc,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="volatility",
-        output_names=["HWC_Upper", "HWC_Middle", "HWC_Lower"],
-        default_output="HWC_Middle",
-    )
-    hwc_config.add_parameter(
-        ParameterConfig(
-            name="na",
-            default_value=0.2,
-            min_value=0.01,
-            max_value=1.0,
-            description="HWCノイズ除去係数",
-        )
-    )
-    hwc_config.add_parameter(
-        ParameterConfig(
-            name="nb",
-            default_value=0.1,
-            min_value=0.01,
-            max_value=1.0,
-            description="HWCバンド幅係数",
-        )
-    )
-    hwc_config.add_parameter(
-        ParameterConfig(
-            name="nc",
-            default_value=3.0,
-            min_value=1.0,
-            max_value=10.0,
-            description="HWCチャンネル係数",
-        )
-    )
-    hwc_config.add_parameter(
-        ParameterConfig(
-            name="nd",
-            default_value=0.3,
-            min_value=0.01,
-            max_value=1.0,
-            description="HWCチャンネル方程式パラメータ",
-        )
-    )
-    hwc_config.add_parameter(
-        ParameterConfig(
-            name="scalar",
-            default_value=2.0,
-            min_value=0.1,
-            max_value=5.0,
-            description="HWCチャンネル幅乗数",
-        )
-    )
-    hwc_config.param_map = {
-        "close": "close",
-        "na": "na",
-        "nb": "nb",
-        "nc": "nc",
-        "nd": "nd",
-        "scalar": "scalar",
-    }
-    indicator_registry.register(hwc_config)
 
     # MASSI
     massi_config = IndicatorConfig(
@@ -2062,32 +1934,6 @@ rvi_config.add_parameter(
 )
 indicator_registry.register(rvi_config)
 
-pvo_config = IndicatorConfig(
-    indicator_name="PVO",
-    adapter_function=MomentumIndicators.pvo,
-    required_data=["volume"],
-    result_type=IndicatorResultType.COMPLEX,
-    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-    category="volume",
-    output_names=["PVO_0", "PVO_1"],
-    default_output="PVO_0",
-)
-pvo_config.add_parameter(
-    ParameterConfig(name="fast", default_value=12, min_value=2, max_value=100)
-)
-pvo_config.add_parameter(
-    ParameterConfig(name="slow", default_value=26, min_value=2, max_value=200)
-)
-pvo_config.add_parameter(
-    ParameterConfig(name="signal", default_value=9, min_value=2, max_value=100)
-)
-pvo_config.param_map = {
-    "volume": "volume",
-    "fast": "fast",
-    "slow": "slow",
-    "signal": "signal",
-}
-indicator_registry.register(pvo_config)
 
 cfo_config = IndicatorConfig(
     indicator_name="CFO",
@@ -2346,25 +2192,6 @@ eom_cfg.param_map = {
 }
 indicator_registry.register(eom_cfg)
 
-kvo_cfg = IndicatorConfig(
-    indicator_name="KVO",
-    adapter_function=VolumeIndicators.kvo,
-    required_data=["high", "low", "close", "volume"],
-    result_type=IndicatorResultType.SINGLE,
-    scale_type=IndicatorScaleType.VOLUME,
-    category="volume",
-)
-kvo_cfg.add_parameter(
-    ParameterConfig(name="fast", default_value=10, min_value=2, max_value=100)
-)
-kvo_cfg.add_parameter(
-    ParameterConfig(name="slow", default_value=20, min_value=2, max_value=200)
-)
-kvo_cfg.param_map = {
-    "fast": "fast",
-    "slow": "slow",
-}
-indicator_registry.register(kvo_cfg)
 
 pvt_cfg = IndicatorConfig(
     indicator_name="PVT",
