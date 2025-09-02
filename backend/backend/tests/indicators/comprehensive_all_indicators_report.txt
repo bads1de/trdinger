@@ -1,0 +1,269 @@
+================================================================================
+包括的テクニカルインジケーターテストレポート
+実行時刻: 2025-09-03 05:30:04
+================================================================================
+
+総テストインジケーター数: 121
+
+【結果サマリー】
+正常動作: 48
+NaN発生: 52
+全てNaN: 21
+計算エラー: 0
+レジストリ未登録: 0
+パラメータエラー: 0
+初期化エラー: 0
+全体成功率: 39.7%
+総実行時間（秒）: 4.37
+平均実行時間（秒）: 0.0361
+
+【カテゴリ別詳細】
+
+正常動作 (48個):
+  ✓ AD - 0.0047s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ BBANDS - 0.0040s, 有効値: 3000/3000
+    calculation_details: 3/3 配列に有効値
+  ✓ BOP - 0.0090s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ CMO - 0.0131s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✓ CV - 0.0037s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ CWMA - 0.1230s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ DEMA - 0.0020s, 有効値: 982/1000
+    calculation_details: 982/1000 個の値が有効
+  ✓ HL2 - 0.0895s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ HLC3 - 0.0865s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ HWMA - 0.0085s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ JMA - 0.0289s, 有効値: 994/1000
+    calculation_details: 994/1000 個の値が有効
+  ✓ KST - 0.2072s, 有効値: 2000/2000
+    calculation_details: 2/2 配列に有効値
+  ✓ LINREG - 0.1349s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ LINREGANGLE - 0.0625s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ LINREGSLOPE - 0.0273s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ LINREG_ANGLE - 0.0569s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ LINREG_INTERCEPT - 0.0400s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ LINREG_SLOPE - 0.1107s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ MACD - 0.0055s, 有効値: 3000/3000
+    calculation_details: 3/3 配列に有効値
+  ✓ MAD - 0.0053s, 有効値: 974/1000
+    calculation_details: 974/1000 個の値が有効
+  ✓ MAX - 0.0040s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ MCGD - 0.0384s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ MIN - 0.0223s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ MOM - 0.0010s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✓ NVI - 0.0240s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ OBV - 0.0027s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ OHLC4 - 0.0319s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ PVI - 0.0629s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ PVOL - 0.0035s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ PVR - 0.0055s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ PWMA - 0.2348s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✓ RANGE - 0.0031s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✓ ROCP - 0.0040s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✓ ROCR - 0.0040s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✓ ROCR100 - 0.0050s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✓ RSI - 0.0785s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ RVI - 0.2317s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ SINWMA - 0.0794s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ SMA - 0.0055s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ SSF - 0.0628s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ T3 - 0.0030s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ TLB - 0.1640s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ UI - 0.0135s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ VIDYA - 0.1193s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✓ VWAP - 0.0440s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ VWMA - 0.0030s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✓ WCP - 0.0481s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+  ✓ WMA - 0.0046s, 有効値: 1000/1000
+    calculation_details: 1000/1000 個の値が有効
+
+NaN発生 (52個):
+  ✗ ADOSC - 0.0055s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✗ ADX - 0.0091s, 有効値: 973/1000
+    calculation_details: 973/1000 個の値が有効
+  ✗ ADXR - 0.0055s, 有効値: 973/1000
+    calculation_details: 973/1000 個の値が有効
+  ✗ ALMA - 0.0510s, 有効値: 990/1000
+    calculation_details: 990/1000 個の値が有効
+  ✗ AO - 0.0340s, 有効値: 967/1000
+    calculation_details: 967/1000 個の値が有効
+  ✗ APO - 0.0050s, 有効値: 975/1000
+    calculation_details: 975/1000 個の値が有効
+  ✗ AROONOSC - 0.0055s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ ATR - 0.0061s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ CCI - 0.0065s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✗ CFO - 0.0331s, 有効値: 992/1000
+    calculation_details: 992/1000 個の値が有効
+  ✗ CHOP - 0.0065s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ CMF - 0.0104s, 有効値: 981/1000
+    calculation_details: 981/1000 個の値が有効
+  ✗ CTI - 0.0331s, 有効値: 989/1000
+    calculation_details: 989/1000 個の値が有効
+  ✗ DPO - 0.0040s, 有効値: 981/1000
+    calculation_details: 981/1000 個の値が有効
+  ✗ DX - 0.0155s, 有効値: 973/1000
+    calculation_details: 973/1000 個の値が有効
+  ✗ EFI - 0.0114s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ EOM - 0.0045s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ FWMA - 0.1214s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✗ HILO - 0.0925s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ HMA - 0.0045s, 有効値: 989/1000
+    calculation_details: 989/1000 個の値が有効
+  ✗ IRM - 0.0057s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✗ KAMA - 0.0559s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✗ MA - 0.1498s, 有効値: 971/1000
+    calculation_details: 971/1000 個の値が有効
+  ✗ MASSI - 0.0180s, 有効値: 960/1000
+    calculation_details: 960/1000 個の値が有効
+  ✗ MFI - 0.0081s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ MIDPOINT - 0.0520s, 有効値: 999/1000
+    calculation_details: 999/1000 個の値が有効
+  ✗ MIDPRICE - 0.0403s, 有効値: 999/1000
+    calculation_details: 999/1000 個の値が有効
+  ✗ MINUS_DI - 0.0150s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ MINUS_DM - 0.0111s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ NATR - 0.0088s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ PDIST - 0.0158s, 有効値: 999/1000
+    calculation_details: 999/1000 個の値が有効
+  ✗ PLUS_DI - 0.0125s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ PLUS_DM - 0.0111s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ PRICE_EMA_RATIO - 0.0331s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✗ PVT - 0.0035s, 有効値: 999/1000
+    calculation_details: 999/1000 個の値が有効
+  ✗ QQE - 0.2354s, 有効値: 982/1000
+    calculation_details: 982/1000 個の値が有効
+  ✗ RMA - 0.0500s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✗ RMI - 0.0030s, 有効値: 980/1000
+    calculation_details: 980/1000 個の値が有効
+  ✗ ROC - 0.0055s, 有効値: 990/1000
+    calculation_details: 990/1000 個の値が有効
+  ✗ SAR - 0.1498s, 有効値: 999/1000
+    calculation_details: 999/1000 個の値が有効
+  ✗ SMA_SLOPE - 0.0331s, 有効値: 986/1000
+    calculation_details: 986/1000 個の値が有効
+  ✗ SWMA - 0.0615s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✗ TEMA - 0.0040s, 有効値: 973/1000
+    calculation_details: 973/1000 個の値が有効
+  ✗ TRANGE - 0.0051s, 有効値: 999/1000
+    calculation_details: 999/1000 個の値が有効
+  ✗ TRIMA - 0.0169s, 有効値: 991/1000
+    calculation_details: 991/1000 個の値が有効
+  ✗ TRIX - 0.0055s, 有効値: 912/1000
+    calculation_details: 912/1000 個の値が有効
+  ✗ TSI - 0.0046s, 有効値: 963/1000
+    calculation_details: 963/1000 個の値が有効
+  ✗ ULTOSC - 0.0095s, 有効値: 972/1000
+    calculation_details: 972/1000 個の値が有効
+  ✗ UO - 0.0040s, 有効値: 972/1000
+    calculation_details: 972/1000 個の値が有効
+  ✗ VAR - 0.0045s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✗ WILLR - 0.0085s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+  ✗ ZLMA - 0.0055s, 有効値: 987/1000
+    calculation_details: 987/1000 個の値が有効
+
+全てNaN (21個):
+  ✗ ACCBANDS - 0.0049s
+    calculation_details: すべての配列が無効
+  ✗ AOBV - 0.0104s
+    calculation_details: すべての配列が無効
+  ✗ AROON - 0.0095s
+    calculation_details: すべての配列が無効
+  ✗ BB - 0.0015s
+    calculation_details: すべての配列が無効
+  ✗ DONCHIAN - 0.0091s
+    calculation_details: すべての配列が無効
+  ✗ EMA - 0.0101s, 有効値: 0/1000
+  ✗ HWC - 0.0149s
+    calculation_details: すべての配列が無効
+  ✗ ICHIMOKU - 0.0830s
+    calculation_details: すべての配列が無効
+  ✗ KDJ - 0.0314s
+    calculation_details: すべての配列が無効
+  ✗ KELTNER - 0.0105s
+    calculation_details: すべての配列が無効
+  ✗ KVO - 0.0224s
+    calculation_details: すべての配列が無効
+  ✗ PPO - 0.0030s
+    calculation_details: すべての配列が無効
+  ✗ PVO - 0.0046s
+    calculation_details: すべての配列が無効
+  ✗ RSI_EMA_CROSS - 0.0035s
+    calculation_details: すべての配列が無効
+  ✗ RVGI - 0.0347s
+    calculation_details: すべての配列が無効
+  ✗ SMI - 0.1237s
+    calculation_details: すべての配列が無効
+  ✗ STOCH - 0.0050s
+    calculation_details: すべての配列が無効
+  ✗ STOCHRSI - 0.0085s
+    calculation_details: すべての配列が無効
+  ✗ SUPERTREND - 0.0679s
+    calculation_details: すべての配列が無効
+  ✗ VORTEX - 0.0055s
+    calculation_details: すべての配列が無効
+  ✗ VP - 0.0650s
+    calculation_details: すべての配列が無効
+
+================================================================================

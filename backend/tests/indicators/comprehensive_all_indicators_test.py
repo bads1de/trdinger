@@ -88,25 +88,29 @@ class ComprehensiveTestReport:
 def create_test_data():
     """テスト用価格データ作成"""
     np.random.seed(42)
-    dates = pd.date_range(start='2024-01-01', periods=500, freq='1H')
+    dates = pd.date_range(start='2024-01-01', periods=1000, freq='1H')  # More data points
+    logger.info(f"Creating test data with {len(dates)} samples")
 
     base_price = 50000
-    price_changes = np.random.normal(0, 0.02, 500)
+    price_changes = np.random.normal(0, 0.01, 1000)  # Reduce volatility for more stable data
 
     close_prices = [base_price]
     for change in price_changes[1:]:
         new_price = close_prices[-1] * (1 + change)
         close_prices.append(max(1, new_price))
 
-    high_prices = [price * (1 + abs(np.random.normal(0, 0.01))) for price in close_prices]
-    low_prices = [price * (1 - abs(np.random.normal(0, 0.01))) for price in close_prices]
-    open_prices = [base_price * (1 + np.random.normal(0, 0.005))] + [
-        close_prices[i-1] * (1 + np.random.normal(0, 0.005)) for i in range(1, len(close_prices))
+    logger.debug(f"Generated {len(close_prices)} close prices")
+
+    high_prices = [price * (1 + abs(np.random.normal(0, 0.005))) for price in close_prices]
+    low_prices = [price * (1 - abs(np.random.normal(0, 0.005))) for price in close_prices]
+    open_prices = [base_price * (1 + np.random.normal(0, 0.002))] + [
+        close_prices[i-1] * (1 + np.random.normal(0, 0.002)) for i in range(1, len(close_prices))
     ]
-    volumes = np.random.uniform(1000000, 10000000, 500)
+    volumes = np.random.uniform(1000000, 10000000, 1000)
 
     # MAEインジケーター用の予測値生成
     predicted_prices = [price * (1 + np.random.normal(0, 0.01)) for price in close_prices]
+    logger.debug(f"Generated all price data: close={len(close_prices)}, high={len(high_prices)}, low={len(low_prices)}, open={len(open_prices)}")
 
     df = pd.DataFrame({
         'timestamp': dates,
@@ -166,9 +170,13 @@ def test_indicator_calculation(df: DataFrame, indicator_name: str) -> Tuple[Test
     """インジケーター計算テスト"""
     service = TechnicalIndicatorService()
 
+    logger.info(f"Testing indicator: {indicator_name}")
+    logger.debug(f"Data shape: {df.shape}")
+
     try:
         config = indicator_registry.get_indicator_config(indicator_name)
         if config is None:
+            logger.error(f"{indicator_name}: Configuration not found")
             return TestResultCategory.CONFIG_MISSING, None, "設定が見つかりません"
 
         # パラメータ生成（可能であれば）
@@ -178,15 +186,24 @@ def test_indicator_calculation(df: DataFrame, indicator_name: str) -> Tuple[Test
                 # デフォルトパラメータを使用
                 for param_name, param_config in config.parameters.items():
                     params[param_name] = param_config.default_value
+                    logger.debug(f"{indicator_name}: param {param_name} = {param_config.default_value}")
             elif hasattr(config, 'get_parameter_ranges'):
                 ranges = config.get_parameter_ranges()
                 for param_name, param_range in ranges.items():
-                    params[param_name] = param_range.get('default', 14)
+                    default_value = param_range.get('default', 14)
+                    params[param_name] = default_value
+                    logger.debug(f"{indicator_name}: range param {param_name} = {default_value}")
+
+            logger.info(f"{indicator_name}: Using params {params}")
+
         except Exception as e:
             logger.warning(f"{indicator_name} パラメータ生成警告: {e}")
+            logger.debug(f"{indicator_name}: Using empty params due to warning")
 
         # 計算実行
+        logger.debug(f"{indicator_name}: Starting calculation")
         result = service.calculate_indicator(df, indicator_name, params)
+        logger.debug(f"{indicator_name}: Calculation finished, result type: {type(result)}")
 
         if result is None:
             return TestResultCategory.ALL_NAN, None, "計算結果が None です"
@@ -196,12 +213,16 @@ def test_indicator_calculation(df: DataFrame, indicator_name: str) -> Tuple[Test
             valid_count = np.sum(~np.isnan(result))
             total_count = len(result)
 
+            logger.debug(f"{indicator_name}: Array result - valid: {valid_count}/{total_count}")
+
             if valid_count == 0:
+                logger.warning(f"{indicator_name}: All NaN in array result")
                 return TestResultCategory.ALL_NAN, result, None
             elif valid_count < total_count:
+                logger.info(f"{indicator_name}: Partial NaN - valid: {valid_count}/{total_count}")
                 return TestResultCategory.NAN_VALUES, result, f"{valid_count}/{total_count} 個の値が有効"
 
-            return TestResultCategory.SUCCESS, result, None
+            return TestResultCategory.SUCCESS, result, f"{valid_count}/{total_count} 個の値が有効"
 
         elif isinstance(result, tuple):
             valid_counts = [np.sum(~np.isnan(arr)) for arr in result if isinstance(arr, np.ndarray)]
@@ -424,7 +445,9 @@ def main():
         print("\n" + "="*50)
         print("TEST REPORT")
         print("="*50)
-        print(full_report)
+        # エンコーディング問題を回避
+        full_report_clean = full_report.replace('✓', '[YES]').replace('✗', '[NO]')
+        print(full_report_clean)
 
         # 全体成功率チェック
         success_count = len(report.results_by_category.get(TestResultCategory.SUCCESS, []))
