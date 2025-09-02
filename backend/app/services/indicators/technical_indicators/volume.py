@@ -326,7 +326,6 @@ class VolumeIndicators:
             pass
 
         # Enhanced fallback: Manual Archer On-Balance Volume calculation
-        logger.info(f"AOBV fallback: fast={fast}, slow={slow}, mamode={mamode}, period={period}")
         try:
             # Calculate OBV first
             try:
@@ -335,13 +334,9 @@ class VolumeIndicators:
                     obv = pd.Series([0], index=close.index)[:-1] + (close - close.shift(1)).apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0)) * volume
                     obv = obv.cumsum()
             except Exception as e:
-                logger.warning(f"AOBV fallback OBV calculation failed: {e}")
                 # Fallback OBV calculation
                 obv_changes = np.where(close.diff() > 0, 1, np.where(close.diff() < 0, -1, 0))
                 obv = (pd.Series(obv_changes, index=close.index) * volume).fillna(0).cumsum()
-
-            logger.info(f"AOBV obv first values: {obv.head()}")
-            logger.info(f"AOBV obv has NaN: {obv.isna().any()}")
 
             # Calculate moving averages
             if mamode.lower() == "ema":
@@ -350,14 +345,10 @@ class VolumeIndicators:
             else:
                 fast_ma = ta.sma(obv, length=fast)
                 slow_ma = ta.sma(obv, length=slow)
-
-            logger.info(f"AOBV fast_ma length: {len(fast_ma)}")
-            logger.info(f"AOBV fast_ma has NaN: {fast_ma.isna().any() if fast_ma is not None else 'None'}")
-
+            
             # Archer AOBV typically uses the difference or cross of fast and slow
             # Return (fast_ma, slow_ma, fast_ma - slow_ma) and fill with NaN/empty for others
             if len(close) < period or fast_ma is None or slow_ma is None:
-                logger.warning(f"AOBV fallback failure: len={len(close)}, period={period}, fast_ma=None={fast_ma is None}, slow_ma=None={slow_ma is None}")
                 empty = pd.Series(np.full(len(close), np.nan), index=close.index)
                 return empty, empty, empty, empty, empty, empty, empty
 
@@ -368,9 +359,6 @@ class VolumeIndicators:
             series2 = slow_ma.fillna(method='bfill').fillna(0)  # AOBV Slow
             series3 = diff.fillna(method='bfill').fillna(0)     # AOBV Signal
             series4 = obv.fillna(method='bfill').fillna(0)     # Original OBV
-
-            logger.info(f"AOBV series1 first 10: {series1.head(10).tolist()}")
-            logger.info(f"AOBV series1 isna sum: {series1.isna().sum()}")
 
             empty = pd.Series(np.full(len(close), 0.0), index=close.index)  # Use 0.0 instead of np.nan
             return series1, series2, series3, series4, empty, empty, empty
@@ -523,16 +511,12 @@ class VolumeIndicators:
         # Enhanced Fallback: Simple volume profile implementation with better error handling
         try:
             if len(close) < width:
-                logger.warning(
-                    f"VP fallback: insufficient data length {len(close)}, required {width}"
-                )
                 # Insufficient data, return empty series
                 empty = pd.Series([], dtype=float)
                 return empty, empty, empty, empty, empty, empty
 
             # Data validation
             if close.isna().all() or volume.isna().all():
-                logger.warning("VP fallback: all input data is NaN")
                 empty = pd.Series([], dtype=float)
                 return empty, empty, empty, empty, empty, empty
 
@@ -565,7 +549,6 @@ class VolumeIndicators:
                         empty,  # total vol
                     )
                 except Exception as e:
-                    logger.warning(f"VP fallback single price calculation failed: {e}")
                     empty = pd.Series([], dtype=float)
                     return empty, empty, empty, empty, empty, empty
 
@@ -580,9 +563,6 @@ class VolumeIndicators:
                 )
                 price_bins = pd.cut(close, bins=n_bins, labels=False)
             except Exception as e:
-                logger.warning(
-                    f"VP fallback bin calculation failed: {e}, using simple binning"
-                )
                 n_bins = min(width, 10)  # Fallback to 10 bins
                 price_bins = pd.qcut(
                     close.rank(method="first"),
@@ -623,13 +603,11 @@ class VolumeIndicators:
                         )
                     prev_close = close.iloc[i]
                 except Exception as e:
-                    logger.debug(f"VP fallback error processing index {i}: {e}")
                     continue
 
             # Create output series with error handling
             try:
                 if not vol_profile:
-                    logger.warning("VP fallback: no valid price levels found")
                     empty = pd.Series([], dtype=float)
                     return empty, empty, empty, empty, empty, empty
 
@@ -661,7 +639,6 @@ class VolumeIndicators:
 
                 # Ensure series are not empty and have valid indices
                 if total_vol_series.empty:
-                    logger.warning("VP fallback: total volume series is empty")
                     empty = pd.Series([], dtype=float)
                     return empty, empty, empty, empty, empty, empty
 
@@ -683,12 +660,10 @@ class VolumeIndicators:
                     total_vol_series,  # total volume
                 )
             except Exception as e:
-                logger.warning(f"VP fallback output creation failed: {e}")
                 empty = pd.Series([], dtype=float)
                 return empty, empty, empty, empty, empty, empty
 
         except Exception as e:
-            logger.warning(f"VP fallback failed completely: {e}")
             empty = pd.Series([], dtype=float)
             return empty, empty, empty, empty, empty, empty
 

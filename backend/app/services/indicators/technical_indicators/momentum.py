@@ -268,7 +268,7 @@ class MomentumIndicators:
             if result is not None and not result.empty and not result.isna().all().all():
                 return result.iloc[:, 0], result.iloc[:, 1]
         except Exception as e:
-            logger.warning(f"Aroon pandas-ta call failed: {e}")
+            pass
 
         # 強化されたフォールバック実装：AROON指標の手動計算
         if len(high) < period or len(low) < period:
@@ -327,7 +327,6 @@ class MomentumIndicators:
             return pd.Series(aroon_up_values, index=high.index), pd.Series(aroon_down_values, index=low.index)
 
         except Exception as e:
-            logger.warning(f"AROON fallback calculation failed: {e}")
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
 
@@ -416,7 +415,7 @@ class MomentumIndicators:
                     ao_fallback = sma5_fallback - sma34_fallback
                     return ao_fallback.fillna(0)
         except Exception as e:
-            logger.warning(f"AO fallback calculation failed: {e}")
+            pass
 
         # 最終フォールバック: NaN配列
         return pd.Series(np.full(len(high), np.nan), index=high.index)
@@ -463,26 +462,14 @@ class MomentumIndicators:
         if length is not None:
             period = length
         try:
-            logger.info(f"CMO: ta.cmo存在チェック: {hasattr(ta, 'cmo')}")
             if hasattr(ta, 'cmo'):
-                logger.info(f"CMO: ta.cmo関数シグネチャ調査...")
                 import inspect
                 sig = inspect.signature(ta.cmo)
-                logger.info(f"CMO: ta.cmo関数シグネチャ: {sig}")
-            logger.info(f"CMO: 引数 data.shape={data.shape}, period={period}")
-            logger.info(f"CMO: ta.cmo呼び出し中...")
             result = ta.cmo(data, length=period)
-            logger.info(f"CMO: ta.cmo呼び出し成功: {result.shape if result is not None else None}")
             if result is None or (hasattr(result, "empty") and result.empty):
-                logger.warning("CMO: 結果がNoneまたは空のためNaNを返す")
                 return pd.Series(np.full(len(data), np.nan), index=data.index)
             return result
         except Exception as e:
-            logger.error(f"CMO: エラー発生 {type(e).__name__}: {e}")
-            logger.error(f"CMO: エラーの詳細: {str(e)}")
-            # 詳しいスタックトレースを追加
-            import traceback
-            logger.error(f"CMO: traceback: {traceback.format_exc()}")
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
     @staticmethod
@@ -559,7 +546,6 @@ class MomentumIndicators:
         # データ長チェック: 最低必要なデータ長
         min_length = length + 2  # 適切なバッファ
         if len(high) < min_length:
-            logger.warning(f"RVGI: insufficient data length {len(high)}, required {min_length}")
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
 
@@ -575,7 +561,7 @@ class MomentumIndicators:
             if result is not None and not result.empty and not result.isna().all().all():
                 return result.iloc[:, 0], result.iloc[:, 1]
         except Exception as e:
-            logger.warning(f"RVGI pandas-ta call failed: {e}")
+            pass
 
         # 強化されたフォールバック実装: 手動計算
         try:
@@ -601,7 +587,7 @@ class MomentumIndicators:
                 return rvi_line, rvi_signal
 
         except Exception as e:
-            logger.warning(f"RVGI fallback calculation failed: {e}")
+            pass
 
         # 最終フォールバック: NaN
         nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
@@ -714,7 +700,7 @@ class MomentumIndicators:
             if result is not None and not result.empty and not result.isna().all().all():
                 return result.iloc[:, 0], result.iloc[:, 1]
         except Exception as e:
-            logger.warning(f"KST pandas-ta call failed: {e}")
+            pass
 
         # フォールバック実装: KSTのマニュアル計算
         if len(data) < max(roc4 + sma4, signal):
@@ -746,7 +732,7 @@ class MomentumIndicators:
                     return kst_line, signal_line
 
         except Exception as e:
-            logger.warning(f"KST fallback calculation failed: {e}")
+            pass
 
         # 最終フォールバック: NaN
         nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
@@ -911,14 +897,10 @@ class MomentumIndicators:
             if slow <= 0:
                 slow = 28
 
-        logger.info(f"ULTOSC: 引数確認 - high.shape={high.shape}, low.shape={low.shape}, close.shape={close.shape}, fast={fast}, medium={medium}, slow={slow}, period={period}")
-        logger.info(f"ULTOSC: ta.uo存在チェック: {hasattr(ta, 'uo')}")
         try:
             if hasattr(ta, 'uo'):
                 import inspect
                 sig = inspect.signature(ta.uo)
-                logger.info(f"ULTOSC: ta.uo関数シグネチャ: {sig}")
-            logger.info(f"ULTOSC: ta.uo呼び出し中...")
             result = ta.uo(
                 high=high,
                 low=low,
@@ -927,15 +909,10 @@ class MomentumIndicators:
                 medium=medium,
                 slow=slow,
             )
-            logger.info(f"ULTOSC: ta.uo呼び出し成功: {result.shape if result is not None else None}")
         except Exception as e:
-            logger.error(f"ULTOSC: エラー発生 {type(e).__name__}: {e}")
-            logger.error(f"ULTOSC: エラーの詳細: {str(e)}")
             import traceback
-            logger.error(f"ULTOSC: traceback: {traceback.format_exc()}")
 
         if result is None or result.empty:
-            logger.warning("ULTOSC: pandas-ta結果がNoneまたは空のためフォールバック使用")
             # フォールバック: 簡易実装 (weighted average of different periods)
             n = len(high)
             if n < slow:
@@ -953,7 +930,6 @@ class MomentumIndicators:
                 # 単純な平均で代替
                 return (fast_ma + medium_ma + slow_ma) / 3
             else:
-                logger.warning("ULTOSC: フォールバックMA計算失敗")
                 return pd.Series(np.full(n, np.nan), index=high.index)
         return result
 
@@ -978,25 +954,16 @@ class MomentumIndicators:
         if period <= 0:
             raise ValueError(f"period must be positive: {period}")
 
-        logger.info(f"BOP: パラメータ確認 - open_.shape={open_.shape}, high.shape={high.shape}, low.shape={low.shape}, close.shape={close.shape}, period={period}, sma_period={sma_period}")
-        logger.info(f"BOP: ta.bop存在チェック: {hasattr(ta, 'bop')}")
         try:
             if hasattr(ta, 'bop'):
                 import inspect
                 sig = inspect.signature(ta.bop)
-                logger.info(f"BOP: ta.bop関数シグネチャ: {sig}")
-            logger.info(f"BOP: ta.bop呼び出し中...")
             result = ta.bop(open_, high, low, close, period)
-            logger.info(f"BOP: ta.bop呼び出し成功: {result.shape if result is not None else None}")
         except Exception as e:
-            logger.error(f"BOP: エラー発生 {type(e).__name__}: {e}")
-            logger.error(f"BOP: エラーの詳細: {str(e)}")
             import traceback
-            logger.error(f"BOP: traceback: {traceback.format_exc()}")
             return pd.Series(np.full(len(high), np.nan), index=high.index)
 
         if result is None:
-            logger.warning("BOP: 結果がNoneのためNaNを返す")
             return pd.Series(np.full(len(high), np.nan), index=high.index)
 
         # オプション: SMAシグナルを適用
@@ -1203,11 +1170,9 @@ class MomentumIndicators:
                 return pd.Series(rvi_values, index=close.index)
             else:
                 # データ長不足時の簡易フォールバック
-                logger.info(f"RVI: データ長不足のため簡易版を使用 (length={length}, data_length={len(close)})")
                 return ta.rsi(close, length=min(length, len(close) - 1))
 
         except Exception as e:
-            logger.warning(f"RVI fallback calculation failed: {e}")
             # 最終フォールバック: RSIベース
             return ta.rsi(close, length=min(length, len(close) - 1))
 
@@ -1268,7 +1233,6 @@ class MomentumIndicators:
             return pd.Series(cfo_values, index=data.index)
 
         except Exception as e:
-            logger.warning(f"CFO fallback calculation failed: {e}")
             # 最終フォールバック: EMAベース近似
             try:
                 ema_short = ta.ema(data, length=length//2)
@@ -1328,7 +1292,6 @@ class MomentumIndicators:
             return pd.Series(cti_values, index=data.index)
 
         except Exception as e:
-            logger.warning(f"CTI fallback calculation failed: {e}")
             # 最終フォールバック: 簡易相関係数ベース
             try:
                 cti_values = np.full(len(data), np.nan)
@@ -1340,7 +1303,6 @@ class MomentumIndicators:
                         cti_values[i] = np.clip(cti_values[i], -100, 100)
                 return pd.Series(cti_values, index=data.index)
             except Exception as e2:
-                logger.warning(f"CTI secondary fallback failed: {e2}")
                 return pd.Series(np.full(len(data), np.nan), index=data.index)
 
     @staticmethod

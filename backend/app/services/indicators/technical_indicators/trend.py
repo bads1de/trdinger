@@ -117,90 +117,61 @@ class TrendIndicators:
         if length <= 0:
             raise ValueError(f"period must be positive: {length}")
 
-        logger.info(f"EMA: data length={len(data)}, period={length}, data_type={data.dtype}")
-        logger.info(f"EMA: data head={data.head().values}")
-        logger.info(f"EMA: data tail={data.tail().values}")
-        logger.info(f"EMA: data NaN count={data.isna().sum()}")
-
         # データチェック
         if len(data) == 0:
             return pd.Series(np.full(0, np.nan), index=data.index)
         if data.isna().sum() > len(data) * 0.5:
-            logger.info(f"EMA: Too many NaN values ({data.isna().sum()}/{len(data)}), returning NaN")
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # 第一優先: pandas-ta
         try:
-            logger.info(f"EMA: Calling ta.ema with window={length}")
             result = ta.ema(data, window=length)
-            logger.info(f"EMA: ta.ema result type={type(result)}")
             if result is None:
-                logger.info(f"EMA: ta.ema returned None")
+                pass
             elif not isinstance(result, pd.Series):
-                logger.info(f"EMA: ta.ema returned {type(result)}, expected pd.Series")
+                pass
             else:
-                logger.info(f"EMA: ta.ema result shape={len(result)}, all NaN={result.isna().all()}")
-                logger.info(f"EMA: ta.ema last 5 values: {result.tail(5).values}")
-                na_count = result.isna().sum()
-                logger.info(f"EMA: ta.ema NaN count: {na_count}/{len(result)}")
-
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length - 1
-                logger.info(f"EMA: start_idx={start_idx}, valid_check_idx_from={start_idx} to {len(result)}")
                 if start_idx < len(result):
                     valid_from_start = result.iloc[start_idx:]
                     all_nan_from_start = valid_from_start.isna().all()
-                    logger.info(f"EMA: values from start_idx all NaN: {all_nan_from_start}")
-                    logger.info(f"EMA: sample values from start_idx: {valid_from_start.head(5).values}")
                     if not all_nan_from_start:
-                        logger.info(f"EMA: Using pandas-ta result with {len(valid_from_start) - valid_from_start.isna().sum()} valid values")
                         return result
                     else:
-                        logger.info(f"EMA: pandas-ta result is all NaN from start_idx, using fallback")
+                        pass
                 else:
-                    logger.info(f"EMA: start_idx >= len(result), falling back")
+                    pass
         except Exception as e:
-            logger.info(f"EMA: pandas-ta failed with error: {e}", exc_info=True)
+            pass
 
         # フォールバック実装: numpyベース -> pandas.Seriesに変更
-        logger.info(f"EMA: Using fallback calculation")
         if len(data) < length:
-            logger.info(f"EMA: Data length {len(data)} < period {length}, returning NaN")
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # EMA計算用変数
         alpha = 2.0 / (length + 1)
-        logger.info(f"EMA: Fallback calculated alpha: {alpha}")
 
         ema_values = np.full(len(data), np.nan, dtype=float)
         if len(data) >= length:
             initial_sma = data.iloc[:length].mean()
             ema_values[length - 1] = initial_sma  # 初期値はSMA
-            logger.info(f"EMA: Fallback initial SMA: {initial_sma} at index {length - 1}")
         else:
-            logger.info(f"EMA: Cannot calculate initial SMA: data length {len(data)} < period {length}")
+            pass
 
         # ループでEMA計算
-        logger.info(f"EMA: Starting fallback calculation loop from {length} to {len(data)}")
         for i in range(length, len(data)):
             current_price = data.iloc[i]
             prev_ema = ema_values[i - 1]
             new_ema = alpha * current_price + (1 - alpha) * prev_ema
             ema_values[i] = new_ema
-            if i < length + 5 or i > len(data) - 5:  # 最初と最後の5ステップのみログ
-                logger.info(f"EMA: Step {i}: price={current_price}, prev_ema={prev_ema}, new_ema={new_ema}")
 
             # NaNチェック
             if np.isnan(new_ema):
-                logger.warning(f"EMA: NaN generated at step {i}: price={current_price}, prev={prev_ema}")
+                pass
 
         result_series = pd.Series(ema_values, index=data.index)
-        valid_count = result_series.notna().sum()
-        logger.info(f"EMA: Fallback result valid count: {valid_count}/{len(result_series)}")
-        logger.info(f"EMA: Fallback result all NaN: {result_series.isna().all()}")
-        logger.info(f"EMA: Fallback result first 5: {result_series.head(5).values}")
-        logger.info(f"EMA: Fallback result last 5: {result_series.tail(5).values}")
         return result_series
 
     @staticmethod
@@ -989,18 +960,16 @@ class TrendIndicators:
         if tenkan >= kijun or kijun >= senkou:
             raise ValueError("Periods must satisfy: tenkan < kijun < senkou")
 
-        logger.debug(f"ICHIMOKU: Input lengths - high: {len(high)}, low: {len(low)}, close: {len(close)}")
-        logger.debug(f"ICHIMOKU: params - tenkan: {tenkan}, kijun: {kijun}, senkou: {senkou}")
-
         # パラメータ名をpandas-taの形式にマッピング
         ta_conversion = tenkan
         ta_base = kijun
         ta_lagging = senkou
 
         # Enhanced minimum data length calculation
-        required_length = senkou + kijun + max(tenkan, 5)  # Ensure adequate data for all calculations
+        required_length = (
+            senkou + kijun + max(tenkan, 5)
+        )  # Ensure adequate data for all calculations
 
-        logger.debug(f"ICHIMOKU: required length: {required_length}, actual length: {len(high)}")
 
         if len(high) < required_length:
             # Return NaN series with proper index alignment
@@ -1009,8 +978,9 @@ class TrendIndicators:
 
         # pandas-taを使用した計算 with enhanced error handling
         try:
-            if len(high) >= 26:  # 最小データ長チェック（基準となる26）- but use enhanced check above
-                logger.debug(f"ICHIMOKU: Calling ta.ichimoku")
+            if (
+                len(high) >= 26
+            ):  # 最小データ長チェック（基準となる26）- but use enhanced check above
                 result = ta.ichimoku(
                     high=high,
                     low=low,
@@ -1019,12 +989,6 @@ class TrendIndicators:
                     base=ta_base,
                     lagging=ta_lagging,
                 )
-                logger.debug(f"ICHIMOKU: ta.ichimoku result: {result is not None}")
-                if result is not None:
-                    logger.debug(f"ICHIMOKU: result columns: {result.columns.tolist() if hasattr(result, 'columns') else 'no columns'}")
-                    if hasattr(result, 'isna'):
-                        logger.debug(f"ICHIMOKU: result all NaN: {result.isna().all().all()}")
-
                 if result is not None and isinstance(result, pd.DataFrame):
                     # pandas-ta returns DataFrame with specific column names based on parameters
                     # Columns: ['ISA_{conversion}', 'ISB_{lagging}', 'ITS_{conversion}', 'IKS_{base}', 'ICS_{lagging}']
@@ -1045,65 +1009,67 @@ class TrendIndicators:
                         span_b = result[span_b_col]
                         lag = result[lag_col]
 
-                        logger.debug(f"ICHIMOKU: Extracted columns NaN check - conv: {conv.isna().all()}, base: {base.isna().all()}")
-
                         # Post-process to handle potential remaining NaN issues
                         if conv.isna().all() or base.isna().all():
-                            logger.debug(f"ICHIMOKU: All NaN in results, using fallback")
-                            pass  # Fall through to manual implementation
+                            pass
                         else:
-                            # Enhance NaN handling in the results
-                            conv = conv.fillna(method='bfill').fillna(conv.mean())
-                            base = base.fillna(method='bfill').fillna(base.mean())
-                            span_a = span_a.fillna(method='bfill').fillna(span_a.mean())
-                            span_b = span_b.fillna(method='bfill').fillna(span_b.mean())
-                            lag = lag.fillna(method='ffill').fillna(lag.mean())
+                            conv = conv.fillna(method="bfill").fillna(conv.mean())
+                            base = base.fillna(method="bfill").fillna(base.mean())
+                            span_a = span_a.fillna(method="bfill").fillna(span_a.mean())
+                            span_b = span_b.fillna(method="bfill").fillna(span_b.mean())
+                            lag = lag.fillna(method="ffill").fillna(lag.mean())
 
-                            logger.debug(f"ICHIMOKU: Using pandas-ta result")
                             return (conv, base, span_a, span_b, lag)
         except Exception as e:
             # pandas-ta failed, fallback to manual implementation
-            logger.warning(f"ICHIMOKU pandas-ta calculation failed: {e}")
 
         # フォールバック: Enhanced manual implementation with better error handling
-        logger.debug(f"ICHIMOKU: Using manual fallback implementation")
         data_length = len(high)
 
         # 標準定義に基づく計算（pandas-taと互換性を持たせる）
         try:
             # Conversion Line: Tenkan-sen (High + Low)/2 over tenkan periods
-            conv_raw = (high.rolling(tenkan, min_periods=tenkan).max() +
-                       low.rolling(tenkan, min_periods=tenkan).min()) / 2.0
+            conv_raw = (
+                high.rolling(tenkan, min_periods=tenkan).max()
+                + low.rolling(tenkan, min_periods=tenkan).min()
+            ) / 2.0
 
             # Base Line: Kijun-sen (High + Low)/2 over kijun periods
-            base_raw = (high.rolling(kijun, min_periods=kijun).max() +
-                       low.rolling(kijun, min_periods=kijun).min()) / 2.0
+            base_raw = (
+                high.rolling(kijun, min_periods=kijun).max()
+                + low.rolling(kijun, min_periods=kijun).min()
+            ) / 2.0
 
             # Handle edge cases for rolling calculations
-            conv = conv_raw.fillna(method='bfill').fillna((high.iloc[:tenkan].max() + low.iloc[:tenkan].min()) / 2.0)
-            base = base_raw.fillna(method='bfill').fillna((high.iloc[:kijun].max() + low.iloc[:kijun].min()) / 2.0)
+            conv = conv_raw.fillna(method="bfill").fillna(
+                (high.iloc[:tenkan].max() + low.iloc[:tenkan].min()) / 2.0
+            )
+            base = base_raw.fillna(method="bfill").fillna(
+                (high.iloc[:kijun].max() + low.iloc[:kijun].min()) / 2.0
+            )
 
             # Leading Span A: (Tenkan-sen + Kijun-sen)/2, shifted kijun periods ahead
             span_a_raw = ((conv + base) / 2.0).shift(kijun)
-            span_a = span_a_raw.fillna(method='bfill').fillna(span_a_raw.mean())
+            span_a = span_a_raw.fillna(method="bfill").fillna(span_a_raw.mean())
 
             # Leading Span B: (High + Low)/2 over senkou periods, shifted kijun periods ahead
             span_b_raw = (
-               (high.rolling(senkou, min_periods=senkou).max() +
-                low.rolling(senkou, min_periods=senkou).min()) / 2.0
+                (
+                    high.rolling(senkou, min_periods=senkou).max()
+                    + low.rolling(senkou, min_periods=senkou).min()
+                )
+                / 2.0
             ).shift(kijun)
-            span_b = span_b_raw.fillna(method='bfill').fillna(span_b_raw.mean())
+            span_b = span_b_raw.fillna(method="bfill").fillna(span_b_raw.mean())
 
             # Lagging Span: Chikou Span - Close price shifted kijun periods back
             lag_raw = close.shift(-kijun)
-            lag = lag_raw.fillna(method='ffill').fillna(lag_raw.mean())
+            lag = lag_raw.fillna(method="ffill").fillna(lag_raw.mean())
 
-            logger.debug(f"ICHIMOKU: Fallback result NaN check - conv: {conv.isna().all()}, base: {base.isna().all()}")
             return (conv, base, span_a, span_b, lag)
 
         except Exception as e:
             # 計算失敗時、全てNaNを返す
-            logger.warning(f"ICHIMOKU manual calculation failed: {e}")
             nan_series = pd.Series(np.full(data_length, np.nan), index=high.index)
             return (nan_series, nan_series, nan_series, nan_series, nan_series)
 
@@ -1122,8 +1088,6 @@ class TrendIndicators:
         ema_vals = TrendIndicators.ema(data, length)
         ema_series = pd.Series(ema_vals, index=data.index)
         return (data / ema_series) - 1.0
-
-    # mama function removed due to pandas-ta compatibility issues
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1284,7 +1248,6 @@ class TrendIndicators:
                 return hwma_series
 
             except Exception as e:
-                logger.warning(f"HWMA fallback calculation failed: {e}")
                 return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         return result
