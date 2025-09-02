@@ -60,7 +60,6 @@ class TestConditionGeneratorIntegration:
             IndicatorGene(type="SMA", enabled=True, parameters={"period": 20}),
             IndicatorGene(type="MACD", enabled=True, parameters={"fast": 12, "slow": 26}),
             # IndicatorGene(type="CORREL", enabled=True, parameters={"period": 20}),  # 統計指標は削除済み
-            IndicatorGene(type="CDL_HAMMER", enabled=True, parameters={}),
         ]
 
     def test_generic_long_short_conditions(self, generator, mock_indicator_registry):
@@ -124,15 +123,6 @@ class TestConditionGeneratorIntegration:
     #     assert long_conditions[0].operator == ">"
     #     assert isinstance(long_conditions[0].right_operand, float)
 
-    def test_pattern_conditions(self, generator):
-        """パターン認識条件生成テスト"""
-        pattern_gene = IndicatorGene(type="CDL_HAMMER", enabled=True, parameters={})
-
-        # Test long condition
-        long_conditions = generator._create_pattern_long_conditions(pattern_gene)
-        assert len(long_conditions) > 0
-        assert long_conditions[0].left_operand == "CDL_HAMMER"
-        assert long_conditions[0].operator == ">"
 
     @pytest.mark.parametrize("profile", ["aggressive", "normal", "conservative"])
     def test_threshold_profile_integration(self, generator, mock_indicator_registry, profile):
@@ -186,7 +176,6 @@ class TestConditionGeneratorIntegration:
         assert IndicatorType.MOMENTUM in categorized
         assert IndicatorType.TREND in categorized
         # assert IndicatorType.STATISTICS in categorized  # 統計指標は削除済み
-        assert IndicatorType.PATTERN_RECOGNITION in categorized
 
         # RSI should be in momentum
         assert any(ind.type == "RSI" for ind in categorized[IndicatorType.MOMENTUM])
@@ -260,21 +249,6 @@ class TestConditionGeneratorIntegration:
         assert len(long_cond) > 0, "モメンタム指標でロング条件が生成されない"
         assert len(short_cond) > 0, "モメンタム指標でショート条件が生成されない"
 
-        # パターン指標のみの場合
-        pattern_only = [
-            IndicatorGene(type="CDL_HAMMER", enabled=True),
-            IndicatorGene(type="CDL_ENGULFING", enabled=True),
-        ]
-
-        long_cond, short_cond, exit_cond = generator.generate_balanced_conditions(pattern_only)
-
-        print("\n=== パターン指標のみ生成テスト ===")
-        print(f"ロング条件数: {len(long_cond)}")
-        print(f"ショート条件数: {len(short_cond)}")
-
-        # パターン指標でもショート条件が生成されるようになったはず
-        assert len(long_cond) > 0, "パターン指標でロング条件が生成されない"
-        assert len(short_cond) > 0, "パターン指標でショート条件が生成されない"
 
         # 混合戦略テスト
         mixed_indicators = [

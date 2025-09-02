@@ -208,3 +208,41 @@ class TestMomentumPandasOnly:
         # numpy arrayはTypeError
         with pytest.raises(TypeError, match="must be pandas Series"):
             MomentumIndicators.rsi(close_np)
+
+
+class TestKSTSpecific:
+    """KST指標の専用テスト"""
+
+    @pytest.fixture
+    def sample_data(self):
+        np.random.seed(42)
+        n = 100
+        close = pd.Series(100 + np.cumsum(np.random.randn(n)), name="close")
+        return close
+
+    def test_kst_parameter_mapping(self, sample_data):
+        """KSTのパラメータ名が正しいかを確認"""
+        try:
+            kst_line, signal = MomentumIndicators.kst(sample_data)
+            # pandas-taのKSTが成功した場合
+            assert isinstance(kst_line, pd.Series), f"KST should return pd.Series, got {type(kst_line)}"
+            assert isinstance(signal, pd.Series), f"KST signal should return pd.Series, got {type(signal)}"
+            # NaNが全てではないことを確認
+            assert not kst_line.isna().all(), "KST should not be all NaN"
+            assert not signal.isna().all(), "KST signal should not be all NaN"
+        except Exception as e:
+            # もし失敗したらパラメータマッピングの問題
+            pytest.fail(f"KSTパラメータマッピング失敗: {e}")
+
+    def test_kst_pandas_ta_compatibility(self, sample_data):
+        """KSTのパンダス-ta互換性をテスト"""
+        try:
+            # 直接pandas-taでKSTを呼び出す
+            pt_kst = ta.kst(sample_data)
+            if pt_kst is not None:
+                # パラメータが違う可能性があるので、直接比較はしない
+                assert isinstance(pt_kst, pd.DataFrame), f"pandas-ta kst should return DataFrame, got {type(pt_kst)}"
+            else:
+                pytest.skip("pandas-ta kst returned None")
+        except Exception as e:
+            pytest.fail(f"pandas-ta kst compatibility test failed: {e}")

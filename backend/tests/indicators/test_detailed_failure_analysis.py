@@ -16,7 +16,7 @@ def analyze_indicator_failures():
         sys.path.insert(0, backend_path)
 
         print("=" * 80)
-        print("🎯 詳細な失敗分析テスト")
+        print("DETAILED FAILURE ANALYSIS TEST")
         print("=" * 80)
 
         # テスト対象のOHLCVデータ生成
@@ -39,8 +39,8 @@ def analyze_indicator_failures():
         df['high'] = np.maximum(df['close'] * (1 + np.random.rand(200) * 0.05), close_prices)
         df['low'] = np.minimum(df['close'] * (1 - np.random.rand(200) * 0.05), close_prices)
 
-        print(f"📊 テストデータ生成: {len(df)}行")
-        print(f"   期間: {df['timestamp'].min()} ～ {df['timestamp'].max()}")
+        print(f"[DATA] Test data generated: {len(df)} rows")
+        print(f"   Period: {df['timestamp'].min()} to {df['timestamp'].max()}")
 
         # テクニカルインディケーターサービス取得
         from app.services.indicators.indicator_orchestrator import TechnicalIndicatorService
@@ -61,7 +61,7 @@ def analyze_indicator_failures():
             'STOCHF': {
                 'description': 'Stochastic Fast - pandas-ta実装エラー',
                 'expected_error': "'NoneType' object has no attribute 'name'",
-                'test_params': {'fastk_period': 5, 'slowk_period': 3, 'slowd_period': 3}
+                'test_params': {'fastk_period': 5, 'd_length': 3, 'slowd_period': 3}
             },
             'EMA': {
                 'description': 'Exponential Moving Average - pandas-ta実装エラー',
@@ -130,7 +130,7 @@ def analyze_indicator_failures():
         }
 
         print("\n" + "=" * 80)
-        print("🔍 失敗詳細分析")
+        print("DETAILED FAILURE ANALYSIS")
         print("=" * 80)
 
         # 各失敗した指標を分析
@@ -139,7 +139,7 @@ def analyze_indicator_failures():
         failure_count = 0
 
         for indicator_name, analysis_info in failed_indicators_analysis.items():
-            print(f"\n🔬 分析中: {indicator_name}")
+            print(f"\n[ANALYZING] {indicator_name}")
             print(f"   説明: {analysis_info['description']}")
             print(f"   予想エラー: {analysis_info['expected_error']}")
 
@@ -147,9 +147,9 @@ def analyze_indicator_failures():
                 # 設定取得
                 config = indicator_registry.get_indicator_config(indicator_name)
                 if config:
-                    print(f"   設定取得: ✅ 成功")
+                    print(f"   設定取得: SUCCESS")
                 else:
-                    print(f"   設定取得: ❌ 失敗")
+                    print(f"   設定取得: FAILED")
                     test_results[indicator_name] = {'status': 'config_missing', 'error': '設定が見つからない'}
                     failure_count += 1
                     continue
@@ -157,9 +157,9 @@ def analyze_indicator_failures():
                 # パラメータ生成
                 params = param_manager.generate_parameters(indicator_name, config)
                 if params:
-                    print(f"   パラメータ生成: ✅ 成功 - {params}")
+                    print(f"   パラメータ生成: SUCCESS - {params}")
                 else:
-                    print(f"   パラメータ生成: ❌ 失敗")
+                    print(f"   パラメータ生成: FAILED")
                     test_results[indicator_name] = {'status': 'params_missing', 'error': 'パラメータ生成失敗'}
                     failure_count += 1
                     continue
@@ -177,56 +177,60 @@ def analyze_indicator_failures():
                 result = service.calculate_indicator(df.copy(), indicator_name, params)
 
                 if result is not None:
-                    print("   計算結果: ✅ 成功\n"                    success_count += 1
+                    print("   計算結果: SUCCESS\n")
+                    success_count += 1
                     test_results[indicator_name] = {
                         'status': 'success',
                         'result_info': result.info if hasattr(result, 'info') else 'No info'
                     }
                 else:
-                    print("   計算結果: ❌ 失敗 (結果がNone)\n"                    failure_count += 1
+                    print("   計算結果: FAILED (結果がNone)\n")
+                    failure_count += 1
                     test_results[indicator_name] = {'status': 'calc_failed', 'error': '計算失敗 (None結果)'}
 
             except Exception as e:
                 failure_count += 1
                 error_msg = str(e)
-                print(f"   計算結果: ❌ 例外発生 - {error_msg}")
-                print("   Traceback:"                traceback.print_exc()
+                print(f"   計算結果: EXCEPTION - {error_msg}")
+                print("   Traceback:")
+                traceback.print_exc()
                 test_results[indicator_name] = {'status': 'exception', 'error': error_msg}
 
         # レジストリ問題の分析
         print("\n" + "=" * 60)
-        print("📋 レジストリ問題分析")
+        print("REGISTRY ISSUE ANALYSIS")
         print("=" * 60)
 
         for indicator_name, analysis_info in registry_issues.items():
-            print(f"\n🔧 分析中: {indicator_name}")
-            print(f"   説明: {analysis_info['description']}")
+            print(f"\n[EXAMINING] {indicator_name}")
+            print(f"   description: {analysis_info['description']}")
 
             try:
                 config = indicator_registry.get_indicator_config(indicator_name)
                 if config:
-                    print("   設定取得: ✅ 見つかりました"                else:
-                    print("   設定取得: ❌ 見つかりません"
+                    print("   config: SUCCESS")
+                else:
+                    print("   config: NOT FOUND")
                     registry_issues[indicator_name]['status'] = 'config_missing'
             except Exception as e:
-                print(f"   エラー: {str(e)}")
+                print(f"   error: {str(e)}")
                 registry_issues[indicator_name]['status'] = 'exception'
                 registry_issues[indicator_name]['error'] = str(e)
 
         # まとめ
         print("\n" + "=" * 80)
-        print("📊 分析結果")
+        print("ANALYSIS RESULTS")
         print("=" * 80)
-        print(f"総テスト数: {len(failed_indicators_analysis)}")
-        print(f"✅ 成功: {success_count}")
-        print(f"❌ 失敗: {failure_count}")
+        print(f"Total tests: {len(failed_indicators_analysis)}")
+        print(f"SUCCESS: {success_count}")
+        print(f"FAILED: {failure_count}")
         print(".1f")
 
         if failure_count > 0:
             print("\n詳細な失敗状況:")
             for indicator_name, result in test_results.items():
                 if result['status'] != 'success':
-                    print(f"  • {indicator_name}: {result['error']}")
+                    print(f"  - {indicator_name}: {result['error']}")
 
         return True
 

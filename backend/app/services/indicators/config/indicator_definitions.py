@@ -7,11 +7,6 @@
 from app.services.indicators.technical_indicators.momentum import (
     MomentumIndicators,
 )
-from app.services.indicators.technical_indicators.pattern_recognition import (
-    PatternRecognitionIndicators,
-)
-
-# StatisticsIndicators import removed
 from app.services.indicators.technical_indicators.trend import TrendIndicators
 from app.services.indicators.technical_indicators.volatility import (
     VolatilityIndicators,
@@ -30,6 +25,27 @@ from .indicator_config import (
 
 def setup_momentum_indicators():
     """モメンタム系インジケーターの設定"""
+
+    # MAD (Mean Absolute Deviation)
+    mad_config = IndicatorConfig(
+        indicator_name="MAD",
+        adapter_function=MomentumIndicators.mad,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+    )
+    mad_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="MAD計算期間",
+        )
+    )
+    mad_config.param_map = {"close": "data", "period": "period"}
+    indicator_registry.register(mad_config)
 
     # STOCH
     stoch_config = IndicatorConfig(
@@ -54,25 +70,16 @@ def setup_momentum_indicators():
     )
     stoch_config.add_parameter(
         ParameterConfig(
-            name="slowk_period",
+            name="d_length",
             default_value=3,
             min_value=1,
             max_value=10,
-            description="Slow %K期間",
-        )
-    )
-    stoch_config.add_parameter(
-        ParameterConfig(
-            name="slowd_period",
-            default_value=3,
-            min_value=1,
-            max_value=10,
-            description="Slow %D期間",
+            description="Slow K期間 (smooth_kとしても使用)",
         )
     )
     stoch_config.param_map = {
         "fastk_period": "k",
-        "slowk_period": "smooth_k",
+        "d_length": "smooth_k",
         "slowd_period": "d",
     }
     indicator_registry.register(stoch_config)
@@ -96,13 +103,34 @@ def setup_momentum_indicators():
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
+        output_names=["KDJ_K", "KDJ_D", "KDJ_J"],
+        default_output="KDJ_K",
     )
     kdj_config.add_parameter(
-        ParameterConfig(name="k", default_value=14, min_value=2, max_value=100)
+        ParameterConfig(
+            name="k",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="K値計算期間",
+        )
     )
     kdj_config.add_parameter(
-        ParameterConfig(name="d", default_value=3, min_value=1, max_value=50)
+        ParameterConfig(
+            name="d",
+            default_value=3,
+            min_value=1,
+            max_value=50,
+            description="D値計算期間",
+        )
     )
+    kdj_config.param_map = {
+        "high": "high",
+        "low": "low",
+        "close": "close",
+        "k": "k",
+        "d": "d",
+    }
     indicator_registry.register(kdj_config)
 
     # RVGI
@@ -158,61 +186,58 @@ def setup_momentum_indicators():
     kst_config = IndicatorConfig(
         indicator_name="KST",
         adapter_function=MomentumIndicators.kst,
-        required_data=[],  # data will be passed as parameter
+        required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
         category="momentum",
+        output_names=["KST_0", "KST_1"],
+        default_output="KST_0",
     )
-    kst_config.param_map = {"close": "data"}
-    indicator_registry.register(kst_config)
-
-    # STC
-    stc_config = IndicatorConfig(
-        indicator_name="STC",
-        adapter_function=MomentumIndicators.stc,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
-        category="momentum",
-    )
-    stc_config.add_parameter(
+    kst_config.add_parameter(
         ParameterConfig(
-            name="tclength",
+            name="roc1",
             default_value=10,
             min_value=2,
             max_value=100,
-            description="STCシグナルライン長",
+            description="ROC1期間",
         )
     )
-    stc_config.add_parameter(
+    kst_config.add_parameter(
         ParameterConfig(
-            name="fast",
-            default_value=23,
+            name="roc2",
+            default_value=15,
             min_value=2,
             max_value=100,
-            description="STC高速期間",
+            description="ROC2期間",
         )
     )
-    stc_config.add_parameter(
+    kst_config.add_parameter(
         ParameterConfig(
-            name="slow",
-            default_value=50,
-            min_value=5,
-            max_value=200,
-            description="STC低速期間",
+            name="roc3",
+            default_value=20,
+            min_value=2,
+            max_value=100,
+            description="ROC3期間",
         )
     )
-    stc_config.add_parameter(
+    kst_config.add_parameter(
         ParameterConfig(
-            name="factor",
-            default_value=0.5,
-            min_value=0.1,
-            max_value=1.0,
-            description="STCスムージングファクター",
+            name="roc4",
+            default_value=30,
+            min_value=2,
+            max_value=100,
+            description="ROC4期間",
         )
     )
-    stc_config.param_map = {"close": "data", "length": "tclength"}
-    indicator_registry.register(stc_config)
+    kst_config.param_map = {
+        "close": "data",
+        "roc1": "roc1",
+        "roc2": "roc2",
+        "roc3": "roc3",
+        "roc4": "roc4",
+    }
+    indicator_registry.register(kst_config)
+
 
     # RSI (Relative Strength Index)
     rsi_config = IndicatorConfig(
@@ -408,13 +433,14 @@ def setup_momentum_indicators():
     )
     adx_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=2,
             max_value=100,
             description="ADX計算期間",
         )
     )
+    adx_config.param_map = {"period": "length"}
     indicator_registry.register(adx_config)
 
     # MFI
@@ -428,13 +454,14 @@ def setup_momentum_indicators():
     )
     mfi_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=2,
             max_value=100,
             description="MFI計算期間",
         )
     )
+    mfi_config.param_map = {"period": "length"}
     indicator_registry.register(mfi_config)
 
     # WILLR
@@ -448,13 +475,14 @@ def setup_momentum_indicators():
     )
     willr_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=2,
             max_value=100,
             description="Williams %R計算期間",
         )
     )
+    willr_config.param_map = {"period": "length"}
     indicator_registry.register(willr_config)
 
     # AROON
@@ -468,13 +496,14 @@ def setup_momentum_indicators():
     )
     aroon_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=2,
             max_value=100,
             description="Aroon計算期間",
         )
     )
+    aroon_config.param_map = {"period": "length"}
     indicator_registry.register(aroon_config)
 
     # AROONOSC
@@ -488,13 +517,14 @@ def setup_momentum_indicators():
     )
     aroonosc_config.add_parameter(
         ParameterConfig(
-            name="length",
+            name="period",
             default_value=14,
             min_value=2,
             max_value=100,
             description="AroonOsc計算期間",
         )
     )
+    aroonosc_config.param_map = {"period": "length"}
     indicator_registry.register(aroonosc_config)
 
     # DX
@@ -624,35 +654,6 @@ def setup_momentum_indicators():
     roc_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(roc_config)
 
-    # STOCHF
-    stochf_config = IndicatorConfig(
-        indicator_name="STOCHF",
-        adapter_function=MomentumIndicators.stochf,
-        required_data=["high", "low", "close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
-        category="momentum",
-    )
-    stochf_config.add_parameter(
-        ParameterConfig(
-            name="fastk_period",
-            default_value=5,
-            min_value=1,
-            max_value=100,
-            description="FastK期間",
-        )
-    )
-    stochf_config.add_parameter(
-        ParameterConfig(
-            name="fastd_period",
-            default_value=3,
-            min_value=1,
-            max_value=100,
-            description="FastD期間",
-        )
-    )
-    stochf_config.param_map = {"fastk_period": "k", "fastd_period": "d"}
-    indicator_registry.register(stochf_config)
 
     # TRIX
     trix_config = IndicatorConfig(
@@ -782,90 +783,6 @@ def setup_momentum_indicators():
     )
     indicator_registry.register(adxr_config)
 
-    # MACDEXT
-    macdext_config = IndicatorConfig(
-        indicator_name="MACDEXT",
-        adapter_function=MomentumIndicators.macdext,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="momentum",
-    )
-    macdext_config.add_parameter(
-        ParameterConfig(
-            name="fast_period",
-            default_value=12,
-            min_value=2,
-            max_value=100,
-            description="高速期間",
-        )
-    )
-    macdext_config.add_parameter(
-        ParameterConfig(
-            name="fast_ma_type",
-            default_value=0,
-            min_value=0,
-            max_value=8,
-            description="高速MA型",
-        )
-    )
-    macdext_config.add_parameter(
-        ParameterConfig(
-            name="slow_period",
-            default_value=26,
-            min_value=2,
-            max_value=200,
-            description="低速期間",
-        )
-    )
-    macdext_config.add_parameter(
-        ParameterConfig(
-            name="slow_ma_type",
-            default_value=0,
-            min_value=0,
-            max_value=8,
-            description="低速MA型",
-        )
-    )
-    macdext_config.add_parameter(
-        ParameterConfig(
-            name="signal_period",
-            default_value=9,
-            min_value=2,
-            max_value=100,
-            description="シグナル期間",
-        )
-    )
-    macdext_config.add_parameter(
-        ParameterConfig(
-            name="signal_ma_type",
-            default_value=0,
-            min_value=0,
-            max_value=8,
-            description="シグナルMA型",
-        )
-    )
-    indicator_registry.register(macdext_config)
-
-    # MACDFIX
-    macdfix_config = IndicatorConfig(
-        indicator_name="MACDFIX",
-        adapter_function=MomentumIndicators.macdfix,
-        required_data=["close"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-        category="momentum",
-    )
-    macdfix_config.add_parameter(
-        ParameterConfig(
-            name="signal_period",
-            default_value=9,
-            min_value=2,
-            max_value=100,
-            description="シグナル期間",
-        )
-    )
-    indicator_registry.register(macdfix_config)
 
     # STOCHRSI
     stochrsi_config = IndicatorConfig(
@@ -1160,7 +1077,22 @@ def setup_trend_indicators():
             description="T3スムージングファクター",
         )
     )
-    t3_config.param_map = {"close": "data", "period": "length", "a": "a"}
+    # Add vfactor parameter mapping to a (for TA-Lib compatibility)
+    t3_config.add_parameter(
+        ParameterConfig(
+            name="vfactor",
+            default_value=0.7,
+            min_value=0.1,
+            max_value=1.0,
+            description="V-Factor for TA-Lib compatibility (maps to a parameter)",
+        )
+    )
+    t3_config.param_map = {
+        "close": "data",
+        "period": "length",
+        "a": "a",
+        "vfactor": "a"  # Map vfactor to a parameter for pandas-ta compatibility
+    }
     indicator_registry.register(t3_config)
 
     # TRIMA
@@ -1281,7 +1213,7 @@ def setup_trend_indicators():
             description="線形回帰計算期間",
         )
     )
-    linreg_config.param_map = {"close": "data"}
+    linreg_config.param_map = {"close": "data", "timeperiod": "length", "length": "length", "period": "length"}
     indicator_registry.register(linreg_config)
     
     # LINREG_SLOPE (Linear Regression Slope)
@@ -1292,6 +1224,7 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="trend",
+        aliases=["LINREGSLOPE"],
     )
     linreg_slope_config.add_parameter(
         ParameterConfig(
@@ -1302,7 +1235,7 @@ def setup_trend_indicators():
             description="線形回帰傾き計算期間",
         )
     )
-    linreg_slope_config.param_map = {"close": "data", "length": "length"}
+    linreg_slope_config.param_map = {"close": "data", "length": "length", "timeperiod": "length"}
     indicator_registry.register(linreg_slope_config)
     
     # LINREG_INTERCEPT (Linear Regression Intercept)
@@ -1334,6 +1267,7 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="trend",
+        aliases=["LINREGANGLE"],
     )
     linreg_angle_config.add_parameter(
         ParameterConfig(
@@ -1353,7 +1287,7 @@ def setup_trend_indicators():
             description="度数法で角度を出力するか",
         )
     )
-    linreg_angle_config.param_map = {"close": "data", "length": "length", "degrees": "degrees"}
+    linreg_angle_config.param_map = {"close": "data", "length": "length", "degrees": "degrees", "timeperiod": "length"}
     indicator_registry.register(linreg_angle_config)
 
     # MIDPOINT
@@ -1395,6 +1329,71 @@ def setup_trend_indicators():
             description="中値価格期間",
         )
     )
+    # MIN - Minimum Value Rolling Moving Average
+    midprice_config.param_map = {"high": "high", "low": "low", "period": "length"}
+    indicator_registry.register(midprice_config)
+
+    min_config = IndicatorConfig(
+        indicator_name="MIN",
+        adapter_function=TrendIndicators.min,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="statistics",
+    )
+    min_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="計算期間",
+        )
+    )
+    min_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(min_config)
+
+    # MAX - Maximum Value Rolling Moving Average
+    max_config = IndicatorConfig(
+        indicator_name="MAX",
+        adapter_function=TrendIndicators.max,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="statistics",
+    )
+    max_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="計算期間",
+        )
+    )
+    max_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(max_config)
+
+    # RANGE - Range (High - Low) within rolling period
+    range_config = IndicatorConfig(
+        indicator_name="RANGE",
+        adapter_function=TrendIndicators.range_func,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+    )
+    range_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="レンジ計算期間",
+        )
+    )
+    range_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(range_config)
     midprice_config.param_map = {"high": "high", "low": "low", "period": "length"}
     indicator_registry.register(midprice_config)
 
@@ -1488,26 +1487,6 @@ def setup_volatility_indicators():
     bbands_config.param_map = {"close": "data", "period": "length", "std": "std"}
     indicator_registry.register(bbands_config)
 
-    # ABERRATION
-    aberration_config = IndicatorConfig(
-        indicator_name="ABERRATION",
-        adapter_function=VolatilityIndicators.aberration,
-        required_data=["high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="volatility",
-    )
-    aberration_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=5,
-            min_value=2,
-            max_value=100,
-            description="ABERRATION計算期間",
-        )
-    )
-    aberration_config.param_map = {"length": "length"}
-    indicator_registry.register(aberration_config)
 
     # BB - BBANDSのエイリアスとして別途登録
     bb_config = IndicatorConfig(
@@ -1681,29 +1660,6 @@ def setup_volatility_indicators():
     pdist_config.param_map = {"length": "length"}
     indicator_registry.register(pdist_config)
 
-    # THERMO
-    thermo_config = IndicatorConfig(
-        indicator_name="THERMO",
-        adapter_function=VolatilityIndicators.thermo,
-        required_data=["high", "low"],
-        result_type=IndicatorResultType.COMPLEX,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="volatility",
-        output_names=["THERMO_Long", "THERMO_Short"],
-        default_output="THERMO_Long",
-    )
-    thermo_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=20,
-            min_value=2,
-            max_value=100,
-            description="THERMO計算期間",
-        )
-    )
-    thermo_config.param_map = {"length": "length"}
-    indicator_registry.register(thermo_config)
-
     # UI
     ui_config = IndicatorConfig(
         indicator_name="UI",
@@ -1724,6 +1680,69 @@ def setup_volatility_indicators():
     )
     ui_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(ui_config)
+
+    # VAR (Variance)
+    var_config = IndicatorConfig(
+        indicator_name="VAR",
+        adapter_function=VolatilityIndicators.variance,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="volatility",
+    )
+    var_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="Variance calculation period",
+        )
+    )
+    var_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(var_config)
+
+    # CV (Coefficient of Variation)
+    cv_config = IndicatorConfig(
+        indicator_name="CV",
+        adapter_function=VolatilityIndicators.coefficient_of_variation,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="volatility",
+    )
+    cv_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="Coefficient of Variation period",
+        )
+    )
+    cv_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(cv_config)
+
+    # IRM (Implied Risk Measure)
+    irm_config = IndicatorConfig(
+        indicator_name="IRM",
+        adapter_function=VolatilityIndicators.implied_risk_measure,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="volatility",
+    )
+    irm_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="Implied Risk Measure period",
+        )
+    )
+    irm_config.param_map = {"length": "length"}
+    indicator_registry.register(irm_config)
 
 
 def setup_volume_indicators():
@@ -1818,226 +1837,19 @@ def setup_volume_indicators():
     # 統計指標の設定は削除済み
 
 
-def setup_pattern_recognition_indicators():
-    """パターン認識系インジケーターの設定"""
-
-    # CDL_HANGING_MAN - ハンギングマン
-    hanging_man_config = IndicatorConfig(
-        indicator_name="CDL_HANGING_MAN",
-        adapter_function=PatternRecognitionIndicators.cdl_hanging_man,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(hanging_man_config)
-
-    # CDL_SHOOTING_STAR - 流れ星
-    shooting_star_config = IndicatorConfig(
-        indicator_name="CDL_SHOOTING_STAR",
-        adapter_function=PatternRecognitionIndicators.cdl_shooting_star,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(shooting_star_config)
-
-    # CDL_HARAMI - はらみ足
-    harami_config = IndicatorConfig(
-        indicator_name="CDL_HARAMI",
-        adapter_function=PatternRecognitionIndicators.cdl_harami,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(harami_config)
-
-    # CDL_PIERCING - 明けの明星
-    piercing_config = IndicatorConfig(
-        indicator_name="CDL_PIERCING",
-        adapter_function=PatternRecognitionIndicators.cdl_piercing,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(piercing_config)
-
-    # CDL_DARK_CLOUD_COVER - 宵の明星
-    dark_cloud_config = IndicatorConfig(
-        indicator_name="CDL_DARK_CLOUD_COVER",
-        adapter_function=PatternRecognitionIndicators.cdl_dark_cloud_cover,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(dark_cloud_config)
-
-    # CDL_THREE_BLACK_CROWS - 三羽烏
-    three_black_crows_config = IndicatorConfig(
-        indicator_name="CDL_THREE_BLACK_CROWS",
-        adapter_function=PatternRecognitionIndicators.cdl_three_black_crows,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(three_black_crows_config)
-
-    # CDL_THREE_WHITE_SOLDIERS - 三兵
-    three_white_soldiers_config = IndicatorConfig(
-        indicator_name="CDL_THREE_WHITE_SOLDIERS",
-        adapter_function=PatternRecognitionIndicators.cdl_three_white_soldiers,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(three_white_soldiers_config)
-
-    # CDL_MARUBOZU - 丸坊主
-    marubozu_config = IndicatorConfig(
-        indicator_name="CDL_MARUBOZU",
-        adapter_function=PatternRecognitionIndicators.cdl_marubozu,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(marubozu_config)
-
-    # CDL_SPINNING_TOP - コマ
-    spinning_top_config = IndicatorConfig(
-        indicator_name="CDL_SPINNING_TOP",
-        adapter_function=PatternRecognitionIndicators.cdl_spinning_top,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(spinning_top_config)
-
-    # DOJI - 同事
-    doji_config = IndicatorConfig(
-        indicator_name="CDL_DOJI",
-        adapter_function=PatternRecognitionIndicators.cdl_doji,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(doji_config)
-
-    # HAMMER - ハンマー
-    hammer_config = IndicatorConfig(
-        indicator_name="HAMMER",
-        adapter_function=PatternRecognitionIndicators.cdl_hammer,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(hammer_config)
-
-    # ENGULFING_PATTERN - 包み足
-    engulfing_config = IndicatorConfig(
-        indicator_name="ENGULFING_PATTERN",
-        adapter_function=PatternRecognitionIndicators.cdl_engulfing,
-        required_data=["open_data", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    indicator_registry.register(engulfing_config)
-
-    # MORNING_STAR - 明けの明星
-    morning_star_config = IndicatorConfig(
-        indicator_name="MORNING_STAR",
-        adapter_function=PatternRecognitionIndicators.cdl_morning_star,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    morning_star_config.param_map = {"open": "open_data"}
-    indicator_registry.register(morning_star_config)
-
-    # EVENING_STAR - 宵の明星
-    evening_star_config = IndicatorConfig(
-        indicator_name="EVENING_STAR",
-        adapter_function=PatternRecognitionIndicators.cdl_evening_star,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    evening_star_config.param_map = {"open": "open_data"}
-    indicator_registry.register(evening_star_config)
-    # CDL_ENGULFING - 包み足
-    engulfing_config = IndicatorConfig(
-        indicator_name="CDL_ENGULFING",
-        adapter_function=PatternRecognitionIndicators.cdl_engulfing,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    engulfing_config.param_map = {"open": "open_data"}
-    indicator_registry.register(engulfing_config)
-
-    # CDL_HAMMER - ハンマー
-    hammer_config = IndicatorConfig(
-        indicator_name="CDL_HAMMER",
-        adapter_function=PatternRecognitionIndicators.cdl_hammer,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    hammer_config.param_map = {"open": "open_data"}
-    indicator_registry.register(hammer_config)
-
-    # CDL_MORNING_STAR - 明けの明星
-    morning_star_cdl_config = IndicatorConfig(
-        indicator_name="CDL_MORNING_STAR",
-        adapter_function=PatternRecognitionIndicators.cdl_morning_star,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    morning_star_cdl_config.param_map = {"open": "open_data"}
-    indicator_registry.register(morning_star_cdl_config)
-
-    # CDL_EVENING_STAR - 宵の明星
-    evening_star_cdl_config = IndicatorConfig(
-        indicator_name="CDL_EVENING_STAR",
-        adapter_function=PatternRecognitionIndicators.cdl_evening_star,
-        required_data=["open", "high", "low", "close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PATTERN_BINARY,
-        category="pattern_recognition",
-    )
-    evening_star_cdl_config.param_map = {"open": "open_data"}
-    indicator_registry.register(evening_star_cdl_config)
-
-
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
     setup_momentum_indicators()
     setup_trend_indicators()
     setup_volatility_indicators()
     setup_volume_indicators()
-    setup_pattern_recognition_indicators()
 
 
 # モジュール読み込み時に初期化
 initialize_all_indicators()
 
 # ---- Append new pandas-ta indicators and custom ones ----
+
 # Trend additions
 hma_config = IndicatorConfig(
     indicator_name="HMA",
@@ -2064,7 +1876,7 @@ zlma_config = IndicatorConfig(
 zlma_config.add_parameter(
     ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
 )
-zlma_config.param_map = {"period": "length"}
+zlma_config.param_map = {"close": "close", "period": "length"}
 indicator_registry.register(zlma_config)
 
 vwma_config = IndicatorConfig(
@@ -2877,3 +2689,50 @@ wcp_config = IndicatorConfig(
 )
 wcp_config.param_map = {"close": "data"}
 indicator_registry.register(wcp_config)
+
+# TLB (Trend Line Break)
+tlb_config = IndicatorConfig(
+    indicator_name="TLB",
+    adapter_function=TrendIndicators.tlb,
+    required_data=["high", "low", "close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+    category="trend",
+)
+tlb_config.add_parameter(
+    ParameterConfig(
+        name="length",
+        default_value=3,
+        min_value=2,
+        max_value=20,
+        description="Trend break lookback length",
+    )
+)
+tlb_config.param_map = {
+    "high": "high",
+    "low": "low",
+    "close": "close",
+    "length": "length"
+}
+indicator_registry.register(tlb_config)
+
+# CWMA (Central Weighted Moving Average)
+cwma_config = IndicatorConfig(
+    indicator_name="CWMA",
+    adapter_function=TrendIndicators.cwma,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+cwma_config.add_parameter(
+    ParameterConfig(
+        name="length",
+        default_value=10,
+        min_value=2,
+        max_value=200,
+        description="Central Weighted Moving Average period",
+    )
+)
+cwma_config.param_map = {"close": "data", "length": "length"}
+indicator_registry.register(cwma_config)

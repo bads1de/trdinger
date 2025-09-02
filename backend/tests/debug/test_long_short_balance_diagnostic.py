@@ -33,9 +33,7 @@ class TestLongShortBalanceDiagnostic:
     def pattern_indicators(self) -> List[IndicatorGene]:
         """パターンマッチ指標セット"""
         return [
-            IndicatorGene(type="CDL_HAMMER", enabled=True),
-            IndicatorGene(type="CDL_ENGULFING", enabled=True),
-            IndicatorGene(type="CDL_DOJI", enabled=True),
+            IndicatorGene(type="SMA", enabled=True),
         ]
 
     @pytest.fixture
@@ -78,25 +76,6 @@ class TestLongShortBalanceDiagnostic:
         if len(short_conds) == 0:
             pytest.fail("統計指標でショート条件が生成されていない - DI戦略の不備を示唆")
 
-    def test_pattern_only_different_indicators_strategy(
-        self, generator: ConditionGenerator, pattern_indicators: List[IndicatorGene]
-    ):
-        """パターンマッチ指標のみでDifferent Indicators戦略が選択された場合の診断"""
-        long_conds, short_conds, exit_conds = generator.generate_balanced_conditions(
-            pattern_indicators
-        )
-
-        # 診断出力
-        print(f"\n=== パターン指標のみテスト ===")
-        print(f"ロング条件数: {len(long_conds)}")
-        print(f"ショート条件数: {len(short_conds)}")
-        print(f"ロング条件詳細: {[c.left_operand if hasattr(c, 'left_operand') else str(c) for c in long_conds]}")
-        print(f"ショート条件詳細: {[c.left_operand if hasattr(c, 'left_operand') else str(c) for c in short_conds]}")
-
-        # アサーション (これらが失敗すればパターン指標のshort条件生成に問題)
-        assert len(long_conds) > 0, "パターン指標でロング条件が生成されなかった"
-        if len(short_conds) == 0:
-            pytest.fail("パターン指標でショート条件が生成されていない - DI戦略の不備を示唆")
 
     def test_complex_conditions_strategy_balanced(
         self, generator: ConditionGenerator, statistics_indicators: List[IndicatorGene]
@@ -123,7 +102,6 @@ class TestLongShortBalanceDiagnostic:
             IndicatorGene(type="RSI", enabled=True),  # STATISTICS
             IndicatorGene(type="SMA", enabled=True),  # TREND
             IndicatorGene(type="ROC", enabled=True),  # MOMENTUM
-            IndicatorGene(type="CDL_HAMMER", enabled=True),  # PATTERN_RECOGNITION
         ]
 
         categorized = generator._dynamic_classify(test_indicators)
@@ -136,7 +114,6 @@ class TestLongShortBalanceDiagnostic:
         # 分類された指標があることを確認
         # assert categorized[IndicatorType.STATISTICS], "統計指標が分類されていない"  # 統計指標は削除済み
         assert categorized[IndicatorType.TREND], "トレンド指標が分類されていない"
-        assert categorized[IndicatorType.PATTERN_RECOGNITION], "パターン指標が分類されていない"
         assert categorized[IndicatorType.MOMENTUM], "モメンタム指標が分類されていない"
 
     def test_strategy_type_selection_balance(self, generator: ConditionGenerator):
@@ -174,7 +151,6 @@ def run_diagnostics():
     # 診断ケース
     diagnostics = [
         ("統計指標診断", [IndicatorGene(type="RSI", enabled=True), IndicatorGene(type="STOCH", enabled=True)]),
-        ("パターン指標診断", [IndicatorGene(type="CDL_HAMMER", enabled=True), IndicatorGene(type="CDL_ENGULFING", enabled=True)]),
         ("トレンド指標診断", [IndicatorGene(type="SMA", enabled=True), IndicatorGene(type="EMA", enabled=True)]),
         ("混合指標診断", [IndicatorGene(type="RSI", enabled=True), IndicatorGene(type="SMA", enabled=True), IndicatorGene(type="ROC", enabled=True)]),
     ]

@@ -49,11 +49,11 @@ def analyze_existing_backtest_results():
                     total_return = metrics.get("total_return", 0)
                     strategy_name = result.get("strategy_name", "Unknown")
 
-                    print("3d")
-                    print(",.2f"                    print(",.3f"                    print(",.3f"                    print(".2f"                    print(",.2%"                    print(",.3f"
+                    print(f"{i:3d} | {strategy_name:20s} | {total_trades:10.3f}")
                     if total_trades == 0:
                         zero_trade_count += 1
-                        print("  → THIS WOULD TRIGGER OUR IMPROVED WARNING MESSAGE!"                        print(f"     Expected message: 'バックテストで取引が発生しませんでした。この戦略はエントリー条件を満たさなかったか、市場条件が不適合でした'")
+                        print("  → THIS WOULD TRIGGER OUR IMPROVED WARNING MESSAGE!")
+                        print(f"     Expected message: 'バックテストで取引が発生しませんでした。この戦略はエントリー条件を満たさなかったか、市場条件が不適合でした'")
                     else:
                         valid_trades_count += 1
                         trade_history = result.get("trade_history", [])

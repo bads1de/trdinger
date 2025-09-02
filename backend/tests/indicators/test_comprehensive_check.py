@@ -46,9 +46,6 @@ def test_comprehensive_indicators():
         ('AD', {}),
         ('PVR', {}),
 
-        # パターン認識指標
-        ('CDL_DOJI', {}),
-        ('CDL_HAMMER', {}),
         ('CDL_ENGULFING', {}),
         ('HAMMER', {}),
         ('ENGULFING_PATTERN', {}),

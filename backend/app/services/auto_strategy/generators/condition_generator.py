@@ -228,13 +228,16 @@ class ConditionGenerator:
             )
             if threshold is not None:
                 self.logger.debug(f"Using threshold {threshold} for {ind.type}")
-                return [
-                    Condition(
-                        left_operand=ind.type, operator=">", right_operand=threshold
-                    )
-                ]
+                # DEBUG: 条件生成詳細ログ
+                final_condition = Condition(
+                    left_operand=ind.type, operator=">", right_operand=threshold
+                )
+                self.logger.debug(f"Generated long condition: {ind.type} > {threshold}")
+                return [final_condition]
         self.logger.warning(f"No threshold found for {ind.type}, using 0 as fallback")
-        return [Condition(left_operand=ind.type, operator=">", right_operand=0)]
+        final_condition = Condition(left_operand=ind.type, operator=">", right_operand=0)
+        self.logger.debug(f"Generated fallback long condition: {ind.type} > 0")
+        return [final_condition]
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ショート条件生成"""
@@ -347,18 +350,6 @@ class ConditionGenerator:
                         )
                     )
 
-            # パターン指標のショート条件を追加
-            if indicators_by_type[IndicatorType.PATTERN_RECOGNITION]:
-                short_conditions.extend(
-                    self._create_pattern_short_conditions(
-                        random.choice(
-                            indicators_by_type[IndicatorType.PATTERN_RECOGNITION]
-                        )
-                    )
-                )
-                self.logger.debug(
-                    f"パターン指標からショート条件追加: {len(short_conditions)}"
-                )
 
             # 最低条件数の保証（簡素化）
             if not long_conditions:
@@ -395,13 +386,13 @@ class ConditionGenerator:
                 self.yaml_config, config, side, self.context
             )
             if threshold is not None:
-                return [
-                    Condition(
-                        left_operand=indicator.type,
-                        operator=">" if side == "long" else "<",
-                        right_operand=threshold,
-                    )
-                ]
+                final_condition = Condition(
+                    left_operand=indicator.type,
+                    operator=">" if side == "long" else "<",
+                    right_operand=threshold,
+                )
+                self.logger.debug(f"YAML-based {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} {threshold}")
+                return [final_condition]
 
         # RSI特別処理
         if indicator.type == "RSI":
@@ -414,43 +405,23 @@ class ConditionGenerator:
                 threshold = 40 if side == "long" else 60
             else:
                 threshold = 35 if side == "long" else 65
-            return [
-                Condition(
-                    left_operand=indicator.type,
-                    operator="<" if side == "long" else ">",
-                    right_operand=threshold,
-                )
-            ]
+            final_condition = Condition(
+                left_operand=indicator.type,
+                operator="<" if side == "long" else ">",
+                right_operand=threshold,
+            )
+            self.logger.debug(f"RSI {side} condition: {indicator.type} {'<' if side == 'long' else '>'} {threshold}")
+            return [final_condition]
 
-        # パターンの場合
-        if "CDL_" in indicator.type:
-            if indicator.type in [
-                "CDL_HANGING_MAN",
-                "CDL_DARK_CLOUD_COVER",
-                "CDL_THREE_BLACK_CROWS",
-            ]:
-                return [
-                    Condition(
-                        left_operand=indicator.type,
-                        operator="<" if side == "long" else ">",
-                        right_operand=0,
-                    )
-                ]
-            else:
-                return [
-                    Condition(
-                        left_operand=indicator.type, operator="!=", right_operand=0
-                    )
-                ]
 
         # デフォルト
-        return [
-            Condition(
-                left_operand=indicator.type,
-                operator=">" if side == "long" else "<",
-                right_operand=0,
-            )
-        ]
+        final_condition = Condition(
+            left_operand=indicator.type,
+            operator=">" if side == "long" else "<",
+            right_operand=0,
+        )
+        self.logger.debug(f"Default {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} 0")
+        return [final_condition]
 
     def _create_trend_long_conditions(
         self, indicator: IndicatorGene
@@ -476,17 +447,6 @@ class ConditionGenerator:
         """統合されたモメンタム系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
 
-    def _create_pattern_long_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """統合されたパターン認識系ロング条件生成"""
-        return self._create_type_based_conditions(indicator, "long")
-
-    def _create_pattern_short_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """統合されたパターン認識系ショート条件生成"""
-        return self._create_type_based_conditions(indicator, "short")
 
     def _generate_indicator_characteristics_strategy(
         self, indicators: List[IndicatorGene]
@@ -574,11 +534,8 @@ class ConditionGenerator:
                     elif indicator_type == IndicatorType.TREND:
                         long_conds = self._create_trend_long_conditions(indicator)
                         short_conds = self._create_trend_short_conditions(indicator)
-                    elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
-                        long_conds = self._create_pattern_long_conditions(indicator)
-                        short_conds = self._create_pattern_short_conditions(indicator)
                     else:
-                        # 未知の指標タイプの場合は汎用条件を使用
+                        # Unknown indicator type - use generic conditions
                         long_conds = self._generic_long_conditions(indicator)
                         short_conds = self._generic_short_conditions(indicator)
 
@@ -655,8 +612,6 @@ class ConditionGenerator:
                     return IndicatorType.MOMENTUM
                 elif type_str == "trend":
                     return IndicatorType.TREND
-                elif type_str == "pattern_recognition":
-                    return IndicatorType.PATTERN_RECOGNITION
                 elif type_str == "volatility":
                     return IndicatorType.VOLATILITY
 
@@ -667,8 +622,6 @@ class ConditionGenerator:
                     return IndicatorType.MOMENTUM
                 elif cat == "trend":
                     return IndicatorType.TREND
-                elif cat == "pattern_recognition":
-                    return IndicatorType.PATTERN_RECOGNITION
 
             if indicator.type in INDICATOR_CHARACTERISTICS:
                 return INDICATOR_CHARACTERISTICS[indicator.type]["type"]
@@ -687,7 +640,6 @@ class ConditionGenerator:
             IndicatorType.MOMENTUM: [],
             IndicatorType.TREND: [],
             IndicatorType.VOLATILITY: [],
-            IndicatorType.PATTERN_RECOGNITION: [],
         }
 
         for ind in indicators:
@@ -707,8 +659,6 @@ class ConditionGenerator:
                     elif cat == "volatility":
                         categorized[IndicatorType.VOLATILITY].append(ind)
                     # elif cat == "statistics":  # 統計指標は削除済み
-                    elif cat == "pattern_recognition":
-                        categorized[IndicatorType.PATTERN_RECOGNITION].append(ind)
                     else:
                         categorized[IndicatorType.TREND].append(ind)
                 elif name in INDICATOR_CHARACTERISTICS:
@@ -764,13 +714,6 @@ class ConditionGenerator:
                     )
                     short_conditions.extend(
                         self._create_trend_short_conditions(indicator)
-                    )
-                elif indicator_type == IndicatorType.PATTERN_RECOGNITION:
-                    long_conditions.extend(
-                        self._create_pattern_long_conditions(indicator)
-                    )
-                    short_conditions.extend(
-                        self._create_pattern_short_conditions(indicator)
                     )
                 else:
                     long_conditions.extend(self._generic_long_conditions(indicator))

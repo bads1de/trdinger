@@ -190,30 +190,7 @@ class AdvancedFeatureEngineer:
                 volume=data["Volume"],
             )
 
-            # パターン認識（pandas-ta使用）
-            doji_result = ta.cdl_doji(
-                open_=data["Open"],
-                high=data["High"],
-                low=data["Low"],
-                close=data["Close"],
-            )
-            if doji_result is not None:
-                data["DOJI"] = doji_result
 
-            # Note: cdl_hammer and cdl_shooting_star may not be available in some pandas_ta versions
-            # Commenting out to avoid errors
-            # data["HAMMER"] = ta.cdl_hammer(
-            #     open_=data["Open"],
-            #     high=data["High"],
-            #     low=data["Low"],
-            #     close=data["Close"],
-            # )
-            # data["SHOOTING_STAR"] = ta.cdl_shooting_star(
-            #     open_=data["Open"],
-            #     high=data["High"],
-            #     low=data["Low"],
-            #     close=data["Close"],
-            # )
 
         except Exception as e:
             logger.warning(f"pandas-ta指標計算エラー: {e}")

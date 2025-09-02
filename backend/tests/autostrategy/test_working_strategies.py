@@ -139,7 +139,7 @@ def create_working_strategies():
                         type="STOCH",
                         parameters={
                             "fastk_period": 5,
-                            "slowk_period": 3,
+                            "d_length": 3,
                             "slowd_period": 3,
                         },
                         enabled=True,
@@ -215,7 +215,7 @@ def create_working_strategies():
                         type="STOCH",
                         parameters={
                             "fastk_period": 5,
-                            "slowk_period": 3,
+                            "d_length": 3,
                             "slowd_period": 3,
                         },
                         enabled=True,
@@ -248,7 +248,7 @@ def create_working_strategies():
                         type="STOCH",
                         parameters={
                             "fastk_period": 5,
-                            "slowk_period": 3,
+                            "d_length": 3,
                             "slowd_period": 3,
                         },
                         enabled=True,

@@ -2,7 +2,7 @@
 テクニカル指標特徴量計算クラス
 
 従来のテクニカル指標（RSI、MACD、ストキャスティクスなど）と
-高度なパターン認識特徴量を計算します。
+テクニカル特徴量を計算します。
 """
 
 import logging
@@ -21,7 +21,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
     """
     テクニカル指標特徴量計算クラス
 
-    従来のテクニカル指標と高度なパターン認識特徴量を計算します。
+    従来のテクニカル指標特徴量を計算します。
     """
 
     def __init__(self):
@@ -46,7 +46,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         # 複数のテクニカル特徴量を順次計算
         result_df = self.calculate_market_regime_features(df, lookback_periods)
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
-        result_df = self.calculate_pattern_features(result_df, lookback_periods)
 
         return result_df
 
@@ -251,98 +250,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             logger.error(f"モメンタム特徴量計算エラー: {e}")
             return df
 
-    def calculate_pattern_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
-    ) -> pd.DataFrame:
-        """
-        パターン認識特徴量を計算
-
-        Args:
-            df: OHLCV価格データ
-            lookback_periods: 計算期間設定
-
-        Returns:
-            パターン認識特徴量が追加されたDataFrame
-        """
-        try:
-            result_df = df.copy()
-
-            # ダイバージェンス検出
-            rsi = (
-                result_df["RSI"]
-                if "RSI" in result_df.columns
-                else self._calculate_rsi(result_df)
-            )
-
-            # 価格とRSIのダイバージェンス（pandas-ta使用）
-            import pandas_ta as ta
-
-            price_trend = ta.linreg(result_df["Close"], length=10, slope=True)
-            rsi_trend = ta.linreg(rsi, length=10, slope=True)
-
-            # ベアダイバージェンス（価格上昇、RSI下降）
-            if price_trend is not None and rsi_trend is not None:
-                result_df["Bear_Divergence"] = ((price_trend > 0) & (rsi_trend < 0)).astype(int)
-            else:
-                result_df["Bear_Divergence"] = 0
-
-            # ブルダイバージェンス（価格下降、RSI上昇）
-            if price_trend is not None and rsi_trend is not None:
-                result_df["Bull_Divergence"] = ((price_trend < 0) & (rsi_trend > 0)).astype(int)
-            else:
-                result_df["Bull_Divergence"] = 0
-
-            # サポート・レジスタンス距離
-            period = lookback_periods.get("volatility", 20)
-
-            # 直近の高値・安値
-            recent_high = result_df["High"].rolling(window=period).max()
-            recent_low = result_df["Low"].rolling(window=period).min()
-
-            result_df["Support_Distance"] = self.safe_ratio_calculation(
-                result_df["Close"] - recent_low, result_df["Close"]
-            )
-            result_df["Resistance_Distance"] = self.safe_ratio_calculation(
-                recent_high - result_df["Close"], result_df["Close"]
-            )
-
-            # ピボットポイント
-            prev_high = result_df["High"].shift(1)
-            prev_low = result_df["Low"].shift(1)
-            prev_close = result_df["Close"].shift(1)
-
-            pivot = (prev_high + prev_low + prev_close) / 3
-            result_df["Pivot_Distance"] = self.safe_ratio_calculation(
-                result_df["Close"] - pivot, pivot
-            )
-
-            # フィボナッチレベル
-            swing_high = result_df["High"].rolling(window=period).max()
-            swing_low = result_df["Low"].rolling(window=period).min()
-
-            fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
-            for level in fib_levels:
-                fib_price = swing_low + (swing_high - swing_low) * level
-                result_df[f"Fib_{int(level*1000)}_Distance"] = (
-                    self.safe_ratio_calculation(
-                        abs(result_df["Close"] - fib_price), result_df["Close"]
-                    )
-                )
-
-            # ギャップ分析
-            gap = result_df["Open"] - result_df["Close"].shift(1)
-            gap_pct = self.safe_ratio_calculation(gap, result_df["Close"].shift(1))
-
-            result_df["Gap_Up"] = (pd.Series(gap_pct) > 0.01).astype(int)
-            result_df["Gap_Down"] = (pd.Series(gap_pct) < -0.01).astype(int)
-            result_df["Gap_Size"] = abs(gap_pct)
-
-            logger.debug("パターン認識特徴量計算完了")
-            return result_df
-
-        except Exception as e:
-            logger.error(f"パターン認識特徴量計算エラー: {e}")
-            return df
 
     def safe_ratio_calculation(self, numerator: pd.Series | Any, denominator: pd.Series | Any, fill_value: float = 0.0) -> pd.Series:
         """
@@ -402,20 +309,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "CCI",
             "ROC",
             "Momentum",
-            # パターン特徴量
-            "Bear_Divergence",
-            "Bull_Divergence",
-            "Support_Distance",
-            "Resistance_Distance",
-            "Pivot_Distance",
-            "Fib_236_Distance",
-            "Fib_382_Distance",
-            "Fib_500_Distance",
-            "Fib_618_Distance",
-            "Fib_786_Distance",
-            "Gap_Up",
-            "Gap_Down",
-            "Gap_Size",
         ]
 
 

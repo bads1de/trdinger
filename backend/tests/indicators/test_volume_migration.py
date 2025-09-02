@@ -10,6 +10,7 @@ import pandas as pd
 import pandas_ta as ta
 
 from app.services.indicators.technical_indicators.volume import VolumeIndicators
+from app.services.indicators.utils import PandasTAError
 
 
 class TestVolumeMigration:
@@ -336,6 +337,29 @@ class TestVolumePandasOnly:
     @pytest.mark.skip(reason="pandasオンリー移行前に実行")
     def test_ad_returns_pandas_series(self, sample_data):
         """ADがpandas Seriesを返すこと"""
+    @pytest.mark.skip(reason="pandasオンリー移行前に実行")
+    def test_obv_volume_error_processing(self, sample_data):
+        """OBV: Volumeデータ処理関連エラーテスト"""
+        from app.services.indicators.utils import PandasTAError
+        import pytest
+
+        # Test None volume
+        with pytest.raises(PandasTAError):
+            VolumeIndicators.obv(sample_data['close'], None)
+
+        # Test zero volume
+        zero_volume = pd.Series([0] * len(sample_data['volume']), name='volume')
+        result = VolumeIndicators.obv(sample_data['close'], zero_volume)
+        # Should return Series but with NaN or other processing
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_data['close'])
+
+        # Test length mismatch
+        with pytest.raises(PandasTAError):
+            VolumeIndicators.obv(sample_data['close'], pd.Series([1, 2], name='volume'))
+
+    @pytest.mark.skip(reason="pandasオンリー移行前に実行")
+    def test_ad_returns_pandas_series(self, sample_data):
         result = VolumeIndicators.ad(sample_data['high'], sample_data['low'], sample_data['close'], sample_data['volume'])
 
         assert isinstance(result, pd.Series)

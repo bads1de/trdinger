@@ -20,8 +20,8 @@ def test_invalid_metrics():
     invalid_indicators = ["MINMAX", "MINMAXINDEX", "MAXINDEX", "MININDEX", "MAMA"]
 
     print(f"Invalid indicators list: {invalid_indicators}")
-        registered_indicators = indicator_registry.list_indicators()
-        print(f"Currently registered indicators: {len(registered_indicators)}")
+    registered_indicators = indicator_registry.list_indicators()
+    print(f"Currently registered indicators: {len(registered_indicators)}")
 
     # 無効な指標が登録されていないことを確認
     registered_indicators = indicator_registry.list_indicators()

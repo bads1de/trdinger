@@ -5,100 +5,19 @@ pandas-taを直接活用し、冗長なラッパーを削除した効率的な�
 """
 
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
 from .config import IndicatorConfig, indicator_registry
+from .technical_indicators.trend import TrendIndicators
+from .data_validation import validate_data_length_with_fallback, create_nan_result
 
 logger = logging.getLogger(__name__)
 
-# Constants
-# pandas-ta動的処理設定
-PANDAS_TA_CONFIG = {
-    "RSI": {
-        "function": "rsi",
-        "params": {"length": ["length", "period"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 14},
-    },
-    "WMA": {
-        "function": "wma",
-        "params": {"length": ["length", "period"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 20},
-    },
-    "MACD": {
-        "function": "macd",
-        "params": {"fast": ["fast"], "slow": ["slow"], "signal": ["signal"]},
-        "data_column": "Close",
-        "returns": "multiple",
-        "return_cols": ["MACD", "Signal", "Histogram"],
-        "default_values": {"fast": 12, "slow": 26, "signal": 9},
-    },
-}
-
-POSITIONAL_DATA_FUNCTIONS = {
-    "rsi",
-    "wma",
-    "sar",
-    "roc",
-    "stoch",
-    "bbands",
-    "macd",
-    "dpo",
-    "rmi",
-    "kama",
-    "trima",
-    "wma",
-    "ma",
-    "midpoint",
-    "midprice",
-    "ht_trendline",
-    "adosc",
-    "correl",
-    "linearreg",
-    "stddev",
-    "tsf",
-    "var",
-    "linearreg_angle",
-    "linearreg_intercept",
-    "linearreg_slope",
-    "hma",
-    "zlma",
-    "swma",
-    "alma",
-    "rma",
-    "tsi",
-    "pvo",
-    "cfo",
-    "cti",
-    "sma_slope",
-    "price_ema_ratio",
-    "beta",
-    "belta",
-    "qqe",
-    "smi",
-    "trix",
-    "apo",
-    "macdext",
-    "macdfix",
-    "WMA",
-    "TRIMA",
-    "MA",
-    "chop",
-    "vortex",
-    "BBANDS",
-    "hilo",
-    "ad",
-    "eom",
-    "kvo",
-    "cmf",
-}
+from .config.pandas_ta_config import PANDAS_TA_CONFIG, POSITIONAL_DATA_FUNCTIONS
 
 
 class TechnicalIndicatorService:
@@ -141,6 +60,63 @@ class TechnicalIndicatorService:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
             raise
 
+    def validate_data_length(
+        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
+    ) -> bool:
+        """
+        データ長が指標計算に十分かどうかを検証
+
+        Args:
+            df: OHLCV価格データ
+            indicator_type: 指標タイプ
+            params: パラメータ辞書
+
+        Returns:
+            データ長が十分な場合はTrue、不十分な場合はFalse
+        """
+        config = PANDAS_TA_CONFIG.get(indicator_type)
+        if not config:
+            # 設定がない指標はアダプター使用のため、検証不要
+            return True
+
+        required_length = config["default_values"].get("length", 14)
+
+        # パラメータからlengthを取得（指定されている場合）
+        for param_name, aliases in config["params"].items():
+            if param_name == "length":
+                for alias in aliases:
+                    if alias in params:
+                        required_length = params[alias]
+                        break
+                break
+
+        # データ系列の長さを取得
+        data_length = len(df)
+        if data_length < required_length:
+            logger.warning(
+                f"{indicator_type}: 必要なデータ長 {required_length} に対して実際の長さ {data_length} が不足しています"
+            )
+            return False
+
+        return True
+
+    def validate_data_length_with_fallback(
+        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
+    ) -> Tuple[bool, int]:
+        """
+        データ長検証を強化 - data_validation.pyの強化版を使用
+
+        Args:
+            df: OHLCV価格データ
+            indicator_type: 指標タイプ
+            params: パラメータ辞書
+
+        Returns:
+            (データ長が十分かどうか, フォールバック可能な最小データ長)
+        """
+        # data_validation.pyの強化版を使用
+        return validate_data_length_with_fallback(df, indicator_type, params)
+
     def _calculate_with_pandas_ta(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Union[np.ndarray, tuple, None]:
@@ -158,6 +134,17 @@ class TechnicalIndicatorService:
         config = PANDAS_TA_CONFIG.get(indicator_type)
         if not config:
             return None  # フォールバック
+
+        # データ長検証（強化版を使用）
+        is_valid, required_length = self.validate_data_length_with_fallback(df, indicator_type, params)
+        if not is_valid:
+            logger.info(f"{indicator_type}: データ長不足のためNaNフィルタを適用")
+            # data_validation.pyのcreate_nan_resultを使用
+            nan_result = create_nan_result(df, indicator_type)
+            if isinstance(nan_result, np.ndarray) and nan_result.ndim == 2:
+                # 複数結果の場合、タプルにする
+                return tuple(nan_result[:, i] for i in range(nan_result.shape[1]))
+            return nan_result
 
         try:
             # パラメータ正規化
@@ -182,6 +169,11 @@ class TechnicalIndicatorService:
                     f"{indicator_type}: period must be positive: {normalized_params['length']}"
                 )
 
+            # Fallback indicators that skip pandas-ta and use manual implementations
+            fallback_indicators = {"PPO", "STOCHF", "EMA", "TEMA", "ALMA", "FWMA"}
+            if indicator_type in fallback_indicators:
+                return self._calculate_fallback_indicator(df, indicator_type, normalized_params)
+
             # pandas-ta関数取得と実行
             if not hasattr(ta, config["function"]):
                 logger.warning(f"pandas-ta function '{config['function']}' not found")
@@ -205,6 +197,30 @@ class TechnicalIndicatorService:
                         elif column == "Close":
                             data_args["close"] = df[column]
 
+                # 必要なカラムが全て存在しない場合（大文字小文字を考慮）
+                required_columns = config.get("data_columns", [])
+                resolved_columns = {}
+                for req_col in required_columns:
+                    actual_col = self._resolve_column_name(df, req_col)
+                    if not actual_col:
+                        logger.warning(f"{indicator_type}: 必要なカラム '{req_col}' が存在しません")
+                        return None
+                    resolved_columns[req_col] = actual_col
+
+                # data_argsに解決されたカラムを使用
+                data_args = {}
+                for req_col in required_columns:
+                    if req_col == "Open":
+                        data_args["open"] = df[resolved_columns[req_col]]
+                    elif req_col == "High":
+                        data_args["high"] = df[resolved_columns[req_col]]
+                    elif req_col == "Low":
+                        data_args["low"] = df[resolved_columns[req_col]]
+                    elif req_col == "Close":
+                        data_args["close"] = df[resolved_columns[req_col]]
+                    else:
+                        data_args[req_col] = df[resolved_columns[req_col]]
+
                 # pandas-taの関数によっては異なる引数名を使用する場合があるため、エラーハンドリングを追加
                 try:
                     result = func(**data_args, **normalized_params)
@@ -220,25 +236,145 @@ class TechnicalIndicatorService:
                         raise
             else:
                 # 単一カラムを使用する指標の処理
-                data_series = df[config["data_column"]]
+                column_name = self._resolve_column_name(df, config["data_column"])
+                if not column_name:
+                    logger.warning(f"{indicator_type}: 必要なカラム '{config['data_column']}' が存在しません")
+                    return None
+                data_series = df[column_name]
                 result = func(data_series, **normalized_params)
+
+            # NaN処理: 結果がNaN多い場合にフィルタ
+            if isinstance(result, pd.Series):
+                if result.isna().sum() > len(result) * 0.7:  # 70%以上NaNの場合
+                    logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
+                    return None
+                result = result.fillna(method='bfill').fillna(0)  # バックフィル、後方0
+            elif isinstance(result, pd.DataFrame):
+                if result.isna().sum().sum() > result.size * 0.7:
+                    logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
+                    return None
+                result = result.fillna(method='bfill').fillna(0)
 
             # 戻り値処理
             if config["returns"] == "single":
-                return result.values
+                # Pandas Series の場合は numpy ndarray に変換
+                if isinstance(result, pd.Series):
+                    return result.values
+                else:
+                    return result
             else:  # multiple
                 if result is None or result.empty:
                     raise ValueError(
                         f"pandas-ta function returned empty result for {indicator_type}"
                     )
-                return tuple(
+
+                # タプルとして返す場合、個別の名前を付ける
+                multiple_results = tuple(
                     result.iloc[:, i].values
                     for i in range(min(len(config["return_cols"]), result.shape[1]))
                 )
 
+                # 設定ベースの出力名を追加
+                if hasattr(self, 'registry') and self.registry:
+                    config_obj = self._get_indicator_config(indicator_type)
+                    if (hasattr(config_obj, 'output_names') and
+                        config_obj.output_names and
+                        len(config_obj.output_names) == len(multiple_results)):
+
+                        # 出力に名前を付ける（デバッグ用途）
+                        logger.debug(f"{indicator_type} outputs: {config_obj.output_names}")
+                        return multiple_results
+
+                return multiple_results
+
         except Exception as e:
             logger.warning(f"pandas-ta計算失敗 {indicator_type}: {e}")
             return None  # フォールバックさせる
+
+    def _calculate_fallback_indicator(self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]) -> Union[np.ndarray, tuple, None]:
+        """
+        Fallback implementation using TrendIndicators/MomentumIndicators classes
+        for indicators that have pandas-ta issues
+        """
+        try:
+            config = PANDAS_TA_CONFIG.get(indicator_type)
+            if not config:
+                return None
+
+            if indicator_type == "PPO":
+                column_name = self._resolve_column_name(df, "Close")
+                if not column_name:
+                    nan_array = np.full(len(df), np.nan)
+                    return nan_array, nan_array, nan_array
+
+                data_series = df[column_name]
+                result = TrendIndicators.ppo(data_series,
+                                           fast=params.get("fast", 12),
+                                           slow=params.get("slow", 26),
+                                           signal=params.get("signal", 9))
+                # PPO returns tuple of (ppo_line, signal_line, histogram)
+                return result
+
+            elif indicator_type == "STOCHF":
+                high_column = self._resolve_column_name(df, "High")
+                low_column = self._resolve_column_name(df, "Low")
+                close_column = self._resolve_column_name(df, "Close")
+
+                if not (high_column and low_column and close_column):
+                    nan_array = np.full(len(df), np.nan)
+                    return nan_array, nan_array
+
+                high_series = df[high_column]
+                low_series = df[low_column]
+                close_series = df[close_column]
+
+                result = TrendIndicators.stochf(high_series, low_series, close_series,
+                                              length=params.get("fastd_length", 3),
+                                              fast_length=params.get("fastk_length", 5))
+                # STOCHF returns tuple of (fast_k, fast_d)
+                return result
+
+            elif indicator_type in {"EMA", "TEMA", "ALMA", "FWMA"}:
+                column_name = self._resolve_column_name(df, config["data_column"])
+                if not column_name:
+                    return np.full(len(df), np.nan)
+
+                data_series = df[column_name]
+
+                if indicator_type == "EMA":
+                    result = TrendIndicators.ema(data_series, length=params.get("length", 20))
+                elif indicator_type == "TEMA":
+                    result = TrendIndicators.tema(data_series, length=params.get("length", 14))
+                elif indicator_type == "ALMA":
+                    result = TrendIndicators.alma(data_series,
+                                                length=params.get("length", 9),
+                                                sigma=params.get("sigma", 6.0),
+                                                offset=params.get("offset", 0.85))
+                elif indicator_type == "FWMA":
+                    result = TrendIndicators.fwma(data_series, length=params.get("length", 10))
+
+                # Return as single series values if needed
+                if config["returns"] == "single":
+                    if isinstance(result, pd.Series):
+                        return result.values
+                    else:
+                        return result
+
+                return result
+
+        except Exception as e:
+            logger.warning(f"Fallback indicator calculation failed for {indicator_type}: {e}")
+            # Return appropriate NaN array based on config
+            if config and config["returns"] == "multiple":
+                nan_array = np.full(len(df), np.nan)
+                if indicator_type == "PPO":
+                    return nan_array, nan_array, nan_array
+                elif indicator_type == "STOCHF":
+                    return nan_array, nan_array
+                else:
+                    return nan_array, nan_array
+            else:
+                return np.full(len(df), np.nan)
 
     def _calculate_with_adapter(
         self,
@@ -364,7 +500,13 @@ class TechnicalIndicatorService:
                     # 無効なパラメータは除外（何もしない）
                 # config.parameters に含まれるパラメータは除外（何もしない）
 
-            return adapter_function(*positional_args, **keyword_args)
+            result = adapter_function(*positional_args, **keyword_args)
+            if isinstance(result, pd.Series):
+                return result.values
+            elif isinstance(result, pd.DataFrame) and result_type == IndicatorResultType.SINGLE:
+                return result.iloc[:, 0].values
+            else:
+                return result
 
         # dataパラメータが含まれているがcloseが含まれていない場合
         # dataを最初の位置引数として渡す（一部の関数で期待される形式）
@@ -380,7 +522,13 @@ class TechnicalIndicatorService:
             return adapter_function(data_arg, **all_args)
 
         # 通常のキーワード引数呼び出し
-        return adapter_function(**all_args)
+        result = adapter_function(**all_args)
+        if isinstance(result, pd.Series):
+            return result.values
+        elif isinstance(result, pd.DataFrame) and result_type == IndicatorResultType.SINGLE:
+            return result.iloc[:, 0].values
+        else:
+            return result
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
         """

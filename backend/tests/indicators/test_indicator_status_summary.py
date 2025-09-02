@@ -55,7 +55,7 @@ class TestIndicatorStatusSummary:
             ("EMA", {"length": 20}),
             ("MACD", {"fast": 12, "slow": 26, "signal": 9}),
             ("BB", {"period": 20, "std": 2.0}),
-            ("STOCH", {"fastk_period": 5, "slowk_period": 3, "slowd_period": 3}),
+            ("STOCH", {"fastk_period": 5, "d_length": 3, "slowd_period": 3}),
             ("ADX", {"length": 14}),
             ("CCI", {"period": 14}),
             ("ATR", {"period": 14}),

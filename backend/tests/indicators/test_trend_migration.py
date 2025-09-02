@@ -504,3 +504,18 @@ class TestTrendMigration:
         assert len(result) == len(high)
         expected = (high + low + close) / 3
         pd.testing.assert_series_equal(result, expected)
+
+    def test_mam_pandas_series(self):
+        """MAM: データとしてpd.Seriesを受け取りpd.Seriesを返すことを確認"""
+        data = pd.Series([10, 11, 12, 13, 14, 15, 16, 17, 18, 19], dtype=float)
+        result = TI.mam(data, length=5)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        # 先頭のデータはNaN (SMAが必要)
+        assert np.isnan(result.iloc[0])
+        assert np.isnan(result.iloc[1])
+        assert np.isnan(result.iloc[2])
+        assert np.isnan(result.iloc[3])
+        # MAM = close/SMA - 1, 異なる値
+        assert not np.isnan(result.iloc[7])

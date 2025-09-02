@@ -118,6 +118,195 @@ def test_basic_indicators():
 
     return successful_tests, failed_tests
 
+def test_additional_indicators():
+    """追加テスト指標のテスト"""
+    print("=== 追加指標テスト開始 ===")
+
+    # データ長を増やしてより長い期間でテスト
+    df = create_test_data_more()
+
+    service = TechnicalIndicatorService()
+
+    # テストする追加指標とパラメータ
+    additional_tests = [
+        # トレンド指標
+        ('KST', {'rorc': 10, 'rkst': 10, 'rsignal': 9}),
+        ('AROON', {'length': 25}),
+        ('SUPERTREND', {'factor': 3, 'atr_period': 10}),
+        ('SAR', {'acceleration': 0.02, 'maximum': 0.2}),
+        ('ICHIMOKU', {}),  # デフォルト
+        ('MIDPRICE', {'timeperiod': 14}),
+        ('ZLMA', {'length': 25}),
+        ('VWMA', {'length': 20}),
+        ('TLB', {}),
+        ('CWMA', {'length': 20}),
+        ('T3', {'length': 5, 'vfactor': 0.7}),
+
+        # ボリューム指標
+        ('PVOL', {}),
+        ('CMF', {'length': 21}),
+        ('EFI', {'length': 13}),
+        ('KVO', {'fast': 34, 'slow': 55, 'siglen': 13}),
+        ('VP', {}),
+        ('OBV', {}),
+
+        # オシレーター
+        ('TSI', {'long': 25, 'short': 13, 'signal': 13}),
+        ('VAR', {'timeperiod': 5}),
+        ('CV', {'length': 10}),
+        ('IRM', {}),
+        ('LINREG', {'timeperiod': 14}),
+        ('LINREGSLOPE', {'timeperiod': 14}),
+        ('LINREGANGLE', {'timeperiod': 14}),
+        ('MAE', {'length': 10}),
+        # ('MAM', {}),  # アダプティブ移動平均、指標名確認
+        ('MAD', {}),
+        ('MASSI', {'fast': 9, 'slow': 25}),  # MI (Mass Index)
+
+        # パターン認識
+        ('CDL_ENGULFING', {}),
+    ]
+
+    successful_tests = []
+    failed_tests = []
+    error_details = {}
+    insufficient_data_flags = []
+
+    for indicator_name, params in additional_tests:
+        print(f"\nTesting {indicator_name}...")
+        try:
+            result = service.calculate_indicator(df, indicator_name, params)
+
+            if result is not None:
+                # 結果タイプ確認修正
+                if isinstance(result, np.ndarray):
+                    valid_count = np.sum(~np.isnan(result))
+                    # データ長不足チェック
+                    if valid_count < len(df) * 0.5:
+                        insufficient_data_flags.append(indicator_name)
+                        print(f"  WARNING: {indicator_name} - insufficient data (valid: {valid_count}/{len(df)})")
+                    if valid_count > 0:
+                        successful_tests.append(indicator_name)
+                        print(f"  SUCCESS: {indicator_name} - shape: {result.shape}, valid values: {valid_count}")
+                    else:
+                        failed_tests.append(indicator_name)
+                        error_details[indicator_name] = "All values are NaN"
+                        print(f"  FAILED: {indicator_name} - all values are NaN")
+
+                elif isinstance(result, tuple):
+                    valid_arrays = [arr for arr in result if isinstance(arr, np.ndarray) and np.sum(~np.isnan(arr)) > 0]
+                    if len(valid_arrays) > 0:
+                        # データ長不足チェック
+                        valid_ratio = len(valid_arrays) / len(result)
+                        if valid_ratio < 0.5:
+                            insufficient_data_flags.append(indicator_name)
+                            print(f"  WARNING: {indicator_name} - insufficient data (valid arrays: {len(valid_arrays)}/{len(result)})")
+                        successful_tests.append(indicator_name)
+                        print(f"  SUCCESS: {indicator_name} - tuple with {len(result)} arrays")
+                    else:
+                        failed_tests.append(indicator_name)
+                        error_details[indicator_name] = "All arrays contain only NaN values"
+                        print(f"  FAILED: {indicator_name} - all arrays contain only NaN")
+
+                elif isinstance(result, pd.Series):
+                    # pandas Seriesもサポート
+                    valid_count = result.notna().sum()
+                    if valid_count < len(df) * 0.5:
+                        insufficient_data_flags.append(indicator_name)
+                        print(f"  WARNING: {indicator_name} - insufficient data (valid: {valid_count}/{len(df)})")
+                    if valid_count > 0:
+                        successful_tests.append(indicator_name)
+                        print(f"  SUCCESS: {indicator_name} - Series with {valid_count} valid values")
+                    else:
+                        failed_tests.append(indicator_name)
+                        error_details[indicator_name] = "All values are NaN"
+                        print(f"  FAILED: {indicator_name} - all values are NaN")
+
+                elif isinstance(result, pd.DataFrame):
+                    # DataFrameもサポート
+                    valid_count = result.notna().sum().sum()
+                    total_cells = result.shape[0] * result.shape[1]
+                    if valid_count < total_cells * 0.5:
+                        insufficient_data_flags.append(indicator_name)
+                        print(f"  WARNING: {indicator_name} - insufficient data (valid cells: {valid_count}/{total_cells})")
+                    if valid_count > 0:
+                        successful_tests.append(indicator_name)
+                        print(f"  SUCCESS: {indicator_name} - DataFrame {result.shape} with {valid_count} valid values")
+                    else:
+                        failed_tests.append(indicator_name)
+                        error_details[indicator_name] = "All values are NaN"
+                        print(f"  FAILED: {indicator_name} - all values are NaN")
+
+                else:
+                    failed_tests.append(indicator_name)
+                    error_details[indicator_name] = f"Unexpected result type: {type(result)}"
+                    print(f"  FAILED: {indicator_name} - unexpected result type")
+            else:
+                failed_tests.append(indicator_name)
+                error_details[indicator_name] = "Result is None"
+                print(f"  FAILED: {indicator_name} - result is None")
+
+        except Exception as e:
+            failed_tests.append(indicator_name)
+            error_details[indicator_name] = str(e)
+            print(f"  ERROR: {indicator_name} - {str(e)}")
+
+    # 結果サマリー
+    print("\n=== 追加指標テスト結果 ===")
+    print(f"成功: {len(successful_tests)}個")
+    print(f"失敗: {len(failed_tests)}個")
+    print(f"データ不足: {len(insufficient_data_flags)}個")
+    print(f"総計: {len(additional_tests)}個")
+
+    if successful_tests:
+        print(f"成功した指標: {successful_tests}")
+
+    if failed_tests:
+        print(f"失敗した指標: {failed_tests}")
+        print("\nエラーの詳細:")
+        for indicator, error in error_details.items():
+            print(f"  {indicator}: {error}")
+
+    if insufficient_data_flags:
+        print(f"データ不足の指標: {insufficient_data_flags}")
+
+    return successful_tests, failed_tests, insufficient_data_flags
+
+def create_test_data_more():
+    """より長い期間のテストデータ作成"""
+    np.random.seed(42)
+    dates = pd.date_range(start='2024-01-01', periods=500, freq='1h')  # 500期間、1hに変更
+
+    # より現実的な価格データ生成
+    base_price = 50000
+    price_changes = np.random.normal(0, 0.02, 499)  # datesに合わせて499
+    close_prices = [base_price]
+    for change in price_changes:
+        new_price = close_prices[-1] * (1 + change)
+        close_prices.append(max(1, new_price))  # 価格が負にならないように
+
+    # OHLCVデータ生成（open価格は前のcloseを使用）
+    high_prices = [price * (1 + abs(np.random.normal(0, 0.01))) for price in close_prices]
+    low_prices = [price * (1 - abs(np.random.normal(0, 0.01))) for price in close_prices]
+    # open価格は前のcloseを基準に生成、最初のopenはベース価格を使用
+    open_prices = [base_price * (1 + np.random.normal(0, 0.005))]
+    for i in range(1, len(close_prices)):
+        open_prices.append(close_prices[i-1] * (1 + np.random.normal(0, 0.005)))
+    volumes = np.random.uniform(1000000, 10000000, 500)
+
+    print(f"Lengths: dates={len(dates)}, close={len(close_prices)}, open={len(open_prices)}, high={len(high_prices)}, low={len(low_prices)}, vol={len(volumes)}")
+
+    df = pd.DataFrame({
+        'timestamp': dates,
+        'open': open_prices,
+        'high': high_prices,
+        'low': low_prices,
+        'close': close_prices,
+        'volume': volumes
+    })
+
+    return df
+
 def test_indicator_registry_consistency():
     """インジケータレジストリの一貫性テスト"""
     print("\n=== レジストリ一貫性テスト ===")
@@ -302,6 +491,9 @@ def main():
         # 基本インジケータテスト
         successful_tests, failed_tests = test_basic_indicators()
 
+        # 追加指標テスト
+        additional_successful, additional_failed, insufficient_data = test_additional_indicators()
+
         # レジストリ一貫性テスト
         registry_consistent = test_indicator_registry_consistency()
 
@@ -321,6 +513,14 @@ def main():
         else:
             print(f"WARNING: 基本インジケータテスト: {len(failed_tests)}個の失敗")
 
+        if len(additional_failed) == 0:
+            print("SUCCESS: 追加指標テスト: すべて成功")
+        else:
+            print(f"WARNING: 追加指標テスト: {len(additional_failed)}個の失敗")
+
+        if len(insufficient_data) > 0:
+            print(f"INFO: データ不足指標: {len(insufficient_data)}個")
+
         if registry_consistent:
             print("SUCCESS: レジストリ一貫性テスト: 成功")
         else:
@@ -331,8 +531,24 @@ def main():
         else:
             print(f"WARNING: パラメータ生成テスト: {len(failed_params)}個の問題")
 
+        # 追加指標の結果出力
+        total_tested_additional = len(additional_successful) + len(additional_failed)
+        print(f"\n=== 追加指標サマリー ===")
+        print(f"成功: {len(additional_successful)}/{total_tested_additional} 指標")
+        print(f"データ不足: {len(insufficient_data)} 指標")
+
+        # チェックリスト更新候補
+        checklist_successful = [ind for ind in additional_successful if ind not in insufficient_data]
+        checklist_insufficient = insufficient_data
+
+        print(f"\n=== チェックリスト更新候補 ===")
+        print(f"[x]に変更可能: {checklist_successful}")
+        print(f"データ長調整要: {checklist_insufficient}")
+        if additional_failed:
+            print(f"修正要: {additional_failed}")
+
         # 全体の評価
-        total_issues = len(init_failed) + len(failed_tests) + (0 if registry_consistent else 1) + len(failed_params)
+        total_issues = len(init_failed) + len(failed_tests) + len(additional_failed) + len(insufficient_data) + (0 if registry_consistent else 1) + len(failed_params)
 
         if total_issues == 0:
             print("\nSUCCESS: すべてのテストが成功しました！システムは正常に動作しています。")

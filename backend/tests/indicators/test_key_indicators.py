@@ -89,7 +89,7 @@ class TestKeyIndicators:
         df = sample_ohlcv_data.copy()
 
         result = technical_indicator_service.calculate_indicator(
-            df, "STOCH", {"fastk_period": 5, "slowk_period": 3, "slowd_period": 3}
+            df, "STOCH", {"fastk_period": 5, "d_length": 3, "slowd_period": 3}
         )
 
         assert result is not None

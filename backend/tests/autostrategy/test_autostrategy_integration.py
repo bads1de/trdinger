@@ -62,7 +62,7 @@ class TestAutoStrategyIntegration:
             ('EMA', {'length': 20}, 'single'),
             ('MACD', {'fast': 12, 'slow': 26, 'signal': 9}, 'complex'),
             ('BBANDS', {'length': 20, 'std': 2.0}, 'complex'),
-            ('STC', {'tclength': 10, 'fast': 23, 'slow': 50, 'factor': 0.5}, 'single'),
+            ('STC', {'tclength': 10, 'fast': 23, 'slow': 50, 'factor': 0.5}, 'complex'),
             ('ADX', {'length': 14}, 'single'),
             ('CCI', {'period': 14}, 'single'),
             ('ATR', {'period': 14}, 'single'),

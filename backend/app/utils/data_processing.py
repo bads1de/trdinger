@@ -102,15 +102,18 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
                 and self.outlier_mask_ is not None
                 and len(X_transformed) == len(self.outlier_mask_)
             ):
+                # 学習時と同じデータサイズの場合、学習時の外れ値マスクを使用
                 outlier_mask = self.outlier_mask_
             else:
-                # 新しいデータの場合は変換しない
+                # 新しいデータの場合は変換しない（学習データのみで外れ値検出）
                 return X_transformed
 
             # 外れ値をNaNに置き換え
             if isinstance(X_transformed, pd.DataFrame):
+                # DataFrameの場合はlocで行を指定してNaNに置き換え
                 X_transformed.loc[outlier_mask] = np.nan
             else:
+                # numpy配列の場合は直接インデックス指定でNaNに置き換え
                 X_transformed[outlier_mask] = np.nan
 
             return X_transformed
@@ -385,6 +388,7 @@ class DataProcessor:
             remove_outliers: 外れ値除去を行うか
             outlier_threshold: 外れ値の閾値
             outlier_method: 外れ値検出方法
+            outlier_transform: 外れ値変換方法 ('robust', 'quantile', 'power')
 
         Returns:
             前処理パイプライン
@@ -392,7 +396,7 @@ class DataProcessor:
         # 数値カラム用の前処理パイプライン
         numeric_pipeline_steps = []
 
-        # 1. 無限値をNaNに変換
+        # 1. 無限値をNaNに変換（数値計算で発生するinfをNaNに統一）
         numeric_pipeline_steps.append(
             (
                 "inf_to_nan",
@@ -404,6 +408,7 @@ class DataProcessor:
 
         # 2. 外れ値除去（オプション）- scikit-learn標準アルゴリズムを使用
         if remove_outliers:
+            # 外れ値検出方法に応じて適切なTransformerを選択
             if outlier_method == "isolation_forest":
                 outlier_transformer = OutlierRemovalTransformer(
                     method="isolation_forest",
@@ -425,6 +430,7 @@ class DataProcessor:
                     n_neighbors=20,
                 )
             elif outlier_method in ("iqr", "zscore"):
+                # IQRまたはZ-scoreはIsolationForestで代替
                 outlier_transformer = OutlierRemovalTransformer(
                     method="isolation_forest",
                     contamination=(
@@ -435,21 +441,23 @@ class DataProcessor:
                     n_estimators=100,
                 )
             else:
+                # 未対応の方法の場合は何もしないTransformer
                 outlier_transformer = FunctionTransformer(
                     func=lambda X: X, validate=False
                 )
 
             numeric_pipeline_steps.append(("outlier_removal", outlier_transformer))
 
-        # 3. 欠損値補完
+        # 3. 欠損値補完（外れ値除去後のNaNを補完）
         numeric_pipeline_steps.append(
             ("imputer", SimpleImputer(strategy=numeric_strategy))
         )
 
         # 4. スケーリング（オプション）
         if scaling_method is not None:
+            # 外れ値変換方法が指定されている場合
             if outlier_transform == "robust":
-                # 中央値/IQRで頑健にスケーリング
+                # 中央値/IQRで頑健にスケーリング（外れ値の影響を受けにくい）
                 scaler = RobustScaler()
             elif outlier_transform == "quantile":
                 from sklearn.preprocessing import QuantileTransformer
@@ -484,10 +492,12 @@ class DataProcessor:
             [
                 (
                     "imputer",
+                    # カテゴリカルデータの欠損値は"Unknown"で埋める
                     SimpleImputer(strategy=categorical_strategy, fill_value="Unknown"),
                 ),
                 (
                     "encoder",
+                    # ラベルエンコーディングを使用（OneHotは次元が大きくなるため）
                     CategoricalEncoderTransformer(encoding_type="label"),
                 ),
             ]
@@ -499,11 +509,13 @@ class DataProcessor:
                 (
                     "numeric",
                     numeric_pipeline,
+                    # 数値型のカラムを選択
                     make_column_selector(dtype_include=np.number),
                 ),
                 (
                     "categorical",
                     categorical_pipeline,
+                    # object型のカラムを選択
                     make_column_selector(dtype_include=object),
                 ),
             ],
@@ -517,6 +529,7 @@ class DataProcessor:
                 ("preprocessor", preprocessor),
                 (
                     "final_cleanup",
+                    # 最終的なクリーンアップ（残ったNaNを0に変換）
                     FunctionTransformer(func=self._final_cleanup, validate=False),
                 ),
             ]
@@ -868,13 +881,13 @@ class DataProcessor:
             try:
                 series = result_df[col]
 
-                # pd.NA を None/NaN に正規化
+                # pd.NA を None/NaN に正規化（pandasの欠損値表現を統一）
                 series = series.replace({pd.NA: None})
 
-                # 数値型を想定する場合は to_numeric で強制変換
+                # 数値型を想定する場合は to_numeric で強制変換（文字列などの異常値をNaNに）
                 if dtype is not None:
                     try:
-                        # pd.to_numericで安全に数値変換を試行
+                        # pd.to_numericで安全に数値変換を試行（errors="coerce"で変換不能はNaN）
                         series = pd.to_numeric(series, errors="coerce")
 
                         # 数値型の場合は指定されたdtypeに変換
@@ -889,7 +902,7 @@ class DataProcessor:
                         # エラーの場合はpd.to_numericで数値型に変換
                         series = pd.to_numeric(series, errors="coerce")
 
-                # 前方補完
+                # 前方補完（時系列データの欠損を前の値で埋める）
                 if forward_fill and hasattr(series, "ffill"):
                     # 确保series是pandas Series类型
                     if isinstance(series, (pd.Series, pd.DataFrame)):
@@ -902,7 +915,7 @@ class DataProcessor:
             except Exception as e:
                 logger.warning(f"列 {col} の前処理（型/ffill）でエラー: {e}")
 
-        # 統計的補完を実行
+        # 統計的補完を実行（SimpleImputerでstrategyに応じた補完を行う）
         if fit_if_needed:
             # scikit-learn ColumnTransformerを使用した効率的な実装
             from sklearn.compose import ColumnTransformer
@@ -910,7 +923,7 @@ class DataProcessor:
             target_columns = [col for col in columns if col in result_df.columns]
 
             if target_columns:
-                # 有効なカラムのみを対象
+                # 有効なカラムのみを対象（NaNが一つもないカラムは除外）
                 valid_columns = [
                     col
                     for col in target_columns
@@ -918,7 +931,7 @@ class DataProcessor:
                 ]
 
                 if valid_columns:
-                    # ColumnTransformerで一括処理
+                    # ColumnTransformerで一括処理（指定されたstrategyで補完）
                     ct = ColumnTransformer(
                         [("imputer", SimpleImputer(strategy=strategy), valid_columns)],
                         remainder="passthrough",
@@ -927,18 +940,19 @@ class DataProcessor:
 
                     imputed_data = ct.fit_transform(result_df)
 
-                    # 特徴名を取得
+                    # 特徴名を取得（ColumnTransformerから出力される特徴名）
                     try:
                         feature_names = ct.get_feature_names_out()
                     except Exception:
+                        # get_feature_names_outが失敗した場合は元のカラム名を使用
                         feature_names = result_df.columns
 
-                    # 結果をDataFrameに変換
+                    # 結果をDataFrameに変換（インデックスは元のDataFrameを保持）
                     result_df = pd.DataFrame(
                         imputed_data, columns=feature_names, index=df.index
                     )
 
-        # デフォルト値で最終補完
+        # デフォルト値で最終補完（指定されたデフォルト値で残りのNaNを埋める）
         for col in columns:
             if col in result_df.columns and col in default_fill_values:
                 result_df[col] = result_df[col].fillna(default_fill_values[col])

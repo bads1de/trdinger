@@ -134,12 +134,10 @@ class TestVolatilityMigration:
             ('keltner', lambda: VolatilityIndicators.keltner(sample_data['high'], sample_data['low'], sample_data['close'])),
             ('donchian', lambda: VolatilityIndicators.donchian(sample_data['high'], sample_data['low'])),
             ('supertrend', lambda: VolatilityIndicators.supertrend(sample_data['high'], sample_data['low'], sample_data['close'])),
-            ('aberration', lambda: VolatilityIndicators.aberration(sample_data['high'], sample_data['low'], sample_data['close'])),
             ('accbands', lambda: VolatilityIndicators.accbands(sample_data['high'], sample_data['low'], sample_data['close'])),
             ('hwc', lambda: VolatilityIndicators.hwc(sample_data['close'])),
             ('massi', lambda: VolatilityIndicators.massi(sample_data['high'], sample_data['low'])),
             ('pdist', lambda: VolatilityIndicators.pdist(sample_data['open'], sample_data['high'], sample_data['low'], sample_data['close'])),
-            ('thermo', lambda: VolatilityIndicators.thermo(sample_data['high'], sample_data['low'])),
             ('ui', lambda: VolatilityIndicators.ui(sample_data['close'])),
         ]
 

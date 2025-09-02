@@ -16,7 +16,6 @@ class IndicatorType(str, Enum):
     MOMENTUM = "momentum"  # モメンタム系
     TREND = "trend"  # トレンド系
     VOLATILITY = "volatility"  # ボラティリティ系
-    PATTERN_RECOGNITION = "pattern_recognition"  # パターン認識系
 
 
 # 戦略タイプ定義
@@ -121,7 +120,6 @@ MOMENTUM_INDICATORS = [
     "ROCR",  # 変化率比率 (Rate of Change Ratio)
     "ROCR100",  # 変化率比率100スケール (Rate of Change Ratio 100 Scale)
     "RSI",  # 相対力指数 (Relative Strength Index)
-    "RSI_EMA_CROSS",  # RSIとEMAのクロス (RSI EMA Cross)
     "RVGI",  # 相対ボラティリティ指数 (Relative Vigor Index)
     "RVI",  # 相対ボラティリティ指数 (Relative Volatility Index)
     "SMI",  # ストキャスティック・モメンタム指数 (Stochastic Momentum Index)
@@ -194,40 +192,15 @@ VOLATILITY_INDICATORS = [
     "DONCHIAN",  # ドンチャンチャネル (Donchian Channel)
     "KELTNER",  # ケルトナチャネル (Keltner Channel)
     "SUPERTREND",  # スーパートレンド (SuperTrend)
-    "ABERRATION",  # アベレーション (Aberration)
     "ACCBANDS",  # アクセレレーションバンド (Acceleration Bands)
     "HWC",  # ハル・ウィリアムズ・チャネル (Hull-Wilder Channels)
-    "MASSI",  # マス指数 (Mass Index)
     "PDIST",  # プライス・ディスタンス (Price Distance)
-    "THERMO",  # サーモメーター (Thermostat)
     "BBANDS",  # ボリンジャーバンド（BBの別名）
     "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
 ]
 
 # 統計系指標（削除済み）
 STATISTICS_INDICATORS = []
-
-# パターン認識系指標
-PATTERN_RECOGNITION_INDICATORS = [
-    "CDL_DOJI",  # 同時線パターン (Doji)
-    "CDL_HAMMER",  # 強気転換のハンマーパターン (Hammer)
-    "CDL_HANGING_MAN",  # 弱気転換の首吊り人形パターン (Hanging Man)
-    "CDL_SHOOTING_STAR",  # 弱気転換の流れ星パターン (Shooting Star)
-    "CDL_ENGULFING",  # 包み線パターン (Engulfing)
-    "CDL_HARAMI",  # はらみ線パターン (Harami)
-    "CDL_PIERCING",  # 強気転換の切り込み線パターン (Piercing)
-    "CDL_THREE_BLACK_CROWS",  # 弱気継続の三羽烏パターン (Three Black Crows)
-    "CDL_THREE_WHITE_SOLDIERS",  # 強気継続の三羽白兵パターン (Three White Soldiers)
-    "CDL_DARK_CLOUD_COVER",  # 弱気転換の暗雲圧力パターン (Dark Cloud Cover)
-    "CDL_SPINNING_TOP",  # 不確実を示す回転相場パターン (Spinning Top)
-    "CDL_MARUBOZU",  # 力強い単独線パターン (Marubozu)
-    "CDL_MORNING_STAR",  # 強気転換の明けの明星パターン (Morning Star)
-    "CDL_EVENING_STAR",  # 弱気転換の宵の明星パターン (Evening Star)
-    "HAMMER",  # 強気転換パターン (Hammer)
-    "ENGULFING_PATTERN",  # 包み線パターン (Engulfing Pattern)
-    "MORNING_STAR",  # 強気転換の朝の明星パターン (Morning Star)
-    "EVENING_STAR",  # 弱気転換の夕方の明星パターン (Evening Star)
-]
 
 # 複合指標
 COMPOSITE_INDICATORS = [
@@ -241,7 +214,6 @@ VALID_INDICATOR_TYPES = (
     + MOMENTUM_INDICATORS
     + TREND_INDICATORS
     + VOLATILITY_INDICATORS
-    + PATTERN_RECOGNITION_INDICATORS
     + COMPOSITE_INDICATORS
 )
 
@@ -316,22 +288,9 @@ CURATED_TECHNICAL_INDICATORS = {
     "NATR",
     "TRANGE",
     "ACCBANDS",
-    "ABERRATION",
     "HWC",
-    "MASSI",
     "PDIST",
-    "THERMO",
-    # パターン認識系
-    "CDL_DOJI",
-    "CDL_HAMMER",
-    "CDL_HANGING_MAN",
-    "CDL_SHOOTING_STAR",
-    "CDL_ENGULFING",
-    "CDL_HARAMI",
-    "CDL_PIERCING",
-    "CDL_THREE_BLACK_CROWS",
-    "CDL_THREE_WHITE_SOLDIERS",
-    "CDL_DARK_CLOUD_COVER",
+    # パターン認識系（削除済み）
 }
 
 # 移動平均系指標の定数
@@ -691,15 +650,8 @@ INDICATOR_CHARACTERISTICS = {
         "range": (0, None),
         "volatility_measure": True,
     },
-    "CDL_DOJI": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),  # パターン強度
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-    },
     "ML_UP_PROB": {
-        "type": "pattern_recognition",
+        "type": "ml_prediction",
         "range": (0, 1),  # 確率値
         "ml_prediction": True,
         "long_zones": [(0.6, 1.0)],
@@ -708,7 +660,7 @@ INDICATOR_CHARACTERISTICS = {
         "high_confidence_threshold": 0.7,
     },
     "ML_DOWN_PROB": {
-        "type": "pattern_recognition",
+        "type": "ml_prediction",
         "range": (0, 1),  # 確率値
         "ml_prediction": True,
         "long_zones": [(0, 0.4)],
@@ -717,83 +669,13 @@ INDICATOR_CHARACTERISTICS = {
         "high_confidence_threshold": 0.7,
     },
     "ML_RANGE_PROB": {
-        "type": "pattern_recognition",
+        "type": "ml_prediction",
         "range": (0, 1),  # 確率値
         "ml_prediction": True,
         "long_zones": [(0, 0.3)],
         "short_zones": [(0, 0.3)],
         "neutral_zone": (0.7, 1.0),
         "high_confidence_threshold": 0.8,
-    },
-    "CDL_HAMMER": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-        "bullish_pattern": True,
-    },
-    "CDL_HANGING_MAN": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-        "bearish_pattern": True,
-    },
-    "CDL_SHOOTING_STAR": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-        "bearish_pattern": True,
-    },
-    "CDL_ENGULFING": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-    },
-    "CDL_HARAMI": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-    },
-    "CDL_PIERCING": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-        "bullish_pattern": True,
-    },
-    "CDL_THREE_BLACK_CROWS": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "continuation_pattern": True,
-        "bearish_pattern": True,
-    },
-    "CDL_THREE_WHITE_SOLDIERS": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "continuation_pattern": True,
-        "bullish_pattern": True,
-    },
-    "CDL_DARK_CLOUD_COVER": {
-        "type": "pattern_recognition",
-        "range": (-100, 100),
-        "pattern_recognition": True,
-        "binary_like": True,
-        "reversal_pattern": True,
-        "bearish_pattern": True,
     },
     "FWMA": {
         "type": "trend",

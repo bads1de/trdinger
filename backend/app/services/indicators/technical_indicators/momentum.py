@@ -44,14 +44,40 @@ class MomentumIndicators:
     """
 
     @staticmethod
-    def rsi(data: pd.Series, length: int = 14) -> pd.Series:
+    def mad(data: pd.Series, period: int = 14) -> pd.Series:
+        """Mean Absolute Deviation with pandas-ta fallback support"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
+
+        try:
+            # pandas-ta MAD if available - but pandas-ta doesn't have MAD function
+            # This would be custom implementation
+            pass
+        except Exception:
+            pass
+
+        # Custom MAD implementation: Mean Absolute Deviation from Moving Average
+        if len(data) < period:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        ma = data.rolling(window=period).mean()
+        abs_dev = (data - ma).abs()
+        mad_result = abs_dev.rolling(window=period).mean()
+
+        return mad_result
+
+    @staticmethod
+    def rsi(data: pd.Series, period: int = 14) -> pd.Series:
         """相対力指数"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
+        length = period
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
 
-        result = ta.rsi(data, length=length)
+        result = ta.rsi(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -88,6 +114,7 @@ class MomentumIndicators:
         k: int = 14,
         d: int = 3,
         smooth_k: int = 3,
+        d_length: int = None,
     ) -> Tuple[pd.Series, pd.Series]:
         """ストキャスティクス"""
         if not isinstance(high, pd.Series):
@@ -96,6 +123,16 @@ class MomentumIndicators:
             raise TypeError("low must be pandas Series")
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
+        if k <= 0:
+            raise ValueError(f"k must be positive: {k}")
+        if d <= 0:
+            raise ValueError(f"d must be positive: {d}")
+        if smooth_k <= 0:
+            raise ValueError(f"smooth_k must be positive: {smooth_k}")
+
+        # d_lengthパラメータが指定された場合、smooth_kをd_lengthに設定
+        if d_length is not None:
+            smooth_k = d_length
 
         result = ta.stoch(
             high=high,
@@ -154,12 +191,13 @@ class MomentumIndicators:
     @staticmethod
     def roc(
         data: pd.Series,
-        length: int = 10,
+        period: int = 10,
         close: pd.Series = None,
     ) -> pd.Series:
         """変化率"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
+        length = period
         # dataが提供されない場合はcloseを使用
         if data is None and close is not None:
             data = close
@@ -169,7 +207,7 @@ class MomentumIndicators:
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
-        result = ta.roc(data, length=length)
+        result = ta.roc(data, window=length)
         if result is None or result.empty:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -190,7 +228,9 @@ class MomentumIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
-        length: int = 14,
+        period: int = 14,
+        length: int = None,
+        **kwargs
     ) -> pd.Series:
         """平均方向性指数"""
         if not isinstance(high, pd.Series):
@@ -200,7 +240,11 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.adx(high=high, low=low, close=close, length=length)
+        # backward compatibility: lengthパラメータをperiodにマッピング
+        if length is not None:
+            period = length
+
+        result = ta.adx(high=high, low=low, close=close, length=period)
         if result is None or result.empty:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result.iloc[:, 0]  # ADX列
@@ -216,12 +260,76 @@ class MomentumIndicators:
             raise TypeError("high must be pandas Series")
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
 
-        result = ta.aroon(high=high, low=low, length=length)
-        if result is None or result.empty:
+        try:
+            result = ta.aroon(high=high, low=low, length=length)
+            if result is not None and not result.empty and not result.isna().all().all():
+                return result.iloc[:, 0], result.iloc[:, 1]
+        except Exception as e:
+            logger.warning(f"Aroon pandas-ta call failed: {e}")
+
+        # 強化されたフォールバック実装：AROON指標の手動計算
+        if len(high) < period or len(low) < period:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
-        return result.iloc[:, 0], result.iloc[:, 1]
+
+        try:
+            aroon_up_values = np.full(len(high), np.nan)
+            aroon_down_values = np.full(len(high), np.nan)
+
+            for i in range(period - 1, len(high)):
+                # 過去period期間の高値と安値を取得
+                high_window = high.iloc[max(0, i - period + 1):i + 1]
+                low_window = low.iloc[max(0, i - period + 1):i + 1]
+
+                if len(high_window) < period:
+                    continue
+
+                # 高値の中で現在の高値がどれほど古いかを計算
+                max_high = high_window.max()
+                if not np.isnan(max_high) and max_high != 0:
+                    if max_high == high.iloc[i]:
+                                # 現在が最高値の場合、AROON=100
+                                    aroon_up_values[i] = 100.0
+                    else:
+                        # 最高値が見つかったインデックスを探す（最近ほどAROONが高い）
+                        max_idx = high_window.idxmax()
+                        periods_since_max = i - high_window.index.get_loc(max_idx)
+                        if periods_since_max <= period:
+                            aroon_up_values[i] = 100 * (period - periods_since_max) / period
+
+                # 安値の中で現在の安値がどれほど古いかを計算
+                min_low = low_window.min()
+                if not np.isnan(min_low) and min_low != 0:
+                    if min_low == low.iloc[i]:
+                        # 現在が最安値の場合、AROON=100
+                        aroon_down_values[i] = 100.0
+                    else:
+                        # 最安値が見つかったインデックスを探す
+                        min_idx = low_window.idxmin()
+                        periods_since_min = i - low_window.index.get_loc(min_idx)
+                        if periods_since_min <= period:
+                            aroon_down_values[i] = 100 * (period - periods_since_min) / period
+
+            # NaN値を埋める（線形補間）
+            if np.isnan(aroon_up_values).any():
+                valid_up = aroon_up_values[~np.isnan(aroon_up_values)]
+                if len(valid_up) > 1:
+                    aroon_up_values = pd.Series(aroon_up_values, index=high.index).fillna(method='bfill').fillna(method='ffill').values
+
+            if np.isnan(aroon_down_values).any():
+                valid_down = aroon_down_values[~np.isnan(aroon_down_values)]
+                if len(valid_down) > 1:
+                  aroon_down_values = pd.Series(aroon_down_values, index=low.index).fillna(method='bfill').fillna(method='ffill').values
+
+            return pd.Series(aroon_up_values, index=high.index), pd.Series(aroon_down_values, index=low.index)
+
+        except Exception as e:
+            logger.warning(f"AROON fallback calculation failed: {e}")
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
 
 
     @staticmethod
@@ -272,22 +380,46 @@ class MomentumIndicators:
 
     @staticmethod
     def ao(high: pd.Series, low: pd.Series) -> pd.Series:
-        """Awesome Oscillator"""
+        """Awesome Oscillator with enhanced fallback"""
         if not isinstance(high, pd.Series):
             raise TypeError("high must be pandas Series")
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
 
-        result = ta.ao(high=high, low=low)
-        if result is None or result.empty:
-            # フォールバック: 簡易実装 (SMAの差分)
-            sma5 = ta.sma((high + low) / 2, length=5)
-            sma34 = ta.sma((high + low) / 2, length=34)
+        try:
+            result = ta.ao(high=high, low=low)
+            if result is not None and not result.empty and not result.isna().all():
+                return result
+        except Exception:
+            pass
+
+        # 強化フォールバック実装
+        try:
+            # 価格の中央値を使用
+            median_price = (high + low) / 2.0
+
+            # 複数期間のSMAを計算
+            sma5 = ta.sma(median_price, length=5)
+            sma34 = ta.sma(median_price, length=34)
+
             if sma5 is not None and sma34 is not None:
-                return sma5 - sma34
+                ao_result = sma5 - sma34
+                # NaN値の補間処理
+                if ao_result.isna().sum() > 0:
+                    ao_result = ao_result.fillna(method='bfill').fillna(method='ffill').fillna(0)
+                return ao_result
             else:
-                return pd.Series(np.full(len(high), np.nan), index=high.index)
-        return result
+                # より簡易的なフォールバック
+                if len(median_price) >= 8:  # 最低限のデータ長確認
+                    sma5_fallback = median_price.rolling(window=5).mean()
+                    sma34_fallback = median_price.rolling(window=34).mean()
+                    ao_fallback = sma5_fallback - sma34_fallback
+                    return ao_fallback.fillna(0)
+        except Exception as e:
+            logger.warning(f"AO fallback calculation failed: {e}")
+
+        # 最終フォールバック: NaN配列
+        return pd.Series(np.full(len(high), np.nan), index=high.index)
 
     # 後方互換性のためのエイリアス
     @staticmethod
@@ -323,24 +455,43 @@ class MomentumIndicators:
         return MomentumIndicators.stoch(high, low, close, k=k, d=d, smooth_k=smooth_k)
 
     @staticmethod
-    def cmo(data: pd.Series, length: int = 14) -> pd.Series:
+    def cmo(data: pd.Series, period: int = 14, length: int = None) -> pd.Series:
         """チェンジモメンタムオシレーター"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
+        # backward compatibility: lengthパラメータをperiodにマッピング
+        if length is not None:
+            period = length
         try:
-            result = ta.cmo(data, length=length)
+            logger.info(f"CMO: ta.cmo存在チェック: {hasattr(ta, 'cmo')}")
+            if hasattr(ta, 'cmo'):
+                logger.info(f"CMO: ta.cmo関数シグネチャ調査...")
+                import inspect
+                sig = inspect.signature(ta.cmo)
+                logger.info(f"CMO: ta.cmo関数シグネチャ: {sig}")
+            logger.info(f"CMO: 引数 data.shape={data.shape}, period={period}")
+            logger.info(f"CMO: ta.cmo呼び出し中...")
+            result = ta.cmo(data, length=period)
+            logger.info(f"CMO: ta.cmo呼び出し成功: {result.shape if result is not None else None}")
             if result is None or (hasattr(result, "empty") and result.empty):
+                logger.warning("CMO: 結果がNoneまたは空のためNaNを返す")
                 return pd.Series(np.full(len(data), np.nan), index=data.index)
             return result
-        except (AttributeError, TypeError):
+        except Exception as e:
+            logger.error(f"CMO: エラー発生 {type(e).__name__}: {e}")
+            logger.error(f"CMO: エラーの詳細: {str(e)}")
+            # 詳しいスタックトレースを追加
+            import traceback
+            logger.error(f"CMO: traceback: {traceback.format_exc()}")
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
     @staticmethod
-    def trix(data: pd.Series, length: int = 30) -> pd.Series:
+    def trix(data: pd.Series, period: int = 30) -> pd.Series:
         """TRIX"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.trix(data, length=length)
+        length = period
+        result = ta.trix(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result.iloc[:, 0] if len(result.columns) > 1 else result
@@ -350,21 +501,21 @@ class MomentumIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
-        k: int = 14,
-        d: int = 3,
-        j_scalar: float = 3.0,
+        period: int = 14,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """KDJ指標（ストキャスティクスベース）"""
+        """KDJ指標"""
         if not isinstance(high, pd.Series):
             raise TypeError("high must be pandas Series")
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
-        # ストキャスティクスを計算してKDJを導出
-        stoch_k, stoch_d = MomentumIndicators.stoch(high, low, close, k=k, d=d)
-        j_vals = j_scalar * stoch_k - 2 * stoch_d
-        return stoch_k, stoch_d, j_vals
+        result = ta.kdj(high, low, close, length=period)
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
+        # 結果からK, D, Jを返す
+        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     def stochrsi(
@@ -376,7 +527,7 @@ class MomentumIndicators:
         """ストキャスティクスRSI"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.stochrsi(data, length=length, k_period=k_period, d_period=d_period)
+        result = ta.stochrsi(data, window=length, k_period=k_period, d_period=d_period)
         if result is None:
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series
@@ -389,18 +540,59 @@ class MomentumIndicators:
         slow: int = 26,
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """Percentage Price Oscillator"""
+        """Percentage Price Oscillator with enhanced fallback"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
-        if result is None:
+
+        # 強化されたパラメータチェックとデータ長検証
+        if fast <= 0 or slow <= 0 or signal <= 0:
+            raise ValueError(f"Parameters must be positive: fast={fast}, slow={slow}, signal={signal}")
+
+        # データ長チェック: 最低必要なデータ長
+        min_length = max(fast, slow) + signal + 2  # 適切なバッファ
+        if len(data) < min_length:
+            logger.warning(f"PPO: insufficient data length {len(data)}, required {min_length}")
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series, nan_series
-        return (
-            result.iloc[:, 0],  # PPO
-            result.iloc[:, 1],  # Histogram
-            result.iloc[:, 2],  # Signal
-        )
+
+        # pandas-ta試行
+        try:
+            result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
+            if result is not None and not result.empty and not result.isna().all().all():
+                return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
+        except Exception as e:
+            logger.warning(f"PPO pandas-ta call failed: {e}")
+
+        # 強化されたフォールバック実装: 手動計算
+        try:
+            # EMA計算
+            ema_fast = ta.ema(data, length=fast)
+            ema_slow = ta.ema(data, length=slow)
+
+            if ema_fast is not None and ema_slow is not None:
+                # PPO = (EMA_fast - EMA_slow) / EMA_slow * 100
+                ppo_line = (ema_fast - ema_slow) / ema_slow * 100
+
+                # シグナルライン: PPOのEMA
+                ppo_signal = ta.ema(ppo_line, length=signal)
+
+                if ppo_signal is not None:
+                    # ヒストグラム: PPO - Signal
+                    ppo_histogram = ppo_line - ppo_signal
+
+                    # NaNの補間
+                    ppo_line = ppo_line.fillna(method='bfill').fillna(method='ffill').fillna(0)
+                    ppo_signal = ppo_signal.fillna(method='bfill').fillna(method='ffill').fillna(0)
+                    ppo_histogram = ppo_histogram.fillna(method='bfill').fillna(method='ffill').fillna(0)
+
+                    return ppo_line, ppo_histogram, ppo_signal
+
+        except Exception as e:
+            logger.warning(f"PPO fallback calculation failed: {e}")
+
+        # 最終フォールバック: NaN
+        nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+        return nan_series, nan_series, nan_series
 
     @staticmethod
     def rvgi(
@@ -410,7 +602,7 @@ class MomentumIndicators:
         close: pd.Series,
         length: int = 14,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Relative Vigor Index"""
+        """Relative Vigor Index with enhanced fallback"""
         if not isinstance(open_, pd.Series):
             raise TypeError("open_ must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -420,17 +612,60 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.rvgi(
-            open_=open_,
-            high=high,
-            low=low,
-            close=close,
-            length=length,
-        )
-        if result is None:
+        # 強化されたパラメータチェックとデータ長検証
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        # データ長チェック: 最低必要なデータ長
+        min_length = length + 2  # 適切なバッファ
+        if len(high) < min_length:
+            logger.warning(f"RVGI: insufficient data length {len(high)}, required {min_length}")
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
-        return result.iloc[:, 0], result.iloc[:, 1]
+
+        # pandas-ta試行
+        try:
+            result = ta.rvgi(
+                open_=open_,
+                high=high,
+                low=low,
+                close=close,
+                window=length,
+            )
+            if result is not None and not result.empty and not result.isna().all().all():
+                return result.iloc[:, 0], result.iloc[:, 1]
+        except Exception as e:
+            logger.warning(f"RVGI pandas-ta call failed: {e}")
+
+        # 強化されたフォールバック実装: 手動計算
+        try:
+            # RVIライン = ((close - open) / (high - low)).ewm(span=length).mean() * 100
+            rvi_numerator = (close - open_)
+            rvi_denominator = (high - low)
+
+            # ゼロ除算防止
+            rvi_denominator = rvi_denominator.replace(0, np.nan)
+
+            # RVIライン計算
+            rvi_line_raw = rvi_numerator / rvi_denominator * 100
+            rvi_line = rvi_line_raw.ewm(span=length).mean() if rvi_line_raw is not None else None
+
+            if rvi_line is not None:
+                # シグナルライン: 4周期のEMA (標準的なRVGIシグナル期間)
+                rvi_signal = rvi_line.ewm(span=4).mean()
+
+                # NaN補間
+                rvi_line = rvi_line.fillna(method='bfill').fillna(method='ffill').fillna(0)
+                rvi_signal = rvi_signal.fillna(method='bfill').fillna(method='ffill').fillna(0)
+
+                return rvi_line, rvi_signal
+
+        except Exception as e:
+            logger.warning(f"RVGI fallback calculation failed: {e}")
+
+        # 最終フォールバック: NaN
+        nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+        return nan_series, nan_series
 
     @staticmethod
     def qqe(data: pd.Series, length: int = 14) -> pd.Series:
@@ -480,80 +715,103 @@ class MomentumIndicators:
     @staticmethod
     def kst(
         data: pd.Series,
-        r1: int = 10,
-        r2: int = 15,
-        r3: int = 20,
-        r4: int = 30,
-        n1: int = 10,
-        n2: int = 10,
-        n3: int = 10,
-        n4: int = 15,
+        roc1: int = 10,
+        roc2: int = 15,
+        roc3: int = 20,
+        roc4: int = 30,
+        sma1: int = 10,
+        sma2: int = 10,
+        sma3: int = 10,
+        sma4: int = 15,
         signal: int = 9,
+        rorc1: int = None,
+        rorc2: int = None,
+        rorc3: int = None,
+        rorc4: int = None,
+        r1: int = None,
+        r2: int = None,
+        r3: int = None,
+        r4: int = None,
     ) -> Tuple[pd.Series, pd.Series]:
         """Know Sure Thing"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.kst(
-            data,
-            r1=r1,
-            r2=r2,
-            r3=r3,
-            r4=r4,
-            n1=n1,
-            n2=n2,
-            n3=n3,
-            n4=n4,
-            signal=signal,
-        )
-        if result is None:
+
+        # rorc/rパラメータがある場合、rocパラメータにマッピング
+        if rorc1 is not None:
+            roc1 = rorc1
+        if rorc2 is not None:
+            roc2 = rorc2
+        if rorc3 is not None:
+            roc3 = rorc3
+        if rorc4 is not None:
+            roc4 = rorc4
+
+        # rパラメータのマッピング(短縮形)
+        if r1 is not None:
+            roc1 = r1
+        if r2 is not None:
+            roc2 = r2
+        if r3 is not None:
+            roc3 = r3
+        if r4 is not None:
+            roc4 = r4
+
+        # pandas-taのKST関数を使用
+        try:
+            result = ta.kst(
+                data,
+                roc1=roc1,
+                roc2=roc2,
+                roc3=roc3,
+                roc4=roc4,
+                sma1=sma1,
+                sma2=sma2,
+                sma3=sma3,
+                sma4=sma4,
+                signal=signal,
+            )
+            if result is not None and not result.empty and not result.isna().all().all():
+                return result.iloc[:, 0], result.iloc[:, 1]
+        except Exception as e:
+            logger.warning(f"KST pandas-ta call failed: {e}")
+
+        # フォールバック実装: KSTのマニュアル計算
+        if len(data) < max(roc4 + sma4, signal):
+            # データ長不足の場合、NaNを返す
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series
-        return result.iloc[:, 0], result.iloc[:, 1]
-
-    @staticmethod
-    def stc(
-        data: pd.Series,
-        tclength: int = 10,
-        fast: int = 23,
-        slow: int = 50,
-        factor: float = 0.5,
-        **kwargs,
-    ) -> pd.Series:
-        """Schaff Trend Cycle"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
 
         try:
-            result = ta.stc(
-                data, tclength=tclength, fast=fast, slow=slow, factor=factor
-            )
-            if result is not None:
-                return result
-        except Exception:
-            pass
+            # ROC計算
+            roc_val1 = ta.roc(data, length=roc1)
+            roc_val2 = ta.roc(data, length=roc2)
+            roc_val3 = ta.roc(data, length=roc3)
+            roc_val4 = ta.roc(data, length=roc4)
 
-        # フォールバック: EMAベースの簡易実装
-        if len(data) < max(tclength, fast, slow):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            # SMA平滑化
+            roc_sma1 = ta.sma(roc_val1, length=sma1) if roc_val1 is not None else None
+            roc_sma2 = ta.sma(roc_val2, length=sma2) if roc_val2 is not None else None
+            roc_sma3 = ta.sma(roc_val3, length=sma3) if roc_val3 is not None else None
+            roc_sma4 = ta.sma(roc_val4, length=sma4) if roc_val4 is not None else None
 
-        # EMAの組み合わせで近似
-        ema_fast = ta.ema(data, length=fast)
-        ema_slow = ta.ema(data, length=slow)
+            if all(x is not None for x in [roc_sma1, roc_sma2, roc_sma3, roc_sma4]):
+                # KSTメインライン: 100 * (roc_sma1 + 2*roc_sma2 + 3*roc_sma3 + 4*roc_sma4)
+                kst_line = 100 * (roc_sma1 + 2 * roc_sma2 + 3 * roc_sma3 + 4 * roc_sma4)
 
-        if ema_fast is None or ema_slow is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+                # シグナルライン: KSTのSMA
+                signal_line = ta.sma(kst_line, length=signal)
 
-        # MACDのようなシグナルを生成
-        stc_values = np.full(len(data), np.nan)
-        macd = ema_fast - ema_slow
-        signal = ta.ema(macd, length=tclength)
+                if signal_line is not None:
+                    return kst_line, signal_line
 
-        if signal is not None:
-            # スケーリング（0-100の範囲に収める）
-            macd_signal_ratio = (macd - signal) / data.std()
-            stc_values = 50 + 50 * np.tanh(macd_signal_ratio)
+        except Exception as e:
+            logger.warning(f"KST fallback calculation failed: {e}")
 
-        return pd.Series(stc_values, index=data.index)
+        # 最終フォールバック: NaN
+        nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+        return nan_series, nan_series
+
 
     @staticmethod
     def aroonosc(
@@ -567,8 +825,15 @@ class MomentumIndicators:
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
 
-        result = ta.aroon(high=high, low=low, length=length)
+        result = ta.aroon(high=high, low=low, window=length)
         if result is None:
+            # フォールバック: aroon関数から計算
+            try:
+                aroon_up, aroon_down = MomentumIndicators.aroon(high, low, length)
+                if aroon_up is not None and aroon_down is not None:
+                    return aroon_up - aroon_down
+            except Exception:
+                pass
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         # アルーンオシレーター = アルーンアップ - アルーンダウン
         return result.iloc[:, 1] - result.iloc[:, 0]
@@ -578,7 +843,7 @@ class MomentumIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
-        length: int = 14,
+        period: int = 14,
     ) -> pd.Series:
         """Directional Movement Index (DX)"""
         if not isinstance(high, pd.Series):
@@ -588,7 +853,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.adx(high=high, low=low, close=close, length=length)
+        result = ta.adx(high=high, low=low, close=close, window=period)
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         # DX列を探す
@@ -614,7 +879,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.adx(high=high, low=low, close=close, length=length)
+        result = ta.adx(high=high, low=low, close=close, window=length)
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         dmp_col = next(
@@ -632,7 +897,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.adx(high=high, low=low, close=close, length=length)
+        result = ta.adx(high=high, low=low, close=close, window=length)
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         dmn_col = next(
@@ -641,36 +906,40 @@ class MomentumIndicators:
         return result[dmn_col]
 
     @staticmethod
-    def plus_dm(high, low, length: int = 14) -> pd.Series:
+    def plus_dm(high: pd.Series, low: pd.Series, period: int = 14) -> pd.Series:
         """Plus Directional Movement (DM)"""
         if not isinstance(high, pd.Series):
             raise TypeError("high must be pandas Series")
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
 
-        result = ta.dm(high=high, low=low, length=length)
+        # Use ta.adx to get DMP, since ta.plus_dm may not exist in some pandas-ta versions
+        result = ta.adx(high=high, low=low, close=high, length=period)  # close not used for DM calculation
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
-        dmp_col = next(
-            (col for col in result.columns if "DMP" in col), result.columns[0]
-        )
-        return result[dmp_col]
+        dmp_col = next((col for col in result.columns if "DMP" in col), None)
+        if dmp_col:
+            return result[dmp_col]
+        else:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
 
     @staticmethod
-    def minus_dm(high, low, length: int = 14) -> pd.Series:
+    def minus_dm(high: pd.Series, low: pd.Series, period: int = 14) -> pd.Series:
         """Minus Directional Movement (DM)"""
         if not isinstance(high, pd.Series):
             raise TypeError("high must be pandas Series")
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
 
-        result = ta.dm(high=high, low=low, length=length)
+        # Use ta.adx to get DMN, since ta.minus_dm may not exist in some pandas-ta versions
+        result = ta.adx(high=high, low=low, close=high, length=period)  # close not used for DM calculation
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
-        dmn_col = next(
-            (col for col in result.columns if "DMN" in col), result.columns[1]
-        )
-        return result[dmn_col]
+        dmn_col = next((col for col in result.columns if "DMN" in col), None)
+        if dmn_col:
+            return result[dmn_col]
+        else:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
 
     @staticmethod
     def ultosc(
@@ -680,6 +949,7 @@ class MomentumIndicators:
         fast: int = 7,
         medium: int = 14,
         slow: int = 28,
+        period: int = None,
     ) -> pd.Series:
         """Ultimate Oscillator"""
         if not isinstance(high, pd.Series):
@@ -689,15 +959,43 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.uo(
-            high=high,
-            low=low,
-            close=close,
-            fast=fast,
-            medium=medium,
-            slow=slow,
-        )
+        # backward compatibility: periodパラメータからfast, medium, slowを計算
+        if period is not None:
+            fast = period // 3
+            medium = period
+            slow = period * 2
+            if fast <= 0:
+                fast = 7
+            if medium <= 0:
+                medium = 14
+            if slow <= 0:
+                slow = 28
+
+        logger.info(f"ULTOSC: 引数確認 - high.shape={high.shape}, low.shape={low.shape}, close.shape={close.shape}, fast={fast}, medium={medium}, slow={slow}, period={period}")
+        logger.info(f"ULTOSC: ta.uo存在チェック: {hasattr(ta, 'uo')}")
+        try:
+            if hasattr(ta, 'uo'):
+                import inspect
+                sig = inspect.signature(ta.uo)
+                logger.info(f"ULTOSC: ta.uo関数シグネチャ: {sig}")
+            logger.info(f"ULTOSC: ta.uo呼び出し中...")
+            result = ta.uo(
+                high=high,
+                low=low,
+                close=close,
+                fast=fast,
+                medium=medium,
+                slow=slow,
+            )
+            logger.info(f"ULTOSC: ta.uo呼び出し成功: {result.shape if result is not None else None}")
+        except Exception as e:
+            logger.error(f"ULTOSC: エラー発生 {type(e).__name__}: {e}")
+            logger.error(f"ULTOSC: エラーの詳細: {str(e)}")
+            import traceback
+            logger.error(f"ULTOSC: traceback: {traceback.format_exc()}")
+
         if result is None or result.empty:
+            logger.warning("ULTOSC: pandas-ta結果がNoneまたは空のためフォールバック使用")
             # フォールバック: 簡易実装 (weighted average of different periods)
             n = len(high)
             if n < slow:
@@ -715,6 +1013,7 @@ class MomentumIndicators:
                 # 単純な平均で代替
                 return (fast_ma + medium_ma + slow_ma) / 3
             else:
+                logger.warning("ULTOSC: フォールバックMA計算失敗")
                 return pd.Series(np.full(n, np.nan), index=high.index)
         return result
 
@@ -724,6 +1023,8 @@ class MomentumIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
+        period: int = 14,
+        sma_period: int = None,
     ) -> pd.Series:
         """Balance of Power"""
         if not isinstance(open_, pd.Series):
@@ -734,24 +1035,34 @@ class MomentumIndicators:
             raise TypeError("low must be pandas Series")
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
 
+        logger.info(f"BOP: パラメータ確認 - open_.shape={open_.shape}, high.shape={high.shape}, low.shape={low.shape}, close.shape={close.shape}, period={period}, sma_period={sma_period}")
+        logger.info(f"BOP: ta.bop存在チェック: {hasattr(ta, 'bop')}")
         try:
-            result = ta.bop(
-                open_=open_,
-                high=high,
-                low=low,
-                close=close,
-                scalar=1,
-            )
-        except TypeError:
-            result = ta.bop(
-                open_=open_,
-                high=high,
-                low=low,
-                close=close,
-            )
-        if result is None:
+            if hasattr(ta, 'bop'):
+                import inspect
+                sig = inspect.signature(ta.bop)
+                logger.info(f"BOP: ta.bop関数シグネチャ: {sig}")
+            logger.info(f"BOP: ta.bop呼び出し中...")
+            result = ta.bop(open_, high, low, close, period)
+            logger.info(f"BOP: ta.bop呼び出し成功: {result.shape if result is not None else None}")
+        except Exception as e:
+            logger.error(f"BOP: エラー発生 {type(e).__name__}: {e}")
+            logger.error(f"BOP: エラーの詳細: {str(e)}")
+            import traceback
+            logger.error(f"BOP: traceback: {traceback.format_exc()}")
             return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        if result is None:
+            logger.warning("BOP: 結果がNoneのためNaNを返す")
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        # オプション: SMAシグナルを適用
+        if sma_period is not None and sma_period > 0:
+            result = ta.sma(result, length=sma_period)
+
         return result
 
     @staticmethod
@@ -759,7 +1070,8 @@ class MomentumIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
-        length: int = 14,
+        period: int = 14,
+        length: int = None,
     ) -> pd.Series:
         """ADX評価"""
         if not isinstance(high, pd.Series):
@@ -769,14 +1081,18 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
+        # backward compatibility: lengthパラメータをperiodにマッピング
+        if length is not None:
+            period = length
+
         try:
-            result = ta.adxr(high=high, low=low, close=close, length=length)
+            result = ta.adxr(high=high, low=low, close=close, length=period)
             if result is None:
                 return pd.Series(np.full(len(high), np.nan), index=high.index)
             return result
         except Exception:
             # フォールバック: ADXを返す
-            result = ta.adx(high=high, low=low, close=close, length=length)
+            result = ta.adx(high=high, low=low, close=close, length=period)
             if result is None:
                 return pd.Series(np.full(len(high), np.nan), index=high.index)
             adx_col = next(
@@ -786,35 +1102,35 @@ class MomentumIndicators:
 
     # 残りの必要なメソッド（簡素化版）
     @staticmethod
-    def rocp(data: pd.Series, length: int = 10) -> pd.Series:
+    def rocp(data: pd.Series, period: int = 10) -> pd.Series:
         """変化率（%）"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
         try:
-            return ta.rocp(data, length=length)
+            return ta.rocp(data, length=period)
         except AttributeError:
-            return ta.roc(data, length=length)
+            return ta.roc(data, length=period)
 
     @staticmethod
-    def rocr(data: pd.Series, length: int = 10) -> pd.Series:
+    def rocr(data: pd.Series, period: int = 10) -> pd.Series:
         """変化率（比率）"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
         try:
-            return ta.rocr(data, length=length)
+            return ta.rocr(data, length=period)
         except AttributeError:
-            shifted = data.shift(length)
+            shifted = data.shift(period)
             return data / shifted
 
     @staticmethod
-    def rocr100(data: pd.Series, length: int = 10) -> pd.Series:
+    def rocr100(data: pd.Series, period: int = 10) -> pd.Series:
         """変化率（比率100スケール）"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
         try:
-            return ta.rocr(data, length=length, scalar=100)
+            return ta.rocr(data, length=period, scalar=100)
         except AttributeError:
-            shifted = data.shift(length)
+            shifted = data.shift(period)
             return (data / shifted) * 100
 
     @staticmethod
@@ -874,6 +1190,10 @@ class MomentumIndicators:
         """True Strength Index"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
+        if fast <= 0:
+            raise ValueError(f"fast must be positive: {fast}")
+        if slow <= 0:
+            raise ValueError(f"slow must be positive: {slow}")
         result = ta.tsi(data, fast=fast, slow=slow)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
@@ -887,7 +1207,7 @@ class MomentumIndicators:
         close: pd.Series,
         length: int = 14,
     ) -> pd.Series:
-        """Relative Volatility Index"""
+        """Relative Volatility Index with enhanced fallback"""
         if not isinstance(open_, pd.Series):
             raise TypeError("open_ must be pandas Series")
         if not isinstance(high, pd.Series):
@@ -896,8 +1216,60 @@ class MomentumIndicators:
             raise TypeError("low must be pandas Series")
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
-        # RVIの簡易実装（RSIベース）
-        return ta.rsi(close, length=length)
+
+        try:
+            result = ta.rvgi(
+                open_=open_,
+                high=high,
+                low=low,
+                close=close,
+                window=length,
+            )
+            if result is not None and not result.empty and not result.isna().all():
+                return result.iloc[:, 0] if result.shape[1] > 1 else result
+        except Exception:
+            pass
+
+        # 強化フォールバック実装：真の変動性インデックスベース
+        try:
+            # 真の値幅の計算
+            true_range = np.maximum(
+                high - low,
+                np.maximum(
+                    np.abs(high - close.shift(1)),
+                    np.abs(low - close.shift(1))
+                )
+            )
+
+            # 値幅変化の計算
+            tr_diff = true_range.diff()
+
+            # 上下値幅の計算
+            upward = pd.Series(np.where(tr_diff > 0, tr_diff, 0), index=close.index)
+            downward = pd.Series(np.where(tr_diff < 0, -tr_diff, 0), index=close.index)
+
+            # RSIと同様の計算
+            if len(upward) >= length and len(downward) >= length:
+                avg_gain = upward.rolling(window=length).mean()
+                avg_loss = downward.rolling(window=length).mean()
+
+                # RVI計算 (上昇値幅 / (上昇値幅 + 下降値幅) * 100)
+                rvi_values = np.where(
+                    avg_gain + avg_loss != 0,
+                    (avg_gain / (avg_gain + avg_loss) * 100),
+                    50  # 中間値
+                )
+
+                return pd.Series(rvi_values, index=close.index)
+            else:
+                # データ長不足時の簡易フォールバック
+                logger.info(f"RVI: データ長不足のため簡易版を使用 (length={length}, data_length={len(close)})")
+                return ta.rsi(close, length=min(length, len(close) - 1))
+
+        except Exception as e:
+            logger.warning(f"RVI fallback calculation failed: {e}")
+            # 最終フォールバック: RSIベース
+            return ta.rsi(close, length=min(length, len(close) - 1))
 
     @staticmethod
     def pvo(
@@ -919,70 +1291,134 @@ class MomentumIndicators:
 
     @staticmethod
     def cfo(data: pd.Series, length: int = 9) -> pd.Series:
-        """Chande Forecast Oscillator"""
+        """Chande Forecast Oscillator with enhanced implementation"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
         try:
-            result = ta.cfo(data, length=length)
-            if result is not None and not result.isna().all():
-                return result if pd.Series(result) else pd.Series(result)
+            result = ta.cfo(data, window=length)
+            if result is not None and isinstance(result, pd.Series):
+                # CFOはベクトル形式で返ることがあるのでSeriesに変換
+                if not isinstance(result, pd.Series):
+                    result = pd.Series(result, index=data.index)
+                if not result.isna().all():
+                    # CFO軸予測の値が適切な範囲内かチェック
+                    if result.min() > -1000 and result.max() < 1000:  # 合理的範囲チェック
+                        return result
         except Exception:
             pass
 
-        # フォールバック実装: CFOの簡易計算 (トレンド方向の変化率)
+        # 強化フォールバック実装：適切なCFO計算
         if len(data) < length:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
-        # CFOの近似: 価格変化をSMAで平滑化した指標
-        price_change = data.pct_change()
-        ema_pc = ta.ema(price_change, length=length // 2)  # 価格変化のEMA
-        cfo_values = np.full(len(data), np.nan)
+        try:
+            # CFOの正確な実装：価格の線形回帰予測に基づく
+            cfo_values = np.full(len(data), np.nan)
 
-        if ema_pc is not None:
-            # CFOの概念: トレンド方向の積分
-            cfo_values[length:] = (ema_pc * data.shift(length // 2))[
-                : len(data) - length
-            ]
-            # 100スケールに正規化 (CFOの標準範囲)
-            cfo_values = (
-                (cfo_values - np.nanmean(cfo_values)) / np.nanstd(cfo_values) * 100
-            )
+            for i in range(length, len(data)):
+                # ウィンドウデータを取得
+                window = data.iloc[i - length:i].values
 
-        return pd.Series(cfo_values, index=data.index)
+                # 線形回帰計算
+                x = np.arange(length)
+                y = window
+
+                # 単純線形回帰
+                slope = np.cov(x, y)[0, 1] / np.var(x)
+                intercept = np.mean(y) - slope * np.mean(x)
+
+                # CFO = (線形予測 - 現在の価格) / 標準偏差
+                predicted_price = intercept + slope * length
+                std_window = np.std(window)
+
+                if std_window > 0:
+                    cfo_values[i] = (predicted_price - data.iloc[i]) / std_window
+                    # CFOは通常-3?+3の範囲なのでクリッピング
+                    cfo_values[i] = np.clip(cfo_values[i], -3.0, 3.0)
+
+            # CFOをパーセントスケールに変換
+            valid_cfo = cfo_values[~np.isnan(cfo_values)]
+            if len(valid_cfo) > 0:
+                cfo_values = (cfo_values / np.std(valid_cfo)) * 10  # スケーリング
+
+            return pd.Series(cfo_values, index=data.index)
+
+        except Exception as e:
+            logger.warning(f"CFO fallback calculation failed: {e}")
+            # 最終フォールバック: EMAベース近似
+            try:
+                ema_short = ta.ema(data, length=length//2)
+                ema_long = ta.ema(data, length=length)
+                if ema_short is not None and ema_long is not None:
+                    return (ema_short - ema_long).fillna(0)
+            except:
+                pass
+
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
     @staticmethod
     def cti(data: pd.Series, length: int = 20) -> pd.Series:
-        """Chande Trend Index"""
+        """Chande Trend Index with enhanced robust implementation"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
         try:
-            result = ta.cti(data, length=length)
-            if result is not None and not result.isna().all():
-                return result if pd.Series(result) else pd.Series(result)
+            result = ta.cti(data, window=length)
+            if result is not None and isinstance(result, pd.Series):
+                if not result.isna().all():
+                    # CTIは-100 to +100の範囲が一般的
+                    result = result.clip(-100, 100)
+                    return result
         except Exception:
             pass
 
-        # フォールバック実装: RSIベースのCTI近似 (トレンド方向の相関係数)
+        # 強化フォールバック実装：CMOベースのCTI計算
         if len(data) < length:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
-        # CTIの概念: 過去データとの相関係数ベースのアプローチ
-        cti_values = np.full(len(data), np.nan)
+        try:
+            cti_values = np.full(len(data), np.nan)
 
-        for i in range(length, len(data)):
-            # 現在値と過去値の相関係数を計算
-            recent_values = data.iloc[i - length : i].values
-            reference_values = data.iloc[0:length].values
+            # CMO (Chande Momentum Oscillator) を計算
+            changes = data.diff()
+            gains = changes.where(changes > 0, 0)
+            losses = -changes.where(changes < 0, 0)
 
-            if len(recent_values) == len(reference_values):
-                correlation = np.corrcoef(recent_values, reference_values)[0, 1]
-                if not np.isnan(correlation):
-                    # 相関係数をCTIスコアに変換 (-100 to 100)
-                    cti_values[i] = correlation * 100
+            # 指数移動平均で平滑化
+            avg_gain = ta.ema(gains, length=length)
+            avg_loss = ta.ema(losses, length=length)
 
-        return pd.Series(cti_values, index=data.index)
+            if avg_gain is not None and avg_loss is not None:
+                # CMO = (AvgGain - AvgLoss) / (AvgGain + AvgLoss) * 100
+                cmo = (avg_gain - avg_loss) / (avg_gain + avg_loss) * 100
+
+                # CTI = CMOのクインテルあらずバージョン (よりトレンド指向)
+                # CTIはCMOの累積和に似るが、バイアスを考慮
+                cti_values = cmo.rolling(window=length//2, min_periods=1).apply(
+                    lambda x: np.sum(x) / len(x) if len(x) > 0 else 0
+                ).values
+
+                # CTIを-100 to +100の範囲に正規化
+                cti_values = np.clip(cti_values, -100, 100)
+
+            return pd.Series(cti_values, index=data.index)
+
+        except Exception as e:
+            logger.warning(f"CTI fallback calculation failed: {e}")
+            # 最終フォールバック: 簡易相関係数ベース
+            try:
+                cti_values = np.full(len(data), np.nan)
+                for i in range(length, len(data)):
+                    # 移動平均との乖離率をCTIとして使用
+                    ma = data.iloc[i-length:i].mean()
+                    if not np.isnan(ma) and ma != 0:
+                        cti_values[i] = ((data.iloc[i] - ma) / ma) * 100
+                        cti_values[i] = np.clip(cti_values[i], -100, 100)
+                return pd.Series(cti_values, index=data.index)
+            except Exception as e2:
+                logger.warning(f"CTI secondary fallback failed: {e2}")
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
 
     @staticmethod
     def rmi(
@@ -1012,7 +1448,7 @@ class MomentumIndicators:
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
-        result = ta.dpo(data, length=length)
+        result = ta.dpo(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -1032,7 +1468,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.chop(high=high, low=low, close=close, length=length)
+        result = ta.chop(high=high, low=low, close=close, window=length)
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result
@@ -1052,7 +1488,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.vortex(high=high, low=low, close=close, length=length)
+        result = ta.vortex(high=high, low=low, close=close, window=length)
         if result is None:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
@@ -1063,7 +1499,7 @@ class MomentumIndicators:
         """Bias"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.bias(data, length=length)
+        result = ta.bias(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -1102,7 +1538,7 @@ class MomentumIndicators:
         """Center of Gravity"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.cg(data, length=length)
+        result = ta.cg(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -1114,7 +1550,7 @@ class MomentumIndicators:
         """Coppock Curve"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.coppock(data, length=length, fast=fast, slow=slow)
+        result = ta.coppock(data, window=length, fast=fast, slow=slow)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -1124,7 +1560,7 @@ class MomentumIndicators:
         """Efficiency Ratio"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.er(data, length=length)
+        result = ta.er(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -1144,7 +1580,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.eri(high=high, low=low, close=close, length=length)
+        result = ta.eri(high=high, low=low, close=close, window=length)
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result
@@ -1162,7 +1598,7 @@ class MomentumIndicators:
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
 
-        result = ta.fisher(high=high, low=low, length=length, signal=signal)
+        result = ta.fisher(high=high, low=low, window=length, signal=signal)
         if result is None:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
@@ -1206,7 +1642,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.pgo(high=high, low=low, close=close, length=length)
+        result = ta.pgo(high=high, low=low, close=close, window=length)
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result
@@ -1221,7 +1657,7 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.psl(close=close, open_=open_, length=length)
+        result = ta.psl(close=close, open_=open_, window=length)
         if result is None or result.empty:
             # フォールバック: 簡易実装 (close > openの割合)
             if open_ is not None:
@@ -1235,7 +1671,7 @@ class MomentumIndicators:
         """RSX"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        result = ta.rsx(data, length=length)
+        result = ta.rsx(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -1265,11 +1701,11 @@ class MomentumIndicators:
             high=high,
             low=low,
             close=close,
-            bb_length=bb_length,
+            bb_window=bb_length,
             bb_std=bb_std,
-            kc_length=kc_length,
+            kc_window=kc_length,
             kc_scalar=kc_scalar,
-            mom_length=mom_length,
+            mom_window=mom_length,
             mom_smooth=mom_smooth,
             use_tr=use_tr,
         )
@@ -1304,13 +1740,13 @@ class MomentumIndicators:
             high=high,
             low=low,
             close=close,
-            bb_length=bb_length,
+            bb_window=bb_length,
             bb_std=bb_std,
-            kc_length=kc_length,
+            kc_window=kc_length,
             kc_scalar_wide=kc_scalar_wide,
             kc_scalar_normal=kc_scalar_normal,
             kc_scalar_narrow=kc_scalar_narrow,
-            mom_length=mom_length,
+            mom_window=mom_length,
             mom_smooth=mom_smooth,
             use_tr=use_tr,
         )

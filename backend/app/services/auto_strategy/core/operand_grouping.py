@@ -11,6 +11,9 @@ from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
+# デバッグログ設定 (統合テスト用)
+DEBUG_MODE = True
+
 
 class OperandGroup(Enum):
     """オペランドのスケールグループ"""
@@ -38,8 +41,16 @@ class OperandGroupingSystem:
 
     def _initialize_group_mappings(self) -> Dict[str, OperandGroup]:
         """オペランドとグループのマッピングを初期化"""
+        mappings = {}
+
+        # 価格ベース指標を追加（価格と同じスケール）
+        mappings.update(self._get_price_based_mappings())
+
+        return mappings
+
+    def _get_price_based_mappings(self) -> Dict[str, OperandGroup]:
+        """価格ベース指標マッピングを取得"""
         return {
-            # 価格ベース指標（価格と同じスケール）
             "SMA": OperandGroup.PRICE_BASED,
             "EMA": OperandGroup.PRICE_BASED,
             "BB": OperandGroup.PRICE_BASED,  # ボリンジャーバンドの上下線
@@ -47,6 +58,10 @@ class OperandGroupingSystem:
             "open": OperandGroup.PRICE_BASED,
             "high": OperandGroup.PRICE_BASED,
             "low": OperandGroup.PRICE_BASED,
+            # BB複数出力の統合
+            "BB_0": OperandGroup.PRICE_BASED,  # 下限バンド
+            "BB_1": OperandGroup.PRICE_BASED,  # 中央線（SMA）
+            "BB_2": OperandGroup.PRICE_BASED,  # 上限バンド
             # 0-100%オシレーター
             "RSI": OperandGroup.PERCENTAGE_0_100,
             "STOCH": OperandGroup.PERCENTAGE_0_100,
@@ -102,6 +117,57 @@ class OperandGroupingSystem:
             "volume": OperandGroup.SPECIAL_SCALE,  # 出来高は独特のスケール
             "OpenInterest": OperandGroup.SPECIAL_SCALE,
             "FundingRate": OperandGroup.SPECIAL_SCALE,
+
+            # 新規Trend系指標（PRICE_BASED）
+            "HMA": OperandGroup.PRICE_BASED,
+            "ZLMA": OperandGroup.PRICE_BASED,
+            "VWMA": OperandGroup.PRICE_BASED,
+            "SWMA": OperandGroup.PRICE_BASED,
+            "ALMA": OperandGroup.PRICE_BASED,
+            "JMA": OperandGroup.PRICE_BASED,
+            "MCGD": OperandGroup.PRICE_BASED,
+            "ICHIMOKU": OperandGroup.PRICE_BASED,
+            "HILO": OperandGroup.PRICE_BASED,
+            "HWMA": OperandGroup.PRICE_BASED,
+            "HL2": OperandGroup.PRICE_BASED,
+            "HLC3": OperandGroup.PRICE_BASED,
+            "OHLC4": OperandGroup.PRICE_BASED,
+            "WCP": OperandGroup.PRICE_BASED,
+            "SSF": OperandGroup.PRICE_BASED,
+            "VIDYA": OperandGroup.PRICE_BASED,
+
+            # 新規Volatility系指標（PRICE_BASED）
+            "KELTNER": OperandGroup.PRICE_BASED,
+            "DONCHIAN": OperandGroup.PRICE_BASED,
+            "ACCBANDS": OperandGroup.PRICE_BASED,
+            "SUPERTREND": OperandGroup.PRICE_BASED,
+            "HWC": OperandGroup.PERCENTAGE_0_100,
+            "UI": OperandGroup.PERCENTAGE_0_100,
+
+            # 新規Volume系指標（ZERO_CENTEREDまたはPRICE_BASED）
+            "NVI": OperandGroup.ZERO_CENTERED,
+            "PVI": OperandGroup.ZERO_CENTERED,
+            "VWAP": OperandGroup.PRICE_BASED,
+            "PVT": OperandGroup.ZERO_CENTERED,
+            "EFI": OperandGroup.ZERO_CENTERED,
+            "EOM": OperandGroup.ZERO_CENTERED,
+            "KVO": OperandGroup.ZERO_CENTERED,
+            "CMF": OperandGroup.ZERO_CENTERED,
+            "AOBV": OperandGroup.ZERO_CENTERED,
+            "PVOL": OperandGroup.ZERO_CENTERED,
+            "PVR": OperandGroup.ZERO_CENTERED,
+
+            # 新規Momentum系指標（ZERO_CENTERED）
+            "TSI": OperandGroup.ZERO_CENTERED,  # 既存から復元
+            "RVI": OperandGroup.ZERO_CENTERED,
+            "RMI": OperandGroup.ZERO_CENTERED,  # 既存から復元
+            "DPO": OperandGroup.ZERO_CENTERED,
+            "VORTEX": OperandGroup.PERCENTAGE_0_100,
+            "CHOP": OperandGroup.PERCENTAGE_0_100,
+            "PVO": OperandGroup.ZERO_CENTERED,
+            "CFO": OperandGroup.ZERO_CENTERED,
+            "CTI": OperandGroup.ZERO_CENTERED,
+
         }
 
     def _initialize_compatibility_matrix(
@@ -136,6 +202,7 @@ class OperandGroupingSystem:
         # 特殊スケール同士は低い互換性
         matrix[(OperandGroup.SPECIAL_SCALE, OperandGroup.SPECIAL_SCALE)] = 0.3
 
+
         # その他の組み合わせは非常に低い互換性
         for group1 in OperandGroup:
             for group2 in OperandGroup:
@@ -153,12 +220,20 @@ class OperandGroupingSystem:
         Returns:
             オペランドのグループ
         """
+        logger.info("DEBUG: get_operand_group called for operand='%s'", operand)
+
         # 直接マッピングがある場合
         if operand in self._group_mappings:
-            return self._group_mappings[operand]
+            group = self._group_mappings[operand]
+            if DEBUG_MODE:
+                logger.info("DEBUG: Direct mapping found for %s -> %s", operand, group.value)
+            return group
 
         # パターンマッチングで判定
-        return self._classify_by_pattern(operand)
+        group = self._classify_by_pattern(operand)
+        if DEBUG_MODE:
+            logger.info("DEBUG: Pattern matching resulted for %s -> %s", operand, group.value)
+        return group
 
     def _classify_by_pattern(self, operand: str) -> OperandGroup:
         """パターンマッチングによるオペランド分類
@@ -182,7 +257,7 @@ class OperandGroupingSystem:
         if any(pattern in operand_upper for pattern in ["CCI", "CMO", "AROONOSC", "TRIX"]):
             return OperandGroup.PERCENTAGE_NEG100_100
 
-        # ゼロ中心のパターン
+        # ゼロ中心のパターン (新規指標拡張)
         if any(
             pattern in operand_upper
             for pattern in [
@@ -238,6 +313,30 @@ class OperandGroupingSystem:
         ):
             return OperandGroup.ZERO_CENTERED
 
+        # 新規Trend系パターン
+        if any(
+            pattern in operand_upper
+            for pattern in ["HMA", "ZLMA", "VWMA", "SWMA", "ALMA", "JMA", "MCGD", "ICHIMOKU", "HILO", "HWMA", "HL2", "HLC3", "OHLC4", "WCP", "SSF", "VIDYA"]
+        ):
+            return OperandGroup.PRICE_BASED
+
+        # 新規Volatility系パターン
+        if any(pattern in operand_upper for pattern in ["KELTNER", "DONCHIAN", "SUPERTREND"]):
+            return OperandGroup.PRICE_BASED
+        if any(pattern in operand_upper for pattern in ["ACCBANDS", "HWC", "UI", "CHOP"]):
+            return OperandGroup.PERCENTAGE_0_100
+
+        # 新規Volume系パターン
+        if any(pattern in operand_upper for pattern in ["NVI", "PVI", "PVT", "EFI", "EOM", "KVO", "CMF", "AOBV", "PVOL", "PVR"]):
+            return OperandGroup.ZERO_CENTERED
+        if "VWAP" in operand_upper:
+            return OperandGroup.PRICE_BASED
+
+        # 新規Momentum系パターン (VORTEXはPERCENTAGE_0_100、その他ZERO_CENTERED)
+        if "VORTEX" in operand_upper:
+            return OperandGroup.PERCENTAGE_0_100
+
+
         # 特殊スケールのパターン
         if any(
             pattern in operand_upper
@@ -246,6 +345,8 @@ class OperandGroupingSystem:
             return OperandGroup.SPECIAL_SCALE
 
         # デフォルトは価格ベース
+        if DEBUG_MODE:
+            logger.info("DEBUG: Default classification for %s -> PRICE_BASED", operand)
         return OperandGroup.PRICE_BASED
 
     def get_compatibility_score(self, operand1: str, operand2: str) -> float:
@@ -258,10 +359,19 @@ class OperandGroupingSystem:
         Returns:
             互換性スコア（0.0-1.0）
         """
+        if DEBUG_MODE:
+            logger.info("DEBUG: get_compatibility_score called for %s vs %s", operand1, operand2)
+
         group1 = self.get_operand_group(operand1)
         group2 = self.get_operand_group(operand2)
 
-        return self._compatibility_matrix.get((group1, group2), 0.1)
+        score = self._compatibility_matrix.get((group1, group2), 0.1)
+
+        if DEBUG_MODE:
+            logger.info("DEBUG: Compatibility score for %s (%s) vs %s (%s) = %.2f",
+                       operand1, group1.value, operand2, group2.value, score)
+
+        return score
 
     def get_compatible_operands(
         self,

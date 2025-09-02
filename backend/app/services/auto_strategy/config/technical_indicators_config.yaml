@@ -5,17 +5,17 @@ indicators:
     scale_type: oscillator_0_100
     thresholds:
       aggressive:
-        long_lt: 25
-        short_gt: 85
+        long_gt: 75
+        short_lt: 25
       normal:
-        long_lt: 30
-        short_gt: 70
+        long_gt: 75
+        short_lt: 25
       conservative:
-        long_lt: 35
-        short_gt: 65
+        long_gt: 75
+        short_lt: 25
     conditions:
-      long: "{left_operand} < {threshold}"
-      short: "{left_operand} > {threshold}"
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
 
   STOCH:
     type: momentum
@@ -427,6 +427,14 @@ indicators:
     conditions:
       long: "close > {left_operand}"
       short: "close < {left_operand}"
+  BB:
+    type: volatility
+    scale_type: price_absolute
+    thresholds: null
+    components: ["upper", "middle", "lower"]
+    conditions:
+      long: "close < {left_operand}_lower"
+      short: "close > {left_operand}_upper"
 
   BBANDS:
     type: volatility
@@ -453,62 +461,6 @@ indicators:
       long: "close > {left_operand}"
       short: "close < {left_operand}"
 
-  # パターン認識系指標
-  CDL_DOJI:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} != 0"
-      short: "{left_operand} != 0"
-
-  CDL_HAMMER:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null  # ハンマーはロングのみ
-
-  CDL_HANGING_MAN:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null  # ハンギングマンはショートのみ
-      short: "{left_operand} < 0"
-
-  CDL_PIERCING:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null
-
-  CDL_DARK_CLOUD_COVER:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
-
-  CDL_THREE_WHITE_SOLDIERS:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null
-
-  CDL_THREE_BLACK_CROWS:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
 
   # 統計系指標
   CORREL:
@@ -603,9 +555,10 @@ indicators:
         multiplier: 3.0
       conservative:
         multiplier: 4.5  # 広いバンドで安定したトレンド判定
+    components: ["lower", "upper", "direction"]
     conditions:
-      long: "close > {left_operand}_lower"  # 価格がバンドの上にある = 上昇トレンド
-      short: "close < {left_operand}_upper"
+      long: "{left_operand}_2 > 0"  # Direction positive for uptrend
+      short: "{left_operand}_2 < 0"  # Direction negative for downtrend
 
   # 高優先度不足指標追加
   TSI:
@@ -819,50 +772,8 @@ indicators:
       long: "close > {left_operand}"
       short: "close < {left_operand}"
 
-  # パターン認識追加指標
-  CDL_SHOOTING_STAR:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
-
-  CDL_ENGULFING:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
-
-  CDL_HARAMI:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
-
-  CDL_MORNING_STAR:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null
-
-  CDL_EVENING_STAR:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
 
   # ボラティリティ追加指標
-  ABERRATION:
-    type: volatility
     scale_type: price_absolute
     thresholds:
       aggressive:
@@ -889,22 +800,6 @@ indicators:
       long: "close > {left_operand}_lower"
       short: "close < {left_operand}_upper"
 
-  MASSI:
-    type: volatility
-    scale_type: oscillator_0_100
-    thresholds:
-      aggressive:
-        long_lt: 26.5
-        short_gt: 27.0
-      normal:
-        long_lt: 26.5
-        short_gt: 27.0
-      conservative:
-        long_lt: 26.5
-        short_gt: 27.0
-    conditions:
-      long: "{left_operand} < {threshold}"
-      short: "{left_operand} > {threshold}"
 
   # 追加モメンタム指標
   AROONOSC:
@@ -1918,14 +1813,31 @@ indicators:
       long: "{left_operand} < {threshold}"
       short: "{left_operand} > {threshold}"
 
+  # Volume Price
+  VP:
+    type: volume
+    scale_type: volume
+    default_output: "VP_TOTAL_VOL"
+    output_names:
+      - "VP_LOW"
+      - "VP_MEAN"
+      - "VP_HIGH"
+      - "VP_POS_VOL"
+      - "VP_NEG_VOL"
+      - "VP_TOTAL_VOL"
+    conditions:
+      long: "{left_operand}_total_vol > 0"  # Total volume positive
+      short: "{left_operand}_total_vol < 0"
+
   # 終極拡張 - Volume系最終
   VWMA:
-    type: volume
+    type: trend
     scale_type: price_absolute
     thresholds: null
+    components: ["vwma", "vol_momentum"]
     conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
+      long: "close > {left_operand}_0"
+      short: "close < {left_operand}_0"
 
   EWMA:
     type: price_transform

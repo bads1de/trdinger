@@ -4,6 +4,7 @@
 登録してあるテクニカルの一覧:
 - SMA (Simple Moving Average)
 - EMA (Exponential Moving Average)
+- TLB (Trend Line Break)
 - TEMA (Triple Exponential Moving Average)
 - DEMA (Double Exponential Moving Average)
 - WMA (Weighted Moving Average)
@@ -16,6 +17,9 @@
 - MAVP (Moving Average Variable Period)
 - MIDPOINT (MidPoint over period)
 - MIDPRICE (MidPrice over period)
+- MIN - Minimum Value
+- MAX - Maximum Value
+- RANGE - Range (High - Low)
 - HMA (Hull Moving Average)
 - ZLMA (Zero Lag Moving Average)
 - VWMA (Volume Weighted Moving Average)
@@ -46,12 +50,16 @@
 
 from typing import Tuple, Optional
 import warnings
+import logging
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
+logger = logging.getLogger(__name__)
+
 from ..utils import handle_pandas_ta_errors
+from ..config.indicator_config import IndicatorResultType
 
 # PandasのSeries位置アクセス警告を抑制 (pandas-taとの互換性のため)
 warnings.filterwarnings(
@@ -68,64 +76,97 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def sma(data: pd.Series, length: int) -> pd.Series:
+    def sma(data: pd.Series, period: int) -> pd.Series:
         """単純移動平均（軽量エラーハンドリング付き）"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
 
         # 基本的な入力検証
         if len(data) == 0:
-            raise ValueError("データが空です")
+            return pd.Series(np.full(0, np.nan), index=data.index)
+            # raise ValueError("データが空です")
 
-        if length == 1:
+        # データチェック: NaNが多すぎる場合
+        if data.isna().sum() > len(data) * 0.5:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        # データ長チェック
+        if len(data) < period:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        if period == 1:
             return data
 
-        result = data.rolling(window=length).mean()
+        result = data.rolling(window=period).mean()
 
         # 結果検証（重要な異常ケースのみ）
         if result.isna().all():
-            raise ValueError("計算結果が全てNaNです")
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            # raise ValueError("計算結果が全てNaNです")
 
         return result
 
     @staticmethod
     @handle_pandas_ta_errors
-    def ema(data: pd.Series, length: int) -> pd.Series:
+    def ema(data: pd.Series, period: int) -> pd.Series:
         """指数移動平均"""
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
+        length = period
+
+        logger.debug(f"EMA: data length={len(data)}, period={period}, data_type={data.dtype}")
+        logger.debug(f"EMA: data head={data.head().values}")
+        logger.debug(f"EMA: data tail={data.tail().values}")
+        logger.debug(f"EMA: data NaN count={data.isna().sum()}")
+
+        # データチェック
+        if len(data) == 0:
+            return pd.Series(np.full(0, np.nan), index=data.index)
+        if data.isna().sum() > len(data) * 0.5:
+            logger.debug(f"EMA: Too many NaN values ({data.isna().sum()}/{len(data)}), returning NaN")
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # 第一優先: pandas-ta
         try:
-            result = ta.ema(data, length=length)
+            logger.debug(f"EMA: Calling ta.ema with window={length}")
+            result = ta.ema(data, window=length)
+            logger.debug(f"EMA: ta.ema result={result}")
             if result is not None and isinstance(result, pd.Series):
+                logger.debug(f"EMA: ta.ema result shape={len(result)}, all NaN={result.isna().all()}")
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length - 1
-                if (
-                    start_idx < len(result)
-                    and not result.iloc[start_idx:].isna().all()
-                ):
+                if start_idx < len(result) and not result.iloc[start_idx:].isna().all():
+                    logger.debug(f"EMA: Using pandas-ta result")
                     return result
-        except Exception:
-            pass
+                else:
+                    logger.debug(f"EMA: pandas-ta result is all NaN, using fallback")
+        except Exception as e:
+            logger.debug(f"EMA: pandas-ta failed with error: {e}")
 
         # フォールバック実装: numpyベース -> pandas.Seriesに変更
+        logger.debug(f"EMA: Using fallback calculation")
         if len(data) < length:
+            logger.debug(f"EMA: Data length {len(data)} < period {length}, returning NaN")
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # EMA計算用変数
         alpha = 2.0 / (length + 1)
         ema_values = np.full(len(data), np.nan, dtype=float)
         ema_values[length - 1] = data.iloc[:length].mean()  # 初期値はSMA
+        logger.debug(f"EMA: Fallback initial value: {ema_values[length - 1]}")
 
         # ループでEMA計算
         for i in range(length, len(data)):
             ema_values[i] = alpha * data.iloc[i] + (1 - alpha) * ema_values[i - 1]
 
-        return pd.Series(ema_values, index=data.index)
+        result_series = pd.Series(ema_values, index=data.index)
+        logger.debug(f"EMA: Fallback result all NaN: {result_series.isna().all()}")
+        return result_series
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -170,8 +211,8 @@ class TrendIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
-        length: int = 14,
-        fast_length: int = 3,
+        period: int = 14,
+        fast_period: int = 3,
     ) -> Tuple[pd.Series, pd.Series]:
         """Stochastic Fast with pandas-ta fallback"""
         if not isinstance(high, pd.Series):
@@ -182,12 +223,13 @@ class TrendIndicators:
             raise TypeError("close must be pd.Series")
 
         try:
-            result = ta.stochf(
+            result = ta.stoch(
                 high=high,
                 low=low,
                 close=close,
-                fastk_length=fast_length,
-                fastd_length=length,
+                k=period,
+                d=fast_period,
+                smooth_k=period,  # Correction: window=fast_period, smooth_window=period
             )
             if result is not None and not result.empty:
                 return result.iloc[:, 0], result.iloc[:, 1]
@@ -213,7 +255,7 @@ class TrendIndicators:
 
         # 第一優先: pandas-ta
         try:
-            result = ta.tema(data, length=length)
+            result = ta.tema(data, window=length)
             if result is not None:
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length * 3 - 1
@@ -251,11 +293,16 @@ class TrendIndicators:
 
         # 第一優先: pandas-ta
         try:
-            result = ta.stc(
-                data, length=length, fastLength=fast_length, slowLength=slow_length
-            )
+            result = ta.stc(data, tclength=length, fast=fast_length, slow=slow_length)
             if result is not None and not result.isna().all():
-                return result
+                # pandas-ta.stc returns DataFrame with columns: ['STC', 'MACD', 'STOCH']
+                # Extract STC column (first column) and return as Series
+                if isinstance(result, pd.DataFrame) and not result.empty:
+                    return result.iloc[:, 0]  # Return STC as Series
+                elif isinstance(result, pd.Series):
+                    return result
+                else:
+                    return result
         except Exception:
             pass
 
@@ -307,7 +354,7 @@ class TrendIndicators:
 
         # 第一優先: pandas-ta
         try:
-            result = ta.dema(data, length=length)
+            result = ta.dema(data, window=length)
             if result is not None:
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length * 2 - 1
@@ -346,7 +393,7 @@ class TrendIndicators:
 
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        return ta.wma(data, length=length)
+        return ta.wma(data, window=length)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -364,7 +411,7 @@ class TrendIndicators:
 
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        return ta.trima(data, length=length)
+        return ta.trima(data, window=length)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -372,7 +419,7 @@ class TrendIndicators:
         """カウフマン適応移動平均"""
         # 第一優先: pandas-ta
         try:
-            result = ta.kama(data, length=length)
+            result = ta.kama(data, window=length)
             if result is not None:
                 return result
         except Exception:
@@ -383,13 +430,49 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def t3(
-        data: pd.Series, length: int = 5, a: float = 0.7
-    ) -> pd.Series:
-        """T3移動平均"""
+    def t3(data: pd.Series, length: int = 5, a: float = 0.7) -> pd.Series:
+        """T3移動平均 with enhanced fallback"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        return ta.t3(data, length=length, a=a)
+
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        if not (0.0 <= a <= 1.0):
+            raise ValueError(f"a must be between 0.0 and 1.0: {a}")
+
+        # 第一優先: pandas-ta
+        try:
+            result = ta.t3(data, window=length, a=a)
+            if result is not None and not result.isna().all():
+                return result
+        except Exception:
+            pass
+
+        # 強化フォールバック実装: T3 = a^3*EMA1 + 3*a^2*(1-a)*EMA2 + 3*a*(1-a)^2*EMA3 + (1-a)^3*EMA4
+        if len(data) < length * 4:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        try:
+            # 多段EMA計算
+            ema1 = TrendIndicators.ema(data, length)
+            ema2 = TrendIndicators.ema(ema1, length)
+            ema3 = TrendIndicators.ema(ema2, length)
+            ema4 = TrendIndicators.ema(ema3, length)
+
+            # T3計算
+            t3_result = (
+                a * a * a * ema1
+                + 3 * a * a * (1 - a) * ema2
+                + 3 * a * (1 - a) * (1 - a) * ema3
+                + (1 - a) * (1 - a) * (1 - a) * ema4
+            )
+
+            return t3_result
+
+        except Exception:
+            # 最終フォールバック: EMAベース近似
+            return TrendIndicators.ema(data, length)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -526,7 +609,7 @@ class TrendIndicators:
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
 
-        return ta.midpoint(data, length=length)
+        return ta.midpoint(data, window=length)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -544,7 +627,35 @@ class TrendIndicators:
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
 
-        return ta.midprice(high=high, low=low, length=length)
+        # データ長チェック
+        if len(high) == 0 or len(low) == 0:
+            raise ValueError("high and low series must not be empty")
+
+        if len(high) != len(low):
+            raise ValueError("high and low must have the same length")
+
+        # all NaNチェック - 早期回避
+        if high.isna().all() and low.isna().all():
+            return pd.Series(np.full(len(high), np.nan), index=high.index, dtype=float)
+
+        try:
+            result = ta.midprice(high=high, low=low, window=length)
+            if result is not None:
+                return result
+        except Exception:
+            pass
+
+        # フォールバック計算: マニュアルSMA of (high + low)/2
+        try:
+            midpoint = (high + low) / 2.0
+            if length == 1:
+                return midpoint
+            result = midpoint.rolling(window=length).mean()
+            return result
+        except Exception as e:
+            print(f"MIDPRICE fallback calculation failed: {e}")
+            # 最終フォールバック: all NaN
+            return pd.Series(np.full(len(high), np.nan), index=high.index, dtype=float)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -555,7 +666,7 @@ class TrendIndicators:
 
         # 第一優先: pandas-ta
         try:
-            result = ta.hma(data, length=length)
+            result = ta.hma(data, window=length)
             if result is not None:
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = int(length * 1.5) - 1  # HMAはより多くのデータを必要とする
@@ -599,54 +710,85 @@ class TrendIndicators:
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
         if hasattr(ta, "zlma"):
-            return ta.zlma(data, length=length)
+            result = ta.zlma(data, window=length)
+            if result is not None:
+                # Ensure result is pd.Series
+                if isinstance(result, pd.Series):
+                    return result
+                else:
+                    return pd.Series(result, index=data.index)
         else:
             # フォールバック: EMAの差分で近似
+            if len(data) < length:
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+
             lag = int((length - 1) / 2)
             shifted = data.shift(lag)
             adjusted = data + (data - shifted)
-            return ta.ema(adjusted, length=length)
+            return TrendIndicators.ema(adjusted, length=length)
 
     @staticmethod
     @handle_pandas_ta_errors
-    def vwma(data: pd.Series, volume: pd.Series, length: int = 20) -> pd.Series:
+    def vwma(data: pd.Series, volume: pd.Series, period: int = 20) -> pd.Series:
         """Volume Weighted Moving Average"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
         if not isinstance(volume, pd.Series):
             raise TypeError("volume must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
         if len(data) != len(volume):
             raise ValueError("data and volume must have the same length")
 
         # 第一優先: pandas-ta
         try:
-            result = ta.vwma(data, volume=volume, length=length)
-            if result is not None and not result.isna().all():
-                # 最初のlength位置以降に有効な値がある場合
-                start_idx = length - 1
-                if (
-                    start_idx < len(result)
-                    and not np.isnan(result.iloc[start_idx:]).all()
-                ):
-                    return result
+            vwma_series = ta.vwma(data, volume, window=period)
+            if (
+                vwma_series is not None
+                and not vwma_series.isna().all()
+                and not (
+                    hasattr(vwma_series, "values")
+                    and np.isnan(
+                        vwma_series.values
+                        if hasattr(vwma_series, "values")
+                        else vwma_series
+                    ).all()
+                )
+            ):
+                # pandas-ta 結果が有効であれば使用
+                vwma_series = (
+                    vwma_series.reindex(data.index)
+                    if hasattr(vwma_series, "reindex")
+                    else vwma_series
+                )
+                return vwma_series
         except Exception:
-            pass
+            pass  # fallback に移行
 
-        # フォールバック: カスタム実装
-        if len(data) < length:
+        # VWMAの手動計算（フォールバック）
+        if len(data) < period:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         # VWMAの手動計算
         vwma_values = np.full(len(data), np.nan)
-        for i in range(length - 1, len(data)):
-            window_price = data.iloc[i - length + 1 : i + 1]
-            window_vol = volume.iloc[i - length + 1 : i + 1]
-            vwma_values[i] = np.average(window_price, weights=window_vol)
+        for i in range(period - 1, len(data)):
+            window_price = data.iloc[i - period + 1 : i + 1]
+            window_vol = volume.iloc[i - period + 1 : i + 1]
 
-        return pd.Series(vwma_values, index=data.index)
+            # ゼロボリュームの処理: ゼロボリュームがある場合、加重平均を使用せず、単純平均を使用
+            if window_vol.sum() > 0:
+                vwma_values[i] = np.average(window_price, weights=window_vol)
+            else:
+                # 全てまたは一部のゼロボリュームの場合、単純平均を使用
+                vwma_values[i] = window_price.mean()
+
+        vwma_series = pd.Series(vwma_values, index=data.index)
+
+        return vwma_series
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -659,7 +801,7 @@ class TrendIndicators:
 
         # 第一優先: pandas-ta
         try:
-            result = ta.swma(data, length=length)
+            result = ta.swma(data, window=length)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
                 result_values = (
@@ -712,7 +854,7 @@ class TrendIndicators:
 
         # 第一優先: pandas-ta
         try:
-            result = ta.alma(data, length=length, sigma=sigma, offset=offset)
+            result = ta.alma(data, window=length, sigma=sigma, offset=offset)
             if result is not None:
                 # 全てNaNではなく、有用な値が含まれている場合のみ使用
                 result_values = (
@@ -759,7 +901,7 @@ class TrendIndicators:
             raise TypeError("data must be pandas Series")
 
         try:
-            result = ta.rma(data, length=length)
+            result = ta.rma(data, window=length)
             if result is not None and not result.isna().all():
                 # 最初のlength位置以降に有効な値がある場合
                 start_idx = length - 1
@@ -794,6 +936,7 @@ class TrendIndicators:
         tenkan: int = 9,
         kijun: int = 26,
         senkou: int = 52,
+        **kwargs,
     ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
         """Ichimoku Cloud: (conversion, base, span_a, span_b, lagging)"""
         if not isinstance(high, pd.Series):
@@ -805,16 +948,129 @@ class TrendIndicators:
         if len(high) != len(low) or len(high) != len(close):
             raise ValueError("high, low, and close must have the same length")
 
-        # 標準定義に基づく計算
-        conv = (high.rolling(tenkan).max() + low.rolling(tenkan).min()) / 2.0
-        base = (high.rolling(kijun).max() + low.rolling(kijun).min()) / 2.0
-        span_a = ((conv + base) / 2.0).shift(kijun)
-        span_b = (
-            (high.rolling(senkou).max() + low.rolling(senkou).min()) / 2.0
-        ).shift(kijun)
-        lag = close.shift(-kijun)
+        # Enhanced parameter validation
+        if tenkan <= 0 or kijun <= 0 or senkou <= 0:
+            raise ValueError("tenkan, kijun, and senkou must be positive")
+        if tenkan >= kijun or kijun >= senkou:
+            raise ValueError("Periods must satisfy: tenkan < kijun < senkou")
 
-        return (conv, base, span_a, span_b, lag)
+        logger.debug(f"ICHIMOKU: Input lengths - high: {len(high)}, low: {len(low)}, close: {len(close)}")
+        logger.debug(f"ICHIMOKU: params - tenkan: {tenkan}, kijun: {kijun}, senkou: {senkou}")
+
+        # パラメータ名をpandas-taの形式にマッピング
+        ta_conversion = tenkan
+        ta_base = kijun
+        ta_lagging = senkou
+
+        # Enhanced minimum data length calculation
+        required_length = senkou + kijun + max(tenkan, 5)  # Ensure adequate data for all calculations
+
+        logger.debug(f"ICHIMOKU: required length: {required_length}, actual length: {len(high)}")
+
+        if len(high) < required_length:
+            # Return NaN series with proper index alignment
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return (nan_series, nan_series, nan_series, nan_series, nan_series)
+
+        # pandas-taを使用した計算 with enhanced error handling
+        try:
+            if len(high) >= 26:  # 最小データ長チェック（基準となる26）- but use enhanced check above
+                logger.debug(f"ICHIMOKU: Calling ta.ichimoku")
+                result = ta.ichimoku(
+                    high=high,
+                    low=low,
+                    close=close,
+                    conversion=ta_conversion,
+                    base=ta_base,
+                    lagging=ta_lagging,
+                )
+                logger.debug(f"ICHIMOKU: ta.ichimoku result: {result is not None}")
+                if result is not None:
+                    logger.debug(f"ICHIMOKU: result columns: {result.columns.tolist() if hasattr(result, 'columns') else 'no columns'}")
+                    if hasattr(result, 'isna'):
+                        logger.debug(f"ICHIMOKU: result all NaN: {result.isna().all().all()}")
+
+                if result is not None and isinstance(result, pd.DataFrame):
+                    # pandas-ta returns DataFrame with specific column names based on parameters
+                    # Columns: ['ISA_{conversion}', 'ISB_{lagging}', 'ITS_{conversion}', 'IKS_{base}', 'ICS_{lagging}']
+                    # For default params: ['ISA_9', 'ISB_52', 'ITS_9', 'IKS_26', 'ICS_26']
+                    conv_col = f"ITS_{ta_conversion}"  # Tenkan-sen (conversion line)
+                    base_col = f"IKS_{ta_base}"  # Kijun-sen (base line)
+                    span_a_col = f"ISA_{ta_conversion}"  # Senkou Span A
+                    span_b_col = f"ISB_{ta_lagging}"  # Senkou Span B
+                    lag_col = f"ICS_{ta_lagging}"  # Chikou Span (lagging line)
+
+                    if all(
+                        col in result.columns
+                        for col in [conv_col, base_col, span_a_col, span_b_col, lag_col]
+                    ):
+                        conv = result[conv_col]
+                        base = result[base_col]
+                        span_a = result[span_a_col]
+                        span_b = result[span_b_col]
+                        lag = result[lag_col]
+
+                        logger.debug(f"ICHIMOKU: Extracted columns NaN check - conv: {conv.isna().all()}, base: {base.isna().all()}")
+
+                        # Post-process to handle potential remaining NaN issues
+                        if conv.isna().all() or base.isna().all():
+                            logger.debug(f"ICHIMOKU: All NaN in results, using fallback")
+                            pass  # Fall through to manual implementation
+                        else:
+                            # Enhance NaN handling in the results
+                            conv = conv.fillna(method='bfill').fillna(conv.mean())
+                            base = base.fillna(method='bfill').fillna(base.mean())
+                            span_a = span_a.fillna(method='bfill').fillna(span_a.mean())
+                            span_b = span_b.fillna(method='bfill').fillna(span_b.mean())
+                            lag = lag.fillna(method='ffill').fillna(lag.mean())
+
+                            logger.debug(f"ICHIMOKU: Using pandas-ta result")
+                            return (conv, base, span_a, span_b, lag)
+        except Exception as e:
+            # pandas-ta failed, fallback to manual implementation
+            logger.warning(f"ICHIMOKU pandas-ta calculation failed: {e}")
+
+        # フォールバック: Enhanced manual implementation with better error handling
+        logger.debug(f"ICHIMOKU: Using manual fallback implementation")
+        data_length = len(high)
+
+        # 標準定義に基づく計算（pandas-taと互換性を持たせる）
+        try:
+            # Conversion Line: Tenkan-sen (High + Low)/2 over tenkan periods
+            conv_raw = (high.rolling(tenkan, min_periods=tenkan).max() +
+                       low.rolling(tenkan, min_periods=tenkan).min()) / 2.0
+
+            # Base Line: Kijun-sen (High + Low)/2 over kijun periods
+            base_raw = (high.rolling(kijun, min_periods=kijun).max() +
+                       low.rolling(kijun, min_periods=kijun).min()) / 2.0
+
+            # Handle edge cases for rolling calculations
+            conv = conv_raw.fillna(method='bfill').fillna((high.iloc[:tenkan].max() + low.iloc[:tenkan].min()) / 2.0)
+            base = base_raw.fillna(method='bfill').fillna((high.iloc[:kijun].max() + low.iloc[:kijun].min()) / 2.0)
+
+            # Leading Span A: (Tenkan-sen + Kijun-sen)/2, shifted kijun periods ahead
+            span_a_raw = ((conv + base) / 2.0).shift(kijun)
+            span_a = span_a_raw.fillna(method='bfill').fillna(span_a_raw.mean())
+
+            # Leading Span B: (High + Low)/2 over senkou periods, shifted kijun periods ahead
+            span_b_raw = (
+               (high.rolling(senkou, min_periods=senkou).max() +
+                low.rolling(senkou, min_periods=senkou).min()) / 2.0
+            ).shift(kijun)
+            span_b = span_b_raw.fillna(method='bfill').fillna(span_b_raw.mean())
+
+            # Lagging Span: Chikou Span - Close price shifted kijun periods back
+            lag_raw = close.shift(-kijun)
+            lag = lag_raw.fillna(method='ffill').fillna(lag_raw.mean())
+
+            logger.debug(f"ICHIMOKU: Fallback result NaN check - conv: {conv.isna().all()}, base: {base.isna().all()}")
+            return (conv, base, span_a, span_b, lag)
+
+        except Exception as e:
+            # 計算失敗時、全てNaNを返す
+            logger.warning(f"ICHIMOKU manual calculation failed: {e}")
+            nan_series = pd.Series(np.full(data_length, np.nan), index=high.index)
+            return (nan_series, nan_series, nan_series, nan_series, nan_series)
 
     # カスタム指標
     @staticmethod
@@ -830,7 +1086,7 @@ class TrendIndicators:
         """価格とEMAの比率 - 1"""
         ema_vals = TrendIndicators.ema(data, length)
         ema_series = pd.Series(ema_vals, index=data.index)
-        return ((data / ema_series) - 1.0)
+        return (data / ema_series) - 1.0
 
     # mama function removed due to pandas-ta compatibility issues
 
@@ -838,23 +1094,17 @@ class TrendIndicators:
     @handle_pandas_ta_errors
     def maxindex(data: pd.Series, length: int = 14) -> pd.Series:
         """最大値のインデックス"""
-        return (
-            data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
-        )
+        return data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
 
     @staticmethod
     @handle_pandas_ta_errors
     def minindex(data: pd.Series, length: int = 14) -> pd.Series:
         """最小値のインデックス"""
-        return (
-            data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
-        )
+        return data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
 
     @staticmethod
     @handle_pandas_ta_errors
-    def minmax(
-        data: pd.Series, length: int = 14
-    ) -> Tuple[pd.Series, pd.Series]:
+    def minmax(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
         """最小値と最大値"""
         min_vals = data.rolling(window=length).min()
         max_vals = data.rolling(window=length).max()
@@ -862,16 +1112,10 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def minmaxindex(
-        data: pd.Series, length: int = 14
-    ) -> Tuple[pd.Series, pd.Series]:
+    def minmaxindex(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
         """最小値と最大値のインデックス"""
-        min_idx = (
-            data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
-        )
-        max_idx = (
-            data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
-        )
+        min_idx = data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
+        max_idx = data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
         return min_idx, max_idx
 
     @staticmethod
@@ -880,7 +1124,7 @@ class TrendIndicators:
         """Fibonacci's Weighted Moving Average"""
         # 第一優先: pandas-ta
         try:
-            result = ta.fwma(data, length=length)
+            result = ta.fwma(data, window=length)
             if result is not None and not result.isna().all():
                 return result
         except Exception:
@@ -930,17 +1174,22 @@ class TrendIndicators:
             high_length=hl,
             low_length=ll,
         )
+
+        # DataFrameの場合、最初の列をSeriesとして返す
+        if result is not None and isinstance(result, pd.DataFrame):
+            return result.iloc[:, 0]
+
         return (
-            result if result is not None else pd.Series(np.full(len(high_series), np.nan), index=high_series.index)
+            result
+            if result is not None
+            else pd.Series(np.full(len(high_series), np.nan), index=high_series.index)
         )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def hl2(
-        high: pd.Series, low: pd.Series
-    ) -> pd.Series:
+    def hl2(high: pd.Series, low: pd.Series, period: int = 14) -> pd.Series:
         """High-Low Average"""
-        return ((high + low) / 2)
+        return (high + low) / 2
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -948,48 +1197,96 @@ class TrendIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
+        period: int = 14,
     ) -> pd.Series:
         """High-Low-Close Average"""
-        return ((high + low + close) / 3)
+        return (high + low + close) / 3
 
     @staticmethod
     @handle_pandas_ta_errors
-    def hwma(data: pd.Series, length: int = 10) -> pd.Series:
-        """Holt-Winter Moving Average"""
-        result = ta.hwma(data, length=length)
-        return result if result is not None else pd.Series(np.full(len(data), np.nan), index=data.index)
+    def hwma(data: pd.Series, period: int = 10) -> pd.Series:
+        """Holt-Winter Moving Average with enhanced fallback"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
+
+        result = ta.hwma(data, window=period)
+
+        if result is None or result.isna().all():
+            # Enhanced fallback: Manual Holt-Winters calculation
+            try:
+                if len(data) < 2 * period:
+                    return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+                # Simplified Holt-Winters implementation
+                # Holt-Winters method components: level, trend, seasonality
+                # For simplicity, use double exponential smoothing as approximation
+
+                hwma_values = np.full(len(data), np.nan)
+                level = data.iloc[period]  # Initial level
+                trend = (data.iloc[period] - data.iloc[0]) / period  # Initial trend
+
+                # Smoothing parameters (typical values)
+                alpha = 0.1  # level smoothing
+                beta = 0.1  # trend smoothing
+
+                for i in range(length, len(data)):
+                    # Update level and trend components
+                    prev_level = level
+                    level = alpha * data.iloc[i] + (1 - alpha) * (level + trend)
+                    trend = beta * (level - prev_level) + (1 - beta) * trend
+
+                    # Forecast current value
+                    hwma_values[i] = level + trend
+
+                # Handle NaN values
+                hwma_series = pd.Series(hwma_values, index=data.index)
+                hwma_series = hwma_series.fillna(method="bfill").fillna(
+                    data.rolling(length).mean().fillna(0)
+                )
+
+                return hwma_series
+
+            except Exception as e:
+                logger.warning(f"HWMA fallback calculation failed: {e}")
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
     def jma(
         data: pd.Series,
-        length: int = 7,
+        period: int = 7,
         phase: float = 0.0,
         power: float = 2.0,
     ) -> pd.Series:
         """Jurik Moving Average"""
-        result = ta.jma(data, length=length, phase=phase, power=power)
-        return result if result is not None else pd.Series(np.full(len(data), np.nan), index=data.index)
+        result = ta.jma(data, window=period, phase=phase, power=power)
+        return (
+            result
+            if result is not None
+            else pd.Series(np.full(len(data), np.nan), index=data.index)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def mcgd(data: pd.Series, length: int = 10) -> pd.Series:
+    def mcgd(data: pd.Series, period: int = 10) -> pd.Series:
         """McGinley Dynamic"""
-        if len(data) < length:
+        if len(data) < period:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         mcgd_values = np.full(len(data), np.nan)
-        mcgd_values[length - 1] = data.iloc[:length].mean()  # 初期値はSMA
+        mcgd_values[period - 1] = data.iloc[:period].mean()  # 初期値はSMA
 
         k = 0.6  # 調整係数
 
-        for i in range(length, len(data)):
-            ratio = (
-                data.iloc[i] / mcgd_values[i - 1] if mcgd_values[i - 1] != 0 else 1
-            )
+        for i in range(period, len(data)):
+            ratio = data.iloc[i] / mcgd_values[i - 1] if mcgd_values[i - 1] != 0 else 1
             mcgd_values[i] = mcgd_values[i - 1] + (
                 data.iloc[i] - mcgd_values[i - 1]
-            ) / (k * length * (ratio**4))
+            ) / (k * period * (ratio**4))
 
         return pd.Series(mcgd_values, index=data.index)
 
@@ -1000,45 +1297,64 @@ class TrendIndicators:
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
+        period: int = 14,
     ) -> pd.Series:
         """Open-High-Low-Close Average"""
-        return ((open_ + high + low + close) / 4)
+        # ta.ohlc4 does not have length parameter, use standard calculation
+        try:
+            result = ta.ohlc4(high, low, open_, close)
+            if result is not None:
+                return result
+        except Exception:
+            pass
+        # Fallback to standard calculation
+        return (open_ + high + low + close) / 4
 
     @staticmethod
     @handle_pandas_ta_errors
-    def pwma(data: pd.Series, length: int = 10) -> pd.Series:
+    def pwma(data: pd.Series, period: int = 10) -> pd.Series:
         """Pascal's Weighted Moving Average"""
-        result = ta.pwma(data, length=length)
-        return result if result is not None else pd.Series(np.full(len(data), np.nan), index=data.index)
+        result = ta.pwma(data, window=period)
+        return (
+            result
+            if result is not None
+            else pd.Series(np.full(len(data), np.nan), index=data.index)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def sinwma(data: pd.Series, length: int = 10) -> pd.Series:
         """Sine Weighted Moving Average"""
-        result = ta.sinwma(data, length=length)
-        return result if result is not None else pd.Series(np.full(len(data), np.nan), index=data.index)
+        result = ta.sinwma(data, window=length)
+        return (
+            result
+            if result is not None
+            else pd.Series(np.full(len(data), np.nan), index=data.index)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def ssf(data: pd.Series, length: int = 10) -> pd.Series:
+    def ssf(data: pd.Series, period: int = 10) -> pd.Series:
         """Ehler's Super Smoother Filter"""
-        result = ta.ssf(data, length=length)
-        return result if result is not None else pd.Series(np.full(len(data), np.nan), index=data.index)
+        result = ta.ssf(data, window=period)
+        return (
+            result
+            if result is not None
+            else pd.Series(np.full(len(data), np.nan), index=data.index)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def vidya(
-        data: pd.Series, length: int = 14, adjust: bool = True
-    ) -> pd.Series:
+    def vidya(data: pd.Series, period: int = 14, adjust: bool = True) -> pd.Series:
         """Variable Index Dynamic Average"""
         series = data.astype(np.float64).copy()
 
         # 第一優先: pandas-ta
         try:
-            result = ta.vidya(series, length=length, adjust=adjust)
+            result = ta.vidya(series, window=period, adjust=adjust)
             if result is not None and not result.isna().all():
-                # 最初のlength位置以降に有効な値がある場合
-                start_idx = length * 2 - 1  # VIDYAはより多くのデータを必要とする
+                # 最初のperiod位置以降に有効な値がある場合
+                start_idx = period * 2 - 1  # VIDYAはより多くのデータを必要とする
                 if (
                     start_idx < len(result)
                     and not np.isnan(result.iloc[start_idx:]).all()
@@ -1048,20 +1364,20 @@ class TrendIndicators:
             pass
 
         # フォールバック実装: カスタVIDYA (CMOベースの適応的平均)
-        if len(series) < length * 3:
+        if len(series) < period * 3:
             return pd.Series(np.full(len(series), np.nan), index=series.index)
 
         vidya_values = np.full(len(series), np.nan)
 
         # 最初の値をSMAで初期化
-        vidya_values[length * 2 - 1] = series.iloc[: length * 2].mean()
+        vidya_values[period * 2 - 1] = series.iloc[: period * 2].mean()
 
         # VIDYA計算: アルファは標準化されたChande Momentum Oscillator (CMO)に基づく
-        for i in range(length * 2, len(series)):
+        for i in range(period * 2, len(series)):
             # CMO計算 (簡易版)
             diff = series.diff()
-            pos_sum = diff[diff > 0].rolling(length).sum().iloc[i]
-            neg_sum = abs(diff[diff < 0]).rolling(length).sum().iloc[i]
+            pos_sum = diff[diff > 0].rolling(period).sum().iloc[i]
+            neg_sum = abs(diff[diff < 0]).rolling(period).sum().iloc[i]
 
             if neg_sum == 0:
                 cmo = 100.0
@@ -1082,36 +1398,282 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def wcp(data: pd.Series) -> pd.Series:
+    def wcp(data: pd.Series, period: int = 14) -> pd.Series:
         """Weighted Closing Price"""
+        # Note: WCP may not use period, but added for consistency
         return data
 
     @staticmethod
     @handle_pandas_ta_errors
     def linreg(data: pd.Series, length: int = 14) -> pd.Series:
         """Linear Regression Moving Average"""
-        return ta.linreg(data, length=length)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError("length must be positive")
+
+        result = ta.linreg(data, window=length)
+        if result is None or result.isna().all():
+            # フォールバック実装
+            if len(data) < length:
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+            reg_values = np.full(len(data), np.nan)
+            for i in range(length - 1, len(data)):
+                window = data.iloc[i - length + 1 : i + 1].values
+                x = np.arange(length)
+                # Linear regression: slope * x + intercept
+                if np.allclose(np.var(x), 0, atol=1e-10):
+                    # Constant x, return mean
+                    reg_values[i] = np.mean(window)
+                else:
+                    slope = np.cov(x, window)[0, 1] / np.var(x)
+                    intercept = np.mean(window) - slope * np.mean(x)
+                    reg_values[i] = slope * length + intercept  # Last point
+            return pd.Series(reg_values, index=data.index)
+
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
     def linreg_slope(data: pd.Series, length: int = 14) -> pd.Series:
         """Linear Regression Slope"""
-        return ta.linreg(data, length=length, slope=True)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError("length must be positive")
+
+        result = ta.linreg(data, window=length, slope=True)
+        if result is None or result.isna().all():
+            # フォールバック実装
+            if len(data) < length:
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+            slope_values = np.full(len(data), np.nan)
+            for i in range(length - 1, len(data)):
+                window = data.iloc[i - length + 1 : i + 1].values
+                x = np.arange(length)
+                if np.allclose(np.var(x), 0, atol=1e-10):
+                    slope_values[i] = 0.0  # No slope for constant x
+                else:
+                    slope_values[i] = np.cov(x, window)[0, 1] / np.var(x)
+            return pd.Series(slope_values, index=data.index)
+
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
-    def linreg_intercept(data: pd.Series, length: int = 14) -> pd.Series:
+    def linreg_intercept(data: pd.Series, period: int = 14) -> pd.Series:
         """Linear Regression Intercept"""
-        return ta.linreg(data, length=length, intercept=True)
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError("period must be positive")
+
+        result = ta.linreg(data, window=period, intercept=True)
+        if result is None or result.isna().all():
+            # フォールバック実装
+            if len(data) < period:
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+            intercept_values = np.full(len(data), np.nan)
+            for i in range(period - 1, len(data)):
+                window = data.iloc[i - period + 1 : i + 1].values
+                x = np.arange(period)
+                if np.allclose(np.var(x), 0, atol=1e-10):
+                    intercept_values[i] = np.mean(window)  # Just the mean
+                else:
+                    slope = np.cov(x, window)[0, 1] / np.var(x)
+                    intercept_values[i] = np.mean(window) - slope * np.mean(x)
+            return pd.Series(intercept_values, index=data.index)
+
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
-    def linreg_angle(data: pd.Series, length: int = 14, degrees: bool = False) -> pd.Series:
+    def linreg_angle(
+        data: pd.Series, period: int = 14, degrees: bool = False
+    ) -> pd.Series:
         """Linear Regression Angle"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError("period must be positive")
+
         if degrees:
-            return ta.linreg(data, length=length, degrees=True)
+            result = ta.linreg(data, window=period, degrees=True)
         else:
-            return ta.linreg(data, length=length, angle=True)
+            result = ta.linreg(data, window=period, angle=True)
+
+        if result is None or result.isna().all():
+            # フォールバック実装
+            slope_series = TrendIndicators.linreg_slope(data, period)
+            angle_values = np.arctan(slope_series)  # atan(slope)
+            if degrees:
+                angle_values = np.degrees(angle_values)
+            angle_values.iloc[: period - 1] = np.nan  # Save Base NaN from slope
+            return angle_values
+
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def cwma(data: pd.Series, period: int = 10) -> pd.Series:
+        """Central Weighted Moving Average (CWMA)"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
+        if len(data) < period:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        # Generate Central Weights: higher in the center
+        center = (period - 1) / 2
+        weights = np.zeros(period)
+        for i in range(period):
+            weights[i] = period - abs(i - center)  # Linear decrease from center
+
+        # Normalize weights
+        weights = weights / weights.sum()
+
+        # Calculate weighted moving average
+        cwma_values = np.full(len(data), np.nan)
+        for i in range(period - 1, len(data)):
+            window = data.iloc[i - period + 1 : i + 1].values
+            cwma_values[i] = np.sum(window * weights)
+
+        return pd.Series(cwma_values, index=data.index)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def tlb(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period: int = 3,
+    ) -> pd.Series:
+        """Trend Line Break"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if len(high) != len(low) or len(high) != len(close):
+            raise ValueError("high, low, and close must have the same length")
+
+        if period <= 0:
+            raise ValueError(f"period must be positive: {period}")
+
+        if len(close) < period + 1:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
+        # TLB calculation: detect trend line breaks
+        tlb_values = np.full(len(close), 0.0)
+
+        for i in range(period, len(close)):
+            # Check upward trend line break
+            if close.iloc[i] > high.iloc[i - period : i].max():
+                tlb_values[i] = 1.0  # Upward break
+            # Check downward trend line break
+            elif close.iloc[i] < low.iloc[i - period : i].min():
+                tlb_values[i] = -1.0  # Downward break
+            else:
+                tlb_values[i] = 0.0  # No break
+
+        return pd.Series(tlb_values, index=close.index)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def mam(data: pd.Series, length: int = 20) -> pd.Series:
+        """Moving Average Multiplier (price/SMA - 1)"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError("length must be positive")
+
+        sma_vals = TrendIndicators.sma(data, length)
+        if sma_vals is None or sma_vals.isna().all():
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        return data / sma_vals - 1.0
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def min(data: pd.Series, period: int = 14) -> pd.Series:
+        """Minimum Value Rolling Moving Average"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError("period must be positive")
+
+        # First try pandas-ta min function
+        try:
+            if hasattr(ta, "min"):
+                result = ta.min(data, window=period)
+                if result is not None and not result.isna().all():
+                    return result
+        except Exception:
+            pass
+
+        # Fallback to rolling min
+        if len(data) < period:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        result = data.rolling(window=period).min()
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def max(data: pd.Series, period: int = 14) -> pd.Series:
+        """Maximum Value Rolling Moving Average"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError("period must be positive")
+
+        # First try pandas-ta max function
+        try:
+            if hasattr(ta, "max"):
+                result = ta.max(data, window=period)
+                if result is not None and not result.isna().all():
+                    return result
+        except Exception:
+            pass
+
+        # Fallback to rolling max
+        if len(data) < period:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        result = data.rolling(window=period).max()
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def range_func(data: pd.Series, period: int = 14) -> pd.Series:
+        """Range (High - Low) within rolling period"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if period <= 0:
+            raise ValueError("period must be positive")
+
+        # First try pandas-ta range function
+        try:
+            if hasattr(ta, "range"):
+                result = ta.range(data, window=period)
+                if result is not None and not result.isna().all():
+                    return result
+        except Exception:
+            pass
+
+        # Fallback to rolling range
+        if len(data) < period:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        max_vals = data.rolling(window=period).max()
+        min_vals = data.rolling(window=period).min()
+        result = max_vals - min_vals
+        return result
 
     # Aliases for compatibility
     ichimoku = ichimoku_cloud
