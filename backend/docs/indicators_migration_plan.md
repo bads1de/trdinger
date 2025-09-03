@@ -243,25 +243,25 @@ Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase
 
 #### 作業項目
 
-1. **YAML 設定ファイル作成**
+- [ ] 1. **YAML 設定ファイル作成**
 
-   ```
-   touch backend/app/config/indicators.yaml
-   ```
+  ```
+  touch backend/app/config/indicators.yaml
+  ```
 
-2. **YamlIndicatorLoader クラスの実装**
+- [ ] 2. **YamlIndicatorLoader クラスの実装**
 
-   ```
-   cd backend/app/services/indicators/config
-   touch yaml_indicator_loader.py
-   ```
+  ```
+  cd backend/app/services/indicators/config
+  touch yaml_indicator_loader.py
+  ```
 
-3. **ConfigDrivenIndicatorRegistry 実装**
+- [ ] 3. **ConfigDrivenIndicatorRegistry 実装**
 
-   ```
-   # indicator_config.py 拡張
-   vim indicator_config.py
-   ```
+  ```
+  # indicator_config.py 拡張
+  vim indicator_config.py
+  ```
 
 #### 検証方法
 
@@ -275,66 +275,66 @@ Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase
 
 #### 作業項目
 
-1. **全指標 YAML 移行**
+- [ ] 1. **全指標 YAML 移行**
 
-   ```
-   python scripts/migrate_indicators_to_yaml.py
-   ```
+  ```
+  python scripts/migrate_indicators_to_yaml.py
+  ```
 
-2. **indicator_definitions.py 簡素化**
+- [ ] 2. **indicator_definitions.py 簡素化**
 
-   ```
-   # 手動設定をYAML読込みに移行
-   vim indicator_definitions.py
-   ```
+  ```
+  # 手動設定をYAML読込みに移行
+  vim indicator_definitions.py
+  ```
 
-3. **constants.py の動的生成処理実装**
+- [ ] 3. **constants.py の動的生成処理実装**
 
-   ```
-   vim constants.py  # YAMLからカテゴリリスト生成
-   ```
+  ```
+  vim constants.py  # YAMLからカテゴリリスト生成
+  ```
 
-4. **不要ファイル削除**
-   **削除対象ファイル:**
+- [ ] 4. **不要ファイル削除**
+     **削除対象ファイル:**
 
-   - `constants.py`: TREND_INDICATORS リストなどが重複しているため、YAML 駆動型に移行後は削除 (823 行)
-   - `indicator_definitions.py`: 手動設定が YAML 読込みに移行されるため、全ファイル削除可能 (2,503 行)
-   - `indicator_config.py`: 構造クラスが新規アーキテクチャで不要になるため削除
+  - `constants.py`: TREND_INDICATORS リストなどが重複しているため、YAML 駆動型に移行後は削除 (823 行)
+  - `indicator_definitions.py`: 手動設定が YAML 読込みに移行されるため、全ファイル削除可能 (2,503 行)
+  - `indicator_config.py`: 構造クラスが新規アーキテクチャで不要になるため削除
 
-   **削除理由と注意点:**
+  **削除理由と注意点:**
 
-   - `constants.py`: 重複定義のリストが YAML 集中管理なしになるため、削除対象。注意: YAML からの動的生成処理が安定稼働を確認後の削除のみ
-   - `indicator_definitions.py`: 全設定手動記述が YAML 駆動に移行完了後に削除可能。注意: 削除前にバックアップ確実に作成
-   - `indicator_config.py`: 新アーキテクチャで構造クラスが冗長となるため削除。注意: 依存コンポーネントへの移行影響を確認後
+  - `constants.py`: 重複定義のリストが YAML 集中管理なしになるため、削除対象。注意: YAML からの動的生成処理が安定稼働を確認後の削除のみ
+  - `indicator_definitions.py`: 全設定手動記述が YAML 駆動に移行完了後に削除可能。注意: 削除前にバックアップ確実に作成
+  - `indicator_config.py`: 新アーキテクチャで構造クラスが冗長となるため削除。注意: 依存コンポーネントへの移行影響を確認後
 
-   **削除タイミング:**
+  **削除タイミング:**
 
-   - 全指標設定の YAML 移行完了後、各ファイルの移行確認テスト通過後
-   - 順序: `constants.py` → `indicator_config.py` → `indicator_definitions.py`
+  - 全指標設定の YAML 移行完了後、各ファイルの移行確認テスト通過後
+  - 順序: `constants.py` → `indicator_config.py` → `indicator_definitions.py`
 
-   **バックアップ戦略:**
+  **バックアップ戦略:**
 
-   ```
-   # バックアップ作成
-   cd backend/app/services/indicators
-   cp constants.py constants.py.backup.$(date +%Y%m%d)
-   cp indicator_definitions.py indicator_definitions.py.backup.$(date +%Y%m%d)
-   cp indicator_config.py indicator_config.py.backup.$(date +%Y%m%d)
+  ```
+  # バックアップ作成
+  cd backend/app/services/indicators
+  cp constants.py constants.py.backup.$(date +%Y%m%d)
+  cp indicator_definitions.py indicator_definitions.py.backup.$(date +%Y%m%d)
+  cp indicator_config.py indicator_config.py.backup.$(date +%Y%m%d)
 
-   # 削除実行
-   rm constants.py indicator_definitions.py indicator_config.py
+  # 削除実行
+  rm constants.py indicator_definitions.py indicator_config.py
 
-   # 復元（緊急時）
-   cp constants.py.backup.$(date +%Y%m%d) constants.py
-   cp indicator_definitions.py.backup.$(date +%Y%m%d) indicator_definitions.py
-   cp indicator_config.py.backup.$(date +%Y%m%d) indicator_config.py
-   ```
+  # 復元（緊急時）
+  cp constants.py.backup.$(date +%Y%m%d) constants.py
+  cp indicator_definitions.py.backup.$(date +%Y%m%d) indicator_definitions.py
+  cp indicator_config.py.backup.$(date +%Y%m%d) indicator_config.py
+  ```
 
-   **削除検証:**
+  **削除検証:**
 
-   - 削除前: 全テスト実行確認
-   - 削除後: システム起動テスト・主要機能検証
-   - 復元テスト: バックアップからのリストア実行確認
+  - 削除前: 全テスト実行確認
+  - 削除後: システム起動テスト・主要機能検証
+  - 復元テスト: バックアップからのリストア実行確認
 
 #### 検証方法
 
@@ -348,9 +348,7 @@ Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase
 
 #### 作業項目
 
-1. **回帰テスト実行**
-2. **負荷テスト実施**
-3. **メモリ使用量最適化**
+- [ ] 1. **回帰テスト実行**
 
 <a name="依存関係マップ"></a>
 
@@ -460,8 +458,6 @@ flowchart LR
 **影響**: 応答遅延・処理能力低下
 **解決策**:
 
-- キャッシュ機構導入
-- 遅延読み込み実装
 - 性能監視強化
 
 #### 2. 互換性破壊 (既存戦略無効化)
@@ -483,15 +479,6 @@ flowchart LR
 - ロールバック計画の準備とバックアップ体制の確保
 
 ### Low Risk 項目 (発生確率: 低 / 影響: 小)
-
-#### 1. 人作業ミス (YAML 記法誤り)
-
-**影響**: 設定読込み失敗
-**解決策**:
-
-- YAML 文法検証ツール導入
-- 自動フォーマッター適用
-- テンプレート設定提供
 
 ### リスク緩和総合戦略
 
@@ -568,20 +555,6 @@ def test_runtime_indicator_calculation():
     """実行時指標計算テスト"""
     # 測定: 単一指標・複合指標計算時間
     pass
-
-def test_load_test_indicators():
-    """ロードテスト: 指標生成機能の応答負荷テスト"""
-    # 測定: 高負荷時（大量のリクエスト同時処理）での指標生成時間と失敗率
-    # シナリオ: 最大同時接続数での指標計算実行
-    # 閾値: 平均応答時間5秒以内、失敗率1%以下
-    pass
-
-def test_memory_usage_evaluation():
-    """メモリ使用量評価テスト"""
-    # 測定: 全指標設定読込み時のメモリ消費量とリーク検知
-    # 評価点: メモリピーク使用量 baseline 比 ±20%以内
-    # 継続監視: 長時間運用時のメモリリーク有無
-    pass
 ```
 
 ### テスト実行シナリオ
@@ -645,30 +618,6 @@ def generate_test_indicator_configs(count=50):
 - **シナリオ数**: 50 以上の取引条件パターン
 
 ---
-
-## 実行コマンド一覧
-
-### 設定準備
-
-```bash
-mkdir -p backend/docs
-```
-
-### 開発環境構築
-
-```bash
-cd backend/app/services/indicators/config
-touch yaml_indicator_loader.py
-cd ../../../config
-touch indicators.yaml
-```
-
-### テスト実行
-
-```bash
-python -m pytest tests/indicators/ -v
-python scripts/test_migration_compatibility.py
-```
 
 ---
 
@@ -742,15 +691,16 @@ PARAMETER_MAPPINGS 重複統合 - YAML 移行
 **影響度**: 高
 **変更内容**:
 
-YAML設定から指標のthresholdを取得してロング・ショート条件を生成する
-- YAML設定からのthreshold値動的取得処理の実装
-- ロング・ショート条件生成ロジックのYAML設定連動化
-- 既存のハードコード化thresholdのYAML移行による柔軟性向上
+YAML 設定から指標の threshold を取得してロング・ショート条件を生成する
+
+- YAML 設定からの threshold 値動的取得処理の実装
+- ロング・ショート条件生成ロジックの YAML 設定連動化
+- 既存のハードコード化 threshold の YAML 移行による柔軟性向上
 
 **対応計画**:
 
-- YAML設定ロード処理との統合実装
-- threshold取得のエラー処理強化
+- YAML 設定ロード処理との統合実装
+- threshold 取得のエラー処理強化
 - 既存条件生成ロジックの互換性確保テスト
 - 段階的移行フェーズでの機能検証
 
@@ -759,16 +709,17 @@ YAML設定から指標のthresholdを取得してロング・ショート条件�
 **影響度**: 高
 **変更内容**:
 
-YamlIndicatorUtilsを使用した定数動的生成
-- 既存の定数リストをYAMLから動的生成する処理移行
-- YamlIndicatorUtilsクラスとの連携によるカテゴリ別定数管理
-- 重複定義問題のYAML中心化による根本解決
+YamlIndicatorUtils を使用した定数動的生成
+
+- 既存の定数リストを YAML から動的生成する処理移行
+- YamlIndicatorUtils クラスとの連携によるカテゴリ別定数管理
+- 重複定義問題の YAML 中心化による根本解決
 
 **対応計画**:
 
-- YAMLベースの定数生成ロジックの実装優先順位設定
+- YAML ベースの定数生成ロジックの実装優先順位設定
 - 既存定数の移行テストによる互換性確保
-- constants.pyの役割変化（動的生成へ）の文書化
+- constants.py の役割変化（動的生成へ）の文書化
 - 移行フェーズでのランタイム設定テスト拡充
 
 #### 5. common_utils.py
@@ -776,14 +727,15 @@ YamlIndicatorUtilsを使用した定数動的生成
 **影響度**: 高
 **変更内容**:
 
-YAMLローディングユーティリティ定義
-- YAMLファイル読み込みユーティリティの標準化実装
+YAML ローディングユーティリティ定義
+
+- YAML ファイル読み込みユーティリティの標準化実装
 - 設定パース処理の共通化とエラー処理統一
 - 移行による他のモジュールへの波及影響の管理
 
 **対応計画**:
 
-- YAMLローディング関数の共通モジュール化
+- YAML ローディング関数の共通モジュール化
 - 例外処理の統一インターフェース設計
 - 他のコンポーネントへの依存関係影響評価
 - ローディング性能のテスト実施
@@ -797,8 +749,7 @@ YAMLローディングユーティリティ定義
 
 - 指標計算時の最小データ長定義を YAML 中心化
 - 複数の characteristically validation ルールの統合
-
-**対応計画**:
+  **対応計画**:
 
 - YAML 設定からの最小長定義読込み処理の実装
 - 既存 validation ルールの移行・統合
