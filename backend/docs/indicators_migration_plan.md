@@ -13,6 +13,7 @@
 4. [依存関係マップ](#依存関係マップ)
 5. [リスクと解決策](#リスク解決策)
 6. [テスト戦略](#テスト戦略)
+7. [影響を受けるコンポーネント分析](#影響を受けるコンポーネント分析)
 
 ---
 
@@ -105,7 +106,7 @@ YAMLセントラル設定 → 動的ローダー → 統合レジストリ
 
 ### YAML設定ファイル構造設計
 
-#### 1. 主設定ファイル: `config/indicators/indicators.yaml`
+#### 1. 主設定ファイル: `backend/app/config/indicators.yaml`
 
 ```yaml
 # indicators.yaml
@@ -217,7 +218,7 @@ class ConfigDrivenIndicatorRegistry(IndicatorConfigRegistry):
 ### 移行フェーズ全体計画
 
 ```
-Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase 3 (テスト) → Phase 4 (デプロイ)
+Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase 3 (テスト)
 ```
 
 ### Phase 1: YAMLプロトタイプ開発 (1-2週間)
@@ -225,10 +226,9 @@ Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase
 
 #### 作業項目:
 1. **YAML設定ファイル作成**
-   ```
-   mkdir -p backend/config/indicators
-   touch backend/config/indicators/indicators.yaml
-   ```
+    ```
+    touch backend/app/config/indicators.yaml
+    ```
 
 2. **YamlIndicatorLoaderクラスの実装**
    ```
@@ -267,6 +267,43 @@ Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase
    vim constants.py  # YAMLからカテゴリリスト生成
    ```
 
+4. **不要ファイル削除**
+   **削除対象ファイル:**
+   - `constants.py`: TREND_INDICATORSリストなどが重複しているため、YAML駆動型に移行後は削除 (823行)
+   - `indicator_definitions.py`: 手動設定がYAML読込みに移行されるため、全ファイル削除可能 (2,503行)
+   - `indicator_config.py`: 構造クラスが新規アーキテクチャで不要になるため削除
+
+   **削除理由と注意点:**
+   - `constants.py`: 重複定義のリストがYAML集中管理なしになるため、削除対象。注意: YAMLからの動的生成処理が安定稼働を確認後の削除のみ
+   - `indicator_definitions.py`: 全設定手動記述がYAML駆動に移行完了後に削除可能。注意: 削除前にバックアップ確実に作成
+   - `indicator_config.py`: 新アーキテクチャで構造クラスが冗長となるため削除。注意: 依存コンポーネントへの移行影響を確認後
+
+   **削除タイミング:**
+   - 全指標設定のYAML移行完了後、各ファイルの移行確認テスト通過後
+   - 順序: `constants.py` → `indicator_config.py` → `indicator_definitions.py`
+
+   **バックアップ戦略:**
+   ```
+   # バックアップ作成
+   cd backend/app/services/indicators
+   cp constants.py constants.py.backup.$(date +%Y%m%d)
+   cp indicator_definitions.py indicator_definitions.py.backup.$(date +%Y%m%d)
+   cp indicator_config.py indicator_config.py.backup.$(date +%Y%m%d)
+
+   # 削除実行
+   rm constants.py indicator_definitions.py indicator_config.py
+
+   # 復元（緊急時）
+   cp constants.py.backup.$(date +%Y%m%d) constants.py
+   cp indicator_definitions.py.backup.$(date +%Y%m%d) indicator_definitions.py
+   cp indicator_config.py.backup.$(date +%Y%m%d) indicator_config.py
+   ```
+
+   **削除検証:**
+   - 削除前: 全テスト実行確認
+   - 削除後: システム起動テスト・主要機能検証
+   - 復元テスト: バックアップからのリストア実行確認
+
 #### 検証方法:
 - 全指標設定読込み確認
 - 実行時Registry更新検証
@@ -279,52 +316,6 @@ Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase
 1. **回帰テスト実行**
 2. **負荷テスト実施**
 3. **メモリ使用量最適化**
-
-### Phase 4: 本番デプロイ (3-5日)
-**目的**: 安全な実運用移行
-
-#### デプロイ手順:
-```bash
-# 1. バックアップ作成
-cp -r backend backend.backup.$(date +%Y%m%d)
-
-# 2. 新ARM移行
-cd backend
-git checkout -b feature/indicators_yaml_migration
-git add .
-git commit -m "feat: YAML-driven indicators configuration"
-
-# 3. 移行スクリプト実行
-python scripts/migration_deploy.py
-
-# 4. 既存全テスト実行
-python -m pytest tests/ -v --tb=short
-
-# 5. 起動テスト
-python main.py --test-mode
-```
-
-### ロールバック戦略
-
-#### 即時ロールバック（緊急時）
-```bash
-# バックアップ復元
-cp -r backend.backup.$(date +%Y%m%d) backend
-
-# サービス再起動
-systemctl restart trading-backend
-```
-
-#### 段階的ロールバック（問題検知時）
-```bash
-# 新アーキテクチャ無効化フラグ
-export USE_YAML_INDICATORS=false
-
-# 徐次旧システム移行
-python scripts/rollback_migration.py
-```
-
----
 
 <a name="依存関係マップ"></a>
 ## 4. 依存関係マップ
@@ -362,6 +353,9 @@ IndicatorConfigRegistry
 | YamlIndicatorLoader | カテゴリ参照 | 簡素化・活用 | 設定更新 | 統合連携 |
 | 条件生成器 | カテゴリ活用 | 設定読取 | 構造利用 | - |
 | 戦略実行器 | - | 指標生成 | - | 設定活用 |
+| parameter_manager.py | PARAMETER_MAPPINGS重複統合 | - | YAML移行連携 | - |
+| data_validation.py | - | 指標最小長統合 | - | YAML統合連携 |
+| indicator_orchestrator.py | - | - | IndicatorConfig削除対応 | YAML駆動型移行連携 |
 
 ### 外部API依存
 
@@ -412,6 +406,13 @@ indicator_definitions.py
 - 互換性維持フラグ利用
 - 段階的移行方式
 
+#### 3. 追加ファイル変更リスク
+**影響**: 移行作業中に影響を受けるコンポーネントの変更により生じる予期せぬ動作不良や統合時の問題発生
+**解決策**:
+- 影響分析の事前実施と変更影響範囲の明確化
+- 単体テストの強化と統合テストの多重実施
+- ロールバック計画の準備とバックアップ体制の確保
+
 ### Low Risk項目 (発生確率: 低 / 影響: 小)
 
 #### 1. 人作業ミス (YAML記法誤り)
@@ -449,7 +450,7 @@ indicator_definitions.py
 # test_yaml_indicator_loader.py
 def test_yaml_parsing():
     """YAML設定読込みテスト"""
-    loader = YamlIndicatorLoader("config/indicators/indicators.yaml")
+    loader = YamlIndicatorLoader("backend/app/config/indicators.yaml")
     configs = loader.load_indicators()
     assert "SMA" in configs
     assert configs["SMA"].category == "trend"
@@ -457,7 +458,7 @@ def test_yaml_parsing():
 def test_indicator_registration():
     """指標登録テスト"""
     registry = ConfigDrivenIndicatorRegistry()
-    registry.load_from_yaml("config/indicators/indicators.yaml")
+    registry.load_from_yaml("backend/app/config/indicators.yaml")
     assert registry.list_indicators() is not None
 ```
 
@@ -565,7 +566,6 @@ def generate_test_indicator_configs(count=50):
 
 ### 設定準備
 ```bash
-mkdir -p backend/config/indicators
 mkdir -p backend/docs
 ```
 
@@ -573,19 +573,14 @@ mkdir -p backend/docs
 ```bash
 cd backend/app/services/indicators/config
 touch yaml_indicator_loader.py
+cd ../../../config
+touch indicators.yaml
 ```
 
 ### テスト実行
 ```bash
 python -m pytest tests/indicators/ -v
 python scripts/test_migration_compatibility.py
-```
-
-### デプロイ
-```bash
-cp -r backend backend.backup.$(date +%Y%m%d)
-python scripts/migration_deploy.py
-systemctl restart trading-backend
 ```
 
 ---
@@ -613,3 +608,56 @@ systemctl restart trading-backend
 **承認状況**: ☐ 要承認 ☐ 承認済
 **担当者**: [プロジェクトチーム]
 **次回レビュ**: [日付]
+
+---
+
+<a name="影響を受けるコンポーネント分析"></a>
+## 7. 影響を受けるコンポーネント分析
+
+### 移行対象ファイルの詳細分析
+
+#### 1. parameter_manager.py
+**影響度**: 高
+**変更内容**:
+
+PARAMETER_MAPPINGS重複統合 - YAML移行
+- 既存のPARAMETER_MAPPINGS辞書の重複定義をYAML中心化へ移行
+- YAML設定からの動的パラメータ読込み処理の実装
+
+**対応計画**:
+- YAML設定からPARAMETER_MAPPINGSを動的生成する処理の追加
+- 既存パラメータの保存性を確保した対応実装
+- 移行テスト実施による影響確認
+
+#### 2. data_validation.py
+**影響度**: 中
+**変更内容**:
+
+指標最小長定義 - YAML統合
+- 指標計算時の最小データ長定義をYAML中心化
+- 複数の characteristically validationルールの統合
+
+**対応計画**:
+- YAML設定からの最小長定義読込み処理の実装
+- 既存validationルールの移行・統合
+- 互換性維持のためのテスト強化
+
+#### 3. indicator_orchestrator.py
+**影響度**: 高
+**変更内容**:
+
+IndicatorConfig削除 - YAML駆動型移行
+- IndicatorConfigクラスの使用をYAML駆動型設定へ置き換え
+- 動的設定読み込みに基づく新たな処理フローの実装
+
+**対応計画**:
+- YAML設定からの動的設定読み込み処理の実装
+- IndicatorConfig依存コードのYAML駆動型置き換え
+- 段階的テストによる移行確認
+
+### 総合的対応計画
+- 影響度別優先順位付け: indicator_orchestrator.py > parameter_manager.py > data_validation.py
+- 各ファイルの変更影響をテストで事前検証
+- 移行段階でのバックアップ・ロールバック体制確保
+
+このように、3つのファイルの具体的な影響度と対応計画を明確に記載した。移行計画書の拡張を実現した。
