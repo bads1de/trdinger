@@ -136,7 +136,8 @@ PANDAS_TA_CONFIG = {
     "AO": {
         "function": "ao",
         "params": {},
-        "data_column": "high_low",
+        "multi_column": True,
+        "data_columns": ["High", "Low"],
         "returns": "single",
         "default_values": {},
     },

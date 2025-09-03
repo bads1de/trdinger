@@ -366,8 +366,10 @@ class GeneValidator:
         """指標遺伝子の妥当性を検証"""
         try:
             if not indicator_gene.type or not isinstance(indicator_gene.type, str):
+                logger.warning(f"指標タイプが無効: {indicator_gene.type}")
                 return False
             if not isinstance(indicator_gene.parameters, dict):
+                logger.warning(f"指標パラメータが無効: {indicator_gene.parameters}")
                 return False
 
             # タイポ修正
@@ -375,14 +377,19 @@ class GeneValidator:
                 indicator_gene.type = "UO"
                 logger.warning("指標タイプ 'UI' を 'UO' に修正しました")
 
+            # ログ: 指標タイプが有効リストに含まれているかを確認
+            logger.debug(f"指標タイプ {indicator_gene.type} が valid_indicator_types に含まれているか: {indicator_gene.type in self.valid_indicator_types}")
             if indicator_gene.type not in self.valid_indicator_types:
+                logger.warning(f"無効な指標タイプ: {indicator_gene.type}, 有効なタイプ: {self.valid_indicator_types[:10]}...")  # 先頭10個のみ表示
                 return False
 
             if "period" in indicator_gene.parameters:
                 period = indicator_gene.parameters["period"]
                 if not isinstance(period, (int, float)) or period <= 0:
+                    logger.warning(f"無効な期間パラメータ: {period}")
                     return False
 
+            logger.debug(f"指標タイプ {indicator_gene.type} は有効です")
             return True
         except Exception as e:
             logger.error(f"指標遺伝子バリデーションエラー: {e}")

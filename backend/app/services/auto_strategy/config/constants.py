@@ -148,6 +148,7 @@ TREND_INDICATORS = [
     "EMA",  # 指数移動平均線 (Exponential Moving Average)
     "WMA",  # 加重移動平均線 (Weighted Moving Average)
     "TRIMA",  # 三角移動平均線 (Triangular Moving Average)
+    "CWMA",  # 中央重み付き移動平均線 (Central Weighted Moving Average)
     "KAMA",  # カフマン適応移動平均線 (Kaufman's Adaptive Moving Average)
     "TEMA",  # 三重指数移動平均線 (Triple Exponential Moving Average)
     "DEMA",  # 二重指数移動平均線 (Double Exponential Moving Average)
@@ -158,20 +159,17 @@ TREND_INDICATORS = [
     "SWMA",  # 対称加重移動平均線 (Symmetric Weighted Moving Average)
     "ZLMA",  # ゼロラグ指数移動平均線 (Zero Lag Exponential Moving Average)
     "MA",  # 移動平均線 (Moving Average)
-    "MIDPOINT",  # 期間中間点 (MidPoint over period)
-    "MIDPRICE",  # 期間中間価格 (MidPrice over period)
     "SAR",  # パラボリックSAR (Parabolic SAR)
     "PRICE_EMA_RATIO",  # 価格-EMA比率 (Price to EMA Ratio)
     "SMA_SLOPE",  # SMA勾配 (SMA Slope)
     "VWMA",  # 出来高加重移動平均線 (Volume Weighted Moving Average)
     "FWMA",  # フィボナッチ加重移動平均線 (Fibonacci's Weighted Moving Average)
     "HILO",  # ギャン高郭安アクティベーター (Gann High-Low Activator)
-    "HL2",  # 高安平均 (High-Low Average)
-    "HLC3",  # 高安終値平均 (High-Low-Close Average)
+    # 数学系指標は削除済み (HL2, HLC3, OHLC4, MIDPOINT, MIDPRICE)
     "HWMA",  # ホルト-ウィンターモデル移動平均線 (Holt-Winter Moving Average)
     "JMA",  # ジュリック移動平均線 (Jurik Moving Average)
     "MCGD",  # マクギリー動的指数 (McGinley Dynamic)
-    "OHLC4",  # 四本値平均 (Open-High-Low-Close Average)
+    # OHLC4は削除済み
     "PWMA",  # パスカル加重移動平均線 (Pascal's Weighted Moving Average)
     "SINWMA",  # 正弦加重移動平均線 (Sine Weighted Moving Average)
     "SSF",  # エーラー・スーパー・スムーサー (Ehler's Super Smoother Filter)
@@ -195,11 +193,12 @@ VOLATILITY_INDICATORS = [
     "ACCBANDS",  # アクセレレーションバンド (Acceleration Bands)
     "HWC",  # ハル・ウィリアムズ・チャネル (Hull-Wilder Channels)
     "PDIST",  # プライス・ディスタンス (Price Distance)
+    # RANGEは削除済み
     "BBANDS",  # ボリンジャーバンド（BBの別名）
     "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
 ]
 
-# 統計系指標（削除済み）
+# 統計系指標（削除済み - 数学指標はあまり有用でないため）
 STATISTICS_INDICATORS = []
 
 # 複合指標
@@ -214,6 +213,7 @@ VALID_INDICATOR_TYPES = (
     + MOMENTUM_INDICATORS
     + TREND_INDICATORS
     + VOLATILITY_INDICATORS
+    + STATISTICS_INDICATORS
     + COMPOSITE_INDICATORS
 )
 
@@ -259,6 +259,7 @@ CURATED_TECHNICAL_INDICATORS = {
     "EMA",
     "WMA",
     "TRIMA",
+    "CWMA",
     "KAMA",
     "TEMA",
     "DEMA",
@@ -335,6 +336,7 @@ MA_INDICATORS_NEEDING_PERIOD = {
     "HMA",
     "RMA",
     "SWMA",
+    "CWMA",
     "ZLMA",
     "VWMA",
     "FWMA",
@@ -501,6 +503,7 @@ BASIC_MA_INDICATORS: List[str] = [
     "EMA",
     "WMA",
     "TRIMA",
+    "CWMA",
     "KAMA",
     "T3",
     "ALMA",

@@ -15,11 +15,6 @@
 - SAREXT (Extended Parabolic SAR)
 - MA (Moving Average with Type)
 - MAVP (Moving Average Variable Period)
-- MIDPOINT (MidPoint over period)
-- MIDPRICE (MidPrice over period)
-- MIN - Minimum Value
-- MAX - Maximum Value
-- RANGE - Range (High - Low)
 - HMA (Hull Moving Average)
 - ZLMA (Zero Lag Moving Average)
 - VWMA (Volume Weighted Moving Average)
@@ -31,12 +26,9 @@
 - PRICE_EMA_RATIO (Price to EMA Ratio)
 - FWMA (Fibonacci's Weighted Moving Average)
 - HILO (Gann High-Low Activator)
-- HL2 (High-Low Average)
-- HLC3 (High-Low-Close Average)
 - HWMA (Holt-Winter Moving Average)
 - JMA (Jurik Moving Average)
 - MCGD (McGinley Dynamic)
-- OHLC4 (Open-High-Low-Close Average)
 - PWMA (Pascal's Weighted Moving Average)
 - SINWMA (Sine Weighted Moving Average)
 - SSF (Ehler's Super Smoother Filter)
@@ -604,64 +596,8 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def midpoint(
-        data: pd.Series,
-        length: int = 14,
-    ) -> pd.Series:
-        """期間内の中点"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-
-        return ta.midpoint(data, window=length)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def midprice(
-        high: pd.Series,
-        low: pd.Series,
-        length: int = 14,
-    ) -> pd.Series:
-        """期間内の中値価格"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-
-        # データ長チェック
-        if len(high) == 0 or len(low) == 0:
-            raise ValueError("high and low series must not be empty")
-
-        if len(high) != len(low):
-            raise ValueError("high and low must have the same length")
-
-        # all NaNチェック - 早期回避
-        if high.isna().all() and low.isna().all():
-            return pd.Series(np.full(len(high), np.nan), index=high.index, dtype=float)
-
-        try:
-            result = ta.midprice(high=high, low=low, window=length)
-            if result is not None:
-                return result
-        except Exception:
-            pass
-
-        # フォールバック計算: マニュアルSMA of (high + low)/2
-        try:
-            midpoint = (high + low) / 2.0
-            if length == 1:
-                return midpoint
-            result = midpoint.rolling(window=length).mean()
-            return result
-        except Exception as e:
-            print(f"MIDPRICE fallback calculation failed: {e}")
-            # 最終フォールバック: all NaN
-            return pd.Series(np.full(len(high), np.nan), index=high.index, dtype=float)
+    def tipo_price_modes_variant(data: pd.Series) -> pd.Series:
+        return data
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -970,7 +906,6 @@ class TrendIndicators:
             senkou + kijun + max(tenkan, 5)
         )  # Ensure adequate data for all calculations
 
-
         if len(high) < required_length:
             # Return NaN series with proper index alignment
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
@@ -1020,8 +955,8 @@ class TrendIndicators:
                             lag = lag.fillna(method="ffill").fillna(lag.mean())
 
                             return (conv, base, span_a, span_b, lag)
-        except Exception as e:
-            # pandas-ta failed, fallback to manual implementation
+        except Exception:
+            pass
 
         # フォールバック: Enhanced manual implementation with better error handling
         data_length = len(high)
@@ -1186,23 +1121,6 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def hl2(high: pd.Series, low: pd.Series, period: int = 14) -> pd.Series:
-        """High-Low Average"""
-        return (high + low) / 2
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def hlc3(
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        period: int = 14,
-    ) -> pd.Series:
-        """High-Low-Close Average"""
-        return (high + low + close) / 3
-
-    @staticmethod
-    @handle_pandas_ta_errors
     def hwma(data: pd.Series, period: int = 10) -> pd.Series:
         """Holt-Winter Moving Average with enhanced fallback"""
         if not isinstance(data, pd.Series):
@@ -1287,26 +1205,6 @@ class TrendIndicators:
             ) / (k * period * (ratio**4))
 
         return pd.Series(mcgd_values, index=data.index)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def ohlc4(
-        open_: pd.Series,
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        period: int = 14,
-    ) -> pd.Series:
-        """Open-High-Low-Close Average"""
-        # ta.ohlc4 does not have length parameter, use standard calculation
-        try:
-            result = ta.ohlc4(high, low, open_, close)
-            if result is not None:
-                return result
-        except Exception:
-            pass
-        # Fallback to standard calculation
-        return (open_ + high + low + close) / 4
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1434,23 +1332,23 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def linreg_slope(data: pd.Series, length: int = 14) -> pd.Series:
+    def linreg_slope(data: pd.Series, period: int = 14) -> pd.Series:
         """Linear Regression Slope"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError("length must be positive")
+        if period <= 0:
+            raise ValueError("period must be positive")
 
-        result = ta.linreg(data, window=length, slope=True)
+        result = ta.linreg(data, window=period, slope=True)
         if result is None or result.isna().all():
             # フォールバック実装
-            if len(data) < length:
+            if len(data) < period:
                 return pd.Series(np.full(len(data), np.nan), index=data.index)
 
             slope_values = np.full(len(data), np.nan)
-            for i in range(length - 1, len(data)):
-                window = data.iloc[i - length + 1 : i + 1].values
-                x = np.arange(length)
+            for i in range(period - 1, len(data)):
+                window = data.iloc[i - period + 1 : i + 1].values
+                x = np.arange(period)
                 if np.allclose(np.var(x), 0, atol=1e-10):
                     slope_values[i] = 0.0  # No slope for constant x
                 else:
@@ -1598,80 +1496,46 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def min(data: pd.Series, period: int = 14) -> pd.Series:
-        """Minimum Value Rolling Moving Average"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if period <= 0:
-            raise ValueError("period must be positive")
-
-        # First try pandas-ta min function
-        try:
-            if hasattr(ta, "min"):
-                result = ta.min(data, window=period)
-                if result is not None and not result.isna().all():
-                    return result
-        except Exception:
-            pass
-
-        # Fallback to rolling min
-        if len(data) < period:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-
-        result = data.rolling(window=period).min()
-        return result
+    def sma_slope(data: pd.Series, length: int = 20) -> pd.Series:
+        """SMAの傾き（前期間との差分）"""
+        sma_vals = TrendIndicators.sma(data, length)
+        return sma_vals.diff()
 
     @staticmethod
     @handle_pandas_ta_errors
-    def max(data: pd.Series, period: int = 14) -> pd.Series:
-        """Maximum Value Rolling Moving Average"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if period <= 0:
-            raise ValueError("period must be positive")
-
-        # First try pandas-ta max function
-        try:
-            if hasattr(ta, "max"):
-                result = ta.max(data, window=period)
-                if result is not None and not result.isna().all():
-                    return result
-        except Exception:
-            pass
-
-        # Fallback to rolling max
-        if len(data) < period:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-
-        result = data.rolling(window=period).max()
-        return result
+    def price_ema_ratio(data: pd.Series, length: int = 20) -> pd.Series:
+        """価格とEMAの比率 - 1"""
+        ema_vals = TrendIndicators.ema(data, length)
+        ema_series = pd.Series(ema_vals, index=data.index)
+        return (data / ema_series) - 1.0
 
     @staticmethod
     @handle_pandas_ta_errors
-    def range_func(data: pd.Series, period: int = 14) -> pd.Series:
-        """Range (High - Low) within rolling period"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if period <= 0:
-            raise ValueError("period must be positive")
+    def maxindex(data: pd.Series, length: int = 14) -> pd.Series:
+        """最大値のインデックス"""
+        return data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
 
-        # First try pandas-ta range function
-        try:
-            if hasattr(ta, "range"):
-                result = ta.range(data, window=period)
-                if result is not None and not result.isna().all():
-                    return result
-        except Exception:
-            pass
+    @staticmethod
+    @handle_pandas_ta_errors
+    def minindex(data: pd.Series, length: int = 14) -> pd.Series:
+        """最小値のインデックス"""
+        return data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
 
-        # Fallback to rolling range
-        if len(data) < period:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+    @staticmethod
+    @handle_pandas_ta_errors
+    def minmax(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
+        """最小値と最大値"""
+        min_vals = data.rolling(window=length).min()
+        max_vals = data.rolling(window=length).max()
+        return min_vals, max_vals
 
-        max_vals = data.rolling(window=period).max()
-        min_vals = data.rolling(window=period).min()
-        result = max_vals - min_vals
-        return result
+    @staticmethod
+    @handle_pandas_ta_errors
+    def minmaxindex(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
+        """最小値と最大値のインデックス"""
+        min_idx = data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
+        max_idx = data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
+        return min_idx, max_idx
 
     # Aliases for compatibility
     ichimoku = ichimoku_cloud

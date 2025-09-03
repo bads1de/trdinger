@@ -1150,7 +1150,7 @@ def setup_trend_indicators():
             description="線形回帰計算期間",
         )
     )
-    linreg_config.param_map = {"close": "data", "timeperiod": "length", "length": "length", "period": "length"}
+    linreg_config.param_map = {"close": "data", "timeperiod": "period", "length": "period", "period": "period"}
     indicator_registry.register(linreg_config)
     
     # LINREG_SLOPE (Linear Regression Slope)
@@ -1172,7 +1172,7 @@ def setup_trend_indicators():
             description="線形回帰傾き計算期間",
         )
     )
-    linreg_slope_config.param_map = {"close": "data", "length": "length", "timeperiod": "length"}
+    linreg_slope_config.param_map = {"close": "data", "length": "period", "timeperiod": "period", "period": "period"}
     indicator_registry.register(linreg_slope_config)
     
     # LINREG_INTERCEPT (Linear Regression Intercept)
@@ -1193,7 +1193,7 @@ def setup_trend_indicators():
             description="線形回帰切片計算期間",
         )
     )
-    linreg_intercept_config.param_map = {"close": "data", "length": "length"}
+    linreg_intercept_config.param_map = {"close": "data", "length": "period", "period": "period"}
     indicator_registry.register(linreg_intercept_config)
     
     # LINREG_ANGLE (Linear Regression Angle)
@@ -1224,115 +1224,16 @@ def setup_trend_indicators():
             description="度数法で角度を出力するか",
         )
     )
-    linreg_angle_config.param_map = {"close": "data", "length": "length", "degrees": "degrees", "timeperiod": "length"}
+    linreg_angle_config.param_map = {"close": "data", "length": "period", "degrees": "degrees", "timeperiod": "period", "period": "period"}
     indicator_registry.register(linreg_angle_config)
 
     # MIDPOINT
-    midpoint_config = IndicatorConfig(
-        indicator_name="MIDPOINT",
-        adapter_function=TrendIndicators.midpoint,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="trend",
-    )
-    midpoint_config.add_parameter(
-        ParameterConfig(
-            name="period",
-            default_value=14,
-            min_value=2,
-            max_value=100,
-            description="中点期間",
-        )
-    )
-    midpoint_config.param_map = {"period": "period"}
-    indicator_registry.register(midpoint_config)
+    # MIDPOINT config deleted
 
     # MIDPRICE
-    midprice_config = IndicatorConfig(
-        indicator_name="MIDPRICE",
-        adapter_function=TrendIndicators.midprice,
-        required_data=["high", "low"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="trend",
-    )
-    midprice_config.add_parameter(
-        ParameterConfig(
-            name="period",
-            default_value=14,
-            min_value=2,
-            max_value=100,
-            description="中値価格期間",
-        )
-    )
-    # MIN - Minimum Value Rolling Moving Average
-    midprice_config.param_map = {"high": "high", "low": "low", "period": "length"}
-    indicator_registry.register(midprice_config)
+    # MIDPRICE config deleted
 
-    min_config = IndicatorConfig(
-        indicator_name="MIN",
-        adapter_function=TrendIndicators.min,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="statistics",
-    )
-    min_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=14,
-            min_value=2,
-            max_value=200,
-            description="計算期間",
-        )
-    )
-    min_config.param_map = {"close": "data", "length": "length"}
-    indicator_registry.register(min_config)
 
-    # MAX - Maximum Value Rolling Moving Average
-    max_config = IndicatorConfig(
-        indicator_name="MAX",
-        adapter_function=TrendIndicators.max,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="statistics",
-    )
-    max_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=14,
-            min_value=2,
-            max_value=200,
-            description="計算期間",
-        )
-    )
-    max_config.param_map = {"close": "data", "length": "length"}
-    indicator_registry.register(max_config)
-
-    # RANGE - Range (High - Low) within rolling period
-    range_config = IndicatorConfig(
-        indicator_name="RANGE",
-        adapter_function=TrendIndicators.range_func,
-        required_data=["close"],
-        result_type=IndicatorResultType.SINGLE,
-        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-        category="volatility",
-    )
-    range_config.add_parameter(
-        ParameterConfig(
-            name="length",
-            default_value=14,
-            min_value=2,
-            max_value=200,
-            description="レンジ計算期間",
-        )
-    )
-    range_config.param_map = {"close": "data", "length": "length"}
-    indicator_registry.register(range_config)
-    midprice_config.param_map = {"high": "high", "low": "low", "period": "length"}
-    indicator_registry.register(midprice_config)
 
 
 def setup_volatility_indicators():
@@ -2348,27 +2249,9 @@ hilo_config.param_map = {
 indicator_registry.register(hilo_config)
 
 # HL2 (High-Low Average)
-hl2_config = IndicatorConfig(
-    indicator_name="HL2",
-    adapter_function=TrendIndicators.hl2,
-    required_data=["high", "low"],
-    result_type=IndicatorResultType.SINGLE,
-    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-    category="trend",
-)
-indicator_registry.register(hl2_config)
-
+# HL2 config deleted
 # HLC3 (High-Low-Close Average)
-hlc3_config = IndicatorConfig(
-    indicator_name="HLC3",
-    adapter_function=TrendIndicators.hlc3,
-    required_data=["high", "low", "close"],
-    result_type=IndicatorResultType.SINGLE,
-    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-    category="trend",
-)
-indicator_registry.register(hlc3_config)
-
+# HLC3 config deleted
 # HWMA (Holt-Winter Moving Average)
 hwma_config = IndicatorConfig(
     indicator_name="HWMA",
@@ -2426,21 +2309,7 @@ mcgd_config.param_map = {"close": "data", "length": "length"}
 indicator_registry.register(mcgd_config)
 
 # OHLC4 (Open-High-Low-Close Average)
-ohlc4_config = IndicatorConfig(
-    indicator_name="OHLC4",
-    adapter_function=TrendIndicators.ohlc4,
-    required_data=["open", "high", "low", "close"],
-    result_type=IndicatorResultType.SINGLE,
-    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-    category="trend",
-)
-ohlc4_config.param_map = {
-    "open": "open_",
-    "high": "high",
-    "low": "low",
-    "close": "close",
-}
-indicator_registry.register(ohlc4_config)
+# OHLC4 config deleted
 
 # PWMA (Pascal's Weighted Moving Average)
 pwma_config = IndicatorConfig(

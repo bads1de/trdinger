@@ -111,28 +111,28 @@ class VolumeIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def nvi(
-             close: pd.Series, volume: pd.Series, period: int = 13, initial: int = 1000
-         ) -> pd.Series:
-         """Negative Volume Index"""
-         if not isinstance(close, pd.Series):
-             raise TypeError("close must be pandas Series")
-         if not isinstance(volume, pd.Series):
-             raise TypeError("volume must be pandas Series")
-         df = ta.nvi(close=close, volume=volume, length=period, initial=initial)
-         return df if df is not None else pd.Series([], dtype=float)
+        close: pd.Series, volume: pd.Series, period: int = 13, initial: int = 1000
+    ) -> pd.Series:
+        """Negative Volume Index"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+        df = ta.nvi(close=close, volume=volume, length=period, initial=initial)
+        return df if df is not None else pd.Series([], dtype=float)
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvi(
-             close: pd.Series, volume: pd.Series, period: int = 13, initial: int = 1000
-         ) -> pd.Series:
-         """Positive Volume Index"""
-         if not isinstance(close, pd.Series):
-             raise TypeError("close must be pandas Series")
-         if not isinstance(volume, pd.Series):
-             raise TypeError("volume must be pandas Series")
-         df = ta.pvi(close=close, volume=volume, length=period, initial=initial)
-         return df if df is not None else pd.Series([], dtype=float)
+        close: pd.Series, volume: pd.Series, period: int = 13, initial: int = 1000
+    ) -> pd.Series:
+        """Positive Volume Index"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+        df = ta.pvi(close=close, volume=volume, length=period, initial=initial)
+        return df if df is not None else pd.Series([], dtype=float)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -159,7 +159,12 @@ class VolumeIndicators:
             # pandas-taのVWAPを試行（時系列インデックスがある場合）
             if hasattr(high.index, "to_period"):
                 df = ta.vwap(
-                    high=high, low=low, close=close, volume=volume, length=period, anchor=anchor
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume,
+                    length=period,
+                    anchor=anchor,
                 )
                 return df if df is not None else pd.Series([], dtype=float)
         except Exception:
@@ -211,7 +216,6 @@ class VolumeIndicators:
             drift=drift,
         )
         return df if df is not None else pd.Series([], dtype=float)
-
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -319,7 +323,12 @@ class VolumeIndicators:
                 mamode=mamode,
                 length=period,
             )
-            if df is not None and isinstance(df, pd.DataFrame) and not df.empty and not df.isna().all().all():
+            if (
+                df is not None
+                and isinstance(df, pd.DataFrame)
+                and not df.empty
+                and not df.isna().all().all()
+            ):
                 # DataFrameの各列をシリーズとして返す
                 return tuple(df.iloc[:, i] for i in range(df.shape[1]))
         except Exception:
@@ -331,12 +340,24 @@ class VolumeIndicators:
             try:
                 obv = ta.obv(close=close, volume=volume, length=len(close))
                 if obv is None or obv.empty:
-                    obv = pd.Series([0], index=close.index)[:-1] + (close - close.shift(1)).apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0)) * volume
+                    obv = (
+                        pd.Series([0], index=close.index)[:-1]
+                        + (close - close.shift(1)).apply(
+                            lambda x: 1 if x > 0 else (-1 if x < 0 else 0)
+                        )
+                        * volume
+                    )
                     obv = obv.cumsum()
             except Exception as e:
                 # Fallback OBV calculation
-                obv_changes = np.where(close.diff() > 0, 1, np.where(close.diff() < 0, -1, 0))
-                obv = (pd.Series(obv_changes, index=close.index) * volume).fillna(0).cumsum()
+                obv_changes = np.where(
+                    close.diff() > 0, 1, np.where(close.diff() < 0, -1, 0)
+                )
+                obv = (
+                    (pd.Series(obv_changes, index=close.index) * volume)
+                    .fillna(0)
+                    .cumsum()
+                )
 
             # Calculate moving averages
             if mamode.lower() == "ema":
@@ -345,7 +366,7 @@ class VolumeIndicators:
             else:
                 fast_ma = ta.sma(obv, length=fast)
                 slow_ma = ta.sma(obv, length=slow)
-            
+
             # Archer AOBV typically uses the difference or cross of fast and slow
             # Return (fast_ma, slow_ma, fast_ma - slow_ma) and fill with NaN/empty for others
             if len(close) < period or fast_ma is None or slow_ma is None:
@@ -355,12 +376,14 @@ class VolumeIndicators:
             diff = fast_ma - slow_ma
 
             # Return tuple with calculated values, fill rest with 0 to avoid NaN issues in test
-            series1 = fast_ma.fillna(method='bfill').fillna(0)  # AOBV Fast
-            series2 = slow_ma.fillna(method='bfill').fillna(0)  # AOBV Slow
-            series3 = diff.fillna(method='bfill').fillna(0)     # AOBV Signal
-            series4 = obv.fillna(method='bfill').fillna(0)     # Original OBV
+            series1 = fast_ma.fillna(method="bfill").fillna(0)  # AOBV Fast
+            series2 = slow_ma.fillna(method="bfill").fillna(0)  # AOBV Slow
+            series3 = diff.fillna(method="bfill").fillna(0)  # AOBV Signal
+            series4 = obv.fillna(method="bfill").fillna(0)  # Original OBV
 
-            empty = pd.Series(np.full(len(close), 0.0), index=close.index)  # Use 0.0 instead of np.nan
+            empty = pd.Series(
+                np.full(len(close), 0.0), index=close.index
+            )  # Use 0.0 instead of np.nan
             return series1, series2, series3, series4, empty, empty, empty
 
         except Exception:
@@ -464,7 +487,9 @@ class VolumeIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def pvr(close: pd.Series, volume: pd.Series, period: int = 10, length: int | None = None) -> pd.Series:
+    def pvr(
+        close: pd.Series, volume: pd.Series, period: int = 10, length: int | None = None
+    ) -> pd.Series:
         """Price Volume Rank"""
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
@@ -548,7 +573,7 @@ class VolumeIndicators:
                         empty,  # neg vol
                         empty,  # total vol
                     )
-                except Exception as e:
+                except Exception:
                     empty = pd.Series([], dtype=float)
                     return empty, empty, empty, empty, empty, empty
 
@@ -562,7 +587,7 @@ class VolumeIndicators:
                     ),
                 )
                 price_bins = pd.cut(close, bins=n_bins, labels=False)
-            except Exception as e:
+            except Exception:
                 n_bins = min(width, 10)  # Fallback to 10 bins
                 price_bins = pd.qcut(
                     close.rank(method="first"),
@@ -602,7 +627,7 @@ class VolumeIndicators:
                             volume.iloc[i] if not pd.isna(volume.iloc[i]) else 0.0
                         )
                     prev_close = close.iloc[i]
-                except Exception as e:
+                except Exception:
                     continue
 
             # Create output series with error handling
@@ -659,11 +684,11 @@ class VolumeIndicators:
                     neg_vol_series,  # negative volume
                     total_vol_series,  # total volume
                 )
-            except Exception as e:
+            except Exception:
                 empty = pd.Series([], dtype=float)
                 return empty, empty, empty, empty, empty, empty
 
-        except Exception as e:
+        except Exception:
             empty = pd.Series([], dtype=float)
             return empty, empty, empty, empty, empty, empty
 

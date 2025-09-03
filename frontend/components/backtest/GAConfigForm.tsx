@@ -44,8 +44,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       strategy_name: "GA_STRATEGY",
       symbol: "BTC/USDT:USDT",
       timeframe: "1h",
-      start_date: "2020-01-01",
-      end_date: "2020-12-31",
+      start_date: "2025-06-03",
+      end_date: "2025-09-03",
       initial_capital: 100000,
       commission_rate: 0.00055,
       strategy_config: {

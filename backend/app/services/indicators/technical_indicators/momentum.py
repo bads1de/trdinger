@@ -378,46 +378,71 @@ class MomentumIndicators:
         return result
 
     @staticmethod
-    def ao(high: pd.Series, low: pd.Series) -> pd.Series:
+    def ao(high: pd.Series, low: pd.Series, **kwargs) -> pd.Series:
         """Awesome Oscillator with enhanced fallback"""
+        logger.debug(f"AO calculation start. Data length: high={len(high)}, low={len(low)}")
+
         if not isinstance(high, pd.Series):
             raise TypeError("high must be pandas Series")
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
 
+        # データ長チェック
+        if len(high) < 50 or len(low) < 50:
+            logger.warning(f"Data length insufficient for AO calculation: len(high)={len(high)}, len(low)={len(low)} < 50")
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        # 入力データ前処理: null値の処理
+        high_null_count = high.isna().sum() if hasattr(high, 'isna') else 0
+        low_null_count = low.isna().sum() if hasattr(low, 'isna') else 0
+        logger.debug(f"Input data null check: high_null={high_null_count}, low_null={low_null_count}")
+
+        # null値がある場合は前処理を適用
+        if high_null_count > 0 or low_null_count > 0:
+            high = high.ffill().bfill().fillna(0)
+            low = low.ffill().bfill().fillna(0)
+            logger.debug("Applied null value preprocessing to high and low data")
+
         try:
+            logger.debug("Attempting pandas-ta ao calculation")
             result = ta.ao(high=high, low=low)
+            logger.debug(f"pammdas-ta result: type={type(result)}, is_None={result is None}")
+            if result is not None and hasattr(result, 'empty'):
+                logger.debug(f"pammdas-ta result empty check: {not result.empty}, all_na check: {not result.isna().all()}")
             if result is not None and not result.empty and not result.isna().all():
+                logger.debug("Returning pandas-ta result successfully")
                 return result
-        except Exception:
-            pass
+            else:
+                logger.warning("pandas-ta ao returned invalid result, attempting fallback")
+        except Exception as e:
+            logger.warning(f"pandas-ta ao failed with exception: {str(e)}")
 
         # 強化フォールバック実装
         try:
+            logger.debug("Starting fallback calculation")
             # 価格の中央値を使用
             median_price = (high + low) / 2.0
+            logger.debug(f"Median price calculation: length={len(median_price)}, null_count={median_price.isna().sum() if hasattr(median_price, 'isna') else 0}")
 
-            # 複数期間のSMAを計算
-            sma5 = ta.sma(median_price, length=5)
-            sma34 = ta.sma(median_price, length=34)
-
-            if sma5 is not None and sma34 is not None:
-                ao_result = sma5 - sma34
-                # NaN値の補間処理
-                if ao_result.isna().sum() > 0:
-                    ao_result = ao_result.fillna(method='bfill').fillna(method='ffill').fillna(0)
-                return ao_result
+            # シンプルなrolling meanを優先使用
+            logger.debug("Using enhanced rolling mean fallback")
+            if len(median_price) >= 50:  # 最低限のデータ長確認（50に変更）
+                logger.debug("Using enhanced rolling mean fallback")
+                sma5_fallback = median_price.rolling(window=5).mean()
+                sma34_fallback = median_price.rolling(window=34).mean()
+                ao_fallback = sma5_fallback - sma34_fallback
+                if ao_fallback.isna().sum() > 0:
+                    ao_fallback = ao_fallback.fillna(method='bfill').fillna(method='ffill').fillna(0)
+                logger.debug(f"Enhanced fallback result: null_count={ao_fallback.isna().sum() if hasattr(ao_fallback, 'isna') else 0}")
+                return ao_fallback
             else:
-                # より簡易的なフォールバック
-                if len(median_price) >= 8:  # 最低限のデータ長確認
-                    sma5_fallback = median_price.rolling(window=5).mean()
-                    sma34_fallback = median_price.rolling(window=34).mean()
-                    ao_fallback = sma5_fallback - sma34_fallback
-                    return ao_fallback.fillna(0)
+                logger.warning(f"Data length insufficient for enhanced fallback: {len(median_price)} < 50")
+
         except Exception as e:
-            pass
+            logger.error(f"Enhanced fallback calculation failed with exception: {str(e)}")
 
         # 最終フォールバック: NaN配列
+        logger.warning("All AO calculation methods failed, returning NaN series")
         return pd.Series(np.full(len(high), np.nan), index=high.index)
 
     # 後方互換性のためのエイリアス

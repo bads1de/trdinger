@@ -412,6 +412,14 @@ indicators:
       long: "close > {left_operand}"
       short: "close < {left_operand}"
 
+  CWMA:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
   MIDPOINT:
     type: trend
     scale_type: price_absolute
