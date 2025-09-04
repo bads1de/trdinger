@@ -7,11 +7,11 @@
 """
 
 import logging
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Tuple, List
 import numpy as np
 import pandas as pd
 
-from .config.pandas_ta_config import PANDAS_TA_CONFIG
+from .config.indicator_definitions import PANDAS_TA_CONFIG
 
 logger = logging.getLogger(__name__)
 

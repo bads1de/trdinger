@@ -103,7 +103,7 @@ class IndicatorConfig:
 
     def __post_init__(self):
         """後処理でパラメータを構築"""
-        from .pandas_ta_config import PANDAS_TA_CONFIG
+        from .indicator_definitions import PANDAS_TA_CONFIG
 
         self.parameters = self._build_parameters_from_config(PANDAS_TA_CONFIG)
 
@@ -145,7 +145,7 @@ class IndicatorConfig:
 
     def get_parameter_ranges(self) -> Dict[str, Dict[str, Any]]:
         """パラメータ範囲を取得"""
-        from app.services.indicators.indicator_orchestrator import PANDAS_TA_CONFIG
+        from .indicator_definitions import PANDAS_TA_CONFIG
 
         ranges = {}
         if self.indicator_name in PANDAS_TA_CONFIG:
@@ -165,7 +165,7 @@ class IndicatorConfig:
 
     def normalize_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """パラメータ正規化"""
-        from app.services.indicators.config.pandas_ta_config import PANDAS_TA_CONFIG
+        from .indicator_definitions import PANDAS_TA_CONFIG
 
         normalized = params.copy()
 

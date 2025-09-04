@@ -11,13 +11,15 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from .config import IndicatorConfig, indicator_registry
+from .config import IndicatorConfig, indicator_registry, IndicatorResultType
 from .technical_indicators.trend import TrendIndicators
 from .data_validation import validate_data_length_with_fallback, create_nan_result
+from .config.indicator_definitions import PANDAS_TA_CONFIG, POSITIONAL_DATA_FUNCTIONS
+
+
+
 
 logger = logging.getLogger(__name__)
-
-from .config.pandas_ta_config import PANDAS_TA_CONFIG, POSITIONAL_DATA_FUNCTIONS
 
 
 class TechnicalIndicatorService:
@@ -136,7 +138,9 @@ class TechnicalIndicatorService:
             return None  # フォールバック
 
         # データ長検証（強化版を使用）
-        is_valid, required_length = self.validate_data_length_with_fallback(df, indicator_type, params)
+        is_valid, required_length = self.validate_data_length_with_fallback(
+            df, indicator_type, params
+        )
         if not is_valid:
             logger.info(f"{indicator_type}: データ長不足のためNaNフィルタを適用")
             # data_validation.pyのcreate_nan_resultを使用
@@ -172,7 +176,9 @@ class TechnicalIndicatorService:
             # Fallback indicators that skip pandas-ta and use manual implementations
             fallback_indicators = {"PPO", "STOCHF", "EMA", "TEMA", "ALMA", "FWMA"}
             if indicator_type in fallback_indicators:
-                return self._calculate_fallback_indicator(df, indicator_type, normalized_params)
+                return self._calculate_fallback_indicator(
+                    df, indicator_type, normalized_params
+                )
 
             # pandas-ta関数取得と実行
             if not hasattr(ta, config["function"]):
@@ -203,7 +209,9 @@ class TechnicalIndicatorService:
                 for req_col in required_columns:
                     actual_col = self._resolve_column_name(df, req_col)
                     if not actual_col:
-                        logger.warning(f"{indicator_type}: 必要なカラム '{req_col}' が存在しません")
+                        logger.warning(
+                            f"{indicator_type}: 必要なカラム '{req_col}' が存在しません"
+                        )
                         return None
                     resolved_columns[req_col] = actual_col
 
@@ -238,7 +246,9 @@ class TechnicalIndicatorService:
                 # 単一カラムを使用する指標の処理
                 column_name = self._resolve_column_name(df, config["data_column"])
                 if not column_name:
-                    logger.warning(f"{indicator_type}: 必要なカラム '{config['data_column']}' が存在しません")
+                    logger.warning(
+                        f"{indicator_type}: 必要なカラム '{config['data_column']}' が存在しません"
+                    )
                     return None
                 data_series = df[column_name]
                 result = func(data_series, **normalized_params)
@@ -248,12 +258,12 @@ class TechnicalIndicatorService:
                 if result.isna().sum() > len(result) * 0.7:  # 70%以上NaNの場合
                     logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
                     return None
-                result = result.fillna(method='bfill').fillna(0)  # バックフィル、後方0
+                result = result.fillna(method="bfill").fillna(0)  # バックフィル、後方0
             elif isinstance(result, pd.DataFrame):
                 if result.isna().sum().sum() > result.size * 0.7:
                     logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
                     return None
-                result = result.fillna(method='bfill').fillna(0)
+                result = result.fillna(method="bfill").fillna(0)
 
             # 戻り値処理
             if config["returns"] == "single":
@@ -275,14 +285,18 @@ class TechnicalIndicatorService:
                 )
 
                 # 設定ベースの出力名を追加
-                if hasattr(self, 'registry') and self.registry:
+                if hasattr(self, "registry") and self.registry:
                     config_obj = self._get_indicator_config(indicator_type)
-                    if (hasattr(config_obj, 'output_names') and
-                        config_obj.output_names and
-                        len(config_obj.output_names) == len(multiple_results)):
+                    if (
+                        hasattr(config_obj, "output_names")
+                        and config_obj.output_names
+                        and len(config_obj.output_names) == len(multiple_results)
+                    ):
 
                         # 出力に名前を付ける（デバッグ用途）
-                        logger.debug(f"{indicator_type} outputs: {config_obj.output_names}")
+                        logger.debug(
+                            f"{indicator_type} outputs: {config_obj.output_names}"
+                        )
                         return multiple_results
 
                 return multiple_results
@@ -291,7 +305,9 @@ class TechnicalIndicatorService:
             logger.warning(f"pandas-ta計算失敗 {indicator_type}: {e}")
             return None  # フォールバックさせる
 
-    def _calculate_fallback_indicator(self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]) -> Union[np.ndarray, tuple, None]:
+    def _calculate_fallback_indicator(
+        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
+    ) -> Union[np.ndarray, tuple, None]:
         """
         Fallback implementation using TrendIndicators/MomentumIndicators classes
         for indicators that have pandas-ta issues
@@ -308,10 +324,12 @@ class TechnicalIndicatorService:
                     return nan_array, nan_array, nan_array
 
                 data_series = df[column_name]
-                result = TrendIndicators.ppo(data_series,
-                                           fast=params.get("fast", 12),
-                                           slow=params.get("slow", 26),
-                                           signal=params.get("signal", 9))
+                result = TrendIndicators.ppo(
+                    data_series,
+                    fast=params.get("fast", 12),
+                    slow=params.get("slow", 26),
+                    signal=params.get("signal", 9),
+                )
                 # PPO returns tuple of (ppo_line, signal_line, histogram)
                 return result
 
@@ -328,9 +346,13 @@ class TechnicalIndicatorService:
                 low_series = df[low_column]
                 close_series = df[close_column]
 
-                result = TrendIndicators.stochf(high_series, low_series, close_series,
-                                              length=params.get("fastd_length", 3),
-                                              fast_length=params.get("fastk_length", 5))
+                result = TrendIndicators.stochf(
+                    high_series,
+                    low_series,
+                    close_series,
+                    length=params.get("fastd_length", 3),
+                    fast_length=params.get("fastk_length", 5),
+                )
                 # STOCHF returns tuple of (fast_k, fast_d)
                 return result
 
@@ -342,16 +364,24 @@ class TechnicalIndicatorService:
                 data_series = df[column_name]
 
                 if indicator_type == "EMA":
-                    result = TrendIndicators.ema(data_series, length=params.get("length", 20))
+                    result = TrendIndicators.ema(
+                        data_series, length=params.get("length", 20)
+                    )
                 elif indicator_type == "TEMA":
-                    result = TrendIndicators.tema(data_series, length=params.get("length", 14))
+                    result = TrendIndicators.tema(
+                        data_series, length=params.get("length", 14)
+                    )
                 elif indicator_type == "ALMA":
-                    result = TrendIndicators.alma(data_series,
-                                                length=params.get("length", 9),
-                                                sigma=params.get("sigma", 6.0),
-                                                offset=params.get("offset", 0.85))
+                    result = TrendIndicators.alma(
+                        data_series,
+                        length=params.get("length", 9),
+                        sigma=params.get("sigma", 6.0),
+                        offset=params.get("offset", 0.85),
+                    )
                 elif indicator_type == "FWMA":
-                    result = TrendIndicators.fwma(data_series, length=params.get("length", 10))
+                    result = TrendIndicators.fwma(
+                        data_series, length=params.get("length", 10)
+                    )
 
                 # Return as single series values if needed
                 if config["returns"] == "single":
@@ -363,7 +393,9 @@ class TechnicalIndicatorService:
                 return result
 
         except Exception as e:
-            logger.warning(f"Fallback indicator calculation failed for {indicator_type}: {e}")
+            logger.warning(
+                f"Fallback indicator calculation failed for {indicator_type}: {e}"
+            )
             # Return appropriate NaN array based on config
             if config and config["returns"] == "multiple":
                 nan_array = np.full(len(df), np.nan)
@@ -503,7 +535,10 @@ class TechnicalIndicatorService:
             result = adapter_function(*positional_args, **keyword_args)
             if isinstance(result, pd.Series):
                 return result.values
-            elif isinstance(result, pd.DataFrame) and result_type == IndicatorResultType.SINGLE:
+            elif (
+                isinstance(result, pd.DataFrame)
+                and config.result_type == IndicatorResultType.SINGLE
+            ):
                 return result.iloc[:, 0].values
             else:
                 return result
@@ -525,7 +560,10 @@ class TechnicalIndicatorService:
         result = adapter_function(**all_args)
         if isinstance(result, pd.Series):
             return result.values
-        elif isinstance(result, pd.DataFrame) and result_type == IndicatorResultType.SINGLE:
+        elif (
+            isinstance(result, pd.DataFrame)
+            and config.result_type == IndicatorResultType.SINGLE
+        ):
             return result.iloc[:, 0].values
         else:
             return result

@@ -238,7 +238,6 @@ def setup_momentum_indicators():
     }
     indicator_registry.register(kst_config)
 
-
     # RSI (Relative Strength Index)
     rsi_config = IndicatorConfig(
         indicator_name="RSI",
@@ -400,7 +399,6 @@ def setup_momentum_indicators():
     )
     mom_config.param_map = {"close": "data", "period": "length"}
     indicator_registry.register(mom_config)
-
 
     # ADX
     adx_config = IndicatorConfig(
@@ -569,7 +567,6 @@ def setup_momentum_indicators():
     minus_di_config.param_map = {"period": "length"}
     indicator_registry.register(minus_di_config)
 
-
     # ROC
     roc_config = IndicatorConfig(
         indicator_name="ROC",
@@ -590,7 +587,6 @@ def setup_momentum_indicators():
     )
     roc_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(roc_config)
-
 
     # TRIX
     trix_config = IndicatorConfig(
@@ -719,7 +715,6 @@ def setup_momentum_indicators():
         )
     )
     indicator_registry.register(adxr_config)
-
 
     # STOCHRSI
     stochrsi_config = IndicatorConfig(
@@ -1028,7 +1023,7 @@ def setup_trend_indicators():
         "close": "data",
         "period": "length",
         "a": "a",
-        "vfactor": "a"  # Map vfactor to a parameter for pandas-ta compatibility
+        "vfactor": "a",  # Map vfactor to a parameter for pandas-ta compatibility
     }
     indicator_registry.register(t3_config)
 
@@ -1131,7 +1126,7 @@ def setup_trend_indicators():
     )
     ma_config.param_map = {"close": "data", "period": "length", "matype": "matype"}
     indicator_registry.register(ma_config)
-    
+
     # LINREG (Linear Regression Moving Average)
     linreg_config = IndicatorConfig(
         indicator_name="LINREG",
@@ -1150,9 +1145,14 @@ def setup_trend_indicators():
             description="線形回帰計算期間",
         )
     )
-    linreg_config.param_map = {"close": "data", "timeperiod": "period", "length": "period", "period": "period"}
+    linreg_config.param_map = {
+        "close": "data",
+        "timeperiod": "period",
+        "length": "period",
+        "period": "period",
+    }
     indicator_registry.register(linreg_config)
-    
+
     # LINREG_SLOPE (Linear Regression Slope)
     linreg_slope_config = IndicatorConfig(
         indicator_name="LINREG_SLOPE",
@@ -1172,9 +1172,14 @@ def setup_trend_indicators():
             description="線形回帰傾き計算期間",
         )
     )
-    linreg_slope_config.param_map = {"close": "data", "length": "period", "timeperiod": "period", "period": "period"}
+    linreg_slope_config.param_map = {
+        "close": "data",
+        "length": "period",
+        "timeperiod": "period",
+        "period": "period",
+    }
     indicator_registry.register(linreg_slope_config)
-    
+
     # LINREG_INTERCEPT (Linear Regression Intercept)
     linreg_intercept_config = IndicatorConfig(
         indicator_name="LINREG_INTERCEPT",
@@ -1193,9 +1198,13 @@ def setup_trend_indicators():
             description="線形回帰切片計算期間",
         )
     )
-    linreg_intercept_config.param_map = {"close": "data", "length": "period", "period": "period"}
+    linreg_intercept_config.param_map = {
+        "close": "data",
+        "length": "period",
+        "period": "period",
+    }
     indicator_registry.register(linreg_intercept_config)
-    
+
     # LINREG_ANGLE (Linear Regression Angle)
     linreg_angle_config = IndicatorConfig(
         indicator_name="LINREG_ANGLE",
@@ -1224,7 +1233,13 @@ def setup_trend_indicators():
             description="度数法で角度を出力するか",
         )
     )
-    linreg_angle_config.param_map = {"close": "data", "length": "period", "degrees": "degrees", "timeperiod": "period", "period": "period"}
+    linreg_angle_config.param_map = {
+        "close": "data",
+        "length": "period",
+        "degrees": "degrees",
+        "timeperiod": "period",
+        "period": "period",
+    }
     indicator_registry.register(linreg_angle_config)
 
     # MIDPOINT
@@ -1232,8 +1247,6 @@ def setup_trend_indicators():
 
     # MIDPRICE
     # MIDPRICE config deleted
-
-
 
 
 def setup_volatility_indicators():
@@ -1325,7 +1338,6 @@ def setup_volatility_indicators():
     bbands_config.param_map = {"close": "data", "period": "length", "std": "std"}
     indicator_registry.register(bbands_config)
 
-
     # BB - BBANDSのエイリアスとして別途登録
     bb_config = IndicatorConfig(
         indicator_name="BB",
@@ -1380,7 +1392,6 @@ def setup_volatility_indicators():
     )
     accbands_config.param_map = {"length": "length"}
     indicator_registry.register(accbands_config)
-
 
     # MASSI
     massi_config = IndicatorConfig(
@@ -1619,6 +1630,261 @@ def initialize_all_indicators():
 
 
 # モジュール読み込み時に初期化
+# python-ta動的処理設定のグローバル設定
+PANDAS_TA_CONFIG = {
+    "RSI": {
+        "function": "rsi",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "SMA": {
+        "function": "sma",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 20},
+    },
+    "EMA": {
+        "function": "ema",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 20},
+    },
+    "WMA": {
+        "function": "wma",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 20},
+    },
+    "MACD": {
+        "function": "macd",
+        "params": {"fast": ["fast"], "slow": ["slow"], "signal": ["signal"]},
+        "data_column": "Close",
+        "returns": "multiple",
+        "return_cols": ["MACD", "Signal", "Histogram"],
+        "default_values": {"fast": 12, "slow": 26, "signal": 9},
+    },
+    "SUPERTREND": {
+        "function": "supertrend",
+        "params": {"length": ["length"], "multiplier": ["multiplier", "factor"]},
+        "data_column": "open_high_low_close",
+        "returns": "complex",
+        "return_cols": ["ST", "D"],
+        "default_values": {"length": 10, "multiplier": 3.0},
+    },
+    "UI": {
+        "function": "ui",
+        "params": {"length": ["length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "SINWMA": {
+        "function": "sinwma",
+        "params": {"length": ["length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "PPO": {
+        "function": "ppo",
+        "params": {"fast": ["fast"], "slow": ["slow"], "signal": ["signal"]},
+        "data_column": "Close",
+        "returns": "multiple",
+        "return_cols": ["PPO_0", "PPO_1", "PPO_2"],
+        "default_values": {"fast": 12, "slow": 26, "signal": 9},
+    },
+    "EMA": {
+        "function": "ema",
+        "params": {"length": ["length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 20},
+    },
+    "TEMA": {
+        "function": "tema",
+        "params": {"length": ["length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "ALMA": {
+        "function": "alma",
+        "params": {"length": ["length"], "sigma": ["sigma"], "offset": ["offset"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 9, "sigma": 6.0, "offset": 0.85},
+    },
+    "FWMA": {
+        "function": "fwma",
+        "params": {"length": ["length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 10},
+    },
+    "STOCHRSI": {
+        "function": "stochrsi",
+        "params": {
+            "length": ["length", "period"],
+            "k_period": ["k_period"],
+            "d_period": ["d_period"],
+        },
+        "data_column": "Close",
+        "returns": "multiple",
+        "default_values": {"length": 14, "k_period": 5, "d_period": 3},
+    },
+    "KST": {
+        "function": "kst",
+        "params": {
+            "roc1": ["roc1", "r1", "rorc1"],
+            "roc2": ["roc2", "r2", "rorc2"],
+            "roc3": ["roc3", "r3", "rorc3"],
+            "roc4": ["roc4", "r4", "rorc4"],
+            "sma1": ["sma1", "n1", "length"],
+            "sma2": ["sma2", "n2"],
+            "sma3": ["sma3", "n3"],
+            "sma4": ["sma4", "n4"],
+            "signal": ["signal"],
+        },
+        "data_column": "Close",
+        "returns": "multiple",
+        "return_cols": ["KST", "KST_Signal"],
+        "default_values": {
+            "roc1": 10,
+            "roc2": 15,
+            "roc3": 20,
+            "roc4": 30,
+            "sma1": 10,
+            "sma2": 10,
+            "sma3": 10,
+            "sma4": 15,
+            "signal": 9,
+        },
+    },
+    "BBANDS": {
+        "function": "bbands",
+        "params": {"length": ["length", "period"], "std": ["std", "multiplier"]},
+        "data_column": "Close",
+        "returns": "multiple",
+        "return_cols": ["BBL", "BBM", "BBU"],
+        "default_values": {"length": 20, "std": 2.0},
+    },
+    "AO": {
+        "function": "ao",
+        "params": {},
+        "multi_column": True,
+        "data_columns": ["High", "Low"],
+        "returns": "single",
+        "default_values": {},
+    },
+    "RVI": {
+        "function": "rvi",
+        "params": {"length": ["length", "period"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "UO": {
+        "function": "uo",
+        "params": {"fast": ["fast"], "medium": ["medium"], "slow": ["slow"]},
+        "data_column": "ohlc",
+        "returns": "single",
+        "default_values": {"fast": 7, "medium": 14, "slow": 28},
+    },
+    "AROON": {
+        "function": "aroon",
+        "params": {"length": ["length", "period"]},
+        "data_column": "open_high_low",  # 高値と安値のみを使用
+        "returns": "multiple",
+        "return_cols": ["AROONU", "AROOND"],
+        "default_values": {"length": 14},
+    },
+    "LINREG_SLOPE": {
+        "function": "linearreg_slope",
+        "params": {"length": ["length", "timeperiod"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "T3": {
+        "function": "t3",
+        "params": {"length": ["length", "period"], "a": ["a", "vfactor"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 5, "a": 0.7},
+    },
+    "KVO": {
+        "function": "kvo",
+        "params": {"fast": ["fast"], "slow": ["slow"]},
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close", "Volume"],
+        "returns": "multiple",
+        "return_cols": ["KVO_34_55_13", "KVOs_34_55_13"],
+        "default_values": {"fast": 34, "slow": 55},
+    },
+}
+
+POSITIONAL_DATA_FUNCTIONS = {
+    "rsi",
+    "wma",
+    "sar",
+    "roc",
+    "stoch",
+    "bbands",
+    "macd",
+    "dpo",
+    "rmi",
+    "kama",
+    "trima",
+    "wma",
+    "ma",
+    "midpoint",
+    "midprice",
+    "ht_trendline",
+    "adosc",
+    "correl",
+    "linearreg",
+    "stddev",
+    "tsf",
+    "var",
+    "linearreg_angle",
+    "linearreg_intercept",
+    "linearreg_slope",
+    "hma",
+    "zlma",
+    "swma",
+    "alma",
+    "rma",
+    "tsi",
+    "pvo",
+    "cfo",
+    "cti",
+    "sma_slope",
+    "price_ema_ratio",
+    "beta",
+    "belta",
+    "qqe",
+    "smi",
+    "trix",
+    "apo",
+    "WMA",
+    "TRIMA",
+    "MA",
+    "chop",
+    "vortex",
+    "BBANDS",
+    "hilo",
+    "ad",
+    "eom",
+    "kvo",
+    "cmf",
+}
+
+# ---- Append new pandas-ta indicators and custom ones ----
 initialize_all_indicators()
 
 # ---- Append new pandas-ta indicators and custom ones ----
@@ -1893,95 +2159,6 @@ price_ema_ratio_config.add_parameter(
 price_ema_ratio_config.param_map = {"period": "length"}
 indicator_registry.register(price_ema_ratio_config)
 
-# MAMA configuration removed due to pandas-ta compatibility issues
-# MAXINDEX and MININDEX configurations also removed due to missing implementations
-#
-# maxindex_config = IndicatorConfig(
-#     indicator_name="MAXINDEX",
-#     adapter_function=TrendIndicators.maxindex,
-#     required_data=["close"],
-#     result_type=IndicatorResultType.SINGLE,
-#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-#     category="statistics",
-# )
-# maxindex_config.add_parameter(
-#     ParameterConfig(
-#         name="period",
-#         default_value=14,
-#         min_value=2,
-#         max_value=100,
-#         description="最大値インデックス期間",
-#     )
-# )
-# maxindex_config.param_map = {"close": "data", "period": "length"}
-# indicator_registry.register(maxindex_config)
-#
-# minindex_config = IndicatorConfig(
-#     indicator_name="MININDEX",
-#     adapter_function=TrendIndicators.minindex,
-#     required_data=["close"],
-#     result_type=IndicatorResultType.SINGLE,
-#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-#     category="statistics",
-# )
-# minindex_config.add_parameter(
-#     ParameterConfig(
-#         name="period",
-#         default_value=14,
-#         min_value=2,
-#         max_value=100,
-#         description="最小値インデックス期間",
-#     )
-# )
-# minindex_config.param_map = {"close": "data", "period": "length"}
-# indicator_registry.register(minindex_config)
-
-# MINMAX indicators removed due to implementation issues
-# These have been commented out to prevent invalid indicator errors
-#
-# minmax_config = IndicatorConfig(
-#     indicator_name="MINMAX",
-#     adapter_function=TrendIndicators.minmax,
-#     required_data=["close"],
-#     result_type=IndicatorResultType.COMPLEX,
-#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-#     category="statistics",
-#     output_names=["MINMAX_MIN", "MINMAX_MAX"],
-#     default_output="MINMAX_MIN",
-# )
-# minmax_config.add_parameter(
-#     ParameterConfig(
-#         name="period",
-#         default_value=14,
-#         min_value=2,
-#         max_value=100,
-#         description="最小最大期間",
-#     )
-# )
-# minmax_config.param_map = {"close": "data", "period": "length"}
-# indicator_registry.register(minmax_config)
-#
-# minmaxindex_config = IndicatorConfig(
-#     indicator_name="MINMAXINDEX",
-#     adapter_function=TrendIndicators.minmaxindex,
-#     required_data=["close"],
-#     result_type=IndicatorResultType.COMPLEX,
-#     scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
-#     category="statistics",
-#     output_names=["MINMAXINDEX_MIN", "MINMAXINDEX_MAX"],
-#     default_output="MINMAXINDEX_MIN",
-# )
-# minmaxindex_config.add_parameter(
-#     ParameterConfig(
-#         name="period",
-#         default_value=14,
-#         min_value=2,
-#         max_value=100,
-#         description="最小最大インデックス期間",
-#     )
-# )
-# minmaxindex_config.param_map = {"close": "data", "period": "length"}
-# indicator_registry.register(minmaxindex_config)
 
 rsi_ema_cross_config = IndicatorConfig(
     indicator_name="RSI_EMA_CROSS",
@@ -2408,7 +2585,7 @@ tlb_config.param_map = {
     "high": "high",
     "low": "low",
     "close": "close",
-    "length": "length"
+    "length": "length",
 }
 indicator_registry.register(tlb_config)
 
@@ -2432,3 +2609,21 @@ cwma_config.add_parameter(
 )
 cwma_config.param_map = {"close": "data", "length": "length"}
 indicator_registry.register(cwma_config)
+
+
+def setup_pandas_ta_indicators():
+    """
+    pandas-ta設定からインジケーターを登録
+    """
+    # PANDAS_TA_CONFIGを使用してインジケーターを登録（外から参照可能）
+    pass
+
+
+# 初期化時にpandas-taインジケーターを設定
+def initialize_pandas_ta_indicators():
+    """pandas-taインジケーターの初期化"""
+    setup_pandas_ta_indicators()
+
+
+# モジュール読み込み時に初期化
+initialize_pandas_ta_indicators()
