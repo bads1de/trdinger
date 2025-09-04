@@ -66,11 +66,10 @@ class VolatilityIndicators:
 
         try:
             result = ta.atr(high=high, low=low, close=close, length=length)
-        except Exception as e:
+        except Exception:
             try:
                 result = ta.atr(high=high, low=low, close=close, window=length)
-            except Exception as e2:
-                # Final fallback: try without parameters
+            except Exception:
                 try:
                     result = ta.atr(high=high, low=low, close=close)
                 except Exception as e3:
@@ -99,14 +98,11 @@ class VolatilityIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        # pandas-ta natrのパラメータを確認
-        import inspect
-
         try:
             # lengthパラメータの確認
             result = ta.natr(high=high, low=low, close=close, length=length)
-        except Exception as e:
-            logger.error(f"NATR: ta.natr failed with length parameter: {e}")
+        except Exception:
+            logger.error("NATR: ta.natr failed with length parameter")
             # windowパラメータで試す
             try:
                 result = ta.natr(high=high, low=low, close=close, window=length)
@@ -187,7 +183,7 @@ class VolatilityIndicators:
 
                 return upper, middle, lower
 
-            except Exception as e:
+            except Exception:
                 nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
                 return (nan_series, nan_series, nan_series)
 
@@ -242,7 +238,7 @@ class VolatilityIndicators:
         try:
             df = ta.kc(high=high, low=low, close=close, window=length, scalar=scalar)
 
-        except Exception as e:
+        except Exception:
             pass
 
         # Method 2: Try with length parameter (alternative)
@@ -253,7 +249,7 @@ class VolatilityIndicators:
                     high=high, low=low, close=close, length=length, scalar=scalar
                 )
 
-            except Exception as e:
+            except Exception:
                 pass
 
         # Method 3: Try with period parameter
@@ -263,9 +259,8 @@ class VolatilityIndicators:
                     high=high, low=low, close=close, period=length, scalar=scalar
                 )
 
-            except Exception as e:
+            except Exception:
                 pass
-
 
         # パフォーマンス実装: ta.kcがNoneまたは全てNaNの場合、事前ATR計算と手動Keltner計算
         if df is None or (hasattr(df, "isna") and df.isna().all().all()):
@@ -309,7 +304,7 @@ class VolatilityIndicators:
 
                 return upper, middle, lower
 
-            except Exception as e:
+            except Exception:
                 nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
                 return nan_series, nan_series, nan_series
 
@@ -330,7 +325,6 @@ class VolatilityIndicators:
             next((c for c in cols if "KCl" in c or "lower" in c.lower()), cols[-1])
         ]
 
-
         return upper, middle, lower
 
     @staticmethod
@@ -345,15 +339,12 @@ class VolatilityIndicators:
             raise TypeError("high must be pandas Series")
         if not isinstance(low, pd.Series):
             raise TypeError("low must be pandas Series")
-        # DONCHIANパラメータエラー診断
-        # pandas-ta donchianのパラメータを確認
-        import inspect
 
         try:
             # lengthパラメータの確認
             df = ta.donchian(high=high, low=low, length=length)
-        except Exception as e:
-            logger.error(f"DONCHIAN: ta.donchian failed with length parameter: {e}")
+        except Exception:
+            logger.error("DONCHIAN: ta.donchian failed with length parameter")
             # windowパラメータで試す
             try:
                 df = ta.donchian(high=high, low=low, window=length)
@@ -397,7 +388,7 @@ class VolatilityIndicators:
 
                 return upper, middle, lower
 
-            except Exception as e:
+            except Exception:
                 nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
                 return nan_series, nan_series, nan_series
 
@@ -469,7 +460,7 @@ class VolatilityIndicators:
             df = ta.supertrend(
                 high=high, low=low, close=close, window=length, multiplier=multiplier
             )
-        except Exception as e:
+        except Exception:
             pass
 
         # Method 2: Try with length parameter (alternative)
@@ -482,30 +473,15 @@ class VolatilityIndicators:
                     length=length,
                     multiplier=multiplier,
                 )
-            except Exception as e:
+            except Exception:
                 pass
 
         # Method 3: Try with minimal parameters
         if df is None or (hasattr(df, "isna") and df.isna().all().all()):
             try:
-                logger.info(
-                    "SUPERTREND DEBUG: Trying ta.supertrend with minimal parameters"
-                )
                 df = ta.supertrend(high=high, low=low, close=close)
-                logger.info(f"SUPERTREND DEBUG: minimal method result type: {type(df)}")
-            except Exception as e:
-                logger.warning(f"SUPERTREND DEBUG: minimal parameter failed: {e}")
-
-        logger.info(f"SUPERTREND DEBUG: Final ta.supertrend result type: {type(df)}")
-        logger.info(f"SUPERTREND DEBUG: ta.supertrend is None: {df is None}")
-
-        if df is not None:
-            logger.info(
-                f"SUPERTREND DEBUG: ta.supertrend shape: {getattr(df, 'shape', 'no shape')}"
-            )
-            logger.info(
-                f"SUPERTREND DEBUG: ta.supertrend columns: {getattr(df, 'columns', 'no columns')}"
-            )
+            except Exception:
+                logger.warning("SUPERTREND DEBUG: minimal parameter failed")
 
         # pandas-ta version might not support factor, so ensure we use multiplier
         if df is None or (hasattr(df, "isna") and df.isna().all().all()):
@@ -569,8 +545,8 @@ class VolatilityIndicators:
 
                 return st_series, upper, direction_series
 
-            except Exception as e:
-                logger.warning(f"SUPERTREND enhanced fallback calculation failed: {e}")
+            except Exception:
+                logger.warning("SUPERTREND enhanced fallback calculation failed")
                 direction = pd.Series(
                     np.where(close >= (upper + lower) / 2, 1.0, -1.0), index=close.index
                 )
@@ -640,17 +616,17 @@ class VolatilityIndicators:
 
                     return upper, middle, lower
 
-                except Exception as e:
+                except Exception:
                     # Method 2: Fallback using high/low based calculation
                     logger.warning(
-                        f"ACCBANDS: Primary fallback failed: {e}, using secondary method"
+                        "ACCBANDS: Primary fallback failed, using secondary method"
                     )
 
                     try:
                         # Calculate moving averages directly
                         high_ma = high.rolling(window=length).mean()
                         low_ma = low.rolling(window=length).mean()
-                        close_ma = close.rolling(window=length).mean()
+                        close.rolling(window=length).mean()
 
                         # Create bands based on price ranges
                         upper = high_ma
@@ -750,7 +726,7 @@ class VolatilityIndicators:
                     )
                     return nan_series, nan_series, nan_series
 
-            except Exception as e:
+            except Exception:
                 nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
                 return nan_series, nan_series, nan_series
 
@@ -813,7 +789,7 @@ class VolatilityIndicators:
             mass_index = single_ema.ewm(span=slow, adjust=False).mean() * 100
 
             return mass_index
-        except Exception as e:
+        except Exception:
             # If fallback also fails, return NaN series
             return pd.Series(np.full(len(high), np.nan), index=high.index)
 
@@ -951,7 +927,7 @@ class VolatilityIndicators:
                             vi_minus = result.iloc[:, 1]
                             return vi_plus, vi_minus
 
-        except Exception as e:
+        except Exception:
             pass
 
         # Enhanced fallback: Manual Vortex Indicator calculation with better error handling
@@ -1008,7 +984,7 @@ class VolatilityIndicators:
 
             return vi_plus_series, vi_minus_series
 
-        except Exception as e:
+        except Exception:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
 

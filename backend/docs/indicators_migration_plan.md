@@ -76,7 +76,7 @@ cwma_config = IndicatorConfig(
      - `constants.py`: TREND_INDICATORS リスト更新
      - `indicator_definitions.py`: Adapter 関数バインド・設定
      - `indicator_config.py`: 構造クラス最定義時補助
-     - YAML ファイル: 適切属性選択
+     - `technical_indicators_config.yaml`YAML ファイル: 適切属性選択
    - **所要時間**: 各箇所での류戸解答時間発生 → 全体作業コスト増大
 
 2. **構造的欠陥 (長期影響)**
