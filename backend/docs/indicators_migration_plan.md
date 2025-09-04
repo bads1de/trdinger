@@ -580,17 +580,6 @@ python scripts/performance_baseline.py --baseline
 python scripts/load_test_indicators.py --duration=300
 ```
 
-### 継続的テスト体制
-
-#### 1. CI/CD Pipeline 統合
-
-```yaml
-# .github/workflows/test.yaml
-- name: Run Indicator Tests
-  run: |
-    python -m pytest tests/indicators/ -v --cov=backend.app.services.indicators
-    python scripts/test_migration_coverage.py
-```
 
 #### 2. カバレッジ目標
 
