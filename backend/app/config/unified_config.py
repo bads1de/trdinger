@@ -232,16 +232,6 @@ class AutoStrategyConfig(BaseSettings):
         extra = "ignore"
 
 
-class IndicatorConfig(BaseSettings):
-    """指標設定"""
-
-    # (Removed per-profile threshold fields — consolidated or unused)
-
-    class Config:
-        env_prefix = "INDICATOR_"
-        extra = "ignore"
-
-
 class GAConfig(BaseSettings):
     """遺伝的アルゴリズム設定"""
 
@@ -403,7 +393,6 @@ class UnifiedConfig(BaseSettings):
     data_collection: DataCollectionConfig = Field(default_factory=DataCollectionConfig)
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)
     auto_strategy: AutoStrategyConfig = Field(default_factory=AutoStrategyConfig)
-    indicators: IndicatorConfig = Field(default_factory=IndicatorConfig)
     ga: GAConfig = Field(default_factory=GAConfig)
     ml: MLConfig = Field(default_factory=MLConfig)
 

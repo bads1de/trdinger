@@ -25,7 +25,7 @@
 
 ### 分散構造の現状
 
-オートストラテジーシステムでは指標設定が以下の 5 つのファイルに分散されており、保守性を大きく低下させています：
+オートストラテジーシステムでは指標設定が以下の 4 つのファイルに分散されており、保守性を大きく低下させています：
 
 #### 1. `constants.py` (823 行)
 
@@ -62,11 +62,7 @@ cwma_config = IndicatorConfig(
 
 - **役割**: IndicatorConfig クラス構造定義
 
-#### 4. `unified_config.py` (設定統合点)
-
-- **役割**: システム設定の統合ハブ
-
-#### 5. YAML 設定ファイル群 (存在点散逸)
+#### 4. YAML 設定ファイル群 (存在点散逸)
 
 - **役割**: 部分的設定活用（データソース依存）
 - **問題**: 場所の一貫性なく、再利用性低下
@@ -76,11 +72,10 @@ cwma_config = IndicatorConfig(
 1. **CWMA 指標追加事例 (問題顕在化)**
 
    - 前提: CWMA (Central Weighted Moving Average) の新規追加
-   - 必要修正 5 箇所:
+   - 必要修正 4 箇所:
      - `constants.py`: TREND_INDICATORS リスト更新
      - `indicator_definitions.py`: Adapter 関数バインド・設定
      - `indicator_config.py`: 構造クラス最定義時補助
-     - `unified_config.py`: 統合参照追加
      - YAML ファイル: 適切属性選択
    - **所要時間**: 各箇所での류戸解答時間発生 → 全体作業コスト増大
 
@@ -197,10 +192,6 @@ class YamlIndicatorLoader:
 
     def validate_config(self, config: Dict) -> bool:
         """設定妥当性検証"""
-        pass
-
-    def update_registry(self) -> None:
-        """indicator_registry へ設定反映"""
         pass
 ```
 
@@ -359,8 +350,6 @@ Phase 1 (設計・プロトタイプ作成) → Phase 2 (設定移行) → Phase
 ```
 メインアプリケーション (main.py)
      ↓
-UnifiedConfig (unified_config.py)
-     ↓
 YamlIndicatorLoader (yaml_indicator_loader.py)
      ↓
 indicator_definitions.py (簡素化版)
@@ -382,14 +371,14 @@ IndicatorConfigRegistry
 
 ### 相互依存関係マトリックス
 
-| コンポーネント            | constants.py                | indicator_definitions.py | indicator_config.py      | unified_config.py   |
-| ------------------------- | --------------------------- | ------------------------ | ------------------------ | ------------------- |
-| YamlIndicatorLoader       | カテゴリ参照                | 簡素化・活用             | 設定更新                 | 統合連携            |
-| 条件生成器                | カテゴリ活用                | 設定読取                 | 構造利用                 | -                   |
-| 戦略実行器                | -                           | 指標生成                 | -                        | 設定活用            |
-| parameter_manager.py      | PARAMETER_MAPPINGS 重複統合 | -                        | YAML 移行連携            | -                   |
-| data_validation.py        | -                           | 指標最小長統合           | -                        | YAML 統合連携       |
-| indicator_orchestrator.py | -                           | -                        | IndicatorConfig 削除対応 | YAML 駆動型移行連携 |
+| コンポーネント            | constants.py                | indicator_definitions.py | indicator_config.py      |
+| ------------------------- | --------------------------- | ------------------------ | ------------------------ |
+| YamlIndicatorLoader       | カテゴリ参照                | 簡素化・活用             | 設定更新                 |
+| 条件生成器                | カテゴリ活用                | 設定読取                 | 構造利用                 |
+| 戦略実行器                | -                           | 指標生成                 | -                        |
+| parameter_manager.py      | PARAMETER_MAPPINGS 重複統合 | -                        | YAML 移行連携            |
+| data_validation.py        | -                           | 指標最小長統合           | -                        |
+| indicator_orchestrator.py | -                           | -                        | IndicatorConfig 削除対応 |
 
 ### 外部 API 依存
 
@@ -580,7 +569,6 @@ python scripts/performance_baseline.py --baseline
 python scripts/load_test_indicators.py --duration=300
 ```
 
-
 #### 2. カバレッジ目標
 
 - **目標カバレッジ**: branches=85%, lines=90%
@@ -622,7 +610,7 @@ def generate_test_indicator_configs(count=50):
 
 想定される効果:
 
-- 新指標追加コスト: 5 箇所 →1 箇所 (80%削減)
+- 新指標追加コスト: 4 箇所 →1 箇所 (75%削減)
 - 修正時間: 30 分 →5 分 (83%改善)
 - 全体保守性: 大幅向上
 

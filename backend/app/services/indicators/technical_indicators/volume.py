@@ -348,7 +348,7 @@ class VolumeIndicators:
                         * volume
                     )
                     obv = obv.cumsum()
-            except Exception as e:
+            except Exception:
                 # Fallback OBV calculation
                 obv_changes = np.where(
                     close.diff() > 0, 1, np.where(close.diff() < 0, -1, 0)
