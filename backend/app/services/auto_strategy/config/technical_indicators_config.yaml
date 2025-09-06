@@ -435,15 +435,6 @@ indicators:
     conditions:
       long: "close > {left_operand}"
       short: "close < {left_operand}"
-  BB:
-    type: volatility
-    scale_type: price_absolute
-    thresholds: null
-    components: ["upper", "middle", "lower"]
-    conditions:
-      long: "close < {left_operand}_lower"
-      short: "close > {left_operand}_upper"
-
   BBANDS:
     type: volatility
     scale_type: price_absolute
@@ -453,34 +444,10 @@ indicators:
       long: "close < {left_operand}_lower"
       short: "close > {left_operand}_upper"
 
-  LINEARREG:
-    type: statistics
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  TSF:
-    type: statistics
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
 
   # 統計系指標
-  CORREL:
-    type: statistics
-    scale_type: oscillator_plus_minus_100
-    thresholds:
-      all:
-        pos_threshold: 0.3
-        neg_threshold: -0.7
-    conditions:
-      long: "{left_operand} > {pos_threshold}"
-      short: "{left_operand} < {neg_threshold}"
 
   LINEARREG_ANGLE:
     type: statistics
@@ -740,29 +707,8 @@ indicators:
       short: "{left_operand} > {threshold}"
 
   # トレンド系追加指標
-  HL2:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  HLC3:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  OHLC4:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   MIDPOINT:
     type: trend
@@ -893,45 +839,11 @@ indicators:
       short: "{left_operand} > {threshold}"
 
   # 統計系追加指標
-  VAR:
-    type: statistics
-    scale_type: price_absolute
-    thresholds:
-      aggressive:
-        percentile: 0.05
-      normal:
-        percentile: 0.1
-      conservative:
-        percentile: 0.15
-    conditions:
-      long: "close < {threshold}"
-      short: "close > {threshold}"
 
   # Cycle系指標
-  HT_TRENDLINE:
-    type: cycles
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  HT_LEADSINE:
-    type: cycles
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
   # Price Transform系追加指標
-  AVGPRICE:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   PWMA:
     type: price_transform
@@ -969,28 +881,8 @@ indicators:
       long: "close > {left_operand}"
       short: "close < {left_operand}"
 
-  ZD_EMA:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds:
-      aggressive:
-        period: 12
-      normal:
-        period: 20
-      conservative:
-        period: 30
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   # 追加移動平均系指標
-  TL:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   VIDYA:
     type: price_transform
@@ -1021,19 +913,6 @@ indicators:
       short: "close < {left_operand}"
 
   # Price Transform追加指標
-  DECYCLE:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds:
-      aggressive:
-        period: 5
-      normal:
-        period: 10
-      conservative:
-        period: 20
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   KAMA:
     type: price_transform
@@ -1050,37 +929,9 @@ indicators:
       short: "close < {left_operand}"
 
   # パターン認識追加指標
-  CDL_LADDER_BOTTOM:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null
 
-  CDL_LADDER_TOP:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
 
-  CDL_GRAVESTONE_DOJI:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} != 0"
-      short: "{left_operand} != 0"
 
-  CDL_DRAGONFLY_DOJI:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} != 0"
-      short: "{left_operand} != 0"
 
   # 追加乖離率系指標
   BIAS:
@@ -1101,22 +952,6 @@ indicators:
       short: "{left_operand} > {threshold}"
 
   # Volatility系追加指標
-  ATAN:
-    type: volatility
-    scale_type: oscillator_0_100
-    thresholds:
-      aggressive:
-        long_lt: 0.2 * 57.3  # radians to degrees
-        short_gt: 0.8 * 57.3
-      normal:
-        long_lt: 0.25 * 57.3
-        short_gt: 0.75 * 57.3
-      conservative:
-        long_lt: 0.3 * 57.3
-        short_gt: 0.7 * 57.3
-    conditions:
-      long: "{left_operand} < {threshold}"
-      short: "{left_operand} > {threshold}"
 
   SINWMA:
     type: volatility
@@ -1136,271 +971,41 @@ indicators:
       short: "close < {left_operand}"
 
   # Price Transform拡張指標
-  EMA9:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  EMA21:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  EMA50:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  SMA20:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  WMA21:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   # 統計系拡張指標
-  DEC_EMA:
-    type: statistics
-    scale_type: price_absolute
-    thresholds:
-      aggressive:
-        lambda: 0.1
-      normal:
-        lambda: 0.05
-      conservative:
-        lambda: 0.02
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   # Pattern Recognition拡張指標
-  CDL_COUNTERATTACK:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_BELTHOLD:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
   # 拡張モメンタム指標
-  WILLIAMS_PERCENT_R:
-    type: momentum
-    scale_type: oscillator_plus_minus_100
-    thresholds:
-      aggressive:
-        long_lt: -95
-        short_gt: -5
-      normal:
-        long_lt: -80
-        short_gt: -20
-      conservative:
-        long_lt: -75
-        short_gt: -25
-    conditions:
-      long: "{left_operand} > {threshold}"
-      short: "{left_operand} < {threshold}"
 
   # 強化したマルチタイムフレーム指標
-  HMA_21:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  KAMA_10_30:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds:
-      aggressive:
-        fast_limit: 2
-        slow_limit: 20
-      normal:
-        fast_limit: 10
-        slow_limit: 30
-      conservative:
-        fast_limit: 15
-        slow_limit: 45
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   # 特殊フィルタリング指標
-  NCR:
-    type: statistics
-    scale_type: oscillator_plus_minus_100
-    thresholds:
-      aggressive:
-        range_pcnt: 3
-      normal:
-        range_pcnt: 5
-      conservative:
-        range_pcnt: 10
-    conditions:
-      long: "{left_operand} > {threshold}"
-      short: "{left_operand} < {threshold}"
 
   # ボラティリティ専用拡張指標
-  VIC:
-    type: volatility
-    scale_type: oscillator_0_100
-    thresholds:
-      aggressive:
-        long_lt: 30
-        short_gt: 70
-      normal:
-        long_lt: 35
-        short_gt: 65
-      conservative:
-        long_lt: 40
-        short_gt: 60
-    conditions:
-      long: "{left_operand} < {threshold}"
-      short: "{left_operand} > {threshold}"
 
   # Composite指標拡張
-  CHANE:
-    type: composite
-    scale_type: oscillator_plus_minus_100
-    thresholds:
-      aggressive:
-        short_cd: 4
-        long_cd: 12
-      normal:
-        short_cd: 5
-        long_cd: 13
-      conservative:
-        short_cd: 6
-        long_cd: 14
-    conditions:
-      long: "{left_operand} > {threshold}"
-      short: "{left_operand} < {threshold}"
 
   # Cycle指標拡張
-  HT_SINE:
-    type: cycles
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  HT_PHASOR_P:
-    type: cycles
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  HT_PHASOR_Q:
-    type: cycles
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
   # 追加Price Transform指標
-  MEDPRICE:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  TYPPRICE:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  WCLPRICE:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   # Pattern Recognition拡張
-  CDL_SEPARATING_LINES:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_MATCHING_LOW:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null
 
-  CDL_BREAKAWAY:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_STICKSANDWICH:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_UNIQUE3RIVER:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null
 
-  CDL_XSIDEGAP3METHODS:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
   # 拡張Momentum指標
   ROCP:
@@ -1455,27 +1060,7 @@ indicators:
       short: "{left_operand} > {threshold}"
 
   # 強化Statistics指標
-  TS_FADEL:
-    type: statistics
-    scale_type: price_absolute
-    thresholds:
-      aggressive:
-        fading: 0.3
-      normal:
-        fading: 0.2
-      conservative:
-        fading: 0.1
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
-  LINV:
-    type: statistics
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
   # 拡大指標群
   PVI:
@@ -1521,21 +1106,7 @@ indicators:
       short: "{left_operand} > {threshold}"
 
   # さらに拡張したPattern Recognition
-  CDL_3LINESTRIKE:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_TRISTAR:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
   # Momentum拡張継続
   MOM:
@@ -1695,22 +1266,6 @@ indicators:
       short: "{left_operand} > {threshold}"
 
   # REX拡張
-  REX:
-    type: momentum
-    scale_type: oscillator_plus_minus_100
-    thresholds:
-      aggressive:
-        long_lt: -3
-        short_gt: 3
-      normal:
-        long_lt: -1
-        short_gt: 1
-      conservative:
-        long_lt: -0.5
-        short_gt: 0.5
-    conditions:
-      long: "{left_operand} > {threshold}"
-      short: "{left_operand} < {threshold}"
 
   # RVI拡張
   RVGI:
@@ -1731,77 +1286,14 @@ indicators:
       short: "{left_operand} < {threshold}"
 
   # 最終Pattern Recognition拡張
-  CDL_ADVANCEBLOCK:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
 
-  CDL_CLOSECANDLE:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_HOMINGPIGEON:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: null
 
-  CDL_INNECK:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
 
-  CDL_INSIDE:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_KICKINGBYLENGTH:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_LONGLINE:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_RISEFALL3METHODS:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: "{left_operand} > 0"
-      short: "{left_operand} < 0"
 
-  CDL_SEPTEMVETURN:
-    type: pattern_recognition
-    scale_type: oscillator_plus_minus_100
-    thresholds: null
-    conditions:
-      long: null
-      short: "{left_operand} < 0"
 
   # 最終拡張グループ
   PVO:
@@ -1822,38 +1314,8 @@ indicators:
       short: "{left_operand} > {threshold}"
 
   # Volume Price
-  VP:
-    type: volume
-    scale_type: volume
-    default_output: "VP_TOTAL_VOL"
-    output_names:
-      - "VP_LOW"
-      - "VP_MEAN"
-      - "VP_HIGH"
-      - "VP_POS_VOL"
-      - "VP_NEG_VOL"
-      - "VP_TOTAL_VOL"
-    conditions:
-      long: "{left_operand}_total_vol > 0"  # Total volume positive
-      short: "{left_operand}_total_vol < 0"
 
   # 終極拡張 - Volume系最終
-  VWMA:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    components: ["vwma", "vol_momentum"]
-    conditions:
-      long: "close > {left_operand}_0"
-      short: "close < {left_operand}_0"
-
-  EWMA:
-    type: price_transform
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
 # スケールタイプ定義
 scale_types:
