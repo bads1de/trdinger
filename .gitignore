@@ -3,6 +3,8 @@ node_modules/
 backend/__pycache__/
 backend/src/**/__pycache__/
 backend/tests/__pycache__/
+.serena/
+
 
 
 # Next.js
