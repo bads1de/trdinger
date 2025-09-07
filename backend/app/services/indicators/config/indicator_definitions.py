@@ -398,6 +398,7 @@ def setup_momentum_indicators():
         )
     )
     mom_config.param_map = {"close": "data", "period": "length"}
+    mom_config.aliases = ["MOMENTUM"]
     indicator_registry.register(mom_config)
 
     # ADX

@@ -239,55 +239,8 @@ class IndicatorConfigRegistry:
         }
 
         # フォールバックマッピングをレジストリ内に定義
-        self._fallback_indicators = self._setup_fallback_indicators()
+        self._fallback_indicators = {}
 
-    def _setup_fallback_indicators(self) -> Dict[str, str]:
-        """未対応指標の代替指標マッピングを設定（オートストラテジー用）"""
-        return {
-            "WMA": "SMA",
-            "HMA": "EMA",
-            "KAMA": "EMA",
-            "TEMA": "EMA",
-            "DEMA": "EMA",
-            "T3": "EMA",
-            "ZLEMA": "EMA",
-            "MIDPOINT": "SMA",
-            "MIDPRICE": "SMA",
-            "TRIMA": "SMA",
-            "VWMA": "SMA",
-            "STOCHRSI": "RSI",
-            "STOCHF": "STOCH",
-            "WILLR": "CCI",
-            "MOMENTUM": "RSI",
-            "MOM": "RSI",
-            "ROC": "RSI",
-            "ROCP": "RSI",
-            "ROCR": "RSI",
-            "AROON": "ADX",
-            "AROONOSC": "ADX",
-            "MFI": "RSI",
-            "CMO": "RSI",
-            "TRIX": "RSI",
-            "ULTOSC": "RSI",
-            "BOP": "RSI",
-            "APO": "MACD",
-            "PPO": "MACD",
-            "DX": "ADX",
-            "ADXR": "ADX",
-            "PLUS_DI": "ADX",
-            "MINUS_DI": "ADX",
-            "NATR": "ATR",
-            "TRANGE": "ATR",
-            "KELTNER": "BB",
-            "STDDEV": "ATR",
-            "DONCHIAN": "BB",
-            "AD": "OBV",
-            "ADOSC": "OBV",
-            "VWAP": "OBV",
-            "PVT": "OBV",
-            "EMV": "OBV",
-            "PSAR": "SMA",
-        }
 
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""

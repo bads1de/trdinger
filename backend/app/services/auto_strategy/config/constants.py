@@ -183,19 +183,19 @@ TREND_INDICATORS = [
 
 # ボラティリティ系指標
 VOLATILITY_INDICATORS = [
-    "ATR",  # 平均真ボラティリティ範囲 (Average True Range)
-    "NATR",  # 正規化平均真ボラティリティ範囲 (Normalized Average True Range)
-    "TRANGE",  # 真ボラティリティ範囲 (True Range)
-    "BB",  # ボリンジャーバンド (Bollinger Bands)
-    "DONCHIAN",  # ドンチャンチャネル (Donchian Channel)
-    "KELTNER",  # ケルトナチャネル (Keltner Channel)
-    "SUPERTREND",  # スーパートレンド (SuperTrend)
-    "ACCBANDS",  # アクセレレーションバンド (Acceleration Bands)
-    "HWC",  # ハル・ウィリアムズ・チャネル (Hull-Wilder Channels)
-    "PDIST",  # プライス・ディスタンス (Price Distance)
-    # RANGEは削除済み
-    "BBANDS",  # ボリンジャーバンド（BBの別名）
-    "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
+     "ATR",  # 平均真ボラティリティ範囲 (Average True Range)
+     "NATR",  # 正規化平均真ボラティリティ範囲 (Normalized Average True Range)
+     "TRANGE",  # 真ボラティリティ範囲 (True Range)
+     "BB",  # ボリンジャーバンド (Bollinger Bands)
+     "DONCHIAN",  # ドンチャンチャネル (Donchian Channel)
+     "KELTNER",  # ケルトナチャネル (Keltner Channel)
+     "SUPERTREND",  # スーパートレンド (SuperTrend)
+     "ACCBANDS",  # アクセレレーションバンド (Acceleration Bands)
+     "HWC",  # ハル・ウィリアムズ・チャネル (Hull-Wilder Channels)
+     "PDIST",  # プライス・ディスタンス (Price Distance)
+     # RANGEは削除済み
+     "BBANDS",  # ボリンジャーバンド（BBの別名）
+     "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
 ]
 
 # 複合指標
