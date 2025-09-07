@@ -7,7 +7,6 @@ constants.pyに統合された定数を基に、構造化された設定クラ�
 
 import json
 import logging
-import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast
@@ -654,11 +653,37 @@ class AutoStrategyConfig:
             position_sizing_data = data.get("position_sizing", {})
 
             # 各設定グループのインスタンス化（適切な型にキャスト）
-            trading = cast(TradingSettings, TradingSettings.from_dict(trading_data) if trading_data else TradingSettings())
-            indicators = cast(IndicatorSettings, IndicatorSettings.from_dict(indicators_data) if indicators_data else IndicatorSettings())
-            ga = cast(GASettings, GASettings.from_dict(ga_data) if ga_data else GASettings())
-            tpsl = cast(TPSLSettings, TPSLSettings.from_dict(tpsl_data) if tpsl_data else TPSLSettings())
-            position_sizing = cast(PositionSizingSettings, PositionSizingSettings.from_dict(position_sizing_data) if position_sizing_data else PositionSizingSettings())
+            trading = cast(
+                TradingSettings,
+                (
+                    TradingSettings.from_dict(trading_data)
+                    if trading_data
+                    else TradingSettings()
+                ),
+            )
+            indicators = cast(
+                IndicatorSettings,
+                (
+                    IndicatorSettings.from_dict(indicators_data)
+                    if indicators_data
+                    else IndicatorSettings()
+                ),
+            )
+            ga = cast(
+                GASettings, GASettings.from_dict(ga_data) if ga_data else GASettings()
+            )
+            tpsl = cast(
+                TPSLSettings,
+                TPSLSettings.from_dict(tpsl_data) if tpsl_data else TPSLSettings(),
+            )
+            position_sizing = cast(
+                PositionSizingSettings,
+                (
+                    PositionSizingSettings.from_dict(position_sizing_data)
+                    if position_sizing_data
+                    else PositionSizingSettings()
+                ),
+            )
 
             # メイン設定の作成
             instance = cls(
@@ -781,9 +806,7 @@ class GAConfig(BaseConfig):
 
     # 多目的最適化設定
     enable_multi_objective: bool = False
-    objectives: List[str] = field(
-        default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy()
-    )
+    objectives: List[str] = field(default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy())
     objective_weights: List[float] = field(
         default_factory=lambda: DEFAULT_GA_OBJECTIVE_WEIGHTS.copy()
     )
@@ -1026,11 +1049,15 @@ class GAConfig(BaseConfig):
             "parallel_processes": None,
             "random_state": None,
             # TPSL設定デフォルト
-            "tpsl_method_constraints": data.get("tpsl_method_constraints", GA_DEFAULT_TPSL_METHOD_CONSTRAINTS),
+            "tpsl_method_constraints": data.get(
+                "tpsl_method_constraints", GA_DEFAULT_TPSL_METHOD_CONSTRAINTS
+            ),
             "tpsl_sl_range": data.get("tpsl_sl_range", GA_TPSL_SL_RANGE),
             "tpsl_tp_range": data.get("tpsl_tp_range", GA_TPSL_TP_RANGE),
             "tpsl_rr_range": data.get("tpsl_rr_range", GA_TPSL_RR_RANGE),
-            "tpsl_atr_multiplier_range": data.get("tpsl_atr_multiplier_range", GA_TPSL_ATR_MULTIPLIER_RANGE),
+            "tpsl_atr_multiplier_range": data.get(
+                "tpsl_atr_multiplier_range", GA_TPSL_ATR_MULTIPLIER_RANGE
+            ),
         }
 
         # デフォルト値をマージ
@@ -1083,22 +1110,27 @@ class GAConfig(BaseConfig):
         # TPSL設定を適用
         if self.tpsl_method_constraints is None:
             from ..config.constants import GA_DEFAULT_TPSL_METHOD_CONSTRAINTS
+
             self.tpsl_method_constraints = GA_DEFAULT_TPSL_METHOD_CONSTRAINTS.copy()
 
         if self.tpsl_sl_range is None:
             from ..config.constants import GA_TPSL_SL_RANGE
+
             self.tpsl_sl_range = GA_TPSL_SL_RANGE.copy()
 
         if self.tpsl_tp_range is None:
             from ..config.constants import GA_TPSL_TP_RANGE
+
             self.tpsl_tp_range = GA_TPSL_TP_RANGE.copy()
 
         if self.tpsl_rr_range is None:
             from ..config.constants import GA_TPSL_RR_RANGE
+
             self.tpsl_rr_range = GA_TPSL_RR_RANGE.copy()
 
         if self.tpsl_atr_multiplier_range is None:
             from ..config.constants import GA_TPSL_ATR_MULTIPLIER_RANGE
+
             self.tpsl_atr_multiplier_range = GA_TPSL_ATR_MULTIPLIER_RANGE.copy()
 
         # 許可指標リスト

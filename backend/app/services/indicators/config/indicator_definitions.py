@@ -1698,13 +1698,6 @@ PANDAS_TA_CONFIG = {
         "return_cols": ["PPO_0", "PPO_1", "PPO_2"],
         "default_values": {"fast": 12, "slow": 26, "signal": 9},
     },
-    "EMA": {
-        "function": "ema",
-        "params": {"length": ["length"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 20},
-    },
     "TEMA": {
         "function": "tema",
         "params": {"length": ["length"]},

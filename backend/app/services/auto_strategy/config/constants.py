@@ -198,9 +198,6 @@ VOLATILITY_INDICATORS = [
     "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
 ]
 
-# 統計系指標（削除済み - 数学指標はあまり有用でないため）
-STATISTICS_INDICATORS = []
-
 # 複合指標
 COMPOSITE_INDICATORS = [
     "ICHIMOKU",  # 一目均衡表 (Ichimoku Kinko Hyo)
@@ -213,7 +210,6 @@ VALID_INDICATOR_TYPES = (
     + MOMENTUM_INDICATORS
     + TREND_INDICATORS
     + VOLATILITY_INDICATORS
-    + STATISTICS_INDICATORS
     + COMPOSITE_INDICATORS
 )
 
@@ -372,17 +368,6 @@ POSITION_SIZING_METHODS = [
 ]
 
 # === GA関連定数 ===
-GA_DEFAULT_SETTINGS = {
-    "population_size": 10,
-    "generations": 5,
-    "crossover_rate": 0.8,
-    "mutation_rate": 0.1,
-    "elite_size": 2,
-    "max_indicators": 3,
-    "min_indicators": 1,
-    "min_conditions": 1,
-    "max_conditions": 3,
-}
 
 # === バックテスト関連定数 ===
 BACKTEST_OBJECTIVES = [
@@ -497,33 +482,6 @@ def get_id_to_indicator_mapping(indicator_ids: Dict[str, int]) -> Dict[int, str]
     return {v: k for k, v in indicator_ids.items()}
 
 
-# 基本的な移動平均インジケータ名のリスト（存在チェックなどに使用）
-BASIC_MA_INDICATORS: List[str] = [
-    "SMA",
-    "EMA",
-    "WMA",
-    "TRIMA",
-    "CWMA",
-    "KAMA",
-    "T3",
-    "ALMA",
-    "HMA",
-    "RMA",
-    "SWMA",
-    "ZLMA",
-    "MA",
-    "VWMA",
-    "FWMA",
-    "HWMA",
-    "JMA",
-    "MCGD",
-    "VIDYA",
-    "WCP",
-    "LINREG",  # 線形回帰移動平均線
-    "LINREG_SLOPE",  # 線形回帰傾き
-    "LINREG_INTERCEPT",  # 線形回帰切片
-    "LINREG_ANGLE",  # 線形回帰角度
-]
 
 
 # === TPSL/Position Sizing 範囲・既定値（散逸防止用） ===

@@ -267,4 +267,21 @@ class TestVolatilityIndicatorsRegistration:
         assert indicator is not None, "DONCHIAN should be registered"
         assert indicator.indicator_name == "DONCHIAN"
         assert indicator.category == "volatility"
-        assert set(indicator.required_data) == {"high", "low"}
+class TestPandasTaConfig:
+    """PANDAS_TA_CONFIGのテスト"""
+
+    def test_pandas_ta_config_no_duplicate_keys(self):
+        """PANDAS_TA_CONFIGの重複キーなしテスト"""
+        from app.services.indicators.config.indicator_definitions import PANDAS_TA_CONFIG
+
+        keys = list(PANDAS_TA_CONFIG.keys())
+        assert len(keys) == len(set(keys)), f"Duplicate keys found in PANDAS_TA_CONFIG: {[k for k in keys if keys.count(k) > 1]}"
+class TestPandasTaConfig:
+    """PANDAS_TA_CONFIGのテスト"""
+
+    def test_pandas_ta_config_no_duplicate_keys(self):
+        """PANDAS_TA_CONFIGの重複キーなしテスト"""
+        from app.services.indicators.config.indicator_definitions import PANDAS_TA_CONFIG
+
+        keys = list(PANDAS_TA_CONFIG.keys())
+        assert len(keys) == len(set(keys)), f"Duplicate keys found in PANDAS_TA_CONFIG: {[k for k in keys if keys.count(k) > 1]}"

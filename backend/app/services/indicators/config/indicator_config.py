@@ -60,25 +60,6 @@ class ParameterConfig:
         self.max_value = max_value
         self.description = description
 
-    def validate_value(self, value: Union[int, float, str, bool]) -> bool:
-        """値の妥当性を検証"""
-        # 数値型でない場合は検証をスキップ
-        if not isinstance(value, (int, float)):
-            return True
-
-        if (
-            self.min_value is not None
-            and isinstance(self.min_value, (int, float))
-            and value < self.min_value
-        ):
-            return False
-        if (
-            self.max_value is not None
-            and isinstance(self.max_value, (int, float))
-            and value > self.max_value
-        ):
-            return False
-        return True
 
 
 @dataclass
@@ -348,14 +329,6 @@ class IndicatorConfigRegistry:
             logger.error(f"指標 {indicator_type} のパラメータ生成に失敗: {e}")
             return {}
 
-    def generate_json_name(self, indicator_name: str) -> str:
-        """JSON形式の名前を生成"""
-        config = self.get_indicator_config(indicator_name)
-        if config:
-            return config.generate_json_name()
-
-        # 設定が見つからない場合のフォールバック
-        return indicator_name
 
 
 # グローバルレジストリインスタンス
