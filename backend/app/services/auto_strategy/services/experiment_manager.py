@@ -5,7 +5,7 @@ GA実験の実行と管理を担当します。
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from app.services.backtest.backtest_service import BacktestService
 
@@ -13,7 +13,6 @@ from ..core.ga_engine import GeneticAlgorithmEngine
 from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..config import GAConfig
-from ..models.strategy_models import StrategyGene
 from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)
@@ -117,15 +116,3 @@ class ExperimentManager:
             return True
 
         return _stop_experiment()
-
-    def validate_strategy_gene(self, gene: StrategyGene) -> tuple[bool, List[str]]:
-        """
-        戦略遺伝子の妥当性を検証
-
-        Args:
-            gene: 検証する戦略遺伝子
-
-        Returns:
-            (is_valid, error_messages)
-        """
-        return self.strategy_factory.validate_gene(gene)
