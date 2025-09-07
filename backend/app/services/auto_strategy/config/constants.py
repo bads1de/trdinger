@@ -8,6 +8,12 @@ from typing import Dict, List
 
 # === 指標タイプ定義 ===
 from enum import Enum
+from app.services.auto_strategy.utils.indicator_utils import (
+    get_volume_indicators,
+    get_momentum_indicators,
+    get_trend_indicators,
+    get_volatility_indicators,
+)
 
 
 class IndicatorType(str, Enum):
@@ -70,130 +76,21 @@ SUPPORTED_TIMEFRAMES = [
 DEFAULT_TIMEFRAME = "1h"
 
 # === テクニカル指標定数 ===
-# カテゴリ別に分割した指標リスト
-
-# ボリューム系指標
-VOLUME_INDICATORS = [
-    "AD",  # 累積/配分線 (Accumulation/Distribution)
-    "ADOSC",  # チャイキン・オシレーター (Chaikin A/D Oscillator)
-    "OBV",  # 残高売買高 (On-Balance Volume)
-    "MFI",  # マネー・フロウ指数 (Money Flow Index)
-    "EOM",  # 動きやすさ (Ease of Movement)
-    "KVO",  # クリンガー・ボリューム・オシレーター (Klinger Volume Oscillator)
-    "CMF",  # チャイキン・マネーフロー (Chaikin Money Flow)
-    "NVI",  # ネガティブ・ボリューム・インデックス (Negative Volume Index)
-    "PVI",  # ポジティブ・ボリューム・インデックス (Positive Volume Index)
-    "PVT",  # 価格・出来高・トレンド (Price Volume Trend)
-    "VWAP",  # 出来高加重平均価格 (Volume Weighted Average Price)
-    "VP",  # 出来高価格確認 (Volume Price Confirmation)
-    "PVOL",  # 価格・出来高指標 (Price-Volume indicator)
-    "PVR",  # 価格・出来高ランク指標 (Price Volume Rank indicator)
-    "EFI",  # エルダーの力指数 (Elder's Force Index)
-    "AOBV",  # アーチャー・オンバランス・ボリューム (Archer On-Balance Volume)
-]
+# カテゴリ別に分割した指標リスト（取得ロジックは utils に集約）
 
 
-# モメンタム系指標
-MOMENTUM_INDICATORS = [
-    "ADX",  # 平均方向性指数 (Average Directional Index)
-    "ADXR",  # ADX評価値 (Average Directional Index Rating)
-    "AO",  # オーサム・オシレーター (Awesome Oscillator)
-    "APO",  # アブソリュート・プライス・オシレーター (Absolute Price Oscillator)
-    "AROON",  # アローンツールシステム (Aroon System)
-    "AROONOSC",  # アローン・オシレーター (Aroon Oscillator)
-    "BOP",  # バランス・オブ・パワー (Balance Of Power)
-    "CCI",  # 商品チャネル指数 (Commodity Channel Index)
-    "CFO",  # チャンド予測オシレーター (Chande Forecast Oscillator)
-    "CHOP",  # チョピネス指数 (Choppiness Index)
-    "CTI",  # チャンド・トレンド指数 (Chande Trend Index)
-    "DPO",  # デトレンド価格オシレーター (Detrended Price Oscillator)
-    "DX",  # 方向性指数 (Directional Movement Index)
-    "MINUS_DI",  # マイナスマイナス方向性指数 (Minus Directional Indicator)
-    "MINUS_DM",  # マイナスマイナス方向性変動 (Minus Directional Movement)
-    "PLUS_DI",  # プラス方向性指数 (Plus Directional Indicator)
-    "PLUS_DM",  # プラス方向性変動 (Plus Directional Movement)
-    "PPO",  # パーセンテージ・プライス・オシレーター (Percentage Price Oscillator)
-    "QQE",  # 定性的定量推定 (Qualitative Quantitative Estimation)
-    "RMI",  # 相対モメンタム指数 (Relative Momentum Index)
-    "ROC",  # 変化率 (Rate of Change)
-    "ROCP",  # 変化率率 (Rate of Change Percentage)
-    "ROCR",  # 変化率比率 (Rate of Change Ratio)
-    "ROCR100",  # 変化率比率100スケール (Rate of Change Ratio 100 Scale)
-    "RSI",  # 相対力指数 (Relative Strength Index)
-    "RVGI",  # 相対ボラティリティ指数 (Relative Vigor Index)
-    "RVI",  # 相対ボラティリティ指数 (Relative Volatility Index)
-    "SMI",  # ストキャスティック・モメンタム指数 (Stochastic Momentum Index)
-    "STC",  # シャフト・トレンド・サイクル (Schaff Trend Cycle)
-    "STOCH",  # ストキャスティクス・オシレーター (Stochastic Oscillator)
-    "STOCHF",  # 高速ストキャスティクス (Stochastic Fast)
-    "STOCHRSI",  # ストキャスティックRSI (Stochastic RSI)
-    "TRIX",  # TRIX (Triple Exponential Average)
-    "TSI",  # 真実の強さ指数 (True Strength Index)
-    "ULTOSC",  # アルティメイト・オシレーター (Ultimate Oscillator)
-    "VORTEX",  # ボルテックス指標 (Vortex Indicator)
-    "WILLR",  # ウィリアムズ・パーセントレンジ (Williams Percent Range)
-    "MACD",  # MACD (Moving Average Convergence Divergence)
-    "MACDEXT",  # MACD拡張 (MACD Extended)
-    "MACDFIX",  # MACD固定 (MACD Fixed)
-    "KDJ",  # KDJ指標 (KDJ)
-    "KST",  # ノウ・シュア・シング (Know Sure Thing)
-    "PVO",  # パーセンテージ・ボリューム・オシレーター (Percentage Volume Oscillator)
-    "CMO",  # チェンド・モメンタム・オシレーター (Chande Momentum Oscillator)
-    "MOM",  # モメンタム (Momentum)
-]
+# ボリューム系指標（レジストリから動的取得）
+VOLUME_INDICATORS = get_volume_indicators()
 
-# トレンド系指標
-TREND_INDICATORS = [
-    "SMA",  # 単純移動平均線 (Simple Moving Average)
-    "EMA",  # 指数移動平均線 (Exponential Moving Average)
-    "WMA",  # 加重移動平均線 (Weighted Moving Average)
-    "TRIMA",  # 三角移動平均線 (Triangular Moving Average)
-    "CWMA",  # 中央重み付き移動平均線 (Central Weighted Moving Average)
-    "KAMA",  # カフマン適応移動平均線 (Kaufman's Adaptive Moving Average)
-    "TEMA",  # 三重指数移動平均線 (Triple Exponential Moving Average)
-    "DEMA",  # 二重指数移動平均線 (Double Exponential Moving Average)
-    "ALMA",  # アルノー・ルグー移動平均線 (Arnaud Legoux Moving Average)
-    "T3",  # T3移動平均線 (Tillson's T3 Moving Average)
-    "HMA",  # ハル移動平均線 (Hull Moving Average)
-    "RMA",  # 平滑化移動平均線 (Smoothed Moving Average)
-    "SWMA",  # 対称加重移動平均線 (Symmetric Weighted Moving Average)
-    "ZLMA",  # ゼロラグ指数移動平均線 (Zero Lag Exponential Moving Average)
-    "MA",  # 移動平均線 (Moving Average)
-    "SAR",  # パラボリックSAR (Parabolic SAR)
-    "PRICE_EMA_RATIO",  # 価格-EMA比率 (Price to EMA Ratio)
-    "SMA_SLOPE",  # SMA勾配 (SMA Slope)
-    "VWMA",  # 出来高加重移動平均線 (Volume Weighted Moving Average)
-    "FWMA",  # フィボナッチ加重移動平均線 (Fibonacci's Weighted Moving Average)
-    "HILO",  # ギャン高郭安アクティベーター (Gann High-Low Activator)
-    "HWMA",  # ホルト-ウィンターモデル移動平均線 (Holt-Winter Moving Average)
-    "JMA",  # ジュリック移動平均線 (Jurik Moving Average)
-    "MCGD",  # マクギリー動的指数 (McGinley Dynamic)
-    "PWMA",  # パスカル加重移動平均線 (Pascal's Weighted Moving Average)
-    "SINWMA",  # 正弦加重移動平均線 (Sine Weighted Moving Average)
-    "SSF",  # エーラー・スーパー・スムーサー (Ehler's Super Smoother Filter)
-    "VIDYA",  # 可変指数動的平均線 (Variable Index Dynamic Average)
-    "WCP",  # 加重終値価格 (Weighted Closing Price)
-    "LINREG",  # 線形回帰移動平均線 (Linear Regression Moving Average)
-    "LINREG_SLOPE",  # 線形回帰傾き (Linear Regression Slope)
-    "LINREG_INTERCEPT",  # 線形回帰切片 (Linear Regression Intercept)
-    "LINREG_ANGLE",  # 線形回帰角度 (Linear Regression Angle)
-]
 
-# ボラティリティ系指標
-VOLATILITY_INDICATORS = [
-     "ATR",  # 平均真ボラティリティ範囲 (Average True Range)
-     "NATR",  # 正規化平均真ボラティリティ範囲 (Normalized Average True Range)
-     "TRANGE",  # 真ボラティリティ範囲 (True Range)
-     "BB",  # ボリンジャーバンド (Bollinger Bands)
-     "DONCHIAN",  # ドンチャンチャネル (Donchian Channel)
-     "KELTNER",  # ケルトナチャネル (Keltner Channel)
-     "SUPERTREND",  # スーパートレンド (SuperTrend)
-     "ACCBANDS",  # アクセレレーションバンド (Acceleration Bands)
-     "HWC",  # ハル・ウィリアムズ・チャネル (Hull-Wilder Channels)
-     "PDIST",  # プライス・ディスタンス (Price Distance)
-     "BBANDS",  # ボリンジャーバンド（BBの別名）
-     "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
-]
+# モメンタム系指標（レジストリから動的取得）
+MOMENTUM_INDICATORS = get_momentum_indicators()
+
+# トレンド系指標（レジストリから動的取得）
+TREND_INDICATORS = get_trend_indicators()
+
+# ボラティリティ系指標（レジストリから動的取得）
+VOLATILITY_INDICATORS = get_volatility_indicators()
 
 # 複合指標
 COMPOSITE_INDICATORS = [
@@ -202,13 +99,20 @@ COMPOSITE_INDICATORS = [
 ]
 
 # 全テクニカル指標（indicator_registryに登録されているもの）
-VALID_INDICATOR_TYPES = (
+# 重複除去しつつ、カテゴリ配列の順序を維持
+_all_lists_concat = (
     VOLUME_INDICATORS
     + MOMENTUM_INDICATORS
     + TREND_INDICATORS
     + VOLATILITY_INDICATORS
     + COMPOSITE_INDICATORS
 )
+_seen_all = set()
+VALID_INDICATOR_TYPES: List[str] = []
+for _name in _all_lists_concat:
+    if _name not in _seen_all:
+        _seen_all.add(_name)
+        VALID_INDICATOR_TYPES.append(_name)
 
 # テクニカルオンリー時のおすすめ指標セット（成立性が高い指標を厳選）
 CURATED_TECHNICAL_INDICATORS = {

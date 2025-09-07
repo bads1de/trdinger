@@ -250,6 +250,10 @@ class IndicatorConfigRegistry:
             for alias in config.aliases:
                 self._configs[alias] = config
 
+    def reset(self) -> None:
+        """レジストリをクリア（テスト用ユーティリティ）"""
+        self._configs.clear()
+
     def get_indicator_config(self, indicator_name: str) -> Optional[IndicatorConfig]:
         """設定を取得 (get をリネーム)"""
         return self._configs.get(indicator_name)
@@ -261,6 +265,14 @@ class IndicatorConfigRegistry:
     def get_supported_indicator_names(self) -> List[str]:
         """サポートされている指標の名前のリストを取得 (新規追加)"""
         return list(self._configs.keys())
+
+    def get_all_indicators(self) -> Dict[str, IndicatorConfig]:
+        """登録済みインジケーターのディクショナリを取得
+
+        Returns:
+            Dict[str, IndicatorConfig]: name/alias -> IndicatorConfig のマップ
+        """
+        return dict(self._configs)
 
     def generate_parameters_for_indicator(self, indicator_type: str) -> Dict[str, Any]:
         """

@@ -13,6 +13,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..utils.common_utils import BaseGene
+from ..utils.indicator_utils import get_all_indicators
 
 logger = logging.getLogger(__name__)
 
@@ -355,10 +356,10 @@ class GeneValidator:
         from ..config.constants import (
             OPERATORS,
             DATA_SOURCES,
-            VALID_INDICATOR_TYPES,
         )
 
-        self.valid_indicator_types = VALID_INDICATOR_TYPES
+        # 定数ではなくユーティリティの動的取得を使用
+        self.valid_indicator_types = get_all_indicators()
         self.valid_operators = OPERATORS
         self.valid_data_sources = DATA_SOURCES
 

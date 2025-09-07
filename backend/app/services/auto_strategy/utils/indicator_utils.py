@@ -4,24 +4,89 @@
 """
 
 from typing import Dict, List
-
-from ..config.constants import VALID_INDICATOR_TYPES, ML_INDICATOR_TYPES, SUPPORTED_SYMBOLS, SUPPORTED_TIMEFRAMES
-from app.services.indicators import TechnicalIndicatorService
 import logging
+from app.services.indicators import TechnicalIndicatorService
+
+
+def _load_indicator_registry():
+    """indicator_registry を初期化して返す（副作用目的の import を含む）"""
+    # setup_* の実行を保証するための side-effect import
+    from app.services.indicators.config import indicator_definitions  # noqa: F401
+    from app.services.indicators.config.indicator_config import (
+        indicator_registry,
+    )
+
+    return indicator_registry
+
+
+def indicators_by_category(category: str) -> List[str]:
+    """レジストリに登録済みのインジケーターからカテゴリ別に主名称のみ抽出"""
+    registry = _load_indicator_registry()
+    seen = set()
+    results: List[str] = []
+    for name, cfg in registry._configs.items():  # type: ignore[attr-defined]
+        try:
+            if cfg and getattr(cfg, "category", None) == category:
+                primary = getattr(cfg, "indicator_name", name)
+                if primary not in seen:
+                    seen.add(primary)
+                    results.append(primary)
+        except Exception:
+            continue
+    results.sort()
+    return results
+
+
+def get_volume_indicators() -> List[str]:
+    return indicators_by_category("volume")
+
+
+def get_momentum_indicators() -> List[str]:
+    return indicators_by_category("momentum")
+
+
+def get_trend_indicators() -> List[str]:
+    return indicators_by_category("trend")
+
+
+def get_volatility_indicators() -> List[str]:
+    return indicators_by_category("volatility")
 
 
 def get_all_indicators() -> List[str]:
-    """全指標タイプを取得"""
-    return VALID_INDICATOR_TYPES + ML_INDICATOR_TYPES
+    """全指標タイプを取得（テクニカル + ML）"""
+    # 遅延インポートで循環依存を回避
+    from ..config.constants import ML_INDICATOR_TYPES
+
+    technical = (
+        get_volume_indicators()
+        + get_momentum_indicators()
+        + get_trend_indicators()
+        + get_volatility_indicators()
+    )
+    # 重複除去して順序維持
+    seen = set()
+    ordered: List[str] = []
+    for n in technical + ML_INDICATOR_TYPES:
+        if n not in seen:
+            seen.add(n)
+            ordered.append(n)
+    return ordered
 
 
 def validate_symbol(symbol: str) -> bool:
     """シンボルの妥当性を検証"""
+    # 遅延インポートで循環依存を回避
+    from ..config.constants import SUPPORTED_SYMBOLS
+
     return symbol in SUPPORTED_SYMBOLS
 
 
 def validate_timeframe(timeframe: str) -> bool:
     """時間軸の妥当性を検証"""
+    # 遅延インポートで循環依存を回避
+    from ..config.constants import SUPPORTED_TIMEFRAMES
+
     return timeframe in SUPPORTED_TIMEFRAMES
 
 
@@ -34,7 +99,12 @@ def get_all_indicator_ids() -> Dict[str, int]:
     """
     try:
         indicator_service = TechnicalIndicatorService()
-        technical_indicators = list(indicator_service.get_supported_indicators().keys())
+        technical_indicators = list(
+            indicator_service.get_supported_indicators().keys()
+        )
+
+        # 遅延インポートで循環依存を回避
+        from ..config.constants import ML_INDICATOR_TYPES
 
         # 全指標を結合
         all_indicators = technical_indicators + ML_INDICATOR_TYPES

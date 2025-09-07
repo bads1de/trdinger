@@ -30,13 +30,13 @@ from ..core.operand_grouping import operand_grouping_system
 from ..config.constants import (
     OPERATORS,
     DATA_SOURCES,
-    VALID_INDICATOR_TYPES,
     CURATED_TECHNICAL_INDICATORS,
     MOVING_AVERAGE_INDICATORS,
     PREFERRED_MA_INDICATORS,
     MA_INDICATORS_NEEDING_PERIOD
 )
 from .condition_generator import ConditionGenerator
+from ..utils.indicator_utils import get_all_indicators
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +129,12 @@ class RandomGeneGenerator:
 
         # 利用可能な演算子
         self.available_operators = OPERATORS
+
+        # 動的に有効なインジケーター名をキャッシュ
+        try:
+            self._valid_indicator_names = set(get_all_indicators())
+        except Exception:
+            self._valid_indicator_names = set()
 
     def _ensure_or_with_fallback(
         self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
@@ -340,8 +346,11 @@ class RandomGeneGenerator:
         if indicator_mode == "technical_only":
             # ### 成立性が高い指標のみを使用し、可読性を向上
             curated = CURATED_TECHNICAL_INDICATORS
-            # VALID_INDICATOR_TYPESに含まれる指標のみに絞り込み
-            curated = {ind for ind in curated if ind in VALID_INDICATOR_TYPES}
+            # 動的に有効な指標のみに絞り込み
+            try:
+                curated = {ind for ind in curated if ind in self._valid_indicator_names}
+            except Exception:
+                curated = set(curated)
 
             try:
                 allowed = set(getattr(config, "allowed_indicators", []) or [])
@@ -607,8 +616,8 @@ class RandomGeneGenerator:
         # テクニカル指標名を追加（JSON形式：パラメータなし）
         for indicator_gene in indicators:
             indicator_type = indicator_gene.type
-            # VALID_INDICATOR_TYPESに含まれる指標のみを使用
-            if indicator_type in VALID_INDICATOR_TYPES:
+            # 動的リストに含まれる指標のみを使用
+            if not self._valid_indicator_names or indicator_type in self._valid_indicator_names:
                 choices.append(indicator_type)
 
         # 基本データソースを追加（価格データ）

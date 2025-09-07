@@ -3,6 +3,7 @@
 
 各インジケーターの設定を定義し、レジストリに登録します。
 """
+import logging
 
 from app.services.indicators.technical_indicators.momentum import (
     MomentumIndicators,
@@ -22,6 +23,7 @@ from .indicator_config import (
     indicator_registry,
 )
 
+logger = logging.getLogger(__name__)
 
 def setup_momentum_indicators():
     """モメンタム系インジケーターの設定"""
@@ -874,6 +876,120 @@ def setup_momentum_indicators():
     )
     indicator_registry.register(minus_dm_config)
 
+    # --- Additions to satisfy tests: TSI, CFO, CTI, RMI, DPO, CHOP, VORTEX ---
+    # TSI
+    tsi_config = IndicatorConfig(
+        indicator_name="TSI",
+        adapter_function=MomentumIndicators.tsi,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    tsi_config.add_parameter(
+        ParameterConfig(name="fastperiod", default_value=13, min_value=2, max_value=100)
+    )
+    tsi_config.add_parameter(
+        ParameterConfig(name="slowperiod", default_value=25, min_value=2, max_value=200)
+    )
+    indicator_registry.register(tsi_config)
+
+    # CFO
+    cfo_config = IndicatorConfig(
+        indicator_name="CFO",
+        adapter_function=MomentumIndicators.cfo,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    cfo_config.add_parameter(
+        ParameterConfig(name="period", default_value=9, min_value=2, max_value=200)
+    )
+    cfo_config.param_map = {"period": "length"}
+    indicator_registry.register(cfo_config)
+
+    # CTI
+    cti_config = IndicatorConfig(
+        indicator_name="CTI",
+        adapter_function=MomentumIndicators.cti,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    cti_config.add_parameter(
+        ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    )
+    cti_config.param_map = {"period": "length"}
+    indicator_registry.register(cti_config)
+
+    # RMI
+    rmi_config = IndicatorConfig(
+        indicator_name="RMI",
+        adapter_function=MomentumIndicators.rmi,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    rmi_config.add_parameter(
+        ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+    )
+    rmi_config.add_parameter(
+        ParameterConfig(name="mom", default_value=20, min_value=1, max_value=100)
+    )
+    indicator_registry.register(rmi_config)
+
+    # DPO
+    dpo_cfg = IndicatorConfig(
+        indicator_name="DPO",
+        adapter_function=MomentumIndicators.dpo,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    dpo_cfg.add_parameter(
+        ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+    )
+    indicator_registry.register(dpo_cfg)
+
+    # CHOP
+    chop_cfg = IndicatorConfig(
+        indicator_name="CHOP",
+        adapter_function=MomentumIndicators.chop,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    chop_cfg.add_parameter(
+        ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+    )
+    chop_cfg.param_map = {
+        "high": "high",
+        "low": "low",
+        "close": "close",
+        "length": "length",
+    }
+    indicator_registry.register(chop_cfg)
+
+    # VORTEX
+    vi_cfg = IndicatorConfig(
+        indicator_name="VORTEX",
+        adapter_function=MomentumIndicators.vortex,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+        category="momentum",
+    )
+    vi_cfg.add_parameter(
+        ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+    )
+    vi_cfg.param_map = {"high": "high", "low": "low", "close": "close", "length": "length"}
+    indicator_registry.register(vi_cfg)
+
 
 def setup_trend_indicators():
     """トレンド系インジケーターの設定（オートストラテジー最適化版）"""
@@ -1243,6 +1359,138 @@ def setup_trend_indicators():
     }
     indicator_registry.register(linreg_angle_config)
 
+    # 追加: HMA
+    hma_config = IndicatorConfig(
+        indicator_name="HMA",
+        adapter_function=TrendIndicators.hma,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    hma_config.add_parameter(
+        ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    )
+    hma_config.param_map = {"period": "length"}
+    indicator_registry.register(hma_config)
+
+    # 追加: ZLMA
+    zlma_config = IndicatorConfig(
+        indicator_name="ZLMA",
+        adapter_function=TrendIndicators.zlma,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    zlma_config.add_parameter(
+        ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    )
+    zlma_config.param_map = {"close": "close", "period": "length"}
+    indicator_registry.register(zlma_config)
+
+    # 追加: VWMA
+    vwma_config = IndicatorConfig(
+        indicator_name="VWMA",
+        adapter_function=TrendIndicators.vwma,
+        required_data=["close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    vwma_config.add_parameter(
+        ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+    )
+    vwma_config.param_map = {"close": "data", "volume": "volume", "length": "length"}
+    indicator_registry.register(vwma_config)
+
+    # 追加: SWMA
+    swma_config = IndicatorConfig(
+        indicator_name="SWMA",
+        adapter_function=TrendIndicators.swma,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    swma_config.add_parameter(
+        ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
+    )
+    swma_config.param_map = {"close": "data", "period": "length"}
+    indicator_registry.register(swma_config)
+
+    # 追加: ALMA
+    alma_config = IndicatorConfig(
+        indicator_name="ALMA",
+        adapter_function=TrendIndicators.alma,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    alma_config.add_parameter(
+        ParameterConfig(name="period", default_value=9, min_value=2, max_value=200)
+    )
+    alma_config.param_map = {"close": "data", "period": "length"}
+    indicator_registry.register(alma_config)
+
+    # 追加: RMA
+    rma_config = IndicatorConfig(
+        indicator_name="RMA",
+        adapter_function=TrendIndicators.rma,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    rma_config.add_parameter(
+        ParameterConfig(name="period", default_value=14, min_value=2, max_value=200)
+    )
+    indicator_registry.register(rma_config)
+
+    # --- Additions to satisfy tests: SMA_SLOPE, PRICE_EMA_RATIO, FWMA ---
+    sma_slope_config = IndicatorConfig(
+        indicator_name="SMA_SLOPE",
+        adapter_function=TrendIndicators.sma_slope,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="trend",
+    )
+    sma_slope_config.add_parameter(
+        ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    )
+    sma_slope_config.param_map = {"period": "length"}
+    indicator_registry.register(sma_slope_config)
+
+    price_ema_ratio_config = IndicatorConfig(
+        indicator_name="PRICE_EMA_RATIO",
+        adapter_function=TrendIndicators.price_ema_ratio,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="trend",
+    )
+    price_ema_ratio_config.add_parameter(
+        ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    )
+    price_ema_ratio_config.param_map = {"period": "length"}
+    indicator_registry.register(price_ema_ratio_config)
+
+    fwma_config = IndicatorConfig(
+        indicator_name="FWMA",
+        adapter_function=TrendIndicators.fwma,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="trend",
+    )
+    fwma_config.add_parameter(
+        ParameterConfig(name="length", default_value=10, min_value=2, max_value=200)
+    )
+    fwma_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(fwma_config)
+
 
 
 def setup_volatility_indicators():
@@ -1524,6 +1772,54 @@ def setup_volatility_indicators():
     irm_config.param_map = {"length": "length"}
     indicator_registry.register(irm_config)
 
+    # --- Additions to satisfy tests: KELTNER, DONCHIAN, SUPERTREND ---
+    kc_config = IndicatorConfig(
+        indicator_name="KELTNER",
+        adapter_function=VolatilityIndicators.keltner,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_RATIO,
+        category="volatility",
+    )
+    kc_config.add_parameter(
+        ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+    )
+    kc_config.add_parameter(
+        ParameterConfig(name="scalar", default_value=2.0, min_value=0.5, max_value=5.0)
+    )
+    indicator_registry.register(kc_config)
+
+    donch_config = IndicatorConfig(
+        indicator_name="DONCHIAN",
+        adapter_function=VolatilityIndicators.donchian,
+        required_data=["high", "low"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+    )
+    donch_config.add_parameter(
+        ParameterConfig(name="period", default_value=20, min_value=2, max_value=200)
+    )
+    donch_config.param_map = {"period": "length"}
+    indicator_registry.register(donch_config)
+
+    supertrend_config = IndicatorConfig(
+        indicator_name="SUPERTREND",
+        adapter_function=VolatilityIndicators.supertrend,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+        category="volatility",
+    )
+    supertrend_config.add_parameter(
+        ParameterConfig(name="period", default_value=10, min_value=2, max_value=200)
+    )
+    supertrend_config.add_parameter(
+        ParameterConfig(name="multiplier", default_value=3.0, min_value=1.0, max_value=10.0)
+    )
+    supertrend_config.param_map = {"period": "length"}
+    indicator_registry.register(supertrend_config)
+
 
 def setup_volume_indicators():
     """出来高系インジケーターの設定"""
@@ -1613,6 +1909,122 @@ def setup_volume_indicators():
     )
     vp_config.param_map = {"period": "width"}
     indicator_registry.register(vp_config)
+
+    # --- Additions to satisfy tests: AOBV, EFI ---
+    aobv_config = IndicatorConfig(
+        indicator_name="AOBV",
+        adapter_function=VolumeIndicators.aobv,
+        required_data=["close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.VOLUME,
+        category="volume",
+    )
+    aobv_config.add_parameter(
+        ParameterConfig(name="fast", default_value=5, min_value=2, max_value=50)
+    )
+    aobv_config.add_parameter(
+        ParameterConfig(name="slow", default_value=10, min_value=2, max_value=100)
+    )
+    aobv_config.add_parameter(
+        ParameterConfig(name="max_lookback", default_value=2, min_value=1, max_value=10)
+    )
+    aobv_config.add_parameter(
+        ParameterConfig(name="min_lookback", default_value=2, min_value=1, max_value=10)
+    )
+    aobv_config.add_parameter(ParameterConfig(name="mamode", default_value="ema"))
+    indicator_registry.register(aobv_config)
+
+    efi_config = IndicatorConfig(
+        indicator_name="EFI",
+        adapter_function=VolumeIndicators.efi,
+        required_data=["close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="volume",
+    )
+    efi_config.add_parameter(
+        ParameterConfig(name="length", default_value=13, min_value=2, max_value=100)
+    )
+    efi_config.add_parameter(ParameterConfig(name="mamode", default_value="ema"))
+    efi_config.add_parameter(
+        ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)
+    )
+    indicator_registry.register(efi_config)
+
+    # 追加: EOM (Ease of Movement)
+    eom_cfg = IndicatorConfig(
+        indicator_name="EOM",
+        adapter_function=VolumeIndicators.eom,
+        required_data=["high", "low", "close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.VOLUME,
+        category="volume",
+    )
+    eom_cfg.add_parameter(
+        ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+    )
+    eom_cfg.add_parameter(
+        ParameterConfig(
+            name="divisor", default_value=100000000, min_value=1, max_value=1000000000
+        )
+    )
+    eom_cfg.add_parameter(
+        ParameterConfig(name="drift", default_value=1, min_value=1, max_value=10)
+    )
+    eom_cfg.param_map = {"divisor": "divisor", "drift": "drift"}
+    indicator_registry.register(eom_cfg)
+
+    # 追加: PVT
+    pvt_cfg = IndicatorConfig(
+        indicator_name="PVT",
+        adapter_function=VolumeIndicators.pvt,
+        required_data=["close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.VOLUME,
+        category="volume",
+    )
+    indicator_registry.register(pvt_cfg)
+
+    # 追加: CMF
+    cmf_cfg = IndicatorConfig(
+        indicator_name="CMF",
+        adapter_function=VolumeIndicators.cmf,
+        required_data=["high", "low", "close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.VOLUME,
+        category="volume",
+    )
+    cmf_cfg.add_parameter(
+        ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+    )
+    cmf_cfg.param_map = {"length": "length"}
+    indicator_registry.register(cmf_cfg)
+
+    # 追加: PVOL
+    pvol_config = IndicatorConfig(
+        indicator_name="PVOL",
+        adapter_function=VolumeIndicators.pvol,
+        required_data=["close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.VOLUME,
+        category="volume",
+    )
+    pvol_config.add_parameter(
+        ParameterConfig(name="signed", default_value=True, min_value=False, max_value=True)
+    )
+    pvol_config.param_map = {"signed": "signed", "period": None, "length": None}
+    indicator_registry.register(pvol_config)
+
+    # 追加: PVR
+    pvr_config = IndicatorConfig(
+        indicator_name="PVR",
+        adapter_function=VolumeIndicators.pvr,
+        required_data=["close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="volume",
+    )
+    indicator_registry.register(pvr_config)
 
 
 def initialize_all_indicators():
