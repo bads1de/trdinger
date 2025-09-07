@@ -419,22 +419,6 @@ indicators:
     conditions:
       long: "close > {left_operand}"
       short: "close < {left_operand}"
-
-  MIDPOINT:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
-
-  MIDPRICE:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
   BBANDS:
     type: volatility
     scale_type: price_absolute
@@ -710,21 +694,6 @@ indicators:
 
 
 
-  MIDPOINT:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
-
-  MIDPRICE:
-    type: trend
-    scale_type: price_absolute
-    thresholds: null
-    conditions:
-      long: "close > {left_operand}"
-      short: "close < {left_operand}"
 
 
   # ボラティリティ追加指標

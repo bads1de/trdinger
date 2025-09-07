@@ -58,12 +58,6 @@ INDICATOR_MIN_DATA_LENGTHS = {
 }
 
 
-class DataValidationError(Exception):
-    """データ検証エラー"""
-
-    pass
-
-
 def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
     """
     指標の種類とパラメータから最小必要データ長を取得
@@ -88,34 +82,6 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
         return length_value
 
     return 1  # 最低1つのデータ点
-
-
-def validate_data_length(
-    df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-) -> bool:
-    """
-    強化されたデータ長検証
-
-    Args:
-        df: OHLCV価格データ
-        indicator_type: 指標タイプ
-        params: パラメータ辞書
-
-    Returns:
-        データ長が十分な場合はTrue
-    """
-    required_length = get_minimum_data_length(indicator_type, params)
-    data_length = len(df)
-
-    if data_length < required_length:
-        logger.warning(
-            "data_validation.pyを強化したデータ長検証における警告。"
-            f"{indicator_type}: 必要なデータ長 {required_length} に対して "
-            f"実際の長さ {data_length} が不足しています"
-        )
-        return False
-
-    return True
 
 
 def validate_data_length_with_fallback(
@@ -203,75 +169,6 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
         return_cols = config.get("return_cols", ["Result"])
         nan_result = np.full((data_length, len(return_cols)), np.nan)
         return nan_result
-
-
-def validate_ohlcv_data_quality(df: pd.DataFrame) -> List[str]:
-    """
-    OHLCVデータの品質検証（prometheus用）
-
-    Args:
-        df: OHLCVデータフレーム
-
-    Returns:
-        検出された問題のリスト
-    """
-    issues = []
-
-    # データ長チェック - 指標計算に最低限必要な長さを考慮
-    min_required = 3  # 絶対的最小
-    if len(df) < min_required:
-        issues.append(f"データ長不足: {len(df)} (最小{min_required}以上必要)")
-
-    recommended_min = 20  # 推奨最小
-    if len(df) < recommended_min:
-        issues.append(f"データ長推奨不足: {len(df)} (推奨{recommended_min}以上)")
-
-    # NaNチェック
-    nan_counts = df.isna().sum()
-    if nan_counts.sum() > 0:
-        for col, count in nan_counts.items():
-            if count > 0:
-                issues.append(f"NaN検出 {col}: {count}個")
-
-    # ゼロ値チェック
-    zero_cols = ["Volume"]
-    for col in zero_cols:
-        if col in df.columns:
-            zero_count = (df[col] == 0).sum()
-            if zero_count > len(df) * 0.1:  # 10%以上
-                issues.append(f"ゼロ値過多 {col}: {zero_count}個")
-
-    return issues
-
-
-def validate_indicator_params(indicator_type: str, params: Dict[str, Any]) -> bool:
-    """
-    パラメータ検証（prometheus用）
-
-    Args:
-        indicator_type: 指標タイプ
-        params: パラメータ辞書
-
-    Returns:
-        パラメータが有効かどうか
-    """
-    config = PANDAS_TA_CONFIG.get(indicator_type)
-    if not config:
-        logger.warning(f"未知の指標タイプ: {indicator_type}")
-        return False
-
-    for param_name, aliases in config["params"].items():
-        for alias in aliases:
-            if alias in params:
-                value = params[alias]
-                if not is_valid_param_value(param_name, value):
-                    logger.warning(
-                        f"無効なパラメータ値: {indicator_type}.{alias} = {value}"
-                    )
-                    return False
-                break
-
-    return True
 
 
 def is_valid_param_value(param_name: str, value: Any) -> bool:
