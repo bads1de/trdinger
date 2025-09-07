@@ -95,9 +95,6 @@ class OperandGroupingSystem:
             "TSI": OperandGroup.ZERO_CENTERED,
             "BOP": OperandGroup.ZERO_CENTERED,
             # ボリンジャーバンドの複数出力
-            "BB_0": OperandGroup.PRICE_BASED,  # 上限バンド
-            "BB_1": OperandGroup.PRICE_BASED,  # 中央線（SMA）
-            "BB_2": OperandGroup.PRICE_BASED,  # 下限バンド
             # ストキャスティクスの複数出力
             "STOCH_0": OperandGroup.PERCENTAGE_0_100,  # %K
             "STOCH_1": OperandGroup.PERCENTAGE_0_100,  # %D
@@ -158,7 +155,6 @@ class OperandGroupingSystem:
             "PVR": OperandGroup.ZERO_CENTERED,
 
             # 新規Momentum系指標（ZERO_CENTERED）
-            "TSI": OperandGroup.ZERO_CENTERED,  # 既存から復元
             "RVI": OperandGroup.ZERO_CENTERED,
             "RMI": OperandGroup.ZERO_CENTERED,  # 既存から復元
             "DPO": OperandGroup.ZERO_CENTERED,
