@@ -27,18 +27,6 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-@dataclass
-class GeneParameter:
-    """遺伝子パラメータ定義"""
-
-    name: str
-    default_value: Any
-    param_type: type
-    min_value: Optional[Union[int, float]] = None
-    max_value: Optional[Union[int, float]] = None
-    description: str = ""
-
-
 class BaseGene(ABC):
     """
     遺伝子クラスの基底クラス

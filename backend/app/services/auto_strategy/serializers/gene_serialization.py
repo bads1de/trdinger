@@ -337,15 +337,6 @@ class GeneSerializer:
             logger.error(f"戦略遺伝子JSON変換エラー: {e}")
             raise ValueError(f"戦略遺伝子のJSON変換に失敗: {e}")
 
-    def _get_current_timestamp(self) -> str:
-        """現在のタイムスタンプを取得"""
-        try:
-            from datetime import datetime
-
-            return datetime.now().isoformat()
-        except Exception as e:
-            logger.error(f"タイムスタンプ取得エラー: {e}")
-            return ""
 
     # 以下、旧GeneEncoderから統合されたメソッド
 

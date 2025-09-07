@@ -7,7 +7,7 @@
 """
 
 import logging
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple
 import numpy as np
 import pandas as pd
 
@@ -171,21 +171,3 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
         return nan_result
 
 
-def is_valid_param_value(param_name: str, value: Any) -> bool:
-    """
-    パラメータ値の有効性検証
-
-    Args:
-        param_name: パラメータ名
-        value: 値
-
-    Returns:
-        有効かどうか
-    """
-    if not isinstance(value, (int, float)):
-        return False
-
-    if param_name in ["length", "window"] and (value <= 0 or value > 1000):
-        return False
-
-    return True

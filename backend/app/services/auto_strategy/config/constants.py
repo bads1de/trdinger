@@ -3,7 +3,7 @@ Auto Strategy 共通定数
 
 """
 
-from typing import Dict, List
+from typing import List
 
 
 # === 指標タイプ定義 ===
