@@ -1243,11 +1243,6 @@ def setup_trend_indicators():
     }
     indicator_registry.register(linreg_angle_config)
 
-    # MIDPOINT
-    # MIDPOINT config deleted
-
-    # MIDPRICE
-    # MIDPRICE config deleted
 
 
 def setup_volatility_indicators():
@@ -1618,8 +1613,6 @@ def setup_volume_indicators():
     )
     vp_config.param_map = {"period": "width"}
     indicator_registry.register(vp_config)
-
-    # 統計指標の設定は削除済み
 
 
 def initialize_all_indicators():
@@ -2554,10 +2547,6 @@ hilo_config.param_map = {
 }
 indicator_registry.register(hilo_config)
 
-# HL2 (High-Low Average)
-# HL2 config deleted
-# HLC3 (High-Low-Close Average)
-# HLC3 config deleted
 # HWMA (Holt-Winter Moving Average)
 hwma_config = IndicatorConfig(
     indicator_name="HWMA",
@@ -2613,9 +2602,6 @@ mcgd_config.add_parameter(
 )
 mcgd_config.param_map = {"close": "data", "length": "length"}
 indicator_registry.register(mcgd_config)
-
-# OHLC4 (Open-High-Low-Close Average)
-# OHLC4 config deleted
 
 # PWMA (Pascal's Weighted Moving Average)
 pwma_config = IndicatorConfig(

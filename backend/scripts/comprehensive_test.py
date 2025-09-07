@@ -133,7 +133,6 @@ def get_all_registered_indicators():
             logger.warning("インジケータレジストリが空です")
             return []
 
-        # STC、THERMO、RSI_EMA_CROSS、AOBV、HWC、RVGI、PPO、PVO、KVOインジケーターを除外（タスク要件により削除済み）
         indicators = [ind for ind in indicators if ind not in ['STC', 'THERMO', 'RSI_EMA_CROSS', 'AOBV', 'HWC', 'RVGI', 'PPO', 'PVO', 'KVO']]
 
         logger.info(f"全{len(indicators)}個のインジケーターを取得しました（STC, THERMO, AOBV, HWC, RVGI, PPO, PVO, KVO除外）")

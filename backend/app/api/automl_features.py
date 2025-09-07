@@ -38,8 +38,6 @@ class TSFreshConfigModel(BaseModel):
     )
 
 
-# Featuretools は削除済みのため、Pydantic モデル定義からも完全に除去しました
-
 
 class AutoFeatConfigModel(BaseModel):
     """AutoFeat設定モデル"""

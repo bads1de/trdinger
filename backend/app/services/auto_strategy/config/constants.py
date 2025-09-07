@@ -165,11 +165,9 @@ TREND_INDICATORS = [
     "VWMA",  # 出来高加重移動平均線 (Volume Weighted Moving Average)
     "FWMA",  # フィボナッチ加重移動平均線 (Fibonacci's Weighted Moving Average)
     "HILO",  # ギャン高郭安アクティベーター (Gann High-Low Activator)
-    # 数学系指標は削除済み (HL2, HLC3, OHLC4, MIDPOINT, MIDPRICE)
     "HWMA",  # ホルト-ウィンターモデル移動平均線 (Holt-Winter Moving Average)
     "JMA",  # ジュリック移動平均線 (Jurik Moving Average)
     "MCGD",  # マクギリー動的指数 (McGinley Dynamic)
-    # OHLC4は削除済み
     "PWMA",  # パスカル加重移動平均線 (Pascal's Weighted Moving Average)
     "SINWMA",  # 正弦加重移動平均線 (Sine Weighted Moving Average)
     "SSF",  # エーラー・スーパー・スムーサー (Ehler's Super Smoother Filter)
@@ -193,7 +191,6 @@ VOLATILITY_INDICATORS = [
      "ACCBANDS",  # アクセレレーションバンド (Acceleration Bands)
      "HWC",  # ハル・ウィリアムズ・チャネル (Hull-Wilder Channels)
      "PDIST",  # プライス・ディスタンス (Price Distance)
-     # RANGEは削除済み
      "BBANDS",  # ボリンジャーバンド（BBの別名）
      "UO",  # アルティメイト・オシレーター (Ultimate Oscillator)
 ]
@@ -287,7 +284,6 @@ CURATED_TECHNICAL_INDICATORS = {
     "ACCBANDS",
     "HWC",
     "PDIST",
-    # パターン認識系（削除済み）
 }
 
 # 移動平均系指標の定数

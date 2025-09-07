@@ -658,7 +658,6 @@ class ConditionGenerator:
                         categorized[IndicatorType.TREND].append(ind)
                     elif cat == "volatility":
                         categorized[IndicatorType.VOLATILITY].append(ind)
-                    # elif cat == "statistics":  # 統計指標は削除済み
                     else:
                         categorized[IndicatorType.TREND].append(ind)
                 elif name in INDICATOR_CHARACTERISTICS:
