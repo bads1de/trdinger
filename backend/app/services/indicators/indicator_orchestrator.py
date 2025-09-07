@@ -61,47 +61,6 @@ class TechnicalIndicatorService:
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
             raise
-
-    def validate_data_length(
-        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-    ) -> bool:
-        """
-        データ長が指標計算に十分かどうかを検証
-
-        Args:
-            df: OHLCV価格データ
-            indicator_type: 指標タイプ
-            params: パラメータ辞書
-
-        Returns:
-            データ長が十分な場合はTrue、不十分な場合はFalse
-        """
-        config = PANDAS_TA_CONFIG.get(indicator_type)
-        if not config:
-            # 設定がない指標はアダプター使用のため、検証不要
-            return True
-
-        required_length = config["default_values"].get("length", 14)
-
-        # パラメータからlengthを取得（指定されている場合）
-        for param_name, aliases in config["params"].items():
-            if param_name == "length":
-                for alias in aliases:
-                    if alias in params:
-                        required_length = params[alias]
-                        break
-                break
-
-        # データ系列の長さを取得
-        data_length = len(df)
-        if data_length < required_length:
-            logger.warning(
-                f"{indicator_type}: 必要なデータ長 {required_length} に対して実際の長さ {data_length} が不足しています"
-            )
-            return False
-
-        return True
-
     def validate_data_length_with_fallback(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Tuple[bool, int]:
@@ -543,18 +502,6 @@ class TechnicalIndicatorService:
             else:
                 return result
 
-        # dataパラメータが含まれているがcloseが含まれていない場合
-        # dataを最初の位置引数として渡す（一部の関数で期待される形式）
-        elif "data" in all_args and "close" not in all_args:
-            # dataを位置引数として渡し、他のパラメータをキーワード引数として渡す
-            data_arg = all_args.pop("data")
-            return adapter_function(data_arg, **all_args)
-
-        # Pass data as first positional argument (format expected by some functions)
-        elif "data" in all_args and "close" not in all_args:
-            # Pass data as positional argument and others as keyword arguments
-            data_arg = all_args.pop("data")
-            return adapter_function(data_arg, **all_args)
 
         # 通常のキーワード引数呼び出し
         result = adapter_function(**all_args)
@@ -570,26 +517,14 @@ class TechnicalIndicatorService:
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
         """
-        データフレームから適切なカラム名を解決（簡素化版）
+        データフレームから適切なカラム名を解決
         """
-        # 特別なマッピング
-        key_mappings = {
-            "open_data": "open",
-            "open_": "open",
-            "data0": "high",
-            "data1": "low",
-        }
+        # 優先順位: 元の名前 > 大文字 > 小文字 > Capitalized
+        candidates = [data_key, data_key.upper(), data_key.lower(), data_key.capitalize()]
 
-        actual_key = key_mappings.get(data_key, data_key)
-
-        # 大文字小文字のバリエーションをチェック
-        for variant in [
-            actual_key.capitalize(),
-            actual_key.upper(),
-            actual_key.lower(),
-        ]:
-            if variant in df.columns:
-                return variant
+        for candidate in candidates:
+            if candidate in df.columns:
+                return candidate
 
         return None
 
