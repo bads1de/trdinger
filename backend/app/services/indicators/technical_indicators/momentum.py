@@ -263,11 +263,13 @@ class MomentumIndicators:
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
 
+        period = length
+
         try:
             result = ta.aroon(high=high, low=low, length=length)
             if result is not None and not result.empty and not result.isna().all().all():
                 return result.iloc[:, 0], result.iloc[:, 1]
-        except Exception as e:
+        except (ValueError, IndexError):
             pass
 
         # 強化されたフォールバック実装：AROON指標の手動計算
@@ -291,14 +293,15 @@ class MomentumIndicators:
                 max_high = high_window.max()
                 if not np.isnan(max_high) and max_high != 0:
                     if max_high == high.iloc[i]:
-                                # 現在が最高値の場合、AROON=100
-                                    aroon_up_values[i] = 100.0
+                            # 現在が最高値の場合、AROON=100
+                                aroon_up_values[i] = 100.0
                     else:
                         # 最高値が見つかったインデックスを探す（最近ほどAROONが高い）
                         max_idx = high_window.idxmax()
-                        periods_since_max = i - high_window.index.get_loc(max_idx)
-                        if periods_since_max <= period:
-                            aroon_up_values[i] = 100 * (period - periods_since_max) / period
+                        if max_idx is not None:
+                            periods_since_max = i - high_window.index.get_loc(max_idx)
+                            if periods_since_max <= period:
+                                aroon_up_values[i] = 100 * (period - periods_since_max) / period
 
                 # 安値の中で現在の安値がどれほど古いかを計算
                 min_low = low_window.min()
@@ -309,24 +312,25 @@ class MomentumIndicators:
                     else:
                         # 最安値が見つかったインデックスを探す
                         min_idx = low_window.idxmin()
-                        periods_since_min = i - low_window.index.get_loc(min_idx)
-                        if periods_since_min <= period:
-                            aroon_down_values[i] = 100 * (period - periods_since_min) / period
+                        if min_idx is not None:
+                            periods_since_min = i - low_window.index.get_loc(min_idx)
+                            if periods_since_min <= period:
+                                aroon_down_values[i] = 100 * (period - periods_since_min) / period
 
             # NaN値を埋める（線形補間）
             if np.isnan(aroon_up_values).any():
                 valid_up = aroon_up_values[~np.isnan(aroon_up_values)]
                 if len(valid_up) > 1:
-                    aroon_up_values = pd.Series(aroon_up_values, index=high.index).fillna(method='bfill').fillna(method='ffill').values
+                    aroon_up_values = pd.Series(aroon_up_values, index=high.index).fillna(method='backfill').fillna(method='pad').values
 
             if np.isnan(aroon_down_values).any():
                 valid_down = aroon_down_values[~np.isnan(aroon_down_values)]
                 if len(valid_down) > 1:
-                  aroon_down_values = pd.Series(aroon_down_values, index=low.index).fillna(method='bfill').fillna(method='ffill').values
+                  aroon_down_values = pd.Series(aroon_down_values, index=low.index).fillna(method='backfill').fillna(method='pad').values
 
             return pd.Series(aroon_up_values, index=high.index), pd.Series(aroon_down_values, index=low.index)
 
-        except Exception as e:
+        except (ValueError, IndexError):
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
 
@@ -446,19 +450,7 @@ class MomentumIndicators:
         return pd.Series(np.full(len(high), np.nan), index=high.index)
 
     # 後方互換性のためのエイリアス
-    @staticmethod
-    def macdext(data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
-        """MACD拡張版（標準MACDで代替）"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        return MomentumIndicators.macd(data, fast=fast, slow=slow, signal=signal)
 
-    @staticmethod
-    def macdfix(data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
-        """MACD固定版（標準MACDで代替）"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        return MomentumIndicators.macd(data, fast=fast, slow=slow, signal=signal)
 
     @staticmethod
     def stochf(
