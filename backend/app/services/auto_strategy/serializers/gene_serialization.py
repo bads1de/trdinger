@@ -20,7 +20,7 @@ from ..models.strategy_models import (
     PositionSizingGene,
     PositionSizingMethod,
 )
-from ..config.constants import (
+from ..utils.indicator_utils import (
     get_all_indicator_ids,
     get_id_to_indicator_mapping,
 )
