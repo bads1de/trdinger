@@ -2159,6 +2159,141 @@ price_ema_ratio_config.add_parameter(
 price_ema_ratio_config.param_map = {"period": "length"}
 indicator_registry.register(price_ema_ratio_config)
 
+# Report-identified high priority indicators
+ppo_config = IndicatorConfig(
+    indicator_name="PPO",
+    adapter_function=TrendIndicators.ppo,
+    required_data=["close"],
+    result_type=IndicatorResultType.COMPLEX,
+    scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+    category="trend",
+    output_names=["PPO_0", "PPO_1", "PPO_2"],
+    default_output="PPO_0",
+)
+ppo_config.add_parameter(
+    ParameterConfig(
+        name="fast", default_value=12, min_value=2, max_value=100, description="高速EMA期間"
+    )
+)
+ppo_config.add_parameter(
+    ParameterConfig(
+        name="slow", default_value=26, min_value=5, max_value=200, description="低速EMA期間"
+    )
+)
+ppo_config.add_parameter(
+    ParameterConfig(
+        name="signal", default_value=9, min_value=2, max_value=50, description="シグナル期間"
+    )
+)
+ppo_config.param_map = {"close": "data"}
+indicator_registry.register(ppo_config)
+
+stc_config = IndicatorConfig(
+    indicator_name="STC",
+    adapter_function=TrendIndicators.stc,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+    category="trend",
+)
+stc_config.add_parameter(
+    ParameterConfig(
+        name="length", default_value=10, min_value=2, max_value=100, description="STC循環期間"
+    )
+)
+stc_config.add_parameter(
+    ParameterConfig(
+        name="fast_length", default_value=23, min_value=2, max_value=100, description="高速周期"
+    )
+)
+stc_config.add_parameter(
+    ParameterConfig(
+        name="slow_length", default_value=50, min_value=5, max_value=200, description="低速周期"
+    )
+)
+indicator_registry.register(stc_config)
+
+mavp_config = IndicatorConfig(
+    indicator_name="MAVP",
+    adapter_function=TrendIndicators.mavp,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_RATIO,
+    category="trend",
+)
+mavp_config.add_parameter(
+    ParameterConfig(
+        name="periods", default_value=[], min_value=None, max_value=None, description="期間のリスト"
+    )
+)
+mavp_config.add_parameter(
+    ParameterConfig(
+        name="minperiod", default_value=2, min_value=2, max_value=50, description="最小期間"
+    )
+)
+mavp_config.add_parameter(
+    ParameterConfig(
+        name="maxperiod", default_value=30, min_value=5, max_value=200, description="最大期間"
+    )
+)
+mavp_config.add_parameter(
+    ParameterConfig(
+        name="matype", default_value=0, min_value=0, max_value=8, description="移動平均タイプ"
+    )
+)
+mavp_config.param_map = {"close": "data", "periods": "periods"}
+indicator_registry.register(mavp_config)
+
+sarext_config = IndicatorConfig(
+    indicator_name="SAREXT",
+    adapter_function=TrendIndicators.sarext,
+    required_data=["high", "low"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
+    category="trend",
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="startvalue", default_value=0.0, min_value=0.0, max_value=10.0, description="初期値"
+    )
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="offsetonreverse", default_value=0.0, min_value=0.0, max_value=10.0, description="リバース時のオフセット"
+    )
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="accelerationinitlong", default_value=0.02, min_value=0.01, max_value=0.1, description="長期加速度初期値"
+    )
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="accelerationlong", default_value=0.02, min_value=0.01, max_value=0.1, description="長期加速度"
+    )
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="accelerationmaxlong", default_value=0.2, min_value=0.1, max_value=1.0, description="長期加速度最大"
+    )
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="accelerationinitshort", default_value=0.02, min_value=0.01, max_value=0.1, description="短期加速度初期値"
+    )
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="accelerationshort", default_value=0.02, min_value=0.01, max_value=0.1, description="短期加速度"
+    )
+)
+sarext_config.add_parameter(
+    ParameterConfig(
+        name="accelerationmaxshort", default_value=0.2, min_value=0.1, max_value=1.0, description="短期加速度最大"
+    )
+)
+indicator_registry.register(sarext_config)
+
 
 rsi_ema_cross_config = IndicatorConfig(
     indicator_name="RSI_EMA_CROSS",

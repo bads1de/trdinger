@@ -1024,33 +1024,6 @@ class TrendIndicators:
         ema_series = pd.Series(ema_vals, index=data.index)
         return (data / ema_series) - 1.0
 
-    @staticmethod
-    @handle_pandas_ta_errors
-    def maxindex(data: pd.Series, length: int = 14) -> pd.Series:
-        """最大値のインデックス"""
-        return data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def minindex(data: pd.Series, length: int = 14) -> pd.Series:
-        """最小値のインデックス"""
-        return data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def minmax(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
-        """最小値と最大値"""
-        min_vals = data.rolling(window=length).min()
-        max_vals = data.rolling(window=length).max()
-        return min_vals, max_vals
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def minmaxindex(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
-        """最小値と最大値のインデックス"""
-        min_idx = data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
-        max_idx = data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
-        return min_idx, max_idx
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1479,63 +1452,6 @@ class TrendIndicators:
 
         return pd.Series(tlb_values, index=close.index)
 
-    @staticmethod
-    @handle_pandas_ta_errors
-    def mam(data: pd.Series, length: int = 20) -> pd.Series:
-        """Moving Average Multiplier (price/SMA - 1)"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError("length must be positive")
-
-        sma_vals = TrendIndicators.sma(data, length)
-        if sma_vals is None or sma_vals.isna().all():
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-
-        return data / sma_vals - 1.0
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def sma_slope(data: pd.Series, length: int = 20) -> pd.Series:
-        """SMAの傾き（前期間との差分）"""
-        sma_vals = TrendIndicators.sma(data, length)
-        return sma_vals.diff()
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def price_ema_ratio(data: pd.Series, length: int = 20) -> pd.Series:
-        """価格とEMAの比率 - 1"""
-        ema_vals = TrendIndicators.ema(data, length)
-        ema_series = pd.Series(ema_vals, index=data.index)
-        return (data / ema_series) - 1.0
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def maxindex(data: pd.Series, length: int = 14) -> pd.Series:
-        """最大値のインデックス"""
-        return data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def minindex(data: pd.Series, length: int = 14) -> pd.Series:
-        """最小値のインデックス"""
-        return data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def minmax(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
-        """最小値と最大値"""
-        min_vals = data.rolling(window=length).min()
-        max_vals = data.rolling(window=length).max()
-        return min_vals, max_vals
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def minmaxindex(data: pd.Series, length: int = 14) -> Tuple[pd.Series, pd.Series]:
-        """最小値と最大値のインデックス"""
-        min_idx = data.rolling(window=length).apply(lambda x: x.argmin(), raw=False)
-        max_idx = data.rolling(window=length).apply(lambda x: x.argmax(), raw=False)
-        return min_idx, max_idx
 
     # Aliases for compatibility
     ichimoku = ichimoku_cloud

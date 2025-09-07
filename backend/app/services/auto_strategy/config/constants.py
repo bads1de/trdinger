@@ -3,8 +3,8 @@ Auto Strategy 共通定数
 
 """
 
-from typing import Dict, List, Any
-import os
+from typing import Dict, List
+
 
 # === 指標タイプ定義 ===
 from enum import Enum
@@ -726,6 +726,33 @@ INDICATOR_CHARACTERISTICS = {
         "trend_strength": True,  # トレンド強度を示唆
         "oscillator_like": True,  # オシレーター様
     },
+    "PPO": {
+        "type": "trend",
+        "range": (-100, 100),
+        "long_zones": [(-60, -20), (-10, -1)],
+        "short_zones": [(1, 10), (20, 60)],
+        "neutral_zone": (-1, 1),
+        "zero_cross": True,
+        "signal_line": True,
+    },
+    "STC": {
+        "type": "trend",
+        "range": (0, 100),
+        "long_zones": [(25, 50), (50, 75)],
+        "short_zones": [(50, 75), (75, 100)],
+        "neutral_zone": (40, 60),
+    },
+    "MAVP": {
+        "type": "trend",
+        "price_comparison": True,
+        "trend_following": True,
+    },
+    "SAREXT": {
+        "type": "trend",
+        "trend_following": True,
+        "price_comparison": True,
+        "reversal_indicator": True,
+    },
 }
 
 # GA目的設定
@@ -810,10 +837,13 @@ GA_DEFAULT_FITNESS_SHARING = {
 
 # === YAMLベースの特性動的生成処理 ===
 
+
 # YAML設定に基づいて特性を生成してマージ
 def _get_merged_characteristics(original):
     # Late import to avoid circular imports
     from app.services.auto_strategy.utils.common_utils import YamlIndicatorUtils
+
     return YamlIndicatorUtils.initialize_yaml_based_characteristics(original)
+
 
 INDICATOR_CHARACTERISTICS = _get_merged_characteristics(INDICATOR_CHARACTERISTICS)
