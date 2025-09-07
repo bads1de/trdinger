@@ -164,6 +164,43 @@ class OperandGroupingSystem:
             "CFO": OperandGroup.ZERO_CENTERED,
             "CTI": OperandGroup.ZERO_CENTERED,
 
+            # Additional trend indicators
+            "SAR": OperandGroup.PRICE_BASED,
+            "MA": OperandGroup.PRICE_RATIO,
+            "FWMA": OperandGroup.PRICE_RATIO,
+            "PWMA": OperandGroup.PRICE_RATIO,
+            "SINWMA": OperandGroup.PRICE_RATIO,
+            "CWMA": OperandGroup.PRICE_RATIO,
+            "MAVP": OperandGroup.PRICE_RATIO,
+            "SAREXT": OperandGroup.PRICE_BASED,
+            "TLB": OperandGroup.ZERO_CENTERED,
+
+            # Additional volume indicators
+            # Additional momentum indicators
+            "PLUS_DM": OperandGroup.PRICE_BASED,
+            "MINUS_DM": OperandGroup.PRICE_BASED,
+            "KST": OperandGroup.PERCENTAGE_NEG100_100,
+            "RSI_EMA_CROSS": OperandGroup.PERCENTAGE_0_100,
+            "RSX": OperandGroup.PERCENTAGE_0_100,
+            "BIAS": OperandGroup.ZERO_CENTERED,
+            "BRAR": OperandGroup.ZERO_CENTERED,
+            "CG": OperandGroup.ZERO_CENTERED,
+            "FISHER": OperandGroup.ZERO_CENTERED,
+            "INERTIA": OperandGroup.ZERO_CENTERED,
+            "PGO": OperandGroup.PERCENTAGE_0_100,
+            "PSL": OperandGroup.PERCENTAGE_NEG100_100,
+            "SQUEEZE": OperandGroup.ZERO_CENTERED,
+            "SQUEEZE_PRO": OperandGroup.ZERO_CENTERED,
+            "ER": OperandGroup.PERCENTAGE_0_100,
+            "ERI": OperandGroup.PERCENTAGE_NEG100_100,
+            "COPPOCK": OperandGroup.ZERO_CENTERED,
+
+            # Additional volatility indicators
+            "PDIST": OperandGroup.PRICE_RATIO,
+            "VAR": OperandGroup.PRICE_RATIO,
+            "CV": OperandGroup.PRICE_RATIO,
+            "IRM": OperandGroup.PRICE_RATIO,
+
         }
 
     def _initialize_compatibility_matrix(
