@@ -170,7 +170,7 @@ class PositionSizingGene(BaseGene):
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
-            from ..config.constants import POSITION_SIZING_LIMITS
+            from ..constants import POSITION_SIZING_LIMITS
 
             lb_min, lb_max = POSITION_SIZING_LIMITS["lookback_period"]
             if not (lb_min <= self.lookback_period <= lb_max):
@@ -232,7 +232,7 @@ class TPSLGene(BaseGene):
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
-            from ..config.constants import TPSL_LIMITS
+            from ..constants import TPSL_LIMITS
 
             sl_min, sl_max = TPSL_LIMITS["stop_loss_pct"]
             if not (sl_min <= self.stop_loss_pct <= sl_max):
@@ -356,7 +356,7 @@ class GeneValidator:
 
     def __init__(self):
         """初期化"""
-        from ..config.constants import (
+        from ..constants import (
             OPERATORS,
             DATA_SOURCES,
         )

@@ -1,130 +1,51 @@
 """
-Auto Strategy 設定モジュール
+AutoStrategyConfigモジュール
 
-統一された設定クラス、ベース設定機能、定数を提供します。
+オートストラテジーの全ての設定クラスを提供します。
 """
 
-from .auto_strategy_config import (
+# 基底クラス
+from .base import BaseConfig
+
+# 個別設定クラス
+from .trading import TradingSettings
+from .indicators import IndicatorSettings
+from .ga import GASettings
+from .tpsl import TPSLSettings
+from .position_sizing import PositionSizingSettings
+
+# 統合設定クラス
+from .auto_strategy import (
     AutoStrategyConfig,
-    TradingSettings,
-    IndicatorSettings,
-    GASettings,
-    TPSLSettings,
-    PositionSizingSettings,
-    GAConfig,
-    GAProgress,
-    BaseConfig,
     DEFAULT_AUTO_STRATEGY_CONFIG,
     get_default_config,
     create_config_from_file,
     validate_config_file,
 )
-from .constants import (
-    # トレーディング設定
-    DEFAULT_SYMBOL,
-    DEFAULT_TIMEFRAME,
-    SUPPORTED_SYMBOLS,
-    SUPPORTED_TIMEFRAMES,
-    # 指標設定
-    VALID_INDICATOR_TYPES,
-    INDICATOR_CHARACTERISTICS,
-    ML_INDICATOR_TYPES,
-    # GA設定
-    GA_DEFAULT_CONFIG,
-    DEFAULT_FITNESS_WEIGHTS,
-    DEFAULT_FITNESS_CONSTRAINTS,
-    GA_PARAMETER_RANGES,
-    GA_THRESHOLD_RANGES,
-    GA_DEFAULT_FITNESS_SHARING,
-    DEFAULT_GA_OBJECTIVES,
-    DEFAULT_GA_OBJECTIVE_WEIGHTS,
-    GA_DEFAULT_TPSL_METHOD_CONSTRAINTS,
-    GA_TPSL_SL_RANGE,
-    GA_TPSL_TP_RANGE,
-    GA_TPSL_RR_RANGE,
-    GA_TPSL_ATR_MULTIPLIER_RANGE,
-    GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS,
-    GA_POSITION_SIZING_LOOKBACK_RANGE,
-    GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE,
-    GA_POSITION_SIZING_ATR_PERIOD_RANGE,
-    GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE,
-    GA_POSITION_SIZING_RISK_PER_TRADE_RANGE,
-    GA_POSITION_SIZING_FIXED_RATIO_RANGE,
-    GA_POSITION_SIZING_FIXED_QUANTITY_RANGE,
-    GA_POSITION_SIZING_MIN_SIZE_RANGE,
-    GA_POSITION_SIZING_MAX_SIZE_RANGE,
-    GA_POSITION_SIZING_PRIORITY_RANGE,
-    # TPSL設定
-    TPSL_METHODS,
-    TPSL_LIMITS,
-    # ポジションサイジング設定
-    POSITION_SIZING_METHODS,
-    POSITION_SIZING_LIMITS,
-    # その他の共通設定
-    OPERATORS,
-    DATA_SOURCES,
-    ERROR_CODES,
-    THRESHOLD_RANGES,
-    CONSTRAINTS,
-    FITNESS_WEIGHT_PROFILES,
+
+# GA実行時設定クラス
+from .ga_runtime import (
+    GAConfig,
+    GAProgress,
 )
 
+# __all__ で公開するクラスを定義
 __all__ = [
-    # メイン設定クラス
-    "AutoStrategyConfig",
+    # 基底クラス
+    "BaseConfig",
+    # 個別設定クラス
     "TradingSettings",
     "IndicatorSettings",
     "GASettings",
     "TPSLSettings",
     "PositionSizingSettings",
-    "GAConfig",
-    "GAProgress",
+    # 統合設定クラス
+    "AutoStrategyConfig",
     "DEFAULT_AUTO_STRATEGY_CONFIG",
     "get_default_config",
     "create_config_from_file",
     "validate_config_file",
-    # ベース設定
-    "BaseConfig",
-    # 定数 (後方互換性のため)
-    "DEFAULT_SYMBOL",
-    "DEFAULT_TIMEFRAME",
-    "SUPPORTED_SYMBOLS",
-    "SUPPORTED_TIMEFRAMES",
-    "VALID_INDICATOR_TYPES",
-    "INDICATOR_CHARACTERISTICS",
-    "ML_INDICATOR_TYPES",
-    "GA_DEFAULT_CONFIG",
-    "DEFAULT_FITNESS_WEIGHTS",
-    "DEFAULT_FITNESS_CONSTRAINTS",
-    "GA_PARAMETER_RANGES",
-    "GA_THRESHOLD_RANGES",
-    "GA_DEFAULT_FITNESS_SHARING",
-    "DEFAULT_GA_OBJECTIVES",
-    "DEFAULT_GA_OBJECTIVE_WEIGHTS",
-    "GA_DEFAULT_TPSL_METHOD_CONSTRAINTS",
-    "GA_TPSL_SL_RANGE",
-    "GA_TPSL_TP_RANGE",
-    "GA_TPSL_RR_RANGE",
-    "GA_TPSL_ATR_MULTIPLIER_RANGE",
-    "GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS",
-    "GA_POSITION_SIZING_LOOKBACK_RANGE",
-    "GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE",
-    "GA_POSITION_SIZING_ATR_PERIOD_RANGE",
-    "GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE",
-    "GA_POSITION_SIZING_RISK_PER_TRADE_RANGE",
-    "GA_POSITION_SIZING_FIXED_RATIO_RANGE",
-    "GA_POSITION_SIZING_FIXED_QUANTITY_RANGE",
-    "GA_POSITION_SIZING_MIN_SIZE_RANGE",
-    "GA_POSITION_SIZING_MAX_SIZE_RANGE",
-    "GA_POSITION_SIZING_PRIORITY_RANGE",
-    "TPSL_METHODS",
-    "TPSL_LIMITS",
-    "POSITION_SIZING_METHODS",
-    "POSITION_SIZING_LIMITS",
-    "OPERATORS",
-    "DATA_SOURCES",
-    "ERROR_CODES",
-    "THRESHOLD_RANGES",
-    "CONSTRAINTS",
-    "FITNESS_WEIGHT_PROFILES",
+    # GA実行時設定クラス
+    "GAConfig",
+    "GAProgress",
 ]

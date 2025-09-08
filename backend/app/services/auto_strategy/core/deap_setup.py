@@ -9,7 +9,7 @@ from typing import Optional
 
 from deap import base, creator, tools
 
-from ..config.auto_strategy_config import GAConfig
+from ..config import GAConfig
 
 logger = logging.getLogger(__name__)
 

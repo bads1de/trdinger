@@ -27,7 +27,7 @@ from ..models.strategy_models import (
 )
 
 from ..core.operand_grouping import operand_grouping_system
-from ..config.constants import (
+from ..constants import (
     OPERATORS,
     DATA_SOURCES,
     CURATED_TECHNICAL_INDICATORS,

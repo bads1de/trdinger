@@ -15,7 +15,7 @@ from app.services.backtest.backtest_service import BacktestService
 
 from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
-from ..config.auto_strategy_config import GAConfig
+from ..config import GAConfig
 from .genetic_operators import crossover_strategy_genes, mutate_strategy_gene
 from .deap_setup import DEAPSetup
 from .fitness_sharing import FitnessSharing

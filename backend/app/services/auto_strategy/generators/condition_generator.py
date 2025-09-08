@@ -2,7 +2,7 @@ import logging
 import random
 import copy
 from typing import List, Tuple, Union, Dict, Any, Optional
-from app.services.auto_strategy.config.constants import (
+from ..constants import (
     INDICATOR_CHARACTERISTICS,
     IndicatorType,
     StrategyType,

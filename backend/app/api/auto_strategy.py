@@ -14,7 +14,6 @@ from app.api.dependencies import (
     get_auto_strategy_service,
 )
 from app.services.auto_strategy import AutoStrategyService
-from app.services.auto_strategy.config.auto_strategy_config import GAConfig
 from app.utils.response import api_response, error_response
 from app.utils.error_handler import ErrorHandler
 
@@ -78,8 +77,6 @@ class GAResultResponse(BaseModel):
     message: str
     data: Optional[Dict[str, Any]] = None
     timestamp: str
-
-
 
 
 class StopExperimentResponse(BaseModel):
@@ -189,6 +186,3 @@ async def stop_experiment(
             )
 
     return await ErrorHandler.safe_execute_async(_stop_experiment)
-
-
-

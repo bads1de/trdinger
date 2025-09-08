@@ -12,7 +12,7 @@ from fastapi import BackgroundTasks
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
-from ..config.constants import DEFAULT_SYMBOL
+from ..constants import DEFAULT_SYMBOL
 
 from .experiment_manager import ExperimentManager
 from ..config import GAConfig

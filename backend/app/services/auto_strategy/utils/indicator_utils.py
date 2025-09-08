@@ -56,7 +56,7 @@ def get_volatility_indicators() -> List[str]:
 def get_all_indicators() -> List[str]:
     """全指標タイプを取得（テクニカル + ML）"""
     # 遅延インポートで循環依存を回避
-    from ..config.constants import ML_INDICATOR_TYPES
+    from ..constants import ML_INDICATOR_TYPES
 
     technical = (
         get_volume_indicators()
@@ -77,7 +77,7 @@ def get_all_indicators() -> List[str]:
 def validate_symbol(symbol: str) -> bool:
     """シンボルの妥当性を検証"""
     # 遅延インポートで循環依存を回避
-    from ..config.constants import SUPPORTED_SYMBOLS
+    from ..constants import SUPPORTED_SYMBOLS
 
     return symbol in SUPPORTED_SYMBOLS
 
@@ -85,7 +85,7 @@ def validate_symbol(symbol: str) -> bool:
 def validate_timeframe(timeframe: str) -> bool:
     """時間軸の妥当性を検証"""
     # 遅延インポートで循環依存を回避
-    from ..config.constants import SUPPORTED_TIMEFRAMES
+    from ..constants import SUPPORTED_TIMEFRAMES
 
     return timeframe in SUPPORTED_TIMEFRAMES
 
@@ -104,7 +104,7 @@ def get_all_indicator_ids() -> Dict[str, int]:
         )
 
         # 遅延インポートで循環依存を回避
-        from ..config.constants import ML_INDICATOR_TYPES
+        from ..constants import ML_INDICATOR_TYPES
 
         # 全指標を結合
         all_indicators = technical_indicators + ML_INDICATOR_TYPES

@@ -32,10 +32,10 @@ AutoStrategy パッケージは遺伝的アルゴリズム（GA）を使用し�
 
 ### 2.3 メンテナンス性の問題
 
-- **巨大なクラス**: `strategy_models.py`は 951 行、`ga_engine.py`は 317 行、`FitnessSharing`は 319 行、`GAConfig`は 1,293 行、`genetic_operators.py`は 427 行、`ExperimentPersistenceService`は 486 行、`CommonUtils.py`は 1,065 行、`Constants.py`は 657 行、`IndicatorService.py`は 244 行。
+- **巨大なクラス**: `strategy_models.py`は 951 行、`genetic_operators.py`は 427 行、`ExperimentPersistenceService`は 486 行、、`Constants.py`は 657 行、`IndicatorService.py`は 244 行。
 - **長いメソッド**: `run_evolution`メソッドは 200 行以上、単一責任ではない。`IndicatorService`のメソッドが 152 行。
 - **弱い凝集度**: 関連性の低い機能が同じクラスに集約されている。
-- **追加の問題**: `Constants.py`の循環依存と業務ロジックの混入、`CommonUtils.py`の責任過多、`IndicatorService.py`の複雑な戻り値型とロガー警告の混在。
+- **追加の問題**: `Constants.py`の循環依存と業務ロジックの混入、`IndicatorService.py`の複雑な戻り値型とロガー警告の混在。
 
 ## 3. アーキテクチャ改善提案
 
