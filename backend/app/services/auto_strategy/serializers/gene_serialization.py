@@ -24,7 +24,7 @@ from ..utils.indicator_utils import (
     get_all_indicator_ids,
     get_id_to_indicator_mapping,
 )
-from ..utils.common_utils import GeneUtils
+from ..utils.gene_utils import GeneUtils
 import uuid
 
 logger = logging.getLogger(__name__)

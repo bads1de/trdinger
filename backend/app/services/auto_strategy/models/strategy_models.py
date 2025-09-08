@@ -6,13 +6,16 @@
 循環依存を解消し、理解しやすさを向上させました。
 """
 
+from __future__ import annotations
+
 import logging
 import random
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ..utils.common_utils import BaseGene
+from ..utils.gene_utils import BaseGene
+
 from ..utils.indicator_utils import get_all_indicators
 
 logger = logging.getLogger(__name__)
@@ -379,9 +382,13 @@ class GeneValidator:
                 logger.warning("指標タイプ 'UI' を 'UO' に修正しました")
 
             # ログ: 指標タイプが有効リストに含まれているかを確認
-            logger.debug(f"指標タイプ {indicator_gene.type} が valid_indicator_types に含まれているか: {indicator_gene.type in self.valid_indicator_types}")
+            logger.debug(
+                f"指標タイプ {indicator_gene.type} が valid_indicator_types に含まれているか: {indicator_gene.type in self.valid_indicator_types}"
+            )
             if indicator_gene.type not in self.valid_indicator_types:
-                logger.warning(f"無効な指標タイプ: {indicator_gene.type}, 有効なタイプ: {self.valid_indicator_types[:10]}...")  # 先頭10個のみ表示
+                logger.warning(
+                    f"無効な指標タイプ: {indicator_gene.type}, 有効なタイプ: {self.valid_indicator_types[:10]}..."
+                )  # 先頭10個のみ表示
                 return False
 
             if "period" in indicator_gene.parameters:
@@ -760,7 +767,7 @@ def crossover_position_sizing_genes(
     parent1: PositionSizingGene, parent2: PositionSizingGene
 ) -> Tuple[PositionSizingGene, PositionSizingGene]:
     """ポジションサイジング遺伝子の交叉（ジェネリック関数使用）"""
-    from ..utils.common_utils import GeneticUtils
+    from ..utils.gene_utils import GeneticUtils
 
     # フィールドのカテゴリ分け
     numeric_fields = [
@@ -792,7 +799,7 @@ def crossover_tpsl_genes(
     parent1: TPSLGene, parent2: TPSLGene
 ) -> Tuple[TPSLGene, TPSLGene]:
     """TP/SL遺伝子の交叉（ジェネリック関数使用）"""
-    from ..utils.common_utils import GeneticUtils
+    from ..utils.gene_utils import GeneticUtils
 
     # 基本フィールドのカテゴリ分け
     numeric_fields = [
@@ -848,7 +855,7 @@ def mutate_position_sizing_gene(
     gene: PositionSizingGene, mutation_rate: float = 0.1
 ) -> PositionSizingGene:
     """ポジションサイジング遺伝子の突然変異（ジェネリック関数使用）"""
-    from ..utils.common_utils import GeneticUtils
+    from ..utils.gene_utils import GeneticUtils
 
     # フィールドルール定義
     numeric_fields = [
@@ -892,7 +899,7 @@ def mutate_position_sizing_gene(
 
 def mutate_tpsl_gene(gene: TPSLGene, mutation_rate: float = 0.1) -> TPSLGene:
     """TP/SL遺伝子の突然変異（ジェネリック関数使用）"""
-    from ..utils.common_utils import GeneticUtils
+    from ..utils.gene_utils import GeneticUtils
 
     # 基本フィールド
     numeric_fields = [

@@ -200,7 +200,7 @@ def crossover_strategy_genes(
             child2_position_sizing = copy.deepcopy(ps_gene2)
 
         # メタデータの交叉（共通ユーティリティ使用）
-        from ..utils.common_utils import prepare_crossover_metadata
+        from ..utils.gene_utils import prepare_crossover_metadata
 
         child1_metadata, child2_metadata = prepare_crossover_metadata(
             strategy_parent1, strategy_parent2

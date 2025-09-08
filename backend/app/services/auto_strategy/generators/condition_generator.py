@@ -8,7 +8,7 @@ from app.services.auto_strategy.config.constants import (
     StrategyType,
 )
 from app.services.indicators.config import indicator_registry
-from ..utils.common_utils import YamlIndicatorUtils
+from ..utils.yaml_utils import YamlIndicatorUtils
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
 
