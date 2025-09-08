@@ -1,0 +1,1322 @@
+indicators:
+  # モメンタム系指標
+  RSI:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_gt: 75
+        short_lt: 25
+      normal:
+        long_gt: 75
+        short_lt: 25
+      conservative:
+        long_gt: 75
+        short_lt: 25
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  STOCH:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 15
+        short_gt: 85
+      normal:
+        long_lt: 20
+        short_gt: 80
+      conservative:
+        long_lt: 25
+        short_gt: 75
+    conditions:
+      long: "{left_operand}_0 < {threshold}"
+      short: "{left_operand}_0 > {threshold}"
+
+  STOCHRSI:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 15
+        short_gt: 85
+      normal:
+        long_lt: 20
+        short_gt: 80
+      conservative:
+        long_lt: 25
+        short_gt: 75
+    conditions:
+      long: "{left_operand}_0 < {threshold}"
+      short: "{left_operand}_1 < {threshold}"
+
+  KDJ:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 15
+        short_gt: 85
+      normal:
+        long_lt: 20
+        short_gt: 80
+      conservative:
+        long_lt: 25
+        short_gt: 75
+    conditions:
+      long: "{left_operand}_2 < {threshold}"
+      short: "{left_operand}_2 > {threshold}"
+
+  QQE:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 15
+        short_gt: 85
+      normal:
+        long_lt: 20
+        short_gt: 80
+      conservative:
+        long_lt: 25
+        short_gt: 75
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  CMO:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -50
+        short_gt: 50
+      normal:
+        long_lt: -40
+        short_gt: 40
+      conservative:
+        long_lt: -30
+        short_gt: 30
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  TRIX:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -0.5
+        short_gt: 0.5
+      normal:
+        long_lt: 0
+        short_gt: 0
+      conservative:
+        long_lt: 0.5
+        short_gt: -0.5
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  ULTOSC:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 30
+        short_gt: 70
+      normal:
+        long_lt: 40
+        short_gt: 60
+      conservative:
+        long_lt: 50
+        short_gt: 50
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  BOP:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      all:
+        long_gt: 0
+        short_lt: 0
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  APO:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      all:
+        long_gt: 0
+        short_lt: 0
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  PPO:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -1.5
+        short_gt: 1.5
+      normal:
+        long_lt: 0
+        short_gt: 0
+      conservative:
+        long_lt: 1.0
+        short_gt: -1.0
+    conditions:
+      long: "{left_operand}_0 > {threshold}"
+      short: "{left_operand}_0 < {threshold}"
+
+  MFI:
+      type: volume
+      scale_type: oscillator_0_100
+      thresholds:
+        aggressive:
+          long_lt: 20
+          short_gt: 85
+        normal:
+          long_lt: 30
+          short_gt: 70
+        conservative:
+          long_lt: 40
+          short_gt: 60
+      conditions:
+        long: "{left_operand} < {threshold}"
+        short: "{left_operand} > {threshold}"
+
+  ADX:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        trend_min: 18
+      normal:
+        trend_min: 25
+      conservative:
+        trend_min: 30
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  CCI:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        abs_limit: 100
+        long_lt: -100
+      normal:
+        abs_limit: 100
+        long_lt: -100
+      conservative:
+        abs_limit: 100
+        long_lt: -100
+    conditions:
+      long: "{left_operand} > {long_threshold}"
+      short: "{left_operand} < {short_threshold}"
+
+  WILLR:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -95
+        short_gt: -5
+      normal:
+        long_lt: -80
+        short_gt: -20
+      conservative:
+        long_lt: -75
+        short_gt: -25
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  MACD:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds: { zero_cross: true }
+    conditions:
+      long: "{left_operand}_0 > 0"
+      short: "{left_operand}_0 < 0"
+
+  MACDEXT:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds: { zero_cross: true }
+    conditions:
+      long: "{left_operand}_0 > 0"
+      short: "{left_operand}_0 < 0"
+
+  # New indicators
+  ROC:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      aggressive:
+        long_lt: -3.0
+        short_gt: 3.0
+      normal:
+        long_lt: -1.5
+        short_gt: 1.5
+      conservative:
+        long_lt: -0.5
+        short_gt: 0.5
+      # Extended thresholds
+      range:
+        long_gt: -2.0
+        long_lt: 0.0
+        short_lt: 2.0
+        short_gt: 0.0
+      combo:
+        primary: -5.0
+        secondary: 5.0
+        condition: "abs_value >= primary or abs_value <= -secondary"
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  STC:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 20
+        short_gt: 80
+      normal:
+        long_lt: 35
+        short_gt: 65
+      conservative:
+        long_lt: 45
+        short_gt: 55
+      # Extended thresholds
+      range:
+        bullish_min: 70
+        bullish_max: 100
+        bearish_min: 0
+        bearish_max: 30
+      combo:
+        primary: 25
+        secondary: 75
+        condition: "value <= primary or value >= secondary"
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  VORTEX:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_gt: 2.5
+        short_lt: -2.5
+      normal:
+        long_gt: 1.5
+        short_lt: -1.5
+      conservative:
+        long_gt: 1.0
+        short_lt: -1.0
+      # Extended thresholds
+      range:
+        vortex_long_gt: 1.8
+        vortex_short_lt: -1.8
+      combo:
+        vortex_primary: 3.0
+        vortex_secondary: -3.0
+        condition: "abs(vortex_diff) >= primary"
+    conditions:
+      long: "{left_operand}_0 > {threshold}"
+      short: "{left_operand}_1 < {threshold}"
+
+  CFO:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      aggressive:
+        long_gt: 15
+        short_lt: -15
+      normal:
+        long_gt: 10
+        short_lt: -10
+      conservative:
+        long_gt: 5
+        short_lt: -5
+      # Extended thresholds
+      range:
+        bullish_min: 8
+        bullish_max: 20
+        bearish_min: -20
+        bearish_max: -8
+      combo:
+        primary: 12
+        secondary: -12
+        condition: "value >= primary or value <= secondary"
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  # トレンド系指標
+  SMA:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  EMA:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  WMA:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  KAMA:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  T3:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  TRIMA:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  CWMA:
+    type: trend
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+  BBANDS:
+    type: volatility
+    scale_type: price_absolute
+    thresholds: null
+    components: ["upper", "middle", "lower"]
+    conditions:
+      long: "close < {left_operand}_lower"
+      short: "close > {left_operand}_upper"
+
+
+
+
+  # 統計系指標
+
+  LINEARREG_ANGLE:
+    type: statistics
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      all:
+        long_lt: 45
+        short_gt: -45
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  LINEARREG_SLOPE:
+    type: statistics
+    scale_type: momentum_zero_centered
+    thresholds:
+      all:
+        long_gt: 0
+        short_lt: 0
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  # 不足指標の追加
+  AO:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_gt: -10  # 強気／弱気をより厳しく判定
+        short_lt: 10
+      normal:
+        long_gt: 0
+        short_lt: 0
+      conservative:
+        long_gt: 10   # より緩い条件でトレンドを判定
+        short_lt: -10
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  ATR:
+    type: volatility
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        multiplier: 0.5  # 狭いバンド
+      normal:
+        multiplier: 1.0
+      conservative:
+        multiplier: 1.5  # 広いバンド
+    conditions:
+      long: "close > {left_operand}_current + {multiplier}"  # ATRベースのトレーリングストップ
+      short: "close < {left_operand}_current - {multiplier}"
+
+  ICHIMOKU:
+    type: trend
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        tenkan_gt: false  # 厳しい条件
+        kijun_gt: false
+      normal:
+        tenkan_gt: true   # 標準条件
+        kijun_gt: true
+      conservative:
+        tenkan_gt: false  # 緩い条件
+        kijun_gt: false
+    conditions:
+      long: "close > {left_operand}_spanA and close > {left_operand}_spanB and {left_operand}_tenkan > {left_operand}_kijun"
+      short: "close < {left_operand}_spanA and close < {left_operand}_spanB and {left_operand}_tenkan < {left_operand}_kijun"
+
+  SUPERTREND:
+    type: volatility
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        multiplier: 1.5  # 狭いバンドで敏感なトレンド変更検知
+      normal:
+        multiplier: 3.0
+      conservative:
+        multiplier: 4.5  # 広いバンドで安定したトレンド判定
+    components: ["lower", "upper", "direction"]
+    conditions:
+      long: "{left_operand}_2 > 0"  # Direction positive for uptrend
+      short: "{left_operand}_2 < 0"  # Direction negative for downtrend
+
+  # 高優先度不足指標追加
+  TSI:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -25
+        short_gt: 25
+      normal:
+        long_lt: -15
+        short_gt: 15
+      conservative:
+        long_lt: -10
+        short_gt: 10
+      # 拡張thresholds - range_conditions
+      range:
+        bullish_min: -5
+        bullish_max: 10
+        bearish_min: -10
+        bearish_max: 5
+      # 拡張thresholds - combo_conditions
+      combo:
+        primary: 20
+        secondary: -20
+        condition: "abs(value) >= primary"
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  RMI:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 30
+        short_gt: 70
+      normal:
+        long_lt: 35
+        short_gt: 65
+      conservative:
+        long_lt: 40
+        short_gt: 60
+      # 拡張thresholds - range_conditions
+      range:
+        bullish_min: 45
+        bullish_max: 100
+        bearish_min: 0
+        bearish_max: 55
+      # 拡張thresholds - combo_conditions
+      combo:
+        primary: 25
+        secondary: 75
+        condition: "value <= primary or value >= secondary"
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  KELTNER:
+    type: volatility
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        multiplier: 1.0  # 狭いバンドで敏感な移動検知
+      normal:
+        multiplier: 1.5
+      conservative:
+        multiplier: 2.0  # 広いバンドで安定したトレンド判定
+      # 拡張thresholds - range_conditions
+      range:
+        break_out_upper: 1.8
+        break_out_lower: -1.8
+      # 拡張thresholds - combo_conditions
+      combo:
+        primary: 2.5
+        secondary: -2.5
+        condition: "distance >= primary or distance <= secondary"
+    conditions:
+      long: "close > {left_operand}_upper"  # 価格がバンドの上にブレイク = 強い上昇
+      short: "close < {left_operand}_lower"  # 価格がバンドの下にブレイク = 強い下落
+
+  DONCHIAN:
+    type: volatility
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        period: 10  # 短期の敏感な判断
+      normal:
+        period: 20
+      conservative:
+        period: 30  # 中期の安定した判断
+      # 拡張thresholds - range_conditions
+      range:
+        break_out_threshold: 0.8  # チャネルの80%到達でブレイク判定
+        consolidation_threshold: 0.3  # 狭いレンジでの統合判定
+      # 拡張thresholds - combo_conditions
+      combo:
+        primary: 0.9
+        secondary: 0.1
+        condition: "(close - lower) / (upper - lower) >= primary or (close - lower) / (upper - lower) <= secondary"
+    conditions:
+      long: "close > {left_operand}_mid"  # 中間線を上回る = 上昇傾向
+      short: "close < {left_operand}_mid"  # 中間線を下回る = 下落傾向
+
+  # VOLUME系指標
+  OBV:
+    type: volume
+    scale_type: momentum_zero_centered
+    thresholds: { zero_cross: true }
+    conditions:
+      long: "{left_operand} > 0"
+      short: "{left_operand} < 0"
+
+  ADOSC:
+    type: volume
+    scale_type: momentum_zero_centered
+    thresholds:
+      aggressive:
+        long_gt: -10000
+        short_lt: 10000
+      normal:
+        long_gt: -5000
+        short_lt: 5000
+      conservative:
+        long_gt: -2000
+        short_lt: 2000
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  AD:
+    type: volume
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  EOM:
+    type: volume
+    scale_type: momentum_zero_centered
+    thresholds:
+      aggressive:
+        long_gt: 0
+        short_lt: 0
+      normal:
+        long_gt: 0
+        short_lt: 0
+      conservative:
+        long_gt: 0
+        short_lt: 0
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  CMF:
+    type: volume
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -0.3
+        short_gt: 0.3
+      normal:
+        long_lt: -0.1
+        short_gt: 0.1
+      conservative:
+        long_lt: -0.05
+        short_gt: 0.05
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # トレンド系追加指標
+
+
+
+
+
+  # ボラティリティ追加指標
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        multiplier: 1.5
+      normal:
+        multiplier: 2.0
+      conservative:
+        multiplier: 2.5
+    conditions:
+      long: "close > {left_operand}_mid"
+      short: "close < {left_operand}_mid"
+
+  ACCBANDS:
+    type: volatility
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        acceleration: 0.005
+      normal:
+        acceleration: 0.01
+      conservative:
+        acceleration: 0.02
+    conditions:
+      long: "close > {left_operand}_lower"
+      short: "close < {left_operand}_upper"
+
+
+  # 追加モメンタム指標
+  AROONOSC:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -50
+        short_gt: 50
+      normal:
+        long_lt: -30
+        short_gt: 30
+      conservative:
+        long_lt: -20
+        short_gt: 20
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  DX:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        trend_min: 18
+      normal:
+        trend_min: 25
+      conservative:
+        trend_min: 30
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  MINUS_DI:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 25
+        short_gt: 75
+      normal:
+        long_lt: 30
+        short_gt: 70
+      conservative:
+        long_lt: 35
+        short_gt: 65
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  PLUS_DI:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 25
+        short_gt: 75
+      normal:
+        long_lt: 30
+        short_gt: 70
+      conservative:
+        long_lt: 35
+        short_gt: 65
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  PVO:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -5.0
+        short_gt: 5.0
+      normal:
+        long_lt: -3.0
+        short_gt: 3.0
+      conservative:
+        long_lt: -1.0
+        short_gt: 1.0
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # 統計系追加指標
+
+  # Cycle系指標
+
+
+  # Price Transform系追加指標
+
+  PWMA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  SWMA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        period: 5
+      normal:
+        period: 10
+      conservative:
+        period: 15
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  SSF:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        poles: 2
+      normal:
+        poles: 3
+      conservative:
+        poles: 4
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+
+  # 追加移動平均系指標
+
+  VIDYA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        alpha: 0.3
+      normal:
+        alpha: 0.5
+      conservative:
+        alpha: 0.7
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  JMA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        length: 5
+      normal:
+        length: 10
+      conservative:
+        length: 15
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  # Price Transform追加指標
+
+  KAMA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        efficiency_ratio: 2.5
+      normal:
+        efficiency_ratio: 5.0
+      conservative:
+        efficiency_ratio: 10.0
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  # パターン認識追加指標
+
+
+
+
+  # 追加乖離率系指標
+  BIAS:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -3.0
+        short_gt: 3.0
+      normal:
+        long_lt: -2.0
+        short_gt: 2.0
+      conservative:
+        long_lt: -1.0
+        short_gt: 1.0
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # Volatility系追加指標
+
+  SINWMA:
+    type: volatility
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        amplitude: 3
+        phase: 0
+      normal:
+        amplitude: 1
+        phase: 0
+      conservative:
+        amplitude: 0.5
+        phase: 0
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  # Price Transform拡張指標
+
+
+
+
+
+  # 統計系拡張指標
+
+  # Pattern Recognition拡張指標
+
+
+  # 拡張モメンタム指標
+
+  # 強化したマルチタイムフレーム指標
+
+
+  # 特殊フィルタリング指標
+
+  # ボラティリティ専用拡張指標
+
+  # Composite指標拡張
+
+  # Cycle指標拡張
+
+
+
+  # 追加Price Transform指標
+
+
+
+  # Pattern Recognition拡張
+
+
+
+
+
+
+  # 拡張Momentum指標
+  ROCP:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      aggressive:
+        long_lt: -0.05
+        short_gt: 0.05
+      normal:
+        long_lt: -0.03
+        short_gt: 0.03
+      conservative:
+        long_lt: -0.01
+        short_gt: 0.01
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  ROCR:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 95
+        short_gt: 105
+      normal:
+        long_lt: 98
+        short_gt: 102
+      conservative:
+        long_lt: 99
+        short_gt: 101
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  ROCR100:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 95
+        short_gt: 105
+      normal:
+        long_lt: 98
+        short_gt: 102
+      conservative:
+        long_lt: 99
+        short_gt: 101
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # 強化Statistics指標
+
+
+  # 拡大指標群
+  PVI:
+    type: volume
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 95
+        short_gt: 105
+      normal:
+        long_lt: 98
+        short_gt: 102
+      conservative:
+        long_lt: 99
+        short_gt: 101
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  PVT:
+    type: volume
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "{left_operand} > 0"
+      short: "{left_operand} < 0"
+
+  NVI:
+    type: volume
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 95
+        short_gt: 105
+      normal:
+        long_lt: 98
+        short_gt: 102
+      conservative:
+        long_lt: 99
+        short_gt: 101
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # さらに拡張したPattern Recognition
+
+
+  # Momentum拡張継続
+  MOM:
+    type: momentum
+    scale_type: momentum_zero_centered
+    thresholds:
+      aggressive:
+        long_lt: -10
+        short_gt: 10
+      normal:
+        long_lt: -5
+        short_gt: 5
+      conservative:
+        long_lt: -2
+        short_gt: 2
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  # 最終拡張 - Price Transform
+  PRICE_EMA_RATIO:
+    type: price_transform
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 95
+        short_gt: 105
+      normal:
+        long_lt: 98
+        short_gt: 102
+      conservative:
+        long_lt: 99
+        short_gt: 101
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # SMA_SLOPE追加
+  SMA_SLOPE:
+    type: price_transform
+    scale_type: momentum_zero_centered
+    thresholds:
+      aggressive:
+        long_gt: 0.1
+        short_lt: -0.1
+      normal:
+        long_gt: 0.05
+        short_lt: -0.05
+      conservative:
+        long_gt: 0.02
+        short_lt: -0.02
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  # HWMA加重移動平均
+  HWMA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  # MCGLENパフォーマンス
+  MCGD:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        alpha: 1.2
+      normal:
+        alpha: 0.8
+      conservative:
+        alpha: 0.6
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  # WILDERS平滑化
+  DEMA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  # ALMAアルゴリズム移動平均
+  ALMA:
+    type: price_transform
+    scale_type: price_absolute
+    thresholds:
+      aggressive:
+        offset: 0.99
+        sigma: 9
+      normal:
+        offset: 0.85
+        sigma: 6
+      conservative:
+        offset: 0.85
+        sigma: 6
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  # Linear Regression拡張
+  LINREG:
+    type: statistics
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}"
+      short: "close < {left_operand}"
+
+  LINREG_INTERCEPT:
+    type: statistics
+    scale_type: price_absolute
+    thresholds: null
+    conditions:
+      long: "close > {left_operand}_0"
+      short: "close < {left_operand}_0"
+
+  LINREG_ANGLE:
+    type: statistics
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: 30
+        short_gt: -30
+      normal:
+        long_lt: 15
+        short_gt: -15
+      conservative:
+        long_lt: 5
+        short_gt: -5
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  # RSX拡張
+  RSX:
+    type: momentum
+    scale_type: oscillator_0_100
+    thresholds:
+      aggressive:
+        long_lt: 25
+        short_gt: 75
+      normal:
+        long_lt: 30
+        short_gt: 70
+      conservative:
+        long_lt: 35
+        short_gt: 65
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # REX拡張
+
+  # RVI拡張
+  RVGI:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -5
+        short_gt: 5
+      normal:
+        long_lt: -3
+        short_gt: 3
+      conservative:
+        long_lt: -1
+        short_gt: 1
+    conditions:
+      long: "{left_operand} > {threshold}"
+      short: "{left_operand} < {threshold}"
+
+  # 最終Pattern Recognition拡張
+
+
+
+
+
+
+
+
+
+  # 最終拡張グループ
+  PVO:
+    type: momentum
+    scale_type: oscillator_plus_minus_100
+    thresholds:
+      aggressive:
+        long_lt: -3
+        short_gt: 3
+      normal:
+        long_lt: -1
+        short_gt: 1
+      conservative:
+        long_lt: -0.5
+        short_gt: 0.5
+    conditions:
+      long: "{left_operand} < {threshold}"
+      short: "{left_operand} > {threshold}"
+
+  # Volume Price
+
+  # 終極拡張 - Volume系最終
+
+# スケールタイプ定義
+scale_types:
+  oscillator_0_100:
+    range: [0, 100]
+  oscillator_plus_minus_100:
+    range: [-100, 100]
+  momentum_zero_centered:
+    range: null
+  price_absolute:
+    range: null
+
+# デフォルト閾値マッピング
+default_thresholds:
+  oscillator_0_100:
+    aggressive:
+      long_lt: 48
+    conservative:
+      long_lt: 52
+    normal:
+      long_lt: 50
+  oscillator_plus_minus_100:
+    aggressive:
+      long_gt: -2
+    conservative:
+      long_gt: 2
+    normal:
+      long_gt: 0
+  momentum_zero_centered:
+    aggressive:
+      long_gt: -0.1
+    conservative:
+      long_gt: 0.1
+    normal:
+      long_gt: 0.0
