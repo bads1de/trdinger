@@ -1,10 +1,11 @@
 """
 遺伝子バリデーター
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import List, Tuple
 
 from ..utils.indicator_utils import get_all_indicators
 

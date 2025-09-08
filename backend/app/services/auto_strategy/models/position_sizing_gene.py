@@ -1,10 +1,11 @@
 """
 ポジションサイジング遺伝子
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List
 
 from .enums import PositionSizingMethod
 from ..utils.gene_utils import BaseGene

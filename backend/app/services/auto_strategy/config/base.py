@@ -6,15 +6,10 @@ BaseConfigクラス
 
 import json
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Tuple
 
-from ..constants import (
-    ERROR_CODES,
-    THRESHOLD_RANGES,
-    CONSTRAINTS,
-)
 
 logger = logging.getLogger(__name__)
 

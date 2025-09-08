@@ -7,7 +7,7 @@ yamlファイルの読み込みと処理を専門に行うユーティリティ�
 import os
 import yaml
 from pathlib import Path
-from typing import Any, Dict, Optional, List, Union, Tuple
+from typing import Any, Dict, Optional, List, Union
 import logging
 
 
@@ -281,7 +281,9 @@ class YamlIndicatorUtils:
     ) -> Dict[str, Any]:
         """YAMLベースの条件生成テスト（ConditionGenerator用）"""
         try:
-            return {"error": "Generator class must be passed externally to avoid circular import"}
+            return {
+                "error": "Generator class must be passed externally to avoid circular import"
+            }
         except Exception as e:
             logger = logging.getLogger(__name__)
             logger.error(f"YAMLテストエラー: {e}")

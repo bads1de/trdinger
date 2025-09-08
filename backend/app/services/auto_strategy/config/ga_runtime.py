@@ -6,7 +6,7 @@ GAConfigクラスとGAProgressクラスを提供します。
 
 import json
 import logging
-from typing import Any, Callable, Dict, List, Optional, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, cast
 
 from dataclasses import dataclass, field
 
@@ -390,7 +390,12 @@ class GAConfig(BaseConfig):
         # TPSL設定を適用
         if self.tpsl_method_constraints is None:
             from ..constants import GA_DEFAULT_TPSL_METHOD_CONSTRAINTS
-            from ..constants import GA_TPSL_SL_RANGE, GA_TPSL_TP_RANGE, GA_TPSL_RR_RANGE, GA_TPSL_ATR_MULTIPLIER_RANGE
+            from ..constants import (
+                GA_TPSL_SL_RANGE,
+                GA_TPSL_TP_RANGE,
+                GA_TPSL_RR_RANGE,
+                GA_TPSL_ATR_MULTIPLIER_RANGE,
+            )
 
             self.tpsl_method_constraints = GA_DEFAULT_TPSL_METHOD_CONSTRAINTS.copy()
 

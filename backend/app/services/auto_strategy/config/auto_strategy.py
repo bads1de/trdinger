@@ -6,11 +6,11 @@ AutoStrategyConfigクラス
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from dataclasses import dataclass, field
 
-from .base import BaseConfig
+
 from .trading import TradingSettings
 from .indicators import IndicatorSettings
 from .ga import GASettings
@@ -218,9 +218,7 @@ class AutoStrategyConfig:
                 else IndicatorSettings()
             )
             ga = GASettings.from_dict(ga_data) if ga_data else GASettings()
-            tpsl = (
-                TPSLSettings.from_dict(tpsl_data) if tpsl_data else TPSLSettings()
-            )
+            tpsl = TPSLSettings.from_dict(tpsl_data) if tpsl_data else TPSLSettings()
             position_sizing = (
                 PositionSizingSettings.from_dict(position_sizing_data)
                 if position_sizing_data
