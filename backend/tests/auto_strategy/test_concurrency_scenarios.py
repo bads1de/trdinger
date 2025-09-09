@@ -7,7 +7,7 @@ import pytest
 import threading
 import time
 import concurrent.futures
-from unittest.mock import Mock, patch, MagicMock, Lock
+from unittest.mock import Mock, patch, MagicMock
 import sys
 import os
 import random

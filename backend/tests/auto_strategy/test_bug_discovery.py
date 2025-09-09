@@ -60,8 +60,7 @@ def test_resource_leak_syntax_corruption():
         assert False, "SyntaxError expected"
     except SyntaxError as e:
         # もしSyntaxErrorが発生したら期待通り
-        pass
-    but since it's in runtime, perhaps test differently
+        pass  # バグテストのため、この行のみ
 
     # 代わりにコードとしてテスト
     code = """

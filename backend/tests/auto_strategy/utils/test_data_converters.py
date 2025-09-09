@@ -7,10 +7,8 @@ from unittest.mock import patch
 from typing import Any, Dict, List
 import logging
 
-# パス調整
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../app/services/auto_strategy/utils'))
-
-from data_converters import DataConverter
+# パス調整 (修正: 相対パスではなく絶対インポートを使用)
+from app.services.auto_strategy.utils.data_converters import DataConverter
 
 
 class TestDataConverter(unittest.TestCase):

@@ -558,120 +558,123 @@ class TestAutoStrategyService:
         )
         # Assert: population_size=1が正常に処理されるべきだが、バグ検出のため異常が発生する可能性
         assert result == experiment_id, "最小population_size処理エラー"
-def test_inverse_input_invalid_config_type(auto_strategy_service):
-         """Inverse Input Testing: ga_config_dictに無効なタイプ(list)を使用"""
-         # 準備
-         experiment_id = "test-exp-invalid-type"
-         experiment_name = "Invalid Type Test"
-         ga_config_dict = ["invalid", "list", "input"]  # list instead of dict
-         backtest_config_dict = get_valid_backtest_config_dict()
-         background_tasks = BackgroundTasks()
+    def test_inverse_input_invalid_config_type(auto_strategy_service):
+        """Inverse Input Testing: ga_config_dictに無効なタイプ(list)を使用"""
+        # 準備
+        experiment_id = "test-exp-invalid-type"
+        experiment_name = "Invalid Type Test"
+        ga_config_dict = ["invalid", "list", "input"]  # list instead of dict
+        backtest_config_dict = get_valid_backtest_config_dict()
+        background_tasks = BackgroundTasks()
 
-         # 実行: 無効なタイプでTypeErrorまたは適切なバリデーションが発生するか確認
-         with pytest.raises((TypeError, AttributeError)) as excinfo:
-             auto_strategy_service.start_strategy_generation(
-                 experiment_id,
-                 experiment_name,
-                 ga_config_dict,
-                 backtest_config_dict,
-                 background_tasks,
-             )
-         # Assert: バグ検出の場合、適切なエラーが発生するかチェック
-         error_str = str(excinfo.value).lower()
-         assert "dict" in error_str or "type" in error_str or "keyword" in error_str, f"予期外のエラー: {excinfo.value}"
-def test_stress_testing_large_configuration(auto_strategy_service):
-         """Stress Testing: 大規模値の組み合わせでの処理確認"""
-         # 準備
-         experiment_id = "test-exp-stress"
-         experiment_name = "Stress Test Large Config"
-         ga_config_dict = get_valid_ga_config_dict()
-         ga_config_dict["generations"] = 10000  # 大規模な世代数
-         ga_config_dict["population_size"] = 10000  # 大規模な個体数
-         ga_config_dict["max_indicators"] = 100  # 大規模な指標数
-         backtest_config_dict = get_valid_backtest_config_dict()
-         background_tasks = BackgroundTasks()
+        # 実行: 無効なタイプでTypeErrorまたは適切なバリデーションが発生するか確認
+        with pytest.raises((TypeError, AttributeError)) as excinfo:
+            auto_strategy_service.start_strategy_generation(
+                experiment_id,
+                experiment_name,
+                ga_config_dict,
+                backtest_config_dict,
+                background_tasks,
+            )
+        # Assert: バグ検出の場合、適切なエラーが発生するかチェック
+        error_str = str(excinfo.value).lower()
+        assert "dict" in error_str or "type" in error_str or "keyword" in error_str, f"予期外のエラー: {excinfo.value}"
+    def test_stress_testing_large_configuration(auto_strategy_service):
+        """Stress Testing: 大規模値の組み合わせでの処理確認"""
+        # 準備
+        experiment_id = "test-exp-stress"
+        experiment_name = "Stress Test Large Config"
+        ga_config_dict = get_valid_ga_config_dict()
+        ga_config_dict["generations"] = 10000  # 大規模な世代数
+        ga_config_dict["population_size"] = 10000  # 大規模な個体数
+        ga_config_dict["max_indicators"] = 100  # 大規模な指標数
+        backtest_config_dict = get_valid_backtest_config_dict()
+        background_tasks = BackgroundTasks()
 
-         # 実行: 大規模値でメモリ不足や処理エラーが発生するか確認
-         try:
-             result = auto_strategy_service.start_strategy_generation(
-                 experiment_id,
-                 experiment_name,
-                 ga_config_dict,
-                 backtest_config_dict,
-                 background_tasks,
-             )
-             assert result == experiment_id, "大規模値処理成功"
-         except (MemoryError, TimeoutError, RecursionError) as e:
-             pytest.fail(f"バグ検出: 大規模値で例外発生: {type(e).__name__}: {e}")
-         except Exception as e:
-             if "limit" in str(e).lower() or "overflow" in str(e).lower():
-                 pytest.fail(f"バグ検出: リミット超過: {e}")
-      def test_internationalization_multiple_encodings(auto_strategy_service):
-         """Internationalization Testing: 多種エンコーディング文字を含むexperiment_nameの処理"""
-         # 準備
-         experiment_id = "test-exp-i18n"
-         experiment_name = "测试试验 экспедíció eksperimento eksperiment thromboembolism 実証実験 Торговля"  # 多言語文字
-         ga_config_dict = get_valid_ga_config_dict()
-         backtest_config_dict = get_valid_backtest_config_dict()
-         background_tasks = BackgroundTasks()
+        # 実行: 大規模値でメモリ不足や処理エラーが発生するか確認
+        try:
+            result = auto_strategy_service.start_strategy_generation(
+                experiment_id,
+                experiment_name,
+                ga_config_dict,
+                backtest_config_dict,
+                background_tasks,
+            )
+            assert result == experiment_id, "大規模値処理成功"
+        except (MemoryError, TimeoutError, RecursionError) as e:
+            pytest.fail(f"バグ検出: 大規模値で例外発生: {type(e).__name__}: {e}")
+        except Exception as e:
+            if "limit" in str(e).lower() or "overflow" in str(e).lower():
+                pytest.fail(f"バグ検出: リミット超過: {e}")
 
-         # 実行: 多言語文字が正しく処理されるか確認
-         result = auto_strategy_service.start_strategy_generation(
-             experiment_id,
-             experiment_name,
-             ga_config_dict,
-             backtest_config_dict,
-             background_tasks,
-         )
-         assert result == experiment_id, "多言語文字処理成功"
+    def test_internationalization_multiple_encodings(auto_strategy_service):
+        """Internationalization Testing: 多種エンコーディング文字を含むexperiment_nameの処理"""
+        # 準備
+        experiment_id = "test-exp-i18n"
+        experiment_name = "测试试验 экспедíció eksperimento eksperiment thromboembolism 実証実験 Торговля"  # 多言語文字
+        ga_config_dict = get_valid_ga_config_dict()
+        backtest_config_dict = get_valid_backtest_config_dict()
+        background_tasks = BackgroundTasks()
 
-         # ログにも多言語文字が正しく記録されるか検証（バグ検出のため）
-         # 実際の実行ではログチェックが必要だが、テストでは基本処理を確認
-      def test_boundary_elite_size_exceeds_population(auto_strategy_service):
-         """Boundary Value Testing: elite_size > population_sizeの境界値テスト"""
-         # 準備
-         experiment_id = "test-exp-elite-boundary"
-         experiment_name = "Elite Size Boundary Test"
-         ga_config_dict = get_valid_ga_config_dict()
-         ga_config_dict["elite_size"] = 10  # elite_size > population_size (default 10)
-         ga_config_dict["population_size"] = 5  # 5 < 10
-         backtest_config_dict = get_valid_backtest_config_dict()
-         background_tasks = BackgroundTasks()
+        # 実行: 多言語文字が正しく処理されるか確認
+        result = auto_strategy_service.start_strategy_generation(
+            experiment_id,
+            experiment_name,
+            ga_config_dict,
+            backtest_config_dict,
+            background_tasks,
+        )
+        assert result == experiment_id, "多言語文字処理成功"
 
-         # 実行: elite_size > population_sizeの場合、バリデーションエラーが発生するか確認
-         try:
-             result = auto_strategy_service.start_strategy_generation(
-                 experiment_id,
-                 experiment_name,
-                 ga_config_dict,
-                 backtest_config_dict,
-                 background_tasks,
-             )
-             # バグ検出: 無効な組み合わせが処理されてしまう
-             pytest.fail("バグ検出: elite_size > population_sizeが許可されてしまった")
-         except (ValueError, HTTPException) as e:
-             assert "elite" in str(e).lower() or "population" in str(e).lower() or "size" in str(e).lower(), f"予期外のバリデーションエラー: {e}"
-      def test_edge_case_mutation_rate_zero(auto_strategy_service):
-         """Edge Case: mutation_rate = 0の処理確認"""
-         # 準備
-         experiment_id = "test-exp-zero-mutation"
-         experiment_name = "Zero Mutation Rate Test"
-         ga_config_dict = get_valid_ga_config_dict()
-         ga_config_dict["mutation_rate"] = 0.0  # 変異率ゼロ
-         backtest_config_dict = get_valid_backtest_config_dict()
-         background_tasks = BackgroundTasks()
+        # ログにも多言語文字が正しく記録されるか検証（バグ検出のため）
+        # 実際の実行ではログチェックが必要だが、テストでは基本処理を確認
 
-         # 実行: 変異率ゼロの場合、進化が妥当に行われるか（またはエラーが発生するか）
-         result = auto_strategy_service.start_strategy_generation(
-             experiment_id,
-             experiment_name,
-             ga_config_dict,
-             backtest_config_dict,
-             background_tasks,
-         )
-         # Assert: 変異率ゼロが許容されるか確認
-         assert result == experiment_id, "変異率ゼロ処理成功"
-         # バグ検出: 変異率ゼロでGAが機能しない場合があるが、このテストでは基本処理のみ確認
+    def test_boundary_elite_size_exceeds_population(auto_strategy_service):
+        """Boundary Value Testing: elite_size > population_sizeの境界値テスト"""
+        # 準備
+        experiment_id = "test-exp-elite-boundary"
+        experiment_name = "Elite Size Boundary Test"
+        ga_config_dict = get_valid_ga_config_dict()
+        ga_config_dict["elite_size"] = 10  # elite_size > population_size (default 10)
+        ga_config_dict["population_size"] = 5  # 5 < 10
+        backtest_config_dict = get_valid_backtest_config_dict()
+        background_tasks = BackgroundTasks()
+
+        # 実行: elite_size > population_sizeの場合、バリデーションエラーが発生するか確認
+        try:
+            result = auto_strategy_service.start_strategy_generation(
+                experiment_id,
+                experiment_name,
+                ga_config_dict,
+                backtest_config_dict,
+                background_tasks,
+            )
+            # バグ検出: 無効な組み合わせが処理されてしまう
+            pytest.fail("バグ検出: elite_size > population_sizeが許可されてしまった")
+        except (ValueError, HTTPException) as e:
+            assert "elite" in str(e).lower() or "population" in str(e).lower() or "size" in str(e).lower(), f"予期外のバリデーションエラー: {e}"
+
+    def test_edge_case_mutation_rate_zero(auto_strategy_service):
+        """Edge Case: mutation_rate = 0の処理確認"""
+        # 準備
+        experiment_id = "test-exp-zero-mutation"
+        experiment_name = "Zero Mutation Rate Test"
+        ga_config_dict = get_valid_ga_config_dict()
+        ga_config_dict["mutation_rate"] = 0.0  # 変異率ゼロ
+        backtest_config_dict = get_valid_backtest_config_dict()
+        background_tasks = BackgroundTasks()
+
+        # 実行: 変異率ゼロの場合、進化が妥当に行われるか（またはエラーが発生するか）
+        result = auto_strategy_service.start_strategy_generation(
+            experiment_id,
+            experiment_name,
+            ga_config_dict,
+            backtest_config_dict,
+            background_tasks,
+        )
+        # Assert: 変異率ゼロが許容されるか確認
+        assert result == experiment_id, "変異率ゼロ処理成功"
+        # バグ検出: 変異率ゼロでGAが機能しない場合があるが、このテストでは基本処理のみ確認
 
 # 新規追加テストケース: 優先度高バグ対応
 

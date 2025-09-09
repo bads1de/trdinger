@@ -349,7 +349,7 @@ class ErrorHandler:
                 logger.warning(f"{context}: 予測値のバリデーションに失敗しました")
 
             # 追加のNaN/Inf チェック
-            if is_valid:
+            if is_valid and predictions is not None:
                 for key, value in predictions.items():
                     if np.isnan(value) or np.isinf(value):
                         logger.warning(f"{context}: {key}に無効な値が含まれています")

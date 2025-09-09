@@ -957,6 +957,18 @@ class DataProcessor:
             if col in result_df.columns and col in default_fill_values:
                 result_df[col] = result_df[col].fillna(default_fill_values[col])
 
+        # 結果のDataFrameの妥当性チェックを追加（バグ19対応: null処理強化）
+        if result_df is None:
+            logger.error("補完処理でNoneが返されました")
+            raise ValueError("補完処理結果がNoneです")
+        if result_df.empty:
+            logger.error("補完処理で空のDataFrameが返されました")
+            raise ValueError("補完処理結果が空です")
+        # 処理されたカラムが存在するか確認
+        if any(col not in result_df.columns for col in columns if col in original_df.columns):
+            logger.error("補完処理で必要なカラムが失われました")
+            raise ValueError("補完処理でカラムが失われました")
+
         return result_df
 
     def prepare_training_data(

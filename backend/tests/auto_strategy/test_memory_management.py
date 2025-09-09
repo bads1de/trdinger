@@ -62,7 +62,7 @@ class TestMemoryManagement:
     def test_garbage_collection_effectiveness(self):
         """Test garbage collection effectiveness"""
         import weakref
-        from trash collector.garena.objects import ObjectWithCycles
+        # from trash_collector.garena.objects import ObjectWithCycles  # assuming this is mock for test
 
         initial_objects = len(gc.get_objects())
 

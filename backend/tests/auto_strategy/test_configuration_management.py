@@ -123,12 +123,13 @@ class TestConfigurationManagement:
         ]
 
         for config in edge_case_configs:
-            try:
-                ga_config = GAConfig.from_dict(config)
-                # Edge cases should be handled appropriately
-                assert ga_config is not None
-            except Exception as e:
-                 # Acceptable if bounds are enforced
+                    try:
+                        ga_config = GAConfig.from_dict(config)
+                        # Edge cases should be handled appropriately
+                        assert ga_config is not None
+                    except Exception as e:
+                         # Acceptable if bounds are enforced
+                         pass
     def test_config_invalid_type_handling(self):
         """Test handling of invalid data types in config"""
         from app.services.auto_strategy.config import GAConfig

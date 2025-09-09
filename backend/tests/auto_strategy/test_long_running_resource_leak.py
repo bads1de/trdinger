@@ -330,7 +330,7 @@ class TestLongRunningResourceLeak:
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # 結果処理
-            total_data_points = sum(len(data) for data, count in results if isinstance(data, list) else 0)
+            total_data_points = sum(len(data) if isinstance(data, list) else 0 for data, count in results)
 
         except Exception as e:
             pytest.fail(f"非同期監視タスクでエラー: {e}")

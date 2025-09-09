@@ -65,11 +65,17 @@ class PriceChangeTransformer(BaseEstimator, TransformerMixin):
         else:
             price_series = X
 
-        # 価格変化率を計算
-        price_change = price_series.pct_change(periods=self.periods).dropna()
+        try:
+            # 価格変化率を計算（バグ22対応: エラーハンドリング追加）
+            price_change = price_series.pct_change(periods=self.periods)
+            price_change = price_change.fillna(0)  # NaN処理を追加
+            price_change = price_change.dropna()  # 残ったNaNを除去
 
-        # 2次元配列として返す（scikit-learn要件）
-        return np.asarray(price_change.values).reshape(-1, 1)
+            # 2次元配列として返す（scikit-learn要件）
+            return np.asarray(price_change.values).reshape(-1, 1)
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            logger.error(f"価格変化率計算エラー: {e}")
+            raise ValueError(f"価格変化率計算に失敗: {e}") from e
 
 
 class SimpleLabelGenerator:
@@ -154,11 +160,16 @@ class SimpleLabelGenerator:
         if not self._is_fitted or self.pipeline is None:
             raise ValueError("fit()を先に実行してください")
 
-        # 変換実行
-        labels_array = self.pipeline.transform(price_data)
+        try:
+            # 変換実行
+            labels_array = self.pipeline.transform(price_data)
 
-        # 価格変化率のインデックスを取得（最初の行は除外される）
-        price_change_index = price_data.pct_change().dropna().index
+            # 価格変化率のインデックスを取得（最初の行は除外される）（バグ22対応: エラーハンドリング追加）
+            price_change = price_data.pct_change()
+            price_change_index = price_change.dropna().index
+        except (AttributeError, KeyError, TypeError) as e:
+            logger.error(f"ラベル変換エラー: {e}")
+            raise ValueError(f"ラベル変換に失敗しました: {e}") from e
 
         # Seriesとして返す
         labels = pd.Series(labels_array.flatten(), index=price_change_index, dtype=int)
@@ -271,13 +282,22 @@ class LabelGenerator:
             else:
                 series_input = price_data  # type: ignore[assignment]
 
-            # 価格変化率を計算
+            # 価格変化率を計算（バグ22対応: エラーハンドリング追加）
             # - Series入力: 次期変化率（forward）で学習用に整合
             # - DataFrame+target_column入力: 過去→現在（backward）でテスト互換
-            if target_column is not None:
-                price_change = series_input.pct_change()
-            else:
-                price_change = series_input.pct_change().shift(-1)
+            try:
+                if target_column is not None:
+                    price_change = series_input.pct_change()
+                    price_change = price_change.fillna(0)  # NaN処理強化
+                else:
+                    price_change = series_input.pct_change().shift(-1)
+                    price_change = price_change.fillna(0)  # NaN処理強化
+            except (AttributeError, KeyError, TypeError, ValueError) as e:
+                logger.error(f"価格変化率計算エラー: {e}")
+                raise ValueError(f"価格変化率計算に失敗しました: {e}") from e
+            except Exception as e:
+                logger.error(f"予期しない価格変化率計算エラー: {e}")
+                raise
 
             # NaNを除去
             valid_mask = price_change.notna()

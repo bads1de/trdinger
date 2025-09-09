@@ -499,15 +499,24 @@ class MLOrchestrator(MLPredictionInterface):
             close_prices = df["Close"]
             price_change = close_prices.pct_change()
 
+            # pct_change後のNaNをfillしてnull処理を強化
+            price_change = price_change.fillna(0)
+
             # 将来の価格変化を予測するため、1期間先にシフト
             target = price_change.shift(-1)
 
-            # 統計的手法で欠損値を補完
+            # 統計的手法で欠損値を補完 (強化されたnull処理)
             target_df = pd.DataFrame({"target": target})
             target_df = data_preprocessor.interpolate_columns(
                 target_df, columns=["target"], strategy="median"
             )
-            # interpolate_columnsはDataFrameを返すので、Seriesとして抽出
+
+            # interpolate_columns結果のnullチェックを追加
+            if target_df is None or target_df.empty:
+                logger.error("補完処理結果が無効です")
+                return None
+
+            # DataFrameとして抽出
             target = pd.Series(target_df["target"])
 
             return target

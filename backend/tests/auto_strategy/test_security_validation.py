@@ -73,7 +73,7 @@ class TestSecurityValidation:
         valid_numbers = ["100", "50.5", "60", "0", "-10", "+100"]
 
         # Invalid non-numeric inputs
-        invalid_inputs = ["not_a_number", "SELECT", "DROP", "alert('XSS')", "<script>", "']
+        invalid_inputs = ["not_a_number", "SELECT", "DROP", "alert('XSS')", "<script>", "'); --"]
 
         for field in numeric_fields:
             for valid in valid_numbers:
