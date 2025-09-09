@@ -3,10 +3,10 @@ import random
 import copy
 from typing import List, Tuple, Union, Dict, Any, Optional
 from ..constants import (
-    INDICATOR_CHARACTERISTICS,
     IndicatorType,
     StrategyType,
 )
+from ..indicator_characteristics import INDICATOR_CHARACTERISTICS
 from app.services.indicators.config import indicator_registry
 from ..utils.yaml_utils import YamlIndicatorUtils
 

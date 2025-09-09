@@ -40,7 +40,6 @@ DRY (Don't Repeat Yourself)、単一責任の原則 (SRP)、メンテナンス�
 
 ---
 
-
 ## 3. 戦略生成 (`generators` ディレクトリ)
 
 ### 課題

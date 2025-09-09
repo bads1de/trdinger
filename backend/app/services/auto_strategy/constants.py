@@ -355,7 +355,6 @@ DEFAULT_FITNESS_CONSTRAINTS = {
     "min_sharpe_ratio": 1.0,
 }
 
-from .indicator_characteristics import INDICATOR_CHARACTERISTICS  # noqa: E402
 
 # GA目的設定
 DEFAULT_GA_OBJECTIVES = ["total_return"]

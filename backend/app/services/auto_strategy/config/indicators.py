@@ -10,11 +10,11 @@ from dataclasses import dataclass, field
 
 from .base import BaseConfig
 from ..constants import (
-    INDICATOR_CHARACTERISTICS,
     ML_INDICATOR_TYPES,
     OPERATORS,
     DATA_SOURCES,
 )
+from ..indicator_characteristics import INDICATOR_CHARACTERISTICS
 from ..utils.indicator_utils import get_valid_indicator_types
 
 

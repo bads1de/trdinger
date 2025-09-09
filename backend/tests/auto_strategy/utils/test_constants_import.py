@@ -8,7 +8,6 @@ def test_constants_import():
     """定数が正しくimportできることをテスト"""
     from app.services.auto_strategy.constants import (
         DEFAULT_SYMBOL,
-        INDICATOR_CHARACTERISTICS,
         IndicatorType,
         StrategyType,
         OPERATORS,
