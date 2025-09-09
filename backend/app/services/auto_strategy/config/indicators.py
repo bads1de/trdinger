@@ -14,7 +14,7 @@ from ..constants import (
     OPERATORS,
     DATA_SOURCES,
 )
-from ..indicator_characteristics import INDICATOR_CHARACTERISTICS
+from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
 from ..utils.indicator_utils import get_valid_indicator_types
 
 

@@ -2,8 +2,8 @@
 テスト: 指標特性の動的初期化
 """
 import pytest
-from backend.app.services.auto_strategy.indicator_characteristics import INDICATOR_CHARACTERISTICS
-from backend.app.services.auto_strategy.indicator_characteristics import _get_merged_characteristics
+from backend.app.services.auto_strategy.utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
+from backend.app.services.auto_strategy.utils.indicator_characteristics import _get_merged_characteristics
 
 
 class TestIndicatorCharacteristics:

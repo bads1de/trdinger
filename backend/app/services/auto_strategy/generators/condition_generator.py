@@ -6,7 +6,7 @@ from ..constants import (
     IndicatorType,
     StrategyType,
 )
-from ..indicator_characteristics import INDICATOR_CHARACTERISTICS
+from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
 from app.services.indicators.config import indicator_registry
 from ..utils.yaml_utils import YamlIndicatorUtils
 

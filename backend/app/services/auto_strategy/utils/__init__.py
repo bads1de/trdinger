@@ -24,6 +24,7 @@ from .yaml_utils import (
     YamlTestUtils,
     MockIndicatorGene,
 )
+from .indicator_characteristics import INDICATOR_CHARACTERISTICS
 
 # Compatibility imports from common_utils
 from .compat_utils import safe_execute
@@ -107,4 +108,7 @@ __all__ = [
 
     # Strategy Integration
     "StrategyIntegrationService",
+
+    # Indicator Characteristics
+    "INDICATOR_CHARACTERISTICS",
 ]
