@@ -60,6 +60,19 @@ class ParameterConfig:
         self.max_value = max_value
         self.description = description
 
+    def validate_value(self, value: Any) -> bool:
+        """与えられた値がこのパラメータの制約（範囲など）を満たすか検証する"""
+        if not isinstance(value, (int, float)):
+            # 数値でない場合は検証スキップ（または型チェックを厳密に行う）
+            return True
+
+        if self.min_value is not None and value < self.min_value:
+            return False
+        if self.max_value is not None and value > self.max_value:
+            return False
+        
+        return True
+
 
 
 @dataclass

@@ -247,8 +247,11 @@ class IndividualEvaluator:
                 # 片方向のみで利益の場合は中程度
                 elif long_pnl > 0 or short_pnl > 0:
                     profit_balance = 0.7
-                else:
-                    profit_balance = 0.3
+            # 両方で損失が出ている場合は低いスコア
+            elif long_pnl < 0 and short_pnl < 0:
+                profit_balance = 0.1
+            else:
+                profit_balance = 0.3
 
             # 総合バランススコア（取引回数バランス60%、利益バランス40%）
             balance_score = 0.6 * trade_balance + 0.4 * profit_balance

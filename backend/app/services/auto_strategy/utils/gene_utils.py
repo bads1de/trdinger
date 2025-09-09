@@ -9,6 +9,7 @@ import random
 from typing import Any, Dict, List, Optional, Union, Tuple
 from datetime import datetime
 from abc import ABC, abstractmethod
+import uuid # uuidモジュールをインポート
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,8 @@ class BaseGene(ABC):
         """オブジェクトを辞書形式に変換"""
         result = {}
         for key, value in self.__dict__.items():
-            if key.startswith("_"):
-                continue  # プライベート属性は除外
+            if key.startswith("_"): # プライベート属性は除外
+                continue
 
             # Enumの処理
             if hasattr(value, "value"):
@@ -346,49 +347,56 @@ class GeneUtils:
         try:
             # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
             # ここでは基本的な構造のみを提供
+            from ..models.strategy_models import IndicatorGene, Condition, TPSLGene, PositionSizingGene, PositionSizingMethod
 
-            # デフォルト指標 (例としてハードコード)
             indicators = [
-                {"type": "SMA", "parameters": {"period": 20}, "enabled": True}
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ]
 
             # デフォルト条件
             long_entry_conditions = [
-                {"left_operand": "close", "operator": ">", "right_operand": "open"}
+                Condition(left_operand="close", operator=">", right_operand="open")
             ]
             short_entry_conditions = [
-                {"left_operand": "close", "operator": "<", "right_operand": "open"}
+                Condition(left_operand="close", operator="<", right_operand="open")
             ]
             exit_conditions = [
-                {"left_operand": "close", "operator": "==", "right_operand": "open"}
+                Condition(left_operand="close", operator="==", right_operand="open")
             ]
             entry_conditions = long_entry_conditions
 
             # デフォルトリスク管理
-            risk_management = {
-                "stop_loss": 0.03,
-                "take_profit": 0.15,
-                "position_size": 0.1,
-            }
+            risk_management = {"position_size": 0.1}
+
+            # デフォルトTP/SL遺伝子
+            tpsl_gene = TPSLGene(
+                take_profit_pct=0.01, stop_loss_pct=0.005, enabled=True
+            )
+
+            # デフォルトポジションサイジング遺伝子
+            position_sizing_gene = PositionSizingGene(
+                method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000, enabled=True
+            )
 
             # メタデータ
             metadata = {
                 "generated_by": "create_default_strategy_gene",
                 "source": "fallback",
                 "indicators_count": len(indicators),
-                "tpsl_gene_included": False,
-                "position_sizing_gene_included": False,
+                "tpsl_gene_included": tpsl_gene is not None,
+                "position_sizing_gene_included": position_sizing_gene is not None,
             }
 
             return strategy_gene_class(
+                id=str(uuid.uuid4()), # 新しいIDを生成
                 indicators=indicators,
                 entry_conditions=entry_conditions,
                 long_entry_conditions=long_entry_conditions,
                 short_entry_conditions=short_entry_conditions,
                 exit_conditions=exit_conditions,
                 risk_management=risk_management,
-                tpsl_gene=None,
-                position_sizing_gene=None,
+                tpsl_gene=tpsl_gene,
+                position_sizing_gene=position_sizing_gene,
                 metadata=metadata,
             )
         except Exception as inner_e:

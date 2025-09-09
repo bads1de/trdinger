@@ -424,7 +424,11 @@ class RandomGeneGenerator:
             # 残り
             for i in range(1, num_indicators):
                 try:
-                    indicator_type = random.choice(self.available_indicators)
+                    if not self.available_indicators:
+                        # 利用可能な指標がない場合はSMAをフォールバックとして使い続ける
+                        indicator_type = "SMA"
+                    else:
+                        indicator_type = random.choice(self.available_indicators)
 
                     parameters = indicator_registry.generate_parameters_for_indicator(
                         indicator_type

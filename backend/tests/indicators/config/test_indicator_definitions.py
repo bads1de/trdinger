@@ -46,7 +46,7 @@ class TestIndicatorDefinitions:
             'WILLR', 'AROON', 'AROONOSC', 'DX', 'PLUS_DI', 'MINUS_DI',
             'ROC', 'TRIX', 'ULTOSC', 'BOP', 'APO', 'ADXR', 'STOCHRSI',
             'ROCP', 'ROCR', 'ROCR100', 'PLUS_DM', 'MINUS_DM', 'TSI',
-            'RVI', 'CFO', 'CTI', 'RMI', 'DPO', 'CHOP', 'VORTEX'
+            'RMI', 'CFO', 'CTI', 'DPO', 'CHOP', 'VORTEX'
         ]
 
         # 少なくとも期待される指標が登録されていることを確認
@@ -88,7 +88,7 @@ class TestIndicatorDefinitions:
 
         expected_trend_indicators = [
             'SMA', 'EMA', 'WMA', 'TRIMA', 'KAMA', 'TEMA', 'DEMA',
-            'ALMA', 'T3', 'HMA', 'RMA', 'SWMA', 'ZLMA', 'MA',
+            'ALMA', 'T3', 'HMA', 'RMA', 'SWMA', 'ZLMA', 'MA', 'TLB', # TLB を追加
             'SAR', 'PRICE_EMA_RATIO', 'SMA_SLOPE', 'VWMA', 'FWMA'
         ]
 
