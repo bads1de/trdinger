@@ -37,6 +37,7 @@ from ..constants import (
 )
 from .condition_generator import ConditionGenerator
 from ..utils.indicator_utils import get_all_indicators
+from .indicator_composition_service import IndicatorCompositionService
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,9 @@ class RandomGeneGenerator:
             self._valid_indicator_names = set(get_all_indicators())
         except Exception:
             self._valid_indicator_names = set()
+
+        # 指標構成サービスを初期化
+        self.composition_service = IndicatorCompositionService(config)
 
     def _ensure_or_with_fallback(
         self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
@@ -457,87 +461,21 @@ class RandomGeneGenerator:
                 except Exception:
                     pass
 
-            # 成立性の底上げ: 少なくとも1つはトレンド系（SMA/EMA/MAのいずれか）を含める
+            # 指標構成サービスを使用して成立性を底上げ
             try:
+                # トレンド指標の強制追加（産業性底上げ）
+                indicators = self.composition_service.enhance_with_trend_indicators(
+                    indicators, self.available_indicators
+                )
 
-                def _is_trend(name: str) -> bool:
-                    cfg = indicator_registry.get_indicator_config(name)
-                    return bool(cfg and getattr(cfg, "category", None) == "trend")
+                # MAクロス戦略を可能にするための追加
+                indicators = self.composition_service.enhance_with_ma_cross_strategy(
+                    indicators, self.available_indicators
+                )
 
-                has_trend = any(_is_trend(ind.type) for ind in indicators)
-                if not has_trend:
-                    # allowed_indicators/available_indicators を尊重してトレンド補完
-                    trend_pool = [
-                        name for name in self.available_indicators if _is_trend(name)
-                    ]
-                    if trend_pool:
-                        chosen = random.choice(trend_pool)
-                        # period が必要なものにのみデフォルトperiodを与える（SMA/EMA 等）
-                        default_params = (
-                            {"period": random.choice([10, 14, 20, 30, 50])}
-                            if chosen in MA_INDICATORS_NEEDING_PERIOD
-                            else {}
-                        )
-                        indicators.append(
-                            IndicatorGene(
-                                type=chosen, parameters=default_params, enabled=True
-                            )
-                        )
-                        # 上限超過なら非トレンドを1つ削除
-                        if len(indicators) > self.max_indicators:
-                            for j, ind in enumerate(indicators):
-                                if not _is_trend(ind.type):
-                                    indicators.pop(j)
-                                    break
-                # MA系が2本未満ならクロス戦略を可能にするために追加
-                try:
-
-                    def _is_ma(name: str) -> bool:
-                        # VALID_INDICATOR_TYPESに含まれる移動平均系指標のみ
-                        return name in MOVING_AVERAGE_INDICATORS
-
-                    ma_count = sum(1 for ind in indicators if _is_ma(ind.type))
-                    if ma_count < 2:
-                        # 追加するMAを選択
-                        ma_pool = [
-                            name for name in self.available_indicators if _is_ma(name)
-                        ]
-                        if ma_pool:
-                            # 既存のMAのperiodと被らないように
-                            existing_periods = set(
-                                ind.parameters.get("period")
-                                for ind in indicators
-                                if _is_ma(ind.type) and isinstance(ind.parameters, dict)
-                            )
-                            # テスト互換性のため優先的なMA指標を使用
-                            preferred = PREFERRED_MA_INDICATORS
-                            pref_pool = [
-                                n for n in ma_pool if n in preferred
-                            ] or ma_pool
-                            chosen = random.choice(pref_pool)
-                            period_choices = [7, 10, 12, 14, 20, 30, 50]
-                            period = random.choice(
-                                [p for p in period_choices if p not in existing_periods]
-                                or [14]
-                            )
-                            indicators.append(
-                                IndicatorGene(
-                                    type=chosen,
-                                    parameters={"period": period},
-                                    enabled=True,
-                                )
-                            )
-                            # 上限超過なら非MAを1つ削除
-                            if len(indicators) > self.max_indicators:
-                                for j, ind in enumerate(indicators):
-                                    if not _is_ma(ind.type):
-                                        indicators.pop(j)
-                                        break
-                except Exception:
-                    pass
-                    # trend_pool が無ければ補完はスキップ（allowed_indicators を厳守）
-            except Exception:
-                # レジストリ取得が失敗しても安全にSMAを追加（ただしavailable_indicatorsにSMAが含まれる場合のみ）
+            except Exception as e:
+                logger.error(f"指標構成サービス使用エラー: {e}")
+                # フォールバック: SMAを追加（安全策）
                 if (
                     any(
                         ind.type in ("SMA", "EMA", "MA", "HMA", "ALMA", "VIDYA")

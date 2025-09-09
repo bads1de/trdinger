@@ -11,6 +11,12 @@ from app.services.indicators.config import indicator_registry
 from ..utils.yaml_utils import YamlIndicatorUtils
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
+from .strategies import (
+    ConditionStrategy,
+    DifferentIndicatorsStrategy,
+    ComplexConditionsStrategy,
+    IndicatorCharacteristicsStrategy,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -99,22 +105,20 @@ class ConditionGenerator:
             strategy_type = self._select_strategy_type(indicators)
             self.logger.info(f"生成戦略タイプ: {strategy_type.name}")
 
-            # 選択された戦略に基づいて条件を生成
+            # 戦略に応じたStrategyクラスをインスタンス化
+            strategy: ConditionStrategy | None = None
             if strategy_type == StrategyType.DIFFERENT_INDICATORS:
-                longs, shorts, exits = self._generate_different_indicators_strategy(
-                    indicators
-                )
-            # TIME_SEPARATION 戦略は削除したので、削除
-            elif strategy_type == StrategyType.TIME_SEPARATION:
-                longs, shorts, exits = self._generate_fallback_conditions()
+                strategy = DifferentIndicatorsStrategy(self)
             elif strategy_type == StrategyType.COMPLEX_CONDITIONS:
-                longs, shorts, exits = self._generate_complex_conditions_strategy(
-                    indicators
-                )
+                strategy = ComplexConditionsStrategy(self)
             elif strategy_type == StrategyType.INDICATOR_CHARACTERISTICS:
-                longs, shorts, exits = (
-                    self._generate_indicator_characteristics_strategy(indicators)
-                )
+                strategy = IndicatorCharacteristicsStrategy(self)
+            else:
+                # Fallback strategy
+                longs, shorts, exits = self._generate_fallback_conditions()
+
+            if strategy:
+                longs, shorts, exits = strategy.generate_conditions(indicators)
             else:
                 longs, shorts, exits = self._generate_fallback_conditions()
 

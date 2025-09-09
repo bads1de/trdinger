@@ -40,30 +40,6 @@ DRY (Don't Repeat Yourself)、単一責任の原則 (SRP)、メンテナンス�
 
 ---
 
-## 3. 戦略生成 (`generators` ディレクトリ)
-
-### 課題
-
-- **巨大なメソッド**: `condition_generator.py` の `generate_balanced_conditions` メソッドが、巨大な if-elif 文で戦略タイプを分岐しており、新しい戦略タイプの追加が困難です。
-- **複雑なロジック**: `random_gene_generator.py` の `_generate_random_indicators` メソッド内に、指標の構成を調整するロジック（トレンド系指標の強制追加など）が複雑に絡み合っています。
-- **クラス間の密結合**: `gene_factory.py` の `SmartGeneGenerator` が `RandomGeneGenerator` を直接インスタンス化しており、結合度が高くなっています。
-
-### 提案
-
-1. **ストラテジーパターンの適用 (SRP/メンテナンス性)**
-
-   - `condition_generator.py` をリファクタリングし、各戦略タイプ（`DifferentIndicatorsStrategy`, `ComplexConditionsStrategy`など）を個別のクラスとして実装します。
-   - `ConditionGenerator` は、これらの戦略クラスを呼び出すファクトリーまたはコンテキストクラスの役割を担います。これにより、新しい戦略の追加が容易になります。
-
-2. **指標構成ロジックの分離 (SRP)**
-
-   - `random_gene_generator.py` から指標の構成ロジックを `IndicatorCompositionService` のような新しいクラスに分離します。
-   - このサービスは「トレンド指標を 1 つ以上含める」「MA クロス戦略を試みる」といったルールベースの構成を担当し、`RandomGeneGenerator` はそれを呼び出すだけにします。
-
-3. **依存性注入 (DI) の採用 (メンテナンス性)**
-   - `GeneGeneratorFactory` や `SmartGeneGenerator` が、依存する他のジェネレーターをコンストラクタで受け取るように変更します（依存性注入）。これにより、クラス間の結合度が下がり、単体テストが容易になります。
-
----
 
 ---
 

@@ -116,11 +116,19 @@ class BaseGeneGenerator(ABC):
 
 
 class SmartGeneGenerator(BaseGeneGenerator):
-    """スマート遺伝子生成器"""
+    """スマート遺伝子生成器 - DI採用"""
 
-    def __init__(self, config: Any):
+    def __init__(self, config: Any, random_generator: 'RandomGeneGenerator' = None):
+        """
+        DIを採用: RandomGeneGeneratorインスタンスを注入
+
+        Args:
+            config: GA設定
+            random_generator: 注入されたRandomGeneGeneratorインスタンス（オプション）
+        """
         super().__init__(config)
         self._smart_generator = None
+        self._random_generator = random_generator  # 注入されたRandomGeneGenerator
 
     def _get_smart_generator(self):
         """ConditionGeneratorを遅延初期化"""
@@ -130,16 +138,23 @@ class SmartGeneGenerator(BaseGeneGenerator):
             self._smart_generator = ConditionGenerator(enable_smart_generation=True)
         return self._smart_generator
 
+    def _get_random_generator(self):
+        """RandomGeneGeneratorの取得（DIまたは遅延初期化）"""
+        if self._random_generator is None:
+            from .random_gene_generator import RandomGeneGenerator
+            self._random_generator = RandomGeneGenerator(self.config)
+        return self._random_generator
+
     def generate_indicators(self) -> List[IndicatorGene]:
-        """スマートに指標を生成"""
+        """スマートに指標を生成（DIを使用）"""
         try:
-            # ランダム生成を使用（ConditionGeneratorは条件生成に特化）
-            random_gen = RandomGeneGenerator(self.config, enable_smart_generation=False)
+            # 注入されたまたは遅延初期化されたRandomGeneGeneratorを使用
+            random_gen = self._get_random_generator()
             return random_gen._generate_random_indicators()
         except Exception as e:
             logger.error(f"スマート指標生成エラー: {e}")
-            # フォールバック: ランダム生成
-            random_gen = RandomGeneGenerator(self.config, enable_smart_generation=False)
+            # フォールバック: 遅延初期化を使用
+            random_gen = self._get_random_generator()
             return random_gen._generate_random_indicators()
 
     def generate_conditions(
@@ -226,13 +241,14 @@ class GeneGeneratorFactory:
     """遺伝子生成器ファクトリー"""
 
     @staticmethod
-    def create_generator(generator_type: GeneratorType, config: Any):
-        """生成器タイプに応じた生成器を作成"""
+    def create_generator(generator_type: GeneratorType, config: Any, random_generator = None):
+        """生成器タイプに応じた生成器を作成（DI対応）"""
         if generator_type == GeneratorType.RANDOM:
             # 実際のRandomGeneGeneratorを使用（型チェックなし）
             return RandomGeneGenerator(config)
         elif generator_type == GeneratorType.SMART:
-            return SmartGeneGenerator(config)
+            # DI: RandomGeneGeneratorインスタンスを注入可能
+            return SmartGeneGenerator(config, random_generator)
         elif generator_type == GeneratorType.DEFAULT:
             return DefaultGeneGenerator(config)
         else:
