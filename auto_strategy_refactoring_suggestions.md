@@ -91,27 +91,6 @@ DRY (Don't Repeat Yourself)、単一責任の原則 (SRP)、メンテナンス�
 
 ---
 
-## 4. サービスと永続化 (`services` ディレクトリ)
-
-### 課題
-
-- **巨大なメソッド**: `experiment_persistence_service.py` の `save_experiment_result` メソッドが、最良戦略の保存、詳細バックテストの実行、その他戦略の保存、パレート最適解の保存など、多数の責務を負っており、非常に長大です。
-- **複数の責務**: `auto_strategy_service.py` の `start_strategy_generation` メソッドが、設定検証、DB 操作、バックグラウンドタスク登録など、複数の異なる関心事を扱っています。
-
-### 提案
-
-1. **永続化ロジックの分割 (SRP/メンテナンス性)**
-
-   - `save_experiment_result` メソッドを、責務ごとにプライベートメソッドに分割します。
-     - `_save_best_strategy(...)`
-     - `_run_and_save_detailed_backtest(...)`
-     - `_save_pareto_front_strategies(...)`
-     - `_save_other_population_strategies(...)`
-   - これにより、各メソッドの責務が明確になり、コードの可読性とメンテナンス性が大幅に向上します。
-
-2. **サービスメソッドの責務明確化 (SRP)**
-   - `start_strategy_generation` 内の各処理（設定検証、DB 作成など）を、それぞれ小さなプライベートメソッドに切り出します。これにより、メインのメソッドは処理の流れを追うだけのシンプルなものになります。
-
 ---
 
 以上の提案を実行することで、`auto_strategy` パッケージ全体がより堅牢で、拡張しやすく、メンテナンスしやすい構造になると考えられます。

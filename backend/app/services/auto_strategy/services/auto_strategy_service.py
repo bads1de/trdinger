@@ -114,6 +114,28 @@ class AutoStrategyService:
         logger.info(f"戦略生成開始: {experiment_name}")
 
         # 1. GA設定の構築と検証
+        ga_config = self._prepare_ga_config(ga_config_dict)
+
+        # 2. バックテスト設定の準備
+        backtest_config = self._prepare_backtest_config(backtest_config_dict)
+
+        # 3. 実験の作成
+        self._create_experiment(experiment_id, experiment_name, ga_config, backtest_config)
+
+        # 4. GAエンジンの初期化
+        self._initialize_ga_engine(ga_config)
+
+        # 5. バックグラウンドタスクの開始
+        self._start_experiment_in_background(experiment_id, ga_config, backtest_config, background_tasks)
+
+        logger.info(
+            f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
+        )
+
+        return experiment_id
+
+    def _prepare_ga_config(self, ga_config_dict: Dict[str, Any]) -> GAConfig:
+        """GA設定を構築し、検証する"""
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="GA設定構築と検証", is_api_call=True)
@@ -124,36 +146,41 @@ class AutoStrategyService:
                 raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
             return ga_config
 
-        ga_config = _validate_ga_config()
+        return _validate_ga_config()
 
-        # 2. バックテスト設定のシンボル設定
+    def _prepare_backtest_config(self, backtest_config_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """バックテスト設定を準備する"""
         backtest_config = backtest_config_dict.copy()
         backtest_config["symbol"] = backtest_config.get("symbol", DEFAULT_SYMBOL)
+        return backtest_config
 
-        # 3. 実験を作成（統合版）
+    def _create_experiment(self, experiment_id: str, experiment_name: str, ga_config: GAConfig, backtest_config: Dict[str, Any]):
+        """実験を作成する"""
         # フロントエンドから送信されたexperiment_idを使用
         self.persistence_service.create_experiment(
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
-        # 4. GAエンジンを初期化
+    def _initialize_ga_engine(self, ga_config: GAConfig):
+        """GAエンジンを初期化する"""
         if not self.experiment_manager:
             raise RuntimeError("実験管理マネージャーが初期化されていません。")
         self.experiment_manager.initialize_ga_engine(ga_config)
 
-        # 5. 実験をバックグラウンドで開始
+    def _start_experiment_in_background(
+        self,
+        experiment_id: str,
+        ga_config: GAConfig,
+        backtest_config: Dict[str, Any],
+        background_tasks: BackgroundTasks
+    ):
+        """実験をバックグラウンドタスクで開始する"""
         background_tasks.add_task(
             self.experiment_manager.run_experiment,
             experiment_id,
             ga_config,
             backtest_config,
         )
-
-        logger.info(
-            f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
-        )
-
-        return experiment_id
 
     def list_experiments(self) -> List[Dict[str, Any]]:
         """
