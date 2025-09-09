@@ -54,9 +54,9 @@ def get_volatility_indicators() -> List[str]:
 
 
 def get_all_indicators() -> List[str]:
-    """全指標タイプを取得（テクニカル + ML）"""
+    """全指標タイプを取得（テクニカル + ML + 複合指標）"""
     # 遅延インポートで循環依存を回避
-    from ..constants import ML_INDICATOR_TYPES
+    from ..constants import ML_INDICATOR_TYPES, COMPOSITE_INDICATORS
 
     technical = (
         get_volume_indicators()
@@ -67,7 +67,7 @@ def get_all_indicators() -> List[str]:
     # 重複除去して順序維持
     seen = set()
     ordered: List[str] = []
-    for n in technical + ML_INDICATOR_TYPES:
+    for n in technical + ML_INDICATOR_TYPES + COMPOSITE_INDICATORS:
         if n not in seen:
             seen.add(n)
             ordered.append(n)
@@ -120,3 +120,28 @@ def get_all_indicator_ids() -> Dict[str, int]:
 def get_id_to_indicator_mapping(indicator_ids: Dict[str, int]) -> Dict[int, str]:
     """ID→指標の逆引きマッピングを取得"""
     return {v: k for k, v in indicator_ids.items()}
+
+
+def get_valid_indicator_types() -> List[str]:
+    """有効な指標タイプを取得（VALID_INDICATOR_TYPESの実装）"""
+    # 重複除去して順序維持
+    technical = (
+        get_volume_indicators()
+        + get_momentum_indicators()
+        + get_trend_indicators()
+        + get_volatility_indicators()
+    )
+
+    # 遅延インポートで循環依存を回避
+    from ..constants import COMPOSITE_INDICATORS, ML_INDICATOR_TYPES
+
+    all_indicators = technical + COMPOSITE_INDICATORS + ML_INDICATOR_TYPES
+
+    seen = set()
+    valid_types: List[str] = []
+    for name in all_indicators:
+        if name not in seen:
+            seen.add(name)
+            valid_types.append(name)
+
+    return valid_types

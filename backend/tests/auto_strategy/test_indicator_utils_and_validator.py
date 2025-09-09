@@ -41,7 +41,7 @@ def test_get_all_indicators_includes_ml():
 def test_gene_validator_uses_dynamic_list(monkeypatch):
     # constants 側の VALID_INDICATOR_TYPES を空にしても、
     # GeneValidator が utils の動的リストに基づいて "SMA" を有効と判断できることを期待
-    import app.services.auto_strategy.config.constants as consts
+    import app.services.auto_strategy.constants as consts
 
     monkeypatch.setattr(consts, "VALID_INDICATOR_TYPES", [], raising=False)
 

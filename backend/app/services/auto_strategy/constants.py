@@ -8,12 +8,6 @@ from typing import List
 
 # === 指標タイプ定義 ===
 from enum import Enum
-from app.services.auto_strategy.utils.indicator_utils import (
-    get_volume_indicators,
-    get_momentum_indicators,
-    get_trend_indicators,
-    get_volatility_indicators,
-)
 
 
 class IndicatorType(str, Enum):
@@ -78,41 +72,17 @@ DEFAULT_TIMEFRAME = "1h"
 # === テクニカル指標定数 ===
 # カテゴリ別に分割した指標リスト（取得ロジックは utils に集約）
 
-
-# ボリューム系指標（レジストリから動的取得）
-VOLUME_INDICATORS = get_volume_indicators()
-
-
-# モメンタム系指標（レジストリから動的取得）
-MOMENTUM_INDICATORS = get_momentum_indicators()
-
-# トレンド系指標（レジストリから動的取得）
-TREND_INDICATORS = get_trend_indicators()
-
-# ボラティリティ系指標（レジストリから動的取得）
-VOLATILITY_INDICATORS = get_volatility_indicators()
-
 # 複合指標
 COMPOSITE_INDICATORS = [
     "ICHIMOKU",  # 一目均衡表 (Ichimoku Kinko Hyo)
     "UI",  # Ulcer指数 (Ulcer Index)
 ]
 
-# 全テクニカル指標（indicator_registryに登録されているもの）
-# 重複除去しつつ、カテゴリ配列の順序を維持
-_all_lists_concat = (
-    VOLUME_INDICATORS
-    + MOMENTUM_INDICATORS
-    + TREND_INDICATORS
-    + VOLATILITY_INDICATORS
-    + COMPOSITE_INDICATORS
-)
-_seen_all = set()
-VALID_INDICATOR_TYPES: List[str] = []
-for _name in _all_lists_concat:
-    if _name not in _seen_all:
-        _seen_all.add(_name)
-        VALID_INDICATOR_TYPES.append(_name)
+# 全テクニカル指標（indicator_registryに登録されているもの）-- utils/indicator_utils.py に移行済み
+# VALID_INDICATOR_TYPES は get_valid_indicator_types() 関数で動的に取得
+VALID_INDICATOR_TYPES: List[str] = (
+    []
+)  # 後方互換性のための空リスト（使用時は get_valid_indicator_types() を推奨）
 
 # テクニカルオンリー時のおすすめ指標セット（成立性が高い指標を厳選）
 CURATED_TECHNICAL_INDICATORS = {

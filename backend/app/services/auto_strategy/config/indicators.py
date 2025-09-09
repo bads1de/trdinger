@@ -10,12 +10,12 @@ from dataclasses import dataclass, field
 
 from .base import BaseConfig
 from ..constants import (
-    VALID_INDICATOR_TYPES,
     INDICATOR_CHARACTERISTICS,
     ML_INDICATOR_TYPES,
     OPERATORS,
     DATA_SOURCES,
 )
+from ..utils.indicator_utils import get_valid_indicator_types
 
 
 @dataclass
@@ -24,7 +24,7 @@ class IndicatorSettings(BaseConfig):
 
     # 利用可能な指標
     valid_indicator_types: List[str] = field(
-        default_factory=lambda: VALID_INDICATOR_TYPES.copy()
+        default_factory=get_valid_indicator_types
     )
     ml_indicator_types: List[str] = field(
         default_factory=lambda: ML_INDICATOR_TYPES.copy()
