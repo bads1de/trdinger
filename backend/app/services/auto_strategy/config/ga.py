@@ -94,3 +94,27 @@ class GASettings(BaseConfig):
             errors.append("最小指標数は最大指標数以下である必要があります")
 
         return errors
+
+    def __post_init__(self) -> None:
+        """Post-initialization validation"""
+        # Validate integer fields
+        if not isinstance(self.population_size, int) or self.population_size <= 0:
+            raise ValueError("population_size は正の整数である必要があります")
+        if not isinstance(self.generations, int) or self.generations <= 0:
+            raise ValueError("generations は正の整数である必要があります")
+        if not isinstance(self.elite_size, int) or self.elite_size < 0:
+            raise ValueError("elite_size は負でない整数である必要があります")
+        if not isinstance(self.max_indicators, int) or self.max_indicators <= 0:
+            raise ValueError("max_indicators は正の整数である必要があります")
+
+        # Validate float fields
+        if not isinstance(self.crossover_rate, (int, float)) or not (0 <= self.crossover_rate <= 1):
+            raise ValueError("crossover_rate は0から1の範囲の実数である必要があります")
+        if not isinstance(self.mutation_rate, (int, float)) or not (0 <= self.mutation_rate <= 1):
+            raise ValueError("mutation_rate は0から1の範囲の実数である必要があります")
+
+        # Convert int to float if necessary
+        if isinstance(self.crossover_rate, int):
+            self.crossover_rate = float(self.crossover_rate)
+        if isinstance(self.mutation_rate, int):
+            self.mutation_rate = float(self.mutation_rate)

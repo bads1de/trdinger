@@ -948,11 +948,11 @@ class TrendIndicators:
                         if conv.isna().all() or base.isna().all():
                             pass
                         else:
-                            conv = conv.fillna(method="bfill").fillna(conv.mean())
-                            base = base.fillna(method="bfill").fillna(base.mean())
-                            span_a = span_a.fillna(method="bfill").fillna(span_a.mean())
-                            span_b = span_b.fillna(method="bfill").fillna(span_b.mean())
-                            lag = lag.fillna(method="ffill").fillna(lag.mean())
+                            conv = conv.bfill().fillna(conv.mean())
+                            base = base.bfill().fillna(base.mean())
+                            span_a = span_a.bfill().fillna(span_a.mean())
+                            span_b = span_b.bfill().fillna(span_b.mean())
+                            lag = lag.ffill().fillna(lag.mean())
 
                             return (conv, base, span_a, span_b, lag)
         except Exception:
@@ -976,16 +976,16 @@ class TrendIndicators:
             ) / 2.0
 
             # Handle edge cases for rolling calculations
-            conv = conv_raw.fillna(method="bfill").fillna(
+            conv = conv_raw.bfill().fillna(
                 (high.iloc[:tenkan].max() + low.iloc[:tenkan].min()) / 2.0
             )
-            base = base_raw.fillna(method="bfill").fillna(
+            base = base_raw.bfill().fillna(
                 (high.iloc[:kijun].max() + low.iloc[:kijun].min()) / 2.0
             )
 
             # Leading Span A: (Tenkan-sen + Kijun-sen)/2, shifted kijun periods ahead
             span_a_raw = ((conv + base) / 2.0).shift(kijun)
-            span_a = span_a_raw.fillna(method="bfill").fillna(span_a_raw.mean())
+            span_a = span_a_raw.bfill().fillna(span_a_raw.mean())
 
             # Leading Span B: (High + Low)/2 over senkou periods, shifted kijun periods ahead
             span_b_raw = (
@@ -995,11 +995,11 @@ class TrendIndicators:
                 )
                 / 2.0
             ).shift(kijun)
-            span_b = span_b_raw.fillna(method="bfill").fillna(span_b_raw.mean())
+            span_b = span_b_raw.bfill().fillna(span_b_raw.mean())
 
             # Lagging Span: Chikou Span - Close price shifted kijun periods back
             lag_raw = close.shift(-kijun)
-            lag = lag_raw.fillna(method="ffill").fillna(lag_raw.mean())
+            lag = lag_raw.ffill().fillna(lag_raw.mean())
 
             return (conv, base, span_a, span_b, lag)
 
@@ -1132,7 +1132,7 @@ class TrendIndicators:
 
                 # Handle NaN values
                 hwma_series = pd.Series(hwma_values, index=data.index)
-                hwma_series = hwma_series.fillna(method="bfill").fillna(
+                hwma_series = hwma_series.bfill().fillna(
                     data.rolling(length).mean().fillna(0)
                 )
 

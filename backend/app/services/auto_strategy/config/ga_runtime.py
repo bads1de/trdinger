@@ -127,6 +127,30 @@ class GAConfig(BaseConfig):
             return self.auto_strategy_config.ga
         return None  # 変更: GASettings() を None に
 
+    def __post_init__(self) -> None:
+        """Post-initialization validation"""
+        # Validate integer fields
+        if not isinstance(self.population_size, int) or self.population_size <= 0:
+            raise ValueError("population_size は正の整数である必要があります")
+        if not isinstance(self.generations, int) or self.generations <= 0:
+            raise ValueError("generations は正の整数である必要があります")
+        if not isinstance(self.elite_size, int) or self.elite_size < 0:
+            raise ValueError("elite_size は負でない整数である必要があります")
+        if not isinstance(self.max_indicators, int) or self.max_indicators <= 0:
+            raise ValueError("max_indicators は正の整数である必要があります")
+
+        # Validate float fields
+        if not isinstance(self.crossover_rate, (int, float)) or not (0 <= self.crossover_rate <= 1):
+            raise ValueError("crossover_rate は0から1の範囲の実数である必要があります")
+        if not isinstance(self.mutation_rate, (int, float)) or not (0 <= self.mutation_rate <= 1):
+            raise ValueError("mutation_rate は0から1の範囲の実数である必要があります")
+
+        # Convert int to float if necessary
+        if isinstance(self.crossover_rate, int):
+            self.crossover_rate = float(self.crossover_rate)
+        if isinstance(self.mutation_rate, int):
+            self.mutation_rate = float(self.mutation_rate)
+
     def validate(self) -> tuple[bool, List[str]]:
         """
         設定の妥当性を検証
@@ -137,28 +161,43 @@ class GAConfig(BaseConfig):
         errors = []
 
         # 進化設定の検証
-        if self.population_size <= 0:
-            errors.append("個体数は正の整数である必要があります")
-        elif self.population_size > 1000:
-            errors.append(
-                "個体数は1000以下である必要があります（パフォーマンス上の制約）"
-            )
+        try:
+            if self.population_size <= 0:
+                errors.append("個体数は正の整数である必要があります")
+            elif self.population_size > 1000:
+                errors.append(
+                    "個体数は1000以下である必要があります（パフォーマンス上の制約）"
+                )
+        except TypeError:
+            errors.append("個体数は数値である必要があります")
 
-        if self.generations <= 0:
-            errors.append("世代数は正の整数である必要があります")
-        elif self.generations > 500:
-            errors.append(
-                "世代数は500以下である必要があります（パフォーマンス上の制約）"
-            )
+        try:
+            if self.generations <= 0:
+                errors.append("世代数は正の整数である必要があります")
+            elif self.generations > 500:
+                errors.append(
+                    "世代数は500以下である必要があります（パフォーマンス上の制約）"
+                )
+        except TypeError:
+            errors.append("世代数は数値である必要があります")
 
-        if not 0 <= self.crossover_rate <= 1:
-            errors.append("交叉率は0-1の範囲である必要があります")
+        try:
+            if not 0 <= self.crossover_rate <= 1:
+                errors.append("交叉率は0-1の範囲である必要があります")
+        except (TypeError, ValueError):
+            errors.append("交叉率は数値である必要があります")
 
-        if not 0 <= self.mutation_rate <= 1:
-            errors.append("突然変異率は0-1の範囲である必要があります")
+        try:
+            if not 0 <= self.mutation_rate <= 1:
+                errors.append("突然変異率は0-1の範囲である必要があります")
+        except (TypeError, ValueError):
+            errors.append("突然変異率は数値である必要があります")
 
-        if self.elite_size < 0 or self.elite_size >= self.population_size:
-            errors.append("エリート保存数は0以上、個体数未満である必要があります")
+        try:
+            if self.elite_size < 0 or self.elite_size >= self.population_size:
+                errors.append("エリート保存数は0以上、個体数未満である必要があります")
+        except (TypeError, ValueError):
+            errors.append("elite_size と population_size は数値である必要があります")
 
         # 評価設定の検証
         if abs(sum(self.fitness_weights.values()) - 1.0) > 0.01:
@@ -175,12 +214,15 @@ class GAConfig(BaseConfig):
             )
 
         # 指標設定の検証
-        if self.max_indicators <= 0:
-            errors.append("最大指標数は正の整数である必要があります")
-        elif self.max_indicators > 10:
-            errors.append(
-                "最大指標数は10以下である必要があります（パフォーマンス上の制約）"
-            )
+        try:
+            if self.max_indicators <= 0:
+                errors.append("最大指標数は正の整数である必要があります")
+            elif self.max_indicators > 10:
+                errors.append(
+                    "最大指標数は10以下である必要があります（パフォーマンス上の制約）"
+                )
+        except TypeError:
+            errors.append("最大指標数は数値である必要があります")
 
         if not self.allowed_indicators:
             errors.append("許可された指標リストが空です")

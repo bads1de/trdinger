@@ -376,10 +376,10 @@ class VolumeIndicators:
             diff = fast_ma - slow_ma
 
             # Return tuple with calculated values, fill rest with 0 to avoid NaN issues in test
-            series1 = fast_ma.fillna(method="bfill").fillna(0)  # AOBV Fast
-            series2 = slow_ma.fillna(method="bfill").fillna(0)  # AOBV Slow
-            series3 = diff.fillna(method="bfill").fillna(0)  # AOBV Signal
-            series4 = obv.fillna(method="bfill").fillna(0)  # Original OBV
+            series1 = fast_ma.bfill().fillna(0)  # AOBV Fast
+            series2 = slow_ma.bfill().fillna(0)  # AOBV Slow
+            series3 = diff.bfill().fillna(0)  # AOBV Signal
+            series4 = obv.bfill().fillna(0)  # Original OBV
 
             empty = pd.Series(
                 np.full(len(close), 0.0), index=close.index

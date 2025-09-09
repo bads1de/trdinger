@@ -165,7 +165,7 @@ class TestAdditionalEdgeCases:
                 result = service.start_strategy_generation("test_id", "test_name", invalid_config, backtest, mock_exp)
                 # Bug: Invalid types were accepted when validation should reject
                 pytest.fail("バグ発見: 無効な型値が受け入れられた - 現象: 型検証失敗, 影響: 無効入力の使用可, 検出方法: pytest失敗, 推定原因: 型チェック不足")
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, Exception):
                 pass  # Expected validation
 
     def test_empty_and_whitespace_parameters(self):

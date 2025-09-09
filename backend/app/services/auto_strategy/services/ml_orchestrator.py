@@ -139,10 +139,14 @@ class MLOrchestrator(MLPredictionInterface):
         """
         with operation_context("ML指標計算"):
             try:
+                # 入力データの空チェック（最も先に実行）
+                if df is None or df.empty:
+                    raise MLDataError("入力データが空です。ML指標計算を実行できません。")
+
                 # データサイズ制限
                 df = self._limit_data_size(df)
 
-                # カラム名の正規化（検証前に実行）
+                # カラム名の正規化（空チェック後に実行）
                 df = self._normalize_column_names(df)
 
                 # 入力データの検証（正規化後に実行）

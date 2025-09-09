@@ -177,9 +177,9 @@ class VolatilityIndicators:
                 lower = middle - (std * std_dev)
 
                 # Handle NaN values properly
-                upper = upper.fillna(method="bfill").fillna(0)
-                lower = lower.fillna(method="bfill").fillna(0)
-                middle = middle.fillna(method="bfill").fillna(0)
+                upper = upper.bfill().fillna(0)
+                lower = lower.bfill().fillna(0)
+                middle = middle.bfill().fillna(0)
 
                 return upper, middle, lower
 
@@ -287,18 +287,18 @@ class VolatilityIndicators:
 
                 # Handle NaN values with forward fill then backward fill
                 upper = (
-                    upper.fillna(method="ffill")
-                    .fillna(method="bfill")
+                    upper.ffill()
+                    .bfill()
                     .fillna(middle + scalar * atr.quantile(0.5))
                 )
                 lower = (
-                    lower.fillna(method="ffill")
-                    .fillna(method="bfill")
+                    lower.ffill()
+                    .bfill()
                     .fillna(middle - scalar * atr.quantile(0.5))
                 )
                 middle = (
-                    middle.fillna(method="ffill")
-                    .fillna(method="bfill")
+                    middle.ffill()
+                    .bfill()
                     .fillna(close.ewm(span=min(length, 5), adjust=False).mean())
                 )
 
@@ -378,13 +378,13 @@ class VolatilityIndicators:
                 middle = (upper + lower) / 2.0
 
                 # Handle NaN values
-                upper = upper.fillna(method="bfill").fillna(
+                upper = upper.bfill().fillna(
                     high.rolling(window=length).max().iloc[0]
                 )
-                lower = lower.fillna(method="bfill").fillna(
+                lower = lower.bfill().fillna(
                     low.rolling(window=length).min().iloc[0]
                 )
-                middle = middle.fillna(method="bfill").fillna((upper + lower).mean())
+                middle = middle.bfill().fillna((upper + lower).mean())
 
                 return upper, middle, lower
 
@@ -704,18 +704,18 @@ class VolatilityIndicators:
 
                     # Enhanced NaN handling with forward fill then backward fill
                     middle = (
-                        middle.fillna(method="ffill")
-                        .fillna(method="bfill")
+                        middle.ffill()
+                        .bfill()
                         .fillna(close)
                     )
                     upper = (
-                        upper.fillna(method="ffill")
-                        .fillna(method="bfill")
+                        upper.ffill()
+                        .bfill()
                         .fillna(middle * (1 + na * scalar))
                     )
                     lower = (
-                        lower.fillna(method="ffill")
-                        .fillna(method="bfill")
+                        lower.ffill()
+                        .bfill()
                         .fillna(middle * (1 - na * scalar))
                     )
 
@@ -940,7 +940,7 @@ class VolatilityIndicators:
             )
 
             # Handle division by zero and edge cases
-            tr = tr.replace(0, np.nan).fillna(method="bfill").fillna(high - low)
+            tr = tr.replace(0, np.nan).bfill().fillna(high - low)
 
             # Vortex movements
             vm_plus = np.abs(high - low.shift(1))

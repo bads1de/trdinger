@@ -217,12 +217,12 @@ class TechnicalIndicatorService:
                 if result.isna().sum() > len(result) * 0.7:  # 70%以上NaNの場合
                     logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
                     return None
-                result = result.fillna(method="bfill").fillna(0)  # バックフィル、後方0
+                result = result.bfill().fillna(0)  # バックフィル、後方0
             elif isinstance(result, pd.DataFrame):
                 if result.isna().sum().sum() > result.size * 0.7:
                     logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
                     return None
-                result = result.fillna(method="bfill").fillna(0)
+                result = result.bfill().fillna(0)
 
             # 戻り値処理
             if config["returns"] == "single":
