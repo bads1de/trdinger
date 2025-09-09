@@ -81,33 +81,26 @@ def crossover_strategy_genes(
 def crossover_strategy_genes(parent1: list, parent2: list) -> tuple[list, list]: ...
 
 
-def crossover_strategy_genes(
-    parent1: Union[StrategyGene, list], parent2: Union[StrategyGene, list]
-) -> tuple[Union[StrategyGene, list], Union[StrategyGene, list]]:
+def crossover_strategy_genes_pure(
+    parent1: StrategyGene, parent2: StrategyGene
+) -> tuple[StrategyGene, StrategyGene]:
     """
-    戦略遺伝子の交叉
+    戦略遺伝子の交叉（純粋版）
 
     指標遺伝子、条件、TP/SL遺伝子すべてを含む完全な交叉を実行します。
-    DEAPのIndividualオブジェクト（リスト）とStrategyGeneオブジェクトの両方に対応。
+    StrategyGeneオブジェクトのみを扱い、DEAPライブラリに依存しません。
 
     Args:
-        parent1: 親1の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
-        parent2: 親2の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
+        parent1: 親1の戦略遺伝子（StrategyGeneオブジェクト）
+        parent2: 親2の戦略遺伝子（StrategyGeneオブジェクト）
 
     Returns:
         交叉後の子1、子2の戦略遺伝子のタプル
     """
     try:
-        # 入力の型を記録（戻り値の型を決定するため）
-        parent1_is_individual = isinstance(parent1, list)
-        parent2_is_individual = isinstance(parent2, list)
-
-        # IndividualオブジェクトをStrategyGeneに変換
-        strategy_parent1 = _convert_to_strategy_gene(parent1)
-        strategy_parent2 = _convert_to_strategy_gene(parent2)
         # 指標遺伝子の交叉（単純な一点交叉）
         min_indicators = min(
-            len(strategy_parent1.indicators), len(strategy_parent2.indicators)
+            len(parent1.indicators), len(parent2.indicators)
         )
         if min_indicators <= 1:
             # 指標数が1以下の場合は交叉点を0に設定（全体を交換）
@@ -116,44 +109,44 @@ def crossover_strategy_genes(
             crossover_point = random.randint(1, min_indicators)
 
         child1_indicators = (
-            strategy_parent1.indicators[:crossover_point]
-            + strategy_parent2.indicators[crossover_point:]
+            parent1.indicators[:crossover_point]
+            + parent2.indicators[crossover_point:]
         )
         child2_indicators = (
-            strategy_parent2.indicators[:crossover_point]
-            + strategy_parent1.indicators[crossover_point:]
+            parent2.indicators[:crossover_point]
+            + parent1.indicators[crossover_point:]
         )
 
         # 最大指標数制限
-        max_indicators = getattr(strategy_parent1, "MAX_INDICATORS", 5)
+        max_indicators = getattr(parent1, "MAX_INDICATORS", 5)
         child1_indicators = child1_indicators[:max_indicators]
         child2_indicators = child2_indicators[:max_indicators]
 
         # 条件の交叉（ランダム選択）
         if random.random() < 0.5:
-            child1_entry = strategy_parent1.entry_conditions.copy()
-            child2_entry = strategy_parent2.entry_conditions.copy()
+            child1_entry = parent1.entry_conditions.copy()
+            child2_entry = parent2.entry_conditions.copy()
         else:
-            child1_entry = strategy_parent2.entry_conditions.copy()
-            child2_entry = strategy_parent1.entry_conditions.copy()
+            child1_entry = parent2.entry_conditions.copy()
+            child2_entry = parent1.entry_conditions.copy()
 
         if random.random() < 0.5:
-            child1_exit = strategy_parent1.exit_conditions.copy()
-            child2_exit = strategy_parent2.exit_conditions.copy()
+            child1_exit = parent1.exit_conditions.copy()
+            child2_exit = parent2.exit_conditions.copy()
         else:
-            child1_exit = strategy_parent2.exit_conditions.copy()
-            child2_exit = strategy_parent1.exit_conditions.copy()
+            child1_exit = parent2.exit_conditions.copy()
+            child2_exit = parent1.exit_conditions.copy()
 
         # リスク管理設定の交叉（平均値）
         child1_risk = {}
         child2_risk = {}
 
-        all_keys = set(strategy_parent1.risk_management.keys()) | set(
-            strategy_parent2.risk_management.keys()
+        all_keys = set(parent1.risk_management.keys()) | set(
+            parent2.risk_management.keys()
         )
         for key in all_keys:
-            val1 = strategy_parent1.risk_management.get(key, 0)
-            val2 = strategy_parent2.risk_management.get(key, 0)
+            val1 = parent1.risk_management.get(key, 0)
+            val2 = parent2.risk_management.get(key, 0)
 
             if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
                 child1_risk[key] = (val1 + val2) / 2
@@ -166,25 +159,25 @@ def crossover_strategy_genes(
         child1_tpsl = None
         child2_tpsl = None
 
-        if strategy_parent1.tpsl_gene and strategy_parent2.tpsl_gene:
+        if parent1.tpsl_gene and parent2.tpsl_gene:
             from ..models.strategy_models import crossover_tpsl_genes
 
             child1_tpsl, child2_tpsl = crossover_tpsl_genes(
-                strategy_parent1.tpsl_gene, strategy_parent2.tpsl_gene
+                parent1.tpsl_gene, parent2.tpsl_gene
             )
-        elif strategy_parent1.tpsl_gene:
-            child1_tpsl = strategy_parent1.tpsl_gene
-            child2_tpsl = strategy_parent1.tpsl_gene  # コピー
-        elif strategy_parent2.tpsl_gene:
-            child1_tpsl = strategy_parent2.tpsl_gene
-            child2_tpsl = strategy_parent2.tpsl_gene  # コピー
+        elif parent1.tpsl_gene:
+            child1_tpsl = parent1.tpsl_gene
+            child2_tpsl = parent1.tpsl_gene  # コピー
+        elif parent2.tpsl_gene:
+            child1_tpsl = parent2.tpsl_gene
+            child2_tpsl = parent2.tpsl_gene  # コピー
 
         # ポジションサイジング遺伝子の交叉
         child1_position_sizing = None
         child2_position_sizing = None
 
-        ps_gene1 = getattr(strategy_parent1, "position_sizing_gene", None)
-        ps_gene2 = getattr(strategy_parent2, "position_sizing_gene", None)
+        ps_gene1 = getattr(parent1, "position_sizing_gene", None)
+        ps_gene2 = getattr(parent2, "position_sizing_gene", None)
 
         if ps_gene1 and ps_gene2:
             from ..models.strategy_models import crossover_position_sizing_genes
@@ -203,23 +196,23 @@ def crossover_strategy_genes(
         from ..utils.gene_utils import prepare_crossover_metadata
 
         child1_metadata, child2_metadata = prepare_crossover_metadata(
-            strategy_parent1, strategy_parent2
+            parent1, parent2
         )
 
         # ロング・ショート条件の交叉
         if random.random() < 0.5:
-            child1_long_entry = strategy_parent1.long_entry_conditions.copy()
-            child2_long_entry = strategy_parent2.long_entry_conditions.copy()
+            child1_long_entry = parent1.long_entry_conditions.copy()
+            child2_long_entry = parent2.long_entry_conditions.copy()
         else:
-            child1_long_entry = strategy_parent2.long_entry_conditions.copy()
-            child2_long_entry = strategy_parent1.long_entry_conditions.copy()
+            child1_long_entry = parent2.long_entry_conditions.copy()
+            child2_long_entry = parent1.long_entry_conditions.copy()
 
         if random.random() < 0.5:
-            child1_short_entry = strategy_parent1.short_entry_conditions.copy()
-            child2_short_entry = strategy_parent2.short_entry_conditions.copy()
+            child1_short_entry = parent1.short_entry_conditions.copy()
+            child2_short_entry = parent2.short_entry_conditions.copy()
         else:
-            child1_short_entry = strategy_parent2.short_entry_conditions.copy()
-            child2_short_entry = strategy_parent1.short_entry_conditions.copy()
+            child1_short_entry = parent2.short_entry_conditions.copy()
+            child2_short_entry = parent1.short_entry_conditions.copy()
 
         # 子遺伝子の作成
         child1_strategy = StrategyGene(
@@ -248,18 +241,7 @@ def crossover_strategy_genes(
             metadata=child2_metadata,
         )
 
-        # 元の型に応じて適切な形式で返す
-        if parent1_is_individual or parent2_is_individual:
-            # DEAPのIndividualクラスを取得
-            from deap import creator
-
-            individual_class = getattr(creator, "Individual", None)
-
-            child1_result = _convert_to_individual(child1_strategy, individual_class)
-            child2_result = _convert_to_individual(child2_strategy, individual_class)
-            return child1_result, child2_result
-        else:
-            return child1_strategy, child2_strategy
+        return child1_strategy, child2_strategy
 
     except Exception as e:
         logger.error(f"戦略遺伝子交叉エラー: {e}")
@@ -267,41 +249,72 @@ def crossover_strategy_genes(
         return parent1, parent2
 
 
-@overload
-def mutate_strategy_gene(
-    gene: StrategyGene, mutation_rate: float = 0.1
-) -> StrategyGene: ...
-
-
-@overload
-def mutate_strategy_gene(gene: list, mutation_rate: float = 0.1) -> list: ...
-
-
-def mutate_strategy_gene(
-    gene: Union[StrategyGene, list], mutation_rate: float = 0.1
-) -> Union[StrategyGene, list]:
+def crossover_strategy_genes(
+    parent1: Union[StrategyGene, list], parent2: Union[StrategyGene, list]
+) -> tuple[Union[StrategyGene, list], Union[StrategyGene, list]]:
     """
-    戦略遺伝子の突然変異
+    戦略遺伝子の交叉
 
-    指標遺伝子、条件、TP/SL遺伝子すべてを含む完全な突然変異を実行します。
+    指標遺伝子、条件、TP/SL遺伝子すべてを含む完全な交叉を実行します。
     DEAPのIndividualオブジェクト（リスト）とStrategyGeneオブジェクトの両方に対応。
 
     Args:
-        gene: 突然変異対象の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
+        parent1: 親1の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
+        parent2: 親2の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
+
+    Returns:
+        交叉後の子1、子2の戦略遺伝子のタプル
+    """
+    try:
+        # 入力の型を記録（戻り値の型を決定するため）
+        parent1_is_individual = isinstance(parent1, list)
+        parent2_is_individual = isinstance(parent2, list)
+
+        # IndividualオブジェクトをStrategyGeneに変換
+        strategy_parent1 = _convert_to_strategy_gene(parent1)
+        strategy_parent2 = _convert_to_strategy_gene(parent2)
+
+        # 純粋関数で交叉を実行
+        result_child1, result_child2 = crossover_strategy_genes_pure(strategy_parent1, strategy_parent2)
+
+        # 元の型に応じて適切な形式で返す
+        if parent1_is_individual or parent2_is_individual:
+            # DEAPのIndividualクラスを取得
+            from deap import creator
+
+            individual_class = getattr(creator, "Individual", None)
+
+            child1_result = _convert_to_individual(result_child1, individual_class)
+            child2_result = _convert_to_individual(result_child2, individual_class)
+            return child1_result, child2_result
+        else:
+            return result_child1, result_child2
+
+    except Exception as e:
+        logger.error(f"戦略遺伝子交叉エラー: {e}")
+        # エラー時は親をそのまま返す
+        return parent1, parent2
+
+
+def mutate_strategy_gene_pure(
+    gene: StrategyGene, mutation_rate: float = 0.1
+) -> StrategyGene:
+    """
+    戦略遺伝子の突然変異（純粋版）
+
+    指標遺伝子、条件、TP/SL遺伝子すべてを含む完全な突然変異を実行します。
+    StrategyGeneオブジェクトのみを扱い、DEAPライブラリに依存しません。
+
+    Args:
+        gene: 突然変異対象の戦略遺伝子（StrategyGeneオブジェクト）
         mutation_rate: 突然変異率
 
     Returns:
         突然変異後の戦略遺伝子
     """
     try:
-        # 入力の型を記録（戻り値の型を決定するため）
-        gene_is_individual = isinstance(gene, list)
-
-        # IndividualオブジェクトをStrategyGeneに変換
-        strategy_gene = _convert_to_strategy_gene(gene)
-
         # 深いコピーを作成
-        mutated = copy.deepcopy(strategy_gene)
+        mutated = copy.deepcopy(gene)
 
         # 指標遺伝子の突然変異
         for i, indicator in enumerate(mutated.indicators):
@@ -410,6 +423,133 @@ def mutate_strategy_gene(
         mutated.metadata["mutated"] = True
         mutated.metadata["mutation_rate"] = mutation_rate
 
+        # 新しいIDを生成（突然変異による変化を示す）
+        mutated.id = str(uuid.uuid4())
+
+        return mutated
+
+    except Exception as e:
+        logger.error(f"戦略遺伝子突然変異エラー: {e}")
+        # エラー時は元の遺伝子をそのまま返す
+        return gene
+
+
+def create_deap_crossover_wrapper(individual_class=None):
+    """
+    DEAPクロスオーバーラッパーを作成
+
+    Args:
+        individual_class: DEAPのIndividualクラス。Noneの場合はcreatorから取得
+
+    Returns:
+        DEAPツールボックスに登録可能なクロスオーバー関数
+    """
+    def crossover_wrapper(parent1, parent2):
+        """
+        DEAP用のクロスオーバーラッパー
+        """
+        try:
+            # IndividualオブジェクトをStrategyGeneに変換
+            strategy_parent1 = _convert_to_strategy_gene(parent1)
+            strategy_parent2 = _convert_to_strategy_gene(parent2)
+
+            # 純粋クロスオーバー関数で交叉を実行
+            child1_strategy, child2_strategy = crossover_strategy_genes_pure(
+                strategy_parent1, strategy_parent2
+            )
+
+            # StrategyGeneをIndividualオブジェクトに変換
+            if individual_class is None:
+                from deap import creator
+                individual_class = getattr(creator, "Individual", None)
+
+            child1_individual = _convert_to_individual(child1_strategy, individual_class)
+            child2_individual = _convert_to_individual(child2_strategy, individual_class)
+
+            return child1_individual, child2_individual
+
+        except Exception as e:
+            logger.error(f"DEAPクロスオーバーラッパーエラー: {e}")
+            # エラー時は親をそのまま返す
+            return parent1, parent2
+
+    return crossover_wrapper
+
+
+def create_deap_mutate_wrapper(individual_class=None):
+    """
+    DEAP突然変異ラッパーを作成
+
+    Args:
+        individual_class: DEAPのIndividualクラス。Noneの場合はcreatorから取得
+
+    Returns:
+        DEAPツールボックスに登録可能な突然変異関数
+    """
+    def mutate_wrapper(individual):
+        """
+        DEAP用の突然変異ラッパー
+        """
+        try:
+            # IndividualオブジェクトをStrategyGeneに変換
+            strategy_gene = _convert_to_strategy_gene(individual)
+
+            # 純粋突然変異関数で突然変異を実行
+            mutated_strategy = mutate_strategy_gene_pure(strategy_gene)
+
+            # StrategyGeneをIndividualオブジェクトに変換
+            if individual_class is None:
+                from deap import creator
+                individual_class = getattr(creator, "Individual", None)
+
+            mutated_individual = _convert_to_individual(mutated_strategy, individual_class)
+
+            return mutated_individual,
+
+        except Exception as e:
+            logger.error(f"DEAP突然変異ラッパーエラー: {e}")
+            # エラー時は元の個体をそのまま返す
+            return individual,
+
+    return mutate_wrapper
+
+
+@overload
+def mutate_strategy_gene(
+    gene: StrategyGene, mutation_rate: float = 0.1
+) -> StrategyGene: ...
+
+
+@overload
+def mutate_strategy_gene(gene: list, mutation_rate: float = 0.1) -> list: ...
+
+
+def mutate_strategy_gene(
+    gene: Union[StrategyGene, list], mutation_rate: float = 0.1
+) -> Union[StrategyGene, list]:
+    """
+    戦略遺伝子の突然変異
+
+    指標遺伝子、条件、TP/SL遺伝子すべてを含む完全な突然変異を実行します。
+    DEAPのIndividualオブジェクト（リスト）とStrategyGeneオブジェクトの両方に対応。
+
+    Args:
+        gene: 突然変異対象の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
+        mutation_rate: 突然変異率
+
+    Returns:
+        突然変異後の戦略遺伝子
+    """
+    try:
+        # 入力の型を記録（戻り値の型を決定するため）
+        gene_is_individual = isinstance(gene, list)
+
+        # IndividualオブジェクトをStrategyGeneに変換
+        strategy_gene = _convert_to_strategy_gene(gene)
+
+        # 純粋関数で突然変異を実行
+        result_mutated = mutate_strategy_gene_pure(strategy_gene, mutation_rate)
+
         # 元の型に応じて適切な形式で返す
         if gene_is_individual:
             # DEAPのIndividualクラスを取得
@@ -417,9 +557,9 @@ def mutate_strategy_gene(
 
             individual_class = getattr(creator, "Individual", None)
 
-            return _convert_to_individual(mutated, individual_class)
+            return _convert_to_individual(result_mutated, individual_class)
         else:
-            return mutated
+            return result_mutated
 
     except Exception as e:
         logger.error(f"戦略遺伝子突然変異エラー: {e}")

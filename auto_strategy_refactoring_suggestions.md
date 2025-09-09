@@ -40,31 +40,6 @@ DRY (Don't Repeat Yourself)、単一責任の原則 (SRP)、メンテナンス�
 
 ---
 
-## 2. コアロジック (`core` ディレクトリ)
-
-### 課題
-
-- **責務の混在**: `genetic_operators.py` 内の交叉・突然変異関数が、ビジネスロジック（`StrategyGene`）とフレームワーク（DEAP の`list`）の両方を扱っており、複雑性が増しています。
-- **巨大なメソッド**: `ga_engine.py` の `run_evolution` メソッドが長大で、単一目的最適化と多目的最適化（NSGA-II）のロジックが混在しています。
-- **ロジックの重複**: `individual_evaluator.py` のフィットネス計算メソッド内に、複数のメトリクス取得ロジックが重複しています。
-
-### 提案
-
-1. **遺伝的演算子の責務分離 (SRP)**
-
-   - `crossover_strategy_genes` と `mutate_strategy_gene` は、`StrategyGene` オブジェクトのみを扱うように修正します。
-   - DEAP のツールボックスに登録する際に、`list` と `StrategyGene` の相互変換を行うラッパー関数を用意します。これにより、コアロジックが DEAP ライブラリから独立し、テストが容易になります。
-
-2. **進化アルゴリズムの分割 (SRP/メンテナンス性)**
-
-   - `ga_engine.py` 内に `EvolutionRunner` のようなヘルパークラスを作成します。
-   - `run_single_objective` と `run_multi_objective` のようにメソッドを分割し、それぞれのアルゴリズムに特化したロジックをカプセル化します。`run_evolution` は、設定に応じて適切なメソッドを呼び出すファサードとして機能します。
-
-3. **フィットネス計算の共通化 (DRY)**
-   - `individual_evaluator.py` に、バックテスト結果から主要なパフォーマンスメトリクスを抽出するプライベートメソッド `_extract_performance_metrics` を作成します。
-   - `_calculate_fitness` と `_calculate_multi_objective_fitness` は、この共通メソッドを呼び出してフィットネスを計算するようにします。
-
----
 
 ## 3. 戦略生成 (`generators` ディレクトリ)
 

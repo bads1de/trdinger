@@ -88,6 +88,50 @@ class IndividualEvaluator:
             else:
                 return (0.0,)
 
+    def _extract_performance_metrics(self, backtest_result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        バックテスト結果からパフォーマンスメトリクスを抽出
+
+        Args:
+            backtest_result: バックテスト結果
+
+        Returns:
+            抽出されたパフォーマンスメトリクス
+        """
+        performance_metrics = backtest_result.get("performance_metrics", {})
+
+        # 主要メトリクスを安全に抽出（デフォルト値を設定）
+        metrics = {
+            "total_return": performance_metrics.get("total_return", 0.0),
+            "sharpe_ratio": performance_metrics.get("sharpe_ratio", 0.0),
+            "max_drawdown": performance_metrics.get("max_drawdown", 1.0),
+            "win_rate": performance_metrics.get("win_rate", 0.0),
+            "profit_factor": performance_metrics.get("profit_factor", 0.0),
+            "sortino_ratio": performance_metrics.get("sortino_ratio", 0.0),
+            "calmar_ratio": performance_metrics.get("calmar_ratio", 0.0),
+            "total_trades": performance_metrics.get("total_trades", 0)
+        }
+
+        # 無効な値を処理（None, inf, nanなど）
+        import math
+        for key, value in metrics.items():
+            def is_invalid_value(val):
+                return (val is None or
+                       (isinstance(val, float) and not math.isfinite(val)) or
+                       not isinstance(val, (int, float)))
+
+            if is_invalid_value(value):
+                if key == "max_drawdown":
+                    metrics[key] = 1.0  # 最大ドローダウンは1.0（100%）が上限
+                elif key == "total_trades":
+                    metrics[key] = 0
+                else:
+                    metrics[key] = 0.0
+            elif key == "max_drawdown" and isinstance(value, (int, float)) and value < 0:
+                metrics[key] = 0.0  # 負のドローダウンは0に修正
+
+        return metrics
+
     def _calculate_fitness(
         self, backtest_result: Dict[str, Any], config: GAConfig
     ) -> float:
@@ -102,14 +146,14 @@ class IndividualEvaluator:
             フィットネス値
         """
         try:
-            # performance_metricsから基本メトリクスを取得
-            performance_metrics = backtest_result.get("performance_metrics", {})
+            # パフォーマンスメトリクスを抽出
+            metrics = self._extract_performance_metrics(backtest_result)
 
-            total_return = performance_metrics.get("total_return", 0.0)
-            sharpe_ratio = performance_metrics.get("sharpe_ratio", 0.0)
-            max_drawdown = performance_metrics.get("max_drawdown", 1.0)
-            win_rate = performance_metrics.get("win_rate", 0.0)
-            total_trades = performance_metrics.get("total_trades", 0)
+            total_return = metrics["total_return"]
+            sharpe_ratio = metrics["sharpe_ratio"]
+            max_drawdown = metrics["max_drawdown"]
+            win_rate = metrics["win_rate"]
+            total_trades = metrics["total_trades"]
 
             # 取引回数が0の場合は低いフィットネス値を返す
             if total_trades == 0:
@@ -247,28 +291,28 @@ class IndividualEvaluator:
             各目的の評価値のタプル
         """
         try:
-            # performance_metricsから基本メトリクスを取得
-            performance_metrics = backtest_result.get("performance_metrics", {})
+            # パフォーマンスメトリクスを抽出
+            metrics = self._extract_performance_metrics(backtest_result)
 
             fitness_values = []
 
             for objective in config.objectives:
                 if objective == "total_return":
-                    value = performance_metrics.get("total_return", 0.0)
+                    value = metrics["total_return"]
                 elif objective == "sharpe_ratio":
-                    value = performance_metrics.get("sharpe_ratio", 0.0)
+                    value = metrics["sharpe_ratio"]
                 elif objective == "max_drawdown":
                     # ドローダウンは最小化したいので、符号を反転させる
                     # DEAP側で-1.0の重みが設定されているため、ここでは正の値のまま
-                    value = performance_metrics.get("max_drawdown", 1.0)
+                    value = metrics["max_drawdown"]
                 elif objective == "win_rate":
-                    value = performance_metrics.get("win_rate", 0.0)
+                    value = metrics["win_rate"]
                 elif objective == "profit_factor":
-                    value = performance_metrics.get("profit_factor", 0.0)
+                    value = metrics["profit_factor"]
                 elif objective == "sortino_ratio":
-                    value = performance_metrics.get("sortino_ratio", 0.0)
+                    value = metrics["sortino_ratio"]
                 elif objective == "calmar_ratio":
-                    value = performance_metrics.get("calmar_ratio", 0.0)
+                    value = metrics["calmar_ratio"]
                 elif objective == "balance_score":
                     value = self._calculate_long_short_balance(backtest_result)
                 else:
@@ -278,7 +322,7 @@ class IndividualEvaluator:
                 fitness_values.append(float(value))
 
             # 取引回数が0の場合は低い評価値を設定
-            total_trades = performance_metrics.get("total_trades", 0)
+            total_trades = metrics["total_trades"]
             if total_trades == 0:
                 logger.warning("取引回数が0のため、低い評価値を設定")
                 fitness_values = [0.1 for _ in fitness_values]
