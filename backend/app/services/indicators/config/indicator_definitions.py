@@ -2261,14 +2261,7 @@ PANDAS_TA_CONFIG = {
         "returns": "single",
         "default_values": {"length": 14},
     },
-    "TLB": {
-        "function": "tlb",
-        "params": {"length": ["length", "period"]},
-        "multi_column": True,
-        "data_columns": ["High", "Low", "Close"],
-        "returns": "single",
-        "default_values": {"length": 3},
-    },
+    # TLB removed - not supported in pandas-ta
     "ADXR": {
         "function": "adxr",
         "params": {"length": ["length", "period"]},
@@ -2728,7 +2721,7 @@ mavp_config = IndicatorConfig(
 )
 mavp_config.add_parameter(
     ParameterConfig(
-        name="periods", default_value=[], min_value=None, max_value=None, description="期間のリスト"
+        name="periods", default_value=None, min_value=None, max_value=None, description="期間のリスト（オプション）"
     )
 )
 mavp_config.add_parameter(
@@ -2746,8 +2739,54 @@ mavp_config.add_parameter(
         name="matype", default_value=0, min_value=0, max_value=8, description="移動平均タイプ"
     )
 )
+mavp_config.add_parameter(
+    ParameterConfig(
+        name="default_period", default_value=14, min_value=2, max_value=50, description="デフォルト期間（periods未指定時）"
+    )
+)
 mavp_config.param_map = {"close": "data", "periods": "periods"}
 indicator_registry.register(mavp_config)
+
+stc_config = IndicatorConfig(
+    indicator_name="STC",
+    adapter_function=TrendIndicators.stc,
+    required_data=["close"],
+    result_type=IndicatorResultType.SINGLE,
+    scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+    category="trend",
+)
+stc_config.add_parameter(
+    ParameterConfig(
+        name="length",
+        default_value=10,
+        min_value=2,
+        max_value=100,
+        description="STC循環期間",
+    )
+)
+stc_config.add_parameter(
+    ParameterConfig(
+        name="fast_length",
+        default_value=23,
+        min_value=2,
+        max_value=100,
+        description="STC高速期間",
+    )
+)
+stc_config.add_parameter(
+    ParameterConfig(
+        name="slow_length",
+        default_value=50,
+        min_value=5,
+        max_value=200,
+        description="STC低速期間",
+    )
+)
+stc_config.param_map = {"close": "data",
+ "length": "length",
+ "fast_length": "fast_length",
+ "slow_length": "slow_length"}
+indicator_registry.register(stc_config)
 
 sarext_config = IndicatorConfig(
     indicator_name="SAREXT",
@@ -2964,7 +3003,7 @@ indicator_registry.register(aobv_config)
 # EFI (Elder's Force Index)
 efi_config = IndicatorConfig(
     indicator_name="EFI",
-    adapter_function=VolumeIndicators.efi,
+    # Use pandas-ta directly instead of adapter function
     required_data=["close", "volume"],
     result_type=IndicatorResultType.SINGLE,
     scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
@@ -3196,31 +3235,7 @@ wcp_config = IndicatorConfig(
 wcp_config.param_map = {"close": "data"}
 indicator_registry.register(wcp_config)
 
-# TLB (Trend Line Break)
-tlb_config = IndicatorConfig(
-    indicator_name="TLB",
-    adapter_function=TrendIndicators.tlb,
-    required_data=["high", "low", "close"],
-    result_type=IndicatorResultType.SINGLE,
-    scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
-    category="trend",
-)
-tlb_config.add_parameter(
-    ParameterConfig(
-        name="length",
-        default_value=3,
-        min_value=2,
-        max_value=20,
-        description="Trend break lookback length",
-    )
-)
-tlb_config.param_map = {
-    "high": "high",
-    "low": "low",
-    "close": "close",
-    "length": "length",
-}
-indicator_registry.register(tlb_config)
+# TLB removed - not supported in pandas-ta
 
 # CWMA (Central Weighted Moving Average)
 cwma_config = IndicatorConfig(

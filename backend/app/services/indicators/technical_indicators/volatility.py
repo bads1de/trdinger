@@ -775,6 +775,44 @@ class VolatilityIndicators:
         return result
 
     @staticmethod
+    @handle_pandas_ta_errors
+    def coefficient_of_variation(data: pd.Series, length: int = 14) -> pd.Series:
+        """Coefficient of Variation: CV = std / mean"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pd.Series")
+        # Custom CV implementation
+        if len(data) < length:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        rolling_mean = data.rolling(window=length).mean()
+        rolling_std = data.rolling(window=length).std()
+        cv = rolling_std / rolling_mean
+        return cv
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def implied_risk_measure(high: pd.Series, low: pd.Series, close: pd.Series, length: int = 14) -> pd.Series:
+        """Implied Risk Measure"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pd.Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pd.Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pd.Series")
+
+        # Simple IRM implementation: (high - low) / close * 100, smoothed
+        if len(high) < length:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        hl_range = high - low
+        # Avoid division by zero
+        close_clean = close.where(close != 0, np.nan)
+        irm_raw = hl_range / close_clean * 100
+
+        # Smooth with rolling mean
+        irm = irm_raw.rolling(window=length).mean()
+        return irm
+
+    @staticmethod
     def _massi_fallback(
         high: pd.Series, low: pd.Series, fast: int = 9, slow: int = 25
     ) -> pd.Series:

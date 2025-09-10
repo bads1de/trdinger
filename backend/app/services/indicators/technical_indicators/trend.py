@@ -1222,6 +1222,7 @@ class TrendIndicators:
         try:
             result = ta.vidya(series, window=period, adjust=adjust)
             if result is not None and not result.isna().all():
+                result = result.astype(np.float64, errors='ignore')
                 # 最初のperiod位置以降に有効な値がある場合
                 start_idx = period * 2 - 1  # VIDYAはより多くのデータを必要とする
                 if (

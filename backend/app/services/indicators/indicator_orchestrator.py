@@ -133,7 +133,7 @@ class TechnicalIndicatorService:
                 )
 
             # Fallback indicators that skip pandas-ta and use manual implementations
-            fallback_indicators = {"PPO", "STOCHF", "EMA", "TEMA", "ALMA", "FWMA"}
+            fallback_indicators = {"PPO", "STOCHF", "EMA", "TEMA", "ALMA", "FWMA", "CV", "IRM"}
             if indicator_type in fallback_indicators:
                 return self._calculate_fallback_indicator(
                     df, indicator_type, normalized_params
@@ -503,8 +503,25 @@ class TechnicalIndicatorService:
                 return result
 
 
-        # 通常のキーワード引数呼び出し
-        result = adapter_function(**all_args)
+        # 通常のキーワード引数呼び出し（フィルタリングを追加）
+        # 有効なパラメータのみフィルタリング
+        filtered_args = {}
+        for k, v in all_args.items():
+            if k in valid_params:
+                filtered_args[k] = v
+            elif k.lower() in valid_params:
+                filtered_args[k.lower()] = v
+
+        # MAVP指標の特別処理: periodsパラメータが不足している場合、デフォルト値を生成
+        if indicator_type == "MAVP" and "periods" not in filtered_args:
+            # periodsが提供されていない場合、デフォルト期間を使用
+            default_period = params.get("default_period", 14)
+            data_length = len(required_data.get("data", df))
+            periods_series = pd.Series([default_period] * data_length, index=df.index)
+            filtered_args["periods"] = periods_series
+            logger.debug(f"MAVP: 生成したデフォルトperiods: {default_period}")
+
+        result = adapter_function(**filtered_args)
         if isinstance(result, pd.Series):
             return result.values
         elif (
