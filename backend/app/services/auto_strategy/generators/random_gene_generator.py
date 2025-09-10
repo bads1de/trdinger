@@ -7,11 +7,10 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 
 import logging
 import random
-from typing import Dict, List, Union, cast, Any
+from typing import List, Union, cast, Any
 
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
-from app.services.indicators.config.indicator_config import IndicatorScaleType
 
 from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import (
@@ -22,19 +21,21 @@ from ..models.strategy_models import (
     PositionSizingGene,
     PositionSizingMethod,
     TPSLGene,
-    TPSLMethod,
-    create_random_tpsl_gene,
 )
 
-from ..core.operand_grouping import operand_grouping_system
+
 from ..constants import (
     OPERATORS,
     DATA_SOURCES,
-    CURATED_TECHNICAL_INDICATORS,
 )
 from .condition_generator import ConditionGenerator
-from ..utils.indicator_utils import get_all_indicators
-from .indicator_composition_service import IndicatorCompositionService
+
+
+from .random.indicator_generator import IndicatorGenerator
+from .random.condition_generator import ConditionGenerator as RandomConditionGenerator
+from .random.tpsl_generator import TPSLGenerator
+from .random.position_sizing_generator import PositionSizingGenerator
+from .random.operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -109,34 +110,23 @@ class RandomGeneGenerator:
         self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
 
-        # 利用可能な指標タイプを指標モードに応じて設定
+        # 分割されたジェネレーターのインスタンスを作成
+        self.indicator_generator = IndicatorGenerator(config)
+        self.condition_generator = RandomConditionGenerator(config)
+        self.tpsl_generator = TPSLGenerator(config)
+        self.position_sizing_generator = PositionSizingGenerator(config)
+        self.operand_generator = OperandGenerator(config)
+
+        # 後方互換性のための古い属性（順次廃止予定）
         self.indicator_service = TechnicalIndicatorService()
-        self.available_indicators = self._setup_indicators_by_mode(config)
-
-        # カバレッジ向上: allowed_indicators が指定されている場合、
-        # 生成呼び出し毎にリストを巡回して少なくとも1つは未登場指標を含める
-        try:
-            self._coverage_cycle = list(getattr(config, "allowed_indicators", []) or [])
-            if self._coverage_cycle:
-                random.shuffle(self._coverage_cycle)
-        except Exception:
-            self._coverage_cycle = []
-        self._coverage_idx = 0
-
-        # 利用可能なデータソース
+        self.available_indicators = self.indicator_generator.available_indicators
         self.available_data_sources = DATA_SOURCES
-
-        # 利用可能な演算子
         self.available_operators = OPERATORS
-
-        # 動的に有効なインジケーター名をキャッシュ
-        try:
-            self._valid_indicator_names = set(get_all_indicators())
-        except Exception:
-            self._valid_indicator_names = set()
-
-        # 指標構成サービスを初期化
-        self.composition_service = IndicatorCompositionService(config)
+        self._coverage_cycle = self.indicator_generator._coverage_cycle
+        self._coverage_idx = self.indicator_generator._coverage_idx
+        self._coverage_pick = self.indicator_generator._coverage_pick
+        self._valid_indicator_names = self.indicator_generator._valid_indicator_names
+        self.composition_service = self.indicator_generator.composition_service
 
     def _ensure_or_with_fallback(
         self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
@@ -204,13 +194,15 @@ class RandomGeneGenerator:
         """
         try:
             # 指標を生成
-            indicators = self._generate_random_indicators()
+            indicators = self.indicator_generator.generate_random_indicators()
 
             # 条件を生成（後方互換性のため保持）
-            entry_conditions = self._generate_random_conditions(indicators, "entry")
+            entry_conditions = self.condition_generator.generate_random_conditions(
+                indicators, "entry"
+            )
 
             # TP/SL遺伝子を先に生成してイグジット条件生成を調整
-            tpsl_gene = self._generate_tpsl_gene()
+            tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
 
             # Auto-StrategyではTP/SLを常に有効化し、エグジット条件は冗長のため生成しない
             if tpsl_gene:
@@ -220,7 +212,9 @@ class RandomGeneGenerator:
             if tpsl_gene and tpsl_gene.enabled:
                 exit_conditions = []
             else:
-                exit_conditions = self._generate_random_conditions(indicators, "exit")
+                exit_conditions = self.condition_generator.generate_random_conditions(
+                    indicators, "exit"
+                )
 
             # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
             # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
@@ -241,10 +235,14 @@ class RandomGeneGenerator:
             )
 
             # リスク管理設定（従来方式、後方互換性のため保持）
-            risk_management = self._generate_risk_management()
+            risk_management = {
+                "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
+            }
 
             # ポジションサイジング遺伝子を生成（GA最適化対象）
-            position_sizing_gene = self._generate_position_sizing_gene()
+            position_sizing_gene = (
+                self.position_sizing_generator.generate_position_sizing_gene()
+            )
 
             gene = StrategyGene(
                 indicators=indicators,
@@ -281,562 +279,4 @@ class RandomGeneGenerator:
                     method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
                 ),  # デフォルト値
                 metadata={"generated_by": "Fallback"},
-            )
-
-    def _setup_indicators_by_mode(self, config: Any) -> List[str]:
-        """
-        指標モードに応じて利用可能な指標を設定
-
-        Args:
-            config: GA設定
-
-        Returns:
-            利用可能な指標のリスト
-        """
-        # テクニカル指標を取得
-        technical_indicators = list(
-            self.indicator_service.get_supported_indicators().keys()
-        )
-
-        # ML指標
-        ml_indicators = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
-
-        # 指標モードに応じて選択
-        indicator_mode = getattr(config, "indicator_mode", "technical_only")
-
-        if indicator_mode == "technical_only":
-            # テクニカル指標のみ
-            available_indicators = technical_indicators
-            logger.info(
-                f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)"
-            )
-
-        else:  # ml_only
-            # ML指標のみ
-            available_indicators = ml_indicators
-            logger.info(f"指標モード: MLオンリー ({len(available_indicators)}個の指標)")
-
-        # allowed_indicators によりさらに絞り込み（安全性と一貫性のため）
-        try:
-            allowed = set(getattr(config, "allowed_indicators", []) or [])
-            if allowed:
-                available_indicators = [
-                    ind for ind in available_indicators if ind in allowed
-                ]
-        except Exception:
-            pass
-
-        # 安定性のため、デフォルトでは実験的インジケータを除外（allowed_indicators 指定時は尊重）
-        # 実験的インジケータはレジストリ定義に従う
-        try:
-            from app.services.indicators.config import indicator_registry
-
-            experimental = indicator_registry.experimental_indicators
-        except Exception:
-            experimental = {"RMI", "DPO", "VORTEX", "EOM", "KVO", "PVT", "CMF"}
-        try:
-            allowed = set(getattr(self.config, "allowed_indicators", []) or [])
-            if not allowed:
-                available_indicators = [
-                    ind for ind in available_indicators if ind not in experimental
-                ]
-        except Exception:
-            available_indicators = [
-                ind for ind in available_indicators if ind not in experimental
-            ]
-        # テクニカルオンリー時のデフォルト候補を厳選して成立性を底上げ（allowed_indicators 指定時は尊重）
-        if indicator_mode == "technical_only":
-            # ### 成立性が高い指標のみを使用し、可読性を向上
-            curated = CURATED_TECHNICAL_INDICATORS
-            # 動的に有効な指標のみに絞り込み
-            try:
-                curated = {ind for ind in curated if ind in self._valid_indicator_names}
-            except Exception:
-                curated = set(curated)
-
-            try:
-                allowed = set(getattr(config, "allowed_indicators", []) or [])
-            except Exception:
-                allowed = set()
-
-            # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
-            # store coverage pick on the instance so other methods can access it
-            self._coverage_pick = None
-            try:
-                if self._coverage_cycle:
-                    self._coverage_pick = self._coverage_cycle[
-                        self._coverage_idx % len(self._coverage_cycle)
-                    ]
-                    self._coverage_idx += 1
-            except Exception:
-                self._coverage_pick = None
-
-            # curated での厳選は allowed 指定がない場合のみ適用
-            if not allowed:
-                available_indicators = [
-                    ind for ind in available_indicators if ind in curated
-                ]
-
-        return available_indicators
-
-    def _generate_random_indicators(self) -> List[IndicatorGene]:
-        """ランダムな指標リストを生成"""
-        try:
-            # coverage_pick は上位で準備済み（インスタンス属性から取得）
-            coverage_pick = getattr(self, "_coverage_pick", None)
-
-            num_indicators = random.randint(self.min_indicators, self.max_indicators)
-            indicators = []
-
-            # 1つ目は coverage_pick を優先
-            if coverage_pick and coverage_pick in self.available_indicators:
-                first_type = coverage_pick
-            else:
-                first_type = (
-                    random.choice(self.available_indicators)
-                    if self.available_indicators
-                    else "SMA"
-                )
-
-            try:
-                # 1本目
-                indicator_type = first_type
-                parameters = indicator_registry.generate_parameters_for_indicator(
-                    indicator_type
-                )
-                indicator_gene = IndicatorGene(
-                    type=indicator_type, parameters=parameters, enabled=True
-                )
-                try:
-                    json_config = indicator_gene.get_json_config()
-                    indicator_gene.json_config = json_config
-                except Exception:
-                    pass
-                indicators.append(indicator_gene)
-            except Exception as e:
-                logger.error(f"指標1生成エラー: {e}")
-                indicators.append(
-                    IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
-                )
-
-            # 残り
-            for i in range(1, num_indicators):
-                try:
-                    if not self.available_indicators:
-                        # 利用可能な指標がない場合はSMAをフォールバックとして使い続ける
-                        indicator_type = "SMA"
-                    else:
-                        indicator_type = random.choice(self.available_indicators)
-
-                    parameters = indicator_registry.generate_parameters_for_indicator(
-                        indicator_type
-                    )
-
-                    # JSON形式対応のIndicatorGene作成
-                    indicator_gene = IndicatorGene(
-                        type=indicator_type, parameters=parameters, enabled=True
-                    )
-
-                    # JSON設定を生成して保存
-                    try:
-                        json_config = indicator_gene.get_json_config()
-                        indicator_gene.json_config = json_config
-                    except Exception:
-                        pass  # JSON設定生成エラーのログを削除
-
-                    indicators.append(indicator_gene)
-
-                except Exception as e:
-                    logger.error(f"指標{i+1}生成エラー: {e}")
-                    # エラーが発生した場合はSMAをフォールバックとして使用
-                    indicators.append(
-                        IndicatorGene(
-                            type="SMA", parameters={"period": 20}, enabled=True
-                        )
-                    )
-
-                # allowed_indicators が明示指定されている場合は、均一サンプリングを尊重し、
-                # 成立性底上げの補助ロジック（トレンド強制/MA追加）はスキップする
-                try:
-                    if getattr(self.config, "allowed_indicators", None):
-                        return indicators
-                except Exception:
-                    pass
-
-            # 指標構成サービスを使用して成立性を底上げ
-            try:
-                # トレンド指標の強制追加（産業性底上げ）
-                indicators = self.composition_service.enhance_with_trend_indicators(
-                    indicators, self.available_indicators
-                )
-
-                # MAクロス戦略を可能にするための追加
-                indicators = self.composition_service.enhance_with_ma_cross_strategy(
-                    indicators, self.available_indicators
-                )
-
-            except Exception as e:
-                logger.error(f"指標構成サービス使用エラー: {e}")
-                # フォールバック: SMAを追加（安全策）
-                if (
-                    any(
-                        ind.type in ("SMA", "EMA", "MA", "HMA", "ALMA", "VIDYA")
-                        for ind in indicators
-                    )
-                    or "SMA" not in self.available_indicators
-                ):
-                    pass
-                else:
-                    indicators.append(
-                        IndicatorGene(
-                            type="SMA", parameters={"period": 20}, enabled=True
-                        )
-                    )
-                    if len(indicators) > self.max_indicators:
-                        indicators = indicators[: self.max_indicators]
-
-            return indicators
-
-        except Exception as e:
-            logger.error(f"指標リスト生成エラー: {e}")
-            # 最低限の指標を返す
-            return [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
-
-    def _generate_random_conditions(
-        self, indicators: List[IndicatorGene], condition_type: str
-    ) -> List[Condition]:
-        """ランダムな条件リストを生成"""
-        # 条件数はプロファイルや生成器の方針により 1〜max_conditions に広げる
-        # ここでは min_conditions〜max_conditions の範囲で選択（下限>上限にならないようにガード）
-        low = int(self.min_conditions)
-        high = int(self.max_conditions)
-        if high < low:
-            low, high = high, low
-        num_conditions = random.randint(low, max(low, high))
-        conditions = []
-
-        for _ in range(num_conditions):
-            condition = self._generate_single_condition(indicators, condition_type)
-            if condition:
-                conditions.append(condition)
-
-        # 最低1つの条件は保証
-        if not conditions:
-            conditions.append(self._generate_fallback_condition(condition_type))
-
-        return conditions
-
-    def _generate_single_condition(
-        self, indicators: List[IndicatorGene], condition_type: str
-    ) -> Condition:
-        """単一の条件を生成"""
-        # 左オペランドの選択
-        left_operand = self._choose_operand(indicators)
-
-        # 演算子の選択
-        operator = random.choice(self.available_operators)
-
-        # 右オペランドの選択
-        right_operand = self._choose_right_operand(
-            left_operand, indicators, condition_type
-        )
-
-        return Condition(
-            left_operand=left_operand, operator=operator, right_operand=right_operand
-        )
-
-    def _choose_operand(self, indicators: List[IndicatorGene]) -> str:
-        """オペランドを選択（指標名またはデータソース）
-
-        グループ化システムを考慮した重み付き選択を行います。
-        """
-
-        choices = []
-
-        # テクニカル指標名を追加（JSON形式：パラメータなし）
-        for indicator_gene in indicators:
-            indicator_type = indicator_gene.type
-            # 動的リストに含まれる指標のみを使用
-            if (
-                not self._valid_indicator_names
-                or indicator_type in self._valid_indicator_names
-            ):
-                choices.append(indicator_type)
-
-        # 基本データソースを追加（価格データ）
-        basic_sources = ["close", "open", "high", "low"]
-        choices.extend(basic_sources * self.config.price_data_weight)
-
-        # 出来高データを追加（重みを調整）
-        choices.extend(["volume"] * self.config.volume_data_weight)
-
-        # OI/FRデータソースを追加（重みを抑制）
-        choices.extend(["OpenInterest", "FundingRate"] * self.config.oi_fr_data_weight)
-
-        return random.choice(choices) if choices else "close"
-
-    def _choose_right_operand(
-        self, left_operand: str, indicators: List[IndicatorGene], condition_type: str
-    ):
-        """右オペランドを選択（指標名、データソース、または数値）
-
-        グループ化システムを使用して、互換性の高いオペランドを優先的に選択します。
-        """
-        # 設定された確率で数値を使用（スケール不一致問題を回避）
-        if random.random() < self.config.numeric_threshold_probability:
-            return self._generate_threshold_value(left_operand, condition_type)
-
-        # 20%の確率で別の指標またはデータソースを使用
-        # グループ化システムを使用して厳密に互換性の高いオペランドのみを選択
-        compatible_operand = self._choose_compatible_operand(left_operand, indicators)
-
-        # 互換性チェック: 低い互換性の場合は数値にフォールバック
-        if compatible_operand != left_operand:
-            compatibility = operand_grouping_system.get_compatibility_score(
-                left_operand, compatible_operand
-            )
-            if (
-                compatibility < self.config.min_compatibility_score
-            ):  # 設定された互換性チェック
-                return self._generate_threshold_value(left_operand, condition_type)
-
-        return compatible_operand
-
-    def _choose_compatible_operand(
-        self, left_operand: str, indicators: List[IndicatorGene]
-    ) -> str:
-        """左オペランドと互換性の高い右オペランドを選択
-
-        Args:
-            left_operand: 左オペランド
-            indicators: 利用可能な指標リスト
-
-        Returns:
-            互換性の高い右オペランド
-        """
-        # 利用可能なオペランドリストを構築
-        available_operands = []
-
-        # テクニカル指標を追加
-        for indicator_gene in indicators:
-            available_operands.append(indicator_gene.type)
-
-        # 基本データソースを追加
-        available_operands.extend(["close", "open", "high", "low", "volume"])
-
-        # OI/FRデータソースを追加
-        available_operands.extend(["OpenInterest", "FundingRate"])
-
-        # 厳密な互換性チェック（設定値以上のみ許可）
-        strict_compatible = operand_grouping_system.get_compatible_operands(
-            left_operand,
-            available_operands,
-            min_compatibility=self.config.strict_compatibility_score,
-        )
-
-        if strict_compatible:
-            return random.choice(strict_compatible)
-
-        # 厳密な互換性がない場合は高い互換性から選択
-        high_compatible = operand_grouping_system.get_compatible_operands(
-            left_operand,
-            available_operands,
-            min_compatibility=self.config.min_compatibility_score,
-        )
-
-        if high_compatible:
-            return random.choice(high_compatible)
-
-        # フォールバック: 利用可能なオペランドからランダム選択
-        # ただし、左オペランドと同じものは除外
-        fallback_operands = [op for op in available_operands if op != left_operand]
-        if fallback_operands:
-            selected = random.choice(fallback_operands)
-            return selected
-
-        # 最終フォールバック
-        return "close"
-
-    def _generate_threshold_value(self, operand: str, condition_type: str) -> float:
-        """オペランドの型に応じて、データ駆動で閾値を生成"""
-
-        # 特殊なデータソースの処理
-        if "FundingRate" in operand:
-            return self._get_safe_threshold(
-                "funding_rate", [0.0001, 0.001], allow_choice=True
-            )
-        if "OpenInterest" in operand:
-            return self._get_safe_threshold(
-                "open_interest", [1000000, 50000000], allow_choice=True
-            )
-        if operand == "volume":
-            return self._get_safe_threshold("volume", [1000, 100000])
-
-        # 指標レジストリからスケールタイプを取得
-        indicator_config = indicator_registry.get_indicator_config(operand)
-        if indicator_config and indicator_config.scale_type:
-            scale_type = indicator_config.scale_type
-            if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
-                return self._get_safe_threshold("oscillator_0_100", [20, 80])
-            if scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-                return self._get_safe_threshold(
-                    "oscillator_plus_minus_100", [-100, 100]
-                )
-            if scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-                return self._get_safe_threshold("momentum_zero_centered", [-0.5, 0.5])
-            if scale_type == IndicatorScaleType.PRICE_RATIO:
-                return self._get_safe_threshold("price_ratio", [0.95, 1.05])
-            if scale_type == IndicatorScaleType.PRICE_ABSOLUTE:
-                return self._get_safe_threshold("price_ratio", [0.95, 1.05])
-            if scale_type == IndicatorScaleType.VOLUME:
-                return self._get_safe_threshold("volume", [1000, 100000])
-
-        # フォールバック: 価格ベースの指標として扱う
-        return self._get_safe_threshold("price_ratio", [0.95, 1.05])
-
-    def _get_safe_threshold(
-        self, key: str, default_range: List[float], allow_choice: bool = False
-    ) -> float:
-        """設定から値を取得し、安全に閾値を生成する"""
-        range_ = self.threshold_ranges.get(key, default_range)
-
-        if isinstance(range_, list):
-            if allow_choice and len(range_) > 2:
-                # 離散値リストから選択
-                try:
-                    return float(random.choice(range_))
-                except (ValueError, TypeError):
-                    # 変換できない場合はフォールバック
-                    pass
-            if (
-                len(range_) >= 2
-                and isinstance(range_[0], (int, float))
-                and isinstance(range_[1], (int, float))
-            ):
-                # 範囲から選択
-                return random.uniform(range_[0], range_[1])
-        # フォールバック
-        return random.uniform(default_range[0], default_range[1])
-
-    def _generate_risk_management(self) -> Dict[str, float]:
-        """リスク管理設定を生成"""
-        # Position Sizingシステムにより、position_sizeは自動最適化されるため固定値を使用
-        return {
-            "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
-        }
-
-    def _generate_position_sizing_gene(self):
-        """ポジションサイジング遺伝子を生成"""
-        try:
-            from ..models.strategy_models import create_random_position_sizing_gene
-
-            return create_random_position_sizing_gene(self.config)
-        except Exception as e:
-            logger.error(f"ポジションサイジング遺伝子生成失敗: {e}")
-            # フォールバック: デフォルト遺伝子を返す
-            from ..models.strategy_models import (
-                PositionSizingGene,
-                PositionSizingMethod,
-            )
-
-            return PositionSizingGene(
-                method=PositionSizingMethod.FIXED_RATIO,
-                fixed_ratio=0.1,
-                max_position_size=20.0,  # より大きなデフォルト値
-                enabled=True,
-            )
-
-    def _generate_fallback_condition(self, condition_type: str) -> Condition:
-        """フォールバック用の基本条件を生成（JSON形式の指標名）"""
-        if condition_type == "entry":
-            return Condition(left_operand="close", operator=">", right_operand="SMA")
-        else:
-            return Condition(left_operand="close", operator="<", right_operand="SMA")
-
-    # cSpell: ignore tpsl
-    def _generate_tpsl_gene(self) -> TPSLGene:
-        """
-        TP/SL遺伝子を生成（GA最適化対象）
-
-        Returns:
-            生成されたTP/SL遺伝子
-        """
-        try:
-            # Anyの設定範囲内でランダムなTP/SL遺伝子を生成
-            tpsl_gene = create_random_tpsl_gene()
-
-            # Anyの制約を適用（設定されている場合）
-            if hasattr(self.config, "tpsl_method_constraints"):
-                # 許可されたメソッドのみを使用
-                allowed_methods = self.config.tpsl_method_constraints
-                if allowed_methods:
-                    tpsl_gene.method = random.choice(
-                        [TPSLMethod(m) for m in allowed_methods]
-                    )
-
-            if (
-                hasattr(self.config, "tpsl_sl_range")
-                and self.config.tpsl_sl_range is not None
-            ):
-                sl_min, sl_max = self.config.tpsl_sl_range
-                tpsl_gene.stop_loss_pct = random.uniform(sl_min, sl_max)
-                tpsl_gene.base_stop_loss = random.uniform(sl_min, sl_max)
-
-            if (
-                hasattr(self.config, "tpsl_tp_range")
-                and self.config.tpsl_tp_range is not None
-            ):
-                # TP範囲制約
-                tp_min, tp_max = self.config.tpsl_tp_range
-                tpsl_gene.take_profit_pct = random.uniform(tp_min, tp_max)
-
-            if (
-                hasattr(self.config, "tpsl_rr_range")
-                and self.config.tpsl_rr_range is not None
-            ):
-                # リスクリワード比範囲制約
-                rr_min, rr_max = self.config.tpsl_rr_range
-                tpsl_gene.risk_reward_ratio = random.uniform(rr_min, rr_max)
-
-            if (
-                hasattr(self.config, "tpsl_atr_multiplier_range")
-                and self.config.tpsl_atr_multiplier_range is not None
-            ):
-                # ATR倍率範囲制約
-                atr_min, atr_max = self.config.tpsl_atr_multiplier_range
-                tpsl_gene.atr_multiplier_sl = random.uniform(atr_min, atr_max)
-                tpsl_gene.atr_multiplier_tp = random.uniform(
-                    atr_min * 1.5, atr_max * 2.0
-                )
-
-            # テクニカルオンリー時はクローズ成立性を高めるため、固定小幅TP/SLにバイアス
-            try:
-                if getattr(self.config, "indicator_mode", None) == "technical_only":
-                    # 小さめの値にバイアスをかけつつ、メソッド自体は多様性を残す
-                    if random.random() < 0.5:
-                        tpsl_gene.method = TPSLMethod.FIXED_PERCENTAGE
-                    # 小さめの値に再サンプル
-                    tpsl_gene.stop_loss_pct = random.uniform(0.005, 0.02)
-                    tpsl_gene.take_profit_pct = random.uniform(0.01, 0.05)
-                    # RR連動のベースも縮小
-                    tpsl_gene.base_stop_loss = max(
-                        0.005, min(0.02, tpsl_gene.stop_loss_pct)
-                    )
-                    # RRは控えめ
-                    tpsl_gene.risk_reward_ratio = 1.5
-            except Exception:
-                pass
-
-            return tpsl_gene
-
-        except Exception as e:
-            logger.error(f"TP/SL遺伝子生成エラー: {e}")
-            # フォールバック: デフォルトのTP/SL遺伝子
-            return TPSLGene(
-                method=TPSLMethod.RISK_REWARD_RATIO,
-                stop_loss_pct=0.03,
-                take_profit_pct=0.06,
-                risk_reward_ratio=2.0,
-                base_stop_loss=0.03,
-                enabled=True,
             )

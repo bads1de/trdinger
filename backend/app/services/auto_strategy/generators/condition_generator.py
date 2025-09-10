@@ -1,7 +1,6 @@
 import logging
 import random
-import copy
-from typing import List, Tuple, Union, Dict, Any, Optional
+from typing import List, Tuple, Union, Dict
 from ..constants import (
     IndicatorType,
     StrategyType,
@@ -239,7 +238,9 @@ class ConditionGenerator:
                 self.logger.debug(f"Generated long condition: {ind.type} > {threshold}")
                 return [final_condition]
         self.logger.warning(f"No threshold found for {ind.type}, using 0 as fallback")
-        final_condition = Condition(left_operand=ind.type, operator=">", right_operand=0)
+        final_condition = Condition(
+            left_operand=ind.type, operator=">", right_operand=0
+        )
         self.logger.debug(f"Generated fallback long condition: {ind.type} > 0")
         return [final_condition]
 
@@ -264,120 +265,6 @@ class ConditionGenerator:
         self.logger.warning(f"No threshold found for {ind.type}, using 0 as fallback")
         return [Condition(left_operand=ind.type, operator="<", right_operand=0)]
 
-    def _generate_different_indicators_strategy(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
-    ]:
-        """
-        異なる指標の組み合わせ戦略
-
-        Args:
-            indicators: 指標リスト
-
-        Returns:
-            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
-        """
-        try:
-            # 指標をタイプ別に分類（未特性化はレジストリから動的分類）
-            indicators_by_type = self._dynamic_classify(indicators)
-            self.logger.debug(
-                f"指標分類: {[f'{k.name}:{len(v)}' for k, v in indicators_by_type.items() if v]}"
-            )
-
-            # トレンド系 + モメンタム系の組み合わせを優先
-            long_conditions: List[Union[Condition, ConditionGroup]] = []
-            short_conditions: List[Union[Condition, ConditionGroup]] = []
-
-            # ML指標とテクニカル指標の混合戦略
-            ml_indicators = [
-                ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
-            ]
-            self.logger.debug(f"ML指標数: {len(ml_indicators)}")
-
-            # 簡素化: 利用可能な指標タイプから1つずつ条件を生成
-            self.logger.debug("ロング条件生成開始")
-            if indicators_by_type[IndicatorType.TREND]:
-                long_conditions.extend(
-                    self._create_trend_long_conditions(
-                        random.choice(indicators_by_type[IndicatorType.TREND])
-                    )
-                )
-                self.logger.debug(
-                    f"トレンド指標からロング条件追加: {len(long_conditions)}"
-                )
-
-            if indicators_by_type[IndicatorType.MOMENTUM]:
-                long_conditions.extend(
-                    self._create_momentum_long_conditions(
-                        random.choice(indicators_by_type[IndicatorType.MOMENTUM])
-                    )
-                )
-                self.logger.debug(
-                    f"モメンタム指標からロング条件追加: {len(long_conditions)}"
-                )
-            # ML指標がある場合は追加
-            if ml_indicators:
-                long_conditions.extend(self._create_ml_long_conditions(ml_indicators))
-                self.logger.debug(f"ML指標からロング条件追加: {len(long_conditions)}")
-
-            # ショート条件の簡素化
-            self.logger.debug("ショート条件生成開始")
-            if indicators_by_type[IndicatorType.TREND]:
-                short_conditions.extend(
-                    self._create_trend_short_conditions(
-                        random.choice(indicators_by_type[IndicatorType.TREND])
-                    )
-                )
-                self.logger.debug(
-                    f"トレンド指標からショート条件追加: {len(short_conditions)}"
-                )
-
-            if indicators_by_type[IndicatorType.MOMENTUM]:
-                short_conditions.extend(
-                    self._create_momentum_short_conditions(
-                        random.choice(indicators_by_type[IndicatorType.MOMENTUM])
-                    )
-                )
-                self.logger.debug(
-                    f"モメンタム指標からショート条件追加: {len(short_conditions)}"
-                )
-
-            # ML指標がある場合の対向条件
-            if ml_indicators and len(ml_indicators) >= 2:
-                if any(ind.type == "ML_DOWN_PROB" for ind in ml_indicators):
-                    short_conditions.append(
-                        Condition(
-                            left_operand="ML_DOWN_PROB", operator=">", right_operand=0.6
-                        )
-                    )
-
-
-            # 最低条件数の保証（簡素化）
-            if not long_conditions:
-                long_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
-            if not short_conditions:
-                short_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
-
-            # 型を明示的に変換して返す
-            long_result: List[Union[Condition, ConditionGroup]] = list(long_conditions)
-            short_result: List[Union[Condition, ConditionGroup]] = list(
-                short_conditions
-            )
-            exit_result: List[Condition] = []
-
-            return long_result, short_result, exit_result
-
-        except Exception as e:
-            self.logger.error(f"異なる指標組み合わせ戦略エラー: {e} with categorized: {indicators_by_type}, ml_indicators: {len(ml_indicators)}")
-            return self._generate_fallback_conditions()
-
     def _create_type_based_conditions(
         self, indicator: IndicatorGene, side: str
     ) -> List[Condition]:
@@ -399,7 +286,9 @@ class ConditionGenerator:
                 operator="<" if side == "long" else ">",
                 right_operand=threshold,
             )
-            self.logger.debug(f"RSI {side} condition: {indicator.type} {'<' if side == 'long' else '>'} {threshold}")
+            self.logger.debug(
+                f"RSI {side} condition: {indicator.type} {'<' if side == 'long' else '>'} {threshold}"
+            )
             return [final_condition]
 
         # YAML設定チェック
@@ -416,7 +305,9 @@ class ConditionGenerator:
                     operator=">" if side == "long" else "<",
                     right_operand=threshold,
                 )
-                self.logger.debug(f"YAML-based {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} {threshold}")
+                self.logger.debug(
+                    f"YAML-based {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} {threshold}"
+                )
                 return [final_condition]
 
         # デフォルト
@@ -425,7 +316,9 @@ class ConditionGenerator:
             operator=">" if side == "long" else "<",
             right_operand=0,
         )
-        self.logger.debug(f"Default {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} 0")
+        self.logger.debug(
+            f"Default {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} 0"
+        )
         return [final_condition]
 
     def _create_trend_long_conditions(
@@ -451,123 +344,6 @@ class ConditionGenerator:
     ) -> List[Condition]:
         """統合されたモメンタム系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
-
-
-    def _generate_indicator_characteristics_strategy(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
-    ]:
-        """
-        ML指標中心の簡素化戦略
-
-        Args:
-            indicators: 指標リスト
-
-        Returns:
-            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
-        """
-        try:
-            long_conditions = []
-            short_conditions = []
-
-            # ML指標のみの処理を簡素化
-            ml_indicators = [
-                ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
-            ]
-            if ml_indicators:
-                long_conditions.extend(self._create_ml_long_conditions(ml_indicators))
-
-                # 複数のML指標があれば基本的な対向条件も追加
-                if len(ml_indicators) >= 2:
-                    short_conditions.extend(
-                        [
-                            Condition(
-                                left_operand="ML_DOWN_PROB",
-                                operator=">",
-                                right_operand=0.6,
-                            )
-                        ]
-                    )
-
-            # 条件が空の場合はフォールバック
-            if not long_conditions:
-                return self._generate_fallback_conditions()
-
-            return long_conditions, short_conditions, []
-
-        except Exception as e:
-            self.logger.error(f"指標特性活用戦略エラー: {e}")
-            return self._generate_fallback_conditions()
-
-    def _generate_complex_conditions_strategy(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
-    ]:
-        """
-        複合条件戦略（複数の条件を組み合わせて確率を高める）
-
-        Args:
-            indicators: 指標リスト
-
-        Returns:
-            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
-        """
-        try:
-            # 利用可能な指標から複数の条件を組み合わせ
-            long_conditions = []
-            short_conditions = []
-
-            for indicator in indicators[:3]:  # 最大3つの指標を使用してバランスを改善
-                if not indicator.enabled:
-                    continue
-
-                if indicator.type in INDICATOR_CHARACTERISTICS:
-                    # 各指標の特性に基づいて条件を追加
-                    char = INDICATOR_CHARACTERISTICS[indicator.type]
-                    indicator_type = char["type"]
-
-                    # インジケータタイプに応じて適切な条件生成メソッドを呼び出し
-                    if indicator_type == IndicatorType.MOMENTUM:
-                        long_conds = self._create_momentum_long_conditions(indicator)
-                        short_conds = self._create_momentum_short_conditions(indicator)
-                    elif indicator_type == IndicatorType.TREND:
-                        long_conds = self._create_trend_long_conditions(indicator)
-                        short_conds = self._create_trend_short_conditions(indicator)
-                    else:
-                        # Unknown indicator type - use generic conditions
-                        long_conds = self._generic_long_conditions(indicator)
-                        short_conds = self._generic_short_conditions(indicator)
-
-                    if long_conds:
-                        long_conditions.extend(long_conds)
-
-                    # ショート条件も同様に生成（全ての指標タイプに対応）
-                    if short_conds:
-                        short_conditions.extend(short_conds)
-
-            # 条件が空の場合は汎用条件で補完（AND増加で厳しくならないよう空の場合のみ）
-            if not long_conditions:
-                for indicator in indicators[:2]:
-                    if not indicator.enabled:
-                        continue
-                    long_conditions.extend(self._generic_long_conditions(indicator))
-                    short_conditions.extend(self._generic_short_conditions(indicator))
-
-                # それでも空ならフォールバック
-                if not long_conditions:
-                    return self._generate_fallback_conditions()
-
-            return long_conditions, short_conditions, []
-
-        except Exception as e:
-            self.logger.error(f"複合条件戦略エラー: {e}")
-            return self._generate_fallback_conditions()
 
     def _create_ml_long_conditions(
         self, indicators: List[IndicatorGene]
@@ -674,116 +450,3 @@ class ConditionGenerator:
                 categorized[IndicatorType.TREND].append(ind)
 
         return categorized
-
-    def apply_threshold_context(
-        self,
-        indicators: List[IndicatorGene],
-        context_override: Dict[str, Any] | None = None,
-    ) -> Dict[str, List[Union[Condition, ConditionGroup]]]:
-        """
-        統合されたthreshold/profile処理メソッド
-        """
-        original_context: Dict[str, Any] | None = None
-        if context_override:
-            original_context = copy.deepcopy(self.context)
-            self.context.update(context_override)
-
-        try:
-            categorized = self._dynamic_classify(indicators)
-
-            long_conditions = []
-            short_conditions = []
-            metadata = {
-                "applied_profile": self.context["threshold_profile"],
-                "timeframe": self.context["timeframe"],
-                "generated_indicators": len(indicators),
-                "category_counts": {k.name: len(v) for k, v in categorized.items()},
-            }
-
-            for indicator in indicators:
-                if not indicator.enabled:
-                    continue
-
-                indicator_type = self._get_indicator_type(indicator)
-                if indicator_type == IndicatorType.MOMENTUM:
-                    if conditions := self._create_momentum_long_conditions(indicator):
-                        long_conditions.extend(conditions)
-                    if conditions := self._create_momentum_short_conditions(indicator):
-                        short_conditions.extend(conditions)
-                elif indicator_type == IndicatorType.TREND:
-                    if conditions := self._create_trend_long_conditions(indicator):
-                        long_conditions.extend(conditions)
-                    if conditions := self._create_trend_short_conditions(indicator):
-                        short_conditions.extend(conditions)
-                else:
-                    if conditions := self._generic_long_conditions(indicator):
-                        long_conditions.extend(conditions)
-                    if conditions := self._generic_short_conditions(indicator):
-                        short_conditions.extend(conditions)
-
-            if not long_conditions:
-                long_conditions = [
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
-            if not short_conditions:
-                short_conditions = [
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
-
-            if long_conditions is None:
-                long_conditions = []
-            if short_conditions is None:
-                short_conditions = []
-
-            result = {
-                "long_conditions": long_conditions,
-                "short_conditions": short_conditions,
-                "threshold_metadata": metadata,
-            }
-
-            return result
-
-        finally:
-            if original_context is not None:
-                self.context = original_context
-
-    def _generate_yaml_based_conditions(
-        self, indicator: IndicatorGene, side: str
-    ) -> List[Condition]:
-        """YAML設定に基づいて条件を生成"""
-        try:
-            config = YamlIndicatorUtils.get_indicator_config_from_yaml(
-                self.yaml_config, indicator.type
-            )
-            if config:
-                threshold = YamlIndicatorUtils.get_threshold_from_yaml(
-                    self.yaml_config, config, side, self.context
-                )
-                if threshold is not None:
-                    operator = ">" if side == "long" else "<"
-                    return [
-                        Condition(
-                            left_operand=indicator.type,
-                            operator=operator,
-                            right_operand=threshold,
-                        )
-                    ]
-            return [
-                Condition(left_operand=indicator.type, operator=">", right_operand=0)
-            ]
-        except Exception as e:
-            self.logger.error(f"YAML条件生成エラー: {e}")
-            return []
-
-    def test_yaml_conditions(
-        self, test_indicators: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """YAMLベースの条件生成テスト"""
-        try:
-            return YamlIndicatorUtils.test_yaml_conditions_with_generator(
-                yaml_config=self.yaml_config,
-                test_indicators=test_indicators,
-            )
-        except Exception as e:
-            self.logger.error(f"YAMLテストエラー: {e}")
-            return {"error": str(e)}
