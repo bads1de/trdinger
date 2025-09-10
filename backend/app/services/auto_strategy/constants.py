@@ -4,9 +4,6 @@ Auto Strategy 共通定数
 """
 
 from typing import List
-
-
-# === 指標タイプ定義 ===
 from enum import Enum
 
 
@@ -68,9 +65,6 @@ SUPPORTED_TIMEFRAMES = [
 ]
 
 DEFAULT_TIMEFRAME = "1h"
-
-# === テクニカル指標定数 ===
-# カテゴリ別に分割した指標リスト（取得ロジックは utils に集約）
 
 # 複合指標
 COMPOSITE_INDICATORS = [
@@ -237,8 +231,6 @@ POSITION_SIZING_METHODS = [
     "fixed_quantity",
 ]
 
-# === GA関連定数 ===
-
 # === バックテスト関連定数 ===
 BACKTEST_OBJECTIVES = [
     "total_return",
@@ -258,50 +250,3 @@ ERROR_CODES = {
     "DATA_ERROR": "データエラー",
     "CONFIG_ERROR": "設定エラー",
 }
-
-# === 閾値設定 ===
-THRESHOLD_RANGES = {
-    "oscillator_0_100": [20, 80],
-    "oscillator_plus_minus_100": [-100, 100],
-    "momentum_zero_centered": [-0.5, 0.5],
-    "funding_rate": [0.0001, 0.0005, 0.001, -0.0001, -0.0005, -0.001],
-    "open_interest": [1000000, 5000000, 10000000, 50000000],
-    "price_ratio": [0.95, 1.05],
-}
-
-# === 制約設定 ===
-CONSTRAINTS = {
-    "min_trades": 10,
-    "max_drawdown_limit": 0.3,
-    "min_sharpe_ratio": 1.0,
-    "max_position_size": 1.0,
-    "min_position_size": 0.01,
-}
-
-# === フィットネス重み設定 ===
-FITNESS_WEIGHT_PROFILES = {
-    "conservative": {
-        "total_return": 0.15,
-        "sharpe_ratio": 0.4,
-        "max_drawdown": 0.25,
-        "win_rate": 0.15,
-        "balance_score": 0.05,
-    },
-    "balanced": {
-        "total_return": 0.25,
-        "sharpe_ratio": 0.35,
-        "max_drawdown": 0.2,
-        "win_rate": 0.1,
-        "balance_score": 0.1,
-    },
-    "aggressive": {
-        "total_return": 0.4,
-        "sharpe_ratio": 0.25,
-        "max_drawdown": 0.15,
-        "win_rate": 0.1,
-        "balance_score": 0.1,
-    },
-}
-
-
-# === 残り定数（各ファイルで定義） ===

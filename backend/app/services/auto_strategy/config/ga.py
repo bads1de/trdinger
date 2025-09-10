@@ -20,13 +20,31 @@ GA_DEFAULT_CONFIG = {
 }
 
 # フィットネス重み設定
-DEFAULT_FITNESS_WEIGHTS = {
-    "total_return": 0.25,
-    "sharpe_ratio": 0.35,
-    "max_drawdown": 0.2,
-    "win_rate": 0.1,
-    "balance_score": 0.1,
+FITNESS_WEIGHT_PROFILES = {
+    "conservative": {
+        "total_return": 0.15,
+        "sharpe_ratio": 0.4,
+        "max_drawdown": 0.25,
+        "win_rate": 0.15,
+        "balance_score": 0.05,
+    },
+    "balanced": {
+        "total_return": 0.25,
+        "sharpe_ratio": 0.35,
+        "max_drawdown": 0.2,
+        "win_rate": 0.1,
+        "balance_score": 0.1,
+    },
+    "aggressive": {
+        "total_return": 0.4,
+        "sharpe_ratio": 0.25,
+        "max_drawdown": 0.15,
+        "win_rate": 0.1,
+        "balance_score": 0.1,
+    },
 }
+
+DEFAULT_FITNESS_WEIGHTS = FITNESS_WEIGHT_PROFILES["balanced"]
 
 # フィットネス制約設定
 DEFAULT_FITNESS_CONSTRAINTS = {
@@ -64,7 +82,7 @@ GA_PARAMETER_RANGES = {
 }
 
 # GA閾値範囲定義
-GA_THRESHOLD_RANGES = {
+THRESHOLD_RANGES = {
     "oscillator_0_100": [20, 80],
     "oscillator_plus_minus_100": [-100, 100],
     "momentum_zero_centered": [-0.5, 0.5],
@@ -101,7 +119,7 @@ class GASettings(BaseConfig):
 
     # フィットネス設定
     fitness_weights: Dict[str, float] = field(
-        default_factory=lambda: DEFAULT_FITNESS_WEIGHTS.copy()
+        default_factory=lambda: FITNESS_WEIGHT_PROFILES["balanced"].copy()
     )
     fitness_constraints: Dict[str, Any] = field(
         default_factory=lambda: DEFAULT_FITNESS_CONSTRAINTS.copy()
