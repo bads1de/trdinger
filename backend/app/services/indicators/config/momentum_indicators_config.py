@@ -1,0 +1,238 @@
+"""
+モメンタム系インジケーターの設定
+"""
+
+from app.services.indicators.technical_indicators.momentum import (
+    MomentumIndicators,
+)
+
+from .indicator_config import (
+    IndicatorConfig,
+    IndicatorResultType,
+    IndicatorScaleType,
+    ParameterConfig,
+    indicator_registry,
+)
+
+
+def setup_momentum_indicators():
+    """モメンタム系インジケーターの設定"""
+
+    # STOCH
+    stoch_config = IndicatorConfig(
+        indicator_name="STOCH",
+        adapter_function=MomentumIndicators.stoch,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+        output_names=["STOCH_0", "STOCH_1"],  # %K, %D
+        default_output="STOCH_0",  # %K
+        aliases=["STOCH"],
+    )
+    stoch_config.add_parameter(
+        ParameterConfig(
+            name="fastk_period",
+            default_value=5,
+            min_value=1,
+            max_value=30,
+            description="Fast %K期間",
+        )
+    )
+    stoch_config.add_parameter(
+        ParameterConfig(
+            name="d_length",
+            default_value=3,
+            min_value=1,
+            max_value=10,
+            description="Slow K期間 (smooth_kとしても使用)",
+        )
+    )
+    stoch_config.param_map = {
+        "fastk_period": "k",
+        "d_length": "smooth_k",
+        "slowd_period": "d",
+    }
+    indicator_registry.register(stoch_config)
+
+    # QQE
+    qqe_config = IndicatorConfig(
+        indicator_name="QQE",
+        adapter_function=MomentumIndicators.qqe,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    qqe_config.add_parameter(
+        ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+    )
+    indicator_registry.register(qqe_config)
+
+    # RSI (Relative Strength Index)
+    rsi_config = IndicatorConfig(
+        indicator_name="RSI",
+        adapter_function=MomentumIndicators.rsi,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    rsi_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="RSI計算期間",
+        )
+    )
+    rsi_config.param_map = {"data": "data"}
+    indicator_registry.register(rsi_config)
+
+    # MACD (Moving Average Convergence Divergence)
+    macd_config = IndicatorConfig(
+        indicator_name="MACD",
+        adapter_function=MomentumIndicators.macd,
+        required_data=["close"],
+        result_type=IndicatorResultType.COMPLEX,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+        output_names=["MACD_0", "MACD_1", "MACD_2"],
+        default_output="MACD_0",
+    )
+    macd_config.add_parameter(
+        ParameterConfig(
+            name="fast",
+            default_value=12,
+            min_value=2,
+            max_value=100,
+            description="高速移動平均期間",
+        )
+    )
+    macd_config.add_parameter(
+        ParameterConfig(
+            name="slow",
+            default_value=26,
+            min_value=5,
+            max_value=200,
+            description="低速移動平均期間",
+        )
+    )
+    macd_config.add_parameter(
+        ParameterConfig(
+            name="signal",
+            default_value=9,
+            min_value=2,
+            max_value=50,
+            description="シグナル線期間",
+        )
+    )
+    macd_config.param_map = {"data": "data"}
+    indicator_registry.register(macd_config)
+
+    # CCI
+    cci_config = IndicatorConfig(
+        indicator_name="CCI",
+        adapter_function=MomentumIndicators.cci,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+        category="momentum",
+    )
+    cci_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=5,
+            max_value=50,
+            description="CCI計算期間",
+        )
+    )
+    cci_config.param_map = {"period": "length"}
+    indicator_registry.register(cci_config)
+
+    # MOM (Momentum)
+    mom_config = IndicatorConfig(
+        indicator_name="MOM",
+        adapter_function=MomentumIndicators.mom,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    mom_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=10,
+            min_value=2,
+            max_value=50,
+            description="モメンタム計算期間",
+        )
+    )
+    mom_config.param_map = {"close": "data", "period": "length"}
+    mom_config.aliases = ["MOMENTUM"]
+    indicator_registry.register(mom_config)
+
+    # ADX
+    adx_config = IndicatorConfig(
+        indicator_name="ADX",
+        adapter_function=MomentumIndicators.adx,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+    )
+    adx_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="ADX計算期間",
+        )
+    )
+    adx_config.param_map = {"period": "length"}
+    indicator_registry.register(adx_config)
+
+    # WILLR
+    willr_config = IndicatorConfig(
+        indicator_name="WILLR",
+        adapter_function=MomentumIndicators.willr,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+        category="momentum",
+    )
+    willr_config.add_parameter(
+        ParameterConfig(
+            name="period",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="Williams %R計算期間",
+        )
+    )
+    willr_config.param_map = {"period": "length"}
+    indicator_registry.register(willr_config)
+
+    # ROC
+    roc_config = IndicatorConfig(
+        indicator_name="ROC",
+        adapter_function=MomentumIndicators.roc,
+        required_data=["close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        category="momentum",
+    )
+    roc_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=10,
+            min_value=1,
+            max_value=100,
+            description="ROC計算期間",
+        )
+    )
+    roc_config.param_map = {"close": "data", "length": "length"}
+    indicator_registry.register(roc_config)
