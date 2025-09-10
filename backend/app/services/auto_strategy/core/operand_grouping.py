@@ -287,7 +287,7 @@ class OperandGroupingSystem:
             return OperandGroup.PERCENTAGE_0_100
 
         # ±100オシレーターのパターン
-        if any(pattern in operand_upper for pattern in ["CCI", "CMO", "AROONOSC", "TRIX"]):
+        if any(pattern in operand_upper for pattern in ["CCI", "CMO", "AROONOSC"]):
             return OperandGroup.PERCENTAGE_NEG100_100
 
         # ゼロ中心のパターン (新規指標拡張)
@@ -318,7 +318,6 @@ class OperandGroupingSystem:
                 "KST",
                 "STC",
                 "COPPOCK",
-                "ER",
                 "ERI",
                 "INERTIA",
                 "PGO",
@@ -346,10 +345,10 @@ class OperandGroupingSystem:
         ):
             return OperandGroup.ZERO_CENTERED
 
-        # 新規Trend系パターン
+        # 新規Trend系パターン + ボリンジャーバンド
         if any(
             pattern in operand_upper
-            for pattern in ["HMA", "ZLMA", "VWMA", "SWMA", "ALMA", "JMA", "MCGD", "ICHIMOKU", "HILO", "HWMA", "HL2", "HLC3", "OHLC4", "WCP", "SSF", "VIDYA"]
+            for pattern in ["HMA", "ZLMA", "VWMA", "SWMA", "ALMA", "JMA", "MCGD", "ICHIMOKU", "HILO", "HWMA", "HL2", "HLC3", "OHLC4", "WCP", "SSF", "VIDYA", "BB"]
         ):
             return OperandGroup.PRICE_BASED
 
@@ -373,7 +372,7 @@ class OperandGroupingSystem:
         # 特殊スケールのパターン
         if any(
             pattern in operand_upper
-            for pattern in ["OPENINTEREST", "FUNDINGRATE", "VOLUME"]
+            for pattern in ["OPENINTEREST", "FUNDING_RATE", "VOLUME"]
         ):
             return OperandGroup.SPECIAL_SCALE
 
@@ -464,3 +463,58 @@ class OperandGroupingSystem:
 
 # グローバルインスタンス
 operand_grouping_system = OperandGroupingSystem()
+
+
+# グローバル関数インターフェース
+def get_operand_group(operand: str) -> OperandGroup:
+    """
+    オペランドのグループを取得（グローバルインターフェース）
+
+    Args:
+        operand: オペランド名
+
+    Returns:
+        オペランドのグループ
+    """
+    return operand_grouping_system.get_operand_group(operand)
+
+
+def _classify_by_pattern(operand: str) -> OperandGroup:
+    """
+    パターンマッチングによるオペランド分類（グローバルインターフェース）
+
+    Args:
+        operand: オペランド名
+
+    Returns:
+        推定されるグループ
+    """
+    return operand_grouping_system._classify_by_pattern(operand)
+
+
+def get_compatibility_score(operand1: str, operand2: str) -> float:
+    """
+    2つのオペランド間の互換性スコアを取得（グローバルインターフェース）
+
+    Args:
+        operand1: 第1オペランド
+        operand2: 第2オペランド
+
+    Returns:
+        互換性スコア（0.0-1.0）
+    """
+    return operand_grouping_system.get_compatibility_score(operand1, operand2)
+
+
+def validate_condition(left_operand: str, right_operand) -> Tuple[bool, str]:
+    """
+    条件の妥当性を検証（グローバルインターフェース）
+
+    Args:
+        left_operand: 左オペランド
+        right_operand: 右オペランド（strまたは数値）
+
+    Returns:
+        (妥当性, 理由)のタプル
+    """
+    return operand_grouping_system.validate_condition(left_operand, right_operand)

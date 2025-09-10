@@ -376,7 +376,11 @@ class YamlLoadUtils:
 
                 # conditionsの検証
                 conditions = indicator_config.get("conditions", {})
-                if isinstance(conditions, dict):
+                if conditions is None:
+                    errors.append(
+                        f"indicator {indicator_name}: conditionsフィールドはNoneにできません"
+                    )
+                elif isinstance(conditions, dict):
                     for side in ["long", "short"]:
                         if side not in conditions:
                             continue  # オプション

@@ -41,22 +41,37 @@ class OHLCVDataConverter:
 
         for candle in ohlcv_data:
             # CCXTのOHLCVデータは [timestamp, open, high, low, close, volume] の形式
-            timestamp_ms, open_price, high, low, close, volume = candle
+            try:
+                timestamp_ms, open_price, high, low, close, volume = candle
+            except ValueError as e:
+                logger.warning(f"OHLCVデータの要素数が不正: {candle} - スキップ")
+                continue
 
             # ミリ秒タイムスタンプをdatetimeに変換（UTCタイムゾーンを明示）
-            timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+            try:
+                if isinstance(timestamp_ms, (int, float)):
+                    timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+                else:
+                    raise TypeError(f"タイムスタンプは数値である必要があります: {type(timestamp_ms)}")
+            except (TypeError, ValueError) as e:
+                logger.warning(f"不正なタイムスタンプ: {timestamp_ms} - スキップ。エラー: {e}")
+                continue
 
             # データベースレコードの辞書を作成
-            db_record = {
-                "symbol": symbol,
-                "timeframe": timeframe,
-                "timestamp": timestamp,
-                "open": float(open_price),
-                "high": float(high),
-                "low": float(low),
-                "close": float(close),
-                "volume": float(volume),
-            }
+            try:
+                db_record = {
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "timestamp": timestamp,
+                    "open": float(open_price),
+                    "high": float(high),
+                    "low": float(low),
+                    "close": float(close),
+                    "volume": float(volume),
+                }
+            except (TypeError, ValueError) as e:
+                logger.warning(f"不正なOHLCV値: {candle} - スキップ。エラー: {e}")
+                continue
 
             db_records.append(db_record)
 
@@ -116,15 +131,26 @@ class FundingRateDataConverter:
             data_timestamp = rate_data.get("datetime")
             if data_timestamp:
                 if isinstance(data_timestamp, str):
-                    # ISO形式の文字列をdatetimeに変換（Zulu時間は+00:00に置換）
-                    data_timestamp = datetime.fromisoformat(
-                        data_timestamp.replace("Z", "+00:00")
-                    )
+                    try:
+                        # ISO形式の文字列をdatetimeに変換（Zulu時間は+00:00に置換）
+                        data_timestamp = datetime.fromisoformat(
+                            data_timestamp.replace("Z", "+00:00")
+                        )
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"不正なdatetime文字列: {data_timestamp} - エラー: {e}")
+                        data_timestamp = None
                 elif isinstance(data_timestamp, (int, float)):
-                    # ミリ秒タイムスタンプをdatetimeに変換
-                    data_timestamp = datetime.fromtimestamp(
-                        data_timestamp / 1000, tz=timezone.utc
-                    )
+                    try:
+                        # ミリ秒タイムスタンプをdatetimeに変換
+                        data_timestamp = datetime.fromtimestamp(
+                            data_timestamp / 1000, tz=timezone.utc
+                        )
+                    except (ValueError, TypeError, OSError) as e:
+                        logger.warning(f"不正なタイムスタンプ数値: {data_timestamp} - エラー: {e}")
+                        data_timestamp = None
+                else:
+                    logger.warning(f"不明なdatetime形式: {type(data_timestamp)}")
+                    data_timestamp = None
 
             # データベースレコードの辞書を作成
             db_record = {
@@ -138,16 +164,19 @@ class FundingRateDataConverter:
             # 次回ファンディング時刻の処理（存在する場合）
             next_funding = rate_data.get("nextFundingDatetime")
             if next_funding:
-                if isinstance(next_funding, str):
-                    # ISO形式の文字列をdatetimeに変換
-                    db_record["next_funding_timestamp"] = datetime.fromisoformat(
-                        next_funding.replace("Z", "+00:00")
-                    )
-                elif isinstance(next_funding, (int, float)):
-                    # ミリ秒タイムスタンプをdatetimeに変換
-                    db_record["next_funding_timestamp"] = datetime.fromtimestamp(
-                        next_funding / 1000, tz=timezone.utc
-                    )
+                try:
+                    if isinstance(next_funding, str):
+                        # ISO形式の文字列をdatetimeに変換
+                        db_record["next_funding_timestamp"] = datetime.fromisoformat(
+                            next_funding.replace("Z", "+00:00")
+                        )
+                    elif isinstance(next_funding, (int, float)):
+                        # ミリ秒タイムスタンプをdatetimeに変換
+                        db_record["next_funding_timestamp"] = datetime.fromtimestamp(
+                            next_funding / 1000, tz=timezone.utc
+                        )
+                except (ValueError, TypeError, OSError) as e:
+                    logger.warning(f"不正なnext_funding値: {next_funding} - エラー: {e}")
 
             db_records.append(db_record)
 
@@ -180,15 +209,26 @@ class OpenInterestDataConverter:
 
             if timestamp_value:
                 if isinstance(timestamp_value, (int, float)):
-                    # ミリ秒タイムスタンプをdatetimeに変換
-                    data_timestamp = datetime.fromtimestamp(
-                        timestamp_value / 1000, tz=timezone.utc
-                    )
+                    try:
+                        # ミリ秒タイムスタンプをdatetimeに変換
+                        data_timestamp = datetime.fromtimestamp(
+                            timestamp_value / 1000, tz=timezone.utc
+                        )
+                    except (ValueError, TypeError, OSError) as e:
+                        logger.warning(f"不正なタイムスタンプ数値: {timestamp_value} - エラー: {e}")
+                        data_timestamp = None
                 elif isinstance(timestamp_value, str):
-                    # ISO形式の文字列をdatetimeに変換
-                    data_timestamp = datetime.fromisoformat(
-                        timestamp_value.replace("Z", "+00:00")
-                    )
+                    try:
+                        # ISO形式の文字列をdatetimeに変換
+                        data_timestamp = datetime.fromisoformat(
+                            timestamp_value.replace("Z", "+00:00")
+                        )
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"不正なdatetime文字列: {timestamp_value} - エラー: {e}")
+                        data_timestamp = None
+                else:
+                    logger.warning(f"不明なtimestamp形式: {type(timestamp_value)}")
+                    data_timestamp = None
 
             # オープンインタレスト値の処理（複数のフィールドを確認して取得）
             open_interest_value = None
@@ -256,7 +296,15 @@ def ensure_list(
                 pass
 
         # その他は全てPython標準のlist()コンストラクタで処理
-        return list(data)
+        if data is None:
+            return []  # Noneの場合は空リストを返す
+
+        try:
+            return list(data)
+        except TypeError:
+            # イテレートできない場合、空リストを返す
+            logger.warning(f"イテレートできないデータをlistに変換: {type(data)}")
+            return []
 
     except Exception as e:
         if raise_on_error:

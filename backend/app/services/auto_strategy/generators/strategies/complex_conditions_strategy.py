@@ -2,11 +2,14 @@
 ComplexConditions strategy for condition generation.
 """
 
+import logging
 import random
 from typing import List, Union
 from .base_strategy import ConditionStrategy
 from ...models.strategy_models import IndicatorGene, Condition
 from ...constants import IndicatorType
+
+logger = logging.getLogger(__name__)
 
 class ComplexConditionsStrategy(ConditionStrategy):
     """Strategy for generating complex conditions with multiple indicator combination."""

@@ -52,11 +52,19 @@ class IndicatorCalculator:
         @safe_operation(context=f"指標計算 ({indicator_type})", is_api_call=False)
         def _calculate_indicator():
             # backtesting.pyのデータオブジェクトをDataFrameに変換
+            if data is None:
+                raise ValueError(f"データオブジェクトがNoneです: {indicator_type}")
             df = data.df
 
             # データの基本検証
             if df.empty:
                 raise ValueError(f"データが空です: {indicator_type}")
+
+            # ML指標の場合も必要なカラム検証
+            required_columns = ["Open", "High", "Low", "Close", "Volume"]
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                logger.warning(f"不足しているカラム: {missing_columns}")
 
             # ML指標の場合は専用サービスを使用
             if indicator_type.startswith("ML_"):
@@ -106,6 +114,9 @@ class IndicatorCalculator:
             logger.warning(
                 f"指標初期化開始: {indicator_gene.type}, パラメータ: {indicator_gene.parameters}"
             )
+
+            if strategy_instance is None:
+                raise ValueError(f"戦略インスタンスがNoneです: {indicator_gene.type}")
 
             # 指標計算を直接実行
             result = self.calculate_indicator(

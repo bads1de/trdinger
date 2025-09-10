@@ -1,6 +1,7 @@
 """
 Base strategy classes for condition generation.
 """
+import logging
 from abc import ABC, abstractmethod
 import random
 from typing import List, Tuple, TypeAlias
@@ -8,6 +9,8 @@ from ...models.strategy_models import IndicatorGene, Condition, ConditionGroup, 
 from ...constants import IndicatorType, StrategyType
 
 ConditionList: TypeAlias = List[Condition]
+
+logger = logging.getLogger(__name__)
 
 class ConditionStrategy(ABC):
     """Base class for condition generation strategies."""
@@ -60,7 +63,7 @@ class ConditionStrategy(ABC):
         """Create generic short conditions for an indicator."""
         return self.condition_generator._generic_short_conditions(indicator)
 
-    def _create_ml_long_conditions__(
+    def _create_ml_long_conditions(
         self, indicators: List[IndicatorGene]
     ) -> List[Condition]:
         """Create ML-based long conditions."""

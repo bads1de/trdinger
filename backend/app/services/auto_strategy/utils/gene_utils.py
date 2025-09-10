@@ -81,6 +81,10 @@ class BaseGene(ABC):
                     # その他の型
                     else:
                         init_params[param_name] = value
+        else:
+            # アノテーションがない場合はデータ全体を使用
+            logger.warning(f"クラス {cls.__name__} に型アノテーションがないため、辞書データを直接使用")
+            init_params = data.copy()
 
         return cls(**init_params)
 

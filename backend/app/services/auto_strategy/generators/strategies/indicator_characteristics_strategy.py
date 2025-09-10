@@ -2,11 +2,14 @@
 IndicatorCharacteristics strategy for ML and specialized indicators.
 """
 
+import logging
 from typing import List, Union
 import random
 from .base_strategy import ConditionStrategy
 from ...models.strategy_models import IndicatorGene, Condition
 from ...constants import IndicatorType
+
+logger = logging.getLogger(__name__)
 
 class IndicatorCharacteristicsStrategy(ConditionStrategy):
     """Strategy for generating conditions based on indicator characteristics (primarily ML)."""
@@ -35,7 +38,7 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
 
             # Generate ML-specific short conditions
             # Look for complementary ML indicators for short signals
-            if len(ml_indicators) >= 2:
+            if len(ml_indicators) >= 1:
                 # Add short conditions based on ML probabilities
                 short_conditions.extend(self._create_ml_short_conditions(ml_indicators))
 
@@ -55,11 +58,29 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
         # Ensure we have at least basic conditions
         if not long_conditions or not short_conditions:
             # Use fallback conditions as last resort
-            longfallback, shortfallback, _ = self.condition_generator._generate_fallback_conditions()
-            if not long_conditions:
-                long_conditions = longfallback
-            if not short_conditions:
-                short_conditions = shortfallback
+            try:
+                fallback_result = self.condition_generator._generate_fallback_conditions()
+                # Unpack only if it's a tuple
+                if isinstance(fallback_result, tuple) and len(fallback_result) == 3:
+                    longfallback, shortfallback, _ = fallback_result
+                    if not long_conditions:
+                        long_conditions = longfallback
+                    if not short_conditions:
+                        short_conditions = shortfallback
+                else:
+                    # If not a proper tuple, use default fallback
+                    if not long_conditions:
+                        long_conditions = [Condition(left_operand="close", operator=">", right_operand="open")]
+                    if not short_conditions:
+                        short_conditions = [Condition(left_operand="close", operator="<", right_operand="open")]
+                    logger.warning("Invalid fallback result format, using default conditions")
+            except Exception as e:
+                logger.error(f"Error in fallback generation: {e}")
+                # Use absolute default conditions
+                if not long_conditions:
+                    long_conditions = [Condition(left_operand="close", operator=">", right_operand="open")]
+                if not short_conditions:
+                    short_conditions = [Condition(left_operand="close", operator="<", right_operand="open")]
 
         # Convert to appropriate return types
         long_result = list(long_conditions)

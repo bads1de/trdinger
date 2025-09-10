@@ -5,6 +5,10 @@
 """
 
 import logging
+from functools import wraps
+import time
+
+from .logging_utils import LoggingUtils
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +19,6 @@ class PerformanceUtils:
     @staticmethod
     def time_function(func):
         """関数実行時間測定デコレータ"""
-        import time
-        from functools import wraps
-        from .logging_utils import LoggingUtils
 
         @wraps(func)
         def wrapper(*args, **kwargs):

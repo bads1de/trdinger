@@ -11,15 +11,17 @@ from typing import Any, Callable, Dict, List, Optional, cast
 from dataclasses import dataclass, field
 
 from .base import BaseConfig
-from ..constants import (
+from .ga import (
     GA_DEFAULT_CONFIG,
     DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_FITNESS_CONSTRAINTS,
-    GA_PARAMETER_RANGES,
-    GA_THRESHOLD_RANGES,
     GA_DEFAULT_FITNESS_SHARING,
     DEFAULT_GA_OBJECTIVES,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,
+    GA_PARAMETER_RANGES,
+    GA_THRESHOLD_RANGES,
+)
+from .tpsl import (
     GA_TPSL_SL_RANGE,
     GA_TPSL_TP_RANGE,
     GA_TPSL_RR_RANGE,

@@ -1,0 +1,1 @@
+# auto_strategy tests package

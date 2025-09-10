@@ -10,7 +10,17 @@ import random
 import uuid
 from typing import Union, overload
 
-from ..models.strategy_models import StrategyGene
+from ..models.strategy_models import (
+    StrategyGene,
+    crossover_tpsl_genes,
+    crossover_position_sizing_genes,
+    create_random_tpsl_gene,
+    mutate_tpsl_gene,
+    create_random_position_sizing_gene,
+    mutate_position_sizing_gene,
+)
+from ..serializers.gene_serialization import GeneSerializer
+from ..utils.gene_utils import GeneUtils, prepare_crossover_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -459,12 +469,14 @@ def create_deap_crossover_wrapper(individual_class=None):
             )
 
             # StrategyGeneをIndividualオブジェクトに変換
-            if individual_class is None:
+            if individual_class is not None:
+                _individual_class = individual_class
+            else:
                 from deap import creator
-                individual_class = getattr(creator, "Individual", None)
+                _individual_class = getattr(creator, "Individual", None)
 
-            child1_individual = _convert_to_individual(child1_strategy, individual_class)
-            child2_individual = _convert_to_individual(child2_strategy, individual_class)
+            child1_individual = _convert_to_individual(child1_strategy, _individual_class)
+            child2_individual = _convert_to_individual(child2_strategy, _individual_class)
 
             return child1_individual, child2_individual
 
@@ -498,11 +510,13 @@ def create_deap_mutate_wrapper(individual_class=None):
             mutated_strategy = mutate_strategy_gene_pure(strategy_gene)
 
             # StrategyGeneをIndividualオブジェクトに変換
-            if individual_class is None:
+            if individual_class is not None:
+                _individual_class = individual_class
+            else:
                 from deap import creator
-                individual_class = getattr(creator, "Individual", None)
+                _individual_class = getattr(creator, "Individual", None)
 
-            mutated_individual = _convert_to_individual(mutated_strategy, individual_class)
+            mutated_individual = _convert_to_individual(mutated_strategy, _individual_class)
 
             return mutated_individual,
 

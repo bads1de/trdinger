@@ -375,28 +375,13 @@ class ConditionGenerator:
             return long_result, short_result, exit_result
 
         except Exception as e:
-            self.logger.error(f"異なる指標組み合わせ戦略エラー: {e}")
+            self.logger.error(f"異なる指標組み合わせ戦略エラー: {e} with categorized: {indicators_by_type}, ml_indicators: {len(ml_indicators)}")
             return self._generate_fallback_conditions()
 
     def _create_type_based_conditions(
         self, indicator: IndicatorGene, side: str
     ) -> List[Condition]:
-        """統合された型別条件生成 - YAML設定またはデフォルト"""
-        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
-            self.yaml_config, indicator.type
-        )
-        if config:
-            threshold = YamlIndicatorUtils.get_threshold_from_yaml(
-                self.yaml_config, config, side, self.context
-            )
-            if threshold is not None:
-                final_condition = Condition(
-                    left_operand=indicator.type,
-                    operator=">" if side == "long" else "<",
-                    right_operand=threshold,
-                )
-                self.logger.debug(f"YAML-based {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} {threshold}")
-                return [final_condition]
+        """統合された型別条件生成 - 特別処理優先、次にYAML設定"""
 
         # RSI特別処理
         if indicator.type == "RSI":
@@ -417,6 +402,22 @@ class ConditionGenerator:
             self.logger.debug(f"RSI {side} condition: {indicator.type} {'<' if side == 'long' else '>'} {threshold}")
             return [final_condition]
 
+        # YAML設定チェック
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+            self.yaml_config, indicator.type
+        )
+        if config:
+            threshold = YamlIndicatorUtils.get_threshold_from_yaml(
+                self.yaml_config, config, side, self.context
+            )
+            if threshold is not None:
+                final_condition = Condition(
+                    left_operand=indicator.type,
+                    operator=">" if side == "long" else "<",
+                    right_operand=threshold,
+                )
+                self.logger.debug(f"YAML-based {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} {threshold}")
+                return [final_condition]
 
         # デフォルト
         final_condition = Condition(
@@ -705,22 +706,20 @@ class ConditionGenerator:
 
                 indicator_type = self._get_indicator_type(indicator)
                 if indicator_type == IndicatorType.MOMENTUM:
-                    long_conditions.extend(
-                        self._create_momentum_long_conditions(indicator)
-                    )
-                    short_conditions.extend(
-                        self._create_momentum_short_conditions(indicator)
-                    )
+                    if conditions := self._create_momentum_long_conditions(indicator):
+                        long_conditions.extend(conditions)
+                    if conditions := self._create_momentum_short_conditions(indicator):
+                        short_conditions.extend(conditions)
                 elif indicator_type == IndicatorType.TREND:
-                    long_conditions.extend(
-                        self._create_trend_long_conditions(indicator)
-                    )
-                    short_conditions.extend(
-                        self._create_trend_short_conditions(indicator)
-                    )
+                    if conditions := self._create_trend_long_conditions(indicator):
+                        long_conditions.extend(conditions)
+                    if conditions := self._create_trend_short_conditions(indicator):
+                        short_conditions.extend(conditions)
                 else:
-                    long_conditions.extend(self._generic_long_conditions(indicator))
-                    short_conditions.extend(self._generic_short_conditions(indicator))
+                    if conditions := self._generic_long_conditions(indicator):
+                        long_conditions.extend(conditions)
+                    if conditions := self._generic_short_conditions(indicator):
+                        short_conditions.extend(conditions)
 
             if not long_conditions:
                 long_conditions = [

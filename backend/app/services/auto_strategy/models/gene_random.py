@@ -35,6 +35,19 @@ def create_random_tpsl_gene() -> TPSLGene:
     """ランダムなTP/SL遺伝子を生成"""
     method = random.choice(list(TPSLMethod))
 
+    method_weights = {
+        "fixed": random.uniform(0.1, 0.4),
+        "risk_reward": random.uniform(0.2, 0.5),
+        "volatility": random.uniform(0.1, 0.4),
+        "statistical": random.uniform(0.1, 0.3),
+    }
+
+    # Normalize method_weights to sum to 1.0
+    total_weight = sum(method_weights.values())
+    if total_weight > 0:
+        for key in method_weights:
+            method_weights[key] /= total_weight
+
     return TPSLGene(
         method=method,
         stop_loss_pct=random.uniform(0.01, 0.08),
@@ -46,12 +59,7 @@ def create_random_tpsl_gene() -> TPSLGene:
         atr_period=random.randint(10, 30),
         lookback_period=random.randint(50, 200),
         confidence_threshold=random.uniform(0.5, 0.9),
-        method_weights={
-            "fixed": random.uniform(0.1, 0.4),
-            "risk_reward": random.uniform(0.2, 0.5),
-            "volatility": random.uniform(0.1, 0.4),
-            "statistical": random.uniform(0.1, 0.3),
-        },
+        method_weights=method_weights,
         enabled=True,
         priority=random.uniform(0.5, 1.5),
     )

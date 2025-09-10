@@ -1,9 +1,13 @@
+"""
+Test for StrategyGene model
+"""
 import pytest
-from backend.app.services.auto_strategy.models.pure_strategy_models import PureStrategyGene, PositionSizingMethod
+from backend.app.services.auto_strategy.models.strategy_gene import StrategyGene
+from backend.app.services.auto_strategy.models.enums import PositionSizingMethod
 
-class TestPureStrategyGene:
+class TestStrategyGene:
     def test_init_default(self):
-        gene = PureStrategyGene()
+        gene = StrategyGene()
 
         assert gene.id == ""
         assert gene.indicators == []
@@ -17,33 +21,33 @@ class TestPureStrategyGene:
         assert gene.metadata == {}
 
     def test_init_with_values(self):
-        gene = PureStrategyGene(id="test_strategy")
+        gene = StrategyGene(id="test_strategy")
 
         assert gene.id == "test_strategy"
         assert gene.indicators == []
         assert gene.entry_conditions == []
 
     def test_get_effective_long_conditions_no_long_conditions(self):
-        gene = PureStrategyGene()
+        gene = StrategyGene()
 
         effective = gene.get_effective_long_conditions()
 
         assert effective == []
 
     def test_get_effective_short_conditions_no_short_conditions(self):
-        gene = PureStrategyGene()
+        gene = StrategyGene()
 
         effective = gene.get_effective_short_conditions()
 
         assert effective == []
 
     def test_has_long_short_separation_false(self):
-        gene = PureStrategyGene()
+        gene = StrategyGene()
 
         assert gene.has_long_short_separation() is False
 
     def test_method_property(self):
-        gene = PureStrategyGene()
+        gene = StrategyGene()
 
         # Default method when no position_sizing_gene
         assert gene.method == PositionSizingMethod.FIXED_RATIO

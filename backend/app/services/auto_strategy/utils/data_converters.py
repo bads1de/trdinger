@@ -1,6 +1,7 @@
 """データ変換ユーティリティ"""
 
 import logging
+import math
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -13,8 +14,12 @@ class DataConverter:
     def ensure_float(value: Any, default: float = 0.0) -> float:
         """値をfloatに安全に変換"""
         try:
-            return float(value)
-        except (ValueError, TypeError):
+            result = float(value)
+            if not math.isfinite(result):
+                logger.warning(f"float変換失敗: {value} (無効値), デフォルト値 {default} を使用")
+                return default
+            return result
+        except (ValueError, TypeError, OverflowError):
             logger.warning(f"float変換失敗: {value}, デフォルト値 {default} を使用")
             return default
 
@@ -22,8 +27,12 @@ class DataConverter:
     def ensure_int(value: Any, default: int = 0) -> int:
         """値をintに安全に変換"""
         try:
-            return int(value)
-        except (ValueError, TypeError):
+            result = int(value)
+            if not math.isfinite(result):
+                logger.warning(f"int変換失敗: {value} (無効値), デフォルト値 {default} を使用")
+                return default
+            return result
+        except (ValueError, TypeError, OverflowError):
             logger.warning(f"int変換失敗: {value}, デフォルト値 {default} を使用")
             return default
 
@@ -54,6 +63,6 @@ class DataConverter:
     @staticmethod
     def normalize_symbol(symbol: Optional[str], provider: str = "generic") -> str:
         """シンボルを正規化（統一サービス経由）"""
-        if not symbol:
+        if not symbol or not symbol.strip():
             return "BTC:USDT"
         return symbol.strip().upper()

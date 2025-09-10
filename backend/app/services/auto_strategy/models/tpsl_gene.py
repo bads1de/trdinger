@@ -12,6 +12,41 @@ from ..utils.gene_utils import BaseGene
 
 @dataclass
 class TPSLGene(BaseGene):
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> TPSLGene:
+        """辞書形式からTPSLGeneオブジェクトを復元
+
+        BaseGeneのfrom_dictを安全に拡張し、すべてのフィールドを適切に初期化します。
+        """
+        init_params = {}
+
+        # クラスアノテーションからパラメータ情報を取得
+        if hasattr(cls, "__annotations__"):
+            annotations = cls.__annotations__
+
+            for param_name, param_type in annotations.items():
+                if param_name in data:
+                    value = data[param_name]
+
+                    # Enum型への変換
+                    if hasattr(param_type, "__members__"):
+                        if isinstance(value, str):
+                            try:
+                                init_params[param_name] = param_type(value)
+                            except ValueError:
+                                logger.warning(f"無効なEnum値 {value} を無視")
+                        else:
+                            init_params[param_name] = value
+                    else:
+                        init_params[param_name] = value
+
+        # TPSLGene固有のフィールドを明示的に処理
+        for param_name in TPSLGene().__dict__.keys():
+            if param_name not in init_params and param_name in data:
+                init_params[param_name] = data[param_name]
+
+        return cls(**init_params)
     """
     TP/SL遺伝子
 
@@ -72,6 +107,18 @@ class TPSLGene(BaseGene):
             )
 
             # method_weightsの検証
+            # 各値が0以上であることを確認
+            for key, value in self.method_weights.items():
+                if value < 0:
+                    errors.append(f"method_weights[{key}]は0以上である必要があります")
+
+            # 必要なキーがすべて含まれていることを確認
+            required_keys = {"fixed", "risk_reward", "volatility", "statistical"}
+            missing_keys = required_keys - set(self.method_weights.keys())
+            if missing_keys:
+                errors.append(f"method_weightsに不足しているキー: {missing_keys}")
+
+            # 合計値が1.0であることを確認
             total_weight = sum(self.method_weights.values())
             if not (0.99 <= total_weight <= 1.01):  # 浮動小数点誤差考慮
                 errors.append("method_weightsの合計は1.0である必要があります")

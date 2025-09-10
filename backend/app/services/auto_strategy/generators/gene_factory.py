@@ -241,7 +241,7 @@ class GeneGeneratorFactory:
     """遺伝子生成器ファクトリー"""
 
     @staticmethod
-    def create_generator(generator_type: GeneratorType, config: Any, random_generator = None):
+    def create_generator(generator_type: GeneratorType, config: Any, random_generator = None) -> 'BaseGeneGenerator':
         """生成器タイプに応じた生成器を作成（DI対応）"""
         if generator_type == GeneratorType.RANDOM:
             # 実際のRandomGeneGeneratorを使用（型チェックなし）

@@ -42,11 +42,11 @@ OHLCV_VALIDATION_CONFIG = {
 }
 
 EXTENDED_MARKET_DATA_VALIDATION_CONFIG = {
-    "Open": {"min": 0, "required": True},
-    "High": {"min": 0, "required": True},
-    "Low": {"min": 0, "required": True},
-    "Close": {"min": 0, "required": True},
-    "Volume": {"min": 0, "required": True},
+    "Open": {"min": 0, "max": 1e6, "required": True},
+    "High": {"min": 0, "max": 1e6, "required": True},
+    "Low": {"min": 0, "max": 1e6, "required": True},
+    "Close": {"min": 0, "max": 1e6, "required": True},
+    "Volume": {"min": 0, "max": 1e12, "required": True},
     "open_interest": {"min": 0, "required": False},
     "funding_rate": {"min": -1, "max": 1, "required": False},
     "fear_greed_value": {"min": 0, "max": 100, "required": False},
@@ -161,7 +161,8 @@ def clean_dataframe_with_config(
             else:
                 # 数値型に変換（エラーの場合はNaN）
                 numeric_data = pd.to_numeric(col_data, errors="coerce")
-                cleaned_df.loc[:, col_name] = numeric_data
+                # 明示的にfloat64型に変換
+                cleaned_df.loc[:, col_name] = numeric_data.astype("float64")
 
             # 範囲外の値をクリップ
             if "min" in col_config:
@@ -290,11 +291,11 @@ class DataValidator:
             if all(col in df.columns for col in ["Open", "High", "Low", "Close"]):
                 # High >= max(Open, Close) and Low <= min(Open, Close)
                 high_violations = (
-                    (df["High"] < df["Open"]) | (df["High"] < df["Close"])
+                    (df["High"] < np.maximum(df["Open"], df["Close"]))
                 ).sum()
 
                 low_violations = (
-                    (df["Low"] > df["Open"]) | (df["Low"] > df["Close"])
+                    (df["Low"] > np.minimum(df["Open"], df["Close"]))
                 ).sum()
 
                 total_violations = high_violations + low_violations
@@ -418,7 +419,21 @@ class DataValidator:
 
                 # タイムスタンプの検証
                 timestamp = record["timestamp"]
-                if not isinstance(timestamp, (datetime, str, int, float)):
+                if isinstance(timestamp, datetime):
+                    pass  # OK
+                elif isinstance(timestamp, str):
+                    # strの場合はISO形式かどうかチェック
+                    try:
+                        datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    except (ValueError, TypeError):
+                        return False
+                elif isinstance(timestamp, (int, float)):
+                    # 数値の場合は妥当な範囲かチェック
+                    try:
+                        datetime.fromtimestamp(float(timestamp), tz=timezone.utc)
+                    except (ValueError, TypeError, OSError):
+                        return False
+                else:
                     return False
 
             return True

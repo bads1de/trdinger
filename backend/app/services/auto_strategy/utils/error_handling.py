@@ -76,13 +76,10 @@ class AutoStrategyErrorHandler(ErrorHandler):
         Returns:
             フォールバック値
         """
-        # ErrorHandlerの機能を活用
-        return AutoStrategyErrorHandler.safe_execute(
-            lambda: None,
-            error_message=f"{context}でエラーが発生: {error}",
-            default_return=fallback_value,
-            log_level=log_level,
-        )
+        # エラーをログ出力し、フォールバック値を返す
+        log_func = getattr(logger, log_level, logger.error)
+        log_func(f"{context}でエラーが発生: {error}")
+        return fallback_value
 
     @staticmethod
     def handle_system_error(

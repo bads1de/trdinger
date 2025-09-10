@@ -132,7 +132,7 @@ class AutoStrategyConfig:
         errors = []
 
         # cache_ttl_hoursの検証
-        if self.cache_ttl_hours < 0:
+        if isinstance(self.cache_ttl_hours, (int, float)) and self.cache_ttl_hours < 0:
             errors.append("キャッシュTTLは正の数である必要があります")
 
         # log_levelの検証

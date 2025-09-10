@@ -41,7 +41,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
         logger.debug(f"ML indicators count: {len(ml_indicators)}")
 
         # Add trend-based conditions for long
-        if indicators_by_type.get(IndicatorType.TREND):
+        if indicators_by_type.get(IndicatorType.TREND) and len(indicators_by_type[IndicatorType.TREND]) > 0:
             selected_trend = self._create_trend_long_conditions(
                 random.choice(indicators_by_type[IndicatorType.TREND])
             )
@@ -49,7 +49,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
             logger.debug(f"Added {len(selected_trend)} trend long conditions")
 
         # Add momentum conditions for long
-        if indicators_by_type.get(IndicatorType.MOMENTUM):
+        if indicators_by_type.get(IndicatorType.MOMENTUM) and len(indicators_by_type[IndicatorType.MOMENTUM]) > 0:
             selected_momentum = self._create_momentum_long_conditions(
                 random.choice(indicators_by_type[IndicatorType.MOMENTUM])
             )
@@ -65,14 +65,14 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
             logger.debug(f"Added {len(ml_long_conditions)} ML long conditions")
 
         # Short conditions (opposite direction)
-        if indicators_by_type.get(IndicatorType.TREND):
+        if indicators_by_type.get(IndicatorType.TREND) and len(indicators_by_type[IndicatorType.TREND]) > 0:
             selected_trend_short = self._create_trend_short_conditions(
                 random.choice(indicators_by_type[IndicatorType.TREND])
             )
             short_conditions.extend(selected_trend_short)
             logger.debug(f"Added {len(selected_trend_short)} trend short conditions")
 
-        if indicators_by_type.get(IndicatorType.MOMENTUM):
+        if indicators_by_type.get(IndicatorType.MOMENTUM) and len(indicators_by_type[IndicatorType.MOMENTUM]) > 0:
             selected_momentum_short = self._create_momentum_short_conditions(
                 random.choice(indicators_by_type[IndicatorType.MOMENTUM])
             )

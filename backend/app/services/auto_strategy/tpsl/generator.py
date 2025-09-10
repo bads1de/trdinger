@@ -59,9 +59,13 @@ class VolatilityStrategy(TPSLStrategy):
         # 簡単な実装 - 後で詳細化
         base_atr_pct = kwargs.get("base_atr_pct", 0.02)
 
+        # ATR multiplierパラメータを使用
+        sl_multiplier = kwargs.get("atr_multiplier_sl", 1.5)
+        tp_multiplier = kwargs.get("atr_multiplier_tp", 3.0)
+
         return TPSLResult(
-            stop_loss_pct=base_atr_pct * 1.5,
-            take_profit_pct=base_atr_pct * 3.0,
+            stop_loss_pct=base_atr_pct * sl_multiplier,
+            take_profit_pct=base_atr_pct * tp_multiplier,
             method_used="volatility",
             confidence_score=0.9,
             expected_performance={"volatility_adjustment": "applied"},

@@ -86,7 +86,7 @@ _INDICATOR_CHARACTERISTICS_BASE = {
     },
     "ATR": {
         "type": "volatility",
-        "range": (0, None),
+        "range": None,
         "volatility_measure": True,
     },
     "ML_UP_PROB": {

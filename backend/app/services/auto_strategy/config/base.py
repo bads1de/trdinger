@@ -7,7 +7,7 @@ BaseConfigクラス
 import json
 import logging
 from abc import ABC
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, MISSING
 from typing import Any, Dict, List, Tuple
 
 
@@ -35,9 +35,9 @@ class BaseConfig(ABC):
         """
         defaults = {}
         for field_info in fields(cls):
-            if field_info.default is not field_info.default_factory:  # sentinel以外
+            if field_info.default is not MISSING:  # _MISSING以外
                 defaults[field_info.name] = field_info.default
-            elif field_info.default_factory is not None:
+            if field_info.default_factory is not MISSING:
                 try:
                     # default_factoryがcallableの場合呼び出し
                     if callable(field_info.default_factory):
@@ -57,7 +57,7 @@ class BaseConfig(ABC):
             # 必須フィールドチェック
             required_fields = self.validation_rules.get("required_fields", [])
             for field_name in required_fields:
-                if not hasattr(self, field_name) or getattr(self, field_name) is None:
+                if not hasattr(self, field_name) or not getattr(self, field_name):
                     errors.append(f"必須フィールド '{field_name}' が設定されていません")
 
             # 範囲チェック
@@ -106,7 +106,10 @@ class BaseConfig(ABC):
             # データで更新
             for key, value in data.items():
                 if hasattr(instance, key):
-                    setattr(instance, key, value)
+                    try:
+                        setattr(instance, key, value)
+                    except Exception as e:
+                        logger.warning(f"Field設定エラー: {key} = {value}, {e}")
 
             return instance
         except Exception as e:
@@ -143,6 +146,9 @@ class BaseConfig(ABC):
         try:
             data = json.loads(json_str)
             return cls.from_dict(data)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON復元エラー: {e}", exc_info=True)
+            return cls()
         except Exception as e:
             logger.error(f"JSON復元エラー: {e}", exc_info=True)
             raise ValueError(f"JSON からの復元に失敗しました: {e}")

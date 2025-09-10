@@ -72,6 +72,12 @@ def crossover_tpsl_genes(
         choice_fields=choice_fields,
     )
 
+    # 共有参照を防ぐため、method_weightsをコピー
+    if hasattr(child1, 'method_weights') and isinstance(child1.method_weights, dict):
+        child1.method_weights = child1.method_weights.copy()
+    if hasattr(child2, 'method_weights') and isinstance(child2.method_weights, dict):
+        child2.method_weights = child2.method_weights.copy()
+
     # method_weightsの特殊処理
     # 辞書の各キーにたいして比率の平均を取る
     all_keys = set(parent1.method_weights.keys()) | set(parent2.method_weights.keys())

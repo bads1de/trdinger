@@ -871,6 +871,8 @@ class DataProcessor:
         Returns:
             補間されたDataFrame
         """
+        # 元のデータのコピーを保存（バグ19対応: null処理強化）
+        original_df = df.copy()
         result_df = df.copy()
         default_fill_values = default_fill_values or {}
 

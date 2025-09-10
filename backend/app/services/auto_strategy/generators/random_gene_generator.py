@@ -31,9 +31,6 @@ from ..constants import (
     OPERATORS,
     DATA_SOURCES,
     CURATED_TECHNICAL_INDICATORS,
-    MOVING_AVERAGE_INDICATORS,
-    PREFERRED_MA_INDICATORS,
-    MA_INDICATORS_NEEDING_PERIOD
 )
 from .condition_generator import ConditionGenerator
 from ..utils.indicator_utils import get_all_indicators
@@ -48,6 +45,7 @@ class RandomGeneGenerator:
 
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
+
     # トレンド系指標の優先順位
     TREND_PREF = (
         "SMA",
@@ -559,7 +557,10 @@ class RandomGeneGenerator:
         for indicator_gene in indicators:
             indicator_type = indicator_gene.type
             # 動的リストに含まれる指標のみを使用
-            if not self._valid_indicator_names or indicator_type in self._valid_indicator_names:
+            if (
+                not self._valid_indicator_names
+                or indicator_type in self._valid_indicator_names
+            ):
                 choices.append(indicator_type)
 
         # 基本データソースを追加（価格データ）

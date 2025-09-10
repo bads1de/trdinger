@@ -186,7 +186,7 @@ class GeneSerializer:
                     "type": "OR_GROUP",
                     "conditions": [self.condition_to_dict(c) for c in obj.conditions],
                 }
-            elif isinstance(obj, Condition):
+            elif isinstance(obj, Condition) or hasattr(obj, 'left_operand'):
                 return self.condition_to_dict(obj)
             else:
                 raise TypeError(f"未知の条件型: {type(obj)}")
