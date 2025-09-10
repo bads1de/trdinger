@@ -1,16 +1,17 @@
 """
 Base strategy classes for condition generation.
 """
+
 import logging
 from abc import ABC, abstractmethod
-import random
 from typing import List, Tuple, TypeAlias
-from ...models.strategy_models import IndicatorGene, Condition, ConditionGroup, Condition
-from ...constants import IndicatorType, StrategyType
+from ...models.strategy_models import IndicatorGene, Condition
+
 
 ConditionList: TypeAlias = List[Condition]
 
 logger = logging.getLogger(__name__)
+
 
 class ConditionStrategy(ABC):
     """Base class for condition generation strategies."""
@@ -37,9 +38,7 @@ class ConditionStrategy(ABC):
         pass
 
     # Helper methods that can be used by subclasses
-    def _classify_indicators_by_type(
-        self, indicators: List[IndicatorGene]
-    ) -> dict:
+    def _classify_indicators_by_type(self, indicators: List[IndicatorGene]) -> dict:
         """
         Classify indicators by their type using the condition generator's classification.
 

@@ -250,3 +250,38 @@ ERROR_CODES = {
     "DATA_ERROR": "データエラー",
     "CONFIG_ERROR": "設定エラー",
 }
+
+# === 取引制約定数 ===
+CONSTRAINTS = {
+    "min_trades": 10,
+    "max_drawdown_limit": 0.3,
+    "max_position_size": 1.0,
+    "min_position_size": 0.01,
+}
+
+# === GAパラメータ範囲定義 ===
+GA_PARAMETER_RANGES = {
+    # 基本パラメータ
+    "period": [5, 200],
+    "fast_period": [5, 20],
+    "slow_period": [20, 50],
+    "signal_period": [5, 15],
+    # 特殊パラメータ
+    "std_dev": [1.5, 2.5],
+    "k_period": [10, 20],
+    "d_period": [3, 7],
+    "slowing": [1, 5],
+    # 閾値パラメータ
+    "overbought": [70, 90],
+    "oversold": [10, 30],
+}
+
+# === GA閾値範囲定義 ===
+THRESHOLD_RANGES = {
+    "oscillator_0_100": [20, 80],
+    "oscillator_plus_minus_100": [-100, 100],
+    "momentum_zero_centered": [-0.5, 0.5],
+    "funding_rate": [0.0001, 0.0005, 0.001, -0.0001, -0.0005, -0.001],
+    "open_interest": [1000000, 5000000, 10000000, 50000000],
+    "price_ratio": [0.95, 1.05],
+}

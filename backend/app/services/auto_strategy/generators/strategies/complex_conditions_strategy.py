@@ -3,20 +3,18 @@ ComplexConditions strategy for condition generation.
 """
 
 import logging
-import random
-from typing import List, Union
+from typing import List
 from .base_strategy import ConditionStrategy
-from ...models.strategy_models import IndicatorGene, Condition
+from ...models.strategy_models import IndicatorGene
 from ...constants import IndicatorType
 
 logger = logging.getLogger(__name__)
 
+
 class ComplexConditionsStrategy(ConditionStrategy):
     """Strategy for generating complex conditions with multiple indicator combination."""
 
-    def generate_conditions(
-        self, indicators: List[IndicatorGene]
-    ):
+    def generate_conditions(self, indicators: List[IndicatorGene]):
         """
         Generate conditions by combining multiple indicators.
 
@@ -38,15 +36,33 @@ class ComplexConditionsStrategy(ConditionStrategy):
             try:
                 # Use the appropriate condition creation method based on indicator type
                 if indicator_type == IndicatorType.MOMENTUM:
-                    long_conds = self.condition_generator._create_momentum_long_conditions(indicator)
-                    short_conds = self.condition_generator._create_momentum_short_conditions(indicator)
+                    long_conds = (
+                        self.condition_generator._create_momentum_long_conditions(
+                            indicator
+                        )
+                    )
+                    short_conds = (
+                        self.condition_generator._create_momentum_short_conditions(
+                            indicator
+                        )
+                    )
                 elif indicator_type == IndicatorType.TREND:
-                    long_conds = self.condition_generator._create_trend_long_conditions(indicator)
-                    short_conds = self.condition_generator._create_trend_short_conditions(indicator)
+                    long_conds = self.condition_generator._create_trend_long_conditions(
+                        indicator
+                    )
+                    short_conds = (
+                        self.condition_generator._create_trend_short_conditions(
+                            indicator
+                        )
+                    )
                 else:
                     # Unknown indicator type - use generic conditions
-                    long_conds = self.condition_generator._generic_long_conditions(indicator)
-                    short_conds = self.condition_generator._generic_short_conditions(indicator)
+                    long_conds = self.condition_generator._generic_long_conditions(
+                        indicator
+                    )
+                    short_conds = self.condition_generator._generic_short_conditions(
+                        indicator
+                    )
 
                 if long_conds:
                     long_conditions.extend(long_conds)
@@ -56,18 +72,28 @@ class ComplexConditionsStrategy(ConditionStrategy):
                     short_conditions.extend(short_conds)
 
             except Exception as e:
-                self.condition_generator.logger.warning(f"Error generating conditions for {indicator.type}: {e}")
+                self.condition_generator.logger.warning(
+                    f"Error generating conditions for {indicator.type}: {e}"
+                )
                 # Fallback to generic conditions
-                long_conditions.extend(self.condition_generator._generic_long_conditions(indicator))
-                short_conditions.extend(self.condition_generator._generic_short_conditions(indicator))
+                long_conditions.extend(
+                    self.condition_generator._generic_long_conditions(indicator)
+                )
+                short_conditions.extend(
+                    self.condition_generator._generic_short_conditions(indicator)
+                )
 
         # If no conditions were generated, try with more indicators
         if not long_conditions:
             for indicator in indicators[:2]:
                 if not indicator.enabled:
                     continue
-                long_conditions.extend(self.condition_generator._generic_long_conditions(indicator))
-                short_conditions.extend(self.condition_generator._generic_short_conditions(indicator))
+                long_conditions.extend(
+                    self.condition_generator._generic_long_conditions(indicator)
+                )
+                short_conditions.extend(
+                    self.condition_generator._generic_short_conditions(indicator)
+                )
 
                 # One more attempt with fallback conditions
                 if not long_conditions:

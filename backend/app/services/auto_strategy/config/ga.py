@@ -82,7 +82,7 @@ GA_PARAMETER_RANGES = {
 }
 
 # GA閾値範囲定義
-THRESHOLD_RANGES = {
+GA_THRESHOLD_RANGES = {
     "oscillator_0_100": [20, 80],
     "oscillator_plus_minus_100": [-100, 100],
     "momentum_zero_centered": [-0.5, 0.5],
