@@ -82,64 +82,23 @@ VALID_INDICATOR_TYPES: List[str] = (
 CURATED_TECHNICAL_INDICATORS = {
     # モメンタム系（オシレーター）
     "MACD",
-    "MACDFIX",
-    "MACDEXT",
     "RSI",
     "STOCH",
-    "STOCHRSI",
-    "CCI",
-    "ADX",
-    "MFI",
     "WILLR",
-    "AROON",
-    "AROONOSC",
-    "BOP",
+    "CCI",
     "MOM",
     "ROC",
-    "TRIX",
-    "TSI",
-    "ULTOSC",
-    "CMO",
-    "DX",
-    "MINUS_DI",
-    "PLUS_DI",
-    "CFO",
-    "CHOP",
-    "CTI",
-    "DPO",
-    "RMI",
-    "RVI",
-    "RVGI",
-    "SMI",
-    "STC",
+    "ADX",
     "QQE",
-    "VORTEX",
-    "PVO",
+    "SQUEEZE",
     # トレンド系（移動平均等）
     "SMA",
     "EMA",
     "WMA",
-    "TRIMA",
-    "CWMA",
-    "KAMA",
-    "TEMA",
     "DEMA",
-    "ALMA",
+    "TEMA",
     "T3",
-    "HMA",
-    "RMA",
-    "SWMA",
-    "ZLMA",
-    "VWMA",
-    "FWMA",
-    "HWMA",
-    "JMA",
-    "MCGD",
-    "VIDYA",
-    "LINREG",
-    "LINREG_SLOPE",
-    "LINREG_INTERCEPT",
-    "LINREG_ANGLE",
+    "KAMA",
     "SAR",
     # ボラティリティ系
     "ATR",
@@ -147,11 +106,16 @@ CURATED_TECHNICAL_INDICATORS = {
     "DONCHIAN",
     "KELTNER",
     "SUPERTREND",
-    "NATR",
-    "TRANGE",
     "ACCBANDS",
-    "HWC",
-    "PDIST",
+    "UI",
+    # ボリューム系
+    "OBV",
+    "AD",
+    "ADOSC",
+    "CMF",
+    "EFI",
+    "MFI",
+    "VWAP",
 }
 
 # 移動平均系指標の定数
@@ -159,52 +123,24 @@ MOVING_AVERAGE_INDICATORS = {
     "SMA",
     "EMA",
     "WMA",
-    "TRIMA",
     "KAMA",
     "TEMA",
     "DEMA",
-    "ALMA",
     "T3",
-    "HMA",
-    "RMA",
-    "SWMA",
-    "ZLMA",
-    "MA",
-    "VWMA",
-    "FWMA",
-    "HWMA",
-    "JMA",
-    "MCGD",
-    "VIDYA",
-    "WCP",
 }
 
 # 優先的な移動平均指標（MA系を2本以上生成する場合の候補）
-PREFERRED_MA_INDICATORS = {"SMA", "EMA", "MA", "HMA", "ALMA", "VIDYA", "JMA"}
+PREFERRED_MA_INDICATORS = {"SMA", "EMA"}
 
 # periodパラメータが必要な移動平均指標
 MA_INDICATORS_NEEDING_PERIOD = {
     "SMA",
     "EMA",
     "WMA",
-    "TRIMA",
     "KAMA",
     "TEMA",
     "DEMA",
-    "ALMA",
     "T3",
-    "HMA",
-    "RMA",
-    "SWMA",
-    "CWMA",
-    "ZLMA",
-    "VWMA",
-    "FWMA",
-    "HWMA",
-    "JMA",
-    "MCGD",
-    "VIDYA",
-    "WCP",
 }
 
 # === ML指標定数 ===
@@ -274,6 +210,62 @@ GA_PARAMETER_RANGES = {
     # 閾値パラメータ
     "overbought": [70, 90],
     "oversold": [10, 30],
+}
+
+# === GA Position Sizing関連定数 ===
+GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS = [
+    "half_optimal_f",
+    "volatility_based",
+    "fixed_ratio",
+    "fixed_quantity",
+]
+
+GA_POSITION_SIZING_LOOKBACK_RANGE = [50, 200]
+GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE = [0.25, 0.75]
+GA_POSITION_SIZING_ATR_PERIOD_RANGE = [10, 30]
+GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE = [1.0, 4.0]
+GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [0.01, 0.05]
+GA_POSITION_SIZING_FIXED_RATIO_RANGE = [0.05, 0.3]
+GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 5.0]
+GA_POSITION_SIZING_MIN_SIZE_RANGE = [0.01, 0.1]
+GA_POSITION_SIZING_MAX_SIZE_RANGE = [0.001, 1.0]
+GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]
+
+POSITION_SIZING_LIMITS = {
+    "lookback_period": (10, 500),
+    "optimal_f_multiplier": (0.1, 1.0),
+    "atr_period": (5, 50),
+    "atr_multiplier": (0.5, 10.0),
+    "risk_per_trade": (0.001, 0.1),
+    "fixed_ratio": (0.01, 10.0),
+    "fixed_quantity": (0.01, 1000.0),
+    "min_position_size": (0.001, 1.0),
+    "max_position_size": (0.001, 1.0),
+}
+
+# === GA TPSL関連定数 ===
+GA_DEFAULT_TPSL_METHOD_CONSTRAINTS = [
+    "fixed_percentage",
+    "risk_reward_ratio",
+    "volatility_based",
+    "statistical",
+    "adaptive",
+]
+
+GA_TPSL_SL_RANGE = [0.01, 0.08]
+GA_TPSL_TP_RANGE = [0.02, 0.20]
+GA_TPSL_RR_RANGE = [1.2, 4.0]
+GA_TPSL_ATR_MULTIPLIER_RANGE = [1.0, 4.0]
+
+TPSL_LIMITS = {
+    "stop_loss_pct": (0.005, 0.15),
+    "take_profit_pct": (0.01, 0.3),
+    "base_stop_loss": (0.005, 0.15),
+    "atr_multiplier_sl": (0.5, 5.0),
+    "atr_multiplier_tp": (1.0, 10.0),
+    "atr_period": (5, 50),
+    "lookback_period": (20, 500),
+    "confidence_threshold": (0.1, 1.0),
 }
 
 # === GA閾値範囲定義 ===

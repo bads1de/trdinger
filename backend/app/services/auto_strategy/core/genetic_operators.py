@@ -16,11 +16,8 @@ from ..models.strategy_models import (
     crossover_position_sizing_genes,
     create_random_tpsl_gene,
     mutate_tpsl_gene,
-    create_random_position_sizing_gene,
     mutate_position_sizing_gene,
 )
-from ..serializers.gene_serialization import GeneSerializer
-from ..utils.gene_utils import GeneUtils, prepare_crossover_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -109,9 +106,7 @@ def crossover_strategy_genes_pure(
     """
     try:
         # 指標遺伝子の交叉（単純な一点交叉）
-        min_indicators = min(
-            len(parent1.indicators), len(parent2.indicators)
-        )
+        min_indicators = min(len(parent1.indicators), len(parent2.indicators))
         if min_indicators <= 1:
             # 指標数が1以下の場合は交叉点を0に設定（全体を交換）
             crossover_point = 0
@@ -119,12 +114,10 @@ def crossover_strategy_genes_pure(
             crossover_point = random.randint(1, min_indicators)
 
         child1_indicators = (
-            parent1.indicators[:crossover_point]
-            + parent2.indicators[crossover_point:]
+            parent1.indicators[:crossover_point] + parent2.indicators[crossover_point:]
         )
         child2_indicators = (
-            parent2.indicators[:crossover_point]
-            + parent1.indicators[crossover_point:]
+            parent2.indicators[:crossover_point] + parent1.indicators[crossover_point:]
         )
 
         # 最大指標数制限
@@ -170,8 +163,6 @@ def crossover_strategy_genes_pure(
         child2_tpsl = None
 
         if parent1.tpsl_gene and parent2.tpsl_gene:
-            from ..models.strategy_models import crossover_tpsl_genes
-
             child1_tpsl, child2_tpsl = crossover_tpsl_genes(
                 parent1.tpsl_gene, parent2.tpsl_gene
             )
@@ -190,8 +181,6 @@ def crossover_strategy_genes_pure(
         ps_gene2 = getattr(parent2, "position_sizing_gene", None)
 
         if ps_gene1 and ps_gene2:
-            from ..models.strategy_models import crossover_position_sizing_genes
-
             child1_position_sizing, child2_position_sizing = (
                 crossover_position_sizing_genes(ps_gene1, ps_gene2)
             )
@@ -205,9 +194,7 @@ def crossover_strategy_genes_pure(
         # メタデータの交叉（共通ユーティリティ使用）
         from ..utils.gene_utils import prepare_crossover_metadata
 
-        child1_metadata, child2_metadata = prepare_crossover_metadata(
-            parent1, parent2
-        )
+        child1_metadata, child2_metadata = prepare_crossover_metadata(parent1, parent2)
 
         # ロング・ショート条件の交叉
         if random.random() < 0.5:
@@ -285,7 +272,9 @@ def crossover_strategy_genes(
         strategy_parent2 = _convert_to_strategy_gene(parent2)
 
         # 純粋関数で交叉を実行
-        result_child1, result_child2 = crossover_strategy_genes_pure(strategy_parent1, strategy_parent2)
+        result_child1, result_child2 = crossover_strategy_genes_pure(
+            strategy_parent1, strategy_parent2
+        )
 
         # 元の型に応じて適切な形式で返す
         if parent1_is_individual or parent2_is_individual:
@@ -401,22 +390,16 @@ def mutate_strategy_gene_pure(
         tpsl_gene = mutated.tpsl_gene
         if tpsl_gene:
             if random.random() < mutation_rate:
-                from ..models.strategy_models import mutate_tpsl_gene
-
                 mutated.tpsl_gene = mutate_tpsl_gene(tpsl_gene, mutation_rate)
         else:
             # TP/SL遺伝子が存在しない場合、低確率で新規作成
             if random.random() < mutation_rate * 0.2:
-                from ..models.strategy_models import create_random_tpsl_gene
-
                 mutated.tpsl_gene = create_random_tpsl_gene()
 
         # ポジションサイジング遺伝子の突然変異
         ps_gene = getattr(mutated, "position_sizing_gene", None)
         if ps_gene:
             if random.random() < mutation_rate:
-                from ..models.strategy_models import mutate_position_sizing_gene
-
                 mutated.position_sizing_gene = mutate_position_sizing_gene(
                     ps_gene, mutation_rate
                 )
@@ -454,6 +437,7 @@ def create_deap_crossover_wrapper(individual_class=None):
     Returns:
         DEAPツールボックスに登録可能なクロスオーバー関数
     """
+
     def crossover_wrapper(parent1, parent2):
         """
         DEAP用のクロスオーバーラッパー
@@ -473,10 +457,15 @@ def create_deap_crossover_wrapper(individual_class=None):
                 _individual_class = individual_class
             else:
                 from deap import creator
+
                 _individual_class = getattr(creator, "Individual", None)
 
-            child1_individual = _convert_to_individual(child1_strategy, _individual_class)
-            child2_individual = _convert_to_individual(child2_strategy, _individual_class)
+            child1_individual = _convert_to_individual(
+                child1_strategy, _individual_class
+            )
+            child2_individual = _convert_to_individual(
+                child2_strategy, _individual_class
+            )
 
             return child1_individual, child2_individual
 
@@ -498,6 +487,7 @@ def create_deap_mutate_wrapper(individual_class=None):
     Returns:
         DEAPツールボックスに登録可能な突然変異関数
     """
+
     def mutate_wrapper(individual):
         """
         DEAP用の突然変異ラッパー
@@ -514,16 +504,19 @@ def create_deap_mutate_wrapper(individual_class=None):
                 _individual_class = individual_class
             else:
                 from deap import creator
+
                 _individual_class = getattr(creator, "Individual", None)
 
-            mutated_individual = _convert_to_individual(mutated_strategy, _individual_class)
+            mutated_individual = _convert_to_individual(
+                mutated_strategy, _individual_class
+            )
 
-            return mutated_individual,
+            return (mutated_individual,)
 
         except Exception as e:
             logger.error(f"DEAP突然変異ラッパーエラー: {e}")
             # エラー時は元の個体をそのまま返す
-            return individual,
+            return (individual,)
 
     return mutate_wrapper
 

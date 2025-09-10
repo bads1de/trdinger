@@ -48,146 +48,198 @@ _INDICATOR_CHARACTERISTICS_BASE = {
         "range": None,  # 価格依存
         "zero_cross": True,
         "signal_line": True,
-    },
-    "MACDEXT": {
-        "type": "momentum",
-        "range": None,  # 価格依存
-        "zero_cross": True,
-        "signal_line": True,
-    },
-    "SMA": {
-        "type": "trend",
-        "price_comparison": True,
-        "trend_following": True,
-    },
-    "EMA": {
-        "type": "trend",
-        "price_comparison": True,
-        "trend_following": True,
-    },
-    "ADX": {
-        "type": "trend",
-        "range": (0, 100),
-        "trend_strength": True,
-        "no_direction": True,  # 方向性を示さない
-        "strong_trend_threshold": 25,
-    },
-    "BB": {
-        "type": "volatility",
-        "components": ["upper", "middle", "lower"],
-        "mean_reversion": True,
-        "breakout_strategy": True,
-    },
-    "BBANDS": {
-        "type": "volatility",
-        "components": ["upper", "middle", "lower"],
-        "mean_reversion": True,
-        "breakout_strategy": True,
-    },
-    "ATR": {
-        "type": "volatility",
-        "range": None,
-        "volatility_measure": True,
-    },
-    "ML_UP_PROB": {
-        "type": "ml_prediction",
-        "range": (0, 1),  # 確率値
-        "ml_prediction": True,
-        "long_zones": [(0.6, 1.0)],
-        "short_zones": [(0, 0.4)],
-        "neutral_zone": (0.4, 0.6),
-        "high_confidence_threshold": 0.7,
-    },
-    "ML_DOWN_PROB": {
-        "type": "ml_prediction",
-        "range": (0, 1),  # 確率値
-        "ml_prediction": True,
-        "long_zones": [(0, 0.4)],
-        "short_zones": [(0.6, 1.0)],
-        "neutral_zone": (0.4, 0.6),
-        "high_confidence_threshold": 0.7,
-    },
-    "ML_RANGE_PROB": {
-        "type": "ml_prediction",
-        "range": (0, 1),  # 確率値
-        "ml_prediction": True,
-        "long_zones": [(0, 0.3)],
-        "short_zones": [(0, 0.3)],
-        "neutral_zone": (0.7, 1.0),
-        "high_confidence_threshold": 0.8,
-    },
-    "FWMA": {
-        "type": "trend",
-        "price_comparison": True,
-        "trend_following": True,
-        "weighted_average": True,  # フィボナッチ重み付き移動平均
-    },
-    "SWMA": {
-        "type": "trend",
-        "price_comparison": True,
-        "trend_following": True,
-        "symmetric_weighting": True,  # 対称重み付き移動平均
-    },
-    "VIDYA": {
-        "type": "trend",
-        "price_comparison": True,
-        "trend_following": True,
-        "adaptive_smoothing": True,  # 適応的スムージング
-        "volatility_adaptive": True,  # ボラティリティ適応型
-    },
-    "LINREG": {
-        "type": "trend",
-        "price_comparison": True,
-        "trend_following": True,
-        "regression_based": True,  # 回帰ベース
-        "linear_regression": True,  # 線形回帰
-    },
-    "LINREG_SLOPE": {
-        "type": "trend",
-        "range": None,  # 価格トレンドに応じた値
-        "regression_based": True,
-        "slope_tracking": True,  # 勾配追跡
-        "momentum_like": True,  # モメンタム様
-    },
-    "LINREG_INTERCEPT": {
-        "type": "trend",
-        "price_comparison": True,
-        "regression_based": True,
-        "trend_following": True,
-    },
-    "LINREG_ANGLE": {
-        "type": "trend",
-        "range": (-90, 90),  # 角度範囲
-        "angle_tracking": True,  # 角度追跡
-        "trend_strength": True,  # トレンド強度を示唆
-        "oscillator_like": True,  # オシレーター様
-    },
-    "PPO": {
-        "type": "trend",
-        "range": (-100, 100),
-        "long_zones": [(-60, -20), (-10, -1)],
-        "short_zones": [(1, 10), (20, 60)],
-        "neutral_zone": (-1, 1),
-        "zero_cross": True,
-        "signal_line": True,
-    },
-    "STC": {
-        "type": "trend",
-        "range": (0, 100),
-        "long_zones": [(25, 50), (50, 75)],
-        "short_zones": [(50, 75), (75, 100)],
-        "neutral_zone": (40, 60),
-    },
-    "MAVP": {
-        "type": "trend",
-        "price_comparison": True,
-        "trend_following": True,
-    },
-    "SAREXT": {
-        "type": "trend",
-        "trend_following": True,
-        "price_comparison": True,
-        "reversal_indicator": True,
+        "SMA": {
+            "type": "trend",
+            "price_comparison": True,
+            "trend_following": True,
+        },
+        "EMA": {
+            "type": "trend",
+            "price_comparison": True,
+            "trend_following": True,
+        },
+        "ADX": {
+            "type": "trend",
+            "range": (0, 100),
+            "trend_strength": True,
+            "no_direction": True,  # 方向性を示さない
+            "strong_trend_threshold": 25,
+        },
+        "BBANDS": {
+            "type": "volatility",
+            "components": ["upper", "middle", "lower"],
+            "mean_reversion": True,
+            "breakout_strategy": True,
+        },
+        "ATR": {
+            "type": "volatility",
+            "range": None,
+            "volatility_measure": True,
+        },
+        "KELTNER": {
+            "type": "volatility",
+            "components": ["upper", "middle", "lower"],
+            "price_comparison": True,
+            "volatility_based": True,
+        },
+        "SUPERTREND": {
+            "type": "trend",
+            "range": None,
+            "trend_following": True,
+            "price_comparison": True,
+            "reversal_indicator": True,
+        },
+        "DONCHIAN": {
+            "type": "volatility",
+            "components": ["upper", "middle", "lower"],
+            "price_comparison": True,
+            "breakout_strategy": True,
+        },
+        "ACCBANDS": {
+            "type": "volatility",
+            "components": ["upper", "middle", "lower"],
+            "price_comparison": True,
+            "acceleration_based": True,
+        },
+        "UI": {
+            "type": "volatility",
+            "range": (0, 100),  # パーセント
+            "volatility_measure": True,
+            "relative_volatility": True,
+            "zero_threshold": 10,  # 安定を示す閾値
+            "high_risk_level": 50,
+        },
+        "OBV": {
+            "type": "volume",
+            "range": None,
+            "volume_accumulation": True,
+            "price_confirmation": True,
+        },
+        "AD": {
+            "type": "volume",
+            "range": None,
+            "volume_pressure": True,
+            "price_confirmation": True,
+        },
+        "ADOSC": {
+            "type": "volume",
+            "range": None,
+            "volume_oscillation": True,
+            "zero_cross": True,
+        },
+        "EFI": {
+            "type": "volume",
+            "range": None,
+            "volume_force": True,
+            "price_volume_combination": True,
+        },
+        "VWAP": {
+            "type": "trend",
+            "price_comparison": True,
+            "volume_weighted": True,
+            "intraday_trend": True,
+        },
+        "WMA": {
+            "type": "trend",
+            "price_comparison": True,
+            "trend_following": True,
+            "linear_weighted": True,
+        },
+        "DEMA": {
+            "type": "trend",
+            "price_comparison": True,
+            "trend_following": True,
+            "double_smoothing": True,
+        },
+        "TEMA": {
+            "type": "trend",
+            "price_comparison": True,
+            "trend_following": True,
+            "triple_smoothing": True,
+        },
+        "T3": {
+            "type": "trend",
+            "price_comparison": True,
+            "trend_following": True,
+            "multiple_smoothing": True,
+        },
+        "KAMA": {
+            "type": "trend",
+            "price_comparison": True,
+            "trend_following": True,
+            "adaptive_smoothing": True,
+            "efficiency_ratio": True,
+        },
+        "SAR": {
+            "type": "trend",
+            "trend_following": True,
+            "price_comparison": True,
+            "reversal_indicator": True,
+            "price_level": True,
+        },
+        "ML_UP_PROB": {
+            "type": "ml_prediction",
+            "range": (0, 1),  # 確率値
+            "ml_prediction": True,
+            "long_zones": [(0.6, 1.0)],
+            "short_zones": [(0, 0.4)],
+            "neutral_zone": (0.4, 0.6),
+            "high_confidence_threshold": 0.7,
+        },
+        "ML_DOWN_PROB": {
+            "type": "ml_prediction",
+            "range": (0, 1),  # 確率値
+            "ml_prediction": True,
+            "long_zones": [(0, 0.4)],
+            "short_zones": [(0.6, 1.0)],
+            "neutral_zone": (0.4, 0.6),
+            "high_confidence_threshold": 0.7,
+        },
+        "ML_RANGE_PROB": {
+            "type": "ml_prediction",
+            "range": (0, 1),  # 確率値
+            "ml_prediction": True,
+            "long_zones": [(0, 0.3)],
+            "short_zones": [(0, 0.3)],
+            "neutral_zone": (0.7, 1.0),
+            "high_confidence_threshold": 0.8,
+        },
+        "WILLR": {
+            "type": "momentum",
+            "range": (-100, 0),
+            "long_zones": [(-80, 0)],
+            "short_zones": [(-100, -20)],
+            "neutral_zone": (-80, -20),
+            "oversold_threshold": -80,
+            "overbought_threshold": -20,
+        },
+        "MOM": {
+            "type": "momentum",
+            "range": None,
+            "zero_cross": True,
+            "momentum_indicator": True,
+        },
+        "ROC": {
+            "type": "momentum",
+            "range": None,
+            "zero_cross": True,
+            "rate_of_change": True,
+        },
+        "QQE": {
+            "type": "momentum",
+            "range": (0, 100),
+            "long_zones": [(30, 50), (50, 70)],
+            "short_zones": [(50, 70), (70, 100)],
+            "neutral_zone": (40, 60),
+            "oversold_threshold": 30,
+            "overbought_threshold": 70,
+        },
+        "SQUEEZE": {
+            "type": "momentum",
+            "range": (0, 1),  # バイナリ値（収縮時1）
+            "squeeze_indicator": True,
+            "volatility_squeeze": True,
+        },
     },
 }
 

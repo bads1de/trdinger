@@ -6,7 +6,7 @@ DEAPライブラリを使用したGA実装。
 
 import logging
 import time
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List
 
 import numpy as np
 from deap import tools, algorithms
@@ -45,10 +45,7 @@ class EvolutionRunner:
         self.fitness_sharing = fitness_sharing
 
     def run_single_objective_evolution(
-        self,
-        population: List[Any],
-        config: GAConfig,
-        halloffame: List[Any] = None
+        self, population: List[Any], config: GAConfig, halloffame: List[Any] = None
     ) -> tuple[List[Any], Any]:
         """
         単一目的最適化アルゴリズムの実行
@@ -92,10 +89,7 @@ class EvolutionRunner:
         return population, logbook
 
     def run_multi_objective_evolution(
-        self,
-        population: List[Any],
-        config: GAConfig,
-        halloffame: List[Any] = None
+        self, population: List[Any], config: GAConfig, halloffame: List[Any] = None
     ) -> tuple[List[Any], Any]:
         """
         多目的最適化アルゴリズムの実行
@@ -310,7 +304,8 @@ class GeneticAlgorithmEngine:
     def _create_evolution_runner(self, toolbox, stats):
         """EvolutionRunnerインスタンスを作成"""
         fitness_sharing = (
-            self.fitness_sharing if hasattr(self, 'fitness_sharing') and self.fitness_sharing
+            self.fitness_sharing
+            if hasattr(self, "fitness_sharing") and self.fitness_sharing
             else None
         )
         return EvolutionRunner(toolbox, stats, fitness_sharing)
@@ -331,10 +326,14 @@ class GeneticAlgorithmEngine:
         else:
             return runner.run_single_objective_evolution(population, config)
 
-    def _process_results(self, population, config: GAConfig, logbook, start_time: float):
+    def _process_results(
+        self, population, config: GAConfig, logbook, start_time: float
+    ):
         """最適化結果を処理"""
         # 最良個体の取得とデコード
-        best_individual, best_gene, best_strategies = self._extract_best_individuals(population, config)
+        best_individual, best_gene, best_strategies = self._extract_best_individuals(
+            population, config
+        )
 
         execution_time = time.time() - start_time
 
@@ -392,7 +391,6 @@ class GeneticAlgorithmEngine:
     def stop_evolution(self):
         """進化を停止"""
         self.is_running = False
-
 
     def _create_individual(self):
         """

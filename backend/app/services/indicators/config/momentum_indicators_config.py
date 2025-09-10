@@ -236,3 +236,87 @@ def setup_momentum_indicators():
     )
     roc_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(roc_config)
+
+    # SQUEEZE
+    squeeze_config = IndicatorConfig(
+        indicator_name="SQUEEZE",
+        adapter_function=MomentumIndicators.squeeze,
+        required_data=["high", "low", "close"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="momentum",
+        output_names=["SQZ"],  # Will return the primary SQZ column
+        default_output="SQZ",
+        aliases=["SQUEEZE"],
+    )
+    squeeze_config.add_parameter(
+        ParameterConfig(
+            name="bb_length",
+            default_value=20,
+            min_value=5,
+            max_value=100,
+            description="Bollinger Bands length",
+        )
+    )
+    squeeze_config.add_parameter(
+        ParameterConfig(
+            name="bb_std",
+            default_value=2.0,
+            min_value=0.5,
+            max_value=5.0,
+            description="Bollinger Bands standard deviation",
+        )
+    )
+    squeeze_config.add_parameter(
+        ParameterConfig(
+            name="kc_length",
+            default_value=20,
+            min_value=5,
+            max_value=100,
+            description="Keltner Channels length",
+        )
+    )
+    squeeze_config.add_parameter(
+        ParameterConfig(
+            name="kc_scalar",
+            default_value=1.5,
+            min_value=0.1,
+            max_value=5.0,
+            description="Keltner Channels scalar",
+        )
+    )
+    squeeze_config.add_parameter(
+        ParameterConfig(
+            name="mom_length",
+            default_value=12,
+            min_value=2,
+            max_value=50,
+            description="Momentum length",
+        )
+    )
+    squeeze_config.add_parameter(
+        ParameterConfig(
+            name="mom_smooth",
+            default_value=6,
+            min_value=1,
+            max_value=20,
+            description="Momentum smoothing",
+        )
+    )
+    squeeze_config.add_parameter(
+        ParameterConfig(
+            name="use_tr",
+            default_value=True,
+            description="Use True Range for calculations",
+        )
+    )
+    squeeze_config.param_map = {
+        "bb_length": "bb_length",
+        "bb_std": "bb_std",
+        "kc_length": "kc_length",
+        "kc_scalar": "kc_scalar",
+        "mom_length": "mom_length",
+        "mom_smooth": "mom_smooth",
+        "use_tr": "use_tr",
+    }
+    indicator_registry.register(squeeze_config)

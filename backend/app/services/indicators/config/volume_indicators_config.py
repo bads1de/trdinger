@@ -113,3 +113,36 @@ def setup_volume_indicators():
         category="volume",
     )
     indicator_registry.register(vwap_config)
+
+    # MFI
+    mfi_config = IndicatorConfig(
+        indicator_name="MFI",
+        adapter_function=VolumeIndicators.mfi,
+        required_data=["high", "low", "close", "volume"],
+        result_type=IndicatorResultType.SINGLE,
+        scale_type=IndicatorScaleType.OSCILLATOR_0_100,
+        category="volume",
+        output_names=["MFI"],
+        default_output="MFI",
+        aliases=["MFI", "MONEY_FLOW_INDEX"],
+    )
+    mfi_config.add_parameter(
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=100,
+            description="MFI calculation period",
+        )
+    )
+    mfi_config.add_parameter(
+        ParameterConfig(
+            name="drift",
+            default_value=1,
+            min_value=1,
+            max_value=10,
+            description="Difference period",
+        )
+    )
+    mfi_config.param_map = {"length": "length", "drift": "drift"}
+    indicator_registry.register(mfi_config)

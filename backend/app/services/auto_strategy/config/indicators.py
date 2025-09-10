@@ -23,9 +23,7 @@ class IndicatorSettings(BaseConfig):
     """テクニカル指標設定"""
 
     # 利用可能な指標
-    valid_indicator_types: List[str] = field(
-        default_factory=get_valid_indicator_types
-    )
+    valid_indicator_types: List[str] = field(default_factory=get_valid_indicator_types)
     ml_indicator_types: List[str] = field(
         default_factory=lambda: ML_INDICATOR_TYPES.copy()
     )
@@ -42,7 +40,6 @@ class IndicatorSettings(BaseConfig):
     # 指標解決支援
     multi_output_mappings: Dict[str, str] = field(
         default_factory=lambda: {
-            "AROON": "AROON_0",
             "MACD": "MACD_0",
             "STOCH": "STOCH_0",
             "BBANDS": "BBANDS_1",

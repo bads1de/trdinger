@@ -27,13 +27,12 @@ class IndicatorGenerator:
     TREND_PREF = (
         "SMA",
         "EMA",
-        "MA",
-        "HMA",
-        "VIDYA",
-        "LINREG",
-        "LINREG_SLOPE",
-        "LINREG_INTERCEPT",
-        "LINREG_ANGLE",
+        "WMA",
+        "DEMA",
+        "TEMA",
+        "T3",
+        "KAMA",
+        "SAR",
     )
 
     def __init__(self, config: Any):
@@ -120,7 +119,14 @@ class IndicatorGenerator:
 
             experimental = indicator_registry.experimental_indicators
         except Exception:
-            experimental = {"RMI", "DPO", "VORTEX", "EOM", "KVO", "PVT", "CMF"}
+            experimental = {
+                "RMI", "DPO", "VORTEX", "EOM", "KVO", "PVT",
+                "AROON", "AROONOSC", "BOP", "TRIX", "TSI", "ULTOSC", "CMO", "DX",
+                "MINUS_DI", "PLUS_DI", "CFO", "CHOP", "CTI", "RVI", "RVGI", "SMI", "STC", "PVO",
+                "TRIMA", "CWMA", "ALMA", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA",
+                "JMA", "MCGD", "VIDYA", "LINREG", "LINREG_SLOPE", "LINREG_INTERCEPT", "LINREG_ANGLE",
+                "NATR", "TRANGE", "HWC", "PDIST", "STOCHRSI", "MACDFIX", "MACDEXT"
+            }
         try:
             allowed = set(getattr(self.config, "allowed_indicators", []) or [])
             if not allowed:
@@ -268,7 +274,7 @@ class IndicatorGenerator:
                 # フォールバック: SMAを追加（安全策）
                 if (
                     any(
-                        ind.type in ("SMA", "EMA", "MA", "HMA", "ALMA", "VIDYA")
+                        ind.type in ("SMA", "EMA", "WMA", "DEMA", "TEMA", "T3", "KAMA")
                         for ind in indicators
                     )
                     or "SMA" not in self.available_indicators
