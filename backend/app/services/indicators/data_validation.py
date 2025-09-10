@@ -33,28 +33,15 @@ INDICATOR_MIN_DATA_LENGTHS = {
     ),  # EMAは初期値のために3分の1程度
     "WMA": lambda params: get_param_value(params, ["length", "window"], 20),
     "MACD": lambda params: params.get("slow", 26) + params.get("signal", 9) + 5,
-    "STOCHF": lambda params: params.get("fastk_length", 5)
-    + params.get("fastd_length", 3),
     "SUPERTREND": lambda params: get_param_value(params, ["length", "window"], 10) + 10,
     "BBANDS": lambda params: get_param_value(params, ["length", "window"], 20),
-    "AO": lambda params: 34,  # AO needs 34 data points for calculation
-    "PPO": lambda params: params.get("slow", 26) + params.get("signal", 9),
     "STOCHRSI": lambda params: get_param_value(params, ["length", "window"], 14)
     + params.get("k_period", 5)
     + params.get("d_period", 3),
-    "KST": lambda params: max(
-        params.get("roc4", 30) + params.get("n4", 15), params.get("signal", 9) + 10
-    ),
     "TEMA": lambda params: max(
         3, get_param_value(params, ["length", "window"], 14) // 2
     ),
-    "ALMA": lambda params: get_param_value(params, ["length", "window"], 9),
-    "AROON": lambda params: get_param_value(params, ["length", "window"], 14) + 1,
     "UI": lambda params: get_param_value(params, ["length", "window"], 14),
-    "SINWMA": lambda params: get_param_value(params, ["length", "window"], 14),
-    "RVI": lambda params: get_param_value(params, ["length", "window"], 14),
-    "UO": lambda params: params.get("slow", 28) + 10,
-    "FWMA": lambda params: get_param_value(params, ["length", "window"], 10),
 }
 
 
@@ -138,9 +125,6 @@ def get_absolute_minimum_length(indicator_type: str) -> int:
         "EMA": 2,  # EMA needs at least 2 data points
         "TEMA": 3,  # TEMA needs at least 3
         "MACD": 26 + 9 + 3,  # slow + signal + some buffer
-        "STOCHF": 5 + 3 + 3,  # fastk_length + fastd_length + buffer
-        "KST": 30 + 15 + 10,  # largest roc + signal + buffer
-        "AO": 34,  # AO specific minimum
     }
 
     return absolute_mins.get(indicator_type, 1)

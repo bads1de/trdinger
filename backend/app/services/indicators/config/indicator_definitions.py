@@ -6,7 +6,7 @@
 
 import logging
 
-# Import setup functions from new config files
+
 from .momentum_indicators_config import setup_momentum_indicators
 from .trend_indicators_config import setup_trend_indicators
 from .volatility_indicators_config import setup_volatility_indicators

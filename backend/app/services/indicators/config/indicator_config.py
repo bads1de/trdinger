@@ -15,7 +15,6 @@ class IndicatorScaleType(Enum):
     """指標のスケールタイプ"""
 
     OSCILLATOR_0_100 = "oscillator_0_100"  # 0-100スケール（RSI, STOCH等）
-    OSCILLATOR_0_1 = "oscillator_0_1"  # 0-1スケール（ML予測確率等）
     OSCILLATOR_PLUS_MINUS_100 = "oscillator_plus_minus_100"  # ±100スケール（CCI等）
     MOMENTUM_ZERO_CENTERED = "momentum_zero_centered"  # ゼロ近辺変動（TRIX, PPO等）
     PRICE_RATIO = "price_ratio"  # 価格比率（SMA, EMA等）
@@ -23,7 +22,6 @@ class IndicatorScaleType(Enum):
     OPEN_INTEREST = "open_interest"  # オープンインタレスト
     VOLUME = "volume"  # 出来高
     PRICE_ABSOLUTE = "price_absolute"  # 絶対価格
-    PATTERN_BINARY = "pattern_binary"  # パターン認識バイナリ（0/1または-1/1）
 
 
 logger = logging.getLogger(__name__)

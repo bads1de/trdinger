@@ -17,8 +17,6 @@ from .data_validation import validate_data_length_with_fallback, create_nan_resu
 from .config.indicator_definitions import PANDAS_TA_CONFIG, POSITIONAL_DATA_FUNCTIONS
 
 
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +59,7 @@ class TechnicalIndicatorService:
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
             raise
+
     def validate_data_length_with_fallback(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Tuple[bool, int]:
@@ -133,7 +132,7 @@ class TechnicalIndicatorService:
                 )
 
             # Fallback indicators that skip pandas-ta and use manual implementations
-            fallback_indicators = {"PPO", "STOCHF", "EMA", "TEMA", "ALMA", "FWMA", "CV", "IRM"}
+            fallback_indicators = {"EMA", "TEMA"}
             if indicator_type in fallback_indicators:
                 return self._calculate_fallback_indicator(
                     df, indicator_type, normalized_params
@@ -268,54 +267,16 @@ class TechnicalIndicatorService:
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Union[np.ndarray, tuple, None]:
         """
-        Fallback implementation using TrendIndicators/MomentumIndicators classes
-        for indicators that have pandas-ta issues
+        Fallback implementation using TrendIndicators classes
+        for remaining indicators that have pandas-ta issues
+        (PPO and STOCHF removed as they are no longer supported)
         """
         try:
             config = PANDAS_TA_CONFIG.get(indicator_type)
             if not config:
                 return None
 
-            if indicator_type == "PPO":
-                column_name = self._resolve_column_name(df, "Close")
-                if not column_name:
-                    nan_array = np.full(len(df), np.nan)
-                    return nan_array, nan_array, nan_array
-
-                data_series = df[column_name]
-                result = TrendIndicators.ppo(
-                    data_series,
-                    fast=params.get("fast", 12),
-                    slow=params.get("slow", 26),
-                    signal=params.get("signal", 9),
-                )
-                # PPO returns tuple of (ppo_line, signal_line, histogram)
-                return result
-
-            elif indicator_type == "STOCHF":
-                high_column = self._resolve_column_name(df, "High")
-                low_column = self._resolve_column_name(df, "Low")
-                close_column = self._resolve_column_name(df, "Close")
-
-                if not (high_column and low_column and close_column):
-                    nan_array = np.full(len(df), np.nan)
-                    return nan_array, nan_array
-
-                high_series = df[high_column]
-                low_series = df[low_column]
-                close_series = df[close_column]
-
-                result = TrendIndicators.stochf(
-                    high_series,
-                    low_series,
-                    close_series,
-                    length=params.get("fastd_length", 3),
-                    fast_length=params.get("fastk_length", 5),
-                )
-                # STOCHF returns tuple of (fast_k, fast_d)
-                return result
-
-            elif indicator_type in {"EMA", "TEMA", "ALMA", "FWMA"}:
+            if indicator_type in {"EMA", "TEMA"}:
                 column_name = self._resolve_column_name(df, config["data_column"])
                 if not column_name:
                     return np.full(len(df), np.nan)
@@ -329,17 +290,6 @@ class TechnicalIndicatorService:
                 elif indicator_type == "TEMA":
                     result = TrendIndicators.tema(
                         data_series, length=params.get("length", 14)
-                    )
-                elif indicator_type == "ALMA":
-                    result = TrendIndicators.alma(
-                        data_series,
-                        length=params.get("length", 9),
-                        sigma=params.get("sigma", 6.0),
-                        offset=params.get("offset", 0.85),
-                    )
-                elif indicator_type == "FWMA":
-                    result = TrendIndicators.fwma(
-                        data_series, length=params.get("length", 10)
                     )
 
                 # Return as single series values if needed
@@ -358,12 +308,7 @@ class TechnicalIndicatorService:
             # Return appropriate NaN array based on config
             if config and config["returns"] == "multiple":
                 nan_array = np.full(len(df), np.nan)
-                if indicator_type == "PPO":
-                    return nan_array, nan_array, nan_array
-                elif indicator_type == "STOCHF":
-                    return nan_array, nan_array
-                else:
-                    return nan_array, nan_array
+                return nan_array, nan_array
             else:
                 return np.full(len(df), np.nan)
 
@@ -502,7 +447,6 @@ class TechnicalIndicatorService:
             else:
                 return result
 
-
         # 通常のキーワード引数呼び出し（フィルタリングを追加）
         # 有効なパラメータのみフィルタリング
         filtered_args = {}
@@ -511,15 +455,6 @@ class TechnicalIndicatorService:
                 filtered_args[k] = v
             elif k.lower() in valid_params:
                 filtered_args[k.lower()] = v
-
-        # MAVP指標の特別処理: periodsパラメータが不足している場合、デフォルト値を生成
-        if indicator_type == "MAVP" and "periods" not in filtered_args:
-            # periodsが提供されていない場合、デフォルト期間を使用
-            default_period = params.get("default_period", 14)
-            data_length = len(required_data.get("data", df))
-            periods_series = pd.Series([default_period] * data_length, index=df.index)
-            filtered_args["periods"] = periods_series
-            logger.debug(f"MAVP: 生成したデフォルトperiods: {default_period}")
 
         result = adapter_function(**filtered_args)
         if isinstance(result, pd.Series):
@@ -537,7 +472,12 @@ class TechnicalIndicatorService:
         データフレームから適切なカラム名を解決
         """
         # 優先順位: 元の名前 > 大文字 > 小文字 > Capitalized
-        candidates = [data_key, data_key.upper(), data_key.lower(), data_key.capitalize()]
+        candidates = [
+            data_key,
+            data_key.upper(),
+            data_key.lower(),
+            data_key.capitalize(),
+        ]
 
         for candidate in candidates:
             if candidate in df.columns:
