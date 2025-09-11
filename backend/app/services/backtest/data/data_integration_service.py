@@ -9,7 +9,7 @@ from typing import Optional
 
 import pandas as pd
 
-from app.utils.data_processing import DataProcessor
+from app.utils.data_processing import data_processor
 from app.utils.error_handler import safe_operation
 
 from ...data_collection.mergers import FearGreedMerger, FRMerger, OIMerger
@@ -225,7 +225,6 @@ class DataIntegrationService:
             required_columns.extend(["fear_greed_value", "fear_greed_classification"])
 
         # データクリーニングと検証
-        data_processor = DataProcessor()
         df = data_processor.clean_and_validate_data(
             df,
             required_columns=required_columns,
