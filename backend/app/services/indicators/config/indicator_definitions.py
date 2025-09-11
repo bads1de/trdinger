@@ -92,8 +92,13 @@ PANDAS_TA_CONFIG = {
     },
     "STOCH": {
         "function": "stoch",
-        "params": {"k_length": ["k", "fastk"], "smooth_k": ["smooth_k", "slowk"], "d_length": ["d", "slowd"]},
-        "data_column": "high_low_close",
+        "params": {
+            "k_length": ["k", "fastk"],
+            "smooth_k": ["smooth_k", "slowk"],
+            "d_length": ["d", "slowd"],
+        },
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "multiple",
         "return_cols": ["STOCH_K", "STOCH_D"],
         "default_values": {"k_length": 14, "smooth_k": 1, "d_length": 3},
@@ -101,14 +106,16 @@ PANDAS_TA_CONFIG = {
     "CCI": {
         "function": "cci",
         "params": {"length": ["length"]},
-        "data_column": "high_low_close",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "single",
         "default_values": {"length": 20},
     },
     "WILLR": {
         "function": "willr",
         "params": {"length": ["length"]},
-        "data_column": "high_low_close",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "single",
         "default_values": {"length": 14},
     },
@@ -129,8 +136,10 @@ PANDAS_TA_CONFIG = {
     "ADX": {
         "function": "adx",
         "params": {"length": ["length"]},
-        "data_column": "high_low_close",
-        "returns": "single",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
+        "returns": "multiple",
+        "return_cols": ["ADX", "DMP", "DMN"],
         "default_values": {"length": 14},
     },
     "QQE": {
@@ -142,16 +151,21 @@ PANDAS_TA_CONFIG = {
         "default_values": {"length": 14, "smooth": 5},
     },
     "SAR": {
-        "function": "sar",
-        "params": {"af": ["acceleration", "acc_factor"], "max_af": ["maximum_acceleration"]},
-        "data_column": "high_low_close",
+        "function": "psar",
+        "params": {
+            "af": ["acceleration", "acc_factor"],
+            "max_af": ["maximum_acceleration"],
+        },
+        "multi_column": True,
+        "data_columns": ["High", "Low"],
         "returns": "single",
         "default_values": {"af": 0.02, "max_af": 0.2},
     },
     "ATR": {
         "function": "atr",
         "params": {"length": ["length"]},
-        "data_column": "high_low_close",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "single",
         "default_values": {"length": 14},
     },
@@ -164,9 +178,10 @@ PANDAS_TA_CONFIG = {
         "default_values": {"length": 20, "std": 2.0},
     },
     "KELTNER": {
-        "function": "keltner",
+        "function": "kc",
         "params": {"length": ["length"], "multiplier": ["multiplier"]},
-        "data_column": "high_low_close",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "multiple",
         "return_cols": ["KC_LB", "KC_MID", "KC_UB"],
         "default_values": {"length": 20, "multiplier": 2.0},
@@ -174,7 +189,8 @@ PANDAS_TA_CONFIG = {
     "SUPERTREND": {
         "function": "supertrend",
         "params": {"length": ["length"], "multiplier": ["multiplier", "factor"]},
-        "data_column": "open_high_low_close",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "complex",
         "return_cols": ["ST", "D"],
         "default_values": {"length": 10, "multiplier": 3.0},
@@ -182,7 +198,8 @@ PANDAS_TA_CONFIG = {
     "DONCHIAN": {
         "function": "donchian",
         "params": {"length": ["length"]},
-        "data_column": "high_low_close",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "multiple",
         "return_cols": ["DC_LB", "DC_MB", "DC_UB"],
         "default_values": {"length": 20},
@@ -190,7 +207,8 @@ PANDAS_TA_CONFIG = {
     "ACCBANDS": {
         "function": "accbands",
         "params": {"length": ["length"], "std": ["scale"]},
-        "data_column": "high_low_close_volume",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close", "Volume"],
         "returns": "multiple",
         "return_cols": ["ACC_LB", "ACC_MB", "ACC_UB"],
         "default_values": {"length": 30, "std": 4.0},
@@ -213,21 +231,24 @@ PANDAS_TA_CONFIG = {
     "AD": {
         "function": "ad",
         "params": {},
-        "data_column": "high_low_close_volume",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close", "Volume"],
         "returns": "single",
         "default_values": {},
     },
     "ADOSC": {
         "function": "adosc",
         "params": {"fast": ["fast"], "slow": ["slow"]},
-        "data_column": "high_low_close_volume",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close", "Volume"],
         "returns": "single",
         "default_values": {"fast": 3, "slow": 10},
     },
     "CMF": {
         "function": "cmf",
         "params": {"length": ["length"]},
-        "data_column": "high_low_close_volume",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close", "Volume"],
         "returns": "single",
         "default_values": {"length": 20},
     },
@@ -253,15 +274,33 @@ PANDAS_TA_CONFIG = {
     },
     "SQUEEZE": {
         "function": "squeeze",
-        "params": {"bb_length": ["bb_length"], "bb_std": ["bb_std"], "kc_length": ["kc_length"], "kc_scalar": ["kc_scalar"], "mom_length": ["mom_length"], "mom_smooth": ["mom_smooth"], "use_tr": ["use_tr"]},
-        "data_column": "high_low_close",
+        "params": {
+            "bb_length": ["bb_length"],
+            "bb_std": ["bb_std"],
+            "kc_length": ["kc_length"],
+            "kc_scalar": ["kc_scalar"],
+            "mom_length": ["mom_length"],
+            "mom_smooth": ["mom_smooth"],
+            "use_tr": ["use_tr"],
+        },
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close"],
         "returns": "single",
-        "default_values": {"bb_length": 20, "bb_std": 2.0, "kc_length": 20, "kc_scalar": 1.5, "mom_length": 12, "mom_smooth": 6, "use_tr": True},
+        "default_values": {
+            "bb_length": 20,
+            "bb_std": 2.0,
+            "kc_length": 20,
+            "kc_scalar": 1.5,
+            "mom_length": 12,
+            "mom_smooth": 6,
+            "use_tr": True,
+        },
     },
     "MFI": {
         "function": "mfi",
         "params": {"length": ["length"], "drift": ["drift"]},
-        "data_column": "high_low_close_volume",
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close", "Volume"],
         "returns": "single",
         "default_values": {"length": 14, "drift": 1},
     },
@@ -284,7 +323,7 @@ POSITIONAL_DATA_FUNCTIONS = {
     "tema",
     "t3",
     "kama",
-    "sar",
+    "psar",
     "atr",
     "bbands",
     "keltner",
@@ -302,23 +341,5 @@ POSITIONAL_DATA_FUNCTIONS = {
     "mfi",
 }
 
-# ---- Append new pandas-ta indicators and custom ones ----
+
 initialize_all_indicators()
-
-
-def setup_pandas_ta_indicators():
-    """
-    pandas-ta設定からインジケーターを登録
-    """
-    # PANDAS_TA_CONFIGを使用してインジケーターを登録（外から参照可能）
-    pass
-
-
-# 初期化時にpandas-taインジケーターを設定
-def initialize_pandas_ta_indicators():
-    """pandas-taインジケーターの初期化"""
-    setup_pandas_ta_indicators()
-
-
-# モジュール読み込み時に初期化
-initialize_pandas_ta_indicators()

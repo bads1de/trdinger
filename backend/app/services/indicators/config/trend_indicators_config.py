@@ -1,5 +1,5 @@
 """
-トレンド系インジケーターの設定（オートストラテジー最適化版）
+トレンド系インジケーターの設定
 """
 
 from app.services.indicators.technical_indicators.trend import TrendIndicators
@@ -14,9 +14,9 @@ from .indicator_config import (
 
 
 def setup_trend_indicators():
-    """トレンド系インジケーターの設定（オートストラテジー最適化版）"""
+    """トレンド系インジケーターの設定"""
 
-    # SMA (Simple Moving Average) - 明示的実装
+    # SMA (Simple Moving Average)
     sma_config = IndicatorConfig(
         indicator_name="SMA",
         adapter_function=TrendIndicators.sma,
@@ -37,7 +37,7 @@ def setup_trend_indicators():
     sma_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(sma_config)
 
-    # EMA (Exponential Moving Average) - 明示的実装
+    # EMA (Exponential Moving Average)
     ema_config = IndicatorConfig(
         indicator_name="EMA",
         adapter_function=TrendIndicators.ema,
@@ -148,14 +148,14 @@ def setup_trend_indicators():
             description="T3スムージングファクター",
         )
     )
-    # Add vfactor parameter mapping to a (for TA-Lib compatibility)
+    # Add vfactor parameter mapping to a (for pandas-ta compatibility)
     t3_config.add_parameter(
         ParameterConfig(
             name="vfactor",
             default_value=0.7,
             min_value=0.1,
             max_value=1.0,
-            description="V-Factor for TA-Lib compatibility (maps to a parameter)",
+            description="V-Factor for pandas-ta compatibility (maps to a parameter)",
         )
     )
     t3_config.param_map = {

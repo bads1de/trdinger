@@ -147,20 +147,6 @@ class TechnicalIndicatorService:
 
             # 複数カラムを使用する価格変換系指標の処理
             if config.get("multi_column", False):
-                # data_columns からデータを取得
-                data_args = {}
-                for column in config["data_columns"]:
-                    if column in df.columns:
-                        # 正確なカラム名でマッピング
-                        if column == "Open":
-                            data_args["open"] = df[column]
-                        elif column == "High":
-                            data_args["high"] = df[column]
-                        elif column == "Low":
-                            data_args["low"] = df[column]
-                        elif column == "Close":
-                            data_args["close"] = df[column]
-
                 # 必要なカラムが全て存在しない場合（大文字小文字を考慮）
                 required_columns = config.get("data_columns", [])
                 resolved_columns = {}
@@ -174,32 +160,50 @@ class TechnicalIndicatorService:
                     resolved_columns[req_col] = actual_col
 
                 # data_argsに解決されたカラムを使用
-                data_args = {}
+                positional_args = []
                 for req_col in required_columns:
-                    if req_col == "Open":
-                        data_args["open"] = df[resolved_columns[req_col]]
-                    elif req_col == "High":
-                        data_args["high"] = df[resolved_columns[req_col]]
-                    elif req_col == "Low":
-                        data_args["low"] = df[resolved_columns[req_col]]
-                    elif req_col == "Close":
-                        data_args["close"] = df[resolved_columns[req_col]]
-                    else:
-                        data_args[req_col] = df[resolved_columns[req_col]]
+                    positional_args.append(df[resolved_columns[req_col]])
 
-                # pandas-taの関数によっては異なる引数名を使用する場合があるため、エラーハンドリングを追加
+                # 先にpositionalで試行
                 try:
-                    result = func(**data_args, **normalized_params)
+                    result = func(*positional_args, **normalized_params)
                 except TypeError as e:
-                    # open引数がopen_である場合の処理
-                    if "open" in data_args and (
-                        "unexpected keyword argument 'open'" in str(e)
-                        or "missing 1 required positional argument: 'open_'" in str(e)
-                    ):
-                        data_args["open_"] = data_args.pop("open")
-                        result = func(**data_args, **normalized_params)
+                    # positionalで失敗した場合、キーワード引数で試行
+                    if "multiple values for argument" in str(e) or "unexpected keyword argument" in str(e):
+                        # 位置引数にマッピング
+                        data_args = {}
+                        for i, req_col in enumerate(required_columns):
+                            col_name = req_col.lower()
+                            # 特殊なマッピング
+                            if req_col == "Open":
+                                col_name = "open" if hasattr(func, '__code__') and 'open' in func.__code__.co_varnames or indicator_type == "SAR" else "open_"
+                            elif req_col == "High":
+                                col_name = "high"
+                            elif req_col == "Low":
+                                col_name = "low"
+                            elif req_col == "Close":
+                                col_name = "close"
+                            data_args[col_name] = positional_args[i]
+                        # multiple valuesの場合、normalized_paramsから重複パラメータを排除
+                        if "multiple values for argument" in str(e):
+                            excluded_params = {}
+                            multiple_param = str(e).split("'")[1]  # 'length' を抽出
+                            for k, v in normalized_params.items():
+                                if k != multiple_param:
+                                    excluded_params[k] = v
+                        else:
+                            excluded_params = normalized_params
+                        try:
+                            result = func(**data_args, **excluded_params)
+                        except TypeError as inner_e:
+                            if "missing" in str(inner_e):
+                                # ポジショナル呼出での再試行
+                                result = func(*positional_args, **excluded_params)
+                            else:
+                                raise
                     else:
                         raise
+
             else:
                 # 単一カラムを使用する指標の処理
                 column_name = self._resolve_column_name(df, config["data_column"])
@@ -211,14 +215,16 @@ class TechnicalIndicatorService:
                 data_series = df[column_name]
                 result = func(data_series, **normalized_params)
 
-            # NaN処理: 結果がNaN多い場合にフィルタ
+            # NaN処理: 結果がNaN多い場合にフィルタ (真理値判定を避ける)
             if isinstance(result, pd.Series):
-                if result.isna().sum() > len(result) * 0.7:  # 70%以上NaNの場合
+                nan_count = int(result.isna().sum())  # sum()を明示的にintに変換
+                if nan_count > len(result) * 0.7:  # 70%以上NaNの場合
                     logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
                     return None
                 result = result.bfill().fillna(0)  # バックフィル、後方0
             elif isinstance(result, pd.DataFrame):
-                if result.isna().sum().sum() > result.size * 0.7:
+                nan_count_total = int(result.isna().sum().sum())  # sum()を明示的にintに変換
+                if nan_count_total > result.size * 0.7:
                     logger.warning(f"{indicator_type}: NaN値が多すぎるためスキップ")
                     return None
                 result = result.bfill().fillna(0)
@@ -228,10 +234,35 @@ class TechnicalIndicatorService:
                 # Pandas Series の場合は numpy ndarray に変換
                 if isinstance(result, pd.Series):
                     return result.values
+                elif isinstance(result, pd.DataFrame):
+                    # DataFrameの場合、最初の列を選択してSeriesに変換
+                    if result.shape[1] > 1:
+                        # configで指定された場合、そのカラムを使用
+                        if hasattr(self, 'registry') and self.registry:
+                            try:
+                                config_obj = self._get_indicator_config(indicator_type)
+                                if hasattr(config_obj, 'default_output') and config_obj.default_output:
+                                    default_col = config_obj.default_output
+                                    if default_col in result.columns:
+                                        return result[default_col].values
+                            except Exception:
+                                pass
+                        # SARの場合、PSARl列を選択
+                        if indicator_type == "SAR" and "PSARl" in result.columns:
+                            psar_cols = [col for col in result.columns if col.startswith("PSARl")]
+                            if psar_cols:
+                                return result[psar_cols[0]].values
+                        # SQUEEZEの場合、SQZ列を選択
+                        if indicator_type == "SQUEEZE" and "SQZ" in result.columns:
+                            return result["SQZ"].values
+                        # デフォルトで最初の列を使用
+                        return result.iloc[:, 0].values
+                    else:
+                        return result.iloc[:, 0].values
                 else:
                     return result
             else:  # multiple
-                if result is None or result.empty:
+                if result is None or ((isinstance(result, (pd.Series, pd.DataFrame)) and len(result) == 0) or (hasattr(result, 'empty') and getattr(result, 'empty', False))):
                     raise ValueError(
                         f"pandas-ta function returned empty result for {indicator_type}"
                     )

@@ -68,9 +68,8 @@ class ParameterConfig:
             return False
         if self.max_value is not None and value > self.max_value:
             return False
-        
-        return True
 
+        return True
 
 
 @dataclass
@@ -110,8 +109,16 @@ class IndicatorConfig:
                 param_config = ParameterConfig(
                     name=aliases[0],  # メインエイリアス
                     default_value=default_value,
-                    min_value=2 if any(word in aliases[0] for word in ["length", "period"]) else None,
-                    max_value=200 if any(word in aliases[0] for word in ["length", "period"]) else None,
+                    min_value=(
+                        2
+                        if any(word in aliases[0] for word in ["length", "period"])
+                        else None
+                    ),
+                    max_value=(
+                        200
+                        if any(word in aliases[0] for word in ["length", "period"])
+                        else None
+                    ),
                 )
                 params[aliases[0]] = param_config
             return params
@@ -119,10 +126,7 @@ class IndicatorConfig:
             # デフォルトパラメータ
             return {
                 "period": ParameterConfig(
-                    name="period",
-                    default_value=14,
-                    min_value=2,
-                    max_value=200
+                    name="period", default_value=14, min_value=2, max_value=200
                 )
             }
 
@@ -146,8 +150,12 @@ class IndicatorConfig:
                 default_value = config["default_values"].get(param_name, 14)
                 ranges[aliases[0]] = {
                     "min": 2,
-                    "max": 200 if any(word in aliases[0] for word in ["length", "period"]) else 100,
-                    "default": default_value
+                    "max": (
+                        200
+                        if any(word in aliases[0] for word in ["length", "period"])
+                        else 100
+                    ),
+                    "default": default_value,
                 }
         else:
             # デフォルト: periodパラメータ
@@ -161,38 +169,14 @@ class IndicatorConfig:
 
         normalized = params.copy()
 
-        # デバッグ用ログ
-        # logger.debug(f"Normalizing params for {self.indicator_name}: {params}")
-
         if self.indicator_name in PANDAS_TA_CONFIG:
             config = PANDAS_TA_CONFIG[self.indicator_name]
-            # logger.debug(f"Found PANDAS_TA_CONFIG for {self.indicator_name}: {config}")
-
-            # AOの特別処理（パラメータなし）
-            if self.indicator_name == "AO":
-                return normalized
-
-            # UOの特別処理
-            if self.indicator_name == "UO":
-                for param_name, aliases in config["params"].items():
-                    for alias in aliases:
-                        if alias in params:
-                            value = params[alias]
-                            # UOの場合、fast, medium, slowをマッピング
-                            normalized[param_name] = value
-
-                            # 範囲チェック (UOのパラメータは通常2-100)
-                            if isinstance(value, (int, float)) and value < 2:
-                                normalized[param_name] = 2
-                            elif isinstance(value, (int, float)) and value > 100:
-                                normalized[param_name] = 100
 
             for param_name, aliases in config["params"].items():
-                # logger.debug(f"Processing param {param_name} with aliases {aliases}")
+
                 for alias in aliases:
                     if alias in params:
                         value = params[alias]
-                        # logger.debug(f"Found alias {alias} with value {value}")
 
                         # エイリアスマッピング
                         if param_name == "length" and alias in ["period"]:
@@ -200,36 +184,39 @@ class IndicatorConfig:
                             normalized[param_name] = value
                             if alias in normalized:
                                 del normalized[alias]
-                            # logger.debug(f"Converted {alias} to {param_name}: {value}")
+
                         elif alias == "period":
                             # period -> length変換 (特殊ケース)
                             normalized["length"] = value
                             if "period" in normalized:
                                 del normalized["period"]
-                            # logger.debug(f"Converted {alias} to length: {value}")
+
                         else:
                             # 標準エイリアスマッピング
                             normalized[param_name] = value
                             if alias != param_name and alias in normalized:
                                 del normalized[alias]
-                            # logger.debug(f"Standard mapping: {alias} -> {param_name}")
 
                         # 範囲チェック
                         if any(word in alias for word in ["length", "period"]):
                             if isinstance(value, (int, float)) and value < 2:
-                                normalized[param_name if alias != "period" else "length"] = 2
+                                normalized[
+                                    param_name if alias != "period" else "length"
+                                ] = 2
                             elif isinstance(value, (int, float)) and value > 200:
-                                normalized[param_name if alias != "period" else "length"] = 200
+                                normalized[
+                                    param_name if alias != "period" else "length"
+                                ] = 200
                         else:
                             if isinstance(value, (int, float)) and value < 1:
-                                normalized[param_name] = config["default_values"].get(param_name, 14)
+                                normalized[param_name] = config["default_values"].get(
+                                    param_name, 14
+                                )
                             elif isinstance(value, (int, float)) and value > 100:
                                 normalized[param_name] = 100
         else:
-            # logger.debug(f"No PANDAS_TA_CONFIG found for {self.indicator_name}")
             pass
 
-        # logger.debug(f"Normalized params result: {normalized}")
         return normalized
 
 
@@ -251,7 +238,6 @@ class IndicatorConfigRegistry:
 
         # フォールバックマッピングをレジストリ内に定義
         self._fallback_indicators = {}
-
 
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
@@ -304,7 +290,6 @@ class IndicatorConfigRegistry:
         except Exception as e:
             logger.error(f"指標 {indicator_type} のパラメータ生成に失敗: {e}")
             return {}
-
 
 
 # グローバルレジストリインスタンス
