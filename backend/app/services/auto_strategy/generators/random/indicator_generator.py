@@ -120,7 +120,7 @@ class IndicatorGenerator:
             experimental = indicator_registry.experimental_indicators
         except Exception:
             experimental = {
-                "RMI", "DPO", "VORTEX", "EOM", "KVO", "PVT",
+                "CMF",
                 "AROON", "AROONOSC", "BOP", "TRIX", "TSI", "ULTOSC", "CMO", "DX",
                 "MINUS_DI", "PLUS_DI", "CFO", "CHOP", "CTI", "RVI", "RVGI", "SMI", "STC", "PVO",
                 "TRIMA", "CWMA", "ALMA", "HMA", "RMA", "SWMA", "ZLMA", "VWMA", "FWMA", "HWMA",

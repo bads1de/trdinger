@@ -50,3 +50,20 @@ class TestIndicatorGenerator:
 
         assert isinstance(indicators, list)
         assert len(indicators) > 0
+
+    def test_experimental_indicators_filtering(self):
+        """実験的指標フィルタリングテスト"""
+        config = Mock()
+        config.indicator_mode = "technical_only"
+        config.allowed_indicators = None  # allowed_indicators が指定されていない場合
+
+        generator = IndicatorGenerator(config)
+        available_indicators = generator.available_indicators
+
+        # experimental_indicators がフィルタリングされていることを確認
+        from backend.app.services.indicators.config.indicator_config import indicator_registry
+        experimental = indicator_registry.experimental_indicators
+
+        # available_indicators に experimental の指標が含まれていないことを確認
+        for exp_indicator in experimental:
+            assert exp_indicator not in available_indicators, f"Experimental indicator {exp_indicator} should be filtered out"

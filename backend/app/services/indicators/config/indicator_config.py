@@ -227,12 +227,6 @@ class IndicatorConfigRegistry:
         self._configs: Dict[str, IndicatorConfig] = {}
         # 実験的インジケータ集合（ジェネレーターから参照）
         self.experimental_indicators = {
-            "RMI",
-            "DPO",
-            "VORTEX",
-            "EOM",
-            "KVO",
-            "PVT",
             "CMF",
         }
 
