@@ -11,6 +11,7 @@ from .momentum_indicators_config import setup_momentum_indicators
 from .trend_indicators_config import setup_trend_indicators
 from .volatility_indicators_config import setup_volatility_indicators
 from .volume_indicators_config import setup_volume_indicators
+from .indicator_config import indicator_registry
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,23 @@ def initialize_all_indicators():
     setup_trend_indicators()
     setup_volatility_indicators()
     setup_volume_indicators()
+
+
+def generate_positional_functions() -> set:
+    """レジストリからPOSITIONAL_DATA_FUNCTIONSを動的生成
+
+    Returns:
+        位置パラメータを使用する関数名のセット
+    """
+    functions = set()
+    all_indicators = indicator_registry.get_all_indicators()
+
+    for name, indicator_config in all_indicators.items():
+        # エイリアスではなく本名のみを使用
+        if not indicator_config.aliases or name not in indicator_config.aliases:
+            functions.add(indicator_config.indicator_name.lower())
+
+    return functions
 
 
 # モジュール読み込み時に初期化
@@ -324,40 +342,7 @@ PANDAS_TA_CONFIG = {
     },
 }
 
-POSITIONAL_DATA_FUNCTIONS = {
-    "rsi",
-    "macd",
-    "stoch",
-    "cci",
-    "mom",
-    "adx",
-    "willr",
-    "roc",
-    "qqe",
-    "sma",
-    "ema",
-    "wma",
-    "dema",
-    "tema",
-    "t3",
-    "kama",
-    "psar",
-    "atr",
-    "bbands",
-    "keltner",
-    "supertrend",
-    "donchian",
-    "accbands",
-    "ui",
-    "obv",
-    "ad",
-    "adosc",
-    "cmf",
-    "efi",
-    "vwap",
-    "squeeze",
-    "mfi",
-}
-
+# 動的設定初期化（レジストリから生成）
+POSITIONAL_DATA_FUNCTIONS = generate_positional_functions()
 
 initialize_all_indicators()
