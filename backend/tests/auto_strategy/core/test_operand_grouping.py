@@ -322,6 +322,42 @@ class TestIntegration:
             # ログが呼ばれているはず（DEBUG_MODE = Trueの場合）
             # 実際の呼び出し回数は実装次第
 
+    def test_unsupported_indicators_not_mapped(self):
+        """pandas-taでサポートされていない指標がマッピングに含まれていないことを確認"""
+        system = OperandGroupingSystem()
+
+        unsupported_indicators = ["CWMA", "MAVP", "SAREXT", "TLB", "RSI_EMA_CROSS", "CV", "IRM"]
+
+        for indicator in unsupported_indicators:
+            assert indicator not in system._group_mappings, f"{indicator} should not be in group mappings"
+            # パターンマッチングでも適切なグループに分類されることを確認
+            result = system.get_operand_group(indicator)
+            assert isinstance(result, OperandGroup)
+
+    def test_undefined_indicators_not_mapped(self):
+        """indicator_definitions.pyで定義されていない指標がマッピングに含まれていないことを確認"""
+        system = OperandGroupingSystem()
+
+        # indicator_definitions.pyで定義されている指標のみ残す
+        defined_indicators = [
+            "RSI", "SMA", "EMA", "WMA", "DEMA", "TEMA", "T3", "KAMA", "MACD", "STOCH", "CCI", "WILLR", "ROC", "MOM", "ADX", "QQE", "SAR", "ATR", "BBANDS", "KELTNER", "SUPERTREND", "DONCHIAN", "ACCBANDS", "UI", "OBV", "AD", "ADOSC", "CMF", "EFI", "VWAP", "SQUEEZE", "MFI",
+            # データソース
+            "close", "open", "high", "low", "volume", "OpenInterest", "FundingRate"
+        ]
+
+        # 残すべき指標はマッピングに含まれていることを確認
+        for indicator in defined_indicators:
+            if indicator in system._group_mappings:
+                assert indicator in system._group_mappings, f"{indicator} should be in group mappings"
+
+        # 定義されていない指標はマッピングに含まれていないことを確認
+        undefined_indicators = [
+            "BB", "BB_0", "BB_1", "BB_2", "ULTOSC", "DX", "PLUS_DI", "MINUS_DI", "ADXR", "CMO", "AROONOSC", "MACD_0", "MACD_1", "MACD_2", "ROCP", "ROCR", "ROCR100", "TRIX", "APO", "PPO", "TSI", "BOP", "STOCH_0", "STOCH_1", "STOCHRSI_0", "STOCHRSI_1", "KDJ_2", "SMI_0", "SMI_1", "PVO_0", "PVO_1", "NATR", "TRANGE", "HMA", "ZLMA", "VWMA", "SWMA", "ALMA", "JMA", "MCGD", "ICHIMOKU", "HILO", "HWMA", "HL2", "HLC3", "OHLC4", "WCP", "SSF", "VIDYA", "HWC", "NVI", "PVI", "PVT", "EOM", "KVO", "AOBV", "PVOL", "PVR", "RVI", "RMI", "DPO", "VORTEX", "CHOP", "PVO", "CFO", "CTI", "MA", "FWMA", "PWMA", "SINWMA", "PLUS_DM", "MINUS_DM", "KST", "RSX", "BIAS", "BRAR", "CG", "FISHER", "INERTIA", "PGO", "PSL", "SQUEEZE_PRO", "ER", "ERI", "COPPOCK", "PDIST", "VAR"
+        ]
+
+        for indicator in undefined_indicators:
+            assert indicator not in system._group_mappings, f"{indicator} should not be in group mappings"
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

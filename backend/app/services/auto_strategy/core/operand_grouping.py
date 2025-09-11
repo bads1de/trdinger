@@ -51,156 +51,49 @@ class OperandGroupingSystem:
     def _get_price_based_mappings(self) -> Dict[str, OperandGroup]:
         """価格ベース指標マッピングを取得"""
         return {
+            # Price-based indicators
             "SMA": OperandGroup.PRICE_BASED,
             "EMA": OperandGroup.PRICE_BASED,
-            "BB": OperandGroup.PRICE_BASED,  # ボリンジャーバンドの上下線
             "close": OperandGroup.PRICE_BASED,
             "open": OperandGroup.PRICE_BASED,
             "high": OperandGroup.PRICE_BASED,
             "low": OperandGroup.PRICE_BASED,
-            # BB複数出力の統合
-            "BB_0": OperandGroup.PRICE_BASED,  # 下限バンド
-            "BB_1": OperandGroup.PRICE_BASED,  # 中央線（SMA）
-            "BB_2": OperandGroup.PRICE_BASED,  # 上限バンド
             # 0-100%オシレーター
             "RSI": OperandGroup.PERCENTAGE_0_100,
             "STOCH": OperandGroup.PERCENTAGE_0_100,
             "ADX": OperandGroup.PERCENTAGE_0_100,
             "MFI": OperandGroup.PERCENTAGE_0_100,
-            "ULTOSC": OperandGroup.PERCENTAGE_0_100,
             "QQE": OperandGroup.PERCENTAGE_0_100,
-            "DX": OperandGroup.PERCENTAGE_0_100,
-            "PLUS_DI": OperandGroup.PERCENTAGE_0_100,
-            "MINUS_DI": OperandGroup.PERCENTAGE_0_100,
-            "ADXR": OperandGroup.PERCENTAGE_0_100,
             # ±100オシレーター
             "CCI": OperandGroup.PERCENTAGE_NEG100_100,
-            "CMO": OperandGroup.PERCENTAGE_NEG100_100,
-            "AROONOSC": OperandGroup.PERCENTAGE_NEG100_100,
             # ゼロ中心の変化率・モメンタム指標
             "MACD": OperandGroup.ZERO_CENTERED,
-            "MACD_0": OperandGroup.ZERO_CENTERED,  # MACDメインライン
-            "MACD_1": OperandGroup.ZERO_CENTERED,  # MACDシグナルライン
-            "MACD_2": OperandGroup.ZERO_CENTERED,  # MACDヒストグラム
             "ROC": OperandGroup.ZERO_CENTERED,
             "MOM": OperandGroup.ZERO_CENTERED,
-            "ROCP": OperandGroup.ZERO_CENTERED,
-            "ROCR": OperandGroup.ZERO_CENTERED,
-            "ROCR100": OperandGroup.ZERO_CENTERED,
-            "TRIX": OperandGroup.ZERO_CENTERED,
-            "WILLR": OperandGroup.ZERO_CENTERED,
-            "T3": OperandGroup.ZERO_CENTERED,
-            "APO": OperandGroup.ZERO_CENTERED,
-            "PPO": OperandGroup.ZERO_CENTERED,
-            "TSI": OperandGroup.ZERO_CENTERED,
-            "BOP": OperandGroup.ZERO_CENTERED,
-            # ボリンジャーバンドの複数出力
-            # ストキャスティクスの複数出力
-            "STOCH_0": OperandGroup.PERCENTAGE_0_100,  # %K
-            "STOCH_1": OperandGroup.PERCENTAGE_0_100,  # %D
-            "STOCHRSI_0": OperandGroup.PERCENTAGE_0_100,  # RSI %K
-            "STOCHRSI_1": OperandGroup.PERCENTAGE_0_100,  # RSI %D
-            "KDJ_2": OperandGroup.PERCENTAGE_0_100,  # KDJ J値
-            # ティッカー・オシレーター系の複数出力
-            "SMI_0": OperandGroup.PERCENTAGE_0_100,  # SMI
-            "SMI_1": OperandGroup.PERCENTAGE_0_100,  # SMI信号
-            "PVO_0": OperandGroup.ZERO_CENTERED,  # PVO
-            "PVO_1": OperandGroup.ZERO_CENTERED,  # PVO信号
-            # 特殊スケール
-            "ATR": OperandGroup.PRICE_BASED,  # 価格の絶対値なので価格ベース
-            "NATR": OperandGroup.PRICE_RATIO,  # 正規化ATRは比率
-            "TRANGE": OperandGroup.PRICE_BASED,  # 真の値幅
-            "OBV": OperandGroup.ZERO_CENTERED,  # 累積出来高、ゼロ中心的
-            "volume": OperandGroup.SPECIAL_SCALE,  # 出来高は独特のスケール
-            "OpenInterest": OperandGroup.SPECIAL_SCALE,
-            "FundingRate": OperandGroup.SPECIAL_SCALE,
-
-            # 新規Trend系指標（PRICE_BASED）
-            "HMA": OperandGroup.PRICE_BASED,
-            "ZLMA": OperandGroup.PRICE_BASED,
-            "VWMA": OperandGroup.PRICE_BASED,
-            "SWMA": OperandGroup.PRICE_BASED,
-            "ALMA": OperandGroup.PRICE_BASED,
-            "JMA": OperandGroup.PRICE_BASED,
-            "MCGD": OperandGroup.PRICE_BASED,
-            "ICHIMOKU": OperandGroup.PRICE_BASED,
-            "HILO": OperandGroup.PRICE_BASED,
-            "HWMA": OperandGroup.PRICE_BASED,
-            "HL2": OperandGroup.PRICE_BASED,
-            "HLC3": OperandGroup.PRICE_BASED,
-            "OHLC4": OperandGroup.PRICE_BASED,
-            "WCP": OperandGroup.PRICE_BASED,
-            "SSF": OperandGroup.PRICE_BASED,
-            "VIDYA": OperandGroup.PRICE_BASED,
-
-            # 新規Volatility系指標（PRICE_BASED）
+            # Trend indicators
+            "SAR": OperandGroup.PRICE_BASED,
             "KELTNER": OperandGroup.PRICE_BASED,
             "DONCHIAN": OperandGroup.PRICE_BASED,
-            "ACCBANDS": OperandGroup.PRICE_BASED,
             "SUPERTREND": OperandGroup.PRICE_BASED,
-            "HWC": OperandGroup.PERCENTAGE_0_100,
+            # Volatility indicators
+            "ATR": OperandGroup.PRICE_BASED,
             "UI": OperandGroup.PERCENTAGE_0_100,
-
-            # 新規Volume系指標（ZERO_CENTEREDまたはPRICE_BASED）
-            "NVI": OperandGroup.ZERO_CENTERED,
-            "PVI": OperandGroup.ZERO_CENTERED,
+            # Volume indicators
+            "OBV": OperandGroup.ZERO_CENTERED,
             "VWAP": OperandGroup.PRICE_BASED,
-            "PVT": OperandGroup.ZERO_CENTERED,
             "EFI": OperandGroup.ZERO_CENTERED,
-            "EOM": OperandGroup.ZERO_CENTERED,
-            "KVO": OperandGroup.ZERO_CENTERED,
             "CMF": OperandGroup.ZERO_CENTERED,
-            "AOBV": OperandGroup.ZERO_CENTERED,
-            "PVOL": OperandGroup.ZERO_CENTERED,
-            "PVR": OperandGroup.ZERO_CENTERED,
-
-            # 新規Momentum系指標（ZERO_CENTERED）
-            "RVI": OperandGroup.ZERO_CENTERED,
-            "RMI": OperandGroup.ZERO_CENTERED,  # 既存から復元
-            "DPO": OperandGroup.ZERO_CENTERED,
-            "VORTEX": OperandGroup.PERCENTAGE_0_100,
-            "CHOP": OperandGroup.PERCENTAGE_0_100,
-            "PVO": OperandGroup.ZERO_CENTERED,
-            "CFO": OperandGroup.ZERO_CENTERED,
-            "CTI": OperandGroup.ZERO_CENTERED,
-
-            # Additional trend indicators
-            "SAR": OperandGroup.PRICE_BASED,
-            "MA": OperandGroup.PRICE_RATIO,
-            "FWMA": OperandGroup.PRICE_RATIO,
-            "PWMA": OperandGroup.PRICE_RATIO,
-            "SINWMA": OperandGroup.PRICE_RATIO,
-            "CWMA": OperandGroup.PRICE_RATIO,
-            "MAVP": OperandGroup.PRICE_RATIO,
-            "SAREXT": OperandGroup.PRICE_BASED,
-            "TLB": OperandGroup.ZERO_CENTERED,
-
-            # Additional volume indicators
-            # Additional momentum indicators
-            "PLUS_DM": OperandGroup.PRICE_BASED,
-            "MINUS_DM": OperandGroup.PRICE_BASED,
-            "KST": OperandGroup.PERCENTAGE_NEG100_100,
-            "RSI_EMA_CROSS": OperandGroup.PERCENTAGE_0_100,
-            "RSX": OperandGroup.PERCENTAGE_0_100,
-            "BIAS": OperandGroup.ZERO_CENTERED,
-            "BRAR": OperandGroup.ZERO_CENTERED,
-            "CG": OperandGroup.ZERO_CENTERED,
-            "FISHER": OperandGroup.ZERO_CENTERED,
-            "INERTIA": OperandGroup.ZERO_CENTERED,
-            "PGO": OperandGroup.PERCENTAGE_0_100,
-            "PSL": OperandGroup.PERCENTAGE_NEG100_100,
+            # Special scale
+            "volume": OperandGroup.SPECIAL_SCALE,
+            "OpenInterest": OperandGroup.SPECIAL_SCALE,
+            "FundingRate": OperandGroup.SPECIAL_SCALE,
+            # Additional indicators
+            "WILLR": OperandGroup.ZERO_CENTERED,
+            "BBANDS": OperandGroup.PRICE_BASED,
+            "ACCBANDS": OperandGroup.PRICE_BASED,
+            "AD": OperandGroup.ZERO_CENTERED,
+            "ADOSC": OperandGroup.ZERO_CENTERED,
             "SQUEEZE": OperandGroup.ZERO_CENTERED,
-            "SQUEEZE_PRO": OperandGroup.ZERO_CENTERED,
-            "ER": OperandGroup.PERCENTAGE_0_100,
-            "ERI": OperandGroup.PERCENTAGE_NEG100_100,
-            "COPPOCK": OperandGroup.ZERO_CENTERED,
-
-            # Additional volatility indicators
-            "PDIST": OperandGroup.PRICE_RATIO,
-            "VAR": OperandGroup.PRICE_RATIO,
-            "CV": OperandGroup.PRICE_RATIO,
-            "IRM": OperandGroup.PRICE_RATIO,
-
         }
 
     def _initialize_compatibility_matrix(
@@ -235,7 +128,6 @@ class OperandGroupingSystem:
         # 特殊スケール同士は低い互換性
         matrix[(OperandGroup.SPECIAL_SCALE, OperandGroup.SPECIAL_SCALE)] = 0.3
 
-
         # その他の組み合わせは非常に低い互換性
         for group1 in OperandGroup:
             for group2 in OperandGroup:
@@ -259,13 +151,17 @@ class OperandGroupingSystem:
         if operand in self._group_mappings:
             group = self._group_mappings[operand]
             if DEBUG_MODE:
-                logger.info("DEBUG: Direct mapping found for %s -> %s", operand, group.value)
+                logger.info(
+                    "DEBUG: Direct mapping found for %s -> %s", operand, group.value
+                )
             return group
 
         # パターンマッチングで判定
         group = self._classify_by_pattern(operand)
         if DEBUG_MODE:
-            logger.info("DEBUG: Pattern matching resulted for %s -> %s", operand, group.value)
+            logger.info(
+                "DEBUG: Pattern matching resulted for %s -> %s", operand, group.value
+            )
         return group
 
     def _classify_by_pattern(self, operand: str) -> OperandGroup:
@@ -282,7 +178,7 @@ class OperandGroupingSystem:
         # 0-100%オシレーターのパターン
         if any(
             pattern in operand_upper
-            for pattern in ["RSI", "STOCH", "ADX", "WILLR", "MFI", "ULTOSC", "QQE", "DX", "PLUS_DI", "MINUS_DI", "ADXR"]
+            for pattern in ["RSI", "STOCH", "ADX", "MFI", "QQE", "UI"]
         ):
             return OperandGroup.PERCENTAGE_0_100
 
@@ -295,52 +191,15 @@ class OperandGroupingSystem:
             pattern in operand_upper
             for pattern in [
                 "MACD",
-                "TRIX",
-                "PPO",
                 "MOM",
-                "BOP",
-                "APO",
-                "EMV",
-                "ROCP",
-                "ROCR",
                 "OBV",
                 "ROC",
-                "STOCHRSI",
-                "SMI",
-                "PVO",
-                "CFO",
-                "CTI",
-                "RMI",
-                "DPO",
-                "CHOP",
-                "VORTEX",
-                "TSI",
-                "KST",
-                "STC",
-                "COPPOCK",
-                "ERI",
-                "INERTIA",
-                "PGO",
-                "PSL",
-                "RSX",
-                "SQUEEZE",
-                "SQUEEZE_PRO",
-                "BIAS",
-                "BRAR",
-                "CG",
-                "FISHER",
-                "INERTIA",
-                "PVOL",
-                "PVR",
-                "EOM",
-                "KVO",
-                "PVT",
-                "CMF",
-                "NVI",
-                "PVI",
-                "AOBV",
                 "EFI",
-                "RVI",
+                "CMF",
+                "SQUEEZE",
+                "WILLR",
+                "AD",
+                "ADOSC",
             ]
         ):
             return OperandGroup.ZERO_CENTERED
@@ -348,26 +207,33 @@ class OperandGroupingSystem:
         # 新規Trend系パターン + ボリンジャーバンド
         if any(
             pattern in operand_upper
-            for pattern in ["HMA", "ZLMA", "VWMA", "SWMA", "ALMA", "JMA", "MCGD", "ICHIMOKU", "HILO", "HWMA", "HL2", "HLC3", "OHLC4", "WCP", "SSF", "VIDYA", "BB"]
+            for pattern in [
+                "SMA",
+                "EMA",
+                "KELTNER",
+                "DONCHIAN",
+                "SUPERTREND",
+                "BBANDS",
+                "ACCBANDS",
+                "SAR",
+            ]
         ):
             return OperandGroup.PRICE_BASED
 
         # 新規Volatility系パターン
-        if any(pattern in operand_upper for pattern in ["KELTNER", "DONCHIAN", "SUPERTREND"]):
+        if any(
+            pattern in operand_upper
+            for pattern in ["KELTNER", "DONCHIAN", "SUPERTREND"]
+        ):
             return OperandGroup.PRICE_BASED
-        if any(pattern in operand_upper for pattern in ["ACCBANDS", "HWC", "UI", "CHOP"]):
+        if any(pattern in operand_upper for pattern in ["ACCBANDS", "UI"]):
             return OperandGroup.PERCENTAGE_0_100
 
         # 新規Volume系パターン
-        if any(pattern in operand_upper for pattern in ["NVI", "PVI", "PVT", "EFI", "EOM", "KVO", "CMF", "AOBV", "PVOL", "PVR"]):
+        if any(pattern in operand_upper for pattern in ["EFI", "CMF"]):
             return OperandGroup.ZERO_CENTERED
         if "VWAP" in operand_upper:
             return OperandGroup.PRICE_BASED
-
-        # 新規Momentum系パターン (VORTEXはPERCENTAGE_0_100、その他ZERO_CENTERED)
-        if "VORTEX" in operand_upper:
-            return OperandGroup.PERCENTAGE_0_100
-
 
         # 特殊スケールのパターン
         if any(
@@ -392,7 +258,9 @@ class OperandGroupingSystem:
             互換性スコア（0.0-1.0）
         """
         if DEBUG_MODE:
-            logger.info("DEBUG: get_compatibility_score called for %s vs %s", operand1, operand2)
+            logger.info(
+                "DEBUG: get_compatibility_score called for %s vs %s", operand1, operand2
+            )
 
         group1 = self.get_operand_group(operand1)
         group2 = self.get_operand_group(operand2)
@@ -400,8 +268,14 @@ class OperandGroupingSystem:
         score = self._compatibility_matrix.get((group1, group2), 0.1)
 
         if DEBUG_MODE:
-            logger.info("DEBUG: Compatibility score for %s (%s) vs %s (%s) = %.2f",
-                       operand1, group1.value, operand2, group2.value, score)
+            logger.info(
+                "DEBUG: Compatibility score for %s (%s) vs %s (%s) = %.2f",
+                operand1,
+                group1.value,
+                operand2,
+                group2.value,
+                score,
+            )
 
         return score
 
@@ -432,8 +306,6 @@ class OperandGroupingSystem:
                 compatible.append(operand)
 
         return compatible
-
-
 
     def validate_condition(
         self, left_operand: str, right_operand: str

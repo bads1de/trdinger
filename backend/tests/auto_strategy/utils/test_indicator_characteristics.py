@@ -13,7 +13,7 @@ class TestIndicatorCharacteristics:
         assert len(INDICATOR_CHARACTERISTICS) > 0
 
         # 基本的な指標が存在することを確認
-        expected_indicators = ["RSI", "SMA", "EMA", "MACD", "ADX", "BB"]
+        expected_indicators = ["RSI", "SMA", "EMA", "MACD", "ADX", "BBANDS"]
         for indicator in expected_indicators:
             assert indicator in INDICATOR_CHARACTERISTICS
             assert "type" in INDICATOR_CHARACTERISTICS[indicator]
@@ -88,7 +88,7 @@ class TestIndicatorCharacteristics:
 
     def test_indicator_characteristics_trend_followers(self):
         """トレンド追従指標の特性テスト"""
-        trend_indicators = ["SMA", "EMA", "FWMA", "SWMA", "VIDYA"]
+        trend_indicators = ["SMA", "EMA"]
 
         for indicator in trend_indicators:
             if indicator in INDICATOR_CHARACTERISTICS:
@@ -99,7 +99,7 @@ class TestIndicatorCharacteristics:
 
     def test_indicator_characteristics_regression_based(self):
         """回帰ベース指標の特性テスト"""
-        regression_indicators = ["LINREG", "LINREG_SLOPE", "LINREG_INTERCEPT", "LINREG_ANGLE"]
+        regression_indicators = []
 
         for indicator in regression_indicators:
             if indicator in INDICATOR_CHARACTERISTICS:
@@ -107,32 +107,19 @@ class TestIndicatorCharacteristics:
                 assert char["regression_based"] is True
 
     def test_indicator_characteristics_linreg_angle(self):
-        """LINREG_ANGLE指標の特性テスト（バグ発見目的）"""
-        if "LINREG_ANGLE" in INDICATOR_CHARACTERISTICS:
-            char = INDICATOR_CHARACTERISTICS["LINREG_ANGLE"]
-
-            assert char["type"] == "trend"
-            assert char["range"] == (-90, 90)
-            assert char["angle_tracking"] is True
-            assert char["trend_strength"] is True
+        """LINREG_ANGLE指標の特性テスト（削除確認）"""
+        # LINREG_ANGLE は削除されているので存在しないことを確認
+        assert "LINREG_ANGLE" not in INDICATOR_CHARACTERISTICS
 
     def test_indicator_characteristics_ppo(self):
-        """PPO指標の特性テスト"""
-        if "PPO" in INDICATOR_CHARACTERISTICS:
-            ppo_char = INDICATOR_CHARACTERISTICS["PPO"]
-
-            assert ppo_char["type"] == "trend"
-            assert ppo_char["range"] == (-100, 100)
-            assert ppo_char["zero_cross"] is True
-            assert ppo_char["signal_line"] is True
+        """PPO指標の特性テスト（削除確認）"""
+        # PPO は削除されているので存在しないことを確認
+        assert "PPO" not in INDICATOR_CHARACTERISTICS
 
     def test_indicator_characteristics_stc(self):
-        """STC指標の特性テスト"""
-        if "STC" in INDICATOR_CHARACTERISTICS:
-            stc_char = INDICATOR_CHARACTERISTICS["STC"]
-
-            assert stc_char["type"] == "trend"
-            assert stc_char["range"] == (0, 100)
+        """STC指標の特性テスト（削除確認）"""
+        # STC は削除されているので存在しないことを確認
+        assert "STC" not in INDICATOR_CHARACTERISTICS
 
     def test_get_merged_characteristics_success(self):
         """_get_merged_characteristics関数の成功テスト"""

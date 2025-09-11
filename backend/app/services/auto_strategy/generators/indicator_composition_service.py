@@ -130,7 +130,7 @@ class IndicatorCompositionService:
     def _choose_preferred_trend_indicator(self, trend_pool: List[str]) -> str:
         """優先順位に従ってトレンド指標を選択"""
         # TREND_PREFを使用
-        trend_pref = ("SMA", "EMA", "MA", "HMA", "VIDYA", "LINREG")
+        trend_pref = ("SMA", "EMA")
 
         # 優先指標からランダム選択
         preferred = [name for name in trend_pool if name in trend_pref]

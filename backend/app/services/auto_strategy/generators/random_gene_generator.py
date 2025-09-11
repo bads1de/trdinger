@@ -51,14 +51,7 @@ class RandomGeneGenerator:
     TREND_PREF = (
         "SMA",
         "EMA",
-        "MA",
-        "HMA",
-        "VIDYA",
-        "LINREG",
-        "LINREG_SLOPE",
-        "LINREG_INTERCEPT",
-        "LINREG_ANGLE",
-    )  # MAMA除外: 条件右オペランド未サポート
+    )
 
     def __init__(
         self,
