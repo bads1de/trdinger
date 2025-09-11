@@ -15,6 +15,15 @@ from .volume_indicators_config import setup_volume_indicators
 logger = logging.getLogger(__name__)
 
 
+# 各指標の最小必要データ長定義に使用するヘルパー関数
+def get_param_value(params, keys, default):
+    """パラメータ名がlengthまたはwindowの場合の値取得をサポート"""
+    for key in keys:
+        if key in params:
+            return params[key]
+    return default
+
+
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
     setup_momentum_indicators()
@@ -32,6 +41,7 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 14},
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 14),
     },
     "SMA": {
         "function": "sma",
@@ -39,6 +49,7 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 20},
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 20),
     },
     "EMA": {
         "function": "ema",
@@ -46,6 +57,7 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 20},
+        "min_length": lambda params: max(2, get_param_value(params, ["length", "window"], 20) // 3),
     },
     "WMA": {
         "function": "wma",
@@ -53,6 +65,7 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 20},
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 20),
     },
     "DEMA": {
         "function": "dema",
@@ -67,6 +80,7 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 14},
+        "min_length": lambda params: max(3, get_param_value(params, ["length", "window"], 14) // 2),
     },
     "T3": {
         "function": "t3",
@@ -89,6 +103,7 @@ PANDAS_TA_CONFIG = {
         "returns": "multiple",
         "return_cols": ["MACD", "Signal", "Histogram"],
         "default_values": {"fast": 12, "slow": 26, "signal": 9},
+        "min_length": lambda params: params.get("slow", 26) + params.get("signal", 9) + 5,
     },
     "STOCH": {
         "function": "stoch",
@@ -176,6 +191,7 @@ PANDAS_TA_CONFIG = {
         "returns": "multiple",
         "return_cols": ["BBL", "BBM", "BBU"],
         "default_values": {"length": 20, "std": 2.0},
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 20),
     },
     "KELTNER": {
         "function": "kc",
@@ -194,6 +210,7 @@ PANDAS_TA_CONFIG = {
         "returns": "complex",
         "return_cols": ["ST", "D"],
         "default_values": {"length": 10, "multiplier": 3.0},
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 10) + 10,
     },
     "DONCHIAN": {
         "function": "donchian",
@@ -219,6 +236,7 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 14},
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 14),
     },
     "OBV": {
         "function": "obv",

@@ -25,24 +25,6 @@ def get_param_value(params, keys, default):
     return default
 
 
-INDICATOR_MIN_DATA_LENGTHS = {
-    "RSI": lambda params: get_param_value(params, ["length", "window"], 14),
-    "SMA": lambda params: get_param_value(params, ["length", "window"], 20),
-    "EMA": lambda params: max(
-        2, get_param_value(params, ["length", "window"], 20) // 3
-    ),  # EMAは初期値のために3分の1程度
-    "WMA": lambda params: get_param_value(params, ["length", "window"], 20),
-    "MACD": lambda params: params.get("slow", 26) + params.get("signal", 9) + 5,
-    "SUPERTREND": lambda params: get_param_value(params, ["length", "window"], 10) + 10,
-    "BBANDS": lambda params: get_param_value(params, ["length", "window"], 20),
-    "STOCHRSI": lambda params: get_param_value(params, ["length", "window"], 14)
-    + params.get("k_period", 5)
-    + params.get("d_period", 3),
-    "TEMA": lambda params: max(
-        3, get_param_value(params, ["length", "window"], 14) // 2
-    ),
-    "UI": lambda params: get_param_value(params, ["length", "window"], 14),
-}
 
 
 def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
@@ -56,11 +38,14 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
     Returns:
         最小必要データ長
     """
-    if indicator_type in INDICATOR_MIN_DATA_LENGTHS:
-        return INDICATOR_MIN_DATA_LENGTHS[indicator_type](params)
-
-    # デフォルト値 - lengthまたはwindowパラメータをサポート
     config = PANDAS_TA_CONFIG.get(indicator_type)
+    if config and "min_length" in config:
+        if callable(config["min_length"]):
+            return config["min_length"](params)
+        else:
+            return config["min_length"]
+
+    # フォールバック：デフォルト値 - lengthまたはwindowパラメータをサポート
     if config:
         # lengthまたはwindowパラメータを取得
         length_value = get_param_value(
