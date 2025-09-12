@@ -158,7 +158,6 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             .fillna(0.0)
         )
 
-        logger.debug("価格特徴量計算完了")
         return result_df
 
     def calculate_volatility_features(

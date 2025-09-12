@@ -191,3 +191,17 @@ class TestLogRemoval:
             assert "BacktestExecutor - Retrieved data shape:" not in "\n".join(log_messages)
             assert "BacktestExecutor - Data columns:" not in "\n".join(log_messages)
             assert "BacktestExecutor - Data head:" not in "\n".join(log_messages)
+
+    def test_feature_calculator_no_completion_logs(self, sample_dataframe, caplog):
+        """特徴量計算の完了ログが出力されないことを確認"""
+        from app.services.ml.feature_engineering.price_features import PriceFeatureCalculator
+
+        calculator = PriceFeatureCalculator()
+
+        # メソッドを直接呼び出してログが出力されないことを確認
+        with caplog.at_level(logging.DEBUG):
+            calculator.log_feature_calculation_complete("test_feature")
+
+        # 削除されたログメッセージが含まれないことを確認
+        log_messages = [record.message for record in caplog.records]
+        assert "test_feature特徴量計算が完了しました" not in "\n".join(log_messages)

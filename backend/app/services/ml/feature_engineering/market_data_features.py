@@ -168,7 +168,6 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
                 merged_df[fr_column].rolling(window=24, min_periods=1).std().fillna(0.0)
             )
 
-            logger.debug("ファンディングレート特徴量計算完了")
             return result_df
 
         except Exception as e:
@@ -301,7 +300,6 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
                 .fillna(0.0)
             )
 
-            logger.debug("建玉残高特徴量計算完了")
             return result_df
 
         except Exception as e:
@@ -414,7 +412,6 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
                 oi_change > 0
             ).astype(int)
 
-            logger.debug("複合特徴量計算完了")
             return result_df
 
         except Exception as e:

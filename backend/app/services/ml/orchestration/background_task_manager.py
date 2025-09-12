@@ -125,9 +125,6 @@ class BackgroundTaskManager:
 
             # 強制ガベージコレクション
             collected = gc.collect()
-            logger.debug(
-                f"タスク{task_id}のガベージコレクション: {collected}オブジェクト回収"
-            )
 
         except Exception as e:
             logger.error(f"タスクリソースクリーンアップエラー: {e}")

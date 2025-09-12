@@ -165,7 +165,6 @@ class BaseResourceManager(ABC):
         for i, callback in enumerate(self._cleanup_callbacks):
             try:
                 callback()
-                logger.debug(f"クリーンアップコールバック{i}実行完了")
             except Exception as e:
                 error_msg = f"クリーンアップコールバック{i}実行エラー: {e}"
                 logger.warning(error_msg)
@@ -175,7 +174,6 @@ class BaseResourceManager(ABC):
         """強制ガベージコレクション"""
         try:
             collected = gc.collect()
-            logger.debug(f"ガベージコレクション実行: {collected}オブジェクト回収")
             return collected
         except Exception as e:
             logger.error(f"ガベージコレクションエラー: {e}")
@@ -189,7 +187,6 @@ class BaseResourceManager(ABC):
             process = psutil.Process()
             return process.memory_info().rss / 1024 / 1024
         except ImportError:
-            logger.debug("psutilが利用できません。メモリ使用量の取得をスキップします")
             return 0.0
         except Exception as e:
             logger.warning(f"メモリ使用量取得エラー: {e}")

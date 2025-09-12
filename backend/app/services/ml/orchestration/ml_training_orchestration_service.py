@@ -459,7 +459,6 @@ class MLTrainingOrchestrationService:
                     try:
                         if os.path.isfile(temp_path):
                             os.remove(temp_path)
-                        logger.debug(f"TSFresh一時ファイル削除: {temp_path}")
                     except Exception as e:
                         logger.warning(
                             f"TSFresh一時ファイル削除エラー {temp_path}: {e}"

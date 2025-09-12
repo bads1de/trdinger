@@ -145,7 +145,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 .fillna(0.0)
             )
 
-            logger.debug("市場レジーム特徴量計算完了")
             return result_df
 
         except Exception as e:
@@ -243,7 +242,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             else:
                 result_df["Momentum"] = 0.0
 
-            logger.debug("モメンタム特徴量計算完了")
             return result_df
 
         except Exception as e:

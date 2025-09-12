@@ -131,4 +131,4 @@ class BaseFeatureCalculator(ABC):
         Args:
             feature_type: 特徴量の種類
         """
-        logger.debug(f"{feature_type}特徴量計算が完了しました")
+        pass  # デバッグログを削除

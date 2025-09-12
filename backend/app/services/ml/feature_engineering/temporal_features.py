@@ -82,7 +82,6 @@ class TemporalFeatureCalculator:
         # セッション重複時間
         result_df = self._calculate_session_overlap_features(result_df)
 
-        logger.debug("時間的特徴量計算完了")
         return result_df
 
     def _calculate_basic_time_features(self, df: pd.DataFrame) -> pd.DataFrame:

@@ -76,7 +76,6 @@ class InteractionFeatureCalculator:
         # OI × 価格変動相互作用
         result_df = self._calculate_oi_price_interactions(result_df)
 
-        logger.debug("相互作用特徴量計算完了")
         return result_df
 
     def _check_required_features(self, df: pd.DataFrame) -> bool:

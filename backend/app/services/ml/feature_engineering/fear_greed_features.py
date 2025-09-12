@@ -85,7 +85,6 @@ class FearGreedFeatureCalculator:
                 result_df, merged_df, lookback_periods
             )
 
-            logger.debug("Fear & Greed Index 特徴量計算完了")
             return result_df
 
         except Exception as e:
