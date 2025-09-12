@@ -1,14 +1,21 @@
 """
 TP/SL計算サービス
 
-TP/SL計算ロジックを一元化し、異なる計算方式を統一的なインターフェースで提供します。
+リファクタリング済み: Calculatorパターンを使用したTP/SL計算サービス
+各計算方式を個別のCalculatorクラスとして実装しています。
 """
 
 import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
-from .generator import UnifiedTPSLGenerator
+from .calculator import (
+    AdaptiveCalculator,
+    FixedPercentageCalculator,
+    RiskRewardCalculator,
+    StatisticalCalculator,
+    VolatilityCalculator,
+)
 from ..models.strategy_models import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
@@ -18,19 +25,26 @@ class TPSLService:
     """
     TP/SL計算サービス
 
-    複数の計算方式を統一的なインターフェースで提供します。
+    Calculatorパターンを使用して、各計算方式を個別のクラスとして実装しています。
     """
 
     def __init__(self):
         """初期化"""
-        # 統合ジェネレーターを使用
-        self.unified_generator = UnifiedTPSLGenerator()
+        # Calculatorインスタンスを作成
+        self.fixed_percentage_calculator = FixedPercentageCalculator()
+        self.risk_reward_calculator = RiskRewardCalculator()
+        self.volatility_calculator = VolatilityCalculator()
+        self.statistical_calculator = StatisticalCalculator()
+        self.adaptive_calculator = AdaptiveCalculator()
 
-        # 後方互換のため: 旧属性名を維持しつつ、統合ジェネレーターに委譲
-        self.risk_reward_generator = None  # 非推奨
-        self.risk_reward_calculator = None  # 非推奨
-        self.statistical_generator = None  # 非推奨
-        self.volatility_generator = None  # 非推奨
+        # Calculatorマッピング
+        self.calculators = {
+            TPSLMethod.FIXED_PERCENTAGE: self.fixed_percentage_calculator,
+            TPSLMethod.RISK_REWARD_RATIO: self.risk_reward_calculator,
+            TPSLMethod.VOLATILITY_BASED: self.volatility_calculator,
+            TPSLMethod.STATISTICAL: self.statistical_calculator,
+            TPSLMethod.ADAPTIVE: self.adaptive_calculator,
+        }
 
     def calculate_tpsl_prices(
         self,
@@ -82,44 +96,6 @@ class TPSLService:
 
         return _calculate_tpsl_prices()
 
-    def _make_prices(
-        self,
-        current_price: float,
-        stop_loss_pct: Optional[float],
-        take_profit_pct: Optional[float],
-        position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
-        """割合からSL/TP価格を生成（共通ユーティリティ）"""
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="価格生成", is_api_call=False, default_return=(None, None)
-        )
-        def _make_prices_impl():
-            sl_price: Optional[float] = None
-            tp_price: Optional[float] = None
-
-            if stop_loss_pct is not None:
-                if stop_loss_pct == 0:
-                    sl_price = current_price
-                else:
-                    if position_direction > 0:
-                        sl_price = current_price * (1 - stop_loss_pct)
-                    else:
-                        sl_price = current_price * (1 + stop_loss_pct)
-
-            if take_profit_pct is not None:
-                if take_profit_pct == 0:
-                    tp_price = current_price
-                else:
-                    if position_direction > 0:
-                        tp_price = current_price * (1 + take_profit_pct)
-                    else:
-                        tp_price = current_price * (1 - take_profit_pct)
-
-            return sl_price, tp_price
-
-        return _make_prices_impl()
 
     def _calculate_from_gene(
         self,
@@ -128,40 +104,36 @@ class TPSLService:
         market_data: Optional[Dict[str, Any]],
         position_direction: float,
     ) -> Tuple[Optional[float], Optional[float]]:
-        """TP/SL遺伝子からTP/SL価格を計算"""
+        """TP/SL遺伝子からTP/SL価格を計算（リファクタリング済み）"""
         from app.utils.error_handler import safe_operation
 
         @safe_operation(
-            context="遺伝子ベースTP/SL計算",
+            context="CalculatorベースTP/SL計算",
             is_api_call=False,
             default_return=self._calculate_fallback(current_price, position_direction),
         )
         def _calculate_from_gene():
-            if tpsl_gene.method == TPSLMethod.FIXED_PERCENTAGE:
-                return self._calculate_fixed_percentage(
-                    current_price, tpsl_gene, position_direction
+            # Calculatorマッピングから適切なCalculatorを取得
+            calculator = self.calculators.get(tpsl_gene.method)
+
+            if calculator:
+                # Calculatorを使用して計算
+                result = calculator.calculate(
+                    current_price=current_price,
+                    tpsl_gene=tpsl_gene,
+                    market_data=market_data,
+                    position_direction=position_direction,
                 )
 
-            elif tpsl_gene.method == TPSLMethod.RISK_REWARD_RATIO:
-                return self._calculate_risk_reward_ratio(
-                    current_price, tpsl_gene, position_direction
+                # TPSLResultから価格を抽出
+                sl_price, tp_price = calculator._make_prices(
+                    current_price,
+                    result.stop_loss_pct,
+                    result.take_profit_pct,
+                    position_direction,
                 )
 
-            elif tpsl_gene.method == TPSLMethod.VOLATILITY_BASED:
-                return self._calculate_volatility_based(
-                    current_price, tpsl_gene, market_data, position_direction
-                )
-
-            elif tpsl_gene.method == TPSLMethod.STATISTICAL:
-                return self._calculate_statistical(
-                    current_price, tpsl_gene, market_data, position_direction
-                )
-
-            elif tpsl_gene.method == TPSLMethod.ADAPTIVE:
-                return self._calculate_adaptive(
-                    current_price, tpsl_gene, market_data, position_direction
-                )
-
+                return sl_price, tp_price
             else:
                 # 未知の方式の場合はフォールバック
                 logger.warning(f"未知のTP/SL方式: {tpsl_gene.method}")
@@ -169,135 +141,6 @@ class TPSLService:
 
         return _calculate_from_gene()
 
-    def _calculate_fixed_percentage(
-        self,
-        current_price: float,
-        tpsl_gene: TPSLGene,
-        position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
-        """固定パーセンテージ方式"""
-        return self._make_prices(
-            current_price,
-            tpsl_gene.stop_loss_pct,
-            tpsl_gene.take_profit_pct,
-            position_direction,
-        )
-
-    def _calculate_risk_reward_ratio(
-        self,
-        current_price: float,
-        tpsl_gene: TPSLGene,
-        position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
-        """リスクリワード比方式"""
-        try:
-            result = self.unified_generator.generate_tpsl(
-                "risk_reward_ratio",
-                stop_loss_pct=tpsl_gene.base_stop_loss,
-                target_ratio=tpsl_gene.risk_reward_ratio,
-            )
-
-            return self._make_prices(
-                current_price,
-                result.stop_loss_pct,
-                result.take_profit_pct,
-                position_direction,
-            )
-
-        except Exception as e:
-            logger.error(f"リスクリワード比計算エラー: {e}")
-            return self._calculate_fixed_percentage(
-                current_price, tpsl_gene, position_direction
-            )
-
-    def _calculate_volatility_based(
-        self,
-        current_price: float,
-        tpsl_gene: TPSLGene,
-        market_data: Optional[Dict[str, Any]],
-        position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
-        """ボラティリティベース方式"""
-        try:
-            result = self.unified_generator.generate_tpsl(
-                "volatility_based",
-                atr_period=tpsl_gene.atr_period,
-                atr_multiplier_sl=tpsl_gene.atr_multiplier_sl,
-                atr_multiplier_tp=tpsl_gene.atr_multiplier_tp,
-                market_data=market_data or {},
-                current_price=current_price,
-            )
-
-            return self._make_prices(
-                current_price,
-                result.stop_loss_pct,
-                result.take_profit_pct,
-                position_direction,
-            )
-
-        except Exception as e:
-            logger.error(f"ボラティリティベース計算エラー: {e}")
-            return self._calculate_fixed_percentage(
-                current_price, tpsl_gene, position_direction
-            )
-
-    def _calculate_statistical(
-        self,
-        current_price: float,
-        tpsl_gene: TPSLGene,
-        market_data: Optional[Dict[str, Any]],
-        position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
-        """統計的方式"""
-        try:
-            result = self.unified_generator.generate_tpsl(
-                "statistical",
-                lookback_period_days=tpsl_gene.lookback_period,
-                confidence_threshold=tpsl_gene.confidence_threshold,
-                market_conditions=market_data,
-            )
-
-            return self._make_prices(
-                current_price,
-                result.stop_loss_pct,
-                result.take_profit_pct,
-                position_direction,
-            )
-
-        except Exception as e:
-            logger.error(f"統計的計算エラー: {e}")
-            return self._calculate_fixed_percentage(
-                current_price, tpsl_gene, position_direction
-            )
-
-    def _calculate_adaptive(
-        self,
-        current_price: float,
-        tpsl_gene: TPSLGene,
-        market_data: Optional[Dict[str, Any]],
-        position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
-        """適応的方式（統合ジェネレーターの自動選択を使用）"""
-        try:
-            result = self.unified_generator.generate_tpsl(
-                "adaptive",
-                tpsl_gene=tpsl_gene,
-                market_data=market_data or {},
-                current_price=current_price,
-            )
-
-            return self._make_prices(
-                current_price,
-                result.stop_loss_pct,
-                result.take_profit_pct,
-                position_direction,
-            )
-
-        except Exception as e:
-            logger.error(f"適応的計算エラー: {e}")
-            return self._calculate_fixed_percentage(
-                current_price, tpsl_gene, position_direction
-            )
 
     def _calculate_fallback(
         self,
@@ -308,7 +151,7 @@ class TPSLService:
         default_sl_pct = 0.03  # 3%
         default_tp_pct = 0.06  # 6%
 
-        return self._make_prices(
+        return self.fixed_percentage_calculator._make_prices(
             current_price,
             default_sl_pct,
             default_tp_pct,
@@ -391,7 +234,7 @@ class TPSLService:
                 else:
                     logger.warning(f"不正なTP割合: {take_profit_pct}")
 
-            return self._make_prices(
+            return self.fixed_percentage_calculator._make_prices(
                 current_price, valid_sl_pct, valid_tp_pct, position_direction
             )
 
@@ -426,7 +269,7 @@ class TPSLService:
             strategy_used = risk_management.get("_tpsl_strategy", "unknown")
 
             # 基本的な価格計算（ポジション方向を考慮）
-            sl_price, tp_price = self._make_prices(
+            sl_price, tp_price = self.fixed_percentage_calculator._make_prices(
                 current_price, stop_loss_pct, take_profit_pct, position_direction
             )
 

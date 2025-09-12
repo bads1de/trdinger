@@ -98,7 +98,7 @@ class TestTPSLService:
         service = TPSLService()
 
         # stop_loss_pct=None, take_profit_pct=None
-        sl_price, tp_price = service._make_prices(
+        sl_price, tp_price = service.fixed_percentage_calculator._make_prices(
             current_price=100.0,
             stop_loss_pct=None,
             take_profit_pct=None,
@@ -114,7 +114,7 @@ class TestTPSLService:
         service = TPSLService()
 
         # stop_loss_pct=0, take_profit_pct=0（現在の価格で指値）
-        sl_price, tp_price = service._make_prices(
+        sl_price, tp_price = service.fixed_percentage_calculator._make_prices(
             current_price=100.0,
             stop_loss_pct=0.0,
             take_profit_pct=0.0,
@@ -130,7 +130,7 @@ class TestTPSLService:
         service = TPSLService()
 
         # ショートポジション (-1.0)
-        sl_price, tp_price = service._make_prices(
+        sl_price, tp_price = service.fixed_percentage_calculator._make_prices(
             current_price=100.0,
             stop_loss_pct=0.05,
             take_profit_pct=0.10,
@@ -180,8 +180,15 @@ class TestTPSLService:
         # 市場条件
         market_conditions = {"volatility": "normal"}
 
-        # generate_adaptive_tpslをテスト
-        result = service.unified_generator.generate_adaptive_tpsl(market_conditions)
+        # AdaptiveCalculatorを直接使用してテスト
+        from app.services.auto_strategy.tpsl.calculator.adaptive_calculator import AdaptiveCalculator
+        calculator = AdaptiveCalculator()
+
+        # calculateメソッドでTPSLを生成
+        result = calculator.calculate(
+            current_price=100.0,
+            market_data=market_conditions
+        )
 
         assert isinstance(result, object)  # TPSLResult
         assert hasattr(result, 'stop_loss_pct')
