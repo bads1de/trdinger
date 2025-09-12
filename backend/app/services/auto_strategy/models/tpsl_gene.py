@@ -4,14 +4,24 @@ TP/SL 遺伝子
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from .enums import TPSLMethod
 from ..utils.gene_utils import BaseGene
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class TPSLGene(BaseGene):
+    """
+    TP/SL遺伝子
+
+    GA最適化対象としてのTP/SL設定を表現します。
+    BaseGeneを継承して共通機能を活用します。
+    """
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> TPSLGene:
@@ -47,12 +57,6 @@ class TPSLGene(BaseGene):
                 init_params[param_name] = data[param_name]
 
         return cls(**init_params)
-    """
-    TP/SL遺伝子
-
-    GA最適化対象としてのTP/SL設定を表現します。
-    BaseGeneを継承して共通機能を活用します。
-    """
 
     method: TPSLMethod = TPSLMethod.RISK_REWARD_RATIO
     stop_loss_pct: float = 0.03

@@ -7,8 +7,8 @@ from typing import Dict, Any
 from backend.app.services.auto_strategy.positions.position_sizing_service import (
     PositionSizingService,
     PositionSizingResult,
-    MarketDataCache,
 )
+from backend.app.services.auto_strategy.positions.market_data_handler import MarketDataCache
 from backend.app.services.auto_strategy.models.position_sizing_gene import PositionSizingGene
 from backend.app.services.auto_strategy.models.enums import PositionSizingMethod
 
@@ -64,7 +64,8 @@ class TestPositionSizingService:
         with patch('backend.app.services.auto_strategy.positions.position_sizing_service.unified_config'):
             service = PositionSizingService()
             assert service.logger is not None
-            assert service._cache is None
+            assert service._market_data_handler is not None
+            assert service._calculator_factory is not None
             assert service._calculation_history == []
 
     @patch('backend.app.services.auto_strategy.positions.position_sizing_service.datetime')
@@ -159,7 +160,7 @@ class TestPositionSizingService:
         assert result.position_size > 0
         assert any("取引履歴" in w for w in result.warnings)
 
-    @patch('backend.app.services.auto_strategy.positions.position_sizing_service.datetime')
+    @patch('backend.app.services.auto_strategy.positions.market_data_handler.datetime')
     def test_cache_expiration(self, mock_datetime, sample_gene_volatility_based):
         """Test cache expiration"""
         # Initial time
@@ -310,16 +311,16 @@ class TestPositionSizingService:
     def test_clear_cache_functionality(self):
         """Test cache clear functionality"""
         # Setup cache
-        self.service._cache = MarketDataCache(
+        self.service._market_data_handler._cache = MarketDataCache(
             atr_values={"BTCUSDT": 1.0},
             volatility_metrics={"BTCUSDT": 0.02},
             price_data=None,
             last_updated=datetime(2024, 1, 1, 12, 0, 0)
         )
 
-        assert self.service._cache is not None
+        assert self.service._market_data_handler._cache is not None
 
         # Clear cache
         self.service.clear_cache()
 
-        assert self.service._cache is None
+        assert self.service._market_data_handler._cache is None

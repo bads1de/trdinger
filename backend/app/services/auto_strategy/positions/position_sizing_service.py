@@ -9,13 +9,13 @@ PositionSizingCalculatorServiceとPositionSizingServiceの機能を統合して�
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Callable
-
-import numpy as np
-import pandas as pd
+from typing import Any, Dict, List, Optional
 
 from app.config.unified_config import unified_config
 from app.utils.error_handler import safe_operation
+
+from .calculators.calculator_factory import CalculatorFactory
+from .market_data_handler import MarketDataHandler
 
 logger = logging.getLogger(__name__)
 
@@ -33,22 +33,6 @@ class PositionSizingResult:
     timestamp: datetime
 
 
-@dataclass
-class MarketDataCache:
-    """市場データキャッシュ"""
-
-    atr_values: Dict[str, float]
-    volatility_metrics: Dict[str, float]
-    price_data: Optional[pd.DataFrame]
-    last_updated: datetime
-
-    def is_expired(self, max_age_minutes: int = 5) -> bool:
-        """キャッシュが期限切れかチェック"""
-        return (
-            datetime.now() - self.last_updated
-        ).total_seconds() > max_age_minutes * 60
-
-
 class PositionSizingService:
     """
     ポジションサイジング計算サービス
@@ -60,51 +44,9 @@ class PositionSizingService:
     def __init__(self):
         """初期化"""
         self.logger = logging.getLogger(__name__)
-        self._cache: Optional[MarketDataCache] = None
+        self._market_data_handler = MarketDataHandler()
+        self._calculator_factory = CalculatorFactory()
         self._calculation_history: List[PositionSizingResult] = []
-
-    def _apply_size_limits_and_finalize(
-        self,
-        position_size: float,
-        details: Dict[str, Any],
-        warnings: List[str],
-        gene
-    ) -> Dict[str, Any]:
-        """統一された最終処理（共通重複コード除去）"""
-        position_size = max(gene.min_position_size, position_size)
-        details["final_position_size"] = position_size
-
-        return {
-            "position_size": position_size,
-            "details": details,
-            "warnings": warnings,
-        }
-
-    def _safe_calculate_with_price_check(
-        self,
-        calculator_fn: Callable[[], float],
-        current_price: float,
-        fallback_value: float = 0,
-        warning_msg: str = "現在価格が無効",
-        warnings_list: Optional[List[str]] = None
-    ) -> float:
-        """価格チェック共通処理（共通重複コード除去）"""
-        if current_price > 0:
-            return calculator_fn()
-        else:
-            if warnings_list is not None:
-                warnings_list.append(warning_msg)
-            return fallback_value
-
-    def _create_calculation_result(
-        self,
-        position_size: float,
-        details: Dict[str, Any],
-        warnings: List[str],
-        gene
-    ) -> Dict[str, Any]:
-        """計算結果の統一作成（結果構造重複除去）"""
-        return self._apply_size_limits_and_finalize(position_size, details, warnings, gene)
 
     def calculate_position_size(
         self,
@@ -131,6 +73,7 @@ class PositionSizingService:
         Returns:
             計算結果
         """
+
         @safe_operation(
             context="ポジションサイズ計算",
             is_api_call=False,
@@ -156,33 +99,19 @@ class PositionSizingService:
                 )
 
             # 市場データの準備
-            enhanced_market_data = self._prepare_market_data(
+            enhanced_market_data = self._market_data_handler.prepare_market_data(
                 symbol, current_price, market_data, use_cache
             )
 
-            # 手法別の計算
-            if gene.method.value == "half_optimal_f":
-                result = self._calculate_half_optimal_f_enhanced(
-                    gene, account_balance, current_price, trade_history
-                )
-            elif gene.method.value == "volatility_based":
-                result = self._calculate_volatility_based_enhanced(
-                    gene, account_balance, current_price, enhanced_market_data
-                )
-            elif gene.method.value == "fixed_ratio":
-                result = self._calculate_fixed_ratio_enhanced(
-                    gene, account_balance, current_price
-                )
-            elif gene.method.value == "fixed_quantity":
-                result = self._calculate_fixed_quantity_enhanced(gene, current_price)
-            else:
-                # フォールバック
-                result = self._calculate_fixed_ratio_enhanced(
-                    gene, account_balance, current_price
-                )
-                warnings.append(
-                    f"未知の手法 {gene.method.value}、固定比率にフォールバック"
-                )
+            # 計算機の選択と実行
+            calculator = self._calculator_factory.create_calculator(gene.method.value)
+            result = calculator.calculate(
+                gene,
+                account_balance,
+                current_price,
+                market_data=enhanced_market_data,
+                trade_history=trade_history,
+            )
 
             # リスクメトリクスの計算
             risk_metrics = self._calculate_risk_metrics(
@@ -245,295 +174,6 @@ class PositionSizingService:
 
         return {"valid": True}
 
-    def _prepare_market_data(
-        self,
-        symbol: str,
-        current_price: float,
-        market_data: Optional[Dict[str, Any]],
-        use_cache: bool,
-    ) -> Dict[str, Any]:
-        """市場データの準備と拡張"""
-        enhanced_data = market_data.copy() if market_data else {}
-
-        # キャッシュチェック
-        if use_cache and self._cache and not self._cache.is_expired():
-            enhanced_data.update(self._cache.atr_values)
-            enhanced_data.update(self._cache.volatility_metrics)
-
-        # ATR値の確保
-        if "atr" not in enhanced_data and "atr_pct" not in enhanced_data:
-            # デフォルトATR値を設定（現在価格の設定値%）
-            default_atr_pct = unified_config.auto_strategy.default_atr_multiplier
-            enhanced_data["atr"] = current_price * default_atr_pct
-            enhanced_data["atr_pct"] = default_atr_pct
-            enhanced_data["atr_source"] = "default"
-
-        # ボラティリティメトリクスの追加
-        if "volatility" not in enhanced_data:
-            enhanced_data["volatility"] = enhanced_data.get("atr_pct", 0.02)
-
-        return enhanced_data
-
-    def _calculate_half_optimal_f_enhanced(
-        self,
-        gene,
-        account_balance: float,
-        current_price: float,
-        trade_history: Optional[List[Dict[str, Any]]],
-    ) -> Dict[str, Any]:
-        """ハーフオプティマルF方式の拡張計算"""
-        details: Dict[str, Any] = {"method": "half_optimal_f"}
-        warnings: List[str] = []
-
-        if not trade_history or len(trade_history) < 10:
-            # データ不足時は簡易版オプティマルF計算を試行
-            @safe_operation(
-                context="簡易オプティマルF計算",
-                is_api_call=False,
-                default_return={
-                    "position_size": 0,
-                    "warnings": ["簡易計算失敗"],
-                    "details": {"fallback_reason": "simplified_calculation_failed"},
-                },
-            )
-            def _simplified_optimal_f():
-                # 統計的仮定値を使用した簡易計算
-                assumed_win_rate = unified_config.auto_strategy.assumed_win_rate
-                assumed_avg_win = unified_config.auto_strategy.assumed_avg_win
-                assumed_avg_loss = unified_config.auto_strategy.assumed_avg_loss
-
-                optimal_f = (
-                    assumed_win_rate * assumed_avg_win
-                    - (1 - assumed_win_rate) * assumed_avg_loss
-                ) / assumed_avg_win
-                half_optimal_f = max(0, min(0.1, optimal_f * gene.optimal_f_multiplier))
-
-                position_amount = account_balance * half_optimal_f
-                if current_price > 0:
-                    position_size = position_amount / current_price
-                else:
-                    position_size = 0
-
-                return {
-                    "position_size": position_size,
-                    "warnings": ["取引履歴が不足、簡易版オプティマルF計算を使用"],
-                    "details": {
-                        "fallback_reason": "insufficient_trade_history_simplified",
-                        "trade_count": len(trade_history) if trade_history else 0,
-                        "assumed_win_rate": assumed_win_rate,
-                        "assumed_avg_win": assumed_avg_win,
-                        "assumed_avg_loss": assumed_avg_loss,
-                        "calculated_optimal_f": optimal_f,
-                        "half_optimal_f": half_optimal_f,
-                    },
-                }
-
-            simplified_result = _simplified_optimal_f()
-            if isinstance(simplified_result, dict):
-                position_size = simplified_result.get("position_size", 0)
-                warnings.extend(simplified_result.get("warnings", []))
-                details.update(simplified_result.get("details", {}))
-            else:
-                # フォールバック
-                position_amount = account_balance * gene.fixed_ratio
-                position_size = self._safe_calculate_with_price_check(
-                    lambda: position_amount / current_price,
-                    current_price, 0, "取引履歴が不足、固定比率にフォールバック", warnings
-                )
-                details.update(
-                    {
-                        "fallback_reason": "insufficient_trade_history_to_fixed",
-                        "trade_count": len(trade_history) if trade_history else 0,
-                        "fallback_ratio": gene.fixed_ratio,
-                    }
-                )
-        else:
-            # 過去データの分析
-            recent_trades = trade_history[-gene.lookback_period :]
-
-            wins = [t for t in recent_trades if t.get("pnl", 0) > 0]
-            losses = [t for t in recent_trades if t.get("pnl", 0) < 0]
-
-            if len(recent_trades) == 0 or len(wins) == 0 or len(losses) == 0:
-                position_amount = account_balance * gene.fixed_ratio
-                position_size = self._safe_calculate_with_price_check(
-                    lambda: position_amount / current_price,
-                    current_price, 0, "有効な取引データなし、固定比率にフォールバック", warnings
-                )
-                details.update(
-                    {
-                        "fallback_reason": "no_valid_trades",
-                        "fallback_ratio": gene.fixed_ratio,
-                    }
-                )
-            else:
-                win_rate = len(wins) / len(recent_trades)
-                avg_win = np.mean([t.get("pnl", 0) for t in wins])
-                avg_loss = abs(np.mean([t.get("pnl", 0) for t in losses]))
-
-                # オプティマルF計算
-                if avg_win > 0 and avg_loss > 0:
-                    optimal_f = (
-                        win_rate * avg_win - (1 - win_rate) * avg_loss
-                    ) / avg_win
-                    half_optimal_f = max(0, optimal_f * gene.optimal_f_multiplier)
-
-                    # 口座残高に対する比率として適用
-                    position_amount = account_balance * half_optimal_f
-                    position_size = self._safe_calculate_with_price_check(
-                        lambda: position_amount / current_price,
-                        current_price, 0, "現在価格が無効", warnings
-                    )
-
-                    details.update(
-                        {
-                            "win_rate": win_rate,
-                            "avg_win": avg_win,
-                            "avg_loss": avg_loss,
-                            "optimal_f": optimal_f,
-                            "half_optimal_f": half_optimal_f,
-                            "trade_count": len(recent_trades),
-                            "lookback_period": gene.lookback_period,
-                        }
-                    )
-                else:
-                    # 無効な損益データの場合、ボラティリティベース方式を試行
-                    @safe_operation(
-                        context="ボラティリティベースフォールバック",
-                        is_api_call=False,
-                        default_return={
-                            "position_size": (
-                                account_balance * gene.fixed_ratio / current_price
-                                if current_price > 0
-                                else 0
-                            ),
-                            "warnings": ["無効な損益データ、固定比率にフォールバック"],
-                            "details": {
-                                "fallback_reason": "invalid_pnl_data_to_fixed",
-                                "fallback_ratio": gene.fixed_ratio,
-                            },
-                        },
-                    )
-                    def _volatility_fallback():
-                        fallback_atr_multiplier = (
-                            unified_config.auto_strategy.fallback_atr_multiplier
-                        )
-                        volatility_result = self._calculate_volatility_based_enhanced(
-                            gene,
-                            account_balance,
-                            current_price,
-                            {"atr": current_price * fallback_atr_multiplier},
-                        )
-                        return {
-                            "position_size": volatility_result["position_size"],
-                            "warnings": [
-                                "無効な損益データ、ボラティリティベース方式にフォールバック"
-                            ],
-                            "details": {
-                                "fallback_reason": "invalid_pnl_data_to_volatility",
-                                "fallback_method": "volatility_based",
-                            },
-                        }
-
-                    fallback_result = _volatility_fallback()
-                    if isinstance(fallback_result, dict):
-                        position_size = fallback_result.get("position_size", 0)
-                        warnings.extend(fallback_result.get("warnings", []))
-                        details.update(fallback_result.get("details", {}))
-                    else:
-                        position_size = fallback_result
-
-        # 統一された最終処理（重複コード除去）
-        return self._apply_size_limits_and_finalize(position_size, details, warnings, gene)
-
-    def _calculate_volatility_based_enhanced(
-        self,
-        gene,
-        account_balance: float,
-        current_price: float,
-        market_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """ボラティリティベース方式の拡張計算"""
-        details: Dict[str, Any] = {"method": "volatility_based"}
-        warnings = []
-
-        # ATR値の取得
-        atr_value = market_data.get("atr", current_price * 0.02)
-        atr_pct = atr_value / current_price if current_price > 0 else 0.02
-
-        # リスク量の計算
-        risk_amount = account_balance * gene.risk_per_trade
-
-        # ポジションサイズの計算
-        volatility_factor = atr_pct * gene.atr_multiplier
-        if volatility_factor > 0:
-            position_size = risk_amount / (current_price * volatility_factor)
-        else:
-            position_size = gene.min_position_size
-            warnings.append("ボラティリティが0、最小サイズを使用")
-
-        # 詳細情報の更新
-        details.update(
-            {
-                "atr_value": atr_value,
-                "atr_pct": atr_pct,
-                "atr_multiplier": gene.atr_multiplier,
-                "risk_per_trade": gene.risk_per_trade,
-                "risk_amount": risk_amount,
-                "volatility_factor": volatility_factor,
-                "atr_source": market_data.get("atr_source", "provided"),
-            }
-        )
-
-        # 最大サイズ制限適用 + 統一された最終処理
-        position_size = min(position_size, gene.max_position_size)
-        return self._apply_size_limits_and_finalize(position_size, details, warnings, gene)
-
-    def _calculate_fixed_ratio_enhanced(
-        self,
-        gene,
-        account_balance: float,
-        current_price: float,
-    ) -> Dict[str, Any]:
-        """固定比率方式の拡張計算"""
-        details: Dict[str, Any] = {"method": "fixed_ratio"}
-
-        # ポジションサイズの計算
-        position_amount = account_balance * gene.fixed_ratio
-        position_size = self._safe_calculate_with_price_check(
-            lambda: position_amount / current_price,
-            current_price, 0, "現在価格が無効", None
-        )
-
-        # 詳細情報の更新
-        details.update(
-            {
-                "fixed_ratio": gene.fixed_ratio,
-                "account_balance": account_balance,
-                "calculated_amount": position_amount,
-            }
-        )
-
-        # 統一された最終処理（重複コード除去）
-        return self._apply_size_limits_and_finalize(position_size, details, [], gene)
-
-    def _calculate_fixed_quantity_enhanced(
-        self,
-        gene,
-        current_price: float,
-    ) -> Dict[str, Any]:
-        """固定枚数方式の拡張計算"""
-        details: Dict[str, Any] = {"method": "fixed_quantity"}
-
-        # ポジションサイズの計算
-        position_size = gene.fixed_quantity
-
-        # 詳細情報の更新
-        details.update({"fixed_quantity": gene.fixed_quantity})
-
-        # 統一された最終処理（重複コード除去）
-        return self._apply_size_limits_and_finalize(position_size, details, [], gene)
-
     def _calculate_risk_metrics(
         self,
         position_size: float,
@@ -542,6 +182,7 @@ class PositionSizingService:
         market_data: Dict[str, Any],
     ) -> Dict[str, float]:
         """リスクメトリクスの計算"""
+
         @safe_operation(
             context="リスクメトリクス計算",
             is_api_call=False,
@@ -584,6 +225,7 @@ class PositionSizingService:
         trade_history: Optional[List[Dict[str, Any]]],
     ) -> float:
         """信頼度スコアの計算"""
+
         @safe_operation(
             context="信頼度スコア計算", is_api_call=False, default_return=0.5
         )
@@ -627,9 +269,7 @@ class PositionSizingService:
 
     def clear_cache(self):
         """キャッシュのクリア"""
-        self._cache = None
-
-    # 以下、旧PositionSizingServiceから統合されたメソッド
+        self._market_data_handler.clear_cache()
 
     def _create_default_gene(self, **kwargs):
         """デフォルト遺伝子を作成"""
@@ -704,6 +344,7 @@ class PositionSizingService:
         Returns:
             ポジションサイズ（数量）
         """
+
         @safe_operation(
             context="簡易ポジションサイズ計算", is_api_call=False, default_return=0.0
         )
