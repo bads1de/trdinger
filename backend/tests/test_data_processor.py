@@ -16,15 +16,30 @@ class TestDataProcessor:
         """テスト用のサンプルデータ"""
         dates = pd.date_range('2023-01-01', periods=100, freq='h')
         np.random.seed(42)
+
+        # OHLCの関係を満たすようにデータを生成
+        base_prices = np.random.uniform(100, 110, 100)
+        volatility = np.random.uniform(0.01, 0.05, 100)  # 1% to 5% volatility
+
+        opens = base_prices
+        highs = base_prices * (1 + volatility)
+        lows = base_prices * (1 - volatility)
+        closes = base_prices + np.random.uniform(-volatility, volatility, 100) * base_prices
+
+        # 確実にlow <= open/close <= highを満たす
+        lows = np.minimum(lows, np.minimum(opens, closes))
+        highs = np.maximum(highs, np.maximum(opens, closes))
+
         data = {
-            'open': np.random.uniform(100, 110, 100),
-            'high': np.random.uniform(105, 115, 100),
-            'low': np.random.uniform(95, 105, 100),
-            'close': np.random.uniform(100, 110, 100),
+            'timestamp': dates,
+            'open': opens,
+            'high': highs,
+            'low': lows,
+            'close': closes,
             'volume': np.random.randint(1000, 10000, 100),
             'fear_greed_value': np.random.uniform(0, 100, 100),
         }
-        return pd.DataFrame(data, index=dates)
+        return pd.DataFrame(data)
 
     @pytest.fixture
     def data_processor(self):
@@ -120,6 +135,22 @@ class TestDataProcessor:
         # キャッシュが空であることを確認
         assert len(data_processor.fitted_pipelines) == 0
         assert len(data_processor.imputation_stats) == 0
+
+    def test_clean_and_validate_data_missing_required_columns(self, data_processor):
+        """必須カラムが欠けている場合のテスト"""
+        dates = pd.date_range('2023-01-01', periods=10, freq='h')
+        data = {
+            'timestamp': dates,
+            'some_other_col': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        }
+        df = pd.DataFrame(data)
+
+        # 必須カラムが欠けている場合、ValueErrorが発生することを期待
+        with pytest.raises(ValueError, match="Missing required columns"):
+            data_processor.clean_and_validate_data(
+                df,
+                required_columns=['open', 'high', 'low', 'close', 'volume']
+            )
 
 
 class TestDataProcessorIntegration:

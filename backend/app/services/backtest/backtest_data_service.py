@@ -83,7 +83,8 @@ class BacktestDataService:
             DataIntegrationError: データ統合に失敗した場合
         """
         try:
-            return self._integration_service.create_backtest_dataframe(
+            logger.info(f"BacktestDataService - Creating backtest dataframe: {symbol} {timeframe} from {start_date} to {end_date}")
+            result = self._integration_service.create_backtest_dataframe(
                 symbol=symbol,
                 timeframe=timeframe,
                 start_date=start_date,
@@ -92,6 +93,9 @@ class BacktestDataService:
                 include_fr=True,
                 include_fear_greed=False,
             )
+            if 'funding_rate' in result.columns:
+                fr_stats = result['funding_rate'].describe()
+            return result
         except DataIntegrationError as e:
             logger.error(f"バックテスト用データ作成エラー: {e}")
             raise ValueError(f"バックテスト用データの作成に失敗しました: {e}")

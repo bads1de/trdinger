@@ -120,8 +120,6 @@ class MarketConfig(BaseSettings):
         default={
             "BTCUSDT": "BTC/USDT:USDT",
             "BTC-USDT": "BTC/USDT:USDT",
-            "BTC/USDT": "BTC/USDT:USDT",
-            "BTC/USDT:USDT": "BTC/USDT:USDT",
             "BTCUSDT_PERP": "BTC/USDT:USDT",
         }
     )

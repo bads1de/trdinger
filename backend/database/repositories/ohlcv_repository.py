@@ -77,7 +77,7 @@ class OHLCVRepository(BaseRepository):
             OHLCV データのリスト
         """
         filters = {"symbol": symbol, "timeframe": timeframe}
-        return self.get_filtered_data(
+        data = self.get_filtered_data(
             filters=filters,
             time_range_column="timestamp",
             start_time=start_time,
@@ -86,6 +86,7 @@ class OHLCVRepository(BaseRepository):
             order_asc=True,
             limit=limit,
         )
+        return data
 
     def get_latest_ohlcv_data(
         self,

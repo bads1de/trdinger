@@ -345,7 +345,7 @@ def mutate_strategy_gene_pure(
                 from ..config import GAConfig
 
                 generator = RandomGeneGenerator(GAConfig())
-                new_indicators = generator._generate_random_indicators()
+                new_indicators = generator.indicator_generator.generate_random_indicators()
                 if new_indicators:
                     mutated.indicators.append(random.choice(new_indicators))
 

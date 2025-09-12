@@ -111,7 +111,9 @@ class DataIntegrationService:
             df = self._integrate_fear_greed_data(df, start_date, end_date)
 
         # 3. データクリーニングと最適化
+        logger.info("データクリーニングと最適化を開始")
         df = self._clean_and_optimize_dataframe(df, include_fear_greed)
+        logger.info("データクリーニングと最適化を完了")
 
         return df
 
@@ -154,10 +156,12 @@ class DataIntegrationService:
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """ベースとなるOHLCVデータのDataFrameを取得"""
+        logger.info(f"DataIntegrationService - Getting OHLCV data: {symbol} {timeframe} from {start_date} to {end_date}")
         ohlcv_data = self.retrieval_service.get_ohlcv_data(
             symbol, timeframe, start_date, end_date
         )
-        return self.conversion_service.convert_ohlcv_to_dataframe(ohlcv_data)
+        df = self.conversion_service.convert_ohlcv_to_dataframe(ohlcv_data)
+        return df
 
     @safe_operation(context="Open Interestデータ統合", is_api_call=False)
     def _integrate_open_interest_data(
@@ -212,11 +216,11 @@ class DataIntegrationService:
         """DataFrameのクリーニングと最適化"""
         # 必須カラムを定義
         required_columns = [
-            "Open",
-            "High",
-            "Low",
-            "Close",
-            "Volume",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
             "open_interest",
             "funding_rate",
         ]
@@ -255,22 +259,28 @@ class DataIntegrationService:
         end_date_val: pd.Timestamp = pd.to_datetime(df.index.max(), errors='coerce')  # type: ignore
         end_date = end_date_val.isoformat() if pd.notna(end_date_val) else None
 
+        # カラム名のケースをチェックして適切なものを選択
+        low_col = "low" if "low" in df.columns else "Low"
+        high_col = "high" if "high" in df.columns else "High"
+        close_col = "close" if "close" in df.columns else "Close"
+        volume_col = "volume" if "volume" in df.columns else "Volume"
+
         summary = {
             "total_records": len(df),
             "start_date": start_date,
             "end_date": end_date,
             "columns": list(df.columns),
             "price_range": {
-                "min": float(df["Low"].min()) if not df.empty else None,
-                "max": float(df["High"].max()) if not df.empty else None,
-                "first_close": float(df["Close"].iloc[0]) if not df.empty else None,
-                "last_close": float(df["Close"].iloc[-1]) if not df.empty else None,
+                "min": float(df[low_col].min()) if not df.empty else None,
+                "max": float(df[high_col].max()) if not df.empty else None,
+                "first_close": float(df[close_col].iloc[0]) if not df.empty else None,
+                "last_close": float(df[close_col].iloc[-1]) if not df.empty else None,
             },
             "volume_stats": {
-                "total": float(df["Volume"].sum()) if not df.empty else 0.0,
-                "average": float(df["Volume"].mean()) if not df.empty else 0.0,
-                "max": float(df["Volume"].max()) if not df.empty else 0.0,
-            },
+                "total": float(df[volume_col].sum()) if not df.empty else 0.0,
+                "average": float(df[volume_col].mean()) if not df.empty else 0.0,
+                "max": float(df[volume_col].max()) if not df.empty else 0.0,
+            }
         }
 
         # 追加データの統計情報

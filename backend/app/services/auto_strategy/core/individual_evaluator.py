@@ -55,6 +55,14 @@ class IndividualEvaluator:
                 else {}
             )
 
+            # デバッグ: バックテスト設定の内容を確認
+            logger.info(f"GA Individual Evaluator - Backtest config: {backtest_config}")
+            if 'start_date' not in backtest_config or 'end_date' not in backtest_config:
+                logger.warning("start_date or end_date missing in backtest config")
+            else:
+                logger.info(f"Symbol: {backtest_config.get('symbol')}, Timeframe: {backtest_config.get('timeframe')}")
+                logger.info(f"Date range: {backtest_config.get('start_date')} to {backtest_config.get('end_date')}")
+
             # 戦略設定を追加（test_strategy_generationと同じ形式）
             from app.services.auto_strategy.serializers.gene_serialization import (
                 GeneSerializer,

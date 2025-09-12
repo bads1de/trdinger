@@ -37,7 +37,7 @@ class GAGenerationRequest(BaseModel):
             "example": {
                 "experiment_name": "BTC_Strategy_Gen_001",
                 "base_config": {
-                    "symbol": "BTC/USDT",
+                    "symbol": "BTC/USDT:USDT",
                     "timeframe": "1h",
                     "start_date": "2024-01-01",
                     "end_date": "2024-12-19",

@@ -244,6 +244,16 @@ class GeneticAlgorithmEngine:
             self.is_running = True
             start_time = time.time()
 
+            logger.info(f"GA Engine - Starting evolution with backtest_config: {backtest_config}")
+
+            # バックテスト設定にデフォルトの日付を設定（存在しない場合）
+            if 'start_date' not in backtest_config:
+                backtest_config['start_date'] = config.fallback_start_date
+                logger.info(f"GA Engine - Using fallback start_date: {config.fallback_start_date}")
+            if 'end_date' not in backtest_config:
+                backtest_config['end_date'] = config.fallback_end_date
+                logger.info(f"GA Engine - Using fallback end_date: {config.fallback_end_date}")
+
             # バックテスト設定を保存
             self.individual_evaluator.set_backtest_config(backtest_config)
 

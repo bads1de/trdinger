@@ -64,20 +64,28 @@ class DataProcessor:
         Returns:
             クリーニング済みのDataFrame
         """
-        logger.info("データクリーニングと検証を開始")
         result_df = df.copy()
+
+        # カラム名を小文字に統一（大文字小文字のケースを統一）
+        result_df.columns = result_df.columns.str.lower()
+
+        # 拡張データの範囲クリップ（funding_rateなど）
+        result_df = self._clip_extended_data_ranges(result_df)
+        logger.info("拡張データの範囲クリップを完了")
 
         # データ検証
         logger.info("データ検証を実行")
         try:
-            if 'Open' in result_df.columns:  # OHLCVデータの場合
+            # 必要なカラムに基づいて検証を実行
+            ohlcv_columns = {'open', 'high', 'low', 'close', 'volume'}
+            if any(col in required_columns for col in ohlcv_columns):
                 validate_ohlcv_data(result_df)
             validate_extended_data(result_df)
             validate_data_integrity(result_df)
             logger.info("データ検証完了")
         except Exception as e:
-            logger.warning(f"データ検証で警告: {e}")
-            # 検証失敗しても処理を継続
+            logger.error(f"データ検証でエラー: {e}")
+            raise ValueError(f"データ検証に失敗しました: {e}")
 
         # データ補間
         if interpolate:
@@ -376,6 +384,44 @@ class DataProcessor:
                 mode_value = result_df[col].mode()
                 if not mode_value.empty:
                     result_df[col] = result_df[col].fillna(mode_value.iloc[0])
+
+        return result_df
+
+    def _clip_extended_data_ranges(self, df: pd.DataFrame) -> pd.DataFrame:
+        """拡張データの範囲クリップ処理"""
+        result_df = df.copy()
+
+        # funding_rateの範囲クリップ (-1から1)
+        if 'funding_rate' in result_df.columns:
+            logger.info(f"funding_rateカラム検出: shape={result_df.shape}")
+            # NaNとinfを処理してからクリップ
+            funding_rate_clean = result_df['funding_rate'].replace([np.inf, -np.inf], np.nan)
+            before_count = (funding_rate_clean < -1).sum() + (funding_rate_clean > 1).sum()
+            logger.info(f"funding_rateクリップ前 - 範囲外値: {before_count}, min: {funding_rate_clean.min()}, max: {funding_rate_clean.max()}")
+            logger.info(f"funding_rateサンプル値: {result_df['funding_rate'].head(3).tolist()}")
+
+            # 常にクリップを実行（範囲外値がなくてもNaN/infの処理のため）
+            result_df['funding_rate'] = np.clip(funding_rate_clean.fillna(0), -1, 1)
+            after_count = (result_df['funding_rate'] < -1).sum() + (result_df['funding_rate'] > 1).sum()
+            logger.info(f"funding_rateをクリップ実行: クリップ後範囲外値: {after_count}")
+            if before_count > 0:
+                logger.info(f"範囲外値を修正: {before_count}件")
+
+        # fear_greedの範囲クリップ (0から100)
+        if 'fear_greed' in result_df.columns:
+            fear_greed_clean = result_df['fear_greed'].replace([np.inf, -np.inf], np.nan)
+            before_count = (fear_greed_clean < 0).sum() + (fear_greed_clean > 100).sum()
+            if before_count > 0:
+                result_df['fear_greed'] = np.clip(fear_greed_clean.fillna(50), 0, 100)
+                logger.info(f"fear_greedをクリップ: {before_count}件の範囲外値を修正")
+
+        # open_interestは負値にならないようにクリップ
+        if 'open_interest' in result_df.columns:
+            oi_clean = result_df['open_interest'].replace([np.inf, -np.inf], np.nan)
+            before_count = (oi_clean < 0).sum()
+            if before_count > 0:
+                result_df['open_interest'] = np.maximum(oi_clean.fillna(0), 0)
+                logger.info(f"open_interestをクリップ: {before_count}件の負値を修正")
 
         return result_df
 

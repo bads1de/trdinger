@@ -398,6 +398,13 @@ class DictConverter:
             # メタデータ
             metadata = data.get("metadata", {})
 
+            # 有効な指標がない場合はデフォルト指標を追加
+            enabled_indicators = [ind for ind in indicators if ind.enabled]
+            if not enabled_indicators:
+                from ..models.strategy_models import IndicatorGene
+                indicators.append(IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True))
+                logger.warning("有効な指標がなかったため、デフォルト指標SMAを追加しました")
+
             # 後方互換性のための処理
             if not long_entry_conditions and entry_conditions:
                 long_entry_conditions = entry_conditions

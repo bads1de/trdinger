@@ -68,6 +68,7 @@ class DataRetrievalService:
         Returns:
             OHLCVデータのリスト。リポジトリが初期化されていない場合は空のリストを返します。
         """
+        logger.info(f"DataRetrievalService - Requesting OHLCV data: {symbol} {timeframe} from {start_date} to {end_date}")
         if self.ohlcv_repo is None:
             logger.warning("OHLCVRepositoryが初期化されていません")
             return []
@@ -91,6 +92,7 @@ class DataRetrievalService:
             )
 
             if not data:
+                logger.error(f"DataRetrievalService - No OHLCV data found for {symbol} {timeframe}")
                 raise DataRetrievalError(
                     f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした"
                 )

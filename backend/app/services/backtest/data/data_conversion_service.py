@@ -46,11 +46,12 @@ class DataConversionService:
 
         # 効率的にDataFrameを作成
         data = {
-            "Open": [float(r.open) for r in ohlcv_data],
-            "High": [float(r.high) for r in ohlcv_data],
-            "Low": [float(r.low) for r in ohlcv_data],
-            "Close": [float(r.close) for r in ohlcv_data],
-            "Volume": [float(r.volume) for r in ohlcv_data],
+            "timestamp": [r.timestamp for r in ohlcv_data],
+            "open": [float(r.open) for r in ohlcv_data],
+            "high": [float(r.high) for r in ohlcv_data],
+            "low": [float(r.low) for r in ohlcv_data],
+            "close": [float(r.close) for r in ohlcv_data],
+            "volume": [float(r.volume) for r in ohlcv_data],
         }
 
         df = pd.DataFrame(data)
@@ -74,14 +75,18 @@ class DataConversionService:
         Returns:
             最適化されたDataFrame
         """
+        # timestampはdatetime型を維持
+        if "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+
         # 価格データは高精度が必要なのでfloat64を維持
-        for col in ["Open", "High", "Low", "Close"]:
+        for col in ["open", "high", "low", "close"]:
             if col in df.columns:
                 df[col] = df[col].astype("float64")
 
         # ボリュームは整数でも可
-        if "Volume" in df.columns:
-            df["Volume"] = df["Volume"].astype(
+        if "volume" in df.columns:
+            df["volume"] = df["volume"].astype(
                 "float64"
             )  # 小数点以下がある場合を考慮
 

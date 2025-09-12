@@ -90,6 +90,7 @@ class BacktestExecutor:
     ) -> pd.DataFrame:
         """バックテスト用データを取得"""
         try:
+            logger.info(f"BacktestExecutor - Requesting data: {symbol} {timeframe} from {start_date} to {end_date}")
             data = self.data_service.get_data_for_backtest(
                 symbol=symbol,
                 timeframe=timeframe,
@@ -98,6 +99,7 @@ class BacktestExecutor:
             )
 
             if data.empty:
+                logger.error(f"BacktestExecutor - No data found for {symbol} {timeframe}")
                 raise BacktestExecutionError(
                     f"{symbol} {timeframe}のデータが見つかりませんでした。"
                 )
@@ -117,6 +119,12 @@ class BacktestExecutor:
     ) -> Backtest:
         """バックテストインスタンスを作成"""
         try:
+
+            # backtesting.pyライブラリが大文字のカラム名を期待するため変換
+            data = data.copy()
+            data.columns = data.columns.str.capitalize()
+            logger.info(f"BacktestExecutor - Converted columns: {list(data.columns)}")
+
             # 暗号通貨シンボルの場合FractionalBacktestを使用（警告回避）
             if self._is_crypto_symbol(symbol):
                 bt = FractionalBacktest(

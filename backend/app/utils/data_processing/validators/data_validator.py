@@ -78,8 +78,11 @@ def validate_extended_data(df: pd.DataFrame) -> bool:
     
     # funding_rate の範囲確認 (通常-1から1程度)
     if 'funding_rate' in df.columns:
-        if not ((df['funding_rate'] >= -1) & (df['funding_rate'] <= 1)).all():
-            raise ValueError("funding_rate values must be between -1 and 1")
+        invalid_mask = ~((df['funding_rate'] >= -1) & (df['funding_rate'] <= 1))
+        if invalid_mask.any():
+            invalid_count = invalid_mask.sum()
+            invalid_values = df.loc[invalid_mask, 'funding_rate'].head(5).tolist()
+            raise ValueError(f"funding_rate values must be between -1 and 1. Found {invalid_count} invalid values: {invalid_values}")
     
     return True
 
