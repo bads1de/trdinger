@@ -51,10 +51,6 @@ class OIMerger:
 
             if oi_data:
                 oi_df = self._convert_oi_to_dataframe(oi_data)
-                # logger.info(
-                #     f"OI DataFrame: {len(oi_df)}行, "
-                #     f"期間: {oi_df.index.min()} - {oi_df.index.max()}"
-                # )
 
                 # toleranceを設定（1日以内のデータのみ使用）
                 tolerance = pd.Timedelta(days=1)
@@ -67,11 +63,6 @@ class OIMerger:
                     tolerance=tolerance,
                 )
 
-                valid_oi_count = df["open_interest"].notna().sum()
-                # logger.info(
-                #     f"OIデータマージ完了: {valid_oi_count}/{len(df)}行に値あり "
-                #     f"({valid_oi_count/len(df)*100:.1f}%)"
-                # )
             else:
                 logger.warning(
                     f"シンボル {symbol} のOpen Interestデータが見つかりませんでした。"

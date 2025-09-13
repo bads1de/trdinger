@@ -1,15 +1,15 @@
 """
-Data Processing Pipelines Package
+データ処理パイプライン パッケージ
 
-This package provides modular, reusable pipelines for data processing workflows.
-All pipelines follow scikit-learn conventions and can be used seamlessly in ML workflows.
+このパッケージは、データ処理ワークフロー用のモジュラーで再利用可能なパイプラインを提供します。
+すべてのパイプラインはscikit-learnの慣例に従い、MLワークフローでシームレスに使用できます。
 
-Available Pipelines:
-- PreprocessingPipeline: Basic data preprocessing (outlier removal, imputation, encoding)
-- MLPipeline: ML-focused pipeline with feature selection and scaling
-- ComprehensivePipeline: Complete end-to-end data processing pipeline
+利用可能なパイプライン：
+- PreprocessingPipeline: 基本的なデータ前処理（外れ値除去、補間、エンコーディング）
+- MLPipeline: 特徴量選択とスケーリングを備えたML中心のパイプライン
+- ComprehensivePipeline: 完全なエンドツーエンドのデータ処理パイプライン
 
-Usage:
+使用法：
     from backend.app.utils.data_processing.pipelines import (
         create_preprocessing_pipeline,
         create_ml_pipeline,

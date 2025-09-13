@@ -128,7 +128,7 @@ class OpenInterestOrchestrationService:
                 db_session = next(get_db())
 
             repository = OpenInterestRepository(db_session)
-            service = BybitOpenInterestService()
+            BybitOpenInterestService()
 
             start_time = (
                 datetime.fromisoformat(start_date.replace("Z", "+00:00"))
@@ -140,7 +140,17 @@ class OpenInterestOrchestrationService:
                 if end_date
                 else None
             )
-            normalized_symbol = symbol if ":" in symbol else f"{symbol}:USDT" if symbol.endswith("/USDT") else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+            normalized_symbol = (
+                symbol
+                if ":" in symbol
+                else (
+                    f"{symbol}:USDT"
+                    if symbol.endswith("/USDT")
+                    else (
+                        f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+                    )
+                )
+            )
 
             records = repository.get_open_interest_data(
                 symbol=normalized_symbol,

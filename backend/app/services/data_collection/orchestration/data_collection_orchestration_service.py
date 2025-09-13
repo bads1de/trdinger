@@ -119,7 +119,9 @@ class DataCollectionOrchestrationService:
             start_date,
         )
 
-        status_message = f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました"
+        status_message = (
+            f"{normalized_symbol} {timeframe} の履歴データ収集を開始しました"
+        )
         if force_update:
             status_message += "（強制更新モード）"
 
@@ -247,7 +249,11 @@ class DataCollectionOrchestrationService:
             raise
 
     async def start_bulk_historical_data_collection(
-        self, background_tasks: BackgroundTasks, db: Session, force_update: bool = False, start_date: Optional[str] = None
+        self,
+        background_tasks: BackgroundTasks,
+        db: Session,
+        force_update: bool = False,
+        start_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
@@ -282,8 +288,14 @@ class DataCollectionOrchestrationService:
                     if should_collect:
                         if force_update and data_count > 0:
                             # 強制更新の場合は既存データを削除
-                            deleted_count = repository.clear_ohlcv_data_by_symbol_and_timeframe(symbol, timeframe)
-                            logger.info(f"強制更新のため {symbol} {timeframe} の既存データを{deleted_count}件削除しました")
+                            deleted_count = (
+                                repository.clear_ohlcv_data_by_symbol_and_timeframe(
+                                    symbol, timeframe
+                                )
+                            )
+                            logger.info(
+                                f"強制更新のため {symbol} {timeframe} の既存データを{deleted_count}件削除しました"
+                            )
 
                         collection_tasks.append((symbol, timeframe))
                         background_tasks.add_task(
@@ -294,7 +306,9 @@ class DataCollectionOrchestrationService:
                             start_date,
                         )
 
-            status_message = f"一括履歴データ収集を開始しました（{len(collection_tasks)}件のタスク）"
+            status_message = (
+                f"一括履歴データ収集を開始しました（{len(collection_tasks)}件のタスク）"
+            )
             if force_update:
                 status_message += "（強制更新モード）"
 
@@ -395,11 +409,11 @@ class DataCollectionOrchestrationService:
         # 最新・最古タイムスタンプを取得
         latest_timestamp = repository.get_latest_timestamp(
             timestamp_column="timestamp",
-            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe}
+            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe},
         )
         oldest_timestamp = repository.get_oldest_timestamp(
             timestamp_column="timestamp",
-            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe}
+            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe},
         )
 
         return api_response(
@@ -481,10 +495,15 @@ class DataCollectionOrchestrationService:
 
             repository = OHLCVRepository(db)
 
-            logger.info(f"ページネーションで全期間データを取得します")
+            logger.info("ページネーションで全期間データを取得します")
 
-            result = await self.historical_service.collect_historical_data_with_start_date(
-                symbol, timeframe, repository, None  # since_timestamp は使用せずページネーションで全データ取得
+            result = (
+                await self.historical_service.collect_historical_data_with_start_date(
+                    symbol,
+                    timeframe,
+                    repository,
+                    None,  # since_timestamp は使用せずページネーションで全データ取得
+                )
             )
 
             if result is not None and result >= 0:

@@ -1,5 +1,5 @@
 """
-ComplexConditions strategy for condition generation.
+条件生成のためのComplexConditions戦略。
 """
 
 import logging
@@ -12,29 +12,29 @@ logger = logging.getLogger(__name__)
 
 
 class ComplexConditionsStrategy(ConditionStrategy):
-    """Strategy for generating complex conditions with multiple indicator combination."""
+    """複数の指標組み合わせで複雑な条件を生成する戦略。"""
 
     def generate_conditions(self, indicators: List[IndicatorGene]):
         """
-        Generate conditions by combining multiple indicators.
+        複数の指標を組み合わせて条件を生成。
 
-        Uses up to 3 indicators to create more complex condition sets.
+        より複雑な条件セットを作成するために最大3つの指標を使用。
         """
         long_conditions = []
         short_conditions = []
 
-        # Use up to 3 indicators to create balanced conditions
+        # バランスの取れた条件を作成するために最大3つの指標を使用
         selected_indicators = indicators[:3]
 
         for indicator in selected_indicators:
             if not indicator.enabled:
                 continue
 
-            # Get indicator type to determine which condition creation method to use
+            # 使用する条件作成メソッドを決定するために指標タイプを取得
             indicator_type = self.condition_generator._get_indicator_type(indicator)
 
             try:
-                # Use the appropriate condition creation method based on indicator type
+                # 指標タイプに基づいて適切な条件作成メソッドを使用
                 if indicator_type == IndicatorType.MOMENTUM:
                     long_conds = (
                         self.condition_generator._create_momentum_long_conditions(
@@ -56,7 +56,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
                         )
                     )
                 else:
-                    # Unknown indicator type - use generic conditions
+                    # 不明な指標タイプ - 汎用条件を使用
                     long_conds = self.condition_generator._generic_long_conditions(
                         indicator
                     )
@@ -67,7 +67,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
                 if long_conds:
                     long_conditions.extend(long_conds)
 
-                # Ensure short conditions are also generated for each indicator
+                # 各指標に対してショート条件も生成することを確認
                 if short_conds:
                     short_conditions.extend(short_conds)
 
@@ -75,7 +75,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
                 self.condition_generator.logger.warning(
                     f"Error generating conditions for {indicator.type}: {e}"
                 )
-                # Fallback to generic conditions
+                # 汎用条件にフォールバック
                 long_conditions.extend(
                     self.condition_generator._generic_long_conditions(indicator)
                 )
@@ -83,7 +83,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
                     self.condition_generator._generic_short_conditions(indicator)
                 )
 
-        # If no conditions were generated, try with more indicators
+        # 条件が生成されなかった場合、より多くの指標で試行
         if not long_conditions:
             for indicator in indicators[:2]:
                 if not indicator.enabled:
@@ -95,11 +95,11 @@ class ComplexConditionsStrategy(ConditionStrategy):
                     self.condition_generator._generic_short_conditions(indicator)
                 )
 
-                # One more attempt with fallback conditions
+                # フォールバック条件でのさらなる試行
                 if not long_conditions:
                     return self.condition_generator._generate_fallback_conditions()
 
-        # Convert to appropriate return types
+        # 適切な戻り値タイプに変換
         long_result = list(long_conditions)
         short_result = list(short_conditions)
         exit_result = []

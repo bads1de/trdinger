@@ -124,7 +124,7 @@ class BackgroundTaskManager:
                     logger.error(f"リソースクリーンアップエラー: {e}")
 
             # 強制ガベージコレクション
-            collected = gc.collect()
+            gc.collect()
 
         except Exception as e:
             logger.error(f"タスクリソースクリーンアップエラー: {e}")
@@ -155,8 +155,6 @@ class BackgroundTaskManager:
         finally:
             self.unregister_task(task_id, force_cleanup=True)
 
-
-
     def cleanup_all_tasks(self):
         """すべてのアクティブなタスクをクリーンアップ"""
         with self._lock:
@@ -166,8 +164,6 @@ class BackgroundTaskManager:
             self.unregister_task(task_id, force_cleanup=True)
 
         logger.info(f"全バックグラウンドタスククリーンアップ完了: {len(task_ids)}個")
-
-
 
     def _get_memory_usage(self) -> float:
         """現在のメモリ使用量を取得（MB単位）"""
@@ -181,8 +177,6 @@ class BackgroundTaskManager:
         except Exception as e:
             logger.warning(f"メモリ使用量取得エラー: {e}")
             return 0.0
-
-
 
 
 # グローバルインスタンス

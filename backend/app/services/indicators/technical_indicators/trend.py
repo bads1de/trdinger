@@ -12,7 +12,6 @@
 - SAR (Parabolic SAR)
 """
 
-from typing import Tuple, Optional
 import warnings
 import logging
 
@@ -20,10 +19,11 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
+from ..utils import handle_pandas_ta_errors
+
+
 logger = logging.getLogger(__name__)
 
-from ..utils import handle_pandas_ta_errors
-from ..config.indicator_config import IndicatorResultType
 
 # PandasのSeries位置アクセス警告を抑制 (pandas-taとの互換性のため)
 warnings.filterwarnings(
@@ -107,7 +107,7 @@ class TrendIndicators:
                         pass
                 else:
                     pass
-        except Exception as e:
+        except Exception:
             pass
 
         # フォールバック実装: numpyベース -> pandas.Seriesに変更
@@ -120,7 +120,7 @@ class TrendIndicators:
         ema_values = np.full(len(data), np.nan, dtype=float)
         if len(data) >= length:
             initial_sma = data.iloc[:length].mean()
-            ema_values[length - 1] = initial_sma # 初期値はSMA
+            ema_values[length - 1] = initial_sma  # 初期値はSMA
         else:
             pass
 
@@ -300,4 +300,4 @@ class TrendIndicators:
         # PSARl と PSARs を結合
         psar_long = result[f"PSARl_{af}_{max_af}"]
         psar_short = result[f"PSARs_{af}_{max_af}"]
-        return psar_long.fillna(psar_short)
+        return psar_long.fillna(psar_short)

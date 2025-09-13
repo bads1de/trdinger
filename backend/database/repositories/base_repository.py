@@ -5,7 +5,7 @@
 from typing import List, Optional, Type, Dict, Any, TypeVar, Generic, Callable, cast
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import func, select, insert, delete, asc, desc
+from sqlalchemy import func, select, delete, asc, desc
 import pandas as pd
 import logging
 
@@ -88,7 +88,9 @@ class BaseRepository(Generic[T]):
             elif db_type == "postgresql":
                 # PostgreSQLの場合はon_conflict_do_nothingを使用
                 logger.info("PostgreSQLを使用中、on_conflict_do_nothingを実行")
-                inserted_count = self._bulk_insert_postgresql_ignore(records, conflict_columns)
+                inserted_count = self._bulk_insert_postgresql_ignore(
+                    records, conflict_columns
+                )
             else:
                 # その他のDBの場合は個別挿入処理
                 logger.info(f"{db_type}を使用中、個別挿入処理を実行")
@@ -139,19 +141,25 @@ class BaseRepository(Generic[T]):
 
         return inserted_count
 
-    def _bulk_insert_postgresql_ignore(self, records: List[Dict[str, Any]], conflict_columns: List[str]) -> int:
+    def _bulk_insert_postgresql_ignore(
+        self, records: List[Dict[str, Any]], conflict_columns: List[str]
+    ) -> int:
         """
         PostgreSQL用のon_conflict_do_nothing一括挿入
         """
         from sqlalchemy import insert
 
         try:
-            stmt = insert(self.model_class).on_conflict_do_nothing(index_elements=conflict_columns)
+            stmt = insert(self.model_class).on_conflict_do_nothing(
+                index_elements=conflict_columns
+            )
             result = self.db.execute(stmt, records)
             return getattr(result, "rowcount", 0)
         except AttributeError:
             # on_conflict_do_nothingがサポートされていない場合のフォールバック
-            logger.warning("on_conflict_do_nothingがサポートされていません、個別挿入にフォールバック")
+            logger.warning(
+                "on_conflict_do_nothingがサポートされていません、個別挿入にフォールバック"
+            )
             return self._bulk_insert_individual(records)
 
     def _bulk_insert_individual(self, records: List[Dict[str, Any]]) -> int:

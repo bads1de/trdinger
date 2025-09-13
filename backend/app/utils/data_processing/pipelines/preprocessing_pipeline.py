@@ -1,31 +1,30 @@
 """
-Preprocessing Pipeline Module
+前処理パイプライン モジュール
 
-This module provides a comprehensive preprocessing pipeline that combines multiple
-transformers for data cleaning, outlier removal, imputation, categorical encoding,
-and dtype optimization.
+このモジュールは、データクリーニング、外れ値除去、補間、カテゴリエンコーディング、
+dtype最適化のための複数のトランスフォーマーを組み合わせた包括的な前処理パイプラインを提供します。
 
-The pipeline follows scikit-learn conventions and can be used in ML workflows.
+パイプラインはscikit-learnの慣例に従い、MLワークフローで使用できます。
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer, make_column_selector
+
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
-# Simplified transformers for the pipeline
+# パイプラインのための簡略化されたトランスフォーマー
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import IsolationForest
-from sklearn.neighbors import LocalOutlierFactor
+
 
 class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
-    """Outlier removal transformer using IsolationForest."""
+    """IsolationForestを使用した外れ値除去トランスフォーマー。"""
 
     def __init__(self, method="isolation_forest", contamination=0.1, **kwargs):
         self.method = method
@@ -35,7 +34,9 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         if self.method == "isolation_forest":
-            self.detector = IsolationForest(contamination=self.contamination, random_state=42)
+            self.detector = IsolationForest(
+                contamination=self.contamination, random_state=42
+            )
             self.detector.fit(X)
         return self
 
@@ -65,17 +66,20 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
         """Get output feature names for transformation."""
         return input_features
 
+
 class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
-    """Categorical encoder transformer."""
+    """カテゴリエンコーダートランスフォーマー。"""
 
     def __init__(self, encoding_type="label", **kwargs):
         self.encoding_type = encoding_type
         self.encoders_ = {}
-        # Ignore extra kwargs to maintain compatibility
+        # 互換性を維持するために余分なkwargsを無視
 
     def fit(self, X, y=None):
         if isinstance(X, pd.DataFrame):
-            categorical_columns = X.select_dtypes(include=["object", "category"]).columns
+            categorical_columns = X.select_dtypes(
+                include=["object", "category"]
+            ).columns
             for col in categorical_columns:
                 encoder = LabelEncoder()
                 encoder.fit(X[col].fillna("Unknown"))
@@ -87,18 +91,19 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
             X_encoded = X.copy()
             for col, encoder in self.encoders_.items():
                 if col in X_encoded.columns:
-                    # Fill NaN with "Unknown" and transform
+                    # NaNを"Unknown"で埋め、変換
                     filled_col = X_encoded[col].fillna("Unknown")
                     X_encoded[col] = encoder.transform(filled_col)
             return X_encoded
         return X
 
     def get_feature_names_out(self, input_features=None):
-        """Get output feature names for transformation."""
+        """変換の出力特徴名を取得。"""
         return input_features
 
+
 class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
-    """Transformer for dtype optimization."""
+    """dtype最適化のためのトランスフォーマー。"""
 
     def fit(self, X, y=None):
         return self
@@ -109,7 +114,7 @@ class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
         return X
 
     def _optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Optimize data types for memory efficiency."""
+        """メモリ効率のためにデータ型を最適化。"""
         result_df = df.copy()
         for col in result_df.columns:
             if result_df[col].dtype == "object":
@@ -137,14 +142,15 @@ class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
         return result_df
 
     def get_feature_names_out(self, input_features=None):
-        """Get output feature names for transformation."""
+        """変換の出力特徴名を取得。"""
         return input_features
+
 
 logger = logging.getLogger(__name__)
 
 
 class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
-    """Custom transformer that handles categorical preprocessing while maintaining DataFrame."""
+    """DataFrameを維持しながらカテゴリ前処理を扱うカスタムトランスフォーマー。"""
 
     def __init__(self, strategy="most_frequent", fill_value="Unknown", encoding=True):
         self.strategy = strategy
@@ -156,7 +162,9 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         if isinstance(X, pd.DataFrame):
             # Fit imputer
-            self.imputer = SimpleImputer(strategy=self.strategy, fill_value=self.fill_value)
+            self.imputer = SimpleImputer(
+                strategy=self.strategy, fill_value=self.fill_value
+            )
             self.imputer.fit(X)
 
             # Fit encoder if enabled
@@ -199,51 +207,48 @@ def create_preprocessing_pipeline(
     categorical_fill_value: str = "Unknown",
     categorical_encoding: str = "label",
     optimize_dtypes: bool = True,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Pipeline:
     """
-    Create a comprehensive preprocessing pipeline.
+    包括的な前処理パイプラインを作成。
 
-    This pipeline includes:
-    - Outlier removal for numerical columns
-    - Missing value imputation
-    - Categorical variable encoding
-    - Data type optimization
+    このパイプラインには以下が含まれます：
+    - 数値列の外れ値除去
+    - 欠損値補間
+    - カテゴリ変数エンコーディング
+    - データ型最適化
 
     Args:
-        outlier_method: Method for outlier detection ('isolation_forest', 'local_outlier_factor')
-        outlier_contamination: Expected proportion of outliers
-        numeric_strategy: Imputation strategy for numerical columns
-        categorical_strategy: Imputation strategy for categorical columns
-        categorical_fill_value: Fill value for categorical missing values
-        categorical_encoding: Encoding method for categorical variables ('label', 'onehot')
-        optimize_dtypes: Whether to optimize data types
-        **kwargs: Additional parameters for transformers
+        outlier_method: 外れ値検出の方法 ('isolation_forest', 'local_outlier_factor')
+        outlier_contamination: 外れ値の予想割合
+        numeric_strategy: 数値列の補間戦略
+        categorical_strategy: カテゴリ列の補間戦略
+        categorical_fill_value: カテゴリ欠損値の埋め値
+        categorical_encoding: カテゴリ変数のエンコーディング方法 ('label', 'onehot')
+        optimize_dtypes: データタイプを最適化するかどうか
+        **kwargs: トランスフォーマーの追加パラメータ
 
     Returns:
-        Configured sklearn Pipeline
+        設定されたsklearnパイプライン
     """
-    logger.info("Creating preprocessing pipeline...")
+    logger.info("前処理パイプラインを作成中...")
 
     # Numerical preprocessing pipeline
     numeric_steps = []
 
     # 1. Imputation for numerical columns (first, before outlier removal)
-    numeric_steps.append((
-        "numeric_imputer",
-        SimpleImputer(strategy=numeric_strategy)
-    ))
+    numeric_steps.append(("numeric_imputer", SimpleImputer(strategy=numeric_strategy)))
 
     # 2. Outlier removal (after imputation)
     if outlier_method:
-        numeric_steps.append((
-            "outlier_removal",
-            OutlierRemovalTransformer(
-                method=outlier_method,
-                contamination=outlier_contamination,
-                **kwargs
+        numeric_steps.append(
+            (
+                "outlier_removal",
+                OutlierRemovalTransformer(
+                    method=outlier_method, contamination=outlier_contamination, **kwargs
+                ),
             )
-        ))
+        )
 
     numeric_pipeline = Pipeline(numeric_steps)
 
@@ -251,7 +256,9 @@ def create_preprocessing_pipeline(
     class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
         """Custom transformer that handles categorical preprocessing while maintaining DataFrame."""
 
-        def __init__(self, strategy="most_frequent", fill_value="Unknown", encoding=True):
+        def __init__(
+            self, strategy="most_frequent", fill_value="Unknown", encoding=True
+        ):
             self.strategy = strategy
             self.fill_value = fill_value
             self.encoding = encoding
@@ -261,7 +268,9 @@ def create_preprocessing_pipeline(
         def fit(self, X, y=None):
             if isinstance(X, pd.DataFrame):
                 # Fit imputer
-                self.imputer = SimpleImputer(strategy=self.strategy, fill_value=self.fill_value)
+                self.imputer = SimpleImputer(
+                    strategy=self.strategy, fill_value=self.fill_value
+                )
                 self.imputer.fit(X)
 
                 # Fit encoder if enabled
@@ -298,7 +307,7 @@ def create_preprocessing_pipeline(
     categorical_pipeline = CategoricalPipelineTransformer(
         strategy=categorical_strategy,
         fill_value=categorical_fill_value,
-        encoding=categorical_encoding
+        encoding=categorical_encoding,
     )
 
     # Apply transformations directly to handle mixed data types properly
@@ -312,8 +321,12 @@ def create_preprocessing_pipeline(
         def fit(self, X, y=None):
             if isinstance(X, pd.DataFrame):
                 # Separate numeric and categorical columns
-                self.numeric_columns_ = X.select_dtypes(include=[np.number]).columns.tolist()
-                self.categorical_columns_ = X.select_dtypes(include=["object", "category"]).columns.tolist()
+                self.numeric_columns_ = X.select_dtypes(
+                    include=[np.number]
+                ).columns.tolist()
+                self.categorical_columns_ = X.select_dtypes(
+                    include=["object", "category"]
+                ).columns.tolist()
 
                 # Fit pipelines on respective columns
                 if self.numeric_columns_:
@@ -334,12 +347,14 @@ def create_preprocessing_pipeline(
 
                 # Transform numeric columns
                 if self.numeric_columns_:
-                    numeric_transformed = self.numeric_pipeline.transform(X[self.numeric_columns_])
+                    numeric_transformed = self.numeric_pipeline.transform(
+                        X[self.numeric_columns_]
+                    )
                     if isinstance(numeric_transformed, np.ndarray):
                         numeric_df = pd.DataFrame(
                             numeric_transformed,
                             columns=self.numeric_columns_,
-                            index=X.index
+                            index=X.index,
                         )
                     else:
                         numeric_df = numeric_transformed
@@ -347,12 +362,14 @@ def create_preprocessing_pipeline(
 
                 # Transform categorical columns
                 if self.categorical_columns_:
-                    categorical_transformed = self.categorical_pipeline.transform(X[self.categorical_columns_])
+                    categorical_transformed = self.categorical_pipeline.transform(
+                        X[self.categorical_columns_]
+                    )
                     if isinstance(categorical_transformed, np.ndarray):
                         categorical_df = pd.DataFrame(
                             categorical_transformed,
                             columns=self.categorical_columns_,
-                            index=X.index
+                            index=X.index,
                         )
                     else:
                         categorical_df = categorical_transformed
@@ -398,8 +415,8 @@ def create_preprocessing_pipeline(
             return pd.DataFrame(X, columns=columns)
         except Exception:
             # Fallback to generic column names
-            if hasattr(X, 'shape') and len(X.shape) > 1:
-                columns = [f'feature_{i}' for i in range(X.shape[1])]
+            if hasattr(X, "shape") and len(X.shape) > 1:
+                columns = [f"feature_{i}" for i in range(X.shape[1])]
                 return pd.DataFrame(X, columns=columns)
             return pd.DataFrame(X)
 
@@ -410,16 +427,18 @@ def create_preprocessing_pipeline(
         except Exception:
             if input_features is not None:
                 return input_features
-            return ['feature']
+            return ["feature"]
 
-    final_steps.append((
-        "to_dataframe",
-        FunctionTransformer(
-            func=to_dataframe_func,
-            validate=False,
-            feature_names_out=get_feature_names_out_func
+    final_steps.append(
+        (
+            "to_dataframe",
+            FunctionTransformer(
+                func=to_dataframe_func,
+                validate=False,
+                feature_names_out=get_feature_names_out_func,
+            ),
         )
-    ))
+    )
 
     pipeline = Pipeline(final_steps)
 
@@ -428,20 +447,19 @@ def create_preprocessing_pipeline(
 
 
 def create_basic_preprocessing_pipeline(
-    impute_strategy: str = "median",
-    encode_categorical: bool = True
+    impute_strategy: str = "median", encode_categorical: bool = True
 ) -> Pipeline:
     """
-    Create a basic preprocessing pipeline without outlier removal.
+    外れ値除去なしの基本的な前処理パイプラインを作成。
 
     Args:
-        impute_strategy: Imputation strategy for missing values
-        encode_categorical: Whether to encode categorical variables
+        impute_strategy: 欠損値の補間戦略
+        encode_categorical: カテゴリ変数をエンコードするかどうか
 
     Returns:
-        Basic preprocessing Pipeline
+        基本的な前処理パイプライン
     """
-    logger.info("Creating basic preprocessing pipeline...")
+    logger.info("基本的な前処理パイプラインを作成中...")
 
     # Simple imputation pipeline
     imputer = SimpleImputer(strategy=impute_strategy)
@@ -449,10 +467,7 @@ def create_basic_preprocessing_pipeline(
     steps = [("imputer", imputer)]
 
     if encode_categorical:
-        steps.append((
-            "encoder",
-            CategoricalEncoderTransformer(encoding_type="label")
-        ))
+        steps.append(("encoder", CategoricalEncoderTransformer(encoding_type="label")))
 
     pipeline = Pipeline(steps)
     logger.info("Basic preprocessing pipeline created")
@@ -461,18 +476,18 @@ def create_basic_preprocessing_pipeline(
 
 def get_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     """
-    Get information about a fitted pipeline.
+    適合済みのパイプラインの情報を取得。
 
     Args:
-        pipeline: Fitted sklearn Pipeline
+        pipeline: 適合済みのsklearnパイプライン
 
     Returns:
-        Dictionary with pipeline information
+        パイプライン情報を含む辞書
     """
     info = {
         "n_steps": len(pipeline.steps),
         "step_names": [step[0] for step in pipeline.steps],
-        "is_fitted": hasattr(pipeline, "feature_names_in_")
+        "is_fitted": hasattr(pipeline, "feature_names_in_"),
     }
 
     if hasattr(pipeline, "feature_names_in_"):

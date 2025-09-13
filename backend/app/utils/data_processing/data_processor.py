@@ -6,26 +6,22 @@ transformers, pipelines, validatorsモジュールを統一的に操作可能。
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
 
-# Import from refactored modules
-from .transformers.outlier_remover import OutlierRemover
-from .transformers.categorical_encoder import CategoricalEncoder
-from .transformers.data_imputer import DataImputer
 from .transformers.dtype_optimizer import DtypeOptimizer
 
-from .pipelines.preprocessing_pipeline import create_preprocessing_pipeline, get_pipeline_info
+from .pipelines.preprocessing_pipeline import get_pipeline_info
 from .pipelines.ml_pipeline import create_ml_pipeline
 from .pipelines.comprehensive_pipeline import create_comprehensive_pipeline
 
 from .validators.data_validator import (
     validate_ohlcv_data,
     validate_extended_data,
-    validate_data_integrity
+    validate_data_integrity,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,7 +73,7 @@ class DataProcessor:
         logger.info("データ検証を実行")
         try:
             # 必要なカラムに基づいて検証を実行
-            ohlcv_columns = {'open', 'high', 'low', 'close', 'volume'}
+            ohlcv_columns = {"open", "high", "low", "close", "volume"}
             if any(col in required_columns for col in ohlcv_columns):
                 validate_ohlcv_data(result_df)
             validate_extended_data(result_df)
@@ -99,18 +95,17 @@ class DataProcessor:
             result_df = optimizer.fit_transform(result_df)
 
         # 時系列順にソート
-        if hasattr(result_df.index, 'is_monotonic_increasing'):
+        if hasattr(result_df.index, "is_monotonic_increasing"):
             if not result_df.index.is_monotonic_increasing:
                 result_df = result_df.sort_index()
 
-        logger.info(f"データクリーニング完了: {len(result_df)}行, {len(result_df.columns)}列")
+        logger.info(
+            f"データクリーニング完了: {len(result_df)}行, {len(result_df.columns)}列"
+        )
         return result_df
 
     def prepare_training_data(
-        self,
-        features_df: pd.DataFrame,
-        label_generator,
-        **training_params
+        self, features_df: pd.DataFrame, label_generator, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series, Dict[str, Any]]:
         """
         学習用データを準備
@@ -126,7 +121,9 @@ class DataProcessor:
             threshold_info: 閾値情報の辞書
         """
         logger.info("学習用データの準備を開始")
-        logger.info(f"入力データサイズ: {len(features_df)}行, {len(features_df.columns)}列")
+        logger.info(
+            f"入力データサイズ: {len(features_df)}行, {len(features_df.columns)}列"
+        )
 
         # 1. 入力データの基本検証
         if features_df is None or features_df.empty:
@@ -138,10 +135,12 @@ class DataProcessor:
             features_df,
             required_columns=[],  # 学習データなので必須カラムなし
             interpolate=True,
-            optimize=True
+            optimize=True,
         )
 
-        logger.info(f"クリーニング後データサイズ: {len(features_processed)}行, {len(features_processed.columns)}列")
+        logger.info(
+            f"クリーニング後データサイズ: {len(features_processed)}行, {len(features_processed.columns)}列"
+        )
 
         # 3. 前処理パイプライン適用
         logger.info("前処理パイプラインを実行")
@@ -149,7 +148,7 @@ class DataProcessor:
             features_processed,
             pipeline_name="training_preprocess",
             fit_pipeline=True,
-            **training_params
+            **training_params,
         )
 
         # 4. ラベル生成のための価格データを取得
@@ -164,8 +163,7 @@ class DataProcessor:
         logger.info("ラベル生成を実行")
         try:
             labels, threshold_info = label_generator.generate_labels(
-                price_data,
-                **training_params
+                price_data, **training_params
             )
             logger.info(f"ラベル生成完了: {len(labels)}行")
         except Exception as label_error:
@@ -205,7 +203,7 @@ class DataProcessor:
         df: pd.DataFrame,
         pipeline_name: str = "default",
         fit_pipeline: bool = True,
-        **pipeline_params
+        **pipeline_params,
     ) -> pd.DataFrame:
         """
         Pipelineベースの前処理実行
@@ -240,7 +238,7 @@ class DataProcessor:
         transformed_data = fitted_pipeline.transform(df)
 
         # 結果をDataFrameに変換
-        if hasattr(transformed_data, 'toarray'):
+        if hasattr(transformed_data, "toarray"):
             # sparse matrixの場合
             transformed_data = transformed_data.toarray()
 
@@ -248,24 +246,26 @@ class DataProcessor:
         try:
             feature_names = fitted_pipeline.get_feature_names_out()
             if feature_names is None or len(feature_names) == 0:
-                feature_names = [f"feature_{i}" for i in range(transformed_data.shape[1])]
+                feature_names = [
+                    f"feature_{i}" for i in range(transformed_data.shape[1])
+                ]
         except Exception:
             feature_names = [f"feature_{i}" for i in range(transformed_data.shape[1])]
 
         result_df = pd.DataFrame(
-            transformed_data,
-            index=df.index,
-            columns=pd.Index(feature_names)
+            transformed_data, index=df.index, columns=pd.Index(feature_names)
         )
 
-        logger.info(f"Pipeline前処理完了: {len(result_df)}行, {len(result_df.columns)}列")
+        logger.info(
+            f"Pipeline前処理完了: {len(result_df)}行, {len(result_df.columns)}列"
+        )
         return result_df
 
     def process_data_efficiently(
         self,
         df: pd.DataFrame,
         pipeline_name: str = "efficient_processing",
-        **pipeline_params
+        **pipeline_params,
     ) -> pd.DataFrame:
         """
         効率的なデータ処理実行
@@ -286,7 +286,9 @@ class DataProcessor:
                 df, pipeline_name=pipeline_name, fit_pipeline=True, **pipeline_params
             )
 
-            logger.info(f"効率的なデータ処理完了: {len(result)}行, {len(result.columns)}列")
+            logger.info(
+                f"効率的なデータ処理完了: {len(result)}行, {len(result.columns)}列"
+            )
             return result
 
         except Exception as e:
@@ -298,7 +300,7 @@ class DataProcessor:
         for_ml: bool = True,
         include_feature_selection: bool = False,
         n_features: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> Pipeline:
         """
         最適化されたパイプラインを作成
@@ -317,7 +319,7 @@ class DataProcessor:
             pipeline = create_ml_pipeline(
                 include_feature_selection=include_feature_selection,
                 n_features=n_features,
-                **kwargs
+                **kwargs,
             )
         else:
             # 包括的パイプライン
@@ -369,14 +371,13 @@ class DataProcessor:
             if result_df[col].isnull().any():
                 # 前方補完 → 線形補完 → 後方補完
                 result_df[col] = (
-                    result_df[col]
-                    .ffill()
-                    .interpolate(method='linear')
-                    .bfill()
+                    result_df[col].ffill().interpolate(method="linear").bfill()
                 )
 
         # カテゴリカルカラムの補間
-        categorical_columns = result_df.select_dtypes(include=['object', 'category']).columns
+        categorical_columns = result_df.select_dtypes(
+            include=["object", "category"]
+        ).columns
 
         for col in categorical_columns:
             if result_df[col].isnull().any():
@@ -392,35 +393,49 @@ class DataProcessor:
         result_df = df.copy()
 
         # funding_rateの範囲クリップ (-1から1)
-        if 'funding_rate' in result_df.columns:
+        if "funding_rate" in result_df.columns:
             logger.info(f"funding_rateカラム検出: shape={result_df.shape}")
             # NaNとinfを処理してからクリップ
-            funding_rate_clean = result_df['funding_rate'].replace([np.inf, -np.inf], np.nan)
-            before_count = (funding_rate_clean < -1).sum() + (funding_rate_clean > 1).sum()
-            logger.info(f"funding_rateクリップ前 - 範囲外値: {before_count}, min: {funding_rate_clean.min()}, max: {funding_rate_clean.max()}")
-            logger.info(f"funding_rateサンプル値: {result_df['funding_rate'].head(3).tolist()}")
+            funding_rate_clean = result_df["funding_rate"].replace(
+                [np.inf, -np.inf], np.nan
+            )
+            before_count = (funding_rate_clean < -1).sum() + (
+                funding_rate_clean > 1
+            ).sum()
+            logger.info(
+                f"funding_rateクリップ前 - 範囲外値: {before_count}, min: {funding_rate_clean.min()}, max: {funding_rate_clean.max()}"
+            )
+            logger.info(
+                f"funding_rateサンプル値: {result_df['funding_rate'].head(3).tolist()}"
+            )
 
             # 常にクリップを実行（範囲外値がなくてもNaN/infの処理のため）
-            result_df['funding_rate'] = np.clip(funding_rate_clean.fillna(0), -1, 1)
-            after_count = (result_df['funding_rate'] < -1).sum() + (result_df['funding_rate'] > 1).sum()
-            logger.info(f"funding_rateをクリップ実行: クリップ後範囲外値: {after_count}")
+            result_df["funding_rate"] = np.clip(funding_rate_clean.fillna(0), -1, 1)
+            after_count = (result_df["funding_rate"] < -1).sum() + (
+                result_df["funding_rate"] > 1
+            ).sum()
+            logger.info(
+                f"funding_rateをクリップ実行: クリップ後範囲外値: {after_count}"
+            )
             if before_count > 0:
                 logger.info(f"範囲外値を修正: {before_count}件")
 
         # fear_greedの範囲クリップ (0から100)
-        if 'fear_greed' in result_df.columns:
-            fear_greed_clean = result_df['fear_greed'].replace([np.inf, -np.inf], np.nan)
+        if "fear_greed" in result_df.columns:
+            fear_greed_clean = result_df["fear_greed"].replace(
+                [np.inf, -np.inf], np.nan
+            )
             before_count = (fear_greed_clean < 0).sum() + (fear_greed_clean > 100).sum()
             if before_count > 0:
-                result_df['fear_greed'] = np.clip(fear_greed_clean.fillna(50), 0, 100)
+                result_df["fear_greed"] = np.clip(fear_greed_clean.fillna(50), 0, 100)
                 logger.info(f"fear_greedをクリップ: {before_count}件の範囲外値を修正")
 
         # open_interestは負値にならないようにクリップ
-        if 'open_interest' in result_df.columns:
-            oi_clean = result_df['open_interest'].replace([np.inf, -np.inf], np.nan)
+        if "open_interest" in result_df.columns:
+            oi_clean = result_df["open_interest"].replace([np.inf, -np.inf], np.nan)
             before_count = (oi_clean < 0).sum()
             if before_count > 0:
-                result_df['open_interest'] = np.maximum(oi_clean.fillna(0), 0)
+                result_df["open_interest"] = np.maximum(oi_clean.fillna(0), 0)
                 logger.info(f"open_interestをクリップ: {before_count}件の負値を修正")
 
         return result_df

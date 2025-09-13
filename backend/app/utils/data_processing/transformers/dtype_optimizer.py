@@ -1,35 +1,34 @@
 import pandas as pd
-import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class DtypeOptimizer(BaseEstimator, TransformerMixin):
     """
-    A transformer that optimizes data types to reduce memory usage.
+    メモリ使用量を削減するためにデータ型を最適化するトランスフォーマー。
 
-    This transformer analyzes the data range and converts data types to more
-    memory-efficient alternatives (e.g., float64 -> float32, int64 -> int32/int16/int8).
+    このトランスフォーマーはデータの範囲を分析し、よりメモリ効率の高い代替データ型に
+    変換します（例: float64 -> float32, int64 -> int32/int16/int8）。
     """
 
     def __init__(self):
-        """Initialize the DtypeOptimizer."""
+        """DtypeOptimizerを初期化。"""
         self.dtypes_ = {}
 
     def fit(self, X, y=None):
         """
-        Fit the transformer by analyzing data ranges and determining optimal dtypes.
+        データの範囲を分析して最適なdtypeを決定してトランスフォーマーを適合。
 
         Parameters:
         -----------
         X : pandas.DataFrame or array-like
-            Input data to fit on
+            適合する入力データ
         y : array-like, default=None
-            Ignored. For compatibility with sklearn pipeline
+            無視されます。sklearnパイプラインとの互換性のために
 
         Returns:
         --------
         self : DtypeOptimizer
-            Fitted transformer
+            適合済みトランスフォーマー
         """
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
@@ -39,24 +38,24 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
         for col in X.columns:
             dtype = X[col].dtype
 
-            # Optimize float64 to float32
-            if dtype == 'float64':
-                self.dtypes_[col] = 'float32'
+            # float64をfloat32に最適化
+            if dtype == "float64":
+                self.dtypes_[col] = "float32"
 
-            # Optimize int64 based on data range
-            elif dtype == 'int64':
+            # データ範囲に基づいてint64を最適化
+            elif dtype == "int64":
                 min_val = X[col].min()
                 max_val = X[col].max()
 
                 if min_val >= -128 and max_val <= 127:
-                    self.dtypes_[col] = 'int8'
+                    self.dtypes_[col] = "int8"
                 elif min_val >= -32768 and max_val <= 32767:
-                    self.dtypes_[col] = 'int16'
+                    self.dtypes_[col] = "int16"
                 elif min_val >= -2147483648 and max_val <= 2147483647:
-                    self.dtypes_[col] = 'int32'
-                # Keep int64 if values are too large
+                    self.dtypes_[col] = "int32"
+                # 値が大きすぎる場合はint64を保持
 
-            # Other dtypes remain unchanged
+            # その他のdtypeは変更なし
             else:
                 pass
 
@@ -64,24 +63,24 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         """
-        Transform data types to optimized versions.
+        データ型を最適化されたバージョンに変換。
 
         Parameters:
         -----------
         X : pandas.DataFrame or array-like
-            Input data to transform
+            変換する入力データ
 
         Returns:
         --------
         pandas.DataFrame
-            Data with optimized data types
+            最適化されたデータ型のデータ
         """
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
 
         X_optimized = X.copy()
 
-        # Apply optimized dtypes
+        # 最適化されたdtypeを適用
         for col in self.dtypes_:
             if col in X_optimized.columns:
                 X_optimized[col] = X_optimized[col].astype(self.dtypes_[col])

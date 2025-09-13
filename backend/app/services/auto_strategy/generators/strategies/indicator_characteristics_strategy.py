@@ -1,5 +1,5 @@
 """
-IndicatorCharacteristics strategy for ML and specialized indicators.
+MLおよび専門指標のためのIndicatorCharacteristics戦略。
 """
 
 import logging
@@ -12,39 +12,39 @@ logger = logging.getLogger(__name__)
 
 
 class IndicatorCharacteristicsStrategy(ConditionStrategy):
-    """Strategy for generating conditions based on indicator characteristics (primarily ML)."""
+    """指標特性に基づいて条件を生成する戦略（主にML）。"""
 
     def generate_conditions(self, indicators: List[IndicatorGene]):
         """
-        Generate conditions focusing on indicator characteristics.
+        指標特性に焦点を当てた条件を生成。
 
-        Primarily handles ML indicators and their probability-based conditions.
+        主にML指標とその確率ベースの条件を扱う。
         """
         long_conditions = []
         short_conditions = []
 
-        # Focus on ML indicators for this strategy
+        # この戦略ではML指標に焦点を当てる
         ml_indicators = [
             ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
         ]
 
         if ml_indicators:
-            # Generate ML-specific long conditions
+            # ML特有のロング条件を生成
             ml_long_conds = self.condition_generator._create_ml_long_conditions(
                 ml_indicators
             )
             if ml_long_conds:
                 long_conditions.extend(ml_long_conds)
 
-            # Generate ML-specific short conditions
-            # Look for complementary ML indicators for short signals
+            # ML特有のショート条件を生成
+            # ショートシグナルのための補完ML指標を探す
             if len(ml_indicators) >= 1:
-                # Add short conditions based on ML probabilities
+                # ML確率に基づくショート条件を追加
                 short_conditions.extend(self._create_ml_short_conditions(ml_indicators))
 
-        # If still no conditions and we have regular indicators, use limited generic conditions
+        # まだ条件がなく、通常の指標がある場合、制限付き汎用条件を使用
         if not long_conditions:
-            # For non-ML indicators, use very basic conditions
+            # 非ML指標の場合、非常に基本的な条件を使用
             regular_indicators = [
                 ind
                 for ind in indicators
@@ -52,7 +52,7 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
             ]
 
             if regular_indicators:
-                # Only use first indicator for this strategy to keep it focused
+                # この戦略を焦点を保つために最初の指標のみを使用
                 first_indicator = regular_indicators[0]
                 long_conditions.extend(
                     self.condition_generator._generic_long_conditions(first_indicator)
@@ -61,14 +61,14 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
                     self.condition_generator._generic_short_conditions(first_indicator)
                 )
 
-        # Ensure we have at least basic conditions
+        # 少なくとも基本条件があることを確認
         if not long_conditions or not short_conditions:
-            # Use fallback conditions as last resort
+            # 最後の手段としてフォールバック条件を使用
             try:
                 fallback_result = (
                     self.condition_generator._generate_fallback_conditions()
                 )
-                # Unpack only if it's a tuple
+                # タプルの場合のみアンパック
                 if isinstance(fallback_result, tuple) and len(fallback_result) == 3:
                     longfallback, shortfallback, _ = fallback_result
                     if not long_conditions:
@@ -76,7 +76,7 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
                     if not short_conditions:
                         short_conditions = shortfallback
                 else:
-                    # If not a proper tuple, use default fallback
+                    # 適切なタプルでない場合、デフォルトフォールバックを使用
                     if not long_conditions:
                         long_conditions = [
                             Condition(
@@ -94,7 +94,7 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
                     )
             except Exception as e:
                 logger.error(f"Error in fallback generation: {e}")
-                # Use absolute default conditions
+                # 絶対デフォルト条件を使用
                 if not long_conditions:
                     long_conditions = [
                         Condition(
@@ -108,7 +108,7 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
                         )
                     ]
 
-        # Convert to appropriate return types
+        # 適切な戻り値タイプに変換
         long_result = list(long_conditions)
         short_result = list(short_conditions)
         exit_result = []
@@ -119,17 +119,17 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
         self, ml_indicators: List[IndicatorGene]
     ) -> List[Condition]:
         """
-        Create ML-based short conditions.
+        MLベースのショート条件を作成。
 
         Args:
-            ml_indicators: List of ML indicators
+            ml_indicators: ML指標のリスト
 
         Returns:
-            List of short entry conditions
+            ショートエントリー条件のリスト
         """
         short_conditions = []
 
-        # Check for specific ML probability indicators
+        # 特定のML確率指標を確認
         for indicator in ml_indicators:
             if indicator.type == "ML_DOWN_PROB":
                 short_conditions.append(
@@ -140,7 +140,7 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
                     )
                 )
             elif indicator.type == "ML_UP_PROB":
-                # For upward probability, we can use it inversely for short
+                # 上昇確率の場合、ショートのために逆を使用可能
                 short_conditions.append(
                     Condition(
                         left_operand="ML_UP_PROB",
@@ -149,7 +149,7 @@ class IndicatorCharacteristicsStrategy(ConditionStrategy):
                     )
                 )
 
-        # If we don't have specific indicators, use range probability
+        # 特定の指標がない場合、レンジ確率を使用
         if not short_conditions:
             range_indicators = [
                 ind for ind in ml_indicators if ind.type == "ML_RANGE_PROB"

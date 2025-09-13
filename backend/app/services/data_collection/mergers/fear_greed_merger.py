@@ -53,19 +53,8 @@ class FearGreedMerger:
                 start_time=start_date, end_time=end_date
             )
 
-            if detailed_logging:
-                logger.info(
-                    f"取得したFear & Greedデータ件数: {len(fear_greed_data) if fear_greed_data else 0}"
-                )
-
             if fear_greed_data:
                 fear_greed_df = self._convert_fear_greed_to_dataframe(fear_greed_data)
-
-                if detailed_logging:
-                    logger.info(
-                        f"Fear & Greed DataFrame: {len(fear_greed_df)}行, "
-                        f"期間: {fear_greed_df.index.min()} - {fear_greed_df.index.max()}"
-                    )
 
                 # toleranceを設定（詳細ログ時は3日、通常時は制限なし）
                 if detailed_logging:
@@ -82,12 +71,6 @@ class FearGreedMerger:
                     tolerance=tolerance,
                 )
 
-                if detailed_logging:
-                    valid_fg_count = df["fear_greed_value"].notna().sum()
-                    logger.info(
-                        f"Fear & Greedデータマージ完了: {valid_fg_count}/{len(df)}行に値あり "
-                        f"({valid_fg_count/len(df)*100:.1f}%)"
-                    )
             else:
                 warning_msg = "Fear & Greedデータが見つかりませんでした。"
                 if detailed_logging:

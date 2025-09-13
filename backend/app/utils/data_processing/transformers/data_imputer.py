@@ -5,50 +5,50 @@ from sklearn.impute import SimpleImputer
 
 class DataImputer(BaseEstimator, TransformerMixin):
     """
-    A transformer that imputes missing values in numerical columns.
+    数値列の欠損値を補間するトランスフォーマー。
 
-    This transformer uses sklearn's SimpleImputer to fill missing values
-    with mean, median, or most frequent values.
+    このトランスフォーマーはsklearnのSimpleImputerを使用して、
+    平均値、中央値、または最も頻繁な値で欠損値を埋めます。
     """
 
     def __init__(self, strategy='mean'):
         """
-        Initialize the DataImputer.
+        DataImputerを初期化。
 
         Parameters:
         -----------
         strategy : str, default='mean'
-            The imputation strategy:
-            - 'mean': replace missing values with mean
-            - 'median': replace missing values with median
-            - 'most_frequent': replace missing values with most frequent value
-            - 'constant': replace missing values with a constant value (fill_value must be provided)
+            補間戦略：
+            - 'mean': 欠損値を平均値で置き換え
+            - 'median': 欠損値を中央値で置き換え
+            - 'most_frequent': 欠損値を最も頻繁な値で置き換え
+            - 'constant': 欠損値を定数値で置き換え（fill_valueを提供する必要あり）
         """
         self.strategy = strategy
         self.imputers_ = {}
 
     def fit(self, X, y=None):
         """
-        Fit the transformer by learning imputation values for each column with missing data.
+        欠損データのある各列の補間値を学習してトランスフォーマーを適合。
 
         Parameters:
         -----------
         X : pandas.DataFrame or array-like
-            Input data to fit on
+            適合する入力データ
         y : array-like, default=None
-            Ignored. For compatibility with sklearn pipeline
+            無視されます。sklearnパイプラインとの互換性のために
 
         Returns:
         --------
         self : DataImputer
-            Fitted transformer
+            適合済みトランスフォーマー
         """
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
 
         self.imputers_ = {}
 
-        # Fit imputer for each column that has missing values
+        # 欠損値のある各列のインピューターを適合
         for col in X.columns:
             if X[col].isnull().any():
                 imputer = SimpleImputer(strategy=self.strategy)
@@ -59,27 +59,27 @@ class DataImputer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         """
-        Impute missing values in the data.
+        データの欠損値を補間。
 
         Parameters:
         -----------
         X : pandas.DataFrame or array-like
-            Input data to transform
+            変換する入力データ
 
         Returns:
         --------
         pandas.DataFrame
-            Data with missing values imputed
+            欠損値が補間されたデータ
         """
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
 
         X_imputed = X.copy()
 
-        # Apply imputation to columns that had missing values during fit
+        # 適合時に欠損値があった列に補間を適用
         for col in self.imputers_:
             if col in X_imputed.columns:
-                # SimpleImputer returns 2D array, so we need to ravel it to 1D
+                # SimpleImputerは2D配列を返すので、1Dにravelする必要がある
                 X_imputed[col] = self.imputers_[col].transform(X_imputed[[col]]).ravel()
 
         return X_imputed

@@ -1,5 +1,5 @@
 """
-Strategies package for condition generation.
+条件生成のためのStrategiesパッケージ。
 """
 
 from .base_strategy import ConditionStrategy

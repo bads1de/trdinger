@@ -1,16 +1,16 @@
 """
-ML Pipeline Module
+MLパイプライン モジュール
 
-This module provides a machine learning-focused pipeline that extends the preprocessing
-pipeline with feature selection and scaling capabilities optimized for ML algorithms.
+このモジュールは、前処理パイプラインを特徴量選択とスケーリング機能で拡張した
+MLアルゴリズムに最適化された機械学習中心のパイプラインを提供します。
 
-The pipeline follows scikit-learn conventions and integrates seamlessly with ML workflows.
+パイプラインはscikit-learnの慣例に従い、MLワークフローとシームレスに統合されます。
 """
 
 import logging
 from typing import Dict, Any, Optional
 
-import numpy as np
+
 import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
@@ -28,61 +28,65 @@ def create_ml_pipeline(
     scaling: bool = True,
     scaling_method: str = "standard",
     preprocessing_params: Optional[Dict[str, Any]] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Pipeline:
     """
-    Create a machine learning-focused pipeline.
+    機械学習中心のパイプラインを作成。
 
-    This pipeline includes:
-    - Base preprocessing (outlier removal, imputation, encoding, dtype optimization)
-    - Feature selection (optional)
-    - Feature scaling (optional)
+    このパイプラインには以下が含まれます：
+    - ベース前処理（外れ値除去、補間、エンコーディング、dtype最適化）
+    - 特徴量選択（オプション）
+    - 特徴量スケーリング（オプション）
 
     Args:
-        feature_selection: Whether to perform feature selection
-        n_features: Number of features to select (if None, keeps all features)
-        selection_method: Feature selection method ('f_regression', 'mutual_info')
-        scaling: Whether to apply feature scaling
-        scaling_method: Scaling method ('standard', 'robust', 'minmax')
-        preprocessing_params: Parameters for the preprocessing pipeline
-        **kwargs: Additional parameters
+        feature_selection: 特徴量選択を実行するかどうか
+        n_features: 選択する特徴量の数（Noneの場合、すべての特徴量を保持）
+        selection_method: 特徴量選択方法 ('f_regression', 'mutual_info')
+        scaling: 特徴量スケーリングを適用するかどうか
+        scaling_method: スケーリング方法 ('standard', 'robust', 'minmax')
+        preprocessing_params: 前処理パイプラインのパラメータ
+        **kwargs: 追加パラメータ
 
     Returns:
-        Configured ML Pipeline
+        設定されたMLパイプライン
     """
-    logger.info("Creating ML pipeline...")
+    logger.info("MLパイプラインを作成中...")
 
-    # Base preprocessing pipeline
+    # ベース前処理パイプライン
     preprocessing_params = preprocessing_params or {}
     preprocessing_pipeline = create_preprocessing_pipeline(**preprocessing_params)
 
-    # Convert DataFrame to array for ML steps
+    # MLステップのためにDataFrameを配列に変換
     def dataframe_to_array(X):
-        """Convert DataFrame to numpy array for ML algorithms."""
+        """MLアルゴリズムのためにDataFrameをnumpy配列に変換。"""
         if isinstance(X, pd.DataFrame):
             return X.values
         return X
 
     from sklearn.preprocessing import FunctionTransformer
 
-    # ML-specific steps
+    # ML特有のステップ
     ml_steps = [("preprocessing", preprocessing_pipeline)]
 
-    # Feature selection (optional)
+    # 特徴量選択（オプション）
     if feature_selection and n_features is not None and n_features > 0:
-        # Convert to array before feature selection
-        ml_steps.append(("to_array", FunctionTransformer(func=dataframe_to_array, validate=False)))
+        # 特徴量選択前に配列に変換
+        ml_steps.append(
+            ("to_array", FunctionTransformer(func=dataframe_to_array, validate=False))
+        )
         if selection_method == "f_regression":
             selector = SelectKBest(score_func=f_regression, k=n_features)
         elif selection_method == "mutual_info":
             selector = SelectKBest(score_func=mutual_info_regression, k=n_features)
         else:
-            raise ValueError(f"Unsupported selection method: {selection_method}")
+            raise ValueError(f"サポートされていない選択方法: {selection_method}")
 
         ml_steps.append(("feature_selection", selector))
-        logger.info(f"Added feature selection with {n_features} features using {selection_method}")
+        logger.info(
+            f"{selection_method}を使用して{n_features}個の特徴量で特徴量選択を追加"
+        )
 
-    # Feature scaling (optional)
+    # 特徴量スケーリング（オプション）
     if scaling:
         if scaling_method == "standard":
             scaler = StandardScaler()
@@ -91,14 +95,14 @@ def create_ml_pipeline(
         elif scaling_method == "minmax":
             scaler = MinMaxScaler()
         else:
-            raise ValueError(f"Unsupported scaling method: {scaling_method}")
+            raise ValueError(f"サポートされていないスケーリング方法: {scaling_method}")
 
         ml_steps.append(("scaler", scaler))
-        logger.info(f"Added {scaling_method} scaling")
+        logger.info(f"{scaling_method}スケーリングを追加")
 
     pipeline = Pipeline(ml_steps)
 
-    logger.info("ML pipeline created successfully")
+    logger.info("MLパイプラインが正常に作成されました")
     return pipeline
 
 
@@ -109,24 +113,24 @@ def create_classification_pipeline(
     scaling: bool = True,
     scaling_method: str = "standard",
     preprocessing_params: Optional[Dict[str, Any]] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Pipeline:
     """
-    Create a classification-focused ML pipeline.
+    分類中心のMLパイプラインを作成。
 
     Args:
-        feature_selection: Whether to perform feature selection
-        n_features: Number of features to select
-        selection_method: Feature selection method for classification
-        scaling: Whether to apply feature scaling
-        scaling_method: Scaling method
-        preprocessing_params: Parameters for the preprocessing pipeline
-        **kwargs: Additional parameters
+        feature_selection: 特徴量選択を実行するかどうか
+        n_features: 選択する特徴量の数
+        selection_method: 分類用の特徴量選択方法
+        scaling: 特徴量スケーリングを適用するかどうか
+        scaling_method: スケーリング方法
+        preprocessing_params: 前処理パイプラインのパラメータ
+        **kwargs: 追加パラメータ
 
     Returns:
-        Configured classification Pipeline
+        設定された分類パイプライン
     """
-    logger.info("Creating classification pipeline...")
+    logger.info("分類パイプラインを作成中...")
 
     from sklearn.feature_selection import f_classif, mutual_info_classif
 
@@ -149,16 +153,22 @@ def create_classification_pipeline(
     # Feature selection for classification
     if feature_selection and n_features is not None and n_features > 0:
         # Convert to array before feature selection
-        steps.append(("to_array", FunctionTransformer(func=dataframe_to_array, validate=False)))
+        steps.append(
+            ("to_array", FunctionTransformer(func=dataframe_to_array, validate=False))
+        )
         if selection_method == "f_classif":
             selector = SelectKBest(score_func=f_classif, k=n_features)
         elif selection_method == "mutual_info":
             selector = SelectKBest(score_func=mutual_info_classif, k=n_features)
         else:
-            raise ValueError(f"Unsupported classification selection method: {selection_method}")
+            raise ValueError(
+                f"Unsupported classification selection method: {selection_method}"
+            )
 
         steps.append(("feature_selection", selector))
-        logger.info(f"Added classification feature selection with {n_features} features")
+        logger.info(
+            f"Added classification feature selection with {n_features} features"
+        )
 
     # Feature scaling
     if scaling:
@@ -187,26 +197,26 @@ def create_regression_pipeline(
     scaling: bool = True,
     scaling_method: str = "robust",
     preprocessing_params: Optional[Dict[str, Any]] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Pipeline:
     """
-    Create a regression-focused ML pipeline.
+    回帰中心のMLパイプラインを作成。
 
     Args:
-        feature_selection: Whether to perform feature selection
-        n_features: Number of features to select
-        selection_method: Feature selection method for regression
-        scaling: Whether to apply feature scaling
-        scaling_method: Scaling method (robust is often preferred for regression)
-        preprocessing_params: Parameters for the preprocessing pipeline
-        **kwargs: Additional parameters
+        feature_selection: 特徴量選択を実行するかどうか
+        n_features: 選択する特徴量の数
+        selection_method: 回帰用の特徴量選択方法
+        scaling: 特徴量スケーリングを適用するかどうか
+        scaling_method: スケーリング方法（回帰ではrobustがよく好まれる）
+        preprocessing_params: 前処理パイプラインのパラメータ
+        **kwargs: 追加パラメータ
 
     Returns:
-        Configured regression Pipeline
+        設定された回帰パイプライン
     """
-    logger.info("Creating regression pipeline...")
+    logger.info("回帰パイプラインを作成中...")
 
-    # Use regression-specific parameters
+    # 回帰特有のパラメータを使用
     return create_ml_pipeline(
         feature_selection=feature_selection,
         n_features=n_features,
@@ -214,27 +224,28 @@ def create_regression_pipeline(
         scaling=scaling,
         scaling_method=scaling_method,
         preprocessing_params=preprocessing_params,
-        **kwargs
+        **kwargs,
     )
 
 
 def get_ml_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     """
-    Get information about an ML pipeline.
+    MLパイプラインの情報を取得。
 
     Args:
-        pipeline: Fitted ML Pipeline
+        pipeline: 適合済みのMLパイプライン
 
     Returns:
-        Dictionary with pipeline information
+        パイプライン情報を含む辞書
     """
     info = {
         "pipeline_type": "ml",
         "n_steps": len(pipeline.steps),
         "step_names": [step[0] for step in pipeline.steps],
         "has_preprocessing": "preprocessing" in [step[0] for step in pipeline.steps],
-        "has_feature_selection": "feature_selection" in [step[0] for step in pipeline.steps],
-        "has_scaling": "scaler" in [step[0] for step in pipeline.steps]
+        "has_feature_selection": "feature_selection"
+        in [step[0] for step in pipeline.steps],
+        "has_scaling": "scaler" in [step[0] for step in pipeline.steps],
     }
 
     if hasattr(pipeline, "feature_names_in_"):
@@ -254,21 +265,21 @@ def optimize_ml_pipeline(
     X: pd.DataFrame,
     y: pd.Series,
     task_type: str = "regression",
-    max_features: Optional[int] = None
+    max_features: Optional[int] = None,
 ) -> Pipeline:
     """
-    Create an optimized ML pipeline based on data characteristics.
+    データ特性に基づいて最適化されたMLパイプラインを作成。
 
     Args:
-        X: Feature DataFrame
-        y: Target series
-        task_type: Type of ML task ('regression', 'classification')
-        max_features: Maximum number of features to consider
+        X: 特徴量DataFrame
+        y: ターゲット系列
+        task_type: MLタスクの種類 ('regression', 'classification')
+        max_features: 考慮する最大特徴量数
 
     Returns:
-        Optimized ML Pipeline
+        最適化されたMLパイプライン
     """
-    logger.info(f"Optimizing ML pipeline for {task_type} task...")
+    logger.info(f"{task_type}タスク用のMLパイプラインを最適化中...")
 
     n_features = X.shape[1]
     n_samples = X.shape[0]
@@ -285,19 +296,19 @@ def optimize_ml_pipeline(
         pipeline = create_regression_pipeline(
             feature_selection=True,
             n_features=max_features,
-            scaling_method=scaling_method
+            scaling_method=scaling_method,
         )
     elif task_type == "classification":
         pipeline = create_classification_pipeline(
             feature_selection=True,
             n_features=max_features,
-            scaling_method=scaling_method
+            scaling_method=scaling_method,
         )
     else:
         pipeline = create_ml_pipeline(
             feature_selection=True,
             n_features=max_features,
-            scaling_method=scaling_method
+            scaling_method=scaling_method,
         )
 
     logger.info(f"Optimized pipeline created with max {max_features} features")

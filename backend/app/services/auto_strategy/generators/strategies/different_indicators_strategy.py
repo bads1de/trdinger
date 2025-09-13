@@ -1,5 +1,5 @@
 """
-DifferentIndicators strategy for condition generation.
+条件生成のためのDifferentIndicators戦略。
 """
 
 import logging
@@ -13,19 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 class DifferentIndicatorsStrategy(ConditionStrategy):
-    """Strategy for generating conditions when different types of indicators are available."""
+    """異なるタイプの指標が利用可能な場合に条件を生成する戦略。"""
 
     def generate_conditions(self, indicators: List[IndicatorGene]):
         """
-        Generate conditions using different indicator types.
+        異なる指標タイプを使用して条件を生成。
 
-        Combines trend + momentum or momentum + volatility indicators.
+        トレンド + モメンタムまたはモメンタム + ボラティリティ指標を組み合わせ。
         """
         logger.debug(
             f"Generating conditions for {len(indicators)} indicators using DifferentIndicators strategy"
         )
 
-        # Group indicators by type
+        # タイプ別に指標をグループ化
         indicators_by_type = self._classify_indicators_by_type(indicators)
         logger.debug(
             f"Indicator classification: {[f'{k.name}:{len(v)}' for k, v in indicators_by_type.items() if v]}"
@@ -34,13 +34,13 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
         long_conditions = []
         short_conditions = []
 
-        # ML indicators get priority
+        # ML指標が優先
         ml_indicators = [
             ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
         ]
         logger.debug(f"ML indicators count: {len(ml_indicators)}")
 
-        # Add trend-based conditions for long
+        # ロングのためのトレンドベースの条件を追加
         if indicators_by_type.get(IndicatorType.TREND) and len(indicators_by_type[IndicatorType.TREND]) > 0:
             selected_trend = self._create_trend_long_conditions(
                 random.choice(indicators_by_type[IndicatorType.TREND])
@@ -48,7 +48,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
             long_conditions.extend(selected_trend)
             logger.debug(f"Added {len(selected_trend)} trend long conditions")
 
-        # Add momentum conditions for long
+        # ロングのためのモメンタム条件を追加
         if indicators_by_type.get(IndicatorType.MOMENTUM) and len(indicators_by_type[IndicatorType.MOMENTUM]) > 0:
             selected_momentum = self._create_momentum_long_conditions(
                 random.choice(indicators_by_type[IndicatorType.MOMENTUM])
@@ -56,7 +56,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
             long_conditions.extend(selected_momentum)
             logger.debug(f"Added {len(selected_momentum)} momentum long conditions")
 
-        # Add ML conditions for long
+        # ロングのためのML条件を追加
         if ml_indicators:
             ml_long_conditions = self.condition_generator._create_ml_long_conditions(
                 ml_indicators
@@ -64,7 +64,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
             long_conditions.extend(ml_long_conditions)
             logger.debug(f"Added {len(ml_long_conditions)} ML long conditions")
 
-        # Short conditions (opposite direction)
+        # ショート条件（逆方向）
         if indicators_by_type.get(IndicatorType.TREND) and len(indicators_by_type[IndicatorType.TREND]) > 0:
             selected_trend_short = self._create_trend_short_conditions(
                 random.choice(indicators_by_type[IndicatorType.TREND])
@@ -81,7 +81,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
                 f"Added {len(selected_momentum_short)} momentum short conditions"
             )
 
-        # ML opposite signals for short
+        # ショートのためのML逆シグナル
         if ml_indicators and len(ml_indicators) >= 2:
             if any(ind.type == "ML_DOWN_PROB" for ind in ml_indicators):
                 short_conditions.append(
@@ -90,7 +90,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
                     )
                 )
 
-        # Ensure we have at least basic conditions
+        # 少なくとも基本条件があることを確認
         if not long_conditions:
             long_conditions = [
                 Condition(left_operand="close", operator=">", right_operand="open")
@@ -101,7 +101,7 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
                 Condition(left_operand="close", operator="<", right_operand="open")
             ]
 
-        # Convert to appropriate types
+        # 適切なタイプに変換
         long_result = list(long_conditions)
         short_result = list(short_conditions)
         exit_result = []
@@ -114,23 +114,23 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
     def _create_trend_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """Create trend-based long conditions."""
+        """トレンドベースのロング条件を作成。"""
         return self.condition_generator._create_trend_long_conditions(indicator)
 
     def _create_trend_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """Create trend-based short conditions."""
+        """トレンドベースのショート条件を作成。"""
         return self.condition_generator._create_trend_short_conditions(indicator)
 
     def _create_momentum_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """Create momentum-based long conditions."""
+        """モメンタムベースのロング条件を作成。"""
         return self.condition_generator._create_momentum_long_conditions(indicator)
 
     def _create_momentum_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """Create momentum-based short conditions."""
+        """モメンタムベースのショート条件を作成。"""
         return self.condition_generator._create_momentum_short_conditions(indicator)

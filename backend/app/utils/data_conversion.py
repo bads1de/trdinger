@@ -1,5 +1,5 @@
 """
-データ変換ユーティリティ（簡素化版）
+データ変換ユーティリティ
 
 pandas標準機能を活用し、冗長なカスタム実装を削除。
 必要最小限の変換ロジックのみを提供。
@@ -43,18 +43,24 @@ class OHLCVDataConverter:
             # CCXTのOHLCVデータは [timestamp, open, high, low, close, volume] の形式
             try:
                 timestamp_ms, open_price, high, low, close, volume = candle
-            except ValueError as e:
+            except ValueError:
                 logger.warning(f"OHLCVデータの要素数が不正: {candle} - スキップ")
                 continue
 
             # ミリ秒タイムスタンプをdatetimeに変換（UTCタイムゾーンを明示）
             try:
                 if isinstance(timestamp_ms, (int, float)):
-                    timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+                    timestamp = datetime.fromtimestamp(
+                        timestamp_ms / 1000, tz=timezone.utc
+                    )
                 else:
-                    raise TypeError(f"タイムスタンプは数値である必要があります: {type(timestamp_ms)}")
+                    raise TypeError(
+                        f"タイムスタンプは数値である必要があります: {type(timestamp_ms)}"
+                    )
             except (TypeError, ValueError) as e:
-                logger.warning(f"不正なタイムスタンプ: {timestamp_ms} - スキップ。エラー: {e}")
+                logger.warning(
+                    f"不正なタイムスタンプ: {timestamp_ms} - スキップ。エラー: {e}"
+                )
                 continue
 
             # データベースレコードの辞書を作成
@@ -137,7 +143,9 @@ class FundingRateDataConverter:
                             data_timestamp.replace("Z", "+00:00")
                         )
                     except (ValueError, TypeError) as e:
-                        logger.warning(f"不正なdatetime文字列: {data_timestamp} - エラー: {e}")
+                        logger.warning(
+                            f"不正なdatetime文字列: {data_timestamp} - エラー: {e}"
+                        )
                         data_timestamp = None
                 elif isinstance(data_timestamp, (int, float)):
                     try:
@@ -146,7 +154,9 @@ class FundingRateDataConverter:
                             data_timestamp / 1000, tz=timezone.utc
                         )
                     except (ValueError, TypeError, OSError) as e:
-                        logger.warning(f"不正なタイムスタンプ数値: {data_timestamp} - エラー: {e}")
+                        logger.warning(
+                            f"不正なタイムスタンプ数値: {data_timestamp} - エラー: {e}"
+                        )
                         data_timestamp = None
                 else:
                     logger.warning(f"不明なdatetime形式: {type(data_timestamp)}")
@@ -176,7 +186,9 @@ class FundingRateDataConverter:
                             next_funding / 1000, tz=timezone.utc
                         )
                 except (ValueError, TypeError, OSError) as e:
-                    logger.warning(f"不正なnext_funding値: {next_funding} - エラー: {e}")
+                    logger.warning(
+                        f"不正なnext_funding値: {next_funding} - エラー: {e}"
+                    )
 
             db_records.append(db_record)
 
@@ -215,7 +227,9 @@ class OpenInterestDataConverter:
                             timestamp_value / 1000, tz=timezone.utc
                         )
                     except (ValueError, TypeError, OSError) as e:
-                        logger.warning(f"不正なタイムスタンプ数値: {timestamp_value} - エラー: {e}")
+                        logger.warning(
+                            f"不正なタイムスタンプ数値: {timestamp_value} - エラー: {e}"
+                        )
                         data_timestamp = None
                 elif isinstance(timestamp_value, str):
                     try:
@@ -224,7 +238,9 @@ class OpenInterestDataConverter:
                             timestamp_value.replace("Z", "+00:00")
                         )
                     except (ValueError, TypeError) as e:
-                        logger.warning(f"不正なdatetime文字列: {timestamp_value} - エラー: {e}")
+                        logger.warning(
+                            f"不正なdatetime文字列: {timestamp_value} - エラー: {e}"
+                        )
                         data_timestamp = None
                 else:
                     logger.warning(f"不明なtimestamp形式: {type(timestamp_value)}")
@@ -264,8 +280,6 @@ class OpenInterestDataConverter:
             db_records.append(db_record)
 
         return db_records
-
-
 
 
 def ensure_list(

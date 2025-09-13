@@ -1,5 +1,5 @@
 """
-Base strategy classes for condition generation.
+条件生成のためのベース戦略クラス。
 """
 
 import logging
@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class ConditionStrategy(ABC):
-    """Base class for condition generation strategies."""
+    """条件生成戦略のベースクラス。"""
 
     def __init__(self, condition_generator):
         """
-        Initialize strategy with context.
+        コンテキストで戦略を初期化。
 
         Args:
-            condition_generator: Reference to ConditionGenerator for shared state
+            condition_generator: 共有状態のためのConditionGeneratorへの参照
         """
         self.condition_generator = condition_generator
 
@@ -30,40 +30,40 @@ class ConditionStrategy(ABC):
         self, indicators: List[IndicatorGene]
     ) -> Tuple[List, List, List]:
         """
-        Generate conditions for the strategy.
+        戦略の条件を生成。
 
         Returns:
             (long_entry_conditions, short_entry_conditions, exit_conditions)
         """
         pass
 
-    # Helper methods that can be used by subclasses
+    # サブクラスで使用できるヘルパーメソッド
     def _classify_indicators_by_type(self, indicators: List[IndicatorGene]) -> dict:
         """
-        Classify indicators by their type using the condition generator's classification.
+        条件生成器の分類を使用して指標をタイプ別に分類。
 
         Args:
-            indicators: List of indicators to classify
+            indicators: 分類する指標のリスト
 
         Returns:
-            Dictionary mapping IndicatorType to list of indicators
+            IndicatorTypeを指標のリストにマッピングする辞書
         """
         return self.condition_generator._dynamic_classify(indicators)
 
     def _create_generic_long_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """Create generic long conditions for an indicator."""
+        """指標の汎用ロング条件を作成。"""
         return self.condition_generator._generic_long_conditions(indicator)
 
     def _create_generic_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """Create generic short conditions for an indicator."""
+        """指標の汎用ショート条件を作成。"""
         return self.condition_generator._generic_short_conditions(indicator)
 
     def _create_ml_long_conditions(
         self, indicators: List[IndicatorGene]
     ) -> List[Condition]:
-        """Create ML-based long conditions."""
+        """MLベースのロング条件を作成。"""
         return self.condition_generator._create_ml_long_conditions(indicators)
