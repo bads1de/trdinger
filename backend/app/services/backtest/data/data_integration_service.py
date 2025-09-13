@@ -111,9 +111,7 @@ class DataIntegrationService:
             df = self._integrate_fear_greed_data(df, start_date, end_date)
 
         # 3. データクリーニングと最適化
-        logger.info("データクリーニングと最適化を開始")
         df = self._clean_and_optimize_dataframe(df, include_fear_greed)
-        logger.info("データクリーニングと最適化を完了")
 
         return df
 
@@ -156,7 +154,6 @@ class DataIntegrationService:
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """ベースとなるOHLCVデータのDataFrameを取得"""
-        logger.info(f"DataIntegrationService - Getting OHLCV data: {symbol} {timeframe} from {start_date} to {end_date}")
         ohlcv_data = self.retrieval_service.get_ohlcv_data(
             symbol, timeframe, start_date, end_date
         )

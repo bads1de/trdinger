@@ -67,10 +67,8 @@ class DataProcessor:
 
         # 拡張データの範囲クリップ（funding_rateなど）
         result_df = self._clip_extended_data_ranges(result_df)
-        logger.info("拡張データの範囲クリップを完了")
 
         # データ検証
-        logger.info("データ検証を実行")
         try:
             # 必要なカラムに基づいて検証を実行
             ohlcv_columns = {"open", "high", "low", "close", "volume"}
@@ -78,19 +76,16 @@ class DataProcessor:
                 validate_ohlcv_data(result_df)
             validate_extended_data(result_df)
             validate_data_integrity(result_df)
-            logger.info("データ検証完了")
         except Exception as e:
             logger.error(f"データ検証でエラー: {e}")
             raise ValueError(f"データ検証に失敗しました: {e}")
 
         # データ補間
         if interpolate:
-            logger.info("データ補間を実行")
             result_df = self._interpolate_data(result_df)
 
         # データ型最適化
         if optimize:
-            logger.info("データ型最適化を実行")
             optimizer = DtypeOptimizer()
             result_df = optimizer.fit_transform(result_df)
 
@@ -99,9 +94,6 @@ class DataProcessor:
             if not result_df.index.is_monotonic_increasing:
                 result_df = result_df.sort_index()
 
-        logger.info(
-            f"データクリーニング完了: {len(result_df)}行, {len(result_df.columns)}列"
-        )
         return result_df
 
     def prepare_training_data(
@@ -394,7 +386,6 @@ class DataProcessor:
 
         # funding_rateの範囲クリップ (-1から1)
         if "funding_rate" in result_df.columns:
-            logger.info(f"funding_rateカラム検出: shape={result_df.shape}")
             # NaNとinfを処理してからクリップ
             funding_rate_clean = result_df["funding_rate"].replace(
                 [np.inf, -np.inf], np.nan
@@ -402,21 +393,12 @@ class DataProcessor:
             before_count = (funding_rate_clean < -1).sum() + (
                 funding_rate_clean > 1
             ).sum()
-            logger.info(
-                f"funding_rateクリップ前 - 範囲外値: {before_count}, min: {funding_rate_clean.min()}, max: {funding_rate_clean.max()}"
-            )
-            logger.info(
-                f"funding_rateサンプル値: {result_df['funding_rate'].head(3).tolist()}"
-            )
 
             # 常にクリップを実行（範囲外値がなくてもNaN/infの処理のため）
             result_df["funding_rate"] = np.clip(funding_rate_clean.fillna(0), -1, 1)
             after_count = (result_df["funding_rate"] < -1).sum() + (
                 result_df["funding_rate"] > 1
             ).sum()
-            logger.info(
-                f"funding_rateをクリップ実行: クリップ後範囲外値: {after_count}"
-            )
             if before_count > 0:
                 logger.info(f"範囲外値を修正: {before_count}件")
 
@@ -428,7 +410,6 @@ class DataProcessor:
             before_count = (fear_greed_clean < 0).sum() + (fear_greed_clean > 100).sum()
             if before_count > 0:
                 result_df["fear_greed"] = np.clip(fear_greed_clean.fillna(50), 0, 100)
-                logger.info(f"fear_greedをクリップ: {before_count}件の範囲外値を修正")
 
         # open_interestは負値にならないようにクリップ
         if "open_interest" in result_df.columns:
@@ -436,7 +417,6 @@ class DataProcessor:
             before_count = (oi_clean < 0).sum()
             if before_count > 0:
                 result_df["open_interest"] = np.maximum(oi_clean.fillna(0), 0)
-                logger.info(f"open_interestをクリップ: {before_count}件の負値を修正")
 
         return result_df
 

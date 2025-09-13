@@ -83,9 +83,6 @@ class BacktestDataService:
             DataIntegrationError: データ統合に失敗した場合
         """
         try:
-            logger.info(
-                f"BacktestDataService - Creating backtest dataframe: {symbol} {timeframe} from {start_date} to {end_date}"
-            )
             result = self._integration_service.create_backtest_dataframe(
                 symbol=symbol,
                 timeframe=timeframe,
