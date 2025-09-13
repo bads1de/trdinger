@@ -53,7 +53,7 @@ class PositionSizingService:
         gene,
         account_balance: float,
         current_price: float,
-        symbol: str = "BTCUSDT",
+        symbol: str = "BTC/USDT:USDT",
         market_data: Optional[Dict[str, Any]] = None,
         trade_history: Optional[List[Dict[str, Any]]] = None,
         use_cache: bool = True,

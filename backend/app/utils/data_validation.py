@@ -58,7 +58,7 @@ def validate_dataframe_with_config(
     df: pd.DataFrame, config: TypingDict[str, TypingDict[str, Any]], lazy: bool = True
 ) -> Tuple[bool, List[str]]:
     """
-    設定ベースのDataFrameバリデーション（Pandera非依存）
+    設定ベースのDataFrameバリデーション
 
     Args:
         df: 検証対象のDataFrame
@@ -133,7 +133,7 @@ def clean_dataframe_with_config(
     drop_invalid_rows: bool = True,
 ) -> pd.DataFrame:
     """
-    設定ベースのDataFrameクリーニング（Pandera非依存）
+    設定ベースのDataFrameクリーニング
 
     Args:
         df: クリーニング対象のDataFrame

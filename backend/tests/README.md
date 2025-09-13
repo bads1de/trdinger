@@ -3,7 +3,7 @@
 ## 📋 概要
 
 バックエンドテストを機能ベースで整理・統合したテストスイートです。
-TDD原則に基づき、各機能を包括的にテストし、保守性と拡張性を向上させています。
+TDD 原則に基づき、各機能を包括的にテストし、保守性と拡張性を向上させています。
 
 ## 🏗️ 構造
 
@@ -33,7 +33,7 @@ backend/tests/
 
 ### ✅ 改善点
 
-1. **ファイル数の削減**: 20+ファイル → 7ファイル（メイン統合ファイル）
+1. **ファイル数の削減**: 20+ファイル → 7 ファイル（メイン統合ファイル）
 2. **命名規則の統一**: 機能ベースの一貫した命名
 3. **責任の明確化**: 各テストファイルの役割が明確
 4. **重複除去**: 類似テストの統合による保守性向上
@@ -42,44 +42,51 @@ backend/tests/
 ### 📊 統合内容
 
 #### unit/test_data_processing.py
+
 - データ変換（OHLCV, FundingRate, OpenInterest）
 - データ処理（クリーニング、バリデーション、補間）
 - データ型最適化
 - エラー処理
 
 #### unit/test_indicators.py
+
 - トレンド指標（SAR, SMA, EMA, WMA）
 - モメンタム指標（RSI, MACD, STOCH）
 - ボラティリティ指標（ATR, BBANDS）
 - 出来高指標（MFI, OBV, AD）
-- MAVP, SQUEEZE, MFIなどの特殊指標
+- MAVP, SQUEEZE, MFI などの特殊指標
 
 #### unit/test_backtest.py
-- BacktestExecutorの実行ワークフロー
-- StrategyFactoryの戦略生成
-- FractionalBacktest統合
+
+- BacktestExecutor の実行ワークフロー
+- StrategyFactory の戦略生成
+- FractionalBacktest 統合
 - 戦略実行とポジションサイジング
 
 #### integration/test_data_flow.py
-- CCXT ↔ DB ↔ API形式変換
+
+- CCXT ↔ DB ↔ API 形式変換
 - データ処理パイプライン
 - 指標計算ワークフロー
 - パフォーマンス・スケーラビリティ
 
 #### integration/test_strategy_execution.py
+
 - 戦略生成から実行までの完全フロー
 - バックテスト実行ワークフロー
 - 戦略パラメータ最適化
 - エラーハンドリング
 
 #### integration/test_ml_pipeline.py
+
 - 特徴量エンジニアリング
-- MLデータ準備
+- ML データ準備
 - モデル学習シミュレーション
 - 交差検証と評価
 
 #### utils/test_warnings_and_deprecations.py
-- pandas非推奨機能（fillna methodパラメータ）
+
+- pandas 非推奨機能（fillna method パラメータ）
 - 指標計算時の警告
 - ログ削除検証
 - 互換性テスト
@@ -87,12 +94,14 @@ backend/tests/
 ## 🚀 実行方法
 
 ### 全テスト実行
+
 ```bash
 cd backend
 pytest tests/
 ```
 
 ### 特定カテゴリの実行
+
 ```bash
 # 単体テストのみ
 pytest tests/unit/
@@ -108,6 +117,7 @@ pytest tests/unit/test_data_processing.py::TestDataConversionIntegrated
 ```
 
 ### パフォーマンステスト
+
 ```bash
 # パフォーマンステストを含む
 pytest tests/ --durations=10
@@ -124,12 +134,14 @@ pytest tests/ --cov=backend --cov-report=html
 
 ## 🔧 テスト作成ガイドライン
 
-### 1. TDD原則の遵守
+### 1. TDD 原則の遵守
+
 - **Red**: 失敗するテストを書く
 - **Green**: テストを通す最小限のコードを書く
 - **Refactor**: コードを改善する
 
 ### 2. テスト構造
+
 ```python
 import pytest
 from unittest.mock import Mock
@@ -153,11 +165,13 @@ class TestFeature:
 ```
 
 ### 3. 命名規則
+
 - テストクラス: `Test[Feature]`
 - テストメソッド: `test_[description]`
 - フィクスチャ: `[data]_fixture`
 
 ### 4. 統合テストのベストプラクティス
+
 - **独立性**: 各テストが他のテストに依存しない
 - **完全性**: エンドツーエンドのワークフローをカバー
 - **保守性**: 変更に対する影響を最小限に
@@ -166,6 +180,7 @@ class TestFeature:
 ## 📋 移行履歴
 
 ### 統合前の構造（問題点）
+
 ```
 /tests/
 ├── test_backtest_executor.py     # 単独ファイル
@@ -177,6 +192,7 @@ class TestFeature:
 ```
 
 ### 統合後の構造（改善点）
+
 ```
 /tests/
 ├── unit/test_data_processing.py    # 統合済み
@@ -188,8 +204,8 @@ class TestFeature:
 
 ## 🎯 品質基準
 
-- **カバレッジ**: 目標80%以上
-- **実行時間**: 全テスト10秒以内
+- **カバレッジ**: 目標 80%以上
+- **実行時間**: 全テスト 10 秒以内
 - **保守性**: 重複コードなし、明確な責任分担
 - **拡張性**: 新機能追加時の影響最小化
 
@@ -198,18 +214,21 @@ class TestFeature:
 ### よくある問題
 
 1. **ImportError**
+
    ```bash
    # PYTHONPATHの確認
    export PYTHONPATH=$PYTHONPATH:/path/to/backend
    ```
 
-2. **Fixtureエラー**
+2. **Fixture エラー**
+
    ```bash
    # conftest.pyの確認
    pytest --fixtures
    ```
 
 3. **遅いテスト**
+
    ```bash
    # 実行時間分析
    pytest --durations=10
