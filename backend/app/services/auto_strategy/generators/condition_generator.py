@@ -268,28 +268,7 @@ class ConditionGenerator:
     def _create_type_based_conditions(
         self, indicator: IndicatorGene, side: str
     ) -> List[Condition]:
-        """統合された型別条件生成 - 特別処理優先、次にYAML設定"""
-
-        # RSI特別処理
-        if indicator.type == "RSI":
-            tf = self.context.get("timeframe", "")
-            if tf in ("15m", "15min", "15"):
-                threshold = 30 if side == "long" else 70
-            elif tf in ("1h", "60"):
-                threshold = 35 if side == "long" else 65
-            elif tf in ("4h", "240"):
-                threshold = 40 if side == "long" else 60
-            else:
-                threshold = 35 if side == "long" else 65
-            final_condition = Condition(
-                left_operand=indicator.type,
-                operator="<" if side == "long" else ">",
-                right_operand=threshold,
-            )
-            self.logger.debug(
-                f"RSI {side} condition: {indicator.type} {'<' if side == 'long' else '>'} {threshold}"
-            )
-            return [final_condition]
+        """統合された型別条件生成 - YAML設定優先"""
 
         # YAML設定チェック
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(

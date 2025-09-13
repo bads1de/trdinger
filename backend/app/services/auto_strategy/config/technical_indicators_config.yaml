@@ -275,11 +275,11 @@ indicators:
     scale_type: oscillator_0_100
     thresholds:
       aggressive:
-        long_gt: 75
-        short_lt: 25
+        long_gt: 70
+        short_lt: 30
       conservative:
-        long_gt: 75
-        short_lt: 25
+        long_gt: 80
+        short_lt: 20
       normal:
         long_gt: 75
         short_lt: 25
