@@ -55,8 +55,7 @@ class TestDataFlowIntegration:
             'close': closes,
             'volume': np.random.randint(1000, 10000, 200),
             'open_interest': np.random.uniform(500000, 2000000, 200),
-            'funding_rate': np.random.uniform(-0.001, 0.001, 200),
-            'fear_greed_value': np.random.uniform(20, 80, 200)
+            'funding_rate': np.random.uniform(-0.001, 0.001, 200)
         }
         return pd.DataFrame(data)
 

@@ -44,7 +44,6 @@ class TestEndToEndWorkflow:
             'macd': np.random.uniform(-10, 10, 10000),
             'bb_upper': np.random.uniform(105, 120, 10000),
             'bb_lower': np.random.uniform(90, 100, 10000),
-            'fear_greed_value': np.random.uniform(0, 100, 10000),
             'funding_rate': np.random.uniform(-0.01, 0.01, 10000),
             'open_interest': np.random.uniform(1000000, 5000000, 10000),
         })

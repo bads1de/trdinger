@@ -564,13 +564,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     target=target,
                 )
             else:
-                # 基本特徴量計算（Fear & Greed データ自動取得を有効化）
+                # 基本特徴量計算
                 logger.info("📊 基本特徴量計算を実行中...")
                 return self.feature_service.calculate_advanced_features(
                     ohlcv_data=ohlcv_data,
                     funding_rate_data=funding_rate_data,
                     open_interest_data=open_interest_data,
-                    auto_fetch_fear_greed=True,  # 自動取得を有効化
                 )
 
         except Exception as e:
@@ -580,7 +579,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 ohlcv_data,
                 funding_rate_data,
                 open_interest_data,
-                auto_fetch_fear_greed=False,
             )
 
     def _calculate_target_for_automl(

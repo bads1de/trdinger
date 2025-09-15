@@ -7,7 +7,6 @@ interface DataStatus {
     ohlcv: number;
     funding_rates: number;
     open_interest: number;
-    fear_greed_index: number;
   };
   total_records: number;
   details?: {
@@ -18,11 +17,6 @@ interface DataStatus {
       oldest_timestamp?: string;
     };
     open_interest?: {
-      count: number;
-      latest_timestamp?: string;
-      oldest_timestamp?: string;
-    };
-    fear_greed_index?: {
       count: number;
       latest_timestamp?: string;
       oldest_timestamp?: string;

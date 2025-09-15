@@ -686,7 +686,6 @@ class FeatureEngineeringService:
             ohlcv_data: OHLCV価格データ
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
-            fear_greed_data: Fear & Greed Index データ（オプション）
             lookback_periods: 各特徴量の計算期間設定
 
         Returns:

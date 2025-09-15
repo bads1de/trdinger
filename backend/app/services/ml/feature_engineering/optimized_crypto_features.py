@@ -53,15 +53,9 @@ class OptimizedCryptoFeatures:
             result_df["funding_rate"] = (
                 result_df["Close"].pct_change(8).rolling(3).mean() * 0.1
             )
-        if "fear_greed_value" not in result_df.columns:
-            # ボラティリティベースの疑似FG
-            volatility = result_df["Close"].pct_change().rolling(24).std()
-            result_df["fear_greed_value"] = (
-                50 - (volatility - volatility.median()) * 1000
-            )
 
         # ロバストな前方補完
-        for col in ["open_interest", "funding_rate", "fear_greed_value"]:
+        for col in ["open_interest", "funding_rate"]:
             # 外れ値の除去
             Q1 = result_df[col].quantile(0.25)
             Q3 = result_df[col].quantile(0.75)

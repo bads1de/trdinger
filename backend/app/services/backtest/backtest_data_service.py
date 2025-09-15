@@ -85,7 +85,6 @@ class BacktestDataService:
                 end_date=end_date,
                 include_oi=True,
                 include_fr=True,
-                include_fear_greed=False,
             )
             if "funding_rate" in result.columns:
                 result["funding_rate"].describe()

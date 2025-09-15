@@ -88,16 +88,6 @@ export const openInterestCollectionConfig: DataCollectionConfig = {
 };
 
 /**
- * Fear & Greed Index収集ボタンの設定
- */
-export const fearGreedCollectionConfig: DataCollectionConfig = {
-  endpoint: "/api/fear-greed/collect",
-  buttonText: "FG収集",
-  variant: "warning",
-  loadingText: "収集中...",
-};
-
-/**
  * 単一シンボル Open Interest収集ボタンの設定を生成
  */
 export const createSingleOpenInterestConfig = (

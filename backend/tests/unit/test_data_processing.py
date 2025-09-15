@@ -134,7 +134,6 @@ class TestDataProcessingIntegrated:
             'low': lows,
             'close': closes,
             'volume': np.random.randint(1000, 10000, 100),
-            'fear_greed_value': np.random.uniform(0, 100, 100),
         }
         return pd.DataFrame(data)
 
@@ -216,10 +215,6 @@ class TestDataValidationIntegrated:
         result = DataValidator.validate_ohlcv_data(df)
         assert result["is_valid"] is True
         assert result["data_quality_score"] == 100.0
-
-        # Fear & Greedデータ検証
-        fg_records = [{"value": 50, "value_classification": "Neutral", "data_timestamp": datetime.now(timezone.utc)}]
-        assert DataValidator.validate_fear_greed_data(fg_records) is True
 
         # OHLCVレコード検証
         ohlcv_records = [{

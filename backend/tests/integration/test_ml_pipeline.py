@@ -51,8 +51,7 @@ class TestMLPipelineIntegration:
             'close': closes,
             'volume': np.random.randint(1000, 10000, 1000),
             'open_interest': np.random.uniform(100000, 500000, 1000),
-            'funding_rate': np.random.uniform(-0.001, 0.001, 1000),
-            'fear_greed_value': np.random.uniform(20, 80, 1000)
+            'funding_rate': np.random.uniform(-0.001, 0.001, 1000)
         }
         return pd.DataFrame(data)
 

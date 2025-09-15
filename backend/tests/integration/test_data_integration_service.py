@@ -43,7 +43,6 @@ class TestDataIntegrationService:
         service.get_ohlcv_data.return_value = ohlcv_objects
         service.oi_repo = None
         service.fr_repo = None
-        service.fear_greed_repo = None
 
         return service
 
@@ -63,8 +62,7 @@ class TestDataIntegrationService:
             start_date=start_date,
             end_date=end_date,
             include_oi=False,
-            include_fr=False,
-            include_fear_greed=False
+            include_fr=False
         )
 
         assert isinstance(result, pd.DataFrame)
@@ -109,8 +107,7 @@ class TestDataIntegrationService:
             start_date=start_date,
             end_date=end_date,
             include_oi=False,
-            include_fr=False,
-            include_fear_greed=False
+            include_fr=False
         )
 
         assert isinstance(result, pd.DataFrame)

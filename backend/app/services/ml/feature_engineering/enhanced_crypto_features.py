@@ -27,7 +27,6 @@ class EnhancedCryptoFeatures:
             "volume": [],
             "open_interest": [],
             "funding_rate": [],
-            "fear_greed": [],
             "technical": [],
             "composite": [],
             "temporal": [],
@@ -49,11 +48,9 @@ class EnhancedCryptoFeatures:
             result_df["open_interest"] = 0
         if "funding_rate" not in result_df.columns:
             result_df["funding_rate"] = 0
-        if "fear_greed_value" not in result_df.columns:
-            result_df["fear_greed_value"] = 50  # 中立値
 
         # 統計的手法による補完
-        optional_columns = ["open_interest", "funding_rate", "fear_greed_value"]
+        optional_columns = ["open_interest", "funding_rate"]
         result_df = data_preprocessor.interpolate_columns(
             result_df, strategy="median", columns=optional_columns
         )
@@ -216,37 +213,6 @@ class EnhancedCryptoFeatures:
 
         return result_df
 
-    def _create_fear_greed_features(
-        self, df: pd.DataFrame, periods: Dict[str, int]
-    ) -> pd.DataFrame:
-        """Fear & Greed関連特徴量"""
-        result_df = df.copy()
-
-        # FG変動
-        result_df["fg_change"] = df["fear_greed_value"].diff()
-        result_df["fg_change_24h"] = df["fear_greed_value"].diff(24)
-
-        # FG極値
-        result_df["fg_extreme_fear"] = (df["fear_greed_value"] <= 25).astype(int)
-        result_df["fg_extreme_greed"] = (df["fear_greed_value"] >= 75).astype(int)
-        result_df["fg_neutral"] = (
-            (df["fear_greed_value"] > 40) & (df["fear_greed_value"] < 60)
-        ).astype(int)
-
-        # FG正規化
-        result_df["fg_normalized"] = (df["fear_greed_value"] - 50) / 50
-
-        # FG vs 価格の逆相関
-        result_df["fg_price_contrarian"] = (
-            (df["fear_greed_value"] < 30) & (df["Close"].pct_change() > 0)
-        ).astype(int)
-
-        self.feature_groups["fear_greed"].extend(
-            [col for col in result_df.columns if col.startswith("fg_")]
-        )
-
-        return result_df
-
     def _create_technical_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
@@ -329,9 +295,7 @@ class EnhancedCryptoFeatures:
 
         # 市場ストレス指標
         result_df["market_stress"] = (
-            result_df["price_volatility_short"]
-            * result_df["fr_abs"]
-            * (1 - result_df["fg_normalized"].abs())
+            result_df["price_volatility_short"] * result_df["fr_abs"]
         )
 
         self.feature_groups["composite"].extend(

@@ -45,22 +45,6 @@ def upgrade() -> None:
     op.create_index('idx_backtest_symbol_timeframe', 'backtest_results', ['symbol', 'timeframe'], unique=False)
     op.create_index(op.f('ix_backtest_results_symbol'), 'backtest_results', ['symbol'], unique=False)
     op.create_index(op.f('ix_backtest_results_timeframe'), 'backtest_results', ['timeframe'], unique=False)
-    op.create_table('fear_greed_index_data',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('value', sa.Integer(), nullable=False),
-    sa.Column('value_classification', sa.String(length=20), nullable=False),
-    sa.Column('data_timestamp', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('timestamp', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_fear_greed_data_timestamp', 'fear_greed_index_data', ['data_timestamp'], unique=False)
-    op.create_index('idx_fear_greed_timestamp', 'fear_greed_index_data', ['timestamp'], unique=False)
-    op.create_index('idx_fear_greed_value', 'fear_greed_index_data', ['value'], unique=False)
-    op.create_index(op.f('ix_fear_greed_index_data_data_timestamp'), 'fear_greed_index_data', ['data_timestamp'], unique=False)
-    op.create_index(op.f('ix_fear_greed_index_data_timestamp'), 'fear_greed_index_data', ['timestamp'], unique=False)
-    op.create_index('uq_fear_greed_data_timestamp', 'fear_greed_index_data', ['data_timestamp'], unique=True)
     op.create_table('funding_rate_data',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('symbol', sa.String(length=50), nullable=False),
@@ -185,13 +169,6 @@ def downgrade() -> None:
     op.drop_index('idx_funding_symbol_timestamp', table_name='funding_rate_data')
     op.drop_index('idx_funding_symbol_created', table_name='funding_rate_data')
     op.drop_table('funding_rate_data')
-    op.drop_index('uq_fear_greed_data_timestamp', table_name='fear_greed_index_data')
-    op.drop_index(op.f('ix_fear_greed_index_data_timestamp'), table_name='fear_greed_index_data')
-    op.drop_index(op.f('ix_fear_greed_index_data_data_timestamp'), table_name='fear_greed_index_data')
-    op.drop_index('idx_fear_greed_value', table_name='fear_greed_index_data')
-    op.drop_index('idx_fear_greed_timestamp', table_name='fear_greed_index_data')
-    op.drop_index('idx_fear_greed_data_timestamp', table_name='fear_greed_index_data')
-    op.drop_table('fear_greed_index_data')
     op.drop_index(op.f('ix_backtest_results_timeframe'), table_name='backtest_results')
     op.drop_index(op.f('ix_backtest_results_symbol'), table_name='backtest_results')
     op.drop_index('idx_backtest_symbol_timeframe', table_name='backtest_results')

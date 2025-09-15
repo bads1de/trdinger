@@ -27,7 +27,6 @@ def test_validate_ohlcv_data_missing_columns():
 def test_validate_extended_data():
     """拡張データの検証テスト"""
     df = pd.DataFrame({
-        'fear_greed': [50, 60],
         'funding_rate': [0.01, 0.02]
     })
     result = validate_extended_data(df)

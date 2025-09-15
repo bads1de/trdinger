@@ -158,7 +158,7 @@ export interface BulkIncrementalUpdateResult {
       inserted_count: number;
       /** 成功フラグ */
       success: boolean;
-      /** 収集タイプ（例: "fear_greed" | "bybit_tickers" など） */
+      /** 収集タイプ（例: "bybit_tickers" など） */
       collection_type?: string;
       /** エラーメッセージ（失敗時） */
       error?: string;
