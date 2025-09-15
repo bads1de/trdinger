@@ -135,7 +135,7 @@ class DataCollectionOrchestrationService:
         self, symbol: str, db: Session
     ) -> Dict[str, Any]:
         """
-        一括差分更新を実行（OHLCV、FR、OI、Fear & Greed Index）
+        一括差分更新を実行（OHLCV、FR、OI）
 
         Args:
             symbol: 取引ペア
@@ -157,50 +157,6 @@ class DataCollectionOrchestrationService:
                 funding_rate_repository=funding_rate_repository,
                 open_interest_repository=open_interest_repository,
             )
-
-            # Fear & Greed Index の差分更新を追加
-            try:
-                from ..orchestration.fear_greed_orchestration_service import (
-                    FearGreedOrchestrationService,
-                )
-
-                fear_greed_service = FearGreedOrchestrationService()
-                fear_greed_result = (
-                    await fear_greed_service.collect_incremental_fear_greed_data(db)
-                )
-
-                if fear_greed_result["success"]:
-                    result["data"]["fear_greed_index"] = {
-                        "success": True,
-                        "inserted_count": fear_greed_result["data"].get(
-                            "inserted_count", 0
-                        ),
-                        "message": fear_greed_result.get(
-                            "message", "Fear & Greed Index差分更新完了"
-                        ),
-                    }
-                    logger.info(
-                        f"Fear & Greed Index差分更新完了: {fear_greed_result['data'].get('inserted_count', 0)}件"
-                    )
-                else:
-                    result["data"]["fear_greed_index"] = {
-                        "success": False,
-                        "inserted_count": 0,
-                        "error": fear_greed_result.get(
-                            "message", "Fear & Greed Index差分更新失敗"
-                        ),
-                    }
-                    logger.error(
-                        f"Fear & Greed Index差分更新失敗: {fear_greed_result.get('message')}"
-                    )
-
-            except Exception as e:
-                logger.error(f"Fear & Greed Index差分更新エラー: {e}")
-                result["data"]["fear_greed_index"] = {
-                    "success": False,
-                    "inserted_count": 0,
-                    "error": str(e),
-                }
 
             return api_response(
                 success=True,

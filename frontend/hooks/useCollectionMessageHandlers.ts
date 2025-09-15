@@ -19,7 +19,6 @@ import {
   BulkOpenInterestCollectionResult,
   OpenInterestCollectionResult,
 } from "@/types/open-interest";
-import { FearGreedCollectionResult } from "@/hooks/useFearGreedData";
 
 /**
  * データ収集メッセージハンドラーの依存関係の型
@@ -32,8 +31,6 @@ export interface UseCollectionMessageHandlersDeps {
     duration?: number,
     type?: "success" | "error" | "info" | "warning"
   ) => void;
-  /** Fear & Greedデータを取得する関数 */
-  fetchFearGreedData: () => Promise<void> | void;
   /** データステータスを取得する関数 */
   fetchDataStatus: () => void;
   /** OHLCVデータを取得する関数 */
@@ -88,7 +85,6 @@ export interface UseCollectionMessageHandlersDeps {
  */
 export const useCollectionMessageHandlers = ({
   setMessage,
-  fetchFearGreedData,
   fetchDataStatus,
   fetchOHLCVData,
   fetchFundingRateData,
@@ -115,10 +111,6 @@ export const useCollectionMessageHandlers = ({
       }
       return `🚀 ${result.symbol}のOIデータ収集完了 (${result.saved_count}件保存)`;
     },
-    feargreed: (result: FearGreedCollectionResult) =>
-      result.success
-        ? `Fear & Greed Index収集完了 (取得:${result.fetched_count}件, 挿入:${result.inserted_count}件)`
-        : `${result.message}`,
     alldata: (result: AllDataCollectionResult) => {
       if (result.ohlcv_result?.status === "completed") {
         const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
@@ -180,16 +172,6 @@ export const useCollectionMessageHandlers = ({
     openinterest: {
       key: MESSAGE_KEYS.OPEN_INTEREST_COLLECTION,
       type: "openinterest",
-    },
-    feargreed: {
-      key: MESSAGE_KEYS.FEAR_GREED_COLLECTION,
-      type: "feargreed",
-      onSuccess: (result: FearGreedCollectionResult) => {
-        if (result.success) {
-          fetchFearGreedData();
-        }
-        fetchDataStatus();
-      },
     },
     alldata: {
       key: MESSAGE_KEYS.ALL_DATA_COLLECTION,

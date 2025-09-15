@@ -9,7 +9,6 @@ from typing import Optional
 
 import pandas as pd
 
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -32,7 +31,6 @@ class BacktestDataService:
         ohlcv_repo: Optional[OHLCVRepository] = None,
         oi_repo: Optional[OpenInterestRepository] = None,
         fr_repo: Optional[FundingRateRepository] = None,
-        fear_greed_repo: Optional[FearGreedIndexRepository] = None,
     ):
         """
         初期化
@@ -41,14 +39,12 @@ class BacktestDataService:
             ohlcv_repo: OHLCVデータリポジトリ
             oi_repo: Open Interestデータリポジトリ
             fr_repo: Funding Rateデータリポジトリ
-            fear_greed_repo: Fear & Greedインデックスリポジトリ
         """
         # 専門サービスを初期化
         self._retrieval_service = DataRetrievalService(
             ohlcv_repo=ohlcv_repo,
             oi_repo=oi_repo,
             fr_repo=fr_repo,
-            fear_greed_repo=fear_greed_repo,
         )
         self._conversion_service = DataConversionService()
         self._integration_service = DataIntegrationService(
@@ -60,7 +56,6 @@ class BacktestDataService:
         self.ohlcv_repo = ohlcv_repo
         self.oi_repo = oi_repo
         self.fr_repo = fr_repo
-        self.fear_greed_repo = fear_greed_repo
 
     def get_data_for_backtest(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
@@ -103,7 +98,7 @@ class BacktestDataService:
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """
-        MLトレーニング用にOHLCV、OI、FR、Fear & Greedデータを統合
+        MLトレーニング用にOHLCV、OI、FRデータを統合
 
         リファクタリング後の実装では、専門サービスに処理を委譲します。
 
@@ -114,7 +109,7 @@ class BacktestDataService:
             end_date: 終了日時
 
         Returns:
-            統合されたDataFrame（Open, High, Low, Close, Volume, open_interest, funding_rate, fear_greed_value）
+            統合されたDataFrame（Open, High, Low, Close, Volume, open_interest, funding_rate）
 
         Raises:
             DataIntegrationError: データ統合に失敗した場合

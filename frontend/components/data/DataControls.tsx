@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import SymbolSelector from "@/components/common/SymbolSelector";
 import TimeFrameSelector from "@/components/common/TimeFrameSelector";
-import DataCollectionButton from "@/components/button/DataCollectionButton";
-import {
+import DataCollectionButton, {
   allDataCollectionConfig,
   ohlcvCollectionConfig,
   fundingRateCollectionConfig,
   openInterestCollectionConfig,
-  fearGreedCollectionConfig,
-} from "@/components/button/dataCollectionConfigs";
+} from "@/components/button/DataCollectionButton";
 import DataResetPanel from "@/components/common/DataResetPanel";
 
 import { TradingPair, TimeFrame } from "@/types/market-data";
@@ -46,7 +44,6 @@ interface DataControlsProps {
   bulkCollectionMessage: string;
   fundingRateCollectionMessage: string;
   openInterestCollectionMessage: string;
-  fearGreedCollectionMessage: string;
   externalMarketCollectionMessage: string;
   allDataCollectionMessage: string;
   incrementalUpdateMessage: string;
@@ -68,7 +65,6 @@ const DataControls: React.FC<DataControlsProps> = ({
   bulkCollectionMessage,
   fundingRateCollectionMessage,
   openInterestCollectionMessage,
-  fearGreedCollectionMessage,
   externalMarketCollectionMessage,
   allDataCollectionMessage,
   incrementalUpdateMessage,
@@ -115,16 +111,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                 </span>
                 <span className="font-medium text-secondary-900 dark:text-secondary-100">
                   {dataStatus.data.data_counts?.open_interest?.toLocaleString()}
-                  件
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-secondary-600 dark:text-secondary-400">
-                  Fear & Greed Index:
-                </span>
-                <span className="font-medium text-secondary-900 dark:text-secondary-100">
-                  {dataStatus.data.data_counts?.fear_greed_index?.toLocaleString() ||
-                    0}
                   件
                 </span>
               </div>
@@ -262,51 +248,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                 </div>
               )}
 
-              {/* Fear & Greed Index詳細 */}
-              {dataStatus.data.details?.fear_greed_index && (
-                <div className="bg-secondary-100 dark:bg-secondary-800 p-3 rounded">
-                  <h4 className="font-medium text-secondary-900 dark:text-secondary-100 mb-2">
-                    Fear & Greed Index詳細
-                  </h4>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-secondary-600 dark:text-secondary-400">
-                        件数:
-                      </span>
-                      <span>
-                        {dataStatus.data.details.fear_greed_index.count?.toLocaleString()}
-                        件
-                      </span>
-                    </div>
-                    {dataStatus.data.details.fear_greed_index
-                      .latest_timestamp && (
-                      <div className="flex justify-between">
-                        <span className="text-secondary-600 dark:text-secondary-400">
-                          最新:
-                        </span>
-                        <span>
-                          {new Date(
-                            dataStatus.data.details.fear_greed_index.latest_timestamp
-                          ).toLocaleDateString("ja-JP")}
-                        </span>
-                      </div>
-                    )}
-                    {dataStatus.data.details.fear_greed_index
-                      .oldest_timestamp && (
-                      <div className="flex justify-between">
-                        <span className="text-secondary-600 dark:text-secondary-400">
-                          最古:
-                        </span>
-                        <span>
-                          {new Date(
-                            dataStatus.data.details.fear_greed_index.oldest_timestamp
-                          ).toLocaleDateString("ja-JP")}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -454,28 +395,6 @@ const DataControls: React.FC<DataControlsProps> = ({
                   className="h-10 bg-green-600 hover:bg-green-700 focus:ring-green-500"
                 />
 
-                {/* FG収集ボタン */}
-                <DataCollectionButton
-                  config={fearGreedCollectionConfig}
-                  onCollectionStart={(result) => {
-                    const handler = collectionHandlers.feargreed;
-                    handleCollectionStart(
-                      handler.key,
-                      handler.type,
-                      result,
-                      handler.duration,
-                      handler.onSuccess
-                    );
-                  }}
-                  onCollectionError={(errorMessage) =>
-                    handleCollectionError(
-                      collectionHandlers.feargreed.key,
-                      errorMessage
-                    )
-                  }
-                  disabled={loading || updating}
-                  className="h-10"
-                />
               </div>
             </div>
           </div>
@@ -485,7 +404,6 @@ const DataControls: React.FC<DataControlsProps> = ({
         {(bulkCollectionMessage ||
           fundingRateCollectionMessage ||
           openInterestCollectionMessage ||
-          fearGreedCollectionMessage ||
           externalMarketCollectionMessage ||
           allDataCollectionMessage ||
           incrementalUpdateMessage) && (
@@ -514,11 +432,6 @@ const DataControls: React.FC<DataControlsProps> = ({
               {openInterestCollectionMessage && (
                 <div className="text-sm text-secondary-600 dark:text-secondary-400">
                   {openInterestCollectionMessage}
-                </div>
-              )}
-              {fearGreedCollectionMessage && (
-                <div className="text-sm text-secondary-600 dark:text-secondary-400">
-                  {fearGreedCollectionMessage}
                 </div>
               )}
               {externalMarketCollectionMessage && (

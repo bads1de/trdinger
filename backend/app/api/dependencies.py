@@ -204,27 +204,6 @@ def get_data_management_orchestration_service():
         )
 
 
-def get_fear_greed_orchestration_service():
-    """
-    FearGreedOrchestrationService のインスタンスを取得（依存性注入用）
-    """
-    try:
-        from app.services.data_collection.orchestration.fear_greed_orchestration_service import (
-            FearGreedOrchestrationService,
-        )
-
-        return FearGreedOrchestrationService()
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.error(f"FearGreedOrchestrationService初期化エラー: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="FearGreedOrchestrationServiceが利用できません。サーバーログを確認してください。",
-        )
-
-
 def get_open_interest_orchestration_service():
     """
     OpenInterestOrchestrationService のインスタンスを取得（依存性注入用）

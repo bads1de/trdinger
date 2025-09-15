@@ -4,7 +4,6 @@ import {
   ohlcvColumns,
   fundingRateColumns,
   openInterestColumns,
-  fearGreedColumns,
 } from "@/components/common/TableColumns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PriceData, TimeFrame } from "@/types/market-data";
@@ -14,11 +13,8 @@ import { OpenInterestData } from "@/types/open-interest";
 interface DataTableContainerProps {
   selectedSymbol: string;
   selectedTimeFrame: TimeFrame;
-  activeTab: "ohlcv" | "funding" | "openinterest" | "feargreed";
-
-  setActiveTab: (
-    tab: "ohlcv" | "funding" | "openinterest" | "feargreed"
-  ) => void;
+  activeTab: string;
+  setActiveTab: (value: string) => void;
   ohlcvData: PriceData[];
   loading: boolean;
   error: string;
@@ -28,9 +24,6 @@ interface DataTableContainerProps {
   openInterestData: OpenInterestData[];
   openInterestLoading: boolean;
   openInterestError: string;
-  fearGreedData?: any[];
-  fearGreedLoading?: boolean;
-  fearGreedError?: string;
 }
 
 const DataTableContainer: React.FC<DataTableContainerProps> = ({
@@ -47,9 +40,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
   openInterestData,
   openInterestLoading,
   openInterestError,
-  fearGreedData = [],
-  fearGreedLoading = false,
-  fearGreedError = "",
 }) => {
   // テーブル設定オブジェクト
   const tableConfigs = {
@@ -77,13 +67,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
       enableSearch: true,
       searchKeys: ["symbol"] as (keyof OpenInterestData)[],
     },
-    feargreed: {
-      columns: fearGreedColumns,
-      title: "Fear & Greed Index データ",
-      enableExport: true,
-      enableSearch: true,
-      searchKeys: ["value_classification"] as (keyof any)[],
-    },
   };
 
   return (
@@ -93,9 +76,7 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
         <Tabs
           value={activeTab}
           onValueChange={(value) =>
-            setActiveTab(
-              value as "ohlcv" | "funding" | "openinterest" | "feargreed"
-            )
+            setActiveTab(value)
           }
           className="w-full"
         >
@@ -108,7 +89,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                 <TabsTrigger value="ohlcv">OHLCV</TabsTrigger>
                 <TabsTrigger value="funding">FR</TabsTrigger>
                 <TabsTrigger value="openinterest">OI</TabsTrigger>
-                <TabsTrigger value="feargreed">F&G</TabsTrigger>
               </TabsList>
             </div>
 
@@ -150,33 +130,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                         notation: "compact",
                         maximumFractionDigits: 1,
                       }).format(openInterestData[0]?.open_interest_value || 0)}
-                    </span>
-                  </>
-                )}
-              {activeTab === "feargreed" &&
-                fearGreedData.length > 0 &&
-                !fearGreedLoading && (
-                  <>
-                    <span className="badge-primary">
-                      {fearGreedData.length}件
-                    </span>
-                    <span className="badge-info">
-                      最新値: {fearGreedData[0]?.value}/100
-                    </span>
-                    <span
-                      className={`badge-${
-                        fearGreedData[0]?.value <= 20
-                          ? "error"
-                          : fearGreedData[0]?.value <= 40
-                          ? "warning"
-                          : fearGreedData[0]?.value <= 60
-                          ? "info"
-                          : fearGreedData[0]?.value <= 80
-                          ? "success"
-                          : "primary"
-                      }`}
-                    >
-                      {fearGreedData[0]?.value_classification}
                     </span>
                   </>
                 )}
@@ -222,36 +175,6 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
               enableSearch={tableConfigs.openinterest.enableSearch}
               searchKeys={tableConfigs.openinterest.searchKeys}
             />
-          </TabsContent>
-          <TabsContent value="feargreed">
-            {!fearGreedLoading &&
-            !fearGreedError &&
-            (!fearGreedData || fearGreedData.length === 0) ? (
-              <div className="enterprise-card">
-                <div className="p-6">
-                  <div className="text-center text-secondary-600 dark:text-secondary-400">
-                    <p className="text-lg font-medium mb-2">
-                      📊 データがありません
-                    </p>
-                    <p className="text-sm">
-                      Fear & Greed Index データを収集してください
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <DataTable
-                data={fearGreedData}
-                columns={tableConfigs.feargreed.columns}
-                title={tableConfigs.feargreed.title}
-                loading={fearGreedLoading}
-                error={fearGreedError || ""}
-                enableExport={tableConfigs.feargreed.enableExport}
-                enableSearch={tableConfigs.feargreed.enableSearch}
-                searchKeys={tableConfigs.feargreed.searchKeys}
-                className="mb-4"
-              />
-            )}
           </TabsContent>
         </Tabs>
       </div>

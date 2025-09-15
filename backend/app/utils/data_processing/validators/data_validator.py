@@ -55,8 +55,8 @@ def validate_extended_data(df: pd.DataFrame) -> bool:
     Raises:
         ValueError: 検証失敗時
     """
-    # 拡張データの必須カラム (例: fear_greed, funding_rate)
-    optional_columns = ["fear_greed", "funding_rate", "open_interest"]
+    # 拡張データの必須カラム (例: funding_rate)
+    optional_columns = ["funding_rate", "open_interest"]
 
     # 存在するカラムのみ検証
     present_columns = [col for col in optional_columns if col in df.columns]
@@ -69,11 +69,6 @@ def validate_extended_data(df: pd.DataFrame) -> bool:
     for col in present_columns:
         if not pd.api.types.is_numeric_dtype(df[col]):
             raise ValueError(f"Column {col} is not numeric")
-
-    # fear_greed の範囲確認 (通常0-100)
-    if "fear_greed" in df.columns:
-        if not ((df["fear_greed"] >= 0) & (df["fear_greed"] <= 100)).all():
-            raise ValueError("fear_greed values must be between 0 and 100")
 
     # funding_rate の範囲確認 (通常-1から1程度)
     if "funding_rate" in df.columns:

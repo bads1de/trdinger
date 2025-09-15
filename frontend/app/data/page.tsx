@@ -15,7 +15,6 @@ import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
-import { useFearGreedData } from "@/hooks/useFearGreedData";
 import { TimeFrame } from "@/types/market-data";
 import { SUPPORTED_TRADING_PAIRS } from "@/constants";
 
@@ -31,9 +30,7 @@ const DataPage: React.FC = () => {
   // 状態管理
   const [selectedSymbol, setSelectedSymbol] = useState<string>("BTC/USDT:USDT");
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>("1h");
-  const [activeTab, setActiveTab] = useState<
-    "ohlcv" | "funding" | "openinterest" | "feargreed"
-  >("ohlcv");
+  const [activeTab, setActiveTab] = useState<string>("ohlcv");
 
   // メッセージとキー定義
   const MESSAGE_DURATION = DefaultMessageDurations;
@@ -41,7 +38,6 @@ const DataPage: React.FC = () => {
     BULK_COLLECTION: "bulkCollection",
     FUNDING_RATE_COLLECTION: "fundingRateCollection",
     OPEN_INTEREST_COLLECTION: "openInterestCollection",
-    FEAR_GREED_COLLECTION: "fearGreedCollection",
     ALL_DATA_COLLECTION: "allDataCollection",
     INCREMENTAL_UPDATE: "incrementalUpdate",
     EXTERNAL_MARKET_COLLECTION: "externalMarketCollection",
@@ -77,12 +73,6 @@ const DataPage: React.FC = () => {
     refetch: fetchOpenInterestData,
   } = useOpenInterestData(selectedSymbol);
 
-  const {
-    data: fearGreedData,
-    loading: fearGreedLoading,
-    error: fearGreedError,
-    fetchLatestData: fetchFearGreedData,
-  } = useFearGreedData();
 
   // リフレッシュ
   const handleRefresh = useCallback(() => {
@@ -112,7 +102,6 @@ const DataPage: React.FC = () => {
   const { handleCollectionStart, handleCollectionError, collectionHandlers } =
     useCollectionMessageHandlers({
       setMessage,
-      fetchFearGreedData,
       fetchDataStatus,
       fetchOHLCVData,
       fetchFundingRateData,
@@ -203,7 +192,6 @@ const DataPage: React.FC = () => {
           bulkCollectionMessage={""}
           fundingRateCollectionMessage={""}
           openInterestCollectionMessage={""}
-          fearGreedCollectionMessage={""}
           externalMarketCollectionMessage={""}
           allDataCollectionMessage={""}
           incrementalUpdateMessage={""}
@@ -223,9 +211,6 @@ const DataPage: React.FC = () => {
           openInterestData={openInterestData}
           openInterestLoading={openInterestLoading}
           openInterestError={openInterestError || ""}
-          fearGreedData={fearGreedData}
-          fearGreedLoading={fearGreedLoading}
-          fearGreedError={fearGreedError || ""}
         />
       </div>
     </div>

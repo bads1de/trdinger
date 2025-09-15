@@ -18,7 +18,6 @@ from app.services.ml.orchestration.background_task_manager import (
 )
 from app.utils.response import api_response
 from app.utils.error_handler import safe_ml_operation
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -54,8 +53,7 @@ class MLTrainingOrchestrationService:
         ohlcv_repo = OHLCVRepository(db)
         oi_repo = OpenInterestRepository(db)
         fr_repo = FundingRateRepository(db)
-        fear_greed_repo = FearGreedIndexRepository(db)
-        return BacktestDataService(ohlcv_repo, oi_repo, fr_repo, fear_greed_repo)
+        return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
 
     def validate_training_config(self, config) -> None:
         """
@@ -226,7 +224,7 @@ class MLTrainingOrchestrationService:
                     }
                 )
 
-                # 統合されたMLトレーニングデータを取得（OHLCV + OI + FR + Fear & Greed）
+                # 統合されたMLトレーニングデータを取得（OHLCV + OI + FR）
                 training_data = data_service.get_ml_training_data(
                     symbol=config.symbol,
                     timeframe=config.timeframe,

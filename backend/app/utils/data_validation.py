@@ -49,8 +49,6 @@ EXTENDED_MARKET_DATA_VALIDATION_CONFIG = {
     "Volume": {"min": 0, "max": 1e12, "required": True},
     "open_interest": {"min": 0, "required": False},
     "funding_rate": {"min": -1, "max": 1, "required": False},
-    "fear_greed_value": {"min": 0, "max": 100, "required": False},
-    "fear_greed_classification": {"type": "str", "required": False},
 }
 
 
@@ -442,52 +440,6 @@ class DataValidator:
             logger.error(f"OHLCVデータ検証エラー: {e}")
             return False
 
-    @classmethod
-    def validate_fear_greed_data(cls, fear_greed_records: List[Dict[str, Any]]) -> bool:
-        """
-        Fear & Greed Indexデータの検証（DataSanitizer からの移行）
-
-        Args:
-            fear_greed_records: 検証するFear & Greed Indexデータのリスト
-
-        Returns:
-            データが有効な場合True、無効な場合False
-        """
-        if not fear_greed_records or not isinstance(fear_greed_records, list):
-            return False
-
-        try:
-            for record in fear_greed_records:
-                if not isinstance(record, dict):
-                    return False
-
-                # 必須フィールドの存在確認
-                required_fields = ["value", "value_classification", "data_timestamp"]
-                if not all(field in record for field in required_fields):
-                    return False
-
-                # 値の検証
-                try:
-                    value = int(record["value"])
-                    if not (0 <= value <= 100):
-                        return False
-                except (ValueError, TypeError):
-                    return False
-
-                # 分類の検証
-                if not isinstance(record["value_classification"], str):
-                    return False
-
-                # タイムスタンプの検証
-                timestamp = record["data_timestamp"]
-                if not isinstance(timestamp, (datetime, str, int, float)):
-                    return False
-
-            return True
-
-        except Exception as e:
-            logger.error(f"Fear & Greed Indexデータ検証エラー: {e}")
-            return False
 
     @classmethod
     def sanitize_ohlcv_data(

@@ -44,9 +44,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       strategy_name: "GA_STRATEGY",
       symbol: "BTC/USDT:USDT",
       timeframe: "1h",
-      start_date: "2025-06-03",
-      end_date: "2025-09-03",
-      initial_capital: 100000,
+      start_date: "2025-01-01",
+      end_date: "2025-03-01",
+      initial_capital: 1000000,
       commission_rate: 0.00055,
       strategy_config: {
         strategy_type: "",
@@ -70,7 +70,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         max_indicators: initialConfig.ga_config?.max_indicators || 5,
         allowed_indicators: initialConfig.ga_config?.allowed_indicators || [],
         // 指標モード設定
-        indicator_mode: initialConfig.ga_config?.indicator_mode || "technical_only",
+        indicator_mode:
+          initialConfig.ga_config?.indicator_mode || "technical_only",
         fitness_weights: initialConfig.ga_config?.fitness_weights || {
           total_return: 0.3,
           sharpe_ratio: 0.4,

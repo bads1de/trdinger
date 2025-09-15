@@ -595,7 +595,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         return calculate_target_for_automl(ohlcv_data, self.config)
 
-    # _get_fear_greed_data メソッドは FeatureEngineeringService に移動されました
 
     def _prepare_training_data(
         self, features_df: pd.DataFrame, **training_params

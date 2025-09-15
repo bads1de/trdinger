@@ -15,12 +15,10 @@ from sqlalchemy.orm import Session
 from app.utils.response import api_response, error_response
 from database.connection import SessionLocal
 from database.models import (
-    FearGreedIndexData,
     FundingRateData,
     OHLCVData,
     OpenInterestData,
 )
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -382,13 +380,11 @@ class DataManagementOrchestrationService:
                 ohlcv_repo = OHLCVRepository(session)
                 fr_repo = FundingRateRepository(session)
                 oi_repo = OpenInterestRepository(session)
-                fg_repo = FearGreedIndexRepository(session)
 
                 # 各データの件数取得
                 ohlcv_count = session.query(OHLCVData).count()
                 fr_count = session.query(FundingRateData).count()
                 oi_count = session.query(OpenInterestData).count()
-                fg_count = session.query(FearGreedIndexData).count()
 
                 # OHLCV詳細情報（時間足別）
                 timeframes = ["15m", "30m", "1h", "4h", "1d"]
@@ -420,22 +416,14 @@ class DataManagementOrchestrationService:
                 oi_latest = oi_repo.get_latest_open_interest_timestamp(symbol)
                 oi_oldest = oi_repo.get_oldest_open_interest_timestamp(symbol)
 
-                # Fear & Greed Index詳細情報
-                fg_latest = fg_repo.get_latest_data_timestamp()
-                fg_oldest = fg_repo.get_data_range().get("oldest_data")
-                if fg_oldest:
-                    from datetime import datetime
-
-                    fg_oldest = datetime.fromisoformat(fg_oldest.replace("Z", "+00:00"))
 
                 response_data = {
                     "data_counts": {
                         "ohlcv": ohlcv_count,
                         "funding_rates": fr_count,
                         "open_interest": oi_count,
-                        "fear_greed_index": fg_count,
                     },
-                    "total_records": ohlcv_count + fr_count + oi_count + fg_count,
+                    "total_records": ohlcv_count + fr_count + oi_count,
                     "details": {
                         "ohlcv": {
                             "symbol": symbol,
@@ -460,15 +448,6 @@ class DataManagementOrchestrationService:
                             ),
                             "oldest_timestamp": (
                                 oi_oldest.isoformat() if oi_oldest else None
-                            ),
-                        },
-                        "fear_greed_index": {
-                            "count": fg_count,
-                            "latest_timestamp": (
-                                fg_latest.isoformat() if fg_latest else None
-                            ),
-                            "oldest_timestamp": (
-                                fg_oldest.isoformat() if fg_oldest else None
                             ),
                         },
                     },

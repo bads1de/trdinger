@@ -402,15 +402,6 @@ class DataProcessor:
             if before_count > 0:
                 logger.info(f"範囲外値を修正: {before_count}件")
 
-        # fear_greedの範囲クリップ (0から100)
-        if "fear_greed" in result_df.columns:
-            fear_greed_clean = result_df["fear_greed"].replace(
-                [np.inf, -np.inf], np.nan
-            )
-            before_count = (fear_greed_clean < 0).sum() + (fear_greed_clean > 100).sum()
-            if before_count > 0:
-                result_df["fear_greed"] = np.clip(fear_greed_clean.fillna(50), 0, 100)
-
         # open_interestは負値にならないようにクリップ
         if "open_interest" in result_df.columns:
             oi_clean = result_df["open_interest"].replace([np.inf, -np.inf], np.nan)

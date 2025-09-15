@@ -8,12 +8,10 @@ from datetime import datetime
 from typing import List, Optional
 
 from database.models import (
-    FearGreedIndexData,
     FundingRateData,
     OHLCVData,
     OpenInterestData,
 )
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -37,7 +35,6 @@ class DataRetrievalService:
         ohlcv_repo: Optional[OHLCVRepository] = None,
         oi_repo: Optional[OpenInterestRepository] = None,
         fr_repo: Optional[FundingRateRepository] = None,
-        fear_greed_repo: Optional[FearGreedIndexRepository] = None,
     ):
         """
         初期化
@@ -46,12 +43,10 @@ class DataRetrievalService:
             ohlcv_repo: OHLCVデータリポジトリ
             oi_repo: Open Interestデータリポジトリ
             fr_repo: Funding Rateデータリポジトリ
-            fear_greed_repo: Fear & Greedインデックスリポジトリ
         """
         self.ohlcv_repo = ohlcv_repo
         self.oi_repo = oi_repo
         self.fr_repo = fr_repo
-        self.fear_greed_repo = fear_greed_repo
 
     def get_ohlcv_data(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
@@ -176,38 +171,3 @@ class DataRetrievalService:
 
         return _get_funding_rate_data()
 
-    def get_fear_greed_data(
-        self, start_date: datetime, end_date: datetime
-    ) -> List[FearGreedIndexData]:
-        """
-        Fear & Greedインデックスデータを取得
-
-        Args:
-            start_date: 開始日時
-            end_date: 終了日時
-
-        Returns:
-            Fear & Greedインデックスデータのリスト
-        """
-        if self.fear_greed_repo is None:
-            logger.warning("Fear & GreedRepositoryが初期化されていません")
-            return []
-
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="Fear & Greedデータ取得", is_api_call=False, default_return=[]
-        )
-        def _get_fear_greed_data():
-            # Type assertion to help type checker understand fear_greed_repo is not None
-            assert self.fear_greed_repo is not None, "Fear & GreedRepositoryが初期化されていません"
-
-            data = self.fear_greed_repo.get_fear_greed_data(
-                start_time=start_date,
-                end_time=end_date,
-            )
-
-            logger.debug(f"Fear & Greedデータ取得完了: {len(data)}件")
-            return data
-
-        return _get_fear_greed_data()

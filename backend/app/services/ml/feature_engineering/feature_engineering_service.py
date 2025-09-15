@@ -19,16 +19,13 @@ import pandas as pd
 
 from ....utils.data_processing import data_processor as data_preprocessor
 
-
 from ....utils.error_handler import safe_ml_operation
 from .data_frequency_manager import DataFrequencyManager
-from .fear_greed_features import FearGreedFeatureCalculator
 from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .temporal_features import TemporalFeatureCalculator
-from database.repositories.fear_greed_repository import FearGreedIndexRepository
 
 # AutoML関連のインポート（オプション）
 AutoFeatCalculator = None
@@ -79,7 +76,6 @@ class FeatureEngineeringService:
         self.technical_calculator = TechnicalFeatureCalculator()
         self.temporal_calculator = TemporalFeatureCalculator()
         self.interaction_calculator = InteractionFeatureCalculator()
-        self.fear_greed_calculator = FearGreedFeatureCalculator()
 
         # データ頻度統一マネージャー
         self.frequency_manager = DataFrequencyManager()
@@ -147,9 +143,7 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
-        fear_greed_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
-        auto_fetch_fear_greed: bool = True,
     ) -> pd.DataFrame:
         """
         高度な特徴量を計算
@@ -158,9 +152,7 @@ class FeatureEngineeringService:
             ohlcv_data: OHLCV価格データ
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
-            fear_greed_data: Fear & Greed Index データ（オプション）
             lookback_periods: 各特徴量の計算期間設定
-            auto_fetch_fear_greed: Fear & Greed データを自動取得するか
 
         Returns:
             特徴量が追加されたDataFrame
@@ -201,7 +193,6 @@ class FeatureEngineeringService:
                 ohlcv_data,
                 funding_rate_data,
                 open_interest_data,
-                fear_greed_data,
                 lookback_periods,
             )
 
@@ -244,9 +235,6 @@ class FeatureEngineeringService:
             # 結果DataFrameを初期化（メモリ効率化）
             result_df = ohlcv_data.copy()
 
-            # Fear & Greed データを自動取得（必要に応じて）
-            if auto_fetch_fear_greed and fear_greed_data is None:
-                fear_greed_data = self._get_fear_greed_data(ohlcv_data, db_session=None)
 
             # データ型を最適化
             result_df = self._optimize_dtypes(result_df)
@@ -371,24 +359,6 @@ class FeatureEngineeringService:
                     except Exception as e:
                         logger.warning(f"Composite中間クリーニングでエラー: {e}")
 
-            # Fear & Greed Index 特徴量（データがある場合）
-            if fear_greed_data is not None and not fear_greed_data.empty:
-                result_df = self.fear_greed_calculator.calculate_fear_greed_features(
-                    result_df, fear_greed_data, lookback_periods
-                )
-                # 中間クリーニング
-                fear_greed_columns = self.fear_greed_calculator.get_feature_names()
-                existing_fg_columns = [
-                    col for col in fear_greed_columns if col in result_df.columns
-                ]
-                if existing_fg_columns:
-                    try:
-                        medians = result_df[existing_fg_columns].median()
-                        result_df[existing_fg_columns] = result_df[
-                            existing_fg_columns
-                        ].fillna(medians)
-                    except Exception as e:
-                        logger.warning(f"FG中間クリーニングでエラー: {e}")
 
             # 市場レジーム特徴量
             result_df = self.technical_calculator.calculate_market_regime_features(
@@ -447,7 +417,6 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
-        fear_greed_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
         automl_config: Optional[Dict] = None,
         target: Optional[pd.Series] = None,
@@ -460,7 +429,6 @@ class FeatureEngineeringService:
             ohlcv_data: OHLCV価格データ
             funding_rate_data: ファンディングレートデータ
             open_interest_data: 建玉残高データ
-            fear_greed_data: Fear & Greed Index データ
             lookback_periods: 計算期間設定
             automl_config: AutoML設定（辞書形式）
             target: ターゲット変数（特徴量選択用）
@@ -475,7 +443,6 @@ class FeatureEngineeringService:
                 ohlcv_data=ohlcv_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
-                fear_greed_data=fear_greed_data,
                 lookback_periods=lookback_periods,
             )
 
@@ -497,7 +464,6 @@ class FeatureEngineeringService:
                 ohlcv_data,
                 funding_rate_data,
                 open_interest_data,
-                fear_greed_data,
                 lookback_periods,
             )
 
@@ -560,7 +526,6 @@ class FeatureEngineeringService:
         feature_names.extend(self.technical_calculator.get_feature_names())
         feature_names.extend(self.temporal_calculator.get_feature_names())
         feature_names.extend(self.interaction_calculator.get_feature_names())
-        feature_names.extend(self.fear_greed_calculator.get_feature_names())
 
         return feature_names
 
@@ -569,7 +534,6 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
-        fear_greed_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
     ) -> pd.DataFrame:
         """ステップ1: 手動特徴量を計算"""
@@ -580,7 +544,6 @@ class FeatureEngineeringService:
             ohlcv_data=ohlcv_data,
             funding_rate_data=funding_rate_data,
             open_interest_data=open_interest_data,
-            fear_greed_data=fear_greed_data,
             lookback_periods=lookback_periods,
         )
 
@@ -714,7 +677,6 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame],
         open_interest_data: Optional[pd.DataFrame],
-        fear_greed_data: Optional[pd.DataFrame],
         lookback_periods: Optional[Dict[str, int]],
     ) -> str:
         """
@@ -744,11 +706,6 @@ class FeatureEngineeringService:
                 open_interest_data.shape if open_interest_data is not None else "None"
             ).encode()
         ).hexdigest()[:8]
-        fg_hash = hashlib.md5(
-            str(
-                fear_greed_data.shape if fear_greed_data is not None else "None"
-            ).encode()
-        ).hexdigest()[:8]
         periods_hash = hashlib.md5(
             str(
                 sorted(lookback_periods.items())
@@ -757,7 +714,7 @@ class FeatureEngineeringService:
             ).encode()
         ).hexdigest()[:8]
 
-        return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{fg_hash}_{periods_hash}"
+        return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{periods_hash}"
 
     def _get_from_cache(self, cache_key: str) -> Optional[pd.DataFrame]:
         """
@@ -809,97 +766,6 @@ class FeatureEngineeringService:
         except Exception as e:
             logger.warning(f"キャッシュ保存エラー: {e}")
 
-    def _get_fear_greed_data(self, ohlcv_data: pd.DataFrame, db_session=None) -> Optional[pd.DataFrame]:
-        """
-        Fear & Greed Index データを取得
-
-        BaseMLTrainerから移動されたロジック
-
-        Args:
-            ohlcv_data: OHLCV価格データ
-            db_session: データベースセッション（オプション）
-
-        Returns:
-            Fear & Greed Index データ（取得できない場合はNone）
-        """
-        try:
-            # データの期間を取得
-            start_date = ohlcv_data.index.min()
-            end_date = ohlcv_data.index.max()
-
-            if db_session is None:
-                logger.warning("データベースセッションが提供されていないため、Fear & Greedデータを取得できません")
-                return None
-
-            # pandas TimestampをPython datetimeに変換
-            try:
-                start_datetime = None
-                end_datetime = None
-
-                # start_dateの変換
-                if isinstance(start_date, pd.Timestamp):
-                    if pd.isna(start_date):
-                        start_datetime = None
-                    else:
-                        start_datetime = start_date.to_pydatetime()
-                elif isinstance(start_date, datetime):
-                    start_datetime = start_date
-                elif start_date is None:
-                    start_datetime = None
-                else:
-                    start_datetime = None
-
-                # end_dateの変換
-                if isinstance(end_date, pd.Timestamp):
-                    if pd.isna(end_date):
-                        end_datetime = None
-                    else:
-                        end_datetime = end_date.to_pydatetime()
-                elif isinstance(end_date, datetime):
-                    end_datetime = end_date
-                elif end_date is None:
-                    end_datetime = None
-                else:
-                    end_datetime = None
-            except Exception as e:
-                logger.warning(f"日時変換エラー: {e}")
-                start_datetime = None
-                end_datetime = None
-
-            # リポジトリを使用してデータを取得
-            fear_greed_repo = FearGreedIndexRepository(db_session)
-            fear_greed_records = fear_greed_repo.get_fear_greed_data(
-                start_time=start_datetime, end_time=end_datetime
-            )
-
-            if not fear_greed_records:
-                logger.warning("Fear & Greed データが見つかりません")
-                return None
-
-            # モデルインスタンスをDataFrameに変換
-            fear_greed_data = []
-            for record in fear_greed_records:
-                fear_greed_data.append({
-                    'value': record.value,
-                    'value_classification': record.value_classification,
-                    'data_timestamp': record.data_timestamp,
-                    'timestamp': record.timestamp
-                })
-
-            df = pd.DataFrame(fear_greed_data)
-
-            # タイムスタンプをインデックスに設定
-            if not df.empty:
-                df['data_timestamp'] = pd.to_datetime(df['data_timestamp'])
-                df.set_index('data_timestamp', inplace=True)
-                df.sort_index(inplace=True)
-
-            logger.info(f"Fear & Greed データを取得: {len(df)}件")
-            return df
-
-        except Exception as e:
-            logger.warning(f"Fear & Greed データ取得エラー: {e}")
-            return None
 
     def _optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """

@@ -12,7 +12,7 @@ import pandas as pd
 from app.utils.data_processing import data_processor
 from app.utils.error_handler import safe_operation
 
-from ...data_collection.mergers import FearGreedMerger, FRMerger, OIMerger
+from ...data_collection.mergers import FRMerger, OIMerger
 from .data_conversion_service import DataConversionService
 from .data_retrieval_service import DataRetrievalService
 
@@ -48,7 +48,6 @@ class DataIntegrationService:
         # データマージャーを初期化（リポジトリが利用可能な場合のみ）
         self.oi_merger = None
         self.fr_merger = None
-        self.fear_greed_merger = None
 
         # リポジトリが利用可能な場合はマージャーを初期化
         if hasattr(retrieval_service, "oi_repo") and retrieval_service.oi_repo:
@@ -56,12 +55,6 @@ class DataIntegrationService:
 
         if hasattr(retrieval_service, "fr_repo") and retrieval_service.fr_repo:
             self.fr_merger = FRMerger(retrieval_service.fr_repo)
-
-        if (
-            hasattr(retrieval_service, "fear_greed_repo")
-            and retrieval_service.fear_greed_repo
-        ):
-            self.fear_greed_merger = FearGreedMerger(retrieval_service.fear_greed_repo)
 
     @safe_operation(
         context="バックテスト用DataFrame作成",
@@ -76,7 +69,6 @@ class DataIntegrationService:
         end_date: datetime,
         include_oi: bool = True,
         include_fr: bool = True,
-        include_fear_greed: bool = False,
     ) -> pd.DataFrame:
         """
         バックテスト用のDataFrameを作成
@@ -88,7 +80,6 @@ class DataIntegrationService:
             end_date: 終了日時
             include_oi: Open Interestデータを含めるか
             include_fr: Funding Rateデータを含めるか
-            include_fear_greed: Fear & Greedデータを含めるか
 
         Returns:
             統合されたDataFrame
@@ -107,11 +98,8 @@ class DataIntegrationService:
         else:
             df["funding_rate"] = 0.0
 
-        if include_fear_greed:
-            df = self._integrate_fear_greed_data(df, start_date, end_date)
-
         # 3. データクリーニングと最適化
-        df = self._clean_and_optimize_dataframe(df, include_fear_greed)
+        df = self._clean_and_optimize_dataframe(df)
 
         return df
 
@@ -146,7 +134,6 @@ class DataIntegrationService:
             end_date=end_date,
             include_oi=True,
             include_fr=True,
-            include_fear_greed=True,
         )
 
     @safe_operation(context="ベースOHLCVデータ取得", is_api_call=False)
@@ -187,29 +174,13 @@ class DataIntegrationService:
 
         return df
 
-    @safe_operation(context="Fear & Greedデータ統合", is_api_call=False)
-    def _integrate_fear_greed_data(
-        self, df: pd.DataFrame, start_date: datetime, end_date: datetime
-    ) -> pd.DataFrame:
-        """Fear & Greedデータを統合"""
-        if self.fear_greed_merger:
-            df = self.fear_greed_merger.merge_fear_greed_data(
-                df, start_date, end_date, detailed_logging=True
-            )
-        else:
-            df["fear_greed_value"] = pd.NA
-            df["fear_greed_classification"] = pd.NA
-
-        return df
 
     @safe_operation(
         context="データクリーニングと最適化",
         is_api_call=False,
         default_return=pd.DataFrame(),
     )
-    def _clean_and_optimize_dataframe(
-        self, df: pd.DataFrame, include_fear_greed: bool = False
-    ) -> pd.DataFrame:
+    def _clean_and_optimize_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """DataFrameのクリーニングと最適化"""
         # 必須カラムを定義
         required_columns = [
@@ -221,9 +192,6 @@ class DataIntegrationService:
             "open_interest",
             "funding_rate",
         ]
-
-        if include_fear_greed:
-            required_columns.extend(["fear_greed_value", "fear_greed_classification"])
 
         # データクリーニングと検証
         df = data_processor.clean_and_validate_data(
@@ -293,13 +261,6 @@ class DataIntegrationService:
                 "average": float(df["funding_rate"].mean()),
                 "min": float(df["funding_rate"].min()),
                 "max": float(df["funding_rate"].max()),
-            }
-
-        if "fear_greed_value" in df.columns:
-            summary["fear_greed_stats"] = {
-                "average": float(df["fear_greed_value"].mean()),
-                "min": float(df["fear_greed_value"].min()),
-                "max": float(df["fear_greed_value"].max()),
             }
 
         return summary
