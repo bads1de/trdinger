@@ -123,29 +123,16 @@ class BacktestExecutor:
             data = data.copy()
             data.columns = data.columns.str.capitalize()
 
-            # 暗号通貨シンボルの場合FractionalBacktestを使用（警告回避）
-            if self._is_crypto_symbol(symbol):
-                bt = FractionalBacktest(
-                    data,
-                    strategy_class,
-                    cash=initial_capital,
-                    commission=commission_rate,
-                    exclusive_orders=False,  # 複数ポジション許可（制約緩和）
-                    trade_on_close=False,  # 現在価格で取引（制約緩和）
-                    hedging=True,  # ヘッジング有効化（制約緩和）
-                    margin=0.01,  # マージン要件を大幅に緩和（1%）
-                )
-            else:
-                bt = Backtest(
-                    data,
-                    strategy_class,
-                    cash=initial_capital,
-                    commission=commission_rate,
-                    exclusive_orders=False,  # 複数ポジション許可（制約緩和）
-                    trade_on_close=False,  # 現在価格で取引（制約緩和）
-                    hedging=True,  # ヘッジング有効化（制約緩和）
-                    margin=0.01,  # マージン要件を大幅に緩和（1%）
-                )
+            bt = FractionalBacktest(
+                data,
+                strategy_class,
+                cash=initial_capital,
+                commission=commission_rate,
+                exclusive_orders=False,  # 複数ポジション許可（制約緩和）
+                trade_on_close=False,  # 現在価格で取引（制約緩和）
+                hedging=True,  # ヘッジング有効化（制約緩和）
+                margin=0.01,  # マージン要件を大幅に緩和（1%）
+            )
 
             return bt
 
@@ -192,29 +179,3 @@ class BacktestExecutor:
             }
         }
 
-    def _is_crypto_symbol(self, symbol: str) -> bool:
-        """暗号通貨シンボルかどうかを判定
-
-        Args:
-            symbol: 取引ペアシンボル
-
-        Returns:
-            True if crypto symbol with high prices that need fractional trading
-        """
-        # 主な暗号通貨のベース通貨
-        crypto_bases = ['BTC', 'ETH', 'LTC', 'ADA', 'DOT', 'XRP', 'SOL', 'BNB', 'DOGE']
-        # USDTや他のフィアット/ステーブルコイン
-        quote_currencies = ['USDT', 'BUSD', 'USDC', 'USD', 'EUR']
-
-        for base in crypto_bases:
-            if base in symbol:
-                # USDやBUSDなどのフィアットとのペアは価格が高いのでfractionalが必要
-                for quote in quote_currencies:
-                    if quote in symbol:
-                        return True
-
-        # BTC以外のペアでもUSD価格が高額のものは対応
-        if len(symbol) > 6 and ('USD' in symbol or 'EUR' in symbol):
-            return True
-
-        return False
