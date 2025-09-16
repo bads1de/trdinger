@@ -76,12 +76,12 @@ class TechnicalIndicatorService:
             config = self._get_config(indicator_type)
             if config:
                 # pandas-ta方式で処理
-                # 2. 基本検証
-                if not self._basic_validation(df, config):
-                    return self._create_nan_result(df, config)
-
-                # 3. パラメータ正規化
+                # 3. パラメータ正規化（基本検証前に必要）
                 normalized_params = self._normalize_params(params, config)
+
+                # 2. 基本検証
+                if not self._basic_validation(df, config, normalized_params):
+                    return self._create_nan_result(df, config)
 
                 # 4. pandas-ta直接呼び出し
                 result = self._call_pandas_ta(df, config, normalized_params)
@@ -130,11 +130,11 @@ class TechnicalIndicatorService:
         """設定を取得"""
         return PANDAS_TA_CONFIG.get(indicator_type)
 
-    def _basic_validation(self, df: pd.DataFrame, config: Dict[str, Any]) -> bool:
+    def _basic_validation(self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]) -> bool:
         """基本検証 - データ長と必須カラムのチェック"""
         # データ長検証
         is_valid, _ = self.validate_data_length_with_fallback(
-            df, config["function"], {}
+            df, config["function"], params
         )
         if not is_valid:
             return False
@@ -163,7 +163,7 @@ class TechnicalIndicatorService:
     def _normalize_params(
         self, params: Dict[str, Any], config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """パラメータ正規化 - エイリアスマッピング"""
+        """パラメータ正規化 - エイリアスマッピングとガード"""
         normalized = {}
         for param_name, aliases in config["params"].items():
             value = None
@@ -176,6 +176,18 @@ class TechnicalIndicatorService:
                 value = config["default_values"].get(param_name)
 
             if value is not None:
+                # min_lengthガードの適用
+                if param_name in ["length", "period"] and "min_length" in config:
+                    min_length_func = config["min_length"]
+                    if callable(min_length_func):
+                        min_length = min_length_func({param_name: value})
+                        if isinstance(value, (int, float)) and value < min_length:
+                            logger.warning(f"パラメータ {param_name}={value} が最小値 {min_length} 未満のため調整します")
+                            value = min_length
+                    elif isinstance(min_length_func, (int, float)) and isinstance(value, (int, float)) and value < min_length_func:
+                        logger.warning(f"パラメータ {param_name}={value} が最小値 {min_length_func} 未満のため調整します")
+                        value = min_length_func
+
                 normalized[param_name] = value
 
         return normalized

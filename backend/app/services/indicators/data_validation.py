@@ -38,7 +38,7 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
     Returns:
         最小必要データ長
     """
-    config = PANDAS_TA_CONFIG.get(indicator_type)
+    config = PANDAS_TA_CONFIG.get(indicator_type.upper())
     if config and "min_length" in config:
         if callable(config["min_length"]):
             return config["min_length"](params)
@@ -77,7 +77,7 @@ def validate_data_length_with_fallback(
         return True, standard_length
 
     # 各指標ごとの最小データ長を計算
-    absolute_minimum = get_absolute_minimum_length(indicator_type)
+    absolute_minimum = get_absolute_minimum_length(indicator_type.upper())
     min_required = max(absolute_minimum, standard_length // 3)
 
     if data_length >= min_required:
@@ -107,6 +107,7 @@ def get_absolute_minimum_length(indicator_type: str) -> int:
         絶対的最小データ長
     """
     absolute_mins = {
+        "SMA": 2,  # SMA needs at least 2 data points
         "EMA": 2,  # EMA needs at least 2 data points
         "TEMA": 3,  # TEMA needs at least 3
         "MACD": 26 + 9 + 3,  # slow + signal + some buffer

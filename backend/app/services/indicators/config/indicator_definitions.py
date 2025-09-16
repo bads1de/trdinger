@@ -59,7 +59,9 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 14},
-        "min_length": lambda params: get_param_value(params, ["length", "window"], 14),
+        "min_length": lambda params: max(
+            2, get_param_value(params, ["length", "window"], 14)
+        ),
     },
     "SMA": {
         "function": "sma",
@@ -67,7 +69,9 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 20},
-        "min_length": lambda params: get_param_value(params, ["length", "window"], 20),
+        "min_length": lambda params: max(
+            2, get_param_value(params, ["length", "window"], 20)
+        ),
     },
     "EMA": {
         "function": "ema",
@@ -75,7 +79,9 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 20},
-        "min_length": lambda params: max(2, get_param_value(params, ["length", "window"], 20) // 3),
+        "min_length": lambda params: max(
+            2, get_param_value(params, ["length", "window"], 20)
+        ),
     },
     "WMA": {
         "function": "wma",
@@ -83,7 +89,9 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 20},
-        "min_length": lambda params: get_param_value(params, ["length", "window"], 20),
+        "min_length": lambda params: max(
+            2, get_param_value(params, ["length", "window"], 20)
+        ),
     },
     "DEMA": {
         "function": "dema",
@@ -98,7 +106,9 @@ PANDAS_TA_CONFIG = {
         "data_column": "Close",
         "returns": "single",
         "default_values": {"length": 14},
-        "min_length": lambda params: max(3, get_param_value(params, ["length", "window"], 14) // 2),
+        "min_length": lambda params: max(
+            3, get_param_value(params, ["length", "window"], 14) // 2
+        ),
     },
     "T3": {
         "function": "t3",
@@ -121,7 +131,9 @@ PANDAS_TA_CONFIG = {
         "returns": "multiple",
         "return_cols": ["MACD", "Signal", "Histogram"],
         "default_values": {"fast": 12, "slow": 26, "signal": 9},
-        "min_length": lambda params: params.get("slow", 26) + params.get("signal", 9) + 5,
+        "min_length": lambda params: params.get("slow", 26)
+        + params.get("signal", 9)
+        + 5,
     },
     "STOCH": {
         "function": "stoch",
@@ -228,7 +240,8 @@ PANDAS_TA_CONFIG = {
         "returns": "complex",
         "return_cols": ["ST", "D"],
         "default_values": {"length": 10, "multiplier": 3.0},
-        "min_length": lambda params: get_param_value(params, ["length", "window"], 10) + 10,
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 10)
+        + 10,
     },
     "DONCHIAN": {
         "function": "donchian",
@@ -347,43 +360,6 @@ PANDAS_TA_CONFIG = {
         "data_columns": ["High", "Low", "Close", "Volume"],
         "returns": "single",
         "default_values": {"length": 14, "drift": 1},
-    },
-    "VIDYA": {
-        "function": "vidya",
-        "params": {"length": ["length"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 14},
-    },
-    "LINREG": {
-        "function": "linreg",
-        "params": {"length": ["length"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 14},
-    },
-    "MAVP": {
-        "function": "mavp",
-        "params": {"fast": ["fast"], "slow": ["slow"], "minperiod": ["minperiod"], "maxperiod": ["maxperiod"], "mamode": ["mamode"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"fast": 2, "slow": 30, "minperiod": 2, "maxperiod": 30, "mamode": "ema"},
-    },
-    "AROON": {
-        "function": "aroon",
-        "params": {"length": ["length"]},
-        "multi_column": True,
-        "data_columns": ["High", "Low"],
-        "returns": "multiple",
-        "return_cols": ["AROON_D", "AROON_U", "AROONOSC"],
-        "default_values": {"length": 14},
-    },
-    "STC": {
-        "function": "stc",
-        "params": {"length": ["length"], "fast": ["fast", "fast_length"], "slow": ["slow", "slow_length"]},
-        "data_column": "Close",
-        "returns": "single",
-        "default_values": {"length": 10, "fast": 23, "slow": 50},
     },
 }
 

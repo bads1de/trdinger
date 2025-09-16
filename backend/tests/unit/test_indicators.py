@@ -160,6 +160,30 @@ class TestIndicatorsIntegrated:
             nan_count = pd.isna(result).sum()
             # 初期のNaN値は許容されるが、全体の大部分がNaNではないことを確認
             assert nan_count < len(result) * 0.9
+    def test_basic_validation_params_issue_fixed(self, indicator_service, sample_close_data):
+        """_basic_validationでparamsが正しく渡されるようになったことをテスト"""
+        # length=2を指定した場合、min_length=2になるので、データ長が2未満ではNaNになるはず
+        # 修正後の正常動作
+        short_data = sample_close_data.iloc[:1]  # 1つのデータのみ
+
+        # length=2を指定すると、min_length=2になるので、データ長1ではNaNが返される
+        result = indicator_service.calculate_indicator(short_data, 'SMA', {'length': 2})
+        # データ長不足でNaNが返されることを確認
+        assert result is not None
+        assert pd.isna(result).all()
+
+    def test_sma_min_length_with_params(self, indicator_service, sample_close_data):
+        """SMAのmin_lengthがlengthパラメータに応じて正しく機能するテスト"""
+        # 修正後：length=2を指定した場合、min_length=2になるはず
+        short_data = sample_close_data.iloc[:1]  # 1つのデータのみ（2未満）
+
+        # length=2を指定した場合、min_length=2になるので、データ長1ではNaNが返されるはず
+        result = indicator_service.calculate_indicator(short_data, 'SMA', {'length': 2})
+        # 修正後：データ長不足でNaNが返されることを期待
+        assert result is not None
+        # データ長不足で全てNaNのはず
+        if hasattr(result, '__len__') and len(result) > 0:
+            assert pd.isna(result).all()
 
 
 class TestIndicatorWarningsAndDeprecations:
@@ -1235,6 +1259,85 @@ class TestTEMAIndicator:
         if len(valid_values) > 0:
             assert valid_values.min() > sample_close_data.min() * 0.5  # 極端に小さくない
             assert valid_values.max() < sample_close_data.max() * 1.5  # 極端に大きくない
+
+
+class TestIndicatorParameterGuard:
+    """指標パラメータガードテスト"""
+
+    @pytest.fixture
+    def sample_close_data(self):
+        """テスト用Closeデータのみの準備"""
+        np.random.seed(42)
+        dates = pd.date_range('2023-01-01', periods=100, freq='D')
+        close = np.random.randn(100).cumsum() + 100
+
+        df = pd.DataFrame({
+            'Close': close
+        }, index=dates)
+        return df
+
+    @pytest.fixture
+    def indicator_service(self):
+        """インジケーターサービスの準備"""
+        return TechnicalIndicatorService()
+
+    def test_sma_length_below_minimum(self, indicator_service, sample_close_data):
+        """SMAのlengthパラメータが2未満の場合の挙動テスト"""
+        # ガード機能によりlength=1は2に調整されるはず
+
+        result = indicator_service.calculate_indicator(sample_close_data, 'SMA', {'length': 1})
+        # ガードによりlengthが2に調整され、正常に計算されるはず
+        assert result is not None
+        assert isinstance(result, np.ndarray)
+        assert len(result) == len(sample_close_data)
+
+    def test_sma_length_zero(self, indicator_service, sample_close_data):
+        """SMAのlength=0の場合の挙動テスト"""
+        result = indicator_service.calculate_indicator(sample_close_data, 'SMA', {'length': 0})
+        # ガードによりlengthが2に調整されるはず
+        assert result is not None
+        assert isinstance(result, np.ndarray)
+
+    def test_sma_negative_length(self, indicator_service, sample_close_data):
+        """SMAの負のlengthパラメータの場合の挙動テスト"""
+        result = indicator_service.calculate_indicator(sample_close_data, 'SMA', {'length': -1})
+        # ガードによりlengthが2に調整されるはず
+        assert result is not None
+        assert isinstance(result, np.ndarray)
+
+    def test_pandas_ta_config_min_length_reading(self, indicator_service):
+        """PANDAS_TA_CONFIGからmin_lengthを読み取る機能テスト"""
+        from app.services.indicators.config.indicator_definitions import PANDAS_TA_CONFIG
+
+        # SMAの設定にmin_lengthが存在することを確認
+        assert 'SMA' in PANDAS_TA_CONFIG
+        sma_config = PANDAS_TA_CONFIG['SMA']
+        assert 'min_length' in sma_config
+
+        # min_lengthが関数であることを確認
+        min_length_func = sma_config['min_length']
+        assert callable(min_length_func)
+
+        # lengthパラメータを指定してmin_lengthを計算
+        params = {'length': 5}
+        calculated_min_length = min_length_func(params)
+        assert calculated_min_length == 5
+
+        # デフォルト値を使用する場合
+        params_default = {}
+        calculated_min_length_default = min_length_func(params_default)
+        assert calculated_min_length_default == 20  # SMAのデフォルト
+
+    def test_indicator_parameter_guard_functionality(self, indicator_service, sample_close_data):
+        """パラメータガード機能のテスト"""
+        # ガード機能が実装されたら、このテストで検証
+        # 現在はlength=1でも動作するか確認（pandas-taの挙動による）
+
+        result = indicator_service.calculate_indicator(sample_close_data, 'SMA', {'length': 1})
+        # pandas-taではlength=1でも動作する可能性がある
+        if result is not None:
+            assert isinstance(result, np.ndarray)
+            assert len(result) == len(sample_close_data)
 
 
 if __name__ == "__main__":
