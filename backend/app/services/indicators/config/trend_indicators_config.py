@@ -214,3 +214,4 @@ def setup_trend_indicators():
         )
     )
     indicator_registry.register(sar_config)
+

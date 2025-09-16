@@ -39,19 +39,18 @@ def setup_volatility_indicators():
     atr_config.param_map = {"period": "length"}
     indicator_registry.register(atr_config)
 
-    # BBANDS (Bollinger Bands)
-    bbands_config = IndicatorConfig(
-        indicator_name="BBANDS",
+    # BB (Bollinger Bands)
+    bb_config = IndicatorConfig(
+        indicator_name="BB",
         adapter_function=VolatilityIndicators.bbands,
         required_data=["close"],
         result_type=IndicatorResultType.COMPLEX,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="volatility",
-        output_names=["BBANDS_Upper", "BBANDS_Middle", "BBANDS_Lower"],
-        default_output="BBANDS_Middle",
-        aliases=["BB"],
+        output_names=["BB_Upper", "BB_Middle", "BB_Lower"],
+        default_output="BB_Middle",
     )
-    bbands_config.add_parameter(
+    bb_config.add_parameter(
         ParameterConfig(
             name="period",
             default_value=20,
@@ -60,7 +59,7 @@ def setup_volatility_indicators():
             description="ボリンジャーバンド期間",
         )
     )
-    bbands_config.add_parameter(
+    bb_config.add_parameter(
         ParameterConfig(
             name="std",
             default_value=2.0,
@@ -69,8 +68,8 @@ def setup_volatility_indicators():
             description="標準偏差倍数",
         )
     )
-    bbands_config.param_map = {"close": "data", "period": "length", "std": "std"}
-    indicator_registry.register(bbands_config)
+    bb_config.param_map = {"close": "data", "period": "length", "std": "std"}
+    indicator_registry.register(bb_config)
 
     # ACCBANDS
     accbands_config = IndicatorConfig(

@@ -152,9 +152,9 @@ def setup_momentum_indicators():
     cci_config.param_map = {"period": "length"}
     indicator_registry.register(cci_config)
 
-    # MOM (Momentum)
+    # MOMENTUM (Momentum)
     mom_config = IndicatorConfig(
-        indicator_name="MOM",
+        indicator_name="MOMENTUM",
         adapter_function=MomentumIndicators.mom,
         required_data=["close"],
         result_type=IndicatorResultType.SINGLE,
@@ -171,7 +171,7 @@ def setup_momentum_indicators():
         )
     )
     mom_config.param_map = {"close": "data", "period": "length"}
-    mom_config.aliases = ["MOMENTUM"]
+    mom_config.aliases = ["MOM"]
     indicator_registry.register(mom_config)
 
     # ADX

@@ -340,7 +340,7 @@ class TestIntegration:
 
         # indicator_definitions.pyで定義されている指標のみ残す
         defined_indicators = [
-            "RSI", "SMA", "EMA", "WMA", "DEMA", "TEMA", "T3", "KAMA", "MACD", "STOCH", "CCI", "WILLR", "ROC", "MOM", "ADX", "QQE", "SAR", "ATR", "BBANDS", "KELTNER", "SUPERTREND", "DONCHIAN", "ACCBANDS", "UI", "OBV", "AD", "ADOSC", "CMF", "EFI", "VWAP", "SQUEEZE", "MFI",
+            "RSI", "SMA", "EMA", "WMA", "DEMA", "TEMA", "T3", "KAMA", "MACD", "STOCH", "CCI", "WILLR", "ROC", "MOM", "ADX", "QQE", "SAR", "ATR", "BB", "KELTNER", "SUPERTREND", "DONCHIAN", "ACCBANDS", "UI", "OBV", "AD", "ADOSC", "CMF", "EFI", "VWAP", "SQUEEZE", "MFI",
             # データソース
             "close", "open", "high", "low", "volume", "OpenInterest", "FundingRate"
         ]

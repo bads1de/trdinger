@@ -42,7 +42,7 @@ class IndicatorSettings(BaseConfig):
         default_factory=lambda: {
             "MACD": "MACD_0",
             "STOCH": "STOCH_0",
-            "BBANDS": "BBANDS_1",
+            "BB": "BB_1",
         }
     )
 

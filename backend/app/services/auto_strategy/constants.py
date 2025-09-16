@@ -102,7 +102,7 @@ CURATED_TECHNICAL_INDICATORS = {
     "SAR",
     # ボラティリティ系
     "ATR",
-    "BBANDS",
+    "BB",
     "DONCHIAN",
     "KELTNER",
     "SUPERTREND",

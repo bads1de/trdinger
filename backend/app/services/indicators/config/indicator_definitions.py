@@ -159,7 +159,7 @@ PANDAS_TA_CONFIG = {
         "returns": "single",
         "default_values": {"length": 10},
     },
-    "MOM": {
+    "MOMENTUM": {
         "function": "mom",
         "params": {"length": ["length"]},
         "data_column": "Close",
@@ -202,15 +202,6 @@ PANDAS_TA_CONFIG = {
         "returns": "single",
         "default_values": {"length": 14},
     },
-    "BBANDS": {
-        "function": "bbands",
-        "params": {"length": ["length", "period"], "std": ["std", "multiplier"]},
-        "data_column": "Close",
-        "returns": "multiple",
-        "return_cols": ["BBL", "BBM", "BBU"],
-        "default_values": {"length": 20, "std": 2.0},
-        "min_length": lambda params: get_param_value(params, ["length", "window"], 20),
-    },
     "KELTNER": {
         "function": "kc",
         "params": {"length": ["length"], "multiplier": ["multiplier"]},
@@ -219,6 +210,15 @@ PANDAS_TA_CONFIG = {
         "returns": "multiple",
         "return_cols": ["KC_LB", "KC_MID", "KC_UB"],
         "default_values": {"length": 20, "multiplier": 2.0},
+    },
+    "BB": {
+        "function": "bbands",
+        "params": {"length": ["length", "period"], "std": ["std", "multiplier"]},
+        "data_column": "Close",
+        "returns": "multiple",
+        "return_cols": ["BBL", "BBM", "BBU"],
+        "default_values": {"length": 20, "std": 2.0},
+        "min_length": lambda params: get_param_value(params, ["length", "window"], 20),
     },
     "SUPERTREND": {
         "function": "supertrend",
@@ -347,6 +347,43 @@ PANDAS_TA_CONFIG = {
         "data_columns": ["High", "Low", "Close", "Volume"],
         "returns": "single",
         "default_values": {"length": 14, "drift": 1},
+    },
+    "VIDYA": {
+        "function": "vidya",
+        "params": {"length": ["length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "LINREG": {
+        "function": "linreg",
+        "params": {"length": ["length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 14},
+    },
+    "MAVP": {
+        "function": "mavp",
+        "params": {"fast": ["fast"], "slow": ["slow"], "minperiod": ["minperiod"], "maxperiod": ["maxperiod"], "mamode": ["mamode"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"fast": 2, "slow": 30, "minperiod": 2, "maxperiod": 30, "mamode": "ema"},
+    },
+    "AROON": {
+        "function": "aroon",
+        "params": {"length": ["length"]},
+        "multi_column": True,
+        "data_columns": ["High", "Low"],
+        "returns": "multiple",
+        "return_cols": ["AROON_D", "AROON_U", "AROONOSC"],
+        "default_values": {"length": 14},
+    },
+    "STC": {
+        "function": "stc",
+        "params": {"length": ["length"], "fast": ["fast", "fast_length"], "slow": ["slow", "slow_length"]},
+        "data_column": "Close",
+        "returns": "single",
+        "default_values": {"length": 10, "fast": 23, "slow": 50},
     },
 }
 

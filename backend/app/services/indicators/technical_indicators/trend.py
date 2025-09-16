@@ -184,3 +184,4 @@ class TrendIndicators:
         psar_long = result[f"PSARl_{af}_{max_af}"]
         psar_short = result[f"PSARs_{af}_{max_af}"]
         return psar_long.fillna(psar_short)
+

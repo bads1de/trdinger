@@ -80,7 +80,7 @@ def sample_strategy_gene_2():
     indicators = [
         IndicatorGene(type="EMA", parameters={"period": 10}, enabled=True),
         IndicatorGene(type="MACD", parameters={"fast_period": 12}, enabled=True),
-        IndicatorGene(type="BBANDS", parameters={"period": 20, "std_dev": 2.0}, enabled=True),
+        IndicatorGene(type="BB", parameters={"period": 20, "std_dev": 2.0}, enabled=True),
     ]
 
     entry_conditions = [

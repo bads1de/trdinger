@@ -204,7 +204,7 @@ class ListDecoder:
             2: "EMA",
             3: "RSI",
             4: "MACD",
-            5: "BBANDS",
+            5: "BB",
             6: "STOCH",
             7: "ADX",
             8: "CCI",
@@ -222,7 +222,7 @@ class ListDecoder:
             period = max(1, min(200, int(param_val * 200)))
 
             # 指標タイプ別の特別なパラメータ
-            if indicator_type in ["BBANDS", "KELTNER"]:
+            if indicator_type in ["BB", "KELTNER"]:
                 return {"period": period, "std_dev": 2.0}
             elif indicator_type in ["MACD"]:
                 return {"fast_period": 12, "slow_period": 26, "signal_period": 9}

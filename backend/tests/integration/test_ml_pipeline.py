@@ -82,7 +82,7 @@ class TestMLPipelineIntegration:
         # 2. 技術指標の計算
         service = TechnicalIndicatorService()
 
-        indicators = ['SMA', 'EMA', 'RSI', 'MACD', 'BBANDS', 'ATR']
+        indicators = ['SMA', 'EMA', 'RSI', 'MACD', 'BB', 'ATR']
         feature_data = cleaned_data.copy()
 
         for indicator in indicators:

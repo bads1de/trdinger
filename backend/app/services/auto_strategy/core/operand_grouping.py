@@ -89,7 +89,7 @@ class OperandGroupingSystem:
             "FundingRate": OperandGroup.SPECIAL_SCALE,
             # Additional indicators
             "WILLR": OperandGroup.ZERO_CENTERED,
-            "BBANDS": OperandGroup.PRICE_BASED,
+            "BB": OperandGroup.PRICE_BASED,
             "ACCBANDS": OperandGroup.PRICE_BASED,
             "AD": OperandGroup.ZERO_CENTERED,
             "ADOSC": OperandGroup.ZERO_CENTERED,
@@ -213,7 +213,7 @@ class OperandGroupingSystem:
                 "KELTNER",
                 "DONCHIAN",
                 "SUPERTREND",
-                "BBANDS",
+                "BB",
                 "ACCBANDS",
                 "SAR",
             ]

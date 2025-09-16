@@ -13,7 +13,7 @@ pandas-taの利点を最大限に活用しつつ、実装の複雑さを大幅�
 サポート指標数: 32個
 - Trend: SMA, EMA, WMA, DEMA, TEMA, T3, KAMA
 - Momentum: RSI, MACD, STOCH, CCI, WILLR, ROC, MOM, ADX, QQE
-- Volatility: ATR, BBANDS, KELTNER, DONCHIAN, ACCBANDS
+- Volatility: ATR, BB, KELTNER, DONCHIAN, ACCBANDS
 - Volume: OBV, AD, ADOSC, CMF, EFI, VWAP, MFI
 - Other: SAR, UI, SQUEEZE
 
@@ -226,7 +226,23 @@ class TechnicalIndicatorService:
                 return np.asarray(result)
         else:  # multiple
             if isinstance(result, pd.DataFrame):
-                return tuple(result.iloc[:, i].values for i in range(result.shape[1]))
+                # return_cols が指定されている場合は指定された列のみを返す
+                if "return_cols" in config and config["return_cols"]:
+                    selected_cols = []
+                    for col in config["return_cols"]:
+                        if col in result.columns:
+                            selected_cols.append(result[col].values)
+                        else:
+                            # 部分一致で検索（例: BBL -> BBL_20_2.0）
+                            matching_cols = [c for c in result.columns if col in c or c.startswith(col + "_")]
+                            if matching_cols:
+                                selected_cols.append(result[matching_cols[0]].values)
+                            else:
+                                # NaN配列を追加
+                                selected_cols.append(np.full(len(result), np.nan))
+                    return tuple(selected_cols)
+                else:
+                    return tuple(result.iloc[:, i].values for i in range(result.shape[1]))
             else:
                 return tuple(np.asarray(arr) for arr in result)
 
@@ -384,14 +400,23 @@ class TechnicalIndicatorService:
             result = adapter_function(*positional_args, **keyword_args)
         else:
             # 通常のキーワード引数呼び出し
-            filtered_args = {}
-            for k, v in all_args.items():
-                if k in valid_params:
-                    filtered_args[k] = v
-                elif k.lower() in valid_params:
-                    filtered_args[k.lower()] = v
+            # パラメータの順序を考慮してpositional argsとkeyword argsを分ける
+            import inspect
 
-            result = adapter_function(**filtered_args)
+            sig = inspect.signature(adapter_function)
+            positional_args = []
+            keyword_args = {}
+
+            # パラメータの順序で処理
+            for param_name in sig.parameters:
+                if param_name in all_args:
+                    param = sig.parameters[param_name]
+                    if param.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD):
+                        positional_args.append(all_args[param_name])
+                    else:
+                        keyword_args[param_name] = all_args[param_name]
+
+            result = adapter_function(*positional_args, **keyword_args)
 
         # 結果の後処理
         if isinstance(result, pd.Series):

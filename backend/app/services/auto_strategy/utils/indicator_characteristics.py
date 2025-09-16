@@ -65,7 +65,7 @@ _INDICATOR_CHARACTERISTICS_BASE = {
             "no_direction": True,  # 方向性を示さない
             "strong_trend_threshold": 25,
         },
-        "BBANDS": {
+        "BB": {
             "type": "volatility",
             "components": ["upper", "middle", "lower"],
             "mean_reversion": True,

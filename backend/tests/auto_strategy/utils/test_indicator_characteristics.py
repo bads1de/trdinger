@@ -13,7 +13,7 @@ class TestIndicatorCharacteristics:
         assert len(INDICATOR_CHARACTERISTICS) > 0
 
         # 基本的な指標が存在することを確認
-        expected_indicators = ["RSI", "SMA", "EMA", "MACD", "ADX", "BBANDS"]
+        expected_indicators = ["RSI", "SMA", "EMA", "MACD", "ADX", "BB"]
         for indicator in expected_indicators:
             assert indicator in INDICATOR_CHARACTERISTICS
             assert "type" in INDICATOR_CHARACTERISTICS[indicator]
@@ -60,8 +60,8 @@ class TestIndicatorCharacteristics:
         assert "high_confidence_threshold" in ml_up
 
     def test_indicator_characteristics_bbands(self):
-        """BBANDS指標の特性テスト"""
-        bb_char = INDICATOR_CHARACTERISTICS["BBANDS"]
+        """BB指標の特性テスト"""
+        bb_char = INDICATOR_CHARACTERISTICS["BB"]
 
         assert bb_char["type"] == "volatility"
         assert "components" in bb_char

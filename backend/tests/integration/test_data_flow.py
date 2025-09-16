@@ -120,7 +120,7 @@ class TestDataFlowIntegration:
         service = TechnicalIndicatorService()
 
         # 複数の指標を計算
-        indicators_to_test = ['SMA', 'EMA', 'RSI', 'MACD', 'BBANDS']
+        indicators_to_test = ['SMA', 'EMA', 'RSI', 'MACD', 'BB']
 
         for indicator in indicators_to_test:
             result = service.calculate_indicator(comprehensive_ohlcv_data, indicator, {})

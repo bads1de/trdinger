@@ -332,7 +332,7 @@ class TestStrategyIntegrationService:
             "indicators": [
                 {"type": "RSI_14", "enabled": True},
                 {"type": "MACD_(12,26,9)", "enabled": True},
-                {"type": "BBANDS(20,2)", "enabled": True}
+                {"type": "BB(20,2)", "enabled": True}
             ]
         }
 

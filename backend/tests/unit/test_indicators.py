@@ -91,21 +91,26 @@ class TestIndicatorsIntegrated:
 
     def test_volatility_indicators_complete(self, indicator_service, sample_ohlcv_data):
         """ボラティリティ指標の完全テスト"""
-        volatility_indicators = ['ATR', 'NATR', 'BBANDS']
+        volatility_indicators = ['ATR', 'NATR', 'BB']
 
         for indicator in volatility_indicators:
             config = indicator_registry.get_indicator_config(indicator)
             if config:
                 result = indicator_service.calculate_indicator(sample_ohlcv_data, indicator, {})
                 assert result is not None
-                assert len(result) == len(sample_ohlcv_data)
+                # BBはmultipleの結果を返すので、タプルの各要素の長さをチェック
+                if isinstance(result, tuple):
+                    for arr in result:
+                        assert len(arr) == len(sample_ohlcv_data)
+                else:
+                    assert len(result) == len(sample_ohlcv_data)
 
     def test_indicator_configurations_loaded(self):
         """指標設定が正しく読み込まれていることをテスト"""
         # pandas-ta設定に主要指標が存在することを確認
         from app.services.indicators.config.indicator_definitions import PANDAS_TA_CONFIG
 
-        essential_indicators = ['SMA', 'EMA', 'RSI', 'MACD', 'BBANDS', 'ATR', 'SAR']
+        essential_indicators = ['SMA', 'EMA', 'RSI', 'MACD', 'BB', 'ATR', 'SAR']
 
         for indicator in essential_indicators:
             assert indicator in PANDAS_TA_CONFIG
@@ -120,7 +125,7 @@ class TestIndicatorsIntegrated:
             ('EMA', {'length': 14}),
             ('RSI', {'length': 14}),
             ('ATR', {'length': 14}),
-            ('BBANDS', {'length': 20, 'std': 2})
+            ('BB', {'length': 20, 'std': 2})
         ]
 
         for indicator, params in test_cases:
@@ -128,13 +133,18 @@ class TestIndicatorsIntegrated:
             if config:
                 result = indicator_service.calculate_indicator(sample_ohlcv_data, indicator, params)
                 assert result is not None
-                assert len(result) == len(sample_ohlcv_data)
+                # BBはmultipleの結果を返すので、タプルの各要素の長さをチェック
+                if isinstance(result, tuple):
+                    for arr in result:
+                        assert len(arr) == len(sample_ohlcv_data)
+                else:
+                    assert len(result) == len(sample_ohlcv_data)
 
     def test_indicator_error_handling(self, indicator_service, sample_close_data):
         """指標計算のエラーハンドリングテスト"""
         # 無効な指標名
-        result = indicator_service.calculate_indicator(sample_close_data, 'INVALID_INDICATOR', {})
-        assert result is None
+        with pytest.raises(ValueError, match="実装が見つかりません"):
+            indicator_service.calculate_indicator(sample_close_data, 'INVALID_INDICATOR', {})
 
         # 必要なデータが不足
         result = indicator_service.calculate_indicator(sample_close_data, 'MFI', {})  # Volumeが必要

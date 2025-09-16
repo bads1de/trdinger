@@ -112,7 +112,7 @@ class ListEncoder:
             "EMA": 2,
             "RSI": 3,
             "MACD": 4,
-            "BBANDS": 5,
+            "BB": 5,
             "STOCH": 6,
             "ADX": 7,
             "CCI": 8,
