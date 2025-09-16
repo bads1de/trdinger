@@ -89,6 +89,9 @@ def handle_pandas_ta_errors(func):
         except PandasTAError:
             # 既にPandasTAErrorの場合は再発生
             raise
+        except (TypeError, ValueError):
+            # バリデーションエラーは再発生
+            raise
         except Exception as e:
             # その他のエラーは簡潔に処理
             raise PandasTAError(f"{func.__name__} 計算エラー: {e}")

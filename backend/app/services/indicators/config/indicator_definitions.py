@@ -340,6 +340,14 @@ PANDAS_TA_CONFIG = {
         "returns": "single",
         "default_values": {"length": 14, "drift": 1},
     },
+    "MONEY_FLOW_INDEX": {
+        "function": "mfi",
+        "params": {"length": ["length"], "drift": ["drift"]},
+        "multi_column": True,
+        "data_columns": ["High", "Low", "Close", "Volume"],
+        "returns": "single",
+        "default_values": {"length": 14, "drift": 1},
+    },
 }
 
 # 動的設定初期化（レジストリから生成）
