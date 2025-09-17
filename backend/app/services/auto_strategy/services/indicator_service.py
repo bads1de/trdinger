@@ -13,7 +13,6 @@ import pandas as pd
 from app.services.indicators import TechnicalIndicatorService
 
 from ..models.strategy_models import IndicatorGene
-from .ml_orchestrator import MLOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +24,11 @@ class IndicatorCalculator:
     テクニカル指標の計算を担当します。
     """
 
-    def __init__(self, ml_orchestrator=None, technical_indicator_service=None):
+    def __init__(self, technical_indicator_service=None):
         """初期化"""
         self.technical_indicator_service = (
             technical_indicator_service or TechnicalIndicatorService()
         )
-        self.ml_orchestrator = ml_orchestrator or MLOrchestrator()
 
     def calculate_indicator(
         self, data, indicator_type: str, parameters: Dict[str, Any]
@@ -60,20 +58,11 @@ class IndicatorCalculator:
             if df.empty:
                 raise ValueError(f"データが空です: {indicator_type}")
 
-            # ML指標の場合も必要なカラム検証
             required_columns = ["Open", "High", "Low", "Close", "Volume"]
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 logger.warning(f"不足しているカラム: {missing_columns}")
 
-            # ML指標の場合は専用サービスを使用
-            if indicator_type.startswith("ML_"):
-                # TODO: 将来的にはファンディングレートと建玉残高データも取得して渡す
-                # 現在は不足特徴量を0で埋める処理で対応済み
-                result = self.ml_orchestrator.calculate_single_ml_indicator(
-                    indicator_type, df, funding_rate_data=None, open_interest_data=None
-                )
-                return result
 
             required_columns = ["Open", "High", "Low", "Close", "Volume"]
             missing_columns = [col for col in required_columns if col not in df.columns]

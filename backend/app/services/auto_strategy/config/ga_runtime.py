@@ -105,8 +105,6 @@ class GAConfig(BaseConfig):
 
     # 指標設定拡張
     allowed_indicators: List[str] = field(default_factory=list)
-    indicator_mode: str = "technical_only"
-    enable_ml_indicators: bool = True
 
     # 遺伝子生成設定拡張
     price_data_weight: int = 3
@@ -298,9 +296,6 @@ class GAConfig(BaseConfig):
             "enable_fitness_sharing": self.enable_fitness_sharing,
             "sharing_radius": self.sharing_radius,
             "sharing_alpha": self.sharing_alpha,
-            # 指標モード設定
-            "indicator_mode": self.indicator_mode,
-            "enable_ml_indicators": self.enable_ml_indicators,
             # TPSL設定
             "tpsl_method_constraints": self.tpsl_method_constraints,
             "tpsl_sl_range": self.tpsl_sl_range,
@@ -362,9 +357,6 @@ class GAConfig(BaseConfig):
             ],
             "sharing_radius": GA_DEFAULT_FITNESS_SHARING["sharing_radius"],
             "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
-            # 指標モード設定
-            "indicator_mode": "mixed",
-            "enable_ml_indicators": True,
             # 多目的最適化設定
             "enable_multi_objective": False,
             "objectives": DEFAULT_GA_OBJECTIVES,

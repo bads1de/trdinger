@@ -177,33 +177,6 @@ _INDICATOR_CHARACTERISTICS_BASE = {
             "reversal_indicator": True,
             "price_level": True,
         },
-        "ML_UP_PROB": {
-            "type": "ml_prediction",
-            "range": (0, 1),  # 確率値
-            "ml_prediction": True,
-            "long_zones": [(0.6, 1.0)],
-            "short_zones": [(0, 0.4)],
-            "neutral_zone": (0.4, 0.6),
-            "high_confidence_threshold": 0.7,
-        },
-        "ML_DOWN_PROB": {
-            "type": "ml_prediction",
-            "range": (0, 1),  # 確率値
-            "ml_prediction": True,
-            "long_zones": [(0, 0.4)],
-            "short_zones": [(0.6, 1.0)],
-            "neutral_zone": (0.4, 0.6),
-            "high_confidence_threshold": 0.7,
-        },
-        "ML_RANGE_PROB": {
-            "type": "ml_prediction",
-            "range": (0, 1),  # 確率値
-            "ml_prediction": True,
-            "long_zones": [(0, 0.3)],
-            "short_zones": [(0, 0.3)],
-            "neutral_zone": (0.7, 1.0),
-            "high_confidence_threshold": 0.8,
-        },
         "WILLR": {
             "type": "momentum",
             "range": (-100, 0),

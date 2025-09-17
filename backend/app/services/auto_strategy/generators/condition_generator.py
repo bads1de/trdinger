@@ -45,7 +45,6 @@ class ConditionGenerator:
         # YAML設定を読み込み
         self.yaml_config = YamlIndicatorUtils.load_yaml_config_for_indicators()
 
-        # 生成時の相場・実行コンテキスト（timeframeやsymbol）+ML統合
         self.context = {
             "timeframe": None,
             "symbol": None,
@@ -159,29 +158,9 @@ class ConditionGenerator:
             選択された戦略タイプ
         """
         try:
-            # ML指標がある場合はMLファースト戦略
-            ml_indicators = [
-                ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
-            ]
-
-            # テクニカル指標の数分析
-            technical_indices = [
-                ind
-                for ind in indicators
-                if ind.enabled and not ind.type.startswith("ML_")
-            ]
-
-            # ML指標とテクニカル指標の混合の場合は組み合わせ戦略
-            if ml_indicators and technical_indices:
-                return StrategyType.DIFFERENT_INDICATORS
-
-            # ML指標のみの場合はML専用戦略
-            if ml_indicators and not technical_indices:
-                return StrategyType.INDICATOR_CHARACTERISTICS
-
             # テクニカル指標のみの場合
             indicator_types = set()
-            for ind in technical_indices:
+            for ind in indicators:
                 if ind.type in INDICATOR_CHARACTERISTICS:
                     indicator_types.add(INDICATOR_CHARACTERISTICS[ind.type]["type"])
 
@@ -324,41 +303,6 @@ class ConditionGenerator:
         """統合されたモメンタム系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
 
-    def _create_ml_long_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> List[Condition]:
-        """
-        ML予測を活用した簡素化したロング条件生成
-
-        Args:
-            indicators: 指標リスト
-
-        Returns:
-            ロング条件のリスト
-        """
-        try:
-            conditions = []
-
-            if any(ind.type == "ML_UP_PROB" for ind in indicators if ind.enabled):
-                # 上昇予測確率が基準以上
-                conditions.append(
-                    Condition(
-                        left_operand="ML_UP_PROB", operator=">", right_operand=0.6
-                    )
-                )
-
-            if any(ind.type == "ML_DOWN_PROB" for ind in indicators if ind.enabled):
-                # 下落予測確率が基準以下
-                conditions.append(
-                    Condition(
-                        left_operand="ML_DOWN_PROB", operator="<", right_operand=0.4
-                    )
-                )
-
-            return conditions
-        except Exception as e:
-            self.logger.error(f"MLロング条件生成エラー: {e}")
-            return []
 
     def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
         """指標のタイプを取得"""

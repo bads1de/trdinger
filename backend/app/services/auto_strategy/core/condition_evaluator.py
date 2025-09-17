@@ -90,13 +90,6 @@ class ConditionEvaluator:
                 condition.right_operand, strategy_instance
             )
 
-            # ML指標の場合はデバッグログを出力
-            if isinstance(
-                condition.left_operand, str
-            ) and condition.left_operand.startswith("ML_"):
-                logger.info(
-                    f"[ML条件評価デバッグ] {condition.left_operand} {condition.operator} {condition.right_operand} => {left_value} {condition.operator} {right_value}"
-                )
 
             # 両方の値が数値であることを確認（numpy互換）
             def is_numeric_value(val):
@@ -167,11 +160,6 @@ class ConditionEvaluator:
                 logger.warning(f"未対応の演算子: {condition.operator}")
                 return False
 
-            # ML指標の場合は評価結果もログ出力
-            if isinstance(
-                condition.left_operand, str
-            ) and condition.left_operand.startswith("ML_"):
-                logger.info(f"[ML条件評価デバッグ] 評価結果: {result}")
 
             return result
 

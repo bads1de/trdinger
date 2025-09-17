@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 
 from .base import BaseConfig
 from ..constants import (
-    ML_INDICATOR_TYPES,
     OPERATORS,
     DATA_SOURCES,
 )
@@ -24,9 +23,6 @@ class IndicatorSettings(BaseConfig):
 
     # 利用可能な指標
     valid_indicator_types: List[str] = field(default_factory=get_valid_indicator_types)
-    ml_indicator_types: List[str] = field(
-        default_factory=lambda: ML_INDICATOR_TYPES.copy()
-    )
 
     # 指標特性データベース
     indicator_characteristics: Dict[str, Any] = field(
@@ -55,7 +51,7 @@ class IndicatorSettings(BaseConfig):
 
     def get_all_indicators(self) -> List[str]:
         """全指標タイプを取得"""
-        return self.valid_indicator_types + self.ml_indicator_types
+        return self.valid_indicator_types
 
     def get_indicator_characteristics(self, indicator: str) -> Optional[Dict[str, Any]]:
         """特定の指標の特性を取得"""

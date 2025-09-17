@@ -143,13 +143,6 @@ MA_INDICATORS_NEEDING_PERIOD = {
     "T3",
 }
 
-# === ML指標定数 ===
-ML_INDICATOR_TYPES = [
-    "ML_UP_PROB",  # 機械学習上昇確率 (Machine Learning Up Probability)
-    "ML_DOWN_PROB",  # 機械学習下落確率 (Machine Learning Down Probability)
-    "ML_RANGE_PROB",  # 機械学習レンジ確率 (Machine Learning Range Probability)
-]
-
 # === TP/SL関連定数 ===
 TPSL_METHODS = [
     "fixed_percentage",

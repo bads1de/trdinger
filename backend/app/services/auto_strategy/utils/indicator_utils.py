@@ -54,9 +54,9 @@ def get_volatility_indicators() -> List[str]:
 
 
 def get_all_indicators() -> List[str]:
-    """全指標タイプを取得（テクニカル + ML + 複合指標）"""
+    """全指標タイプを取得（テクニカル + 複合指標）"""
     # 遅延インポートで循環依存を回避
-    from ..constants import ML_INDICATOR_TYPES, COMPOSITE_INDICATORS
+    from ..constants import COMPOSITE_INDICATORS
 
     technical = (
         get_volume_indicators()
@@ -67,7 +67,7 @@ def get_all_indicators() -> List[str]:
     # 重複除去して順序維持
     seen = set()
     ordered: List[str] = []
-    for n in technical + ML_INDICATOR_TYPES + COMPOSITE_INDICATORS:
+    for n in technical + COMPOSITE_INDICATORS:
         if n not in seen:
             seen.add(n)
             ordered.append(n)
@@ -94,7 +94,7 @@ def get_all_indicator_ids() -> Dict[str, int]:
     """
     全指標のIDマッピングを取得（統合版）
 
-    テクニカル指標とML指標を統合したIDマッピングを提供します。
+    テクニカル指標のIDマッピングを提供します。
     gene_utils.py との重複機能を統合しています。
     """
     try:
@@ -103,14 +103,8 @@ def get_all_indicator_ids() -> Dict[str, int]:
             indicator_service.get_supported_indicators().keys()
         )
 
-        # 遅延インポートで循環依存を回避
-        from ..constants import ML_INDICATOR_TYPES
-
-        # 全指標を結合
-        all_indicators = technical_indicators + ML_INDICATOR_TYPES
-
         # IDマッピングを作成（空文字列は0、その他は1から開始）
-        return {"": 0, **{ind: i + 1 for i, ind in enumerate(all_indicators)}}
+        return {"": 0, **{ind: i + 1 for i, ind in enumerate(technical_indicators)}}
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"指標ID取得エラー: {e}")
@@ -133,9 +127,9 @@ def get_valid_indicator_types() -> List[str]:
     )
 
     # 遅延インポートで循環依存を回避
-    from ..constants import COMPOSITE_INDICATORS, ML_INDICATOR_TYPES
+    from ..constants import COMPOSITE_INDICATORS
 
-    all_indicators = technical + COMPOSITE_INDICATORS + ML_INDICATOR_TYPES
+    all_indicators = technical + COMPOSITE_INDICATORS
 
     seen = set()
     valid_types: List[str] = []

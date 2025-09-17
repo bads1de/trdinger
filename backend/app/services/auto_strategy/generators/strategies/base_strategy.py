@@ -62,8 +62,3 @@ class ConditionStrategy(ABC):
         """指標の汎用ショート条件を作成。"""
         return self.condition_generator._generic_short_conditions(indicator)
 
-    def _create_ml_long_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> List[Condition]:
-        """MLベースのロング条件を作成。"""
-        return self.condition_generator._create_ml_long_conditions(indicators)

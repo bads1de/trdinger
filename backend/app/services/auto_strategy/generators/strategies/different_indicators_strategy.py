@@ -34,12 +34,6 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
         long_conditions = []
         short_conditions = []
 
-        # ML指標が優先
-        ml_indicators = [
-            ind for ind in indicators if ind.enabled and ind.type.startswith("ML_")
-        ]
-        logger.debug(f"ML indicators count: {len(ml_indicators)}")
-
         # ロングのためのトレンドベースの条件を追加
         if indicators_by_type.get(IndicatorType.TREND) and len(indicators_by_type[IndicatorType.TREND]) > 0:
             selected_trend = self._create_trend_long_conditions(
@@ -56,13 +50,6 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
             long_conditions.extend(selected_momentum)
             logger.debug(f"Added {len(selected_momentum)} momentum long conditions")
 
-        # ロングのためのML条件を追加
-        if ml_indicators:
-            ml_long_conditions = self.condition_generator._create_ml_long_conditions(
-                ml_indicators
-            )
-            long_conditions.extend(ml_long_conditions)
-            logger.debug(f"Added {len(ml_long_conditions)} ML long conditions")
 
         # ショート条件（逆方向）
         if indicators_by_type.get(IndicatorType.TREND) and len(indicators_by_type[IndicatorType.TREND]) > 0:
@@ -81,14 +68,6 @@ class DifferentIndicatorsStrategy(ConditionStrategy):
                 f"Added {len(selected_momentum_short)} momentum short conditions"
             )
 
-        # ショートのためのML逆シグナル
-        if ml_indicators and len(ml_indicators) >= 2:
-            if any(ind.type == "ML_DOWN_PROB" for ind in ml_indicators):
-                short_conditions.append(
-                    Condition(
-                        left_operand="ML_DOWN_PROB", operator=">", right_operand=0.6
-                    )
-                )
 
         # 少なくとも基本条件があることを確認
         if not long_conditions:

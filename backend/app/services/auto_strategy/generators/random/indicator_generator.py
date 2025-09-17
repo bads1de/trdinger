@@ -84,23 +84,12 @@ class IndicatorGenerator:
             self.indicator_service.get_supported_indicators().keys()
         )
 
-        # ML指標
-        ml_indicators = ["ML_UP_PROB", "ML_DOWN_PROB", "ML_RANGE_PROB"]
 
-        # 指標モードに応じて選択
-        indicator_mode = getattr(config, "indicator_mode", "technical_only")
-
-        if indicator_mode == "technical_only":
-            # テクニカル指標のみ
-            available_indicators = technical_indicators
-            logger.info(
-                f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)"
-            )
-
-        else:  # ml_only
-            # ML指標のみ
-            available_indicators = ml_indicators
-            logger.info(f"指標モード: MLオンリー ({len(available_indicators)}個の指標)")
+        # テクニカル指標のみを使用
+        available_indicators = technical_indicators
+        logger.info(
+            f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)"
+        )
 
         # allowed_indicators によりさらに絞り込み（安全性と一貫性のため）
         try:
@@ -137,37 +126,35 @@ class IndicatorGenerator:
             available_indicators = [
                 ind for ind in available_indicators if ind not in experimental
             ]
-        # テクニカルオンリー時のデフォルト候補を厳選して成立性を底上げ（allowed_indicators 指定時は尊重）
-        if indicator_mode == "technical_only":
-            # ### 成立性が高い指標のみを使用し、可読性を向上
-            curated = CURATED_TECHNICAL_INDICATORS
-            # 動的に有効な指標のみに絞り込み
-            try:
-                curated = {ind for ind in curated if ind in self._valid_indicator_names}
-            except Exception:
-                curated = set(curated)
+        # ### 成立性が高い指標のみを使用し、可読性を向上
+        curated = CURATED_TECHNICAL_INDICATORS
+        # 動的に有効な指標のみに絞り込み
+        try:
+            curated = {ind for ind in curated if ind in self._valid_indicator_names}
+        except Exception:
+            curated = set(curated)
 
-            try:
-                allowed = set(getattr(config, "allowed_indicators", []) or [])
-            except Exception:
-                allowed = set()
+        try:
+            allowed = set(getattr(config, "allowed_indicators", []) or [])
+        except Exception:
+            allowed = set()
 
-            # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
-            # store coverage pick on the instance so other methods can access it
-            try:
-                if self._coverage_cycle:
-                    self._coverage_pick = self._coverage_cycle[
-                        self._coverage_idx % len(self._coverage_cycle)
-                    ]
-                    self._coverage_idx += 1
-            except Exception:
-                self._coverage_pick = None
-
-            # curated での厳選は allowed 指定がない場合のみ適用
-            if not allowed:
-                available_indicators = [
-                    ind for ind in available_indicators if ind in curated
+        # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
+        # store coverage pick on the instance so other methods can access it
+        try:
+            if self._coverage_cycle:
+                self._coverage_pick = self._coverage_cycle[
+                    self._coverage_idx % len(self._coverage_cycle)
                 ]
+                self._coverage_idx += 1
+        except Exception:
+            self._coverage_pick = None
+
+        # curated での厳選は allowed 指定がない場合のみ適用
+        if not allowed:
+            available_indicators = [
+                ind for ind in available_indicators if ind in curated
+            ]
 
         return available_indicators
 
