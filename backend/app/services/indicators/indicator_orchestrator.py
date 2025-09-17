@@ -133,10 +133,13 @@ class TechnicalIndicatorService:
     def _basic_validation(self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]) -> bool:
         """基本検証 - データ長と必須カラムのチェック"""
         # データ長検証
-        is_valid, _ = self.validate_data_length_with_fallback(
+        is_valid, min_length = self.validate_data_length_with_fallback(
             df, config["function"], params
         )
         if not is_valid:
+            # STOCHの場合、詳細ログ
+            if config["function"] == "stoch":
+                logger.warning(f"STOCH データ長検証失敗: データ長={len(df)}, 最小必要長={min_length}, パラメータ={params}")
             return False
 
         # カラム検証
@@ -220,7 +223,27 @@ class TechnicalIndicatorService:
                 positional_args = []
                 for req_col in required_columns:
                     col_name = self._resolve_column_name(df, req_col)
+                    if col_name is None:
+                        logger.error(f"STOCH エラー: 必須カラム '{req_col}' が存在しません")
+                        return None
                     positional_args.append(df[col_name])
+
+                # STOCHの場合、パラメータとデータ長を詳細ログ
+                if config["function"] == "stoch":
+                    logger.debug(f"STOCH multi_column呼び出し: パラメータ={params}, データ長={len(df)}, カラム={required_columns}")
+
+                # STOCHの場合、パラメータ名をpandas-ta仕様に変換
+                if config["function"] == "stoch":
+                    converted_params = params.copy()
+                    if "k_length" in params:
+                        converted_params["k"] = params["k_length"]
+                        del converted_params["k_length"]
+                    if "d_length" in params:
+                        converted_params["d"] = params["d_length"]
+                        del converted_params["d_length"]
+                    # smooth_kはそのまま
+                    params = converted_params
+                    logger.debug(f"STOCH パラメータ変換後: {params}")
 
                 return func(*positional_args, **params)
             else:
@@ -235,9 +258,21 @@ class TechnicalIndicatorService:
                     logger.error(f"TA_SMA エラー: データ長({len(df)})がlength({params.get('length', 'N/A')})未満")
                     return None
 
+                # STOCHの場合、データ長チェック
+                if config["function"] == "stoch":
+                    min_length = params.get('k_length', 14) + params.get('d_length', 3) + params.get('smooth_k', 3)
+                    logger.debug(f"STOCH データ長チェック: データ長={len(df)}, 推定最小必要長={min_length}")
+
+                # STOCHの場合、パラメータとデータ長を詳細ログ
+                if config["function"] == "stoch":
+                    logger.debug(f"STOCH呼び出し詳細: パラメータ={params}, データ長={len(df)}, High列={config['data_columns'][0] in df.columns}, Low列={config['data_columns'][1] in df.columns}, Close列={config['data_columns'][2] in df.columns}")
+
                 return func(df[col_name], **params)
 
         except Exception as e:
+            # STOCHの場合、エラー詳細をログ
+            if config["function"] == "stoch":
+                logger.error(f"STOCH pandas-ta呼び出し失敗: {e}, パラメータ: {params}, データ長: {len(df)}")
             logger.error(f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}, パラメータ: {params}")
             return None
 

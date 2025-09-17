@@ -91,20 +91,17 @@ class MomentumIndicators:
         if smooth_k <= 0:
             raise ValueError(f"smooth_k must be positive: {smooth_k}")
 
-        # d_lengthパラメータが指定された場合の処理
-        # ユーザーが明示的にsmooth_kとd_lengthの両方を指定した場合、d_lengthをdとして使用
-        if d_length is not None:
-            # smooth_kがデフォルト値(1)の場合のみd_lengthで上書き
-            if smooth_k == 1:
-                smooth_k = d_length
+        # d_lengthパラメータが指定された場合の処理（後方互換性）
+        if d_length is not None and d == 3:  # dがデフォルトの場合のみ
+            d = d_length
 
         result = ta.stoch(
             high=high,
             low=low,
             close=close,
-            k=k,
-            d=d,
-            smooth_k=smooth_k,
+            length=k,
+            smoothd=d,
+            smoothk=smooth_k,
         )
 
         if result is None or result.empty:
