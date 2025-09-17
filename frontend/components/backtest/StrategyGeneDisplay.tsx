@@ -9,6 +9,18 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
+interface Condition {
+  left_operand: string;
+  operator: string;
+  right_operand: string | number;
+}
+
+interface ConditionGroup {
+  conditions: Condition[];
+}
+
+type ConditionOrGroup = Condition | ConditionGroup;
+
 interface StrategyGene {
   id?: string;
   indicators?: Array<{
@@ -16,26 +28,10 @@ interface StrategyGene {
     parameters: Record<string, any>;
     enabled: boolean;
   }>;
-  entry_conditions?: Array<{
-    left_operand: string;
-    operator: string;
-    right_operand: string | number;
-  }>;
-  long_entry_conditions?: Array<{
-    left_operand: string;
-    operator: string;
-    right_operand: string | number;
-  }>;
-  short_entry_conditions?: Array<{
-    left_operand: string;
-    operator: string;
-    right_operand: string | number;
-  }>;
-  exit_conditions?: Array<{
-    left_operand: string;
-    operator: string;
-    right_operand: string | number;
-  }>;
+  entry_conditions?: ConditionOrGroup[];
+  long_entry_conditions?: ConditionOrGroup[];
+  short_entry_conditions?: ConditionOrGroup[];
+  exit_conditions?: ConditionOrGroup[];
   tpsl_gene?: Record<string, any>;
   position_sizing_gene?: Record<string, any>;
   metadata?: Record<string, any>;
@@ -65,7 +61,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
   };
 
   // 有効なロング条件を取得（後方互換性を考慮）
-  const getEffectiveLongConditions = () => {
+  const getEffectiveLongConditions = (): ConditionOrGroup[] => {
     if (
       strategyGene.long_entry_conditions &&
       strategyGene.long_entry_conditions.length > 0
@@ -76,7 +72,7 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
   };
 
   // 有効なショート条件を取得（後方互換性を考慮）
-  const getEffectiveShortConditions = () => {
+  const getEffectiveShortConditions = (): ConditionOrGroup[] => {
     if (
       strategyGene.short_entry_conditions &&
       strategyGene.short_entry_conditions.length > 0
@@ -93,8 +89,17 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
     return [];
   };
 
-  const formatCondition = (condition: any) => {
-    return `${condition.left_operand} ${condition.operator} ${condition.right_operand}`;
+  const formatCondition = (condition: ConditionOrGroup): string => {
+    if ('conditions' in condition) {
+      // ConditionGroupの場合
+      const subConditions = condition.conditions.map(subCond =>
+        `${subCond.left_operand} ${subCond.operator} ${subCond.right_operand}`
+      );
+      return `(${subConditions.join(' OR ')})`;
+    } else {
+      // Conditionの場合
+      return `${condition.left_operand} ${condition.operator} ${condition.right_operand}`;
+    }
   };
 
   // TP/SL遺伝子が有効かどうかを判定

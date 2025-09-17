@@ -95,9 +95,9 @@ class ComplexConditionsStrategy(ConditionStrategy):
                     self.condition_generator._generic_short_conditions(indicator)
                 )
 
-                # フォールバック条件でのさらなる試行
+                # 条件が生成できなかった場合、例外を投げる
                 if not long_conditions:
-                    return self.condition_generator._generate_fallback_conditions()
+                    raise RuntimeError("条件生成に失敗しました")
 
         # 適切な戻り値タイプに変換
         long_result = list(long_conditions)

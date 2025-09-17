@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from backend.app.services.auto_strategy.generators.condition_generator import ConditionGenerator
 from backend.app.services.auto_strategy.models.strategy_models import IndicatorGene
 
@@ -42,3 +43,23 @@ class TestConditionGenerator:
         assert condition.left_operand == "SMA"
         assert condition.operator == ">"
         assert condition.right_operand == 0
+
+    def test_generate_balanced_conditions_success(self):
+        """正常な指標リストで条件生成が成功することをテスト"""
+        indicators = [IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)]
+        long_conditions, short_conditions, exit_conditions = self.generator.generate_balanced_conditions(indicators)
+
+        assert isinstance(long_conditions, list)
+        assert isinstance(short_conditions, list)
+        assert isinstance(exit_conditions, list)
+
+    def test_generate_balanced_conditions_raises_exception_on_error(self):
+        """YAML設定読み込みでエラーが発生した場合に例外を投げることをテスト"""
+        indicators = [IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)]
+
+        with patch('backend.app.services.auto_strategy.generators.condition_generator.YamlIndicatorUtils.load_yaml_config_for_indicators') as mock_load:
+            mock_load.side_effect = Exception("YAML読み込みエラー")
+
+            # コンストラクタで失敗するので新しいインスタンスを作成
+            with pytest.raises(Exception):
+                ConditionGenerator()

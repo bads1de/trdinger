@@ -426,7 +426,7 @@ def timeout_decorator(timeout_seconds: int):
 
 
 def safe_operation(
-    default_return: Any = None,
+    default_return: Any = "RAISE_EXCEPTION",
     error_handler: Optional[Callable] = None,
     context: str = "統一操作",
     is_api_call: bool = False,
@@ -435,6 +435,7 @@ def safe_operation(
     統一安全操作デコレータ
 
     API と ML 両方のコンテキストに対応した安全実行デコレータ
+    default_returnが指定されていない場合や"RAISE_EXCEPTION"の場合、例外を投げる
     """
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
@@ -450,6 +451,8 @@ def safe_operation(
                         raise ErrorHandler.handle_api_error(e, context)
                     else:
                         logger.error(f"エラー in {context}: {e}")
+                        if default_return == "RAISE_EXCEPTION":
+                            raise e
                         return default_return
 
         return wrapper

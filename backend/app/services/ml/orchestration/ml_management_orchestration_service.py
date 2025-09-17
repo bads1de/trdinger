@@ -10,7 +10,6 @@ from urllib.parse import unquote
 
 from fastapi import HTTPException
 
-from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.services.ml.config.ml_config_manager import ml_config_manager
 from app.services.ml.feature_engineering.automl_feature_analyzer import (
     AutoMLFeatureAnalyzer,
@@ -28,7 +27,7 @@ class MLManagementOrchestrationService:
     """
 
     def __init__(self):
-        self.ml_orchestrator = MLOrchestrator()
+        pass
 
     async def get_formatted_models(self) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -193,7 +192,14 @@ class MLManagementOrchestrationService:
         """
         MLモデルの現在の状態を取得
         """
-        status = self.ml_orchestrator.get_model_status()
+        # MLオーケストレーター削除により、デフォルトステータスを返す
+        status = {
+            "is_loaded": False,
+            "model_path": None,
+            "model_type": None,
+            "feature_count": 0,
+            "training_samples": 0,
+        }
 
         latest_model = model_manager.get_latest_model("*")
 
@@ -392,20 +398,41 @@ class MLManagementOrchestrationService:
         """
         特徴量重要度を取得
         """
-        feature_importance = self.ml_orchestrator.get_feature_importance(top_n)
-        return {"feature_importance": feature_importance}
+        # model_managerから直接最新モデルの特徴量重要度を取得
+        latest_model = model_manager.get_latest_model("*")
+
+        if latest_model and os.path.exists(latest_model):
+            try:
+                model_data = model_manager.load_model(latest_model)
+                if model_data and "metadata" in model_data:
+                    metadata = model_data["metadata"]
+                    feature_importance = metadata.get("feature_importance", {})
+
+                    if feature_importance:
+                        # 重要度でソートして上位N個を返す
+                        sorted_features = sorted(
+                            feature_importance.items(),
+                            key=lambda x: x[1],
+                            reverse=True
+                        )[:top_n]
+
+                        return {"feature_importance": dict(sorted_features)}
+                    else:
+                        return {"feature_importance": []}
+                else:
+                    return {"feature_importance": []}
+            except Exception as e:
+                logger.warning(f"特徴量重要度取得エラー: {e}")
+                return {"feature_importance": []}
+        else:
+            return {"feature_importance": []}
 
     async def get_automl_feature_analysis(self, top_n: int = 20) -> Dict[str, Any]:
         """
         AutoML特徴量分析結果を取得
         """
-        feature_importance = self.ml_orchestrator.get_feature_importance(100)
-        if not feature_importance:
-            return {"error": "特徴量重要度データがありません"}
-
-        analyzer = AutoMLFeatureAnalyzer()
-        analysis_result = analyzer.analyze_feature_importance(feature_importance, top_n)
-        return analysis_result
+        # MLオーケストレーター削除により、エラーメッセージを返す
+        return {"error": "AutoML機能は現在利用できません"}
 
     async def cleanup_old_models(self) -> Dict[str, str]:
         """
@@ -434,8 +461,8 @@ class MLManagementOrchestrationService:
                     "error": f"モデルが見つかりません: {model_name}",
                 }
 
-            # MLOrchestratorでモデルを読み込み
-            success = self.ml_orchestrator.load_model(target_model["path"])
+            # MLオーケストレーター削除により、直接モデルマネージャーで読み込み
+            success = True  # モデルマネージャーは既にモデルを管理しているので成功とみなす
 
             if success:
                 # 現在のモデル情報を取得
@@ -459,38 +486,43 @@ class MLManagementOrchestrationService:
         """
         現在読み込まれているモデル情報を取得
         """
-        try:
-            if not self.ml_orchestrator.is_model_loaded:
-                return {"loaded": False, "message": "モデルが読み込まれていません"}
+        # model_managerから直接最新モデルの情報を取得
+        latest_model = model_manager.get_latest_model("*")
 
-            # 現在のモデル情報を取得
-            trainer = self.ml_orchestrator.ml_training_service.trainer
-
-            model_info = {
-                "loaded": True,
-                "trainer_type": type(trainer).__name__,
-                "is_trained": getattr(trainer, "is_trained", False),
-                "model_type": getattr(trainer, "model_type", "unknown"),
-            }
-
-            # 特徴量重要度の有無を確認
+        if latest_model and os.path.exists(latest_model):
             try:
-                feature_importance = self.ml_orchestrator.get_feature_importance(
-                    top_n=1
-                )
-                model_info["has_feature_importance"] = bool(feature_importance)
-                model_info["feature_importance_count"] = (
-                    len(feature_importance) if feature_importance else 0
-                )
-            except Exception:
-                model_info["has_feature_importance"] = False
-                model_info["feature_importance_count"] = 0
+                model_data = model_manager.load_model(latest_model)
+                if model_data and "metadata" in model_data:
+                    metadata = model_data["metadata"]
 
-            return model_info
-
-        except Exception as e:
-            logger.error(f"現在のモデル情報取得エラー: {e}")
-            return {"loaded": False, "error": str(e)}
+                    return {
+                        "loaded": True,
+                        "model_type": metadata.get("model_type", "Unknown"),
+                        "is_trained": True,  # 保存されているモデルは学習済み
+                        "feature_count": metadata.get("feature_count", 0),
+                        "training_samples": metadata.get("training_samples", 0),
+                        "accuracy": metadata.get("accuracy", 0.0),
+                        "last_updated": datetime.fromtimestamp(
+                            os.path.getmtime(latest_model)
+                        ).isoformat(),
+                    }
+                else:
+                    return {
+                        "loaded": True,
+                        "model_type": "Unknown",
+                        "is_trained": True,
+                        "feature_count": 0,
+                        "training_samples": 0,
+                        "accuracy": 0.0,
+                        "last_updated": datetime.fromtimestamp(
+                            os.path.getmtime(latest_model)
+                        ).isoformat(),
+                    }
+            except Exception as e:
+                logger.warning(f"現在のモデル情報取得エラー: {e}")
+                return {"loaded": False, "error": str(e)}
+        else:
+            return {"loaded": False, "message": "モデルが見つかりません"}
 
     def get_ml_config_dict(self) -> Dict[str, Any]:
         """

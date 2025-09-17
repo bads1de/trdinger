@@ -46,7 +46,8 @@ class IndicatorParameterManager:
         """
         try:
             # 設定の妥当性チェック
-            if config.indicator_name != indicator_type:
+            # indicator_typeが本名またはエイリアスであることを確認
+            if config.indicator_name != indicator_type and indicator_type not in (config.aliases or []):
                 raise Exception(
                     f"指標タイプが一致しません: 要求されたのは {indicator_type} ですが、実際は {config.indicator_name} でした"
                 )

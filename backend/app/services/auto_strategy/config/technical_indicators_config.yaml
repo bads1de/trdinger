@@ -82,6 +82,17 @@ indicators:
     scale_type: price_absolute
     thresholds: null
     type: volatility
+  BB:
+    components:
+    - upper
+    - middle
+    - lower
+    conditions:
+      long: close < {left_operand}_lower
+      short: close > {left_operand}_upper
+    scale_type: price_absolute
+    thresholds: null
+    type: volatility
   CCI:
     conditions:
       long: '{left_operand} > {long_threshold}'

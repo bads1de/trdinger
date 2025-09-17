@@ -15,14 +15,8 @@ class IndicatorType(str, Enum):
     VOLATILITY = "volatility"  # ボラティリティ系
 
 
-# 戦略タイプ定義
-class StrategyType(str, Enum):
-    """戦略タイプ"""
-
-    DIFFERENT_INDICATORS = "different_indicators"  # 異なる指標の組み合わせ
-    TIME_SEPARATION = "time_separation"  # 時間軸分離
-    COMPLEX_CONDITIONS = "complex_conditions"  # 複合条件
-    INDICATOR_CHARACTERISTICS = "indicator_characteristics"  # 指標特性活用
+# 戦略タイプ定義（統合済み）
+# StrategyTypeは削除し、条件生成戦略を一元化
 
 
 # === 演算子定数 ===

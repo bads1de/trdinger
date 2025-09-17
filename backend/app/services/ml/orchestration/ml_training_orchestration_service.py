@@ -5,17 +5,18 @@ APIルーター内に散在していたMLトレーニング関連のビジネス
 """
 
 import logging
+import os
 from datetime import datetime
 from typing import Any, Dict
 
 from sqlalchemy.orm import Session
 
-from app.services.auto_strategy.services.ml_orchestrator import MLOrchestrator
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
+from app.services.ml.model_manager import model_manager
 from app.utils.response import api_response
 from app.utils.error_handler import safe_ml_operation
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -132,8 +133,34 @@ class MLTrainingOrchestrationService:
             モデル情報
         """
         try:
-            ml_orchestrator = MLOrchestrator()
-            model_status = ml_orchestrator.get_model_status()
+            latest_model = model_manager.get_latest_model("*")
+            if latest_model and os.path.exists(latest_model):
+                try:
+                    model_data = model_manager.load_model(latest_model)
+                    if model_data and "metadata" in model_data:
+                        metadata = model_data["metadata"]
+                        model_status = {
+                            "is_loaded": True,
+                            "model_path": latest_model,
+                            "model_type": metadata.get("model_type", "Unknown"),
+                            "feature_count": metadata.get("feature_count", 0),
+                            "training_samples": metadata.get("training_samples", 0),
+                            "accuracy": metadata.get("accuracy", 0.0),
+                        }
+                    else:
+                        model_status = {
+                            "is_loaded": True,
+                            "model_path": latest_model,
+                            "model_type": None,
+                            "feature_count": 0,
+                            "training_samples": 0,
+                            "accuracy": 0.0,
+                        }
+                except Exception as e:
+                    logger.warning(f"モデル情報取得エラー: {e}")
+                    model_status = {"is_loaded": False, "model_path": None, "model_type": None, "feature_count": 0, "training_samples": 0, "accuracy": 0.0}
+            else:
+                model_status = {"is_loaded": False, "model_path": None, "model_type": None, "feature_count": 0, "training_samples": 0, "accuracy": 0.0}
 
             return api_response(
                 success=True,
@@ -143,7 +170,6 @@ class MLTrainingOrchestrationService:
                     "last_training": training_status.get("model_info"),
                 },
             )
-
         except Exception as e:
             logger.error(f"MLモデル情報取得エラー: {e}")
             raise

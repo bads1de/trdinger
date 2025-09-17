@@ -1,9 +1,9 @@
 import logging
 import random
 from typing import List, Tuple, Union, Dict
+from app.utils.error_handler import safe_operation
 from ..constants import (
     IndicatorType,
-    StrategyType,
 )
 from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
 from app.services.indicators.config import indicator_registry
@@ -11,10 +11,7 @@ from ..utils.yaml_utils import YamlIndicatorUtils
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
 from .strategies import (
-    ConditionStrategy,
-    DifferentIndicatorsStrategy,
     ComplexConditionsStrategy,
-    IndicatorCharacteristicsStrategy,
 )
 
 
@@ -32,6 +29,7 @@ class ConditionGenerator:
     4. 指標特性活用戦略
     """
 
+    @safe_operation(context="ConditionGenerator初期化", is_api_call=False)
     def __init__(self, enable_smart_generation: bool = True):
         """
         初期化（統合後）
@@ -55,6 +53,7 @@ class ConditionGenerator:
         # geneに含まれる指標一覧をオプションで保持
         self.indicators: List[IndicatorGene] | None = None
 
+    @safe_operation(context="コンテキスト設定", is_api_call=False)
     def set_context(
         self,
         *,
@@ -64,20 +63,18 @@ class ConditionGenerator:
         threshold_profile: str | None = None,
     ):
         """生成コンテキストを設定（RSI閾値やレジーム切替に利用）"""
-        try:
-            if timeframe is not None:
-                self.context["timeframe"] = timeframe
-            if symbol is not None:
-                self.context["symbol"] = symbol
-            if regime_gating is not None:
-                self.context["regime_gating"] = bool(regime_gating)
-            if threshold_profile is not None:
-                if threshold_profile not in ("aggressive", "normal", "conservative"):
-                    threshold_profile = "normal"
-                self.context["threshold_profile"] = threshold_profile
-        except Exception:
-            pass
+        if timeframe is not None:
+            self.context["timeframe"] = timeframe
+        if symbol is not None:
+            self.context["symbol"] = symbol
+        if regime_gating is not None:
+            self.context["regime_gating"] = bool(regime_gating)
+        if threshold_profile is not None:
+            if threshold_profile not in ("aggressive", "normal", "conservative"):
+                threshold_profile = "normal"
+            self.context["threshold_profile"] = threshold_profile
 
+    @safe_operation(context="バランス条件生成", is_api_call=False)
     def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
         List[Union[Condition, ConditionGroup]],
         List[Union[Condition, ConditionGroup]],
@@ -92,111 +89,36 @@ class ConditionGenerator:
         Returns:
             (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
         """
-        try:
-            if not self.enable_smart_generation:
-                return self._generate_fallback_conditions()
+        if not self.enable_smart_generation:
+            raise ValueError("スマート生成が無効です")
 
-            if not indicators:
-                return self._generate_fallback_conditions()
+        if not indicators:
+            raise ValueError("指標リストが空です")
 
-            # 戦略タイプを選択
-            strategy_type = self._select_strategy_type(indicators)
-            self.logger.info(f"生成戦略タイプ: {strategy_type.name}")
+        # 統合された戦略を使用（ComplexConditionsStrategy）
+        strategy = ComplexConditionsStrategy(self)
+        longs, shorts, exits = strategy.generate_conditions(indicators)
 
-            # 戦略に応じたStrategyクラスをインスタンス化
-            strategy: ConditionStrategy | None = None
-            if strategy_type == StrategyType.DIFFERENT_INDICATORS:
-                strategy = DifferentIndicatorsStrategy(self)
-            elif strategy_type == StrategyType.COMPLEX_CONDITIONS:
-                strategy = ComplexConditionsStrategy(self)
-            elif strategy_type == StrategyType.INDICATOR_CHARACTERISTICS:
-                strategy = IndicatorCharacteristicsStrategy(self)
-            else:
-                # Fallback strategy
-                longs, shorts, exits = self._generate_fallback_conditions()
+        # 条件数を3個以内に制限
+        if len(longs) > 3:
+            longs = random.sample(longs, 3) if len(longs) >= 3 else longs
+        if len(shorts) > 3:
+            shorts = random.sample(shorts, 3) if len(shorts) >= 3 else shorts
 
-            if strategy:
-                longs, shorts, exits = strategy.generate_conditions(indicators)
-            else:
-                longs, shorts, exits = self._generate_fallback_conditions()
+        # 条件が生成できなかった場合は例外を投げる
+        if not longs:
+            raise RuntimeError("ロング条件を生成できませんでした")
+        if not shorts:
+            raise RuntimeError("ショート条件を生成できませんでした")
 
-            # 簡素化: 条件数を2個以内に制限
-            if len(longs) > 2:
-                longs = random.sample(longs, 2) if len(longs) >= 2 else longs
-            if len(shorts) > 2:
-                shorts = random.sample(shorts, 2) if len(shorts) >= 2 else shorts
+        # 型を明示的に変換して返す
+        long_conditions: List[Union[Condition, ConditionGroup]] = list(longs)
+        short_conditions: List[Union[Condition, ConditionGroup]] = list(shorts)
+        exit_conditions: List[Condition] = list(exits)
 
-            # 万一どちらかが空の場合は、成立しやすいデフォルトを適用
-            if not longs:
-                longs = [
-                    Condition(left_operand="close", operator=">", right_operand="open")
-                ]
-            if not shorts:
-                shorts = [
-                    Condition(left_operand="close", operator="<", right_operand="open")
-                ]
-
-            # 型を明示的に変換して返す
-            long_conditions: List[Union[Condition, ConditionGroup]] = list(longs)
-            short_conditions: List[Union[Condition, ConditionGroup]] = list(shorts)
-            exit_conditions: List[Condition] = list(exits)
-
-            return long_conditions, short_conditions, exit_conditions
-
-        except Exception as e:
-            self.logger.error(f"スマート条件生成エラー: {e}")
-            return self._generate_fallback_conditions()
-
-    def _select_strategy_type(self, indicators: List[IndicatorGene]) -> StrategyType:
-        """
-        簡素化された戦略タイプ選択
-
-        Args:
-            indicators: 指標リスト
-
-        Returns:
-            選択された戦略タイプ
-        """
-        try:
-            # テクニカル指標のみの場合
-            indicator_types = set()
-            for ind in indicators:
-                if ind.type in INDICATOR_CHARACTERISTICS:
-                    indicator_types.add(INDICATOR_CHARACTERISTICS[ind.type]["type"])
-
-            # 異なるタイプの指標がある場合は組み合わせ戦略
-            if len(indicator_types) >= 2:
-                return StrategyType.DIFFERENT_INDICATORS
-
-            # デフォルトは複合条件戦略
-            return StrategyType.COMPLEX_CONDITIONS
-
-        except Exception as e:
-            self.logger.error(f"戦略タイプ選択エラー: {e}")
-            return StrategyType.DIFFERENT_INDICATORS
-
-    def _generate_fallback_conditions(
-        self,
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
-    ]:
-        """
-        フォールバック条件を生成
-
-        Returns:
-            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
-        """
-        long_conditions: List[Union[Condition, ConditionGroup]] = [
-            Condition(left_operand="close", operator=">", right_operand="open")
-        ]
-        short_conditions: List[Union[Condition, ConditionGroup]] = [
-            Condition(left_operand="close", operator="<", right_operand="open")
-        ]
-        exit_conditions: List[Condition] = []
         return long_conditions, short_conditions, exit_conditions
 
+    @safe_operation(context="戦略タイプ選択", is_api_call=False)
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ロング条件生成"""
         self.logger.debug(f"Generating long conditions for {ind.type}")
@@ -303,37 +225,35 @@ class ConditionGenerator:
         """統合されたモメンタム系ショート条件生成"""
         return self._create_type_based_conditions(indicator, "short")
 
-
+    @safe_operation(context="指標タイプ取得", is_api_call=False)
     def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
         """指標のタイプを取得"""
-        try:
-            config = YamlIndicatorUtils.get_indicator_config_from_yaml(
-                self.yaml_config, indicator.type
-            )
-            if config and "type" in config:
-                type_str = config["type"]
-                if type_str == "momentum":
-                    return IndicatorType.MOMENTUM
-                elif type_str == "trend":
-                    return IndicatorType.TREND
-                elif type_str == "volatility":
-                    return IndicatorType.VOLATILITY
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+            self.yaml_config, indicator.type
+        )
+        if config and "type" in config:
+            type_str = config["type"]
+            if type_str == "momentum":
+                return IndicatorType.MOMENTUM
+            elif type_str == "trend":
+                return IndicatorType.TREND
+            elif type_str == "volatility":
+                return IndicatorType.VOLATILITY
 
-            cfg = indicator_registry.get_indicator_config(indicator.type)
-            if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
-                cat = getattr(cfg, "category")
-                if cat == "momentum":
-                    return IndicatorType.MOMENTUM
-                elif cat == "trend":
-                    return IndicatorType.TREND
+        cfg = indicator_registry.get_indicator_config(indicator.type)
+        if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
+            cat = getattr(cfg, "category")
+            if cat == "momentum":
+                return IndicatorType.MOMENTUM
+            elif cat == "trend":
+                return IndicatorType.TREND
 
-            if indicator.type in INDICATOR_CHARACTERISTICS:
-                return INDICATOR_CHARACTERISTICS[indicator.type]["type"]
+        if indicator.type in INDICATOR_CHARACTERISTICS:
+            return INDICATOR_CHARACTERISTICS[indicator.type]["type"]
 
-            return IndicatorType.TREND
-        except Exception:
-            return IndicatorType.TREND
+        raise ValueError(f"不明な指標タイプ: {indicator.type}")
 
+    @safe_operation(context="動的指標分類", is_api_call=False)
     def _dynamic_classify(
         self, indicators: List[IndicatorGene]
     ) -> Dict[IndicatorType, List[IndicatorGene]]:
@@ -353,23 +273,20 @@ class ConditionGenerator:
             name = ind.type
             cfg = indicator_registry.get_indicator_config(name)
 
-            try:
-                if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
-                    cat = getattr(cfg, "category")
-                    if cat == "momentum":
-                        categorized[IndicatorType.MOMENTUM].append(ind)
-                    elif cat == "trend":
-                        categorized[IndicatorType.TREND].append(ind)
-                    elif cat == "volatility":
-                        categorized[IndicatorType.VOLATILITY].append(ind)
-                    else:
-                        categorized[IndicatorType.TREND].append(ind)
-                elif name in INDICATOR_CHARACTERISTICS:
-                    char = INDICATOR_CHARACTERISTICS[name]
-                    categorized[char["type"]].append(ind)
+            if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
+                cat = getattr(cfg, "category")
+                if cat == "momentum":
+                    categorized[IndicatorType.MOMENTUM].append(ind)
+                elif cat == "trend":
+                    categorized[IndicatorType.TREND].append(ind)
+                elif cat == "volatility":
+                    categorized[IndicatorType.VOLATILITY].append(ind)
                 else:
                     categorized[IndicatorType.TREND].append(ind)
-            except Exception:
-                categorized[IndicatorType.TREND].append(ind)
+            elif name in INDICATOR_CHARACTERISTICS:
+                char = INDICATOR_CHARACTERISTICS[name]
+                categorized[char["type"]].append(ind)
+            else:
+                raise ValueError(f"分類できない指標タイプ: {name}")
 
         return categorized
