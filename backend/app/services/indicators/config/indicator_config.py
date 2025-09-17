@@ -208,7 +208,11 @@ class IndicatorConfig:
                                     param_name if alias != "period" else "length"
                                 ] = 200
                         else:
-                            if isinstance(value, (int, float)) and value < 1:
+                            # STOCHのsmooth_kパラメータの特別処理
+                            if (param_name == "smooth_k" and
+                                isinstance(value, (int, float)) and value < 2):
+                                normalized[param_name] = 2
+                            elif isinstance(value, (int, float)) and value < 1:
                                 normalized[param_name] = config["default_values"].get(
                                     param_name, 14
                                 )

@@ -147,6 +147,7 @@ PANDAS_TA_CONFIG = {
         "returns": "multiple",
         "return_cols": ["STOCH_K", "STOCH_D"],
         "default_values": {"k_length": 14, "smooth_k": 1, "d_length": 3},
+        "min_length": lambda params: params.get("k", 14) + params.get("d_length", params.get("smooth_k", 1)) + params.get("d", 3),
     },
     "CCI": {
         "function": "cci",

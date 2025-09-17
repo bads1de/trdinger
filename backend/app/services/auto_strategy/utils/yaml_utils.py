@@ -239,6 +239,11 @@ class YamlIndicatorUtils:
             logger.debug("thresholds not found in config")
             return None
 
+        # thresholdsが文字列の場合（例: "close"）
+        if isinstance(thresholds, str):
+            logger.debug(f"thresholds is string: {thresholds}")
+            return thresholds
+
         profile = context.get("threshold_profile", "normal")
         logger.debug(f"Using profile: {profile}, side: {side}")
 

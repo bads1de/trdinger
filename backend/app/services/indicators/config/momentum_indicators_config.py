@@ -48,10 +48,19 @@ def setup_momentum_indicators():
             description="Slow K期間 (smooth_kとしても使用)",
         )
     )
+    stoch_config.add_parameter(
+        ParameterConfig(
+            name="slowd_period",
+            default_value=3,
+            min_value=1,
+            max_value=10,
+            description="Slow D期間",
+        )
+    )
     stoch_config.param_map = {
-        "fastk_period": "k",
-        "d_length": "smooth_k",
-        "slowd_period": "d",
+        "k_length": "k",
+        "smooth_k": "smooth_k",
+        "d_length": "d",
     }
     indicator_registry.register(stoch_config)
 

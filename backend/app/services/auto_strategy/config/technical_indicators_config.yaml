@@ -144,7 +144,7 @@ indicators:
       long: close > {left_operand}
       short: close < {left_operand}
     scale_type: price_absolute
-    thresholds: null
+    thresholds: "close"
     type: trend
   KAMA:
     conditions:

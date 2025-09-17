@@ -230,6 +230,49 @@ class ConditionEvaluator:
 
             # 文字列オペランドの処理
             if isinstance(operand, str):
+                # OHLCVデータの直接アクセス（backtesting.py Strategyインスタンスの場合）
+                if operand.lower() in ['open', 'high', 'low', 'close', 'volume']:
+                    logger.debug(f"[OHLCVアクセス] '{operand}' オペランド検出 - strategy_instance type: {type(strategy_instance)}")
+                    if hasattr(strategy_instance, 'data'):
+                        logger.debug(f"[OHLCVアクセス] strategy_instance.data 存在: {type(strategy_instance.data)}")
+                        try:
+                            # backtesting.pyではカラム名が大文字（Open, High, Low, Close, Volume）
+                            capitalized_operand = operand.capitalize()
+
+                            # pandas DataFrameの場合
+                            try:
+                                if hasattr(strategy_instance.data, 'columns') and hasattr(strategy_instance.data, '__getitem__'):
+                                    logger.debug(f"[OHLCVアクセス] pandas DataFrame検出")
+                                    if capitalized_operand in strategy_instance.data.columns:
+                                        logger.debug(f"[OHLCVアクセス] '{capitalized_operand}' カラムが見つかりました")
+                                        data_value = strategy_instance.data[capitalized_operand]
+                                        logger.debug(f"[OHLCVアクセス] '{capitalized_operand}' から取得成功: {data_value}")
+                                        return self._get_final_value(data_value)
+                                    else:
+                                        logger.warning(f"[OHLCVアクセス] '{capitalized_operand}' カラムが見つかりません。利用可能なカラム: {list(strategy_instance.data.columns)}")
+                                else:
+                                    # backtesting.pyの特殊なデータアクセス方法
+                                    try:
+                                        # backtesting.py Strategyのデータアクセス（self.data.Closeなど）
+                                        data_value = getattr(strategy_instance.data, capitalized_operand)
+                                        logger.debug(f"[OHLCVアクセス] backtesting.pyデータアクセス成功: {data_value}")
+                                        return self._get_final_value(data_value)
+                                    except AttributeError:
+                                        logger.warning(f"[OHLCVアクセス] backtesting.pyデータアクセス失敗: {capitalized_operand}属性なし")
+                            except TypeError:
+                                # Mockオブジェクトなどでcolumnsアクセスが失敗する場合
+                                try:
+                                    data_value = getattr(strategy_instance.data, capitalized_operand)
+                                    logger.debug(f"[OHLCVアクセス] 属性アクセス成功: {data_value}")
+                                    return self._get_final_value(data_value)
+                                except AttributeError:
+                                    logger.warning(f"[OHLCVアクセス] 属性アクセス失敗: {capitalized_operand}")
+
+                        except Exception as e:
+                            logger.warning(f"[OHLCVアクセス] データアクセスエラー: {e}")
+                    else:
+                        logger.warning(f"[OHLCVアクセス] strategy_instanceにdata属性がありません。利用可能な属性: {[attr for attr in dir(strategy_instance) if not attr.startswith('_')]}")
+
                 # pandas-taの標準指標名で直接アクセス
                 try:
                     value = getattr(strategy_instance, operand)
