@@ -1,55 +1,55 @@
 # AGENTS.md
 
-This file provides guidance to agents when working with code in this repository.
+このファイルは、このリポジトリのコードを扱う際のエージェントへのガイドを提供します。
 
 ## Unified Configuration System
 
-- Use `unified_config` singleton instance for all configuration access
-- Environment variables support nested delimiter: `env_nested_delimiter = "__"`
-- Configuration hierarchy: app, database, logging, security, market, data_collection, backtest, auto_strategy, ga, ml
-- Default trading symbol: "BTC/USDT:USDT" (Bybit format)
+- すべての設定アクセスに `unified_config` シングルトンインスタンスを使用
+- 環境変数はネストされたデリミタをサポート: `env_nested_delimiter = "__"`
+- 設定階層: app, database, logging, security, market, data_collection, backtest, auto_strategy, ga, ml
+- デフォルト取引シンボル: "BTC/USDT:USDT" (Bybit 形式)
 
 ## Error Handling Decorator
 
-- `@safe_operation(context="...", is_api_call=True/False, default_return=...)` for robust error handling
-- Use `context` parameter to specify operation context for better error logging
-- Set `is_api_call=True` for API endpoints, `False` for internal operations
-- Provide appropriate `default_return` values to prevent crashes
+- `@safe_operation(context="...", is_api_call=True/False, default_return=...)` で堅牢なエラーハンドリング
+- より良いエラーログのために `context` パラメータを使用して操作コンテキストを指定
+- API エンドポイントには `is_api_call=True` を設定、内部操作には `False`
+- クラッシュを防ぐために適切な `default_return` 値を指定
 
 ## Logging Infrastructure
 
-- `DuplicateFilter(capacity=200, interval=1.0)` prevents log spam
-- Log format: `"%(asctime)s - %(name)s - %(levelname)s - %(message)s"`
-- Auto-strategy logger configured separately: `logging.getLogger("app.services.auto_strategy")`
+- `DuplicateFilter(capacity=200, interval=1.0)` でログスパムを防ぐ
+- ログ形式: `"%(asctime)s - %(name)s - %(levelname)s - %(message)s"`
+- オートストラテジーロガーは別途設定: `logging.getLogger("app.services.auto_strategy")`
 
 ## Import Order Standards
 
-- Follow isort configuration: profile="black", multi_line_output=3
-- Known first party: ["app", "backtest", "scripts"]
-- Line length: 88 characters (Black convention)
+- isort 設定に従う: profile="black", multi_line_output=3
+- 既知のファーストパーティ: ["app", "backtest", "scripts"]
+- 行長: 88 文字 (Black 規約)
 
 ## Type Checking Rigor
 
-- **Backend**: MyPy strict mode enabled:
+- **Backend**: MyPy strict モード有効:
   - `disallow_untyped_defs = true`
   - `no_implicit_optional = true`
   - `warn_return_any = true`
   - `strict_equality = true`
-- **Frontend**: TypeScript `strict: true` mode
-- All third-party libraries (ccxt, pandas, numpy) ignore missing imports
+- **Frontend**: TypeScript `strict: true` モード
+- すべてのサードパーティライブラリ (ccxt, pandas, numpy) は missing imports を無視
 
 ## Test Setup Specialties
 
-- **Backend conftest.py**: Automatically adds backend directory to sys.path for imports
-- **Frontend Jest setup**: Extensive DOM mocking including:
+- **Backend conftest.py**: インポートのためにバックエンドディレクトリを自動的に sys.path に追加
+- **Frontend Jest setup**: 広範な DOM モッキングを含む:
   - `matchMedia`, `ResizeObserver`, `IntersectionObserver`
   - `TextEncoder`/`TextDecoder`, `Blob`, `URL.createObjectURL`
-  - Next.js `NextResponse` mocking
-  - Custom `a` tag click behavior for download tests
+  - Next.js `NextResponse` モッキング
+  - ダウンロードテスト用のカスタム `a` タグクリック動作
 
 ## Cryptocurrency-Specific Elements
 
-- Primary exchange: Bybit (via CCXT 4.1.64)
-- Symbol format: "{BASE}/{QUOTE}:{QUOTE}" (e.g., "BTC/USDT:USDT")
-- Supported timeframes: ["15m", "30m", "1h", "4h", "1d"]
-- Data collection limits: max 1000 records per request, page limit 200
+- 主要取引所: Bybit (via CCXT 4.1.64)
+- シンボル形式: "{BASE}/{QUOTE}:{QUOTE}" (例: "BTC/USDT:USDT")
+- サポートされるタイムフレーム: ["15m", "30m", "1h", "4h", "1d"]
+- データ収集制限: リクエストあたり最大 1000 レコード, ページ制限 200

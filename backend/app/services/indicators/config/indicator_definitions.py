@@ -171,7 +171,7 @@ PANDAS_TA_CONFIG = {
         "returns": "single",
         "default_values": {"length": 10},
     },
-    "MOMENTUM": {
+    "MOM": {
         "function": "mom",
         "params": {"length": ["length"]},
         "data_column": "Close",

@@ -183,12 +183,18 @@ class TechnicalIndicatorService:
                         min_length = min_length_func({param_name: value})
                         if isinstance(value, (int, float)) and value < min_length:
                             logger.warning(f"パラメータ {param_name}={value} が最小値 {min_length} 未満のため調整します")
+                            logger.debug(f"TA_SMA パラメータ調整: {param_name} {value} -> {min_length}")
                             value = min_length
                     elif isinstance(min_length_func, (int, float)) and isinstance(value, (int, float)) and value < min_length_func:
                         logger.warning(f"パラメータ {param_name}={value} が最小値 {min_length_func} 未満のため調整します")
+                        logger.debug(f"TA_SMA パラメータ調整: {param_name} {value} -> {min_length_func}")
                         value = min_length_func
 
                 normalized[param_name] = value
+
+        # TA_SMAの場合、パラメータをログ出力
+        if config["function"] == "sma":
+            logger.debug(f"TA_SMA 正規化パラメータ: {normalized}")
 
         return normalized
 
@@ -198,9 +204,15 @@ class TechnicalIndicatorService:
         """pandas-ta直接呼び出し"""
         try:
             if not hasattr(ta, config["function"]):
+                logger.warning(f"pandas-ta関数 {config['function']} が存在しません")
                 return None
 
             func = getattr(ta, config["function"])
+
+            # デバッグログ：パラメータとデータ情報を記録
+            logger.debug(f"TA_SMA 呼び出し: 関数={config['function']}, パラメータ={params}, データ長={len(df)}")
+            if config["function"] == "sma":
+                logger.debug(f"SMA 詳細: length={params.get('length', 'N/A')}, Closeカラム存在={config['data_column'] in df.columns}")
 
             if config.get("multi_column", False):
                 # 複数カラム処理
@@ -214,10 +226,19 @@ class TechnicalIndicatorService:
             else:
                 # 単一カラム処理
                 col_name = self._resolve_column_name(df, config["data_column"])
+                if col_name is None:
+                    logger.error(f"TA_SMA エラー: 必須カラム '{config['data_column']}' が存在しません")
+                    return None
+
+                # データ長チェック
+                if len(df) < params.get('length', 0):
+                    logger.error(f"TA_SMA エラー: データ長({len(df)})がlength({params.get('length', 'N/A')})未満")
+                    return None
+
                 return func(df[col_name], **params)
 
         except Exception as e:
-            logger.warning(f"pandas-ta呼び出し失敗: {e}")
+            logger.error(f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}, パラメータ: {params}")
             return None
 
     def _post_process(
