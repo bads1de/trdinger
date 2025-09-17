@@ -55,7 +55,7 @@ class VolatilityIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.atr(high=high, low=low, close=close, length=length)
+        result = ta.atr(high=high.values, low=low.values, close=close.values, length=length)
 
         if result is None:
             logger.error("ATR: Calculation returned None - returning NaN series")
@@ -123,7 +123,7 @@ class VolatilityIndicators:
             nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
             return nan_series, nan_series, nan_series
 
-        df = ta.kc(high=high, low=low, close=close, length=period, scalar=scalar, mamode="ema")
+        df = ta.kc(high=high.values, low=low.values, close=close.values, length=period, scalar=scalar, mamode="sma")
 
         if df is None or (hasattr(df, "isna") and df.isna().all().all()):
             nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
@@ -216,7 +216,8 @@ class VolatilityIndicators:
 
         # Calculate basic bands for compatibility with enhanced parameter validation
         hl2 = (high + low) / 2
-        atr = VolatilityIndicators.atr(high, low, close, period)
+        atr_length = max(period, 14)  # Ensure ATR length is sufficient
+        atr = VolatilityIndicators.atr(high, low, close, atr_length)
 
         # Add NaN check for ATR
         if atr is None or atr.isna().all():
@@ -227,9 +228,9 @@ class VolatilityIndicators:
         lower = hl2 - multiplier * atr
 
         df = ta.supertrend(
-            high=high,
-            low=low,
-            close=close,
+            high=high.values,
+            low=low.values,
+            close=close.values,
             length=length,
             multiplier=multiplier,
         )
