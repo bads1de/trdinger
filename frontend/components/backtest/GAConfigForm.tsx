@@ -16,6 +16,12 @@ import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_INFO_MESSAGES } from "@/constants/info";
 import { ObjectiveSelection } from "./optimization/ObjectiveSelection";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 // 指標モードの選択肢
 const INDICATOR_MODE_OPTIONS = [
@@ -39,6 +45,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   isLoading = false,
   currentBacktestConfig = null,
 }) => {
+  // Collapsibleの開閉状態（デフォルトは閉じている）
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+
   const [config, setConfig] = useState<GAConfigType>(() => {
     const baseBacktestConfig: BacktestConfigType = {
       strategy_name: "GA_STRATEGY",
@@ -220,69 +229,87 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           🧬 GA詳細設定
         </h3>
 
-        {/* 指標モードの説明 */}
-        <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-md">
-          <h4 className="font-medium text-purple-300 mb-2">
-            📊 指標モード選択
-          </h4>
-          <div className="text-sm text-purple-200 space-y-1">
-            <div>
-              <strong className="text-purple-100">TA:</strong>{" "}
-              従来のテクニカル指標のみを使用
+        {/* 自動最適化設定説明（Collapsible） */}
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger className="w-full">
+            <div className="flex items-center justify-between p-3 bg-secondary-800/50 border border-secondary-600/30 rounded-md hover:bg-secondary-700/50 transition-colors">
+              <h4 className="font-medium text-secondary-200">
+                📋 自動最適化設定説明
+              </h4>
+              <ChevronDown
+                className={`w-5 h-5 text-secondary-400 transition-transform duration-200 ${
+                  isOpen ? "rotate-180" : ""
+                }`}
+              />
             </div>
-            <div>
-              <strong className="text-purple-100">ML:</strong>{" "}
-              ML予測指標のみを使用
-            </div>
-            <div>
-              <strong className="text-purple-100">混合:</strong>{" "}
-              テクニカル指標とML予測指標を組み合わせ
-            </div>
-          </div>
-        </div>
+          </CollapsibleTrigger>
 
-        {/* リスク管理自動最適化 */}
-        <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded-md">
-          <h4 className="font-medium text-blue-300 mb-2">
-            🤖 リスク管理自動最適化
-          </h4>
-          <p className="text-sm text-blue-200">
-            TP/SLとポジションサイズはGAが自動最適化します。
-            <strong className="text-blue-100">
-              手動でのイグジット条件は無視されます。
-            </strong>
-          </p>
-        </div>
+          <CollapsibleContent className="space-y-4 mt-4">
+            {/* 指標モードの説明 */}
+            <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-md">
+              <h4 className="font-medium text-purple-300 mb-2">
+                📊 指標モード選択
+              </h4>
+              <div className="text-sm text-purple-200 space-y-1">
+                <div>
+                  <strong className="text-purple-100">TA:</strong>{" "}
+                  従来のテクニカル指標のみを使用
+                </div>
+                <div>
+                  <strong className="text-purple-100">ML:</strong>{" "}
+                  ML予測指標のみを使用
+                </div>
+                <div>
+                  <strong className="text-purple-100">混合:</strong>{" "}
+                  テクニカル指標とML予測指標を組み合わせ
+                </div>
+              </div>
+            </div>
 
-        {/* TP/SL自動最適化 */}
-        <div className="p-3 bg-pink-900/30 border border-pink-500/30 rounded-md">
-          <h4 className="font-medium text-pink-300 mb-2">📈 TP/SL自動最適化</h4>
-          <div className="text-xs text-pink-200 space-y-1">
-            <div>
-              • <strong>決定方式</strong>:
-              固定値、リスクリワード比、ボラティリティベース等
+            {/* リスク管理自動最適化 */}
+            <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded-md">
+              <h4 className="font-medium text-blue-300 mb-2">
+                🤖 リスク管理自動最適化
+              </h4>
+              <p className="text-sm text-blue-200">
+                TP/SLとポジションサイズはGAが自動最適化します。
+                <strong className="text-blue-100">
+                  手動でのイグジット条件は無視されます。
+                </strong>
+              </p>
             </div>
-            <div>
-              • <strong>リスクリワード比</strong>: 1:1.2 ～ 1:4.0
-            </div>
-            <div>
-              • <strong>パーセンテージ範囲</strong>: SL: 1%-8%, TP: 2%-20%
-            </div>
-          </div>
-        </div>
 
-        {/* ポジションサイジング自動最適化 */}
-        <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-md">
-          <h4 className="font-medium text-emerald-300 mb-2">
-            💰 ポジションサイジング自動最適化
-          </h4>
-          <div className="text-xs text-emerald-200 space-y-1">
-            <div>
-              • <strong>方式</strong>: ハーフオプティマルF,
-              ボラティリティベース, 固定比率/枚数
+            {/* TP/SL自動最適化 */}
+            <div className="p-3 bg-pink-900/30 border border-pink-500/30 rounded-md">
+              <h4 className="font-medium text-pink-300 mb-2">📈 TP/SL自動最適化</h4>
+              <div className="text-xs text-pink-200 space-y-1">
+                <div>
+                  • <strong>決定方式</strong>:
+                  固定値、リスクリワード比、ボラティリティベース等
+                </div>
+                <div>
+                  • <strong>リスクリワード比</strong>: 1:1.2 ～ 1:4.0
+                </div>
+                <div>
+                  • <strong>パーセンテージ範囲</strong>: SL: 1%-8%, TP: 2%-20%
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+
+            {/* ポジションサイジング自動最適化 */}
+            <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-md">
+              <h4 className="font-medium text-emerald-300 mb-2">
+                💰 ポジションサイジング自動最適化
+              </h4>
+              <div className="text-xs text-emerald-200 space-y-1">
+                <div>
+                  • <strong>方式</strong>: ハーフオプティマルF,
+                  ボラティリティベース, 固定比率/枚数
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* 高度なGA設定 */}
         <div className="p-3 bg-indigo-900/30 border border-indigo-500/30 rounded-md">
