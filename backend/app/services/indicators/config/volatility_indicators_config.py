@@ -123,12 +123,7 @@ def setup_volatility_indicators():
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="volatility",
     )
-    kc_config.add_parameter(
-        ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
-    )
-    kc_config.add_parameter(
-        ParameterConfig(name="scalar", default_value=2.0, min_value=0.5, max_value=5.0)
-    )
+    kc_config.param_map = {"length": "period", "multiplier": "scalar"}
     indicator_registry.register(kc_config)
 
     donch_config = IndicatorConfig(

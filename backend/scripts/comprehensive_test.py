@@ -296,9 +296,23 @@ def execute_single_indicator_test(df: DataFrame, indicator_name: str) -> Indicat
             result.valid_values_count = np.sum(~np.isnan(calc_result))
             result.total_values_count = len(calc_result)
         elif isinstance(calc_result, tuple):
-            valid_counts = [np.sum(~np.isnan(arr)) for arr in calc_result if isinstance(arr, np.ndarray)]
+            valid_counts = []
+            total_lengths = []
+            for arr in calc_result:
+                if isinstance(arr, np.ndarray):
+                    valid_count = np.sum(~np.isnan(arr))
+                    valid_counts.append(valid_count)
+                    total_lengths.append(len(arr))
+                elif hasattr(arr, 'notna'):  # pandas Series/DataFrame
+                    valid_count = arr.notna().sum()
+                    if hasattr(arr, 'shape') and len(arr.shape) > 1:
+                        total_length = arr.shape[0] * arr.shape[1]
+                    else:
+                        total_length = arr.shape[0]
+                    valid_counts.append(valid_count)
+                    total_lengths.append(total_length)
             result.valid_values_count = sum(valid_counts) if valid_counts else 0
-            result.total_values_count = sum(len(arr) for arr in calc_result if isinstance(arr, np.ndarray))
+            result.total_values_count = sum(total_lengths) if total_lengths else 0
         elif isinstance(calc_result, (pd.Series, pd.DataFrame)):
             result.valid_values_count = calc_result.notna().sum()
             result.total_values_count = calc_result.shape[0]
