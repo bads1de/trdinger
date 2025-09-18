@@ -47,30 +47,6 @@ class ErrorHandler:
     APIErrorHandler と MLErrorHandler の重複機能を統合しています。
     """
 
-    # 統一エラーメッセージテンプレート
-    ERROR_TEMPLATES = {
-        # API関連エラー
-        "API_VALIDATION_ERROR": "入力データの検証に失敗しました: {details}",
-        "API_DATABASE_ERROR": "データベース操作でエラーが発生しました",
-        "API_EXTERNAL_ERROR": "外部APIとの通信でエラーが発生しました",
-        "API_INTERNAL_ERROR": "サーバー内部でエラーが発生しました",
-        # ML関連エラー
-        "ML_DATA_ERROR": "ML処理用データでエラーが発生しました: {details}",
-        "ML_MODEL_ERROR": "MLモデル処理でエラーが発生しました: {details}",
-        "ML_PREDICTION_ERROR": "ML予測処理でエラーが発生しました: {details}",
-        "ML_TRAINING_ERROR": "MLモデル学習でエラーが発生しました: {details}",
-        "ML_VALIDATION_ERROR": "MLデータ検証でエラーが発生しました: {details}",
-        # データ関連エラー
-        "DATA_NOT_FOUND": "指定されたデータが見つかりません",
-        "DATA_INVALID_FORMAT": "データ形式が無効です: {details}",
-        "DATA_INSUFFICIENT": "データが不足しています: {details}",
-        # 設定関連エラー
-        "CONFIG_INVALID": "設定が無効です: {details}",
-        "CONFIG_MISSING": "必要な設定が不足しています: {details}",
-        # タイムアウトエラー
-        "TIMEOUT_ERROR": "処理がタイムアウトしました: {details}",
-    }
-
     # --- 統一エラーレスポンス生成 ---
 
     @staticmethod
@@ -305,9 +281,7 @@ class ErrorHandler:
 
         def timeout_handler(signum, frame):
             _ = signum, frame  # 未使用パラメータ
-            raise TimeoutError(
-                f"Unix環境でのタイムアウト（{timeout_seconds}秒）"
-            )
+            raise TimeoutError(f"Unix環境でのタイムアウト（{timeout_seconds}秒）")
 
         # 既存のシグナルハンドラーを保存
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)

@@ -8,16 +8,13 @@ from typing import List
 
 import pandas as pd
 
+from app.utils.data_conversion import DataConversionError
 from app.utils.error_handler import safe_operation
 from database.models import (
     OHLCVData,
 )
 
 logger = logging.getLogger(__name__)
-
-
-class DataConversionError(Exception):
-    """データ変換エラー"""
 
 
 class DataConversionService:

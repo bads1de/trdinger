@@ -37,7 +37,6 @@ class StrategyIntegrationService:
         self,
         limit: int = 50,
         offset: int = 0,
-        category: Optional[str] = None,
         risk_level: Optional[str] = None,
         experiment_id: Optional[int] = None,
         min_fitness: Optional[float] = None,
@@ -82,22 +81,6 @@ class StrategyIntegrationService:
                 f"生成済み戦略の取得中にエラーが発生しました: {e}", exc_info=True
             )
             raise
-
-    def get_all_strategies_for_stats(self) -> List[Dict[str, Any]]:
-        """統計情報計算のために、フィルター前の全戦略を取得する"""
-        strategies_from_db = (
-            self.generated_strategy_repo.get_strategies_with_backtest_results(
-                limit=2000, offset=0
-            )
-        )
-        return [
-            s
-            for s in (
-                self._convert_generated_strategy_to_display_format(strategy)
-                for strategy in strategies_from_db
-            )
-            if s is not None
-        ]
 
     def _convert_generated_strategy_to_display_format(
         self, strategy: GeneratedStrategy
@@ -280,7 +263,6 @@ class StrategyIntegrationService:
         self,
         limit: int = 50,
         offset: int = 0,
-        category: Optional[str] = None,
         risk_level: Optional[str] = None,
         experiment_id: Optional[int] = None,
         min_fitness: Optional[float] = None,
@@ -293,7 +275,6 @@ class StrategyIntegrationService:
         Args:
             limit: 取得件数制限
             offset: オフセット
-            category: カテゴリフィルター
             risk_level: リスクレベルフィルター
             experiment_id: 実験IDフィルター
             min_fitness: 最小フィットネススコア
@@ -305,13 +286,12 @@ class StrategyIntegrationService:
         """
         try:
             logger.info(
-                f"戦略取得開始: limit={limit}, offset={offset}, category={category}, experiment_id={experiment_id}"
+                f"戦略取得開始: limit={limit}, offset={offset}, experiment_id={experiment_id}"
             )
 
             result = self.get_strategies(
                 limit=limit,
                 offset=offset,
-                category=category,
                 risk_level=risk_level,
                 experiment_id=experiment_id,
                 min_fitness=min_fitness,

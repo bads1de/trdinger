@@ -7,10 +7,8 @@ pandas標準機能を活用し、冗長なカスタム実装を削除。
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
-import numpy as np
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -280,49 +278,3 @@ class OpenInterestDataConverter:
             db_records.append(db_record)
 
         return db_records
-
-
-def ensure_list(
-    data: Union[pd.Series, list, np.ndarray, Any],
-    raise_on_error: bool = True,
-) -> list:
-    """
-    データをlistに変換（簡素化版）
-
-    Python標準のlist()コンストラクタを活用。
-    pandas/numpyオブジェクトはtolist()で効率的に変換。
-    backtesting.lib._Arrayなどの特殊な配列型にも対応。
-    """
-    try:
-        if isinstance(data, list):
-            return data
-
-        # pandas/numpyおよびbacktesting.lib._Arrayはtolist()で効率的に変換
-        if hasattr(data, "tolist"):
-            return data.tolist()
-
-        # numpy互換のdata属性がある場合（例: backtesting.lib._Array）
-        if hasattr(data, "data"):
-            try:
-                return list(data.data)
-            except (AttributeError, TypeError):
-                # data属性がリストに変換できない場合
-                pass
-
-        # その他は全てPython標準のlist()コンストラクタで処理
-        if data is None:
-            return []  # Noneの場合は空リストを返す
-
-        try:
-            return list(data)
-        except TypeError:
-            # イテレートできない場合、空リストを返す
-            logger.warning(f"イテレートできないデータをlistに変換: {type(data)}")
-            return []
-
-    except Exception as e:
-        if raise_on_error:
-            raise DataConversionError(f"list変換に失敗: {e}")
-        else:
-            logger.warning(f"list変換に失敗: {e}")
-            return []

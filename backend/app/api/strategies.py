@@ -51,7 +51,6 @@ class StrategyStatsResponse(BaseModel):
 async def get_strategies(
     limit: int = Query(unified_config.auto_strategy.default_strategies_limit, ge=1, le=unified_config.auto_strategy.max_strategies_limit, description="取得件数制限"),
     offset: int = Query(0, ge=0, description="オフセット"),
-    category: Optional[str] = Query(None, description="カテゴリフィルター"),
     risk_level: Optional[str] = Query(None, description="リスクレベルフィルター"),
     experiment_id: Optional[int] = Query(None, description="実験IDフィルター"),
     min_fitness: Optional[float] = Query(None, description="最小フィットネススコア"),
@@ -70,7 +69,6 @@ async def get_strategies(
     Args:
         limit: 取得件数制限 (1-100)
         offset: オフセット
-        category: カテゴリフィルター
         risk_level: リスクレベルフィルター (low, medium, high)
         experiment_id: 実験IDフィルター
         min_fitness: 最小フィットネススコア
@@ -86,7 +84,6 @@ async def get_strategies(
         return strategy_service.get_strategies_with_response(
             limit=limit,
             offset=offset,
-            category=category,
             risk_level=risk_level,
             experiment_id=experiment_id,
             min_fitness=min_fitness,

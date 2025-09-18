@@ -10,12 +10,10 @@ from .gene_utils import (
     GeneticUtils,
     GeneUtils,
     create_default_strategy_gene,
-    normalize_parameter,
     create_child_metadata,
     prepare_crossover_metadata,
 )
 from .data_converters import DataConverter
-from .logging_utils import LoggingUtils
 
 from .yaml_utils import (
     YamlIndicatorUtils,
@@ -44,7 +42,6 @@ from .strategy_integration_service import StrategyIntegrationService
 # Utility functions from data_converters
 ensure_float = DataConverter.ensure_float
 ensure_int = DataConverter.ensure_int
-ensure_list = DataConverter.ensure_list
 ensure_dict = DataConverter.ensure_dict
 normalize_symbol = DataConverter.normalize_symbol
 
@@ -56,8 +53,6 @@ __all__ = [
     "GeneUtils",
     "DataConverter",
     "ValidationUtils",
-    "LoggingUtils",
-    "PerformanceUtils",
     "YamlIndicatorUtils",
     "YamlLoadUtils",
     "YamlTestUtils",
@@ -70,14 +65,8 @@ __all__ = [
     "safe_execute",
     "ensure_float",
     "ensure_int",
-    "ensure_list",
     "ensure_dict",
     "normalize_symbol",
-    "validate_range",
-    "validate_required_fields",
-    "time_function",
-    # Decorators
-    "safe_auto_operation",
     # Operand Grouping
     "OperandGroup",
     "OperandGroupingSystem",

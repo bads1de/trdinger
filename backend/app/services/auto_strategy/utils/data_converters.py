@@ -2,7 +2,7 @@
 
 import logging
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,9 @@ class DataConverter:
         try:
             result = float(value)
             if not math.isfinite(result):
-                logger.warning(f"float変換失敗: {value} (無効値), デフォルト値 {default} を使用")
+                logger.warning(
+                    f"float変換失敗: {value} (無効値), デフォルト値 {default} を使用"
+                )
                 return default
             return result
         except (ValueError, TypeError, OverflowError):
@@ -33,25 +35,14 @@ class DataConverter:
         try:
             result = int(value)
             if not math.isfinite(result):
-                logger.warning(f"int変換失敗: {value} (無効値), デフォルト値 {default} を使用")
+                logger.warning(
+                    f"int変換失敗: {value} (無効値), デフォルト値 {default} を使用"
+                )
                 return default
             return result
         except (ValueError, TypeError, OverflowError):
             logger.warning(f"int変換失敗: {value}, デフォルト値 {default} を使用")
             return default
-
-    @staticmethod
-    def ensure_list(value: Any, default: Optional[List] = None) -> List:
-        """値をリストに安全に変換"""
-        if default is None:
-            default = []
-
-        if isinstance(value, list):
-            return value
-        elif value is None:
-            return default
-        else:
-            return [value]
 
     @staticmethod
     def ensure_dict(value: Any, default: Optional[Dict] = None) -> Dict:
