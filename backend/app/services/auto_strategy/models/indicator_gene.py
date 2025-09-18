@@ -1,6 +1,7 @@
 """
 指標遺伝子モデル
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -43,14 +44,3 @@ class IndicatorGene:
             return {"indicator": self.type, "parameters": self.parameters}
         except ImportError:
             return {"indicator": self.type, "parameters": self.parameters}
-
-@dataclass
-class IndicatorParams:
-    """
-    指標パラメータ
-
-    指標計算に必要なパラメータを定義します。
-    """
-    indicator_type: str
-    period: int
-    source: str
