@@ -121,49 +121,49 @@ class ConditionGenerator:
     @safe_operation(context="戦略タイプ選択", is_api_call=False)
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ロング条件生成"""
-        self.logger.debug(f"Generating long conditions for {ind.type}")
+        self.logger.debug(f"{ind.type}のロング条件を生成中")
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(
             self.yaml_config, ind.type
         )
-        self.logger.debug(f"Config for {ind.type}: {config}")
+        self.logger.debug(f"{ind.type}の設定: {config}")
         if config:
             threshold = YamlIndicatorUtils.get_threshold_from_yaml(
                 self.yaml_config, config, "long", self.context
             )
             if threshold is not None:
-                self.logger.debug(f"Using threshold {threshold} for {ind.type}")
+                self.logger.debug(f"{ind.type}に閾値{threshold}を使用")
                 # DEBUG: 条件生成詳細ログ
                 final_condition = Condition(
                     left_operand=ind.type, operator=">", right_operand=threshold
                 )
-                self.logger.debug(f"Generated long condition: {ind.type} > {threshold}")
+                self.logger.debug(f"ロング条件生成: {ind.type} > {threshold}")
                 return [final_condition]
-        self.logger.warning(f"No threshold found for {ind.type}, using 0 as fallback")
+        self.logger.warning(f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用")
         final_condition = Condition(
             left_operand=ind.type, operator=">", right_operand=0
         )
-        self.logger.debug(f"Generated fallback long condition: {ind.type} > 0")
+        self.logger.debug(f"フォールバックロング条件生成: {ind.type} > 0")
         return [final_condition]
 
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         """統合された汎用ショート条件生成"""
-        self.logger.debug(f"Generating short conditions for {ind.type}")
+        self.logger.debug(f"{ind.type}のショート条件を生成中")
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(
             self.yaml_config, ind.type
         )
-        self.logger.debug(f"Config for {ind.type}: {config}")
+        self.logger.debug(f"{ind.type}の設定: {config}")
         if config:
             threshold = YamlIndicatorUtils.get_threshold_from_yaml(
                 self.yaml_config, config, "short", self.context
             )
             if threshold is not None:
-                self.logger.debug(f"Using threshold {threshold} for {ind.type}")
+                self.logger.debug(f"{ind.type}に閾値{threshold}を使用")
                 return [
                     Condition(
                         left_operand=ind.type, operator="<", right_operand=threshold
                     )
                 ]
-        self.logger.warning(f"No threshold found for {ind.type}, using 0 as fallback")
+        self.logger.warning(f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用")
         return [Condition(left_operand=ind.type, operator="<", right_operand=0)]
 
     def _create_type_based_conditions(
@@ -186,7 +186,7 @@ class ConditionGenerator:
                     right_operand=threshold,
                 )
                 self.logger.debug(
-                    f"YAML-based {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} {threshold}"
+                    f"YAMLベースの{side}条件 ({indicator.type}): {indicator.type} {'>' if side == 'long' else '<'} {threshold}"
                 )
                 return [final_condition]
 
@@ -197,7 +197,7 @@ class ConditionGenerator:
             right_operand=0,
         )
         self.logger.debug(
-            f"Default {side} condition for {indicator.type}: {indicator.type} {'>' if side == 'long' else '<'} 0"
+            f"デフォルト{side}条件 ({indicator.type}): {indicator.type} {'>' if side == 'long' else '<'} 0"
         )
         return [final_condition]
 
