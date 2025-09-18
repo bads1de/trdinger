@@ -9,8 +9,9 @@ import logging
 import random
 from typing import List, Union, cast, Any
 
-from app.services.indicators import TechnicalIndicatorService
+
 from app.services.indicators.config import indicator_registry
+from app.utils.error_handler import safe_operation
 
 from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import (
@@ -23,11 +24,6 @@ from ..models.strategy_models import (
     TPSLGene,
 )
 
-
-from ..constants import (
-    OPERATORS,
-    DATA_SOURCES,
-)
 from .condition_generator import ConditionGenerator
 
 
@@ -110,17 +106,6 @@ class RandomGeneGenerator:
         self.position_sizing_generator = PositionSizingGenerator(config)
         self.operand_generator = OperandGenerator(config)
 
-        # 後方互換性のための古い属性（順次廃止予定）
-        self.indicator_service = TechnicalIndicatorService()
-        self.available_indicators = self.indicator_generator.available_indicators
-        self.available_data_sources = DATA_SOURCES
-        self.available_operators = OPERATORS
-        self._coverage_cycle = self.indicator_generator._coverage_cycle
-        self._coverage_idx = self.indicator_generator._coverage_idx
-        self._coverage_pick = self.indicator_generator._coverage_pick
-        self._valid_indicator_names = self.indicator_generator._valid_indicator_names
-        self.composition_service = self.indicator_generator.composition_service
-
     def _ensure_or_with_fallback(
         self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
     ) -> List[Union[Condition, ConditionGroup]]:
@@ -178,6 +163,27 @@ class RandomGeneGenerator:
         top_level.append(fallback)
         return top_level
 
+    @safe_operation(
+        context="ランダム戦略遺伝子生成",
+        is_api_call=False,
+        default_return=StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+            ],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+            tpsl_gene=TPSLGene(
+                take_profit_pct=0.01, stop_loss_pct=0.005
+            ),
+            position_sizing_gene=PositionSizingGene(
+                method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
+            ),
+            metadata={"generated_by": "Fallback"},
+        )
+    )
     def generate_random_gene(self) -> StrategyGene:
         """
         ランダムな戦略遺伝子を生成
@@ -185,91 +191,67 @@ class RandomGeneGenerator:
         Returns:
             生成された戦略遺伝子
         """
+        # 指標を生成
+        indicators = self.indicator_generator.generate_random_indicators()
+
+        # 条件を生成（後方互換性のため保持）
+        entry_conditions = self.condition_generator.generate_random_conditions(
+            indicators, "entry"
+        )
+
+        # TP/SL遺伝子を先に生成してイグジット条件生成を調整
+        tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
+
+        # Auto-StrategyではTP/SLを常に有効化し、エグジット条件は冗長のため生成しない
+        if tpsl_gene:
+            tpsl_gene.enabled = True
+
+        # TP/SL遺伝子が有効な場合はイグジット条件を最小化
+        if tpsl_gene and tpsl_gene.enabled:
+            exit_conditions = []
+        else:
+            exit_conditions = self.condition_generator.generate_random_conditions(
+                indicators, "exit"
+            )
+
+        # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
+        # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
         try:
-            # 指標を生成
-            indicators = self.indicator_generator.generate_random_indicators()
+            self.smart_condition_generator.indicators = indicators
+        except Exception:
+            pass
+        long_entry_conditions, short_entry_conditions, _ = (
+            self.smart_condition_generator.generate_balanced_conditions(indicators)
+        )
 
-            # 条件を生成（後方互換性のため保持）
-            entry_conditions = self.condition_generator.generate_random_conditions(
-                indicators, "entry"
-            )
+        # 条件の成立性を底上げ：OR 正規化と価格vsトレンド(or open)フォールバックをコアに委譲
+        long_entry_conditions = self._ensure_or_with_fallback(
+            long_entry_conditions, "long", indicators
+        )
+        short_entry_conditions = self._ensure_or_with_fallback(
+            short_entry_conditions, "short", indicators
+        )
 
-            # TP/SL遺伝子を先に生成してイグジット条件生成を調整
-            tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
+        # リスク管理設定（従来方式、後方互換性のため保持）
+        risk_management = {
+            "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
+        }
 
-            # Auto-StrategyではTP/SLを常に有効化し、エグジット条件は冗長のため生成しない
-            if tpsl_gene:
-                tpsl_gene.enabled = True
+        # ポジションサイジング遺伝子を生成（GA最適化対象）
+        position_sizing_gene = (
+            self.position_sizing_generator.generate_position_sizing_gene()
+        )
 
-            # TP/SL遺伝子が有効な場合はイグジット条件を最小化
-            if tpsl_gene and tpsl_gene.enabled:
-                exit_conditions = []
-            else:
-                exit_conditions = self.condition_generator.generate_random_conditions(
-                    indicators, "exit"
-                )
+        gene = StrategyGene(
+            indicators=indicators,
+            entry_conditions=entry_conditions,  # 後方互換性
+            exit_conditions=exit_conditions,
+            long_entry_conditions=long_entry_conditions,  # 新機能
+            short_entry_conditions=short_entry_conditions,  # 新機能
+            risk_management=risk_management,
+            tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
+            position_sizing_gene=position_sizing_gene,  # 新しいポジションサイジング遺伝子
+            metadata={"generated_by": "RandomGeneGenerator"},
+        )
 
-            # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
-            # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
-            try:
-                self.smart_condition_generator.indicators = indicators
-            except Exception:
-                pass
-            long_entry_conditions, short_entry_conditions, _ = (
-                self.smart_condition_generator.generate_balanced_conditions(indicators)
-            )
-
-            # 条件の成立性を底上げ：OR 正規化と価格vsトレンド(or open)フォールバックをコアに委譲
-            long_entry_conditions = self._ensure_or_with_fallback(
-                long_entry_conditions, "long", indicators
-            )
-            short_entry_conditions = self._ensure_or_with_fallback(
-                short_entry_conditions, "short", indicators
-            )
-
-            # リスク管理設定（従来方式、後方互換性のため保持）
-            risk_management = {
-                "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
-            }
-
-            # ポジションサイジング遺伝子を生成（GA最適化対象）
-            position_sizing_gene = (
-                self.position_sizing_generator.generate_position_sizing_gene()
-            )
-
-            gene = StrategyGene(
-                indicators=indicators,
-                entry_conditions=entry_conditions,  # 後方互換性
-                exit_conditions=exit_conditions,
-                long_entry_conditions=long_entry_conditions,  # 新機能
-                short_entry_conditions=short_entry_conditions,  # 新機能
-                risk_management=risk_management,
-                tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
-                position_sizing_gene=position_sizing_gene,  # 新しいポジションサイジング遺伝子
-                metadata={"generated_by": "RandomGeneGenerator"},
-            )
-
-            return gene
-
-        except Exception as e:
-            logger.error(f"ランダム戦略遺伝子生成失敗: {e}", exc_info=True)
-            # フォールバック: 最小限の遺伝子を生成
-            # logger.info("フォールバック戦略遺伝子を生成")
-
-            return StrategyGene(
-                indicators=[
-                    IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
-                ],
-                entry_conditions=[],
-                exit_conditions=[],
-                long_entry_conditions=[],
-                short_entry_conditions=[],
-                risk_management={},  # デフォルト値
-                tpsl_gene=TPSLGene(
-                    take_profit_pct=0.01, stop_loss_pct=0.005
-                ),  # デフォルト値
-                position_sizing_gene=PositionSizingGene(
-                    method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
-                ),  # デフォルト値
-                metadata={"generated_by": "Fallback"},
-            )
+        return gene

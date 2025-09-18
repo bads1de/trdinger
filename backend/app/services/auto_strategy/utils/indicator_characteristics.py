@@ -3,8 +3,6 @@
 定数定義から分離された動的指標特性管理モジュール
 """
 
-# YAMLベースの特性動的生成処理
-
 
 def _get_merged_characteristics(original):
     # Late import to avoid circular imports

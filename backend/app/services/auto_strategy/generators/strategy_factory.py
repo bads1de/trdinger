@@ -102,48 +102,12 @@ class StrategyFactory:
                     raise
 
             def _init_indicator(self, indicator_gene: IndicatorGene):
-                """単一指標の初期化（統合版）"""
+                """単一指標の初期化"""
                 try:
                     # 指標計算器を使用して初期化
-                    try:
-                        factory.indicator_calculator.init_indicator(
-                            indicator_gene, self
-                        )
-                        return
-                    except Exception as e:
-                        logger.warning(f"指標初期化失敗 {indicator_gene.type}: {e}")
-
-                        # フォールバック: SMAの最小構成でリカバーを試みる
-                        if indicator_gene.type not in ("SMA", "RSI"):
-                            from ..models.strategy_models import IndicatorGene as IG
-
-                            period = indicator_gene.parameters.get("period", 14)
-                            if period <= 0:
-                                period = 14
-
-                            try:
-                                fb = IG(
-                                    type="SMA",
-                                    parameters={"period": period},
-                                    enabled=True,
-                                )
-                                factory.indicator_calculator.init_indicator(fb, self)
-                                return
-                            except Exception as fb_e:
-                                logger.warning(f"フォールバック失敗: {fb_e}")
-                        else:
-                            # 最後の手段: RSI(14)
-                            try:
-                                from ..models.strategy_models import IndicatorGene as IG
-
-                                fb2 = IG(
-                                    type="RSI", parameters={"period": 14}, enabled=True
-                                )
-                                factory.indicator_calculator.init_indicator(fb2, self)
-                                return
-                            except Exception as fb2_e:
-                                logger.error(f"最終フォールバック失敗: {fb2_e}")
-
+                    factory.indicator_calculator.init_indicator(
+                        indicator_gene, self
+                    )
                 except Exception as e:
                     logger.error(
                         f"指標初期化エラー {indicator_gene.type}: {e}", exc_info=True

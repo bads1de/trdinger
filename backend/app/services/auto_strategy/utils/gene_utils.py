@@ -9,7 +9,7 @@ import random
 from typing import Any, Dict, List, Optional, Union, Tuple
 from datetime import datetime
 from abc import ABC, abstractmethod
-import uuid # uuidモジュールをインポート
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class BaseGene(ABC):
         """オブジェクトを辞書形式に変換"""
         result = {}
         for key, value in self.__dict__.items():
-            if key.startswith("_"): # プライベート属性は除外
+            if key.startswith("_"):  # プライベート属性は除外
                 continue
 
             # Enumの処理
@@ -46,44 +46,67 @@ class BaseGene(ABC):
 
         return result
 
+    @staticmethod
+    def _is_enum_type(param_type) -> bool:
+        """パラメータタイプがEnum型かどうかをチェック"""
+        return hasattr(param_type, "__members__")
+
+    @staticmethod
+    def _is_datetime_type(param_type) -> bool:
+        """パラメータタイプがdatetime型かどうかをチェック"""
+        return param_type == datetime
+
+    @staticmethod
+    def _convert_enum_value(value: Any, param_type) -> Any:
+        """Enum型への変換"""
+        if isinstance(value, str):
+            try:
+                return param_type(value)
+            except ValueError:
+                logger.warning(f"無効なEnum値 {value} を無視、デフォルト値を設定")
+                # Enumの最初の値をデフォルトとして返す
+                return next(iter(param_type))
+        return value
+
+    @staticmethod
+    def _convert_datetime_value(value: Any) -> Any:
+        """datetime型への変換"""
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                logger.warning(f"無効なdatetime値 {value} を無視、デフォルト値を設定")
+                return datetime.now()  # デフォルトとして現在時刻
+        return value
+
+    @staticmethod
+    def _convert_value(value: Any, param_type) -> Any:
+        """一般的な値変換"""
+        if BaseGene._is_enum_type(param_type):
+            return BaseGene._convert_enum_value(value, param_type)
+        elif BaseGene._is_datetime_type(param_type):
+            return BaseGene._convert_datetime_value(value)
+        else:
+            return value
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Any:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
 
-        # クラスアノテーションからパラメータ情報を取得
-        if hasattr(cls, "__annotations__"):
+        # クラスアノテーションがある場合
+        if hasattr(cls, "__annotations__") and cls.__annotations__:
             annotations = cls.__annotations__
 
             for param_name, param_type in annotations.items():
                 if param_name in data:
-                    value = data[param_name]
-
-                    # Enum型への変換
-                    if hasattr(param_type, "__members__"):
-                        # Enum型の場合はvalueから取得
-                        if isinstance(value, str):
-                            try:
-                                init_params[param_name] = param_type(value)
-                            except ValueError:
-                                logger.warning(f"無効なEnum値 {value} を無視")
-                        else:
-                            init_params[param_name] = value
-                    # datetime型への変換
-                    elif param_type == datetime:
-                        if isinstance(value, str):
-                            try:
-                                init_params[param_name] = datetime.fromisoformat(value)
-                            except ValueError:
-                                logger.warning(f"無効なdatetime値 {value} を無視")
-                        else:
-                            init_params[param_name] = value
-                    # その他の型
-                    else:
-                        init_params[param_name] = value
+                    raw_value = data[param_name]
+                    init_params[param_name] = cls._convert_value(raw_value, param_type)
         else:
-            # アノテーションがない場合はデータ全体を使用
-            logger.warning(f"クラス {cls.__name__} に型アノテーションがないため、辞書データを直接使用")
+            # アノテーションがないまたは空の場合はデータ全体を使用
+            logger.warning(
+                f"クラス {cls.__name__} に型アノテーションがないため、辞書データを直接使用"
+            )
             init_params = data.copy()
 
         return cls(**init_params)
@@ -351,7 +374,13 @@ class GeneUtils:
         try:
             # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
             # ここでは基本的な構造のみを提供
-            from ..models.strategy_models import IndicatorGene, Condition, TPSLGene, PositionSizingGene, PositionSizingMethod
+            from ..models.strategy_models import (
+                IndicatorGene,
+                Condition,
+                TPSLGene,
+                PositionSizingGene,
+                PositionSizingMethod,
+            )
 
             indicators = [
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
@@ -379,7 +408,9 @@ class GeneUtils:
 
             # デフォルトポジションサイジング遺伝子
             position_sizing_gene = PositionSizingGene(
-                method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000, enabled=True
+                method=PositionSizingMethod.FIXED_QUANTITY,
+                fixed_quantity=1000,
+                enabled=True,
             )
 
             # メタデータ
@@ -392,7 +423,7 @@ class GeneUtils:
             }
 
             return strategy_gene_class(
-                id=str(uuid.uuid4()), # 新しいIDを生成
+                id=str(uuid.uuid4()),  # 新しいIDを生成
                 indicators=indicators,
                 entry_conditions=entry_conditions,
                 long_entry_conditions=long_entry_conditions,

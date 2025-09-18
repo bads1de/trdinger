@@ -428,7 +428,3 @@ class GeneticAlgorithmEngine:
             # 遺伝子生成はGAの根幹部分であり、失敗した場合は例外をスローして処理を停止するのが安全
             raise
 
-    def _evaluate_population(self, population):
-        """個体群を評価（レガシー用のメソッド）"""
-        # EvolutionRunnerを使用するため、このメソッドは必要なくなる可能性あり
-        pass

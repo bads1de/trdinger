@@ -3,8 +3,12 @@
 import logging
 import math
 from typing import Any, Dict, List, Optional
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
+
+# 互換性維持用の関数
+safe_execute = ErrorHandler.safe_execute
 
 
 class DataConverter:

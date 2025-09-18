@@ -53,6 +53,120 @@ def _convert_to_strategy_gene(individual_or_gene) -> StrategyGene:
     raise TypeError(f"サポートされていない型です: {type(individual_or_gene)}")
 
 
+def _crossover_tpsl_genes(parent1_tpsl, parent2_tpsl):
+    """
+    TP/SL遺伝子の交叉を処理
+
+    Args:
+        parent1_tpsl: 親1のTP/SL遺伝子
+        parent2_tpsl: 親2のTP/SL遺伝子
+
+    Returns:
+        子1と子2のTP/SL遺伝子のタプル
+    """
+    if parent1_tpsl and parent2_tpsl:
+        return crossover_tpsl_genes(parent1_tpsl, parent2_tpsl)
+    elif parent1_tpsl:
+        return parent1_tpsl, parent1_tpsl  # コピー
+    elif parent2_tpsl:
+        return parent2_tpsl, parent2_tpsl  # コピー
+    else:
+        return None, None
+
+
+def _crossover_position_sizing_genes(parent1_ps, parent2_ps):
+    """
+    ポジションサイジング遺伝子の交叉を処理
+
+    Args:
+        parent1_ps: 親1のポジションサイジング遺伝子
+        parent2_ps: 親2のポジションサイジング遺伝子
+
+    Returns:
+        子1と子2のポジションサイジング遺伝子のタプル
+    """
+    if parent1_ps and parent2_ps:
+        return crossover_position_sizing_genes(parent1_ps, parent2_ps)
+    elif parent1_ps:
+        return parent1_ps, copy.deepcopy(parent1_ps)
+    elif parent2_ps:
+        return parent2_ps, copy.deepcopy(parent2_ps)
+    else:
+        return None, None
+
+
+def _mutate_indicators(mutated, gene, mutation_rate):
+    """
+    指標の突然変異を処理
+
+    Args:
+        mutated: 突然変異対象のStrategyGene
+        gene: 元のStrategyGene
+        mutation_rate: 突然変異率
+    """
+    # 指標パラメータの突然変異
+    for i, indicator in enumerate(mutated.indicators):
+        if random.random() < mutation_rate:
+            for param_name, param_value in indicator.parameters.items():
+                if (
+                    isinstance(param_value, (int, float))
+                    and random.random() < mutation_rate
+                ):
+                    if param_name == "period":
+                        mutated.indicators[i].parameters[param_name] = max(
+                            1, min(200, int(param_value * random.uniform(0.8, 1.2)))
+                        )
+                    else:
+                        mutated.indicators[i].parameters[param_name] = (
+                            param_value * random.uniform(0.8, 1.2)
+                        )
+
+    # 指標の追加・削除
+    if random.random() < mutation_rate * 0.3:
+        max_indicators = getattr(gene, "MAX_INDICATORS", 5)
+
+        if len(mutated.indicators) < max_indicators and random.random() < 0.5:
+            # 新しい指標を追加
+            from ..generators.random_gene_generator import RandomGeneGenerator
+            from ..config import GAConfig
+
+            generator = RandomGeneGenerator(GAConfig())
+            new_indicators = generator.indicator_generator.generate_random_indicators()
+            if new_indicators:
+                mutated.indicators.append(random.choice(new_indicators))
+
+        elif len(mutated.indicators) > 1 and random.random() < 0.5:
+            # 指標を削除
+            mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
+
+
+def _mutate_conditions(mutated, mutation_rate):
+    """
+    条件の突然変異を処理
+
+    Args:
+        mutated: 突然変異対象のStrategyGene
+        mutation_rate: 突然変異率
+    """
+    if random.random() < mutation_rate * 0.5:
+        # エントリー条件の変更
+        if mutated.entry_conditions and random.random() < 0.5:
+            condition_idx = random.randint(0, len(mutated.entry_conditions) - 1)
+            condition = mutated.entry_conditions[condition_idx]
+
+            operators = [">", "<", ">=", "<=", "=="]
+            condition.operator = random.choice(operators)
+
+    if random.random() < mutation_rate * 0.5:
+        # エグジット条件の変更
+        if mutated.exit_conditions and random.random() < 0.5:
+            condition_idx = random.randint(0, len(mutated.exit_conditions) - 1)
+            condition = mutated.exit_conditions[condition_idx]
+
+            operators = [">", "<", ">=", "<=", "=="]
+            condition.operator = random.choice(operators)
+
+
 def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
     """
     StrategyGeneオブジェクトをIndividualオブジェクトに変換
@@ -159,37 +273,12 @@ def crossover_strategy_genes_pure(
                 child2_risk[key] = val2 if random.random() < 0.5 else val1
 
         # TP/SL遺伝子の交叉
-        child1_tpsl = None
-        child2_tpsl = None
-
-        if parent1.tpsl_gene and parent2.tpsl_gene:
-            child1_tpsl, child2_tpsl = crossover_tpsl_genes(
-                parent1.tpsl_gene, parent2.tpsl_gene
-            )
-        elif parent1.tpsl_gene:
-            child1_tpsl = parent1.tpsl_gene
-            child2_tpsl = parent1.tpsl_gene  # コピー
-        elif parent2.tpsl_gene:
-            child1_tpsl = parent2.tpsl_gene
-            child2_tpsl = parent2.tpsl_gene  # コピー
+        child1_tpsl, child2_tpsl = _crossover_tpsl_genes(parent1.tpsl_gene, parent2.tpsl_gene)
 
         # ポジションサイジング遺伝子の交叉
-        child1_position_sizing = None
-        child2_position_sizing = None
-
         ps_gene1 = getattr(parent1, "position_sizing_gene", None)
         ps_gene2 = getattr(parent2, "position_sizing_gene", None)
-
-        if ps_gene1 and ps_gene2:
-            child1_position_sizing, child2_position_sizing = (
-                crossover_position_sizing_genes(ps_gene1, ps_gene2)
-            )
-        elif ps_gene1:
-            child1_position_sizing = ps_gene1
-            child2_position_sizing = copy.deepcopy(ps_gene1)
-        elif ps_gene2:
-            child1_position_sizing = ps_gene2
-            child2_position_sizing = copy.deepcopy(ps_gene2)
+        child1_position_sizing, child2_position_sizing = _crossover_position_sizing_genes(ps_gene1, ps_gene2)
 
         # メタデータの交叉（共通ユーティリティ使用）
         from ..utils.gene_utils import prepare_crossover_metadata
@@ -316,63 +405,10 @@ def mutate_strategy_gene_pure(
         mutated = copy.deepcopy(gene)
 
         # 指標遺伝子の突然変異
-        for i, indicator in enumerate(mutated.indicators):
-            if random.random() < mutation_rate:
-                # パラメータの突然変異
-                for param_name, param_value in indicator.parameters.items():
-                    if (
-                        isinstance(param_value, (int, float))
-                        and random.random() < mutation_rate
-                    ):
-                        if param_name == "period":
-                            # 期間パラメータの場合
-                            mutated.indicators[i].parameters[param_name] = max(
-                                1, min(200, int(param_value * random.uniform(0.8, 1.2)))
-                            )
-                        else:
-                            # その他の数値パラメータ
-                            mutated.indicators[i].parameters[param_name] = (
-                                param_value * random.uniform(0.8, 1.2)
-                            )
+        _mutate_indicators(mutated, gene, mutation_rate)
 
-        # 指標の追加・削除（低確率）
-        if random.random() < mutation_rate * 0.3:
-            max_indicators = getattr(gene, "MAX_INDICATORS", 5)
-
-            if len(mutated.indicators) < max_indicators and random.random() < 0.5:
-                # 新しい指標を追加
-                from ..generators.random_gene_generator import RandomGeneGenerator
-                from ..config import GAConfig
-
-                generator = RandomGeneGenerator(GAConfig())
-                new_indicators = generator.indicator_generator.generate_random_indicators()
-                if new_indicators:
-                    mutated.indicators.append(random.choice(new_indicators))
-
-            elif len(mutated.indicators) > 1 and random.random() < 0.5:
-                # 指標を削除
-                mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
-
-        # 条件の突然変異（低確率）
-        if random.random() < mutation_rate * 0.5:
-            # エントリー条件の変更
-            if mutated.entry_conditions and random.random() < 0.5:
-                condition_idx = random.randint(0, len(mutated.entry_conditions) - 1)
-                condition = mutated.entry_conditions[condition_idx]
-
-                # オペレーターの変更
-                operators = [">", "<", ">=", "<=", "=="]
-                condition.operator = random.choice(operators)
-
-        if random.random() < mutation_rate * 0.5:
-            # エグジット条件の変更
-            if mutated.exit_conditions and random.random() < 0.5:
-                condition_idx = random.randint(0, len(mutated.exit_conditions) - 1)
-                condition = mutated.exit_conditions[condition_idx]
-
-                # オペレーターの変更
-                operators = [">", "<", ">=", "<=", "=="]
-                condition.operator = random.choice(operators)
+        # 条件の突然変異
+        _mutate_conditions(mutated, mutation_rate)
 
         # リスク管理設定の突然変異
         for key, value in mutated.risk_management.items():

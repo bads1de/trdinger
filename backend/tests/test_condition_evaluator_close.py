@@ -151,3 +151,43 @@ class TestConditionEvaluatorClose:
 
         # Should be True because last close (105.0) > last open (102.0)
         assert result == True
+
+    def test_error_handling_with_invalid_operand(self):
+        """無効なオペランドでのエラーハンドリングテスト"""
+        mock_strategy = Mock()
+
+        # 無効なオペランドを渡す - デコレーターにより0.0が返されるはず
+        result = self.evaluator.get_condition_value(None, mock_strategy)
+
+        # エラーが発生してもデコレーターにより0.0が返される
+        assert result == 0.0
+
+    def test_error_handling_with_invalid_strategy_instance(self):
+        """無効な戦略インスタンスでのエラーハンドリングテスト"""
+        # 条件付きでNoneを渡すとエラーが発生するはず
+        from app.services.auto_strategy.models.strategy_models import Condition
+
+        condition = Condition(
+            left_operand="close",
+            operator=">",
+            right_operand=100
+        )
+
+        # 無効な戦略インスタンスを渡す
+        result = self.evaluator.evaluate_conditions([condition], None)
+
+        # エラーが発生してもデコレーターによりFalseが返される
+        assert result == False
+
+    def test_error_handling_in_condition_group(self):
+        """条件グループでのエラーハンドリングテスト"""
+        from app.services.auto_strategy.models.strategy_models import ConditionGroup
+
+        # 空の条件グループを渡す
+        group = ConditionGroup(conditions=[])
+        mock_strategy = Mock()
+
+        result = self.evaluator._evaluate_condition_group(group, mock_strategy)
+
+        # 空のグループなのでFalseが返される
+        assert result == False
