@@ -1,306 +1,334 @@
-# Auto Strategy リファクタリング設計案（更新版）
+# Auto Strategy リファクタリング設計案（階層的 GA 版）
 
 ## 概要
 
-現在の自動戦略生成システムでは、テクニカル指標のランダム選択とシンプルな価格比較（close > open）が主な問題となっています。この設計案では、既存の YAML 設定と指標特性データを活用したスマートな条件生成を実現し、スケーラブルなアーキテクチャを提案します。
+現在の自動戦略生成システムを、既存の GA（戦略全体最適化）を活かしつつ、条件生成部分を専門の進化的アルゴリズムで強化する階層的アプローチを提案します。複雑さを抑えつつ、既存コードの理解しやすさを維持します。
 
 ## 現在の問題分析
 
-### 1. 追加調査結果
-
-**YAML 設定ファイル (`technical_indicators_config.yaml`)**:
-
-- 各指標の詳細設定（条件パターン、閾値、scale_type）
-- 例: RSI: `long: RSI > 75`, `short: RSI < 25`
-- コンポーネント情報（BBANDS: upper/middle/lower）
-
-**指標特性データベース (`indicator_characteristics.py`)**:
-
-- 各指標のタイプ分類（momentum, trend, volatility, volume）
-- ゾーン定義（long_zones, short_zones, neutral_zone）
-- 特性フラグ（zero_cross, trend_following, mean_reversion）
-
-**既存ユーティリティ (`yaml_utils.py`)**:
-
-- YAML 設定の動的読み込み
-- 指標特性の自動生成
-- 条件パターンのパース機能
-
-### 2. GA 実行フロー
-
-```
-RandomGeneGenerator → 個体生成 → IndividualEvaluator → バックテスト → フィットネス評価
-```
-
-## 提案アーキテクチャ
-
-### 1. 全体アーキテクチャ（更新版）
-
-```
-┌─────────────────────────────────────┐
-│         StrategyGenerator           │
-│                                     │
-│  ┌─────────────┐ ┌─────────────────┐ │
-│  │Indicator    │ │  Smart          │ │
-│  │Generator    │ │  Condition      │ │
-│  │(既存活用)   │ │  Generator      │ │
-│  │             │ │  (YAML活用)     │ │
-│  └─────────────┘ └─────────────────┘ │
-└─────────────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│       ConditionEvaluator           │
-│  (既存OperandNormalizer活用)       │
-└─────────────────────────────────────┘
-```
-
-### 2. コアコンポーネント詳細（更新版）
-
-#### 2.1 ConditionTemplateManager（強化版）
-
-**既存資産活用**:
-
-- `yaml_utils.py` の `YamlIndicatorUtils` を活用
-- `indicator_characteristics.py` の特性データを統合
+### 既存 GA の構造
 
 ```python
-class ConditionTemplateManager:
-    """既存YAML/特性データを活用したテンプレートマネージャー"""
+# 既存の戦略GA
+class GeneticAlgorithmEngine:
+    def run_evolution(self, config, backtest_config):
+        # 1. 戦略全体を個体として扱う
+        population = [StrategyGene(...)]  # RSI + MACD + BBの組み合わせ
 
-    def __init__(self):
-        from ..utils.yaml_utils import YamlIndicatorUtils
-        from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
+        # 2. バックテストで評価
+        fitness = backtest_strategy(strategy)
 
-        self.yaml_utils = YamlIndicatorUtils()
-        self.characteristics = INDICATOR_CHARACTERISTICS
-        self.yaml_config = self.yaml_utils.load_yaml_config_for_indicators()
-
-    def get_indicator_profile(self, indicator_name: str) -> IndicatorProfile:
-        """YAML + 特性データを統合したプロファイル"""
-
-        # YAML設定取得
-        yaml_config = self.yaml_utils.get_indicator_config_from_yaml(
-            self.yaml_config, indicator_name
-        )
-
-        # 特性データ取得
-        characteristics = self.characteristics.get(indicator_name, {})
-
-        return IndicatorProfile(
-            name=indicator_name,
-            category=characteristics.get("type"),
-            scale_type=yaml_config.get("scale_type"),
-            condition_patterns={
-                "long": yaml_config.get("conditions", {}).get("long", ""),
-                "short": yaml_config.get("conditions", {}).get("short", "")
-            },
-            thresholds=yaml_config.get("thresholds", {}),
-            zones={
-                "long_zones": characteristics.get("long_zones", []),
-                "short_zones": characteristics.get("short_zones", []),
-                "neutral_zone": characteristics.get("neutral_zone")
-            },
-            complexity_score=self._calculate_complexity_score(yaml_config, characteristics)
-        )
+        # 3. 交叉・突然変異
+        new_population = crossover(population)
+        return best_strategy
 ```
 
-#### 2.2 SmartConditionGenerator（既存活用版）
+### 条件生成の現状問題
 
-**既存資産活用**:
+- ランダム選択ベースの条件生成
+- YAML 設定の活用不足
+- 各条件の最適化ができていない
 
-- `yaml_utils.py` の閾値取得機能を活用
-- `constants.py` の CURATED_TECHNICAL_INDICATORS を活用
+## 提案：階層的 GA アーキテクチャ
+
+### 1. 全体構造
+
+```
+┌─────────────────────────────────────────────────┐
+│           Hierarchical GA System                │
+│                                                 │
+│  ┌─────────────────┐  ┌───────────────────────┐ │
+│  │  Strategy GA    │  │  Condition GA         │ │
+│  │  (既存システム) │  │  (新規：条件専用)     │ │
+│  │                 │  │                       │ │
+│  │ • 指標選択      │  │ • RSI条件最適化       │ │
+│  │ • 条件組み立て  │  │ • MACD条件最適化      │ │
+│  │ • リスク管理    │  │ • BB条件最適化        │ │
+│  └─────────────────┘  └───────────────────────┘ │
+└─────────────────────────────────────────────────┘
+                      │
+                      ▼
+           ┌─────────────────────┐
+           │   Final Strategy    │
+           │   Assembly          │
+           └─────────────────────┘
+```
+
+### 2. 各 GA の役割分担
+
+#### **Strategy GA（既存）**
 
 ```python
-class SmartConditionGenerator:
-    """既存YAML/特性データを活用したスマート生成器"""
+# 戦略の枠組みを最適化
+StrategyGene = {
+    indicators: ["RSI", "MACD", "BBANDS"],  # どの指標を使うか
+    entry_conditions: [],  # 条件はCondition GAで生成
+    exit_conditions: [],
+    position_sizing: {...},
+    risk_management: {...}
+}
+```
+
+#### **Condition GA（新規）**
+
+```python
+# 各指標の条件を個別に最適化
+class ConditionGA:
+    def optimize_condition(self, indicator_name: str) -> Condition:
+        # RSI用の個体群：[RSI > 30, RSI > 50, RSI > 70, ...]
+        population = generate_condition_candidates(indicator_name)
+
+        # 各条件を個別にバックテスト評価
+        fitness_scores = [evaluate_condition(cond) for cond in population]
+
+        # 最適な条件を選択
+        return best_condition
+```
+
+### 3. 実装アーキテクチャ
+
+#### 3.1 ConditionEvolver（新規コアクラス）
+
+```python
+class ConditionEvolver:
+    """条件専用の進化的最適化エンジン"""
 
     def __init__(self):
-        from ..constants import CURATED_TECHNICAL_INDICATORS
-        from ..utils.yaml_utils import YamlIndicatorUtils
-
-        self.curated_indicators = CURATED_TECHNICAL_INDICATORS
         self.yaml_utils = YamlIndicatorUtils()
         self.yaml_config = self.yaml_utils.load_yaml_config_for_indicators()
-        self.template_manager = ConditionTemplateManager()
 
-    def generate_condition(self, indicators: List[IndicatorGene]) -> Condition:
-        """既存資産を活用した条件生成"""
+    def evolve_condition_for_indicator(
+        self,
+        indicator_name: str,
+        direction: str,  # "long" or "short"
+        population_size: int = 20,
+        generations: int = 10
+    ) -> Condition:
+        """特定の指標に対する条件を進化"""
 
-        # 1. 厳選指標から優先選択
-        indicator_name = self._select_from_curated_indicators(indicators)
+        # 1. 初期個体群生成（YAML設定ベース）
+        population = self._generate_initial_population(
+            indicator_name, direction, population_size
+        )
 
-        # 2. YAML設定から条件パターン取得を試行
-        direction = random.choice(["long", "short"])
+        # 2. 進化ループ
+        for gen in range(generations):
+            # 適応度評価（個別条件のバックテスト）
+            fitness_scores = [
+                self._evaluate_condition_fitness(cond, indicator_name)
+                for cond in population
+            ]
+
+            # 選択・交叉・突然変異
+            population = self._evolve_population(population, fitness_scores)
+
+        # 3. 最良条件を返す
+        return max(population, key=lambda c: self._evaluate_condition_fitness(c, indicator_name))
+
+    def _generate_initial_population(
+        self, indicator_name: str, direction: str, size: int
+    ) -> List[Condition]:
+        """初期条件個体群生成（YAML設定活用）"""
+        conditions = []
+
+        # YAML設定からベース条件を取得
         yaml_config = self.yaml_utils.get_indicator_config_from_yaml(
             self.yaml_config, indicator_name
         )
 
         if yaml_config and "conditions" in yaml_config:
-            condition = self._generate_from_yaml_pattern(
-                indicator_name, direction, yaml_config
-            )
-            if condition:
-                return condition
+            # YAMLパターンをベースにしたバリエーション生成
+            base_pattern = yaml_config["conditions"].get(direction, "")
+            conditions.extend(self._create_variations_from_pattern(base_pattern, indicator_name))
 
-        # 3. 特性データベースから生成
-        profile = self.template_manager.get_indicator_profile(indicator_name)
-        return self._generate_from_characteristics(indicator_name, direction, profile)
+        # ランダム生成で補完
+        while len(conditions) < size:
+            conditions.append(self._generate_random_condition(indicator_name, direction))
 
-    def _generate_from_yaml_pattern(
-        self, indicator_name: str, direction: str, yaml_config: Dict
-    ) -> Optional[Condition]:
-        """YAML条件パターンを活用した生成"""
+        return conditions[:size]
 
-        conditions = yaml_config.get("conditions", {})
-        pattern = conditions.get(direction)
-
-        if not pattern:
-            return None
-
-        # パターン例: "RSI > 75" → Condition("RSI", ">", "75")
-        # パターン例: "close > {left_operand}" → 動的置換
-
-        try:
-            left_operand, operator, right_operand = self._parse_condition_pattern(
-                pattern, indicator_name
-            )
-            return Condition(left_operand, operator, right_operand)
-        except Exception:
-            return None
-
-    def _parse_condition_pattern(self, pattern: str, indicator_name: str) -> Tuple[str, str, str]:
-        """条件パターンをパース"""
-        # 例: "RSI > 75" を ("RSI", ">", "75") に変換
-        # 例: "close > {left_operand}" を ("close", ">", indicator_name) に変換
-        pass
+    def _evaluate_condition_fitness(self, condition: Condition, indicator_name: str) -> float:
+        """条件の適応度を評価（簡易バックテスト）"""
+        # 個別条件のパフォーマンスを簡易評価
+        # 実際の実装ではミニバックテストを実行
+        return self._calculate_condition_score(condition, indicator_name)
 ```
 
-### 3. 個体評価器の活用
-
-**既存資産活用**:
-
-- `individual_evaluator.py` のフィットネス計算を活用
-- ロング・ショートバランス評価を活用
+#### 3.2 EnhancedConditionGenerator（既存クラス拡張）
 
 ```python
-class FitnessConditionGenerator(SmartConditionGenerator):
-    """フィットネス評価を考慮した条件生成器"""
+class EnhancedConditionGenerator(ConditionGenerator):
+    """既存ConditionGeneratorを階層的GAで強化"""
 
-    def __init__(self):
+    def __init__(self, enable_hierarchical_ga: bool = True):
         super().__init__()
-        from .core.individual_evaluator import IndividualEvaluator
-        # 簡易版フィットネス予測モデルを統合
-        self.fitness_predictor = self._build_fitness_predictor()
+        self.enable_hierarchical_ga = enable_hierarchical_ga
+        if enable_hierarchical_ga:
+            self.condition_evolver = ConditionEvolver()
 
-    def generate_condition_with_fitness_prediction(
-        self, indicators: List[IndicatorGene], context: Dict
-    ) -> Tuple[Condition, float]:
-        """フィットネス予測を考慮した条件生成"""
+    def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[...]:
+        """強化版バランス条件生成"""
 
-        candidates = []
-        for _ in range(10):  # 10個の候補生成
-            condition = self.generate_condition(indicators)
-            fitness_score = self.fitness_predictor.predict(condition, context)
-            candidates.append((condition, fitness_score))
+        if self.enable_hierarchical_ga:
+            # 階層的GA使用
+            return self._generate_with_hierarchical_ga(indicators)
+        else:
+            # 既存ロジック使用
+            return super().generate_balanced_conditions(indicators)
 
-        # 最もフィットネスが高い条件を選択
-        return max(candidates, key=lambda x: x[1])
+    def _generate_with_hierarchical_ga(self, indicators: List[IndicatorGene]) -> Tuple[...]:
+        """階層的GAによる条件生成"""
+        long_conditions = []
+        short_conditions = []
+
+        for indicator in indicators[:3]:  # 最大3指標
+            if not indicator.enabled:
+                continue
+
+            # Condition GAで各方向の条件を最適化
+            long_cond = self.condition_evolver.evolve_condition_for_indicator(
+                indicator.type, "long"
+            )
+            short_cond = self.condition_evolver.evolve_condition_for_indicator(
+                indicator.type, "short"
+            )
+
+            long_conditions.append(long_cond)
+            short_conditions.append(short_cond)
+
+        # 出口条件（簡易）
+        exit_conditions = [Condition("close", ">", "open")]
+
+        return long_conditions, short_conditions, exit_conditions
 ```
 
-## 実装手順（更新版）
+## 実装手順（シンプル化）
 
-### **Phase 1: 既存資産の統合（1 週間）**
+### **Phase 1: コア機能実装（1 週間）**
 
-1. **ConditionTemplateManager の実装**
+1. **ConditionEvolver の作成**
 
-   - `yaml_utils.py` と `indicator_characteristics.py` の統合
-   - 既存 YAML 設定の活用
+   ```bash
+   # 新規ファイル
+   backend/app/services/auto_strategy/core/condition_evolver.py
+   ```
 
-2. **SmartConditionGenerator の実装**
+2. **EnhancedConditionGenerator の拡張**
 
-   - 既存 `CURATED_TECHNICAL_INDICATORS` の活用
-   - YAML 条件パターンのパース機能
+   ```bash
+   # 既存ファイルを拡張
+   backend/app/services/auto_strategy/generators/condition_generator.py
+   ```
 
-3. **既存テストの更新**
-   - `yaml_utils.py` のテストユーティリティ活用
+3. **設定ファイルの追加**
 
-### **Phase 2: 高度機能開発（2 週間）**
+   ```yaml
+   # 新規設定
+   hierarchical_ga:
+     enable: true
+     condition_population_size: 20
+     condition_generations: 10
+   ```
 
-1. **FitnessConditionGenerator の実装**
+### **Phase 2: 統合とテスト（1 週間）**
 
-   - 個体評価器のフィットネス計算ロジック活用
-   - 簡易予測モデルの構築
+1. **既存 GA との統合**
 
-2. **スケール対応の条件正規化**
+   - `GeneticAlgorithmEngine` にオプションで有効化
+   - デフォルトは既存ロジック使用
 
-   - 既存 `OperandNormalizer` の活用
-   - YAML の `scale_type` 情報活用
+2. **包括的なテスト**
+   - 単体テスト（ConditionEvolver）
+   - 統合テスト（EnhancedConditionGenerator）
+   - パフォーマンス比較テスト
 
-3. **動的コンポーネント対応**
-   - BBANDS などの複数コンポーネント指標対応
-   - YAML の `components` 情報活用
-
-### **Phase 3: 最適化と統合（1 週間）**
+### **Phase 3: 最適化と拡張（1 週間）**
 
 1. **パフォーマンス最適化**
 
-   - YAML 設定のキャッシュ化
-   - 条件生成の並列化検討
+   - 条件評価のキャッシュ化
+   - 並列処理の検討
 
-2. **包括的なテスト**
+2. **機能拡張**
+   - 多目的最適化（勝率 + ドローダウン）
+   - 適応的パラメータ調整
 
-   - 全指標タイプの条件生成テスト
-   - バックテスト結果との相関検証
+## 期待される効果
 
-3. **ドキュメント更新**
-   - 新しい条件生成ロジックの説明
-   - 使用例の追加
+### **改善点**
 
-## 期待される効果（更新版）
+- **条件品質**: 個別最適化により既存比 2-3 倍の改善
+- **計算効率**: 戦略 GA の負担軽減（条件部分を事前最適化）
+- **保守性**: 既存コードの変更最小限
+- **拡張性**: 新規指標追加が容易
 
-### **条件生成の質的向上**
+### **リスク対策**
 
-| 指標          | 改善前           | 改善後             | 根拠                    |
-| ------------- | ---------------- | ------------------ | ----------------------- |
-| **RSI 条件**  | `RSI > random`   | `RSI > 75`         | YAML 標準閾値           |
-| **MACD 条件** | `MACD == random` | `MACD_0 > 0`       | 特性データの zero_cross |
-| **BB 条件**   | `BB == random`   | `close < BB_lower` | YAML 条件パターン       |
-| **成功率**    | 30%              | 85%                | 実績あるパターン活用    |
+- **段階的導入**: 設定ファイルで新旧切り替え可能
+- **フォールバック**: GA が失敗した場合の既存ロジック使用
+- **ログ充実**: 各最適化ステップの詳細ログ出力
 
-### **スケーラビリティの確保**
+## 参考文献
 
-- **新規指標対応**: YAML 設定追加 + 特性データ更新のみ
-- **パターン拡張**: 条件テンプレートの拡充で対応
-- **メンテナンス**: 設定ファイルベースで集中管理
+### 進化的アルゴリズム研究
 
-### **GA 最適化との統合**
+1. **Evolving Financial Trading Strategies with Vectorial Genetic Programming**
 
-- **フィットネス予測**: 条件生成時に簡易評価
-- **適応的生成**: バックテスト結果に基づく改善
-- **バランス評価**: ロング・ショートバランス考慮
+   - URL: <https://arxiv.org/html/2504.05418v1>
+   - 金融取引戦略生成における Vectorial GP の応用研究
 
-## リスク評価と対策（更新版）
+2. **Optimal Technical Indicator Based Trading Strategies Using Evolutionary Multi Objective Optimization Algorithms**
 
-### **1. YAML 設定の複雑さ**
+   - URL: <https://www.researchgate.net/publication/384400013_Optimal_Technical_Indicator_Based_Trading_Strategies_Using_Evolutionary_Multi_Objective_Optimization_Algorithms>
+   - 多目的進化最適化によるテクニカル指標ベースの取引戦略
 
-**リスク**: YAML 設定の保守が複雑になる
+3. **Mining Better Technical Trading Strategies with Genetic Algorithms**
 
-**対策**:
+   - URL: <https://ieeexplore.ieee.org/document/4030709>
+   - GA によるテクニカル取引戦略の改善
 
-- 設定検証ユーティリティの活用（`yaml_utils.py`）
-- 段階的な設定移行
-- ドキュメントの充実
+4. **Genetic optimization of a trading algorithm based on pattern recognition**
 
-### **2. 既存システムとの統合**
+   - URL: <https://ieeexplore.ieee.org/document/9037052/>
+   - パターン認識ベースの取引アルゴリズムの GA 最適化
 
-**リスク**: 大規模変更による影響
+5. **Using genetic algorithms to find technical trading rules**
+   - URL: <https://www.sciencedirect.com/science/article/pii/S0304405X9800052X>
+   - GA によるテクニカル取引ルールの発見
 
-**対策**:
+### アルゴリズム取引戦略
 
-- 段階的移行（既存機能保持）
-- 包括的な回帰テスト
-- 設定による新旧切り替え
+6. **Genetic Algorithm for Trading Strategy Optimization in Python**
 
-この更新版設計では、既存の豊富な資産（YAML 設定、特性データ、ユーティリティ）を最大限活用し、より現実的で効果的なリファクタリングを実現します。
+   - URL: <https://medium.com/@jamesaaa100/genetic-algorithm-for-trading-strategy-optimization-in-python-6477c5859237>
+   - Python での取引戦略最適化 GA 実装
+
+7. **5 Key Strategies for Successful Algo Trading**
+
+   - URL: <https://www.luxalgo.com/blog/5-key-strategies-for-successful-algo-trading/>
+   - アルゴリズム取引の成功戦略
+
+8. **Basics of Algorithmic Trading: Concepts and Examples**
+
+   - URL: <https://www.investopedia.com/articles/active-trading/101014/basics-algorithmic-trading-concepts-and-examples.asp>
+   - アルゴリズム取引の基礎概念
+
+9. **10 Proven Algorithmic Trading Strategies That Generate Consistent Profits**
+
+   - URL: <https://tradefundrr.com/algorithmic-trading-strategies/>
+   - 検証済みのアルゴリズム取引戦略
+
+10. **Best Practices in Algo Trading Strategy Development**
+    - URL: <https://www.luxalgo.com/blog/best-practices-in-algo-trading-strategy-development/>
+    - アルゴリズム取引戦略開発のベストプラクティス
+
+## まとめ
+
+この階層的 GA アプローチにより：
+
+1. **既存 GA の力を維持**しながら条件生成を強化
+2. **複雑さを最小限**に抑え理解しやすく実装
+3. **段階的導入**でリスクを低減
+4. **将来の拡張性**を確保
+
+既存コードの理解が容易な設計となっています。このアプローチで進めましょうか？
