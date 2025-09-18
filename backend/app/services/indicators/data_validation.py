@@ -11,7 +11,7 @@ from typing import Dict, Any, Tuple
 import numpy as np
 import pandas as pd
 
-from .config.indicator_definitions import PANDAS_TA_CONFIG
+from .config.indicator_config import indicator_registry
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,6 @@ def get_param_value(params, keys, default):
     return default
 
 
-
-
 def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
     """
     指標の種類とパラメータから最小必要データ長を取得
@@ -38,19 +36,14 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
     Returns:
         最小必要データ長
     """
-    config = PANDAS_TA_CONFIG.get(indicator_type.upper())
-    if config and "min_length" in config:
-        if callable(config["min_length"]):
-            return config["min_length"](params)
-        else:
-            return config["min_length"]
+    config = indicator_registry.get_indicator_config(indicator_type.upper())
+    if config and config.min_length_func:
+        return config.min_length_func(params)
 
     # フォールバック：デフォルト値 - lengthまたはwindowパラメータをサポート
-    if config:
+    if config and config.default_values:
         # lengthまたはwindowパラメータを取得
-        length_value = get_param_value(
-            config["default_values"], ["length", "window"], 14
-        )
+        length_value = get_param_value(config.default_values, ["length", "window"], 14)
         return length_value
 
     return 1  # 最低1つのデータ点
@@ -127,17 +120,15 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
     Returns:
         NaN配列
     """
-    config = PANDAS_TA_CONFIG.get(indicator_type)
+    config = indicator_registry.get_indicator_config(indicator_type.upper())
     data_length = len(df)
 
     if not config:
         return np.full(data_length, np.nan)
 
-    if config["returns"] == "single":
+    if config.returns == "single":
         return np.full(data_length, np.nan)
     else:
-        return_cols = config.get("return_cols", ["Result"])
+        return_cols = config.return_cols or ["Result"]
         nan_result = np.full((data_length, len(return_cols)), np.nan)
         return nan_result
-
-

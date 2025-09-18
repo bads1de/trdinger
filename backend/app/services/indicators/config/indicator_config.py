@@ -8,7 +8,7 @@ JSON形式でのインジケーター設定を管理し、
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 
 class IndicatorScaleType(Enum):
@@ -76,7 +76,7 @@ class ParameterConfig:
 class IndicatorConfig:
     """インジケーター設定のメタ情報を保持するシンプルなデータクラス
 
-    最小限の属性とユーティリティを提供し、他モジュールから参照される想定の API を満たします。
+    pandas-taとの連携設定を含む完全なインジケーター定義を提供します。
     """
 
     indicator_name: str
@@ -92,43 +92,57 @@ class IndicatorConfig:
     # 後方互換性のための追加
     parameters: Dict[str, Any] = field(default_factory=dict)
 
+    # pandas-ta連携設定
+    pandas_function: Optional[str] = None
+    data_column: Optional[str] = None
+    data_columns: Optional[List[str]] = None
+    returns: str = "single"
+    return_cols: Optional[List[str]] = None
+    multi_column: bool = False
+    default_values: Dict[str, Any] = field(default_factory=dict)
+    min_length_func: Optional[Callable[[Dict[str, Any]], int]] = None
+
     def __post_init__(self):
         """後処理でパラメータを構築"""
-        from .indicator_definitions import PANDAS_TA_CONFIG
+        if not self.parameters:
+            self.parameters = self._build_parameters_from_defaults()
 
-        self.parameters = self._build_parameters_from_config(PANDAS_TA_CONFIG)
+    def _build_parameters_from_defaults(self) -> Dict[str, Any]:
+        """デフォルト値からパラメータを構築"""
+        params = {}
 
-    def _build_parameters_from_config(self, pandas_ta_config) -> Dict[str, Any]:
-        """pandas-ta設定からパラメータを構築"""
-        if self.indicator_name in pandas_ta_config:
-            config = pandas_ta_config[self.indicator_name]
-            params = {}
-            for param_name, aliases in config["params"].items():
-                default_value = config["default_values"].get(param_name, 14)
-                # ParameterConfig を作成
-                param_config = ParameterConfig(
-                    name=aliases[0],  # メインエイリアス
-                    default_value=default_value,
-                    min_value=(
-                        2
-                        if any(word in aliases[0] for word in ["length", "period"])
-                        else None
-                    ),
-                    max_value=(
-                        200
-                        if any(word in aliases[0] for word in ["length", "period"])
-                        else None
-                    ),
-                )
-                params[aliases[0]] = param_config
-            return params
-        else:
-            # デフォルトパラメータ
-            return {
-                "period": ParameterConfig(
-                    name="period", default_value=14, min_value=2, max_value=200
-                )
-            }
+        # param_mapからパラメータ名を取得
+        param_names = set()
+        if self.param_map:
+            for param_name in self.param_map.keys():
+                if param_name and param_name != "data":
+                    param_names.add(param_name)
+
+        # default_valuesからもパラメータ名を取得
+        for param_name in self.default_values.keys():
+            param_names.add(param_name)
+
+        # 各パラメータのParameterConfigを作成
+        for param_name in param_names:
+            default_value = self.default_values.get(param_name, 14)
+
+            # length/periodパラメータの特別処理
+            if any(word in param_name for word in ["length", "period"]):
+                min_val = 2
+                max_val = 200
+            else:
+                min_val = None
+                max_val = None
+
+            param_config = ParameterConfig(
+                name=param_name,
+                default_value=default_value,
+                min_value=min_val,
+                max_value=max_val,
+            )
+            params[param_name] = param_config
+
+        return params
 
     def add_parameter(self, param: ParameterConfig) -> None:
         """互換性のためのダミー実装: パラメータを param_map に追加しないが呼び出しを許可する。"""
@@ -141,85 +155,57 @@ class IndicatorConfig:
 
     def get_parameter_ranges(self) -> Dict[str, Dict[str, Any]]:
         """パラメータ範囲を取得"""
-        from .indicator_definitions import PANDAS_TA_CONFIG
-
         ranges = {}
-        if self.indicator_name in PANDAS_TA_CONFIG:
-            config = PANDAS_TA_CONFIG[self.indicator_name]
-            for param_name, aliases in config["params"].items():
-                default_value = config["default_values"].get(param_name, 14)
-                ranges[aliases[0]] = {
-                    "min": 2,
-                    "max": (
-                        200
-                        if any(word in aliases[0] for word in ["length", "period"])
-                        else 100
-                    ),
+
+        for param_name, param_config in self.parameters.items():
+            if isinstance(param_config, ParameterConfig):
+                ranges[param_name] = {
+                    "min": param_config.min_value,
+                    "max": param_config.max_value,
+                    "default": param_config.default_value,
+                }
+            else:
+                # 後方互換性のための処理
+                default_value = self.default_values.get(param_name, 14)
+                if any(word in param_name for word in ["length", "period"]):
+                    min_val = 2
+                    max_val = 200
+                else:
+                    min_val = None
+                    max_val = 100
+                ranges[param_name] = {
+                    "min": min_val,
+                    "max": max_val,
                     "default": default_value,
                 }
-        else:
-            # デフォルト: periodパラメータ
-            ranges["period"] = {"min": 2, "max": 200, "default": 14}
 
         return ranges
 
     def normalize_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """パラメータ正規化"""
-        from .indicator_definitions import PANDAS_TA_CONFIG
-
         normalized = params.copy()
 
-        if self.indicator_name in PANDAS_TA_CONFIG:
-            config = PANDAS_TA_CONFIG[self.indicator_name]
+        # param_mapに基づいてエイリアスマッピング
+        if self.param_map:
+            for param_key, mapped_param in self.param_map.items():
+                if param_key in params and mapped_param and mapped_param != param_key:
+                    value = params[param_key]
+                    normalized[mapped_param] = value
+                    if param_key in normalized:
+                        del normalized[param_key]
 
-            for param_name, aliases in config["params"].items():
+        # パラメータ範囲チェック
+        for param_name, param_config in self.parameters.items():
+            if param_name in normalized and isinstance(param_config, ParameterConfig):
+                value = normalized[param_name]
 
-                for alias in aliases:
-                    if alias in params:
-                        value = params[alias]
-
-                        # エイリアスマッピング
-                        if param_name == "length" and alias in ["period"]:
-                            # period -> length変換
-                            normalized[param_name] = value
-                            if alias in normalized:
-                                del normalized[alias]
-
-                        elif alias == "period":
-                            # period -> length変換 (特殊ケース)
-                            normalized["length"] = value
-                            if "period" in normalized:
-                                del normalized["period"]
-
-                        else:
-                            # 標準エイリアスマッピング
-                            normalized[param_name] = value
-                            if alias != param_name and alias in normalized:
-                                del normalized[alias]
-
-                        # 範囲チェック
-                        if any(word in alias for word in ["length", "period"]):
-                            if isinstance(value, (int, float)) and value < 2:
-                                normalized[
-                                    param_name if alias != "period" else "length"
-                                ] = 2
-                            elif isinstance(value, (int, float)) and value > 200:
-                                normalized[
-                                    param_name if alias != "period" else "length"
-                                ] = 200
-                        else:
-                            # STOCHのsmooth_kパラメータの特別処理
-                            if (param_name == "smooth_k" and
-                                isinstance(value, (int, float)) and value < 2):
-                                normalized[param_name] = 2
-                            elif isinstance(value, (int, float)) and value < 1:
-                                normalized[param_name] = config["default_values"].get(
-                                    param_name, 14
-                                )
-                            elif isinstance(value, (int, float)) and value > 100:
-                                normalized[param_name] = 100
-        else:
-            pass
+                # 範囲チェック
+                if param_config.min_value is not None and isinstance(value, (int, float)):
+                    if value < param_config.min_value:
+                        normalized[param_name] = param_config.min_value
+                if param_config.max_value is not None and isinstance(value, (int, float)):
+                    if value > param_config.max_value:
+                        normalized[param_name] = param_config.max_value
 
         return normalized
 
@@ -292,3 +278,40 @@ class IndicatorConfigRegistry:
 
 # グローバルレジストリインスタンス
 indicator_registry = IndicatorConfigRegistry()
+
+
+def initialize_all_indicators():
+    """全インジケーターの設定を初期化"""
+    from .momentum_indicators_config import setup_momentum_indicators
+    from .trend_indicators_config import setup_trend_indicators
+    from .volatility_indicators_config import setup_volatility_indicators
+    from .volume_indicators_config import setup_volume_indicators
+
+    setup_momentum_indicators()
+    setup_trend_indicators()
+    setup_volatility_indicators()
+    setup_volume_indicators()
+
+
+def generate_positional_functions() -> set:
+    """レジストリからPOSITIONAL_DATA_FUNCTIONSを動的生成
+
+    Returns:
+        位置パラメータを使用する関数名のセット
+    """
+    functions = set()
+    all_indicators = indicator_registry.get_all_indicators()
+
+    for name, indicator_config in all_indicators.items():
+        # エイリアスではなく本名のみを使用
+        if not indicator_config.aliases or name not in indicator_config.aliases:
+            functions.add(indicator_config.indicator_name.lower())
+
+    return functions
+
+
+# 動的設定初期化（レジストリから生成）
+POSITIONAL_DATA_FUNCTIONS = generate_positional_functions()
+
+# 全インジケーター初期化
+initialize_all_indicators()

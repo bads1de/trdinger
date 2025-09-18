@@ -29,14 +29,31 @@ def setup_momentum_indicators():
         output_names=["STOCH_0", "STOCH_1"],  # %K, %D
         default_output="STOCH_0",  # %K
         aliases=["STOCH"],
+        # pandas-ta設定
+        pandas_function="stoch",
+        multi_column=True,
+        data_columns=["High", "Low", "Close"],
+        returns="multiple",
+        return_cols=["STOCHk", "STOCHd"],
+        default_values={"k_length": 14, "smooth_k": 3, "d_length": 3},
+        min_length_func=lambda params: params.get("k_length", 14) + params.get("d_length", 3) + params.get("smooth_k", 3),
     )
     stoch_config.add_parameter(
         ParameterConfig(
-            name="fastk_period",
-            default_value=5,
+            name="k_length",
+            default_value=14,
             min_value=1,
             max_value=30,
-            description="Fast %K期間",
+            description="K期間",
+        )
+    )
+    stoch_config.add_parameter(
+        ParameterConfig(
+            name="smooth_k",
+            default_value=3,
+            min_value=1,
+            max_value=10,
+            description="K平滑化期間",
         )
     )
     stoch_config.add_parameter(
@@ -45,19 +62,13 @@ def setup_momentum_indicators():
             default_value=3,
             min_value=1,
             max_value=10,
-            description="Slow K期間 (smooth_kとしても使用)",
-        )
-    )
-    stoch_config.add_parameter(
-        ParameterConfig(
-            name="slowd_period",
-            default_value=3,
-            min_value=1,
-            max_value=10,
-            description="Slow D期間",
+            description="D期間",
         )
     )
     stoch_config.param_map = {
+        "high": "high",
+        "low": "low",
+        "close": "close",
         "k_length": "k",
         "smooth_k": "smooth_k",
         "d_length": "d",
@@ -72,10 +83,32 @@ def setup_momentum_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
+        # pandas-ta設定
+        pandas_function="qqe",
+        data_column="Close",
+        returns="multiple",
+        return_cols=["QQE", "QQE_SIGNAL"],
+        default_values={"length": 14, "smooth": 5},
     )
     qqe_config.add_parameter(
-        ParameterConfig(name="length", default_value=14, min_value=2, max_value=200)
+        ParameterConfig(
+            name="length",
+            default_value=14,
+            min_value=2,
+            max_value=200,
+            description="QQE計算期間",
+        )
     )
+    qqe_config.add_parameter(
+        ParameterConfig(
+            name="smooth",
+            default_value=5,
+            min_value=1,
+            max_value=50,
+            description="QQE平滑化期間",
+        )
+    )
+    qqe_config.param_map = {"close": "data", "length": "length", "smooth": "smooth"}
     indicator_registry.register(qqe_config)
 
     # RSI (Relative Strength Index)
@@ -86,6 +119,12 @@ def setup_momentum_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.OSCILLATOR_0_100,
         category="momentum",
+        # pandas-ta設定
+        pandas_function="rsi",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 14},
+        min_length_func=lambda params: max(2, params.get("length", 14)),
     )
     rsi_config.add_parameter(
         ParameterConfig(
@@ -96,7 +135,7 @@ def setup_momentum_indicators():
             description="RSI計算期間",
         )
     )
-    rsi_config.param_map = {"data": "data"}
+    rsi_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(rsi_config)
 
     # MACD (Moving Average Convergence Divergence)
@@ -109,6 +148,13 @@ def setup_momentum_indicators():
         category="momentum",
         output_names=["MACD_0", "MACD_1", "MACD_2"],
         default_output="MACD_0",
+        # pandas-ta設定
+        pandas_function="macd",
+        data_column="Close",
+        returns="multiple",
+        return_cols=["MACD", "Signal", "Histogram"],
+        default_values={"fast": 12, "slow": 26, "signal": 9},
+        min_length_func=lambda params: params.get("slow", 26) + params.get("signal", 9) + 5,
     )
     macd_config.add_parameter(
         ParameterConfig(
@@ -137,7 +183,7 @@ def setup_momentum_indicators():
             description="シグナル線期間",
         )
     )
-    macd_config.param_map = {"data": "data"}
+    macd_config.param_map = {"close": "data", "fast": "fast", "slow": "slow", "signal": "signal"}
     indicator_registry.register(macd_config)
 
     # CCI

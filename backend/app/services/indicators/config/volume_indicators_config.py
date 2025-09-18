@@ -24,7 +24,14 @@ def setup_volume_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.VOLUME,
         category="volume",
+        # pandas-ta設定
+        pandas_function="obv",
+        multi_column=True,
+        data_columns=["Close", "Volume"],
+        returns="single",
+        default_values={},
     )
+    obv_config.param_map = {"close": "close", "volume": "volume"}
     indicator_registry.register(obv_config)
 
     # AD
@@ -35,7 +42,14 @@ def setup_volume_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.VOLUME,
         category="volume",
+        # pandas-ta設定
+        pandas_function="ad",
+        multi_column=True,
+        data_columns=["High", "Low", "Close", "Volume"],
+        returns="single",
+        default_values={},
     )
+    ad_config.param_map = {"high": "high", "low": "low", "close": "close", "volume": "volume"}
     indicator_registry.register(ad_config)
 
     # ADOSC
@@ -46,10 +60,16 @@ def setup_volume_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         category="volume",
+        # pandas-ta設定
+        pandas_function="adosc",
+        multi_column=True,
+        data_columns=["High", "Low", "Close", "Volume"],
+        returns="single",
+        default_values={"fast": 3, "slow": 10},
     )
     adosc_config.add_parameter(
         ParameterConfig(
-            name="fastperiod",
+            name="fast",
             default_value=3,
             min_value=2,
             max_value=50,
@@ -58,17 +78,20 @@ def setup_volume_indicators():
     )
     adosc_config.add_parameter(
         ParameterConfig(
-            name="slowperiod",
+            name="slow",
             default_value=10,
             min_value=2,
             max_value=100,
             description="低速期間",
         )
     )
-
     adosc_config.param_map = {
-        "fastperiod": "fast",
-        "slowperiod": "slow",
+        "high": "high",
+        "low": "low",
+        "close": "close",
+        "volume": "volume",
+        "fast": "fast",
+        "slow": "slow",
     }
     indicator_registry.register(adosc_config)
 
@@ -96,11 +119,23 @@ def setup_volume_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.VOLUME,
         category="volume",
+        # pandas-ta設定
+        pandas_function="cmf",
+        multi_column=True,
+        data_columns=["High", "Low", "Close", "Volume"],
+        returns="single",
+        default_values={"length": 20},
     )
     cmf_cfg.add_parameter(
-        ParameterConfig(name="length", default_value=20, min_value=2, max_value=200)
+        ParameterConfig(
+            name="length",
+            default_value=20,
+            min_value=2,
+            max_value=200,
+            description="Chaikin Money Flow期間",
+        )
     )
-    cmf_cfg.param_map = {"length": "length"}
+    cmf_cfg.param_map = {"high": "high", "low": "low", "close": "close", "volume": "volume", "length": "length"}
     indicator_registry.register(cmf_cfg)
 
     # VWAP
@@ -125,6 +160,12 @@ def setup_volume_indicators():
         output_names=["MFI"],
         default_output="MFI",
         aliases=["MFI", "MONEY_FLOW_INDEX"],
+        # pandas-ta設定
+        pandas_function="mfi",
+        multi_column=True,
+        data_columns=["High", "Low", "Close", "Volume"],
+        returns="single",
+        default_values={"length": 14, "drift": 1},
     )
     mfi_config.add_parameter(
         ParameterConfig(
@@ -144,5 +185,5 @@ def setup_volume_indicators():
             description="Difference period",
         )
     )
-    mfi_config.param_map = {"length": "length", "drift": "drift"}
+    mfi_config.param_map = {"high": "high", "low": "low", "close": "close", "volume": "volume", "length": "length", "drift": "drift"}
     indicator_registry.register(mfi_config)

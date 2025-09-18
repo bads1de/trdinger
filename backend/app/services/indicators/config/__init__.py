@@ -10,11 +10,9 @@ from .indicator_config import (
     IndicatorResultType,
     ParameterConfig,
     indicator_registry,
+    initialize_all_indicators,
+    POSITIONAL_DATA_FUNCTIONS,
 )
-from .indicator_definitions import initialize_all_indicators
-
-# 自動初期化
-initialize_all_indicators()
 
 __all__ = [
     "IndicatorConfig",
@@ -23,4 +21,5 @@ __all__ = [
     "IndicatorConfigRegistry",
     "indicator_registry",
     "initialize_all_indicators",
+    "POSITIONAL_DATA_FUNCTIONS",
 ]

@@ -9,9 +9,7 @@ from app.services.indicators import TechnicalIndicatorService
 
 
 def _load_indicator_registry():
-    """indicator_registry を初期化して返す（副作用目的の import を含む）"""
-    # setup_* の実行を保証するための side-effect import
-    from app.services.indicators.config import indicator_definitions  # noqa: F401
+    """indicator_registry を取得"""
     from app.services.indicators.config.indicator_config import (
         indicator_registry,
     )

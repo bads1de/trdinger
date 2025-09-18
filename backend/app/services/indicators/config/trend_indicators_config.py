@@ -24,6 +24,12 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
+        # pandas-ta設定
+        pandas_function="sma",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 20},
+        min_length_func=lambda params: max(2, params.get("length", 20)),
     )
     sma_config.add_parameter(
         ParameterConfig(
@@ -45,6 +51,12 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
+        # pandas-ta設定
+        pandas_function="ema",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 20},
+        min_length_func=lambda params: max(2, params.get("length", 20)),
     )
     ema_config.add_parameter(
         ParameterConfig(
@@ -66,11 +78,17 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
+        # pandas-ta設定
+        pandas_function="wma",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 20},
+        min_length_func=lambda params: max(2, params.get("length", 20)),
     )
     wma_config.add_parameter(
         ParameterConfig(
             name="length",
-            default_value=14,
+            default_value=20,
             min_value=2,
             max_value=200,
             description="加重移動平均期間",
@@ -87,17 +105,22 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
+        # pandas-ta設定
+        pandas_function="dema",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 14},
     )
     dema_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=200,
             description="二重指数移動平均期間",
         )
     )
-    dema_config.param_map = {"close": "data", "period": "length"}
+    dema_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(dema_config)
 
     # TEMA
@@ -108,17 +131,23 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
+        # pandas-ta設定
+        pandas_function="tema",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 14},
+        min_length_func=lambda params: max(3, params.get("length", 14) // 2),
     )
     tema_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=14,
             min_value=2,
             max_value=200,
             description="三重指数移動平均期間",
         )
     )
-    tema_config.param_map = {"close": "data", "period": "length"}
+    tema_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(tema_config)
 
     # T3
@@ -129,10 +158,15 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
+        # pandas-ta設定
+        pandas_function="t3",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 5, "a": 0.7},
     )
     t3_config.add_parameter(
         ParameterConfig(
-            name="period",
+            name="length",
             default_value=5,
             min_value=2,
             max_value=50,
@@ -160,7 +194,7 @@ def setup_trend_indicators():
     )
     t3_config.param_map = {
         "close": "data",
-        "period": "length",
+        "length": "length",
         "a": "a",
         "vfactor": "a",  # Map vfactor to a parameter for pandas-ta compatibility
     }
@@ -174,6 +208,11 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_RATIO,
         category="trend",
+        # pandas-ta設定
+        pandas_function="kama",
+        data_column="Close",
+        returns="single",
+        default_values={"length": 30},
     )
     kama_config.add_parameter(
         ParameterConfig(
@@ -184,6 +223,7 @@ def setup_trend_indicators():
             description="KAMA期間",
         )
     )
+    kama_config.param_map = {"close": "data", "length": "length"}
     indicator_registry.register(kama_config)
 
     # SAR
@@ -194,10 +234,16 @@ def setup_trend_indicators():
         result_type=IndicatorResultType.SINGLE,
         scale_type=IndicatorScaleType.PRICE_ABSOLUTE,
         category="trend",
+        # pandas-ta設定
+        pandas_function="psar",
+        multi_column=True,
+        data_columns=["High", "Low"],
+        returns="single",
+        default_values={"af": 0.02, "max_af": 0.2},
     )
     sar_config.add_parameter(
         ParameterConfig(
-            name="acceleration",
+            name="af",
             default_value=0.02,
             min_value=0.01,
             max_value=0.1,
@@ -206,12 +252,13 @@ def setup_trend_indicators():
     )
     sar_config.add_parameter(
         ParameterConfig(
-            name="maximum",
+            name="max_af",
             default_value=0.2,
             min_value=0.1,
             max_value=1.0,
-            description="最大値",
+            description="最大加速因子",
         )
     )
+    sar_config.param_map = {"high": "high", "low": "low", "af": "af", "max_af": "max_af"}
     indicator_registry.register(sar_config)
 

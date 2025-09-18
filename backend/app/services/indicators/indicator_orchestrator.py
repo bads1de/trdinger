@@ -30,7 +30,8 @@ import pandas_ta as ta
 
 from .config import IndicatorConfig, indicator_registry, IndicatorResultType
 from .data_validation import validate_data_length_with_fallback, create_nan_result
-from .config.indicator_definitions import PANDAS_TA_CONFIG, POSITIONAL_DATA_FUNCTIONS
+from .config.indicator_config import POSITIONAL_DATA_FUNCTIONS
+from .config.indicator_config import indicator_registry
 
 
 logger = logging.getLogger(__name__)
@@ -128,7 +129,21 @@ class TechnicalIndicatorService:
 
     def _get_config(self, indicator_type: str) -> Optional[Dict[str, Any]]:
         """設定を取得"""
-        return PANDAS_TA_CONFIG.get(indicator_type)
+        config = indicator_registry.get_indicator_config(indicator_type.upper())
+        if config and config.pandas_function:
+            # IndicatorConfigからPANDAS_TA_CONFIG形式に変換
+            return {
+                "function": config.pandas_function,
+                "data_column": config.data_column,
+                "data_columns": config.data_columns,
+                "returns": config.returns,
+                "return_cols": config.return_cols,
+                "multi_column": config.multi_column,
+                "params": {},  # param_mapから構築
+                "default_values": config.default_values,
+                "min_length": config.min_length_func,
+            }
+        return None
 
     def _basic_validation(self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]) -> bool:
         """基本検証 - データ長と必須カラムのチェック"""
