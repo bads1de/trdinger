@@ -15,7 +15,7 @@ export interface UnifiedStrategy {
   description: string;
   /** カテゴリ */
   category: string;
-  /** 使用指標リスト（例: "RSI", "MACD", "BBANDS" など） */
+  /** 使用指標リスト（例: "RSI", "MACD", "BB" など） */
   indicators: string[];
   /** パラメータ（キー=指標/ルール名、値=設定値。例: {"RSI.period":14}） */
   parameters: Record<string, any>;

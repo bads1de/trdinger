@@ -71,17 +71,6 @@ indicators:
       normal:
         multiplier: 1.0
     type: volatility
-  BBANDS:
-    components:
-    - upper
-    - middle
-    - lower
-    conditions:
-      long: close < {left_operand}_lower
-      short: close > {left_operand}_upper
-    scale_type: price_absolute
-    thresholds: null
-    type: volatility
   BB:
     components:
     - upper

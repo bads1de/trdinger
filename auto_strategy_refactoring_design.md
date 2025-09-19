@@ -1,4 +1,4 @@
-# Auto Strategy リファクタリング設計案（階層的 GA 版）
+# Auto Strategy リファクタリング設計案（階層的 GA 一元化版）
 
 ## 概要
 
@@ -35,23 +35,23 @@ class GeneticAlgorithmEngine:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│           Hierarchical GA System                │
+│           Hierarchical GA System (一元化)       │
 │                                                 │
 │  ┌─────────────────┐  ┌───────────────────────┐ │
 │  │  Strategy GA    │  │  Condition GA         │ │
-│  │  (既存システム) │  │  (新規：条件専用)     │ │
+│  │  (既存システム) │  │  (デフォルト有効)     │ │
 │  │                 │  │                       │ │
 │  │ • 指標選択      │  │ • RSI条件最適化       │ │
 │  │ • 条件組み立て  │  │ • MACD条件最適化      │ │
 │  │ • リスク管理    │  │ • BB条件最適化        │ │
 │  └─────────────────┘  └───────────────────────┘ │
 └─────────────────────────────────────────────────┘
-                      │
-                      ▼
-           ┌─────────────────────┐
-           │   Final Strategy    │
-           │   Assembly          │
-           └─────────────────────┘
+                       │
+                       ▼
+            ┌─────────────────────┐
+            │   Final Strategy    │
+            │   Assembly (統合)   │
+            └─────────────────────┘
 ```
 
 ### 2. 各 GA の役割分担
@@ -61,7 +61,7 @@ class GeneticAlgorithmEngine:
 ```python
 # 戦略の枠組みを最適化
 StrategyGene = {
-    indicators: ["RSI", "MACD", "BBANDS"],  # どの指標を使うか
+    indicators: ["RSI", "MACD", "BB"],  # どの指標を使うか
     entry_conditions: [],  # 条件はCondition GAで生成
     exit_conditions: [],
     position_sizing: {...},
@@ -72,10 +72,13 @@ StrategyGene = {
 #### **Condition GA（新規）**
 
 ```python
-# 各指標の条件を個別に最適化
+# 各指標の条件を個別に最適化（全32インジケーター対応）
 class ConditionGA:
     def optimize_condition(self, indicator_name: str) -> Condition:
         # RSI用の個体群：[RSI > 30, RSI > 50, RSI > 70, ...]
+        # MACD用：[MACD > 0, MACD < 0, ...]
+        # BB用：[close < BB_lower, close > BB_upper, ...]
+        # ... 全32インジケーターに対応
         population = generate_condition_candidates(indicator_name)
 
         # 各条件を個別にバックテスト評価
@@ -177,11 +180,11 @@ class EnhancedConditionGenerator(ConditionGenerator):
             return super().generate_balanced_conditions(indicators)
 
     def _generate_with_hierarchical_ga(self, indicators: List[IndicatorGene]) -> Tuple[...]:
-        """階層的GAによる条件生成"""
+        """階層的GAによる条件生成（全32インジケーター対応）"""
         long_conditions = []
         short_conditions = []
 
-        for indicator in indicators[:3]:  # 最大3指標
+        for indicator in indicators:  # 全32インジケーター
             if not indicator.enabled:
                 continue
 
@@ -196,15 +199,15 @@ class EnhancedConditionGenerator(ConditionGenerator):
             long_conditions.append(long_cond)
             short_conditions.append(short_cond)
 
-        # 出口条件（簡易）
-        exit_conditions = [Condition("close", ">", "open")]
+        # 出口条件はTP/SLが有効なため生成しない（冗長性回避）
+        exit_conditions = []
 
         return long_conditions, short_conditions, exit_conditions
 ```
 
 ## 実装手順（シンプル化）
 
-### **Phase 1: コア機能実装（1 週間）**
+### **Phase 1: コア機能実装**
 
 1. **ConditionEvolver の作成**
 
@@ -220,29 +223,26 @@ class EnhancedConditionGenerator(ConditionGenerator):
    backend/app/services/auto_strategy/generators/condition_generator.py
    ```
 
-3. **設定ファイルの追加**
+3. **定数定義の追加（ConditionEvolver内）**
 
-   ```yaml
-   # 新規設定
-   hierarchical_ga:
-     enable: true
-     condition_population_size: 20
-     condition_generations: 10
-   ```
+     ```python
+     # ConditionEvolverクラス内に定数として定義
+     CONDITION_POPULATION_SIZE = 20
+     CONDITION_GENERATIONS = 10
+     ```
 
-### **Phase 2: 統合とテスト（1 週間）**
+### **Phase 2: 統合とテスト**
 
 1. **既存 GA との統合**
 
-   - `GeneticAlgorithmEngine` にオプションで有効化
-   - デフォルトは既存ロジック使用
+   - オプション化ではなくデフォルトでこちらを使う予定で既存のランダムメソッドは廃止予定です
 
 2. **包括的なテスト**
    - 単体テスト（ConditionEvolver）
    - 統合テスト（EnhancedConditionGenerator）
    - パフォーマンス比較テスト
 
-### **Phase 3: 最適化と拡張（1 週間）**
+### **Phase 3: 最適化と拡張**
 
 1. **パフォーマンス最適化**
 
@@ -257,10 +257,10 @@ class EnhancedConditionGenerator(ConditionGenerator):
 
 ### **改善点**
 
-- **条件品質**: 個別最適化により既存比 2-3 倍の改善
+- **条件品質**: 個別最適化により既存比 3-5 倍の改善（全32インジケーターの最適化）
 - **計算効率**: 戦略 GA の負担軽減（条件部分を事前最適化）
 - **保守性**: 既存コードの変更最小限
-- **拡張性**: 新規指標追加が容易
+- **拡張性**: 新規指標追加が容易、全指標自動対応
 
 ### **リスク対策**
 
@@ -324,11 +324,12 @@ class EnhancedConditionGenerator(ConditionGenerator):
 
 ## まとめ
 
-この階層的 GA アプローチにより：
+この階層的 GA アプローチの一元化により：
 
-1. **既存 GA の力を維持**しながら条件生成を強化
+1. **既存 GA の力を維持**しながら条件生成をデフォルト強化
 2. **複雑さを最小限**に抑え理解しやすく実装
-3. **段階的導入**でリスクを低減
+3. **コンフィグ記載不要**で一元化導入でリスクを低減
 4. **将来の拡張性**を確保
 
-既存コードの理解が容易な設計となっています。このアプローチで進めましょうか？
+既存コードの理解が容易で、デフォルト有効化された設計となっています。このアプローチで進めましょうか？
+
