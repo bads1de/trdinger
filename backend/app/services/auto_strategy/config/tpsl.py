@@ -66,9 +66,3 @@ class TPSLSettings(BaseConfig):
         defaults = self.get_default_values_from_fields()
         # 必要に応じてカスタマイズ（外部定数など）
         return defaults
-
-    def get_limits_for_param(self, param_name: str) -> Tuple[float, float]:
-        """指定されたパラメータの制限を取得"""
-        if param_name in self.limits:
-            return self.limits[param_name]
-        raise ValueError(f"不明なパラメータ: {param_name}")

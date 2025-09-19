@@ -117,29 +117,12 @@ class IndicatorGenerator:
                 ind for ind in available_indicators if ind in allowed
             ]
 
-        # 安定性のため、デフォルトでは実験的インジケータを除外
-        experimental = getattr(indicator_registry, 'experimental_indicators', set())
-
-        if not allowed:
-            available_indicators = [
-                ind for ind in available_indicators if ind not in experimental
-            ]
-
-        # 成立性が高い指標のみを使用
-        curated = {ind for ind in CURATED_TECHNICAL_INDICATORS if ind in self._valid_indicator_names}
-
         # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
         if self._coverage_cycle:
             self._coverage_pick = self._coverage_cycle[
                 self._coverage_idx % len(self._coverage_cycle)
             ]
             self._coverage_idx += 1
-
-        # curated での厳選は allowed 指定がない場合のみ適用
-        if not allowed:
-            available_indicators = [
-                ind for ind in available_indicators if ind in curated
-            ]
 
         return available_indicators
 

@@ -43,24 +43,3 @@ class TradingSettings(BaseConfig):
         defaults = self.get_default_values_from_fields()
         # 必要に応じてカスタマイズ（外部定数など）
         return defaults
-
-    def _custom_validation(self) -> List[str]:
-        """カスタム検証"""
-        errors = []
-
-        if self.default_symbol not in self.supported_symbols:
-            errors.append(
-                f"デフォルトシンボル '{self.default_symbol}' はサポート対象外です"
-            )
-
-        if self.default_timeframe not in self.supported_timeframes:
-            errors.append(
-                f"デフォルト時間軸 '{self.default_timeframe}' はサポート対象外です"
-            )
-
-        if self.min_position_size >= self.max_position_size:
-            errors.append(
-                "最小ポジションサイズは最大ポジションサイズより小さく設定してください"
-            )
-
-        return errors

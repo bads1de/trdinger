@@ -224,9 +224,7 @@ class GAConfig(BaseConfig):
         except TypeError:
             errors.append("最大指標数は数値である必要があります")
 
-        if not self.allowed_indicators:
-            errors.append("許可された指標リストが空です")
-        else:
+        if self.allowed_indicators:
             try:
                 from app.services.indicators import TechnicalIndicatorService
 
@@ -511,63 +509,6 @@ class GAConfig(BaseConfig):
             logger.error(f"JSON復元エラー: {e}", exc_info=True)
             raise ValueError(f"JSON からの復元に失敗しました: {e}")
 
-    @classmethod
-    def create_default(cls) -> "GAConfig":
-        """デフォルト設定を作成"""
-        return cls()
-
-    @classmethod
-    def create_fast(cls) -> "GAConfig":
-        """高速実行用設定を作成"""
-        config = cls()
-        config.population_size = 10
-        config.generations = 5
-        config.elite_size = 2
-        config.max_indicators = 3
-        return config
-
-    @classmethod
-    def create_thorough(cls) -> "GAConfig":
-        """徹底的な探索用設定を作成"""
-        config = cls()
-        config.population_size = 200
-        config.generations = 100
-        config.crossover_rate = 0.85
-        config.mutation_rate = 0.05
-        config.elite_size = 20
-        config.max_indicators = 5
-        config.log_level = "INFO"
-        config.save_intermediate_results = True
-        return config
-
-    @classmethod
-    def create_multi_objective(
-        cls,
-        objectives: Optional[List[str]] = None,
-        weights: Optional[List[float]] = None,
-    ) -> "GAConfig":
-        """
-        多目的最適化用設定を作成
-
-        Args:
-            objectives: 最適化する目的のリスト（デフォルト: ["total_return", "max_drawdown"]）
-            weights: 各目的の重み（デフォルト: [1.0, -1.0] = [最大化, 最小化]）
-        """
-        if objectives is None:
-            objectives = ["total_return", "max_drawdown"]
-        if weights is None:
-            weights = [1.0, -1.0]  # total_return最大化、max_drawdown最小化
-
-        config = cls()
-        config.population_size = 50
-        config.generations = 30
-        config.enable_multi_objective = True
-        config.objectives = objectives.copy()
-        config.objective_weights = weights.copy()
-        config.max_indicators = 3
-        config.log_level = "INFO"
-        config.save_intermediate_results = True
-        return config
 
 
 @dataclass

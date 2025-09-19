@@ -72,20 +72,6 @@ def get_all_indicators() -> List[str]:
     return ordered
 
 
-def validate_symbol(symbol: str) -> bool:
-    """シンボルの妥当性を検証"""
-    # 遅延インポートで循環依存を回避
-    from ..constants import SUPPORTED_SYMBOLS
-
-    return symbol in SUPPORTED_SYMBOLS
-
-
-def validate_timeframe(timeframe: str) -> bool:
-    """時間軸の妥当性を検証"""
-    # 遅延インポートで循環依存を回避
-    from ..constants import SUPPORTED_TIMEFRAMES
-
-    return timeframe in SUPPORTED_TIMEFRAMES
 
 
 def get_all_indicator_ids() -> Dict[str, int]:

@@ -66,11 +66,6 @@ COMPOSITE_INDICATORS = [
     "UI",  # Ulcer指数 (Ulcer Index)
 ]
 
-# 全テクニカル指標（indicator_registryに登録されているもの）-- utils/indicator_utils.py に移行済み
-# VALID_INDICATOR_TYPES は get_valid_indicator_types() 関数で動的に取得
-VALID_INDICATOR_TYPES: List[str] = (
-    []
-)  # 後方互換性のための空リスト（使用時は get_valid_indicator_types() を推奨）
 
 # テクニカルオンリー時のおすすめ指標セット（成立性が高い指標を厳選）
 CURATED_TECHNICAL_INDICATORS = {
@@ -154,15 +149,6 @@ POSITION_SIZING_METHODS = [
     "fixed_quantity",
 ]
 
-# === バックテスト関連定数 ===
-BACKTEST_OBJECTIVES = [
-    "total_return",
-    "sharpe_ratio",
-    "max_drawdown",
-    "win_rate",
-    "profit_factor",
-    "sortino_ratio",
-]
 
 # === エラーコード定数 ===
 ERROR_CODES = {

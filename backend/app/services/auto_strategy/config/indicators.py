@@ -33,14 +33,6 @@ class IndicatorSettings(BaseConfig):
     operators: List[str] = field(default_factory=lambda: OPERATORS.copy())
     data_sources: List[str] = field(default_factory=lambda: DATA_SOURCES.copy())
 
-    # 指標解決支援
-    multi_output_mappings: Dict[str, str] = field(
-        default_factory=lambda: {
-            "MACD": "MACD_0",
-            "STOCH": "STOCH_0",
-            "BB": "BB_1",
-        }
-    )
 
     def get_default_values(self) -> Dict[str, Any]:
         """デフォルト値を取得（自動生成を利用）"""

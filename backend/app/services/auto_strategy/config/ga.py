@@ -21,24 +21,10 @@ GA_DEFAULT_CONFIG = {
 
 # フィットネス重み設定
 FITNESS_WEIGHT_PROFILES = {
-    "conservative": {
-        "total_return": 0.15,
-        "sharpe_ratio": 0.4,
-        "max_drawdown": 0.25,
-        "win_rate": 0.15,
-        "balance_score": 0.05,
-    },
     "balanced": {
         "total_return": 0.25,
         "sharpe_ratio": 0.35,
         "max_drawdown": 0.2,
-        "win_rate": 0.1,
-        "balance_score": 0.1,
-    },
-    "aggressive": {
-        "total_return": 0.4,
-        "sharpe_ratio": 0.25,
-        "max_drawdown": 0.15,
         "win_rate": 0.1,
         "balance_score": 0.1,
     },
