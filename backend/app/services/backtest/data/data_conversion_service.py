@@ -8,7 +8,7 @@ from typing import List
 
 import pandas as pd
 
-from app.utils.data_conversion import DataConversionError
+
 from app.utils.error_handler import safe_operation
 from database.models import (
     OHLCVData,
@@ -24,7 +24,9 @@ class DataConversionService:
     データベースモデルからpandas.DataFrameへの変換を専門に担当します。
     """
 
-    @safe_operation(context="OHLCV DataFrame変換", is_api_call=False, default_return=pd.DataFrame())
+    @safe_operation(
+        context="OHLCV DataFrame変換", is_api_call=False, default_return=pd.DataFrame()
+    )
     def convert_ohlcv_to_dataframe(self, ohlcv_data: List[OHLCVData]) -> pd.DataFrame:
         """
         OHLCVDataリストをpandas.DataFrameに変換
@@ -83,8 +85,6 @@ class DataConversionService:
 
         # ボリュームは整数でも可
         if "volume" in df.columns:
-            df["volume"] = df["volume"].astype(
-                "float64"
-            )  # 小数点以下がある場合を考慮
+            df["volume"] = df["volume"].astype("float64")  # 小数点以下がある場合を考慮
 
         return df

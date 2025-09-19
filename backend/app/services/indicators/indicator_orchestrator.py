@@ -17,8 +17,6 @@ pandas-taの利点を最大限に活用しつつ、実装の複雑さを大幅�
 - Volume: OBV, AD, ADOSC, CMF, EFI, VWAP, MFI
 - Other: SAR, UI, SQUEEZE
 
-テスト成功率: 100% (31/31指標)
-コード行数削減: 60% (735行 → 約300行)
 """
 
 import logging
@@ -31,7 +29,6 @@ import pandas_ta as ta
 from .config import IndicatorConfig, indicator_registry, IndicatorResultType
 from .data_validation import validate_data_length_with_fallback, create_nan_result
 from .config.indicator_config import POSITIONAL_DATA_FUNCTIONS
-from .config.indicator_config import indicator_registry
 
 
 logger = logging.getLogger(__name__)
@@ -145,7 +142,9 @@ class TechnicalIndicatorService:
             }
         return None
 
-    def _basic_validation(self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]) -> bool:
+    def _basic_validation(
+        self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]
+    ) -> bool:
         """基本検証 - データ長と必須カラムのチェック"""
         # データ長検証
         is_valid, min_length = self.validate_data_length_with_fallback(
@@ -154,7 +153,9 @@ class TechnicalIndicatorService:
         if not is_valid:
             # STOCHの場合、詳細ログ
             if config["function"] == "stoch":
-                logger.warning(f"STOCH データ長検証失敗: データ長={len(df)}, 最小必要長={min_length}, パラメータ={params}")
+                logger.warning(
+                    f"STOCH データ長検証失敗: データ長={len(df)}, 最小必要長={min_length}, パラメータ={params}"
+                )
             return False
 
         # カラム検証
@@ -200,12 +201,24 @@ class TechnicalIndicatorService:
                     if callable(min_length_func):
                         min_length = min_length_func({param_name: value})
                         if isinstance(value, (int, float)) and value < min_length:
-                            logger.warning(f"パラメータ {param_name}={value} が最小値 {min_length} 未満のため調整します")
-                            logger.debug(f"TA_SMA パラメータ調整: {param_name} {value} -> {min_length}")
+                            logger.warning(
+                                f"パラメータ {param_name}={value} が最小値 {min_length} 未満のため調整します"
+                            )
+                            logger.debug(
+                                f"TA_SMA パラメータ調整: {param_name} {value} -> {min_length}"
+                            )
                             value = min_length
-                    elif isinstance(min_length_func, (int, float)) and isinstance(value, (int, float)) and value < min_length_func:
-                        logger.warning(f"パラメータ {param_name}={value} が最小値 {min_length_func} 未満のため調整します")
-                        logger.debug(f"TA_SMA パラメータ調整: {param_name} {value} -> {min_length_func}")
+                    elif (
+                        isinstance(min_length_func, (int, float))
+                        and isinstance(value, (int, float))
+                        and value < min_length_func
+                    ):
+                        logger.warning(
+                            f"パラメータ {param_name}={value} が最小値 {min_length_func} 未満のため調整します"
+                        )
+                        logger.debug(
+                            f"TA_SMA パラメータ調整: {param_name} {value} -> {min_length_func}"
+                        )
                         value = min_length_func
 
                 normalized[param_name] = value
@@ -228,9 +241,13 @@ class TechnicalIndicatorService:
             func = getattr(ta, config["function"])
 
             # デバッグログ：パラメータとデータ情報を記録
-            logger.debug(f"TA_SMA 呼び出し: 関数={config['function']}, パラメータ={params}, データ長={len(df)}")
+            logger.debug(
+                f"TA_SMA 呼び出し: 関数={config['function']}, パラメータ={params}, データ長={len(df)}"
+            )
             if config["function"] == "sma":
-                logger.debug(f"SMA 詳細: length={params.get('length', 'N/A')}, Closeカラム存在={config['data_column'] in df.columns}")
+                logger.debug(
+                    f"SMA 詳細: length={params.get('length', 'N/A')}, Closeカラム存在={config['data_column'] in df.columns}"
+                )
 
             if config.get("multi_column", False):
                 # 複数カラム処理
@@ -239,13 +256,17 @@ class TechnicalIndicatorService:
                 for req_col in required_columns:
                     col_name = self._resolve_column_name(df, req_col)
                     if col_name is None:
-                        logger.error(f"STOCH エラー: 必須カラム '{req_col}' が存在しません")
+                        logger.error(
+                            f"STOCH エラー: 必須カラム '{req_col}' が存在しません"
+                        )
                         return None
                     positional_args.append(df[col_name])
 
                 # STOCHの場合、パラメータとデータ長を詳細ログ
                 if config["function"] == "stoch":
-                    logger.debug(f"STOCH multi_column呼び出し: パラメータ={params}, データ長={len(df)}, カラム={required_columns}")
+                    logger.debug(
+                        f"STOCH multi_column呼び出し: パラメータ={params}, データ長={len(df)}, カラム={required_columns}"
+                    )
 
                 # STOCHの場合、パラメータ名をpandas-ta仕様に変換
                 if config["function"] == "stoch":
@@ -265,30 +286,46 @@ class TechnicalIndicatorService:
                 # 単一カラム処理
                 col_name = self._resolve_column_name(df, config["data_column"])
                 if col_name is None:
-                    logger.error(f"TA_SMA エラー: 必須カラム '{config['data_column']}' が存在しません")
+                    logger.error(
+                        f"TA_SMA エラー: 必須カラム '{config['data_column']}' が存在しません"
+                    )
                     return None
 
                 # データ長チェック
-                if len(df) < params.get('length', 0):
-                    logger.error(f"TA_SMA エラー: データ長({len(df)})がlength({params.get('length', 'N/A')})未満")
+                if len(df) < params.get("length", 0):
+                    logger.error(
+                        f"TA_SMA エラー: データ長({len(df)})がlength({params.get('length', 'N/A')})未満"
+                    )
                     return None
 
                 # STOCHの場合、データ長チェック
                 if config["function"] == "stoch":
-                    min_length = params.get('k_length', 14) + params.get('d_length', 3) + params.get('smooth_k', 3)
-                    logger.debug(f"STOCH データ長チェック: データ長={len(df)}, 推定最小必要長={min_length}")
+                    min_length = (
+                        params.get("k_length", 14)
+                        + params.get("d_length", 3)
+                        + params.get("smooth_k", 3)
+                    )
+                    logger.debug(
+                        f"STOCH データ長チェック: データ長={len(df)}, 推定最小必要長={min_length}"
+                    )
 
                 # STOCHの場合、パラメータとデータ長を詳細ログ
                 if config["function"] == "stoch":
-                    logger.debug(f"STOCH呼び出し詳細: パラメータ={params}, データ長={len(df)}, High列={config['data_columns'][0] in df.columns}, Low列={config['data_columns'][1] in df.columns}, Close列={config['data_columns'][2] in df.columns}")
+                    logger.debug(
+                        f"STOCH呼び出し詳細: パラメータ={params}, データ長={len(df)}, High列={config['data_columns'][0] in df.columns}, Low列={config['data_columns'][1] in df.columns}, Close列={config['data_columns'][2] in df.columns}"
+                    )
 
                 return func(df[col_name], **params)
 
         except Exception as e:
             # STOCHの場合、エラー詳細をログ
             if config["function"] == "stoch":
-                logger.error(f"STOCH pandas-ta呼び出し失敗: {e}, パラメータ: {params}, データ長: {len(df)}")
-            logger.error(f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}, パラメータ: {params}")
+                logger.error(
+                    f"STOCH pandas-ta呼び出し失敗: {e}, パラメータ: {params}, データ長: {len(df)}"
+                )
+            logger.error(
+                f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}, パラメータ: {params}"
+            )
             return None
 
     def _post_process(
@@ -317,7 +354,11 @@ class TechnicalIndicatorService:
                             selected_cols.append(result[col].values)
                         else:
                             # 部分一致で検索（例: BBL -> BBL_20_2.0）
-                            matching_cols = [c for c in result.columns if col in c or c.startswith(col + "_")]
+                            matching_cols = [
+                                c
+                                for c in result.columns
+                                if col in c or c.startswith(col + "_")
+                            ]
                             if matching_cols:
                                 selected_cols.append(result[matching_cols[0]].values)
                             else:
@@ -325,21 +366,11 @@ class TechnicalIndicatorService:
                                 selected_cols.append(np.full(len(result), np.nan))
                     return tuple(selected_cols)
                 else:
-                    return tuple(result.iloc[:, i].values for i in range(result.shape[1]))
+                    return tuple(
+                        result.iloc[:, i].values for i in range(result.shape[1])
+                    )
             else:
                 return tuple(np.asarray(arr) for arr in result)
-
-    def _fallback_to_adapter(
-        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-    ) -> Any:
-        """アダプター方式へのフォールバック"""
-        try:
-            config = self._get_indicator_config(indicator_type)
-            if config.adapter_function:
-                return self._calculate_with_adapter(df, indicator_type, params, config)
-        except Exception as e:
-            logger.warning(f"アダプターフォールバック失敗 {indicator_type}: {e}")
-        return np.full(len(df), np.nan)
 
     def _prepare_adapter_data(
         self, df: pd.DataFrame, config: IndicatorConfig
@@ -390,7 +421,7 @@ class TechnicalIndicatorService:
         self,
         params: Dict[str, Any],
         config: IndicatorConfig,
-        required_data: Dict[str, pd.Series]
+        required_data: Dict[str, pd.Series],
     ) -> Tuple[Dict[str, Any], Dict[str, pd.Series]]:
         """
         アダプター関数のパラメータをマッピング
@@ -494,7 +525,10 @@ class TechnicalIndicatorService:
             for param_name in sig.parameters:
                 if param_name in all_args:
                     param = sig.parameters[param_name]
-                    if param.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD):
+                    if param.kind in (
+                        inspect.Parameter.POSITIONAL_ONLY,
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    ):
                         positional_args.append(all_args[param_name])
                     else:
                         keyword_args[param_name] = all_args[param_name]
@@ -533,13 +567,17 @@ class TechnicalIndicatorService:
         required_data = self._prepare_adapter_data(df, config)
 
         # パラメータマッピングを分離したメソッドに委譲
-        converted_params, required_data = self._map_adapter_params(params, config, required_data)
+        converted_params, required_data = self._map_adapter_params(
+            params, config, required_data
+        )
 
         # 引数の統合
         all_args = {**required_data, **converted_params}
 
         # 関数呼び出しを分離したメソッドに委譲
-        return self._call_adapter_function(adapter_function, all_args, indicator_type, config)
+        return self._call_adapter_function(
+            adapter_function, all_args, indicator_type, config
+        )
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
         """

@@ -3,7 +3,6 @@ Auto Strategy 共通定数
 
 """
 
-from typing import List
 from enum import Enum
 
 
@@ -13,10 +12,6 @@ class IndicatorType(str, Enum):
     MOMENTUM = "momentum"  # モメンタム系
     TREND = "trend"  # トレンド系
     VOLATILITY = "volatility"  # ボラティリティ系
-
-
-# 戦略タイプ定義（統合済み）
-# StrategyTypeは削除し、条件生成戦略を一元化
 
 
 # === 演算子定数 ===
