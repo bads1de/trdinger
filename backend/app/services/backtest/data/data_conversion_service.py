@@ -10,11 +10,33 @@ import pandas as pd
 
 
 from app.utils.error_handler import safe_operation
+
+
 from database.models import (
     OHLCVData,
 )
 
 logger = logging.getLogger(__name__)
+
+
+class DataConversionError(ValueError):
+    """
+    データ変換処理で発生するエラーを表すカスタム例外クラス
+
+    データ変換時の型エラー、データ不整合、変換失敗などの問題を
+    より具体的に表現するために使用します。
+    """
+
+    def __init__(self, message: str, original_error: Exception = None):
+        """
+        DataConversionError クラスの初期化
+
+        Args:
+            message: エラーメッセージ
+            original_error: 元の例外（オプション）
+        """
+        super().__init__(message)
+        self.original_error = original_error
 
 
 class DataConversionService:
@@ -88,3 +110,7 @@ class DataConversionService:
             df["volume"] = df["volume"].astype("float64")  # 小数点以下がある場合を考慮
 
         return df
+
+
+# エクスポート定義
+__all__ = ["DataConversionService", "DataConversionError"]
