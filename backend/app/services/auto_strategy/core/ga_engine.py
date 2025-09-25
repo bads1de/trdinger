@@ -5,6 +5,7 @@ DEAPライブラリを使用したGA実装。
 """
 
 import logging
+import random
 import time
 from typing import Any, Dict, List
 
@@ -16,7 +17,11 @@ from app.services.backtest.backtest_service import BacktestService
 from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..config import GAConfig
-from .genetic_operators import crossover_strategy_genes, mutate_strategy_gene
+from .genetic_operators import (
+    crossover_strategy_genes,
+    mutate_strategy_gene,
+    create_deap_mutate_wrapper,
+)
 from .deap_setup import DEAPSetup
 from .fitness_sharing import FitnessSharing
 from .individual_evaluator import IndividualEvaluator
@@ -31,7 +36,7 @@ class EvolutionRunner:
     単一目的と多目的最適化のロジックをカプセル化したヘルパークラスです。
     """
 
-    def __init__(self, toolbox, stats, fitness_sharing=None):
+    def __init__(self, toolbox, stats, fitness_sharing=None, population=None):
         """
         初期化
 
@@ -39,10 +44,12 @@ class EvolutionRunner:
             toolbox: DEAPツールボックス
             stats: 統計情報収集オブジェクト
             fitness_sharing: 適応度共有オブジェクト（オプション）
+            population: 個体集団（適応的突然変異用）
         """
         self.toolbox = toolbox
         self.stats = stats
         self.fitness_sharing = fitness_sharing
+        self.population = population  # 適応的突然変異用
 
     def run_single_objective_evolution(
         self, population: List[Any], config: GAConfig, halloffame: List[Any] = None
@@ -63,27 +70,46 @@ class EvolutionRunner:
         # 初期適応度評価
         population = self._evaluate_population(population)
 
-        # 適応度共有の適用（有効な場合）
-        if config.enable_fitness_sharing and self.fitness_sharing:
-            population = self.fitness_sharing.apply_fitness_sharing(population)
-
         logbook = tools.Logbook()
 
-        # DEAP標準アルゴリズム（mu+lambda）を使用
-        mu = len(population)
-        lambda_ = len(population)
-        population, logbook = algorithms.eaMuPlusLambda(
-            population,
-            self.toolbox,
-            mu,
-            lambda_,
-            cxpb=config.crossover_rate,
-            mutpb=config.mutation_rate,
-            ngen=config.generations,
-            stats=self.stats,
-            halloffame=halloffame,
-            verbose=False,
-        )
+        # カスタム世代ループ（fitness_sharingを世代毎に適用）
+        for gen in range(config.generations):
+            logger.debug(f"世代 {gen + 1}/{config.generations} を開始")
+
+            # 適応度共有の適用（有効な場合、世代毎）
+            if config.enable_fitness_sharing and self.fitness_sharing:
+                population = self.fitness_sharing.apply_fitness_sharing(population)
+
+            # 選択
+            offspring = list(self.toolbox.map(self.toolbox.clone, population))
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() < config.crossover_rate:
+                    self.toolbox.mate(child1, child2)
+                    del child1.fitness.values
+                    del child2.fitness.values
+
+            # 突然変異
+            for mutant in offspring:
+                if random.random() < config.mutation_rate:
+                    self.toolbox.mutate(mutant)
+                    del mutant.fitness.values
+
+            # 評価
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # 次世代の選択 (mu+lambda)
+            population[:] = self.toolbox.select(offspring + population, len(population))
+
+            # 統計の記録
+            record = self.stats.compile(population) if self.stats else {}
+            logbook.record(gen=gen, **record)
+
+            # Hall of Fameの更新
+            if halloffame is not None:
+                halloffame.update(population)
 
         logger.info("単一目的最適化アルゴリズム完了")
         return population, logbook
@@ -117,21 +143,44 @@ class EvolutionRunner:
 
         logbook = tools.Logbook()
 
-        # DEAP標準アルゴリズムを使用
-        mu = len(population)
-        lambda_ = len(population)
-        population, logbook = algorithms.eaMuPlusLambda(
-            population,
-            self.toolbox,
-            mu,
-            lambda_,
-            cxpb=config.crossover_rate,
-            mutpb=config.mutation_rate,
-            ngen=config.generations,
-            stats=self.stats,
-            halloffame=halloffame,
-            verbose=False,
-        )
+        # カスタム世代ループ（fitness_sharingを世代毎に適用）
+        for gen in range(config.generations):
+            logger.debug(f"多目的世代 {gen + 1}/{config.generations} を開始")
+
+            # 適応度共有の適用（有効な場合、世代毎）
+            if config.enable_fitness_sharing and self.fitness_sharing:
+                population = self.fitness_sharing.apply_fitness_sharing(population)
+
+            # 選択
+            offspring = list(self.toolbox.map(self.toolbox.clone, population))
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() < config.crossover_rate:
+                    self.toolbox.mate(child1, child2)
+                    del child1.fitness.values
+                    del child2.fitness.values
+
+            # 突然変異
+            for mutant in offspring:
+                if random.random() < config.mutation_rate:
+                    self.toolbox.mutate(mutant)
+                    del mutant.fitness.values
+
+            # 評価
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # 次世代の選択 (mu+lambda, NSGA-II)
+            population[:] = self.toolbox.select(offspring + population, len(population))
+
+            # 統計の記録
+            record = self.stats.compile(population) if self.stats else {}
+            logbook.record(gen=gen, **record)
+
+            # Hall of Fameの更新
+            if halloffame is not None:
+                halloffame.update(population)
 
         # パレートフロントを更新
         for ind in population:
@@ -269,11 +318,16 @@ class GeneticAlgorithmEngine:
 
             stats = self._create_statistics()
 
-            # EvolutionRunnerの作成
-            runner = self._create_evolution_runner(toolbox, stats)
-
             # 初期個体群の生成と評価
             population = self._create_initial_population(toolbox, config)
+
+            # 適応的突然変異用mutate_wrapperの設定
+            individual_class = self.deap_setup.get_individual_class()
+            mutate_wrapper = create_deap_mutate_wrapper(individual_class, population)
+            toolbox.register("mutate", mutate_wrapper)
+
+            # EvolutionRunnerの作成
+            runner = self._create_evolution_runner(toolbox, stats, population)
 
             # 最適化アルゴリズムの実行
             population, logbook = self._run_optimization(runner, population, config)
@@ -311,14 +365,14 @@ class GeneticAlgorithmEngine:
         stats.register("max", np.max)
         return stats
 
-    def _create_evolution_runner(self, toolbox, stats):
+    def _create_evolution_runner(self, toolbox, stats, population=None):
         """EvolutionRunnerインスタンスを作成"""
         fitness_sharing = (
             self.fitness_sharing
             if hasattr(self, "fitness_sharing") and self.fitness_sharing
             else None
         )
-        return EvolutionRunner(toolbox, stats, fitness_sharing)
+        return EvolutionRunner(toolbox, stats, fitness_sharing, population)
 
     def _create_initial_population(self, toolbox, config: GAConfig):
         """初期個体群を生成"""

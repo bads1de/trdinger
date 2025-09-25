@@ -3,15 +3,20 @@
 """
 
 import pytest
+import numpy as np
 from unittest.mock import Mock, patch
+
+from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
 
 from app.services.auto_strategy.core.genetic_operators import (
     crossover_strategy_genes_pure,
     mutate_strategy_gene_pure,
+    uniform_crossover,
     _crossover_tpsl_genes,
     _crossover_position_sizing_genes,
     _mutate_indicators,
     _mutate_conditions,
+    adaptive_mutate_strategy_gene_pure,
 )
 from app.services.auto_strategy.models.strategy_models import StrategyGene, IndicatorGene, Condition, TPSLGene, PositionSizingGene
 
@@ -147,3 +152,211 @@ class TestGeneticOperators:
         assert isinstance(mutated, StrategyGene)
         assert mutated.metadata.get("mutated") is True
         assert mutated.metadata.get("mutation_rate") == 1.0
+
+    def test_adaptive_mutation_rate_adjustment(self, sample_strategy_gene):
+        """適応的突然変異率調整のテスト"""
+        import copy
+
+        # 個体を作成（DEAP形式を模倣）
+        class MockIndividual(list):
+            def __init__(self, gene, fitness_values):
+                super().__init__([gene])
+                self.fitness = Mock()
+                self.fitness.values = fitness_values
+
+        # 高分散のpopulation（多様性が高い場合）
+        high_variance_pop = [
+            MockIndividual(copy.deepcopy(sample_strategy_gene), (1.0,)),
+            MockIndividual(copy.deepcopy(sample_strategy_gene), (0.5,)),
+            MockIndividual(copy.deepcopy(sample_strategy_gene), (1.5,)),
+        ]
+
+        # 低分散のpopulation（収束している場合）
+        low_variance_pop = [
+            MockIndividual(copy.deepcopy(sample_strategy_gene), (1.0,)),
+            MockIndividual(copy.deepcopy(sample_strategy_gene), (1.01,)),
+            MockIndividual(copy.deepcopy(sample_strategy_gene), (0.99,)),
+        ]
+
+        gene_to_mutate = copy.deepcopy(sample_strategy_gene)
+
+        # 高分散の場合、低いmutation_rateになるはず
+        mutated_high = adaptive_mutate_strategy_gene_pure(high_variance_pop, gene_to_mutate, base_mutation_rate=0.1)
+        assert isinstance(mutated_high, StrategyGene)
+
+        # 低分散の場合、高いmutation_rateになるはず
+        mutated_low = adaptive_mutate_strategy_gene_pure(low_variance_pop, gene_to_mutate, base_mutation_rate=0.1)
+        assert isinstance(mutated_low, StrategyGene)
+
+        # メタデータに適応的rateが設定されている
+        assert "adaptive_mutation_rate" in mutated_high.metadata
+        assert "adaptive_mutation_rate" in mutated_low.metadata
+
+        # 高分散のrate < 低分散のrate のはず
+        assert mutated_high.metadata["adaptive_mutation_rate"] < mutated_low.metadata["adaptive_mutation_rate"]
+
+    def test_uniform_crossover_diversity(self):
+        """Test diversity of uniform crossover"""
+        import copy
+
+        # Create different parents
+        parent1 = StrategyGene(
+            id="parent1",
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}),
+                IndicatorGene(type="EMA", parameters={"period": 20}),
+            ],
+            entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
+            exit_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
+            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
+            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
+            risk_management={"position_size": 0.1, "stop_loss": 0.05},
+            tpsl_gene=TPSLGene(stop_loss_pct=0.05, take_profit_pct=0.15, risk_reward_ratio=3.0),
+            position_sizing_gene=PositionSizingGene(method="fixed_ratio", fixed_ratio=0.1),
+            metadata={"parent": 1},
+        )
+
+        parent2 = StrategyGene(
+            id="parent2",
+            indicators=[
+                IndicatorGene(type="RSI", parameters={"period": 14}),
+                IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
+            ],
+            entry_conditions=[Condition(left_operand="rsi", operator="<", right_operand="30")],
+            exit_conditions=[Condition(left_operand="rsi", operator=">", right_operand="70")],
+            long_entry_conditions=[Condition(left_operand="macd", operator=">", right_operand="signal")],
+            short_entry_conditions=[Condition(left_operand="macd", operator="<", right_operand="signal")],
+            risk_management={"position_size": 0.2, "take_profit": 0.1},
+            tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.10, risk_reward_ratio=3.33),
+            position_sizing_gene=PositionSizingGene(method="fixed_ratio", fixed_ratio=0.2),
+            metadata={"parent": 2},
+        )
+
+        # Perform multiple crossovers to check diversity
+        children = []
+        for _ in range(50):
+            child1, child2 = uniform_crossover(copy.deepcopy(parent1), copy.deepcopy(parent2))
+            children.extend([child1, child2])
+
+        # Verify diversity: not all children are identical to parents
+        parent1_str = str(parent1.indicators) + str(parent1.entry_conditions) + str(parent1.risk_management)
+        parent2_str = str(parent2.indicators) + str(parent2.entry_conditions) + str(parent2.risk_management)
+
+        diverse_children = 0
+        for child in children:
+            child_str = str(child.indicators) + str(child.entry_conditions) + str(child.risk_management)
+            if child_str != parent1_str and child_str != parent2_str:
+                diverse_children += 1
+
+        # Ensure at least some children are a mix of parents
+        assert diverse_children > 0, "uniform crossover does not generate diversity"
+
+        # Note: Due to random nature, field-level mixing may not occur in all cases
+        # The key is that some children are different from parents (diverse_children > 0)
+
+    def test_population_variance_after_operations(self, sample_strategy_gene):
+        """Test population variance after genetic operations"""
+        import copy
+
+        # Create diverse population
+        class MockIndividual(list):
+            def __init__(self, gene, fitness_values):
+                super().__init__([gene])
+                self.fitness = Mock()
+                self.fitness.values = fitness_values
+                self.fitness.valid = True
+
+        population = [
+            MockIndividual(copy.deepcopy(sample_strategy_gene), (1.0,)),
+            MockIndividual(StrategyGene(
+                id="gene2",
+                indicators=[
+                    IndicatorGene(type="RSI", parameters={"period": 14}),
+                    IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
+                ],
+                entry_conditions=[Condition(left_operand="rsi", operator="<", right_operand="30")],
+                exit_conditions=[Condition(left_operand="rsi", operator=">", right_operand="70")],
+                long_entry_conditions=[Condition(left_operand="macd", operator=">", right_operand="signal")],
+                short_entry_conditions=[Condition(left_operand="macd", operator="<", right_operand="signal")],
+                risk_management={"position_size": 0.2},
+                tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.10),
+                position_sizing_gene=PositionSizingGene(),
+                metadata={},
+            ), (0.8,)),
+            MockIndividual(StrategyGene(
+                id="gene3",
+                indicators=[IndicatorGene(type="BB", parameters={"period": 20, "std": 2})],
+                entry_conditions=[Condition(left_operand="close", operator="<", right_operand="bb_lower")],
+                exit_conditions=[Condition(left_operand="close", operator=">", right_operand="bb_upper")],
+                long_entry_conditions=[],
+                short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="bb_lower")],
+                risk_management={"position_size": 0.15},
+                tpsl_gene=TPSLGene(stop_loss_pct=0.04, take_profit_pct=0.12),
+                position_sizing_gene=PositionSizingGene(),
+                metadata={},
+            ), (0.9,)),
+            MockIndividual(StrategyGene(
+                id="gene4",
+                indicators=[IndicatorGene(type="STOCH", parameters={"k_period": 14, "d_period": 3})],
+                entry_conditions=[Condition(left_operand="stoch_k", operator=">", right_operand="stoch_d")],
+                exit_conditions=[],
+                long_entry_conditions=[Condition(left_operand="stoch_k", operator=">", right_operand="stoch_d")],
+                short_entry_conditions=[],
+                risk_management={"position_size": 0.25},
+                tpsl_gene=TPSLGene(stop_loss_pct=0.02, take_profit_pct=0.08),
+                position_sizing_gene=PositionSizingGene(),
+                metadata={},
+            ), (0.7,)),
+        ]
+
+        fitness_sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+
+        def calculate_population_variance(population):
+            gene_vectors = []
+            for ind in population:
+                gene = ind[0]  # StrategyGene
+                vector = fitness_sharing._vectorize_gene(gene)
+                gene_vectors.append(vector)
+            if len(gene_vectors) < 2:
+                return 0.0
+            gene_matrix = np.array(gene_vectors)
+            # Calculate average variance across dimensions
+            return np.var(gene_matrix, axis=0).mean()
+
+        original_variance = calculate_population_variance(population)
+        assert original_variance > 0, "Initial population should have variance"
+
+        # Test adaptive mutation
+        mutated_population = []
+        for ind in population:
+            mutated_gene = adaptive_mutate_strategy_gene_pure(population, ind[0], base_mutation_rate=0.1)
+            mutated_ind = MockIndividual(mutated_gene, ind.fitness.values)
+            mutated_population.append(mutated_ind)
+
+        mutated_variance = calculate_population_variance(mutated_population)
+        # Adaptive mutation should maintain or increase diversity
+        assert mutated_variance >= original_variance * 0.8, "Adaptive mutation should not significantly reduce diversity"
+
+        # Test uniform crossover
+        crossover_population = []
+        for i in range(0, len(population) - 1, 2):
+            parent1 = population[i][0]
+            parent2 = population[i + 1][0]
+            child1, child2 = uniform_crossover(copy.deepcopy(parent1), copy.deepcopy(parent2))
+            crossover_population.extend([
+                MockIndividual(child1, (0.5,)),
+                MockIndividual(child2, (0.5,))
+            ])
+
+        if len(crossover_population) < len(population):
+            crossover_population.extend(population[len(crossover_population):])
+
+        crossover_variance = calculate_population_variance(crossover_population)
+        # Crossover should maintain diversity
+        assert crossover_variance >= original_variance * 0.6, "Uniform crossover should maintain diversity"
+
+        # Test silhouette-based sharing
+        shared_population = fitness_sharing.silhouette_based_sharing(population)
+        shared_variance = calculate_population_variance(shared_population)
+        # Sharing should maintain diversity
+        assert shared_variance >= original_variance * 0.6, "Silhouette-based sharing should maintain diversity"

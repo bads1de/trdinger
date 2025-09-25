@@ -7,6 +7,10 @@
 
 import logging
 from typing import Any, Dict, List
+import numpy as np
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples
 
 from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import StrategyGene
@@ -90,7 +94,8 @@ class FitnessSharing:
                     )
                     individual.fitness.values = shared_fitness_values
 
-            return population
+            # ニッチ計算後にシルエットベース共有を適用
+            return self.silhouette_based_sharing(population)
 
         except Exception as e:
             logger.error(f"フィットネス共有適用エラー: {e}")
@@ -302,6 +307,113 @@ class FitnessSharing:
             )
 
         return min(1.0, score)
+
+    def silhouette_based_sharing(self, population: List[Any]) -> List[Any]:
+        """
+        シルエットベースの共有
+
+        KMeansクラスタリングとシルエットスコアを使って個体のフィットネスを調整します。
+        クラスタ内での凝集度が高い個体ほどフィットネスが高くなります。
+
+        Args:
+            population: 個体群
+
+        Returns:
+            シルエットベース調整適用後の個体群
+        """
+        try:
+            if len(population) <= 1:
+                return population
+
+            # 個体の特徴ベクトルを作成
+            vectors = []
+            valid_indices = []
+            for i, individual in enumerate(population):
+                try:
+                    gene = self.gene_serializer.from_list(individual, StrategyGene)
+                    if gene is not None:
+                        vector = self._vectorize_gene(gene)
+                        vectors.append(vector)
+                        valid_indices.append(i)
+                except Exception:
+                    continue
+
+            if len(vectors) <= 1:
+                return population
+
+            vectors = np.array(vectors)
+            n_clusters = min(len(vectors), 3)  # 最大3クラスタ
+
+            # KMeansクラスタリング
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            labels = kmeans.fit_predict(vectors)
+
+            # シルエットスコア計算
+            silhouette_vals = silhouette_samples(vectors, labels)
+
+            # フィットネス調整
+            for j, idx in enumerate(valid_indices):
+                individual = population[idx]
+                if hasattr(individual, "fitness") and individual.fitness.valid:
+                    silhouette_score = silhouette_vals[j]
+                    # シルエットスコアを0-1に正規化（-1 to 1 -> 0 to 1）
+                    normalized_silhouette = (silhouette_score + 1.0) / 2.0
+                    # 良いシルエットスコアほどfitnessを高く（調整係数小さく）
+                    adjustment_factor = max(0.1, 1.0 - normalized_silhouette)
+
+                    original_fitness_values = individual.fitness.values
+                    adjusted_values = tuple(
+                        fitness_val * adjustment_factor
+                        for fitness_val in original_fitness_values
+                    )
+                    individual.fitness.values = adjusted_values
+
+            return population
+
+        except Exception as e:
+            logger.error(f"シルエットベース共有エラー: {e}")
+            return population
+
+    def _vectorize_gene(self, gene: StrategyGene) -> np.ndarray:
+        """
+        StrategyGeneを特徴ベクトルに変換
+
+        Args:
+            gene: 戦略遺伝子
+
+        Returns:
+            特徴ベクトル
+        """
+        features = []
+
+        # 指標数
+        features.append(float(len(gene.indicators)))
+
+        # 条件数
+        features.append(float(len(gene.long_entry_conditions)))
+        features.append(float(len(gene.short_entry_conditions)))
+
+        # リスク管理パラメータ
+        if gene.risk_management:
+            features.append(float(gene.risk_management.get('position_size', 0.1)))
+        else:
+            features.append(0.1)
+
+        # TP/SLパラメータ
+        if gene.tpsl_gene:
+            features.append(float(gene.tpsl_gene.stop_loss_pct or 0.05))
+            features.append(float(gene.tpsl_gene.take_profit_pct or 0.1))
+        else:
+            features.append(0.05)
+            features.append(0.1)
+
+        # ポジションサイジングパラメータ
+        if gene.position_sizing_gene and hasattr(gene.position_sizing_gene, 'risk_per_trade'):
+            features.append(float(gene.position_sizing_gene.risk_per_trade or 0.01))
+        else:
+            features.append(0.01)
+
+        return np.array(features)
 
     def _sharing_function(self, similarity: float) -> float:
         """
