@@ -66,6 +66,36 @@
    - 利点: ノイズ低減と効率的な戦略生成、仮想通貨の急変動に対応。
    - 関連: pandas, DEAP。
 
+9. **Genetic Programming (GP) の統合**:
+
+   - 目的: GP を用いて取引ルール自体を進化させ、移動平均のウィンドウパラメータやクロスオーバーシグナルを最適化。
+   - 利点: パラメータ最適化を超え、戦略の構造を自動生成し、市場適応性を向上（例: Bitcoinデータでのバックテストで利益最大化）。
+   - 関連: DEAP (GP拡張), pandas。
+
+10. **EGARCHモデルとのGA統合**:
+
+    - 目的: GAでEGARCH（Exponential GARCH）のパラメータを最適化し、仮想通貨の極端なボラティリティを予測。
+    - 利点: 非対称ボラティリティを捕捉し、リスク管理を強化（Quantum NNとのハイブリッドで精度向上）。
+    - 関連: arch (EGARCH), PyTorch, DEAP。
+
+11. **MOEA/Dによる多目的最適化**:
+
+    - 目的: 分解ベースのMOEA/Dアルゴリズムで取引ルールの複数パラメータセットを最適化、偽シグナルを低減。
+    - 利点: COVID-19のような予測不能市場で取引シグナルの精度を向上（Sharpe RatioとDrawdownのPareto最適化）。
+    - 関連: pymoo (MOEA/D), DEAP。
+
+12. **GAによる特徴量選択**:
+
+    - 目的: GAでMLモデル向けの特徴量を選択し、Bitcoinや株価の方向予測を強化。
+    - 利点: 過剰適合を防ぎ、予測精度を向上（MSE 0.0863, MPE 0.0084達成例）。
+    - 関連: scikit-learn (特徴量選択), DEAP。
+
+13. **トレンドフォロー戦略のGA最適化**:
+
+    - 目的: GAで移動平均、MACD、RSI、Bollinger Bandsなどのトレンドフォロー指標のパラメータを最適化。
+    - 利点: 仮想通貨のトレンドを捕捉し、利益を最大化（複数戦略の組み合わせでパフォーマンス向上）。
+    - 関連: TA-Lib (指標), DEAP。
+
 ## 3. 各案の実施ステップ（TDD ベース）
 
 TDD（Test-Driven Development）を厳守し、pytest でユニット/統合テストを作成。変更は backend/app/services/auto_strategy/を中心に。
@@ -125,23 +155,58 @@ TDD（Test-Driven Development）を厳守し、pytest でユニット/統合テ�
 - フェーズ 2: 統合/最適化（Optuna でハイパーパラメータチューニング）。
 - フェーズ 3: フロントエンド更新（GAConfigForm に新オプション追加）。
 
+**追加案 9: Genetic Programming (GP) 統合**
+
+- [ ] テスト: `test_gp_integration.py`作成（GP進化ルールのバックテスト検証）。
+- [ ] 実装: `gp_orchestrator.py`にDEAP GPモジュール追加。`strategy_generator.py`でルール進化を統合。
+- [ ] リファクタ: `genetic_operators.py`でGPをGAとハイブリッド化。
+- [ ] 統合テスト: GP最適化戦略のバックテスト（パラメータ進化による利益向上確認）。
+
+**追加案 10: EGARCHモデルとのGA統合**
+
+- [ ] テスト: `test_egarch_ga.py`作成（ボラティリティ予測精度テスト）。
+- [ ] 実装: `volatility_predictor.py`にarchとGA統合モジュール追加。
+- [ ] リファクタ: `individual_evaluator.py`でEGARCH予測をフィットネスに反映。
+- [ ] 統合テスト: EGARCH強化戦略のバックテスト（ボラティリティ捕捉効果確認）。
+
+**追加案 11: MOEA/Dによる多目的最適化**
+
+- [ ] テスト: `test_moead_optimization.py`作成（Paretoフロンティア生成テスト）。
+- [ ] 実装: `moead_optimizer.py`にpymoo MOEA/Dモジュール追加。
+- [ ] リファクタ: `optimization/base_optimizer.py`でMOEA/Dを拡張。
+- [ ] 統合テスト: MOEA/D最適化戦略のバックテスト（シグナル精度向上確認）。
+
+**追加案 12: GAによる特徴量選択**
+
+- [ ] テスト: `test_feature_selection_ga.py`作成（特徴量選択のMSE/MPE検証）。
+- [ ] 実装: `feature_selector.py`にGAベース選択モジュール追加。
+- [ ] リファクタ: `ml_orchestrator.py`で選択特徴量をLightGBM入力に適用。
+- [ ] 統合テスト: 特徴量選択戦略のバックテスト（予測精度向上確認）。
+
+**追加案 13: トレンドフォロー戦略のGA最適化**
+
+- [ ] テスト: `test_trend_following_ga.py`作成（指標パラメータ最適化テスト）。
+- [ ] 実装: `trend_optimizer.py`にTA-LibとGA統合モジュール追加。
+- [ ] リファクタ: `strategy_generator.py`でトレンド指標を遺伝子に組み込み。
+- [ ] 統合テスト: トレンドフォロー戦略のバックテスト（Sharpe Ratio向上確認）。
+
 ## 4. 視覚化（Mermaid ダイアグラム: 強化後の GA フロー）
 
 ```mermaid
 graph TD
-    A[市場データ入力] --> B[HMMレジーム検出]
-    B --> C[センチメント分析 (GAS)]
-    C --> D[Directional Changesサンプリング]
-    D --> E[GA初期個体生成<br/>(条件/インジケーター/ペア)]
-    E --> F[LightGBM/NN予測洗練]
-    F --> G[Triple Barrierラベル最適化]
-    G --> H[動的ポジションサイジング<br/>(VaR調整)]
-    H --> I[TP/SL最適化]
-    I --> J[多目的フィットネス評価<br/>(Sharpe, Drawdown)]
-    J --> K[交叉/突然変異]
-    K --> L[バックテスト]
-    L --> M[戦略出力]
-    M --> N[実践投入]
+    A["Market Data Input"] --> B["HMM Regime Detection"]
+    B --> C["Sentiment Analysis GAS"]
+    C --> D["Directional Changes Sampling"]
+    D --> E["GA Initial Population Generation<br/>Conditions Indicators Pairs"]
+    E --> F["LightGBM NN EGARCH Prediction Refinement"]
+    F --> G["Triple Barrier Label Optimization"]
+    G --> H["Dynamic Position Sizing<br/>VaR Adjustment"]
+    H --> I["TP SL Optimization"]
+    I --> J["GP MOEA D Multi-objective Optimization<br/>Feature Selection Trend Following"]
+    J --> K["Crossover Mutation"]
+    K --> L["Backtesting"]
+    L --> M["Strategy Output"]
+    M --> N["Live Deployment"]
 ```
 
 この計画で、よりロバストで強い戦略生成が可能になります。承認いただければ、code モードに切り替えて実装を開始します。
