@@ -413,7 +413,6 @@ def uniform_crossover(
         return parent1, parent2
 
 
-@overload
 def crossover_strategy_genes(
     parent1: Union[StrategyGene, list], parent2: Union[StrategyGene, list]
 ) -> tuple[Union[StrategyGene, list], Union[StrategyGene, list]]:
