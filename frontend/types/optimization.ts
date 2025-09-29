@@ -62,6 +62,10 @@ export interface GAConfig {
     objectives?: string[];
     /** 目的関数ごとの重み（objectives と同じ順序） */
     objective_weights?: number[];
+
+    // レジーム適応設定
+    /** レジーム適応を有効化するかどうか */
+    regime_adaptation_enabled?: boolean;
   };
 }
 

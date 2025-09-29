@@ -6,29 +6,28 @@ GAConfigクラスとGAProgressクラスを提供します。
 
 import json
 import logging
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, cast
 
-from dataclasses import dataclass, field
-
+from .auto_strategy import AutoStrategyConfig
 from .base import BaseConfig
 from .ga import (
-    GA_DEFAULT_CONFIG,
-    DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_FITNESS_CONSTRAINTS,
-    GA_DEFAULT_FITNESS_SHARING,
-    DEFAULT_GA_OBJECTIVES,
+    DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,
+    DEFAULT_GA_OBJECTIVES,
+    GA_DEFAULT_CONFIG,
+    GA_DEFAULT_FITNESS_SHARING,
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
 )
 from .tpsl import (
+    GA_DEFAULT_TPSL_METHOD_CONSTRAINTS,
+    GA_TPSL_ATR_MULTIPLIER_RANGE,
+    GA_TPSL_RR_RANGE,
     GA_TPSL_SL_RANGE,
     GA_TPSL_TP_RANGE,
-    GA_TPSL_RR_RANGE,
-    GA_TPSL_ATR_MULTIPLIER_RANGE,
-    GA_DEFAULT_TPSL_METHOD_CONSTRAINTS,
 )
-from .auto_strategy import AutoStrategyConfig
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +102,13 @@ class GAConfig(BaseConfig):
     save_intermediate_results: bool = True
     progress_callback: Optional[Callable[["GAProgress"], None]] = None
 
+    # フォールバック設定
+    fallback_start_date: str = "2024-01-01"
+    fallback_end_date: str = "2024-04-09"
+
+    # レジーム適応設定
+    regime_adaptation_enabled: bool = False
+
     # 指標設定拡張
     allowed_indicators: List[str] = field(default_factory=list)
 
@@ -140,9 +146,13 @@ class GAConfig(BaseConfig):
             raise ValueError("max_indicators は正の整数である必要があります")
 
         # Validate float fields
-        if not isinstance(self.crossover_rate, (int, float)) or not (0 <= self.crossover_rate <= 1):
+        if not isinstance(self.crossover_rate, (int, float)) or not (
+            0 <= self.crossover_rate <= 1
+        ):
             raise ValueError("crossover_rate は0から1の範囲の実数である必要があります")
-        if not isinstance(self.mutation_rate, (int, float)) or not (0 <= self.mutation_rate <= 1):
+        if not isinstance(self.mutation_rate, (int, float)) or not (
+            0 <= self.mutation_rate <= 1
+        ):
             raise ValueError("mutation_rate は0から1の範囲の実数である必要があります")
 
         # Convert int to float if necessary
@@ -290,6 +300,9 @@ class GAConfig(BaseConfig):
             "random_state": self.random_state,
             "log_level": self.log_level,
             "save_intermediate_results": self.save_intermediate_results,
+            # フォールバック設定
+            "fallback_start_date": self.fallback_start_date,
+            "fallback_end_date": self.fallback_end_date,
             # フィットネス共有設定
             "enable_fitness_sharing": self.enable_fitness_sharing,
             "sharing_radius": self.sharing_radius,
@@ -300,6 +313,8 @@ class GAConfig(BaseConfig):
             "tpsl_tp_range": self.tpsl_tp_range,
             "tpsl_rr_range": self.tpsl_rr_range,
             "tpsl_atr_multiplier_range": self.tpsl_atr_multiplier_range,
+            # レジーム適応設定
+            "regime_adaptation_enabled": self.regime_adaptation_enabled,
         }
 
     @classmethod
@@ -362,6 +377,9 @@ class GAConfig(BaseConfig):
             # 実行設定
             "parallel_processes": None,
             "random_state": None,
+            # フォールバック設定
+            "fallback_start_date": data.get("fallback_start_date", "2024-01-01"),
+            "fallback_end_date": data.get("fallback_end_date", "2024-04-09"),
             # TPSL設定デフォルト
             "tpsl_method_constraints": data.get(
                 "tpsl_method_constraints", GA_DEFAULT_TPSL_METHOD_CONSTRAINTS
@@ -372,6 +390,8 @@ class GAConfig(BaseConfig):
             "tpsl_atr_multiplier_range": data.get(
                 "tpsl_atr_multiplier_range", GA_TPSL_ATR_MULTIPLIER_RANGE
             ),
+            # レジーム適応設定
+            "regime_adaptation_enabled": data.get("regime_adaptation_enabled", False),
         }
 
         # デフォルト値をマージ
@@ -423,12 +443,12 @@ class GAConfig(BaseConfig):
 
         # TPSL設定を適用
         if self.tpsl_method_constraints is None:
-            from ..constants import GA_DEFAULT_TPSL_METHOD_CONSTRAINTS
             from ..constants import (
+                GA_DEFAULT_TPSL_METHOD_CONSTRAINTS,
+                GA_TPSL_ATR_MULTIPLIER_RANGE,
+                GA_TPSL_RR_RANGE,
                 GA_TPSL_SL_RANGE,
                 GA_TPSL_TP_RANGE,
-                GA_TPSL_RR_RANGE,
-                GA_TPSL_ATR_MULTIPLIER_RANGE,
             )
 
             self.tpsl_method_constraints = GA_DEFAULT_TPSL_METHOD_CONSTRAINTS.copy()
@@ -444,6 +464,17 @@ class GAConfig(BaseConfig):
 
         if self.tpsl_atr_multiplier_range is None:
             self.tpsl_atr_multiplier_range = GA_TPSL_ATR_MULTIPLIER_RANGE.copy()
+
+        # フォールバック設定
+        self.fallback_start_date = getattr(
+            ga_config, "fallback_start_date", "2024-01-01"
+        )
+        self.fallback_end_date = getattr(ga_config, "fallback_end_date", "2024-04-09")
+
+        # レジーム適応設定（デフォルトはFalse、後続ステップで設定可能にする）
+        self.regime_adaptation_enabled = getattr(
+            ga_config, "regime_adaptation_enabled", False
+        )
 
         # 許可指標リスト
         if not self.allowed_indicators:
@@ -508,7 +539,6 @@ class GAConfig(BaseConfig):
         except Exception as e:
             logger.error(f"JSON復元エラー: {e}", exc_info=True)
             raise ValueError(f"JSON からの復元に失敗しました: {e}")
-
 
 
 @dataclass

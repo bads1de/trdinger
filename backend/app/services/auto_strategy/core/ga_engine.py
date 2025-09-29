@@ -7,23 +7,24 @@ DEAPライブラリを使用したGA実装。
 import logging
 import random
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-from deap import tools, algorithms
+from deap import tools
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..generators.strategy_factory import StrategyFactory
+from ..config import GAConfigPydantic as GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
-from ..config import GAConfig
-from .genetic_operators import (
-    crossover_strategy_genes,
-    mutate_strategy_gene,
-    create_deap_mutate_wrapper,
-)
+from ..generators.strategy_factory import StrategyFactory
+from ..services.regime_detector import RegimeDetector
 from .deap_setup import DEAPSetup
 from .fitness_sharing import FitnessSharing
+from .genetic_operators import (
+    create_deap_mutate_wrapper,
+    crossover_strategy_genes,
+    mutate_strategy_gene,
+)
 from .individual_evaluator import IndividualEvaluator
 
 logger = logging.getLogger(__name__)
@@ -223,6 +224,7 @@ class GeneticAlgorithmEngine:
         backtest_service: BacktestService,
         strategy_factory: StrategyFactory,
         gene_generator: RandomGeneGenerator,
+        regime_detector: Optional["RegimeDetector"] = None,
     ):
         """
         初期化
@@ -231,6 +233,7 @@ class GeneticAlgorithmEngine:
             backtest_service: バックテストサービス
             strategy_factory: 戦略ファクトリー
             gene_generator: 遺伝子生成器
+            regime_detector: レジーム検知器（オプション、レジーム適応時に使用）
         """
         self.backtest_service = backtest_service
         self.strategy_factory = strategy_factory
@@ -241,7 +244,9 @@ class GeneticAlgorithmEngine:
 
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
-        self.individual_evaluator = IndividualEvaluator(backtest_service)
+        self.individual_evaluator = IndividualEvaluator(
+            backtest_service, regime_detector
+        )
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing = None  # setup_deap時に初期化
 
@@ -293,15 +298,23 @@ class GeneticAlgorithmEngine:
             self.is_running = True
             start_time = time.time()
 
-            logger.info(f"GA Engine - Starting evolution with backtest_config: {backtest_config}")
+            logger.info(
+                "GA Engine - Starting evolution with backtest_config: %s",
+                backtest_config
+            )
 
             # バックテスト設定にデフォルトの日付を設定（存在しない場合）
-            if 'start_date' not in backtest_config:
-                backtest_config['start_date'] = config.fallback_start_date
-                logger.info(f"GA Engine - Using fallback start_date: {config.fallback_start_date}")
-            if 'end_date' not in backtest_config:
-                backtest_config['end_date'] = config.fallback_end_date
-                logger.info(f"GA Engine - Using fallback end_date: {config.fallback_end_date}")
+            if "start_date" not in backtest_config:
+                backtest_config["start_date"] = config.fallback_start_date
+                logger.info(
+                    "GA Engine - Using fallback start_date: %s",
+                    config.fallback_start_date
+                )
+            if "end_date" not in backtest_config:
+                backtest_config["end_date"] = config.fallback_end_date
+                logger.info(
+                    f"GA Engine - Using fallback end_date: {config.fallback_end_date}"
+                )
 
             # バックテスト設定を保存
             self.individual_evaluator.set_backtest_config(backtest_config)
@@ -424,8 +437,8 @@ class GeneticAlgorithmEngine:
 
     def _extract_best_individuals(self, population, config: GAConfig):
         """最良個体を抽出し、デコード"""
-        from ..serializers.gene_serialization import GeneSerializer
         from ..models.strategy_models import StrategyGene
+        from ..serializers.gene_serialization import GeneSerializer
 
         gene_serializer = GeneSerializer()
 
@@ -481,4 +494,3 @@ class GeneticAlgorithmEngine:
             logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")
             # 遺伝子生成はGAの根幹部分であり、失敗した場合は例外をスローして処理を停止するのが安全
             raise
-

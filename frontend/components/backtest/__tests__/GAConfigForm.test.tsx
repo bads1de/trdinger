@@ -53,6 +53,7 @@ const initialConfig = {
     enable_multi_objective: true,
     objectives: ["win_rate", "max_drawdown"],
     objective_weights: [1.0, -1.0],
+    regime_adaptation_enabled: false,
   },
 };
 
@@ -80,8 +81,8 @@ describe("GAConfigForm", () => {
       />
     );
 
-    // 指標モードのセレクト要素を取得（placeholderで特定）
-    const indicatorModeSelect = screen.getByDisplayValue("TA");
+    // 指標モードのセレクト要素を取得（TAラベルで特定）
+    const indicatorModeSelect = screen.getByText("TA");
 
     // デフォルト値が"technical_only"であることを確認
     expect(indicatorModeSelect).toBeInTheDocument();
@@ -97,7 +98,7 @@ describe("GAConfigForm", () => {
     );
 
     // 指標モードのセレクト要素を取得
-    const indicatorModeSelect = screen.getByDisplayValue("TA");
+    const indicatorModeSelect = screen.getByText("TA");
 
     // 要素が存在することを確認
     expect(indicatorModeSelect).toBeInTheDocument();
@@ -124,7 +125,7 @@ describe("GAConfigForm", () => {
     expect(collapsibleTrigger).toHaveAttribute("aria-expanded", "false");
 
     // 説明コンテンツが表示されていないことを確認
-    expect(screen.queryByText("TA: 従来のテクニカル指標のみを使用")).not.toBeInTheDocument();
+    expect(screen.queryByText(/TA: 従来のテクニカル指標のみを使用/)).not.toBeInTheDocument();
     expect(screen.queryByText("TP/SLとポジションサイズはGAが自動最適化します。")).not.toBeInTheDocument();
   });
 
@@ -147,7 +148,7 @@ describe("GAConfigForm", () => {
     expect(collapsibleTrigger).toHaveAttribute("aria-expanded", "true");
 
     // 説明コンテンツが表示されることを確認
-    expect(screen.getByText("TA: 従来のテクニカル指標のみを使用")).toBeInTheDocument();
+    expect(screen.getByText(/TA: 従来のテクニカル指標のみを使用/)).toBeInTheDocument();
     expect(screen.getByText("TP/SLとポジションサイズはGAが自動最適化します。")).toBeInTheDocument();
   });
 
@@ -182,7 +183,7 @@ describe("GAConfigForm", () => {
     );
 
     // 現在の値がTAであることを確認
-    expect(screen.getByDisplayValue("TA")).toBeInTheDocument();
+    expect(screen.getByText("TA")).toBeInTheDocument();
 
     // 指標モードのセレクトトリガーをクリック（ドロップダウンを開く）
     const selectTrigger = screen.getByRole("combobox");
@@ -193,7 +194,7 @@ describe("GAConfigForm", () => {
     fireEvent.click(mlOption);
 
     // 値が変更されたことを確認
-    expect(screen.getByDisplayValue("ML")).toBeInTheDocument();
+    expect(screen.getByText("ML")).toBeInTheDocument();
 
     // フォームを送信
     const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
@@ -202,5 +203,72 @@ describe("GAConfigForm", () => {
     // onSubmitが正しい値で呼び出されたことを確認
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
     expect(submittedConfig.ga_config.indicator_mode).toBe("ml_only");
+  });
+
+  test("レジーム適応チェックボックスがデフォルトで未チェックであること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    // レジーム適応チェックボックスを取得
+    const regimeCheckbox = screen.getByLabelText("レジーム適応を有効化");
+
+    // デフォルトで未チェックであることを確認
+    expect(regimeCheckbox).not.toBeChecked();
+  });
+
+  test("レジーム適応チェックボックスをチェックできること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    // レジーム適応チェックボックスを取得
+    const regimeCheckbox = screen.getByLabelText("レジーム適応を有効化");
+
+    // チェックボックスをクリック
+    fireEvent.click(regimeCheckbox);
+
+    // チェックされたことを確認
+    expect(regimeCheckbox).toBeChecked();
+
+    // フォームを送信
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    // onSubmitが正しい値で呼び出されたことを確認
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.regime_adaptation_enabled).toBe(true);
+  });
+
+  test("レジーム適応チェックボックスがtrueで初期化されるとチェックされること", () => {
+    const configWithRegimeEnabled = {
+      ...initialConfig,
+      ga_config: {
+        ...initialConfig.ga_config,
+        regime_adaptation_enabled: true,
+      },
+    };
+
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={configWithRegimeEnabled}
+      />
+    );
+
+    // レジーム適応チェックボックスを取得
+    const regimeCheckbox = screen.getByLabelText("レジーム適応を有効化");
+
+    // チェックされていることを確認
+    expect(regimeCheckbox).toBeChecked();
   });
 });

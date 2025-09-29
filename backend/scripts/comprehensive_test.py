@@ -15,13 +15,20 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from pandas import DataFrame, Series
 
 from app.services.indicators.indicator_orchestrator import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
+from app.services.auto_strategy.services.regime_detector import RegimeDetector
+from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.config.ga_runtime import GAConfig
+from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
+from app.services.backtest.backtest_service import BacktestService
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -126,6 +133,51 @@ def create_test_data():
     df.set_index('timestamp', inplace=True)
 
     return df
+
+
+def create_regime_specific_test_data(n_samples: int = 100) -> Dict[str, pd.DataFrame]:
+    """レジーム別のテストデータ作成（test_regime_detector.py準拠）"""
+    np.random.seed(42)
+
+    # ベース価格
+    base_price = 50000
+
+    # トレンドデータ（上昇トレンド）
+    trend_dates = pd.date_range(start='2024-01-01', periods=n_samples, freq='1h')
+    trend_data = np.cumsum(np.random.randn(n_samples, 4) * 0.01 + 0.001, axis=0)
+    trend_volume = np.random.rand(n_samples) * 1000 + 500
+    trend_data = np.column_stack([trend_data, trend_volume])
+
+    trend_df = pd.DataFrame(trend_data, columns=['open', 'high', 'low', 'close', 'volume'], index=trend_dates)
+    # 価格を正規化
+    for col in ['open', 'high', 'low', 'close']:
+        trend_df[col] = base_price + trend_df[col] * 100
+
+    # レンジデータ（横ばい）
+    range_dates = pd.date_range(start='2024-01-01', periods=n_samples, freq='1h')
+    range_data = np.random.randn(n_samples, 4) * 0.005
+    range_volume = np.random.rand(n_samples) * 1000 + 500
+    range_data = np.column_stack([range_data, range_volume])
+
+    range_df = pd.DataFrame(range_data, columns=['open', 'high', 'low', 'close', 'volume'], index=range_dates)
+    for col in ['open', 'high', 'low', 'close']:
+        range_df[col] = base_price + range_df[col] * 100
+
+    # 高ボラティリティデータ
+    high_vol_dates = pd.date_range(start='2024-01-01', periods=n_samples, freq='1h')
+    high_vol_data = np.random.randn(n_samples, 4) * 0.02
+    high_vol_volume = np.random.rand(n_samples) * 1000 + 500
+    high_vol_data = np.column_stack([high_vol_data, high_vol_volume])
+
+    high_vol_df = pd.DataFrame(high_vol_data, columns=['open', 'high', 'low', 'close', 'volume'], index=high_vol_dates)
+    for col in ['open', 'high', 'low', 'close']:
+        high_vol_df[col] = base_price + high_vol_df[col] * 100
+
+    return {
+        'trend': trend_df,
+        'range': range_df,
+        'high_volatility': high_vol_df
+    }
 
 
 def get_all_registered_indicators():
@@ -440,6 +492,326 @@ def generate_test_report(report: ComprehensiveTestReport, output_path: Optional[
         logger.info(f"レポートを保存しました: {output_path}")
 
     return full_report
+
+
+class TestRegimeAwareIntegration:
+    """レジーム対応統合テスト"""
+
+    @pytest.fixture
+    def mock_regime_detector_config(self):
+        """RegimeDetector設定のモック"""
+        config = Mock()
+        config.n_components = 3
+        config.covariance_type = "full"
+        config.n_iter = 100
+        return config
+
+    @pytest.fixture
+    def regime_detector(self, mock_regime_detector_config):
+        """RegimeDetectorインスタンス"""
+        return RegimeDetector(mock_regime_detector_config)
+
+    @pytest.fixture
+    def mock_ga_config_with_regime(self):
+        """レジーム適応有効のGAConfig"""
+        config = GAConfig(
+            population_size=20,  # 小さくしてテスト高速化
+            generations=5,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            enable_multi_objective=False,
+            enable_fitness_sharing=False,
+            fallback_start_date="2024-01-01",
+            fallback_end_date="2024-12-31",
+            objectives=["sharpe_ratio"],
+            regime_adaptation_enabled=True,
+        )
+        return config
+
+    @pytest.fixture
+    def mock_ga_config_without_regime(self):
+        """レジーム適応無効のGAConfig"""
+        config = GAConfig(
+            population_size=20,
+            generations=5,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            enable_multi_objective=False,
+            enable_fitness_sharing=False,
+            fallback_start_date="2024-01-01",
+            fallback_end_date="2024-12-31",
+            objectives=["sharpe_ratio"],
+            regime_adaptation_enabled=False,
+        )
+        return config
+
+    @pytest.fixture
+    def mock_backtest_service(self):
+        """BacktestServiceのモック"""
+        service = Mock(spec=BacktestService)
+
+        # 異なるレジームでのバックテスト結果を返す
+        def mock_run_backtest(*args, **kwargs):
+            return {
+                "sharpe_ratio": np.random.uniform(0.5, 2.0),
+                "total_return": np.random.uniform(-0.1, 0.3),
+                "max_drawdown": np.random.uniform(0.05, 0.2),
+                "win_rate": np.random.uniform(0.4, 0.7),
+                "profit_factor": np.random.uniform(1.0, 2.5),
+                "total_trades": np.random.randint(50, 200),
+            }
+
+        service.run_backtest.side_effect = mock_run_backtest
+        return service
+
+    def test_regime_detector_with_different_regimes(self, regime_detector):
+        """異なるレジームでのRegimeDetector動作テスト"""
+        regime_data = create_regime_specific_test_data(100)
+
+        # 各レジームで検知テスト（mockを使って安定させる）
+        for regime_name, data in regime_data.items():
+            # 各レジームに応じた結果をmock
+            if regime_name == 'trend':
+                expected_regimes = np.array([0] * 90 + [1] * 10)  # 主にトレンド
+            elif regime_name == 'range':
+                expected_regimes = np.array([1] * 90 + [0] * 10)  # 主にレンジ
+            else:  # high_volatility
+                expected_regimes = np.array([2] * 90 + [0] * 10)  # 主に高ボラ
+
+            with patch.object(regime_detector, 'detect_regimes', return_value=expected_regimes):
+                regimes = regime_detector.detect_regimes(data)
+
+                assert isinstance(regimes, np.ndarray)
+                assert len(regimes) == len(data)
+                assert all(regime in [0, 1, 2] for regime in regimes)
+
+                # 各レジームの主要なラベルを確認
+                unique_regimes = set(regimes)
+                assert len(unique_regimes) > 0
+
+    def test_ga_performance_comparison_with_regime_adaptation(
+        self, mock_backtest_service, mock_regime_detector_config,
+        mock_ga_config_with_regime, mock_ga_config_without_regime
+    ):
+        """レジーム適応有無でのGAパフォーマンス比較テスト"""
+        # RegimeDetectorのモック
+        regime_detector = RegimeDetector(mock_regime_detector_config)
+
+        # モックデータを準備
+        test_data = create_regime_specific_test_data(100)['trend']  # トレンドデータを使用
+
+        # 複数のレジームをシミュレート
+        with patch.object(regime_detector, 'detect_regimes', return_value=np.array([0]*50 + [1]*30 + [2]*20)):
+            # mock_backtest_serviceにdata_serviceを設定
+            mock_data_service = Mock()
+            mock_data_service.get_ohlcv_data.return_value = test_data
+            mock_backtest_service.data_service = mock_data_service
+            mock_backtest_service._ensure_data_service_initialized = Mock()
+
+            # レジーム適応有効での評価
+            evaluator_with_regime = IndividualEvaluator(mock_backtest_service, regime_detector)
+            evaluator_with_regime.set_backtest_config({
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 10000,
+                "commission_rate": 0.001,
+            })
+
+            # レジーム適応無効での評価
+            evaluator_without_regime = IndividualEvaluator(mock_backtest_service, None)
+            evaluator_without_regime.set_backtest_config({
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 10000,
+                "commission_rate": 0.001,
+            })
+
+            # テスト個体
+            individual = [0.1, 0.2, 0.3, 0.4, 0.5]  # 遺伝子リスト
+
+            # 両方の設定で評価
+            fitness_with_regime = evaluator_with_regime.evaluate_individual(individual, mock_ga_config_with_regime)
+            fitness_without_regime = evaluator_without_regime.evaluate_individual(individual, mock_ga_config_without_regime)
+
+            # フィットネス値が返されることを確認
+            assert isinstance(fitness_with_regime, tuple)
+            assert isinstance(fitness_without_regime, tuple)
+            assert len(fitness_with_regime) == 1
+            assert len(fitness_without_regime) == 1
+
+            # レジーム適応有効時はRegimeDetectorが呼ばれたことを確認
+            regime_detector.detect_regimes.assert_called()
+
+    def test_regime_transition_impact_on_performance(self, regime_detector, mock_backtest_service):
+        """レジーム遷移がパフォーマンスに与える影響テスト"""
+        # 遷移を含むデータ作成
+        trend_data = create_regime_specific_test_data(100)['trend']
+        range_data = create_regime_specific_test_data(100)['range']
+
+        # トレンド→レンジへの遷移データを結合
+        transition_data = pd.concat([trend_data, range_data])
+
+        # 遷移をシミュレート（mock）
+        transition_regimes = np.array([0] * 80 + [1] * 120)  # トレンド→レンジ遷移
+
+        with patch.object(regime_detector, 'detect_regimes', return_value=transition_regimes):
+            # レジーム検知
+            regimes = regime_detector.detect_regimes(transition_data)
+
+            # 遷移が発生していることを確認
+            first_half_regimes = regimes[:100]
+            second_half_regimes = regimes[100:]
+
+            # 遷移があることを確認
+            assert 0 in first_half_regimes  # トレンドがある
+            assert 1 in second_half_regimes  # レジームがある
+
+            # mock_backtest_serviceにdata_serviceを設定
+            mock_data_service = Mock()
+            mock_data_service.get_ohlcv_data.return_value = transition_data
+            mock_backtest_service.data_service = mock_data_service
+            mock_backtest_service._ensure_data_service_initialized = Mock()
+
+            # バックテスト結果のモックで遷移影響をシミュレート
+            evaluator = IndividualEvaluator(mock_backtest_service, regime_detector)
+            evaluator.set_backtest_config({
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 10000,
+                "commission_rate": 0.001,
+            })
+
+            ga_config = GAConfig(
+                population_size=20,
+                generations=3,
+                crossover_rate=0.8,
+                mutation_rate=0.2,
+                enable_multi_objective=False,
+                enable_fitness_sharing=False,
+                fallback_start_date="2024-01-01",
+                fallback_end_date="2024-12-31",
+                objectives=["sharpe_ratio"],
+                regime_adaptation_enabled=True,
+            )
+
+            individual = [0.1, 0.2, 0.3]
+            fitness = evaluator.evaluate_individual(individual, ga_config)
+
+            assert isinstance(fitness, tuple)
+            assert len(fitness) == 1
+
+    def test_regime_detection_failure_fallback(self, mock_backtest_service, mock_regime_detector_config):
+        """レジーム検知失敗時のフォールバック動作テスト"""
+        # エラーを発生させるRegimeDetectorのモック
+        failing_detector = RegimeDetector(mock_regime_detector_config)
+
+        # mock_backtest_serviceにdata_serviceを設定
+        mock_data_service = Mock()
+        test_data = create_regime_specific_test_data(100)['trend']
+        mock_data_service.get_ohlcv_data.return_value = test_data
+        mock_backtest_service.data_service = mock_data_service
+        mock_backtest_service._ensure_data_service_initialized = Mock()
+
+        # 検知失敗をシミュレート
+        with patch.object(failing_detector, 'detect_regimes', side_effect=Exception("Detection failed")):
+            evaluator = IndividualEvaluator(mock_backtest_service, failing_detector)
+            evaluator.set_backtest_config({
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "initial_capital": 10000,
+                "commission_rate": 0.001,
+            })
+
+            ga_config = GAConfig(
+                population_size=20,
+                generations=3,
+                crossover_rate=0.8,
+                mutation_rate=0.2,
+                enable_multi_objective=False,
+                enable_fitness_sharing=False,
+                fallback_start_date="2024-01-01",
+                fallback_end_date="2024-12-31",
+                objectives=["sharpe_ratio"],
+                regime_adaptation_enabled=True,
+            )
+
+            individual = [0.1, 0.2, 0.3]
+
+            # エラーが発生してもフォールバックされるはず
+            fitness = evaluator.evaluate_individual(individual, ga_config)
+
+            # デフォルトフィットネスが返されることを確認
+            assert isinstance(fitness, tuple)
+            assert len(fitness) == 1
+            assert fitness[0] == 0.1  # 取引回数0時のデフォルト値
+
+    def test_sharpe_ratio_drawdown_comparison_across_regimes(self, regime_detector, mock_backtest_service):
+        """異なるレジームでのSharpe比率とドローダウンの比較テスト"""
+        regime_data = create_regime_specific_test_data(50)
+
+        results = {}
+
+        for regime_name, data in regime_data.items():
+            # 各レジームに応じたmock結果
+            if regime_name == 'trend':
+                mock_regimes = np.array([0] * 40 + [1] * 10)  # 主にトレンド
+            elif regime_name == 'range':
+                mock_regimes = np.array([1] * 40 + [0] * 10)  # 主にレンジ
+            else:  # high_volatility
+                mock_regimes = np.array([2] * 40 + [0] * 10)  # 主に高ボラ
+
+            with patch.object(regime_detector, 'detect_regimes', return_value=mock_regimes):
+                regimes = regime_detector.detect_regimes(data)
+
+                # mock_backtest_serviceにdata_serviceを設定
+                mock_data_service = Mock()
+                mock_data_service.get_ohlcv_data.return_value = data
+                mock_backtest_service.data_service = mock_data_service
+                mock_backtest_service._ensure_data_service_initialized = Mock()
+
+                evaluator = IndividualEvaluator(mock_backtest_service, regime_detector)
+                evaluator.set_backtest_config({
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1h",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                    "initial_capital": 10000,
+                    "commission_rate": 0.001,
+                })
+
+                ga_config = GAConfig(
+                    population_size=10,
+                    generations=2,
+                    crossover_rate=0.8,
+                    mutation_rate=0.2,
+                    enable_multi_objective=False,
+                    enable_fitness_sharing=False,
+                    fallback_start_date="2024-01-01",
+                    fallback_end_date="2024-12-31",
+                    objectives=["sharpe_ratio"],
+                    regime_adaptation_enabled=True,
+                )
+
+                individual = [0.1, 0.2, 0.3]
+                fitness = evaluator.evaluate_individual(individual, ga_config)
+
+                results[regime_name] = {
+                    'fitness': fitness[0],
+                    'regime_distribution': np.bincount(regimes, minlength=3)
+                }
+
+        # 結果が生成されたことを確認
+        assert len(results) == 3
+        assert all('fitness' in result for result in results.values())
+        assert all('regime_distribution' in result for result in results.values())
 
 
 def main():

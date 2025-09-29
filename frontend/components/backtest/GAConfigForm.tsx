@@ -102,6 +102,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         objective_weights: initialConfig.ga_config?.objective_weights || [
           1.0, -1.0,
         ],
+        regime_adaptation_enabled: initialConfig.ga_config?.regime_adaptation_enabled ?? false,
       },
     };
   });
@@ -343,6 +344,21 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             gaConfig={config.ga_config}
             onGAConfigChange={handleGAConfigChange}
           />
+
+          {/* レジーム適応設定 */}
+          <div className="mb-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={config.ga_config.regime_adaptation_enabled ?? false}
+                onChange={(e) => handleGAConfigChange({ regime_adaptation_enabled: e.target.checked })}
+                className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-indigo-200">
+                レジーム適応を有効化
+              </span>
+            </label>
+          </div>
         </div>
 
         {/* Action Buttons */}
