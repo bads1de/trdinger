@@ -102,7 +102,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         objective_weights: initialConfig.ga_config?.objective_weights || [
           1.0, -1.0,
         ],
-        regime_adaptation_enabled: initialConfig.ga_config?.regime_adaptation_enabled ?? false,
+        regime_adaptation_enabled:
+          initialConfig.ga_config?.regime_adaptation_enabled ?? false,
       },
     };
   });
@@ -282,7 +283,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
             {/* TP/SL自動最適化 */}
             <div className="p-3 bg-pink-900/30 border border-pink-500/30 rounded-md">
-              <h4 className="font-medium text-pink-300 mb-2">📈 TP/SL自動最適化</h4>
+              <h4 className="font-medium text-pink-300 mb-2">
+                📈 TP/SL自動最適化
+              </h4>
               <div className="text-xs text-pink-200 space-y-1">
                 <div>
                   • <strong>決定方式</strong>:
@@ -337,6 +340,23 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 フィットネス共有 (戦略の多様性向上)
               </span>
             </label>
+            <div className="pt-1">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={config.ga_config.regime_adaptation_enabled ?? false}
+                  onChange={(e) =>
+                    handleGAConfigChange({
+                      regime_adaptation_enabled: e.target.checked,
+                    })
+                  }
+                  className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-indigo-200">
+                  レジーム適応を有効化
+                </span>
+              </label>
+            </div>
           </div>
 
           {/* 多目的最適化設定 */}
@@ -344,21 +364,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             gaConfig={config.ga_config}
             onGAConfigChange={handleGAConfigChange}
           />
-
-          {/* レジーム適応設定 */}
-          <div className="mb-2">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={config.ga_config.regime_adaptation_enabled ?? false}
-                onChange={(e) => handleGAConfigChange({ regime_adaptation_enabled: e.target.checked })}
-                className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm text-indigo-200">
-                レジーム適応を有効化
-              </span>
-            </label>
-          </div>
         </div>
 
         {/* Action Buttons */}
