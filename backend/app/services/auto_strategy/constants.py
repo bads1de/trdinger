@@ -209,6 +209,10 @@ POSITION_SIZING_LIMITS = {
     "fixed_quantity": (0.01, 1000.0),
     "min_position_size": (0.001, 1.0),
     "max_position_size": (0.001, 1.0),
+    "var_confidence": (0.8, 0.999),
+    "max_var_ratio": (0.001, 0.1),
+    "max_expected_shortfall_ratio": (0.001, 0.2),
+    "var_lookback": (20, 1000),
 }
 
 # === GA TPSL関連定数 ===

@@ -37,6 +37,10 @@ GA_POSITION_SIZING_MAX_SIZE_RANGE = [
     1.0,
 ]  # 最大ポジションサイズ範囲（システム全体のmax_position_sizeに一致）
 GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]  # 優先度範囲
+GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE = [0.8, 0.99]  # VaR信頼水準
+GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE = [0.005, 0.05]  # VaR許容比率
+GA_POSITION_SIZING_MAX_ES_RATIO_RANGE = [0.01, 0.1]  # ES許容比率
+GA_POSITION_SIZING_VAR_LOOKBACK_RANGE = [50, 500]  # VaR計算のルックバック期間
 
 # ポジションサイジング制限設定
 POSITION_SIZING_LIMITS = {
@@ -49,6 +53,10 @@ POSITION_SIZING_LIMITS = {
     "fixed_quantity": (0.01, 1000.0),
     "min_position_size": (0.001, 1.0),
     "max_position_size": (0.001, 1.0),
+    "var_confidence": (0.8, 0.999),
+    "max_var_ratio": (0.001, 0.1),
+    "max_expected_shortfall_ratio": (0.001, 0.2),
+    "var_lookback": (20, 1000),
 }
 
 
@@ -92,6 +100,18 @@ class PositionSizingSettings(BaseConfig):
     )
     priority_range: List[float] = field(
         default_factory=lambda: GA_POSITION_SIZING_PRIORITY_RANGE.copy()
+    )
+    var_confidence_range: List[float] = field(
+        default_factory=lambda: GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE.copy()
+    )
+    max_var_ratio_range: List[float] = field(
+        default_factory=lambda: GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE.copy()
+    )
+    max_expected_shortfall_ratio_range: List[float] = field(
+        default_factory=lambda: GA_POSITION_SIZING_MAX_ES_RATIO_RANGE.copy()
+    )
+    var_lookback_range: List[int] = field(
+        default_factory=lambda: GA_POSITION_SIZING_VAR_LOOKBACK_RANGE.copy()
     )
 
     # 制限設定

@@ -30,6 +30,10 @@ class PositionSizingGene(BaseGene):
     fixed_quantity: float = 1.0
     min_position_size: float = 0.01
     max_position_size: float = 9999.0
+    var_confidence: float = 0.95
+    max_var_ratio: float = 0.02
+    max_expected_shortfall_ratio: float = 0.03
+    var_lookback: int = 100
     enabled: bool = True
     priority: float = 1.0
 
@@ -52,6 +56,34 @@ class PositionSizingGene(BaseGene):
             self._validate_range(
                 self.atr_multiplier, 0.1, 5.0, "atr_multiplier", errors
             )
+            self._validate_range(
+                self.var_confidence,
+                POSITION_SIZING_LIMITS["var_confidence"][0],
+                POSITION_SIZING_LIMITS["var_confidence"][1],
+                "var_confidence",
+                errors,
+            )
+            self._validate_range(
+                self.max_var_ratio,
+                POSITION_SIZING_LIMITS["max_var_ratio"][0],
+                POSITION_SIZING_LIMITS["max_var_ratio"][1],
+                "max_var_ratio",
+                errors,
+            )
+            self._validate_range(
+                self.max_expected_shortfall_ratio,
+                POSITION_SIZING_LIMITS["max_expected_shortfall_ratio"][0],
+                POSITION_SIZING_LIMITS["max_expected_shortfall_ratio"][1],
+                "max_expected_shortfall_ratio",
+                errors,
+            )
+            self._validate_range(
+                self.var_lookback,
+                POSITION_SIZING_LIMITS["var_lookback"][0],
+                POSITION_SIZING_LIMITS["var_lookback"][1],
+                "var_lookback",
+                errors,
+            )
 
         except ImportError:
             # 定数が利用できない場合の基本検証
@@ -63,3 +95,13 @@ class PositionSizingGene(BaseGene):
                 errors.append("risk_per_tradeは0.001-0.1の範囲である必要があります")
             if not (0.001 <= self.fixed_ratio <= 1.0):
                 errors.append("fixed_ratioは0.001-1.0の範囲である必要があります")
+            if not (0.8 <= self.var_confidence <= 0.999):
+                errors.append("var_confidenceは0.8-0.999の範囲である必要があります")
+            if not (0.001 <= self.max_var_ratio <= 0.1):
+                errors.append("max_var_ratioは0.001-0.1の範囲である必要があります")
+            if not (0.001 <= self.max_expected_shortfall_ratio <= 0.2):
+                errors.append(
+                    "max_expected_shortfall_ratioは0.001-0.2の範囲である必要があります"
+                )
+            if not (20 <= self.var_lookback <= 1000):
+                errors.append("var_lookbackは20-1000の範囲である必要があります")

@@ -16,6 +16,7 @@ from app.utils.error_handler import safe_operation
 
 from .calculators.calculator_factory import CalculatorFactory
 from .market_data_handler import MarketDataHandler
+from .risk_metrics import calculate_expected_shortfall, calculate_historical_var
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,7 @@ class PositionSizingService:
                 account_balance,
                 current_price,
                 enhanced_market_data,
+                gene,
             )
 
             # 信頼度スコアの計算
@@ -180,6 +182,7 @@ class PositionSizingService:
         account_balance: float,
         current_price: float,
         market_data: Dict[str, Any],
+        gene,
     ) -> Dict[str, float]:
         """リスクメトリクスの計算"""
 
@@ -208,12 +211,43 @@ class PositionSizingService:
                 potential_loss_1atr / account_balance if account_balance > 0 else 0
             )
 
+            returns_data = market_data.get("returns")
+            returns_sample: List[float] = []
+            if returns_data is not None:
+                try:
+                    returns_list = list(returns_data)
+                    lookback = max(int(getattr(gene, "var_lookback", len(returns_list))), 1)
+                    returns_sample = returns_list[-lookback:]
+                except TypeError:
+                    returns_sample = []
+
+            var_ratio = calculate_historical_var(
+                returns_sample, getattr(gene, "var_confidence", 0.95)
+            )
+            expected_shortfall_ratio = calculate_expected_shortfall(
+                returns_sample, getattr(gene, "var_confidence", 0.95)
+            )
+
+            var_loss = position_value * var_ratio
+            es_loss = position_value * expected_shortfall_ratio
+            max_var_allowed = account_balance * getattr(gene, "max_var_ratio", 0.0)
+            max_es_allowed = account_balance * getattr(
+                gene, "max_expected_shortfall_ratio", 0.0
+            )
+
             return {
                 "position_value": position_value,
                 "position_ratio": position_ratio,
                 "potential_loss_1atr": potential_loss_1atr,
                 "potential_loss_ratio": potential_loss_ratio,
                 "atr_used": atr_pct,
+                "var": var_ratio,
+                "var_loss": var_loss,
+                "max_var_allowed": max_var_allowed,
+                "expected_shortfall": expected_shortfall_ratio,
+                "expected_shortfall_loss": es_loss,
+                "max_expected_shortfall_allowed": max_es_allowed,
+                "return_sample_size": len(returns_sample),
             }
 
         return _calculate_risk_metrics_impl()
