@@ -34,6 +34,7 @@ export interface GAConfig {
       sharpe_ratio: number;
       max_drawdown: number;
       win_rate: number;
+      prediction_score?: number; // ハイブリッドモード用
     };
     /** 実行時の制約（スクリーニング条件） */
     fitness_constraints: {
@@ -66,6 +67,14 @@ export interface GAConfig {
     // レジーム適応設定
     /** レジーム適応を有効化するかどうか */
     regime_adaptation_enabled?: boolean;
+
+    // ハイブリッドGA+ML設定
+    /** ハイブリッドモード有効化（GA+ML予測統合） */
+    hybrid_mode?: boolean;
+    /** MLモデルタイプ（lightgbm, xgboost, catboost, randomforest） */
+    hybrid_model_type?: string;
+    /** 複数モデル平均の場合のモデルリスト */
+    hybrid_model_types?: string[];
   };
 }
 

@@ -98,6 +98,12 @@ class GAConfig(BaseConfig):
     # 実行時設定
     parallel_processes: Optional[int] = None
     random_state: Optional[int] = None
+    
+    # ハイブリッドGA+ML設定
+    hybrid_mode: bool = False
+    hybrid_model_type: str = "lightgbm"  # lightgbm, xgboost, catboost, randomforest
+    hybrid_model_types: Optional[List[str]] = None  # 複数モデル平均の場合
+    hybrid_automl_config: Optional[Dict[str, Any]] = None  # AutoML特徴量生成設定
     log_level: str = "ERROR"
     save_intermediate_results: bool = True
     progress_callback: Optional[Callable[["GAProgress"], None]] = None

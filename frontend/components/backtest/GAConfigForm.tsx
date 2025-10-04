@@ -223,6 +223,61 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           options={INDICATOR_MODE_OPTIONS}
           required
         />
+        
+        {/* ハイブリッドモード設定 */}
+        <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-blue-200">
+              🔬 ハイブリッドGA+MLモード
+            </label>
+            <input
+              type="checkbox"
+              checked={config.ga_config.hybrid_mode || false}
+              onChange={(e) =>
+                handleGAConfigChange({ hybrid_mode: e.target.checked })
+              }
+              className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
+            />
+          </div>
+          
+          {config.ga_config.hybrid_mode && (
+            <>
+              <SelectField
+                label="MLモデル"
+                value={config.ga_config.hybrid_model_type || "lightgbm"}
+                onChange={(value) =>
+                  handleGAConfigChange({ hybrid_model_type: value })
+                }
+                options={[
+                  { value: "lightgbm", label: "LightGBM" },
+                  { value: "xgboost", label: "XGBoost" },
+                  { value: "catboost", label: "CatBoost" },
+                  { value: "randomforest", label: "Random Forest" },
+                ]}
+              />
+              <InputField
+                label="ML予測重み (prediction_score)"
+                type="number"
+                value={config.ga_config.fitness_weights.prediction_score || 0.1}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    fitness_weights: {
+                      ...config.ga_config.fitness_weights,
+                      prediction_score: value,
+                    },
+                  })
+                }
+                min={0}
+                max={1}
+                step={0.05}
+                description="ML予測スコアの重み（0-1）"
+              />
+              <p className="text-xs text-blue-300">
+                💡 事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Right Column: Advanced GA Settings */}

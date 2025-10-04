@@ -1,6 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# AGENTS.md
 
 .最初の指示で serena を使ってください
 .実装作業に入る前に serena の think を使って思考してください.

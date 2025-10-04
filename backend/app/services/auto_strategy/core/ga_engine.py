@@ -225,6 +225,9 @@ class GeneticAlgorithmEngine:
         strategy_factory: StrategyFactory,
         gene_generator: RandomGeneGenerator,
         regime_detector: Optional["RegimeDetector"] = None,
+        hybrid_mode: bool = False,
+        hybrid_predictor: Optional[Any] = None,
+        hybrid_feature_adapter: Optional[Any] = None,
     ):
         """
         初期化
@@ -234,19 +237,37 @@ class GeneticAlgorithmEngine:
             strategy_factory: 戦略ファクトリー
             gene_generator: 遺伝子生成器
             regime_detector: レジーム検知器（オプション、レジーム適応時に使用）
+            hybrid_mode: ハイブリッドGA+MLモードを有効化
+            hybrid_predictor: ハイブリッド予測器（hybrid_mode=Trueの場合）
+            hybrid_feature_adapter: 特徴量アダプタ（hybrid_mode=Trueの場合）
         """
         self.backtest_service = backtest_service
         self.strategy_factory = strategy_factory
         self.gene_generator = gene_generator
+        self.hybrid_mode = hybrid_mode
 
         # 実行状態
         self.is_running = False
 
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
-        self.individual_evaluator = IndividualEvaluator(
-            backtest_service, regime_detector
-        )
+        
+        # ハイブリッドモードに応じてEvaluatorを選択
+        if hybrid_mode:
+            logger.info("🔬 ハイブリッドGA+MLモードで起動")
+            from .hybrid_individual_evaluator import HybridIndividualEvaluator
+            self.individual_evaluator = HybridIndividualEvaluator(
+                backtest_service=backtest_service,
+                predictor=hybrid_predictor,
+                feature_adapter=hybrid_feature_adapter,
+                regime_detector=regime_detector,
+            )
+        else:
+            logger.info("🧬 標準GAモードで起動")
+            self.individual_evaluator = IndividualEvaluator(
+                backtest_service, regime_detector
+            )
+        
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing = None  # setup_deap時に初期化
 
