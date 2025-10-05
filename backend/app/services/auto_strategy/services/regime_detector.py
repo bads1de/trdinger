@@ -5,6 +5,7 @@ HMM (Hidden Markov Model) を使用して市場レジームを検知します。
 """
 
 import logging
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -13,6 +14,15 @@ from hmmlearn import hmm
 from pydantic import BaseModel, ValidationError
 
 from app.utils.error_handler import safe_operation
+
+
+@dataclass
+class RegimeDetectorConfig:
+    """RegimeDetectorの設定値"""
+
+    n_components: int = 3
+    covariance_type: str = "full"
+    n_iter: int = 100
 
 logger = logging.getLogger(__name__)
 
@@ -36,18 +46,18 @@ class RegimeDetector:
     3状態: 0=トレンド, 1=レンジ, 2=高ボラ
     """
 
-    def __init__(self, config):
+    def __init__(self, config: Optional[RegimeDetectorConfig] = None):
         """
         初期化
 
         Args:
             config: 設定オブジェクト (n_components, covariance_type, n_iter)
         """
-        self.config = config
+        self.config = config or RegimeDetectorConfig()
         self.model = hmm.GaussianHMM(
-            n_components=config.n_components,
-            covariance_type=config.covariance_type,
-            n_iter=config.n_iter,
+            n_components=self.config.n_components,
+            covariance_type=self.config.covariance_type,
+            n_iter=self.config.n_iter,
         )
 
     @safe_operation(context="レジーム検知", is_api_call=False)

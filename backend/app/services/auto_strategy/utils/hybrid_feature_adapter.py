@@ -48,6 +48,8 @@ class HybridFeatureAdapter:
         gene: StrategyGene,
         ohlcv_data: pd.DataFrame,
         apply_preprocessing: bool = False,
+        label_data: Optional[pd.DataFrame] = None,
+        sentiment_scores: Optional[pd.Series] = None,
     ) -> pd.DataFrame:
         """
         StrategyGene → 特徴量DataFrame変換
@@ -56,6 +58,8 @@ class HybridFeatureAdapter:
             gene: 戦略遺伝子
             ohlcv_data: OHLCVデータ
             apply_preprocessing: 前処理を適用するか
+            label_data: イベントドリブンラベルデータ
+            sentiment_scores: センチメントスコア系列
             
         Returns:
             特徴量DataFrame
@@ -82,6 +86,53 @@ class HybridFeatureAdapter:
             # Gene特徴量をDataFrameに追加
             for key, value in gene_features.items():
                 features_df[key] = value
+
+            # イベントラベル特徴量
+            if label_data is not None and not label_data.empty:
+                aligned_labels = label_data.reindex(features_df.index)
+                aligned_labels = aligned_labels.ffill().fillna(0)
+                if "label_hrhp" in aligned_labels.columns:
+                    features_df["label_hrhp_signal"] = aligned_labels["label_hrhp"].astype(float)
+                else:
+                    features_df["label_hrhp_signal"] = 0.0
+                if "label_lrlp" in aligned_labels.columns:
+                    features_df["label_lrlp_signal"] = aligned_labels["label_lrlp"].astype(float)
+                else:
+                    features_df["label_lrlp_signal"] = 0.0
+                if "market_regime" in aligned_labels.columns:
+                    features_df["market_regime"] = aligned_labels["market_regime"].astype(float)
+                elif "market_regime" not in features_df:
+                    features_df["market_regime"] = 0.0
+            else:
+                features_df["label_hrhp_signal"] = 0.0
+                features_df["label_lrlp_signal"] = 0.0
+                features_df["market_regime"] = 0.0
+
+            # OI変化率
+            if "open_interest" in features_df.columns:
+                oi_series = features_df["open_interest"].astype(float)
+                features_df["oi_pct_change"] = (
+                    oi_series.replace(0, np.nan).pct_change().replace([np.inf, -np.inf], 0).fillna(0)
+                )
+            else:
+                features_df["oi_pct_change"] = 0.0
+
+            # ファンディングレート変化
+            if "funding_rate" in features_df.columns:
+                fr_series = features_df["funding_rate"].astype(float).fillna(0)
+                features_df["funding_rate_change"] = fr_series.diff().fillna(0)
+            else:
+                features_df["funding_rate_change"] = 0.0
+
+            # センチメント特徴
+            if sentiment_scores is not None and not sentiment_scores.empty:
+                aligned_sentiment = sentiment_scores.reindex(features_df.index)
+                aligned_sentiment = aligned_sentiment.ffill().fillna(0.0)
+                features_df["sentiment_smoothed"] = (
+                    aligned_sentiment.rolling(window=3, min_periods=1).mean().fillna(0.0)
+                )
+            else:
+                features_df["sentiment_smoothed"] = 0.0
             
             # AutoML特徴量生成（有効な場合）
             if self._automl_enabled:

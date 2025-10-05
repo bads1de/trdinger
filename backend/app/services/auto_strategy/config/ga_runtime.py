@@ -7,10 +7,12 @@ GAConfigクラスとGAProgressクラスを提供します。
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from .auto_strategy import AutoStrategyConfig
 from .base import BaseConfig
+if TYPE_CHECKING:
+    from ..services.regime_detector import RegimeDetectorConfig
 from .ga import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
@@ -114,6 +116,7 @@ class GAConfig(BaseConfig):
 
     # レジーム適応設定
     regime_adaptation_enabled: bool = False
+    regime_detector_config: Optional["RegimeDetectorConfig"] = None
 
     # 指標設定拡張
     allowed_indicators: List[str] = field(default_factory=list)
@@ -321,6 +324,7 @@ class GAConfig(BaseConfig):
             "tpsl_atr_multiplier_range": self.tpsl_atr_multiplier_range,
             # レジーム適応設定
             "regime_adaptation_enabled": self.regime_adaptation_enabled,
+            "regime_detector_config": self.regime_detector_config,
         }
 
     @classmethod
@@ -398,6 +402,7 @@ class GAConfig(BaseConfig):
             ),
             # レジーム適応設定
             "regime_adaptation_enabled": data.get("regime_adaptation_enabled", False),
+            "regime_detector_config": data.get("regime_detector_config"),
         }
 
         # デフォルト値をマージ

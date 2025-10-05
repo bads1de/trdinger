@@ -88,6 +88,7 @@ class RandomGeneGenerator:
                 symbol=smart_context.get("symbol"),
                 regime_gating=smart_context.get("regime_gating"),
                 threshold_profile=smart_context.get("threshold_profile"),
+                regime_thresholds=smart_context.get("regime_thresholds"),
             )
         except Exception:
             pass
