@@ -18,7 +18,8 @@ from sklearn.metrics import silhouette_score
 
 from deap import tools
 
-from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine, EvolutionRunner
+from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.core.evolution_runner import EvolutionRunner
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 

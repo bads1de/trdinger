@@ -325,7 +325,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         **training_params,
     ) -> Dict[str, Any]:
         """
-        単一モデルの学習
+        単一モデルの学習（統合実装）
 
         Args:
             X_train: 学習用特徴量
@@ -340,25 +340,13 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         try:
             logger.info(f"🤖 単一モデル学習開始: {self.model_type}")
 
-            # モデルの作成と学習
-            from .single_model.single_model_trainer import SingleModelTrainer
+            # 学習データを結合（旧実装との互換性維持）
+            training_data = self._prepare_combined_training_data(X_train, X_test, y_train, y_test)
+            
+            # 統合されたモデル学習実行
+            result = self._execute_single_model_training(training_data, **training_params)
 
-            # 一時的にSingleModelTrainerを使用（後で統合）
-            trainer = SingleModelTrainer(
-                model_type=self.model_type, automl_config=self.automl_config
-            )
-
-            # 学習データを結合
-            X_combined = pd.concat([X_train, X_test])
-            y_combined = pd.concat([y_train, y_test])
-            training_data = X_combined.copy()
-            training_data["target"] = y_combined
-
-            # 学習実行
-            result = trainer.train_model(training_data, **training_params)
-
-            # モデルを保存
-            self.model = trainer.model
+            # 結果の後処理
             self.is_trained = True
 
             logger.info(f"✅ 単一モデル学習完了: {self.model_type}")
@@ -377,11 +365,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         **training_params,
     ) -> Dict[str, Any]:
         """
-        アンサンブルモデルの学習
+        アンサンブルモデルの学習（統合実装）
 
         Args:
             X_train: 学習用特徴量
-            X_test: テスト用特徴量
+            X_test: テスト用特徃
             y_train: 学習用ラベル
             y_test: テスト用ラベル
             **training_params: 学習パラメータ
@@ -394,30 +382,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 f"🎯 アンサンブル学習開始: {self.ensemble_config.get('method', 'bagging')}"
             )
 
-            # アンサンブルトレーナーの作成と学習
-            from .ensemble.ensemble_trainer import EnsembleTrainer
+            # 学習データを結合（旧実装との互換性維持）
+            training_data = self._prepare_combined_training_data(X_train, X_test, y_train, y_test)
+            
+            # 統合されたアンサンブル学習実行
+            result = self._execute_ensemble_model_training(training_data, **training_params)
 
-            # 一時的にEnsembleTrainerを使用（後で統合）
-            trainer = EnsembleTrainer(
-                ensemble_config=self.ensemble_config, automl_config=self.automl_config
-            )
-
-            # 学習データを結合
-            X_combined = pd.concat([X_train, X_test])
-            y_combined = pd.concat([y_train, y_test])
-            training_data = X_combined.copy()
-            training_data["target"] = y_combined
-
-            # 学習実行
-            result = trainer.train_model(training_data, **training_params)
-
-            # モデルを保存（EnsembleTrainerに委譲し、BaseMLTrainerでは保存しない）
-            self.models = trainer.models
-            self.model = trainer  # アンサンブルトレーナー自体を保存
+            # 結果の後処理
             self.is_trained = True
-
-            # EnsembleTrainerが既にモデルを保存しているため、BaseMLTrainerでは重複保存を避ける
-            self._ensemble_trainer = trainer  # 参照を保持
 
             logger.info(
                 f"✅ アンサンブル学習完了: {self.ensemble_config.get('method', 'bagging')}"
@@ -1047,6 +1019,88 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             y_test_cv,
             **training_params,
         )
+
+    def _prepare_combined_training_data(
+        self,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: pd.Series,
+        y_test: pd.Series,
+    ) -> pd.DataFrame:
+        """
+        学習データの統合準備（旧実装との互換性維持）
+
+        Args:
+            X_train: 学習用特徴量
+            X_test: テスト用特徴量  
+            y_train: 学習用ラベル
+            y_test: テスト用ラベル
+
+        Returns:
+            統合された学習データ
+        """
+        # 学習データを結合（旧実装との互換性維持）
+        X_combined = pd.concat([X_train, X_test])
+        y_combined = pd.concat([y_train, y_test])
+        training_data = X_combined.copy()
+        training_data["target"] = y_combined
+        return training_data
+
+    def _execute_single_model_training(
+        self, training_data: pd.DataFrame, **training_params
+    ) -> Dict[str, Any]:
+        """
+        単一モデル学習の実行
+
+        Args:
+            training_data: 統合済み学習データ
+            **training_params: 学習パラメータ
+
+        Returns:
+            学習結果
+        """
+        # 旧実装との互換性を維持しつつ、テンプレートメソッドパターンを適用
+        from .single_model.single_model_trainer import SingleModelTrainer
+        
+        trainer = SingleModelTrainer(
+            model_type=self.model_type, automl_config=self.automl_config
+        )
+        
+        result = trainer.train_model(training_data, **training_params)
+        
+        # モデルを保存
+        self.model = trainer.model
+        
+        return result
+
+    def _execute_ensemble_model_training(
+        self, training_data: pd.DataFrame, **training_params
+    ) -> Dict[str, Any]:
+        """
+        アンサンブルモデル学習の実行
+
+        Args:
+            training_data: 統合済み学習データ
+            **training_params: 学習パラメータ
+
+        Returns:    
+            学習結果
+        """
+        # 旧実装との互換性を維持しつつ、テンプレートメソッドパターンを適用
+        from .ensemble.ensemble_trainer import EnsembleTrainer
+        
+        trainer = EnsembleTrainer(
+            ensemble_config=self.ensemble_config, automl_config=self.automl_config
+        )
+        
+        result = trainer.train_model(training_data, **training_params)
+        
+        # モデルを保存
+        self.models = trainer.models
+        self.model = trainer  # アンサンブルトレーナー自体を保存
+        self._ensemble_trainer = trainer  # 参照を保持
+        
+        return result
 
         # フォールド情報を追加
         fold_result.update(

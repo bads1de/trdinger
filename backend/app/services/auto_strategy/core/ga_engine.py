@@ -19,6 +19,7 @@ from ..generators.random_gene_generator import RandomGeneGenerator
 from ..generators.strategy_factory import StrategyFactory
 from ..services.regime_detector import RegimeDetector
 from .deap_setup import DEAPSetup
+from .evolution_runner import EvolutionRunner
 from .fitness_sharing import FitnessSharing
 from .genetic_operators import (
     create_deap_mutate_wrapper,
@@ -28,187 +29,6 @@ from .genetic_operators import (
 from .individual_evaluator import IndividualEvaluator
 
 logger = logging.getLogger(__name__)
-
-
-class EvolutionRunner:
-    """
-    進化計算の実行を担当するクラス
-
-    単一目的と多目的最適化のロジックをカプセル化したヘルパークラスです。
-    """
-
-    def __init__(self, toolbox, stats, fitness_sharing=None, population=None):
-        """
-        初期化
-
-        Args:
-            toolbox: DEAPツールボックス
-            stats: 統計情報収集オブジェクト
-            fitness_sharing: 適応度共有オブジェクト（オプション）
-            population: 個体集団（適応的突然変異用）
-        """
-        self.toolbox = toolbox
-        self.stats = stats
-        self.fitness_sharing = fitness_sharing
-        self.population = population  # 適応的突然変異用
-
-    def run_single_objective_evolution(
-        self, population: List[Any], config: GAConfig, halloffame: List[Any] = None
-    ) -> tuple[List[Any], Any]:
-        """
-        単一目的最適化アルゴリズムの実行
-
-        Args:
-            population: 初期個体群
-            config: GA設定
-            halloffame: 殿堂入り個体リスト
-
-        Returns:
-            (最終個体群, 進化ログ)
-        """
-        logger.info("単一目的最適化アルゴリズムを開始")
-
-        # 初期適応度評価
-        population = self._evaluate_population(population)
-
-        logbook = tools.Logbook()
-
-        # カスタム世代ループ（fitness_sharingを世代毎に適用）
-        for gen in range(config.generations):
-            logger.debug(f"世代 {gen + 1}/{config.generations} を開始")
-
-            # 適応度共有の適用（有効な場合、世代毎）
-            if config.enable_fitness_sharing and self.fitness_sharing:
-                population = self.fitness_sharing.apply_fitness_sharing(population)
-
-            # 選択
-            offspring = list(self.toolbox.map(self.toolbox.clone, population))
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                if random.random() < config.crossover_rate:
-                    self.toolbox.mate(child1, child2)
-                    del child1.fitness.values
-                    del child2.fitness.values
-
-            # 突然変異
-            for mutant in offspring:
-                if random.random() < config.mutation_rate:
-                    self.toolbox.mutate(mutant)
-                    del mutant.fitness.values
-
-            # 評価
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
-
-            # 次世代の選択 (mu+lambda)
-            population[:] = self.toolbox.select(offspring + population, len(population))
-
-            # 統計の記録
-            record = self.stats.compile(population) if self.stats else {}
-            logbook.record(gen=gen, **record)
-
-            # Hall of Fameの更新
-            if halloffame is not None:
-                halloffame.update(population)
-
-        logger.info("単一目的最適化アルゴリズム完了")
-        return population, logbook
-
-    def run_multi_objective_evolution(
-        self, population: List[Any], config: GAConfig, halloffame: List[Any] = None
-    ) -> tuple[List[Any], Any]:
-        """
-        多目的最適化アルゴリズムの実行
-
-        Args:
-            population: 初期個体群
-            config: GA設定
-            halloffame: 殿堂入り個体リスト
-
-        Returns:
-            (最終個体群, 進化ログ)
-        """
-        logger.info("多目的最適化アルゴリズム（NSGA-II）を開始")
-
-        # 初期適応度評価
-        population = self._evaluate_population(population)
-
-        # 多目的最適化用の選択関数に切り替え
-        original_select = self.toolbox.select
-        self.toolbox.select = tools.selNSGA2
-
-        # パレートフロント更新
-        pareto_front = tools.ParetoFront()
-        population = self.toolbox.select(population, len(population))
-
-        logbook = tools.Logbook()
-
-        # カスタム世代ループ（fitness_sharingを世代毎に適用）
-        for gen in range(config.generations):
-            logger.debug(f"多目的世代 {gen + 1}/{config.generations} を開始")
-
-            # 適応度共有の適用（有効な場合、世代毎）
-            if config.enable_fitness_sharing and self.fitness_sharing:
-                population = self.fitness_sharing.apply_fitness_sharing(population)
-
-            # 選択
-            offspring = list(self.toolbox.map(self.toolbox.clone, population))
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                if random.random() < config.crossover_rate:
-                    self.toolbox.mate(child1, child2)
-                    del child1.fitness.values
-                    del child2.fitness.values
-
-            # 突然変異
-            for mutant in offspring:
-                if random.random() < config.mutation_rate:
-                    self.toolbox.mutate(mutant)
-                    del mutant.fitness.values
-
-            # 評価
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
-
-            # 次世代の選択 (mu+lambda, NSGA-II)
-            population[:] = self.toolbox.select(offspring + population, len(population))
-
-            # 統計の記録
-            record = self.stats.compile(population) if self.stats else {}
-            logbook.record(gen=gen, **record)
-
-            # Hall of Fameの更新
-            if halloffame is not None:
-                halloffame.update(population)
-
-        # パレートフロントを更新
-        for ind in population:
-            pareto_front.update(population)
-
-        # 選択関数を元に戻す
-        self.toolbox.select = original_select
-
-        logger.info("多目的最適化アルゴリズム（NSGA-II）完了")
-        return population, logbook
-
-    def _evaluate_population(self, population: List[Any]) -> List[Any]:
-        """
-        個体群の適応度評価
-
-        Args:
-            population: 評価対象の個体群
-
-        Returns:
-            評価された個体群
-        """
-        # 初期個体群の評価
-        fitnesses = list(self.toolbox.map(self.toolbox.evaluate, population))
-        for ind, fit in zip(population, fitnesses):
-            ind.fitness.values = fit
-
-        return population
 
 
 class GeneticAlgorithmEngine:
@@ -251,7 +71,7 @@ class GeneticAlgorithmEngine:
 
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
-        
+
         # ハイブリッドモードに応じてEvaluatorを選択
         if hybrid_mode:
             logger.info("🔬 ハイブリッドGA+MLモードで起動")
@@ -278,10 +98,10 @@ class GeneticAlgorithmEngine:
         Args:
             config: GA設定
         """
-        # DEAP環境をセットアップ（個体生成メソッドで統合）
+        # DEAP環境をセットアップ（戦略個体生成メソッドで統合）
         self.deap_setup.setup_deap(
             config,
-            self._create_individual,
+            self._create_strategy_individual,
             self.individual_evaluator.evaluate_individual,
             crossover_strategy_genes,
             mutate_strategy_gene,
@@ -306,7 +126,7 @@ class GeneticAlgorithmEngine:
         """
         進化アルゴリズムを実行
 
-        EvolutionRunnerを使って設定に応じて適切な最適化アルゴリズムを呼び出します。
+        独立したEvolutionRunnerを使って設定に応じて適切な最適化アルゴリズムを呼び出します。
 
         Args:
             config: GA設定
@@ -360,7 +180,7 @@ class GeneticAlgorithmEngine:
             mutate_wrapper = create_deap_mutate_wrapper(individual_class, population)
             toolbox.register("mutate", mutate_wrapper)
 
-            # EvolutionRunnerの作成
+            # 独立したEvolutionRunnerの作成
             runner = self._create_evolution_runner(toolbox, stats, population)
 
             # 最適化アルゴリズムの実行
@@ -400,7 +220,7 @@ class GeneticAlgorithmEngine:
         return stats
 
     def _create_evolution_runner(self, toolbox, stats, population=None):
-        """EvolutionRunnerインスタンスを作成"""
+        """独立したEvolutionRunnerインスタンスを作成"""
         fitness_sharing = (
             self.fitness_sharing
             if hasattr(self, "fitness_sharing") and self.fitness_sharing
@@ -418,7 +238,7 @@ class GeneticAlgorithmEngine:
         return population
 
     def _run_optimization(self, runner: EvolutionRunner, population, config: GAConfig):
-        """最適化アルゴリズムを実行"""
+        """独立したEvolutionRunnerを使用して最適化アルゴリズムを実行"""
         if config.enable_multi_objective:
             return runner.run_multi_objective_evolution(population, config)
         else:
@@ -490,9 +310,9 @@ class GeneticAlgorithmEngine:
         """進化を停止"""
         self.is_running = False
 
-    def _create_individual(self):
+    def _create_strategy_individual(self):
         """
-        個体生成（統合版IndividualCreator）
+        戦略個体生成
 
         Returns:
             Individualオブジェクト
