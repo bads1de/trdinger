@@ -284,3 +284,52 @@ class TestRegimeAwareEvaluation:
         assert isinstance(fitness, tuple)
         assert len(fitness) == 1
         assert fitness[0] == 0.1  # 取引回数0時のデフォルト値
+
+
+class TestRiskFocusedObjectives:
+    """リスク指標強化に関する評価ロジックのテスト"""
+
+    def test_multi_objective_returns_ulcer_and_trade_penalty(self) -> None:
+        """多目的フィットネスにulcer indexと取引頻度ペナルティを含める。"""
+
+        evaluator = IndividualEvaluator(Mock(spec=BacktestService))
+
+        config = GAConfig(
+            enable_multi_objective=True,
+            objectives=[
+                "total_return",
+                "ulcer_index",
+                "trade_frequency_penalty",
+            ],
+            objective_weights=[1.0, -1.0, -1.0],
+        )
+
+        start = "2024-01-01"
+        end = "2024-01-11"
+        backtest_result = {
+            "performance_metrics": {
+                "total_return": 0.35,
+                "sharpe_ratio": 1.1,
+                "max_drawdown": 0.2,
+                "total_trades": 40,
+            },
+            "equity_curve": [
+                {"timestamp": start, "equity": 100000, "drawdown": 0.0},
+                {"timestamp": "2024-01-03", "equity": 99500, "drawdown": 0.05},
+                {"timestamp": "2024-01-07", "equity": 99000, "drawdown": 0.1},
+                {"timestamp": end, "equity": 102000, "drawdown": 0.0},
+            ],
+            "trade_history": [{"entry_time": start}] * 40,
+            "start_date": start,
+            "end_date": end,
+        }
+
+        fitness_values = evaluator._calculate_multi_objective_fitness(
+            backtest_result,
+            config,
+        )
+
+        assert len(fitness_values) == 3
+        assert fitness_values[0] == pytest.approx(0.35, rel=1e-6)
+        assert fitness_values[1] == pytest.approx(0.0559, rel=1e-3)
+        assert fitness_values[2] == pytest.approx(0.4621, rel=1e-3)

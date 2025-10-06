@@ -64,6 +64,7 @@ class EvolutionRunner:
 
         # 初期適応度評価
         population = self._evaluate_population(population)
+        self._update_dynamic_objective_scalars(population, config)
 
         logbook = tools.Logbook()
 
@@ -98,6 +99,8 @@ class EvolutionRunner:
             # 次世代の選択 (mu+lambda)
             population[:] = self.toolbox.select(offspring + population, len(population))
 
+            self._update_dynamic_objective_scalars(population, config)
+
             # 統計の記録
             record = self.stats.compile(population) if self.stats else {}
             logbook.record(gen=gen, **record)
@@ -127,6 +130,7 @@ class EvolutionRunner:
 
         # 初期適応度評価
         population = self._evaluate_population(population)
+        self._update_dynamic_objective_scalars(population, config)
 
         # 多目的最適化用の選択関数に切り替え
         original_select = self.toolbox.select
@@ -169,6 +173,8 @@ class EvolutionRunner:
             # 次世代の選択 (mu+lambda, NSGA-II)
             population[:] = self.toolbox.select(offspring + population, len(population))
 
+            self._update_dynamic_objective_scalars(population, config)
+
             # 統計の記録
             record = self.stats.compile(population) if self.stats else {}
             logbook.record(gen=gen, **record)
@@ -203,3 +209,40 @@ class EvolutionRunner:
             ind.fitness.values = fit
 
         return population
+
+    def _update_dynamic_objective_scalars(self, population: List[Any], config: Any) -> None:
+        """Update dynamic objective scaling factors for risk-aware weighting."""
+
+        if not getattr(config, "dynamic_objective_reweighting", False):
+            config.objective_dynamic_scalars = {}
+            return
+
+        if not population:
+            config.objective_dynamic_scalars = {}
+            return
+
+        scalars: Dict[str, float] = {}
+        for index, objective in enumerate(getattr(config, "objectives", [])):
+            values: List[float] = []
+            for individual in population:
+                fitness = getattr(individual, "fitness", None)
+                if not fitness or not getattr(fitness, "valid", False):
+                    continue
+                fitness_values = getattr(fitness, "values", ())
+                if len(fitness_values) <= index:
+                    continue
+                try:
+                    values.append(float(fitness_values[index]))
+                except (TypeError, ValueError):
+                    continue
+
+            if not values:
+                continue
+
+            average_value = float(np.mean(values))
+            if objective in {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}:
+                scalars[objective] = min(2.0, 1.0 + max(average_value, 0.0))
+            else:
+                scalars[objective] = 1.0
+
+        config.objective_dynamic_scalars = scalars

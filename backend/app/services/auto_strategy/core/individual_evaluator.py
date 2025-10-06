@@ -13,6 +13,7 @@ from app.services.backtest.backtest_service import BacktestService
 
 from ..config import GAConfig
 from ..services.regime_detector import RegimeDetector
+from .metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +206,17 @@ class IndividualEvaluator:
             ):
                 metrics[key] = 0.0  # 負のドローダウンは0に修正
 
+        equity_curve = backtest_result.get("equity_curve", [])
+        metrics["ulcer_index"] = calculate_ulcer_index(equity_curve)
+
+        trade_history = backtest_result.get("trade_history", [])
+        metrics["trade_frequency_penalty"] = calculate_trade_frequency_penalty(
+            total_trades=metrics["total_trades"],
+            start_date=backtest_result.get("start_date"),
+            end_date=backtest_result.get("end_date"),
+            trade_history=trade_history,
+        )
+
         return metrics
 
     def _calculate_fitness(
@@ -232,6 +244,8 @@ class IndividualEvaluator:
             max_drawdown = metrics["max_drawdown"]
             win_rate = metrics["win_rate"]
             total_trades = metrics["total_trades"]
+            ulcer_index = metrics.get("ulcer_index", 0.0)
+            trade_penalty = metrics.get("trade_frequency_penalty", 0.0)
 
             # 取引回数が0の場合は低いフィットネス値を返す
             if total_trades == 0:
@@ -307,6 +321,24 @@ class IndividualEvaluator:
                 + fitness_weights.get("max_drawdown", 0.2) * (1 - max_drawdown)
                 + fitness_weights.get("win_rate", 0.1) * win_rate
                 + fitness_weights.get("balance_score", 0.1) * balance_score
+            )
+
+            ulcer_scale = 1.0
+            trade_scale = 1.0
+            if getattr(config, "dynamic_objective_reweighting", False):
+                dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
+                ulcer_scale = dynamic_scalars.get("ulcer_index", 1.0)
+                trade_scale = dynamic_scalars.get("trade_frequency_penalty", 1.0)
+
+            fitness -= (
+                fitness_weights.get("ulcer_index_penalty", 0.0)
+                * ulcer_scale
+                * ulcer_index
+            )
+            fitness -= (
+                fitness_weights.get("trade_frequency_penalty", 0.0)
+                * trade_scale
+                * trade_penalty
             )
 
             return max(0.0, fitness)
@@ -441,11 +473,17 @@ class IndividualEvaluator:
                     value = metrics["calmar_ratio"]
                 elif objective == "balance_score":
                     value = self._calculate_long_short_balance(backtest_result)
+                elif objective == "ulcer_index":
+                    value = metrics.get("ulcer_index", 0.0)
+                elif objective == "trade_frequency_penalty":
+                    value = metrics.get("trade_frequency_penalty", 0.0)
                 else:
                     logger.warning(f"未知の目的: {objective}")
                     value = 0.0
 
-                fitness_values.append(float(value))
+                dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
+                scale = dynamic_scalars.get(objective, 1.0)
+                fitness_values.append(float(value) * scale)
 
             # 取引回数が0の場合は低い評価値を設定
             total_trades = metrics["total_trades"]

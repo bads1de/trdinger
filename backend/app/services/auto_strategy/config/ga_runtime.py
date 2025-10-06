@@ -93,6 +93,8 @@ class GAConfig(BaseConfig):
     objective_weights: List[float] = field(
         default_factory=lambda: DEFAULT_GA_OBJECTIVE_WEIGHTS.copy()
     )
+    dynamic_objective_reweighting: bool = True
+    objective_dynamic_scalars: Dict[str, float] = field(default_factory=dict)
 
     # 評価設定拡張（単一目的最適化用）
     primary_metric: str = "sharpe_ratio"
@@ -298,6 +300,8 @@ class GAConfig(BaseConfig):
             "enable_multi_objective": self.enable_multi_objective,
             "objectives": self.objectives,
             "objective_weights": self.objective_weights,
+            "dynamic_objective_reweighting": self.dynamic_objective_reweighting,
+            "objective_dynamic_scalars": self.objective_dynamic_scalars,
             "allowed_indicators": self.allowed_indicators,
             "parameter_ranges": self.parameter_ranges,
             "threshold_ranges": self.threshold_ranges,
@@ -384,6 +388,8 @@ class GAConfig(BaseConfig):
             "enable_multi_objective": False,
             "objectives": DEFAULT_GA_OBJECTIVES,
             "objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS,
+            "dynamic_objective_reweighting": True,
+            "objective_dynamic_scalars": {},
             # 実行設定
             "parallel_processes": None,
             "random_state": None,

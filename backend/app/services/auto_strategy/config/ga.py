@@ -22,11 +22,13 @@ GA_DEFAULT_CONFIG = {
 # フィットネス重み設定
 FITNESS_WEIGHT_PROFILES = {
     "balanced": {
-        "total_return": 0.25,
-        "sharpe_ratio": 0.35,
-        "max_drawdown": 0.2,
+        "total_return": 0.2,
+        "sharpe_ratio": 0.25,
+        "max_drawdown": 0.15,
         "win_rate": 0.1,
         "balance_score": 0.1,
+        "ulcer_index_penalty": 0.15,
+        "trade_frequency_penalty": 0.05,
     },
 }
 
@@ -40,8 +42,13 @@ DEFAULT_FITNESS_CONSTRAINTS = {
 }
 
 # GA目的設定
-DEFAULT_GA_OBJECTIVES = ["total_return"]
-DEFAULT_GA_OBJECTIVE_WEIGHTS = [1.0]  # 最大化
+DEFAULT_GA_OBJECTIVES = [
+    "total_return",
+    "max_drawdown",
+    "ulcer_index",
+    "trade_frequency_penalty",
+]
+DEFAULT_GA_OBJECTIVE_WEIGHTS = [1.0, -1.0, -1.0, -1.0]
 
 # GAフィットネス共有設定
 GA_DEFAULT_FITNESS_SHARING = {
