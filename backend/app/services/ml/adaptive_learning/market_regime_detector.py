@@ -723,13 +723,3 @@ class MarketRegimeDetector:
             method="default",
         )
 
-    def get_regime_stability(self, window: int = 10) -> float:
-        """レジームの安定性を計算"""
-        if len(self.regime_history) < window:
-            return 0.5
-
-        recent_regimes = [r.regime for r in self.regime_history[-window:]]
-        most_common = max(set(recent_regimes), key=recent_regimes.count)
-        stability = recent_regimes.count(most_common) / len(recent_regimes)
-
-        return stability
