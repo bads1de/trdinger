@@ -2,7 +2,6 @@
 データバリデーションユーティリティ
 
 特徴量データの妥当性チェックとクリーンアップ機能を提供します。
-無限大値、NaN値、異常に大きな値の検出と処理を行います。
 """
 
 import logging
@@ -21,23 +20,19 @@ class DataValidator:
     特徴量データの妥当性チェックとクリーンアップを行います。
     """
 
-    # 異常値の閾値設定（金融データに適した範囲に調整）
-    MAX_VALUE_THRESHOLD = 1e6  # 最大値の閾値
-    MIN_VALUE_THRESHOLD = -1e6  # 最小値の閾値
-
     def __init__(self):
         """初期化"""
 
     @classmethod
     def validate_ohlcv_records_simple(cls, ohlcv_records: List[Dict[str, Any]]) -> bool:
         """
-        OHLCVデータの検証（シンプル版 - DataSanitizer からの移行）
+        OHLCVデータの妥当性を検証
 
         Args:
             ohlcv_records: 検証するOHLCVデータのリスト
 
         Returns:
-            データが有効な場合True、無効な場合False
+            データが有効な場合True、無劅な場合False
         """
         if not ohlcv_records or not isinstance(ohlcv_records, list):
             return False
@@ -71,7 +66,7 @@ class DataValidator:
                 # タイムスタンプの検証
                 timestamp = record["timestamp"]
                 if isinstance(timestamp, datetime):
-                    pass  # OK
+                    pass
                 elif isinstance(timestamp, str):
                     # strの場合はISO形式かどうかチェック
                     try:
@@ -98,7 +93,7 @@ class DataValidator:
         cls, ohlcv_records: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
-        OHLCVデータをサニタイズ（DataSanitizer からの移行）
+        OHLCVデータをサニタイズ
 
         Args:
             ohlcv_records: サニタイズするOHLCVデータのリスト
