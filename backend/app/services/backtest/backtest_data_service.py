@@ -104,6 +104,34 @@ class BacktestDataService:
             logger.error(f"バックテスト用データ作成エラー: {e}")
             raise ValueError(f"バックテスト用データの作成に失敗しました: {e}")
 
+    def get_ohlcv_data(
+        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
+    ) -> pd.DataFrame:
+        """OHLCVデータをDataFrameとして取得"""
+
+        raw_data = self._retrieval_service.get_ohlcv_data(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        df = self._conversion_service.convert_ohlcv_to_dataframe(raw_data)
+        df = df.drop(columns=["timestamp"], errors="ignore")
+
+        for column in ("open", "high", "low", "close", "volume"):
+            if column in df.columns:
+                df[column] = pd.to_numeric(df[column], errors="coerce")
+
+        if df.empty:
+            logger.warning(
+                "OHLCVデータが取得できなかったため空のDataFrameを返します: %s %s",
+                symbol,
+                timeframe,
+            )
+
+        return df
+
     def get_ml_training_data(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
