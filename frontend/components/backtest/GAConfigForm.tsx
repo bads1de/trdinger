@@ -312,98 +312,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           options={INDICATOR_MODE_OPTIONS}
           required
         />
-        
-        {/* ハイブリッドモード設定 */}
-        <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-blue-200">
-              🔬 ハイブリッドGA+MLモード
-            </label>
-            <input
-              type="checkbox"
-              checked={config.ga_config.hybrid_mode || false}
-              onChange={(e) =>
-                handleGAConfigChange({ hybrid_mode: e.target.checked })
-              }
-              className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
-              aria-label="ハイブリッドGA+MLモードを有効化"
-            />
-          </div>
-          
-          {config.ga_config.hybrid_mode && (
-            <>
-              <SelectField
-                label="MLモデル"
-                value={config.ga_config.hybrid_model_type || "lightgbm"}
-                onChange={(value) =>
-                  handleGAConfigChange({ hybrid_model_type: value })
-                }
-                options={[
-                  { value: "lightgbm", label: "LightGBM" },
-                  { value: "xgboost", label: "XGBoost" },
-                  { value: "catboost", label: "CatBoost" },
-                  { value: "randomforest", label: "Random Forest" },
-                ]}
-              />
-              <InputField
-                label="ML予測重み (prediction_score)"
-                type="number"
-                value={config.ga_config.fitness_weights.prediction_score || 0.1}
-                onChange={(value) =>
-                  handleGAConfigChange({
-                    fitness_weights: {
-                      ...config.ga_config.fitness_weights,
-                      prediction_score: value,
-                    },
-                  })
-                }
-                min={0}
-                max={1}
-                step={0.05}
-                description="ML予測スコアの重み（0-1）"
-              />
-              <div className="p-3 bg-slate-900/40 border border-slate-600/30 rounded-md space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-200">
-                    🧠 DRLポリシーブレンド
-                  </label>
-                  <input
-                    type="checkbox"
-                    checked={drlEnabled}
-                    onChange={(event) =>
-                      handleDRLEnabledChange(event.target.checked)
-                    }
-                    className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
-                    aria-label="DRLポリシーブレンドを有効化"
-                  />
-                </div>
-                {drlEnabled && (
-                  <>
-                    <SelectField
-                      label="DRLポリシー"
-                      value={drlPolicyType}
-                      onChange={handleDRLPolicyTypeChange}
-                      options={DRL_POLICY_OPTIONS}
-                    />
-                    <InputField
-                      label="DRLブレンド重み"
-                      type="number"
-                      value={drlPolicyWeight}
-                      onChange={handleDRLPolicyWeightChange}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      description="DRLとML予測の混合比率（0-1）"
-                    />
-                  </>
-                )}
-              </div>
-              <p className="text-xs text-blue-300">
-                💡 事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
-              </p>
-            </>
-          )}
-        </div>
       </div>
 
       {/* Right Column: Advanced GA Settings */}
@@ -545,6 +453,105 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             gaConfig={config.ga_config}
             onGAConfigChange={handleGAConfigChange}
           />
+        </div>
+
+        {/* ハイブリッドGA+MLモード設定 */}
+        <div className="p-4 bg-indigo-900/30 border border-indigo-500/30 rounded-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-indigo-200">
+              🔬 ハイブリッドGA+MLモード
+            </label>
+            <input
+              type="checkbox"
+              checked={config.ga_config.hybrid_mode || false}
+              onChange={(e) =>
+                handleGAConfigChange({ hybrid_mode: e.target.checked })
+              }
+              className="w-5 h-5 rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
+              aria-label="ハイブリッドGA+MLモードを有効化"
+            />
+          </div>
+
+          {config.ga_config.hybrid_mode && (
+            <>
+              <SelectField
+                label="MLモデル"
+                value={config.ga_config.hybrid_model_type || "lightgbm"}
+                onChange={(value) =>
+                  handleGAConfigChange({ hybrid_model_type: value })
+                }
+                options={[
+                  { value: "lightgbm", label: "LightGBM" },
+                  { value: "xgboost", label: "XGBoost" },
+                  { value: "catboost", label: "CatBoost" },
+                  { value: "randomforest", label: "Random Forest" },
+                ]}
+              />
+              <InputField
+                label="ML予測重み (prediction_score)"
+                type="number"
+                value={config.ga_config.fitness_weights.prediction_score || 0.1}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    fitness_weights: {
+                      ...config.ga_config.fitness_weights,
+                      prediction_score: value,
+                    },
+                  })
+                }
+                min={0}
+                max={1}
+                step={0.05}
+                description="ML予測スコアの重み（0-1）"
+              />
+              <div className="p-3 bg-slate-900/40 border border-slate-600/30 rounded-md space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-200">
+                    🧠 DRLポリシーブレンド
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={drlEnabled}
+                    onChange={(event) =>
+                      handleDRLEnabledChange(event.target.checked)
+                    }
+                    className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
+                    aria-label="DRLポリシーブレンドを有効化"
+                  />
+                </div>
+                {drlEnabled && (
+                  <>
+                    <SelectField
+                      label="DRLポリシー"
+                      value={drlPolicyType}
+                      onChange={handleDRLPolicyTypeChange}
+                      options={DRL_POLICY_OPTIONS}
+                    />
+                    <InputField
+                      label="DRLブレンド重み"
+                      type="number"
+                      value={drlPolicyWeight}
+                      onChange={handleDRLPolicyWeightChange}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      description="DRLとML予測の混合比率（0-1）"
+                    />
+                    <div className="p-3 bg-slate-800/40 border border-slate-500/30 rounded-md text-xs text-slate-300 space-y-2">
+                      <h5 className="font-semibold text-slate-200 mb-2">🧠 DRLポリシーブレンドについて</h5>
+                      <p><strong>PPO</strong>: 資本効率的。安定志向のトレーダー向け。リターン/リスク比を改善。</p>
+                      <p><strong>A2C</strong>: 高リスク高リターン。アグレッシブなトレーディングスタイル。</p>
+                      <p><strong>DQN</strong>: 現在開発中。将来的にはディープQネットワークを実装予定。</p>
+                      <p className="text-slate-400">0.0=MLのみ, 1.0=DRLのみ, 中間値=ブレンド運用</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-indigo-300">
+                💡 事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
+              </p>
+            </>
+          )}
         </div>
 
         {/* Action Buttons */}
