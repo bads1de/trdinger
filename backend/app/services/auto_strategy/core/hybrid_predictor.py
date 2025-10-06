@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app.services.ml.exceptions import MLPredictionError
+from .drl_policy_adapter import DRLPolicyAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class HybridPredictor:
         use_time_series_cv: bool = False,
         training_service_cls: Optional[Type["MLTrainingService"]] = None,
         model_manager_instance: Optional["ModelManager"] = None,
+        drl_policy_adapter: Optional[DRLPolicyAdapter] = None,
     ):
         """初期化"""
 
@@ -44,6 +46,12 @@ class HybridPredictor:
         self.ensemble_config = ensemble_config
         self.automl_config = automl_config
         self.use_time_series_cv = use_time_series_cv
+        self.drl_config = (automl_config or {}).get("drl") if automl_config else None
+        self._drl_enabled = bool(self.drl_config and self.drl_config.get("enabled", False))
+        self._drl_weight = float(self.drl_config.get("policy_weight", 0.5)) if self.drl_config else 0.0
+        if not 0.0 <= self._drl_weight <= 1.0:
+            logger.warning("DRLポリシーの重みが範囲外のため0.5に調整しました")
+            self._drl_weight = 0.5
 
         if model_type:
             self.model_type = model_type
@@ -83,6 +91,8 @@ class HybridPredictor:
             )
             self.services = [service]
             self.service = service
+
+        self.drl_policy_adapter = self._resolve_drl_adapter(drl_policy_adapter)
 
     @staticmethod
     def _default_prediction() -> Dict[str, float]:
@@ -128,32 +138,31 @@ class HybridPredictor:
                     except Exception as e:
                         logger.warning(f"モデル予測エラー: {e}")
                         continue
-                
+
                 if not predictions:
                     logger.warning("全てのモデルで予測失敗、デフォルト値を返します")
-                    return self._default_prediction()
-                
-                # 平均化
-                avg_prediction = {
-                    "up": np.mean([p["up"] for p in predictions]),
-                    "down": np.mean([p["down"] for p in predictions]),
-                    "range": np.mean([p["range"] for p in predictions]),
-                }
-                return avg_prediction
-            
-            # 単一モデルの場合
-            service = self.services[0]
-            
-            # モデルが学習されているかチェック
-            if not self._service_is_trained(service):
-                logger.warning("モデル未学習、デフォルト値を返します")
-                return self._default_prediction()
-            
-            # 予測実行
-            self._run_time_series_cv(service, features_df)
-            predictions = service.generate_signals(features_df)
-            
-            return predictions
+                    ml_prediction = self._default_prediction()
+                else:
+                    ml_prediction = {
+                        "up": float(np.mean([p.get("up", 0.0) for p in predictions])),
+                        "down": float(np.mean([p.get("down", 0.0) for p in predictions])),
+                        "range": float(np.mean([p.get("range", 0.0) for p in predictions])),
+                    }
+            else:
+                # 単一モデルの場合
+                service = self.services[0]
+
+                # モデルが学習されているかチェック
+                if not self._service_is_trained(service):
+                    logger.warning("モデル未学習、デフォルト値を返します")
+                    ml_prediction = self._default_prediction()
+                else:
+                    # 予測実行
+                    self._run_time_series_cv(service, features_df)
+                    ml_prediction = service.generate_signals(features_df)
+
+            blended = self._blend_with_drl(ml_prediction, features_df)
+            return blended
             
         except MLPredictionError:
             raise
@@ -303,3 +312,57 @@ class HybridPredictor:
             return False
 
         return True
+
+    def _resolve_drl_adapter(
+        self, override: Optional[DRLPolicyAdapter]
+    ) -> Optional[DRLPolicyAdapter]:
+        if override is not None:
+            return override
+
+        if not self._drl_enabled:
+            return None
+
+        try:
+            policy_type = self.drl_config.get("policy_type", "ppo") if self.drl_config else "ppo"
+            return DRLPolicyAdapter(policy_type=policy_type, policy_config=self.drl_config)
+        except Exception as exc:
+            logger.warning("DRLPolicyAdapterの初期化に失敗しました: %s", exc)
+            return None
+
+    def _blend_with_drl(
+        self, ml_prediction: Dict[str, float], features_df: pd.DataFrame
+    ) -> Dict[str, float]:
+        if not self._drl_enabled or self.drl_policy_adapter is None:
+            return self._normalise_prediction(ml_prediction)
+
+        try:
+            drl_prediction = self.drl_policy_adapter.predict_signals(features_df)
+        except Exception as exc:
+            logger.warning("DRLポリシー予測が失敗したためML予測のみを使用します: %s", exc)
+            return self._normalise_prediction(ml_prediction)
+
+        weight = self._drl_weight
+        weight = min(max(weight, 0.0), 1.0)
+        ml_weight = 1.0 - weight
+
+        blended = {
+            key: weight * float(drl_prediction.get(key, 0.0))
+            + ml_weight * float(ml_prediction.get(key, 0.0))
+            for key in {"up", "down", "range"}
+        }
+
+        return self._normalise_prediction(blended)
+
+    @staticmethod
+    def _normalise_prediction(prediction: Dict[str, float]) -> Dict[str, float]:
+        up = float(prediction.get("up", 0.0))
+        down = float(prediction.get("down", 0.0))
+        range_score = float(prediction.get("range", 0.0))
+        total = up + down + range_score
+        if total <= 0 or not np.isfinite(total):
+            return {"up": 1 / 3, "down": 1 / 3, "range": 1 / 3}
+        return {
+            "up": up / total,
+            "down": down / total,
+            "range": range_score / total,
+        }

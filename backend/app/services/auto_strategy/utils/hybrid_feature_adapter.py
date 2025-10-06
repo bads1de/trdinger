@@ -42,6 +42,15 @@ class HybridFeatureAdapter:
         self._automl_enabled = bool(self.automl_config.get("enabled", False))
         self._preprocess_handler = preprocess_handler
         self._preprocess_trainer = None
+        self._wavelet_transformer: Optional["WaveletFeatureTransformer"] = None
+
+        wavelet_config = self.automl_config.get("wavelet") if self.automl_config else None
+        if isinstance(wavelet_config, dict) and wavelet_config.get("enabled", False):
+            try:
+                self._wavelet_transformer = WaveletFeatureTransformer(wavelet_config)
+            except Exception as exc:
+                logger.warning("WaveletFeatureTransformer初期化に失敗しました: %s", exc)
+                self._wavelet_transformer = None
 
     def gene_to_features(
         self,
@@ -134,6 +143,13 @@ class HybridFeatureAdapter:
             else:
                 features_df["sentiment_smoothed"] = 0.0
             
+            # ウェーブレット特徴量の追加
+            if self._wavelet_transformer is not None:
+                try:
+                    features_df = self._wavelet_transformer.append_features(features_df)
+                except Exception as exc:
+                    logger.warning("ウェーブレット特徴量の追加に失敗したためスキップします: %s", exc)
+
             # AutoML特徴量生成（有効な場合）
             if self._automl_enabled:
                 try:
@@ -360,3 +376,56 @@ class HybridFeatureAdapter:
                 features_list.append(pd.DataFrame())
         
         return features_list
+
+
+class WaveletFeatureTransformer:
+    """簡易ウェーブレット変換で特徴量を生成するヘルパー"""
+
+    def __init__(self, config: Dict[str, Any]):
+        self.base_wavelet = config.get("base_wavelet", "haar")
+        self.scales = self._validate_scales(config.get("scales", [2, 4]))
+        self.target_columns = config.get("target_columns") or ["close"]
+
+        if self.base_wavelet != "haar":
+            logger.warning("未対応のウェーブレット '%s' が指定されたため 'haar' を使用します", self.base_wavelet)
+            self.base_wavelet = "haar"
+
+    @staticmethod
+    def _validate_scales(scales: Any) -> List[int]:
+        if not isinstance(scales, (list, tuple, set)):
+            return [2, 4]
+        validated: List[int] = []
+        for scale in scales:
+            try:
+                scale_int = int(scale)
+            except (TypeError, ValueError):
+                continue
+            if scale_int >= 2:
+                validated.append(scale_int)
+        return sorted(set(validated)) or [2, 4]
+
+    def append_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
+        """指定カラムにウェーブレットディテール成分を付与"""
+
+        for column in self.target_columns:
+            if column not in features_df.columns:
+                continue
+            series = features_df[column]
+            if not np.issubdtype(series.dtype, np.number):
+                continue
+
+            numeric_series = series.astype(float)
+            for scale in self.scales:
+                detail = self._haar_detail(numeric_series, scale)
+                new_column = f"wavelet_{column}_scale_{scale}"
+                features_df[new_column] = detail
+
+        return features_df
+
+    @staticmethod
+    def _haar_detail(series: pd.Series, scale: int) -> pd.Series:
+        window = max(2, scale)
+        coarse = series.rolling(window=window, min_periods=1).mean()
+        detail = series - coarse
+        detail = detail.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+        return detail

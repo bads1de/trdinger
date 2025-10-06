@@ -30,6 +30,12 @@ const INDICATOR_MODE_OPTIONS = [
   { value: "mixed", label: "混合" },
 ];
 
+const DRL_POLICY_OPTIONS = [
+  { value: "ppo", label: "PPO" },
+  { value: "a2c", label: "A2C" },
+  { value: "dqn", label: "DQN" },
+];
+
 interface GAConfigFormProps {
   onSubmit: (config: GAConfigType) => void;
   onClose?: () => void;
@@ -64,46 +70,48 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     };
 
     const effectiveBaseConfig = currentBacktestConfig || baseBacktestConfig;
+    const initialGAConfig = initialConfig.ga_config ?? {};
+    const defaultFitnessWeights = {
+      total_return: 0.3,
+      sharpe_ratio: 0.4,
+      max_drawdown: 0.2,
+      win_rate: 0.1,
+      ...initialGAConfig.fitness_weights,
+    };
+    const defaultFitnessConstraints = {
+      min_trades: 10,
+      max_drawdown_limit: 0.3,
+      min_sharpe_ratio: 0.5,
+      ...initialGAConfig.fitness_constraints,
+    };
+
+    const defaultExperimentName =
+      initialConfig.experiment_name ??
+      `GA_${new Date().toISOString().slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`;
 
     return {
-      experiment_name: `GA_${new Date()
-        .toISOString()
-        .slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`,
-      base_config: effectiveBaseConfig,
+      experiment_name: defaultExperimentName,
+      base_config: initialConfig.base_config ?? effectiveBaseConfig,
       ga_config: {
-        population_size: initialConfig.ga_config?.population_size || 10,
-        generations: initialConfig.ga_config?.generations || 10,
-        mutation_rate: initialConfig.ga_config?.mutation_rate || 0.1,
-        crossover_rate: initialConfig.ga_config?.crossover_rate || 0.8,
-        elite_size: initialConfig.ga_config?.elite_size || 5,
-        max_indicators: initialConfig.ga_config?.max_indicators || 5,
-        allowed_indicators: initialConfig.ga_config?.allowed_indicators || [],
-        // 指標モード設定
-        indicator_mode:
-          initialConfig.ga_config?.indicator_mode || "technical_only",
-        fitness_weights: initialConfig.ga_config?.fitness_weights || {
-          total_return: 0.3,
-          sharpe_ratio: 0.4,
-          max_drawdown: 0.2,
-          win_rate: 0.1,
-        },
-        fitness_constraints: initialConfig.ga_config?.fitness_constraints || {
-          min_trades: 10,
-          max_drawdown_limit: 0.3,
-          min_sharpe_ratio: 0.5,
-        },
-        // 多目的最適化設定
-        enable_multi_objective:
-          initialConfig.ga_config?.enable_multi_objective ?? true,
-        objectives: initialConfig.ga_config?.objectives || [
-          "win_rate",
-          "max_drawdown",
-        ],
-        objective_weights: initialConfig.ga_config?.objective_weights || [
-          1.0, -1.0,
-        ],
+        population_size: initialGAConfig.population_size ?? 10,
+        generations: initialGAConfig.generations ?? 10,
+        mutation_rate: initialGAConfig.mutation_rate ?? 0.1,
+        crossover_rate: initialGAConfig.crossover_rate ?? 0.8,
+        elite_size: initialGAConfig.elite_size ?? 5,
+        max_indicators: initialGAConfig.max_indicators ?? 5,
+        allowed_indicators: initialGAConfig.allowed_indicators ?? [],
+        indicator_mode: initialGAConfig.indicator_mode ?? "technical_only",
+        fitness_weights: defaultFitnessWeights,
+        fitness_constraints: defaultFitnessConstraints,
+        enable_multi_objective: initialGAConfig.enable_multi_objective ?? true,
+        objectives: initialGAConfig.objectives ?? ["win_rate", "max_drawdown"],
+        objective_weights: initialGAConfig.objective_weights ?? [1.0, -1.0],
         regime_adaptation_enabled:
-          initialConfig.ga_config?.regime_adaptation_enabled ?? false,
+          initialGAConfig.regime_adaptation_enabled ?? false,
+        hybrid_mode: initialGAConfig.hybrid_mode ?? false,
+        hybrid_model_type: initialGAConfig.hybrid_model_type ?? "lightgbm",
+        hybrid_model_types: initialGAConfig.hybrid_model_types,
+        hybrid_automl_config: initialGAConfig.hybrid_automl_config,
       },
     };
   });
@@ -135,6 +143,87 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
   const handleSubmit = () => {
     onSubmit(config);
+  };
+
+  const drlConfig = config.ga_config.hybrid_automl_config?.drl;
+  const drlEnabled = Boolean(drlConfig?.enabled);
+  const drlPolicyType = drlConfig?.policy_type ?? "ppo";
+  const drlPolicyWeight = drlConfig?.policy_weight ?? 0.5;
+
+  const handleDRLEnabledChange = (enabled: boolean) => {
+    setConfig((prev) => {
+      const currentAutoml = prev.ga_config.hybrid_automl_config ?? {};
+      const currentDrl = currentAutoml.drl ?? {
+        policy_type: "ppo",
+        policy_weight: 0.5,
+      };
+
+      return {
+        ...prev,
+        ga_config: {
+          ...prev.ga_config,
+          hybrid_automl_config: {
+            ...currentAutoml,
+            drl: {
+              ...currentDrl,
+              enabled,
+            },
+          },
+        },
+      };
+    });
+  };
+
+  const handleDRLPolicyTypeChange = (value: string) => {
+    setConfig((prev) => {
+      const currentAutoml = prev.ga_config.hybrid_automl_config ?? {};
+      const currentDrl = currentAutoml.drl ?? {
+        enabled: false,
+        policy_weight: 0.5,
+      };
+
+      return {
+        ...prev,
+        ga_config: {
+          ...prev.ga_config,
+          hybrid_automl_config: {
+            ...currentAutoml,
+            drl: {
+              ...currentDrl,
+              policy_type: value,
+            },
+          },
+        },
+      };
+    });
+  };
+
+  const handleDRLPolicyWeightChange = (value: number) => {
+    const safeValue = Number.isFinite(value)
+      ? Math.min(Math.max(value, 0), 1)
+      : 0.5;
+
+    setConfig((prev) => {
+      const currentAutoml = prev.ga_config.hybrid_automl_config ?? {};
+      const currentDrl = currentAutoml.drl ?? {
+        enabled: false,
+        policy_type: "ppo",
+      };
+
+      return {
+        ...prev,
+        ga_config: {
+          ...prev.ga_config,
+          hybrid_automl_config: {
+            ...currentAutoml,
+            drl: {
+              ...currentDrl,
+              policy_weight: safeValue,
+            },
+          },
+        },
+      };
+    });
   };
 
   return (
@@ -237,6 +326,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 handleGAConfigChange({ hybrid_mode: e.target.checked })
               }
               className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
+              aria-label="ハイブリッドGA+MLモードを有効化"
             />
           </div>
           
@@ -272,6 +362,42 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 step={0.05}
                 description="ML予測スコアの重み（0-1）"
               />
+              <div className="p-3 bg-slate-900/40 border border-slate-600/30 rounded-md space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-200">
+                    🧠 DRLポリシーブレンド
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={drlEnabled}
+                    onChange={(event) =>
+                      handleDRLEnabledChange(event.target.checked)
+                    }
+                    className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
+                    aria-label="DRLポリシーブレンドを有効化"
+                  />
+                </div>
+                {drlEnabled && (
+                  <>
+                    <SelectField
+                      label="DRLポリシー"
+                      value={drlPolicyType}
+                      onChange={handleDRLPolicyTypeChange}
+                      options={DRL_POLICY_OPTIONS}
+                    />
+                    <InputField
+                      label="DRLブレンド重み"
+                      type="number"
+                      value={drlPolicyWeight}
+                      onChange={handleDRLPolicyWeightChange}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      description="DRLとML予測の混合比率（0-1）"
+                    />
+                  </>
+                )}
+              </div>
               <p className="text-xs text-blue-300">
                 💡 事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
               </p>

@@ -148,7 +148,7 @@ describe("GAConfigForm", () => {
     expect(collapsibleTrigger).toHaveAttribute("aria-expanded", "true");
 
     // 説明コンテンツが表示されることを確認
-    expect(screen.getByText(/TA: 従来のテクニカル指標のみを使用/)).toBeInTheDocument();
+    expect(screen.getByText(/指標モード選択/)).toBeInTheDocument();
     expect(screen.getByText("TP/SLとポジションサイズはGAが自動最適化します。")).toBeInTheDocument();
   });
 
@@ -186,8 +186,11 @@ describe("GAConfigForm", () => {
     expect(screen.getByText("TA")).toBeInTheDocument();
 
     // 指標モードのセレクトトリガーをクリック（ドロップダウンを開く）
-    const selectTrigger = screen.getByRole("combobox");
-    fireEvent.click(selectTrigger);
+    const selectTrigger = screen
+      .getAllByRole("combobox")
+      .find((element) => element.textContent?.includes("TA"));
+    expect(selectTrigger).toBeTruthy();
+    fireEvent.click(selectTrigger!);
 
     // MLオプションをクリック
     const mlOption = screen.getByText("ML");
@@ -270,5 +273,38 @@ describe("GAConfigForm", () => {
 
     // チェックされていることを確認
     expect(regimeCheckbox).toBeChecked();
+  });
+
+  test("ハイブリッドモードでDRL設定を有効化できること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const hybridToggle = screen.getByLabelText("ハイブリッドGA+MLモードを有効化");
+    fireEvent.click(hybridToggle);
+
+    const drlToggle = screen.getByLabelText("DRLポリシーブレンドを有効化");
+    fireEvent.click(drlToggle);
+
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+
+    expect(submittedConfig.ga_config.hybrid_mode).toBe(true);
+    expect(
+      submittedConfig.ga_config.hybrid_automl_config?.drl?.enabled
+    ).toBe(true);
+    expect(
+      submittedConfig.ga_config.hybrid_automl_config?.drl?.policy_type
+    ).toBe("ppo");
+    expect(
+      submittedConfig.ga_config.hybrid_automl_config?.drl?.policy_weight
+    ).toBeCloseTo(0.5);
   });
 });
