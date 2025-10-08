@@ -3,19 +3,13 @@
 YAML設定ファイル読み込みテスト
 """
 
-import os
 from app.services.auto_strategy.core.condition_evolver import YamlIndicatorUtils
 
 def main():
     """メイン実行関数"""
     try:
-        # 絶対パスでYAMLファイルのパスを指定
-        yaml_path = os.path.join(os.path.dirname(__file__), "..", "app", "services", "auto_strategy", "config", "technical_indicators_config.yaml")
-        print(f"YAMLファイルパス: {yaml_path}")
-        print(f"ファイルが存在するか: {os.path.exists(yaml_path)}")
-
-        # YAMLファイル読み込み
-        yaml_utils = YamlIndicatorUtils(yaml_path)
+        # メタデータ定義を利用して読み込み
+        yaml_utils = YamlIndicatorUtils()
 
         # 利用可能な指標一覧を取得
         indicators = yaml_utils.get_available_indicators()

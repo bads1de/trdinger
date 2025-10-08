@@ -282,15 +282,9 @@ indicator_registry = IndicatorConfigRegistry()
 
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
-    from .momentum_indicators_config import setup_momentum_indicators
-    from .trend_indicators_config import setup_trend_indicators
-    from .volatility_indicators_config import setup_volatility_indicators
-    from .volume_indicators_config import setup_volume_indicators
+    from app.services.indicators.manifest import register_indicator_manifest
 
-    setup_momentum_indicators()
-    setup_trend_indicators()
-    setup_volatility_indicators()
-    setup_volume_indicators()
+    register_indicator_manifest(indicator_registry)
 
 
 def generate_positional_functions() -> set:
@@ -310,8 +304,8 @@ def generate_positional_functions() -> set:
     return functions
 
 
-# 動的設定初期化（レジストリから生成）
-POSITIONAL_DATA_FUNCTIONS = generate_positional_functions()
-
 # 全インジケーター初期化
 initialize_all_indicators()
+
+# 動的設定初期化（レジストリから生成）
+POSITIONAL_DATA_FUNCTIONS = generate_positional_functions()

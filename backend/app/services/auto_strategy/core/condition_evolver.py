@@ -19,6 +19,7 @@ from deap import base, creator, tools, algorithms
 from app.services.backtest.backtest_service import BacktestService
 from ..config import GAConfig
 from app.utils.error_handler import safe_operation
+from app.services.indicators.manifest import manifest_to_yaml_dict
 
 logger = logging.getLogger(__name__)
 
@@ -46,25 +47,30 @@ class YamlIndicatorUtils:
     32指標の設定を読み込み、指標タイプ別の分類や閾値範囲の取得を行います。
     """
 
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: Optional[str] = None):
         """
         初期化
 
         Args:
             config_path: YAML設定ファイルのパス
         """
-        self.config_path = Path(config_path)
+        self.config_path = Path(config_path) if config_path else None
         self.config = self._load_yaml_config()
         self._validate_config()
 
     def _load_yaml_config(self) -> Dict[str, Any]:
         """YAML設定ファイルを読み込み"""
-        try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f)
-        except Exception as e:
-            logger.error(f"YAML設定ファイルの読み込みに失敗: {e}")
-            raise ValueError(f"設定ファイルの読み込みに失敗しました: {self.config_path}")
+        if self.config_path and self.config_path.exists():
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as file:
+                    return yaml.safe_load(file)
+            except Exception as exc:
+                logger.warning(
+                    "YAML設定ファイルの読み込みに失敗したためメタデータ定義を使用します: %s",
+                    exc,
+                )
+
+        return manifest_to_yaml_dict()
 
     def _validate_config(self):
         """設定ファイルの検証"""

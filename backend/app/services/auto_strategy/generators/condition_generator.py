@@ -1,7 +1,6 @@
 import logging
 import random
 from typing import List, Tuple, Union, Dict, Optional
-from pathlib import Path
 from app.utils.error_handler import safe_operation
 from ..constants import (
     IndicatorType,
@@ -364,17 +363,8 @@ class GAConditionGenerator(ConditionGenerator):
                 self.logger.warning("BacktestServiceが設定されていないため、GA機能は制限されます")
                 return False
 
-            # YAML設定ファイルのパスを取得
-            yaml_config_path = (
-                Path(__file__).parent.parent / "config" / "technical_indicators_config.yaml"
-            )
-
-            if not yaml_config_path.exists():
-                self.logger.error(f"YAML設定ファイルが見つかりません: {yaml_config_path}")
-                return False
-
-            # ConditionEvolver用のYamlIndicatorUtilsを作成
-            yaml_indicator_utils = CoreYamlIndicatorUtils(str(yaml_config_path))
+            # ConditionEvolver用のYamlIndicatorUtilsを作成（メタデータ使用）
+            yaml_indicator_utils = CoreYamlIndicatorUtils()
 
             # ConditionEvolverインスタンスを作成
             self.condition_evolver = ConditionEvolver(

@@ -40,11 +40,8 @@ class TestConditionEvolverIntegration:
 
     @pytest.fixture
     def yaml_indicator_utils(self):
-        """YAML指標ユーティリティ"""
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        yaml_path = os.path.join(current_dir, "..", "app", "services", "auto_strategy", "config", "technical_indicators_config.yaml")
-        return YamlIndicatorUtils(yaml_path)
+        """メタデータ駆動の指標ユーティリティ"""
+        return YamlIndicatorUtils()
 
     @pytest.fixture
     def condition_evolver(self, mock_backtest_service, yaml_indicator_utils):
@@ -226,10 +223,7 @@ class TestYamlIndicatorUtils:
 
     def test_yaml_loading(self):
         """YAML設定ファイル読み込みテスト"""
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        yaml_path = os.path.join(current_dir, "..", "app", "services", "auto_strategy", "config", "technical_indicators_config.yaml")
-        utils = YamlIndicatorUtils(yaml_path)
+        utils = YamlIndicatorUtils()
 
         indicators = utils.get_available_indicators()
         assert len(indicators) > 0
@@ -238,10 +232,7 @@ class TestYamlIndicatorUtils:
 
     def test_indicator_info_retrieval(self):
         """指標情報取得テスト"""
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        yaml_path = os.path.join(current_dir, "..", "app", "services", "auto_strategy", "config", "technical_indicators_config.yaml")
-        utils = YamlIndicatorUtils(yaml_path)
+        utils = YamlIndicatorUtils()
 
         rsi_info = utils.get_indicator_info("RSI")
         assert "conditions" in rsi_info
@@ -250,10 +241,7 @@ class TestYamlIndicatorUtils:
 
     def test_indicator_types_classification(self):
         """指標タイプ分類テスト"""
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        yaml_path = os.path.join(current_dir, "..", "app", "services", "auto_strategy", "config", "technical_indicators_config.yaml")
-        utils = YamlIndicatorUtils(yaml_path)
+        utils = YamlIndicatorUtils()
 
         types = utils.get_indicator_types()
         assert "momentum" in types
@@ -271,10 +259,7 @@ class TestConditionEvolverIntegrationAdvanced:
     def test_32_indicators_comprehensive_test(self):
         """32指標全てに対する包括的テスト"""
         # 32指標の設定を検証
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        yaml_path = os.path.join(current_dir, "..", "app", "services", "auto_strategy", "config", "technical_indicators_config.yaml")
-        utils = YamlIndicatorUtils(yaml_path)
+        utils = YamlIndicatorUtils()
 
         indicators = utils.get_available_indicators()
         types = utils.get_indicator_types()

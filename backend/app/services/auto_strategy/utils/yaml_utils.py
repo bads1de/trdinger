@@ -4,11 +4,12 @@ YAML関連ユーティリティ関数
 yamlファイルの読み込みと処理を専門に行うユーティリティを提供します。
 """
 
-import os
 import yaml
 from pathlib import Path
 from typing import Any, Dict, Optional, List, Union
 import logging
+
+from app.services.indicators.manifest import manifest_to_yaml_dict
 
 
 class YamlIndicatorUtils:
@@ -176,32 +177,43 @@ class YamlIndicatorUtils:
         Returns:
             マージされた特性データ
         """
-        CONFIG_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        YAML_CONFIG_PATH = os.path.join(
-            CONFIG_DIR, "config", "technical_indicators_config.yaml"
-        )
+        yaml_config = manifest_to_yaml_dict()
+        yaml_based_characteristics = {}
 
-        if os.path.exists(YAML_CONFIG_PATH):
-            YAML_BASED_CHARACTERISTICS = cls.generate_characteristics_from_yaml(
-                YAML_CONFIG_PATH
-            )
-            # 既存の特性とマージして動的に更新
-            return cls._merge_characteristics(
-                existing_characteristics, YAML_BASED_CHARACTERISTICS
-            )
-        else:
-            print(f"警告: YAML設定ファイルが見つかりません: {YAML_CONFIG_PATH}")
-            return existing_characteristics
+        for indicator_name, indicator_config in yaml_config.get("indicators", {}).items():
+            if not isinstance(indicator_config, dict):
+                continue
+
+            char = {
+                "type": indicator_config.get("type", "unknown"),
+                "scale_type": indicator_config.get("scale_type", "price_absolute"),
+            }
+
+            thresholds = indicator_config.get("thresholds", {})
+            if thresholds:
+                if isinstance(thresholds, dict):
+                    for risk_level, risk_config in thresholds.items():
+                        if risk_level in ["aggressive", "normal", "conservative"]:
+                            char[f"{risk_level}_config"] = risk_config
+                        elif risk_level == "all":
+                            char.update(cls._process_thresholds(risk_config))
+                        else:
+                            char.update(cls._process_thresholds({risk_level: risk_config}))
+
+                char.update(
+                    cls._extract_oscillator_settings(
+                        char, indicator_config, thresholds
+                    )
+                )
+
+            yaml_based_characteristics[indicator_name] = char
+
+        return cls._merge_characteristics(existing_characteristics, yaml_based_characteristics)
 
     @classmethod
     def load_yaml_config_for_indicators(cls) -> Dict[str, Any]:
-        """技術指標のYAML設定を読み込み（ConditionGenerator用）"""
-        config_path = (
-            Path(__file__).parent.parent / "config" / "technical_indicators_config.yaml"
-        )
-        # YamlLoadUtilsを使用して読み込み
-        config = YamlLoadUtils.load_yaml_config(config_path)
-        return config
+        """メタデータから技術指標設定を提供（ConditionGenerator用）"""
+        return manifest_to_yaml_dict()
 
     @classmethod
     def get_indicator_config_from_yaml(
