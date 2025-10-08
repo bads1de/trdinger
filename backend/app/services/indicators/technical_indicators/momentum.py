@@ -68,6 +68,31 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    def ppo(
+        data: pd.Series,
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Percentage Price Oscillator"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+
+        result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series, nan_series
+
+        result = result.bfill().fillna(0)
+
+        return (
+            result.iloc[:, 0].to_numpy(),
+            result.iloc[:, 1].to_numpy(),
+            result.iloc[:, 2].to_numpy(),
+        )
+
+    @staticmethod
     def stoch(
         high: pd.Series,
         low: pd.Series,
@@ -230,6 +255,41 @@ class MomentumIndicators:
         return result.iloc[:, 1] if result.shape[1] > 1 else result.iloc[:, 0]
 
     @staticmethod
+    def trix(
+        data: pd.Series,
+        length: int = 14,
+        signal: int = 9,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """TRIXとシグナル"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.trix(data, length=length, signal=signal)
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series, nan_series
+
+        result = result.bfill().fillna(0)
+
+        if result.shape[1] == 2:
+            hist = result.iloc[:, 0] - result.iloc[:, 1]
+            hist_name = f"{result.columns[0]}_hist"
+            result = pd.concat([result, hist.rename(hist_name)], axis=1)
+        elif result.shape[1] >= 3:
+            hist_series = result.iloc[:, 2]
+            if np.isnan(hist_series.to_numpy()).all():
+                result.iloc[:, 2] = result.iloc[:, 0] - result.iloc[:, 1]
+
+        return (
+            result.iloc[:, 0].to_numpy(),
+            result.iloc[:, 1].to_numpy(),
+            result.iloc[:, 2].to_numpy(),
+        )
+
+    @staticmethod
     def squeeze(
         high: pd.Series,
         low: pd.Series,
@@ -264,4 +324,27 @@ class MomentumIndicators:
         )
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
-        return result
+        return result
+
+    @staticmethod
+    def uo(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        fast: int = 7,
+        medium: int = 14,
+        slow: int = 28,
+    ) -> pd.Series:
+        """Ultimate Oscillator"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        result = ta.uo(high=high, low=low, close=close, fast=fast, medium=medium, slow=slow)
+
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result.bfill().fillna(0)

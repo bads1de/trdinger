@@ -167,6 +167,46 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def hma(data: pd.Series, length: int = 20) -> pd.Series:
+        """Hull移動平均"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if len(data) == 0:
+            return pd.Series(np.full(0, np.nan), index=data.index)
+
+        result = ta.hma(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vwma(
+        close: pd.Series,
+        volume: pd.Series,
+        length: int = 20,
+    ) -> pd.Series:
+        """出来高加重移動平均"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+        if len(close) != len(volume):
+            raise ValueError("close and volume series must share the same length")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if len(close) == 0:
+            return pd.Series(np.full(0, np.nan), index=close.index)
+
+        result = ta.vwma(close=close, volume=volume, length=length)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def sar(
         high: pd.Series,
         low: pd.Series,
