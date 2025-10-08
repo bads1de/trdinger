@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import logging
 from typing import Any, Callable, Dict, Optional
 
 from app.services.indicators.config.indicator_config import (
@@ -11,6 +12,9 @@ from app.services.indicators.config.indicator_config import (
     IndicatorConfigRegistry,
     indicator_registry,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_callable(path: Optional[str]) -> Optional[Callable[..., Any]]:
@@ -27,7 +31,16 @@ def _resolve_callable(path: Optional[str]) -> Optional[Callable[..., Any]]:
 
         attr = module
         for attribute_name in parts[index:]:
-            attr = getattr(attr, attribute_name)
+            try:
+                attr = getattr(attr, attribute_name)
+            except AttributeError:
+                logger.warning(
+                    "Failed to resolve attribute '%s' on module '%s' for path '%s'",
+                    attribute_name,
+                    module_name,
+                    path,
+                )
+                return None
         return attr
 
     raise ImportError(f"Callable path could not be resolved: {path}")
@@ -183,6 +196,34 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
         },
         'yaml': {'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} > {threshold}'}, 'scale_type': 'oscillator_0_100', 'thresholds': {'aggressive': {'trend_min': 18}, 'conservative': {'trend_min': 30}, 'normal': {'trend_min': 25}}, 'type': 'momentum'},
     },
+    'ALMA': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'price_ratio',
+            'category': 'trend',
+            'adapter_function': 'app.services.indicators.technical_indicators.trend.TrendIndicators.alma',
+            'required_data': ['close'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'close': 'data', 'length': 'length', 'sigma': 'sigma', 'distribution_offset': 'distribution_offset', 'offset': 'offset'},
+            'parameters': {
+                'length': {'default_value': 10, 'min_value': 2, 'max_value': 200, 'description': 'ALMA計算期間'},
+                'sigma': {'default_value': 6.0, 'min_value': 0.1, 'max_value': 10.0, 'description': 'ガウス分布のシグマ'},
+                'distribution_offset': {'default_value': 0.85, 'min_value': 0.0, 'max_value': 1.0, 'description': 'ガウス分布のオフセット'},
+                'offset': {'default_value': 0, 'min_value': -10, 'max_value': 10, 'description': '出力シフト量'},
+            },
+            'pandas_function': 'alma',
+            'data_column': 'Close',
+            'data_columns': None,
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'length': 10, 'sigma': 6.0, 'distribution_offset': 0.85, 'offset': 0},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': 'close > {left_operand}', 'short': 'close < {left_operand}'}, 'scale_type': 'price_absolute', 'thresholds': None, 'type': 'trend'},
+    },
     'ATR': {
         'config': {
             'result_type': 'single',
@@ -275,6 +316,29 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
         },
         'yaml': {'conditions': {'long': 'close > {left_operand}_mid', 'short': 'close < {left_operand}_mid'}, 'scale_type': 'price_absolute', 'thresholds': {'aggressive': {'multiplier': 1.5}, 'conservative': {'multiplier': 2.5}, 'normal': {'multiplier': 2.0}}, 'type': 'volume'},
     },
+    'CMO': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'oscillator_plus_minus_100',
+            'category': 'momentum',
+            'adapter_function': 'app.services.indicators.technical_indicators.momentum.MomentumIndicators.cmo',
+            'required_data': ['close'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'close': 'data', 'length': 'length'},
+            'parameters': {'length': {'default_value': 14, 'min_value': 2, 'max_value': 100, 'description': 'CMO計算期間'}},
+            'pandas_function': 'cmo',
+            'data_column': 'Close',
+            'data_columns': None,
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'length': 14},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} < {threshold}'}, 'scale_type': 'oscillator_plus_minus_100', 'thresholds': {'all': {'long_gt': 50, 'short_lt': -50}}, 'type': 'momentum'},
+    },
     'DEMA': {
         'config': {
             'result_type': 'single',
@@ -343,6 +407,32 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             'min_length_func': None,
         },
         'yaml': {'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} < {threshold}'}, 'scale_type': 'momentum_zero_centered', 'thresholds': {'all': {'long_gt': 0, 'short_lt': 0}}, 'type': 'volume'},
+    },
+    'FISHER': {
+        'config': {
+            'result_type': 'complex',
+            'scale_type': 'momentum_zero_centered',
+            'category': 'momentum',
+            'adapter_function': 'app.services.indicators.technical_indicators.momentum.MomentumIndicators.fisher',
+            'required_data': ['high', 'low'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'high': 'high', 'low': 'low', 'length': 'length', 'signal': 'signal'},
+            'parameters': {
+                'length': {'default_value': 9, 'min_value': 2, 'max_value': 100, 'description': 'Fisher期間'},
+                'signal': {'default_value': 1, 'min_value': 1, 'max_value': 20, 'description': 'シグナル期間'}
+            },
+            'pandas_function': 'fisher',
+            'data_column': None,
+            'data_columns': ['High', 'Low'],
+            'returns': 'multiple',
+            'return_cols': ['FISHERT', 'FISHERTs'],
+            'multi_column': True,
+            'default_values': {'length': 9, 'signal': 1},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': '{left_operand}_0 > 0', 'short': '{left_operand}_0 < 0'}, 'scale_type': 'momentum_zero_centered', 'thresholds': {'zero_cross': True}, 'type': 'momentum'},
     },
     'EMA': {
         'config': {
@@ -435,6 +525,50 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             'min_length_func': None,
         },
         'yaml': {'conditions': {'long': 'close > {left_operand}_upper', 'short': 'close < {left_operand}_lower'}, 'scale_type': 'price_absolute', 'thresholds': {'aggressive': {'multiplier': 1.0}, 'combo': {'condition': 'distance >= primary or distance <= secondary', 'primary': 2.5, 'secondary': -2.5}, 'conservative': {'multiplier': 2.0}, 'normal': {'multiplier': 1.5}, 'range': {'break_out_lower': -1.8, 'break_out_upper': 1.8}}, 'type': 'volatility'},
+    },
+    'KST': {
+        'config': {
+            'result_type': 'complex',
+            'scale_type': 'momentum_zero_centered',
+            'category': 'momentum',
+            'adapter_function': 'app.services.indicators.technical_indicators.momentum.MomentumIndicators.kst',
+            'required_data': ['close'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {
+                'close': 'data',
+                'roc1': 'roc1',
+                'roc2': 'roc2',
+                'roc3': 'roc3',
+                'roc4': 'roc4',
+                'sma1': 'sma1',
+                'sma2': 'sma2',
+                'sma3': 'sma3',
+                'sma4': 'sma4',
+                'signal': 'signal'
+            },
+            'parameters': {
+                'roc1': {'default_value': 10, 'min_value': 2, 'max_value': 60, 'description': 'ROC1期間'},
+                'roc2': {'default_value': 15, 'min_value': 2, 'max_value': 60, 'description': 'ROC2期間'},
+                'roc3': {'default_value': 20, 'min_value': 2, 'max_value': 60, 'description': 'ROC3期間'},
+                'roc4': {'default_value': 30, 'min_value': 2, 'max_value': 90, 'description': 'ROC4期間'},
+                'sma1': {'default_value': 10, 'min_value': 2, 'max_value': 60, 'description': 'SMA1期間'},
+                'sma2': {'default_value': 10, 'min_value': 2, 'max_value': 60, 'description': 'SMA2期間'},
+                'sma3': {'default_value': 10, 'min_value': 2, 'max_value': 60, 'description': 'SMA3期間'},
+                'sma4': {'default_value': 15, 'min_value': 2, 'max_value': 90, 'description': 'SMA4期間'},
+                'signal': {'default_value': 9, 'min_value': 1, 'max_value': 50, 'description': 'シグナル期間'}
+            },
+            'pandas_function': 'kst',
+            'data_column': 'Close',
+            'data_columns': None,
+            'returns': 'multiple',
+            'return_cols': ['KST', 'KSTs'],
+            'multi_column': False,
+            'default_values': {'roc1': 10, 'roc2': 15, 'roc3': 20, 'roc4': 30, 'sma1': 10, 'sma2': 10, 'sma3': 10, 'sma4': 15, 'signal': 9},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': '{left_operand}_0 > 0', 'short': '{left_operand}_0 < 0'}, 'scale_type': 'momentum_zero_centered', 'thresholds': {'zero_cross': True}, 'type': 'momentum'},
     },
     'MACD': {
         'config': {
@@ -808,6 +942,29 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
         },
         'yaml': {'conditions': {'long': '{left_operand}_0 > 0', 'short': '{left_operand}_0 < 0'}, 'scale_type': 'momentum_zero_centered', 'thresholds': {'zero_cross': True}, 'type': 'momentum'},
     },
+    'TRIMA': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'price_ratio',
+            'category': 'trend',
+            'adapter_function': 'app.services.indicators.technical_indicators.trend.TrendIndicators.trima',
+            'required_data': ['close'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'close': 'data', 'length': 'length', 'talib': 'talib'},
+            'parameters': {'length': {'default_value': 10, 'min_value': 2, 'max_value': 200, 'description': 'TRIMA期間'}},
+            'pandas_function': 'trima',
+            'data_column': 'Close',
+            'data_columns': None,
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'length': 10},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': 'close > {left_operand}', 'short': 'close < {left_operand}'}, 'scale_type': 'price_absolute', 'thresholds': None, 'type': 'trend'},
+    },
     'TEMA': {
         'config': {
             'result_type': 'single',
@@ -877,6 +1034,33 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
         },
         'yaml': {'conditions': {'long': 'close > {left_operand}', 'short': 'close < {left_operand}'}, 'scale_type': 'price_absolute', 'thresholds': None, 'type': 'trend'},
     },
+    'ZLMA': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'price_ratio',
+            'category': 'trend',
+            'adapter_function': 'app.services.indicators.technical_indicators.trend.TrendIndicators.zlma',
+            'required_data': ['close'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'close': 'data', 'length': 'length', 'mamode': 'mamode', 'offset': 'offset'},
+            'parameters': {
+                'length': {'default_value': 10, 'min_value': 2, 'max_value': 200, 'description': 'ZLMA期間'},
+                'mamode': {'default_value': 'ema', 'min_value': None, 'max_value': None, 'description': '元となる移動平均モード'},
+                'offset': {'default_value': 0, 'min_value': -10, 'max_value': 10, 'description': 'シフト量'}
+            },
+            'pandas_function': 'zlma',
+            'data_column': 'Close',
+            'data_columns': None,
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'length': 10, 'mamode': 'ema', 'offset': 0},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': 'close > {left_operand}', 'short': 'close < {left_operand}'}, 'scale_type': 'price_absolute', 'thresholds': None, 'type': 'trend'},
+    },
     'VWAP': {
         'config': {
             'result_type': 'single',
@@ -922,6 +1106,98 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             'min_length_func': None,
         },
         'yaml': {'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} < {threshold}'}, 'scale_type': 'oscillator_plus_minus_100', 'thresholds': {'aggressive': {'long_lt': -95, 'short_gt': -5}, 'conservative': {'long_lt': -75, 'short_gt': -25}, 'normal': {'long_lt': -80, 'short_gt': -20}}, 'type': 'momentum'},
+    },
+    'STC': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'oscillator_0_100',
+            'category': 'momentum',
+            'adapter_function': 'app.services.indicators.technical_indicators.momentum.MomentumIndicators.stc',
+            'required_data': ['close'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'close': 'data', 'fast': 'fast', 'slow': 'slow', 'cycle': 'cycle', 'd1': 'd1', 'd2': 'd2'},
+            'parameters': {'fast': {'default_value': 23, 'min_value': 2, 'max_value': 50, 'description': 'STC fast period'}, 'slow': {'default_value': 50, 'min_value': 5, 'max_value': 100, 'description': 'STC slow period'}, 'cycle': {'default_value': 10, 'min_value': 3, 'max_value': 50, 'description': 'STC cycle period'}, 'd1': {'default_value': 3, 'min_value': 2, 'max_value': 20, 'description': 'STC first smoothing'}, 'd2': {'default_value': 3, 'min_value': 2, 'max_value': 20, 'description': 'STC second smoothing'}},
+            'pandas_function': 'stc',
+            'data_column': 'Close',
+            'data_columns': None,
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'fast': 23, 'slow': 50, 'cycle': 10, 'd1': 3, 'd2': 3},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': '{left_operand} < {threshold}', 'short': '{left_operand} > {threshold}'}, 'scale_type': 'oscillator_0_100', 'thresholds': {'aggressive': {'long_lt': 25, 'short_gt': 75}, 'conservative': {'long_lt': 35, 'short_gt': 65}, 'normal': {'long_lt': 30, 'short_gt': 70}}, 'type': 'momentum'},
+    },
+    'EOM': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'momentum_zero_centered',
+            'category': 'volume',
+            'adapter_function': 'app.services.indicators.technical_indicators.volume.VolumeIndicators.eom',
+            'required_data': ['high', 'low', 'volume'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'high': 'high', 'low': 'low', 'volume': 'volume', 'length': 'length'},
+            'parameters': {'length': {'default_value': 14, 'min_value': 1, 'max_value': 50, 'description': 'EOM計算期間'}},
+            'pandas_function': 'eom',
+            'data_column': None,
+            'data_columns': ['High', 'Low', 'Volume'],
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'length': 14},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} < {threshold}'}, 'scale_type': 'momentum_zero_centered', 'thresholds': {'aggressive': {'long_gt': 0.1, 'short_lt': -0.1}, 'conservative': {'long_gt': 0.3, 'short_lt': -0.3}, 'normal': {'long_gt': 0.2, 'short_lt': -0.2}}, 'type': 'volume'},
+    },
+    'CHAIKIN_OSC': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'momentum_zero_centered',
+            'category': 'volume',
+            'adapter_function': 'app.services.indicators.technical_indicators.volume.VolumeIndicators.chaikin_osc',
+            'required_data': ['high', 'low', 'close', 'volume'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'high': 'high', 'low': 'low', 'close': 'close', 'volume': 'volume', 'fast': 'fast', 'slow': 'slow'},
+            'parameters': {'fast': {'default_value': 3, 'min_value': 2, 'max_value': 20, 'description': 'Chaikin Oscillator fast period'}, 'slow': {'default_value': 10, 'min_value': 5, 'max_value': 50, 'description': 'Chaikin Oscillator slow period'}},
+            'pandas_function': None,  # 自前実装
+            'data_column': None,
+            'data_columns': ['High', 'Low', 'Close', 'Volume'],
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': True,
+            'default_values': {'fast': 3, 'slow': 10},
+            'min_length_func': None,
+        },
+        'yaml': {'conditions': {'long': '{left_operand} > 0', 'short': '{left_operand} < 0'}, 'scale_type': 'momentum_zero_centered', 'thresholds': {'zero_cross': True}, 'type': 'volume'},
+    },
+    'PIVOT_POINTS': {
+        'config': {
+            'result_type': 'complex',
+            'scale_type': 'price_absolute',
+            'category': 'volume',
+            'adapter_function': 'app.services.indicators.technical_indicators.volume.VolumeIndicators.pivot_points',
+            'required_data': ['high', 'low', 'close'],
+            'output_names': ['PIVOT', 'R1', 'R2', 'R3', 'S1', 'S2', 'S3'],
+            'default_output': 'PIVOT',
+            'aliases': None,
+            'param_map': {'high': 'high', 'low': 'low', 'close': 'close', 'method': 'method'},
+            'parameters': {'method': {'default_value': 'standard', 'min_value': None, 'max_value': None, 'description': 'Pivot Points calculation method (standard, woodie, camarilla)'}},
+            'pandas_function': None,  # 自前実装
+            'data_column': None,
+            'data_columns': ['High', 'Low', 'Close'],
+            'returns': 'multiple',
+            'return_cols': None,
+            'multi_column': True,
+            'default_values': {'method': 'standard'},
+            'min_length_func': None,
+        },
+        'yaml': {'levels': ['pivot', 'r1', 'r2', 'r3', 's1', 's2', 's3'], 'conditions': {'long': 'close > {left_operand}_pivot', 'short': 'close < {left_operand}_pivot'}, 'scale_type': 'price_absolute', 'thresholds': {'support_resistance': True}, 'type': 'volume'},
     },
     'WMA': {
         'config': {

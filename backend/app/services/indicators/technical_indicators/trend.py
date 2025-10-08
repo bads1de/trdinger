@@ -9,6 +9,11 @@
 - TEMA (Triple Exponential Moving Average)
 - T3 (Tillson's T3 Moving Average)
 - KAMA (Kaufman's Adaptive Moving Average)
+- HMA (Hull Moving Average)
+- VWMA (Volume Weighted Moving Average)
+- ALMA (Arnaud Legoux Moving Average)
+- TRIMA (Triangular Moving Average)
+- ZLMA (Zero Lag Moving Average)
 - SAR (Parabolic SAR)
 """
 
@@ -84,6 +89,71 @@ class TrendIndicators:
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
         return ta.wma(data, window=length)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def trima(data: pd.Series, length: int = 10, talib: bool | None = None) -> pd.Series:
+        """三角移動平均"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.trima(data, length=length, talib=talib)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def zlma(
+        data: pd.Series,
+        length: int = 10,
+        mamode: str = "ema",
+        offset: int = 0,
+    ) -> pd.Series:
+        """Zero Lag移動平均"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.zlma(data, length=length, mamode=mamode, offset=offset)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def alma(
+        data: pd.Series,
+        length: int = 10,
+        sigma: float = 6.0,
+        distribution_offset: float = 0.85,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Arnaud Legoux Moving Average"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if sigma <= 0:
+            raise ValueError(f"sigma must be positive: {sigma}")
+        if not 0.0 <= distribution_offset <= 1.0:
+            raise ValueError(
+                f"distribution_offset must be between 0.0 and 1.0: {distribution_offset}"
+            )
+
+        result = ta.alma(
+            data,
+            length=length,
+            sigma=sigma,
+            distribution_offset=distribution_offset,
+            offset=offset,
+        )
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors

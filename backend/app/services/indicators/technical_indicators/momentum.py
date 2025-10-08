@@ -12,6 +12,10 @@
 - ADX (Average Directional Index)
 - QQE (Qualitative Quantitative Estimation)
 - SQUEEZE (Squeeze)
+- STC (Schaff Trend Cycle)
+- CMO (Chande Momentum Oscillator)
+- FISHER (Fisher Transform)
+- KST (Know Sure Thing)
 """
 
 from typing import Tuple
@@ -173,6 +177,134 @@ class MomentumIndicators:
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result
+
+    @staticmethod
+    def cmo(
+        data: pd.Series,
+        length: int = 14,
+        talib: bool | None = None,
+    ) -> pd.Series:
+        """チャンデ・モメンタム・オシレーター"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.cmo(data, length=length, talib=talib)
+        if result is None or result.empty:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def stc(
+        data: pd.Series,
+        fast: int = 23,
+        slow: int = 50,
+        cycle: int = 10,
+        d1: int = 3,
+        d2: int = 3,
+    ) -> pd.Series:
+        """Schaff Trend Cycle"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if fast <= 0 or slow <= 0:
+            raise ValueError("fast and slow must be positive")
+        if cycle <= 0:
+            raise ValueError("cycle must be positive")
+
+        factor_base = max(d1, d2)
+        factor = max(0.1, min(factor_base / max(cycle, 1), 0.9))
+
+        result = ta.stc(
+            data,
+            fast=fast,
+            slow=slow,
+            tclength=cycle,
+            factor=factor,
+        )
+        if result is None or result.empty:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        if isinstance(result, pd.DataFrame):
+            series = result.iloc[:, 0]
+        else:
+            series = result
+
+        return series.bfill().fillna(0)
+
+    @staticmethod
+    def fisher(
+        high: pd.Series,
+        low: pd.Series,
+        length: int = 9,
+        signal: int = 1,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """フィッシャー変換"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if signal <= 0:
+            raise ValueError(f"signal must be positive: {signal}")
+
+        result = ta.fisher(high=high, low=low, length=length, signal=signal)
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+
+        result = result.bfill().fillna(0)
+        return result.iloc[:, 0], result.iloc[:, 1]
+
+    @staticmethod
+    def kst(
+        data: pd.Series,
+        roc1: int = 10,
+        roc2: int = 15,
+        roc3: int = 20,
+        roc4: int = 30,
+        sma1: int = 10,
+        sma2: int = 10,
+        sma3: int = 10,
+        sma4: int = 15,
+        signal: int = 9,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Know Sure Thing"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        for name, value in {
+            "roc1": roc1,
+            "roc2": roc2,
+            "roc3": roc3,
+            "roc4": roc4,
+            "sma1": sma1,
+            "sma2": sma2,
+            "sma3": sma3,
+            "sma4": sma4,
+            "signal": signal,
+        }.items():
+            if value <= 0:
+                raise ValueError(f"{name} must be positive: {value}")
+
+        result = ta.kst(
+            data,
+            roc1=roc1,
+            roc2=roc2,
+            roc3=roc3,
+            roc4=roc4,
+            sma1=sma1,
+            sma2=sma2,
+            sma3=sma3,
+            sma4=sma4,
+            signal=signal,
+        )
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series
+
+        result = result.bfill().fillna(0)
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     def roc(
