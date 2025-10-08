@@ -223,10 +223,6 @@ class TechnicalIndicatorService:
 
                 normalized[param_name] = value
 
-        # TA_SMAの場合、パラメータをログ出力
-        if config["function"] == "sma":
-            logger.debug(f"TA_SMA 正規化パラメータ: {normalized}")
-
         return normalized
 
     def _call_pandas_ta(
@@ -239,15 +235,6 @@ class TechnicalIndicatorService:
                 return None
 
             func = getattr(ta, config["function"])
-
-            # デバッグログ：パラメータとデータ情報を記録
-            logger.debug(
-                f"TA_SMA 呼び出し: 関数={config['function']}, パラメータ={params}, データ長={len(df)}"
-            )
-            if config["function"] == "sma":
-                logger.debug(
-                    f"SMA 詳細: length={params.get('length', 'N/A')}, Closeカラム存在={config['data_column'] in df.columns}"
-                )
 
             if config.get("multi_column", False):
                 # 複数カラム処理
@@ -262,12 +249,6 @@ class TechnicalIndicatorService:
                         return None
                     positional_args.append(df[col_name])
 
-                # STOCHの場合、パラメータとデータ長を詳細ログ
-                if config["function"] == "stoch":
-                    logger.debug(
-                        f"STOCH multi_column呼び出し: パラメータ={params}, データ長={len(df)}, カラム={required_columns}"
-                    )
-
                 # STOCHの場合、パラメータ名をpandas-ta仕様に変換
                 if config["function"] == "stoch":
                     converted_params = params.copy()
@@ -279,7 +260,6 @@ class TechnicalIndicatorService:
                         del converted_params["d_length"]
                     # smooth_kはそのまま
                     params = converted_params
-                    logger.debug(f"STOCH パラメータ変換後: {params}")
 
                 return func(*positional_args, **params)
             else:
@@ -304,15 +284,6 @@ class TechnicalIndicatorService:
                         params.get("k_length", 14)
                         + params.get("d_length", 3)
                         + params.get("smooth_k", 3)
-                    )
-                    logger.debug(
-                        f"STOCH データ長チェック: データ長={len(df)}, 推定最小必要長={min_length}"
-                    )
-
-                # STOCHの場合、パラメータとデータ長を詳細ログ
-                if config["function"] == "stoch":
-                    logger.debug(
-                        f"STOCH呼び出し詳細: パラメータ={params}, データ長={len(df)}, High列={config['data_columns'][0] in df.columns}, Low列={config['data_columns'][1] in df.columns}, Close列={config['data_columns'][2] in df.columns}"
                     )
 
                 return func(df[col_name], **params)
