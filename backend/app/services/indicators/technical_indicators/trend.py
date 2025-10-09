@@ -15,6 +15,8 @@
 - TRIMA (Triangular Moving Average)
 - ZLMA (Zero Lag Moving Average)
 - SAR (Parabolic SAR)
+- AMAT (Archer Moving Averages Trends)
+- RMA (Wilde's Moving Average)
 """
 
 import warnings
@@ -331,4 +333,43 @@ class TrendIndicators:
         psar_long = result[f"PSARl_{af}_{max_af}"]
         psar_short = result[f"PSARs_{af}_{max_af}"]
         return psar_long.fillna(psar_short)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def amat(
+        data: pd.Series,
+        fast: int = 3,
+        slow: int = 30,
+        signal: int = 10
+    ) -> pd.Series:
+        """Archer Moving Averages Trends"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+
+        # AMAT特有のデータ検証
+        min_length = max(fast, slow, signal) + 10
+        if len(data) < min_length:
+            raise ValueError(f"Insufficient data for AMAT calculation. Need at least {min_length} points, got {len(data)}")
+
+        result = ta.amat(data, fast=fast, slow=slow, signal=signal)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        # AMAT returns DataFrame, get the main series
+        if hasattr(result, 'iloc'):
+            return result.iloc[:, 0] if len(result.shape) > 1 else result
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rma(data: pd.Series, length: int = 10) -> pd.Series:
+        """Wilde's Moving Average"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError("length must be positive")
+
+        result = ta.rma(data, length=length)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
 

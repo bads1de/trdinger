@@ -24,6 +24,9 @@
 - AO (Awesome Oscillator)
 - AROON (Aroon Indicator)
 - CHOP (Choppiness Index)
+- BOP (Balance of Power)
+- CG (Center of Gravity)
+- COPPOCK (Coppock Curve)
 """
 
 from typing import Optional, Tuple
@@ -677,4 +680,66 @@ class MomentumIndicators:
         result = ta.chop(high=high, low=low, close=close, length=length)
         if result is None:
             return pd.Series(np.full(series_lengths[0], np.nan), index=high.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def bop(
+        open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+    ) -> pd.Series:
+        """Balance of Power"""
+        if not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # BOP特有のデータ検証
+        series_lengths = [len(open_), len(high), len(low), len(close)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError("BOP requires all series to have the same length")
+
+        result = ta.bop(open_=open_, high=high, low=low, close=close)
+        if result is None:
+            return pd.Series(np.full(series_lengths[0], np.nan), index=open_.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def cg(data: pd.Series, length: int = 10) -> pd.Series:
+        """Center of Gravity"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+
+        # CG特有のデータ検証
+        min_length = length + 2
+        if len(data) < min_length:
+            raise ValueError(
+                f"Insufficient data for CG calculation. Need at least {min_length} points, got {len(data)}"
+            )
+
+        result = ta.cg(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def coppock(
+        close: pd.Series, length: int = 11, fast: int = 14, slow: int = 10
+    ) -> pd.Series:
+        """Coppock Curve"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # Coppock特有のデータ検証
+        min_length = slow + fast + 5
+        if len(close) < min_length:
+            raise ValueError(
+                f"Insufficient data for Coppock calculation. Need at least {min_length} points, got {len(close)}"
+            )
+
+        result = ta.coppock(close=close, length=length, fast=fast, slow=slow)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
         return result.bfill().fillna(0)
