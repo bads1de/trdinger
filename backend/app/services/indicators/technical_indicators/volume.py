@@ -384,6 +384,71 @@ class VolumeIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def kvo(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
+        fast: int = 34,
+        slow: int = 55,
+        signal: int = 13,
+        scalar: float = 100.0,
+        mamode: str = "ema",
+        drift: int = 1,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Klinger Volume Oscillator"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+
+        # KVO特有のデータ検証
+        series_lengths = [len(high), len(low), len(close), len(volume)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError(
+                f"KVO requires all input series to have the same length. Got lengths: high={len(high)}, low={len(low)}, close={len(close)}, volume={len(volume)}"
+            )
+
+        # 最小データ長チェック
+        min_length = max(fast, slow) + drift + 5
+        if series_lengths[0] < min_length:
+            raise ValueError(
+                f"Insufficient data for KVO calculation. Need at least {min_length} points, got {series_lengths[0]}"
+            )
+
+        result = ta.kvo(
+            high=high,
+            low=low,
+            close=close,
+            volume=volume,
+            fast=fast,
+            slow=slow,
+            signal=signal,
+            scalar=scalar,
+            mamode=mamode,
+            drift=drift,
+        )
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(series_lengths[0], np.nan))
+            return nan_series, nan_series
+
+        # 結果が複数列の場合の処理
+        if isinstance(result, pd.DataFrame):
+            if len(result.columns) >= 2:
+                return result.iloc[:, 0], result.iloc[:, 1]
+            elif len(result.columns) == 1:
+                return result.iloc[:, 0], pd.Series(np.full(len(result), np.nan))
+
+        return result, pd.Series(np.full(len(result), np.nan))
+
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def nvi(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Negative Volume Index"""
         if not isinstance(close, pd.Series):

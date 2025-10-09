@@ -21,6 +21,9 @@
 - PGO (Pretty Good Oscillator)
 - MASSI (Mass Index)
 - PSL (Psychological Line)
+- AO (Awesome Oscillator)
+- AROON (Aroon Indicator)
+- CHOP (Choppiness Index)
 """
 
 from typing import Optional, Tuple
@@ -353,7 +356,7 @@ class MomentumIndicators:
         close: pd.Series,
         period: int = 14,
         length: int = None,
-        **kwargs
+        **kwargs,
     ) -> pd.Series:
         """平均方向性指数"""
         if not isinstance(high, pd.Series):
@@ -574,8 +577,104 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.uo(high=high, low=low, close=close, fast=fast, medium=medium, slow=slow)
+        result = ta.uo(
+            high=high, low=low, close=close, fast=fast, medium=medium, slow=slow
+        )
 
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def ao(high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34) -> pd.Series:
+        """Awesome Oscillator"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+
+        # AO特有のデータ検証
+        if len(high) != len(low):
+            raise ValueError("AO requires high and low series to have the same length")
+
+        # 最小データ長チェック
+        min_length = slow + 5
+        if len(high) < min_length:
+            raise ValueError(
+                f"Insufficient data for AO calculation. Need at least {min_length} points, got {len(high)}"
+            )
+
+        result = ta.ao(high=high, low=low, fast=fast, slow=slow)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def aroon(
+        high: pd.Series, low: pd.Series, length: int = 14
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Aroon Indicator"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+
+        # AROON特有のデータ検証
+        if len(high) != len(low):
+            raise ValueError(
+                "AROON requires high and low series to have the same length"
+            )
+
+        # 最小データ長チェック
+        min_length = length + 5
+        if len(high) < min_length:
+            raise ValueError(
+                f"Insufficient data for AROON calculation. Need at least {min_length} points, got {len(high)}"
+            )
+
+        result = ta.aroon(high=high, low=low, length=length)
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+
+        # 結果がDataFrameの場合、Aroon UpとAroon Downを分離
+        if isinstance(result, pd.DataFrame) and len(result.columns) >= 2:
+            return result.iloc[:, 0], result.iloc[:, 1]
+        else:
+            # 単一シリーズの場合はコピーを作成
+            up = (
+                result.copy()
+                if hasattr(result, "copy")
+                else pd.Series(result, index=high.index)
+            )
+            down = pd.Series(np.full(len(result), np.nan), index=high.index)
+            return up, down
+
+    @staticmethod
+    def chop(
+        high: pd.Series, low: pd.Series, close: pd.Series, length: int = 14
+    ) -> pd.Series:
+        """Choppiness Index"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # CHOP特有のデータ検証
+        series_lengths = [len(high), len(low), len(close)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError("CHOP requires all series to have the same length")
+
+        # 最小データ長チェック
+        min_length = length + 5
+        if series_lengths[0] < min_length:
+            raise ValueError(
+                f"Insufficient data for CHOP calculation. Need at least {min_length} points, got {series_lengths[0]}"
+            )
+
+        result = ta.chop(high=high, low=low, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(series_lengths[0], np.nan), index=high.index)
         return result.bfill().fillna(0)
