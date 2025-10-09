@@ -63,6 +63,26 @@ class VolatilityIndicators:
 
         return result
 
+    @staticmethod
+    @handle_pandas_ta_errors
+    def natr(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+    ) -> pd.Series:
+        """Normalized Average True Range"""
+        for series, name in ((high, "high"), (low, "low"), (close, "close")):
+            if not isinstance(series, pd.Series):
+                raise TypeError(f"{name} must be pandas Series")
+        if length <= 0:
+            raise ValueError("length must be positive")
+
+        result = ta.natr(high=high, low=low, close=close, length=length)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
 
 
     @staticmethod

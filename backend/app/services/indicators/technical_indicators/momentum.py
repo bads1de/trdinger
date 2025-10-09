@@ -403,6 +403,26 @@ class MomentumIndicators:
         return result.bfill().fillna(0)
 
     @staticmethod
+    def apo(
+        data: pd.Series,
+        fast: int = 12,
+        slow: int = 26,
+        ma_mode: str = "ema",
+    ) -> pd.Series:
+        """Absolute Price Oscillator"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if fast <= 0 or slow <= 0:
+            raise ValueError("fast and slow must be positive")
+        if fast >= slow:
+            raise ValueError("fast period must be less than slow period")
+
+        result = ta.apo(data, fast=fast, slow=slow, ma_mode=ma_mode)
+        if result is None or result.empty:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
     def tsi(
         data: pd.Series,
         fast: int = 13,

@@ -277,6 +277,43 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def linreg(
+        data: pd.Series,
+        length: int = 14,
+        scalar: float = 1.0,
+        intercept: bool = False,
+    ) -> pd.Series:
+        """線形回帰 (pandas-ta)"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError("length must be positive")
+        if scalar == 0:
+            raise ValueError("scalar must be non-zero")
+
+        result = ta.linreg(data, length=length, scalar=scalar, intercept=intercept)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def linregslope(data: pd.Series, length: int = 14, scalar: float = 1.0) -> pd.Series:
+        """線形回帰スロープ"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError("length must be positive")
+        if scalar == 0:
+            raise ValueError("scalar must be non-zero")
+
+        result = ta.linregslope(data, length=length, scalar=scalar)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def sar(
         high: pd.Series,
         low: pd.Series,
