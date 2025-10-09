@@ -9,12 +9,17 @@
 - EFI (Elder Force Index)
 - MFI (Money Flow Index)
 - VWAP (出来高加重平均価格)
+- PVO (Percentage Volume Oscillator)
+- PVT (Price Volume Trend)
+- NVI (Negative Volume Index)
 """
+
+import logging
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
-import logging
 
 from ..utils import handle_pandas_ta_errors
 
@@ -328,3 +333,65 @@ class VolumeIndicators:
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pvo(
+        volume: pd.Series,
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9,
+        scalar: float = 100.0,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Percentage Volume Oscillator"""
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+        if fast <= 0 or slow <= 0 or signal <= 0:
+            raise ValueError("fast, slow, signal must be positive")
+
+        result = ta.pvo(
+            volume=volume,
+            fast=fast,
+            slow=slow,
+            signal=signal,
+            scalar=scalar,
+        )
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(volume), np.nan), index=volume.index)
+            return nan_series, nan_series, nan_series
+
+        result = result.bfill().fillna(0)
+        return (
+            result.iloc[:, 0].to_numpy(),
+            result.iloc[:, 1].to_numpy(),
+            result.iloc[:, 2].to_numpy(),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pvt(close: pd.Series, volume: pd.Series) -> pd.Series:
+        """Price Volume Trend"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+
+        result = ta.pvt(close=close, volume=volume)
+        if result is None:
+            return np.full(len(close), np.nan)
+        return result.bfill().fillna(0).to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def nvi(close: pd.Series, volume: pd.Series) -> pd.Series:
+        """Negative Volume Index"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+
+        result = ta.nvi(close=close, volume=volume)
+        if result is None or result.empty:
+            return np.full(len(close), np.nan)
+        return result.bfill().ffill().to_numpy()

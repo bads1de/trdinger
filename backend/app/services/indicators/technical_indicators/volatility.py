@@ -9,14 +9,14 @@
 - Supertrend
 - Acceleration Bands
 - Ulcer Index
+- Relative Volatility Index (RVI)
 """
 
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 import logging
 
 import numpy as np
 import pandas as pd
-
 import pandas_ta as ta
 
 from ..utils import handle_pandas_ta_errors
@@ -323,4 +323,45 @@ class VolatilityIndicators:
         result = ta.ui(data, window=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rvi(
+        close: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        length: int = 14,
+        scalar: float = 100.0,
+        refined: bool = False,
+        thirds: bool = False,
+        mamode: str | None = None,
+        drift: int | None = None,
+        offset: int | None = None,
+    ) -> pd.Series:
+        """Relative Volatility Index"""
+
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+
+        result = ta.rvi(
+            close=close,
+            high=high,
+            low=low,
+            length=length,
+            scalar=scalar,
+            refined=refined,
+            thirds=thirds,
+            mamode=mamode,
+            drift=drift,
+            offset=offset,
+        )
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
         return result

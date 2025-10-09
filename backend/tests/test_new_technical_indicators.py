@@ -130,6 +130,125 @@ def test_cmo_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
+def test_rvi_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "RVI",
+        {"length": 14, "scalar": 100},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_cti_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "CTI",
+        {"length": 20},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_tsi_returns_main_and_signal(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "TSI",
+        {"fast": 25, "slow": 13, "signal": 13, "mamode": "ema"},
+    )
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    for series in result:
+        assert isinstance(series, np.ndarray)
+        assert series.shape[0] == len(sample_ohlcv)
+        assert np.isfinite(series[-1])
+
+
+def test_pgo_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "PGO",
+        {"length": 14},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_massi_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "MASSI",
+        {"fast": 9, "slow": 25},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_psl_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "PSL",
+        {"length": 12, "scalar": 100},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_supertrend_returns_trend_and_direction(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "SUPERTREND",
+        {"length": 10, "multiplier": 3.0},
+    )
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    for series in result:
+        assert isinstance(series, np.ndarray)
+        assert series.shape[0] == len(sample_ohlcv)
+        assert np.all(np.isfinite(series[-5:]))
+
+
+def test_pvo_returns_three_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "PVO",
+        {"fast": 12, "slow": 26, "signal": 9},
+    )
+    assert isinstance(result, tuple)
+    assert len(result) == 3
+    for series in result:
+        assert isinstance(series, np.ndarray)
+        assert series.shape[0] == len(sample_ohlcv)
+        assert np.all(np.isfinite(series[-5:]))
+
+
+def test_pvt_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "PVT",
+        {},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_nvi_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "NVI",
+        {},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
 def test_fisher_returns_main_and_signal(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,

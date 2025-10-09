@@ -16,9 +16,14 @@
 - CMO (Chande Momentum Oscillator)
 - FISHER (Fisher Transform)
 - KST (Know Sure Thing)
+- CTI (Correlation Trend Indicator)
+- TSI (True Strength Index)
+- PGO (Pretty Good Oscillator)
+- MASSI (Mass Index)
+- PSL (Psychological Line)
 """
 
-from typing import Tuple
+from typing import Optional, Tuple
 import logging
 
 import numpy as np
@@ -387,39 +392,113 @@ class MomentumIndicators:
         return result.iloc[:, 1] if result.shape[1] > 1 else result.iloc[:, 0]
 
     @staticmethod
-    def trix(
-        data: pd.Series,
-        length: int = 14,
-        signal: int = 9,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """TRIXとシグナル"""
+    def cti(data: pd.Series, length: int = 12) -> pd.Series:
+        """Correlation Trend Indicator"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
 
-        result = ta.trix(data, length=length, signal=signal)
+        result = ta.cti(data, length=length)
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def tsi(
+        data: pd.Series,
+        fast: int = 13,
+        slow: int = 25,
+        signal: int = 13,
+        scalar: float = 100.0,
+        mamode: Optional[str] = "ema",
+        drift: int = 1,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """True Strength Index"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if fast <= 0 or slow <= 0 or signal <= 0:
+            raise ValueError("fast, slow, signal must be positive")
+        if drift <= 0:
+            raise ValueError("drift must be positive")
+
+        result = ta.tsi(
+            data,
+            fast=fast,
+            slow=slow,
+            signal=signal,
+            scalar=scalar,
+            mamode=mamode,
+            drift=drift,
+        )
 
         if result is None or result.empty:
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series, nan_series
+            return nan_series, nan_series
 
         result = result.bfill().fillna(0)
+        return result.iloc[:, 0], result.iloc[:, 1]
 
-        if result.shape[1] == 2:
-            hist = result.iloc[:, 0] - result.iloc[:, 1]
-            hist_name = f"{result.columns[0]}_hist"
-            result = pd.concat([result, hist.rename(hist_name)], axis=1)
-        elif result.shape[1] >= 3:
-            hist_series = result.iloc[:, 2]
-            if np.isnan(hist_series.to_numpy()).all():
-                result.iloc[:, 2] = result.iloc[:, 0] - result.iloc[:, 1]
+    @staticmethod
+    def pgo(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+    ) -> pd.Series:
+        """Pretty Good Oscillator"""
+        for series, name in ((high, "high"), (low, "low"), (close, "close")):
+            if not isinstance(series, pd.Series):
+                raise TypeError(f"{name} must be pandas Series")
 
-        return (
-            result.iloc[:, 0].to_numpy(),
-            result.iloc[:, 1].to_numpy(),
-            result.iloc[:, 2].to_numpy(),
+        result = ta.pgo(high=high, low=low, close=close, length=length)
+        if result is None or result.empty:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def massi(
+        high: pd.Series,
+        low: pd.Series,
+        fast: int = 9,
+        slow: int = 25,
+    ) -> pd.Series:
+        """Mass Index"""
+        for series, name in ((high, "high"), (low, "low")):
+            if not isinstance(series, pd.Series):
+                raise TypeError(f"{name} must be pandas Series")
+        if fast <= 0 or slow <= 0:
+            raise ValueError("fast and slow must be positive")
+
+        result = ta.massi(high=high, low=low, fast=fast, slow=slow)
+        if result is None or result.empty:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result.bfill().fillna(0)
+
+    @staticmethod
+    def psl(
+        close: pd.Series,
+        length: int = 12,
+        scalar: float = 100.0,
+        drift: int = 1,
+        open_: Optional[pd.Series] = None,
+    ) -> pd.Series:
+        """Psychological Line"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if open_ is not None and not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if length <= 0 or drift <= 0:
+            raise ValueError("length and drift must be positive")
+
+        result = ta.psl(
+            close=close,
+            open_=open_,
+            length=length,
+            scalar=scalar,
+            drift=drift,
         )
+        if result is None or result.empty:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.bfill().fillna(0)
 
     @staticmethod
     def squeeze(
