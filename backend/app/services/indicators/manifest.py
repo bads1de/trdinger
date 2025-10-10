@@ -62,6 +62,10 @@ def _min_length_sma(params: Dict[str, Any]) -> int:
     return _min_length_generic_length(params, 20)
 
 
+def _min_length_dpo(params: Dict[str, Any]) -> int:
+    return _min_length_generic_length(params, 20)
+
+
 def _min_length_ema(params: Dict[str, Any]) -> int:
     return _min_length_generic_length(params, 20)
 
@@ -92,6 +96,7 @@ def _min_length_tema(params: Dict[str, Any]) -> int:
 
 _MIN_LENGTH_FUNCTIONS = {
     "BB": _min_length_bb,
+    "DPO": _min_length_dpo,
     "EMA": _min_length_ema,
     "MACD": _min_length_macd,
     "RSI": _min_length_rsi,
@@ -385,6 +390,38 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
         },
         'yaml': {'conditions': {'long': 'close > {left_operand}_mid', 'short': 'close < {left_operand}_mid'}, 'scale_type': 'price_absolute', 'thresholds': {'aggressive': {'period': 10}, 'combo': {'condition': '(close - lower) / (upper - lower) >= primary or (close - lower) / (upper - lower) <= secondary', 'primary': 0.9, 'secondary': 0.1}, 'conservative': {'period': 30}, 'normal': {'period': 20}, 'range': {'break_out_threshold': 0.8, 'consolidation_threshold': 0.3}}, 'type': 'volatility'},
     },
+    'DPO': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'momentum_zero_centered',
+            'category': 'trend',
+            'adapter_function': 'app.services.indicators.technical_indicators.trend.TrendIndicators.dpo',
+            'required_data': ['close'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {'close': 'data', 'length': 'length', 'centered': 'centered', 'offset': 'offset'},
+            'parameters': {
+                'length': {'default_value': 20, 'min_value': 2, 'max_value': 200, 'description': 'DPO計算期間'},
+                'centered': {'default_value': True, 'min_value': None, 'max_value': None, 'description': '中心化するかどうか'},
+                'offset': {'default_value': 0, 'min_value': -50, 'max_value': 50, 'description': '出力オフセット'},
+            },
+            'pandas_function': 'dpo',
+            'data_column': 'Close',
+            'data_columns': None,
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'length': 20, 'centered': True, 'offset': 0},
+            'min_length_func': 'DPO',
+        },
+        'yaml': {
+            'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} < {threshold}'},
+            'scale_type': 'momentum_zero_centered',
+            'thresholds': {'normal': {'threshold': 0}},
+            'type': 'trend',
+        },
+    },
     'EFI': {
         'config': {
             'result_type': 'single',
@@ -407,6 +444,48 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             'min_length_func': None,
         },
         'yaml': {'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} < {threshold}'}, 'scale_type': 'momentum_zero_centered', 'thresholds': {'all': {'long_gt': 0, 'short_lt': 0}}, 'type': 'volume'},
+    },
+    'EOM': {
+        'config': {
+            'result_type': 'single',
+            'scale_type': 'momentum_zero_centered',
+            'category': 'volume',
+            'adapter_function': 'app.services.indicators.technical_indicators.volume.VolumeIndicators.eom',
+            'required_data': ['high', 'low', 'close', 'volume'],
+            'output_names': None,
+            'default_output': None,
+            'aliases': None,
+            'param_map': {
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'volume': 'volume',
+                'length': 'length',
+                'divisor': 'divisor',
+                'drift': 'drift',
+                'offset': 'offset',
+            },
+            'parameters': {
+                'length': {'default_value': 14, 'min_value': 2, 'max_value': 200, 'description': 'EOM計算期間'},
+                'divisor': {'default_value': 100000000.0, 'min_value': None, 'max_value': None, 'description': '正規化に使用する除数'},
+                'drift': {'default_value': 1, 'min_value': 1, 'max_value': 10, 'description': '変化を測るドリフト'},
+                'offset': {'default_value': 0, 'min_value': -10, 'max_value': 10, 'description': '出力オフセット'},
+            },
+            'pandas_function': 'eom',
+            'data_column': None,
+            'data_columns': ['High', 'Low', 'Close', 'Volume'],
+            'returns': 'single',
+            'return_cols': None,
+            'multi_column': True,
+            'default_values': {'length': 14, 'divisor': 100000000.0, 'drift': 1, 'offset': 0},
+            'min_length_func': None,
+        },
+        'yaml': {
+            'conditions': {'long': '{left_operand} > {threshold}', 'short': '{left_operand} < {threshold}'},
+            'scale_type': 'momentum_zero_centered',
+            'thresholds': {'normal': {'threshold': 0}},
+            'type': 'volume',
+        },
     },
     'FISHER': {
         'config': {
@@ -1367,6 +1446,45 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
         },
         'yaml': {'conditions': {'long': 'close > {left_operand}', 'short': 'close < {left_operand}'}, 'scale_type': 'price_absolute', 'thresholds': None, 'type': 'trend'},
     },
+    'VORTEX': {
+        'config': {
+            'result_type': 'complex',
+            'scale_type': 'price_ratio',
+            'category': 'trend',
+            'adapter_function': 'app.services.indicators.technical_indicators.trend.TrendIndicators.vortex',
+            'required_data': ['high', 'low', 'close'],
+            'output_names': ['VORTEX_Positive', 'VORTEX_Negative'],
+            'default_output': 'VORTEX_Positive',
+            'aliases': None,
+            'param_map': {
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'length': 'length',
+                'drift': 'drift',
+                'offset': 'offset',
+            },
+            'parameters': {
+                'length': {'default_value': 14, 'min_value': 2, 'max_value': 200, 'description': 'Vortex期間'},
+                'drift': {'default_value': 1, 'min_value': 1, 'max_value': 10, 'description': '差分に使用するドリフト'},
+                'offset': {'default_value': 0, 'min_value': -10, 'max_value': 10, 'description': '出力オフセット'},
+            },
+            'pandas_function': 'vortex',
+            'data_column': None,
+            'data_columns': ['High', 'Low', 'Close'],
+            'returns': 'multiple',
+            'return_cols': ['VTXP', 'VTXM'],
+            'multi_column': True,
+            'default_values': {'length': 14, 'drift': 1, 'offset': 0},
+            'min_length_func': None,
+        },
+        'yaml': {
+            'conditions': {'long': '{left_operand}_0 > {left_operand}_1', 'short': '{left_operand}_0 < {left_operand}_1'},
+            'scale_type': 'price_ratio',
+            'thresholds': None,
+            'type': 'trend',
+        },
+    },
 
     'VWAP': {
         'config': {
@@ -1459,6 +1577,47 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             'min_length_func': 'WMA',
         },
         'yaml': {'conditions': {'long': 'close > {left_operand}', 'short': 'close < {left_operand}'}, 'scale_type': 'price_absolute', 'thresholds': None, 'type': 'trend'},
+    },
+    'TRIX': {
+        'config': {
+            'result_type': 'complex',
+            'scale_type': 'momentum_zero_centered',
+            'category': 'momentum',
+            'adapter_function': 'app.services.indicators.technical_indicators.momentum.MomentumIndicators.trix',
+            'required_data': ['close'],
+            'output_names': ['TRIX_Value', 'TRIX_Signal', 'TRIX_Histogram'],
+            'default_output': 'TRIX_Value',
+            'aliases': None,
+            'param_map': {
+                'close': 'data',
+                'length': 'length',
+                'signal': 'signal',
+                'scalar': 'scalar',
+                'drift': 'drift',
+                'offset': 'offset',
+            },
+            'parameters': {
+                'length': {'default_value': 15, 'min_value': 2, 'max_value': 200, 'description': 'TRIX計算期間'},
+                'signal': {'default_value': 9, 'min_value': 1, 'max_value': 50, 'description': 'シグナル期間'},
+                'scalar': {'default_value': 100.0, 'min_value': 1.0, 'max_value': 200.0, 'description': 'スケール調整係数'},
+                'drift': {'default_value': 1, 'min_value': 1, 'max_value': 10, 'description': 'ドリフト期間'},
+                'offset': {'default_value': 0, 'min_value': -10, 'max_value': 10, 'description': '出力オフセット'},
+            },
+            'pandas_function': None,
+            'data_column': None,
+            'data_columns': None,
+            'returns': 'multiple',
+            'return_cols': None,
+            'multi_column': False,
+            'default_values': {'length': 15, 'signal': 9, 'scalar': 100.0, 'drift': 1, 'offset': 0},
+            'min_length_func': None,
+        },
+        'yaml': {
+            'conditions': {'long': '{left_operand}_0 > {left_operand}_1', 'short': '{left_operand}_0 < {left_operand}_1'},
+            'scale_type': 'momentum_zero_centered',
+            'thresholds': {'zero_cross': True},
+            'type': 'momentum',
+        },
     },
     'TSI': {
         'config': {

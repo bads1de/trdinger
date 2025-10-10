@@ -108,6 +108,44 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    def trix(
+        data: pd.Series,
+        length: int = 15,
+        signal: int = 9,
+        scalar: Optional[float] = None,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """TRIX (Triple Exponential Average)"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if signal <= 0:
+            raise ValueError(f"signal must be positive: {signal}")
+        if drift <= 0:
+            raise ValueError(f"drift must be positive: {drift}")
+
+        result = ta.trix(
+            close=data,
+            length=length,
+            signal=signal,
+            scalar=scalar,
+            drift=drift,
+            offset=offset,
+        )
+
+        if result is None or result.empty:
+            nan_array = np.full(len(data), np.nan)
+            return nan_array, nan_array, nan_array
+
+        result = result.bfill().fillna(0)
+        trix_line = result.iloc[:, 0].to_numpy()
+        signal_line = result.iloc[:, 1].to_numpy()
+        histogram = trix_line - signal_line
+        return trix_line, signal_line, histogram
+
+    @staticmethod
     def stoch(
         high: pd.Series,
         low: pd.Series,

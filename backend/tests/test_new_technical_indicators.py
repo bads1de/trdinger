@@ -276,3 +276,39 @@ def test_kst_returns_line_and_signal(indicator_service: TechnicalIndicatorServic
         assert isinstance(series, np.ndarray)
         assert series.shape[0] == len(sample_ohlcv)
         assert np.isfinite(series[-1])
+
+
+def test_dpo_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "DPO",
+        {"length": 20, "centered": False},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_eom_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "EOM",
+        {"length": 14, "divisor": 100000000, "drift": 1},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+
+
+def test_vortex_returns_plus_and_minus(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "VORTEX",
+        {"length": 14, "drift": 1},
+    )
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    for series in result:
+        assert isinstance(series, np.ndarray)
+        assert series.shape[0] == len(sample_ohlcv)
+        assert np.all(np.isfinite(series[-5:]))

@@ -12,6 +12,7 @@
 - PVO (Percentage Volume Oscillator)
 - PVT (Price Volume Trend)
 - NVI (Negative Volume Index)
+- EOM (Ease of Movement)
 """
 
 import logging
@@ -107,6 +108,50 @@ class VolumeIndicators:
 
         result = ta.obv(close=close, volume=volume_clean, length=period)
         return result if result is not None else pd.Series([], dtype=float)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def eom(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
+        length: int = 14,
+        divisor: float = 100000000.0,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Ease of Movement"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if drift <= 0:
+            raise ValueError(f"drift must be positive: {drift}")
+        if len({len(high), len(low), len(close), len(volume)}) != 1:
+            raise ValueError("high, low, close, volume must have the same length")
+
+        result = ta.eom(
+            high=high,
+            low=low,
+            close=close,
+            volume=volume,
+            length=length,
+            divisor=divisor,
+            drift=drift,
+            offset=offset,
+        )
+
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        return result
 
 
     @staticmethod

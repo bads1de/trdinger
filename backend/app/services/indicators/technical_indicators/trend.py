@@ -17,10 +17,13 @@
 - SAR (Parabolic SAR)
 - AMAT (Archer Moving Averages Trends)
 - RMA (Wilde's Moving Average)
+- DPO (Detrended Price Oscillator)
+- VORTEX (Vortex Indicator)
 """
 
 import warnings
 import logging
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -372,4 +375,65 @@ class TrendIndicators:
         if result is None or (hasattr(result, "empty") and result.empty):
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def dpo(
+        data: pd.Series,
+        length: int = 20,
+        centered: bool = True,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Detrended Price Oscillator"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.dpo(
+            close=data,
+            length=length,
+            centered=centered,
+            offset=offset,
+        )
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vortex(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Vortex Indicator"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if drift <= 0:
+            raise ValueError(f"drift must be positive: {drift}")
+
+        result = ta.vortex(
+            high=high,
+            low=low,
+            close=close,
+            length=length,
+            drift=drift,
+            offset=offset,
+        )
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+
+        return result.iloc[:, 0], result.iloc[:, 1]
 
