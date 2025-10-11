@@ -119,6 +119,33 @@ def test_zlma_outputs_series(indicator_service: TechnicalIndicatorService, sampl
     assert np.isfinite(result[-1])
 
 
+def test_frama_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "FRAMA",
+        {"length": 16, "slow": 200},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+    assert np.isfinite(result[15:]).all()
+
+
+def test_super_smoother_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+    result = indicator_service.calculate_indicator(
+        sample_ohlcv,
+        "SUPER_SMOOTHER",
+        {"length": 14},
+    )
+    assert isinstance(result, np.ndarray)
+    assert result.shape[0] == len(sample_ohlcv)
+    assert np.isfinite(result[-1])
+    warmup = 14
+    assert np.all(np.isfinite(result[warmup:]))
+    original = sample_ohlcv["Close"].to_numpy()
+    assert np.std(result[warmup:]) < np.std(original[warmup:])
+
+
 def test_cmo_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
