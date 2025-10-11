@@ -387,7 +387,17 @@ class ErrorHandler:
 
 
 def timeout_decorator(timeout_seconds: int):
-    """統一タイムアウト処理のデコレータ"""
+    """
+    タイムアウトデコレータ
+
+    指定された秒数で関数の実行をタイムアウトさせるデコレータ
+
+    Args:
+        timeout_seconds: タイムアウト秒数
+
+    Returns:
+        デコレータ関数
+    """
 
     def decorator(func):
         @functools.wraps(func)
@@ -436,7 +446,15 @@ def safe_operation(
 
 @contextmanager
 def operation_context(operation_name: str, log_memory: bool = False):
-    """統一操作のコンテキストマネージャー"""
+    """
+    統一操作のコンテキストマネージャー
+
+    操作の実行時間とメモリ使用量を計測するコンテキストマネージャー
+
+    Args:
+        operation_name: 操作名
+        log_memory: メモリ使用量を記録するかどうか
+    """
     start_time = time.time()
 
     if log_memory:

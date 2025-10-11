@@ -22,7 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 class HistoricalDataService:
-    """履歴データ収集サービス"""
+    """
+    履歴データ収集サービス
+
+    Bybitからの履歴OHLCVデータの収集と保存を担当するサービスクラス。
+    データの一貫性と完全性を保証しながら、効率的なデータ収集を行います。
+    """
 
     def __init__(self, market_service: Optional[BybitMarketDataService] = None):
         self.market_service = market_service or BybitMarketDataService()

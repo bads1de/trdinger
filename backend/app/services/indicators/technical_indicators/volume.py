@@ -30,6 +30,9 @@ logger = logging.getLogger(__name__)
 class VolumeIndicators:
     """
     出来高系指標クラス
+
+    OBV, Chaikin A/Dラインなどの出来高系テクニカル指標を提供。
+    出来高と価格の関係性分析に使用します。
     """
 
     @staticmethod

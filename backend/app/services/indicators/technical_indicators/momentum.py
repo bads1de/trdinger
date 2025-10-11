@@ -42,6 +42,9 @@ logger = logging.getLogger(__name__)
 class MomentumIndicators:
     """
     モメンタム系指標クラス
+
+    RSI, MACD, ストキャスティクスなどのモメンタム系テクニカル指標を提供。
+    価格の勢いと転換点の検出に使用します。
     """
 
     @staticmethod

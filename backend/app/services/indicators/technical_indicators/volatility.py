@@ -37,6 +37,9 @@ logger = logging.getLogger(__name__)
 class VolatilityIndicators:
     """
     ボラティリティ系指標クラス
+
+    ATR, Bollinger Bandsなどのボラティリティ系テクニカル指標を提供。
+    市場の変動性とリスク評価に使用します。
     """
 
     @staticmethod

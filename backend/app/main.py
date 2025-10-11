@@ -102,6 +102,18 @@ def create_app() -> FastAPI:
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
+        """
+        グローバル例外ハンドラ
+
+        未処理の例外をキャッチして標準化されたエラーレスポンスを返す
+
+        Args:
+            request: HTTPリクエスト
+            exc: 例外オブジェクト
+
+        Returns:
+            JSONResponse: 標準化されたエラーレスポンス
+        """
         logger.error(f"Unhandled exception: {exc}", exc_info=True)
         return JSONResponse(
             status_code=500,
@@ -115,6 +127,14 @@ def create_app() -> FastAPI:
     # ヘルスチェックエンドポイント
     @app.get("/health")
     async def health_check():
+        """
+        ヘルスチェックエンドポイント
+
+        アプリケーションの状態を確認するためのエンドポイント
+
+        Returns:
+            dict: アプリケーションの状態情報
+        """
         return {
             "status": "ok",
             "app_name": unified_config.app.app_name,

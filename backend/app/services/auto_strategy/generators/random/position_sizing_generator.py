@@ -30,7 +30,15 @@ class PositionSizingGenerator:
         self.config = config
 
     def generate_position_sizing_gene(self):
-        """ポジションサイジング遺伝子を生成"""
+        """
+        ポジションサイジング遺伝子を生成
+
+        設定に基づいてランダムなポジションサイジング遺伝子を生成する。
+        エラー発生時はデフォルトの遺伝子を返す。
+
+        Returns:
+            PositionSizingGene: 生成されたポジションサイジング遺伝子
+        """
         try:
             return create_random_position_sizing_gene(self.config)
         except Exception as e:

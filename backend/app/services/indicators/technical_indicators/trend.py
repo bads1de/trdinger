@@ -46,6 +46,9 @@ warnings.filterwarnings(
 class TrendIndicators:
     """
     トレンド系指標クラス
+
+    移動平均線、Parabolic SARなどのトレンド系テクニカル指標を提供。
+    トレンドの方向性と強さの分析に使用します。
     """
 
     @staticmethod

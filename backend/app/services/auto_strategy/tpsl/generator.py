@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class TPSLStrategy:
-    """TP/SL戦略の基底クラス"""
+    """
+    TP/SL戦略の基底クラス
+
+    すべてのTP/SL戦略の基底クラス。継承して具体的な戦略を実装する。
+    """
 
     def generate(self, **kwargs) -> TPSLResult:
         """TP/SLを生成"""
@@ -20,7 +24,12 @@ class TPSLStrategy:
 
 
 class RiskRewardStrategy(TPSLStrategy):
-    """リスクリワード比ベース戦略"""
+    """
+    リスクリワード比ベース戦略
+
+    指定されたリスクリワード比に基づいてTP/SLを生成するシンプルな戦略。
+    固定されたリスクとリターンの比率を維持する。
+    """
 
     def generate(self, **kwargs) -> TPSLResult:
         # 簡単な実装 - 後で詳細化
