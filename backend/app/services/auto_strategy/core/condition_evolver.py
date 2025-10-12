@@ -13,11 +13,10 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
-import numpy as np
-from deap import base, creator, tools, algorithms
+from deap import base, creator, tools
 
 from app.services.backtest.backtest_service import BacktestService
-from ..config import GAConfig
+
 from app.utils.error_handler import safe_operation
 from app.services.indicators.manifest import manifest_to_yaml_dict
 
@@ -84,7 +83,9 @@ class YamlIndicatorUtils:
         for indicator_name, indicator_config in self.config["indicators"].items():
             for key in required_keys:
                 if key not in indicator_config:
-                    logger.warning(f"指標 '{indicator_name}' に '{key}' キーが見つかりません")
+                    logger.warning(
+                        f"指標 '{indicator_name}' に '{key}' キーが見つかりません"
+                    )
 
     def get_available_indicators(self) -> List[str]:
         """利用可能な指標リストを取得"""
@@ -105,7 +106,9 @@ class YamlIndicatorUtils:
         """
         if indicator_name not in self.config["indicators"]:
             available = self.get_available_indicators()
-            raise ValueError(f"指標 '{indicator_name}' が見つかりません。利用可能な指標: {available}")
+            raise ValueError(
+                f"指標 '{indicator_name}' が見つかりません。利用可能な指標: {available}"
+            )
 
         return self.config["indicators"][indicator_name].copy()
 
@@ -121,7 +124,7 @@ class YamlIndicatorUtils:
             "volatility": [],
             "volume": [],
             "trend": [],
-            "price_transform": []
+            "price_transform": [],
         }
 
         for indicator_name, config in self.config["indicators"].items():
@@ -146,7 +149,7 @@ class YamlIndicatorUtils:
         for scale_type, config in scale_types.items():
             result[scale_type] = {
                 "range": config.get("range"),
-                "defaults": default_thresholds.get(scale_type, {})
+                "defaults": default_thresholds.get(scale_type, {}),
             }
 
         return result
@@ -200,13 +203,13 @@ class Condition:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Condition':
+    def from_dict(cls, data: Dict[str, Any]) -> "Condition":
         """辞書形式からConditionを作成"""
         return cls(
             indicator_name=data["indicator_name"],
             operator=data["operator"],
             threshold=data["threshold"],
-            direction=data["direction"]
+            direction=data["direction"],
         )
 
     def __eq__(self, other) -> bool:
@@ -222,7 +225,9 @@ class Condition:
 
     def __str__(self) -> str:
         """文字列表現"""
-        return f"{self.indicator_name} {self.operator} {self.threshold} ({self.direction})"
+        return (
+            f"{self.indicator_name} {self.operator} {self.threshold} ({self.direction})"
+        )
 
 
 def create_simple_strategy(condition: Condition) -> Dict[str, Any]:
@@ -244,14 +249,11 @@ def create_simple_strategy(condition: Condition) -> Dict[str, Any]:
                     "indicator": condition.indicator_name,
                     "operator": condition.operator,
                     "threshold": condition.threshold,
-                    "direction": condition.direction
-                }
+                    "direction": condition.direction,
+                },
             }
         },
-        "parameters": {
-            "symbol": "BTC/USDT:USDT",
-            "timeframe": "1h"
-        }
+        "parameters": {"symbol": "BTC/USDT:USDT", "timeframe": "1h"},
     }
 
 
@@ -266,7 +268,7 @@ class ConditionEvolver:
     def __init__(
         self,
         backtest_service: BacktestService,
-        yaml_indicator_utils: YamlIndicatorUtils
+        yaml_indicator_utils: YamlIndicatorUtils,
     ):
         """
         初期化
@@ -296,7 +298,9 @@ class ConditionEvolver:
 
         # 個体生成関数
         self.toolbox.register("individual", self._create_individual)
-        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+        self.toolbox.register(
+            "population", tools.initRepeat, list, self.toolbox.individual
+        )
 
         # 交叉・突然変異関数
         self.toolbox.register("mate", self.crossover)
@@ -332,7 +336,7 @@ class ConditionEvolver:
             indicator_name=indicator_name,
             operator=operator,
             threshold=threshold,
-            direction=direction
+            direction=direction,
         )
 
     def _generate_threshold(self, indicator_info: Dict[str, Any]) -> float:
@@ -377,7 +381,9 @@ class ConditionEvolver:
         return [self._create_individual() for _ in range(population_size)]
 
     @safe_operation(context="ConditionEvolver.evaluate_fitness", default_return=0.0)
-    def evaluate_fitness(self, condition: Condition, backtest_config: Dict[str, Any]) -> float:
+    def evaluate_fitness(
+        self, condition: Condition, backtest_config: Dict[str, Any]
+    ) -> float:
         """
         個体の適応度を評価
 
@@ -412,10 +418,10 @@ class ConditionEvolver:
 
             # 多目的適応度を単一値に統合（重み付け）
             fitness = (
-                0.4 * max(0, total_return) +
-                0.3 * max(0, sharpe_ratio) +
-                0.2 * max(0, (1 - max_drawdown)) +
-                0.1 * min(1, total_trades / 100)  # 取引回数ボーナス
+                0.4 * max(0, total_return)
+                + 0.3 * max(0, sharpe_ratio)
+                + 0.2 * max(0, (1 - max_drawdown))
+                + 0.1 * min(1, total_trades / 100)  # 取引回数ボーナス
             )
 
             logger.debug(f"Condition {condition} fitness: {fitness:.4f}")
@@ -426,10 +432,7 @@ class ConditionEvolver:
             return 0.0
 
     def tournament_selection(
-        self,
-        population: List[Condition],
-        fitness_values: List[float],
-        k: int = 3
+        self, population: List[Condition], fitness_values: List[float], k: int = 3
     ) -> List[Condition]:
         """
         トーナメント選択
@@ -451,7 +454,9 @@ class ConditionEvolver:
             selected.append(winner)
         return selected
 
-    def crossover(self, parent1: Condition, parent2: Condition) -> Tuple[Condition, Condition]:
+    def crossover(
+        self, parent1: Condition, parent2: Condition
+    ) -> Tuple[Condition, Condition]:
         """
         一点交叉
 
@@ -471,13 +476,13 @@ class ConditionEvolver:
                 indicator_name=parent1.indicator_name,
                 operator=parent2.operator,
                 threshold=parent1.threshold,
-                direction=parent1.direction
+                direction=parent1.direction,
             )
             child2 = Condition(
                 indicator_name=parent2.indicator_name,
                 operator=parent1.operator,
                 threshold=parent2.threshold,
-                direction=parent2.direction
+                direction=parent2.direction,
             )
         else:
             # 閾値を交叉（平均値を使用）
@@ -486,13 +491,13 @@ class ConditionEvolver:
                 indicator_name=parent1.indicator_name,
                 operator=parent1.operator,
                 threshold=new_threshold,
-                direction=parent1.direction
+                direction=parent1.direction,
             )
             child2 = Condition(
                 indicator_name=parent2.indicator_name,
                 operator=parent2.operator,
                 threshold=new_threshold,
-                direction=parent2.direction
+                direction=parent2.direction,
             )
 
         return child1, child2
@@ -511,7 +516,7 @@ class ConditionEvolver:
             indicator_name=condition.indicator_name,
             operator=condition.operator,
             threshold=condition.threshold,
-            direction=condition.direction
+            direction=condition.direction,
         )
 
         # 突然変異の種類を決定
@@ -527,8 +532,10 @@ class ConditionEvolver:
         elif mutation_type == "threshold":
             # 閾値を突然変異（10%程度の変動）
             variation = random.uniform(-0.1, 0.1)
-            mutated_condition.threshold *= (1 + variation)
-            mutated_condition.threshold = max(0, mutated_condition.threshold)  # 負値防止
+            mutated_condition.threshold *= 1 + variation
+            mutated_condition.threshold = max(
+                0, mutated_condition.threshold
+            )  # 負値防止
 
         elif mutation_type == "indicator":
             # 指標を突然変異
@@ -549,7 +556,7 @@ class ConditionEvolver:
         self,
         backtest_config: Dict[str, Any],
         population_size: int = 20,
-        generations: int = 10
+        generations: int = 10,
     ) -> Dict[str, Any]:
         """
         進化アルゴリズムを実行
@@ -583,13 +590,17 @@ class ConditionEvolver:
                 # 進化履歴を記録
                 best_fitness = max(fitness_values)
                 avg_fitness = sum(fitness_values) / len(fitness_values)
-                evolution_history.append({
-                    "generation": generation + 1,
-                    "best_fitness": best_fitness,
-                    "avg_fitness": avg_fitness
-                })
+                evolution_history.append(
+                    {
+                        "generation": generation + 1,
+                        "best_fitness": best_fitness,
+                        "avg_fitness": avg_fitness,
+                    }
+                )
 
-                logger.info(f"世代 {generation + 1}: 最高適応度={best_fitness:.4f}, 平均適応度={avg_fitness:.4f}")
+                logger.info(
+                    f"世代 {generation + 1}: 最高適応度={best_fitness:.4f}, 平均適応度={avg_fitness:.4f}"
+                )
 
                 # エリート選択（最良個体を保存）
                 elite = [max(zip(population, fitness_values), key=lambda x: x[1])[0]]
@@ -633,10 +644,12 @@ class ConditionEvolver:
                 "best_fitness": best_fitness,
                 "final_population": population,
                 "evolution_history": evolution_history,
-                "generations_completed": generations
+                "generations_completed": generations,
             }
 
-            logger.info(f"進化完了: 最高適応度={best_fitness:.4f}, 最高条件={best_condition}")
+            logger.info(
+                f"進化完了: 最高適応度={best_fitness:.4f}, 最高条件={best_condition}"
+            )
             return result
 
         except Exception as e:

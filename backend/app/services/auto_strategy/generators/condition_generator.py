@@ -7,6 +7,7 @@ from ..constants import (
 )
 from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
 from app.services.indicators.config import indicator_registry
+from app.services.backtest.backtest_service import BacktestService
 from ..utils.yaml_utils import YamlIndicatorUtils
 from ..core.condition_evolver import ConditionEvolver, YamlIndicatorUtils as CoreYamlIndicatorUtils
 

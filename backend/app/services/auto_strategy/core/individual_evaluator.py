@@ -13,7 +13,7 @@ from app.services.backtest.backtest_service import BacktestService
 
 from ..config import GAConfig
 from ..services.regime_detector import RegimeDetector
-from .metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
+from .risk_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
 
 logger = logging.getLogger(__name__)
 

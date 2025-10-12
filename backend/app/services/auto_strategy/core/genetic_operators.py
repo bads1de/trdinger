@@ -8,7 +8,7 @@ import copy
 import logging
 import random
 import uuid
-from typing import Union, overload
+from typing import Union
 
 import numpy as np
 
@@ -225,10 +225,12 @@ def crossover_strategy_genes_pure(
                 crossover_point = random.randint(1, min_indicators)
 
             child1_indicators = (
-                parent1.indicators[:crossover_point] + parent2.indicators[crossover_point:]
+                parent1.indicators[:crossover_point]
+                + parent2.indicators[crossover_point:]
             )
             child2_indicators = (
-                parent2.indicators[:crossover_point] + parent1.indicators[crossover_point:]
+                parent2.indicators[:crossover_point]
+                + parent1.indicators[crossover_point:]
             )
 
             # 最大指標数制限
@@ -270,17 +272,23 @@ def crossover_strategy_genes_pure(
                     child2_risk[key] = val2 if random.random() < 0.5 else val1
 
             # TP/SL遺伝子の交叉
-            child1_tpsl, child2_tpsl = _crossover_tpsl_genes(parent1.tpsl_gene, parent2.tpsl_gene)
+            child1_tpsl, child2_tpsl = _crossover_tpsl_genes(
+                parent1.tpsl_gene, parent2.tpsl_gene
+            )
 
             # ポジションサイジング遺伝子の交叉
             ps_gene1 = getattr(parent1, "position_sizing_gene", None)
             ps_gene2 = getattr(parent2, "position_sizing_gene", None)
-            child1_position_sizing, child2_position_sizing = _crossover_position_sizing_genes(ps_gene1, ps_gene2)
+            child1_position_sizing, child2_position_sizing = (
+                _crossover_position_sizing_genes(ps_gene1, ps_gene2)
+            )
 
             # メタデータの交叉（共通ユーティリティ使用）
             from ..utils.gene_utils import prepare_crossover_metadata
 
-            child1_metadata, child2_metadata = prepare_crossover_metadata(parent1, parent2)
+            child1_metadata, child2_metadata = prepare_crossover_metadata(
+                parent1, parent2
+            )
 
             # ロング・ショート条件の交叉
             if random.random() < 0.5:
@@ -350,32 +358,89 @@ def uniform_crossover(
     """
     try:
         # 各フィールドに対してランダム選択
-        child1_indicators = parent1.indicators if random.random() < 0.5 else parent2.indicators
-        child2_indicators = parent2.indicators if random.random() < 0.5 else parent1.indicators
+        child1_indicators = (
+            parent1.indicators if random.random() < 0.5 else parent2.indicators
+        )
+        child2_indicators = (
+            parent2.indicators if random.random() < 0.5 else parent1.indicators
+        )
 
-        child1_entry_conditions = parent1.entry_conditions if random.random() < 0.5 else parent2.entry_conditions
-        child2_entry_conditions = parent2.entry_conditions if random.random() < 0.5 else parent1.entry_conditions
+        child1_entry_conditions = (
+            parent1.entry_conditions
+            if random.random() < 0.5
+            else parent2.entry_conditions
+        )
+        child2_entry_conditions = (
+            parent2.entry_conditions
+            if random.random() < 0.5
+            else parent1.entry_conditions
+        )
 
-        child1_exit_conditions = parent1.exit_conditions if random.random() < 0.5 else parent2.exit_conditions
-        child2_exit_conditions = parent2.exit_conditions if random.random() < 0.5 else parent1.exit_conditions
+        child1_exit_conditions = (
+            parent1.exit_conditions
+            if random.random() < 0.5
+            else parent2.exit_conditions
+        )
+        child2_exit_conditions = (
+            parent2.exit_conditions
+            if random.random() < 0.5
+            else parent1.exit_conditions
+        )
 
-        child1_long_entry_conditions = parent1.long_entry_conditions if random.random() < 0.5 else parent2.long_entry_conditions
-        child2_long_entry_conditions = parent2.long_entry_conditions if random.random() < 0.5 else parent1.long_entry_conditions
+        child1_long_entry_conditions = (
+            parent1.long_entry_conditions
+            if random.random() < 0.5
+            else parent2.long_entry_conditions
+        )
+        child2_long_entry_conditions = (
+            parent2.long_entry_conditions
+            if random.random() < 0.5
+            else parent1.long_entry_conditions
+        )
 
-        child1_short_entry_conditions = parent1.short_entry_conditions if random.random() < 0.5 else parent2.short_entry_conditions
-        child2_short_entry_conditions = parent2.short_entry_conditions if random.random() < 0.5 else parent1.short_entry_conditions
+        child1_short_entry_conditions = (
+            parent1.short_entry_conditions
+            if random.random() < 0.5
+            else parent2.short_entry_conditions
+        )
+        child2_short_entry_conditions = (
+            parent2.short_entry_conditions
+            if random.random() < 0.5
+            else parent1.short_entry_conditions
+        )
 
-        child1_risk_management = parent1.risk_management if random.random() < 0.5 else parent2.risk_management
-        child2_risk_management = parent2.risk_management if random.random() < 0.5 else parent1.risk_management
+        child1_risk_management = (
+            parent1.risk_management
+            if random.random() < 0.5
+            else parent2.risk_management
+        )
+        child2_risk_management = (
+            parent2.risk_management
+            if random.random() < 0.5
+            else parent1.risk_management
+        )
 
-        child1_tpsl_gene = parent1.tpsl_gene if random.random() < 0.5 else parent2.tpsl_gene
-        child2_tpsl_gene = parent2.tpsl_gene if random.random() < 0.5 else parent1.tpsl_gene
+        child1_tpsl_gene = (
+            parent1.tpsl_gene if random.random() < 0.5 else parent2.tpsl_gene
+        )
+        child2_tpsl_gene = (
+            parent2.tpsl_gene if random.random() < 0.5 else parent1.tpsl_gene
+        )
 
-        child1_position_sizing_gene = parent1.position_sizing_gene if random.random() < 0.5 else parent2.position_sizing_gene
-        child2_position_sizing_gene = parent2.position_sizing_gene if random.random() < 0.5 else parent1.position_sizing_gene
+        child1_position_sizing_gene = (
+            parent1.position_sizing_gene
+            if random.random() < 0.5
+            else parent2.position_sizing_gene
+        )
+        child2_position_sizing_gene = (
+            parent2.position_sizing_gene
+            if random.random() < 0.5
+            else parent1.position_sizing_gene
+        )
 
         # メタデータの交叉（共通ユーティリティ使用）
         from ..utils.gene_utils import prepare_crossover_metadata
+
         child1_metadata, child2_metadata = prepare_crossover_metadata(parent1, parent2)
 
         # 子遺伝子の作成
@@ -706,7 +771,7 @@ def adaptive_mutate_strategy_gene_pure(
         # populationからfitnessを抽出
         fitnesses = []
         for ind in population:
-            if hasattr(ind, 'fitness') and ind.fitness and ind.fitness.values:
+            if hasattr(ind, "fitness") and ind.fitness and ind.fitness.values:
                 fitnesses.append(ind.fitness.values[0])  # 最初のfitness値を使用
 
         if not fitnesses:

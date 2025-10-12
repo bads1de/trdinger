@@ -12,7 +12,6 @@ from typing import List, Any
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
-from ...constants import CURATED_TECHNICAL_INDICATORS
 from ...models.strategy_models import IndicatorGene
 from ...utils.indicator_utils import get_all_indicators
 from ..indicator_composition_service import IndicatorCompositionService
@@ -71,7 +70,12 @@ class IndicatorGenerator:
             self._coverage_idx = 0
             self._coverage_pick = None
 
-    @safe_operation(default_return=IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True), context="デフォルト指標遺伝子生成")
+    @safe_operation(
+        default_return=IndicatorGene(
+            type="SMA", parameters={"period": 20}, enabled=True
+        ),
+        context="デフォルト指標遺伝子生成",
+    )
     def _get_default_indicator_gene(self) -> IndicatorGene:
         """デフォルトの指標遺伝子を返す"""
         return IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
@@ -86,7 +90,6 @@ class IndicatorGenerator:
         """安全にJSON設定を生成"""
         json_config = indicator_gene.get_json_config()
         indicator_gene.json_config = json_config
-
 
     @safe_operation(default_return=[], context="指標モード別設定")
     def _setup_indicators_by_mode(self, config: Any) -> List[str]:
@@ -170,7 +173,12 @@ class IndicatorGenerator:
 
         return indicators
 
-    @safe_operation(default_return=IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True), context="指標遺伝子作成")
+    @safe_operation(
+        default_return=IndicatorGene(
+            type="SMA", parameters={"period": 20}, enabled=True
+        ),
+        context="指標遺伝子作成",
+    )
     def _create_indicator_gene(self, indicator_type: str) -> IndicatorGene:
         """指標遺伝子を作成"""
         parameters = self._safe_generate_parameters(indicator_type)
@@ -181,7 +189,9 @@ class IndicatorGenerator:
         return indicator_gene
 
     @safe_operation(default_return=[], context="指標構成サービス適用")
-    def _enhance_indicators_with_composition_service(self, indicators: List[IndicatorGene]) -> List[IndicatorGene]:
+    def _enhance_indicators_with_composition_service(
+        self, indicators: List[IndicatorGene]
+    ) -> List[IndicatorGene]:
         """指標構成サービスを適用して成立性を底上げ"""
         # トレンド指標の強制追加
         indicators = self.composition_service.enhance_with_trend_indicators(
