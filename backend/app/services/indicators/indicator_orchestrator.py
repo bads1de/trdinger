@@ -550,10 +550,13 @@ class TechnicalIndicatorService:
             adapter_function, all_args, indicator_type, config
         )
 
-    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> Optional[str]:
+    def _resolve_column_name(self, df: pd.DataFrame, data_key: Optional[str]) -> Optional[str]:
         """
         データフレームから適切なカラム名を解決
         """
+        if data_key is None:
+            return None
+
         # 優先順位: 元の名前 > 大文字 > 小文字 > Capitalized
         candidates = [
             data_key,

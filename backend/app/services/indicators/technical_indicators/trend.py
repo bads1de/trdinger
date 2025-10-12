@@ -299,10 +299,24 @@ class TrendIndicators:
         if scalar == 0:
             raise ValueError("scalar must be non-zero")
 
-        result = ta.linreg(data, length=length, scalar=scalar, intercept=intercept)
-        if result is None or (hasattr(result, "empty") and result.empty):
+        if len(data) < length:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
+
+        values = [np.nan] * (length - 1)
+
+        for i in range(length - 1, len(data)):
+            window = data[i-length+1:i+1]
+            x = np.arange(length)
+            coeffs = np.polyfit(x, window, 1)  # [slope, intercept]
+            if intercept:
+                value = coeffs[1]  # y切片
+            else:
+                # 中心点の値を計算
+                mid_x = (length - 1) / 2
+                value = coeffs[0] * mid_x + coeffs[1]
+            values.append(value * scalar)
+
+        return pd.Series(values, index=data.index)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -315,10 +329,18 @@ class TrendIndicators:
         if scalar == 0:
             raise ValueError("scalar must be non-zero")
 
-        result = ta.linregslope(data, length=length, scalar=scalar)
-        if result is None or (hasattr(result, "empty") and result.empty):
+        if len(data) < length:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
+
+        slopes = [np.nan] * (length - 1)
+
+        for i in range(length - 1, len(data)):
+            window = data[i-length+1:i+1]
+            x = np.arange(length)
+            slope = np.polyfit(x, window, 1)[0]  # 1次多項式の係数（スロープ）
+            slopes.append(slope * scalar)  # scalarを適用
+
+        return pd.Series(slopes, index=data.index)
 
     @staticmethod
     @handle_pandas_ta_errors

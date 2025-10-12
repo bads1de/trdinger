@@ -148,7 +148,7 @@ class VolatilityIndicators:
 
         df = ta.kc(high=high.values, low=low.values, close=close.values, length=period, scalar=scalar, mamode="sma")
 
-        if df is None or (hasattr(df, "isna") and df.isna().all().all()):
+        if df is None:
             nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
             return nan_series, nan_series, nan_series
 
@@ -258,7 +258,7 @@ class VolatilityIndicators:
             multiplier=multiplier,
         )
 
-        if df is None or (hasattr(df, "isna") and df.isna().all().all()):
+        if df is None:
             direction = pd.Series(
                 np.where(close >= (upper + lower) / 2, 1.0, -1.0), index=close.index
             )
