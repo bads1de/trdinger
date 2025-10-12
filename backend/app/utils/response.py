@@ -11,6 +11,7 @@ def error_response(
     error_code: Optional[str] = None,
     details: Optional[Dict[str, Any]] = None,
     context: Optional[str] = None,
+    data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     エラーレスポンスを生成
@@ -19,6 +20,7 @@ def error_response(
     error_code: エラーコード
     details: エラー詳細
     context: エラーコンテキスト
+    data: 返却データ（必須フィールドとして追加）
 
     Returns:
         生成されたエラーレスポンス
@@ -34,6 +36,8 @@ def error_response(
         response["details"] = details
     if context:
         response["context"] = context
+    if data is not None:
+        response["data"] = data
     return response
 
 

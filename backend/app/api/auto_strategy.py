@@ -133,6 +133,7 @@ async def generate_strategy(
             return error_response(
                 message=f"戦略生成に失敗しました: {str(e)}",
                 details={"error_type": type(e).__name__, "error_details": str(e)},
+                data={},
             )
 
     return await ErrorHandler.safe_execute_async(_generate_strategy)
