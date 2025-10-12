@@ -3,5 +3,6 @@
     "allow": ["Bash", "WebFetch", "Edit", "MultiEdit", "WebSearch", "Write"],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true
 }

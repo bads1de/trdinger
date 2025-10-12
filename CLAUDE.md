@@ -1,10 +1,18 @@
 # CLAUDE.md
 
-このファイルは、このリポジトリのコードを操作する際にClaude Code (claude.ai/code)にガイダンスを提供します。
+このファイルは、このリポジトリのコードを操作する際に Claude Code (claude.ai/code)にガイダンスを提供します。
+
+.最初の指示で serena を使ってください
+.実装作業に入る前に serena の think を使って思考してください.
+.実装する前に serena のメモリも確認してください
+.返答は日本語
+.わからなければウェブ検索を行い調べてください
+.ライブラリは context7 ドキュメントを調べてください
+.TDD で開発してください
 
 ## プロジェクト概要
 
-Trdingerは、遺伝的アルゴリズム（GA）と機械学習を組み合わせ、自動的に最適な取引戦略を生成する暗号通貨取引戦略自動化システムです。このシステムはFastAPIバックエンドとReactフロントエンドで構成され、GAの実装にDEAPライブラリを使用します。
+Trdinger は、遺伝的アルゴリズム（GA）と機械学習を組み合わせ、自動的に最適な取引戦略を生成する暗号通貨取引戦略自動化システムです。このシステムは FastAPI バックエンドと React フロントエンドで構成され、GA の実装に DEAP ライブラリを使用します。
 
 ## リポジトリ構造
 
@@ -74,9 +82,9 @@ npm run lint
 
 ### バックエンドサービス
 
-1. **GAエンジン** (`backend/app/services/auto_strategy/core/ga_engine.py`)
+1. **GA エンジン** (`backend/app/services/auto_strategy/core/ga_engine.py`)
 
-   - `GeneticAlgorithmEngine`: メインGA実装
+   - `GeneticAlgorithmEngine`: メイン GA 実装
    - `EvolutionRunner`: 単一/多目的最適化実行
    - `IndividualEvaluator`: 個体評価
    - `GeneticOperators`: 交叉と突然変異操作
@@ -90,7 +98,7 @@ npm run lint
 
 3. **機械学習** (`backend/app/services/ml/`)
 
-   - `BaseMLTrainer`: MLトレーニング基底クラス
+   - `BaseMLTrainer`: ML トレーニング基底クラス
    - `MLTrainingService`: トレーニングサービス
    - `SingleModelTrainer`: 単一モデルトレーニング
    - `ModelManager`: モデル管理
@@ -100,12 +108,12 @@ npm run lint
    - 環境変数サポート
    - サービス固有の設定クラス
 
-### APIエンドポイント
+### API エンドポイント
 
-- `/api/auto_strategy` - GA戦略生成
+- `/api/auto_strategy` - GA 戦略生成
 - `/api/backtest` - バックテストサービス
 - `/api/data_collection` - 市場データ収集
-- `/api/ml_training` - MLモデルトレーニング
+- `/api/ml_training` - ML モデルトレーニング
 - `/api/strategies` - 戦略管理
 - `/api/market_data` - 市場データアクセス
 
@@ -113,7 +121,7 @@ npm run lint
 
 - `/` - 機能概要のホームページ
 - `/backtest` - バックテストインターフェース
-- `/ml` - ML管理インターフェース
+- `/ml` - ML 管理インターフェース
 - `/data` - データ管理インターフェース
 
 ## 設定と設定項目
@@ -130,32 +138,32 @@ npm run lint
 
 ### バックエンドテスト
 
-- 80%以上のカバレッジ要件でpytestを使用
+- 80%以上のカバレッジ要件で pytest を使用
 - 外部サービス（CCXT、市場データ）をモック
 - 個別コンポーネントを分離してテスト
 - 共通テスト設定にフィクスチャを使用
 
 ### フロントエンドテスト
 
-- ユニットテストにJest
-- コンポーネントにReact Testing Library
-- ブラウザシミュレーションにjsdom環境
+- ユニットテストに Jest
+- コンポーネントに React Testing Library
+- ブラウザシミュレーションに jsdom 環境
 
 ## コード品質要件
 
 ### Python
 
-- **Black**: 行長88文字
+- **Black**: 行長 88 文字
 - **MyPy**: 厳密な型チェック
 - **Isort**: インポートソート
 - **Flake8**: コードリント
 - **Pydantic**: データ検証
-- Googleスタイルのdocstring
+- Google スタイルの docstring
 
 ### TypeScript
 
 - 厳密モード有効
-- CamelCase命名規則
+- CamelCase 命名規則
 - 型安全性強制
 
 ## 重要なファイルとパターン
@@ -166,26 +174,26 @@ npm run lint
 - `__`ネストサポート付き環境変数
 - サービス固有の設定クラス
 
-### GA実装
+### GA 実装
 
-- `backend/app/services/auto_strategy/core/ga_engine.py` - メインGAエンジン
-- DEAPツールボックスカスタマイズ
+- `backend/app/services/auto_strategy/core/ga_engine.py` - メイン GA エンジン
+- DEAP ツールボックスカスタマイズ
 - レジーム対応評価
 - 適応度共有実装
 
-### API構造
+### API 構造
 
-- `backend/app/main.py:65` - FastAPIアプリ作成
-- CORS設定
+- `backend/app/main.py:65` - FastAPI アプリ作成
+- CORS 設定
 - グローバル例外処理
 - ヘルスチェックエンドポイント
 
 ### フロントエンドアーキテクチャ
 
-- App Router付きNext.js 15
-- TypeScript厳密モード
-- Tailwind CSSスタイリング
-- Radix UIコンポーネント
+- App Router 付き Next.js 15
+- TypeScript 厳密モード
+- Tailwind CSS スタイリング
+- Radix UI コンポーネント
 
 ## 一般的な開発タスク
 
@@ -193,15 +201,15 @@ npm run lint
 
 1. `backend/app/services/indicators/`にインジケーターを作成
 2. `IndicatorGene`モデルに追加
-3. GA設定を更新
-4. 必要に応じてAPIエンドポイントを追加
+3. GA 設定を更新
+4. 必要に応じて API エンドポイントを追加
 
-### MLモデルの追加
+### ML モデルの追加
 
 1. `BaseMLTrainer`クラスを拡張
 2. `MLTrainingConfig`で設定
 3. モデルマネージャーに追加
-4. APIエンドポイントを作成
+4. API エンドポイントを作成
 
 ### 取引所の追加
 
@@ -229,8 +237,8 @@ npm install
 
 ## データベースとデータ
 
-- Alembicマイグレーション付きPostgreSQLデータベース
-- OHLCV形式で保存された市場データ
+- Alembic マイグレーション付き PostgreSQL データベース
+- OHLCV 形式で保存された市場データ
 - 戦略とモデルメタデータ保存
 - バックテスト結果永続化
 
@@ -244,13 +252,13 @@ npm install
 ## パフォーマンス考慮事項
 
 - 大規模データセットのメモリ管理
-- 効率的なGA人口処理
+- 効率的な GA 人口処理
 - 市場データのキャッシング
 - 並列バックテスト実行
 
 ## セキュリティノート
 
 - 環境変数設定
-- API認証準備済み
-- Pydanticによる入力検証
+- API 認証準備済み
+- Pydantic による入力検証
 - 設定での安全なデフォルト

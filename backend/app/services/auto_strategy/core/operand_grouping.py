@@ -11,8 +11,8 @@ from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-# デバッグログ設定 (統合テスト用)
-DEBUG_MODE = True
+# デバッグログ設定 (開発用)
+DEBUG_MODE = False
 
 
 class OperandGroup(Enum):
@@ -145,22 +145,22 @@ class OperandGroupingSystem:
         Returns:
             オペランドのグループ
         """
-        logger.info("DEBUG: get_operand_group called for operand='%s'", operand)
+        logger.debug("get_operand_group called for operand='%s'", operand)
 
         # 直接マッピングがある場合
         if operand in self._group_mappings:
             group = self._group_mappings[operand]
             if DEBUG_MODE:
-                logger.info(
-                    "DEBUG: Direct mapping found for %s -> %s", operand, group.value
+                logger.debug(
+                    "Direct mapping found for %s -> %s", operand, group.value
                 )
             return group
 
         # パターンマッチングで判定
         group = self._classify_by_pattern(operand)
         if DEBUG_MODE:
-            logger.info(
-                "DEBUG: Pattern matching resulted for %s -> %s", operand, group.value
+            logger.debug(
+                "Pattern matching resulted for %s -> %s", operand, group.value
             )
         return group
 
@@ -244,7 +244,7 @@ class OperandGroupingSystem:
 
         # デフォルトは価格ベース
         if DEBUG_MODE:
-            logger.info("DEBUG: Default classification for %s -> PRICE_BASED", operand)
+            logger.debug("Default classification for %s -> PRICE_BASED", operand)
         return OperandGroup.PRICE_BASED
 
     def get_compatibility_score(self, operand1: str, operand2: str) -> float:
@@ -258,8 +258,8 @@ class OperandGroupingSystem:
             互換性スコア（0.0-1.0）
         """
         if DEBUG_MODE:
-            logger.info(
-                "DEBUG: get_compatibility_score called for %s vs %s", operand1, operand2
+            logger.debug(
+                "get_compatibility_score called for %s vs %s", operand1, operand2
             )
 
         group1 = self.get_operand_group(operand1)
@@ -268,8 +268,8 @@ class OperandGroupingSystem:
         score = self._compatibility_matrix.get((group1, group2), 0.1)
 
         if DEBUG_MODE:
-            logger.info(
-                "DEBUG: Compatibility score for %s (%s) vs %s (%s) = %.2f",
+            logger.debug(
+                "Compatibility score for %s (%s) vs %s (%s) = %.2f",
                 operand1,
                 group1.value,
                 operand2,
