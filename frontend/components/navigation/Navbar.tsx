@@ -12,7 +12,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BarChart3, Brain, Database, TrendingUp } from "lucide-react";
+import { Home, BarChart3, Database, TrendingUp } from "lucide-react";
 
 import {
   Sidebar,
@@ -53,13 +53,6 @@ const navItems: NavItem[] = [
     icon: BarChart3,
     description: "戦略の有効性を検証",
     color: "text-purple-500",
-  },
-  {
-    href: "/ml",
-    label: "ML Management",
-    icon: Brain,
-    description: "機械学習モデル管理",
-    color: "text-green-500",
   },
   {
     href: "/data",
