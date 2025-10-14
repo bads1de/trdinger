@@ -216,29 +216,6 @@ async def start_ml_training(
         MLTrainingResponse: トレーニング開始応答
     """
 
-    logger.info(f"📋 受信したconfig全体: {config}")
-    logger.info(f"📋 アンサンブル設定: {config.ensemble_config}")
-    logger.info(
-        f"📋 アンサンブル設定enabled: {config.ensemble_config.enabled if config.ensemble_config else 'None'}"
-    )
-    logger.info(f"📋 単一モデル設定: {config.single_model_config}")
-    logger.info(
-        f"📋 単一モデルタイプ: {config.single_model_config.model_type if config.single_model_config else 'None'}"
-    )
-    logger.info(f"📋 最適化設定: {config.optimization_settings}")
-
-    # 設定の詳細確認
-    if config.ensemble_config:
-        ensemble_dict = config.ensemble_config.model_dump()
-        logger.info(f"📋 アンサンブル設定辞書: {ensemble_dict}")
-        logger.info(
-            f"📋 enabled値確認: {ensemble_dict.get('enabled')} (型: {type(ensemble_dict.get('enabled'))})"
-        )
-
-    if config.single_model_config:
-        single_dict = config.single_model_config.model_dump()
-        logger.info(f"📋 単一モデル設定辞書: {single_dict}")
-
     async def _start_training():
         return await orchestration_service.start_training(
             config=config, background_tasks=background_tasks, db=db

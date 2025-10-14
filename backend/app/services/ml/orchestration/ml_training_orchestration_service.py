@@ -95,8 +95,8 @@ class MLTrainingOrchestrationService:
             トレーニング開始結果
         """
         try:
-            # 設定の検証
-            self.validate_training_config(config)
+            # 設定の検証とログ出力
+            self._log_and_validate_config(config)
 
             # バックグラウンドタスクでトレーニング開始
             background_tasks.add_task(self._train_ml_model_background, config, db)
@@ -115,6 +115,43 @@ class MLTrainingOrchestrationService:
         except Exception as e:
             logger.error(f"MLトレーニング開始エラー: {e}")
             raise
+
+    def _log_and_validate_config(self, config) -> None:
+        """
+        設定のログ出力と検証
+
+        Args:
+            config: MLTrainingConfig
+
+        Raises:
+            ValueError: 設定が無効な場合
+        """
+        # 設定の詳細ログ出力
+        logger.info(f"📋 受信したconfig全体: {config}")
+        logger.info(f"📋 アンサンブル設定: {config.ensemble_config}")
+        logger.info(
+            f"📋 アンサンブル設定enabled: {config.ensemble_config.enabled if config.ensemble_config else 'None'}"
+        )
+        logger.info(f"📋 単一モデル設定: {config.single_model_config}")
+        logger.info(
+            f"📋 単一モデルタイプ: {config.single_model_config.model_type if config.single_model_config else 'None'}"
+        )
+        logger.info(f"📋 最適化設定: {config.optimization_settings}")
+
+        # 設定の詳細確認
+        if config.ensemble_config:
+            ensemble_dict = config.ensemble_config.model_dump()
+            logger.info(f"📋 アンサンブル設定辞書: {ensemble_dict}")
+            logger.info(
+                f"📋 enabled値確認: {ensemble_dict.get('enabled')} (型: {type(ensemble_dict.get('enabled'))})"
+            )
+
+        if config.single_model_config:
+            single_dict = config.single_model_config.model_dump()
+            logger.info(f"📋 単一モデル設定辞書: {single_dict}")
+
+        # 既存の検証ロジック
+        self.validate_training_config(config)
 
     async def get_training_status(self) -> Dict[str, Any]:
         """
