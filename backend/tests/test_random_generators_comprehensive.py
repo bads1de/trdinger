@@ -1,19 +1,35 @@
 """
 ランダムジェネレータの包括的テスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import random
 
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-from app.services.auto_strategy.generators.random.indicator_generator import IndicatorGenerator
-from app.services.auto_strategy.generators.random.condition_generator import ConditionGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
+from app.services.auto_strategy.generators.random.indicator_generator import (
+    IndicatorGenerator,
+)
+from app.services.auto_strategy.generators.random.condition_generator import (
+    ConditionGenerator,
+)
 from app.services.auto_strategy.generators.random.tpsl_generator import TPSLGenerator
-from app.services.auto_strategy.generators.random.position_sizing_generator import PositionSizingGenerator
-from app.services.auto_strategy.generators.random.operand_generator import OperandGenerator
+from app.services.auto_strategy.generators.random.position_sizing_generator import (
+    PositionSizingGenerator,
+)
+from app.services.auto_strategy.generators.random.operand_generator import (
+    OperandGenerator,
+)
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.models.strategy_models import (
-    StrategyGene, IndicatorGene, Condition, TPSLGene, PositionSizingGene, PositionSizingMethod
+    StrategyGene,
+    IndicatorGene,
+    Condition,
+    TPSLGene,
+    PositionSizingGene,
+    PositionSizingMethod,
 )
 
 
@@ -31,8 +47,8 @@ class TestRandomGeneratorsComprehensive:
             threshold_ranges={
                 "oscillator_0_100": [20, 80],
                 "volume": [1000, 10000],
-                "price_ratio": [0.95, 1.05]
-            }
+                "price_ratio": [0.95, 1.05],
+            },
         )
 
     @pytest.fixture
@@ -45,9 +61,9 @@ class TestRandomGeneratorsComprehensive:
         generator = IndicatorGenerator(config)
 
         assert generator.config == config
-        assert hasattr(generator, 'indicator_service')
-        assert hasattr(generator, 'composition_service')
-        assert hasattr(generator, '_valid_indicator_names')
+        assert hasattr(generator, "indicator_service")
+        assert hasattr(generator, "composition_service")
+        assert hasattr(generator, "_valid_indicator_names")
         assert isinstance(generator._valid_indicator_names, set)
 
     def test_indicator_generator_fallback_behavior(self, config):
@@ -77,9 +93,9 @@ class TestRandomGeneratorsComprehensive:
         # 指標が生成される
         assert len(indicators) >= 1
         for indicator in indicators:
-            assert hasattr(indicator, 'type')
-            assert hasattr(indicator, 'parameters')
-            assert hasattr(indicator, 'enabled')
+            assert hasattr(indicator, "type")
+            assert hasattr(indicator, "parameters")
+            assert hasattr(indicator, "enabled")
             assert indicator.enabled is True
 
     def test_condition_generator_initialization(self, config):
@@ -87,10 +103,10 @@ class TestRandomGeneratorsComprehensive:
         generator = ConditionGenerator(config)
 
         assert generator.config == config
-        assert hasattr(generator, 'available_operators')
-        assert hasattr(generator, 'price_data_weight')
-        assert hasattr(generator, 'volume_data_weight')
-        assert hasattr(generator, 'oi_fr_data_weight')
+        assert hasattr(generator, "available_operators")
+        assert hasattr(generator, "price_data_weight")
+        assert hasattr(generator, "volume_data_weight")
+        assert hasattr(generator, "oi_fr_data_weight")
 
     def test_condition_generator_with_indicators(self, config):
         """指標付き条件生成のテスト"""
@@ -99,7 +115,7 @@ class TestRandomGeneratorsComprehensive:
         # テスト用指標
         indicators = [
             IndicatorGene(type="SMA", parameters={"period": 10}),
-            IndicatorGene(type="RSI", parameters={"period": 14})
+            IndicatorGene(type="RSI", parameters={"period": 14}),
         ]
 
         conditions = generator.generate_random_conditions(indicators, "entry")
@@ -108,9 +124,9 @@ class TestRandomGeneratorsComprehensive:
         assert len(conditions) >= 1
         for condition in conditions:
             assert isinstance(condition, Condition)
-            assert hasattr(condition, 'left_operand')
-            assert hasattr(condition, 'operator')
-            assert hasattr(condition, 'right_operand')
+            assert hasattr(condition, "left_operand")
+            assert hasattr(condition, "operator")
+            assert hasattr(condition, "right_operand")
 
     def test_condition_generator_no_indicators(self, config):
         """指標なし条件生成のテスト"""
@@ -130,7 +146,9 @@ class TestRandomGeneratorsComprehensive:
         indicators = [IndicatorGene(type="SMA", parameters={"period": 10})]
 
         # 互換性の高いオペランドが選ばれるか
-        with patch('app.services.auto_strategy.core.operand_grouping.operand_grouping_system.get_compatible_operands') as mock_compatible:
+        with patch(
+            "app.services.auto_strategy.core.operand_grouping.operand_grouping_system.get_compatible_operands"
+        ) as mock_compatible:
             mock_compatible.return_value = ["SMA", "close"]
 
             operand = generator._choose_right_operand("SMA", indicators, "entry")
@@ -152,10 +170,10 @@ class TestRandomGeneratorsComprehensive:
 
         # 有効なTP/SL遺伝子が生成される
         assert isinstance(tpsl_gene, TPSLGene)
-        assert hasattr(tpsl_gene, 'method')
-        assert hasattr(tpsl_gene, 'stop_loss_pct')
-        assert hasattr(tpsl_gene, 'take_profit_pct')
-        assert hasattr(tpsl_gene, 'risk_reward_ratio')
+        assert hasattr(tpsl_gene, "method")
+        assert hasattr(tpsl_gene, "stop_loss_pct")
+        assert hasattr(tpsl_gene, "take_profit_pct")
+        assert hasattr(tpsl_gene, "risk_reward_ratio")
 
     def test_tpsl_generator_with_constraints(self, config):
         """制約付きTP/SL生成のテスト"""
@@ -203,7 +221,9 @@ class TestRandomGeneratorsComprehensive:
         generator = TPSLGenerator(config)
 
         # create_random_tpsl_geneをモックでエラーを発生
-        with patch('app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene') as mock_create:
+        with patch(
+            "app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene"
+        ) as mock_create:
             mock_create.side_effect = Exception("Test error")
 
             tpsl_gene = generator.generate_tpsl_gene()
@@ -227,8 +247,8 @@ class TestRandomGeneratorsComprehensive:
 
         # 有効な遺伝子が生成される
         assert isinstance(pos_gene, PositionSizingGene)
-        assert hasattr(pos_gene, 'method')
-        assert hasattr(pos_gene, 'enabled')
+        assert hasattr(pos_gene, "method")
+        assert hasattr(pos_gene, "enabled")
 
     def test_operand_generator_initialization(self, config):
         """オペランド生成器の初期化テスト"""
@@ -242,11 +262,11 @@ class TestRandomGeneratorsComprehensive:
 
         assert generator.config == config
         assert generator.enable_smart_generation is True
-        assert hasattr(generator, 'indicator_generator')
-        assert hasattr(generator, 'condition_generator')
-        assert hasattr(generator, 'tpsl_generator')
-        assert hasattr(generator, 'position_sizing_generator')
-        assert hasattr(generator, 'operand_generator')
+        assert hasattr(generator, "indicator_generator")
+        assert hasattr(generator, "condition_generator")
+        assert hasattr(generator, "tpsl_generator")
+        assert hasattr(generator, "position_sizing_generator")
+        assert hasattr(generator, "operand_generator")
 
     def test_random_gene_generator_core_generation(self, random_gene_generator):
         """ランダム遺伝子生成のコアテスト"""
@@ -254,25 +274,25 @@ class TestRandomGeneratorsComprehensive:
 
         # 基本的な属性が存在する
         assert isinstance(gene, StrategyGene)
-        assert hasattr(gene, 'indicators')
-        assert hasattr(gene, 'entry_conditions')
-        assert hasattr(gene, 'exit_conditions')
-        assert hasattr(gene, 'long_entry_conditions')
-        assert hasattr(gene, 'short_entry_conditions')
-        assert hasattr(gene, 'risk_management')
-        assert hasattr(gene, 'tpsl_gene')
-        assert hasattr(gene, 'position_sizing_gene')
-        assert hasattr(gene, 'metadata')
+        assert hasattr(gene, "indicators")
+        assert hasattr(gene, "entry_conditions")
+        assert hasattr(gene, "exit_conditions")
+        assert hasattr(gene, "long_entry_conditions")
+        assert hasattr(gene, "short_entry_conditions")
+        assert hasattr(gene, "risk_management")
+        assert hasattr(gene, "tpsl_gene")
+        assert hasattr(gene, "position_sizing_gene")
+        assert hasattr(gene, "metadata")
 
     def test_random_gene_generator_fallback_behavior(self, config):
         """ランダム遺伝子生成器のフォールバックテスト"""
         # すべてのサブジェネレータをモックでエラーに
         with patch.multiple(
-            'app.services.auto_strategy.generators.random_gene_generator',
+            "app.services.auto_strategy.generators.random_gene_generator",
             IndicatorGenerator=Mock(side_effect=Exception("Test error")),
             ConditionGenerator=Mock(side_effect=Exception("Test error")),
             TPSLGenerator=Mock(side_effect=Exception("Test error")),
-            PositionSizingGenerator=Mock(side_effect=Exception("Test error"))
+            PositionSizingGenerator=Mock(side_effect=Exception("Test error")),
         ):
             generator = RandomGeneGenerator(config)
 
@@ -289,14 +309,20 @@ class TestRandomGeneratorsComprehensive:
         empty_conditions = []
         indicators = [IndicatorGene(type="SMA", parameters={"period": 10})]
 
-        result = random_gene_generator._ensure_or_with_fallback(empty_conditions, "long", indicators)
+        result = random_gene_generator._ensure_or_with_fallback(
+            empty_conditions, "long", indicators
+        )
 
         # フォールバック条件が追加される
         assert len(result) >= 1
 
         # 単一条件の場合
-        single_condition = [Condition(left_operand="close", operator=">", right_operand="open")]
-        result = random_gene_generator._ensure_or_with_fallback(single_condition, "long", indicators)
+        single_condition = [
+            Condition(left_operand="close", operator=">", right_operand="open")
+        ]
+        result = random_gene_generator._ensure_or_with_fallback(
+            single_condition, "long", indicators
+        )
 
         # 追加条件が含まれる
         assert len(result) >= 2
@@ -307,13 +333,15 @@ class TestRandomGeneratorsComprehensive:
         indicators = [
             IndicatorGene(type="SMA", parameters={"period": 10}, enabled=True),
             IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True),
-            IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)  # トレンドではない
+            IndicatorGene(
+                type="RSI", parameters={"period": 14}, enabled=True
+            ),  # トレンドではない
         ]
 
         result = random_gene_generator._ensure_or_with_fallback([], "long", indicators)
 
         # トレンド指標が選ばれる
-        if result and hasattr(result[0], 'right_operand'):
+        if result and hasattr(result[0], "right_operand"):
             assert result[0].right_operand in ["SMA", "EMA"]
 
     def test_diversity_in_generation(self, config):
@@ -337,13 +365,16 @@ class TestRandomGeneratorsComprehensive:
 
     def test_smart_generation_integration(self, config):
         """スマート生成の統合テスト"""
-        generator = RandomGeneGenerator(config, enable_smart_generation=True,
-                                 smart_context={
-                                     "timeframe": "1h",
-                                     "symbol": "BTC/USDT",
-                                     "regime_gating": "bullish",
-                                     "threshold_profile": "aggressive"
-                                 })
+        generator = RandomGeneGenerator(
+            config,
+            enable_smart_generation=True,
+            smart_context={
+                "timeframe": "1h",
+                "symbol": "BTC/USDT",
+                "regime_gating": "bullish",
+                "threshold_profile": "aggressive",
+            },
+        )
 
         assert generator.enable_smart_generation is True
         # コンテキストが設定される
@@ -363,11 +394,13 @@ class TestRandomGeneratorsComprehensive:
         # 複数の条件
         conditions = [
             Condition(left_operand="close", operator=">", right_operand="sma"),
-            Condition(left_operand="rsi", operator="<", right_operand="30")
+            Condition(left_operand="rsi", operator="<", right_operand="30"),
         ]
         indicators = [IndicatorGene(type="SMA", parameters={"period": 10})]
 
-        result = random_gene_generator._ensure_or_with_fallback(conditions, "long", indicators)
+        result = random_gene_generator._ensure_or_with_fallback(
+            conditions, "long", indicators
+        )
 
         # ORグループが生成される可能性
         # 複雑なロジックのため、正常終了を確認
@@ -401,8 +434,10 @@ class TestRandomGeneratorsComprehensive:
         generator = RandomGeneGenerator(config)
 
         # 生成中にエラーが発生してもフォールバックが働くか
-        with patch.object(generator, 'indicator_generator') as mock_indicator:
-            mock_indicator.generate_random_indicators.side_effect = Exception("Test error")
+        with patch.object(generator, "indicator_generator") as mock_indicator:
+            mock_indicator.generate_random_indicators.side_effect = Exception(
+                "Test error"
+            )
 
             gene = generator.generate_random_gene()
 
@@ -425,8 +460,8 @@ class TestRandomGeneratorsComprehensive:
         gene = random_gene_generator.generate_random_gene()
 
         # entry_conditionsとexit_conditionsが存在する
-        assert hasattr(gene, 'entry_conditions')
-        assert hasattr(gene, 'exit_conditions')
+        assert hasattr(gene, "entry_conditions")
+        assert hasattr(gene, "exit_conditions")
 
     def test_metadata_enrichment(self, random_gene_generator):
         """メタデータの充実化テスト"""
@@ -438,7 +473,9 @@ class TestRandomGeneratorsComprehensive:
 
     def test_generator_component_interaction(self, config):
         """ジェネレータコンポーネントの相互作用"""
-        with patch('app.services.auto_strategy.generators.random_gene_generator.ConditionGenerator') as MockConditionGen:
+        with patch(
+            "app.services.auto_strategy.generators.random_gene_generator.ConditionGenerator"
+        ) as MockConditionGen:
             mock_condition_gen = Mock()
             mock_condition_gen.generate_random_conditions.return_value = [
                 Condition(left_operand="close", operator=">", right_operand="sma")
@@ -458,7 +495,7 @@ class TestRandomGeneratorsComprehensive:
         generator = RandomGeneGenerator(config)
 
         # 内部のコンディショングェネレータが設定を参照しているか
-        assert hasattr(generator.condition_generator, 'threshold_ranges')
+        assert hasattr(generator.condition_generator, "threshold_ranges")
         # 実際の動作確認は難しく、初期化が成功すればOK
 
     def test_operands_weight_distribution(self, config):
@@ -466,16 +503,16 @@ class TestRandomGeneratorsComprehensive:
         generator = RandomGeneGenerator(config)
 
         # オペランド生成器が重みを正しく設定しているか
-        assert hasattr(generator.operand_generator, 'price_data_weight')
-        assert hasattr(generator.operand_generator, 'volume_data_weight')
-        assert hasattr(generator.operand_generator, 'oi_fr_data_weight')
+        assert hasattr(generator.operand_generator, "price_data_weight")
+        assert hasattr(generator.operand_generator, "volume_data_weight")
+        assert hasattr(generator.operand_generator, "oi_fr_data_weight")
 
     def test_indicator_composition_service_integration(self, config):
         """指標構成サービス統合のテスト"""
         generator = RandomGeneGenerator(config)
 
         # 指標生成器が構成サービスを持っている
-        assert hasattr(generator.indicator_generator, 'composition_service')
+        assert hasattr(generator.indicator_generator, "composition_service")
 
     def test_diversity_preservation_in_constraints(self, config):
         """制約下での多様性維持"""
@@ -539,7 +576,9 @@ class TestRandomGeneratorsComprehensive:
         generator = RandomGeneGenerator(config)
 
         # 各サブジェネレータで例外が発生してもフォールバックが働く
-        with patch.object(generator.indicator_generator, 'generate_random_indicators') as mock_ind:
+        with patch.object(
+            generator.indicator_generator, "generate_random_indicators"
+        ) as mock_ind:
             mock_ind.side_effect = ValueError("Test error")
 
             gene = generator.generate_random_gene()
@@ -579,8 +618,8 @@ class TestRandomGeneratorsComprehensive:
         gene = random_gene_generator.generate_random_gene()
 
         # 新しい条件が含まれる
-        assert hasattr(gene, 'long_entry_conditions')
-        assert hasattr(gene, 'short_entry_conditions')
+        assert hasattr(gene, "long_entry_conditions")
+        assert hasattr(gene, "short_entry_conditions")
 
         # バランスが取れているか（完全なテストは難しいが、生成される）
         assert gene.long_entry_conditions is not None

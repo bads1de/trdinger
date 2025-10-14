@@ -53,7 +53,7 @@ class FundingRateOrchestrationService:
             return None
         try:
             # ISO形式の日付文字列をパース（例: "2023-01-01T00:00:00"）
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
         except ValueError as e:
             logger.error(f"日付文字列のパースに失敗しました: {date_str}, エラー: {e}")
             return None

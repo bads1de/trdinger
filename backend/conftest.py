@@ -10,5 +10,5 @@ if BACKEND_DIR not in sys.path:
 os.chdir(BACKEND_DIR)
 
 # Allow importing from current directory
-if '.' not in sys.path:
-    sys.path.insert(0, '.')
+if "." not in sys.path:
+    sys.path.insert(0, ".")

@@ -1,6 +1,7 @@
 """
 遺伝子交叉ユーティリティ
 """
+
 from __future__ import annotations
 
 from typing import Tuple
@@ -73,9 +74,9 @@ def crossover_tpsl_genes(
     )
 
     # 共有参照を防ぐため、method_weightsをコピー
-    if hasattr(child1, 'method_weights') and isinstance(child1.method_weights, dict):
+    if hasattr(child1, "method_weights") and isinstance(child1.method_weights, dict):
         child1.method_weights = child1.method_weights.copy()
-    if hasattr(child2, 'method_weights') and isinstance(child2.method_weights, dict):
+    if hasattr(child2, "method_weights") and isinstance(child2.method_weights, dict):
         child2.method_weights = child2.method_weights.copy()
 
     # method_weightsの特殊処理

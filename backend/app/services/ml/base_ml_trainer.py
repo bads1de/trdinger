@@ -341,10 +341,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.info(f"🤖 単一モデル学習開始: {self.model_type}")
 
             # 学習データを結合（旧実装との互換性維持）
-            training_data = self._prepare_combined_training_data(X_train, X_test, y_train, y_test)
-            
+            training_data = self._prepare_combined_training_data(
+                X_train, X_test, y_train, y_test
+            )
+
             # 統合されたモデル学習実行
-            result = self._execute_single_model_training(training_data, **training_params)
+            result = self._execute_single_model_training(
+                training_data, **training_params
+            )
 
             # 結果の後処理
             self.is_trained = True
@@ -383,10 +387,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             )
 
             # 学習データを結合（旧実装との互換性維持）
-            training_data = self._prepare_combined_training_data(X_train, X_test, y_train, y_test)
-            
+            training_data = self._prepare_combined_training_data(
+                X_train, X_test, y_train, y_test
+            )
+
             # 統合されたアンサンブル学習実行
-            result = self._execute_ensemble_model_training(training_data, **training_params)
+            result = self._execute_ensemble_model_training(
+                training_data, **training_params
+            )
 
             # 結果の後処理
             self.is_trained = True
@@ -564,7 +572,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         from ...utils.label_generation import calculate_target_for_automl
 
         return calculate_target_for_automl(ohlcv_data, self.config)
-
 
     def _prepare_training_data(
         self, features_df: pd.DataFrame, **training_params
@@ -1032,7 +1039,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         Args:
             X_train: 学習用特徴量
-            X_test: テスト用特徴量  
+            X_test: テスト用特徴量
             y_train: 学習用ラベル
             y_test: テスト用ラベル
 
@@ -1061,16 +1068,16 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """
         # 旧実装との互換性を維持しつつ、テンプレートメソッドパターンを適用
         from .single_model.single_model_trainer import SingleModelTrainer
-        
+
         trainer = SingleModelTrainer(
             model_type=self.model_type, automl_config=self.automl_config
         )
-        
+
         result = trainer.train_model(training_data, **training_params)
-        
+
         # モデルを保存
         self.model = trainer.model
-        
+
         return result
 
     def _execute_ensemble_model_training(
@@ -1083,23 +1090,23 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             training_data: 統合済み学習データ
             **training_params: 学習パラメータ
 
-        Returns:    
+        Returns:
             学習結果
         """
         # 旧実装との互換性を維持しつつ、テンプレートメソッドパターンを適用
         from .ensemble.ensemble_trainer import EnsembleTrainer
-        
+
         trainer = EnsembleTrainer(
             ensemble_config=self.ensemble_config, automl_config=self.automl_config
         )
-        
+
         result = trainer.train_model(training_data, **training_params)
-        
+
         # モデルを保存
         self.models = trainer.models
         self.model = trainer  # アンサンブルトレーナー自体を保存
         self._ensemble_trainer = trainer  # 参照を保持
-        
+
         return result
 
         # フォールド情報を追加

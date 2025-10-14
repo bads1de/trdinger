@@ -202,7 +202,9 @@ class GeneratedStrategyRepository(BaseRepository):
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="バックテスト結果付き戦略取得", is_api_call=False, default_return=[])
+        @safe_operation(
+            context="バックテスト結果付き戦略取得", is_api_call=False, default_return=[]
+        )
         def _get_strategies_with_backtest_results():
             query = self.db.query(GeneratedStrategy).join(
                 GeneratedStrategy.backtest_result
@@ -235,7 +237,9 @@ class GeneratedStrategyRepository(BaseRepository):
         from database.models import BacktestResult
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="フィルタリング戦略取得", is_api_call=False, default_return=(0, []))
+        @safe_operation(
+            context="フィルタリング戦略取得", is_api_call=False, default_return=(0, [])
+        )
         def _get_filtered_and_sorted_strategies():
             query = self.db.query(GeneratedStrategy).join(
                 GeneratedStrategy.backtest_result

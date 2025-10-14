@@ -21,5 +21,5 @@ __all__ = [
     "MLIndicators",
     "MLPredictions",
     "MLModelStatus",
-    "MLTrainingResult"
+    "MLTrainingResult",
 ]

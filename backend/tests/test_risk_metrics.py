@@ -17,7 +17,11 @@ def test_calculate_ulcer_index_returns_root_mean_square() -> None:
 
     base_time = datetime(2024, 1, 1, 0, 0, 0)
     equity_curve = [
-        {"timestamp": base_time + timedelta(days=idx), "equity": 100000 + idx * 500, "drawdown": drawdown}
+        {
+            "timestamp": base_time + timedelta(days=idx),
+            "equity": 100000 + idx * 500,
+            "drawdown": drawdown,
+        }
         for idx, drawdown in enumerate([0.0, 0.05, 0.1, 0.0])
     ]
 

@@ -50,7 +50,9 @@ class VolatilityBasedCalculator(BaseCalculator):
             except TypeError:
                 returns_data = []
 
-        var_ratio = calculate_historical_var(returns_data, getattr(gene, "var_confidence", 0.95))
+        var_ratio = calculate_historical_var(
+            returns_data, getattr(gene, "var_confidence", 0.95)
+        )
         expected_shortfall_ratio = calculate_expected_shortfall(
             returns_data, getattr(gene, "var_confidence", 0.95)
         )
@@ -76,26 +78,38 @@ class VolatilityBasedCalculator(BaseCalculator):
         if var_ratio > 0 and risk_controls["max_var_allowed"] > 0:
             if risk_controls["var_loss"] > risk_controls["max_var_allowed"]:
                 capped_value = risk_controls["max_var_allowed"] / max(var_ratio, 1e-12)
-                position_value = max(capped_value, gene.min_position_size * price_for_adjustment)
+                position_value = max(
+                    capped_value, gene.min_position_size * price_for_adjustment
+                )
                 position_size = position_value / price_for_adjustment
                 risk_controls["var_adjusted"] = True
                 warnings.append("VaR制限を適用しました")
                 risk_controls["var_loss"] = position_value * var_ratio
-                risk_controls["expected_shortfall_loss"] = position_value * expected_shortfall_ratio
-
-        if expected_shortfall_ratio > 0 and risk_controls["max_expected_shortfall_allowed"] > 0:
-            current_es_loss = position_size * price_for_adjustment * expected_shortfall_ratio
-            if current_es_loss > risk_controls["max_expected_shortfall_allowed"]:
-                capped_value = (
-                    risk_controls["max_expected_shortfall_allowed"]
-                    / max(expected_shortfall_ratio, 1e-12)
+                risk_controls["expected_shortfall_loss"] = (
+                    position_value * expected_shortfall_ratio
                 )
-                position_value = max(capped_value, gene.min_position_size * price_for_adjustment)
+
+        if (
+            expected_shortfall_ratio > 0
+            and risk_controls["max_expected_shortfall_allowed"] > 0
+        ):
+            current_es_loss = (
+                position_size * price_for_adjustment * expected_shortfall_ratio
+            )
+            if current_es_loss > risk_controls["max_expected_shortfall_allowed"]:
+                capped_value = risk_controls["max_expected_shortfall_allowed"] / max(
+                    expected_shortfall_ratio, 1e-12
+                )
+                position_value = max(
+                    capped_value, gene.min_position_size * price_for_adjustment
+                )
                 position_size = position_value / price_for_adjustment
                 risk_controls["expected_shortfall_adjusted"] = True
                 warnings.append("期待ショートフォール制限を適用しました")
                 risk_controls["var_loss"] = position_value * var_ratio
-                risk_controls["expected_shortfall_loss"] = position_value * expected_shortfall_ratio
+                risk_controls["expected_shortfall_loss"] = (
+                    position_value * expected_shortfall_ratio
+                )
 
         # 詳細情報の更新
         details.update(

@@ -33,7 +33,6 @@ class IndicatorSettings(BaseConfig):
     operators: List[str] = field(default_factory=lambda: OPERATORS.copy())
     data_sources: List[str] = field(default_factory=lambda: DATA_SOURCES.copy())
 
-
     def get_default_values(self) -> Dict[str, Any]:
         """デフォルト値を取得（自動生成を利用）"""
         # フィールドから自動生成したデフォルト値を取得

@@ -1,6 +1,7 @@
 """
 遺伝子突然変異ユーティリティ
 """
+
 from __future__ import annotations
 
 import random

@@ -24,6 +24,7 @@ class RegimeDetectorConfig:
     covariance_type: str = "full"
     n_iter: int = 100
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -163,17 +164,21 @@ class RegimeDetector:
         # ファンディングレート変化 (オプション)
         if "funding_rate" in data.columns:
             funding_change = data["funding_rate"].pct_change().fillna(0).values
-            features = np.column_stack([
-                returns,
-                atr_pct_change,
-                volume_pct_change,
-                funding_change,
-            ])
+            features = np.column_stack(
+                [
+                    returns,
+                    atr_pct_change,
+                    volume_pct_change,
+                    funding_change,
+                ]
+            )
         else:
-            features = np.column_stack([
-                returns,
-                atr_pct_change,
-                volume_pct_change,
-            ])
+            features = np.column_stack(
+                [
+                    returns,
+                    atr_pct_change,
+                    volume_pct_change,
+                ]
+            )
 
         return features

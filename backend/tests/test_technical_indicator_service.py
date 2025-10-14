@@ -1,6 +1,7 @@
 """
 TechnicalIndicatorServiceのテスト
 """
+
 import pytest
 from unittest.mock import Mock, patch
 import pandas as pd
@@ -19,8 +20,8 @@ class TestTechnicalIndicatorService:
     def test_init(self):
         """初期化のテスト"""
         assert self.service is not None
-        assert hasattr(self.service, 'indicators')
-        assert hasattr(self.service, 'config')
+        assert hasattr(self.service, "indicators")
+        assert hasattr(self.service, "config")
 
     def test_get_supported_indicators(self):
         """サポート指標取得のテスト"""
@@ -50,10 +51,12 @@ class TestTechnicalIndicatorService:
     def test_calculate_single_indicator(self):
         """単一指標計算のテスト"""
         # テスト用データ
-        data = pd.DataFrame({
-            'close': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
-            'volume': [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900],
+            }
+        )
 
         result = self.service.calculate_indicator(data, "SMA", period=5)
 
@@ -70,10 +73,12 @@ class TestTechnicalIndicatorService:
 
     def test_calculate_multiple_indicators(self):
         """複数指標計算のテスト"""
-        data = pd.DataFrame({
-            'close': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
-            'volume': [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900],
+            }
+        )
 
         indicators = ["SMA", "RSI"]
         result = self.service.calculate_indicators(data, indicators)
@@ -84,14 +89,16 @@ class TestTechnicalIndicatorService:
 
     def test_calculate_custom_indicators(self):
         """カスタム指標計算のテスト"""
-        data = pd.DataFrame({
-            'close': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
-            'volume': [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900],
+            }
+        )
 
         custom_config = [
             {"name": "SMA", "params": {"period": 5}},
-            {"name": "RSI", "params": {"period": 10}}
+            {"name": "RSI", "params": {"period": 10}},
         ]
 
         result = self.service.calculate_custom_indicators(data, custom_config)
@@ -115,10 +122,7 @@ class TestTechnicalIndicatorService:
 
     def test_validate_indicator_data_enough_data(self):
         """データ検証（十分なデータ）のテスト"""
-        data = pd.DataFrame({
-            'close': list(range(100)),
-            'volume': [1000] * 100
-        })
+        data = pd.DataFrame({"close": list(range(100)), "volume": [1000] * 100})
 
         is_valid, message = self.service.validate_indicator_data(data, "SMA", period=14)
 
@@ -127,10 +131,9 @@ class TestTechnicalIndicatorService:
 
     def test_validate_indicator_data_insufficient(self):
         """データ検証（データ不足）のテスト"""
-        data = pd.DataFrame({
-            'close': [100, 101, 102],  # 不十分なデータ
-            'volume': [1000, 1100, 1200]
-        })
+        data = pd.DataFrame(
+            {"close": [100, 101, 102], "volume": [1000, 1100, 1200]}  # 不十分なデータ
+        )
 
         is_valid, message = self.service.validate_indicator_data(data, "SMA", period=14)
 
@@ -175,10 +178,12 @@ class TestTechnicalIndicatorService:
 
     def test_calculate_indicator_with_validation(self):
         """検証付き指標計算のテスト"""
-        data = pd.DataFrame({
-            'close': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
-            'volume': [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900],
+            }
+        )
 
         result = self.service.calculate_indicator_with_validation(
             data, "SMA", period=5, validate=True
@@ -200,8 +205,8 @@ class TestTechnicalIndicatorService:
     def test_batch_calculate_indicators(self):
         """バッチ指標計算のテスト"""
         data_list = [
-            pd.DataFrame({'close': [100, 101, 102], 'volume': [1000, 1100, 1200]}),
-            pd.DataFrame({'close': [200, 201, 202], 'volume': [2000, 2100, 2200]})
+            pd.DataFrame({"close": [100, 101, 102], "volume": [1000, 1100, 1200]}),
+            pd.DataFrame({"close": [200, 201, 202], "volume": [2000, 2100, 2200]}),
         ]
         indicators = ["SMA", "RSI"]
 
@@ -241,12 +246,12 @@ class TestTechnicalIndicatorService:
     def test_update_indicator_cache(self):
         """指標キャッシュ更新のテスト"""
         cache_key = "test_cache_key"
-        data = pd.DataFrame({'close': [1, 2, 3]})
+        data = pd.DataFrame({"close": [1, 2, 3]})
 
         self.service._update_indicator_cache(cache_key, data)
 
         # キャッシュが更新されたか確認（内部検証）
-        assert hasattr(self.service, '_cache')
+        assert hasattr(self.service, "_cache")
         # 実際のキャッシュ検証は難しいため、メソッドが存在することを確認
 
     def test_clear_indicator_cache(self):
@@ -271,10 +276,7 @@ class TestTechnicalIndicatorService:
 
     def test_get_indicator_calculation_time(self):
         """指標計算時間取得のテスト"""
-        data = pd.DataFrame({
-            'close': list(range(100)),
-            'volume': [1000] * 100
-        })
+        data = pd.DataFrame({"close": list(range(100)), "volume": [1000] * 100})
 
         calc_time = self.service.estimate_calculation_time(data, ["SMA", "RSI"])
 
@@ -292,7 +294,7 @@ class TestTechnicalIndicatorService:
     def test_error_handling_in_calculation(self):
         """計算中のエラー処理テスト"""
         # 無効なデータ
-        data = pd.DataFrame({'invalid': [1, 2, 3]})
+        data = pd.DataFrame({"invalid": [1, 2, 3]})
 
         result = self.service.calculate_indicator(data, "SMA", period=5)
 

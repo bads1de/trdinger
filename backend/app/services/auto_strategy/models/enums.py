@@ -3,6 +3,7 @@
 
 ポジションサイジングやTP/SL方式のEnumを定義します。
 """
+
 from __future__ import annotations
 
 from enum import Enum

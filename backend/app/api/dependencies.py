@@ -161,6 +161,7 @@ def get_automl_feature_generation_service(
             detail="AutoMLFeatureGenerationServiceが利用できません。サーバーログを確認してください。",
         )
 
+
 # Dependency factories for various orchestration services (avoid direct new() in API modules)
 def get_data_collection_orchestration_service():
     """
@@ -176,7 +177,9 @@ def get_data_collection_orchestration_service():
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"DataCollectionOrchestrationService初期化エラー: {e}", exc_info=True)
+        logger.error(
+            f"DataCollectionOrchestrationService初期化エラー: {e}", exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="DataCollectionOrchestrationServiceが利用できません。サーバーログを確認してください。",
@@ -197,7 +200,9 @@ def get_data_management_orchestration_service():
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"DataManagementOrchestrationService初期化エラー: {e}", exc_info=True)
+        logger.error(
+            f"DataManagementOrchestrationService初期化エラー: {e}", exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="DataManagementOrchestrationServiceが利用できません。サーバーログを確認してください。",
@@ -218,7 +223,9 @@ def get_open_interest_orchestration_service():
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"OpenInterestOrchestrationService初期化エラー: {e}", exc_info=True)
+        logger.error(
+            f"OpenInterestOrchestrationService初期化エラー: {e}", exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="OpenInterestOrchestrationServiceが利用できません。サーバーログを確認してください。",
@@ -244,6 +251,8 @@ def get_ml_training_orchestration_service():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="MLTrainingOrchestrationServiceが利用できません。サーバーログを確認してください。",
         )
+
+
 def get_backtest_orchestration_service(
     db: Session = Depends(get_db),
 ):
@@ -307,7 +316,9 @@ def get_ml_management_orchestration_service():
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"MLManagementOrchestrationService初期化エラー: {e}", exc_info=True)
+        logger.error(
+            f"MLManagementOrchestrationService初期化エラー: {e}", exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="MLManagementOrchestrationServiceが利用できません。サーバーログを確認してください。",

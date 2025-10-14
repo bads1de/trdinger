@@ -36,22 +36,30 @@ class TestGAConfig:
 
     def test_post_init_validation_invalid_population_size(self):
         """無効なpopulation_sizeでのバリデーション"""
-        with pytest.raises(ValueError, match="population_size は正の整数である必要があります"):
+        with pytest.raises(
+            ValueError, match="population_size は正の整数である必要があります"
+        ):
             GAConfig(population_size=0)
 
     def test_post_init_validation_invalid_generations(self):
         """無効なgenerationsでのバリデーション"""
-        with pytest.raises(ValueError, match="generations は正の整数である必要があります"):
+        with pytest.raises(
+            ValueError, match="generations は正の整数である必要があります"
+        ):
             GAConfig(generations=-1)
 
     def test_post_init_validation_invalid_crossover_rate(self):
         """無効なcrossover_rateでのバリデーション"""
-        with pytest.raises(ValueError, match="crossover_rate は0から1の範囲の実数である必要があります"):
+        with pytest.raises(
+            ValueError, match="crossover_rate は0から1の範囲の実数である必要があります"
+        ):
             GAConfig(crossover_rate=1.5)
 
     def test_post_init_validation_invalid_mutation_rate(self):
         """無効なmutation_rateでのバリデーション"""
-        with pytest.raises(ValueError, match="mutation_rate は0から1の範囲の実数である必要があります"):
+        with pytest.raises(
+            ValueError, match="mutation_rate は0から1の範囲の実数である必要があります"
+        ):
             GAConfig(mutation_rate=-0.1)
 
     def test_validate_valid_config(self, basic_ga_config):
@@ -186,13 +194,16 @@ class TestGAConfig:
         assert is_valid is False
         assert "個体数は数値である必要があります" in errors[0]
 
-    @patch('backend.app.services.auto_strategy.config.ga_runtime.logger')
+    @patch("backend.app.services.auto_strategy.config.ga_runtime.logger")
     def test_indicator_validation_with_import_error(self, mock_logger):
         """指標検証時のインポートエラーハンドリング"""
         config = GAConfig()
         config.allowed_indicators = ["INVALID_INDICATOR"]
 
-        with patch('backend.app.services.indicators.TechnicalIndicatorService', side_effect=ImportError):
+        with patch(
+            "backend.app.services.indicators.TechnicalIndicatorService",
+            side_effect=ImportError,
+        ):
             is_valid, errors = config.validate()
             mock_logger.warning.assert_called_with("指標検証がスキップされました")
 

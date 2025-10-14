@@ -113,7 +113,9 @@ class EnhancedMetricsCalculator:
         self._operation_counts: Dict[str, int] = defaultdict(int)
         self._lock = threading.Lock()
 
-    @safe_operation(context="包括的な評価指標計算", is_api_call=False, default_return={})
+    @safe_operation(
+        context="包括的な評価指標計算", is_api_call=False, default_return={}
+    )
     def calculate_comprehensive_metrics(
         self,
         y_true: np.ndarray,
@@ -151,9 +153,7 @@ class EnhancedMetricsCalculator:
         # 混同行列
         if self.config.include_confusion_matrix:
             metrics.update(
-                self._calculate_confusion_matrix_metrics(
-                    y_true, y_pred, class_names
-                )
+                self._calculate_confusion_matrix_metrics(y_true, y_pred, class_names)
             )
 
         # 分類レポート
@@ -163,9 +163,7 @@ class EnhancedMetricsCalculator:
             )
 
         # クラス別詳細指標
-        metrics.update(
-            self._calculate_per_class_metrics(y_true, y_pred, class_names)
-        )
+        metrics.update(self._calculate_per_class_metrics(y_true, y_pred, class_names))
 
         # データ分布情報
         metrics.update(self._calculate_distribution_metrics(y_true, y_pred))
@@ -692,11 +690,15 @@ class EnhancedMetricsCalculator:
             # クラス別の精密度、再現率、F1スコア
             # typing.castを使って型を明示的に指定し、型チェッカーのエラーを解決
             from typing import cast
+
             precision, recall, f1_score, support = cast(
                 tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
                 precision_recall_fscore_support(
-                    y_true, y_pred, average=None, zero_division=self.config.zero_division
-                )
+                    y_true,
+                    y_pred,
+                    average=None,
+                    zero_division=self.config.zero_division,
+                ),
             )
 
             # 各変数を明示的にnumpy配列として扱う
@@ -777,10 +779,6 @@ class EnhancedMetricsCalculator:
             sample_weights[mask] = weights[i]
 
         return sample_weights
-
-
-
-
 
 
 # グローバルインスタンス（統合されたメトリクス計算器・収集器）

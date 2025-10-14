@@ -1,6 +1,7 @@
 """
 APIエンドポイントの包括的テスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
@@ -10,9 +11,16 @@ from sqlalchemy.orm import Session
 from app.api.auto_strategy import router as auto_strategy_router
 from app.api.backtest import router as backtest_router
 from app.api.ml_training import router as ml_training_router
-from app.api.dependencies import get_backtest_orchestration_service, get_ml_training_orchestration_service
-from app.services.backtest.orchestration.backtest_orchestration_service import BacktestOrchestrationService
-from app.services.ml.orchestration.ml_training_orchestration_service import MLTrainingOrchestrationService
+from app.api.dependencies import (
+    get_backtest_orchestration_service,
+    get_ml_training_orchestration_service,
+)
+from app.services.backtest.orchestration.backtest_orchestration_service import (
+    BacktestOrchestrationService,
+)
+from app.services.ml.orchestration.ml_training_orchestration_service import (
+    MLTrainingOrchestrationService,
+)
 
 
 class TestAPIEndpointsComprehensive:
@@ -40,7 +48,9 @@ class TestAPIEndpointsComprehensive:
         def override_backtest_service():
             return mock_backtest_service
 
-        app.dependency_overrides[get_backtest_orchestration_service] = override_backtest_service
+        app.dependency_overrides[get_backtest_orchestration_service] = (
+            override_backtest_service
+        )
         return TestClient(app)
 
     @pytest.fixture
@@ -55,7 +65,9 @@ class TestAPIEndpointsComprehensive:
         def override_ml_service():
             return mock_ml_training_service
 
-        app.dependency_overrides[get_ml_training_orchestration_service] = override_ml_service
+        app.dependency_overrides[get_ml_training_orchestration_service] = (
+            override_ml_service
+        )
         return TestClient(app)
 
     @pytest.fixture
@@ -71,11 +83,8 @@ class TestAPIEndpointsComprehensive:
             "commission_rate": 0.001,
             "strategy_config": {
                 "strategy_type": "sma_crossover",
-                "parameters": {
-                    "fast_period": 10,
-                    "slow_period": 20
-                }
-            }
+                "parameters": {"fast_period": 10, "slow_period": 20},
+            },
         }
 
     @pytest.fixture
@@ -90,7 +99,7 @@ class TestAPIEndpointsComprehensive:
             "prediction_horizon": 24,
             "threshold_up": 0.02,
             "threshold_down": -0.02,
-            "save_model": True
+            "save_model": True,
         }
 
     def test_backtest_endpoint_availability(self, backtest_client):
@@ -127,8 +136,14 @@ class TestAPIEndpointsComprehensive:
 
     def test_ml_training_start_request(self, ml_training_client, ml_training_config):
         """MLトレーニング開始リクエストのテスト"""
-        response = ml_training_client.post("/api/ml-training/train", json=ml_training_config)
-        assert response.status_code in [200, 422, 503]  # 成功、バリデーションエラー、またはサービス利用不可
+        response = ml_training_client.post(
+            "/api/ml-training/train", json=ml_training_config
+        )
+        assert response.status_code in [
+            200,
+            422,
+            503,
+        ]  # 成功、バリデーションエラー、またはサービス利用不可
 
     def test_ml_training_status_endpoint(self, ml_training_client):
         """MLトレーニングステータスエンドポイントのテスト"""
@@ -139,7 +154,9 @@ class TestAPIEndpointsComprehensive:
         """APIレート制限のテスト"""
         # 複数リクエスト
         for i in range(10):
-            response = backtest_client.post("/api/backtest/run", json=backtest_request_data)
+            response = backtest_client.post(
+                "/api/backtest/run", json=backtest_request_data
+            )
             # すべてのリクエストが処理されるか、レート制限が適切に働く
             assert response.status_code in [200, 429]  # 429 = Too Many Requests
 
@@ -158,7 +175,7 @@ class TestAPIEndpointsComprehensive:
             data = response.json()
             # 標準的なレスポンス形式
             assert isinstance(data, dict)
-            assert 'success' in data or 'data' in data or 'error' in data
+            assert "success" in data or "data" in data or "error" in data
 
     def test_api_error_handling(self, backtest_client):
         """APIエラーハンドリングのテスト"""
@@ -168,7 +185,7 @@ class TestAPIEndpointsComprehensive:
 
         if response.status_code >= 400:
             # エラーレスポンスが適切
-            assert 'error' in response.json() or 'detail' in response.json()
+            assert "error" in response.json() or "detail" in response.json()
 
     def test_api_request_timeout(self, backtest_client, backtest_request_data):
         """APIリクエストタイムアウトのテスト"""
@@ -192,7 +209,9 @@ class TestAPIEndpointsComprehensive:
         responses = []
 
         def make_request():
-            response = backtest_client.post("/api/backtest/run", json=backtest_request_data)
+            response = backtest_client.post(
+                "/api/backtest/run", json=backtest_request_data
+            )
             responses.append(response.status_code)
 
         # 同時リクエスト
@@ -220,10 +239,8 @@ class TestAPIEndpointsComprehensive:
             "commission_rate": 0.001,
             "strategy_config": {
                 "strategy_type": "sma_crossover",
-                "parameters": {
-                    "sql_injection": "'; DROP TABLE users; --"
-                }
-            }
+                "parameters": {"sql_injection": "'; DROP TABLE users; --"},
+            },
         }
 
         response = backtest_client.post("/api/backtest/run", json=malicious_data)
@@ -266,8 +283,12 @@ class TestAPIEndpointsComprehensive:
     def test_api_response_caching(self, backtest_client, backtest_request_data):
         """APIレスポンスキャッシュのテスト"""
         # 同じリクエストを2回
-        response1 = backtest_client.post("/api/backtest/run", json=backtest_request_data)
-        response2 = backtest_client.post("/api/backtest/run", json=backtest_request_data)
+        response1 = backtest_client.post(
+            "/api/backtest/run", json=backtest_request_data
+        )
+        response2 = backtest_client.post(
+            "/api/backtest/run", json=backtest_request_data
+        )
 
         # レスポンスが一貫している
         assert response1.status_code == response2.status_code
@@ -305,7 +326,9 @@ class TestAPIEndpointsComprehensive:
         # 複数のリクエスト
         responses = []
         for i in range(10):
-            response = backtest_client.post("/api/backtest/run", json=backtest_request_data)
+            response = backtest_client.post(
+                "/api/backtest/run", json=backtest_request_data
+            )
             responses.append(response.status_code)
 
         # 一貫した応答
@@ -315,9 +338,9 @@ class TestAPIEndpointsComprehensive:
         """APIバックアップと回復のテスト"""
         # バックアップ手順
         backup_procedures = [
-            'api_documentation_backup',
-            'rate_limit_config_backup',
-            'authentication_config_backup'
+            "api_documentation_backup",
+            "rate_limit_config_backup",
+            "authentication_config_backup",
         ]
 
         for procedure in backup_procedures:
@@ -326,11 +349,7 @@ class TestAPIEndpointsComprehensive:
     def test_api_compliance_and_audit(self):
         """APIコンプライアンスと監査のテスト"""
         # 監査ログ
-        audit_requirements = [
-            'request_logging',
-            'access_control',
-            'data_encryption'
-        ]
+        audit_requirements = ["request_logging", "access_control", "data_encryption"]
 
         for requirement in audit_requirements:
             assert isinstance(requirement, str)
@@ -339,13 +358,13 @@ class TestAPIEndpointsComprehensive:
         """API災害復旧のテスト"""
         # 復旧計画
         recovery_plan = {
-            'rto': '4_hours',
-            'rpo': '1_hour',
-            'backup_site': 'active_standby'
+            "rto": "4_hours",
+            "rpo": "1_hour",
+            "backup_site": "active_standby",
         }
 
-        assert 'rto' in recovery_plan
-        assert 'rpo' in recovery_plan
+        assert "rto" in recovery_plan
+        assert "rpo" in recovery_plan
 
     def test_api_performance_benchmarking(self, backtest_client, backtest_request_data):
         """APIパフォーマンスベンチマークのテスト"""

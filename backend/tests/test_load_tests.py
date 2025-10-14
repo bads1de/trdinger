@@ -1,6 +1,7 @@
 """
 負荷テスト - 高負荷状況での安定性を検証
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -62,6 +63,7 @@ class TestLoadTests:
 
     def test_endurance_test_long_running(self):
         """長時間稼働耐久テスト"""
+
         # 長時間稼働のシミュレーション
         def long_running_process():
             start_time = time.time()
@@ -88,6 +90,7 @@ class TestLoadTests:
 
     def test_spike_load_simulation(self):
         """スパイク負荷シミュレーションのテスト"""
+
         # 突発的負荷
         def simulate_spike():
             # 短時間に高負荷
@@ -109,12 +112,13 @@ class TestLoadTests:
 
     def test_volume_test_data_scale(self):
         """データ量テストの大規模データスケール"""
+
         # 大量データ処理
         def process_large_volume(data_size):
-            large_data = pd.DataFrame({
-                f'col_{i}': np.random.randn(data_size) for i in range(100)
-            })
-            large_data['target'] = np.random.choice([0, 1], data_size)
+            large_data = pd.DataFrame(
+                {f"col_{i}": np.random.randn(data_size) for i in range(100)}
+            )
+            large_data["target"] = np.random.choice([0, 1], data_size)
 
             # 処理
             correlation_matrix = large_data.corr()
@@ -135,6 +139,7 @@ class TestLoadTests:
 
     def test_scalability_test_horizontal(self):
         """水平スケーラビリティテスト"""
+
         # ノード追加によるスケーリング
         def simulate_node_processing(node_id):
             # 各ノードの処理
@@ -150,19 +155,21 @@ class TestLoadTests:
             start_time = time.time()
 
             with ThreadPoolExecutor(max_workers=node_count) as executor:
-                results = list(executor.map(simulate_node_processing, range(node_count)))
+                results = list(
+                    executor.map(simulate_node_processing, range(node_count))
+                )
 
             end_time = time.time()
             total_time = end_time - start_time
 
             scalability_results[node_count] = {
-                'total_time': total_time,
-                'results_count': len(results)
+                "total_time": total_time,
+                "results_count": len(results),
             }
 
         # スケーリング効果
-        single_node_time = scalability_results[1]['total_time']
-        multi_node_time = scalability_results[4]['total_time']
+        single_node_time = scalability_results[1]["total_time"]
+        multi_node_time = scalability_results[4]["total_time"]
 
         # 4ノードで性能が向上
         assert multi_node_time < single_node_time * 2  # 2倍未満の時間
@@ -171,18 +178,18 @@ class TestLoadTests:
         """垂直スケーラビリティテスト"""
         # リソース増強によるスケーリング
         resource_levels = [
-            {'cpu': 1, 'memory': '1GB'},
-            {'cpu': 2, 'memory': '2GB'},
-            {'cpu': 4, 'memory': '4GB'}
+            {"cpu": 1, "memory": "1GB"},
+            {"cpu": 2, "memory": "2GB"},
+            {"cpu": 4, "memory": "4GB"},
         ]
 
         for level in resource_levels:
             start_time = time.time()
 
             # リソースに応じた処理
-            if level['cpu'] == 1:
+            if level["cpu"] == 1:
                 data_size = 10000
-            elif level['cpu'] == 2:
+            elif level["cpu"] == 2:
                 data_size = 20000
             else:
                 data_size = 40000
@@ -199,6 +206,7 @@ class TestLoadTests:
 
     def test_failover_test_service_failure(self):
         """フェイルオーバーテストのサービス障害"""
+
         # サービス障害シミュレーション
         class FailoverService:
             def __init__(self):
@@ -285,6 +293,7 @@ class TestLoadTests:
 
     def test_database_load_test(self):
         """データベース負荷テスト"""
+
         # データベース操作の負荷
         def database_operation(op_id):
             # 複数のDB操作
@@ -307,6 +316,7 @@ class TestLoadTests:
 
     def test_api_load_test(self):
         """API負荷テスト"""
+
         # APIリクエストの負荷
         def api_request(request_id):
             # API呼び出しのシミュレーション
@@ -367,6 +377,7 @@ class TestLoadTests:
 
     def test_network_load_test(self):
         """ネットワーク負荷テスト"""
+
         # ネットワークリクエストの負荷
         def network_call(call_id):
             # ネットワーク遅延のシミュレーション
@@ -387,11 +398,12 @@ class TestLoadTests:
 
     def test_mixed_load_scenario(self):
         """混合負荷シナリオのテスト"""
+
         # 複合的な負荷
         def mixed_task(task_type, task_id):
             if task_type == "cpu":
                 # CPU集約
-                result = sum(i*i for i in range(10000))
+                result = sum(i * i for i in range(10000))
             elif task_type == "io":
                 # I/O集約
                 time.sleep(0.01)
@@ -422,6 +434,7 @@ class TestLoadTests:
 
     def test_peak_load_scenario(self):
         """ピーク負荷シナリオのテスト"""
+
         # ピーク時の処理
         def peak_hour_task():
             # ピーク時の重い処理
@@ -444,6 +457,7 @@ class TestLoadTests:
 
     def test_baseline_performance_comparison(self):
         """ベースライン性能比較のテスト"""
+
         # ベースライン測定
         def baseline_task():
             data = np.random.randn(1000, 10)
@@ -480,22 +494,22 @@ class TestLoadTests:
         """最終負荷テスト検証"""
         # すべての負荷テストが成功
         load_test_categories = [
-            'high_concurrency',
-            'endurance',
-            'spike_load',
-            'volume_test',
-            'horizontal_scaling',
-            'vertical_scaling',
-            'failover',
-            'recovery',
-            'resource_exhaustion',
-            'database_load',
-            'api_load',
-            'cache_load',
-            'network_load',
-            'mixed_load',
-            'peak_load',
-            'baseline_comparison'
+            "high_concurrency",
+            "endurance",
+            "spike_load",
+            "volume_test",
+            "horizontal_scaling",
+            "vertical_scaling",
+            "failover",
+            "recovery",
+            "resource_exhaustion",
+            "database_load",
+            "api_load",
+            "cache_load",
+            "network_load",
+            "mixed_load",
+            "peak_load",
+            "baseline_comparison",
         ]
 
         for category in load_test_categories:

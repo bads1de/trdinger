@@ -26,7 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
 class HybridIndividualEvaluator(IndividualEvaluator):
     """
     ハイブリッド個体評価器
-    
+
     IndividualEvaluatorを継承し、ML予測スコアをフィットネス計算に統合します。
     """
 
@@ -39,7 +39,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     ):
         """
         初期化
-        
+
         Args:
             backtest_service: バックテストサービス
             predictor: ハイブリッド予測器（オプション）
@@ -53,11 +53,11 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     def evaluate_individual(self, individual, config: GAConfig):
         """
         個体評価（ML予測統合版）
-        
+
         Args:
             individual: 評価する個体
             config: GA設定
-            
+
         Returns:
             フィットネス値のタプル
         """
@@ -300,13 +300,13 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     ) -> float:
         """
         フィットネス計算（ML予測スコア統合版）
-        
+
         Args:
             backtest_result: バックテスト結果
             config: GA設定
             regime_labels: レジームラベル（オプション）
             prediction_signals: ML予測信号（オプション）
-            
+
         Returns:
             フィットネス値
         """
@@ -356,13 +356,13 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     ) -> tuple:
         """
         多目的最適化用フィットネス計算（ML予測スコア統合版）
-        
+
         Args:
             backtest_result: バックテスト結果
             config: GA設定
             regime_labels: レジームラベル（オプション）
             prediction_signals: ML予測信号（オプション）
-            
+
         Returns:
             各目的の評価値のタプル
         """
@@ -380,9 +380,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
             # ML予測スコアを計算
             if prediction_signals:
-                prediction_score = (
-                    prediction_signals["up"] - prediction_signals["down"]
-                )
+                prediction_score = prediction_signals["up"] - prediction_signals["down"]
                 fitness_list[pred_score_index] = prediction_score
             else:
                 # 予測がない場合はデフォルト値

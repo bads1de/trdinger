@@ -61,4 +61,3 @@ class ConditionStrategy(ABC):
     ) -> List[Condition]:
         """指標の汎用ショート条件を作成。"""
         return self.condition_generator._generic_short_conditions(indicator)
-

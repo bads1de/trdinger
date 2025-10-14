@@ -42,7 +42,9 @@ class StackingEnsemble(BaseEnsemble):
 
         # スタッキング固有の設定
         self.base_models = config.get("base_models", ["lightgbm", "random_forest"])
-        self.meta_model: str = config.get("meta_model", "logistic_regression") or "logistic_regression"
+        self.meta_model: str = (
+            config.get("meta_model", "logistic_regression") or "logistic_regression"
+        )
         self.cv_folds = config.get("cv_folds", 5)
         self.stack_method = config.get("stack_method", "predict_proba")
         self.random_state = config.get("random_state", 42)
@@ -347,6 +349,7 @@ class StackingEnsemble(BaseEnsemble):
             metadata_path = model_path.replace(".pkl", "_metadata.json")
 
             import json
+
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, ensure_ascii=False, indent=2)
 

@@ -17,7 +17,13 @@ class TestEnum(Enum):
 class TestGene(BaseGene):
     """テスト用の遺伝子クラス"""
 
-    def __init__(self, normal_field: str = None, enum_field: TestEnum = None, datetime_field: datetime = None, optional_field: str = "default"):
+    def __init__(
+        self,
+        normal_field: str = None,
+        enum_field: TestEnum = None,
+        datetime_field: datetime = None,
+        optional_field: str = "default",
+    ):
         self.normal_field = normal_field
         self.enum_field = enum_field
         self.datetime_field = datetime_field
@@ -28,10 +34,10 @@ class TestGene(BaseGene):
 
     # アノテーションを追加（テスト用）
     __annotations__ = {
-        'normal_field': str,
-        'enum_field': TestEnum,
-        'datetime_field': datetime,
-        'optional_field': str
+        "normal_field": str,
+        "enum_field": TestEnum,
+        "datetime_field": datetime,
+        "optional_field": str,
     }
 
 
@@ -46,7 +52,7 @@ class TestGeneWithoutAnnotations(BaseGene):
 
 
 # アノテーションなしにするため、クラス定義後に削除
-if hasattr(TestGeneWithoutAnnotations, '__annotations__'):
+if hasattr(TestGeneWithoutAnnotations, "__annotations__"):
     del TestGeneWithoutAnnotations.__annotations__
 
 
@@ -59,7 +65,7 @@ class TestGeneUtils:
             "normal_field": "test_value",
             "enum_field": "value1",
             "datetime_field": "2023-01-01T00:00:00",
-            "optional_field": "custom_value"
+            "optional_field": "custom_value",
         }
 
         gene = TestGene.from_dict(data)
@@ -74,7 +80,7 @@ class TestGeneUtils:
         data = {
             "normal_field": "test_value",
             "enum_field": "invalid_value",
-            "datetime_field": "2023-01-01T00:00:00"
+            "datetime_field": "2023-01-01T00:00:00",
         }
 
         gene = TestGene.from_dict(data)
@@ -89,7 +95,7 @@ class TestGeneUtils:
         data = {
             "normal_field": "test_value",
             "enum_field": "value2",
-            "datetime_field": "invalid_datetime"
+            "datetime_field": "invalid_datetime",
         }
 
         gene = TestGene.from_dict(data)
@@ -104,7 +110,7 @@ class TestGeneUtils:
         data = {
             "normal_field": "test_value",
             "enum_field": TestEnum.VALUE2,
-            "datetime_field": "2023-01-01T00:00:00"
+            "datetime_field": "2023-01-01T00:00:00",
         }
 
         gene = TestGene.from_dict(data)
@@ -119,7 +125,7 @@ class TestGeneUtils:
         data = {
             "normal_field": "test_value",
             "enum_field": "value1",
-            "datetime_field": test_datetime
+            "datetime_field": test_datetime,
         }
 
         gene = TestGene.from_dict(data)
@@ -130,11 +136,7 @@ class TestGeneUtils:
 
     def test_from_dict_without_annotations(self):
         """アノテーションなしクラスのテスト"""
-        data = {
-            "field1": "value1",
-            "field2": 42,
-            "field3": {"nested": "data"}
-        }
+        data = {"field1": "value1", "field2": 42, "field3": {"nested": "data"}}
 
         gene = TestGeneWithoutAnnotations.from_dict(data)
 
@@ -146,7 +148,7 @@ class TestGeneUtils:
         """一部のフィールドが欠けている場合のテスト"""
         data = {
             "normal_field": "test_value",
-            "enum_field": "value1"
+            "enum_field": "value1",
             # datetime_field が欠けている
         }
 

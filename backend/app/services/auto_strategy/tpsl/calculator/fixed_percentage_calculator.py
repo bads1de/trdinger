@@ -31,7 +31,7 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
         tpsl_gene: Optional[TPSLGene] = None,
         market_data: Optional[Dict[str, Any]] = None,
         position_direction: float = 1.0,
-        **kwargs
+        **kwargs,
     ) -> TPSLResult:
         """
         固定パーセンテージ方式でTP/SLを計算

@@ -40,7 +40,9 @@ def sample_ohlcv() -> pd.DataFrame:
     return df
 
 
-def test_all_pandas_ta_indicators_execute_without_adapter(sample_ohlcv: pd.DataFrame) -> None:
+def test_all_pandas_ta_indicators_execute_without_adapter(
+    sample_ohlcv: pd.DataFrame,
+) -> None:
     """pandas-ta 関数を持つインジケーターがフォールバック無しで実行できることを確認"""
 
     service = TechnicalIndicatorService()
@@ -60,9 +62,13 @@ def test_all_pandas_ta_indicators_execute_without_adapter(sample_ohlcv: pd.DataF
         assert pandas_config is not None, f"{name} の pandas 設定が取得できません"
 
         normalized_params = service._normalize_params({}, pandas_config)
-        result = service._call_pandas_ta(sample_ohlcv.copy(), pandas_config, normalized_params)
+        result = service._call_pandas_ta(
+            sample_ohlcv.copy(), pandas_config, normalized_params
+        )
 
         if result is None:
             failing.append(config.indicator_name)
 
-    assert not failing, f"pandas-ta 直接呼び出しに失敗したインジケーター: {sorted(failing)}"
+    assert (
+        not failing
+    ), f"pandas-ta 直接呼び出しに失敗したインジケーター: {sorted(failing)}"

@@ -81,7 +81,7 @@ class TestTPSLGene:
         assert gene.method == TPSLMethod.RISK_REWARD_RATIO
         assert gene.stop_loss_pct == 0.03
 
-    @patch('backend.app.services.auto_strategy.models.tpsl_gene.logger')
+    @patch("backend.app.services.auto_strategy.models.tpsl_gene.logger")
     def test_from_dict_enum_conversion_warning(self, mock_logger):
         """Enum変換時の警告テスト"""
         data = {"method": "invalid_method"}
@@ -171,8 +171,12 @@ class TestTPSLGene:
         gene = TPSLGene()
 
         # TPSL_LIMITSのインポートエラーをシミュレート
-        with patch('backend.app.services.auto_strategy.models.tpsl_gene.TPSL_LIMITS', {}):
-            with patch('backend.app.services.auto_strategy.models.tpsl_gene.logger') as mock_logger:
+        with patch(
+            "backend.app.services.auto_strategy.models.tpsl_gene.TPSL_LIMITS", {}
+        ):
+            with patch(
+                "backend.app.services.auto_strategy.models.tpsl_gene.logger"
+            ) as mock_logger:
                 is_valid, errors = gene.validate()
                 # 基本検証が適用される
                 assert isinstance(is_valid, bool)

@@ -269,10 +269,10 @@ async def get_ml_model_info(
     """
     現在のMLモデル情報を取得
     """
- 
+
     async def _get_model_info():
         return await orchestration_service.get_model_info()
- 
+
     return await ErrorHandler.safe_execute_async(_get_model_info)
 
 
@@ -285,8 +285,8 @@ async def stop_ml_training(
     """
     MLトレーニングを停止
     """
- 
+
     async def _stop_training():
         return await orchestration_service.stop_training()
- 
+
     return await ErrorHandler.safe_execute_async(_stop_training)

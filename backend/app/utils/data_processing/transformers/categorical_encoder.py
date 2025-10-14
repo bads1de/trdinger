@@ -37,7 +37,7 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
         self.encoders_ = {}
 
         # カテゴリ列を検出し、エンコーダーを適合
-        categorical_cols = X.select_dtypes(include=['object', 'category']).columns
+        categorical_cols = X.select_dtypes(include=["object", "category"]).columns
 
         for col in categorical_cols:
             encoder = LabelEncoder()

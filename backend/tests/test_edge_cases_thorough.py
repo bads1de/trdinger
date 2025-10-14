@@ -1,6 +1,7 @@
 """
 エッジケースの徹底テスト - 極端な状況を網羅
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -24,62 +25,68 @@ class TestEdgeCasesThorough:
         """極端な市場状況のテスト"""
         # 極端な市場データ
         extreme_data = {
-            'flash_crash': {
-                'prices': [100, 50, 25, 75, 100],  # 50%下落、50%反発
-                'volume': [100000, 500000, 1000000, 300000]
+            "flash_crash": {
+                "prices": [100, 50, 25, 75, 100],  # 50%下落、50%反発
+                "volume": [100000, 500000, 1000000, 300000],
             },
-            'parabolic_rally': {
-                'prices': [100, 200, 400, 800, 1600],  # 2倍ずつ上昇
-                'volume': [1000, 2000, 4000, 8000, 16000]
+            "parabolic_rally": {
+                "prices": [100, 200, 400, 800, 1600],  # 2倍ずつ上昇
+                "volume": [1000, 2000, 4000, 8000, 16000],
             },
-            'zero_volume': {
-                'prices': [100, 100, 100, 100],
-                'volume': [0, 0, 0, 0]
-            }
+            "zero_volume": {"prices": [100, 100, 100, 100], "volume": [0, 0, 0, 0]},
         }
 
         for scenario, data in extreme_data.items():
-            if scenario == 'flash_crash':
+            if scenario == "flash_crash":
                 # 急落時の対応
-                max_drawdown = (min(data['prices']) - max(data['prices'])) / max(data['prices'])
+                max_drawdown = (min(data["prices"]) - max(data["prices"])) / max(
+                    data["prices"]
+                )
                 assert max_drawdown == -0.5  # 50%下落
-            elif scenario == 'parabolic_rally':
+            elif scenario == "parabolic_rally":
                 # 指数上昇
-                growth = data['prices'][-1] / data['prices'][0]
+                growth = data["prices"][-1] / data["prices"][0]
                 assert growth == 16.0  # 16倍
-            elif scenario == 'zero_volume':
+            elif scenario == "zero_volume":
                 # 零取引量
-                assert all(v == 0 for v in data['volume'])
+                assert all(v == 0 for v in data["volume"])
 
     def test_extreme_parameter_values(self):
         """極端なパラメータ値のテスト"""
         # 非常に極端なパラメータ
         extreme_params = [
-            {'learning_rate': 1.0, 'description': '最大学習率'},
-            {'learning_rate': 1e-8, 'description': '最小学習率'},
-            {'population_size': 1, 'description': '最小個体群'},
-            {'population_size': 10000, 'description': '最大個体群'},
-            {'timeframe': '1s', 'description': '最短足'},
-            {'timeframe': '1y', 'description': '最長足'}
+            {"learning_rate": 1.0, "description": "最大学習率"},
+            {"learning_rate": 1e-8, "description": "最小学習率"},
+            {"population_size": 1, "description": "最小個体群"},
+            {"population_size": 10000, "description": "最大個体群"},
+            {"timeframe": "1s", "description": "最短足"},
+            {"timeframe": "1y", "description": "最長足"},
         ]
 
         for param in extreme_params:
-            if param['description'] == '最大学習率':
-                assert param['learning_rate'] == 1.0
-            elif param['description'] == '最小学習率':
-                assert param['learning_rate'] == 1e-8
-            elif param['description'] == '最小個体群':
-                assert param['population_size'] == 1
-            elif param['description'] == '最大個体群':
-                assert param['population_size'] == 10000
+            if param["description"] == "最大学習率":
+                assert param["learning_rate"] == 1.0
+            elif param["description"] == "最小学習率":
+                assert param["learning_rate"] == 1e-8
+            elif param["description"] == "最小個体群":
+                assert param["population_size"] == 1
+            elif param["description"] == "最大個体群":
+                assert param["population_size"] == 10000
 
     def test_boundary_conditions_in_algorithms(self):
         """アルゴリズムの境界条件テスト"""
         # 境界値
         boundary_values = [
-            0, 1, -1, 0.0001, 999999.9999,
-            float('inf'), float('-inf'), float('nan'),
-            sys.maxsize, -sys.maxsize - 1
+            0,
+            1,
+            -1,
+            0.0001,
+            999999.9999,
+            float("inf"),
+            float("-inf"),
+            float("nan"),
+            sys.maxsize,
+            -sys.maxsize - 1,
         ]
 
         for value in boundary_values:
@@ -124,12 +131,19 @@ class TestEdgeCasesThorough:
         """空データとヌルデータ処理のテスト"""
         # 空のデータ構造
         empty_structures = [
-            [], {}, pd.DataFrame(), set(), "",
-            np.array([]), None, pd.NaT, pd.NA
+            [],
+            {},
+            pd.DataFrame(),
+            set(),
+            "",
+            np.array([]),
+            None,
+            pd.NaT,
+            pd.NA,
         ]
 
         for data in empty_structures:
-            if data is None or (hasattr(data, 'empty') and data.empty):
+            if data is None or (hasattr(data, "empty") and data.empty):
                 # 空データのフォールバック
                 fallback = []
                 assert isinstance(fallback, list)
@@ -148,10 +162,10 @@ class TestEdgeCasesThorough:
 
         try:
             # 100万件のデータ
-            large_data = pd.DataFrame({
-                f'feature_{i}': np.random.randn(1000000) for i in range(10)
-            })
-            large_data['target'] = np.random.choice([0, 1], 1000000)
+            large_data = pd.DataFrame(
+                {f"feature_{i}": np.random.randn(1000000) for i in range(10)}
+            )
+            large_data["target"] = np.random.choice([0, 1], 1000000)
 
             # メモリ効率の処理
             processed = large_data.sample(frac=0.1)  # 10%だけ処理
@@ -160,7 +174,7 @@ class TestEdgeCasesThorough:
 
         except MemoryError:
             # メモリ不足時のフォールバック
-            processed = pd.DataFrame({'fallback': [1, 2, 3]})
+            processed = pd.DataFrame({"fallback": [1, 2, 3]})
             assert len(processed) == 3
 
         finally:
@@ -174,20 +188,16 @@ class TestEdgeCasesThorough:
     def test_extremely_small_data_sets(self):
         """極小データセットのテスト"""
         # 最小限のデータ
-        tiny_data = pd.DataFrame({
-            'feature1': [1.0],
-            'feature2': [2.0],
-            'target': [1]
-        })
+        tiny_data = pd.DataFrame({"feature1": [1.0], "feature2": [2.0], "target": [1]})
 
         # 小規模データでの学習
         if len(tiny_data) < 10:
             # 特別な処理
-            model_complexity = 'simple'
+            model_complexity = "simple"
         else:
-            model_complexity = 'normal'
+            model_complexity = "normal"
 
-        assert model_complexity in ['simple', 'normal']
+        assert model_complexity in ["simple", "normal"]
 
     def test_concurrent_access_extremes(self):
         """同時アクセスの極端なケーステスト"""
@@ -223,45 +233,49 @@ class TestEdgeCasesThorough:
         # 時系列のエッジケース
         edge_cases = [
             {
-                'name': 'single_point',
-                'data': pd.DataFrame({'price': [100], 'timestamp': ['2023-01-01']})
+                "name": "single_point",
+                "data": pd.DataFrame({"price": [100], "timestamp": ["2023-01-01"]}),
             },
             {
-                'name': 'duplicate_timestamps',
-                'data': pd.DataFrame({
-                    'price': [100, 101, 102],
-                    'timestamp': ['2023-01-01', '2023-01-01', '2023-01-01']
-                })
+                "name": "duplicate_timestamps",
+                "data": pd.DataFrame(
+                    {
+                        "price": [100, 101, 102],
+                        "timestamp": ["2023-01-01", "2023-01-01", "2023-01-01"],
+                    }
+                ),
             },
             {
-                'name': 'reverse_chronological',
-                'data': pd.DataFrame({
-                    'price': [102, 101, 100],
-                    'timestamp': ['2023-01-03', '2023-01-02', '2023-01-01']
-                })
-            }
+                "name": "reverse_chronological",
+                "data": pd.DataFrame(
+                    {
+                        "price": [102, 101, 100],
+                        "timestamp": ["2023-01-03", "2023-01-02", "2023-01-01"],
+                    }
+                ),
+            },
         ]
 
         for case in edge_cases:
-            data = case['data']
-            if case['name'] == 'single_point':
+            data = case["data"]
+            if case["name"] == "single_point":
                 # 単一データポイント
                 assert len(data) == 1
-            elif case['name'] == 'duplicate_timestamps':
+            elif case["name"] == "duplicate_timestamps":
                 # 重複タイムスタンプ
-                duplicates = data.duplicated(subset=['timestamp'])
+                duplicates = data.duplicated(subset=["timestamp"])
                 assert duplicates.any()
-            elif case['name'] == 'reverse_chronological':
+            elif case["name"] == "reverse_chronological":
                 # 逆時系列
-                assert data['timestamp'].is_monotonic_decreasing
+                assert data["timestamp"].is_monotonic_decreasing
 
     def test_precision_and_accuracy_limits(self):
         """精度と正確性の限界テスト"""
         # 高精度計算
         high_precision_values = [
-            Decimal('0.123456789012345678901234567890'),
-            Decimal('9999999999999999999999999999.99'),
-            Decimal('0.0000000000000000000000000001')
+            Decimal("0.123456789012345678901234567890"),
+            Decimal("9999999999999999999999999999.99"),
+            Decimal("0.0000000000000000000000000001"),
         ]
 
         for value in high_precision_values:
@@ -277,58 +291,58 @@ class TestEdgeCasesThorough:
         """ネットワークと遅延の極端なケーステスト"""
         # 遅延のシナリオ
         latency_scenarios = [
-            {'delay': 0.001, 'description': '超低遅延 (1ms)'},
-            {'delay': 10.0, 'description': '高遅延 (10s)'},
-            {'timeout': True, 'description': 'タイムアウト'}
+            {"delay": 0.001, "description": "超低遅延 (1ms)"},
+            {"delay": 10.0, "description": "高遅延 (10s)"},
+            {"timeout": True, "description": "タイムアウト"},
         ]
 
         for scenario in latency_scenarios:
-            if 'delay' in scenario:
-                if scenario['delay'] < 1.0:
+            if "delay" in scenario:
+                if scenario["delay"] < 1.0:
                     # 低遅延対応
-                    assert scenario['delay'] == 0.001
+                    assert scenario["delay"] == 0.001
                 else:
                     # 高遅延対応
-                    assert scenario['delay'] == 10.0
-            elif 'timeout' in scenario:
+                    assert scenario["delay"] == 10.0
+            elif "timeout" in scenario:
                 # タイムアウト処理
-                assert scenario['timeout'] is True
+                assert scenario["timeout"] is True
 
     def test_resource_constrained_environments(self):
         """リソース制約環境のテスト"""
         # 制約のシミュレーション
         constraints = {
-            'memory_limit_mb': 100,
-            'cpu_limit_percent': 10,
-            'disk_space_mb': 500,
-            'network_bandwidth_kbps': 56
+            "memory_limit_mb": 100,
+            "cpu_limit_percent": 10,
+            "disk_space_mb": 500,
+            "network_bandwidth_kbps": 56,
         }
 
         # 制約下での最適化
-        if constraints['memory_limit_mb'] < 1024:
+        if constraints["memory_limit_mb"] < 1024:
             # メモリ最適化モード
-            optimization_level = 'aggressive'
+            optimization_level = "aggressive"
         else:
-            optimization_level = 'normal'
+            optimization_level = "normal"
 
-        assert optimization_level in ['aggressive', 'normal']
+        assert optimization_level in ["aggressive", "normal"]
 
     def test_extreme_volatility_regimes(self):
         """極端なボラティリティレジームのテスト"""
         # ボラティリティの極端な値
         volatility_scenarios = [
-            {'volatility': 0.001, 'description': '極低ボラ (0.1%)'},
-            {'volatility': 5.0, 'description': '極高ボラ (500%)'},
-            {'volatility': 0.0, 'description': 'ゼロボラ'}
+            {"volatility": 0.001, "description": "極低ボラ (0.1%)"},
+            {"volatility": 5.0, "description": "極高ボラ (500%)"},
+            {"volatility": 0.0, "description": "ゼロボラ"},
         ]
 
         for scenario in volatility_scenarios:
-            if scenario['volatility'] == 0.0:
+            if scenario["volatility"] == 0.0:
                 # ゼロボラ対応
                 risk_adjustment = 0.01  # 最小リスク
-            elif scenario['volatility'] > 1.0:
+            elif scenario["volatility"] > 1.0:
                 # 高ボラ対応
-                risk_adjustment = 1.0 / scenario['volatility']  # ボラ逆数
+                risk_adjustment = 1.0 / scenario["volatility"]  # ボラ逆数
             else:
                 risk_adjustment = 1.0
 
@@ -338,20 +352,20 @@ class TestEdgeCasesThorough:
         """相関の極端なケーステスト"""
         # 相関行列
         correlation_scenarios = [
-            {'correlation': 1.0, 'description': '完全正相関'},
-            {'correlation': -1.0, 'description': '完全負相関'},
-            {'correlation': 0.0, 'description': '無相関'}
+            {"correlation": 1.0, "description": "完全正相関"},
+            {"correlation": -1.0, "description": "完全負相関"},
+            {"correlation": 0.0, "description": "無相関"},
         ]
 
         for scenario in correlation_scenarios:
-            if abs(scenario['correlation']) == 1.0:
+            if abs(scenario["correlation"]) == 1.0:
                 # 完全相関時の対応
                 diversification = 0.0  # 分散効果なし
-            elif scenario['correlation'] == 0.0:
+            elif scenario["correlation"] == 0.0:
                 # 無相関
                 diversification = 1.0  # 最大分散効果
             else:
-                diversification = 1 - abs(scenario['correlation'])
+                diversification = 1 - abs(scenario["correlation"])
 
             assert 0.0 <= diversification <= 1.0
 
@@ -359,16 +373,16 @@ class TestEdgeCasesThorough:
         """流動性の極端なケーステスト"""
         # 流動性シナリオ
         liquidity_scenarios = [
-            {'spread': 0.0001, 'volume': 1000000, 'description': '高流動性'},
-            {'spread': 10.0, 'volume': 1, 'description': '低流動性'},
-            {'spread': float('inf'), 'volume': 0, 'description': '流動性枯渇'}
+            {"spread": 0.0001, "volume": 1000000, "description": "高流動性"},
+            {"spread": 10.0, "volume": 1, "description": "低流動性"},
+            {"spread": float("inf"), "volume": 0, "description": "流動性枯渇"},
         ]
 
         for scenario in liquidity_scenarios:
-            if scenario['volume'] == 0:
+            if scenario["volume"] == 0:
                 # 流動性枯渇
                 trading_allowed = False
-            elif scenario['spread'] > 1.0:
+            elif scenario["spread"] > 1.0:
                 # 高スプレッド
                 trading_allowed = False
             else:
@@ -380,20 +394,20 @@ class TestEdgeCasesThorough:
         """市場休場シナリオのテスト"""
         # 市場状態
         market_states = [
-            {'status': 'open', 'hours': 'normal'},
-            {'status': 'closed', 'reason': 'weekend'},
-            {'status': 'closed', 'reason': 'holiday'},
-            {'status': 'closed', 'reason': 'crisis'}
+            {"status": "open", "hours": "normal"},
+            {"status": "closed", "reason": "weekend"},
+            {"status": "closed", "reason": "holiday"},
+            {"status": "closed", "reason": "crisis"},
         ]
 
         for state in market_states:
-            if state['status'] == 'closed':
+            if state["status"] == "closed":
                 # 休場中の処理
                 trading_enabled = False
-                risk_calculation = 'suspended'
+                risk_calculation = "suspended"
             else:
                 trading_enabled = True
-                risk_calculation = 'active'
+                risk_calculation = "active"
 
             assert isinstance(trading_enabled, bool)
 
@@ -401,21 +415,21 @@ class TestEdgeCasesThorough:
         """データ損傷シナリオのテスト"""
         # 損傷の種類
         corruption_types = [
-            'missing_values',
-            'outliers',
-            'format_errors',
-            'timing_errors',
-            'duplicate_records'
+            "missing_values",
+            "outliers",
+            "format_errors",
+            "timing_errors",
+            "duplicate_records",
         ]
 
         for corruption in corruption_types:
             # 損傷検出と修復
-            if corruption == 'missing_values':
-                imputation_method = 'forward_fill'
-            elif corruption == 'outliers':
-                outlier_method = 'iqr_removal'
-            elif corruption == 'format_errors':
-                validation_method = 'schema_check'
+            if corruption == "missing_values":
+                imputation_method = "forward_fill"
+            elif corruption == "outliers":
+                outlier_method = "iqr_removal"
+            elif corruption == "format_errors":
+                validation_method = "schema_check"
 
             assert True  # 対応策が存在
 
@@ -423,22 +437,22 @@ class TestEdgeCasesThorough:
         """最終エッジケース検証"""
         # すべてのエッジケースがカバー
         edge_categories = [
-            'extreme_market',
-            'extreme_parameters',
-            'boundary_conditions',
-            'overflow_underflow',
-            'empty_null_data',
-            'large_small_data',
-            'concurrent_access',
-            'time_series',
-            'precision_limits',
-            'network_latency',
-            'resource_constraints',
-            'volatility_extremes',
-            'correlation_extremes',
-            'liquidity_extremes',
-            'market_closure',
-            'data_corruption'
+            "extreme_market",
+            "extreme_parameters",
+            "boundary_conditions",
+            "overflow_underflow",
+            "empty_null_data",
+            "large_small_data",
+            "concurrent_access",
+            "time_series",
+            "precision_limits",
+            "network_latency",
+            "resource_constraints",
+            "volatility_extremes",
+            "correlation_extremes",
+            "liquidity_extremes",
+            "market_closure",
+            "data_corruption",
         ]
 
         for category in edge_categories:

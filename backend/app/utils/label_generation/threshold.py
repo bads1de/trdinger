@@ -16,6 +16,7 @@ from .enums import ThresholdMethod
 
 logger = logging.getLogger(__name__)
 
+
 class ThresholdCalculator:
     """
     閾値計算クラス

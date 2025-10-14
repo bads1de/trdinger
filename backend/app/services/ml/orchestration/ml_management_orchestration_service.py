@@ -408,9 +408,7 @@ class MLManagementOrchestrationService:
                     if feature_importance:
                         # 重要度でソートして上位N個を返す
                         sorted_features = sorted(
-                            feature_importance.items(),
-                            key=lambda x: x[1],
-                            reverse=True
+                            feature_importance.items(), key=lambda x: x[1], reverse=True
                         )[:top_n]
 
                         return {"feature_importance": dict(sorted_features)}
@@ -459,7 +457,9 @@ class MLManagementOrchestrationService:
                 }
 
             # MLオーケストレーター削除により、直接モデルマネージャーで読み込み
-            success = True  # モデルマネージャーは既にモデルを管理しているので成功とみなす
+            success = (
+                True  # モデルマネージャーは既にモデルを管理しているので成功とみなす
+            )
 
             if success:
                 # 現在のモデル情報を取得

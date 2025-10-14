@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from backend.app.services.auto_strategy.generators.condition_generator import (
     ConditionGenerator,
-    GAConditionGenerator
+    GAConditionGenerator,
 )
 from backend.app.services.auto_strategy.models.strategy_models import IndicatorGene
 
@@ -13,7 +13,9 @@ class TestConditionGenerator:
 
     def test_ema_long_condition_right_operand_is_close(self):
         """EMAのロング条件生成でright_operandが"close"であることをテスト"""
-        ema_indicator = IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)
+        ema_indicator = IndicatorGene(
+            type="EMA", parameters={"period": 20}, enabled=True
+        )
 
         long_conditions = self.generator._create_trend_long_conditions(ema_indicator)
 
@@ -25,7 +27,9 @@ class TestConditionGenerator:
 
     def test_ema_short_condition_right_operand_is_close(self):
         """EMAのショート条件生成でright_operandが"close"であることをテスト"""
-        ema_indicator = IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)
+        ema_indicator = IndicatorGene(
+            type="EMA", parameters={"period": 20}, enabled=True
+        )
 
         short_conditions = self.generator._create_trend_short_conditions(ema_indicator)
 
@@ -37,7 +41,9 @@ class TestConditionGenerator:
 
     def test_sma_long_condition_uses_threshold_fallback(self):
         """SMAのロング条件生成でthresholdがない場合fallbackを使うことをテスト"""
-        sma_indicator = IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+        sma_indicator = IndicatorGene(
+            type="SMA", parameters={"period": 20}, enabled=True
+        )
 
         long_conditions = self.generator._create_trend_long_conditions(sma_indicator)
 
@@ -49,8 +55,12 @@ class TestConditionGenerator:
 
     def test_generate_balanced_conditions_success(self):
         """正常な指標リストで条件生成が成功することをテスト"""
-        indicators = [IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)]
-        long_conditions, short_conditions, exit_conditions = self.generator.generate_balanced_conditions(indicators)
+        indicators = [
+            IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)
+        ]
+        long_conditions, short_conditions, exit_conditions = (
+            self.generator.generate_balanced_conditions(indicators)
+        )
 
         assert isinstance(long_conditions, list)
         assert isinstance(short_conditions, list)
@@ -58,9 +68,13 @@ class TestConditionGenerator:
 
     def test_generate_balanced_conditions_raises_exception_on_error(self):
         """YAML設定読み込みでエラーが発生した場合に例外を投げることをテスト"""
-        indicators = [IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)]
+        indicators = [
+            IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)
+        ]
 
-        with patch('backend.app.services.auto_strategy.generators.condition_generator.YamlIndicatorUtils.load_yaml_config_for_indicators') as mock_load:
+        with patch(
+            "backend.app.services.auto_strategy.generators.condition_generator.YamlIndicatorUtils.load_yaml_config_for_indicators"
+        ) as mock_load:
             mock_load.side_effect = Exception("YAML読み込みエラー")
 
             # コンストラクタで失敗するので新しいインスタンスを作成
@@ -75,8 +89,7 @@ class TestGAConditionGenerator:
         """各テストメソッドの前処理"""
         self.mock_backtest_service = MagicMock()
         self.generator = GAConditionGenerator(
-            use_hierarchical_ga=True,
-            backtest_service=self.mock_backtest_service
+            use_hierarchical_ga=True, backtest_service=self.mock_backtest_service
         )
 
     def test_initialization_with_hierarchical_ga_enabled(self):
@@ -99,8 +112,14 @@ class TestGAConditionGenerator:
 
     def test_ga_components_initialization_success(self):
         """GAコンポーネント初期化が成功することをテスト"""
-        with patch('backend.app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils') as mock_utils, \
-             patch('backend.app.services.auto_strategy.generators.condition_generator.ConditionEvolver') as mock_evolver:
+        with (
+            patch(
+                "backend.app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils"
+            ) as mock_utils,
+            patch(
+                "backend.app.services.auto_strategy.generators.condition_generator.ConditionEvolver"
+            ) as mock_evolver,
+        ):
 
             mock_yaml_utils = MagicMock()
             mock_utils.return_value = mock_yaml_utils
@@ -122,7 +141,9 @@ class TestGAConditionGenerator:
 
     def test_ga_components_initialization_missing_yaml_file(self):
         """YAMLファイルが存在しない場合の初期化をテスト"""
-        with patch('backend.app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils') as mock_utils:
+        with patch(
+            "backend.app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils"
+        ) as mock_utils:
             mock_utils.side_effect = FileNotFoundError("ファイルが見つかりません")
 
             result = self.generator.initialize_ga_components()
@@ -131,9 +152,11 @@ class TestGAConditionGenerator:
     def test_generate_hierarchical_ga_conditions_with_ga_disabled(self):
         """階層的GAが無効の場合の条件生成をテスト"""
         generator = GAConditionGenerator(use_hierarchical_ga=False)
-        indicators = [IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)]
+        indicators = [
+            IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)
+        ]
 
-        with patch.object(generator, 'generate_balanced_conditions') as mock_fallback:
+        with patch.object(generator, "generate_balanced_conditions") as mock_fallback:
             mock_fallback.return_value = ([], [], [])
 
             result = generator.generate_hierarchical_ga_conditions(indicators)
@@ -144,10 +167,14 @@ class TestGAConditionGenerator:
     def test_generate_hierarchical_ga_conditions_ga_initialization_failure(self):
         """GA初期化失敗時のフォールバックをテスト"""
         generator = GAConditionGenerator(use_hierarchical_ga=True)
-        indicators = [IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)]
+        indicators = [
+            IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)
+        ]
 
-        with patch.object(generator, 'initialize_ga_components', return_value=False), \
-             patch.object(generator, 'generate_balanced_conditions') as mock_fallback:
+        with (
+            patch.object(generator, "initialize_ga_components", return_value=False),
+            patch.object(generator, "generate_balanced_conditions") as mock_fallback,
+        ):
             mock_fallback.return_value = ([], [], [])
 
             result = generator.generate_hierarchical_ga_conditions(indicators)
@@ -159,11 +186,13 @@ class TestGAConditionGenerator:
         """階層的GA条件生成が成功することをテスト"""
         indicators = [
             IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True),
-            IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
+            IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True),
         ]
 
-        with patch.object(self.generator, 'initialize_ga_components', return_value=True), \
-             patch.object(self.generator, 'condition_evolver') as mock_evolver:
+        with (
+            patch.object(self.generator, "initialize_ga_components", return_value=True),
+            patch.object(self.generator, "condition_evolver") as mock_evolver,
+        ):
 
             # Mock ConditionEvolverの戻り値
             mock_condition = MagicMock()
@@ -171,13 +200,15 @@ class TestGAConditionGenerator:
             mock_evolver.run_evolution.return_value = {
                 "best_condition": mock_condition,
                 "best_fitness": 0.8,
-                "generations_completed": 10
+                "generations_completed": 10,
             }
 
             result = self.generator.generate_hierarchical_ga_conditions(indicators)
 
             # 結果が返されることを確認
-            assert len(result) == 3  # (long_conditions, short_conditions, exit_conditions)
+            assert (
+                len(result) == 3
+            )  # (long_conditions, short_conditions, exit_conditions)
             long_conditions, short_conditions, exit_conditions = result
             assert isinstance(long_conditions, list)
             assert isinstance(short_conditions, list)
@@ -185,11 +216,17 @@ class TestGAConditionGenerator:
 
     def test_generate_hierarchical_ga_conditions_evolution_failure(self):
         """GA進化失敗時のフォールバックをテスト"""
-        indicators = [IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)]
+        indicators = [
+            IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True)
+        ]
 
-        with patch.object(self.generator, 'initialize_ga_components', return_value=True), \
-             patch.object(self.generator, 'condition_evolver') as mock_evolver, \
-             patch.object(self.generator, 'generate_balanced_conditions') as mock_fallback:
+        with (
+            patch.object(self.generator, "initialize_ga_components", return_value=True),
+            patch.object(self.generator, "condition_evolver") as mock_evolver,
+            patch.object(
+                self.generator, "generate_balanced_conditions"
+            ) as mock_fallback,
+        ):
 
             mock_evolver.run_evolution.return_value = None  # 失敗をシミュレート
             mock_fallback.return_value = ([MagicMock()], [MagicMock()], [])
@@ -202,10 +239,7 @@ class TestGAConditionGenerator:
     def test_set_ga_config(self):
         """GA設定更新機能をテスト"""
         self.generator.set_ga_config(
-            population_size=30,
-            generations=15,
-            crossover_rate=0.9,
-            mutation_rate=0.1
+            population_size=30, generations=15, crossover_rate=0.9, mutation_rate=0.1
         )
 
         assert self.generator.ga_config["population_size"] == 30
@@ -228,17 +262,21 @@ class TestGAConditionGenerator:
         indicator = IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
         backtest_config = {"symbol": "BTC/USDT:USDT"}
 
-        with patch.object(self.generator, 'initialize_ga_components', return_value=True), \
-             patch.object(self.generator, 'condition_evolver') as mock_evolver:
+        with (
+            patch.object(self.generator, "initialize_ga_components", return_value=True),
+            patch.object(self.generator, "condition_evolver") as mock_evolver,
+        ):
 
             mock_condition = MagicMock()
             mock_condition.direction = "long"
             mock_evolver.run_evolution.return_value = {
                 "best_condition": mock_condition,
-                "best_fitness": 0.7
+                "best_fitness": 0.7,
             }
 
-            result = self.generator.optimize_single_condition(indicator, "long", backtest_config)
+            result = self.generator.optimize_single_condition(
+                indicator, "long", backtest_config
+            )
 
             assert result == mock_condition
             mock_evolver.run_evolution.assert_called_once()
@@ -258,17 +296,21 @@ class TestGAConditionGenerator:
         indicator = IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
         backtest_config = {"symbol": "BTC/USDT:USDT"}
 
-        with patch.object(self.generator, 'initialize_ga_components', return_value=True), \
-             patch.object(self.generator, 'condition_evolver') as mock_evolver:
+        with (
+            patch.object(self.generator, "initialize_ga_components", return_value=True),
+            patch.object(self.generator, "condition_evolver") as mock_evolver,
+        ):
 
             mock_condition = MagicMock()
             mock_condition.direction = "short"  # 要求された方向と異なる
             mock_evolver.run_evolution.return_value = {
                 "best_condition": mock_condition,
-                "best_fitness": 0.7
+                "best_fitness": 0.7,
             }
 
-            result = self.generator.optimize_single_condition(indicator, "long", backtest_config)
+            result = self.generator.optimize_single_condition(
+                indicator, "long", backtest_config
+            )
 
             assert result is None  # 方向が一致しないためNoneを返す
 
@@ -277,11 +319,15 @@ class TestGAConditionGenerator:
         indicator = IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
         backtest_config = {"symbol": "BTC/USDT:USDT"}
 
-        with patch.object(self.generator, 'initialize_ga_components', return_value=True), \
-             patch.object(self.generator, 'condition_evolver') as mock_evolver:
+        with (
+            patch.object(self.generator, "initialize_ga_components", return_value=True),
+            patch.object(self.generator, "condition_evolver") as mock_evolver,
+        ):
 
             mock_evolver.run_evolution.side_effect = Exception("進化エラー")
 
-            result = self.generator.optimize_single_condition(indicator, "long", backtest_config)
+            result = self.generator.optimize_single_condition(
+                indicator, "long", backtest_config
+            )
 
             assert result is None  # エラー時はNoneを返す

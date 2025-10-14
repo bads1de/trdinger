@@ -181,9 +181,7 @@ class BacktestDataService:
             )
         except DataIntegrationError as exc:
             logger.error(f"イベントラベル用データ作成エラー: {exc}")
-            raise ValueError(
-                f"イベントラベル付きデータの作成に失敗しました: {exc}"
-            )
+            raise ValueError(f"イベントラベル付きデータの作成に失敗しました: {exc}")
 
         if market_df.empty:
             logger.warning("取得データが空のためイベントラベリングをスキップします")

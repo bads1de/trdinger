@@ -105,9 +105,7 @@ class StrategyFactory:
                 """単一指標の初期化"""
                 try:
                     # 指標計算器を使用して初期化
-                    factory.indicator_calculator.init_indicator(
-                        indicator_gene, self
-                    )
+                    factory.indicator_calculator.init_indicator(indicator_gene, self)
                 except Exception as e:
                     logger.error(
                         f"指標初期化エラー {indicator_gene.type}: {e}", exc_info=True
@@ -301,4 +299,3 @@ class StrategyFactory:
         except Exception as e:
             logger.error(f"遺伝子検証エラー: {e}")
             return False, [f"検証エラー: {str(e)}"]
-

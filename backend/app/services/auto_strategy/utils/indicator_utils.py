@@ -72,8 +72,6 @@ def get_all_indicators() -> List[str]:
     return ordered
 
 
-
-
 def get_all_indicator_ids() -> Dict[str, int]:
     """
     全指標のIDマッピングを取得（統合版）
@@ -83,9 +81,7 @@ def get_all_indicator_ids() -> Dict[str, int]:
     """
     try:
         indicator_service = TechnicalIndicatorService()
-        technical_indicators = list(
-            indicator_service.get_supported_indicators().keys()
-        )
+        technical_indicators = list(indicator_service.get_supported_indicators().keys())
 
         # IDマッピングを作成（空文字列は0、その他は1から開始）
         return {"": 0, **{ind: i + 1 for i, ind in enumerate(technical_indicators)}}

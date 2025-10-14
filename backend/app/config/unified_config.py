@@ -69,8 +69,6 @@ class LoggingConfig(BaseSettings):
         extra = "ignore"
 
 
-
-
 class MarketConfig(BaseSettings):
     """市場データ設定"""
 
@@ -225,6 +223,7 @@ class AutoStrategyConfig(BaseSettings):
 class GAConfig(BaseSettings):
     """遺伝的アルゴリズム設定"""
 
+    # 基本設定
     fallback_symbol: str = Field(default="BTC/USDT", alias="GA_FALLBACK_SYMBOL")
     fallback_timeframe: str = Field(default="1d", alias="GA_FALLBACK_TIMEFRAME")
     fallback_start_date: str = Field(
@@ -237,6 +236,32 @@ class GAConfig(BaseSettings):
     fallback_commission_rate: float = Field(
         default=0.001, alias="GA_FALLBACK_COMMISSION_RATE"
     )
+
+    # GAパラメータ
+    population_size: int = Field(default=50, alias="GA_POPULATION_SIZE")
+    generations: int = Field(default=20, alias="GA_GENERATIONS")
+    crossover_rate: float = Field(default=0.8, alias="GA_CROSSOVER_RATE")
+    mutation_rate: float = Field(default=0.1, alias="GA_MUTATION_RATE")
+    elite_size: int = Field(default=5, alias="GA_ELITE_SIZE")
+
+    # 多目的最適化
+    enable_multi_objective: bool = Field(
+        default=False, alias="GA_ENABLE_MULTI_OBJECTIVE"
+    )
+    objectives: List[str] = Field(default=["total_return"], alias="GA_OBJECTIVES")
+    objective_weights: List[float] = Field(default=[1.0], alias="GA_OBJECTIVE_WEIGHTS")
+
+    # その他設定
+    max_indicators: int = Field(default=5, alias="GA_MAX_INDICATORS")
+    allowed_indicators: List[str] = Field(
+        default=["SMA", "EMA", "RSI", "MACD", "BB", "ATR"],
+        alias="GA_ALLOWED_INDICATORS",
+    )
+    enable_fitness_sharing: bool = Field(
+        default=False, alias="GA_ENABLE_FITNESS_SHARING"
+    )
+    sharing_radius: float = Field(default=0.1, alias="GA_SHARING_RADIUS")
+    sharing_alpha: float = Field(default=1.0, alias="GA_SHARING_ALPHA")
 
     class Config:
         env_prefix = "GA_"

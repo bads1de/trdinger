@@ -1,6 +1,7 @@
 """
 GAエンジンの包括的テスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import numpy as np
@@ -8,14 +9,20 @@ from deap import base, creator, tools
 
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.models.strategy_models import StrategyGene, IndicatorGene, Condition
+from app.services.auto_strategy.models.strategy_models import (
+    StrategyGene,
+    IndicatorGene,
+    Condition,
+)
 from app.services.auto_strategy.core.genetic_operators import (
     crossover_strategy_genes_pure,
     mutate_strategy_gene_pure,
     create_deap_crossover_wrapper,
     create_deap_mutate_wrapper,
 )
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
 
 
 class TestGACoreComprehensive:
@@ -29,7 +36,7 @@ class TestGACoreComprehensive:
             generations=5,
             crossover_rate=0.8,
             mutation_rate=0.1,
-            elite_size=2
+            elite_size=2,
         )
 
     @pytest.fixture
@@ -41,10 +48,18 @@ class TestGACoreComprehensive:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            exit_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
-            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
+            entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            exit_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
             risk_management={"position_size": 0.1},
             metadata={"test": True},
         )
@@ -62,7 +77,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         assert engine.config == config
@@ -83,18 +98,18 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # ツールボックスが正しくセットアップされる
-        assert hasattr(engine.toolbox, 'register')
-        assert hasattr(engine.toolbox, 'select')
-        assert hasattr(engine.toolbox, 'evaluate')
+        assert hasattr(engine.toolbox, "register")
+        assert hasattr(engine.toolbox, "select")
+        assert hasattr(engine.toolbox, "evaluate")
 
         # 遺伝的演算子が登録されている
-        assert hasattr(engine.toolbox, 'mate')
-        assert hasattr(engine.toolbox, 'mutate')
-        assert hasattr(engine.toolbox, 'select')
+        assert hasattr(engine.toolbox, "mate")
+        assert hasattr(engine.toolbox, "mutate")
+        assert hasattr(engine.toolbox, "select")
 
     def test_population_diversity_maintenance(self, config, sample_strategy_gene):
         """個体群の多様性維持テスト"""
@@ -108,14 +123,14 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 遺伝子を複製して多様性のない個体群を作成
         population = [sample_strategy_gene for _ in range(5)]
 
         # 多様性が低いと警告が発生するかテスト
-        with patch.object(engine, '_log_diversity_warning') as mock_log:
+        with patch.object(engine, "_log_diversity_warning") as mock_log:
             engine._check_population_diversity(population)
             mock_log.assert_called_once()
 
@@ -131,14 +146,28 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 遺伝子を作成
-        gene1 = StrategyGene(id="gene1", indicators=[], entry_conditions=[], exit_conditions=[],
-                         long_entry_conditions=[], short_entry_conditions=[], risk_management={})
-        gene2 = StrategyGene(id="gene2", indicators=[], entry_conditions=[], exit_conditions=[],
-                         long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene1 = StrategyGene(
+            id="gene1",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
+        gene2 = StrategyGene(
+            id="gene2",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
 
         # DEAP個体を作成
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -173,15 +202,22 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 同じフィットネスの個体群
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="gene", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="gene",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
 
         population = []
         for i in range(10):
@@ -213,7 +249,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 初期パラメータ
@@ -226,8 +262,15 @@ class TestGACoreComprehensive:
 
         high_variance_pop = []
         for i in range(10):
-            gene = StrategyGene(id=f"gene{i}", indicators=[], entry_conditions=[], exit_conditions=[],
-                           long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            gene = StrategyGene(
+                id=f"gene{i}",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             ind = creator.Individual([gene])
             ind.fitness.values = (i * 0.2,)  # 分散が高い
             high_variance_pop.append(ind)
@@ -241,8 +284,15 @@ class TestGACoreComprehensive:
         # 低分散の個体群（収束している）
         low_variance_pop = []
         for i in range(10):
-            gene = StrategyGene(id=f"gene{i}", indicators=[], entry_conditions=[], exit_conditions=[],
-                           long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            gene = StrategyGene(
+                id=f"gene{i}",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             ind = creator.Individual([gene])
             ind.fitness.values = (1.0 + i * 0.001,)  # 分散が低い
             low_variance_pop.append(ind)
@@ -265,7 +315,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 無効な遺伝子でテスト
@@ -292,7 +342,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 空の個体群
@@ -301,8 +351,15 @@ class TestGACoreComprehensive:
         assert result == []
 
         # 1個体だけ
-        single_gene = StrategyGene(id="single", indicators=[], entry_conditions=[], exit_conditions=[],
-                              long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        single_gene = StrategyGene(
+            id="single",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         single_pop = [single_gene]
 
         # 1個体でも処理できるか
@@ -321,7 +378,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 突然変異率が0.01-1.0の範囲内に収まっているか
@@ -344,7 +401,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
@@ -356,12 +413,16 @@ class TestGACoreComprehensive:
         gene2 = StrategyGene(
             id="gene2",
             indicators=[IndicatorGene(type="RSI", parameters={"period": 14})],
-            entry_conditions=[Condition(left_operand="rsi", operator="<", right_operand="30")],
-            exit_conditions=[Condition(left_operand="rsi", operator=">", right_operand="70")],
+            entry_conditions=[
+                Condition(left_operand="rsi", operator="<", right_operand="30")
+            ],
+            exit_conditions=[
+                Condition(left_operand="rsi", operator=">", right_operand="70")
+            ],
             long_entry_conditions=[],
             short_entry_conditions=[],
             risk_management={"position_size": 0.2},
-            metadata={}
+            metadata={},
         )
 
         ind1 = creator.Individual([gene1])
@@ -396,18 +457,40 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # ランダム遺伝子生成器のモック
-        with patch('app.services.auto_strategy.core.ga_engine.RandomGeneGenerator') as MockGenerator:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.RandomGeneGenerator"
+        ) as MockGenerator:
             mock_generator = Mock()
             # 多様な遺伝子を返すように設定
-            mock_gene1 = StrategyGene(id="gene1", indicators=[], entry_conditions=[], exit_conditions=[],
-                                long_entry_conditions=[], short_entry_conditions=[], risk_management={})
-            mock_gene2 = StrategyGene(id="gene2", indicators=[], entry_conditions=[], exit_conditions=[],
-                                long_entry_conditions=[], short_entry_conditions=[], risk_management={})
-            mock_generator.generate_random_gene.side_effect = [mock_gene1, mock_gene2, mock_gene1, mock_gene2, mock_gene1]
+            mock_gene1 = StrategyGene(
+                id="gene1",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
+            mock_gene2 = StrategyGene(
+                id="gene2",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
+            mock_generator.generate_random_gene.side_effect = [
+                mock_gene1,
+                mock_gene2,
+                mock_gene1,
+                mock_gene2,
+                mock_gene1,
+            ]
 
             MockGenerator.return_value = mock_generator
 
@@ -429,7 +512,7 @@ class TestGACoreComprehensive:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -440,15 +523,22 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="test",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         individual = creator.Individual([gene])
 
         # フィットネス計算
@@ -472,7 +562,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 並列評価が有効な場合
@@ -482,15 +572,22 @@ class TestGACoreComprehensive:
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="test",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         individual = creator.Individual([gene])
         individual.fitness.values = (1.0,)
 
         population = [individual]
 
         # 並列評価が正しく動作するか
-        with patch('multiprocessing.Pool') as mock_pool:
+        with patch("multiprocessing.Pool") as mock_pool:
             mock_pool.return_value.__enter__.return_value.map.return_value = [(1.0,)]
 
             # 並列評価が可能か確認
@@ -518,7 +615,7 @@ class TestGACoreComprehensive:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -529,20 +626,30 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # メモリ効率の良い初期化
-        with patch('app.services.auto_strategy.core.ga_engine.RandomGeneGenerator') as MockGenerator:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.RandomGeneGenerator"
+        ) as MockGenerator:
             mock_generator = Mock()
-            mock_gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                                long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            mock_gene = StrategyGene(
+                id="test",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             mock_generator.generate_random_gene.return_value = mock_gene
 
             MockGenerator.return_value = mock_generator
 
             # 大規模個体群の初期化
             import gc
+
             initial_memory = len(gc.get_objects())
             population = engine._initialize_population()
             gc.collect()
@@ -561,7 +668,7 @@ class TestGACoreComprehensive:
             generations=5,
             crossover_rate=0.8,
             mutation_rate=0.1,
-            elite_size=2
+            elite_size=2,
         )
 
         mock_backtest_service = Mock()
@@ -575,7 +682,7 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 内部で有効な値に修正される
@@ -596,15 +703,22 @@ class TestGACoreComprehensive:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="test",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         individual = creator.Individual([gene])
 
         # バックテスト失敗時のフォールバック

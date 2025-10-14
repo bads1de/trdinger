@@ -13,7 +13,7 @@ from app.services.auto_strategy.core.condition_evolver import (
     ConditionEvolver,
     YamlIndicatorUtils,
     Condition,
-    EvolutionConfig
+    EvolutionConfig,
 )
 from app.services.backtest.backtest_service import BacktestService
 from scripts.strategy_comparison import StrategyComparison
@@ -33,8 +33,8 @@ class TestConditionEvolverIntegration:
                 "sharpe_ratio": 1.5,
                 "max_drawdown": -0.08,
                 "total_trades": 25,
-                "win_rate": 0.60
-            }
+                "win_rate": 0.60,
+            },
         }
         return mock_service
 
@@ -48,7 +48,7 @@ class TestConditionEvolverIntegration:
         """ConditionEvolverインスタンス"""
         return ConditionEvolver(
             backtest_service=mock_backtest_service,
-            yaml_indicator_utils=yaml_indicator_utils
+            yaml_indicator_utils=yaml_indicator_utils,
         )
 
     def test_strategy_comparison_initialization(self, condition_evolver):
@@ -67,15 +67,12 @@ class TestConditionEvolverIntegration:
             "start_date": datetime.now() - timedelta(days=30),
             "end_date": datetime.now(),
             "initial_capital": 100000,
-            "commission_rate": 0.001
+            "commission_rate": 0.001,
         }
 
         # 条件の作成
         condition = Condition(
-            indicator_name="RSI",
-            operator=">",
-            threshold=70.0,
-            direction="long"
+            indicator_name="RSI", operator=">", threshold=70.0, direction="long"
         )
 
         # 適応度評価
@@ -91,7 +88,7 @@ class TestConditionEvolverIntegration:
         conditions = [
             Condition("RSI", ">", 70.0, "long"),
             Condition("MACD", ">", 0.0, "long"),
-            Condition("SMA", "<", 0.0, "short")
+            Condition("SMA", "<", 0.0, "short"),
         ]
 
         backtest_config = {
@@ -101,7 +98,7 @@ class TestConditionEvolverIntegration:
             "start_date": datetime.now() - timedelta(days=30),
             "end_date": datetime.now(),
             "initial_capital": 100000,
-            "commission_rate": 0.001
+            "commission_rate": 0.001,
         }
 
         # 各戦略の適応度を評価
@@ -112,7 +109,9 @@ class TestConditionEvolverIntegration:
 
         assert len(fitness_scores) == len(conditions)
         assert all(isinstance(f, float) for f in fitness_scores)
-        assert condition_evolver.backtest_service.run_backtest.call_count == len(conditions)
+        assert condition_evolver.backtest_service.run_backtest.call_count == len(
+            conditions
+        )
 
     def test_statistical_comparison_calculation(self, condition_evolver):
         """統計比較計算テスト"""
@@ -123,15 +122,15 @@ class TestConditionEvolverIntegration:
                 "sharpe_ratio": 1.5,
                 "max_drawdown": -0.08,
                 "win_rate": 0.60,
-                "total_trades": 25
+                "total_trades": 25,
             },
             {
                 "total_return": 0.12,
                 "sharpe_ratio": 1.2,
                 "max_drawdown": -0.10,
                 "win_rate": 0.55,
-                "total_trades": 22
-            }
+                "total_trades": 22,
+            },
         ]
 
         # 統計比較の計算
@@ -152,15 +151,15 @@ class TestConditionEvolverIntegration:
                 "sharpe_ratio": 1.5,
                 "max_drawdown": -0.08,
                 "win_rate": 0.60,
-                "total_trades": 25
+                "total_trades": 25,
             },
             "Random_Strategy": {
                 "total_return": 0.12,
                 "sharpe_ratio": 1.2,
                 "max_drawdown": -0.10,
                 "win_rate": 0.55,
-                "total_trades": 22
-            }
+                "total_trades": 22,
+            },
         }
 
         # レポート生成（HTML形式）
@@ -172,7 +171,7 @@ class TestConditionEvolverIntegration:
         # HTML内の日本語文字がエンコードされるため、英語の文字列でテスト
         assert "Strategy" in report_html
         assert "0.15" in report_html  # GA戦略のtotal_return値
-        assert "1.5" in report_html   # GA戦略のsharpe_ratio値
+        assert "1.5" in report_html  # GA戦略のsharpe_ratio値
 
     def _calculate_comparison_stats(self, results: list) -> Dict[str, Any]:
         """統計比較計算（ヘルパーメソッド）"""
@@ -188,7 +187,7 @@ class TestConditionEvolverIntegration:
                 "std": df[column].std(),
                 "min": df[column].min(),
                 "max": df[column].max(),
-                "median": df[column].median()
+                "median": df[column].median(),
             }
 
         return stats
@@ -285,15 +284,15 @@ class TestConditionEvolverIntegrationAdvanced:
                 "sharpe_ratio": 1.5,
                 "max_drawdown": -0.08,
                 "win_rate": 0.60,
-                "total_trades": 25
+                "total_trades": 25,
             },
             {
                 "total_return": 0.18,
                 "sharpe_ratio": 1.8,
                 "max_drawdown": -0.06,
                 "win_rate": 0.65,
-                "total_trades": 28
-            }
+                "total_trades": 28,
+            },
         ]
 
         mock_random_results = [
@@ -302,22 +301,24 @@ class TestConditionEvolverIntegrationAdvanced:
                 "sharpe_ratio": 1.2,
                 "max_drawdown": -0.10,
                 "win_rate": 0.55,
-                "total_trades": 22
+                "total_trades": 22,
             },
             {
                 "total_return": 0.10,
                 "sharpe_ratio": 1.0,
                 "max_drawdown": -0.12,
                 "win_rate": 0.50,
-                "total_trades": 20
-            }
+                "total_trades": 20,
+            },
         ]
 
         # 分析実行
         comparison = StrategyComparison()
 
         # モックデータを直接使用してテスト
-        analysis = comparison._analyze_comparison_results(mock_ga_results, mock_random_results)
+        analysis = comparison._analyze_comparison_results(
+            mock_ga_results, mock_random_results
+        )
 
         # 結果検証
         assert "ga_statistics" in analysis
@@ -383,14 +384,14 @@ class TestConditionEvolverIntegrationAdvanced:
 
         stats = {}
         for column in df.columns:
-            if df[column].dtype in ['int64', 'float64']:
+            if df[column].dtype in ["int64", "float64"]:
                 stats[column] = {
                     "mean": df[column].mean(),
                     "std": df[column].std(),
                     "min": df[column].min(),
                     "max": df[column].max(),
                     "median": df[column].median(),
-                    "count": df[column].count()
+                    "count": df[column].count(),
                 }
 
         return stats
@@ -408,7 +409,7 @@ class TestIntegrationWorkflow:
             symbols=["BTC/USDT:USDT"],
             timeframes=["1h"],
             num_iterations=3,  # テスト用に少なめに設定
-            initial_capital=100000.0
+            initial_capital=100000.0,
         )
 
         # 結果検証
@@ -419,10 +420,11 @@ class TestIntegrationWorkflow:
 
         # レポートファイルが生成されたことを確認
         import os
+
         assert os.path.exists(result["report_path"])
 
         # レポートの内容を確認
-        with open(result["report_path"], 'r', encoding='utf-8') as f:
+        with open(result["report_path"], "r", encoding="utf-8") as f:
             report_content = f.read()
             assert "GA戦略 vs ランダム戦略" in report_content
             assert "BTC/USDT:USDT" in report_content
@@ -455,7 +457,7 @@ class TestTDDApproach:
         comparison = StrategyComparison()
 
         # 初期状態の検証
-        assert hasattr(comparison, 'results_dir')
+        assert hasattr(comparison, "results_dir")
         assert comparison.results_dir.exists()
 
         print("✅ TDD初期化テスト成功")
@@ -475,8 +477,14 @@ class TestTDDApproach:
         analysis = comparison._analyze_comparison_results(ga_results, random_results)
 
         # 結果検証
-        assert analysis["performance_comparison"]["total_return"]["ga_mean"] == expected_ga_return
-        assert analysis["performance_comparison"]["total_return"]["random_mean"] == expected_random_return
+        assert (
+            analysis["performance_comparison"]["total_return"]["ga_mean"]
+            == expected_ga_return
+        )
+        assert (
+            analysis["performance_comparison"]["total_return"]["random_mean"]
+            == expected_random_return
+        )
         assert analysis["performance_comparison"]["total_return"]["ga_wins"] == True
 
         print("✅ TDDモックデータ分析テスト成功")
@@ -506,7 +514,11 @@ class TestTDDApproach:
     def test_strategy_comparison_tdd_report_generation(self):
         """TDD: レポート生成の検証"""
         # レポート生成の要件
-        required_sections = ["GA戦略 パフォーマンス", "ランダム戦略 パフォーマンス", "統計的検定結果"]
+        required_sections = [
+            "GA戦略 パフォーマンス",
+            "ランダム戦略 パフォーマンス",
+            "統計的検定結果",
+        ]
 
         comparison = StrategyComparison()
 
@@ -516,36 +528,66 @@ class TestTDDApproach:
                 "symbols": ["BTC/USDT:USDT"],
                 "timeframes": ["1h"],
                 "num_iterations": 3,
-                "timestamp": "2025-09-23T08:00:00"
+                "timestamp": "2025-09-23T08:00:00",
             },
             "results": [
                 {
                     "symbol": "BTC/USDT:USDT",
                     "timeframe": "1h",
                     "comparison": {
-                        "ga_statistics": {"total_return": {"mean": 0.15, "std": 0.02, "min": 0.12, "max": 0.18}},
-                        "random_statistics": {"total_return": {"mean": 0.12, "std": 0.03, "min": 0.08, "max": 0.16}},
-                        "statistical_tests": {"total_return": {"t_statistic": 2.5, "p_value": 0.02, "cohens_d": 1.2, "significant": True}},
-                        "performance_comparison": {"total_return": {"ga_mean": 0.15, "random_mean": 0.12, "improvement_percent": 25.0, "ga_wins": True}}
-                    }
+                        "ga_statistics": {
+                            "total_return": {
+                                "mean": 0.15,
+                                "std": 0.02,
+                                "min": 0.12,
+                                "max": 0.18,
+                            }
+                        },
+                        "random_statistics": {
+                            "total_return": {
+                                "mean": 0.12,
+                                "std": 0.03,
+                                "min": 0.08,
+                                "max": 0.16,
+                            }
+                        },
+                        "statistical_tests": {
+                            "total_return": {
+                                "t_statistic": 2.5,
+                                "p_value": 0.02,
+                                "cohens_d": 1.2,
+                                "significant": True,
+                            }
+                        },
+                        "performance_comparison": {
+                            "total_return": {
+                                "ga_mean": 0.15,
+                                "random_mean": 0.12,
+                                "improvement_percent": 25.0,
+                                "ga_wins": True,
+                            }
+                        },
+                    },
                 }
-            ]
+            ],
         }
 
         statistical_summary = {
             "overall_performance": {
                 "ga_average_return": 0.15,
                 "random_average_return": 0.12,
-                "overall_improvement": 25.0
+                "overall_improvement": 25.0,
             }
         }
 
         # レポート生成
-        report_path = comparison._generate_comparison_report(all_results, statistical_summary)
+        report_path = comparison._generate_comparison_report(
+            all_results, statistical_summary
+        )
 
         # 結果検証
         assert report_path.exists()
-        with open(report_path, 'r', encoding='utf-8') as f:
+        with open(report_path, "r", encoding="utf-8") as f:
             report_content = f.read()
 
         # 必須セクションの確認
@@ -570,15 +612,27 @@ class TestTDDApproach:
         # エッジケース2: 単一データポイント
         single_ga = [{"total_return": 0.15}]
         single_random = [{"total_return": 0.12}]
-        single_analysis = comparison._analyze_comparison_results(single_ga, single_random)
+        single_analysis = comparison._analyze_comparison_results(
+            single_ga, single_random
+        )
 
         assert "ga_statistics" in single_analysis
-        assert single_analysis["performance_comparison"]["total_return"]["ga_mean"] == 0.15
-        assert single_analysis["performance_comparison"]["total_return"]["random_mean"] == 0.12
+        assert (
+            single_analysis["performance_comparison"]["total_return"]["ga_mean"] == 0.15
+        )
+        assert (
+            single_analysis["performance_comparison"]["total_return"]["random_mean"]
+            == 0.12
+        )
 
         # エッジケース3: 同一データ
         same_data = [{"total_return": 0.15}, {"total_return": 0.15}]
         same_analysis = comparison._analyze_comparison_results(same_data, same_data)
-        assert same_analysis["performance_comparison"]["total_return"]["improvement_percent"] == 0
+        assert (
+            same_analysis["performance_comparison"]["total_return"][
+                "improvement_percent"
+            ]
+            == 0
+        )
 
         print("✅ TDDエッジケーステスト成功")

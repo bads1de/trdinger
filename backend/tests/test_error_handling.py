@@ -32,7 +32,7 @@ class TestErrorHandler:
             message="テストエラー",
             error_code="TEST_ERROR",
             details={"key": "value"},
-            context="テストコンテキスト"
+            context="テストコンテキスト",
         )
 
         assert isinstance(response, dict)
@@ -45,12 +45,12 @@ class TestErrorHandler:
         """APIエラーハンドリングテスト"""
         error = ValueError("テストエラー")
 
-        with patch('backend.app.utils.error_handler.logger') as mock_logger:
+        with patch("backend.app.utils.error_handler.logger") as mock_logger:
             http_exception = ErrorHandler.handle_api_error(
                 error,
                 context="テストコンテキスト",
                 status_code=400,
-                error_code="TEST_ERROR"
+                error_code="TEST_ERROR",
             )
 
         assert isinstance(http_exception, HTTPException)
@@ -62,11 +62,9 @@ class TestErrorHandler:
         """モデルエラーハンドリングテスト"""
         error = RuntimeError("モデルエラー")
 
-        with patch('backend.app.utils.error_handler.logger') as mock_logger:
+        with patch("backend.app.utils.error_handler.logger") as mock_logger:
             response = ErrorHandler.handle_model_error(
-                error,
-                context="MLコンテキスト",
-                operation="predict"
+                error, context="MLコンテキスト", operation="predict"
             )
 
         assert isinstance(response, dict)
@@ -76,6 +74,7 @@ class TestErrorHandler:
 
     def test_safe_execute_success(self):
         """安全実行成功テスト"""
+
         def test_func():
             return "success"
 
@@ -84,6 +83,7 @@ class TestErrorHandler:
 
     def test_safe_execute_with_exception(self):
         """安全実行例外テスト"""
+
         def test_func():
             raise ValueError("テストエラー")
 
@@ -92,6 +92,7 @@ class TestErrorHandler:
 
     def test_safe_execute_api_call_with_exception(self):
         """API呼び出し時の安全実行例外テスト"""
+
         def test_func():
             raise ValueError("APIエラー")
 
@@ -100,12 +101,13 @@ class TestErrorHandler:
                 test_func,
                 is_api_call=True,
                 api_status_code=400,
-                api_error_code="API_ERROR"
+                api_error_code="API_ERROR",
             )
 
     @pytest.mark.asyncio
     async def test_safe_execute_async_success(self):
         """非同期安全実行成功テスト"""
+
         async def test_func():
             return "async_success"
 
@@ -115,14 +117,15 @@ class TestErrorHandler:
     @pytest.mark.asyncio
     async def test_safe_execute_async_with_exception(self):
         """非同期安全実行例外テスト"""
+
         async def test_func():
             raise ValueError("非同期エラー")
 
         with pytest.raises(HTTPException):
             await ErrorHandler.safe_execute_async(test_func, status_code=400)
 
-    @patch('backend.app.utils.error_handler.platform.system')
-    @patch('backend.app.utils.error_handler.concurrent.futures.ThreadPoolExecutor')
+    @patch("backend.app.utils.error_handler.platform.system")
+    @patch("backend.app.utils.error_handler.concurrent.futures.ThreadPoolExecutor")
     def test_handle_timeout_windows(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト処理テスト"""
         mock_platform.return_value = "Windows"
@@ -133,8 +136,8 @@ class TestErrorHandler:
         result = ErrorHandler.handle_timeout(test_func, 5)
         assert result == "success"
 
-    @patch('backend.app.utils.error_handler.platform.system')
-    @patch('backend.app.utils.error_handler.signal')
+    @patch("backend.app.utils.error_handler.platform.system")
+    @patch("backend.app.utils.error_handler.signal")
     def test_handle_timeout_unix(self, mock_signal, mock_platform):
         """Unixタイムアウト処理テスト"""
         mock_platform.return_value = "Linux"
@@ -145,8 +148,8 @@ class TestErrorHandler:
         result = ErrorHandler.handle_timeout(test_func, 5)
         assert result == "success"
 
-    @patch('backend.app.utils.error_handler.platform.system')
-    @patch('backend.app.utils.error_handler.concurrent.futures.ThreadPoolExecutor')
+    @patch("backend.app.utils.error_handler.platform.system")
+    @patch("backend.app.utils.error_handler.concurrent.futures.ThreadPoolExecutor")
     def test_handle_timeout_windows_timeout(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト発生テスト"""
         mock_platform.return_value = "Windows"
@@ -171,26 +174,21 @@ class TestErrorHandler:
 
     def test_validate_predictions_invalid_nan(self):
         """NaNを含む予測値バリデーションテスト"""
-        predictions = {"up": 0.3, "down": float('nan'), "range": 0.3}
+        predictions = {"up": 0.3, "down": float("nan"), "range": 0.3}
         result = ErrorHandler.validate_predictions(predictions)
         assert result is False
 
     def test_validate_predictions_invalid_inf(self):
         """Infを含む予測値バリデーションテスト"""
-        predictions = {"up": 0.3, "down": float('inf'), "range": 0.3}
+        predictions = {"up": 0.3, "down": float("inf"), "range": 0.3}
         result = ErrorHandler.validate_predictions(predictions)
         assert result is False
 
     def test_validate_dataframe_valid(self):
         """有効なデータフレームバリデーションテスト"""
-        df = pd.DataFrame({
-            'col1': [1, 2, 3],
-            'col2': [4, 5, 6]
-        })
+        df = pd.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
         result = ErrorHandler.validate_dataframe(
-            df,
-            required_columns=['col1', 'col2'],
-            min_rows=2
+            df, required_columns=["col1", "col2"], min_rows=2
         )
         assert result is True
 
@@ -202,16 +200,13 @@ class TestErrorHandler:
 
     def test_validate_dataframe_missing_columns(self):
         """必須カラム不足データフレームバリデーションテスト"""
-        df = pd.DataFrame({'col1': [1, 2, 3]})
-        result = ErrorHandler.validate_dataframe(
-            df,
-            required_columns=['col1', 'col2']
-        )
+        df = pd.DataFrame({"col1": [1, 2, 3]})
+        result = ErrorHandler.validate_dataframe(df, required_columns=["col1", "col2"])
         assert result is False
 
     def test_validate_dataframe_insufficient_rows(self):
         """行数不足データフレームバリデーションテスト"""
-        df = pd.DataFrame({'col1': [1]})
+        df = pd.DataFrame({"col1": [1]})
         result = ErrorHandler.validate_dataframe(df, min_rows=5)
         assert result is False
 
@@ -221,6 +216,7 @@ class TestDecoratorsAndContexts:
 
     def test_timeout_decorator_success(self):
         """タイムアウトデコレータ成功テスト"""
+
         @timeout_decorator(5)
         def test_func():
             return "success"
@@ -230,6 +226,7 @@ class TestDecoratorsAndContexts:
 
     def test_safe_operation_decorator_success(self):
         """安全操作デコレータ成功テスト"""
+
         @safe_operation(default_return="default")
         def test_func():
             return "success"
@@ -239,6 +236,7 @@ class TestDecoratorsAndContexts:
 
     def test_safe_operation_decorator_with_exception(self):
         """安全操作デコレータ例外テスト"""
+
         @safe_operation(default_return="default")
         def test_func():
             raise ValueError("test error")
@@ -248,6 +246,7 @@ class TestDecoratorsAndContexts:
 
     def test_safe_operation_decorator_raise_exception(self):
         """安全操作デコレータ例外再送テスト"""
+
         @safe_operation(default_return="RAISE_EXCEPTION")
         def test_func():
             raise ValueError("test error")
@@ -257,6 +256,7 @@ class TestDecoratorsAndContexts:
 
     def test_safe_ml_operation_alias(self):
         """safe_ml_operationエイリアステスト"""
+
         @safe_ml_operation(default_return="default")
         def test_func():
             raise ValueError("test error")
@@ -266,7 +266,7 @@ class TestDecoratorsAndContexts:
 
     def test_operation_context_success(self):
         """操作コンテキスト成功テスト"""
-        with patch('backend.app.utils.error_handler.logger') as mock_logger:
+        with patch("backend.app.utils.error_handler.logger") as mock_logger:
             with operation_context("テスト操作"):
                 pass
 
@@ -276,7 +276,7 @@ class TestDecoratorsAndContexts:
 
     def test_operation_context_with_exception(self):
         """操作コンテキスト例外テスト"""
-        with patch('backend.app.utils.error_handler.logger') as mock_logger:
+        with patch("backend.app.utils.error_handler.logger") as mock_logger:
             with pytest.raises(ValueError):
                 with operation_context("テスト操作"):
                     raise ValueError("test error")

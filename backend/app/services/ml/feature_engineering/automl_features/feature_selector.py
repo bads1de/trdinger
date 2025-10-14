@@ -101,7 +101,8 @@ class AdvancedFeatureSelector:
 
         selection_info["final_count"] = len(current_features.columns)
         selection_info["reduction_ratio"] = (
-            0.0 if selection_info["original_count"] == 0
+            0.0
+            if selection_info["original_count"] == 0
             else 1 - selection_info["final_count"] / selection_info["original_count"]
         )
 
@@ -156,7 +157,9 @@ class AdvancedFeatureSelector:
             )
 
             # p値が有効な特徴量のみを選択
-            mask = (feature_scores["p_value"].notna()) & (feature_scores["p_value"] < 0.05)
+            mask = (feature_scores["p_value"].notna()) & (
+                feature_scores["p_value"] < 0.05
+            )
             filtered_scores = feature_scores.loc[mask].copy()
             valid_scores = filtered_scores.sort_values("f_score", ascending=False)
 

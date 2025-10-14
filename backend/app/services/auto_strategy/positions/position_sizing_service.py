@@ -216,7 +216,9 @@ class PositionSizingService:
             if returns_data is not None:
                 try:
                     returns_list = list(returns_data)
-                    lookback = max(int(getattr(gene, "var_lookback", len(returns_list))), 1)
+                    lookback = max(
+                        int(getattr(gene, "var_lookback", len(returns_list))), 1
+                    )
                     returns_sample = returns_list[-lookback:]
                 except TypeError:
                     returns_sample = []

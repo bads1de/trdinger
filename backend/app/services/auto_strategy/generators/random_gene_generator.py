@@ -176,14 +176,12 @@ class RandomGeneGenerator:
             long_entry_conditions=[],
             short_entry_conditions=[],
             risk_management={},
-            tpsl_gene=TPSLGene(
-                take_profit_pct=0.01, stop_loss_pct=0.005
-            ),
+            tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
             position_sizing_gene=PositionSizingGene(
                 method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
             ),
             metadata={"generated_by": "Fallback"},
-        )
+        ),
     )
     def generate_random_gene(self) -> StrategyGene:
         """

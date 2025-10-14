@@ -12,7 +12,7 @@ from app.services.backtest.backtest_service import BacktestService
 from ..core.ga_engine import GeneticAlgorithmEngine
 from ..generators.strategy_factory import StrategyFactory
 from ..generators.random_gene_generator import RandomGeneGenerator
-from ..config import GAConfig
+from ..config.ga_runtime import GAConfig
 from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)
@@ -92,20 +92,21 @@ class ExperimentManager:
         regime_detector = None
         if ga_config.regime_adaptation_enabled:
             from ..services.regime_detector import RegimeDetector
+
             regime_detector = RegimeDetector()
             logger.info("レジーム適応が有効化されました")
 
         gene_generator = RandomGeneGenerator(ga_config)
-        
+
         # ハイブリッドモードの初期化
         hybrid_predictor = None
         hybrid_feature_adapter = None
-        
+
         if ga_config.hybrid_mode:
             logger.info("🔬 ハイブリッドGA+MLモードを初期化")
             from ..core.hybrid_predictor import HybridPredictor
             from ..utils.hybrid_feature_adapter import HybridFeatureAdapter
-            
+
             model_types = ga_config.hybrid_model_types
             if model_types and len(model_types) > 1:
                 # 複数モデル平均
@@ -124,15 +125,17 @@ class ExperimentManager:
                     model_type=model_type,
                     automl_config=ga_config.hybrid_automl_config,
                 )
-            
+
             # HybridFeatureAdapterの初期化
             hybrid_feature_adapter = HybridFeatureAdapter(
                 automl_config=ga_config.hybrid_automl_config
             )
-            
+
             logger.info("✅ ハイブリッドコンポーネント初期化完了")
-            logger.info("💡 事前にMLモデルを学習しておくことを推奨します（未学習の場合はデフォルト予測を使用）")
-        
+            logger.info(
+                "💡 事前にMLモデルを学習しておくことを推奨します（未学習の場合はデフォルト予測を使用）"
+            )
+
         self.ga_engine = GeneticAlgorithmEngine(
             self.backtest_service,
             self.strategy_factory,
@@ -142,7 +145,7 @@ class ExperimentManager:
             hybrid_predictor=hybrid_predictor,
             hybrid_feature_adapter=hybrid_feature_adapter,
         )
-        
+
         if ga_config.log_level.upper() in ["DEBUG", "INFO"]:
             logger.info("GAエンジンを動的に初期化しました。")
 

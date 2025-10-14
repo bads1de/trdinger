@@ -104,21 +104,21 @@ class TestHybridIndividualEvaluator:
     def test_evaluator_initialization(self, mock_backtest_service):
         """
         Evaluator初期化テスト
-        
+
         検証項目:
         - 正しく初期化される
         - BacktestServiceとHybridPredictorが設定される
         """
-        
+
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=None,
         )
-        
+
         assert evaluator is not None
         assert evaluator.backtest_service == mock_backtest_service
 
@@ -131,28 +131,28 @@ class TestHybridIndividualEvaluator:
     ):
         """
         ML予測を含む個体評価テスト
-        
+
         検証項目:
         - バックテストが実行される
         - ML予測が実行される
         - 予測スコアがフィットネスに統合される
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
-        
+
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
-        
+
         # フィットネスが返される
         assert isinstance(fitness, tuple)
         assert len(fitness) == 1  # 単一目的
         assert fitness[0] > 0
-        
+
         # バックテストとML予測が呼ばれたことを確認
         assert mock_backtest_service.run_backtest.called
         assert mock_hybrid_predictor.predict.called
@@ -165,22 +165,22 @@ class TestHybridIndividualEvaluator:
     ):
         """
         ML予測なしの個体評価テスト（従来のGA評価）
-        
+
         検証項目:
         - predictorがNoneの場合、従来の評価が行われる
         - フィットネスが正しく計算される
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=None,  # 予測なし
         )
-        
+
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
-        
+
         # フィットネスが返される
         assert isinstance(fitness, tuple)
         assert len(fitness) == 1
@@ -193,15 +193,15 @@ class TestHybridIndividualEvaluator:
     ):
         """
         予測スコアを含むフィットネス計算テスト
-        
+
         検証項目:
         - prediction_scoreが正しく計算される
         - fitness = base_fitness + prediction_weight * prediction_score
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         backtest_result = {
             "performance_metrics": {
                 "total_return": 0.25,
@@ -211,25 +211,25 @@ class TestHybridIndividualEvaluator:
                 "total_trades": 100,
             },
         }
-        
+
         prediction_signals = {
             "up": 0.7,
             "down": 0.2,
             "range": 0.1,
         }
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=Mock(),
         )
-        
+
         # _calculate_fitnessを直接テスト
         fitness = evaluator._calculate_fitness(
             backtest_result,
             ga_config,
             prediction_signals=prediction_signals,
         )
-        
+
         # 予測スコアが統合されたフィットネスが返される
         assert fitness > 0
         # prediction_score = up - down = 0.7 - 0.2 = 0.5
@@ -242,15 +242,15 @@ class TestHybridIndividualEvaluator:
     ):
         """
         ロング・ショートバランススコアとML予測の統合テスト
-        
+
         検証項目:
         - balance_scoreとprediction_scoreが両方考慮される
         - 重み付けが正しく適用される
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         backtest_result = {
             "performance_metrics": {
                 "total_return": 0.25,
@@ -262,27 +262,27 @@ class TestHybridIndividualEvaluator:
             "trade_history": [
                 {"size": 1.0, "pnl": 100.0},  # Long
                 {"size": -1.0, "pnl": 50.0},  # Short
-                {"size": 1.0, "pnl": 75.0},   # Long
+                {"size": 1.0, "pnl": 75.0},  # Long
             ],
         }
-        
+
         prediction_signals = {
             "up": 0.6,
             "down": 0.3,
             "range": 0.1,
         }
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=Mock(),
         )
-        
+
         fitness = evaluator._calculate_fitness(
             backtest_result,
             ga_config,
             prediction_signals=prediction_signals,
         )
-        
+
         # balance_scoreとprediction_scoreの両方が含まれる
         assert fitness > 0
 
@@ -295,25 +295,24 @@ class TestHybridIndividualEvaluator:
     ):
         """
         多目的最適化での個体評価テスト
-        
+
         検証項目:
         - 複数の目的関数値が返される
         - prediction_scoreが目的の一つとして含まれる
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
-        
+
         fitness = evaluator.evaluate_individual(
-            sample_individual,
-            ga_config_multi_objective
+            sample_individual, ga_config_multi_objective
         )
-        
+
         # 多目的のフィットネス値が返される
         assert isinstance(fitness, tuple)
         assert len(fitness) == 3  # sharpe_ratio, max_drawdown, prediction_score
@@ -327,25 +326,25 @@ class TestHybridIndividualEvaluator:
     ):
         """
         エラーハンドリングテスト
-        
+
         検証項目:
         - バックテストエラー時にデフォルト値が返される
         - ML予測エラー時もデフォルト値が返される
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         # バックテストでエラーを発生させる
         mock_backtest_service.run_backtest.side_effect = Exception("Backtest error")
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=Mock(),
         )
-        
+
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
-        
+
         # エラー時はデフォルト値が返される
         assert isinstance(fitness, tuple)
         assert fitness[0] == 0.0
@@ -358,26 +357,26 @@ class TestHybridIndividualEvaluator:
     ):
         """
         ML学習エラーのハンドリングテスト
-        
+
         検証項目:
         - MLTrainingError発生時にデフォルト予測値が使われる
         - エラーログが出力される
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         # ML予測でエラーを発生させる
         mock_predictor = Mock()
         mock_predictor.predict.side_effect = MLTrainingError("ML error")
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=mock_predictor,
         )
-        
+
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
-        
+
         # エラーがあってもフィットネスは返される（デフォルト予測使用）
         assert isinstance(fitness, tuple)
         assert fitness[0] >= 0
@@ -391,15 +390,15 @@ class TestHybridIndividualEvaluator:
     ):
         """
         取引回数ゼロの場合のテスト
-        
+
         検証項目:
         - 取引回数が0の場合、低いフィットネス値が返される
         - ML予測は実行されない（または無視される）
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         # 取引回数0の結果を設定
         mock_backtest_service.run_backtest.return_value = {
             "performance_metrics": {
@@ -410,14 +409,14 @@ class TestHybridIndividualEvaluator:
                 "total_trades": 0,  # 取引なし
             },
         }
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
-        
+
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
-        
+
         # 取引回数0の場合は低いフィットネス
         assert isinstance(fitness, tuple)
         assert fitness[0] <= 0.1
@@ -430,15 +429,15 @@ class TestHybridIndividualEvaluator:
     ):
         """
         予測重み設定テスト
-        
+
         検証項目:
         - prediction_weightが設定で変更可能
         - 重みが0の場合、従来のGA評価と同じ
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         # prediction_weight = 0 の設定
         ga_config_no_prediction = GAConfig(
             population_size=50,
@@ -455,22 +454,23 @@ class TestHybridIndividualEvaluator:
             fallback_start_date="2023-01-01",
             fallback_end_date="2023-12-31",
         )
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
-        
+
         fitness = evaluator.evaluate_individual(
-            sample_individual,
-            ga_config_no_prediction
+            sample_individual, ga_config_no_prediction
         )
-        
+
         # ML予測は呼ばれるが、フィットネスには影響しない
         assert isinstance(fitness, tuple)
         assert fitness[0] > 0
 
-    @patch("app.services.auto_strategy.utils.hybrid_feature_adapter.HybridFeatureAdapter")
+    @patch(
+        "app.services.auto_strategy.utils.hybrid_feature_adapter.HybridFeatureAdapter"
+    )
     def test_feature_adapter_integration(
         self,
         mock_adapter_class,
@@ -481,30 +481,32 @@ class TestHybridIndividualEvaluator:
     ):
         """
         HybridFeatureAdapterとの統合テスト
-        
+
         検証項目:
         - Gene → 特徴量変換 → ML予測の流れが動作する
         - HybridFeatureAdapterが正しく呼ばれる
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator
+            HybridIndividualEvaluator,
         )
-        
+
         # モックの設定
         mock_adapter = Mock()
-        mock_adapter.gene_to_features.return_value = pd.DataFrame({
-            "feature_1": [0.5],
-            "feature_2": [0.3],
-        })
+        mock_adapter.gene_to_features.return_value = pd.DataFrame(
+            {
+                "feature_1": [0.5],
+                "feature_2": [0.3],
+            }
+        )
         mock_adapter_class.return_value = mock_adapter
-        
+
         evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
-        
+
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
-        
+
         # HybridFeatureAdapterが呼ばれたことを確認
         assert mock_adapter.gene_to_features.called
         assert isinstance(fitness, tuple)

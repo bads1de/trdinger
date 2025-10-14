@@ -104,17 +104,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             merged_df[fr_column] = merged_df[fr_column].ffill()
 
             # ファンディングレート移動平均（pandas rolling を使用）
-            fr_ma_24 = (
-                merged_df[fr_column]
-                .rolling(window=24, min_periods=1)
-                .mean()
-            )
+            fr_ma_24 = merged_df[fr_column].rolling(window=24, min_periods=1).mean()
             result_df["FR_MA_24"] = pd.Series(fr_ma_24).fillna(0.0)
-            fr_ma_168 = (
-                merged_df[fr_column]
-                .rolling(window=168, min_periods=1)
-                .mean()
-            )
+            fr_ma_168 = merged_df[fr_column].rolling(window=168, min_periods=1).mean()
             result_df["FR_MA_168"] = pd.Series(fr_ma_168).fillna(0.0)
 
             # ファンディングレート変化（安全な計算）
@@ -252,17 +244,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             ].fillna(merged_df[oi_column])
 
             # 建玉残高移動平均
-            oi_ma_24 = (
-                merged_df[oi_column]
-                .rolling(window=24, min_periods=1)
-                .mean()
-            )
+            oi_ma_24 = merged_df[oi_column].rolling(window=24, min_periods=1).mean()
             result_df["OI_MA_24"] = pd.Series(oi_ma_24).fillna(0.0)
-            oi_ma_168 = (
-                merged_df[oi_column]
-                .rolling(window=168, min_periods=1)
-                .mean()
-            )
+            oi_ma_168 = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
             result_df["OI_MA_168"] = pd.Series(oi_ma_168).fillna(0.0)
 
             # 建玉残高トレンド（安全な計算）

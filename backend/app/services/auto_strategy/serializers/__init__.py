@@ -10,9 +10,9 @@ from .list_decoder import ListDecoder
 from .json_converter import JsonConverter
 
 __all__ = [
-    "GeneSerializer",        # 統合インターフェース
-    "DictConverter",         # 辞書形式変換
-    "ListEncoder",           # リストエンコード
-    "ListDecoder",           # リストデコード
-    "JsonConverter",         # JSON変換
+    "GeneSerializer",  # 統合インターフェース
+    "DictConverter",  # 辞書形式変換
+    "ListEncoder",  # リストエンコード
+    "ListDecoder",  # リストデコード
+    "JsonConverter",  # JSON変換
 ]

@@ -25,20 +25,22 @@ class TestPerformanceComparison:
                 "win_rate": 0.65,
                 "total_return": 0.25,
                 "total_trades": 100,
-                "profit_factor": 1.8
+                "profit_factor": 1.8,
             },
             "equity_curve": [1.0, 1.02, 0.98, 1.05],
             "trade_history": [
                 {"profit": 100, "entry_price": 100, "exit_price": 105},
-                {"profit": -50, "entry_price": 105, "exit_price": 100}
-            ]
+                {"profit": -50, "entry_price": 105, "exit_price": 100},
+            ],
         }
 
     @pytest.fixture
     def regime_detector_mock(self):
         """レジーム検知モック"""
         mock = Mock(spec=RegimeDetector)
-        mock.detect_regimes.return_value = np.array([0, 0, 1, 1, 2, 2])  # trend, range, high_vol
+        mock.detect_regimes.return_value = np.array(
+            [0, 0, 1, 1, 2, 2]
+        )  # trend, range, high_vol
         return mock
 
     @pytest.fixture
@@ -52,7 +54,7 @@ class TestPerformanceComparison:
                 "win_rate": 0.58,
                 "total_return": 0.18,
                 "total_trades": 80,
-                "profit_factor": 1.5
+                "profit_factor": 1.5,
             }
         }
         return mock
@@ -97,33 +99,49 @@ class TestPerformanceComparison:
         # サンプルデータでは勝率0.5になるはず
         assert win_rate == 0.5
 
-    def test_regime_based_comparison_basic(self, regime_detector_mock, backtest_service_mock):
+    def test_regime_based_comparison_basic(
+        self, regime_detector_mock, backtest_service_mock
+    ):
         """レジーム別比較基本テスト"""
         # モックデータを設定
-        ohlcv_data = pd.DataFrame({
-            'open': [100, 101, 102, 103, 104, 105],
-            'high': [105, 106, 107, 108, 109, 110],
-            'low': [95, 96, 97, 98, 99, 100],
-            'close': [102, 103, 104, 105, 106, 107],
-            'volume': [1000, 1100, 1200, 1300, 1400, 1500]
-        })
+        ohlcv_data = pd.DataFrame(
+            {
+                "open": [100, 101, 102, 103, 104, 105],
+                "high": [105, 106, 107, 108, 109, 110],
+                "low": [95, 96, 97, 98, 99, 100],
+                "close": [102, 103, 104, 105, 106, 107],
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500],
+            }
+        )
 
-        with patch('backend.scripts.performance_comparison.RegimeDetector', return_value=regime_detector_mock), \
-             patch('backend.scripts.performance_comparison.BacktestService', return_value=backtest_service_mock), \
-             patch('backend.scripts.performance_comparison.OHLCVRepository') as mock_repo_class:
+        with (
+            patch(
+                "backend.scripts.performance_comparison.RegimeDetector",
+                return_value=regime_detector_mock,
+            ),
+            patch(
+                "backend.scripts.performance_comparison.BacktestService",
+                return_value=backtest_service_mock,
+            ),
+            patch(
+                "backend.scripts.performance_comparison.OHLCVRepository"
+            ) as mock_repo_class,
+        ):
 
             mock_repo = Mock()
             mock_repo.get_ohlcv_dataframe.return_value = ohlcv_data
             mock_repo_class.return_value = mock_repo
 
-            from backend.scripts.performance_comparison import regime_based_backtest_comparison
+            from backend.scripts.performance_comparison import (
+                regime_based_backtest_comparison,
+            )
 
             results = regime_based_backtest_comparison(
                 symbol="BTC/USDT",
                 timeframe="1h",
                 start_date="2023-01-01",
                 end_date="2023-01-02",
-                regime_adaptation_enabled=True
+                regime_adaptation_enabled=True,
             )
 
             # 結果が辞書であることを確認
@@ -138,7 +156,7 @@ class TestPerformanceComparison:
         regime_results = {
             "trend": sample_backtest_result["performance_metrics"],
             "range": sample_backtest_result["performance_metrics"],
-            "high_volatility": sample_backtest_result["performance_metrics"]
+            "high_volatility": sample_backtest_result["performance_metrics"],
         }
 
         # 出力がエラーなく実行されることを確認
@@ -154,7 +172,7 @@ class TestPerformanceComparison:
         regime_results = {
             "trend": sample_backtest_result["performance_metrics"],
             "range": sample_backtest_result["performance_metrics"],
-            "high_volatility": sample_backtest_result["performance_metrics"]
+            "high_volatility": sample_backtest_result["performance_metrics"],
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -175,7 +193,7 @@ class TestPerformanceComparison:
         regime_results = {
             "trend": sample_backtest_result["performance_metrics"],
             "range": sample_backtest_result["performance_metrics"],
-            "high_volatility": sample_backtest_result["performance_metrics"]
+            "high_volatility": sample_backtest_result["performance_metrics"],
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -185,7 +203,7 @@ class TestPerformanceComparison:
             try:
                 plot_results(regime_results, file_path, regime_adaptation_enabled=True)
                 # ファイルが作成されたことを確認（matplotlibが利用可能な場合）
-                if hasattr(pd, 'plot'):  # matplotlibが利用可能かの簡易チェック
+                if hasattr(pd, "plot"):  # matplotlibが利用可能かの簡易チェック
                     assert os.path.exists(file_path)
             except ImportError:
                 # matplotlibが利用できない場合はスキップ
@@ -198,7 +216,7 @@ class TestPerformanceComparison:
         from backend.scripts.performance_comparison import (
             calculate_sharpe_ratio,
             calculate_max_drawdown,
-            calculate_win_rate
+            calculate_win_rate,
         )
 
         # テストデータ作成
@@ -214,11 +232,6 @@ class TestPerformanceComparison:
         assert abs(max_dd - -0.067) < 0.01  # 概算値
 
         # 勝率テスト
-        trades = [
-            {"profit": 100},
-            {"profit": -50},
-            {"profit": 200},
-            {"profit": -25}
-        ]
+        trades = [{"profit": 100}, {"profit": -50}, {"profit": 200}, {"profit": -25}]
         win_rate = calculate_win_rate(trades)
         assert win_rate == 0.5  # 2勝2敗

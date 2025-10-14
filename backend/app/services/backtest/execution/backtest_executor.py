@@ -98,7 +98,9 @@ class BacktestExecutor:
             )
 
             if data.empty:
-                logger.error(f"BacktestExecutor - No data found for {symbol} {timeframe}")
+                logger.error(
+                    f"BacktestExecutor - No data found for {symbol} {timeframe}"
+                )
                 raise BacktestExecutionError(
                     f"{symbol} {timeframe}のデータが見つかりませんでした。"
                 )
@@ -178,4 +180,3 @@ class BacktestExecutor:
                 },
             }
         }
-

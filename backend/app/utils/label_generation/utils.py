@@ -19,6 +19,7 @@ from .enums import ThresholdMethod
 
 logger = logging.getLogger(__name__)
 
+
 def create_label_pipeline(
     n_bins: int = 3, strategy: str = "quantile", encode: str = "ordinal"
 ) -> Pipeline:
@@ -39,7 +40,9 @@ def create_label_pipeline(
             (
                 "discretizer",
                 KBinsDiscretizer(
-                    n_bins=n_bins, encode=encode, strategy=strategy,  # subsample=None
+                    n_bins=n_bins,
+                    encode=encode,
+                    strategy=strategy,  # subsample=None
                 ),
             ),
         ]

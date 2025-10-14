@@ -151,17 +151,13 @@ class OperandGroupingSystem:
         if operand in self._group_mappings:
             group = self._group_mappings[operand]
             if DEBUG_MODE:
-                logger.debug(
-                    "Direct mapping found for %s -> %s", operand, group.value
-                )
+                logger.debug("Direct mapping found for %s -> %s", operand, group.value)
             return group
 
         # パターンマッチングで判定
         group = self._classify_by_pattern(operand)
         if DEBUG_MODE:
-            logger.debug(
-                "Pattern matching resulted for %s -> %s", operand, group.value
-            )
+            logger.debug("Pattern matching resulted for %s -> %s", operand, group.value)
         return group
 
     def _classify_by_pattern(self, operand: str) -> OperandGroup:

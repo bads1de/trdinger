@@ -27,9 +27,12 @@ from app.services.backtest.backtest_service import BacktestService
 
 from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
 
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
 
 # 簡易的な設定
+
 
 class DiversityEvolutionRunner(EvolutionRunner):
 
@@ -45,7 +48,9 @@ class DiversityEvolutionRunner(EvolutionRunner):
 
             # メトリクス計算
 
-            fitnesses = [ind.fitness.values[0] for ind in population if ind.fitness.valid]
+            fitnesses = [
+                ind.fitness.values[0] for ind in population if ind.fitness.valid
+            ]
 
             if fitnesses:
 
@@ -61,11 +66,17 @@ class DiversityEvolutionRunner(EvolutionRunner):
 
                     try:
 
-                        kmeans = KMeans(n_clusters=min(3, len(fitnesses)//2 or 1), random_state=42, n_init=10)
+                        kmeans = KMeans(
+                            n_clusters=min(3, len(fitnesses) // 2 or 1),
+                            random_state=42,
+                            n_init=10,
+                        )
 
                         labels = kmeans.fit_predict(X)
 
-                        sil = silhouette_score(X, labels) if len(set(labels)) > 1 else 0.0
+                        sil = (
+                            silhouette_score(X, labels) if len(set(labels)) > 1 else 0.0
+                        )
 
                     except:
 
@@ -75,7 +86,9 @@ class DiversityEvolutionRunner(EvolutionRunner):
 
                     sil = 0.0
 
-                print(f"Generation {gen+1}: Mean Fitness={mean_fitness:.2f}, Variance={variance:.2f}, Silhouette={sil:.2f}")
+                print(
+                    f"Generation {gen+1}: Mean Fitness={mean_fitness:.2f}, Variance={variance:.2f}, Silhouette={sil:.2f}"
+                )
 
             else:
 
@@ -127,24 +140,18 @@ class DiversityEvolutionRunner(EvolutionRunner):
 
         return population, logbook
 
+
 def run_diversity_evolution_demo():
 
     # GA設定
 
     config = GAConfig(
-
         generations=10,
-
         population_size=50,
-
         crossover_rate=0.7,
-
         mutation_rate=0.2,
-
         enable_fitness_sharing=True,
-
         # 他のデフォルト
-
     )
 
     # backtest_serviceなど初期化 (簡易)
@@ -172,22 +179,16 @@ def run_diversity_evolution_demo():
     engine._create_evolution_runner = create_diversity_runner
 
     backtest_config = {
-
-        'start_date': '2023-01-01',
-
-        'end_date': '2023-12-31',
-
-        'symbol': 'BTCUSDT',
-
-        'timeframe': '1h',
-
-        'initial_capital': 10000,
-
-        'commission_rate': 0.001
-
+        "start_date": "2023-01-01",
+        "end_date": "2023-12-31",
+        "symbol": "BTCUSDT",
+        "timeframe": "1h",
+        "initial_capital": 10000,
+        "commission_rate": 0.001,
     }
 
     result = engine.run_evolution(config, backtest_config)
+
 
 if __name__ == "__main__":
 

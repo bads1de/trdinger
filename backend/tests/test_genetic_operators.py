@@ -18,7 +18,13 @@ from app.services.auto_strategy.core.genetic_operators import (
     _mutate_conditions,
     adaptive_mutate_strategy_gene_pure,
 )
-from app.services.auto_strategy.models.strategy_models import StrategyGene, IndicatorGene, Condition, TPSLGene, PositionSizingGene
+from app.services.auto_strategy.models.strategy_models import (
+    StrategyGene,
+    IndicatorGene,
+    Condition,
+    TPSLGene,
+    PositionSizingGene,
+)
 
 
 class TestGeneticOperators:
@@ -33,10 +39,18 @@ class TestGeneticOperators:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            exit_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
-            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
+            entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            exit_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
             risk_management={"position_size": 0.1},
             tpsl_gene=TPSLGene(),
             position_sizing_gene=PositionSizingGene(),
@@ -46,6 +60,7 @@ class TestGeneticOperators:
     def test_crossover_strategy_genes_pure_basic(self, sample_strategy_gene):
         """基本的な交叉テスト"""
         import copy
+
         parent1 = copy.deepcopy(sample_strategy_gene)
         parent2 = copy.deepcopy(sample_strategy_gene)
 
@@ -62,7 +77,9 @@ class TestGeneticOperators:
         tpsl1 = Mock()
         tpsl2 = Mock()
 
-        with patch('app.services.auto_strategy.core.genetic_operators.crossover_tpsl_genes') as mock_crossover:
+        with patch(
+            "app.services.auto_strategy.core.genetic_operators.crossover_tpsl_genes"
+        ) as mock_crossover:
             mock_crossover.return_value = (Mock(), Mock())
             child1_tpsl, child2_tpsl = _crossover_tpsl_genes(tpsl1, tpsl2)
 
@@ -90,7 +107,9 @@ class TestGeneticOperators:
         ps1 = Mock()
         ps2 = Mock()
 
-        with patch('app.services.auto_strategy.core.genetic_operators.crossover_position_sizing_genes') as mock_crossover:
+        with patch(
+            "app.services.auto_strategy.core.genetic_operators.crossover_position_sizing_genes"
+        ) as mock_crossover:
             mock_crossover.return_value = (Mock(), Mock())
             child1_ps, child2_ps = _crossover_position_sizing_genes(ps1, ps2)
 
@@ -120,32 +139,41 @@ class TestGeneticOperators:
         assert isinstance(mutated, StrategyGene)
         assert mutated.id != sample_strategy_gene.id
 
-    @patch('random.random', return_value=0.1)  # 確実に条件を満たす
-    def test_mutate_indicators_parameter_mutation(self, mock_random, sample_strategy_gene):
+    @patch("random.random", return_value=0.1)  # 確実に条件を満たす
+    def test_mutate_indicators_parameter_mutation(
+        self, mock_random, sample_strategy_gene
+    ):
         """指標パラメータの突然変異テスト"""
-        _mutate_indicators(sample_strategy_gene, sample_strategy_gene, mutation_rate=0.5)
+        _mutate_indicators(
+            sample_strategy_gene, sample_strategy_gene, mutation_rate=0.5
+        )
 
         # パラメータが変更されている可能性がある
         assert len(sample_strategy_gene.indicators) >= 1
 
-    @patch('random.random', return_value=0.1)
-    def test_mutate_conditions_entry_conditions(self, mock_random, sample_strategy_gene):
+    @patch("random.random", return_value=0.1)
+    def test_mutate_conditions_entry_conditions(
+        self, mock_random, sample_strategy_gene
+    ):
         """エントリー条件の突然変異テスト"""
         _mutate_conditions(sample_strategy_gene, mutation_rate=0.5)
 
         # テストはモックなので変更を確認しにくいが、エラーが発生しないことを確認
         assert len(sample_strategy_gene.entry_conditions) >= 0
 
-    @patch('random.random', return_value=0.1)
+    @patch("random.random", return_value=0.1)
     def test_mutate_conditions_exit_conditions(self, mock_random, sample_strategy_gene):
         """エグジット条件の突然変異テスト"""
         _mutate_conditions(sample_strategy_gene, mutation_rate=0.5)
 
         assert len(sample_strategy_gene.exit_conditions) >= 0
 
-    def test_mutate_strategy_gene_pure_with_high_mutation_rate(self, sample_strategy_gene):
+    def test_mutate_strategy_gene_pure_with_high_mutation_rate(
+        self, sample_strategy_gene
+    ):
         """高い突然変異率でのテスト"""
         import copy
+
         gene_to_mutate = copy.deepcopy(sample_strategy_gene)
         mutated = mutate_strategy_gene_pure(gene_to_mutate, mutation_rate=1.0)
 
@@ -181,11 +209,15 @@ class TestGeneticOperators:
         gene_to_mutate = copy.deepcopy(sample_strategy_gene)
 
         # 高分散の場合、低いmutation_rateになるはず
-        mutated_high = adaptive_mutate_strategy_gene_pure(high_variance_pop, gene_to_mutate, base_mutation_rate=0.1)
+        mutated_high = adaptive_mutate_strategy_gene_pure(
+            high_variance_pop, gene_to_mutate, base_mutation_rate=0.1
+        )
         assert isinstance(mutated_high, StrategyGene)
 
         # 低分散の場合、高いmutation_rateになるはず
-        mutated_low = adaptive_mutate_strategy_gene_pure(low_variance_pop, gene_to_mutate, base_mutation_rate=0.1)
+        mutated_low = adaptive_mutate_strategy_gene_pure(
+            low_variance_pop, gene_to_mutate, base_mutation_rate=0.1
+        )
         assert isinstance(mutated_low, StrategyGene)
 
         # メタデータに適応的rateが設定されている
@@ -193,7 +225,10 @@ class TestGeneticOperators:
         assert "adaptive_mutation_rate" in mutated_low.metadata
 
         # 高分散のrate < 低分散のrate のはず
-        assert mutated_high.metadata["adaptive_mutation_rate"] < mutated_low.metadata["adaptive_mutation_rate"]
+        assert (
+            mutated_high.metadata["adaptive_mutation_rate"]
+            < mutated_low.metadata["adaptive_mutation_rate"]
+        )
 
     def test_uniform_crossover_diversity(self):
         """Test diversity of uniform crossover"""
@@ -206,13 +241,25 @@ class TestGeneticOperators:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            exit_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
-            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
+            entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            exit_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
             risk_management={"position_size": 0.1, "stop_loss": 0.05},
-            tpsl_gene=TPSLGene(stop_loss_pct=0.05, take_profit_pct=0.15, risk_reward_ratio=3.0),
-            position_sizing_gene=PositionSizingGene(method="fixed_ratio", fixed_ratio=0.1),
+            tpsl_gene=TPSLGene(
+                stop_loss_pct=0.05, take_profit_pct=0.15, risk_reward_ratio=3.0
+            ),
+            position_sizing_gene=PositionSizingGene(
+                method="fixed_ratio", fixed_ratio=0.1
+            ),
             metadata={"parent": 1},
         )
 
@@ -222,29 +269,55 @@ class TestGeneticOperators:
                 IndicatorGene(type="RSI", parameters={"period": 14}),
                 IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
             ],
-            entry_conditions=[Condition(left_operand="rsi", operator="<", right_operand="30")],
-            exit_conditions=[Condition(left_operand="rsi", operator=">", right_operand="70")],
-            long_entry_conditions=[Condition(left_operand="macd", operator=">", right_operand="signal")],
-            short_entry_conditions=[Condition(left_operand="macd", operator="<", right_operand="signal")],
+            entry_conditions=[
+                Condition(left_operand="rsi", operator="<", right_operand="30")
+            ],
+            exit_conditions=[
+                Condition(left_operand="rsi", operator=">", right_operand="70")
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="macd", operator=">", right_operand="signal")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="macd", operator="<", right_operand="signal")
+            ],
             risk_management={"position_size": 0.2, "take_profit": 0.1},
-            tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.10, risk_reward_ratio=3.33),
-            position_sizing_gene=PositionSizingGene(method="fixed_ratio", fixed_ratio=0.2),
+            tpsl_gene=TPSLGene(
+                stop_loss_pct=0.03, take_profit_pct=0.10, risk_reward_ratio=3.33
+            ),
+            position_sizing_gene=PositionSizingGene(
+                method="fixed_ratio", fixed_ratio=0.2
+            ),
             metadata={"parent": 2},
         )
 
         # Perform multiple crossovers to check diversity
         children = []
         for _ in range(50):
-            child1, child2 = uniform_crossover(copy.deepcopy(parent1), copy.deepcopy(parent2))
+            child1, child2 = uniform_crossover(
+                copy.deepcopy(parent1), copy.deepcopy(parent2)
+            )
             children.extend([child1, child2])
 
         # Verify diversity: not all children are identical to parents
-        parent1_str = str(parent1.indicators) + str(parent1.entry_conditions) + str(parent1.risk_management)
-        parent2_str = str(parent2.indicators) + str(parent2.entry_conditions) + str(parent2.risk_management)
+        parent1_str = (
+            str(parent1.indicators)
+            + str(parent1.entry_conditions)
+            + str(parent1.risk_management)
+        )
+        parent2_str = (
+            str(parent2.indicators)
+            + str(parent2.entry_conditions)
+            + str(parent2.risk_management)
+        )
 
         diverse_children = 0
         for child in children:
-            child_str = str(child.indicators) + str(child.entry_conditions) + str(child.risk_management)
+            child_str = (
+                str(child.indicators)
+                + str(child.entry_conditions)
+                + str(child.risk_management)
+            )
             if child_str != parent1_str and child_str != parent2_str:
                 diverse_children += 1
 
@@ -268,45 +341,96 @@ class TestGeneticOperators:
 
         population = [
             MockIndividual(copy.deepcopy(sample_strategy_gene), (1.0,)),
-            MockIndividual(StrategyGene(
-                id="gene2",
-                indicators=[
-                    IndicatorGene(type="RSI", parameters={"period": 14}),
-                    IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
-                ],
-                entry_conditions=[Condition(left_operand="rsi", operator="<", right_operand="30")],
-                exit_conditions=[Condition(left_operand="rsi", operator=">", right_operand="70")],
-                long_entry_conditions=[Condition(left_operand="macd", operator=">", right_operand="signal")],
-                short_entry_conditions=[Condition(left_operand="macd", operator="<", right_operand="signal")],
-                risk_management={"position_size": 0.2},
-                tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.10),
-                position_sizing_gene=PositionSizingGene(),
-                metadata={},
-            ), (0.8,)),
-            MockIndividual(StrategyGene(
-                id="gene3",
-                indicators=[IndicatorGene(type="BB", parameters={"period": 20, "std": 2})],
-                entry_conditions=[Condition(left_operand="close", operator="<", right_operand="bb_lower")],
-                exit_conditions=[Condition(left_operand="close", operator=">", right_operand="bb_upper")],
-                long_entry_conditions=[],
-                short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="bb_lower")],
-                risk_management={"position_size": 0.15},
-                tpsl_gene=TPSLGene(stop_loss_pct=0.04, take_profit_pct=0.12),
-                position_sizing_gene=PositionSizingGene(),
-                metadata={},
-            ), (0.9,)),
-            MockIndividual(StrategyGene(
-                id="gene4",
-                indicators=[IndicatorGene(type="STOCH", parameters={"k_period": 14, "d_period": 3})],
-                entry_conditions=[Condition(left_operand="stoch_k", operator=">", right_operand="stoch_d")],
-                exit_conditions=[],
-                long_entry_conditions=[Condition(left_operand="stoch_k", operator=">", right_operand="stoch_d")],
-                short_entry_conditions=[],
-                risk_management={"position_size": 0.25},
-                tpsl_gene=TPSLGene(stop_loss_pct=0.02, take_profit_pct=0.08),
-                position_sizing_gene=PositionSizingGene(),
-                metadata={},
-            ), (0.7,)),
+            MockIndividual(
+                StrategyGene(
+                    id="gene2",
+                    indicators=[
+                        IndicatorGene(type="RSI", parameters={"period": 14}),
+                        IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
+                    ],
+                    entry_conditions=[
+                        Condition(left_operand="rsi", operator="<", right_operand="30")
+                    ],
+                    exit_conditions=[
+                        Condition(left_operand="rsi", operator=">", right_operand="70")
+                    ],
+                    long_entry_conditions=[
+                        Condition(
+                            left_operand="macd", operator=">", right_operand="signal"
+                        )
+                    ],
+                    short_entry_conditions=[
+                        Condition(
+                            left_operand="macd", operator="<", right_operand="signal"
+                        )
+                    ],
+                    risk_management={"position_size": 0.2},
+                    tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.10),
+                    position_sizing_gene=PositionSizingGene(),
+                    metadata={},
+                ),
+                (0.8,),
+            ),
+            MockIndividual(
+                StrategyGene(
+                    id="gene3",
+                    indicators=[
+                        IndicatorGene(type="BB", parameters={"period": 20, "std": 2})
+                    ],
+                    entry_conditions=[
+                        Condition(
+                            left_operand="close", operator="<", right_operand="bb_lower"
+                        )
+                    ],
+                    exit_conditions=[
+                        Condition(
+                            left_operand="close", operator=">", right_operand="bb_upper"
+                        )
+                    ],
+                    long_entry_conditions=[],
+                    short_entry_conditions=[
+                        Condition(
+                            left_operand="close", operator="<", right_operand="bb_lower"
+                        )
+                    ],
+                    risk_management={"position_size": 0.15},
+                    tpsl_gene=TPSLGene(stop_loss_pct=0.04, take_profit_pct=0.12),
+                    position_sizing_gene=PositionSizingGene(),
+                    metadata={},
+                ),
+                (0.9,),
+            ),
+            MockIndividual(
+                StrategyGene(
+                    id="gene4",
+                    indicators=[
+                        IndicatorGene(
+                            type="STOCH", parameters={"k_period": 14, "d_period": 3}
+                        )
+                    ],
+                    entry_conditions=[
+                        Condition(
+                            left_operand="stoch_k",
+                            operator=">",
+                            right_operand="stoch_d",
+                        )
+                    ],
+                    exit_conditions=[],
+                    long_entry_conditions=[
+                        Condition(
+                            left_operand="stoch_k",
+                            operator=">",
+                            right_operand="stoch_d",
+                        )
+                    ],
+                    short_entry_conditions=[],
+                    risk_management={"position_size": 0.25},
+                    tpsl_gene=TPSLGene(stop_loss_pct=0.02, take_profit_pct=0.08),
+                    position_sizing_gene=PositionSizingGene(),
+                    metadata={},
+                ),
+                (0.7,),
+            ),
         ]
 
         fitness_sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
@@ -329,34 +453,43 @@ class TestGeneticOperators:
         # Test adaptive mutation
         mutated_population = []
         for ind in population:
-            mutated_gene = adaptive_mutate_strategy_gene_pure(population, ind[0], base_mutation_rate=0.1)
+            mutated_gene = adaptive_mutate_strategy_gene_pure(
+                population, ind[0], base_mutation_rate=0.1
+            )
             mutated_ind = MockIndividual(mutated_gene, ind.fitness.values)
             mutated_population.append(mutated_ind)
 
         mutated_variance = calculate_population_variance(mutated_population)
         # Adaptive mutation should maintain or increase diversity
-        assert mutated_variance >= original_variance * 0.8, "Adaptive mutation should not significantly reduce diversity"
+        assert (
+            mutated_variance >= original_variance * 0.8
+        ), "Adaptive mutation should not significantly reduce diversity"
 
         # Test uniform crossover
         crossover_population = []
         for i in range(0, len(population) - 1, 2):
             parent1 = population[i][0]
             parent2 = population[i + 1][0]
-            child1, child2 = uniform_crossover(copy.deepcopy(parent1), copy.deepcopy(parent2))
-            crossover_population.extend([
-                MockIndividual(child1, (0.5,)),
-                MockIndividual(child2, (0.5,))
-            ])
+            child1, child2 = uniform_crossover(
+                copy.deepcopy(parent1), copy.deepcopy(parent2)
+            )
+            crossover_population.extend(
+                [MockIndividual(child1, (0.5,)), MockIndividual(child2, (0.5,))]
+            )
 
         if len(crossover_population) < len(population):
-            crossover_population.extend(population[len(crossover_population):])
+            crossover_population.extend(population[len(crossover_population) :])
 
         crossover_variance = calculate_population_variance(crossover_population)
         # Crossover should maintain diversity
-        assert crossover_variance >= original_variance * 0.6, "Uniform crossover should maintain diversity"
+        assert (
+            crossover_variance >= original_variance * 0.6
+        ), "Uniform crossover should maintain diversity"
 
         # Test silhouette-based sharing
         shared_population = fitness_sharing.silhouette_based_sharing(population)
         shared_variance = calculate_population_variance(shared_population)
         # Sharing should maintain diversity
-        assert shared_variance >= original_variance * 0.6, "Silhouette-based sharing should maintain diversity"
+        assert (
+            shared_variance >= original_variance * 0.6
+        ), "Silhouette-based sharing should maintain diversity"

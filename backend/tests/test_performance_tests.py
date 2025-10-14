@@ -1,6 +1,7 @@
 """
 パフォーマンステスト - 処理速度と効率を検証
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -24,26 +25,23 @@ class TestPerformanceTests:
     @pytest.fixture
     def large_dataset(self):
         """大規模データセット"""
-        return pd.DataFrame({
-            f'feature_{i}': np.random.randn(100000) for i in range(50)
-        })
+        return pd.DataFrame(
+            {f"feature_{i}": np.random.randn(100000) for i in range(50)}
+        )
 
     @pytest.fixture
     def medium_dataset(self):
         """中規模データセット"""
-        return pd.DataFrame({
-            f'feature_{i}': np.random.randn(10000) for i in range(20)
-        })
+        return pd.DataFrame({f"feature_{i}": np.random.randn(10000) for i in range(20)})
 
     @pytest.fixture
     def small_dataset(self):
         """小規模データセット"""
-        return pd.DataFrame({
-            f'feature_{i}': np.random.randn(1000) for i in range(10)
-        })
+        return pd.DataFrame({f"feature_{i}": np.random.randn(1000) for i in range(10)})
 
     def test_response_time_measurement(self, medium_dataset):
         """応答時間測定のテスト"""
+
         # GAアルゴリズムの応答時間
         def run_ga_algorithm():
             # GA実行（モック）
@@ -59,12 +57,16 @@ class TestPerformanceTests:
 
     def test_throughput_measurement(self, large_dataset):
         """スループット測定のテスト"""
+
         # 並列処理スループット
         def process_chunk(chunk):
             return chunk.sum().sum()
 
         chunk_size = 10000
-        chunks = [large_dataset[i:i+chunk_size] for i in range(0, len(large_dataset), chunk_size)]
+        chunks = [
+            large_dataset[i : i + chunk_size]
+            for i in range(0, len(large_dataset), chunk_size)
+        ]
 
         start_time = time.time()
 
@@ -126,6 +128,7 @@ class TestPerformanceTests:
 
     def test_cpu_utilization_optimization(self, medium_dataset):
         """CPU使用率最適化のテスト"""
+
         # CPU集約型タスク
         def cpu_intensive_task():
             result = 0
@@ -148,17 +151,20 @@ class TestPerformanceTests:
         assert processing_time < 5.0  # 5秒以内
         assert final_cpu > initial_cpu  # CPUが使用されている
 
-    def test_scalability_with_data_size(self, small_dataset, medium_dataset, large_dataset):
+    def test_scalability_with_data_size(
+        self, small_dataset, medium_dataset, large_dataset
+    ):
         """データサイズに対するスケーラビリティテスト"""
         datasets = [
-            ('small', small_dataset),
-            ('medium', medium_dataset),
-            ('large', large_dataset)
+            ("small", small_dataset),
+            ("medium", medium_dataset),
+            ("large", large_dataset),
         ]
 
         performance_results = {}
 
         for name, dataset in datasets:
+
             def process_data(data):
                 return data.corr().sum().sum()
 
@@ -167,19 +173,16 @@ class TestPerformanceTests:
             end_time = time.time()
 
             processing_time = end_time - start_time
-            performance_results[name] = {
-                'size': len(dataset),
-                'time': processing_time
-            }
+            performance_results[name] = {"size": len(dataset), "time": processing_time}
 
         # スケーラビリティが良い
-        small_time = performance_results['small']['time']
-        medium_time = performance_results['medium']['time']
-        large_time = performance_results['large']['time']
+        small_time = performance_results["small"]["time"]
+        medium_time = performance_results["medium"]["time"]
+        large_time = performance_results["large"]["time"]
 
         # 線形近似でスケーリング
         assert medium_time < small_time * 15  # 10倍のデータで15倍以下
-        assert large_time < medium_time * 15   # 10倍のデータで15倍以下
+        assert large_time < medium_time * 15  # 10倍のデータで15倍以下
 
     def test_garbage_collection_efficiency(self):
         """ガベージコレクション効率のテスト"""
@@ -206,12 +209,13 @@ class TestPerformanceTests:
 
     def test_database_query_performance(self):
         """データベースクエリパフォーマンスのテスト"""
+
         # 複数のクエリ
         def simulate_db_query(query_type):
             time.sleep(0.01)  # 10msのモッククエリ
             return f"result_{query_type}"
 
-        query_types = ['select', 'insert', 'update', 'delete']
+        query_types = ["select", "insert", "update", "delete"]
 
         start_time = time.time()
 
@@ -248,6 +252,7 @@ class TestPerformanceTests:
 
     def test_network_latency_optimization(self):
         """ネットワークラテンシ最適化のテスト"""
+
         # ネットワークリクエストのシミュレーション
         def simulate_network_call(endpoint):
             time.sleep(0.05)  # 50msの遅延
@@ -309,7 +314,7 @@ class TestPerformanceTests:
             # 書き込みテスト
             start_time = time.time()
 
-            with open(test_file, 'wb') as f:
+            with open(test_file, "wb") as f:
                 for _ in range(100):
                     data = np.random.randn(1000, 100).tobytes()
                     f.write(data)
@@ -319,7 +324,7 @@ class TestPerformanceTests:
             # 読み込みテスト
             start_time = time.time()
 
-            with open(test_file, 'rb') as f:
+            with open(test_file, "rb") as f:
                 total_size = 0
                 while True:
                     chunk = f.read(8192)
@@ -335,6 +340,7 @@ class TestPerformanceTests:
 
     def test_real_time_processing_latency(self):
         """リアルタイム処理レイテンシのテスト"""
+
         # リアルタイムデータストリーム
         def process_real_time_data(data_point):
             # 軽量処理
@@ -369,7 +375,7 @@ class TestPerformanceTests:
 
             # バッチ処理
             for i in range(0, len(data), 1000):
-                batch = data[i:i+1000]
+                batch = data[i : i + 1000]
                 # 処理（モック）
                 result = np.mean(batch)
 
@@ -381,12 +387,13 @@ class TestPerformanceTests:
 
     def test_load_balancing_effectiveness(self):
         """ロードバランシング効果のテスト"""
+
         # サーバーロードのシミュレーション
         def simulate_server_load(server_id):
             time.sleep(0.1)
             return f"server_{server_id}_completed"
 
-        servers = ['server_1', 'server_2', 'server_3', 'server_4']
+        servers = ["server_1", "server_2", "server_3", "server_4"]
 
         start_time = time.time()
 
@@ -402,6 +409,7 @@ class TestPerformanceTests:
 
     def test_resource_pooling_efficiency(self):
         """リソースプーリング効率のテスト"""
+
         # データベース接続プールのシミュレーション
         class MockConnectionPool:
             def __init__(self, max_connections=10):
@@ -437,8 +445,8 @@ class TestPerformanceTests:
         end_time = time.time()
         pooling_time = end_time - start_time
 
-        completed_tasks = sum(1 for r in results if 'completed' in r)
-        failed_tasks = sum(1 for r in results if 'failed' in r)
+        completed_tasks = sum(1 for r in results if "completed" in r)
+        failed_tasks = sum(1 for r in results if "failed" in r)
 
         # プーリング効果
         assert completed_tasks >= 10  # 半数以上が成功
@@ -448,22 +456,22 @@ class TestPerformanceTests:
         """最終パフォーマンス検証"""
         # すべてのパフォーメトリックが達成
         performance_metrics = [
-            'response_time',
-            'throughput',
-            'concurrency',
-            'memory_usage',
-            'cpu_utilization',
-            'scalability',
-            'garbage_collection',
-            'database_queries',
-            'cache_efficiency',
-            'network_latency',
-            'algorithmic_complexity',
-            'disk_io',
-            'real_time_latency',
-            'batch_processing',
-            'load_balancing',
-            'resource_pooling'
+            "response_time",
+            "throughput",
+            "concurrency",
+            "memory_usage",
+            "cpu_utilization",
+            "scalability",
+            "garbage_collection",
+            "database_queries",
+            "cache_efficiency",
+            "network_latency",
+            "algorithmic_complexity",
+            "disk_io",
+            "real_time_latency",
+            "batch_processing",
+            "load_balancing",
+            "resource_pooling",
         ]
 
         for metric in performance_metrics:

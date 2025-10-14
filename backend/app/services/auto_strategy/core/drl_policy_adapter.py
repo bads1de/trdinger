@@ -36,7 +36,9 @@ class DRLPolicyAdapter:
             try:
                 return self._normalise(self._custom_predict(features_df))
             except Exception as exc:
-                logger.warning("カスタムDRL予測が失敗したためデフォルト推論を使用します: %s", exc)
+                logger.warning(
+                    "カスタムDRL予測が失敗したためデフォルト推論を使用します: %s", exc
+                )
 
         if features_df is None or features_df.empty:
             return {"up": 1 / 3, "down": 1 / 3, "range": 1 / 3}

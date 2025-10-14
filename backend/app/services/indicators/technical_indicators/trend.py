@@ -100,7 +100,9 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def trima(data: pd.Series, length: int = 10, talib: bool | None = None) -> pd.Series:
+    def trima(
+        data: pd.Series, length: int = 10, talib: bool | None = None
+    ) -> pd.Series:
         """三角移動平均"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
@@ -305,7 +307,7 @@ class TrendIndicators:
         values = [np.nan] * (length - 1)
 
         for i in range(length - 1, len(data)):
-            window = data[i-length+1:i+1]
+            window = data[i - length + 1 : i + 1]
             x = np.arange(length)
             coeffs = np.polyfit(x, window, 1)  # [slope, intercept]
             if intercept:
@@ -320,7 +322,9 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def linregslope(data: pd.Series, length: int = 14, scalar: float = 1.0) -> pd.Series:
+    def linregslope(
+        data: pd.Series, length: int = 14, scalar: float = 1.0
+    ) -> pd.Series:
         """線形回帰スロープ"""
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
@@ -335,7 +339,7 @@ class TrendIndicators:
         slopes = [np.nan] * (length - 1)
 
         for i in range(length - 1, len(data)):
-            window = data[i-length+1:i+1]
+            window = data[i - length + 1 : i + 1]
             x = np.arange(length)
             slope = np.polyfit(x, window, 1)[0]  # 1次多項式の係数（スロープ）
             slopes.append(slope * scalar)  # scalarを適用
@@ -365,10 +369,7 @@ class TrendIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def amat(
-        data: pd.Series,
-        fast: int = 3,
-        slow: int = 30,
-        signal: int = 10
+        data: pd.Series, fast: int = 3, slow: int = 30, signal: int = 10
     ) -> pd.Series:
         """Archer Moving Averages Trends"""
         if not isinstance(data, pd.Series):
@@ -377,13 +378,15 @@ class TrendIndicators:
         # AMAT特有のデータ検証
         min_length = max(fast, slow, signal) + 10
         if len(data) < min_length:
-            raise ValueError(f"Insufficient data for AMAT calculation. Need at least {min_length} points, got {len(data)}")
+            raise ValueError(
+                f"Insufficient data for AMAT calculation. Need at least {min_length} points, got {len(data)}"
+            )
 
         result = ta.amat(data, fast=fast, slow=slow, signal=signal)
         if result is None or (hasattr(result, "empty") and result.empty):
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         # AMAT returns DataFrame, get the main series
-        if hasattr(result, 'iloc'):
+        if hasattr(result, "iloc"):
             return result.iloc[:, 0] if len(result.shape) > 1 else result
         return result
 
@@ -461,4 +464,3 @@ class TrendIndicators:
             return nan_series, nan_series
 
         return result.iloc[:, 0], result.iloc[:, 1]
-

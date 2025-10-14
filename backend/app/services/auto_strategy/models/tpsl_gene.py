@@ -1,6 +1,7 @@
 """
 TP/SL 遺伝子
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

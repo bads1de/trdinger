@@ -58,7 +58,9 @@ class ListDecoder:
         try:
             # エンコードされたリストが短すぎる場合は、デフォルト遺伝子を返す
             if not encoded or len(encoded) < 10:
-                logger.warning(f"エンコードされたリストが短すぎるため、デフォルト遺伝子を生成します: length={len(encoded)}")
+                logger.warning(
+                    f"エンコードされたリストが短すぎるため、デフォルト遺伝子を生成します: length={len(encoded)}"
+                )
                 return GeneUtils.create_default_strategy_gene(strategy_gene_class)
 
             max_indicators = 5  # デフォルト値

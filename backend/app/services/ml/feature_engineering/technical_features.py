@@ -248,8 +248,12 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             logger.error(f"モメンタム特徴量計算エラー: {e}")
             return df
 
-
-    def safe_ratio_calculation(self, numerator: pd.Series | Any, denominator: pd.Series | Any, fill_value: float = 0.0) -> pd.Series:
+    def safe_ratio_calculation(
+        self,
+        numerator: pd.Series | Any,
+        denominator: pd.Series | Any,
+        fill_value: float = 0.0,
+    ) -> pd.Series:
         """
         ゼロ除算を防ぐための安全な比率計算
 

@@ -24,7 +24,6 @@ from .ga_runtime import (
     GAConfig,
     GAProgress,
 )
-from .ga_config import GAConfig as GAConfigPydantic
 
 # __all__ で公開するクラスを定義
 __all__ = [
@@ -41,5 +40,4 @@ __all__ = [
     # GA実行時設定クラス
     "GAConfig",
     "GAProgress",
-    "GAConfigPydantic",
 ]

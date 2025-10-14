@@ -285,7 +285,7 @@ class TimeSeriesCrossValidator:
 
                 # 予測
                 y_pred = model.predict(X_test)
-                y_proba = getattr(model, 'predict_proba', lambda x: None)(X_test)
+                y_proba = getattr(model, "predict_proba", lambda x: None)(X_test)
 
                 # 評価指標計算
                 fold_scores = self._calculate_scores(y_test, y_pred, y_proba, scoring)
@@ -311,11 +311,23 @@ class TimeSeriesCrossValidator:
                                 "index": idx,
                                 "true": true_val,
                                 "pred": pred_val,
-                                "proba": proba_val.tolist() if proba_val is not None else None,
+                                "proba": (
+                                    proba_val.tolist()
+                                    if proba_val is not None
+                                    else None
+                                ),
                             }
                             for idx, (true_val, pred_val, proba_val) in zip(
                                 test_idx,
-                                zip(y_test, y_pred, y_proba if y_proba is not None else [None] * len(y_test))
+                                zip(
+                                    y_test,
+                                    y_pred,
+                                    (
+                                        y_proba
+                                        if y_proba is not None
+                                        else [None] * len(y_test)
+                                    ),
+                                ),
                             )
                         ]
                     )

@@ -205,8 +205,6 @@ class TrainingMetadata:
         if self.started_at is None:
             self.started_at = datetime.now().isoformat()
 
-
-
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式に変換"""
         result = asdict(self)

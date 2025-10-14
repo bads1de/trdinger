@@ -78,12 +78,12 @@ class IndividualEvaluator:
                 logger.info(
                     "Symbol: %s, Timeframe: %s",
                     backtest_config.get("symbol"),
-                    backtest_config.get("timeframe")
+                    backtest_config.get("timeframe"),
                 )
                 logger.info(
                     "Date range: %s to %s",
                     backtest_config.get("start_date"),
-                    backtest_config.get("end_date")
+                    backtest_config.get("end_date"),
                 )
 
             # 戦略設定を追加（test_strategy_generationと同じ形式）

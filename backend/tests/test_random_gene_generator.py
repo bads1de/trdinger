@@ -1,5 +1,7 @@
 import pytest
-from backend.app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from backend.app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
 from backend.app.services.auto_strategy.config.ga import GASettings
 
 
@@ -14,11 +16,11 @@ class TestRandomGeneGenerator:
     def test_generate_random_gene(self):
         gene = self.generator.generate_random_gene()
         assert gene is not None
-        assert hasattr(gene, 'indicators')
-        assert hasattr(gene, 'long_entry_conditions')
-        assert hasattr(gene, 'short_entry_conditions')
-        assert hasattr(gene, 'tpsl_gene')
-        assert hasattr(gene, 'position_sizing_gene')
+        assert hasattr(gene, "indicators")
+        assert hasattr(gene, "long_entry_conditions")
+        assert hasattr(gene, "short_entry_conditions")
+        assert hasattr(gene, "tpsl_gene")
+        assert hasattr(gene, "position_sizing_gene")
 
     def test_ensure_or_with_fallback_basic(self):
         """_ensure_or_with_fallbackの基本テスト"""
@@ -29,11 +31,11 @@ class TestRandomGeneGenerator:
             Condition(left_operand="close", operator=">", right_operand="open")
         ]
 
-        indicators = [
-            type('MockIndicator', (), {'type': 'SMA', 'enabled': True})()
-        ]
+        indicators = [type("MockIndicator", (), {"type": "SMA", "enabled": True})()]
 
-        result = self.generator._ensure_or_with_fallback(simple_conditions, "long", indicators)
+        result = self.generator._ensure_or_with_fallback(
+            simple_conditions, "long", indicators
+        )
 
         # 結果がリストであること
         assert isinstance(result, list)

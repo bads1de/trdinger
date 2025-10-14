@@ -1,6 +1,7 @@
 """
 BacktestServiceのテスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -24,7 +25,7 @@ class TestBacktestService:
 
     def test_ensure_data_service_initialized(self):
         """データサービス初期化のテスト"""
-        with patch.object(self.service, '_initialize_data_service') as mock_init:
+        with patch.object(self.service, "_initialize_data_service") as mock_init:
             self.service._ensure_data_service_initialized()
             mock_init.assert_called_once()
 
@@ -32,7 +33,7 @@ class TestBacktestService:
         """既に初期化済みのデータサービステスト"""
         self.service._data_service_initialized = True
 
-        with patch.object(self.service, '_initialize_data_service') as mock_init:
+        with patch.object(self.service, "_initialize_data_service") as mock_init:
             self.service._ensure_data_service_initialized()
             mock_init.assert_not_called()
 
@@ -45,13 +46,15 @@ class TestBacktestService:
             "end_date": "2024-12-19",
             "strategy_config": {
                 "strategy_type": "GENERATED_GA",
-                "parameters": {"strategy_gene": {"id": "test_gene"}}
-            }
+                "parameters": {"strategy_gene": {"id": "test_gene"}},
+            },
         }
 
-        with patch.object(self.service, '_prepare_backtest_data') as mock_prepare:
-            with patch.object(self.service, '_execute_backtest') as mock_execute:
-                with patch.object(self.service, '_calculate_performance_metrics') as mock_metrics:
+        with patch.object(self.service, "_prepare_backtest_data") as mock_prepare:
+            with patch.object(self.service, "_execute_backtest") as mock_execute:
+                with patch.object(
+                    self.service, "_calculate_performance_metrics"
+                ) as mock_metrics:
                     mock_prepare.return_value = (Mock(), Mock())
                     mock_execute.return_value = Mock()
                     mock_metrics.return_value = {"total_return": 0.15}
@@ -75,13 +78,15 @@ class TestBacktestService:
         start_date = "2024-01-01"
         end_date = "2024-12-19"
 
-        mock_ohlcv = pd.DataFrame({
-            'open': [100, 101, 99],
-            'high': [102, 102, 100],
-            'low': [98, 99, 98],
-            'close': [101, 99, 100],
-            'volume': [1000, 1100, 900]
-        })
+        mock_ohlcv = pd.DataFrame(
+            {
+                "open": [100, 101, 99],
+                "high": [102, 102, 100],
+                "low": [98, 99, 98],
+                "close": [101, 99, 100],
+                "volume": [1000, 1100, 900],
+            }
+        )
 
         self.mock_data_service.get_ohlcv_data.return_value = mock_ohlcv
 
@@ -114,12 +119,16 @@ class TestBacktestService:
         mock_data = pd.DataFrame()
         mock_market_data = {}
 
-        with patch('app.services.backtest.backtest_service.Backtest') as mock_backtest_class:
+        with patch(
+            "app.services.backtest.backtest_service.Backtest"
+        ) as mock_backtest_class:
             mock_backtest = Mock()
             mock_backtest_class.return_value = mock_backtest
             mock_backtest.run.return_value = Mock()
 
-            result = self.service._execute_backtest(mock_strategy, mock_data, mock_market_data)
+            result = self.service._execute_backtest(
+                mock_strategy, mock_data, mock_market_data
+            )
 
             assert result is not None
             mock_backtest_class.assert_called_once()
@@ -158,7 +167,7 @@ class TestBacktestService:
         mock_backtest_result = Mock()
         mock_backtest_result.trades = [
             Mock(size=1, pnl=10, entry_time="2024-01-01", exit_time="2024-01-02"),
-            Mock(size=-1, pnl=-5, entry_time="2024-01-03", exit_time="2024-01-04")
+            Mock(size=-1, pnl=-5, entry_time="2024-01-03", exit_time="2024-01-04"),
         ]
 
         trade_history = self.service._get_trade_history(mock_backtest_result)
@@ -175,7 +184,7 @@ class TestBacktestService:
         """バックテストエラー処理のテスト"""
         error = Exception("Backtest error")
 
-        with patch('app.services.backtest.backtest_service.logger') as mock_logger:
+        with patch("app.services.backtest.backtest_service.logger") as mock_logger:
             result = self.service._handle_backtest_error(error, "test context")
 
             assert result is None
@@ -188,10 +197,7 @@ class TestBacktestService:
             "timeframe": "1h",
             "start_date": "2024-01-01",
             "end_date": "2024-12-19",
-            "strategy_config": {
-                "strategy_type": "GENERATED_GA",
-                "parameters": {}
-            }
+            "strategy_config": {"strategy_type": "GENERATED_GA", "parameters": {}},
         }
 
         # 例外が投げられないことを確認
@@ -205,7 +211,7 @@ class TestBacktestService:
         config = {
             "symbol": "BTC/USDT:USDT",
             # timeframeが欠けている
-            "start_date": "2024-01-01"
+            "start_date": "2024-01-01",
         }
 
         with pytest.raises(ValueError, match="timeframeが指定されていません"):
@@ -217,33 +223,38 @@ class TestBacktestService:
             "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": "2024-12-19",  # 終了日より後
-            "end_date": "2024-01-01",   # 開始日より前
-            "strategy_config": {
-                "strategy_type": "GENERATED_GA",
-                "parameters": {}
-            }
+            "end_date": "2024-01-01",  # 開始日より前
+            "strategy_config": {"strategy_type": "GENERATED_GA", "parameters": {}},
         }
 
-        with pytest.raises(ValueError, match="開始日は終了日より前である必要があります"):
+        with pytest.raises(
+            ValueError, match="開始日は終了日より前である必要があります"
+        ):
             self.service._validate_backtest_config(config)
 
     def test_create_strategy_instance(self):
         """戦略インスタンス作成のテスト"""
         strategy_config = {
             "strategy_type": "GENERATED_GA",
-            "parameters": {
-                "strategy_gene": {"id": "test_gene", "indicators": []}
-            }
+            "parameters": {"strategy_gene": {"id": "test_gene", "indicators": []}},
         }
         data = pd.DataFrame()
 
-        with patch('app.services.backtest.backtest_service.StrategyFactory') as mock_factory_class:
+        with patch(
+            "app.services.backtest.backtest_service.StrategyFactory"
+        ) as mock_factory_class:
             mock_factory = Mock()
             mock_strategy_class = Mock()
             mock_strategy_instance = Mock()
-            mock_factory_class.return_value.create_strategy_instance.return_value = mock_strategy_instance
-            mock_factory_class.return_value.create_strategy_class.return_value = mock_strategy_class
-            mock_factory_class.return_value.create_strategy_instance.return_value = mock_strategy_instance
+            mock_factory_class.return_value.create_strategy_instance.return_value = (
+                mock_strategy_instance
+            )
+            mock_factory_class.return_value.create_strategy_class.return_value = (
+                mock_strategy_class
+            )
+            mock_factory_class.return_value.create_strategy_instance.return_value = (
+                mock_strategy_instance
+            )
 
             strategy = self.service._create_strategy_instance(strategy_config, data)
 
@@ -251,10 +262,7 @@ class TestBacktestService:
 
     def test_create_strategy_instance_invalid_type(self):
         """無効な戦略タイプのインスタンス作成テスト"""
-        strategy_config = {
-            "strategy_type": "INVALID_TYPE",
-            "parameters": {}
-        }
+        strategy_config = {"strategy_type": "INVALID_TYPE", "parameters": {}}
         data = pd.DataFrame()
 
         with pytest.raises(ValueError, match="サポートされていない戦略タイプ"):
@@ -267,17 +275,21 @@ class TestBacktestService:
         start_date = "2024-01-01"
         end_date = "2024-12-19"
 
-        mock_ohlcv = pd.DataFrame({
-            'open': [100, 101],
-            'high': [102, 102],
-            'low': [98, 99],
-            'close': [101, 99],
-            'volume': [1000, 1100]
-        })
+        mock_ohlcv = pd.DataFrame(
+            {
+                "open": [100, 101],
+                "high": [102, 102],
+                "low": [98, 99],
+                "close": [101, 99],
+                "volume": [1000, 1100],
+            }
+        )
 
         self.mock_data_service.get_ohlcv_data.return_value = mock_ohlcv
 
-        market_data = self.service._get_market_data(symbol, timeframe, start_date, end_date)
+        market_data = self.service._get_market_data(
+            symbol, timeframe, start_date, end_date
+        )
 
         assert isinstance(market_data, dict)
         assert "ohlcv" in market_data
@@ -291,9 +303,15 @@ class TestBacktestService:
         mock_oi_repo = Mock()
         mock_fr_repo = Mock()
 
-        with patch('app.services.backtest.backtest_service.OHLCVRepository') as mock_ohlcv_class:
-            with patch('app.services.backtest.backtest_service.OpenInterestRepository') as mock_oi_class:
-                with patch('app.services.backtest.backtest_service.FundingRateRepository') as mock_fr_class:
+        with patch(
+            "app.services.backtest.backtest_service.OHLCVRepository"
+        ) as mock_ohlcv_class:
+            with patch(
+                "app.services.backtest.backtest_service.OpenInterestRepository"
+            ) as mock_oi_class:
+                with patch(
+                    "app.services.backtest.backtest_service.FundingRateRepository"
+                ) as mock_fr_class:
                     mock_ohlcv_class.return_value = mock_ohlcv_repo
                     mock_oi_class.return_value = mock_oi_repo
                     mock_fr_class.return_value = mock_fr_repo
@@ -307,7 +325,7 @@ class TestBacktestService:
         """クリーンアップのテスト"""
         self.service._data_service_initialized = True
 
-        with patch.object(self.service.data_service, 'cleanup') as mock_cleanup:
+        with patch.object(self.service.data_service, "cleanup") as mock_cleanup:
             self.service.cleanup()
 
             mock_cleanup.assert_called_once()
@@ -317,7 +335,9 @@ class TestBacktestService:
         """利用可能シンボル取得のテスト"""
         expected_symbols = ["BTC/USDT:USDT", "ETH/USDT:USDT"]
 
-        with patch.object(self.service.data_service, 'get_available_symbols') as mock_get:
+        with patch.object(
+            self.service.data_service, "get_available_symbols"
+        ) as mock_get:
             mock_get.return_value = expected_symbols
 
             symbols = self.service.get_available_symbols()
@@ -329,7 +349,7 @@ class TestBacktestService:
         """利用可能時間足取得のテスト"""
         expected_timeframes = ["1m", "5m", "1h", "1d"]
 
-        with patch.object(self.service.data_service, 'get_timeframes') as mock_get:
+        with patch.object(self.service.data_service, "get_timeframes") as mock_get:
             mock_get.return_value = expected_timeframes
 
             timeframes = self.service.get_timeframes()
@@ -346,15 +366,17 @@ class TestBacktestService:
             "end_date": "2024-12-19",
             "strategy_config": {
                 "strategy_type": "GENERATED_GA",
-                "parameters": {"strategy_gene": {"id": "test_gene"}}
+                "parameters": {"strategy_gene": {"id": "test_gene"}},
             },
             "initial_capital": 100000,
-            "commission_rate": 0.00055
+            "commission_rate": 0.00055,
         }
 
-        with patch.object(self.service, '_prepare_backtest_data') as mock_prepare:
-            with patch.object(self.service, '_execute_backtest') as mock_execute:
-                with patch.object(self.service, '_calculate_performance_metrics') as mock_metrics:
+        with patch.object(self.service, "_prepare_backtest_data") as mock_prepare:
+            with patch.object(self.service, "_execute_backtest") as mock_execute:
+                with patch.object(
+                    self.service, "_calculate_performance_metrics"
+                ) as mock_metrics:
                     mock_prepare.return_value = (Mock(), Mock())
                     mock_execute.return_value = Mock()
                     mock_metrics.return_value = {"total_return": 0.15}
@@ -367,14 +389,14 @@ class TestBacktestService:
 
     def test_concurrent_backtest_execution(self):
         """並列バックテスト実行のテスト"""
-        configs = [
-            {"config": "config1"},
-            {"config": "config2"},
-            {"config": "config3"}
-        ]
+        configs = [{"config": "config1"}, {"config": "config2"}, {"config": "config3"}]
 
-        with patch('app.services.backtest.backtest_service.ThreadPoolExecutor') as mock_executor:
-            with patch('app.services.backtest.backtest_service.as_completed') as mock_completed:
+        with patch(
+            "app.services.backtest.backtest_service.ThreadPoolExecutor"
+        ) as mock_executor:
+            with patch(
+                "app.services.backtest.backtest_service.as_completed"
+            ) as mock_completed:
                 mock_future1 = Mock()
                 mock_future1.result.return_value = {"result": "test1"}
                 mock_future2 = Mock()
@@ -383,11 +405,16 @@ class TestBacktestService:
                 mock_future3.result.return_value = {"result": "test3"}
 
                 mock_executor.return_value.__enter__.return_value.submit.side_effect = [
-                    mock_future1, mock_future2, mock_future3
+                    mock_future1,
+                    mock_future2,
+                    mock_future3,
                 ]
                 mock_completed.return_value = [mock_future1, mock_future2, mock_future3]
 
                 results = self.service.run_concurrent_backtests(configs)
 
                 assert len(results) == 3
-                assert mock_executor.return_value.__enter__.return_value.submit.call_count == 3
+                assert (
+                    mock_executor.return_value.__enter__.return_value.submit.call_count
+                    == 3
+                )

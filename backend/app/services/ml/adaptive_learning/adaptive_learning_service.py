@@ -76,9 +76,7 @@ class AdaptiveLearningService:
         self.ml_service = ml_service or MLTrainingService()
 
         # 統合済みレジーム検出器の初期化
-        method_str = str(
-            getattr(self.config, "detection_method", "ensemble")
-        ).lower()
+        method_str = str(getattr(self.config, "detection_method", "ensemble")).lower()
         try:
             method_map = {
                 "rule_based": RegimeDetectionMethod.RULE_BASED,
@@ -87,7 +85,9 @@ class AdaptiveLearningService:
                 "hmm": RegimeDetectionMethod.HMM,
                 "ensemble": RegimeDetectionMethod.ENSEMBLE,
             }
-            detection_method = method_map.get(method_str, RegimeDetectionMethod.ENSEMBLE)
+            detection_method = method_map.get(
+                method_str, RegimeDetectionMethod.ENSEMBLE
+            )
         except Exception:
             detection_method = RegimeDetectionMethod.ENSEMBLE
 

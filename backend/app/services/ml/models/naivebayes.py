@@ -116,8 +116,10 @@ class NaiveBayesModel:
 
             results = {
                 "algorithm": self.ALGORITHM_NAME,
-                "var_smoothing": self.model.var_smoothing if self.model is not None else 0.0,
-                "n_classes": len(self.model.classes_) if self.model is not None and hasattr(self.model, 'classes_') else 0,  # type: ignore
+                "var_smoothing": (
+                    self.model.var_smoothing if self.model is not None else 0.0
+                ),
+                "n_classes": len(self.model.classes_) if self.model is not None and hasattr(self.model, "classes_") else 0,  # type: ignore
                 "feature_count": len(self.feature_columns),
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),

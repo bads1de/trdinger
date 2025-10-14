@@ -36,7 +36,6 @@ class BybitService(ABC):
             }
         )
 
-
     def _validate_symbol(self, symbol: str) -> None:
         """
         シンボルの検証
@@ -63,7 +62,9 @@ class BybitService(ABC):
         if limit is not None:
             max_limit = unified_config.data_collection.max_limit
             if not isinstance(limit, int) or limit <= 0 or limit > max_limit:
-                raise ValueError(f"limitは1から{max_limit}の間の整数である必要があります")
+                raise ValueError(
+                    f"limitは1から{max_limit}の間の整数である必要があります"
+                )
 
     def _validate_parameters(self, symbol: str, limit: Optional[int] = None) -> None:
         """
@@ -141,9 +142,7 @@ class BybitService(ABC):
             raise DataError(f"取引所エラー: {e}") from e
         except Exception as e:
             logger.error(f"予期しないエラー: {e}")
-            raise DataError(
-                f"{operation_name}中にエラーが発生しました: {e}"
-            ) from e
+            raise DataError(f"{operation_name}中にエラーが発生しました: {e}") from e
 
     async def _fetch_paginated_data(
         self,
@@ -540,7 +539,15 @@ class BybitService(ABC):
 
         # 履歴取得メソッドを取得
         # シンボルを正規化
-        normalized_symbol = symbol if ":" in symbol else f"{symbol}:USDT" if symbol.endswith("/USDT") else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+        normalized_symbol = (
+            symbol
+            if ":" in symbol
+            else (
+                f"{symbol}:USDT"
+                if symbol.endswith("/USDT")
+                else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+            )
+        )
         fetch_history_method = getattr(self.exchange, config.fetch_history_method_name)
 
         if latest_timestamp:
@@ -639,7 +646,15 @@ class BybitService(ABC):
             取得・保存結果を含む辞書
         """
         # シンボルを正規化
-        normalized_symbol = symbol if ":" in symbol else f"{symbol}:USDT" if symbol.endswith("/USDT") else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+        normalized_symbol = (
+            symbol
+            if ":" in symbol
+            else (
+                f"{symbol}:USDT"
+                if symbol.endswith("/USDT")
+                else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+            )
+        )
         if fetch_all:
             # 全期間データを取得
             latest_timestamp = await self._get_latest_timestamp_from_db(

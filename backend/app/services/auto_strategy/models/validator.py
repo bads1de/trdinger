@@ -33,7 +33,9 @@ class GeneValidator:
         self.valid_operators = OPERATORS
         self.valid_data_sources = DATA_SOURCES
 
-    @safe_operation(context="指標遺伝子バリデーション", is_api_call=False, default_return=False)
+    @safe_operation(
+        context="指標遺伝子バリデーション", is_api_call=False, default_return=False
+    )
     def validate_indicator_gene(self, indicator_gene) -> bool:
         """指標遺伝子の妥当性を検証"""
         if not indicator_gene.type or not isinstance(indicator_gene.type, str):
@@ -63,7 +65,11 @@ class GeneValidator:
         logger.debug(f"指標タイプ {indicator_gene.type} は有効です")
         return True
 
-    @safe_operation(context="条件バリデーション", is_api_call=False, default_return=(False, "バリデーションエラー"))
+    @safe_operation(
+        context="条件バリデーション",
+        is_api_call=False,
+        default_return=(False, "バリデーションエラー"),
+    )
     def validate_condition(self, condition) -> Tuple[bool, str]:
         """条件の妥当性を検証"""
         if not all(
@@ -91,7 +97,11 @@ class GeneValidator:
 
         return True, ""
 
-    @safe_operation(context="オペランド検証", is_api_call=False, default_return=(False, "オペランド検証エラー"))
+    @safe_operation(
+        context="オペランド検証",
+        is_api_call=False,
+        default_return=(False, "オペランド検証エラー"),
+    )
     def _is_valid_operand_detailed(self, operand) -> Tuple[bool, str]:
         """オペランドの妥当性を詳細に検証"""
         try:
@@ -128,7 +138,11 @@ class GeneValidator:
         except Exception as e:
             return False, f"オペランド検証エラー: {e}"
 
-    @safe_operation(context="辞書オペランド検証", is_api_call=False, default_return=(False, "辞書検証エラー"))
+    @safe_operation(
+        context="辞書オペランド検証",
+        is_api_call=False,
+        default_return=(False, "辞書検証エラー"),
+    )
     def _validate_dict_operand_detailed(self, operand: dict) -> Tuple[bool, str]:
         """辞書形式のオペランドを詳細に検証"""
         try:
@@ -244,7 +258,11 @@ class GeneValidator:
         else:
             return str(operand_dict.get("name", ""))
 
-    @safe_operation(context="戦略遺伝子バリデーション", is_api_call=False, default_return=(False, ["バリデーションエラー"]))
+    @safe_operation(
+        context="戦略遺伝子バリデーション",
+        is_api_call=False,
+        default_return=(False, ["バリデーションエラー"]),
+    )
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
         """戦略遺伝子の妥当性を検証"""
         from .condition import ConditionGroup
@@ -278,9 +296,7 @@ class GeneValidator:
                     self.clean_condition(condition)
                     is_valid, error_detail = self.validate_condition(condition)
                     if not is_valid:
-                        errors.append(
-                            f"{label_prefix}{i}が無効です: {error_detail}"
-                        )
+                        errors.append(f"{label_prefix}{i}が無効です: {error_detail}")
 
         _validate_mixed_conditions(strategy_gene.entry_conditions, "エントリー条件")
         _validate_mixed_conditions(
@@ -311,18 +327,20 @@ class GeneValidator:
                 errors.append("イグジット条件が設定されていません")
 
         # 有効な指標の存在チェック
-        enabled_indicators = [
-            ind for ind in strategy_gene.indicators if ind.enabled
-        ]
+        enabled_indicators = [ind for ind in strategy_gene.indicators if ind.enabled]
         if not enabled_indicators:
             errors.append("有効な指標が設定されていません")
 
         return len(errors) == 0, errors
 
-    @safe_operation(context="条件のトリビアル判定", is_api_call=False, default_return=False)
+    @safe_operation(
+        context="条件のトリビアル判定", is_api_call=False, default_return=False
+    )
     def _is_trivial_condition(self, condition) -> bool:
         """条件がシンプルすぎる（トリビアル）かどうかを判定"""
-        if not hasattr(condition, 'left_operand') or not hasattr(condition, 'right_operand'):
+        if not hasattr(condition, "left_operand") or not hasattr(
+            condition, "right_operand"
+        ):
             return False
 
         left = condition.left_operand
@@ -333,8 +351,11 @@ class GeneValidator:
         price_fields = {"close", "open", "high", "low"}
 
         # closeとopenの直接比較はトリビアル
-        if (left in price_fields and right in price_fields and
-            operator in [">", "<", ">=", "<="]):
+        if (
+            left in price_fields
+            and right in price_fields
+            and operator in [">", "<", ">=", "<="]
+        ):
             return True
 
         # 同じ価格データの比較（例: close > close）は常にトリビアル
@@ -344,7 +365,9 @@ class GeneValidator:
         # 非常にシンプルな数値比較（例: close > 1.0 など、意味のない閾値）
         if left in price_fields and isinstance(right, (int, float)):
             # 価格比として意味のない値（1.0 や 0.0 など）
-            if operator in [">", "<"] and (right == 1.0 or right == 0.0 or abs(right) > 10):
+            if operator in [">", "<"] and (
+                right == 1.0 or right == 0.0 or abs(right) > 10
+            ):
                 return True
 
         return False

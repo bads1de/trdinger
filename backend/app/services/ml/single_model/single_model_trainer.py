@@ -206,7 +206,9 @@ class SingleModelTrainer(BaseMLTrainer):
         try:
             # 特徴量の順序を学習時と合わせる
             if self.feature_columns:
-                features_df = cast(pd.DataFrame, features_df.loc[:, self.feature_columns])
+                features_df = cast(
+                    pd.DataFrame, features_df.loc[:, self.feature_columns]
+                )
 
             # 単一モデルで予測確率を取得
             predictions = self.single_model.predict_proba(features_df)

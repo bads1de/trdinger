@@ -11,7 +11,7 @@ from .data_retrieval_service import DataRetrievalError, DataRetrievalService
 __all__ = [
     "DataRetrievalService",
     "DataRetrievalError",
-    "DataConversionService", 
+    "DataConversionService",
     "DataConversionError",
     "DataIntegrationService",
     "DataIntegrationError",

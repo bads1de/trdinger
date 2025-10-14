@@ -350,7 +350,7 @@ class MarketRegimeDetector:
 
         # numpy ndarray を pandas Series に変換
         if isinstance(rsi_raw, np.ndarray):
-            rsi = pd.Series(rsi_raw, index=close.index[-len(rsi_raw):])
+            rsi = pd.Series(rsi_raw, index=close.index[-len(rsi_raw) :])
         else:
             rsi = rsi_raw
 
@@ -722,4 +722,3 @@ class MarketRegimeDetector:
             timestamp=datetime.now(),
             method="default",
         )
-

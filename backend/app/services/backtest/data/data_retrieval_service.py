@@ -86,7 +86,9 @@ class DataRetrievalService:
             )
 
             if not data:
-                logger.error(f"DataRetrievalService - No OHLCV data found for {symbol} {timeframe}")
+                logger.error(
+                    f"DataRetrievalService - No OHLCV data found for {symbol} {timeframe}"
+                )
                 raise DataRetrievalError(
                     f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした"
                 )
@@ -120,7 +122,9 @@ class DataRetrievalService:
         )
         def _get_open_interest_data():
             # Type assertion to help type checker understand oi_repo is not None
-            assert self.oi_repo is not None, "Open InterestRepositoryが初期化されていません"
+            assert (
+                self.oi_repo is not None
+            ), "Open InterestRepositoryが初期化されていません"
 
             data = self.oi_repo.get_open_interest_data(
                 symbol=symbol,
@@ -158,7 +162,9 @@ class DataRetrievalService:
         )
         def _get_funding_rate_data():
             # Type assertion to help type checker understand fr_repo is not None
-            assert self.fr_repo is not None, "Funding RateRepositoryが初期化されていません"
+            assert (
+                self.fr_repo is not None
+            ), "Funding RateRepositoryが初期化されていません"
 
             data = self.fr_repo.get_funding_rate_data(
                 symbol=symbol,
@@ -170,4 +176,3 @@ class DataRetrievalService:
             return data
 
         return _get_funding_rate_data()
-

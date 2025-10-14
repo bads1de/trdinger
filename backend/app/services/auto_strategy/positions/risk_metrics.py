@@ -24,9 +24,7 @@ def _prepare_returns(raw_returns: Iterable[float]) -> np.ndarray:
     return array[np.isfinite(array)]
 
 
-def calculate_historical_var(
-    returns: Iterable[float], confidence: float
-) -> float:
+def calculate_historical_var(returns: Iterable[float], confidence: float) -> float:
     """ヒストリカルVaR（損失率）を計算"""
 
     prepared = _prepare_returns(returns)
@@ -38,9 +36,7 @@ def calculate_historical_var(
     return float(abs(min(quantile, 0.0)))
 
 
-def calculate_expected_shortfall(
-    returns: Iterable[float], confidence: float
-) -> float:
+def calculate_expected_shortfall(returns: Iterable[float], confidence: float) -> float:
     """ヒストリカルES（条件付平均損失率）を計算"""
 
     prepared = _prepare_returns(returns)

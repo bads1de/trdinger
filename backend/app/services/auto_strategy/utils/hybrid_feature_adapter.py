@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class HybridFeatureAdapter:
     """
     StrategyGene → ML特徴量変換アダプタ
-    
+
     GAで生成された戦略遺伝子をMLモデルで評価可能な特徴量に変換します。
     """
 
@@ -34,7 +34,7 @@ class HybridFeatureAdapter:
     ):
         """
         初期化
-        
+
         Args:
             automl_config: AutoML設定（tsfresh, autofeatなど）
         """
@@ -44,7 +44,9 @@ class HybridFeatureAdapter:
         self._preprocess_trainer = None
         self._wavelet_transformer: Optional["WaveletFeatureTransformer"] = None
 
-        wavelet_config = self.automl_config.get("wavelet") if self.automl_config else None
+        wavelet_config = (
+            self.automl_config.get("wavelet") if self.automl_config else None
+        )
         if isinstance(wavelet_config, dict) and wavelet_config.get("enabled", False):
             try:
                 self._wavelet_transformer = WaveletFeatureTransformer(wavelet_config)
@@ -62,17 +64,17 @@ class HybridFeatureAdapter:
     ) -> pd.DataFrame:
         """
         StrategyGene → 特徴量DataFrame変換
-        
+
         Args:
             gene: 戦略遺伝子
             ohlcv_data: OHLCVデータ
             apply_preprocessing: 前処理を適用するか
             label_data: イベントドリブンラベルデータ
             sentiment_scores: センチメントスコア系列
-            
+
         Returns:
             特徴量DataFrame
-            
+
         Raises:
             MLFeatureError: 変換に失敗した場合
         """
@@ -80,18 +82,18 @@ class HybridFeatureAdapter:
             # 入力検証
             if gene is None:
                 raise MLFeatureError("Geneがnullです")
-            
+
             if ohlcv_data is None or ohlcv_data.empty:
                 raise MLFeatureError("OHLCVデータが空です")
-            
+
             # 基本特徴量を作成
             features_df = ohlcv_data.copy()
             if not isinstance(features_df, pd.DataFrame):
                 raise MLFeatureError("OHLCVデータはDataFrameである必要があります")
-            
+
             # Gene情報から特徴量を抽出
             gene_features = self._extract_gene_features(gene)
-            
+
             # Gene特徴量をDataFrameに追加
             for key, value in gene_features.items():
                 features_df[key] = value
@@ -101,15 +103,21 @@ class HybridFeatureAdapter:
                 aligned_labels = label_data.reindex(features_df.index)
                 aligned_labels = aligned_labels.ffill().fillna(0)
                 if "label_hrhp" in aligned_labels.columns:
-                    features_df["label_hrhp_signal"] = aligned_labels["label_hrhp"].astype(float)
+                    features_df["label_hrhp_signal"] = aligned_labels[
+                        "label_hrhp"
+                    ].astype(float)
                 else:
                     features_df["label_hrhp_signal"] = 0.0
                 if "label_lrlp" in aligned_labels.columns:
-                    features_df["label_lrlp_signal"] = aligned_labels["label_lrlp"].astype(float)
+                    features_df["label_lrlp_signal"] = aligned_labels[
+                        "label_lrlp"
+                    ].astype(float)
                 else:
                     features_df["label_lrlp_signal"] = 0.0
                 if "market_regime" in aligned_labels.columns:
-                    features_df["market_regime"] = aligned_labels["market_regime"].astype(float)
+                    features_df["market_regime"] = aligned_labels[
+                        "market_regime"
+                    ].astype(float)
                 elif "market_regime" not in features_df:
                     features_df["market_regime"] = 0.0
             else:
@@ -121,7 +129,10 @@ class HybridFeatureAdapter:
             if "open_interest" in features_df.columns:
                 oi_series = features_df["open_interest"].astype(float)
                 features_df["oi_pct_change"] = (
-                    oi_series.replace(0, np.nan).pct_change().replace([np.inf, -np.inf], 0).fillna(0)
+                    oi_series.replace(0, np.nan)
+                    .pct_change()
+                    .replace([np.inf, -np.inf], 0)
+                    .fillna(0)
                 )
             else:
                 features_df["oi_pct_change"] = 0.0
@@ -138,17 +149,22 @@ class HybridFeatureAdapter:
                 aligned_sentiment = sentiment_scores.reindex(features_df.index)
                 aligned_sentiment = aligned_sentiment.ffill().fillna(0.0)
                 features_df["sentiment_smoothed"] = (
-                    aligned_sentiment.rolling(window=3, min_periods=1).mean().fillna(0.0)
+                    aligned_sentiment.rolling(window=3, min_periods=1)
+                    .mean()
+                    .fillna(0.0)
                 )
             else:
                 features_df["sentiment_smoothed"] = 0.0
-            
+
             # ウェーブレット特徴量の追加
             if self._wavelet_transformer is not None:
                 try:
                     features_df = self._wavelet_transformer.append_features(features_df)
                 except Exception as exc:
-                    logger.warning("ウェーブレット特徴量の追加に失敗したためスキップします: %s", exc)
+                    logger.warning(
+                        "ウェーブレット特徴量の追加に失敗したためスキップします: %s",
+                        exc,
+                    )
 
             # AutoML特徴量生成（有効な場合）
             if self._automl_enabled:
@@ -156,7 +172,7 @@ class HybridFeatureAdapter:
                     features_df = self._augment_with_automl_features(features_df)
                 except Exception as e:
                     logger.warning(f"AutoML特徴量生成エラー: {e}")
-            
+
             # 前処理（オプション）
             if apply_preprocessing:
                 features_df = self._apply_preprocessing(features_df)
@@ -165,9 +181,9 @@ class HybridFeatureAdapter:
 
             # 重複カラムを排除（AutoML特徴量追加時の安全策）
             features_df = features_df.loc[:, ~features_df.columns.duplicated()]
-            
+
             return features_df
-            
+
         except MLFeatureError:
             raise
         except Exception as e:
@@ -177,28 +193,28 @@ class HybridFeatureAdapter:
     def _extract_gene_features(self, gene: StrategyGene) -> Dict[str, Any]:
         """
         StrategyGeneから特徴量を抽出
-        
+
         Args:
             gene: 戦略遺伝子
-            
+
         Returns:
             特徴量辞書
         """
         features = {}
-        
+
         # インジケータ数
         features["indicator_count"] = len(gene.indicators) if gene.indicators else 0
-        
+
         # 条件数
         long_conditions = gene.get_effective_long_conditions()
         short_conditions = gene.get_effective_short_conditions()
         features["condition_count"] = len(long_conditions) + len(short_conditions)
         features["long_condition_count"] = len(long_conditions)
         features["short_condition_count"] = len(short_conditions)
-        
+
         # ロング・ショート分離フラグ
         features["has_long_short_separation"] = int(gene.has_long_short_separation())
-        
+
         # インジケータタイプの特徴
         if gene.indicators:
             indicator_types = [getattr(ind, "type", "") for ind in gene.indicators]
@@ -208,7 +224,7 @@ class HybridFeatureAdapter:
             features["has_rsi"] = int("RSI" in indicator_types)
             features["has_macd"] = int("MACD" in indicator_types)
             features["has_bollinger"] = int("BollingerBands" in indicator_types)
-            
+
             # インジケータパラメータの平均
             periods = []
             for ind in gene.indicators:
@@ -230,7 +246,7 @@ class HybridFeatureAdapter:
                     "avg_indicator_period": 0,
                 }
             )
-        
+
         # TPSL設定
         if gene.tpsl_gene:
             features["has_tpsl"] = 1
@@ -247,7 +263,7 @@ class HybridFeatureAdapter:
             features["has_tpsl"] = 0
             features["take_profit_ratio"] = 0
             features["stop_loss_ratio"] = 0
-        
+
         # ポジションサイジング設定
         if gene.position_sizing_gene:
             features["has_position_sizing"] = 1
@@ -257,16 +273,16 @@ class HybridFeatureAdapter:
         else:
             features["has_position_sizing"] = 0
             features["position_sizing_method"] = 0
-        
+
         return features
 
     def _fallback_preprocess(self, features_df: pd.DataFrame) -> pd.DataFrame:
         """
         特徴量の前処理
-        
+
         Args:
             features_df: 特徴量DataFrame
-            
+
         Returns:
             前処理後のDataFrame
         """
@@ -292,7 +308,9 @@ class HybridFeatureAdapter:
 
     def _get_preprocess_callable(
         self,
-    ) -> Optional[Callable[[pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]]]:
+    ) -> Optional[
+        Callable[[pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]]
+    ]:
         """BaseMLTrainer由来の前処理関数を取得"""
 
         if self._preprocess_handler is not None:
@@ -322,15 +340,27 @@ class HybridFeatureAdapter:
             close = augmented["close"].astype(float)
             augmented["close_return_1"] = close.pct_change().fillna(0)
             augmented["close_return_5"] = close.pct_change(periods=5).fillna(0)
-            augmented["close_rolling_mean_5"] = close.rolling(window=5, min_periods=1).mean()
-            augmented["close_rolling_std_5"] = close.rolling(window=5, min_periods=1).std().fillna(0)
-            augmented["close_rolling_min_5"] = close.rolling(window=5, min_periods=1).min()
-            augmented["close_rolling_max_5"] = close.rolling(window=5, min_periods=1).max()
+            augmented["close_rolling_mean_5"] = close.rolling(
+                window=5, min_periods=1
+            ).mean()
+            augmented["close_rolling_std_5"] = (
+                close.rolling(window=5, min_periods=1).std().fillna(0)
+            )
+            augmented["close_rolling_min_5"] = close.rolling(
+                window=5, min_periods=1
+            ).min()
+            augmented["close_rolling_max_5"] = close.rolling(
+                window=5, min_periods=1
+            ).max()
 
         if "volume" in augmented.columns:
             volume = augmented["volume"].astype(float)
-            augmented["volume_rolling_mean_5"] = volume.rolling(window=5, min_periods=1).mean()
-            augmented["volume_rolling_std_5"] = volume.rolling(window=5, min_periods=1).std().fillna(0)
+            augmented["volume_rolling_mean_5"] = volume.rolling(
+                window=5, min_periods=1
+            ).mean()
+            augmented["volume_rolling_std_5"] = (
+                volume.rolling(window=5, min_periods=1).std().fillna(0)
+            )
 
         if set(["high", "low"]).issubset(augmented.columns):
             spread = augmented["high"].astype(float) - augmented["low"].astype(float)
@@ -355,16 +385,16 @@ class HybridFeatureAdapter:
     ) -> List[pd.DataFrame]:
         """
         複数Geneのバッチ変換
-        
+
         Args:
             genes: 戦略遺伝子リスト
             ohlcv_data: OHLCVデータ
-            
+
         Returns:
             特徴量DataFrameのリスト
         """
         features_list = []
-        
+
         for gene in genes:
             try:
                 features_df = self.gene_to_features(gene, ohlcv_data)
@@ -374,7 +404,7 @@ class HybridFeatureAdapter:
                 logger.error(f"Gene {gene_id} の変換エラー: {e}")
                 # エラー時は空のDataFrameを追加
                 features_list.append(pd.DataFrame())
-        
+
         return features_list
 
 
@@ -387,7 +417,10 @@ class WaveletFeatureTransformer:
         self.target_columns = config.get("target_columns") or ["close"]
 
         if self.base_wavelet != "haar":
-            logger.warning("未対応のウェーブレット '%s' が指定されたため 'haar' を使用します", self.base_wavelet)
+            logger.warning(
+                "未対応のウェーブレット '%s' が指定されたため 'haar' を使用します",
+                self.base_wavelet,
+            )
             self.base_wavelet = "haar"
 
     @staticmethod

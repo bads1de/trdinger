@@ -291,12 +291,16 @@ class AutoFeatCalculator:
 
                         # 結果がDataFrameであることを確認
                         if not isinstance(transformed_df, pd.DataFrame):
-                            logger.error(f"AutoFeatが予期しない型を返しました: {type(transformed_df)}")
+                            logger.error(
+                                f"AutoFeatが予期しない型を返しました: {type(transformed_df)}"
+                            )
                             return df, {"error": "AutoFeat returned unexpected type"}
 
                         # AutoFeatの内部状態をログ出力
                         # AutoFeatモデルの属性に安全にアクセス
-                        feateng_cols = getattr(self.autofeat_model, "feateng_cols_", None)
+                        feateng_cols = getattr(
+                            self.autofeat_model, "feateng_cols_", None
+                        )
                         if feateng_cols is not None:
                             feateng_count = len(feateng_cols)
                             logger.info(f"AutoFeat生成特徴量列: {feateng_count}個")
@@ -320,7 +324,7 @@ class AutoFeatCalculator:
                         result_df,
                         columns=list(result_df.columns),
                         strategy="median",
-                        forward_fill=True
+                        forward_fill=True,
                     )
 
                 # インデックスを統一（長さ不一致問題を防ぐ）
@@ -425,7 +429,7 @@ class AutoFeatCalculator:
                         processed_df,
                         columns=list(processed_df.columns),
                         strategy="median",
-                        forward_fill=True
+                        forward_fill=True,
                     )
 
             if isinstance(processed_target, pd.Series):
@@ -440,7 +444,7 @@ class AutoFeatCalculator:
                         target_df,
                         columns=["target"],
                         strategy="median",
-                        forward_fill=True
+                        forward_fill=True,
                     )
                     processed_target = target_df["target"]
 
@@ -591,7 +595,9 @@ class AutoFeatCalculator:
 
                 # 結果がDataFrameであることを確認
                 if not isinstance(transformed_df, pd.DataFrame):
-                    logger.error(f"AutoFeatバッチ処理が予期しない型を返しました: {type(transformed_df)}")
+                    logger.error(
+                        f"AutoFeatバッチ処理が予期しない型を返しました: {type(transformed_df)}"
+                    )
                     return df, {"error": "AutoFeat returned unexpected type"}
 
                 # 結果をDataFrameに変換

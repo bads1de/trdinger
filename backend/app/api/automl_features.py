@@ -38,7 +38,6 @@ class TSFreshConfigModel(BaseModel):
     )
 
 
-
 class AutoFeatConfigModel(BaseModel):
     """AutoFeat設定モデル"""
 

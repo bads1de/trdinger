@@ -77,22 +77,24 @@ class TestDynamicPositionSizing:
 
         risk_controls = result["details"].get("risk_controls", {})
         var_ratio = risk_controls.get("var_ratio")
-        expected_cap_size = (
-            10000.0 * gene.max_var_ratio
-        ) / (max(var_ratio, 1e-12) * 200.0)
-        es_ratio = risk_controls.get("expected_shortfall")
-        expected_shortfall_cap = (
-            10000.0 * gene.max_expected_shortfall_ratio
-        ) / (max(es_ratio, 1e-12) * 200.0)
-        expected_size = min(expected_cap_size, expected_shortfall_cap, gene.max_position_size)
-
-        assert math.isclose(
-            result["position_size"], expected_size, rel_tol=1e-6
+        expected_cap_size = (10000.0 * gene.max_var_ratio) / (
+            max(var_ratio, 1e-12) * 200.0
         )
+        es_ratio = risk_controls.get("expected_shortfall")
+        expected_shortfall_cap = (10000.0 * gene.max_expected_shortfall_ratio) / (
+            max(es_ratio, 1e-12) * 200.0
+        )
+        expected_size = min(
+            expected_cap_size, expected_shortfall_cap, gene.max_position_size
+        )
+
+        assert math.isclose(result["position_size"], expected_size, rel_tol=1e-6)
 
         assert risk_controls.get("var_adjusted") is True
         assert risk_controls.get("expected_shortfall_adjusted") is False
-        assert risk_controls.get("var_loss") <= risk_controls.get("max_var_allowed") + 1e-6
+        assert (
+            risk_controls.get("var_loss") <= risk_controls.get("max_var_allowed") + 1e-6
+        )
         assert var_ratio > 0
 
     def test_position_sizing_service_reports_var_es(self):
@@ -163,12 +165,10 @@ class TestDynamicPositionSizing:
         risk_controls = result["details"].get("risk_controls", {})
         es_ratio = risk_controls.get("expected_shortfall")
         var_ratio = risk_controls.get("var_ratio")
-        es_cap = (
-            10000.0 * gene.max_expected_shortfall_ratio
-        ) / (max(es_ratio, 1e-12) * 200.0)
-        var_cap = (
-            10000.0 * gene.max_var_ratio
-        ) / (max(var_ratio, 1e-12) * 200.0)
+        es_cap = (10000.0 * gene.max_expected_shortfall_ratio) / (
+            max(es_ratio, 1e-12) * 200.0
+        )
+        var_cap = (10000.0 * gene.max_var_ratio) / (max(var_ratio, 1e-12) * 200.0)
         expected_size = min(es_cap, var_cap, gene.max_position_size)
         expected_size = max(expected_size, gene.min_position_size)
 

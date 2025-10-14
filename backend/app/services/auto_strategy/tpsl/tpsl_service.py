@@ -96,7 +96,6 @@ class TPSLService:
 
         return _calculate_tpsl_prices()
 
-
     def _calculate_from_gene(
         self,
         current_price: float,
@@ -140,7 +139,6 @@ class TPSLService:
                 return self._calculate_fallback(current_price, position_direction)
 
         return _calculate_from_gene()
-
 
     def _calculate_fallback(
         self,

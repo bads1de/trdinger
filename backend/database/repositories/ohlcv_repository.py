@@ -113,9 +113,7 @@ class OHLCVRepository(BaseRepository):
         )
 
     def get_latest_timestamp(
-        self,
-        timestamp_column: str,
-        filter_conditions: Optional[Dict[str, Any]] = None
+        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
     ) -> Optional[datetime]:
         """
         最新タイムスタンプを取得（BaseRepositoryのメソッドをオーバーライド）
@@ -129,14 +127,14 @@ class OHLCVRepository(BaseRepository):
         """
         # OHLCVデータの場合は常にtimestampカラムを使用
         if timestamp_column != "timestamp":
-            logger.warning(f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}")
+            logger.warning(
+                f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}"
+            )
 
         return super().get_latest_timestamp(timestamp_column, filter_conditions)
 
     def get_oldest_timestamp(
-        self,
-        timestamp_column: str,
-        filter_conditions: Optional[Dict[str, Any]] = None
+        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
     ) -> Optional[datetime]:
         """
         最古タイムスタンプを取得（BaseRepositoryのメソッドをオーバーライド）
@@ -150,7 +148,9 @@ class OHLCVRepository(BaseRepository):
         """
         # OHLCVデータの場合は常にtimestampカラムを使用
         if timestamp_column != "timestamp":
-            logger.warning(f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}")
+            logger.warning(
+                f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}"
+            )
 
         return super().get_oldest_timestamp(timestamp_column, filter_conditions)
 
@@ -168,9 +168,7 @@ class OHLCVRepository(BaseRepository):
         return super().get_record_count({"symbol": symbol, "timeframe": timeframe})
 
     def get_date_range(
-        self,
-        timestamp_column: str,
-        filter_conditions: Optional[Dict[str, Any]] = None
+        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
     ):
         """
         データ期間を取得（BaseRepositoryのメソッドをオーバーライド）
@@ -184,7 +182,9 @@ class OHLCVRepository(BaseRepository):
         """
         # OHLCVデータの場合は常にtimestampカラムを使用
         if timestamp_column != "timestamp":
-            logger.warning(f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}")
+            logger.warning(
+                f"OHLCVデータではtimestampカラムを使用してください: {timestamp_column}"
+            )
 
         return super().get_date_range(timestamp_column, filter_conditions)
 
@@ -226,8 +226,6 @@ class OHLCVRepository(BaseRepository):
             index_column="timestamp",
         )
 
-
-
     def sanitize_ohlcv_data(self, ohlcv_data: List[dict]) -> List[dict]:
         """
         OHLCV データをサニタイズ
@@ -267,7 +265,9 @@ class OHLCVRepository(BaseRepository):
         )
         return deleted_count
 
-    def clear_ohlcv_data_by_symbol_and_timeframe(self, symbol: str, timeframe: str) -> int:
+    def clear_ohlcv_data_by_symbol_and_timeframe(
+        self, symbol: str, timeframe: str
+    ) -> int:
         """
         指定されたシンボルと時間軸のOHLCVデータを削除
 
@@ -284,7 +284,7 @@ class OHLCVRepository(BaseRepository):
             # SQLAlchemy 2.0の標準的なdelete文を使用
             stmt = delete(self.model_class).where(
                 self.model_class.symbol == symbol,
-                self.model_class.timeframe == timeframe
+                self.model_class.timeframe == timeframe,
             )
             result = self.db.execute(stmt)
             deleted_count = getattr(result, "rowcount", 0)

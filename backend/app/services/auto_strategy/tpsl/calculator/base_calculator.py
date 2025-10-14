@@ -32,7 +32,7 @@ class BaseTPSLCalculator(ABC):
         tpsl_gene: Optional[TPSLGene] = None,
         market_data: Optional[Dict[str, Any]] = None,
         position_direction: float = 1.0,
-        **kwargs
+        **kwargs,
     ) -> TPSLResult:
         """
         TP/SLを計算

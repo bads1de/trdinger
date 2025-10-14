@@ -25,11 +25,7 @@ class ConditionEvaluator:
     戦略の条件評価ロジックを担当します。
     """
 
-    @safe_operation(
-        context="条件評価（AND）",
-        is_api_call=False,
-        default_return=False
-    )
+    @safe_operation(context="条件評価（AND）", is_api_call=False, default_return=False)
     def evaluate_conditions(
         self, conditions: List[Union[Condition, ConditionGroup]], strategy_instance
     ) -> bool:
@@ -56,9 +52,7 @@ class ConditionEvaluator:
         return True
 
     @safe_operation(
-        context="条件グループ評価（OR）",
-        is_api_call=False,
-        default_return=False
+        context="条件グループ評価（OR）", is_api_call=False, default_return=False
     )
     def _evaluate_condition_group(
         self, group: ConditionGroup, strategy_instance
@@ -71,11 +65,7 @@ class ConditionEvaluator:
                 return True
         return False
 
-    @safe_operation(
-        context="単一条件評価",
-        is_api_call=False,
-        default_return=False
-    )
+    @safe_operation(context="単一条件評価", is_api_call=False, default_return=False)
     def evaluate_single_condition(
         self, condition: Condition, strategy_instance
     ) -> bool:
@@ -90,9 +80,7 @@ class ConditionEvaluator:
             条件の評価結果
         """
         # 左オペランドの値を取得
-        left_value = self.get_condition_value(
-            condition.left_operand, strategy_instance
-        )
+        left_value = self.get_condition_value(condition.left_operand, strategy_instance)
         right_value = self.get_condition_value(
             condition.right_operand, strategy_instance
         )
@@ -122,7 +110,13 @@ class ConditionEvaluator:
             if isinstance(operand, (int, float)):
                 return True
             if isinstance(operand, str):
-                cleaned = operand.replace(".", "").replace("-", "").replace("+", "").replace("e", "").replace("E", "")
+                cleaned = (
+                    operand.replace(".", "")
+                    .replace("-", "")
+                    .replace("+", "")
+                    .replace("e", "")
+                    .replace("E", "")
+                )
                 return cleaned.isdigit() and "." not in operand[1:]
             return False
 
@@ -142,9 +136,7 @@ class ConditionEvaluator:
                 f"非数値文字列オペランドが数値に変換されました: '{condition.left_operand}' -> {left_value}, "
                 f"戦略インスタンスの属性が見つかりませんでした"
             )
-        elif (
-            right_is_string and not right_is_original_numeric and right_value == 0.0
-        ):
+        elif right_is_string and not right_is_original_numeric and right_value == 0.0:
             # 右オペランドも同様
             logger.warning(
                 f"非数値文字列オペランドが数値に変換されました: '{condition.right_operand}' -> {right_value}, "
@@ -172,9 +164,7 @@ class ConditionEvaluator:
         return result
 
     @safe_operation(
-        context="最終値取得（pandas-ta対応）",
-        is_api_call=False,
-        default_return=0.0
+        context="最終値取得（pandas-ta対応）", is_api_call=False, default_return=0.0
     )
     def _get_final_value(self, value) -> float:
         """配列/シーケンスから末尾の有限値を取得（pandas-ta対応）"""
@@ -191,9 +181,7 @@ class ConditionEvaluator:
             return val if pd.notna(val) else 0.0
 
     @safe_operation(
-        context="条件オペランド値取得",
-        is_api_call=False,
-        default_return=0.0
+        context="条件オペランド値取得", is_api_call=False, default_return=0.0
     )
     def get_condition_value(
         self, operand: Union[Dict[str, Any], str, int, float], strategy_instance
@@ -274,19 +262,27 @@ class ConditionEvaluator:
             )
             return None
 
-        logger.debug(f"[OHLCVアクセス] strategy_instance.data 存在: {type(strategy_instance.data)}")
+        logger.debug(
+            f"[OHLCVアクセス] strategy_instance.data 存在: {type(strategy_instance.data)}"
+        )
 
         try:
             # backtesting.pyではカラム名が大文字（Open, High, Low, Close, Volume）
             capitalized_operand = operand.capitalize()
 
             # pandas DataFrameの場合
-            if hasattr(strategy_instance.data, "columns") and hasattr(strategy_instance.data, "__getitem__"):
+            if hasattr(strategy_instance.data, "columns") and hasattr(
+                strategy_instance.data, "__getitem__"
+            ):
                 logger.debug("[OHLCVアクセス] pandas DataFrame検出")
                 if capitalized_operand in strategy_instance.data.columns:
-                    logger.debug(f"[OHLCVアクセス] '{capitalized_operand}' カラムが見つかりました")
+                    logger.debug(
+                        f"[OHLCVアクセス] '{capitalized_operand}' カラムが見つかりました"
+                    )
                     data_value = strategy_instance.data[capitalized_operand]
-                    logger.debug(f"[OHLCVアクセス] '{capitalized_operand}' から取得成功: {data_value}")
+                    logger.debug(
+                        f"[OHLCVアクセス] '{capitalized_operand}' から取得成功: {data_value}"
+                    )
                     return self._get_final_value(data_value)
                 else:
                     logger.warning(
@@ -298,10 +294,14 @@ class ConditionEvaluator:
             # backtesting.pyの特殊なデータアクセス方法
             try:
                 data_value = getattr(strategy_instance.data, capitalized_operand)
-                logger.debug(f"[OHLCVアクセス] backtesting.pyデータアクセス成功: {data_value}")
+                logger.debug(
+                    f"[OHLCVアクセス] backtesting.pyデータアクセス成功: {data_value}"
+                )
                 return self._get_final_value(data_value)
             except AttributeError:
-                logger.warning(f"[OHLCVアクセス] backtesting.pyデータアクセス失敗: {capitalized_operand}属性なし")
+                logger.warning(
+                    f"[OHLCVアクセス] backtesting.pyデータアクセス失敗: {capitalized_operand}属性なし"
+                )
                 return None
 
         except Exception as e:

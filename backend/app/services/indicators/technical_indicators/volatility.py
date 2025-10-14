@@ -58,7 +58,9 @@ class VolatilityIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.atr(high=high.values, low=low.values, close=close.values, length=length)
+        result = ta.atr(
+            high=high.values, low=low.values, close=close.values, length=length
+        )
 
         if result is None:
             logger.error("ATR: Calculation returned None - returning NaN series")
@@ -85,8 +87,6 @@ class VolatilityIndicators:
         if result is None or (hasattr(result, "empty") and result.empty):
             return pd.Series(np.full(len(close), np.nan), index=close.index)
         return result
-
-
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -146,7 +146,14 @@ class VolatilityIndicators:
             nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
             return nan_series, nan_series, nan_series
 
-        df = ta.kc(high=high.values, low=low.values, close=close.values, length=period, scalar=scalar, mamode="sma")
+        df = ta.kc(
+            high=high.values,
+            low=low.values,
+            close=close.values,
+            length=period,
+            scalar=scalar,
+            mamode="sma",
+        )
 
         if df is None:
             nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
@@ -330,10 +337,6 @@ class VolatilityIndicators:
             next((c for c in cols if "ACCBL" in c or "lower" in c.lower()), cols[-1])
         ]
         return upper, middle, lower
-
-
-
-
 
     @staticmethod
     @handle_pandas_ta_errors

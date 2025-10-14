@@ -16,6 +16,7 @@ from .transformer import PriceChangeTransformer
 
 logger = logging.getLogger(__name__)
 
+
 class LabelGenerator:
     """
     ラベル生成クラス

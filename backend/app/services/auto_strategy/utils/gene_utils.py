@@ -362,7 +362,9 @@ class GeneUtils:
     """遺伝子関連ユーティリティ"""
 
     @staticmethod
-    def normalize_parameter(value: Union[int, float], min_val: int = 1, max_val: int = 200) -> float:
+    def normalize_parameter(
+        value: Union[int, float], min_val: int = 1, max_val: int = 200
+    ) -> float:
         """
         パラメータ値を正規化（0-1の範囲に変換）
 
@@ -375,7 +377,9 @@ class GeneUtils:
             0-1の範囲に正規化した値
         """
         if not isinstance(value, (int, float)):
-            logger.warning(f"数値でないパラメータを正規化: {value}, デフォルト値0.1を返却")
+            logger.warning(
+                f"数値でないパラメータを正規化: {value}, デフォルト値0.1を返却"
+            )
             return 0.1
 
         # 範囲内に制限

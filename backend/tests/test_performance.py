@@ -21,26 +21,30 @@ class TestPerformanceMetrics:
     def large_training_data(self):
         """大規模学習データ"""
         np.random.seed(42)
-        return pd.DataFrame({
-            'open': np.random.randn(1000) + 100,
-            'high': np.random.randn(1000) + 102,
-            'low': np.random.randn(1000) + 98,
-            'close': np.random.randn(1000) + 100,
-            'volume': np.random.randint(1000, 10000, 1000),
-            'target': np.random.choice([0, 1, 2], 1000),  # 3クラス分類
-        })
+        return pd.DataFrame(
+            {
+                "open": np.random.randn(1000) + 100,
+                "high": np.random.randn(1000) + 102,
+                "low": np.random.randn(1000) + 98,
+                "close": np.random.randn(1000) + 100,
+                "volume": np.random.randint(1000, 10000, 1000),
+                "target": np.random.choice([0, 1, 2], 1000),  # 3クラス分類
+            }
+        )
 
     @pytest.fixture
     def small_training_data(self):
         """小規模学習データ"""
-        return pd.DataFrame({
-            'open': [100, 101, 102, 103, 104] * 20,
-            'high': [105, 106, 107, 108, 109] * 20,
-            'low': [95, 96, 97, 98, 99] * 20,
-            'close': [102, 103, 104, 105, 106] * 20,
-            'volume': [1000, 1100, 1200, 1300, 1400] * 20,
-            'target': [1, 0, 1, 2, 1] * 20,
-        })
+        return pd.DataFrame(
+            {
+                "open": [100, 101, 102, 103, 104] * 20,
+                "high": [105, 106, 107, 108, 109] * 20,
+                "low": [95, 96, 97, 98, 99] * 20,
+                "close": [102, 103, 104, 105, 106] * 20,
+                "volume": [1000, 1100, 1200, 1300, 1400] * 20,
+                "target": [1, 0, 1, 2, 1] * 20,
+            }
+        )
 
     def test_ga_engine_execution_time(self, small_training_data):
         """GAエンジンの実行時間テスト"""
@@ -55,7 +59,9 @@ class TestPerformanceMetrics:
 
         start_time = time.time()
 
-        with patch('backend.app.services.auto_strategy.core.ga_engine.BacktestService') as mock_backtest:
+        with patch(
+            "backend.app.services.auto_strategy.core.ga_engine.BacktestService"
+        ) as mock_backtest:
             mock_backtest.return_value.run_backtest.return_value = {
                 "sharpe_ratio": 1.5,
                 "total_return": 0.25,
@@ -81,16 +87,20 @@ class TestPerformanceMetrics:
         """ML学習のパフォーマンステスト"""
         start_time = time.time()
 
-        with patch('backend.app.services.ml.ml_training_service.SingleModelTrainer') as mock_trainer:
+        with patch(
+            "backend.app.services.ml.ml_training_service.SingleModelTrainer"
+        ) as mock_trainer:
             mock_trainer.return_value.train_model.return_value = {
                 "success": True,
                 "f1_score": 0.85,
-                "model_path": "/tmp/test_model.pkl"
+                "model_path": "/tmp/test_model.pkl",
             }
             mock_trainer.return_value.is_trained = True
-            mock_trainer.return_value.feature_columns = ['close', 'volume']
+            mock_trainer.return_value.feature_columns = ["close", "volume"]
 
-            service = MLTrainingService(trainer_type="single", single_model_config={"model_type": "lightgbm"})
+            service = MLTrainingService(
+                trainer_type="single", single_model_config={"model_type": "lightgbm"}
+            )
             result = service.train_model(small_training_data, save_model=False)
 
         execution_time = time.time() - start_time
@@ -115,7 +125,9 @@ class TestPerformanceMetrics:
 
         start_time = time.time()
 
-        with patch('backend.app.services.auto_strategy.core.ga_engine.BacktestService') as mock_backtest:
+        with patch(
+            "backend.app.services.auto_strategy.core.ga_engine.BacktestService"
+        ) as mock_backtest:
             mock_backtest.return_value.run_backtest.return_value = {
                 "sharpe_ratio": 1.5,
                 "total_return": 0.25,
@@ -144,14 +156,16 @@ class TestPerformanceMetrics:
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
 
-        with patch('backend.app.services.ml.ml_training_service.SingleModelTrainer') as mock_trainer:
+        with patch(
+            "backend.app.services.ml.ml_training_service.SingleModelTrainer"
+        ) as mock_trainer:
             mock_trainer.return_value.train_model.return_value = {
                 "success": True,
                 "f1_score": 0.85,
-                "model_path": "/tmp/test_model.pkl"
+                "model_path": "/tmp/test_model.pkl",
             }
             mock_trainer.return_value.is_trained = True
-            mock_trainer.return_value.feature_columns = ['close', 'volume']
+            mock_trainer.return_value.feature_columns = ["close", "volume"]
 
             service = MLTrainingService(trainer_type="single")
             result = service.train_model(small_training_data, save_model=False)
@@ -176,7 +190,9 @@ class TestPerformanceMetrics:
 
         start_time = time.time()
 
-        with patch('backend.app.services.auto_strategy.core.ga_engine.BacktestService') as mock_backtest:
+        with patch(
+            "backend.app.services.auto_strategy.core.ga_engine.BacktestService"
+        ) as mock_backtest:
             mock_backtest.return_value.run_backtest.return_value = {
                 "sharpe_ratio": 1.5,
                 "total_return": 0.25,
@@ -218,7 +234,9 @@ class TestPerformanceMetrics:
 
     def test_fitness_evaluation_performance(self, small_training_data):
         """適応度評価パフォーマンステスト"""
-        from backend.app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
+        from backend.app.services.auto_strategy.core.individual_evaluator import (
+            IndividualEvaluator,
+        )
         from backend.app.services.auto_strategy.config.ga_runtime import GAConfig
 
         config = GAConfig()
@@ -285,7 +303,14 @@ class TestPerformanceMetrics:
 
         # データが正しく読み込まれていることを確認
         assert len(large_training_data) == 1000
-        assert list(large_training_data.columns) == ['open', 'high', 'low', 'close', 'volume', 'target']
+        assert list(large_training_data.columns) == [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "target",
+        ]
 
     @pytest.mark.parametrize("population_size", [10, 50, 100])
     def test_ga_scaling_performance(self, small_training_data, population_size):
@@ -301,7 +326,9 @@ class TestPerformanceMetrics:
 
         start_time = time.time()
 
-        with patch('backend.app.services.auto_strategy.core.ga_engine.BacktestService') as mock_backtest:
+        with patch(
+            "backend.app.services.auto_strategy.core.ga_engine.BacktestService"
+        ) as mock_backtest:
             mock_backtest.return_value.run_backtest.return_value = {
                 "sharpe_ratio": 1.5,
                 "total_return": 0.25,

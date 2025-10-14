@@ -17,10 +17,10 @@ sys.path.insert(0, project_root)
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 async def collect_ohlcv_data(symbol: str, timeframe: str):
     """
@@ -35,7 +35,9 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
     try:
         from database.connection import SessionLocal
         from database.repositories.ohlcv_repository import OHLCVRepository
-        from app.services.data_collection.historical.historical_data_service import HistoricalDataService
+        from app.services.data_collection.historical.historical_data_service import (
+            HistoricalDataService,
+        )
 
         db = SessionLocal()
         try:
@@ -53,7 +55,7 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
                 symbol=symbol,
                 timeframe=timeframe,
                 repository=repository,
-                since_timestamp=None  # 全期間取得
+                since_timestamp=None,  # 全期間取得
             )
 
             end_time = datetime.now(timezone.utc)
@@ -64,20 +66,29 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
             # データ件数を確認（取得後）
             final_count = repository.get_data_count(symbol, timeframe)
             saved_count = final_count - initial_count
-            logger.info(f"取得後のデータ件数: {final_count} (新規保存: {saved_count}件)")
+            logger.info(
+                f"取得後のデータ件数: {final_count} (新規保存: {saved_count}件)"
+            )
 
             # 日付範囲を確認
             date_range = repository.get_date_range(
                 timestamp_column="timestamp",
-                filter_conditions={"symbol": symbol, "timeframe": timeframe}
+                filter_conditions={"symbol": symbol, "timeframe": timeframe},
             )
 
             if date_range[0] and date_range[1]:
                 logger.info(f"データ期間: {date_range[0]} から {date_range[1]}")
                 days_diff = (date_range[1] - date_range[0]).days
-                hours_diff = days_diff * 24 + ((date_range[1] - date_range[0]).seconds // 3600)
-                minutes_diff = hours_diff * 60 + ((date_range[1] - date_range[0]).seconds % 3600) // 60
-                logger.info(f"データ範囲: {days_diff}日 ({hours_diff}時間, {minutes_diff}分)")
+                hours_diff = days_diff * 24 + (
+                    (date_range[1] - date_range[0]).seconds // 3600
+                )
+                minutes_diff = (
+                    hours_diff * 60
+                    + ((date_range[1] - date_range[0]).seconds % 3600) // 60
+                )
+                logger.info(
+                    f"データ範囲: {days_diff}日 ({hours_diff}時間, {minutes_diff}分)"
+                )
             else:
                 logger.warning("データ期間情報が取得できませんでした")
 
@@ -91,12 +102,15 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
     except Exception as e:
         logger.error(f"FAILED: {symbol} {timeframe} データ取得失敗: {e}")
         import traceback
+
         logger.error(f"エラーの詳細:\n{traceback.format_exc()}")
         return False
+
 
 def validate_timeframe(timeframe: str) -> str:
     """タイムフレームの検証"""
     from app.config.unified_config import unified_config
+
     supported_timeframes = unified_config.market.supported_timeframes
 
     if timeframe not in supported_timeframes:
@@ -106,47 +120,46 @@ def validate_timeframe(timeframe: str) -> str:
         )
     return timeframe
 
+
 def validate_symbol(symbol: str) -> str:
     """シンボルの検証"""
     # 基本的な形式チェック
-    if ':' not in symbol:
+    if ":" not in symbol:
         raise argparse.ArgumentTypeError(
-            f"無効なシンボル形式: {symbol}. "
-            "正しい形式: 'BTC/USDT:USDT'"
+            f"無効なシンボル形式: {symbol}. " "正しい形式: 'BTC/USDT:USDT'"
         )
     return symbol
+
 
 def main():
     """メイン実行関数"""
     parser = argparse.ArgumentParser(
-        description='OHLCVデータ取得スクリプト',
+        description="OHLCVデータ取得スクリプト",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用例:
   python collect_ohlcv_data.py --symbol BTC/USDT:USDT --timeframe 15m
   python collect_ohlcv_data.py -s ETH/USDT:USDT -t 1h
-        """
+        """,
     )
 
     parser.add_argument(
-        '-s', '--symbol',
+        "-s",
+        "--symbol",
         type=validate_symbol,
-        default='BTC/USDT:USDT',
-        help='取引ペアシンボル (デフォルト: BTC/USDT:USDT)'
+        default="BTC/USDT:USDT",
+        help="取引ペアシンボル (デフォルト: BTC/USDT:USDT)",
     )
 
     parser.add_argument(
-        '-t', '--timeframe',
+        "-t",
+        "--timeframe",
         type=validate_timeframe,
-        default='15m',
-        help='時間軸 (デフォルト: 15m)'
+        default="15m",
+        help="時間軸 (デフォルト: 15m)",
     )
 
-    parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='詳細なログ出力'
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="詳細なログ出力")
 
     args = parser.parse_args()
 
@@ -173,6 +186,7 @@ def main():
     except Exception as e:
         print(f"\n[FATAL] 予期しないエラー: {e}")
         return 1
+
 
 if __name__ == "__main__":
     exit_code = main()

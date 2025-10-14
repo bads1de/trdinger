@@ -200,10 +200,14 @@ class IndicatorConfig:
                 value = normalized[param_name]
 
                 # 範囲チェック
-                if param_config.min_value is not None and isinstance(value, (int, float)):
+                if param_config.min_value is not None and isinstance(
+                    value, (int, float)
+                ):
                     if value < param_config.min_value:
                         normalized[param_name] = param_config.min_value
-                if param_config.max_value is not None and isinstance(value, (int, float)):
+                if param_config.max_value is not None and isinstance(
+                    value, (int, float)
+                ):
                     if value > param_config.max_value:
                         normalized[param_name] = param_config.max_value
 

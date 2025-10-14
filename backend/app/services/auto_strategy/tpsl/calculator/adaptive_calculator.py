@@ -41,7 +41,7 @@ class AdaptiveCalculator(BaseTPSLCalculator):
         tpsl_gene: Optional[TPSLGene] = None,
         market_data: Optional[Dict[str, Any]] = None,
         position_direction: float = 1.0,
-        **kwargs
+        **kwargs,
     ) -> TPSLResult:
         """
         適応的にTP/SLを計算
@@ -67,7 +67,7 @@ class AdaptiveCalculator(BaseTPSLCalculator):
                 tpsl_gene=tpsl_gene,
                 market_data=market_data,
                 position_direction=position_direction,
-                **kwargs
+                **kwargs,
             )
 
             # 適応的選択の情報を追加
@@ -85,7 +85,7 @@ class AdaptiveCalculator(BaseTPSLCalculator):
                 tpsl_gene=tpsl_gene,
                 market_data=market_data,
                 position_direction=position_direction,
-                **kwargs
+                **kwargs,
             )
 
     def _select_best_method(

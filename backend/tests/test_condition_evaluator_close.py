@@ -5,6 +5,7 @@ condition_evaluatorのcloseオペランド取得機能をテスト
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
@@ -26,13 +27,15 @@ class TestConditionEvaluatorClose:
         """pandas DataFrameでのcloseオペランド取得テスト"""
         # Mock strategy instance with pandas DataFrame data
         mock_strategy = Mock()
-        mock_data = pd.DataFrame({
-            'Open': [100.0, 101.0, 102.0],
-            'High': [105.0, 106.0, 107.0],
-            'Low': [95.0, 96.0, 97.0],
-            'Close': [103.0, 104.0, 105.0],
-            'Volume': [1000, 1100, 1200]
-        })
+        mock_data = pd.DataFrame(
+            {
+                "Open": [100.0, 101.0, 102.0],
+                "High": [105.0, 106.0, 107.0],
+                "Low": [95.0, 96.0, 97.0],
+                "Close": [103.0, 104.0, 105.0],
+                "Volume": [1000, 1100, 1200],
+            }
+        )
         mock_strategy.data = mock_data
 
         # Test close operand
@@ -45,13 +48,15 @@ class TestConditionEvaluatorClose:
         """pandas DataFrameでのopenオペランド取得テスト"""
         # Mock strategy instance with pandas DataFrame data
         mock_strategy = Mock()
-        mock_data = pd.DataFrame({
-            'Open': [100.0, 101.0, 102.0],
-            'High': [105.0, 106.0, 107.0],
-            'Low': [95.0, 96.0, 97.0],
-            'Close': [103.0, 104.0, 105.0],
-            'Volume': [1000, 1100, 1200]
-        })
+        mock_data = pd.DataFrame(
+            {
+                "Open": [100.0, 101.0, 102.0],
+                "High": [105.0, 106.0, 107.0],
+                "Low": [95.0, 96.0, 97.0],
+                "Close": [103.0, 104.0, 105.0],
+                "Volume": [1000, 1100, 1200],
+            }
+        )
         mock_strategy.data = mock_data
 
         # Test open operand
@@ -104,21 +109,19 @@ class TestConditionEvaluatorClose:
         """closeオペランドを使用した条件評価テスト"""
         # Mock strategy with close data
         mock_strategy = Mock()
-        mock_data = pd.DataFrame({
-            'Open': [100.0, 101.0, 102.0],
-            'High': [105.0, 106.0, 107.0],
-            'Low': [95.0, 96.0, 97.0],
-            'Close': [103.0, 104.0, 105.0],
-            'Volume': [1000, 1100, 1200]
-        })
+        mock_data = pd.DataFrame(
+            {
+                "Open": [100.0, 101.0, 102.0],
+                "High": [105.0, 106.0, 107.0],
+                "Low": [95.0, 96.0, 97.0],
+                "Close": [103.0, 104.0, 105.0],
+                "Volume": [1000, 1100, 1200],
+            }
+        )
         mock_strategy.data = mock_data
 
         # Create condition: close > 100
-        condition = Condition(
-            left_operand="close",
-            operator=">",
-            right_operand=100
-        )
+        condition = Condition(left_operand="close", operator=">", right_operand=100)
 
         # Evaluate condition
         result = self.evaluator.evaluate_single_condition(condition, mock_strategy)
@@ -130,21 +133,19 @@ class TestConditionEvaluatorClose:
         """close vs openの条件評価テスト"""
         # Mock strategy with data where close > open
         mock_strategy = Mock()
-        mock_data = pd.DataFrame({
-            'Open': [100.0, 101.0, 102.0],
-            'High': [105.0, 106.0, 107.0],
-            'Low': [95.0, 96.0, 97.0],
-            'Close': [103.0, 104.0, 105.0],  # close > open
-            'Volume': [1000, 1100, 1200]
-        })
+        mock_data = pd.DataFrame(
+            {
+                "Open": [100.0, 101.0, 102.0],
+                "High": [105.0, 106.0, 107.0],
+                "Low": [95.0, 96.0, 97.0],
+                "Close": [103.0, 104.0, 105.0],  # close > open
+                "Volume": [1000, 1100, 1200],
+            }
+        )
         mock_strategy.data = mock_data
 
         # Create condition: close > open
-        condition = Condition(
-            left_operand="close",
-            operator=">",
-            right_operand="open"
-        )
+        condition = Condition(left_operand="close", operator=">", right_operand="open")
 
         # Evaluate condition
         result = self.evaluator.evaluate_single_condition(condition, mock_strategy)
@@ -167,11 +168,7 @@ class TestConditionEvaluatorClose:
         # 条件付きでNoneを渡すとエラーが発生するはず
         from app.services.auto_strategy.models.strategy_models import Condition
 
-        condition = Condition(
-            left_operand="close",
-            operator=">",
-            right_operand=100
-        )
+        condition = Condition(left_operand="close", operator=">", right_operand=100)
 
         # 無効な戦略インスタンスを渡す
         result = self.evaluator.evaluate_conditions([condition], None)

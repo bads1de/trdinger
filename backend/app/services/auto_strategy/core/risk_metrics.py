@@ -25,7 +25,9 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
 
     squared_drawdowns: MutableSequence[float] = []
     for point in equity_curve:
-        raw_drawdown: Any = point.get("drawdown") if isinstance(point, Mapping) else None
+        raw_drawdown: Any = (
+            point.get("drawdown") if isinstance(point, Mapping) else None
+        )
         if raw_drawdown is None:
             continue
         try:

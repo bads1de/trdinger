@@ -99,7 +99,9 @@ class OptimizedCryptoFeatures:
             # pandas-ta returns numpy array, convert to pandas Series and handle NaN
             if isinstance(vwap_smooth, np.ndarray):
                 vwap_smooth = pd.Series(vwap_smooth, index=df.index)
-            result_df[f"vwap_smooth_{period}h"] = pd.Series(vwap_smooth, index=df.index).fillna(vwap)
+            result_df[f"vwap_smooth_{period}h"] = pd.Series(
+                vwap_smooth, index=df.index
+            ).fillna(vwap)
 
             # 価格との関係（ロバスト版）
             price_vwap_ratio = df["Close"] / vwap_smooth

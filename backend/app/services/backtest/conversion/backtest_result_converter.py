@@ -345,7 +345,9 @@ class BacktestResultConverter:
                     # 取引がない場合でも基本的な指標は設定
                     if statistics.get("total_trades", 0) == 0:
                         # オートストラテジーでは取引が発生しないケースが多いためログレベルはinfo
-                        logger.info("バックテストで0件の取引が発生しました。戦略が市場条件を満たさなかった可能性があります。")
+                        logger.info(
+                            "バックテストで0件の取引が発生しました。戦略が市場条件を満たさなかった可能性があります。"
+                        )
                         statistics["total_trades"] = 0
                         statistics["win_rate"] = 0.0
                         statistics["profit_factor"] = 0.0
@@ -460,7 +462,9 @@ class BacktestResultConverter:
             trades_df = getattr(actual_stats, "_trades", None)
 
             if trades_df is None or (hasattr(trades_df, "empty") and trades_df.empty):
-                logger.warning("バックテストで取引が発生しませんでした。この戦略はエントリー条件を満たさなかったか、市場条件が不適合でした")
+                logger.warning(
+                    "バックテストで取引が発生しませんでした。この戦略はエントリー条件を満たさなかったか、市場条件が不適合でした"
+                )
                 return []
 
             trades = []

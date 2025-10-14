@@ -10,7 +10,9 @@ from .base_calculator import BaseCalculator
 class FixedRatioCalculator(BaseCalculator):
     """固定比率方式計算クラス"""
 
-    def calculate(self, gene, account_balance: float, current_price: float, **kwargs) -> Dict[str, Any]:
+    def calculate(
+        self, gene, account_balance: float, current_price: float, **kwargs
+    ) -> Dict[str, Any]:
         """固定比率方式の拡張計算"""
         details: Dict[str, Any] = {"method": "fixed_ratio"}
 
@@ -18,7 +20,10 @@ class FixedRatioCalculator(BaseCalculator):
         position_amount = account_balance * gene.fixed_ratio
         position_size = self._safe_calculate_with_price_check(
             lambda: position_amount / current_price,
-            current_price, 0, "現在価格が無効", None
+            current_price,
+            0,
+            "現在価格が無効",
+            None,
         )
 
         # 詳細情報の更新

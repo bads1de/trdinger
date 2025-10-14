@@ -20,12 +20,12 @@ def sample_ohlcv() -> pd.DataFrame:
     """テスト用のOHLCVデータを生成"""
     periods = 500  # 十分な長さを確保
     index = pd.date_range("2022-01-01", periods=periods, freq="H")
-    
+
     # ランダム性とトレンドを含むデータ
     base = np.linspace(10000, 15000, periods)
     noise = np.random.normal(0, 100, periods)
     close = base + noise
-    
+
     df = pd.DataFrame(
         {
             "Open": close * np.random.uniform(0.99, 1.01, periods),
@@ -36,11 +36,17 @@ def sample_ohlcv() -> pd.DataFrame:
         },
         index=index,
     )
-    
+
     # ボラティリティを追加
-    df["High"] = np.maximum(df["High"], df[["Open", "Close"]].max(axis=1) * np.random.uniform(1.0, 1.05, periods))
-    df["Low"] = np.minimum(df["Low"], df[["Open", "Close"]].min(axis=1) * np.random.uniform(0.95, 1.0, periods))
-    
+    df["High"] = np.maximum(
+        df["High"],
+        df[["Open", "Close"]].max(axis=1) * np.random.uniform(1.0, 1.05, periods),
+    )
+    df["Low"] = np.minimum(
+        df["Low"],
+        df[["Open", "Close"]].min(axis=1) * np.random.uniform(0.95, 1.0, periods),
+    )
+
     return df
 
 
@@ -52,41 +58,112 @@ def indicator_service() -> TechnicalIndicatorService:
 
 class TestAllTechnicalIndicators:
     """70個のテクニカルインジケーターの包括的テスト"""
-    
+
     # テスト対象の70個のインジケーター
     INDICATORS = [
-        "ACCBANDS", "AD", "ADOSC", "ADX", "ALMA", "AMAT", "AO", "APO", "AROON", "ATR",
-        "BB", "BOP", "CCI", "CG", "CHOP", "CMF", "CMO", "COPPOCK", "CTI", 
-        "DEMA", "DONCHIAN", "DPO", "EFI", "EMA", "EOM", "FISHER", "FRAMA", "HMA", 
-        "KAMA", "KELTNER", "KST", "KVO", "LINREG", "LINREGSLOPE", "MACD", "MASSI", 
-        "MFI", "MOM", "NATR", "NVI", "OBV", "PGO", "PPO", "PSL", "PVO", "PVT",
-        "QQE", "RMA", "ROC", "RSI", "RVI", "SAR", "SMA", "SQUEEZE", "STC", "STOCH",
-        "SUPERTREND", "SUPER_SMOOTHER", "TEMA", "TRIMA", "TRIX", "TSI", "UI", "UO",
-        "VORTEX", "VWAP", "VWMA", "WILLR", "WMA", "ZLMA"
+        "ACCBANDS",
+        "AD",
+        "ADOSC",
+        "ADX",
+        "ALMA",
+        "AMAT",
+        "AO",
+        "APO",
+        "AROON",
+        "ATR",
+        "BB",
+        "BOP",
+        "CCI",
+        "CG",
+        "CHOP",
+        "CMF",
+        "CMO",
+        "COPPOCK",
+        "CTI",
+        "DEMA",
+        "DONCHIAN",
+        "DPO",
+        "EFI",
+        "EMA",
+        "EOM",
+        "FISHER",
+        "FRAMA",
+        "HMA",
+        "KAMA",
+        "KELTNER",
+        "KST",
+        "KVO",
+        "LINREG",
+        "LINREGSLOPE",
+        "MACD",
+        "MASSI",
+        "MFI",
+        "MOM",
+        "NATR",
+        "NVI",
+        "OBV",
+        "PGO",
+        "PPO",
+        "PSL",
+        "PVO",
+        "PVT",
+        "QQE",
+        "RMA",
+        "ROC",
+        "RSI",
+        "RVI",
+        "SAR",
+        "SMA",
+        "SQUEEZE",
+        "STC",
+        "STOCH",
+        "SUPERTREND",
+        "SUPER_SMOOTHER",
+        "TEMA",
+        "TRIMA",
+        "TRIX",
+        "TSI",
+        "UI",
+        "UO",
+        "VORTEX",
+        "VWAP",
+        "VWMA",
+        "WILLR",
+        "WMA",
+        "ZLMA",
     ]
 
-    def test_all_indicators_can_be_initialized(self, indicator_service: TechnicalIndicatorService):
+    def test_all_indicators_can_be_initialized(
+        self, indicator_service: TechnicalIndicatorService
+    ):
         """すべてのインジケーターが初期化可能か確認"""
         for indicator in self.INDICATORS:
             try:
                 # 各インジケーターの設定を取得できるか確認
                 config = indicator_service.registry.get_indicator_config(indicator)
                 assert config is not None, f"{indicator}の設定が見つかりません"
-                assert config.adapter_function is not None, f"{indicator}のアダプター関数がありません"
+                assert (
+                    config.adapter_function is not None
+                ), f"{indicator}のアダプター関数がありません"
             except Exception as e:
                 pytest.fail(f"{indicator}の初期化に失敗: {e}")
 
     @pytest.mark.parametrize("indicator", INDICATORS)
-    def test_indicator_basic_calculation(self, indicator: str, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame):
+    def test_indicator_basic_calculation(
+        self,
+        indicator: str,
+        indicator_service: TechnicalIndicatorService,
+        sample_ohlcv: pd.DataFrame,
+    ):
         """各インジケーターの基本計算をテスト"""
         try:
             # インジケーター設定を取得
             config = indicator_service.registry.get_indicator_config(indicator)
             assert config is not None, f"{indicator}の設定が取得できません"
-            
+
             # デフォルトパラメータでテスト
             default_params = config.default_values or {}
-            
+
             # 特定のパラメータを設定
             if indicator == "ACCBANDS":
                 params = {"length": 20}
@@ -97,7 +174,12 @@ class TestAllTechnicalIndicators:
             elif indicator == "ADX":
                 params = {"period": 14}
             elif indicator == "ALMA":
-                params = {"length": 10, "sigma": 6.0, "distribution_offset": 0.85, "offset": 0}
+                params = {
+                    "length": 10,
+                    "sigma": 6.0,
+                    "distribution_offset": 0.85,
+                    "offset": 0,
+                }
             elif indicator == "AMAT":
                 params = {"fast": 5, "slow": 20}
             elif indicator == "AO":
@@ -145,7 +227,17 @@ class TestAllTechnicalIndicators:
             elif indicator == "KELTNER":
                 params = {"length": 20, "multiplier": 2.0}
             elif indicator == "KST":
-                params = {"roc1": 10, "roc2": 15, "roc3": 20, "roc4": 30, "sma1": 10, "sma2": 10, "sma3": 10, "sma4": 15, "signal": 9}
+                params = {
+                    "roc1": 10,
+                    "roc2": 15,
+                    "roc3": 20,
+                    "roc4": 30,
+                    "sma1": 10,
+                    "sma2": 10,
+                    "sma3": 10,
+                    "sma4": 15,
+                    "signal": 9,
+                }
             elif indicator == "KVO":
                 params = {"fast": 14, "slow": 28}
             elif indicator == "LINREG":
@@ -189,7 +281,15 @@ class TestAllTechnicalIndicators:
             elif indicator == "SMA":
                 params = {"length": 20}
             elif indicator == "SQUEEZE":
-                params = {"bb_length": 20, "bb_std": 2.0, "kc_length": 20, "kc_scalar": 1.5, "mom_length": 12, "mom_smooth": 6, "use_tr": True}
+                params = {
+                    "bb_length": 20,
+                    "bb_std": 2.0,
+                    "kc_length": 20,
+                    "kc_scalar": 1.5,
+                    "mom_length": 12,
+                    "mom_smooth": 6,
+                    "use_tr": True,
+                }
             elif indicator == "STC":
                 params = {"fast": 12, "slow": 26, "cycle": 9}
             elif indicator == "STOCH":
@@ -224,47 +324,65 @@ class TestAllTechnicalIndicators:
                 params = {"length": 20}
             else:
                 params = default_params
-            
+
             # 計算を実行
-            result = indicator_service.calculate_indicator(sample_ohlcv, indicator, params)
-            
+            result = indicator_service.calculate_indicator(
+                sample_ohlcv, indicator, params
+            )
+
             # 結果の形式を検証
             if config.result_type == "single":
-                assert isinstance(result, np.ndarray), f"{indicator}の結果がndarrayではありません"
-                assert result.shape[0] == len(sample_ohlcv), f"{indicator}の結果の長さが不正"
+                assert isinstance(
+                    result, np.ndarray
+                ), f"{indicator}の結果がndarrayではありません"
+                assert result.shape[0] == len(
+                    sample_ohlcv
+                ), f"{indicator}の結果の長さが不正"
                 # NaNを含む場合があるが、最後の数ポイントは有効な場合がある
                 assert result.shape[0] > 0, f"{indicator}の結果が空"
-                
+
             elif config.result_type == "complex" or config.result_type == "multiple":
-                assert isinstance(result, tuple), f"{indicator}の結果がtupleではありません"
+                assert isinstance(
+                    result, tuple
+                ), f"{indicator}の結果がtupleではありません"
                 assert len(result) > 0, f"{indicator}の結果が空のtuple"
                 for i, series in enumerate(result):
-                    assert isinstance(series, np.ndarray), f"{indicator}の結果[{i}]がndarrayではありません"
-                    assert series.shape[0] == len(sample_ohlcv), f"{indicator}の結果[{i}]の長さが不正{indicator}"
-            
+                    assert isinstance(
+                        series, np.ndarray
+                    ), f"{indicator}の結果[{i}]がndarrayではありません"
+                    assert series.shape[0] == len(
+                        sample_ohlcv
+                    ), f"{indicator}の結果[{i}]の長さが不正{indicator}"
+
         except Exception as e:
             pytest.fail(f"{indicator}のテストでエラー: {e}")
 
-    def test_all_indicators_handle_insufficient_data(self, indicator_service: TechnicalIndicatorService):
+    def test_all_indicators_handle_insufficient_data(
+        self, indicator_service: TechnicalIndicatorService
+    ):
         """不十分なデータに対する挙動をテスト"""
-        short_data = pd.DataFrame({
-            "Close": [100, 101, 102],
-            "High": [101, 102, 103],
-            "Low": [99, 100, 101],
-            "Volume": [1000, 1100, 900]
-        })
-        
+        short_data = pd.DataFrame(
+            {
+                "Close": [100, 101, 102],
+                "High": [101, 102, 103],
+                "Low": [99, 100, 101],
+                "Volume": [1000, 1100, 900],
+            }
+        )
+
         for indicator in self.INDICATORS:
             try:
                 config = indicator_service.registry.get_indicator_config(indicator)
                 if not config:
                     continue
-                    
+
                 # 短いデータで計算を試みる
                 params = config.default_values or {}
-                
-                result = indicator_service.calculate_indicator(short_data, indicator, params)
-                
+
+                result = indicator_service.calculate_indicator(
+                    short_data, indicator, params
+                )
+
                 # 結果が期待通りか検証
                 if config.result_type == "single":
                     assert isinstance(result, np.ndarray)
@@ -272,84 +390,112 @@ class TestAllTechnicalIndicators:
                     assert result.shape[0] == len(short_data)
                 elif config.result_type in ["complex", "multiple"]:
                     assert isinstance(result, tuple)
-                    
+
             except Exception as e:
                 # 一部のインジケーターは短いデータでエラーになるのは許容
                 if "データ長" not in str(e) and "長さ" not in str(e):
                     print(f"警告: {indicator}で予期しないエラー: {e}")
 
-    def test_indicators_return_valid_values(self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame):
+    def test_indicators_return_valid_values(
+        self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+    ):
         """インジケーターが有効な値を返すか検証"""
         for indicator in ["RSI", "MFI", "CCI", "WILLR", "UO"]:
             try:
                 if indicator == "RSI":
-                    result = indicator_service.calculate_indicator(sample_ohlcv, indicator, {"length": 14})
+                    result = indicator_service.calculate_indicator(
+                        sample_ohlcv, indicator, {"length": 14}
+                    )
                     # RSIは0-100の範囲
                     if isinstance(result, np.ndarray):
                         valid_values = result[np.isfinite(result)]
                         if len(valid_values) > 0:
-                            assert all(0 <= val <= 100 for val in valid_values), f"{indicator}の値が範囲外"
-                            
+                            assert all(
+                                0 <= val <= 100 for val in valid_values
+                            ), f"{indicator}の値が範囲外"
+
                 elif indicator == "MFI":
-                    result = indicator_service.calculate_indicator(sample_ohlcv, indicator, {"length": 14})
+                    result = indicator_service.calculate_indicator(
+                        sample_ohlcv, indicator, {"length": 14}
+                    )
                     if isinstance(result, np.ndarray):
                         valid_values = result[np.isfinite(result)]
                         if len(valid_values) > 0:
-                            assert all(0 <= val <= 100 for val in valid_values), f"{indicator}の値が範囲外"
-                            
+                            assert all(
+                                0 <= val <= 100 for val in valid_values
+                            ), f"{indicator}の値が範囲外"
+
                 elif indicator == "WILLR":
-                    result = indicator_service.calculate_indicator(sample_ohlcv, indicator, {"length": 14})
+                    result = indicator_service.calculate_indicator(
+                        sample_ohlcv, indicator, {"length": 14}
+                    )
                     if isinstance(result, np.ndarray):
                         valid_values = result[np.isfinite(result)]
                         if len(valid_values) > 0:
-                            assert all(-100 <= val <= 0 for val in valid_values), f"{indicator}の値が範囲外"
-                            
+                            assert all(
+                                -100 <= val <= 0 for val in valid_values
+                            ), f"{indicator}の値が範囲外"
+
             except Exception:
                 pass  # 他のインジケーターは範囲チェックをスキップ
 
-    def test_all_indicators_with_custom_parameters(self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame):
+    def test_all_indicators_with_custom_parameters(
+        self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+    ):
         """カスタムパラメータでの動作をテスト"""
         for indicator in ["EMA", "SMA", "WMA", "DEMA", "TEMA"]:
             try:
                 # 異なる長さのパラメータでテスト
                 for length in [5, 20, 50]:
                     params = {"length": length}
-                    result = indicator_service.calculate_indicator(sample_ohlcv, indicator, params)
-                    
-                    if hasattr(result, 'shape'):
+                    result = indicator_service.calculate_indicator(
+                        sample_ohlcv, indicator, params
+                    )
+
+                    if hasattr(result, "shape"):
                         assert result.shape[0] == len(sample_ohlcv)
                     else:
                         assert len(result) == len(sample_ohlcv)
-                        
+
             except Exception as e:
                 pytest.fail(f"{indicator}のカスタムパラメータテストで失敗: {e}")
 
-    def test_profile_indicators_performance(self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame):
+    def test_profile_indicators_performance(
+        self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+    ):
         """主要インジケーターのパフォーマンスを計測"""
         import time
-        
+
         # 高頻度で使用されるインジケーター
         common_indicators = ["SMA", "EMA", "RSI", "MACD", "BB"]
-        
+
         start_time = time.time()
-        
+
         for indicator in common_indicators:
             for _ in range(5):  # 5回実行
                 if indicator == "MACD":
-                    indicator_service.calculate_indicator(sample_ohlcv, indicator, {"fast": 12, "slow": 26, "signal": 9})
+                    indicator_service.calculate_indicator(
+                        sample_ohlcv, indicator, {"fast": 12, "slow": 26, "signal": 9}
+                    )
                 else:
-                    indicator_service.calculate_indicator(sample_ohlcv, indicator, {"length": 14})
-        
+                    indicator_service.calculate_indicator(
+                        sample_ohlcv, indicator, {"length": 14}
+                    )
+
         elapsed = time.time() - start_time
         # 2秒以内に完了すべき
         assert elapsed < 2.0, f"パフォーマンステスト失敗: {elapsed:.2f}秒"
 
-    def test_all_indicators_supported_by_registry(self, indicator_service: TechnicalIndicatorService):
+    def test_all_indicators_supported_by_registry(
+        self, indicator_service: TechnicalIndicatorService
+    ):
         """レジストリに登録されているか確認"""
         supported = indicator_service.get_supported_indicators()
-        
+
         for indicator in self.INDICATORS:
-            assert indicator in supported, f"{indicator}がレジストリに登録されていません"
+            assert (
+                indicator in supported
+            ), f"{indicator}がレジストリに登録されていません"
             assert supported[indicator]["parameters"] is not None
             assert supported[indicator]["result_type"] is not None
 

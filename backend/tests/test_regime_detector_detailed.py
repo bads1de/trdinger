@@ -1,6 +1,7 @@
 """
 RegimeDetectorのテスト
 """
+
 import pytest
 import numpy as np
 from unittest.mock import Mock, patch
@@ -18,7 +19,7 @@ class TestRegimeDetector:
     def test_init(self):
         """初期化のテスト"""
         assert self.detector.model is not None
-        assert hasattr(self.detector, 'model')  # model属性があること
+        assert hasattr(self.detector, "model")  # model属性があること
 
     def test_detect_regimes_success(self):
         """レジーム検出成功のテスト"""
@@ -28,8 +29,8 @@ class TestRegimeDetector:
         data.volume = [1000, 1100, 900, 1200, 1300, 950, 1000]
         data.index = range(len(data.close))
 
-        with patch.object(self.detector, '_extract_features') as mock_extract:
-            with patch.object(self.detector, '_predict_regimes') as mock_predict:
+        with patch.object(self.detector, "_extract_features") as mock_extract:
+            with patch.object(self.detector, "_predict_regimes") as mock_predict:
                 mock_extract.return_value = np.array([[0.1, 0.2], [0.15, 0.18]])
                 mock_predict.return_value = [0, 1]  # トレンド、レンジ
 
@@ -57,7 +58,7 @@ class TestRegimeDetector:
         data.volume = [1000, 1100]
         data.index = [0, 1]
 
-        with patch.object(self.detector, '_extract_features') as mock_extract:
+        with patch.object(self.detector, "_extract_features") as mock_extract:
             mock_extract.return_value = np.array([])  # 空の特徴量
 
             regimes = self.detector.detect_regimes(data)
@@ -90,7 +91,9 @@ class TestRegimeDetector:
         low = np.array([99, 100, 101, 102, 103, 104])
         volume = np.array([1000, 1100, 1200, 1300, 1400, 1500])
 
-        indicators = self.detector._calculate_technical_indicators(close, high, low, volume)
+        indicators = self.detector._calculate_technical_indicators(
+            close, high, low, volume
+        )
 
         assert isinstance(indicators, np.ndarray)
         assert indicators.shape[0] == len(close)
@@ -100,7 +103,7 @@ class TestRegimeDetector:
         """レジーム予測のテスト"""
         features = np.array([[0.1, 0.2], [0.15, 0.18], [0.05, 0.25]])
 
-        with patch.object(self.detector.model, 'predict') as mock_predict:
+        with patch.object(self.detector.model, "predict") as mock_predict:
             mock_predict.return_value = [0, 1, 2]  # トレンド、レンジ、高ボラ
 
             regimes = self.detector._predict_regimes(features)
@@ -120,11 +123,13 @@ class TestRegimeDetector:
         """レジーム確率取得のテスト"""
         features = np.array([[0.1, 0.2], [0.15, 0.18]])
 
-        with patch.object(self.detector.model, 'predict_proba') as mock_predict_proba:
-            mock_predict_proba.return_value = np.array([
-                [0.7, 0.2, 0.1],  # トレンド:0.7, レンジ:0.2, 高ボラ:0.1
-                [0.3, 0.6, 0.1]   # トレンド:0.3, レンジ:0.6, 高ボラ:0.1
-            ])
+        with patch.object(self.detector.model, "predict_proba") as mock_predict_proba:
+            mock_predict_proba.return_value = np.array(
+                [
+                    [0.7, 0.2, 0.1],  # トレンド:0.7, レンジ:0.2, 高ボラ:0.1
+                    [0.3, 0.6, 0.1],  # トレンド:0.3, レンジ:0.6, 高ボラ:0.1
+                ]
+            )
 
             probabilities = self.detector.get_regime_probabilities(features)
 
@@ -146,13 +151,15 @@ class TestRegimeDetector:
         close = [100 + i * 0.1 for i in range(time)]
         volume = [1000 + i * 10 for i in range(time)]
 
-        market_data = pd.DataFrame({
-            'close': close,
-            'volume': volume,
-            'open': [c - 1 for c in close],
-            'high': [c + 2 for c in close],
-            'low': [c - 2 for c in close]
-        })
+        market_data = pd.DataFrame(
+            {
+                "close": close,
+                "volume": volume,
+                "open": [c - 1 for c in close],
+                "high": [c + 2 for c in close],
+                "low": [c - 2 for c in close],
+            }
+        )
 
         # 実際のdetect_regimesをテスト
         regimes = self.detector.detect_regimes(market_data)
@@ -238,7 +245,17 @@ class TestRegimeDetector:
 
     def test_get_regime_duration(self):
         """レジーム持続時間取得のテスト"""
-        regimes = [0, 0, 0, 1, 1, 2, 2, 2, 2]  # トレンド:3期間, レンジ:2期間, 高ボラ:4期間
+        regimes = [
+            0,
+            0,
+            0,
+            1,
+            1,
+            2,
+            2,
+            2,
+            2,
+        ]  # トレンド:3期間, レンジ:2期間, 高ボラ:4期間
 
         durations = self.detector.get_regime_duration(regimes)
 
@@ -295,7 +312,9 @@ class TestRegimeDetector:
         data = Mock()
         data.close = None  # 無効なデータ
 
-        with patch('app.services.auto_strategy.services.regime_detector.logger') as mock_logger:
+        with patch(
+            "app.services.auto_strategy.services.regime_detector.logger"
+        ) as mock_logger:
             regimes = self.detector.detect_regimes(data)
 
             assert regimes == []

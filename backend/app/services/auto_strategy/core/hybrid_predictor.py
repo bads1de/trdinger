@@ -47,8 +47,12 @@ class HybridPredictor:
         self.automl_config = automl_config
         self.use_time_series_cv = use_time_series_cv
         self.drl_config = (automl_config or {}).get("drl") if automl_config else None
-        self._drl_enabled = bool(self.drl_config and self.drl_config.get("enabled", False))
-        self._drl_weight = float(self.drl_config.get("policy_weight", 0.5)) if self.drl_config else 0.0
+        self._drl_enabled = bool(
+            self.drl_config and self.drl_config.get("enabled", False)
+        )
+        self._drl_weight = (
+            float(self.drl_config.get("policy_weight", 0.5)) if self.drl_config else 0.0
+        )
         if not 0.0 <= self._drl_weight <= 1.0:
             logger.warning("DRLポリシーの重みが範囲外のため0.5に調整しました")
             self._drl_weight = 0.5
@@ -83,9 +87,9 @@ class HybridPredictor:
         else:
             service = self.training_service_cls(
                 trainer_type=trainer_type,
-                single_model_config=self.single_model_config
-                if trainer_type == "single"
-                else None,
+                single_model_config=(
+                    self.single_model_config if trainer_type == "single" else None
+                ),
                 ensemble_config=ensemble_config,
                 automl_config=automl_config,
             )
@@ -102,7 +106,7 @@ class HybridPredictor:
     def get_available_models() -> List[str]:
         """
         利用可能なモデル一覧を取得
-        
+
         Returns:
             モデルタイプのリスト
         """
@@ -112,13 +116,13 @@ class HybridPredictor:
     def predict(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """
         予測を実行
-        
+
         Args:
             features_df: 特徴量DataFrame
-            
+
         Returns:
             予測確率辞書 {"up": float, "down": float, "range": float}
-            
+
         Raises:
             MLPredictionError: 予測に失敗した場合
         """
@@ -126,7 +130,7 @@ class HybridPredictor:
             # 入力検証
             if features_df is None or features_df.empty:
                 raise MLPredictionError("特徴量DataFrameが空です")
-            
+
             # 複数モデルの場合は平均化
             if len(self.services) > 1:
                 predictions = []
@@ -145,8 +149,12 @@ class HybridPredictor:
                 else:
                     ml_prediction = {
                         "up": float(np.mean([p.get("up", 0.0) for p in predictions])),
-                        "down": float(np.mean([p.get("down", 0.0) for p in predictions])),
-                        "range": float(np.mean([p.get("range", 0.0) for p in predictions])),
+                        "down": float(
+                            np.mean([p.get("down", 0.0) for p in predictions])
+                        ),
+                        "range": float(
+                            np.mean([p.get("range", 0.0) for p in predictions])
+                        ),
                     }
             else:
                 # 単一モデルの場合
@@ -163,20 +171,22 @@ class HybridPredictor:
 
             blended = self._blend_with_drl(ml_prediction, features_df)
             return blended
-            
+
         except MLPredictionError:
             raise
         except Exception as e:
             logger.error(f"予測エラー: {e}")
             raise MLPredictionError(f"予測に失敗しました: {e}")
 
-    def predict_batch(self, features_batch: List[pd.DataFrame]) -> List[Dict[str, float]]:
+    def predict_batch(
+        self, features_batch: List[pd.DataFrame]
+    ) -> List[Dict[str, float]]:
         """
         バッチ予測
-        
+
         Args:
             features_batch: 特徴量DataFrameのリスト
-            
+
         Returns:
             予測結果のリスト
         """
@@ -188,7 +198,7 @@ class HybridPredictor:
             except Exception as e:
                 logger.error(f"バッチ予測エラー: {e}")
                 results.append(self._default_prediction())
-        
+
         return results
 
     def _run_time_series_cv(
@@ -214,10 +224,10 @@ class HybridPredictor:
     def load_model(self, model_path: str) -> bool:
         """
         モデルをロード
-        
+
         Args:
             model_path: モデルファイルパス
-            
+
         Returns:
             ロード成功フラグ
         """
@@ -235,7 +245,7 @@ class HybridPredictor:
     def get_latest_model(self) -> Optional[str]:
         """
         最新モデルのパスを取得
-        
+
         Returns:
             モデルパス（存在しない場合はNone）
         """
@@ -250,7 +260,7 @@ class HybridPredictor:
     def is_trained(self) -> bool:
         """
         モデルが学習済みかチェック
-        
+
         Returns:
             学習済みフラグ
         """
@@ -262,7 +272,7 @@ class HybridPredictor:
     def get_model_info(self) -> Dict[str, Any]:
         """
         モデル情報を取得
-        
+
         Returns:
             モデル情報辞書
         """
@@ -278,7 +288,7 @@ class HybridPredictor:
 
     @staticmethod
     def _resolve_training_service_cls(
-        override: Optional[Type["MLTrainingService"]]
+        override: Optional[Type["MLTrainingService"]],
     ) -> Type["MLTrainingService"]:
         if override is not None:
             return override
@@ -287,9 +297,7 @@ class HybridPredictor:
         return getattr(module, "MLTrainingService")
 
     @staticmethod
-    def _resolve_model_manager(
-        override: Optional["ModelManager"]
-    ) -> "ModelManager":
+    def _resolve_model_manager(override: Optional["ModelManager"]) -> "ModelManager":
         if override is not None:
             return override
 
@@ -323,8 +331,12 @@ class HybridPredictor:
             return None
 
         try:
-            policy_type = self.drl_config.get("policy_type", "ppo") if self.drl_config else "ppo"
-            return DRLPolicyAdapter(policy_type=policy_type, policy_config=self.drl_config)
+            policy_type = (
+                self.drl_config.get("policy_type", "ppo") if self.drl_config else "ppo"
+            )
+            return DRLPolicyAdapter(
+                policy_type=policy_type, policy_config=self.drl_config
+            )
         except Exception as exc:
             logger.warning("DRLPolicyAdapterの初期化に失敗しました: %s", exc)
             return None
@@ -338,7 +350,9 @@ class HybridPredictor:
         try:
             drl_prediction = self.drl_policy_adapter.predict_signals(features_df)
         except Exception as exc:
-            logger.warning("DRLポリシー予測が失敗したためML予測のみを使用します: %s", exc)
+            logger.warning(
+                "DRLポリシー予測が失敗したためML予測のみを使用します: %s", exc
+            )
             return self._normalise_prediction(ml_prediction)
 
         weight = self._drl_weight

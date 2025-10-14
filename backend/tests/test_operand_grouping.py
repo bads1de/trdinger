@@ -41,10 +41,15 @@ class TestOperandGroupingSystem:
         """PERCENTAGE_0_100グループのオペランド分類"""
         # RSI系
         assert grouping_system.get_operand_group("RSI") == OperandGroup.PERCENTAGE_0_100
-        assert grouping_system.get_operand_group("STOCH") == OperandGroup.PERCENTAGE_0_100
+        assert (
+            grouping_system.get_operand_group("STOCH") == OperandGroup.PERCENTAGE_0_100
+        )
 
         # 他のパーセント型
-        assert grouping_system.get_operand_group("ACCBANDS") == OperandGroup.PERCENTAGE_0_100
+        assert (
+            grouping_system.get_operand_group("ACCBANDS")
+            == OperandGroup.PERCENTAGE_0_100
+        )
 
     def test_get_operand_group_zero_centered(self, grouping_system):
         """ZERO_CENTEREDグループのオペランド分類"""
@@ -55,8 +60,14 @@ class TestOperandGroupingSystem:
     def test_get_operand_group_volume_based(self, grouping_system):
         """VOLUME_BASEDグループのオペランド分類"""
         assert grouping_system.get_operand_group("VOLUME") == OperandGroup.VOLUME_BASED
-        assert grouping_system.get_operand_group("OPENINTEREST") == OperandGroup.VOLUME_BASED
-        assert grouping_system.get_operand_group("FUNDING_RATE") == OperandGroup.VOLUME_BASED
+        assert (
+            grouping_system.get_operand_group("OPENINTEREST")
+            == OperandGroup.VOLUME_BASED
+        )
+        assert (
+            grouping_system.get_operand_group("FUNDING_RATE")
+            == OperandGroup.VOLUME_BASED
+        )
 
     def test_get_compatibility_score_perfect_match(self, grouping_system):
         """完全一致するオペランド間の互換性スコア"""
@@ -116,7 +127,11 @@ class TestOperandGroupingSystem:
     def test_error_handling_invalid_operand(self, grouping_system):
         """無効なオペランドでのエラー処理"""
         # 空文字列
-        with patch.object(grouping_system, '_classify_by_pattern', side_effect=Exception("Pattern error")):
+        with patch.object(
+            grouping_system,
+            "_classify_by_pattern",
+            side_effect=Exception("Pattern error"),
+        ):
             group = grouping_system.get_operand_group("")
             assert group == OperandGroup.PRICE_BASED  # デフォルト
 
@@ -150,7 +165,10 @@ class TestGlobalInterface:
 
     def test_operand_grouping_system_singleton(self):
         """operand_grouping_systemがシングルトンであることをテスト"""
-        from backend.app.services.auto_strategy.core.operand_grouping import operand_grouping_system
+        from backend.app.services.auto_strategy.core.operand_grouping import (
+            operand_grouping_system,
+        )
+
         instance1 = operand_grouping_system
         instance2 = operand_grouping_system
         assert instance1 is instance2

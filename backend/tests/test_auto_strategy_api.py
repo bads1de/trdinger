@@ -1,4 +1,3 @@
-
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
@@ -18,12 +17,15 @@ app.dependency_overrides[get_auto_strategy_service] = override_get_auto_strategy
 
 client = TestClient(app)
 
+
 @pytest.fixture(autouse=True)
 def reset_mocks():
     """各テストの前にモックをリセット"""
     mock_auto_strategy_service.reset_mock()
 
+
 # --- テストケース ---
+
 
 def test_generate_strategy_success():
     """正常系: POST /generate - 戦略生成が正常に受け付けられる"""
@@ -33,7 +35,7 @@ def test_generate_strategy_success():
         "experiment_id": "test-exp-id",
         "experiment_name": "Test Experiment",
         "base_config": {"symbol": "BTC/USDT"},
-        "ga_config": {"population_size": 10}
+        "ga_config": {"population_size": 10},
     }
 
     # 実行
@@ -45,37 +47,43 @@ def test_generate_strategy_success():
     assert response.json()["data"]["experiment_id"] == "test-exp-id"
     mock_auto_strategy_service.start_strategy_generation.assert_called_once()
 
+
 def test_generate_strategy_validation_error():
     """異常系: POST /generate - 不正なリクエストボディ"""
     # 準備
-    request_body = {"experiment_name": "Test"} # 必須フィールドが不足
+    request_body = {"experiment_name": "Test"}  # 必須フィールドが不足
 
     # 実行
     response = client.post("/api/auto-strategy/generate", json=request_body)
 
     # 検証
-    assert response.status_code == 422 # Unprocessable Entity
+    assert response.status_code == 422  # Unprocessable Entity
+
 
 def test_generate_strategy_service_exception():
     """異常系: POST /generate - サービスレイヤーで例外発生"""
     # 準備
-    mock_auto_strategy_service.start_strategy_generation.side_effect = Exception("Service Error")
+    mock_auto_strategy_service.start_strategy_generation.side_effect = Exception(
+        "Service Error"
+    )
     request_body = {
         "experiment_id": "err-exp-id",
         "experiment_name": "Error Experiment",
-        "base_config": {}, "ga_config": {}
+        "base_config": {},
+        "ga_config": {},
     }
 
     # 実行
     # NOTE: safe_execute_asyncが例外をキャッチし、エラーレスポンスを返すため、
     # TestClientは例外を発生させない。レスポンスの内容をチェックする。
     response = client.post("/api/auto-strategy/generate", json=request_body)
-    
+
     # 検証
-    assert response.status_code == 202 # 例外はハンドラ内で処理されるため202のまま
+    assert response.status_code == 202  # 例外はハンドラ内で処理されるため202のまま
     json_response = response.json()
     assert json_response["success"] is False
     assert "Service Error" in json_response["message"]
+
 
 def test_list_experiments_success():
     """正常系: GET /experiments - 実験一覧の取得"""
@@ -91,11 +99,15 @@ def test_list_experiments_success():
     assert response.json()["experiments"] == mock_experiments
     mock_auto_strategy_service.list_experiments.assert_called_once()
 
+
 def test_stop_experiment_success():
     """正常系: POST /experiments/{experiment_id}/stop - 実験の停止"""
     # 準備
     experiment_id = "stop-me"
-    mock_auto_strategy_service.stop_experiment.return_value = {"success": True, "message": "Stopped"}
+    mock_auto_strategy_service.stop_experiment.return_value = {
+        "success": True,
+        "message": "Stopped",
+    }
 
     # 実行
     response = client.post(f"/api/auto-strategy/experiments/{experiment_id}/stop")
@@ -105,11 +117,14 @@ def test_stop_experiment_success():
     assert response.json()["success"] is True
     mock_auto_strategy_service.stop_experiment.assert_called_with(experiment_id)
 
+
 def test_stop_experiment_not_found():
     """異常系: POST /experiments/{experiment_id}/stop - 存在しない実験"""
     # 準備
     experiment_id = "not-found"
-    mock_auto_strategy_service.stop_experiment.side_effect = ValueError("Experiment not found")
+    mock_auto_strategy_service.stop_experiment.side_effect = ValueError(
+        "Experiment not found"
+    )
 
     # 実行
     response = client.post(f"/api/auto-strategy/experiments/{experiment_id}/stop")
@@ -117,4 +132,3 @@ def test_stop_experiment_not_found():
     # 検証
     assert response.status_code == 400
     assert "Experiment not found" in response.json()["detail"]
-

@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 class HalfOptimalFCalculator(BaseCalculator):
     """ハーフオプティマルF方式計算クラス"""
 
-    def calculate(self, gene, account_balance: float, current_price: float, **kwargs) -> Dict[str, Any]:
+    def calculate(
+        self, gene, account_balance: float, current_price: float, **kwargs
+    ) -> Dict[str, Any]:
         """ハーフオプティマルF方式の拡張計算"""
         trade_history = kwargs.get("trade_history")
         details: Dict[str, Any] = {"method": "half_optimal_f"}
@@ -36,7 +38,9 @@ class HalfOptimalFCalculator(BaseCalculator):
             )
 
         # 統一された最終処理（重複コード除去）
-        return self._apply_size_limits_and_finalize(result["position_size"], details, warnings, gene)
+        return self._apply_size_limits_and_finalize(
+            result["position_size"], details, warnings, gene
+        )
 
     def _calculate_simplified_optimal_f(
         self,
@@ -45,9 +49,10 @@ class HalfOptimalFCalculator(BaseCalculator):
         current_price: float,
         trade_history: Optional[List[Dict[str, Any]]],
         warnings: List[str],
-        details: Dict[str, Any]
+        details: Dict[str, Any],
     ) -> Dict[str, Any]:
         """簡易オプティマルF計算"""
+
         @safe_operation(
             context="簡易オプティマルF計算",
             is_api_call=False,
@@ -72,7 +77,9 @@ class HalfOptimalFCalculator(BaseCalculator):
             position_amount = account_balance * half_optimal_f
             position_size = self._safe_calculate_with_price_check(
                 lambda: position_amount / current_price,
-                current_price, 0, "現在価格が無効"
+                current_price,
+                0,
+                "現在価格が無効",
             )
 
             return {
@@ -99,13 +106,18 @@ class HalfOptimalFCalculator(BaseCalculator):
             position_amount = account_balance * gene.fixed_ratio
             position_size = self._safe_calculate_with_price_check(
                 lambda: position_amount / current_price,
-                current_price, 0, "取引履歴が不足、固定比率にフォールバック", warnings
+                current_price,
+                0,
+                "取引履歴が不足、固定比率にフォールバック",
+                warnings,
             )
-            details.update({
-                "fallback_reason": "insufficient_trade_history_to_fixed",
-                "trade_count": len(trade_history) if trade_history else 0,
-                "fallback_ratio": gene.fixed_ratio,
-            })
+            details.update(
+                {
+                    "fallback_reason": "insufficient_trade_history_to_fixed",
+                    "trade_count": len(trade_history) if trade_history else 0,
+                    "fallback_ratio": gene.fixed_ratio,
+                }
+            )
             return {"position_size": position_size}
 
     def _calculate_with_trade_history(
@@ -115,7 +127,7 @@ class HalfOptimalFCalculator(BaseCalculator):
         current_price: float,
         trade_history: List[Dict[str, Any]],
         warnings: List[str],
-        details: Dict[str, Any]
+        details: Dict[str, Any],
     ) -> Dict[str, Any]:
         """取引履歴を使用した計算"""
         recent_trades = trade_history[-gene.lookback_period :]
@@ -127,12 +139,17 @@ class HalfOptimalFCalculator(BaseCalculator):
             position_amount = account_balance * gene.fixed_ratio
             position_size = self._safe_calculate_with_price_check(
                 lambda: position_amount / current_price,
-                current_price, 0, "有効な取引データなし、固定比率にフォールバック", warnings
+                current_price,
+                0,
+                "有効な取引データなし、固定比率にフォールバック",
+                warnings,
             )
-            details.update({
-                "fallback_reason": "no_valid_trades",
-                "fallback_ratio": gene.fixed_ratio,
-            })
+            details.update(
+                {
+                    "fallback_reason": "no_valid_trades",
+                    "fallback_ratio": gene.fixed_ratio,
+                }
+            )
             return {"position_size": position_size}
 
         win_rate = len(wins) / len(recent_trades)
@@ -141,27 +158,30 @@ class HalfOptimalFCalculator(BaseCalculator):
 
         # オプティマルF計算
         if avg_win > 0 and avg_loss > 0:
-            optimal_f = (
-                win_rate * avg_win - (1 - win_rate) * avg_loss
-            ) / avg_win
+            optimal_f = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
             half_optimal_f = max(0, optimal_f * gene.optimal_f_multiplier)
 
             # 口座残高に対する比率として適用
             position_amount = account_balance * half_optimal_f
             position_size = self._safe_calculate_with_price_check(
                 lambda: position_amount / current_price,
-                current_price, 0, "現在価格が無効", warnings
+                current_price,
+                0,
+                "現在価格が無効",
+                warnings,
             )
 
-            details.update({
-                "win_rate": win_rate,
-                "avg_win": avg_win,
-                "avg_loss": avg_loss,
-                "optimal_f": optimal_f,
-                "half_optimal_f": half_optimal_f,
-                "trade_count": len(recent_trades),
-                "lookback_period": gene.lookback_period,
-            })
+            details.update(
+                {
+                    "win_rate": win_rate,
+                    "avg_win": avg_win,
+                    "avg_loss": avg_loss,
+                    "optimal_f": optimal_f,
+                    "half_optimal_f": half_optimal_f,
+                    "trade_count": len(recent_trades),
+                    "lookback_period": gene.lookback_period,
+                }
+            )
             return {"position_size": position_size}
         else:
             # 無効な損益データの場合、ボラティリティベース方式を試行
@@ -176,15 +196,19 @@ class HalfOptimalFCalculator(BaseCalculator):
         account_balance: float,
         current_price: float,
         warnings: List[str],
-        details: Dict[str, Any]
+        details: Dict[str, Any],
     ) -> Dict[str, Any]:
         """ボラティリティベースフォールバック"""
+
         @safe_operation(
             context="ボラティリティベースフォールバック",
             is_api_call=False,
             default_return={
-                "position_size": account_balance * gene.fixed_ratio / current_price
-                if current_price > 0 else 0,
+                "position_size": (
+                    account_balance * gene.fixed_ratio / current_price
+                    if current_price > 0
+                    else 0
+                ),
                 "warnings": ["無効な損益データ、固定比率にフォールバック"],
                 "details": {
                     "fallback_reason": "invalid_pnl_data_to_fixed",
@@ -193,7 +217,9 @@ class HalfOptimalFCalculator(BaseCalculator):
             },
         )
         def _fallback():
-            fallback_atr_multiplier = unified_config.auto_strategy.fallback_atr_multiplier
+            fallback_atr_multiplier = (
+                unified_config.auto_strategy.fallback_atr_multiplier
+            )
             # 簡易ボラティリティ計算
             atr_value = current_price * fallback_atr_multiplier
             risk_amount = account_balance * gene.risk_per_trade
@@ -205,7 +231,9 @@ class HalfOptimalFCalculator(BaseCalculator):
 
             return {
                 "position_size": position_size,
-                "warnings": ["無効な損益データ、ボラティリティベース方式にフォールバック"],
+                "warnings": [
+                    "無効な損益データ、ボラティリティベース方式にフォールバック"
+                ],
                 "details": {
                     "fallback_reason": "invalid_pnl_data_to_volatility",
                     "fallback_method": "volatility_based",

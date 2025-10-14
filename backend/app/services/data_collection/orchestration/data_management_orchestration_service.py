@@ -395,11 +395,11 @@ class DataManagementOrchestrationService:
                     count = ohlcv_repo.get_data_count(symbol, tf)
                     latest = ohlcv_repo.get_latest_timestamp(
                         timestamp_column="timestamp",
-                        filter_conditions={"symbol": symbol, "timeframe": tf}
+                        filter_conditions={"symbol": symbol, "timeframe": tf},
                     )
                     oldest = ohlcv_repo.get_oldest_timestamp(
                         timestamp_column="timestamp",
-                        filter_conditions={"symbol": symbol, "timeframe": tf}
+                        filter_conditions={"symbol": symbol, "timeframe": tf},
                     )
 
                     ohlcv_details[tf] = {
@@ -415,7 +415,6 @@ class DataManagementOrchestrationService:
                 # オープンインタレスト詳細情報
                 oi_latest = oi_repo.get_latest_open_interest_timestamp(symbol)
                 oi_oldest = oi_repo.get_oldest_open_interest_timestamp(symbol)
-
 
                 response_data = {
                     "data_counts": {

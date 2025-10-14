@@ -20,7 +20,7 @@ class TestGAConfig:
         """シリアライズとデシリアライズが正しく動作することを確認"""
         original = GAConfig(regime_adaptation_enabled=True)
         data = original.model_dump()
-        assert data['regime_adaptation_enabled'] == True
+        assert data["regime_adaptation_enabled"] == True
 
         restored = GAConfig.model_validate(data)
         assert restored.regime_adaptation_enabled == True

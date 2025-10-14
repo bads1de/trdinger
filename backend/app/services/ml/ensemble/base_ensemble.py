@@ -135,7 +135,7 @@ class BaseEnsemble(ABC):
                 n_estimators=unified_config.ml.training.rf_n_estimators,
                 max_depth=unified_config.ml.training.rf_max_depth,
                 random_state=unified_config.ml.training.random_state,
-                n_jobs=-1
+                n_jobs=-1,
             )
         elif (
             model_type.lower() == "gradient_boosting"

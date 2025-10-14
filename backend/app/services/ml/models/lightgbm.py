@@ -62,7 +62,9 @@ class LightGBMModel:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> "LightGBMModel":
+    def fit(
+        self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]
+    ) -> "LightGBMModel":
         """
         sklearn互換のfitメソッド
 
@@ -173,9 +175,10 @@ class LightGBMModel:
             )
 
             # 予測と評価
-            y_pred_proba = cast(np.ndarray, self.model.predict(
-                X_test, num_iteration=self.model.best_iteration
-            ))
+            y_pred_proba = cast(
+                np.ndarray,
+                self.model.predict(X_test, num_iteration=self.model.best_iteration),
+            )
 
             if num_classes > 2:
                 y_pred_class = np.argmax(y_pred_proba, axis=1)
@@ -191,7 +194,11 @@ class LightGBMModel:
 
             # 特徴量重要度を計算
             feature_importance = {}
-            if self.model and hasattr(self.model, "feature_importance") and self.feature_columns:
+            if (
+                self.model
+                and hasattr(self.model, "feature_importance")
+                and self.feature_columns
+            ):
                 importance_scores = self.model.feature_importance(
                     importance_type="gain"
                 )
@@ -213,7 +220,9 @@ class LightGBMModel:
                 "best_iteration": self.model.best_iteration,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
-                "feature_count": len(self.feature_columns) if self.feature_columns else 0,
+                "feature_count": (
+                    len(self.feature_columns) if self.feature_columns else 0
+                ),
                 "feature_importance": feature_importance,  # 特徴量重要度を追加
                 **detailed_metrics,  # 詳細な評価指標を追加
             }
@@ -282,13 +291,15 @@ class LightGBMModel:
                     X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
                 else:
                     X = pd.DataFrame(
-                        X, columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])])
+                        X,
+                        columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])]),
                     )
 
             # 予測確率を取得
-            predictions_proba = cast(np.ndarray, self.model.predict(
-                X, num_iteration=self.model.best_iteration
-            ))
+            predictions_proba = cast(
+                np.ndarray,
+                self.model.predict(X, num_iteration=self.model.best_iteration),
+            )
 
             # クラス数を判定
             if predictions_proba.ndim == 1:
@@ -324,10 +335,14 @@ class LightGBMModel:
                     X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
                 else:
                     X = pd.DataFrame(
-                        X, columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])])
+                        X,
+                        columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])]),
                     )
 
-            predictions = cast(np.ndarray, self.model.predict(X, num_iteration=self.model.best_iteration))
+            predictions = cast(
+                np.ndarray,
+                self.model.predict(X, num_iteration=self.model.best_iteration),
+            )
 
             # 二値分類の場合、確率を[1-p, p]の形式に変換
             if predictions.ndim == 1:

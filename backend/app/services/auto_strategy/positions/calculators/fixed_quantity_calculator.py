@@ -10,7 +10,9 @@ from .base_calculator import BaseCalculator
 class FixedQuantityCalculator(BaseCalculator):
     """固定枚数方式計算クラス"""
 
-    def calculate(self, gene, account_balance: float, current_price: float, **kwargs) -> Dict[str, Any]:
+    def calculate(
+        self, gene, account_balance: float, current_price: float, **kwargs
+    ) -> Dict[str, Any]:
         """固定枚数方式の拡張計算"""
         details: Dict[str, Any] = {"method": "fixed_quantity"}
 

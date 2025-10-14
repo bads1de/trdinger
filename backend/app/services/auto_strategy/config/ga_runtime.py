@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from .auto_strategy import AutoStrategyConfig
 from .base import BaseConfig
+
 if TYPE_CHECKING:
     from ..services.regime_detector import RegimeDetectorConfig
 from .ga import (
@@ -102,7 +103,7 @@ class GAConfig(BaseConfig):
     # 実行時設定
     parallel_processes: Optional[int] = None
     random_state: Optional[int] = None
-    
+
     # ハイブリッドGA+ML設定
     hybrid_mode: bool = False
     hybrid_model_type: str = "lightgbm"  # lightgbm, xgboost, catboost, randomforest

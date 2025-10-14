@@ -13,6 +13,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 logger = logging.getLogger(__name__)
 
+
 class PriceChangeTransformer(BaseEstimator, TransformerMixin):
     """
     価格データから価格変化率を計算するTransformer

@@ -21,7 +21,6 @@ __all__ = [
     "BybitFundingRateService",
     "BybitMarketDataService",
     "BybitOpenInterestService",
-
     # Configuration
     "DataServiceConfig",
     "get_funding_rate_config",

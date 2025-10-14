@@ -180,7 +180,9 @@ class YamlIndicatorUtils:
         yaml_config = manifest_to_yaml_dict()
         yaml_based_characteristics = {}
 
-        for indicator_name, indicator_config in yaml_config.get("indicators", {}).items():
+        for indicator_name, indicator_config in yaml_config.get(
+            "indicators", {}
+        ).items():
             if not isinstance(indicator_config, dict):
                 continue
 
@@ -198,17 +200,19 @@ class YamlIndicatorUtils:
                         elif risk_level == "all":
                             char.update(cls._process_thresholds(risk_config))
                         else:
-                            char.update(cls._process_thresholds({risk_level: risk_config}))
+                            char.update(
+                                cls._process_thresholds({risk_level: risk_config})
+                            )
 
                 char.update(
-                    cls._extract_oscillator_settings(
-                        char, indicator_config, thresholds
-                    )
+                    cls._extract_oscillator_settings(char, indicator_config, thresholds)
                 )
 
             yaml_based_characteristics[indicator_name] = char
 
-        return cls._merge_characteristics(existing_characteristics, yaml_based_characteristics)
+        return cls._merge_characteristics(
+            existing_characteristics, yaml_based_characteristics
+        )
 
     @classmethod
     def load_yaml_config_for_indicators(cls) -> Dict[str, Any]:

@@ -1,6 +1,7 @@
 """
 ExperimentManagerのテスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
@@ -10,7 +11,9 @@ from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.services.experiment_manager import ExperimentManager
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
 
 
 class TestExperimentManager:
@@ -21,8 +24,7 @@ class TestExperimentManager:
         self.mock_backtest_service = Mock()
         self.mock_persistence_service = Mock()
         self.manager = ExperimentManager(
-            self.mock_backtest_service,
-            self.mock_persistence_service
+            self.mock_backtest_service, self.mock_persistence_service
         )
 
     def test_init(self):
@@ -54,29 +56,31 @@ class TestExperimentManager:
             "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": "2024-01-01",
-            "end_date": "2024-12-19"
+            "end_date": "2024-12-19",
         }
 
         # GAエンジンと永続化サービスをモック
         mock_ga_engine = MagicMock()
         mock_ga_engine.run_evolution.return_value = {"winning_individuals": []}
         self.manager.ga_engine = mock_ga_engine
-        
+
         # 初期化が呼ばれないと仮定するため、設定
-        with patch.object(self.manager, 'initialize_ga_engine') as mock_init:
+        with patch.object(self.manager, "initialize_ga_engine") as mock_init:
             # テスト実行
             self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
 
             # 検証: initialize_ga_engineは呼ばれない（エンジンがすでに初期化されているため）
             mock_init.assert_not_called()
-            mock_ga_engine.run_evolution.assert_called_once_with(ga_config, backtest_config)
+            mock_ga_engine.run_evolution.assert_called_once_with(
+                ga_config, backtest_config
+            )
 
     def test_run_experiment_exception(self):
         """実験実行中の例外テスト"""
         ga_config = GAConfig()
         backtest_config = {}
 
-        with patch.object(self.manager, 'initialize_ga_engine') as mock_init:
+        with patch.object(self.manager, "initialize_ga_engine") as mock_init:
             mock_init.side_effect = Exception("Test exception")
 
             with pytest.raises(Exception):
@@ -87,7 +91,7 @@ class TestExperimentManager:
         ga_config = GAConfig()
         backtest_config = {"symbol": "BTC/USDT:USDT"}
 
-        with patch.object(self.manager.ga_engine, 'evolve') as mock_evolve:
+        with patch.object(self.manager.ga_engine, "evolve") as mock_evolve:
             mock_evolve.return_value = [Mock(), Mock()]
 
             result = self.manager._run_ga_evolution(ga_config, backtest_config)
@@ -101,7 +105,9 @@ class TestExperimentManager:
         results = [{"fitness": 0.8, "genes": []}]
         ga_config = GAConfig()
 
-        with patch.object(self.manager.persistence_service, 'save_generation_results') as mock_save:
+        with patch.object(
+            self.manager.persistence_service, "save_generation_results"
+        ) as mock_save:
             self.manager._save_results(experiment_id, results, ga_config)
             mock_save.assert_called_once_with(experiment_id, results, ga_config)
 
@@ -112,7 +118,7 @@ class TestExperimentManager:
             "timeframe": "1h",
             "start_date": "2024-01-01",
             "end_date": "2024-12-19",
-            "initial_capital": 100000
+            "initial_capital": 100000,
         }
 
         # 例外が投げられないことを確認
@@ -132,7 +138,7 @@ class TestExperimentManager:
         """リソースクリーンアップのテスト"""
         self.manager.ga_engine = Mock()
 
-        with patch.object(self.manager.ga_engine, 'cleanup') as mock_cleanup:
+        with patch.object(self.manager.ga_engine, "cleanup") as mock_cleanup:
             self.manager._cleanup_resources()
             mock_cleanup.assert_called_once()
 
@@ -143,7 +149,9 @@ class TestExperimentManager:
         """実験ステータス取得のテスト"""
         experiment_id = "test_exp_001"
 
-        with patch.object(self.manager.persistence_service, 'get_experiment_status') as mock_status:
+        with patch.object(
+            self.manager.persistence_service, "get_experiment_status"
+        ) as mock_status:
             mock_status.return_value = {"status": "running", "generation": 3}
 
             result = self.manager.get_experiment_status(experiment_id)

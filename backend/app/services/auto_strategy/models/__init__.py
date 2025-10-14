@@ -4,7 +4,6 @@
 戦略遺伝子、GA設定、フィットネス評価などのモデルを定義します。
 """
 
-
 from .condition import Condition, ConditionGroup
 from .enums import PositionSizingMethod, TPSLMethod
 from .indicator_gene import IndicatorGene

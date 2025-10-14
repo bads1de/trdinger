@@ -1,6 +1,7 @@
 """
 GAアルゴリズムの包括的バグ検出テスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import numpy as np
@@ -9,7 +10,12 @@ import random
 
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.models.strategy_models import StrategyGene, IndicatorGene, Condition, TPSLGene
+from app.services.auto_strategy.models.strategy_models import (
+    StrategyGene,
+    IndicatorGene,
+    Condition,
+    TPSLGene,
+)
 from app.services.auto_strategy.core.genetic_operators import (
     crossover_strategy_genes_pure,
     mutate_strategy_gene_pure,
@@ -22,7 +28,9 @@ from app.services.auto_strategy.core.genetic_operators import (
     create_deap_crossover_wrapper,
     create_deap_mutate_wrapper,
 )
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
 
 
 class TestGABugDetection:
@@ -36,7 +44,7 @@ class TestGABugDetection:
             generations=10,
             crossover_rate=0.8,
             mutation_rate=0.1,
-            elite_size=3
+            elite_size=3,
         )
 
     @pytest.fixture
@@ -48,10 +56,18 @@ class TestGABugDetection:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            exit_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
-            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
-            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="ema")],
+            entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            exit_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema")
+            ],
             risk_management={"position_size": 0.1},
             tpsl_gene=TPSLGene(),
             metadata={"test": True},
@@ -99,7 +115,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -113,7 +129,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 初期メモリ状態
@@ -121,10 +137,19 @@ class TestGABugDetection:
         initial_memory = sys.getsizeof(gc.get_objects())
 
         # 大規模個体群の初期化
-        with patch('app.services.auto_strategy.core.ga_engine.RandomGeneGenerator') as MockGenerator:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.RandomGeneGenerator"
+        ) as MockGenerator:
             mock_generator = Mock()
-            mock_gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                                long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            mock_gene = StrategyGene(
+                id="test",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             mock_generator.generate_random_gene.return_value = mock_gene
 
             MockGenerator.return_value = mock_generator
@@ -148,7 +173,7 @@ class TestGABugDetection:
             "total_return": 0.0,
             "max_drawdown": 0.0,
             "win_rate": 0.0,
-            "total_trades": 0  # これが原因でゼロ除算が発生する可能性
+            "total_trades": 0,  # これが原因でゼロ除算が発生する可能性
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -159,15 +184,22 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="test",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         individual = creator.Individual([gene])
 
         # ゼロ除算が発生しない
@@ -188,7 +220,7 @@ class TestGABugDetection:
             exit_conditions=[],
             long_entry_conditions=[],
             short_entry_conditions=[],
-            risk_management={}
+            risk_management={},
         )
 
         # 境界値テスト
@@ -199,12 +231,18 @@ class TestGABugDetection:
         assert child2 is not None
 
         # 指標数が制限内
-        assert len(child1.indicators) <= max(len(gene1.indicators), len(gene2.indicators))
-        assert len(child2.indicators) <= max(len(gene1.indicators), len(gene2.indicators))
+        assert len(child1.indicators) <= max(
+            len(gene1.indicators), len(gene2.indicators)
+        )
+        assert len(child2.indicators) <= max(
+            len(gene1.indicators), len(gene2.indicators)
+        )
 
     def test_null_pointer_in_gene_conversion(self):
         """遺伝子変換でのヌルポインタ防止"""
-        from app.services.auto_strategy.core.genetic_operators import _convert_to_strategy_gene
+        from app.services.auto_strategy.core.genetic_operators import (
+            _convert_to_strategy_gene,
+        )
 
         # None入力
         with pytest.raises(TypeError):
@@ -222,7 +260,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -233,7 +271,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
@@ -243,16 +281,29 @@ class TestGABugDetection:
         # 並列評価のテスト
         population = []
         for i in range(5):
-            gene = StrategyGene(id=f"gene{i}", indicators=[], entry_conditions=[], exit_conditions=[],
-                           long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            gene = StrategyGene(
+                id=f"gene{i}",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             individual = creator.Individual([gene])
             individual.fitness.values = (i * 0.1,)
             population.append(individual)
 
         # 競合状態が発生しない
         try:
-            with patch('multiprocessing.Pool') as mock_pool:
-                mock_pool.return_value.__enter__.return_value.map.return_value = [(0.1,), (0.2,), (0.3,), (0.4,), (0.5,)]
+            with patch("multiprocessing.Pool") as mock_pool:
+                mock_pool.return_value.__enter__.return_value.map.return_value = [
+                    (0.1,),
+                    (0.2,),
+                    (0.3,),
+                    (0.4,),
+                    (0.5,),
+                ]
                 engine._evaluate_population_parallel(population)
         except Exception:
             # 並列評価が失敗しても順次評価が動作する
@@ -280,7 +331,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -291,7 +342,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
@@ -300,8 +351,15 @@ class TestGABugDetection:
 
         population = []
         for i in range(5):
-            gene = StrategyGene(id=f"gene{i}", indicators=[], entry_conditions=[], exit_conditions=[],
-                           long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            gene = StrategyGene(
+                id=f"gene{i}",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             individual = creator.Individual([gene])
             individual.fitness.values = (i * 0.1,)
             population.append(individual)
@@ -320,31 +378,35 @@ class TestGABugDetection:
         original_gene2 = StrategyGene(
             id="gene2",
             indicators=[IndicatorGene(type="RSI", parameters={"period": 14})],
-            entry_conditions=[Condition(left_operand="rsi", operator="<", right_operand="30")],
-            exit_conditions=[Condition(left_operand="rsi", operator=">", right_operand="70")],
+            entry_conditions=[
+                Condition(left_operand="rsi", operator="<", right_operand="30")
+            ],
+            exit_conditions=[
+                Condition(left_operand="rsi", operator=">", right_operand="70")
+            ],
             long_entry_conditions=[],
             short_entry_conditions=[],
             risk_management={"position_size": 0.2},
-            metadata={}
+            metadata={},
         )
 
         # 交叉実行
         child1, child2 = crossover_strategy_genes_pure(original_gene1, original_gene2)
 
         # 基本的な整合性
-        assert hasattr(child1, 'indicators')
-        assert hasattr(child1, 'entry_conditions')
-        assert hasattr(child1, 'exit_conditions')
-        assert hasattr(child1, 'long_entry_conditions')
-        assert hasattr(child1, 'short_entry_conditions')
-        assert hasattr(child1, 'risk_management')
+        assert hasattr(child1, "indicators")
+        assert hasattr(child1, "entry_conditions")
+        assert hasattr(child1, "exit_conditions")
+        assert hasattr(child1, "long_entry_conditions")
+        assert hasattr(child1, "short_entry_conditions")
+        assert hasattr(child1, "risk_management")
 
-        assert hasattr(child2, 'indicators')
-        assert hasattr(child2, 'entry_conditions')
-        assert hasattr(child2, 'exit_conditions')
-        assert hasattr(child2, 'long_entry_conditions')
-        assert hasattr(child2, 'short_entry_conditions')
-        assert hasattr(child2, 'risk_management')
+        assert hasattr(child2, "indicators")
+        assert hasattr(child2, "entry_conditions")
+        assert hasattr(child2, "exit_conditions")
+        assert hasattr(child2, "long_entry_conditions")
+        assert hasattr(child2, "short_entry_conditions")
+        assert hasattr(child2, "risk_management")
 
     def test_unexpected_termination_in_generation_loop(self, config):
         """世代ループでの予期しない終了防止"""
@@ -354,7 +416,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -365,7 +427,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 少ない世代数でテスト
@@ -375,10 +437,19 @@ class TestGABugDetection:
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        with patch('app.services.auto_strategy.core.ga_engine.RandomGeneGenerator') as MockGenerator:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.RandomGeneGenerator"
+        ) as MockGenerator:
             mock_generator = Mock()
-            mock_gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                                long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            mock_gene = StrategyGene(
+                id="test",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             mock_generator.generate_random_gene.return_value = mock_gene
             MockGenerator.return_value = mock_generator
 
@@ -395,7 +466,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -406,15 +477,22 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="test",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         individual = creator.Individual([gene])
 
         # リソースが適切に解放される
@@ -430,10 +508,24 @@ class TestGABugDetection:
         sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
 
         # 同期的な操作
-        mock_gene1 = StrategyGene(id="gene1", indicators=[], entry_conditions=[], exit_conditions=[],
-                            long_entry_conditions=[], short_entry_conditions=[], risk_management={})
-        mock_gene2 = StrategyGene(id="gene2", indicators=[], entry_conditions=[], exit_conditions=[],
-                            long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        mock_gene1 = StrategyGene(
+            id="gene1",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
+        mock_gene2 = StrategyGene(
+            id="gene2",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
 
         # 並行情報が発生しない
         try:
@@ -454,12 +546,12 @@ class TestGABugDetection:
         assert mutated.id != original_gene.id
 
         # 基本的な属性が保持されている
-        assert hasattr(mutated, 'indicators')
-        assert hasattr(mutated, 'entry_conditions')
-        assert hasattr(mutated, 'exit_conditions')
-        assert hasattr(mutated, 'long_entry_conditions')
-        assert hasattr(mutated, 'short_entry_conditions')
-        assert hasattr(mutated, 'risk_management')
+        assert hasattr(mutated, "indicators")
+        assert hasattr(mutated, "entry_conditions")
+        assert hasattr(mutated, "exit_conditions")
+        assert hasattr(mutated, "long_entry_conditions")
+        assert hasattr(mutated, "short_entry_conditions")
+        assert hasattr(mutated, "risk_management")
 
     def test_inconsistency_in_elitism(self, config):
         """エリート主義での不整合防止"""
@@ -469,7 +561,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -480,7 +572,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
@@ -488,10 +580,24 @@ class TestGABugDetection:
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
         # 遺伝子
-        gene1 = StrategyGene(id="gene1", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
-        gene2 = StrategyGene(id="gene2", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene1 = StrategyGene(
+            id="gene1",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
+        gene2 = StrategyGene(
+            id="gene2",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
 
         ind1 = creator.Individual([gene1])
         ind2 = creator.Individual([gene2])
@@ -523,7 +629,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 境界値が自動調整される
@@ -542,15 +648,22 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # Noneを含む個体群
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="test",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         individual = creator.Individual([gene])
         individual.fitness.values = (1.0,)
 
@@ -570,7 +683,9 @@ class TestGABugDetection:
         # 空の個体群
         empty_population = []
 
-        mutated = adaptive_mutate_strategy_gene_pure(empty_population, sample_strategy_gene)
+        mutated = adaptive_mutate_strategy_gene_pure(
+            empty_population, sample_strategy_gene
+        )
         assert mutated is not None
 
         # 無効なフィットネス
@@ -593,7 +708,7 @@ class TestGABugDetection:
             "total_return": 0.0,
             "max_drawdown": 0.0,
             "win_rate": 0.0,
-            "total_trades": 0
+            "total_trades": 0,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -604,15 +719,22 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                        long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+        gene = StrategyGene(
+            id="test",
+            indicators=[],
+            entry_conditions=[],
+            exit_conditions=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+            risk_management={},
+        )
         individual = creator.Individual([gene])
 
         # 不活性な遺伝子でも評価される
@@ -633,18 +755,27 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # DEAPのセットアップ
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
-        with patch('app.services.auto_strategy.core.ga_engine.RandomGeneGenerator') as MockGenerator:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.RandomGeneGenerator"
+        ) as MockGenerator:
             mock_generator = Mock()
             # 同じIDを返すモック
-            mock_gene = StrategyGene(id="same-id", indicators=[], entry_conditions=[], exit_conditions=[],
-                                long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            mock_gene = StrategyGene(
+                id="same-id",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             mock_generator.generate_random_gene.return_value = mock_gene
 
             MockGenerator.return_value = mock_generator
@@ -678,7 +809,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -689,7 +820,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # メモリフラグメンテーションテスト
@@ -698,10 +829,19 @@ class TestGABugDetection:
 
         # 複数世代をシミュレート
         for _ in range(5):
-            with patch('app.services.auto_strategy.core.ga_engine.RandomGeneGenerator') as MockGenerator:
+            with patch(
+                "app.services.auto_strategy.core.ga_engine.RandomGeneGenerator"
+            ) as MockGenerator:
                 mock_generator = Mock()
-                mock_gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                                    long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+                mock_gene = StrategyGene(
+                    id="test",
+                    indicators=[],
+                    entry_conditions=[],
+                    exit_conditions=[],
+                    long_entry_conditions=[],
+                    short_entry_conditions=[],
+                    risk_management={},
+                )
                 mock_generator.generate_random_gene.return_value = mock_gene
                 MockGenerator.return_value = mock_generator
 
@@ -721,7 +861,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -732,16 +872,18 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 正常な終了条件
-        assert hasattr(engine, 'config')
+        assert hasattr(engine, "config")
         assert engine.config.generations > 0
 
     def test_unexpected_data_loss_in_serialization(self, sample_strategy_gene):
         """直列化でのデータ損失防止"""
-        from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer
+        from app.services.auto_strategy.serializers.gene_serialization import (
+            GeneSerializer,
+        )
 
         serializer = GeneSerializer()
         gene_list = serializer.encode_strategy_gene_to_list(sample_strategy_gene)
@@ -749,7 +891,9 @@ class TestGABugDetection:
 
         # 基本的なデータが保持されている
         assert len(restored_gene.indicators) == len(sample_strategy_gene.indicators)
-        assert len(restored_gene.entry_conditions) == len(sample_strategy_gene.entry_conditions)
+        assert len(restored_gene.entry_conditions) == len(
+            sample_strategy_gene.entry_conditions
+        )
 
     def test_unexpected_behavior_with_edge_case_parameters(self, config):
         """境界値パラメータでの予期しない動作"""
@@ -764,7 +908,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -775,14 +919,23 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 極端な設定でも動作する
-        with patch('app.services.auto_strategy.core.ga_engine.RandomGeneGenerator') as MockGenerator:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.RandomGeneGenerator"
+        ) as MockGenerator:
             mock_generator = Mock()
-            mock_gene = StrategyGene(id="test", indicators=[], entry_conditions=[], exit_conditions=[],
-                                long_entry_conditions=[], short_entry_conditions=[], risk_management={})
+            mock_gene = StrategyGene(
+                id="test",
+                indicators=[],
+                entry_conditions=[],
+                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+            )
             mock_generator.generate_random_gene.return_value = mock_gene
             MockGenerator.return_value = mock_generator
 
@@ -797,7 +950,7 @@ class TestGABugDetection:
             "total_return": 0.2,
             "max_drawdown": 0.1,
             "win_rate": 0.6,
-            "total_trades": 50
+            "total_trades": 50,
         }
         mock_persistence_service = Mock()
         mock_regime_detector = Mock()
@@ -808,7 +961,7 @@ class TestGABugDetection:
             backtest_service=mock_backtest_service,
             persistence_service=mock_persistence_service,
             regime_detector=mock_regime_detector,
-            data_service=mock_data_service
+            data_service=mock_data_service,
         )
 
         # 各コンポーネントが正常に連携

@@ -3,6 +3,7 @@
 
 エントリー・イグジット条件の基本モデルを定義します。
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

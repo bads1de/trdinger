@@ -1,6 +1,7 @@
 """
 エラーハンドリングの包括的テスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -10,8 +11,13 @@ import threading
 from fastapi import HTTPException
 
 from app.utils.error_handler import (
-    ErrorHandler, error_response, api_response,
-    TimeoutError, ValidationError, DataError, ModelError
+    ErrorHandler,
+    error_response,
+    api_response,
+    TimeoutError,
+    ValidationError,
+    DataError,
+    ModelError,
 )
 from app.utils.response import error_response as utils_error_response
 
@@ -25,7 +31,7 @@ class TestErrorHandlerComprehensive:
             message="Test error",
             error_code="TEST_001",
             details={"field": "value"},
-            context="test context"
+            context="test context",
         )
 
         assert response["success"] is False
@@ -37,7 +43,9 @@ class TestErrorHandlerComprehensive:
 
     def test_api_response_generation(self):
         """APIレスポンス生成のテスト"""
-        success_response = api_response.success("Operation successful", data={"result": "ok"})
+        success_response = api_response.success(
+            "Operation successful", data={"result": "ok"}
+        )
         error_response = api_response.error("Operation failed", error_code="ERR_001")
 
         assert success_response["success"] is True
@@ -47,6 +55,7 @@ class TestErrorHandlerComprehensive:
 
     def test_timeout_error_handling(self):
         """タイムアウトエラー処理のテスト"""
+
         @ErrorHandler.timeout_handler(timeout=5)
         def slow_function():
             time.sleep(10)  # 10秒待機
@@ -64,6 +73,7 @@ class TestErrorHandlerComprehensive:
 
     def test_validation_error_handling(self):
         """バリデーションエラー処理のテスト"""
+
         @ErrorHandler.safe_operation(default_return="default", context="validation")
         def validate_data(data):
             if not data:
@@ -80,6 +90,7 @@ class TestErrorHandlerComprehensive:
 
     def test_data_error_handling(self):
         """データエラー処理のテスト"""
+
         @ErrorHandler.safe_operation(default_return=[], context="data_processing")
         def process_data(data):
             if len(data) == 0:
@@ -92,6 +103,7 @@ class TestErrorHandlerComprehensive:
 
     def test_model_error_handling(self):
         """モデルエラー処理のテスト"""
+
         @ErrorHandler.safe_operation(default_return=None, context="model_training")
         def train_model():
             raise ModelError("Model training failed")
@@ -129,7 +141,9 @@ class TestErrorHandlerComprehensive:
         """メモリエラーからの回復テスト"""
         import gc
 
-        @ErrorHandler.safe_operation(default_return="recovered", context="memory_intensive")
+        @ErrorHandler.safe_operation(
+            default_return="recovered", context="memory_intensive"
+        )
         def memory_intensive_task():
             # 大量のデータを作成
             large_list = [np.random.randn(1000, 1000) for _ in range(100)]
@@ -198,7 +212,7 @@ class TestErrorHandlerComprehensive:
             "error_message",
             "stack_trace",
             "context",
-            "user_id"
+            "user_id",
         ]
 
         for item in log_items:
@@ -206,6 +220,7 @@ class TestErrorHandlerComprehensive:
 
     def test_error_propagation_control(self):
         """エラー伝播制御のテスト"""
+
         def level1():
             try:
                 level2()
@@ -227,7 +242,7 @@ class TestErrorHandlerComprehensive:
         errors = [
             {"type": "validation", "count": 5},
             {"type": "network", "count": 3},
-            {"type": "database", "count": 2}
+            {"type": "database", "count": 2},
         ]
 
         total_errors = sum(error["count"] for error in errors)
@@ -236,11 +251,7 @@ class TestErrorHandlerComprehensive:
     def test_error_rate_monitoring(self):
         """エラー率監視のテスト"""
         # 監視指標
-        error_metrics = {
-            "total_requests": 100,
-            "error_count": 5,
-            "error_rate": 0.05
-        }
+        error_metrics = {"total_requests": 100, "error_count": 5, "error_rate": 0.05}
 
         calculated_rate = error_metrics["error_count"] / error_metrics["total_requests"]
         assert abs(calculated_rate - error_metrics["error_rate"]) < 1e-6
@@ -250,7 +261,7 @@ class TestErrorHandlerComprehensive:
         # デッドレターキューのメッセージ
         dlq_messages = [
             {"error_type": "timeout", "retry_count": 3, "payload": "data1"},
-            {"error_type": "validation", "retry_count": 2, "payload": "data2"}
+            {"error_type": "validation", "retry_count": 2, "payload": "data2"},
         ]
 
         for message in dlq_messages:
@@ -265,7 +276,7 @@ class TestErrorHandlerComprehensive:
             "email_alert",
             "slack_notification",
             "pagerduty",
-            "log_alert"
+            "log_alert",
         ]
 
         for method in notification_methods:
@@ -278,7 +289,7 @@ class TestErrorHandlerComprehensive:
             "error_count": 10,
             "error_types": ["timeout", "validation"],
             "affected_users": 5,
-            "mean_time_to_recover": 300
+            "mean_time_to_recover": 300,
         }
 
         assert "error_count" in telemetry_data
@@ -291,7 +302,7 @@ class TestErrorHandlerComprehensive:
             "full_service",
             "reduced_functionality",
             "read_only",
-            "maintenance_mode"
+            "maintenance_mode",
         ]
 
         for level in degradation_levels:
@@ -300,11 +311,7 @@ class TestErrorHandlerComprehensive:
     def test_error_boundary_patterns(self):
         """エラーバウンダリパターンのテスト"""
         # バウンダリの種類
-        error_boundaries = [
-            "service_boundary",
-            "module_boundary",
-            "team_boundary"
-        ]
+        error_boundaries = ["service_boundary", "module_boundary", "team_boundary"]
 
         for boundary in error_boundaries:
             assert isinstance(boundary, str)
@@ -317,7 +324,7 @@ class TestErrorHandlerComprehensive:
             "error_code": "VALIDATION_001",
             "message": "Validation failed",
             "timestamp": "2023-12-01T10:00:00",
-            "context": "user_registration"
+            "context": "user_registration",
         }
 
         required_fields = ["success", "error_code", "message", "timestamp"]
@@ -330,7 +337,7 @@ class TestErrorHandlerComprehensive:
         prevention_mechanisms = [
             "circuit_breaker",
             "bulkhead_isolation",
-            "timeout_settings"
+            "timeout_settings",
         ]
 
         for mechanism in prevention_mechanisms:
@@ -342,7 +349,7 @@ class TestErrorHandlerComprehensive:
         recovery_strategies = [
             "restart_service",
             "fallback_to_backup",
-            "manual_intervention"
+            "manual_intervention",
         ]
 
         for strategy in recovery_strategies:
@@ -351,11 +358,7 @@ class TestErrorHandlerComprehensive:
     def test_error_simulation_and_testing(self):
         """エラーのシミュレーションとテスト"""
         # シミュレーションの種類
-        simulation_types = [
-            "network_partition",
-            "service_failure",
-            "data_corruption"
-        ]
+        simulation_types = ["network_partition", "service_failure", "data_corruption"]
 
         for simulation_type in simulation_types:
             assert isinstance(simulation_type, str)
@@ -365,8 +368,8 @@ class TestErrorHandlerComprehensive:
         # エラー予算
         error_budget = {
             "monthly_error_rate": 0.01,  # 1%
-            "current_rate": 0.005,      # 現在0.5%
-            "remaining_budget": 0.005
+            "current_rate": 0.005,  # 現在0.5%
+            "remaining_budget": 0.005,
         }
 
         remaining = error_budget["monthly_error_rate"] - error_budget["current_rate"]
@@ -379,7 +382,7 @@ class TestErrorHandlerComprehensive:
             "error_identification",
             "data_collection",
             "root_cause_analysis",
-            "corrective_action"
+            "corrective_action",
         ]
 
         for step in analysis_steps:
@@ -388,12 +391,7 @@ class TestErrorHandlerComprehensive:
     def test_final_error_handling_validation(self):
         """最終エラーハンドリング検証"""
         # エラーハンドリングの完全性
-        error_handling_components = [
-            "detection",
-            "logging",
-            "notification",
-            "recovery"
-        ]
+        error_handling_components = ["detection", "logging", "notification", "recovery"]
 
         for component in error_handling_components:
             assert isinstance(component, str)

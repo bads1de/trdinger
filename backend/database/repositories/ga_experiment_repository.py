@@ -78,7 +78,9 @@ class GAExperimentRepository(BaseRepository):
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="実験ステータス更新", is_api_call=False, default_return=False)
+        @safe_operation(
+            context="実験ステータス更新", is_api_call=False, default_return=False
+        )
         def _update_experiment_status():
             # BaseRepositoryの汎用メソッドを使用して実験を取得
             experiments = self.get_filtered_data(
@@ -119,7 +121,9 @@ class GAExperimentRepository(BaseRepository):
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context="ステータス別実験取得", is_api_call=False, default_return=[])
+        @safe_operation(
+            context="ステータス別実験取得", is_api_call=False, default_return=[]
+        )
         def _get_experiments_by_status():
             # BaseRepositoryの汎用メソッドを使用
             return self.get_filtered_data(

@@ -158,9 +158,23 @@ class MLTrainingOrchestrationService:
                         }
                 except Exception as e:
                     logger.warning(f"モデル情報取得エラー: {e}")
-                    model_status = {"is_loaded": False, "model_path": None, "model_type": None, "feature_count": 0, "training_samples": 0, "accuracy": 0.0}
+                    model_status = {
+                        "is_loaded": False,
+                        "model_path": None,
+                        "model_type": None,
+                        "feature_count": 0,
+                        "training_samples": 0,
+                        "accuracy": 0.0,
+                    }
             else:
-                model_status = {"is_loaded": False, "model_path": None, "model_type": None, "feature_count": 0, "training_samples": 0, "accuracy": 0.0}
+                model_status = {
+                    "is_loaded": False,
+                    "model_path": None,
+                    "model_type": None,
+                    "feature_count": 0,
+                    "training_samples": 0,
+                    "accuracy": 0.0,
+                }
 
             return api_response(
                 success=True,

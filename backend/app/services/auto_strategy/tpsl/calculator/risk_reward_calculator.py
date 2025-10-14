@@ -31,7 +31,7 @@ class RiskRewardCalculator(BaseTPSLCalculator):
         tpsl_gene: Optional[TPSLGene] = None,
         market_data: Optional[Dict[str, Any]] = None,
         position_direction: float = 1.0,
-        **kwargs
+        **kwargs,
     ) -> TPSLResult:
         """
         リスクリワード比方式でTP/SLを計算
@@ -52,8 +52,12 @@ class RiskRewardCalculator(BaseTPSLCalculator):
                 base_stop_loss = tpsl_gene.base_stop_loss or tpsl_gene.stop_loss_pct
                 target_ratio = tpsl_gene.risk_reward_ratio
             else:
-                base_stop_loss = kwargs.get("stop_loss_pct", kwargs.get("base_stop_loss", 0.03))
-                target_ratio = kwargs.get("target_ratio", kwargs.get("risk_reward_ratio", 2.0))
+                base_stop_loss = kwargs.get(
+                    "stop_loss_pct", kwargs.get("base_stop_loss", 0.03)
+                )
+                target_ratio = kwargs.get(
+                    "target_ratio", kwargs.get("risk_reward_ratio", 2.0)
+                )
 
             # リスクリワード比でTPを計算
             take_profit_pct = base_stop_loss * target_ratio
@@ -82,6 +86,6 @@ class RiskRewardCalculator(BaseTPSLCalculator):
             confidence_score=0.5,
             expected_performance={
                 "type": "risk_reward_fallback",
-                "risk_reward_ratio": 2.0
+                "risk_reward_ratio": 2.0,
             },
         )

@@ -1,12 +1,15 @@
 """
 MLサービステスト - 包括的かつバグ検出を重視
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
 import numpy as np
 from app.services.ml.ml_training_service import MLTrainingService, OptimizationSettings
-from app.services.ml.orchestration.ml_training_orchestration_service import MLTrainingOrchestrationService
+from app.services.ml.orchestration.ml_training_orchestration_service import (
+    MLTrainingOrchestrationService,
+)
 
 
 class TestMLServiceComprehensive:
@@ -26,33 +29,37 @@ class TestMLServiceComprehensive:
     def sample_training_data(self):
         """サンプル学習データ"""
         np.random.seed(42)
-        return pd.DataFrame({
-            'open': np.random.randn(100) + 100,
-            'high': np.random.randn(100) + 101,
-            'low': np.random.randn(100) + 99,
-            'close': np.random.randn(100) + 100,
-            'volume': np.random.randint(1000, 10000, 100),
-            'target': np.random.choice([0, 1], 100)
-        })
+        return pd.DataFrame(
+            {
+                "open": np.random.randn(100) + 100,
+                "high": np.random.randn(100) + 101,
+                "low": np.random.randn(100) + 99,
+                "close": np.random.randn(100) + 100,
+                "volume": np.random.randint(1000, 10000, 100),
+                "target": np.random.choice([0, 1], 100),
+            }
+        )
 
     def test_training_service_initialization(self, training_service):
         """トレーニングサービス初期化のテスト"""
         assert training_service is not None
-        assert hasattr(training_service, 'train_model')
-        assert hasattr(training_service, 'evaluate_model')
-        assert hasattr(training_service, 'save_model')
+        assert hasattr(training_service, "train_model")
+        assert hasattr(training_service, "evaluate_model")
+        assert hasattr(training_service, "save_model")
 
     def test_optimization_settings_basic(self):
         """最適化設定の基本テスト"""
         settings = OptimizationSettings(
             enabled=True,
             n_calls=100,
-            parameter_space={'learning_rate': {'type': 'real', 'low': 0.01, 'high': 0.1}}
+            parameter_space={
+                "learning_rate": {"type": "real", "low": 0.01, "high": 0.1}
+            },
         )
 
         assert settings.enabled is True
         assert settings.n_calls == 100
-        assert 'learning_rate' in settings.parameter_space
+        assert "learning_rate" in settings.parameter_space
 
     def test_optimization_settings_disabled(self):
         """最適化無効設定のテスト"""
@@ -65,35 +72,35 @@ class TestMLServiceComprehensive:
     def test_orchestration_service_initialization(self, orchestration_service):
         """オーケストレーションサービス初期化のテスト"""
         assert orchestration_service is not None
-        assert hasattr(orchestration_service, 'start_training')
-        assert hasattr(orchestration_service, 'get_training_status')
-        assert hasattr(orchestration_service, 'stop_training')
+        assert hasattr(orchestration_service, "start_training")
+        assert hasattr(orchestration_service, "get_training_status")
+        assert hasattr(orchestration_service, "stop_training")
 
     def test_training_status_management(self, orchestration_service):
         """トレーニング状態管理のテスト"""
         # 初期状態
         initial_status = orchestration_service.get_training_status()
-        assert initial_status['is_training'] is False
-        assert initial_status['status'] == 'idle'
+        assert initial_status["is_training"] is False
+        assert initial_status["status"] == "idle"
 
         # トレーニング開始
         orchestration_service.start_training({}, Mock())
 
         # 状態が更新される
         training_status = orchestration_service.get_training_status()
-        assert training_status['is_training'] is True
-        assert training_status['status'] != 'idle'
+        assert training_status["is_training"] is True
+        assert training_status["status"] != "idle"
 
     def test_data_validation_in_training(self, training_service, sample_training_data):
         """トレーニング中のデータ検証テスト"""
         # 有効なデータ
         valid_data = sample_training_data
         assert len(valid_data) > 0
-        assert 'target' in valid_data.columns
+        assert "target" in valid_data.columns
 
         # 無効なデータ（欠損値が多い）
         invalid_data = sample_training_data.copy()
-        invalid_data.loc[:50, 'close'] = np.nan
+        invalid_data.loc[:50, "close"] = np.nan
 
         # 欠損値が処理されるか
         try:
@@ -105,8 +112,8 @@ class TestMLServiceComprehensive:
 
     def test_model_type_validation(self, training_service):
         """モデルタイプ検証のテスト"""
-        valid_model_types = ['lightgbm', 'xgboost', 'randomforest']
-        invalid_model_types = ['invalid_model', '', None]
+        valid_model_types = ["lightgbm", "xgboost", "randomforest"]
+        invalid_model_types = ["invalid_model", "", None]
 
         for model_type in valid_model_types:
             assert isinstance(model_type, str)
@@ -123,11 +130,11 @@ class TestMLServiceComprehensive:
         # アンサンブル設定
         ensemble_config = Mock()
         ensemble_config.enabled = True
-        ensemble_config.method = 'bagging'
+        ensemble_config.method = "bagging"
 
         # 単一モデル設定
         single_model_config = Mock()
-        single_model_config.model_type = 'lightgbm'
+        single_model_config.model_type = "lightgbm"
 
         # 両方の設定が正しく処理される
         assert ensemble_config.enabled or single_model_config.model_type
@@ -136,35 +143,30 @@ class TestMLServiceComprehensive:
         """パラメータ空間検証のテスト"""
         # 有効なパラメータ空間
         valid_space = {
-            'learning_rate': {'type': 'real', 'low': 0.01, 'high': 0.1},
-            'n_estimators': {'type': 'integer', 'low': 50, 'high': 200},
-            'max_depth': {'type': 'integer', 'low': 3, 'high': 10}
+            "learning_rate": {"type": "real", "low": 0.01, "high": 0.1},
+            "n_estimators": {"type": "integer", "low": 50, "high": 200},
+            "max_depth": {"type": "integer", "low": 3, "high": 10},
         }
 
-        settings = OptimizationSettings(
-            enabled=True,
-            parameter_space=valid_space
-        )
+        settings = OptimizationSettings(enabled=True, parameter_space=valid_space)
 
         assert len(settings.parameter_space) == 3
 
         # 無効なパラメータ空間
-        invalid_space = {
-            'invalid_param': {'type': 'unknown', 'low': 0, 'high': 1}
-        }
+        invalid_space = {"invalid_param": {"type": "unknown", "low": 0, "high": 1}}
 
         # 無効なタイプが検出される
-        assert 'unknown' not in ['real', 'integer', 'categorical']
+        assert "unknown" not in ["real", "integer", "categorical"]
 
     def test_memory_management_in_large_scale_training(self, training_service):
         """大規模トレーニングでのメモリ管理テスト"""
         import gc
 
         # 大規模データ
-        large_data = pd.DataFrame({
-            f'feature_{i}': np.random.randn(10000) for i in range(100)
-        })
-        large_data['target'] = np.random.choice([0, 1], 10000)
+        large_data = pd.DataFrame(
+            {f"feature_{i}": np.random.randn(10000) for i in range(100)}
+        )
+        large_data["target"] = np.random.choice([0, 1], 10000)
 
         initial_memory = len(gc.get_objects())
         gc.collect()
@@ -185,7 +187,7 @@ class TestMLServiceComprehensive:
     def test_concurrent_training_prevention(self, orchestration_service):
         """同時トレーニング防止のテスト"""
         # 既にトレーニング中の状態を設定
-        orchestration_service.training_status['is_training'] = True
+        orchestration_service.training_status["is_training"] = True
 
         # 別のトレーニングリクエストが拒否される
         try:
@@ -195,7 +197,7 @@ class TestMLServiceComprehensive:
             pytest.fail("同時トレーニングが適切に防止されていない")
 
         # 状態が維持される
-        assert orchestration_service.get_training_status()['is_training'] is True
+        assert orchestration_service.get_training_status()["is_training"] is True
 
     def test_training_progress_tracking(self, orchestration_service):
         """トレーニング進捗追跡のテスト"""
@@ -203,8 +205,8 @@ class TestMLServiceComprehensive:
         orchestration_service.update_training_progress(50, "Training phase 1 completed")
 
         status = orchestration_service.get_training_status()
-        assert status['progress'] == 50
-        assert "Training phase 1 completed" in status['message']
+        assert status["progress"] == 50
+        assert "Training phase 1 completed" in status["message"]
 
     def test_error_handling_in_training_failure(self, orchestration_service):
         """トレーニング失敗時のエラーハンドリングテスト"""
@@ -212,8 +214,8 @@ class TestMLServiceComprehensive:
         orchestration_service.handle_training_error("Model training failed")
 
         status = orchestration_service.get_training_status()
-        assert status['error'] is not None
-        assert "Model training failed" in status['error']
+        assert status["error"] is not None
+        assert "Model training failed" in status["error"]
 
     def test_model_saving_and_loading(self, training_service):
         """モデル保存と読み込みのテスト"""
@@ -246,8 +248,8 @@ class TestMLServiceComprehensive:
             enabled=True,
             n_calls=20,
             parameter_space={
-                'learning_rate': {'type': 'real', 'low': 0.01, 'high': 0.1}
-            }
+                "learning_rate": {"type": "real", "low": 0.01, "high": 0.1}
+            },
         )
 
         assert optimization_settings.enabled is True
@@ -317,30 +319,28 @@ class TestMLServiceComprehensive:
     def test_resource_cleanup_after_training(self, training_service):
         """トレーニング後のリソースクリーンアップテスト"""
         # トレーニングサービスがリソース管理を実装
-        assert hasattr(training_service, 'cleanup')
-        assert hasattr(training_service, 'release_resources')
+        assert hasattr(training_service, "cleanup")
+        assert hasattr(training_service, "release_resources")
 
     def test_training_configuration_validation(self):
         """トレーニング設定検証のテスト"""
         # 有効な設定
         valid_config = {
-            'symbol': 'BTC/USDT',
-            'timeframe': '1h',
-            'start_date': '2023-01-01',
-            'end_date': '2023-12-31',
-            'validation_split': 0.2
+            "symbol": "BTC/USDT",
+            "timeframe": "1h",
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "validation_split": 0.2,
         }
 
-        assert 'symbol' in valid_config
-        assert 'timeframe' in valid_config
-        assert 0 <= valid_config['validation_split'] <= 1
+        assert "symbol" in valid_config
+        assert "timeframe" in valid_config
+        assert 0 <= valid_config["validation_split"] <= 1
 
         # 無効な設定
-        invalid_config = {
-            'validation_split': 1.5  # 無効な値
-        }
+        invalid_config = {"validation_split": 1.5}  # 無効な値
 
-        assert invalid_config['validation_split'] > 1
+        assert invalid_config["validation_split"] > 1
 
     def test_model_prediction_consistency(self, training_service):
         """モデル予測一貫性のテスト"""
@@ -375,43 +375,50 @@ class TestMLServiceComprehensive:
             upper_bound = Q3 + 1.5 * IQR
 
             # 外れ値が一定程度処理されている
-            outliers = ((processed_data[col] < lower_bound) | (processed_data[col] > upper_bound))
+            outliers = (processed_data[col] < lower_bound) | (
+                processed_data[col] > upper_bound
+            )
             assert outliers.sum() >= 0
 
     def test_model_complexity_vs_performance_tradeoff(self):
         """モデル複雑度vsパフォーマンストレードオフのテスト"""
         # 複雑なモデルと単純なモデルの比較（モック）
-        complex_model_metrics = {'accuracy': 0.95, 'training_time': 300}
-        simple_model_metrics = {'accuracy': 0.85, 'training_time': 60}
+        complex_model_metrics = {"accuracy": 0.95, "training_time": 300}
+        simple_model_metrics = {"accuracy": 0.85, "training_time": 60}
 
         # トレードオフが存在する
-        assert complex_model_metrics['accuracy'] > simple_model_metrics['accuracy']
-        assert complex_model_metrics['training_time'] > simple_model_metrics['training_time']
+        assert complex_model_metrics["accuracy"] > simple_model_metrics["accuracy"]
+        assert (
+            complex_model_metrics["training_time"]
+            > simple_model_metrics["training_time"]
+        )
 
     def test_training_service_error_recovery(self, orchestration_service):
         """トレーニングサービスエラー回復のテスト"""
         # エラー状態をシミュレート
-        orchestration_service.training_status['error'] = "Previous training failed"
+        orchestration_service.training_status["error"] = "Previous training failed"
 
         # エラー回復
         orchestration_service.reset_training_status()
 
         status = orchestration_service.get_training_status()
-        assert status['error'] is None
-        assert status['is_training'] is False
+        assert status["error"] is None
+        assert status["is_training"] is False
 
     def test_model_comparison_and_selection(self):
         """モデル比較と選択のテスト"""
         # 複数モデルのメトリクス
         models_metrics = {
-            'lightgbm': {'accuracy': 0.92, 'f1_score': 0.89},
-            'xgboost': {'accuracy': 0.94, 'f1_score': 0.91},
-            'randomforest': {'accuracy': 0.88, 'f1_score': 0.85}
+            "lightgbm": {"accuracy": 0.92, "f1_score": 0.89},
+            "xgboost": {"accuracy": 0.94, "f1_score": 0.91},
+            "randomforest": {"accuracy": 0.88, "f1_score": 0.85},
         }
 
         # 最良モデルを選択
-        best_model = max(models_metrics.keys(), key=lambda k: models_metrics[k]['f1_score'])
-        assert best_model == 'xgboost'
+        best_model = max(
+            models_metrics.keys(), key=lambda k: models_metrics[k]["f1_score"]
+        )
+        assert best_model == "xgboost"
 
     def test_training_data_quality_assurance(self, sample_training_data):
         """トレーニングデータ品質保証のテスト"""
@@ -420,7 +427,9 @@ class TestMLServiceComprehensive:
         assert not sample_training_data.empty
 
         # 欠損値チェック
-        missing_ratio = sample_training_data.isnull().sum().sum() / sample_training_data.size
+        missing_ratio = (
+            sample_training_data.isnull().sum().sum() / sample_training_data.size
+        )
         assert missing_ratio < 0.1  # 10%未満
 
         # 重複チェック
@@ -430,7 +439,11 @@ class TestMLServiceComprehensive:
     def test_model_interpretability_features(self):
         """モデル解釈可能性機能のテスト"""
         # 解釈可能性機能の存在（モック）
-        interpretability_features = ['feature_importance', 'partial_dependence', 'shap_values']
+        interpretability_features = [
+            "feature_importance",
+            "partial_dependence",
+            "shap_values",
+        ]
 
         for feature in interpretability_features:
             assert isinstance(feature, str)
@@ -440,10 +453,10 @@ class TestMLServiceComprehensive:
         """トレーニングパイプライン監視のテスト"""
         # 監視指標
         monitoring_metrics = {
-            'training_loss': [],
-            'validation_loss': [],
-            'accuracy': [],
-            'f1_score': []
+            "training_loss": [],
+            "validation_loss": [],
+            "accuracy": [],
+            "f1_score": [],
         }
 
         assert isinstance(monitoring_metrics, dict)
@@ -465,11 +478,7 @@ class TestMLServiceComprehensive:
         training_jobs = []
 
         for i in range(5):
-            job = {
-                'id': f'job_{i}',
-                'status': 'pending',
-                'model_type': 'lightgbm'
-            }
+            job = {"id": f"job_{i}", "status": "pending", "model_type": "lightgbm"}
             training_jobs.append(job)
 
         assert len(training_jobs) == 5
@@ -478,32 +487,32 @@ class TestMLServiceComprehensive:
         """モデルメタデータ管理のテスト"""
         # モデルメタデータ
         model_metadata = {
-            'model_id': 'test_model_123',
-            'training_date': '2023-12-01',
-            'model_type': 'lightgbm',
-            'features': ['close', 'volume', 'rsi'],
-            'accuracy': 0.92
+            "model_id": "test_model_123",
+            "training_date": "2023-12-01",
+            "model_type": "lightgbm",
+            "features": ["close", "volume", "rsi"],
+            "accuracy": 0.92,
         }
 
-        required_fields = ['model_id', 'training_date', 'model_type', 'features']
+        required_fields = ["model_id", "training_date", "model_type", "features"]
         for field in required_fields:
             assert field in model_metadata
 
     def test_training_service_documentation_and_logging(self):
         """トレーニングサービスドキュメントとログのテスト"""
         # ログレベルの設定
-        log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+        log_levels = ["DEBUG", "INFO", "WARNING", "ERROR"]
 
         for level in log_levels:
-            assert level in ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+            assert level in ["DEBUG", "INFO", "WARNING", "ERROR"]
 
     def test_model_update_strategy(self):
         """モデル更新戦略のテスト"""
         # 更新戦略
         update_strategies = [
-            'retrain_on_new_data',
-            'incremental_learning',
-            'model_ensemble_with_new_model'
+            "retrain_on_new_data",
+            "incremental_learning",
+            "model_ensemble_with_new_model",
         ]
 
         for strategy in update_strategies:
@@ -513,24 +522,26 @@ class TestMLServiceComprehensive:
         """トレーニングサービスセキュリティとアクセス制御のテスト"""
         # セキュリティ機能
         security_features = [
-            'authentication_required',
-            'role_based_access',
-            'data_encryption',
-            'audit_logging'
+            "authentication_required",
+            "role_based_access",
+            "data_encryption",
+            "audit_logging",
         ]
 
         for feature in security_features:
             assert isinstance(feature, str)
 
-    def test_final_validation_and_integration_test(self, training_service, orchestration_service):
+    def test_final_validation_and_integration_test(
+        self, training_service, orchestration_service
+    ):
         """最終検証と統合テスト"""
         # すべてのコンポーネントが正常に動作
         assert training_service is not None
         assert orchestration_service is not None
 
         # 基本機能が存在
-        assert hasattr(training_service, 'train_model')
-        assert hasattr(orchestration_service, 'start_training')
+        assert hasattr(training_service, "train_model")
+        assert hasattr(orchestration_service, "start_training")
 
         # サービスが初期化されている
         assert True  # 基本的な検証が通る

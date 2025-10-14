@@ -31,16 +31,18 @@ def indicator_service() -> TechnicalIndicatorService:
     return TechnicalIndicatorService()
 
 
-def test_hma_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv, "HMA", {"length": 30}
-    )
+def test_hma_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
+    result = indicator_service.calculate_indicator(sample_ohlcv, "HMA", {"length": 30})
     assert isinstance(result, np.ndarray)
     assert result.shape[0] == len(sample_ohlcv)
     assert np.isfinite(result[-1])
 
 
-def test_alma_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_alma_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "ALMA",
@@ -51,16 +53,18 @@ def test_alma_outputs_series(indicator_service: TechnicalIndicatorService, sampl
     assert np.isfinite(result[-1])
 
 
-def test_vwma_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv, "VWMA", {"length": 24}
-    )
+def test_vwma_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
+    result = indicator_service.calculate_indicator(sample_ohlcv, "VWMA", {"length": 24})
     assert isinstance(result, np.ndarray)
     assert result.shape[0] == len(sample_ohlcv)
     assert np.isfinite(result[-1])
 
 
-def test_ppo_returns_three_arrays(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_ppo_returns_three_arrays(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv, "PPO", {"fast": 12, "slow": 26, "signal": 9}
     )
@@ -72,7 +76,9 @@ def test_ppo_returns_three_arrays(indicator_service: TechnicalIndicatorService, 
         assert np.isfinite(series[-1])
 
 
-def test_trix_returns_three_arrays(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_trix_returns_three_arrays(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv, "TRIX", {"length": 15, "signal": 9}
     )
@@ -97,7 +103,9 @@ def test_ultimate_oscillator_outputs_series(
     assert np.isfinite(result[-1])
 
 
-def test_trima_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_trima_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "TRIMA",
@@ -108,7 +116,9 @@ def test_trima_outputs_series(indicator_service: TechnicalIndicatorService, samp
     assert np.isfinite(result[-1])
 
 
-def test_zlma_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_zlma_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "ZLMA",
@@ -119,7 +129,9 @@ def test_zlma_outputs_series(indicator_service: TechnicalIndicatorService, sampl
     assert np.isfinite(result[-1])
 
 
-def test_frama_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_frama_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "FRAMA",
@@ -131,7 +143,9 @@ def test_frama_outputs_series(indicator_service: TechnicalIndicatorService, samp
     assert np.isfinite(result[15:]).all()
 
 
-def test_super_smoother_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_super_smoother_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "SUPER_SMOOTHER",
@@ -146,7 +160,9 @@ def test_super_smoother_outputs_series(indicator_service: TechnicalIndicatorServ
     assert np.std(result[warmup:]) < np.std(original[warmup:])
 
 
-def test_cmo_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_cmo_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "CMO",
@@ -157,7 +173,9 @@ def test_cmo_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_rvi_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_rvi_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "RVI",
@@ -168,7 +186,9 @@ def test_rvi_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_cti_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_cti_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "CTI",
@@ -179,7 +199,9 @@ def test_cti_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_tsi_returns_main_and_signal(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_tsi_returns_main_and_signal(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "TSI",
@@ -193,7 +215,9 @@ def test_tsi_returns_main_and_signal(indicator_service: TechnicalIndicatorServic
         assert np.isfinite(series[-1])
 
 
-def test_pgo_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_pgo_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "PGO",
@@ -204,7 +228,9 @@ def test_pgo_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_massi_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_massi_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "MASSI",
@@ -215,7 +241,9 @@ def test_massi_outputs_series(indicator_service: TechnicalIndicatorService, samp
     assert np.isfinite(result[-1])
 
 
-def test_psl_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_psl_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "PSL",
@@ -226,7 +254,9 @@ def test_psl_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_supertrend_returns_trend_and_direction(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_supertrend_returns_trend_and_direction(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "SUPERTREND",
@@ -241,7 +271,9 @@ def test_supertrend_returns_trend_and_direction(indicator_service: TechnicalIndi
         assert np.isfinite(series).any() or True
 
 
-def test_pvo_returns_three_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_pvo_returns_three_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "PVO",
@@ -255,7 +287,9 @@ def test_pvo_returns_three_series(indicator_service: TechnicalIndicatorService, 
         assert np.all(np.isfinite(series[-5:]))
 
 
-def test_pvt_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_pvt_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "PVT",
@@ -266,7 +300,9 @@ def test_pvt_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_nvi_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_nvi_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "NVI",
@@ -277,7 +313,9 @@ def test_nvi_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_fisher_returns_main_and_signal(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_fisher_returns_main_and_signal(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "FISHER",
@@ -291,7 +329,9 @@ def test_fisher_returns_main_and_signal(indicator_service: TechnicalIndicatorSer
         assert np.isfinite(series[-1])
 
 
-def test_kst_returns_line_and_signal(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_kst_returns_line_and_signal(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "KST",
@@ -305,7 +345,9 @@ def test_kst_returns_line_and_signal(indicator_service: TechnicalIndicatorServic
         assert np.isfinite(series[-1])
 
 
-def test_dpo_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_dpo_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "DPO",
@@ -316,7 +358,9 @@ def test_dpo_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_eom_outputs_series(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_eom_outputs_series(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "EOM",
@@ -327,7 +371,9 @@ def test_eom_outputs_series(indicator_service: TechnicalIndicatorService, sample
     assert np.isfinite(result[-1])
 
 
-def test_vortex_returns_plus_and_minus(indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame) -> None:
+def test_vortex_returns_plus_and_minus(
+    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+) -> None:
     result = indicator_service.calculate_indicator(
         sample_ohlcv,
         "VORTEX",

@@ -44,11 +44,14 @@ class MLModelError(MLBaseError):
     モデルの読み込み、保存、予測実行時、または一般的なモデル関連の問題で発生する例外
     """
 
-    def __init__(self, message: str, model_info: Optional[dict] = None, error_code: str = "ML_MODEL_ERROR"):
+    def __init__(
+        self,
+        message: str,
+        model_info: Optional[dict] = None,
+        error_code: str = "ML_MODEL_ERROR",
+    ):
         self.model_info = model_info or {}
         super().__init__(message, error_code)
-
-
 
 
 class MLTrainingError(MLBaseError):

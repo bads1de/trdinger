@@ -182,8 +182,6 @@ class OpenInterestData(Base):
     # uses ToDictMixin.to_dict
 
 
-
-
 class BacktestResult(Base):
     """
     バックテスト結果テーブル

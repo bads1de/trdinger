@@ -14,7 +14,7 @@ from deap import tools
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..config import GAConfigPydantic as GAConfig
+from ..config.ga_runtime import GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..generators.strategy_factory import StrategyFactory
 from ..services.regime_detector import RegimeDetector
@@ -76,6 +76,7 @@ class GeneticAlgorithmEngine:
         if hybrid_mode:
             logger.info("🔬 ハイブリッドGA+MLモードで起動")
             from .hybrid_individual_evaluator import HybridIndividualEvaluator
+
             self.individual_evaluator = HybridIndividualEvaluator(
                 backtest_service=backtest_service,
                 predictor=hybrid_predictor,
@@ -87,7 +88,7 @@ class GeneticAlgorithmEngine:
             self.individual_evaluator = IndividualEvaluator(
                 backtest_service, regime_detector
             )
-        
+
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing = None  # setup_deap時に初期化
 
@@ -141,7 +142,7 @@ class GeneticAlgorithmEngine:
 
             logger.info(
                 "GA Engine - Starting evolution with backtest_config: %s",
-                backtest_config
+                backtest_config,
             )
 
             # バックテスト設定にデフォルトの日付を設定（存在しない場合）
@@ -149,7 +150,7 @@ class GeneticAlgorithmEngine:
                 backtest_config["start_date"] = config.fallback_start_date
                 logger.info(
                     "GA Engine - Using fallback start_date: %s",
-                    config.fallback_start_date
+                    config.fallback_start_date,
                 )
             if "end_date" not in backtest_config:
                 backtest_config["end_date"] = config.fallback_end_date

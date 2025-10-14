@@ -240,9 +240,14 @@ class EnhancedCryptoFeatures:
                     df["Close"]
                 )
                 # BB Position計算
-                bb_width = result_df[f"bb_upper_{period}"] - result_df[f"bb_lower_{period}"]
+                bb_width = (
+                    result_df[f"bb_upper_{period}"] - result_df[f"bb_lower_{period}"]
+                )
                 result_df[f"bb_position_{period}"] = (
-                    ((df["Close"] - result_df[f"bb_lower_{period}"]) / (bb_width + 1e-10))
+                    (
+                        (df["Close"] - result_df[f"bb_lower_{period}"])
+                        / (bb_width + 1e-10)
+                    )
                     .clip(0, 1)
                     .fillna(0.5)
                 )
@@ -314,14 +319,16 @@ class EnhancedCryptoFeatures:
 
         # DatetimeIndexの確認
         if not isinstance(result_df.index, pd.DatetimeIndex):
-            logger.warning("インデックスがDatetimeIndexではありません。時間関連特徴量をスキップします。")
+            logger.warning(
+                "インデックスがDatetimeIndexではありません。時間関連特徴量をスキップします。"
+            )
             return result_df
 
         # 時間帯
         try:
-            hour = getattr(result_df.index, 'hour', 0)  # type: ignore
-            dayofweek = getattr(result_df.index, 'dayofweek', 0)  # type: ignore
-            day = getattr(result_df.index, 'day', 15)  # type: ignore
+            hour = getattr(result_df.index, "hour", 0)  # type: ignore
+            dayofweek = getattr(result_df.index, "dayofweek", 0)  # type: ignore
+            day = getattr(result_df.index, "day", 15)  # type: ignore
 
             result_df["hour"] = hour
             result_df["day_of_week"] = dayofweek

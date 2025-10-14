@@ -120,13 +120,17 @@ class AutoStrategyService:
         backtest_config = self._prepare_backtest_config(backtest_config_dict)
 
         # 3. 実験の作成
-        self._create_experiment(experiment_id, experiment_name, ga_config, backtest_config)
+        self._create_experiment(
+            experiment_id, experiment_name, ga_config, backtest_config
+        )
 
         # 4. GAエンジンの初期化
         self._initialize_ga_engine(ga_config)
 
         # 5. バックグラウンドタスクの開始
-        self._start_experiment_in_background(experiment_id, ga_config, backtest_config, background_tasks)
+        self._start_experiment_in_background(
+            experiment_id, ga_config, backtest_config, background_tasks
+        )
 
         logger.info(
             f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
@@ -148,13 +152,21 @@ class AutoStrategyService:
 
         return _validate_ga_config()
 
-    def _prepare_backtest_config(self, backtest_config_dict: Dict[str, Any]) -> Dict[str, Any]:
+    def _prepare_backtest_config(
+        self, backtest_config_dict: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """バックテスト設定を準備する"""
         backtest_config = backtest_config_dict.copy()
         backtest_config["symbol"] = backtest_config.get("symbol", DEFAULT_SYMBOL)
         return backtest_config
 
-    def _create_experiment(self, experiment_id: str, experiment_name: str, ga_config: GAConfig, backtest_config: Dict[str, Any]):
+    def _create_experiment(
+        self,
+        experiment_id: str,
+        experiment_name: str,
+        ga_config: GAConfig,
+        backtest_config: Dict[str, Any],
+    ):
         """実験を作成する"""
         # フロントエンドから送信されたexperiment_idを使用
         self.persistence_service.create_experiment(
@@ -172,7 +184,7 @@ class AutoStrategyService:
         experiment_id: str,
         ga_config: GAConfig,
         backtest_config: Dict[str, Any],
-        background_tasks: BackgroundTasks
+        background_tasks: BackgroundTasks,
     ):
         """実験をバックグラウンドタスクで開始する"""
         background_tasks.add_task(
@@ -196,7 +208,6 @@ class AutoStrategyService:
             return self.persistence_service.list_experiments()
 
         return _list_experiments()
-
 
     def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
         """

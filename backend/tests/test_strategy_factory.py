@@ -72,7 +72,7 @@ class TestStrategyFactory:
         with pytest.raises(ValueError):
             self.factory.create_strategy_class(gene)
 
-    @patch('app.services.auto_strategy.generators.strategy_factory.IndicatorCalculator')
+    @patch("app.services.auto_strategy.generators.strategy_factory.IndicatorCalculator")
     def test_indicator_initialization_failure(self, mock_indicator_calculator):
         """指標初期化失敗時のテスト"""
         from app.services.auto_strategy.models.condition import Condition
@@ -80,7 +80,9 @@ class TestStrategyFactory:
         # IndicatorCalculatorのモックを設定
         mock_instance = Mock()
         mock_indicator_calculator.return_value = mock_instance
-        mock_instance.init_indicator.side_effect = Exception("Indicator initialization failed")
+        mock_instance.init_indicator.side_effect = Exception(
+            "Indicator initialization failed"
+        )
 
         # 戦略遺伝子作成（有効な条件を追加）- 有効な指標タイプを使う
         gene = StrategyGene(

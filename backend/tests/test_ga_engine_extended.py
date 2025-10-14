@@ -1,6 +1,7 @@
 """
 GAエンジンの拡張テスト
 """
+
 import pytest
 from unittest.mock import Mock, patch
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
@@ -20,7 +21,7 @@ class TestGAEngineExtended:
         self.engine = GeneticAlgorithmEngine(
             self.mock_backtest_service,
             self.ga_config,
-            regime_detector=self.mock_regime_detector
+            regime_detector=self.mock_regime_detector,
         )
 
     def test_evolve_with_regime_adaptation(self):
@@ -28,13 +29,15 @@ class TestGAEngineExtended:
         # GAエンジンを初期化
         self.ga_config.regime_adaptation_enabled = True
 
-        with patch.object(self.engine, '_run_generation') as mock_run_gen:
-            with patch.object(self.engine, '_update_regime_weights') as mock_update_weights:
+        with patch.object(self.engine, "_run_generation") as mock_run_gen:
+            with patch.object(
+                self.engine, "_update_regime_weights"
+            ) as mock_update_weights:
                 # 各世代で異なるレジーム分布を模擬
                 mock_run_gen.side_effect = [
                     [{"fitness": 0.8, "genes": []}],
                     [{"fitness": 0.85, "genes": []}],
-                    [{"fitness": 0.9, "genes": []}]
+                    [{"fitness": 0.9, "genes": []}],
                 ]
 
                 results = self.engine.evolve()
@@ -50,11 +53,15 @@ class TestGAEngineExtended:
 
         population = [{"genes": [1, 2, 3]} for _ in range(4)]
 
-        with patch('app.services.auto_strategy.core.ga_engine.ProcessPoolExecutor') as mock_executor:
-            with patch.object(self.engine, '_evaluate_individual') as mock_eval:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.ProcessPoolExecutor"
+        ) as mock_executor:
+            with patch.object(self.engine, "_evaluate_individual") as mock_eval:
                 mock_future = Mock()
                 mock_future.result.return_value = 0.8
-                mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
+                mock_executor.return_value.__enter__.return_value.submit.return_value = (
+                    mock_future
+                )
 
                 results = self.engine._evaluate_population_parallel(population)
 
@@ -85,7 +92,7 @@ class TestGAEngineExtended:
         ]
 
         # 多様性が低いと適応度が調整される
-        with patch.object(self.engine, '_calculate_diversity_score') as mock_diversity:
+        with patch.object(self.engine, "_calculate_diversity_score") as mock_diversity:
             mock_diversity.return_value = 0.1  # 低多様性
             adjusted = self.engine._apply_diversity_pressure(similar_population)
 
@@ -124,7 +131,9 @@ class TestGAEngineExtended:
         # 適応度履歴を作成
         fitness_history = [0.5, 0.6, 0.7, 0.55, 0.65]
 
-        with patch.object(self.engine, '_adjust_parameters_based_on_performance') as mock_adjust:
+        with patch.object(
+            self.engine, "_adjust_parameters_based_on_performance"
+        ) as mock_adjust:
             # パラメータ調整が行われる
             self.engine._dynamic_parameter_adjustment(fitness_history)
 
@@ -142,10 +151,12 @@ class TestGAEngineExtended:
 
     def test_memory_optimization(self):
         """メモリ最適化のテスト"""
-        large_population = [{"fitness": 0.1 * i, "genes": list(range(100))} for i in range(100)]
+        large_population = [
+            {"fitness": 0.1 * i, "genes": list(range(100))} for i in range(100)
+        ]
 
         # 大規模集団でもメモリが適切に管理される
-        with patch('app.services.auto_strategy.core.ga_engine.gc') as mock_gc:
+        with patch("app.services.auto_strategy.core.ga_engine.gc") as mock_gc:
             optimized = self.engine._optimize_memory_usage(large_population)
 
             # ガベージコレクションが呼ばれる
@@ -156,7 +167,7 @@ class TestGAEngineExtended:
         # 個体評価でエラーが発生する状況
         individual = {"genes": [1, 2, 3]}
 
-        with patch.object(self.engine, '_evaluate_individual') as mock_eval:
+        with patch.object(self.engine, "_evaluate_individual") as mock_eval:
             mock_eval.side_effect = Exception("Evaluation error")
 
             # エラーが適切に処理される
@@ -209,11 +220,11 @@ class TestGAEngineExtended:
         generation_data = {
             "generation": 5,
             "population": [{"fitness": 0.8, "genes": [1, 2, 3]}],
-            "best_fitness": 0.8
+            "best_fitness": 0.8,
         }
 
-        with patch('builtins.open') as mock_open:
-            with patch('json.dump') as mock_dump:
+        with patch("builtins.open") as mock_open:
+            with patch("json.dump") as mock_dump:
                 self.engine._save_checkpoint(generation_data, 5)
 
                 # チェックポイントが保存される
@@ -222,8 +233,8 @@ class TestGAEngineExtended:
 
     def test_load_checkpoint(self):
         """チェックポイント読み込みのテスト"""
-        with patch('builtins.open') as mock_open:
-            with patch('json.load') as mock_load:
+        with patch("builtins.open") as mock_open:
+            with patch("json.load") as mock_load:
                 mock_load.return_value = {"test": "data"}
 
                 data = self.engine._load_checkpoint("test_checkpoint.json")
@@ -234,7 +245,7 @@ class TestGAEngineExtended:
         """リアルタイムモニタリングのテスト"""
         population = [{"fitness": 0.8, "genes": [1, 2, 3]}]
 
-        with patch.object(self.engine, '_send_progress_update') as mock_progress:
+        with patch.object(self.engine, "_send_progress_update") as mock_progress:
             self.engine._real_time_monitoring(population, 1, 10)
 
             # 進捗通知が送信される
@@ -242,6 +253,7 @@ class TestGAEngineExtended:
 
     def test_custom_termination_criteria(self):
         """カスタム終了条件のテスト"""
+
         # カスタム終了条件を設定
         def custom_criteria(generation, population, best_fitness):
             return generation >= 5
@@ -257,7 +269,7 @@ class TestGAEngineExtended:
         self.ga_config.enable_multi_objective = True
         self.ga_config.objectives = ["total_return", "sharpe_ratio"]
 
-        with patch.object(self.engine, '_run_multi_objective_evolution') as mock_multi:
+        with patch.object(self.engine, "_run_multi_objective_evolution") as mock_multi:
             mock_multi.return_value = [{"fitness": (0.8, 1.2), "genes": [1, 2, 3]}]
 
             results = self.engine.evolve()
@@ -270,7 +282,9 @@ class TestGAEngineExtended:
         """ハイブリッド評価のテスト"""
         individual = {"genes": [1, 2, 3]}
 
-        with patch('app.services.auto_strategy.core.ga_engine.HybridIndividualEvaluator') as mock_hybrid:
+        with patch(
+            "app.services.auto_strategy.core.ga_engine.HybridIndividualEvaluator"
+        ) as mock_hybrid:
             mock_evaluator = Mock()
             mock_evaluator.evaluate_individual_hybrid.return_value = (0.85,)
             mock_hybrid.return_value = mock_evaluator
@@ -283,10 +297,10 @@ class TestGAEngineExtended:
 
     def test_performance_profiling(self):
         """パフォーマンスプロファイリングのテスト"""
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             mock_time.return_value = 1000.0
 
-            with patch.object(self.engine, '_log_performance_metrics') as mock_log:
+            with patch.object(self.engine, "_log_performance_metrics") as mock_log:
                 # プロファイリングが実行される
                 start_time = self.engine._start_performance_timer()
                 self.engine._end_performance_timer(start_time, "test_operation")

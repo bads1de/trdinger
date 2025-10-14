@@ -1,11 +1,14 @@
 """
 ExperimentPersistenceServiceのテスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 
-from app.services.auto_strategy.services.experiment_persistence_service import ExperimentPersistenceService
+from app.services.auto_strategy.services.experiment_persistence_service import (
+    ExperimentPersistenceService,
+)
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.models.strategy_models import StrategyGene
 
@@ -18,13 +21,14 @@ class TestExperimentPersistenceService:
         self.mock_db_session_factory = Mock()
         self.mock_backtest_service = Mock()
         self.persistence_service = ExperimentPersistenceService(
-            self.mock_db_session_factory,
-            self.mock_backtest_service
+            self.mock_db_session_factory, self.mock_backtest_service
         )
 
     def test_init(self):
         """初期化のテスト"""
-        assert self.persistence_service.db_session_factory == self.mock_db_session_factory
+        assert (
+            self.persistence_service.db_session_factory == self.mock_db_session_factory
+        )
         assert self.persistence_service.backtest_service == self.mock_backtest_service
 
     def test_create_experiment(self):
@@ -36,10 +40,12 @@ class TestExperimentPersistenceService:
             "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": "2024-01-01",
-            "end_date": "2024-12-19"
+            "end_date": "2024-12-19",
         }
 
-        with patch.object(self.persistence_service, '_save_experiment_to_db') as mock_save:
+        with patch.object(
+            self.persistence_service, "_save_experiment_to_db"
+        ) as mock_save:
             self.persistence_service.create_experiment(
                 experiment_id, experiment_name, ga_config, backtest_config
             )
@@ -51,21 +57,19 @@ class TestExperimentPersistenceService:
     def test_save_generation_results(self):
         """世代結果保存のテスト"""
         experiment_id = "test_exp_001"
-        results = [
-            {
-                "fitness": 0.85,
-                "genes": [1, 2, 3, 4, 5],
-                "generation": 1
-            }
-        ]
+        results = [{"fitness": 0.85, "genes": [1, 2, 3, 4, 5], "generation": 1}]
         ga_config = GAConfig()
 
-        with patch.object(self.persistence_service, '_save_generation_results_to_db') as mock_save:
-            with patch.object(self.persistence_service, '_calculate_generation_summary') as mock_calc:
+        with patch.object(
+            self.persistence_service, "_save_generation_results_to_db"
+        ) as mock_save:
+            with patch.object(
+                self.persistence_service, "_calculate_generation_summary"
+            ) as mock_calc:
                 mock_calc.return_value = {
                     "avg_fitness": 0.75,
                     "best_fitness": 0.85,
-                    "worst_fitness": 0.65
+                    "worst_fitness": 0.65,
                 }
 
                 self.persistence_service.save_generation_results(
@@ -83,12 +87,16 @@ class TestExperimentPersistenceService:
         results = []
         ga_config = GAConfig()
 
-        with patch.object(self.persistence_service, '_save_generation_results_to_db') as mock_save:
-            with patch.object(self.persistence_service, '_calculate_generation_summary') as mock_calc:
+        with patch.object(
+            self.persistence_service, "_save_generation_results_to_db"
+        ) as mock_save:
+            with patch.object(
+                self.persistence_service, "_calculate_generation_summary"
+            ) as mock_calc:
                 mock_calc.return_value = {
                     "avg_fitness": 0.0,
                     "best_fitness": 0.0,
-                    "worst_fitness": 0.0
+                    "worst_fitness": 0.0,
                 }
 
                 self.persistence_service.save_generation_results(
@@ -106,11 +114,13 @@ class TestExperimentPersistenceService:
                 "name": "Experiment 1",
                 "status": "completed",
                 "created_at": datetime.now(),
-                "updated_at": datetime.now()
+                "updated_at": datetime.now(),
             }
         ]
 
-        with patch.object(self.persistence_service, '_get_experiments_from_db') as mock_get:
+        with patch.object(
+            self.persistence_service, "_get_experiments_from_db"
+        ) as mock_get:
             mock_get.return_value = mock_experiments
 
             experiments = self.persistence_service.list_experiments()
@@ -125,10 +135,12 @@ class TestExperimentPersistenceService:
             "id": experiment_id,
             "status": "running",
             "current_generation": 5,
-            "best_fitness": 0.85
+            "best_fitness": 0.85,
         }
 
-        with patch.object(self.persistence_service, '_get_experiment_status_from_db') as mock_get:
+        with patch.object(
+            self.persistence_service, "_get_experiment_status_from_db"
+        ) as mock_get:
             mock_get.return_value = expected_status
 
             status = self.persistence_service.get_experiment_status(experiment_id)
@@ -140,7 +152,9 @@ class TestExperimentPersistenceService:
         """実験ステータス取得失敗のテスト"""
         experiment_id = "nonexistent_exp"
 
-        with patch.object(self.persistence_service, '_get_experiment_status_from_db') as mock_get:
+        with patch.object(
+            self.persistence_service, "_get_experiment_status_from_db"
+        ) as mock_get:
             mock_get.return_value = None
 
             status = self.persistence_service.get_experiment_status(experiment_id)
@@ -152,7 +166,9 @@ class TestExperimentPersistenceService:
         experiment_id = "test_exp_001"
         new_status = "completed"
 
-        with patch.object(self.persistence_service, '_update_experiment_status_in_db') as mock_update:
+        with patch.object(
+            self.persistence_service, "_update_experiment_status_in_db"
+        ) as mock_update:
             self.persistence_service.update_experiment_status(experiment_id, new_status)
 
             mock_update.assert_called_once_with(experiment_id, new_status)
@@ -163,12 +179,16 @@ class TestExperimentPersistenceService:
         best_individual = {
             "fitness": 0.95,
             "genes": [1, 2, 3, 4, 5, 6],
-            "generation": 10
+            "generation": 10,
         }
         ga_config = GAConfig()
 
-        with patch.object(self.persistence_service, '_save_best_strategy_to_db') as mock_save:
-            self.persistence_service.save_best_strategy(experiment_id, best_individual, ga_config)
+        with patch.object(
+            self.persistence_service, "_save_best_strategy_to_db"
+        ) as mock_save:
+            self.persistence_service.save_best_strategy(
+                experiment_id, best_individual, ga_config
+            )
 
             mock_save.assert_called_once_with(experiment_id, best_individual, ga_config)
 
@@ -178,7 +198,7 @@ class TestExperimentPersistenceService:
             {"fitness": 0.85, "genes": [], "generation": 1},
             {"fitness": 0.75, "genes": [], "generation": 1},
             {"fitness": 0.95, "genes": [], "generation": 1},
-            {"fitness": 0.65, "genes": [], "generation": 1}
+            {"fitness": 0.65, "genes": [], "generation": 1},
         ]
 
         summary = self.persistence_service._calculate_generation_summary(results)
@@ -254,12 +274,11 @@ class TestExperimentPersistenceService:
 
     def test_deserialize_strategy_gene(self):
         """戦略遺伝子デシリアライズのテスト"""
-        gene_data = {
-            "id": "gene_001",
-            "parameters": {"indicator": "SMA", "period": 14}
-        }
+        gene_data = {"id": "gene_001", "parameters": {"indicator": "SMA", "period": 14}}
 
-        with patch('app.services.auto_strategy.services.experiment_persistence_service.StrategyGene') as mock_gene_class:
+        with patch(
+            "app.services.auto_strategy.services.experiment_persistence_service.StrategyGene"
+        ) as mock_gene_class:
             mock_gene = Mock()
             mock_gene_class.return_value = mock_gene
 
@@ -270,21 +289,13 @@ class TestExperimentPersistenceService:
 
     def test_format_generation_data(self):
         """世代データフォーマットのテスト"""
-        results = [
-            {
-                "fitness": 0.85,
-                "genes": [1, 2, 3, 4, 5],
-                "generation": 1
-            }
-        ]
-        summary = {
-            "avg_fitness": 0.85,
-            "best_fitness": 0.85,
-            "worst_fitness": 0.85
-        }
+        results = [{"fitness": 0.85, "genes": [1, 2, 3, 4, 5], "generation": 1}]
+        summary = {"avg_fitness": 0.85, "best_fitness": 0.85, "worst_fitness": 0.85}
         ga_config = GAConfig()
 
-        formatted = self.persistence_service._format_generation_data(results, summary, ga_config)
+        formatted = self.persistence_service._format_generation_data(
+            results, summary, ga_config
+        )
 
         assert isinstance(formatted, dict)
         assert "results" in formatted
@@ -296,8 +307,12 @@ class TestExperimentPersistenceService:
         test_func = Mock()
         test_func.side_effect = Exception("Database error")
 
-        with patch('app.services.auto_strategy.services.experiment_persistence_service.logger') as mock_logger:
-            result = self.persistence_service._handle_database_error(test_func, "test operation")
+        with patch(
+            "app.services.auto_strategy.services.experiment_persistence_service.logger"
+        ) as mock_logger:
+            result = self.persistence_service._handle_database_error(
+                test_func, "test operation"
+            )
 
             assert result is None
             mock_logger.error.assert_called_once_with(
@@ -308,7 +323,9 @@ class TestExperimentPersistenceService:
         """実験リソースクリーンアップのテスト"""
         experiment_id = "test_exp_001"
 
-        with patch.object(self.persistence_service, '_cleanup_experiment_resources_in_db') as mock_cleanup:
+        with patch.object(
+            self.persistence_service, "_cleanup_experiment_resources_in_db"
+        ) as mock_cleanup:
             self.persistence_service.cleanup_experiment_resources(experiment_id)
 
             mock_cleanup.assert_called_once_with(experiment_id)
@@ -321,11 +338,13 @@ class TestExperimentPersistenceService:
                 "generation": 1,
                 "avg_fitness": 0.75,
                 "best_fitness": 0.85,
-                "timestamp": datetime.now()
+                "timestamp": datetime.now(),
             }
         ]
 
-        with patch.object(self.persistence_service, '_get_experiment_history_from_db') as mock_get:
+        with patch.object(
+            self.persistence_service, "_get_experiment_history_from_db"
+        ) as mock_get:
             mock_get.return_value = expected_history
 
             history = self.persistence_service.get_experiment_history(experiment_id)
@@ -337,7 +356,9 @@ class TestExperimentPersistenceService:
         """空の実験履歴取得のテスト"""
         experiment_id = "test_exp_001"
 
-        with patch.object(self.persistence_service, '_get_experiment_history_from_db') as mock_get:
+        with patch.object(
+            self.persistence_service, "_get_experiment_history_from_db"
+        ) as mock_get:
             mock_get.return_value = []
 
             history = self.persistence_service.get_experiment_history(experiment_id)

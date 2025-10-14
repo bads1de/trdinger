@@ -30,7 +30,7 @@ class EvolutionRunner:
         toolbox,
         stats,
         fitness_sharing: Optional[FitnessSharing] = None,
-        population: Optional[List[Any]] = None
+        population: Optional[List[Any]] = None,
     ):
         """
         初期化
@@ -73,7 +73,10 @@ class EvolutionRunner:
             logger.debug(f"世代 {gen + 1}/{config.generations} を開始")
 
             # 適応度共有の適用（有効な場合、世代毎）
-            if getattr(config, 'enable_fitness_sharing', False) and self.fitness_sharing:
+            if (
+                getattr(config, "enable_fitness_sharing", False)
+                and self.fitness_sharing
+            ):
                 population = self.fitness_sharing.apply_fitness_sharing(population)
 
             # 選択
@@ -147,7 +150,10 @@ class EvolutionRunner:
             logger.debug(f"多目的世代 {gen + 1}/{config.generations} を開始")
 
             # 適応度共有の適用（有効な場合、世代毎）
-            if getattr(config, 'enable_fitness_sharing', False) and self.fitness_sharing:
+            if (
+                getattr(config, "enable_fitness_sharing", False)
+                and self.fitness_sharing
+            ):
                 population = self.fitness_sharing.apply_fitness_sharing(population)
 
             # 選択
@@ -210,7 +216,9 @@ class EvolutionRunner:
 
         return population
 
-    def _update_dynamic_objective_scalars(self, population: List[Any], config: Any) -> None:
+    def _update_dynamic_objective_scalars(
+        self, population: List[Any], config: Any
+    ) -> None:
         """Update dynamic objective scaling factors for risk-aware weighting."""
 
         if not getattr(config, "dynamic_objective_reweighting", False):

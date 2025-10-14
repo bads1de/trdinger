@@ -6,6 +6,7 @@
 
 from enum import Enum
 
+
 class ThresholdMethod(Enum):
     """閾値計算方法"""
 

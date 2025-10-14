@@ -167,7 +167,9 @@ class BacktestService:
                 logger.info("バックテストデータサービスを初期化しました")
             except Exception as e:
                 logger.error(f"バックテストデータサービスの初期化に失敗しました: {e}")
-                raise BacktestExecutionError(f"データサービスの初期化に失敗しました: {e}")
+                raise BacktestExecutionError(
+                    f"データサービスの初期化に失敗しました: {e}"
+                )
 
     def _ensure_executor_initialized(self) -> None:
         """実行エンジンの初期化を確保"""

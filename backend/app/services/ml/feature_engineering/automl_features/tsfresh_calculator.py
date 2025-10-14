@@ -144,7 +144,9 @@ class TSFreshFeatureCalculator:
 
                 # 結果がDataFrameであることを確認
                 if not isinstance(extracted_features, pd.DataFrame):
-                    logger.error(f"TSFreshが予期しない型を返しました: {type(extracted_features)}")
+                    logger.error(
+                        f"TSFreshが予期しない型を返しました: {type(extracted_features)}"
+                    )
                     return df
 
                 # キャッシュ保存を無効化（毎回新鮮な特徴量生成のため）
@@ -205,7 +207,10 @@ class TSFreshFeatureCalculator:
                 result_features = extracted_features
 
             # 特徴量数制限
-            if isinstance(result_features, pd.DataFrame) and len(result_features.columns) > self.config.feature_count_limit:
+            if (
+                isinstance(result_features, pd.DataFrame)
+                and len(result_features.columns) > self.config.feature_count_limit
+            ):
                 logger.info(
                     f"特徴量数を{self.config.feature_count_limit}個に制限します"
                 )
@@ -218,7 +223,9 @@ class TSFreshFeatureCalculator:
 
             # 元のDataFrameに結合
             if not isinstance(result_features, pd.DataFrame):
-                logger.error(f"特徴量がDataFrameではありません: {type(result_features)}")
+                logger.error(
+                    f"特徴量がDataFrameではありません: {type(result_features)}"
+                )
                 return df
             result_df = self._merge_features_with_original(df, result_features)
 
@@ -255,7 +262,11 @@ class TSFreshFeatureCalculator:
             for col in available_columns:
                 series_data = df[col].dropna()
                 for i, (timestamp, value) in enumerate(series_data.items()):
-                    if pd.notna(value).any() if isinstance(value, (pd.Series, np.ndarray)) else (pd.notna(value) and np.isfinite(value)):
+                    if (
+                        pd.notna(value).any()
+                        if isinstance(value, (pd.Series, np.ndarray))
+                        else (pd.notna(value) and np.isfinite(value))
+                    ):
                         ts_data.append({"id": col, "time": i, "value": float(value)})
 
             result_df = pd.DataFrame(ts_data)

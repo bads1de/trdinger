@@ -32,7 +32,9 @@ class IndicatorCalculator:
 
     def calculate_indicator(
         self, data, indicator_type: str, parameters: Dict[str, Any]
-    ) -> Union[np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None]:
+    ) -> Union[
+        np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+    ]:
         """
         指標計算
 
@@ -62,7 +64,6 @@ class IndicatorCalculator:
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 logger.warning(f"不足しているカラム: {missing_columns}")
-
 
             required_columns = ["Open", "High", "Low", "Close", "Volume"]
             missing_columns = [col for col in required_columns if col not in df.columns]

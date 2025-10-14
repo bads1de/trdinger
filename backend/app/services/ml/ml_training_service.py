@@ -397,14 +397,18 @@ class MLTrainingService(BaseResourceManager):
                     # 利用可能な特徴量のみを使用し、統計的手法で欠損値を補完
                     features_subset = features[available_columns]
                     features_selected = data_preprocessor.interpolate_columns(
-                        features_subset, columns=list(features_subset.columns), strategy="median"
+                        features_subset,
+                        columns=list(features_subset.columns),
+                        strategy="median",
                     )
 
                     # 不足している特徴量を一度にまとめて追加（DataFrame断片化を防ぐ）
                     if missing_columns:
                         # 不足特徴量のDataFrameを作成
                         missing_features_df = pd.DataFrame(
-                            0.0, index=features_selected.index, columns=pd.Index(missing_columns)
+                            0.0,
+                            index=features_selected.index,
+                            columns=pd.Index(missing_columns),
                         )
                         # pd.concatで一度に結合（断片化を防ぐ）
                         features_selected = pd.concat(
@@ -425,7 +429,9 @@ class MLTrainingService(BaseResourceManager):
 
             # 予測（LightGBMモデルの場合）
             # best_iteration属性の存在を確認してから使用
-            if hasattr(self.trainer.model, "best_iteration") and hasattr(self.trainer.model, "predict"):
+            if hasattr(self.trainer.model, "best_iteration") and hasattr(
+                self.trainer.model, "predict"
+            ):
                 try:
                     best_iter = getattr(self.trainer.model, "best_iteration", None)
                     if best_iter is not None:
@@ -435,7 +441,9 @@ class MLTrainingService(BaseResourceManager):
                             )
                         )
                     else:
-                        predictions = np.array(self.trainer.model.predict(features_scaled))
+                        predictions = np.array(
+                            self.trainer.model.predict(features_scaled)
+                        )
                 except TypeError:
                     # num_iterationパラメータがサポートされていない場合
                     predictions = np.array(self.trainer.model.predict(features_scaled))

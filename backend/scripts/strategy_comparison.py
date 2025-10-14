@@ -19,13 +19,13 @@ import matplotlib.dates as mdates
 from matplotlib.figure import Figure
 import seaborn as sns
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
-plt.rcParams['font.family'] = 'MS Gothic'  # Set Japanese font
+
+matplotlib.use("Agg")  # Use non-interactive backend
+plt.rcParams["font.family"] = "MS Gothic"  # Set Japanese font
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class StrategyComparison:
         num_iterations: int = 10,
         initial_capital: float = 100000.0,
         start_date: datetime = None,
-        end_date: datetime = None
+        end_date: datetime = None,
     ) -> Dict[str, Any]:
         """
         戦略比較を実行
@@ -90,9 +90,9 @@ class StrategyComparison:
                 "num_iterations": num_iterations,
                 "start_date": start_date.isoformat(),
                 "end_date": end_date.isoformat(),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             },
-            "results": []
+            "results": [],
         }
 
         # 各銘柄・時間軸での比較
@@ -105,7 +105,7 @@ class StrategyComparison:
                     "timeframe": timeframe,
                     "initial_capital": initial_capital,
                     "start_date": start_date.isoformat(),
-                    "end_date": end_date.isoformat()
+                    "end_date": end_date.isoformat(),
                 }
 
                 # モックデータを使用した戦略比較実行
@@ -114,14 +114,18 @@ class StrategyComparison:
                 )
 
                 if comparison_result:
-                    all_results["results"].append({
-                        "symbol": symbol,
-                        "timeframe": timeframe,
-                        "comparison": comparison_result
-                    })
+                    all_results["results"].append(
+                        {
+                            "symbol": symbol,
+                            "timeframe": timeframe,
+                            "comparison": comparison_result,
+                        }
+                    )
 
         # 統計分析
-        statistical_summary = self._calculate_statistical_summary(all_results["results"])
+        statistical_summary = self._calculate_statistical_summary(
+            all_results["results"]
+        )
 
         # デバッグ出力
         logger.info(f"統計的要約: {statistical_summary}")
@@ -133,16 +137,14 @@ class StrategyComparison:
             "success": True,
             "results": all_results,
             "statistical_summary": statistical_summary,
-            "report_path": str(report_path)
+            "report_path": str(report_path),
         }
 
         logger.info(f"戦略比較完了。レポート: {report_path}")
         return final_result
 
     def _compare_strategies_mock(
-        self,
-        config: Dict[str, Any],
-        num_iterations: int
+        self, config: Dict[str, Any], num_iterations: int
     ) -> Dict[str, Any]:
         """
         モックデータを使用した戦略比較
@@ -159,13 +161,15 @@ class StrategyComparison:
         for i in range(num_iterations):
             # GA戦略はランダム戦略より少し良い結果を生成
             base_return = np.random.uniform(0.08, 0.25)  # 8% - 25%
-            ga_results.append({
-                "total_return": base_return,
-                "sharpe_ratio": np.random.uniform(1.2, 2.5),
-                "max_drawdown": np.random.uniform(-0.15, -0.05),
-                "win_rate": np.random.uniform(0.55, 0.75),
-                "total_trades": np.random.randint(20, 40)
-            })
+            ga_results.append(
+                {
+                    "total_return": base_return,
+                    "sharpe_ratio": np.random.uniform(1.2, 2.5),
+                    "max_drawdown": np.random.uniform(-0.15, -0.05),
+                    "win_rate": np.random.uniform(0.55, 0.75),
+                    "total_trades": np.random.randint(20, 40),
+                }
+            )
             logger.info(f"GA戦略 {i+1}: リターン = {base_return:.2%}")
 
         # モックデータ生成（ランダム戦略の結果）
@@ -173,13 +177,15 @@ class StrategyComparison:
         for i in range(num_iterations):
             # ランダム戦略はGA戦略より少し悪い結果を生成
             base_return = np.random.uniform(0.05, 0.18)  # 5% - 18%
-            random_results.append({
-                "total_return": base_return,
-                "sharpe_ratio": np.random.uniform(0.8, 1.8),
-                "max_drawdown": np.random.uniform(-0.20, -0.08),
-                "win_rate": np.random.uniform(0.45, 0.65),
-                "total_trades": np.random.randint(15, 35)
-            })
+            random_results.append(
+                {
+                    "total_return": base_return,
+                    "sharpe_ratio": np.random.uniform(0.8, 1.8),
+                    "max_drawdown": np.random.uniform(-0.20, -0.08),
+                    "win_rate": np.random.uniform(0.45, 0.65),
+                    "total_trades": np.random.randint(15, 35),
+                }
+            )
             logger.info(f"ランダム戦略 {i+1}: リターン = {base_return:.2%}")
 
         # 結果分析
@@ -194,13 +200,11 @@ class StrategyComparison:
             "random_results": random_results,
             "analysis": comparison_result,
             "num_ga_completed": len(ga_results),
-            "num_random_completed": len(random_results)
+            "num_random_completed": len(random_results),
         }
 
     def _analyze_comparison_results(
-        self,
-        ga_results: List[Dict[str, Any]],
-        random_results: List[Dict[str, Any]]
+        self, ga_results: List[Dict[str, Any]], random_results: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         比較結果の分析
@@ -223,7 +227,7 @@ class StrategyComparison:
             "ga_statistics": self._calculate_statistics(ga_df),
             "random_statistics": self._calculate_statistics(random_df),
             "statistical_tests": {},
-            "performance_comparison": {}
+            "performance_comparison": {},
         }
 
         # 統計的検定
@@ -231,8 +235,7 @@ class StrategyComparison:
         for metric in metrics_to_test:
             if metric in ga_df.columns and metric in random_df.columns:
                 test_result = self._perform_statistical_test(
-                    ga_df[metric].dropna(),
-                    random_df[metric].dropna()
+                    ga_df[metric].dropna(), random_df[metric].dropna()
                 )
                 analysis["statistical_tests"][metric] = test_result
 
@@ -241,13 +244,17 @@ class StrategyComparison:
             if metric in ga_df.columns and metric in random_df.columns:
                 ga_mean = ga_df[metric].mean()
                 random_mean = random_df[metric].mean()
-                improvement = ((ga_mean - random_mean) / abs(random_mean)) * 100 if random_mean != 0 else 0
+                improvement = (
+                    ((ga_mean - random_mean) / abs(random_mean)) * 100
+                    if random_mean != 0
+                    else 0
+                )
 
                 analysis["performance_comparison"][metric] = {
                     "ga_mean": ga_mean,
                     "random_mean": random_mean,
                     "improvement_percent": improvement,
-                    "ga_wins": ga_mean > random_mean
+                    "ga_wins": ga_mean > random_mean,
                 }
 
         return analysis
@@ -259,22 +266,20 @@ class StrategyComparison:
 
         stats = {}
         for column in df.columns:
-            if df[column].dtype in ['int64', 'float64']:
+            if df[column].dtype in ["int64", "float64"]:
                 stats[column] = {
                     "mean": df[column].mean(),
                     "std": df[column].std(),
                     "min": df[column].min(),
                     "max": df[column].max(),
                     "median": df[column].median(),
-                    "count": df[column].count()
+                    "count": df[column].count(),
                 }
 
         return stats
 
     def _perform_statistical_test(
-        self,
-        ga_data: pd.Series,
-        random_data: pd.Series
+        self, ga_data: pd.Series, random_data: pd.Series
     ) -> Dict[str, Any]:
         """
         統計的検定（t検定）
@@ -292,7 +297,7 @@ class StrategyComparison:
 
             # 効果量（Cohen's d）
             mean_diff = ga_data.mean() - random_data.mean()
-            pooled_std = np.sqrt((ga_data.std()**2 + random_data.std()**2) / 2)
+            pooled_std = np.sqrt((ga_data.std() ** 2 + random_data.std() ** 2) / 2)
             cohen_d = mean_diff / pooled_std if pooled_std != 0 else 0
 
             return {
@@ -301,14 +306,16 @@ class StrategyComparison:
                 "cohens_d": cohen_d,
                 "significant": p_value < 0.05,
                 "sample_size_ga": len(ga_data),
-                "sample_size_random": len(random_data)
+                "sample_size_random": len(random_data),
             }
 
         except Exception as e:
             logger.error(f"統計検定エラー: {e}")
             return {"error": str(e)}
 
-    def _calculate_statistical_summary(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _calculate_statistical_summary(
+        self, results: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         全結果の統計的要約
 
@@ -324,7 +331,7 @@ class StrategyComparison:
         summary = {
             "overall_performance": {},
             "significance_summary": {},
-            "best_configurations": []
+            "best_configurations": [],
         }
 
         # 全結果を集計
@@ -344,14 +351,26 @@ class StrategyComparison:
             logger.info(f"Random stats: {random_stats}")
 
             # 総リターンの集計
-            if "total_return" in ga_stats and isinstance(ga_stats["total_return"], dict) and "mean" in ga_stats["total_return"]:
+            if (
+                "total_return" in ga_stats
+                and isinstance(ga_stats["total_return"], dict)
+                and "mean" in ga_stats["total_return"]
+            ):
                 all_ga_returns.append(ga_stats["total_return"]["mean"])
-            elif "total_return" in ga_stats and isinstance(ga_stats["total_return"], (int, float)):
+            elif "total_return" in ga_stats and isinstance(
+                ga_stats["total_return"], (int, float)
+            ):
                 all_ga_returns.append(ga_stats["total_return"])
 
-            if "total_return" in random_stats and isinstance(random_stats["total_return"], dict) and "mean" in random_stats["total_return"]:
+            if (
+                "total_return" in random_stats
+                and isinstance(random_stats["total_return"], dict)
+                and "mean" in random_stats["total_return"]
+            ):
                 all_random_returns.append(random_stats["total_return"]["mean"])
-            elif "total_return" in random_stats and isinstance(random_stats["total_return"], (int, float)):
+            elif "total_return" in random_stats and isinstance(
+                random_stats["total_return"], (int, float)
+            ):
                 all_random_returns.append(random_stats["total_return"])
 
         # 全体的なパフォーマンス比較
@@ -362,15 +381,17 @@ class StrategyComparison:
             summary["overall_performance"] = {
                 "ga_average_return": ga_avg_return,
                 "random_average_return": random_avg_return,
-                "overall_improvement": ((ga_avg_return - random_avg_return) / abs(random_avg_return)) * 100 if random_avg_return != 0 else 0
+                "overall_improvement": (
+                    ((ga_avg_return - random_avg_return) / abs(random_avg_return)) * 100
+                    if random_avg_return != 0
+                    else 0
+                ),
             }
 
         return summary
 
     def _generate_comparison_report(
-        self,
-        all_results: Dict[str, Any],
-        statistical_summary: Dict[str, Any]
+        self, all_results: Dict[str, Any], statistical_summary: Dict[str, Any]
     ) -> Path:
         """
         比較レポートを生成（HTML形式）
@@ -439,7 +460,11 @@ class StrategyComparison:
                     </div>
                 </div>
             </div>
-            """.format(perf["ga_average_return"], perf["random_average_return"], perf["overall_improvement"])
+            """.format(
+                perf["ga_average_return"],
+                perf["random_average_return"],
+                perf["overall_improvement"],
+            )
 
         # 各銘柄・時間軸の詳細結果
         for result in all_results["results"]:
@@ -453,7 +478,10 @@ class StrategyComparison:
             """
 
             # GA戦略統計
-            if "ga_statistics" in comparison and "total_return" in comparison["ga_statistics"]:
+            if (
+                "ga_statistics" in comparison
+                and "total_return" in comparison["ga_statistics"]
+            ):
                 ga_stats = comparison["ga_statistics"]["total_return"]
                 html_content += """
                 <h3>GA戦略 パフォーマンス</h3>
@@ -475,10 +503,15 @@ class StrategyComparison:
                         <div class="negative">{:.2%}</div>
                     </div>
                 </div>
-                """.format(ga_stats["mean"], ga_stats["std"], ga_stats["max"], ga_stats["min"])
+                """.format(
+                    ga_stats["mean"], ga_stats["std"], ga_stats["max"], ga_stats["min"]
+                )
 
             # ランダム戦略統計
-            if "random_statistics" in comparison and "total_return" in comparison["random_statistics"]:
+            if (
+                "random_statistics" in comparison
+                and "total_return" in comparison["random_statistics"]
+            ):
                 random_stats = comparison["random_statistics"]["total_return"]
                 html_content += """
                 <h3>ランダム戦略 パフォーマンス</h3>
@@ -500,7 +533,12 @@ class StrategyComparison:
                         <div class="negative">{:.2%}</div>
                     </div>
                 </div>
-                """.format(random_stats["mean"], random_stats["std"], random_stats["max"], random_stats["min"])
+                """.format(
+                    random_stats["mean"],
+                    random_stats["std"],
+                    random_stats["max"],
+                    random_stats["min"],
+                )
 
             # 統計的検定結果
             if "statistical_tests" in comparison:
@@ -512,7 +550,9 @@ class StrategyComparison:
 
                 for metric, test_result in comparison["statistical_tests"].items():
                     if "error" not in test_result:
-                        significant = "有意" if test_result["significant"] else "有意でない"
+                        significant = (
+                            "有意" if test_result["significant"] else "有意でない"
+                        )
                         html_content += """
                         <tr>
                             <td>{}</td>
@@ -521,8 +561,13 @@ class StrategyComparison:
                             <td>{:.4f}</td>
                             <td>{}</td>
                         </tr>
-                        """.format(metric, test_result["t_statistic"], test_result["p_value"],
-                                 test_result["cohens_d"], significant)
+                        """.format(
+                            metric,
+                            test_result["t_statistic"],
+                            test_result["p_value"],
+                            test_result["cohens_d"],
+                            significant,
+                        )
 
                 html_content += "</table>"
 
@@ -544,9 +589,18 @@ class StrategyComparison:
                         <td class="{}">{:+.1f}%</td>
                         <td>{}</td>
                     </tr>
-                    """.format(metric, comp_result["ga_mean"], comp_result["random_mean"],
-                             "positive" if comp_result["improvement_percent"] > 0 else "negative",
-                             comp_result["improvement_percent"], ga_wins)
+                    """.format(
+                        metric,
+                        comp_result["ga_mean"],
+                        comp_result["random_mean"],
+                        (
+                            "positive"
+                            if comp_result["improvement_percent"] > 0
+                            else "negative"
+                        ),
+                        comp_result["improvement_percent"],
+                        ga_wins,
+                    )
 
                 html_content += "</table>"
 
@@ -600,13 +654,15 @@ class StrategyComparison:
         """
 
         # ファイル書き込み
-        with open(report_path, 'w', encoding='utf-8') as f:
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write(html_content)
 
         logger.info(f"レポート生成完了: {report_path}")
         return report_path
 
-    def _generate_equity_curve_chart(self, all_results: Dict[str, Any]) -> Optional[str]:
+    def _generate_equity_curve_chart(
+        self, all_results: Dict[str, Any]
+    ) -> Optional[str]:
         """
         エクイティカーブ比較チャートを生成
 
@@ -621,7 +677,9 @@ class StrategyComparison:
 
             # モックデータによるエクイティカーブ生成
             days = 30
-            dates = pd.date_range(start=datetime.now() - timedelta(days=days), periods=days, freq='D')
+            dates = pd.date_range(
+                start=datetime.now() - timedelta(days=days), periods=days, freq="D"
+            )
 
             # GA戦略のエクイティカーブ（より良いパフォーマンス）
             ga_equity = [100000]
@@ -638,25 +696,29 @@ class StrategyComparison:
                 random_equity.append(new_equity)
 
             # プロット
-            ax.plot(dates, ga_equity, label='GA戦略', linewidth=2, color='green')
-            ax.plot(dates, random_equity, label='ランダム戦略', linewidth=2, color='red')
+            ax.plot(dates, ga_equity, label="GA戦略", linewidth=2, color="green")
+            ax.plot(
+                dates, random_equity, label="ランダム戦略", linewidth=2, color="red"
+            )
 
-            ax.set_title('エクイティカーブ比較')
-            ax.set_xlabel('日付')
-            ax.set_ylabel('ポートフォリオ価値')
+            ax.set_title("エクイティカーブ比較")
+            ax.set_xlabel("日付")
+            ax.set_ylabel("ポートフォリオ価値")
             ax.legend()
             ax.grid(True, alpha=0.3)
 
             # フォーマット
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'¥{x:,.0f}'))
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"¥{x:,.0f}"))
 
             plt.xticks(rotation=45)
             plt.tight_layout()
 
             # ファイル保存
-            chart_filename = f"equity_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            chart_filename = (
+                f"equity_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            )
             chart_path = self.results_dir / chart_filename
-            plt.savefig(chart_path, dpi=100, bbox_inches='tight')
+            plt.savefig(chart_path, dpi=100, bbox_inches="tight")
             plt.close()
 
             return chart_filename
@@ -665,7 +727,9 @@ class StrategyComparison:
             logger.error(f"エクイティカーブチャート生成エラー: {e}")
             return None
 
-    def _generate_return_violin_plot(self, all_results: Dict[str, Any]) -> Optional[str]:
+    def _generate_return_violin_plot(
+        self, all_results: Dict[str, Any]
+    ) -> Optional[str]:
         """
         リターンバイオリンプロットを生成
 
@@ -694,25 +758,29 @@ class StrategyComparison:
 
             # より詳細なデータ生成
             for _ in range(20):  # 20サンプルずつ生成
-                ga_returns.append(np.random.normal(0.15, 0.03))  # GA: 平均15%, 標準偏差3%
-                random_returns.append(np.random.normal(0.10, 0.05))  # ランダム: 平均10%, 標準偏差5%
+                ga_returns.append(
+                    np.random.normal(0.15, 0.03)
+                )  # GA: 平均15%, 標準偏差3%
+                random_returns.append(
+                    np.random.normal(0.10, 0.05)
+                )  # ランダム: 平均10%, 標準偏差5%
 
             # バイオリンプロット
             data = [ga_returns, random_returns]
-            labels = ['GA戦略', 'ランダム戦略']
+            labels = ["GA戦略", "ランダム戦略"]
 
             parts = ax.violinplot(data, showmeans=True, showmedians=True)
-            parts['bodies'][0].set_facecolor('green')
-            parts['bodies'][0].set_alpha(0.7)
-            parts['bodies'][1].set_facecolor('red')
-            parts['bodies'][1].set_alpha(0.7)
+            parts["bodies"][0].set_facecolor("green")
+            parts["bodies"][0].set_alpha(0.7)
+            parts["bodies"][1].set_facecolor("red")
+            parts["bodies"][1].set_alpha(0.7)
 
             # 平均値と中央値をカスタムマーカーで表示
             for i, means in enumerate([np.mean(ga_returns), np.mean(random_returns)]):
-                ax.scatter(i+1, means, marker='o', color='white', s=30, zorder=3)
+                ax.scatter(i + 1, means, marker="o", color="white", s=30, zorder=3)
 
-            ax.set_title('リターン分布比較（バイオリンプロット）')
-            ax.set_ylabel('リターン')
+            ax.set_title("リターン分布比較（バイオリンプロット）")
+            ax.set_ylabel("リターン")
             ax.set_xticks([1, 2])
             ax.set_xticklabels(labels)
             ax.grid(True, alpha=0.3)
@@ -720,9 +788,11 @@ class StrategyComparison:
             plt.tight_layout()
 
             # ファイル保存
-            chart_filename = f"return_violin_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            chart_filename = (
+                f"return_violin_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            )
             chart_path = self.results_dir / chart_filename
-            plt.savefig(chart_path, dpi=100, bbox_inches='tight')
+            plt.savefig(chart_path, dpi=100, bbox_inches="tight")
             plt.close()
 
             return chart_filename
@@ -746,7 +816,9 @@ class StrategyComparison:
 
             # モックデータによるドローダウン生成
             days = 30
-            dates = pd.date_range(start=datetime.now() - timedelta(days=days), periods=days, freq='D')
+            dates = pd.date_range(
+                start=datetime.now() - timedelta(days=days), periods=days, freq="D"
+            )
 
             # GA戦略のドローダウン（小さい）
             ga_drawdown = [0]
@@ -763,17 +835,21 @@ class StrategyComparison:
                 random_drawdown.append(new_dd)
 
             # プロット
-            ax.fill_between(dates, ga_drawdown, 0, alpha=0.7, color='green', label='GA戦略')
-            ax.fill_between(dates, random_drawdown, 0, alpha=0.7, color='red', label='ランダム戦略')
+            ax.fill_between(
+                dates, ga_drawdown, 0, alpha=0.7, color="green", label="GA戦略"
+            )
+            ax.fill_between(
+                dates, random_drawdown, 0, alpha=0.7, color="red", label="ランダム戦略"
+            )
 
-            ax.set_title('ドローダウン比較')
-            ax.set_xlabel('日付')
-            ax.set_ylabel('ドローダウン (%)')
+            ax.set_title("ドローダウン比較")
+            ax.set_xlabel("日付")
+            ax.set_ylabel("ドローダウン (%)")
             ax.legend()
             ax.grid(True, alpha=0.3)
 
             # フォーマット
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1%}'))
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.1%}"))
 
             plt.xticks(rotation=45)
             plt.tight_layout()
@@ -781,7 +857,7 @@ class StrategyComparison:
             # ファイル保存
             chart_filename = f"drawdown_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             chart_path = self.results_dir / chart_filename
-            plt.savefig(chart_path, dpi=100, bbox_inches='tight')
+            plt.savefig(chart_path, dpi=100, bbox_inches="tight")
             plt.close()
 
             return chart_filename
@@ -808,7 +884,7 @@ def main():
             num_iterations=num_iterations,
             initial_capital=100000.0,
             start_date=datetime.now() - timedelta(days=30),
-            end_date=datetime.now()
+            end_date=datetime.now(),
         )
 
         if result and result.get("success"):
@@ -820,8 +896,12 @@ def main():
             if stats.get("overall_performance"):
                 perf = stats["overall_performance"]
                 print(f"[GA] GA戦略平均リターン: {perf['ga_average_return']:.2%}")
-                print(f"[RANDOM] ランダム戦略平均リターン: {perf['random_average_return']:.2%}")
-                print(f"[IMPROVEMENT] GA戦略の改善率: {perf['overall_improvement']:+.1f}%")
+                print(
+                    f"[RANDOM] ランダム戦略平均リターン: {perf['random_average_return']:.2%}"
+                )
+                print(
+                    f"[IMPROVEMENT] GA戦略の改善率: {perf['overall_improvement']:+.1f}%"
+                )
         else:
             print("[ERROR] 戦略比較に失敗しました")
     except Exception as e:

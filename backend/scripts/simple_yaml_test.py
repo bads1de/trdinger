@@ -5,6 +5,7 @@ YAML設定ファイル読み込みテスト
 
 from app.services.auto_strategy.core.condition_evolver import YamlIndicatorUtils
 
+
 def main():
     """メイン実行関数"""
     try:
@@ -32,7 +33,9 @@ def main():
     except Exception as e:
         print(f"❌ エラーが発生しました: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     main()

@@ -29,6 +29,7 @@ class MarketDataCache:
             datetime.now() - self.last_updated
         ).total_seconds() > max_age_minutes * 60
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,7 +72,7 @@ class MarketDataHandler:
         self,
         atr_values: Dict[str, float],
         volatility_metrics: Dict[str, float],
-        price_data: Optional[pd.DataFrame] = None
+        price_data: Optional[pd.DataFrame] = None,
     ):
         """キャッシュの更新"""
         self._cache = MarketDataCache(

@@ -190,8 +190,6 @@ class AdvancedFeatureEngineer:
                 volume=data["Volume"],
             )
 
-
-
         except Exception as e:
             logger.warning(f"pandas-ta指標計算エラー: {e}")
 
@@ -371,15 +369,17 @@ class AdvancedFeatureEngineer:
 
         # DatetimeIndexの確認
         if not isinstance(data.index, pd.DatetimeIndex):
-            logger.warning("インデックスがDatetimeIndexではありません。時間関連特徴量をスキップします。")
+            logger.warning(
+                "インデックスがDatetimeIndexではありません。時間関連特徴量をスキップします。"
+            )
             return data
 
         # 時間特徴量（getattrを使用して属性アクセスエラーを回避）
         try:
-            hour = getattr(data.index, 'hour', 0)  # type: ignore
-            dayofweek = getattr(data.index, 'dayofweek', 0)  # type: ignore
-            day = getattr(data.index, 'day', 1)  # type: ignore
-            month = getattr(data.index, 'month', 1)  # type: ignore
+            hour = getattr(data.index, "hour", 0)  # type: ignore
+            dayofweek = getattr(data.index, "dayofweek", 0)  # type: ignore
+            day = getattr(data.index, "day", 1)  # type: ignore
+            month = getattr(data.index, "month", 1)  # type: ignore
 
             data["Hour"] = hour
             data["DayOfWeek"] = dayofweek

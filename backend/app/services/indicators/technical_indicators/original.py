@@ -57,9 +57,13 @@ class OriginalIndicators:
             return pd.Series(np.full(0, np.nan), index=close.index, name="FRAMA")
         if len(close) < length:
             logger.warning(
-                "FRAMA: insufficient data length (%s) for window size %s", len(close), length
+                "FRAMA: insufficient data length (%s) for window size %s",
+                len(close),
+                length,
             )
-            return pd.Series(np.full(len(close), np.nan), index=close.index, name="FRAMA")
+            return pd.Series(
+                np.full(len(close), np.nan), index=close.index, name="FRAMA"
+            )
 
         prices = close.astype(float).to_numpy(copy=True)
         result = np.empty_like(prices)
@@ -89,7 +93,11 @@ class OriginalIndicators:
                 dimen = 1.0
 
             alpha = float(np.exp(w * (dimen - 1.0)))
-            alpha = float(np.clip(alpha, OriginalIndicators._ALPHA_MIN, OriginalIndicators._ALPHA_MAX))
+            alpha = float(
+                np.clip(
+                    alpha, OriginalIndicators._ALPHA_MIN, OriginalIndicators._ALPHA_MAX
+                )
+            )
 
             prev_value = result[idx - 1] if np.isfinite(result[idx - 1]) else window[-1]
             current_price = window[-1]
@@ -122,7 +130,9 @@ class OriginalIndicators:
             raise ValueError("length must be >= 2")
 
         if close.empty:
-            return pd.Series(np.full(0, np.nan), index=close.index, name="SUPER_SMOOTHER")
+            return pd.Series(
+                np.full(0, np.nan), index=close.index, name="SUPER_SMOOTHER"
+            )
 
         prices = close.astype(float).to_numpy(copy=True)
         result = np.empty_like(prices)

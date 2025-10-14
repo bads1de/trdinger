@@ -173,9 +173,13 @@ class GASettings(BaseConfig):
             raise ValueError("max_indicators は正の整数である必要があります")
 
         # Validate float fields
-        if not isinstance(self.crossover_rate, (int, float)) or not (0 <= self.crossover_rate <= 1):
+        if not isinstance(self.crossover_rate, (int, float)) or not (
+            0 <= self.crossover_rate <= 1
+        ):
             raise ValueError("crossover_rate は0から1の範囲の実数である必要があります")
-        if not isinstance(self.mutation_rate, (int, float)) or not (0 <= self.mutation_rate <= 1):
+        if not isinstance(self.mutation_rate, (int, float)) or not (
+            0 <= self.mutation_rate <= 1
+        ):
             raise ValueError("mutation_rate は0から1の範囲の実数である必要があります")
 
         # Convert int to float if necessary

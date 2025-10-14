@@ -191,5 +191,3 @@ class BaseResourceManager(ABC):
         except Exception as e:
             logger.warning(f"メモリ使用量取得エラー: {e}")
             return 0.0
-
-

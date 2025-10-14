@@ -57,4 +57,3 @@ __all__ = [
     "mutate_position_sizing_gene",
     "mutate_tpsl_gene",
 ]
-

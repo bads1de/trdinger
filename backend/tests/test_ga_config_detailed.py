@@ -1,6 +1,7 @@
 """
 GAConfigのテスト
 """
+
 import pytest
 from unittest.mock import Mock
 
@@ -28,7 +29,7 @@ class TestGAConfig:
             generations=50,
             crossover_rate=0.9,
             mutation_rate=0.05,
-            elite_size=10
+            elite_size=10,
         )
 
         assert config.population_size == 100
@@ -44,7 +45,7 @@ class TestGAConfig:
             "generations": 150,
             "crossover_rate": 0.85,
             "mutation_rate": 0.12,
-            "elite_size": 7
+            "elite_size": 7,
         }
 
         config = GAConfig.from_dict(config_dict)
@@ -57,9 +58,7 @@ class TestGAConfig:
 
     def test_from_dict_partial(self):
         """部分辞書からの構築テスト"""
-        config_dict = {
-            "population_size": 120
-        }
+        config_dict = {"population_size": 120}
 
         config = GAConfig.from_dict(config_dict)
 
@@ -122,7 +121,7 @@ class TestGAConfig:
             generations=120,
             crossover_rate=0.75,
             mutation_rate=0.15,
-            elite_size=8
+            elite_size=8,
         )
 
         config_dict = config.to_dict()
@@ -160,7 +159,7 @@ class TestGAConfig:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "win_rate": 0.1
+            "win_rate": 0.1,
         }
         config.fitness_weights = weights
 
@@ -172,7 +171,7 @@ class TestGAConfig:
         constraints = {
             "min_sharpe_ratio": 0.5,
             "max_drawdown_limit": 0.2,
-            "min_trades": 10
+            "min_trades": 10,
         }
         config.fitness_constraints = constraints
 
@@ -191,7 +190,7 @@ class TestGAConfig:
         constraints = {
             "max_indicators": 5,
             "allowed_indicators": ["SMA", "RSI", "MACD", "BB", "ATR"],
-            "indicator_combinations": ["SMA+RSI", "MACD+BB"]
+            "indicator_combinations": ["SMA+RSI", "MACD+BB"],
         }
         config.indicator_constraints = constraints
 
@@ -246,7 +245,7 @@ class TestGAConfig:
         settings = {
             "in_sample_period": "2023-01-01:2023-12-31",
             "out_of_sample_period": "2024-01-01:2024-12-31",
-            "rolling_window": True
+            "rolling_window": True,
         }
         config.walk_forward_settings = settings
 
@@ -285,10 +284,10 @@ class TestGAConfig:
         # 複数の無効な値を含む設定
         config = GAConfig(
             population_size=0,  # 無効
-            generations=-10,    # 無効
-            crossover_rate=2.0, # 無効
-            mutation_rate=-0.1, # 無効
-            elite_size=200      # 無効（集団サイズより大きい）
+            generations=-10,  # 無効
+            crossover_rate=2.0,  # 無効
+            mutation_rate=-0.1,  # 無効
+            elite_size=200,  # 無効（集団サイズより大きい）
         )
 
         is_valid, errors = config.validate()
@@ -334,11 +333,7 @@ class TestGAConfig:
     def test_update_from_dict(self):
         """辞書からの更新テスト"""
         config = GAConfig()
-        updates = {
-            "population_size": 150,
-            "generations": 75,
-            "crossover_rate": 0.85
-        }
+        updates = {"population_size": 150, "generations": 75, "crossover_rate": 0.85}
 
         config.update_from_dict(updates)
 

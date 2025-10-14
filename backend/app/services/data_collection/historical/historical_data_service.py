@@ -79,7 +79,7 @@ class HistoricalDataService:
                 # 最初のデータは重複している可能性があるので、最新のタイムスタンプと比較
                 latest_db_ts = repository.get_latest_timestamp(
                     timestamp_column="timestamp",
-                    filter_conditions={"symbol": symbol, "timeframe": timeframe}
+                    filter_conditions={"symbol": symbol, "timeframe": timeframe},
                 )
                 if latest_db_ts:
                     historical_data = [
@@ -184,7 +184,7 @@ class HistoricalDataService:
                 # データベースの最新データと比較して重複を避ける
                 latest_db_ts = repository.get_latest_timestamp(
                     timestamp_column="timestamp",
-                    filter_conditions={"symbol": symbol, "timeframe": timeframe}
+                    filter_conditions={"symbol": symbol, "timeframe": timeframe},
                 )
                 if latest_db_ts:
                     historical_data = [
@@ -287,7 +287,7 @@ class HistoricalDataService:
                     # 最新タイムスタンプを取得
                     latest_timestamp = ohlcv_repository.get_latest_timestamp(
                         timestamp_column="timestamp",
-                        filter_conditions={"symbol": symbol, "timeframe": tf}
+                        filter_conditions={"symbol": symbol, "timeframe": tf},
                     )
                     since_ms = (
                         int(latest_timestamp.timestamp() * 1000)

@@ -11,7 +11,7 @@ class DataImputer(BaseEstimator, TransformerMixin):
     平均値、中央値、または最も頻繁な値で欠損値を埋めます。
     """
 
-    def __init__(self, strategy='mean'):
+    def __init__(self, strategy="mean"):
         """
         DataImputerを初期化。
 

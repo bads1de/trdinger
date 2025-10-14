@@ -1,6 +1,7 @@
 """
 データ処理パイプラインの包括的テスト
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -8,12 +9,18 @@ import numpy as np
 import warnings
 
 from app.utils.data_processing.data_processor import DataProcessor
-from app.utils.data_processing.pipelines.preprocessing_pipeline import create_preprocessing_pipeline
-from app.utils.data_processing.pipelines.comprehensive_pipeline import create_comprehensive_pipeline
+from app.utils.data_processing.pipelines.preprocessing_pipeline import (
+    create_preprocessing_pipeline,
+)
+from app.utils.data_processing.pipelines.comprehensive_pipeline import (
+    create_comprehensive_pipeline,
+)
 from app.utils.data_processing.validators.data_validator import DataValidator
 from app.utils.data_processing.transformers.outlier_remover import OutlierRemover
 from app.utils.data_processing.transformers.data_imputer import DataImputer
-from app.utils.data_processing.transformers.categorical_encoder import CategoricalEncoder
+from app.utils.data_processing.transformers.categorical_encoder import (
+    CategoricalEncoder,
+)
 from app.utils.data_processing.transformers.dtype_optimizer import DataTypeOptimizer
 
 
@@ -28,58 +35,64 @@ class TestDataProcessingPipelinesComprehensive:
     @pytest.fixture
     def sample_clean_data(self):
         """クリーンなサンプルデータ"""
-        return pd.DataFrame({
-            'feature1': np.random.randn(100),
-            'feature2': np.random.randn(100),
-            'feature3': np.random.randint(1, 5, 100),
-            'target': np.random.choice([0, 1], 100)
-        })
+        return pd.DataFrame(
+            {
+                "feature1": np.random.randn(100),
+                "feature2": np.random.randn(100),
+                "feature3": np.random.randint(1, 5, 100),
+                "target": np.random.choice([0, 1], 100),
+            }
+        )
 
     @pytest.fixture
     def sample_dirty_data(self):
         """汚れたサンプルデータ"""
-        data = pd.DataFrame({
-            'feature1': np.random.randn(100),
-            'feature2': np.random.randn(100),
-            'feature3': np.random.randint(1, 5, 100),
-            'target': np.random.choice([0, 1], 100)
-        })
+        data = pd.DataFrame(
+            {
+                "feature1": np.random.randn(100),
+                "feature2": np.random.randn(100),
+                "feature3": np.random.randint(1, 5, 100),
+                "target": np.random.choice([0, 1], 100),
+            }
+        )
         # 汚染を追加
-        data.loc[10:20, 'feature1'] = np.nan
-        data.loc[30:35, 'feature2'] = np.inf
-        data.loc[50:55, 'feature3'] = -999
+        data.loc[10:20, "feature1"] = np.nan
+        data.loc[30:35, "feature2"] = np.inf
+        data.loc[50:55, "feature3"] = -999
         return data
 
     @pytest.fixture
     def sample_categorical_data(self):
         """カテゴリカルデータ"""
-        return pd.DataFrame({
-            'category': ['A', 'B', 'C', 'A', 'B'] * 20,
-            'numeric': np.random.randn(100),
-            'target': np.random.choice([0, 1], 100)
-        })
+        return pd.DataFrame(
+            {
+                "category": ["A", "B", "C", "A", "B"] * 20,
+                "numeric": np.random.randn(100),
+                "target": np.random.choice([0, 1], 100),
+            }
+        )
 
     def test_data_processor_initialization(self, data_processor):
         """データプロセッサ初期化のテスト"""
         assert data_processor is not None
-        assert hasattr(data_processor, 'process')
-        assert hasattr(data_processor, 'validate')
+        assert hasattr(data_processor, "process")
+        assert hasattr(data_processor, "validate")
 
     def test_preprocessing_pipeline_creation(self):
         """前処理パイプライン作成のテスト"""
         pipeline = create_preprocessing_pipeline()
 
         assert pipeline is not None
-        assert hasattr(pipeline, 'fit')
-        assert hasattr(pipeline, 'transform')
+        assert hasattr(pipeline, "fit")
+        assert hasattr(pipeline, "transform")
 
     def test_comprehensive_pipeline_creation(self):
         """包括的パイプライン作成のテスト"""
         pipeline = create_comprehensive_pipeline()
 
         assert pipeline is not None
-        assert hasattr(pipeline, 'fit')
-        assert hasattr(pipeline, 'transform')
+        assert hasattr(pipeline, "fit")
+        assert hasattr(pipeline, "transform")
 
     def test_data_validation_basic(self, sample_clean_data):
         """基本データ検証のテスト"""
@@ -101,7 +114,7 @@ class TestDataProcessingPipelinesComprehensive:
 
     def test_outlier_removal_iqr_method(self, sample_dirty_data):
         """IQR法による外れ値除去のテスト"""
-        remover = OutlierRemover(method='iqr')
+        remover = OutlierRemover(method="iqr")
 
         # 外れ値除去
         cleaned_data = remover.remove_outliers(sample_dirty_data)
@@ -111,7 +124,7 @@ class TestDataProcessingPipelinesComprehensive:
 
     def test_outlier_removal_isolation_forest(self, sample_clean_data):
         """孤立森による外れ値除去のテスト"""
-        remover = OutlierRemover(method='isolation_forest')
+        remover = OutlierRemover(method="isolation_forest")
 
         # 外れ値除去
         cleaned_data = remover.remove_outliers(sample_clean_data)
@@ -120,7 +133,7 @@ class TestDataProcessingPipelinesComprehensive:
 
     def test_data_imputation_mean(self, sample_dirty_data):
         """平均値補完のテスト"""
-        imputer = DataImputer(strategy='mean')
+        imputer = DataImputer(strategy="mean")
 
         # 補完
         imputed_data = imputer.impute(sample_dirty_data)
@@ -130,7 +143,7 @@ class TestDataProcessingPipelinesComprehensive:
 
     def test_data_imputation_median(self, sample_dirty_data):
         """中央値補完のテスト"""
-        imputer = DataImputer(strategy='median')
+        imputer = DataImputer(strategy="median")
 
         imputed_data = imputer.impute(sample_dirty_data)
 
@@ -138,7 +151,7 @@ class TestDataProcessingPipelinesComprehensive:
 
     def test_categorical_encoding_onehot(self, sample_categorical_data):
         """One-hotエンコーディングのテスト"""
-        encoder = CategoricalEncoder(encoding_type='onehot')
+        encoder = CategoricalEncoder(encoding_type="onehot")
 
         encoded_data = encoder.encode(sample_categorical_data)
 
@@ -147,7 +160,7 @@ class TestDataProcessingPipelinesComprehensive:
 
     def test_categorical_encoding_label(self, sample_categorical_data):
         """ラベルエンコーディングのテスト"""
-        encoder = CategoricalEncoder(encoding_type='label')
+        encoder = CategoricalEncoder(encoding_type="label")
 
         encoded_data = encoder.encode(sample_categorical_data)
 
@@ -174,10 +187,15 @@ class TestDataProcessingPipelinesComprehensive:
 
         # ステップの確認
         step_names = [step[0] for step in preprocessing_pipeline.steps]
-        expected_steps = ['outlier_removal', 'imputation', 'encoding', 'dtype_optimization']
+        expected_steps = [
+            "outlier_removal",
+            "imputation",
+            "encoding",
+            "dtype_optimization",
+        ]
 
         for step in expected_steps:
-            if step in ['outlier_removal', 'imputation', 'encoding']:
+            if step in ["outlier_removal", "imputation", "encoding"]:
                 # 条件付きステップのため、必ずしも存在するとは限らない
                 pass
 
@@ -186,10 +204,10 @@ class TestDataProcessingPipelinesComprehensive:
         import gc
 
         # 大規模データ
-        large_data = pd.DataFrame({
-            f'feature_{i}': np.random.randn(10000) for i in range(100)
-        })
-        large_data['target'] = np.random.choice([0, 1], 10000)
+        large_data = pd.DataFrame(
+            {f"feature_{i}": np.random.randn(10000) for i in range(100)}
+        )
+        large_data["target"] = np.random.choice([0, 1], 10000)
 
         initial_memory = len(gc.get_objects())
         gc.collect()
@@ -213,11 +231,13 @@ class TestDataProcessingPipelinesComprehensive:
     def test_incremental_data_processing(self, data_processor):
         """増分データ処理のテスト"""
         # 小分けのデータ
-        chunk_data = pd.DataFrame({
-            'feature1': np.random.randn(10),
-            'feature2': np.random.randn(10),
-            'target': np.random.choice([0, 1], 10)
-        })
+        chunk_data = pd.DataFrame(
+            {
+                "feature1": np.random.randn(10),
+                "feature2": np.random.randn(10),
+                "target": np.random.choice([0, 1], 10),
+            }
+        )
 
         # 増分処理
         cumulative_result = data_processor.process_incremental(chunk_data)
@@ -227,8 +247,8 @@ class TestDataProcessingPipelinesComprehensive:
     def test_data_drift_detection(self, data_processor):
         """データドリフト検出のテスト"""
         # 基準データ
-        reference_data = pd.DataFrame({'feature': np.random.randn(100)})
-        current_data = pd.DataFrame({'feature': np.random.randn(100) + 0.5})  # シフト
+        reference_data = pd.DataFrame({"feature": np.random.randn(100)})
+        current_data = pd.DataFrame({"feature": np.random.randn(100) + 0.5})  # シフト
 
         # ドリフト検出
         drift_detected = data_processor.detect_data_drift(reference_data, current_data)
@@ -239,21 +259,21 @@ class TestDataProcessingPipelinesComprehensive:
         """ロバストスケーリングのテスト"""
         # ロバストスケーリング
         scaler = DataProcessor()
-        scaled_data = scaler.scale_features(sample_clean_data, method='robust')
+        scaled_data = scaler.scale_features(sample_clean_data, method="robust")
 
         assert isinstance(scaled_data, pd.DataFrame)
 
     def test_feature_scaling_standard(self, sample_clean_data):
         """標準スケーリングのテスト"""
         scaler = DataProcessor()
-        scaled_data = scaler.scale_features(sample_clean_data, method='standard')
+        scaled_data = scaler.scale_features(sample_clean_data, method="standard")
 
         assert isinstance(scaled_data, pd.DataFrame)
 
     def test_feature_normalization_minmax(self, sample_clean_data):
         """Min-Max正規化のテスト"""
         scaler = DataProcessor()
-        normalized_data = scaler.normalize_features(sample_clean_data, method='minmax')
+        normalized_data = scaler.normalize_features(sample_clean_data, method="minmax")
 
         assert isinstance(normalized_data, pd.DataFrame)
 
@@ -262,20 +282,22 @@ class TestDataProcessingPipelinesComprehensive:
         quality_report = DataProcessor().get_data_quality_report(sample_clean_data)
 
         assert isinstance(quality_report, dict)
-        assert 'missing_ratio' in quality_report
-        assert 'duplicate_ratio' in quality_report
-        assert 'outlier_ratio' in quality_report
+        assert "missing_ratio" in quality_report
+        assert "duplicate_ratio" in quality_report
+        assert "outlier_ratio" in quality_report
 
     def test_batch_processing_with_validation(self, data_processor):
         """検証付きバッチ処理のテスト"""
         # バッチデータ
         batches = []
         for i in range(5):
-            batch = pd.DataFrame({
-                'feature1': np.random.randn(20),
-                'feature2': np.random.randn(20),
-                'target': np.random.choice([0, 1], 20)
-            })
+            batch = pd.DataFrame(
+                {
+                    "feature1": np.random.randn(20),
+                    "feature2": np.random.randn(20),
+                    "target": np.random.choice([0, 1], 20),
+                }
+            )
             batches.append(batch)
 
         # バッチ処理
@@ -287,8 +309,8 @@ class TestDataProcessingPipelinesComprehensive:
         """リアルタイムデータストリーミングのテスト"""
         # ストリームデータ
         stream_data = [
-            {'feature1': 1.0, 'feature2': 2.0, 'target': 0},
-            {'feature1': 1.1, 'feature2': 2.1, 'target': 1}
+            {"feature1": 1.0, "feature2": 2.0, "target": 0},
+            {"feature1": 1.1, "feature2": 2.1, "target": 1},
         ]
 
         # ストリーム処理
@@ -313,7 +335,9 @@ class TestDataProcessingPipelinesComprehensive:
     def test_data_augmentation_techniques(self, sample_clean_data):
         """データ拡張技術のテスト"""
         # 拡張
-        augmented_data = DataProcessor().augment_data(sample_clean_data, augmentation_factor=2)
+        augmented_data = DataProcessor().augment_data(
+            sample_clean_data, augmentation_factor=2
+        )
 
         # データが増加する
         assert len(augmented_data) > len(sample_clean_data)
@@ -321,7 +345,7 @@ class TestDataProcessingPipelinesComprehensive:
     def test_multicollinearity_detection_and_removal(self, sample_clean_data):
         """多重共線性検出と除去のテスト"""
         # 人工的に相関のある特徴量を追加
-        sample_clean_data['feature1_copy'] = sample_clean_data['feature1'] * 2
+        sample_clean_data["feature1_copy"] = sample_clean_data["feature1"] * 2
 
         # 多重共線性除去
         cleaned_data = DataProcessor().remove_multicollinearity(sample_clean_data)
@@ -340,35 +364,31 @@ class TestDataProcessingPipelinesComprehensive:
         """データバージョニングと追跡のテスト"""
         # バージョン管理
         version_info = {
-            'version': '1.0',
-            'created_date': '2023-12-01',
-            'data_hash': 'abc123def456',
-            'processing_steps': ['outlier_removal', 'imputation']
+            "version": "1.0",
+            "created_date": "2023-12-01",
+            "data_hash": "abc123def456",
+            "processing_steps": ["outlier_removal", "imputation"],
         }
 
-        assert 'version' in version_info
-        assert 'data_hash' in version_info
+        assert "version" in version_info
+        assert "data_hash" in version_info
 
     def test_data_lineage_tracking(self):
         """データ系統追跡のテスト"""
         # 系統情報
         lineage = {
-            'source': 'exchange_api',
-            'processing_steps': ['cleaning', 'transformation', 'validation'],
-            'destination': 'ml_training'
+            "source": "exchange_api",
+            "processing_steps": ["cleaning", "transformation", "validation"],
+            "destination": "ml_training",
         }
 
-        assert 'source' in lineage
-        assert 'destination' in lineage
+        assert "source" in lineage
+        assert "destination" in lineage
 
     def test_data_governance_compliance(self):
         """データガバナンスコンプライアンスのテスト"""
         # コンプライアンス要件
-        compliance_requirements = [
-            'data_privacy',
-            'audit_trail',
-            'access_control'
-        ]
+        compliance_requirements = ["data_privacy", "audit_trail", "access_control"]
 
         for requirement in compliance_requirements:
             assert isinstance(requirement, str)
@@ -376,22 +396,15 @@ class TestDataProcessingPipelinesComprehensive:
     def test_data_encryption_at_rest(self):
         """保存中のデータ暗号化のテスト"""
         # 暗号化設定
-        encryption_config = {
-            'algorithm': 'AES-256',
-            'key_rotation': '90_days'
-        }
+        encryption_config = {"algorithm": "AES-256", "key_rotation": "90_days"}
 
-        assert 'algorithm' in encryption_config
-        assert 'key_rotation' in encryption_config
+        assert "algorithm" in encryption_config
+        assert "key_rotation" in encryption_config
 
     def test_data_masking_techniques(self):
         """データマスキング技術のテスト"""
         # マスキング方法
-        masking_methods = [
-            'hashing',
-            'tokenization',
-            'generalization'
-        ]
+        masking_methods = ["hashing", "tokenization", "generalization"]
 
         for method in masking_methods:
             assert isinstance(method, str)
@@ -400,34 +413,34 @@ class TestDataProcessingPipelinesComprehensive:
         """データ保持と削除のテスト"""
         # 保持ポリシー
         retention_policy = {
-            'retention_period': '2_years',
-            'deletion_method': 'secure_wipe'
+            "retention_period": "2_years",
+            "deletion_method": "secure_wipe",
         }
 
-        assert 'retention_period' in retention_policy
-        assert 'deletion_method' in retention_policy
+        assert "retention_period" in retention_policy
+        assert "deletion_method" in retention_policy
 
     def test_data_backup_verification(self):
         """データバックアップ検証のテスト"""
         # バックアップ検証
         backup_verification = {
-            'last_backup': '2023-12-01',
-            'backup_size': '10GB',
-            'integrity_check': 'passed'
+            "last_backup": "2023-12-01",
+            "backup_size": "10GB",
+            "integrity_check": "passed",
         }
 
-        assert 'last_backup' in backup_verification
-        assert 'integrity_check' in backup_verification
+        assert "last_backup" in backup_verification
+        assert "integrity_check" in backup_verification
 
     def test_data_migration_safety(self):
         """データ移行の安全性のテスト"""
         # 移行手順
         migration_steps = [
-            'backup_source',
-            'validate_target_schema',
-            'migrate_data',
-            'verify_integrity',
-            'cutover'
+            "backup_source",
+            "validate_target_schema",
+            "migrate_data",
+            "verify_integrity",
+            "cutover",
         ]
 
         for step in migration_steps:
@@ -436,12 +449,7 @@ class TestDataProcessingPipelinesComprehensive:
     def test_data_quality_monitoring(self):
         """データ品質監視のテスト"""
         # 監視指標
-        quality_metrics = [
-            'completeness',
-            'accuracy',
-            'consistency',
-            'timeliness'
-        ]
+        quality_metrics = ["completeness", "accuracy", "consistency", "timeliness"]
 
         for metric in quality_metrics:
             assert isinstance(metric, str)

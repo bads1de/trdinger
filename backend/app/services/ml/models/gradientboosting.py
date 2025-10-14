@@ -100,12 +100,16 @@ class GradientBoostingModel:
 
             # 包括的な評価指標を計算（テストデータ）
             test_metrics = evaluate_model_predictions(
-                y_test, cast(np.ndarray, y_pred_test), cast(np.ndarray, y_pred_proba_test)
+                y_test,
+                cast(np.ndarray, y_pred_test),
+                cast(np.ndarray, y_pred_proba_test),
             )
 
             # 包括的な評価指標を計算（学習データ）
             train_metrics = evaluate_model_predictions(
-                y_train, cast(np.ndarray, y_pred_train), cast(np.ndarray, y_pred_proba_train)
+                y_train,
+                cast(np.ndarray, y_pred_train),
+                cast(np.ndarray, y_pred_proba_train),
             )
 
             # クラス数を取得

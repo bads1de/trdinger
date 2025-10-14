@@ -1,6 +1,7 @@
 """
 TP/SL 計算結果モデル
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

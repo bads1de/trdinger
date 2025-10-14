@@ -286,7 +286,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 include_confusion_matrix=True,
                 include_classification_report=True,
                 average_method="weighted",
-                zero_division='0',
+                zero_division="0",
             )
 
             metrics_calculator = EnhancedMetricsCalculator(config)
@@ -298,7 +298,7 @@ class EnsembleTrainer(BaseMLTrainer):
             from sklearn.metrics import classification_report
 
             class_report = classification_report(
-                y_test, y_pred, output_dict=True, zero_division='0'
+                y_test, y_pred, output_dict=True, zero_division="0"
             )
 
             # 特徴量重要度
@@ -316,13 +316,17 @@ class EnsembleTrainer(BaseMLTrainer):
             if self.use_automl and hasattr(self, "feature_service"):
                 try:
                     # 安全にメソッドを呼び出し
-                    analyze_method = getattr(self.feature_service, "analyze_features", None)
+                    analyze_method = getattr(
+                        self.feature_service, "analyze_features", None
+                    )
                     if analyze_method is not None and callable(analyze_method):
                         automl_feature_analysis = analyze_method(X_train, y_train)
                     else:
                         logger.debug("analyze_featuresメソッドが利用できません")
                 except AttributeError:
-                    logger.debug("FeatureEngineeringServiceにanalyze_featuresメソッドがありません")
+                    logger.debug(
+                        "FeatureEngineeringServiceにanalyze_featuresメソッドがありません"
+                    )
                 except Exception as e:
                     logger.warning(f"AutoML特徴量分析でエラー: {e}")
 

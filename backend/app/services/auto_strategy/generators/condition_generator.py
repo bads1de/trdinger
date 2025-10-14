@@ -9,7 +9,10 @@ from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
 from app.services.indicators.config import indicator_registry
 from app.services.backtest.backtest_service import BacktestService
 from ..utils.yaml_utils import YamlIndicatorUtils
-from ..core.condition_evolver import ConditionEvolver, YamlIndicatorUtils as CoreYamlIndicatorUtils
+from ..core.condition_evolver import (
+    ConditionEvolver,
+    YamlIndicatorUtils as CoreYamlIndicatorUtils,
+)
 
 from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
 from .strategies import (
@@ -144,7 +147,9 @@ class ConditionGenerator:
                 )
                 self.logger.debug(f"ロング条件生成: {ind.type} > {threshold}")
                 return [final_condition]
-        self.logger.warning(f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用")
+        self.logger.warning(
+            f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用"
+        )
         final_condition = Condition(
             left_operand=ind.type, operator=">", right_operand=0
         )
@@ -169,7 +174,9 @@ class ConditionGenerator:
                         left_operand=ind.type, operator="<", right_operand=threshold
                     )
                 ]
-        self.logger.warning(f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用")
+        self.logger.warning(
+            f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用"
+        )
         return [Condition(left_operand=ind.type, operator="<", right_operand=0)]
 
     def _create_type_based_conditions(
@@ -315,7 +322,7 @@ class GAConditionGenerator(ConditionGenerator):
         self,
         enable_smart_generation: bool = True,
         use_hierarchical_ga: bool = True,
-        backtest_service: Optional['BacktestService'] = None  # 型アノテーションのみ
+        backtest_service: Optional["BacktestService"] = None,  # 型アノテーションのみ
     ):
         """
         拡張条件生成器の初期化
@@ -361,7 +368,9 @@ class GAConditionGenerator(ConditionGenerator):
 
         try:
             if self.backtest_service is None:
-                self.logger.warning("BacktestServiceが設定されていないため、GA機能は制限されます")
+                self.logger.warning(
+                    "BacktestServiceが設定されていないため、GA機能は制限されます"
+                )
                 return False
 
             # ConditionEvolver用のYamlIndicatorUtilsを作成（メタデータ使用）
@@ -370,7 +379,7 @@ class GAConditionGenerator(ConditionGenerator):
             # ConditionEvolverインスタンスを作成
             self.condition_evolver = ConditionEvolver(
                 backtest_service=self.backtest_service,
-                yaml_indicator_utils=yaml_indicator_utils
+                yaml_indicator_utils=yaml_indicator_utils,
             )
 
             self._ga_initialized = True
@@ -385,8 +394,12 @@ class GAConditionGenerator(ConditionGenerator):
     def generate_hierarchical_ga_conditions(
         self,
         indicators: List[IndicatorGene],
-        backtest_config: Optional[Dict[str, any]] = None
-    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]], List[Condition]]:
+        backtest_config: Optional[Dict[str, any]] = None,
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """
         階層的GAによる最適化条件生成
 
@@ -402,7 +415,9 @@ class GAConditionGenerator(ConditionGenerator):
             return self.generate_balanced_conditions(indicators)
 
         if not self.initialize_ga_components():
-            self.logger.warning("GAコンポーネント初期化失敗のため、標準生成にフォールバック")
+            self.logger.warning(
+                "GAコンポーネント初期化失敗のため、標準生成にフォールバック"
+            )
             return self.generate_balanced_conditions(indicators)
 
         if self.condition_evolver is None:
@@ -430,7 +445,9 @@ class GAConditionGenerator(ConditionGenerator):
                 if not type_indicators:
                     continue
 
-                self.logger.info(f"{indicator_type.name}タイプの指標を処理: {len(type_indicators)}個")
+                self.logger.info(
+                    f"{indicator_type.name}タイプの指標を処理: {len(type_indicators)}個"
+                )
 
                 # 各指標に対してGA最適化を実行
                 for indicator in type_indicators:
@@ -439,25 +456,35 @@ class GAConditionGenerator(ConditionGenerator):
                         evolution_result = self.condition_evolver.run_evolution(
                             backtest_config=backtest_config,
                             population_size=self.ga_config["population_size"],
-                            generations=self.ga_config["generations"]
+                            generations=self.ga_config["generations"],
                         )
 
                         if evolution_result and "best_condition" in evolution_result:
                             best_condition = evolution_result["best_condition"]
                             optimized_conditions.append(best_condition)
-                            self.logger.info(f"指標 {indicator.type} の最適化完了: {best_condition}")
+                            self.logger.info(
+                                f"指標 {indicator.type} の最適化完了: {best_condition}"
+                            )
                         else:
                             self.logger.warning(f"指標 {indicator.type} の最適化に失敗")
 
                     except Exception as e:
-                        self.logger.error(f"指標 {indicator.type} のGA最適化エラー: {e}")
+                        self.logger.error(
+                            f"指標 {indicator.type} のGA最適化エラー: {e}"
+                        )
                         # フォールバック: 標準条件生成
                         try:
-                            fallback_conditions = self._create_type_based_conditions(indicator, "long")
+                            fallback_conditions = self._create_type_based_conditions(
+                                indicator, "long"
+                            )
                             optimized_conditions.extend(fallback_conditions)
-                            self.logger.info(f"指標 {indicator.type} のフォールバック条件生成完了")
+                            self.logger.info(
+                                f"指標 {indicator.type} のフォールバック条件生成完了"
+                            )
                         except Exception as fallback_error:
-                            self.logger.error(f"指標 {indicator.type} のフォールバック処理も失敗: {fallback_error}")
+                            self.logger.error(
+                                f"指標 {indicator.type} のフォールバック処理も失敗: {fallback_error}"
+                            )
 
             # 最適化された条件からロング・ショート条件を分離
             long_conditions = []
@@ -465,7 +492,7 @@ class GAConditionGenerator(ConditionGenerator):
             exit_conditions = []
 
             for condition in optimized_conditions:
-                if hasattr(condition, 'direction'):
+                if hasattr(condition, "direction"):
                     if condition.direction == "long":
                         long_conditions.append(condition)
                     elif condition.direction == "short":
@@ -473,8 +500,12 @@ class GAConditionGenerator(ConditionGenerator):
 
             # 条件が生成できなかった場合は完全フォールバック
             if not long_conditions:
-                self.logger.warning("ロング条件が生成されなかったため、標準生成にフォールバック")
-                fallback_longs, fallback_shorts, fallback_exits = self.generate_balanced_conditions(indicators)
+                self.logger.warning(
+                    "ロング条件が生成されなかったため、標準生成にフォールバック"
+                )
+                fallback_longs, fallback_shorts, fallback_exits = (
+                    self.generate_balanced_conditions(indicators)
+                )
                 long_conditions = fallback_longs
                 short_conditions = fallback_shorts
                 exit_conditions = fallback_exits
@@ -531,10 +562,7 @@ class GAConditionGenerator(ConditionGenerator):
 
     @safe_operation(context="GA最適化実行", is_api_call=False)
     def optimize_single_condition(
-        self,
-        indicator: IndicatorGene,
-        direction: str,
-        backtest_config: Dict[str, any]
+        self, indicator: IndicatorGene, direction: str, backtest_config: Dict[str, any]
     ) -> Optional[Condition]:
         """
         単一指標の条件をGAで最適化
@@ -554,7 +582,8 @@ class GAConditionGenerator(ConditionGenerator):
             # 単一指標用の進化実行
             evolution_result = self.condition_evolver.run_evolution(
                 backtest_config=backtest_config,
-                population_size=self.ga_config["population_size"] // 2,  # 単一指標なので個体数を減らす
+                population_size=self.ga_config["population_size"]
+                // 2,  # 単一指標なので個体数を減らす
                 generations=self.ga_config["generations"] // 2,
             )
 
@@ -568,5 +597,7 @@ class GAConditionGenerator(ConditionGenerator):
             return None
 
         except Exception as e:
-            self.logger.error(f"単一条件最適化エラー ({indicator.type}, {direction}): {e}")
+            self.logger.error(
+                f"単一条件最適化エラー ({indicator.type}, {direction}): {e}"
+            )
             return None

@@ -88,7 +88,7 @@ async def update_bulk_incremental_data(
     """
 
     async def _execute():
- 
+
         return await orchestration_service.execute_bulk_incremental_update(symbol, db)
 
     return await ErrorHandler.safe_execute_async(_execute)

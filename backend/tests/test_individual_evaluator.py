@@ -1,6 +1,7 @@
 """
 IndividualEvaluatorのテスト
 """
+
 import pytest
 import numpy as np
 from unittest.mock import Mock, patch
@@ -39,10 +40,10 @@ class TestIndividualEvaluator:
                 "sharpe_ratio": 1.5,
                 "max_drawdown": 0.1,
                 "win_rate": 0.6,
-                "profit_factor": 1.8
+                "profit_factor": 1.8,
             },
             "equity_curve": [100, 110, 105, 120],
-            "trade_history": [{"size": 1, "pnl": 10}, {"size": -1, "pnl": -5}]
+            "trade_history": [{"size": 1, "pnl": 10}, {"size": -1, "pnl": -5}],
         }
 
         self.mock_backtest_service.run_backtest.return_value = mock_result
@@ -54,7 +55,7 @@ class TestIndividualEvaluator:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "win_rate": 0.1
+            "win_rate": 0.1,
         }
 
         # テスト実行
@@ -70,10 +71,10 @@ class TestIndividualEvaluator:
             "performance_metrics": {
                 "total_return": 0.1,
                 "sharpe_ratio": 1.5,
-                "max_drawdown": 0.1
+                "max_drawdown": 0.1,
             },
             "equity_curve": [],
-            "trade_history": []
+            "trade_history": [],
         }
 
         self.mock_backtest_service.run_backtest.return_value = mock_result
@@ -125,16 +126,16 @@ class TestIndividualEvaluator:
                 "win_rate": 0.55,
                 "profit_factor": 1.9,
                 "sortino_ratio": 1.8,
-                "calmar_ratio": 1.5
+                "calmar_ratio": 1.5,
             },
             "equity_curve": [100, 110, 105, 120, 115],
             "trade_history": [
                 {"size": 1, "pnl": 10},
                 {"size": -1, "pnl": -5},
-                {"size": 1, "pnl": 15}
+                {"size": 1, "pnl": 15},
             ],
             "start_date": "2024-01-01",
-            "end_date": "2024-12-19"
+            "end_date": "2024-12-19",
         }
 
         metrics = self.evaluator._extract_performance_metrics(backtest_result)
@@ -150,13 +151,13 @@ class TestIndividualEvaluator:
         """無効な値の処理テスト"""
         backtest_result = {
             "performance_metrics": {
-                "total_return": float('inf'),  # 無限大
+                "total_return": float("inf"),  # 無限大
                 "sharpe_ratio": None,  # None
                 "max_drawdown": -0.1,  # 負のドローダウン
-                "win_rate": "invalid"  # 無効な型
+                "win_rate": "invalid",  # 無効な型
             },
             "equity_curve": [],
-            "trade_history": []
+            "trade_history": [],
         }
 
         metrics = self.evaluator._extract_performance_metrics(backtest_result)
@@ -175,10 +176,10 @@ class TestIndividualEvaluator:
                 "sharpe_ratio": 1.5,
                 "max_drawdown": 0.1,
                 "win_rate": 0.6,
-                "total_trades": 0  # 取引なし
+                "total_trades": 0,  # 取引なし
             },
             "equity_curve": [],
-            "trade_history": []
+            "trade_history": [],
         }
 
         ga_config = GAConfig()
@@ -186,7 +187,7 @@ class TestIndividualEvaluator:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "win_rate": 0.1
+            "win_rate": 0.1,
         }
 
         fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
@@ -200,23 +201,23 @@ class TestIndividualEvaluator:
                 "sharpe_ratio": 0.2,  # 最低シャープレシオ未満
                 "max_drawdown": 0.1,
                 "win_rate": 0.6,
-                "total_trades": 5
+                "total_trades": 5,
             },
             "equity_curve": [],
-            "trade_history": []
+            "trade_history": [],
         }
 
         ga_config = GAConfig()
         ga_config.fitness_constraints = {
             "min_sharpe_ratio": 0.5,
             "min_trades": 3,
-            "max_drawdown_limit": 0.15
+            "max_drawdown_limit": 0.15,
         }
         ga_config.fitness_weights = {
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "win_rate": 0.1
+            "win_rate": 0.1,
         }
 
         fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
@@ -226,10 +227,10 @@ class TestIndividualEvaluator:
         """ロング・ショートバランス計算のテスト"""
         # ロングとショートがバランスしている取引履歴
         trade_history = [
-            {"size": 1, "pnl": 10},   # ロング
-            {"size": -1, "pnl": 5},   # ショート
-            {"size": 1, "pnl": 15},   # ロング
-            {"size": -1, "pnl": 10}   # ショート
+            {"size": 1, "pnl": 10},  # ロング
+            {"size": -1, "pnl": 5},  # ショート
+            {"size": 1, "pnl": 15},  # ロング
+            {"size": -1, "pnl": 10},  # ショート
         ]
 
         backtest_result = {"trade_history": trade_history}
@@ -254,21 +255,36 @@ class TestIndividualEvaluator:
                 "profit_factor": 1.9,
                 "sortino_ratio": 1.8,
                 "calmar_ratio": 1.5,
-                "total_trades": 1
+                "total_trades": 1,
             },
             "equity_curve": [],
-            "trade_history": [{"id": 1, "type": "long", "entry_price": 100, "exit_price": 115, "pnl": 0.15}]
+            "trade_history": [
+                {
+                    "id": 1,
+                    "type": "long",
+                    "entry_price": 100,
+                    "exit_price": 115,
+                    "pnl": 0.15,
+                }
+            ],
         }
 
         ga_config = GAConfig()
-        ga_config.objectives = ["total_return", "sharpe_ratio", "max_drawdown", "win_rate"]
+        ga_config.objectives = [
+            "total_return",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+        ]
 
-        result = self.evaluator._calculate_multi_objective_fitness(backtest_result, ga_config)
+        result = self.evaluator._calculate_multi_objective_fitness(
+            backtest_result, ga_config
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 4
         assert result[0] == 0.15  # total_return
-        assert result[1] == 1.2   # sharpe_ratio
+        assert result[1] == 1.2  # sharpe_ratio
         assert result[2] == 0.08  # max_drawdown
         assert result[3] == 0.55  # win_rate
 
@@ -278,6 +294,8 @@ class TestIndividualEvaluator:
         ga_config = GAConfig()
         ga_config.objectives = ["unknown_objective"]
 
-        result = self.evaluator._calculate_multi_objective_fitness(backtest_result, ga_config)
+        result = self.evaluator._calculate_multi_objective_fitness(
+            backtest_result, ga_config
+        )
 
         assert result == (0.0,)  # 未知の目的は0.0

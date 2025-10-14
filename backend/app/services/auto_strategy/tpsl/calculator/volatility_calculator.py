@@ -31,7 +31,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
         tpsl_gene: Optional[TPSLGene] = None,
         market_data: Optional[Dict[str, Any]] = None,
         position_direction: float = 1.0,
-        **kwargs
+        **kwargs,
     ) -> TPSLResult:
         """
         ボラティリティベースでTP/SLを計算
@@ -109,7 +109,9 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
         return None
 
-    def _calculate_atr_from_ohlc(self, ohlc_data: list, atr_period: int) -> Optional[float]:
+    def _calculate_atr_from_ohlc(
+        self, ohlc_data: list, atr_period: int
+    ) -> Optional[float]:
         """OHLCデータからATRを計算"""
         try:
             if len(ohlc_data) < atr_period:
@@ -119,13 +121,9 @@ class VolatilityCalculator(BaseTPSLCalculator):
             for i in range(1, len(ohlc_data)):
                 high = ohlc_data[i]["high"]
                 low = ohlc_data[i]["low"]
-                prev_close = ohlc_data[i-1]["close"]
+                prev_close = ohlc_data[i - 1]["close"]
 
-                tr = max(
-                    high - low,
-                    abs(high - prev_close),
-                    abs(low - prev_close)
-                )
+                tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
                 true_ranges.append(tr)
 
             # ATR = 平均True Range

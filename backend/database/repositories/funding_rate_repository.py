@@ -86,7 +86,9 @@ class FundingRateRepository(BaseRepository):
                 processed_records.append(new_record)
 
             except (ValueError, TypeError) as e:
-                logger.warning(f"レコードの変換に失敗しました（スキップ）: {record}, エラー: {e}")
+                logger.warning(
+                    f"レコードの変換に失敗しました（スキップ）: {record}, エラー: {e}"
+                )
                 continue
 
         if not processed_records:

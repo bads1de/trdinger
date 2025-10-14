@@ -395,7 +395,7 @@ class FitnessSharing:
 
         # リスク管理パラメータ
         if gene.risk_management:
-            features.append(float(gene.risk_management.get('position_size', 0.1)))
+            features.append(float(gene.risk_management.get("position_size", 0.1)))
         else:
             features.append(0.1)
 
@@ -408,7 +408,9 @@ class FitnessSharing:
             features.append(0.1)
 
         # ポジションサイジングパラメータ
-        if gene.position_sizing_gene and hasattr(gene.position_sizing_gene, 'risk_per_trade'):
+        if gene.position_sizing_gene and hasattr(
+            gene.position_sizing_gene, "risk_per_trade"
+        ):
             features.append(float(gene.position_sizing_gene.risk_per_trade or 0.01))
         else:
             features.append(0.01)

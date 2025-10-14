@@ -3,7 +3,9 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from app.services.auto_strategy.generators.random.indicator_generator import IndicatorGenerator
+from app.services.auto_strategy.generators.random.indicator_generator import (
+    IndicatorGenerator,
+)
 from app.services.auto_strategy.models.strategy_models import IndicatorGene
 
 
@@ -27,7 +29,7 @@ class TestIndicatorGenerator:
     def test_initialization(self, generator):
         """初期化テスト"""
         assert generator.config is not None
-        assert hasattr(generator, 'available_indicators')
+        assert hasattr(generator, "available_indicators")
         assert isinstance(generator.available_indicators, list)
 
     def test_generate_random_indicators_basic(self, generator):
@@ -58,7 +60,7 @@ class TestIndicatorGenerator:
 
     def test_fallback_behavior(self, generator):
         """フォールバック動作テスト"""
-        with patch.object(generator, 'available_indicators', []):
+        with patch.object(generator, "available_indicators", []):
             indicators = generator.generate_random_indicators()
 
             # フォールバックとしてSMAが使用される
@@ -71,7 +73,7 @@ class TestIndicatorGenerator:
         indicators = generator.generate_random_indicators()
 
         for indicator in indicators:
-            assert hasattr(indicator, 'parameters')
+            assert hasattr(indicator, "parameters")
             assert isinstance(indicator.parameters, dict)
 
     def test_json_config_generation(self, generator):
@@ -79,14 +81,18 @@ class TestIndicatorGenerator:
         indicators = generator.generate_random_indicators()
 
         # 少なくとも1つの指標にjson_configがあるはず
-        has_json_config = any(hasattr(ind, 'json_config') and ind.json_config for ind in indicators)
+        has_json_config = any(
+            hasattr(ind, "json_config") and ind.json_config for ind in indicators
+        )
         assert has_json_config or True  # 柔軟にテスト（エラーハンドリング確認のため）
 
     def test_setup_indicators_by_mode(self, mock_config):
         """モード別指標設定テスト"""
         mock_config.allowed_indicators = ["SMA", "EMA"]
 
-        with patch('app.services.indicators.config.indicator_registry') as mock_registry:
+        with patch(
+            "app.services.indicators.config.indicator_registry"
+        ) as mock_registry:
             mock_registry.experimental_indicators = set()
 
             generator = IndicatorGenerator(mock_config)

@@ -20,7 +20,7 @@
 from .preprocessing_pipeline import (
     create_preprocessing_pipeline,
     create_basic_preprocessing_pipeline,
-    get_pipeline_info as get_preprocessing_pipeline_info
+    get_pipeline_info as get_preprocessing_pipeline_info,
 )
 
 from .ml_pipeline import (
@@ -28,7 +28,7 @@ from .ml_pipeline import (
     create_classification_pipeline,
     create_regression_pipeline,
     get_ml_pipeline_info,
-    optimize_ml_pipeline
+    optimize_ml_pipeline,
 )
 
 from .comprehensive_pipeline import (
@@ -37,27 +37,25 @@ from .comprehensive_pipeline import (
     create_eda_pipeline,
     get_comprehensive_pipeline_info,
     validate_comprehensive_pipeline,
-    optimize_comprehensive_pipeline
+    optimize_comprehensive_pipeline,
 )
 
 __all__ = [
     # Preprocessing Pipeline
-    'create_preprocessing_pipeline',
-    'create_basic_preprocessing_pipeline',
-    'get_preprocessing_pipeline_info',
-
+    "create_preprocessing_pipeline",
+    "create_basic_preprocessing_pipeline",
+    "get_preprocessing_pipeline_info",
     # ML Pipeline
-    'create_ml_pipeline',
-    'create_classification_pipeline',
-    'create_regression_pipeline',
-    'get_ml_pipeline_info',
-    'optimize_ml_pipeline',
-
+    "create_ml_pipeline",
+    "create_classification_pipeline",
+    "create_regression_pipeline",
+    "get_ml_pipeline_info",
+    "optimize_ml_pipeline",
     # Comprehensive Pipeline
-    'create_comprehensive_pipeline',
-    'create_production_pipeline',
-    'create_eda_pipeline',
-    'get_comprehensive_pipeline_info',
-    'validate_comprehensive_pipeline',
-    'optimize_comprehensive_pipeline',
+    "create_comprehensive_pipeline",
+    "create_production_pipeline",
+    "create_eda_pipeline",
+    "get_comprehensive_pipeline_info",
+    "validate_comprehensive_pipeline",
+    "optimize_comprehensive_pipeline",
 ]

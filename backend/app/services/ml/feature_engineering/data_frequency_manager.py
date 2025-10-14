@@ -43,8 +43,6 @@ class DataFrequencyManager:
             "1d": 24 * 60 * 60 * 1000,
         }
 
-    
-
     def detect_ohlcv_timeframe(self, ohlcv_data: pd.DataFrame) -> str:
         """
         OHLCVデータからtimeframeを自動検出
@@ -74,7 +72,7 @@ class DataFrequencyManager:
             # TimedeltaIndexをSeriesに変換してmedianを計算
             time_diffs_series = pd.Series(time_diffs)
             median_diff = time_diffs_series.median()
-            if str(median_diff) == 'NaT':
+            if str(median_diff) == "NaT":
                 return "1h"
             median_diff = pd.Timedelta(median_diff)
             diff_minutes = median_diff.total_seconds() / 60
@@ -302,5 +300,3 @@ class DataFrequencyManager:
             validation_result["is_valid"] = False
 
         return validation_result
-
-    

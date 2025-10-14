@@ -14,12 +14,15 @@ from .enums import ThresholdMethod
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class BarrierProfile:
     """Barrier profile configuration"""
+
     base_tp: float
     base_sl: float
     holding_period: int
+
 
 class EventDrivenLabelGenerator:
     """Event driven (triple barrier) label generator"""
@@ -44,7 +47,9 @@ class EventDrivenLabelGenerator:
     ) -> Tuple[pd.DataFrame, dict]:
         if market_data is None or market_data.empty or len(market_data) < 3:
             logger.warning("Skipping due to insufficient data")
-            empty_df = pd.DataFrame(columns=["label_hrhp", "label_lrlp", "market_regime"])
+            empty_df = pd.DataFrame(
+                columns=["label_hrhp", "label_lrlp", "market_regime"]
+            )
             info = {"regime_profiles": {}, "label_distribution": {}}
             return empty_df, info
 
@@ -113,7 +118,9 @@ class EventDrivenLabelGenerator:
             resolved[name] = BarrierProfile(
                 base_tp=float(override.get("base_tp", base_profile.base_tp)),
                 base_sl=float(override.get("base_sl", base_profile.base_sl)),
-                holding_period=int(override.get("holding_period", base_profile.holding_period)),
+                holding_period=int(
+                    override.get("holding_period", base_profile.holding_period)
+                ),
             )
         return resolved
 
@@ -188,7 +195,9 @@ class EventDrivenLabelGenerator:
     ) -> Dict[Any, dict]:
         summary: Dict[Any, dict] = {}
         for regime_key in [0, 1, 2, "default"]:
-            factors = self._resolve_regime_factors(regime_key if isinstance(regime_key, int) else None)
+            factors = self._resolve_regime_factors(
+                regime_key if isinstance(regime_key, int) else None
+            )
             summary[regime_key] = {
                 "hrhp": self._profile_stats(profiles["hrhp"], factors),
                 "lrlp": self._profile_stats(profiles["lrlp"], factors),
@@ -201,7 +210,9 @@ class EventDrivenLabelGenerator:
         return {
             "take_profit": round(profile.base_tp * factors["tp"], 6),
             "stop_loss": round(profile.base_sl * factors["sl"], 6),
-            "holding_period": max(1, int(round(profile.holding_period * factors["holding"]))),
+            "holding_period": max(
+                1, int(round(profile.holding_period * factors["holding"]))
+            ),
         }
 
     def _distribution_summary(self, labels: pd.Series) -> dict:

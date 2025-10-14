@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class RegimeConfig(BaseModel):
     """レジーム検知設定"""
+
     n_components: int = 3
     covariance_type: str = "full"
     n_iter: int = 100
@@ -87,7 +88,7 @@ def regime_based_backtest_comparison(
     end_date: str,
     regime_adaptation_enabled: bool = True,
     output_csv: Optional[str] = None,
-    output_plot: Optional[str] = None
+    output_plot: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     複数レジームでのバックテスト比較を実行
@@ -104,20 +105,28 @@ def regime_based_backtest_comparison(
     Returns:
         比較結果
     """
-    logger.info(f"レジーム別バックテスト比較開始: {symbol} {timeframe} {start_date}-{end_date}")
+    logger.info(
+        f"レジーム別バックテスト比較開始: {symbol} {timeframe} {start_date}-{end_date}"
+    )
 
     # データ取得 (ダミーデータ使用)
     np.random.seed(42)
-    dates = pd.date_range(start=start_date, end=end_date, freq='1h')
+    dates = pd.date_range(start=start_date, end=end_date, freq="1h")
     n = len(dates)
-    ohlcv_data = pd.DataFrame({
-        'timestamp': dates,
-        'open': 100 + np.cumsum(np.random.randn(n) * 0.01),
-        'high': 100 + np.cumsum(np.random.randn(n) * 0.01) + np.random.rand(n) * 0.02,
-        'low': 100 + np.cumsum(np.random.randn(n) * 0.01) - np.random.rand(n) * 0.02,
-        'close': 100 + np.cumsum(np.random.randn(n) * 0.01),
-        'volume': np.random.randint(100, 1000, n)
-    }).set_index('timestamp')
+    ohlcv_data = pd.DataFrame(
+        {
+            "timestamp": dates,
+            "open": 100 + np.cumsum(np.random.randn(n) * 0.01),
+            "high": 100
+            + np.cumsum(np.random.randn(n) * 0.01)
+            + np.random.rand(n) * 0.02,
+            "low": 100
+            + np.cumsum(np.random.randn(n) * 0.01)
+            - np.random.rand(n) * 0.02,
+            "close": 100 + np.cumsum(np.random.randn(n) * 0.01),
+            "volume": np.random.randint(100, 1000, n),
+        }
+    ).set_index("timestamp")
 
     # レジーム検知
     config = RegimeConfig()
@@ -133,7 +142,9 @@ def regime_based_backtest_comparison(
         regime_data = ohlcv_data[regime_mask]
 
         if len(regime_data) < 10:  # 最小データ数チェック
-            logger.warning(f"レジーム {regime_name} のデータが不足しています: {len(regime_data)}件")
+            logger.warning(
+                f"レジーム {regime_name} のデータが不足しています: {len(regime_data)}件"
+            )
             continue
 
         # バックテスト実行（簡易版）
@@ -156,11 +167,13 @@ def regime_based_backtest_comparison(
     return {
         "regime_results": regime_results,
         "summary": summary,
-        "regime_adaptation_enabled": regime_adaptation_enabled
+        "regime_adaptation_enabled": regime_adaptation_enabled,
     }
 
 
-def run_simple_backtest(data: pd.DataFrame, regime_adaptation_enabled: bool) -> Dict[str, Any]:
+def run_simple_backtest(
+    data: pd.DataFrame, regime_adaptation_enabled: bool
+) -> Dict[str, Any]:
     """
     簡易バックテスト実行
 
@@ -180,20 +193,20 @@ def run_simple_backtest(data: pd.DataFrame, regime_adaptation_enabled: bool) -> 
         sma_short_period = 10
         sma_long_period = 30
 
-    data['sma_short'] = data['close'].rolling(sma_short_period).mean()
-    data['sma_long'] = data['close'].rolling(sma_long_period).mean()
+    data["sma_short"] = data["close"].rolling(sma_short_period).mean()
+    data["sma_long"] = data["close"].rolling(sma_long_period).mean()
     data = data.dropna()
 
     if data.empty:
         return {"performance_metrics": {}, "trade_history": []}
 
     # シグナル生成
-    data['signal'] = 0
-    data.loc[data['sma_short'] > data['sma_long'], 'signal'] = 1
-    data.loc[data['sma_short'] < data['sma_long'], 'signal'] = -1
+    data["signal"] = 0
+    data.loc[data["sma_short"] > data["sma_long"], "signal"] = 1
+    data.loc[data["sma_short"] < data["sma_long"], "signal"] = -1
 
     # ポジション変化でのみ取引
-    data['position_change'] = data['signal'].diff()
+    data["position_change"] = data["signal"].diff()
     trades = []
 
     capital = 10000
@@ -201,38 +214,42 @@ def run_simple_backtest(data: pd.DataFrame, regime_adaptation_enabled: bool) -> 
     entry_price = 0
 
     for idx, row in data.iterrows():
-        if row['position_change'] != 0:
-            if position == 0 and row['signal'] == 1:  # 買いエントリー
-                position = capital / row['close']
-                entry_price = row['close']
+        if row["position_change"] != 0:
+            if position == 0 and row["signal"] == 1:  # 買いエントリー
+                position = capital / row["close"]
+                entry_price = row["close"]
                 capital = 0
-            elif position > 0 and row['signal'] == -1:  # 売り決済
-                capital = position * row['close']
+            elif position > 0 and row["signal"] == -1:  # 売り決済
+                capital = position * row["close"]
                 profit = capital - 10000
-                trades.append({
-                    "profit": profit,
-                    "entry_price": entry_price,
-                    "exit_price": row['close']
-                })
+                trades.append(
+                    {
+                        "profit": profit,
+                        "entry_price": entry_price,
+                        "exit_price": row["close"],
+                    }
+                )
                 position = 0
                 entry_price = 0
                 capital = 10000  # リセット
 
     # 最終ポジション決済
     if position > 0:
-        final_value = position * data.iloc[-1]['close']
+        final_value = position * data.iloc[-1]["close"]
         profit = final_value - 10000
-        trades.append({
-            "profit": profit,
-            "entry_price": entry_price,
-            "exit_price": data.iloc[-1]['close']
-        })
+        trades.append(
+            {
+                "profit": profit,
+                "entry_price": entry_price,
+                "exit_price": data.iloc[-1]["close"],
+            }
+        )
 
     # メトリクス計算
     equity_curve = [10000]
     cumulative = 10000
     for trade in trades:
-        cumulative += trade['profit']
+        cumulative += trade["profit"]
         equity_curve.append(cumulative)
 
     equity_series = pd.Series(equity_curve)
@@ -243,17 +260,19 @@ def run_simple_backtest(data: pd.DataFrame, regime_adaptation_enabled: bool) -> 
         "max_drawdown": calculate_max_drawdown(equity_series),
         "win_rate": calculate_win_rate(trades),
         "total_trades": len(trades),
-        "total_return": (cumulative - 10000) / 10000 if equity_curve else 0
+        "total_return": (cumulative - 10000) / 10000 if equity_curve else 0,
     }
 
     return {
         "performance_metrics": metrics,
         "equity_curve": equity_curve,
-        "trade_history": trades
+        "trade_history": trades,
     }
 
 
-def calculate_regime_comparison_summary(regime_results: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+def calculate_regime_comparison_summary(
+    regime_results: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
     """
     レジーム比較の集計
 
@@ -275,7 +294,9 @@ def calculate_regime_comparison_summary(regime_results: Dict[str, Dict[str, Any]
     return summary
 
 
-def output_to_console(regime_results: Dict[str, Dict[str, Any]], regime_adaptation_enabled: bool):
+def output_to_console(
+    regime_results: Dict[str, Dict[str, Any]], regime_adaptation_enabled: bool
+):
     """
     コンソール出力
 
@@ -298,7 +319,11 @@ def output_to_console(regime_results: Dict[str, Dict[str, Any]], regime_adaptati
         print()
 
 
-def save_to_csv(regime_results: Dict[str, Dict[str, Any]], file_path: str, regime_adaptation_enabled: bool):
+def save_to_csv(
+    regime_results: Dict[str, Dict[str, Any]],
+    file_path: str,
+    regime_adaptation_enabled: bool,
+):
     """
     CSV保存
 
@@ -313,7 +338,7 @@ def save_to_csv(regime_results: Dict[str, Dict[str, Any]], file_path: str, regim
         row = {
             "regime": regime,
             "regime_adaptation": regime_adaptation_enabled,
-            **metrics
+            **metrics,
         }
         rows.append(row)
 
@@ -322,7 +347,11 @@ def save_to_csv(regime_results: Dict[str, Dict[str, Any]], file_path: str, regim
     logger.info(f"結果をCSVに保存しました: {file_path}")
 
 
-def plot_results(regime_results: Dict[str, Dict[str, Any]], file_path: str, regime_adaptation_enabled: bool):
+def plot_results(
+    regime_results: Dict[str, Dict[str, Any]],
+    file_path: str,
+    regime_adaptation_enabled: bool,
+):
     """
     グラフ生成
 
@@ -335,17 +364,22 @@ def plot_results(regime_results: Dict[str, Dict[str, Any]], file_path: str, regi
         import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-        fig.suptitle(f"レジーム別バックテスト比較 (適応: {'有効' if regime_adaptation_enabled else '無効'})")
+        fig.suptitle(
+            f"レジーム別バックテスト比較 (適応: {'有効' if regime_adaptation_enabled else '無効'})"
+        )
 
-        metrics = ['sharpe_ratio', 'max_drawdown', 'win_rate', 'total_return']
+        metrics = ["sharpe_ratio", "max_drawdown", "win_rate", "total_return"]
         regimes = list(regime_results.keys())
 
         for i, metric in enumerate(metrics):
-            ax = axes[i//2, i%2]
-            values = [regime_results[r].get('performance_metrics', {}).get(metric, 0) for r in regimes]
+            ax = axes[i // 2, i % 2]
+            values = [
+                regime_results[r].get("performance_metrics", {}).get(metric, 0)
+                for r in regimes
+            ]
             ax.bar(regimes, values)
-            ax.set_title(metric.replace('_', ' ').title())
-            ax.tick_params(axis='x', rotation=45)
+            ax.set_title(metric.replace("_", " ").title())
+            ax.tick_params(axis="x", rotation=45)
 
         plt.tight_layout()
         plt.savefig(file_path)
@@ -363,8 +397,12 @@ def performance_test():
     # 大規模テストデータ作成
     n = 50000
     np.random.seed(42)
-    high = pd.Series(100 + np.cumsum(np.random.randn(n)) + np.random.rand(n) * 10, name="high")
-    low = pd.Series(100 + np.cumsum(np.random.randn(n)) - np.random.rand(n) * 10, name="low")
+    high = pd.Series(
+        100 + np.cumsum(np.random.randn(n)) + np.random.rand(n) * 10, name="high"
+    )
+    low = pd.Series(
+        100 + np.cumsum(np.random.randn(n)) - np.random.rand(n) * 10, name="low"
+    )
     close = pd.Series(100 + np.cumsum(np.random.randn(n)), name="close")
     volume = pd.Series(np.random.randint(10000, 100000, n), name="volume")
 
@@ -408,16 +446,16 @@ def performance_test():
             result_type = type(result).__name__
 
         results[name] = {
-            'time': elapsed,
-            'result_type': result_type,
-            'valid': not (hasattr(result, 'isna') and result.isna().all())
+            "time": elapsed,
+            "result_type": result_type,
+            "valid": not (hasattr(result, "isna") and result.isna().all()),
         }
 
         print(f"  OK {name}: {elapsed:.4f}秒, {result_type}")
 
     # 結果集計
     print("\n=== パフォーマンス結果集計 ===")
-    total_time = sum(r['time'] for r in results.values())
+    total_time = sum(r["time"] for r in results.values())
     avg_time = total_time / len(results)
 
     print(f"総処理時間: {total_time:.4f}秒")
@@ -426,11 +464,15 @@ def performance_test():
     # 詳細結果
     print("\n=== 詳細結果 ===")
     for name, data in results.items():
-        valid_icon = "OK" if data['valid'] else "NG"
-        print(f"{name:20} | {data['time']:6.4f}秒 | {data['result_type']:30} | {valid_icon}")
+        valid_icon = "OK" if data["valid"] else "NG"
+        print(
+            f"{name:20} | {data['time']:6.4f}秒 | {data['result_type']:30} | {valid_icon}"
+        )
     print(f"\n全テスト完了！ 平均 {avg_time:.4f}秒/指標")
     print("Pandasオンリー移行がパフォーマンス正常")
     print("全ての指標が正常に pd.Series または tuple[pd.Series] を返します")
+
+
 if __name__ == "__main__":
     import sys
 
@@ -444,7 +486,7 @@ if __name__ == "__main__":
             end_date="2023-12-31",
             regime_adaptation_enabled=enabled,
             output_csv=f"regime_comparison_results_{enabled}.csv",
-            output_plot=f"regime_comparison_plot_{enabled}.png"
+            output_plot=f"regime_comparison_plot_{enabled}.png",
         )
     else:
         # 既存のパフォーマンステスト実行

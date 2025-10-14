@@ -49,7 +49,12 @@ class StrategyStatsResponse(BaseModel):
 
 @router.get("/", response_model=StrategiesResponse)
 async def get_strategies(
-    limit: int = Query(unified_config.auto_strategy.default_strategies_limit, ge=1, le=unified_config.auto_strategy.max_strategies_limit, description="取得件数制限"),
+    limit: int = Query(
+        unified_config.auto_strategy.default_strategies_limit,
+        ge=1,
+        le=unified_config.auto_strategy.max_strategies_limit,
+        description="取得件数制限",
+    ),
     offset: int = Query(0, ge=0, description="オフセット"),
     risk_level: Optional[str] = Query(None, description="リスクレベルフィルター"),
     experiment_id: Optional[int] = Query(None, description="実験IDフィルター"),

@@ -178,12 +178,20 @@ class AdaBoostModel:
             # 特徴量の順序を確認
             if self._feature_columns:
                 # 列の存在チェックとDataFrameの型保証
-                missing_cols = [col for col in self._feature_columns if col not in X.columns]
+                missing_cols = [
+                    col for col in self._feature_columns if col not in X.columns
+                ]
                 if missing_cols:
-                    raise ModelError(f"必要な特徴量カラムが見つかりません: {missing_cols}")
+                    raise ModelError(
+                        f"必要な特徴量カラムが見つかりません: {missing_cols}"
+                    )
                 X_selected = X[self._feature_columns]
                 # 型アサーションでDataFrameであることを保証
-                X = X_selected if isinstance(X_selected, pd.DataFrame) else X_selected.to_frame()
+                X = (
+                    X_selected
+                    if isinstance(X_selected, pd.DataFrame)
+                    else X_selected.to_frame()
+                )
 
             predictions = self.model.predict(X)
             return predictions
@@ -209,12 +217,20 @@ class AdaBoostModel:
             # 特徴量の順序を確認
             if self._feature_columns:
                 # 列の存在チェックとDataFrameの型保証
-                missing_cols = [col for col in self._feature_columns if col not in X.columns]
+                missing_cols = [
+                    col for col in self._feature_columns if col not in X.columns
+                ]
                 if missing_cols:
-                    raise ModelError(f"必要な特徴量カラムが見つかりません: {missing_cols}")
+                    raise ModelError(
+                        f"必要な特徴量カラムが見つかりません: {missing_cols}"
+                    )
                 X_selected = X[self._feature_columns]
                 # 型アサーションでDataFrameであることを保証
-                X = X_selected if isinstance(X_selected, pd.DataFrame) else X_selected.to_frame()
+                X = (
+                    X_selected
+                    if isinstance(X_selected, pd.DataFrame)
+                    else X_selected.to_frame()
+                )
 
             probabilities = self.model.predict_proba(X)
             return probabilities

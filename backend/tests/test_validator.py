@@ -61,18 +61,24 @@ class TestGeneValidator:
         result = validator.validate_indicator_gene(valid_indicator_gene)
         assert result is True
 
-    def test_validate_indicator_gene_invalid_type(self, validator, invalid_indicator_gene):
+    def test_validate_indicator_gene_invalid_type(
+        self, validator, invalid_indicator_gene
+    ):
         """無効なタイプの指標遺伝子の検証"""
         result = validator.validate_indicator_gene(invalid_indicator_gene)
         assert result is False
 
-    def test_validate_indicator_gene_invalid_parameters(self, validator, valid_indicator_gene):
+    def test_validate_indicator_gene_invalid_parameters(
+        self, validator, valid_indicator_gene
+    ):
         """無効なパラメータの指標遺伝子の検証"""
         valid_indicator_gene.parameters = None
         result = validator.validate_indicator_gene(valid_indicator_gene)
         assert result is False
 
-    def test_validate_indicator_gene_invalid_period(self, validator, valid_indicator_gene):
+    def test_validate_indicator_gene_invalid_period(
+        self, validator, valid_indicator_gene
+    ):
         """無効な期間パラメータの指標遺伝子の検証"""
         valid_indicator_gene.parameters = {"period": -1}
         result = validator.validate_indicator_gene(valid_indicator_gene)

@@ -9,7 +9,10 @@ from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
 import numpy as np
 
-from backend.app.services.ml.ml_training_service import MLTrainingService, OptimizationSettings
+from backend.app.services.ml.ml_training_service import (
+    MLTrainingService,
+    OptimizationSettings,
+)
 
 
 class TestMLTrainingService:
@@ -18,14 +21,16 @@ class TestMLTrainingService:
     @pytest.fixture
     def sample_training_data(self):
         """サンプル学習データ"""
-        return pd.DataFrame({
-            'open': [100, 101, 102, 103, 104] * 20,
-            'high': [105, 106, 107, 108, 109] * 20,
-            'low': [95, 96, 97, 98, 99] * 20,
-            'close': [102, 103, 104, 105, 106] * 20,
-            'volume': [1000, 1100, 1200, 1300, 1400] * 20,
-            'target': [1, 0, 1, 2, 1] * 20,  # 3クラス分類
-        })
+        return pd.DataFrame(
+            {
+                "open": [100, 101, 102, 103, 104] * 20,
+                "high": [105, 106, 107, 108, 109] * 20,
+                "low": [95, 96, 97, 98, 99] * 20,
+                "close": [102, 103, 104, 105, 106] * 20,
+                "volume": [1000, 1100, 1200, 1300, 1400] * 20,
+                "target": [1, 0, 1, 2, 1] * 20,  # 3クラス分類
+            }
+        )
 
     @pytest.fixture
     def mock_trainer(self):
@@ -33,14 +38,14 @@ class TestMLTrainingService:
         trainer = Mock()
         trainer.is_trained = True
         trainer.model = Mock()
-        trainer.feature_columns = ['close', 'volume']
+        trainer.feature_columns = ["close", "volume"]
         trainer.scaler = Mock()
         trainer.scaler.transform.return_value = np.array([[1.0, 2.0]])
         trainer.model.predict.return_value = np.array([0.2, 0.3, 0.5])
         trainer.train_model.return_value = {
             "success": True,
             "f1_score": 0.85,
-            "classification_report": {"macro avg": {"f1-score": 0.82}}
+            "classification_report": {"macro avg": {"f1-score": 0.82}},
         }
         trainer.evaluate_model.return_value = {"accuracy": 0.9}
         trainer.predict.return_value = np.array([0.2, 0.3, 0.5])
@@ -48,14 +53,20 @@ class TestMLTrainingService:
 
     def test_initialization_with_ensemble_trainer(self, mock_trainer):
         """アンサンブルトレーナーでの初期化テスト"""
-        with patch('backend.app.services.ml.ml_training_service.BaseMLTrainer', return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.BaseMLTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService(trainer_type="ensemble")
             assert service.trainer_type == "ensemble"
             assert service.trainer == mock_trainer
 
     def test_initialization_with_single_trainer(self, mock_trainer):
         """単一モデルトレーナーでの初期化テスト"""
-        with patch('backend.app.services.ml.ml_training_service.SingleModelTrainer', return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.SingleModelTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService(trainer_type="single")
             assert service.trainer_type == "single"
             assert service.trainer == mock_trainer
@@ -101,21 +112,26 @@ class TestMLTrainingService:
         automl_config = {"enabled": True}
         service = MLTrainingService(automl_config=automl_config)
 
-        with patch('backend.app.services.ml.ml_training_service.EnsembleTrainer', return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             result = service.train_model(sample_training_data, save_model=False)
 
         assert result["success"] is True
         mock_trainer.train_model.assert_called_once()
 
-    @patch('backend.app.services.ml.ml_training_service.OptunaOptimizer')
-    def test_train_model_with_optimization(self, mock_optimizer_class, sample_training_data, mock_trainer):
+    @patch("backend.app.services.ml.ml_training_service.OptunaOptimizer")
+    def test_train_model_with_optimization(
+        self, mock_optimizer_class, sample_training_data, mock_trainer
+    ):
         """最適化ありでのモデル学習テスト"""
         mock_optimizer = Mock()
         mock_optimizer.optimize.return_value = Mock(
             best_params={"learning_rate": 0.1},
             best_score=0.9,
             total_evaluations=10,
-            optimization_time=5.0
+            optimization_time=5.0,
         )
         mock_optimizer.cleanup = Mock()
         mock_optimizer_class.return_value = mock_optimizer
@@ -127,7 +143,7 @@ class TestMLTrainingService:
         result = service.train_model(
             sample_training_data,
             save_model=False,
-            optimization_settings=optimization_settings
+            optimization_settings=optimization_settings,
         )
 
         assert "optimization_result" in result
@@ -161,7 +177,7 @@ class TestMLTrainingService:
         service = MLTrainingService()
         service.trainer = mock_trainer
 
-        features_df = pd.DataFrame([[1.0, 2.0]], columns=['close', 'volume'])
+        features_df = pd.DataFrame([[1.0, 2.0]], columns=["close", "volume"])
         result = service.predict(features_df)
 
         assert "predictions" in result
@@ -173,7 +189,7 @@ class TestMLTrainingService:
         service = MLTrainingService()
         service.trainer = mock_trainer
 
-        features_df = pd.DataFrame([[1.0, 2.0]], columns=['close', 'volume'])
+        features_df = pd.DataFrame([[1.0, 2.0]], columns=["close", "volume"])
         signals = service.generate_signals(features_df)
 
         assert "up" in signals
@@ -186,20 +202,20 @@ class TestMLTrainingService:
         service = MLTrainingService()
         service.trainer = mock_trainer
 
-        features_df = pd.DataFrame([[1.0, 2.0]], columns=['close', 'volume'])
+        features_df = pd.DataFrame([[1.0, 2.0]], columns=["close", "volume"])
         signals = service.generate_signals(features_df)
 
         # デフォルト値が返されるはず
         assert isinstance(signals, dict)
 
-    @patch('backend.app.services.ml.ml_training_service.logger')
+    @patch("backend.app.services.ml.ml_training_service.logger")
     def test_generate_signals_missing_features(self, mock_logger, mock_trainer):
         """特徴量不足時のシグナル生成テスト"""
         service = MLTrainingService()
         service.trainer = mock_trainer
-        mock_trainer.feature_columns = ['close', 'volume', 'missing_feature']
+        mock_trainer.feature_columns = ["close", "volume", "missing_feature"]
 
-        features_df = pd.DataFrame([[1.0, 2.0]], columns=['close', 'volume'])
+        features_df = pd.DataFrame([[1.0, 2.0]], columns=["close", "volume"])
         signals = service.generate_signals(features_df)
 
         mock_logger.warning.assert_called()
@@ -225,9 +241,12 @@ class TestMLTrainingService:
 
     def test_get_available_single_models(self):
         """利用可能単一モデル取得テスト"""
-        with patch('backend.app.services.ml.ml_training_service.SingleModelTrainer.get_available_models', return_value=['lightgbm', 'xgboost']):
+        with patch(
+            "backend.app.services.ml.ml_training_service.SingleModelTrainer.get_available_models",
+            return_value=["lightgbm", "xgboost"],
+        ):
             models = MLTrainingService.get_available_single_models()
-            assert models == ['lightgbm', 'xgboost']
+            assert models == ["lightgbm", "xgboost"]
 
     def test_determine_trainer_type(self):
         """トレーナータイプ決定テスト"""
@@ -254,9 +273,7 @@ class TestOptimizationSettings:
         """パラメータ付き初期化テスト"""
         param_space = {"learning_rate": {"type": "float", "low": 0.01, "high": 0.1}}
         settings = OptimizationSettings(
-            enabled=False,
-            n_calls=100,
-            parameter_space=param_space
+            enabled=False, n_calls=100, parameter_space=param_space
         )
         assert settings.enabled is False
         assert settings.n_calls == 100

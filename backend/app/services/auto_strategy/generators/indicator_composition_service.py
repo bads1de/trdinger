@@ -2,6 +2,7 @@
 IndicatorCompositionService
 ロジックをRandomGeneGeneratorから分離し、指標の構成を責任とするサービス。
 """
+
 import random
 import logging
 from typing import List
@@ -10,11 +11,12 @@ from app.services.indicators.config import indicator_registry
 from ..constants import (
     MOVING_AVERAGE_INDICATORS,
     PREFERRED_MA_INDICATORS,
-    MA_INDICATORS_NEEDING_PERIOD
+    MA_INDICATORS_NEEDING_PERIOD,
 )
 from ..models.strategy_models import IndicatorGene
 
 logger = logging.getLogger(__name__)
+
 
 class IndicatorCompositionService:
     """
@@ -42,13 +44,10 @@ class IndicatorCompositionService:
         try:
             # トレンド系指標が存在するかチェック
             trend_indicators_pool = [
-                name for name in available_indicators
-                if self._is_trend_indicator(name)
+                name for name in available_indicators if self._is_trend_indicator(name)
             ]
 
-            has_trend = any(
-                self._is_trend_indicator(ind.type) for ind in indicators
-            )
+            has_trend = any(self._is_trend_indicator(ind.type) for ind in indicators)
 
             if not has_trend and trend_indicators_pool:
                 # 優先順位に従ってトレンド指標を選択
@@ -87,12 +86,15 @@ class IndicatorCompositionService:
         """
         try:
             # 現在のMA指標数をカウント
-            ma_count = sum(1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS)
+            ma_count = sum(
+                1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS
+            )
 
             if ma_count < 2:
                 # MA指標プールを準備
                 ma_pool = [
-                    name for name in available_indicators
+                    name
+                    for name in available_indicators
                     if name in MOVING_AVERAGE_INDICATORS
                 ]
 
@@ -104,11 +106,15 @@ class IndicatorCompositionService:
                     )
 
                     if chosen_ma:
-                        indicators.append(IndicatorGene(
-                            type=chosen_ma,
-                            parameters=self._get_default_params_for_indicator(chosen_ma),
-                            enabled=True
-                        ))
+                        indicators.append(
+                            IndicatorGene(
+                                type=chosen_ma,
+                                parameters=self._get_default_params_for_indicator(
+                                    chosen_ma
+                                ),
+                                enabled=True,
+                            )
+                        )
 
                         # 上限を超えた場合は非MA指標を削除
                         if len(indicators) > self.config.max_indicators:
@@ -164,7 +170,7 @@ class IndicatorCompositionService:
         """既存の指標のパラメータを取得"""
         periods = set()
         for ind in indicators:
-            if hasattr(ind, 'parameters') and isinstance(ind.parameters, dict):
+            if hasattr(ind, "parameters") and isinstance(ind.parameters, dict):
                 period = ind.parameters.get("period")
                 if period:
                     periods.add(period)

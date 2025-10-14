@@ -1,6 +1,7 @@
 """
 インフラ層の包括的テスト - データベース、バックグラウンドタスク、キャッシュ
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -51,31 +52,33 @@ class TestInfrastructureComprehensive:
     def sample_backtest_result(self):
         """サンプルバックテスト結果"""
         return {
-            'sharpe_ratio': 1.5,
-            'total_return': 0.25,
-            'max_drawdown': 0.1,
-            'win_rate': 0.6,
-            'strategy_config': {'period': 20},
-            'symbol': 'BTC/USDT',
-            'timeframe': '1d'
+            "sharpe_ratio": 1.5,
+            "total_return": 0.25,
+            "max_drawdown": 0.1,
+            "win_rate": 0.6,
+            "strategy_config": {"period": 20},
+            "symbol": "BTC/USDT",
+            "timeframe": "1d",
         }
 
     @pytest.fixture
     def sample_ohlcv_data(self):
         """サンプルOHLCVデータ"""
-        return pd.DataFrame({
-            'timestamp': pd.date_range('2023-01-01', periods=100, freq='D'),
-            'open': np.random.randn(100) + 100,
-            'high': np.random.randn(100) + 101,
-            'low': np.random.randn(100) + 99,
-            'close': np.random.randn(100) + 100,
-            'volume': np.random.randint(1000, 10000, 100)
-        })
+        return pd.DataFrame(
+            {
+                "timestamp": pd.date_range("2023-01-01", periods=100, freq="D"),
+                "open": np.random.randn(100) + 100,
+                "high": np.random.randn(100) + 101,
+                "low": np.random.randn(100) + 99,
+                "close": np.random.randn(100) + 100,
+                "volume": np.random.randint(1000, 10000, 100),
+            }
+        )
 
     def test_database_connection_pooling(self, mock_db_session):
         """データベース接続プーリングのテスト"""
         # 接続プールのモック
-        with patch('database.connection.engine') as mock_engine:
+        with patch("database.connection.engine") as mock_engine:
             mock_engine.connect.return_value = mock_db_session
 
             # 複数の接続要求
@@ -86,11 +89,13 @@ class TestInfrastructureComprehensive:
     def test_base_repository_initialization(self, base_repository):
         """基本リポジトリ初期化のテスト"""
         assert base_repository is not None
-        assert hasattr(base_repository, 'save')
-        assert hasattr(base_repository, 'find_by_id')
-        assert hasattr(base_repository, 'find_all')
+        assert hasattr(base_repository, "save")
+        assert hasattr(base_repository, "find_by_id")
+        assert hasattr(base_repository, "find_all")
 
-    def test_backtest_result_repository_save(self, backtest_result_repository, sample_backtest_result):
+    def test_backtest_result_repository_save(
+        self, backtest_result_repository, sample_backtest_result
+    ):
         """バックテスト結果リポジトリ保存のテスト"""
         # 保存操作
         result = backtest_result_repository.save_backtest_result(sample_backtest_result)
@@ -108,9 +113,9 @@ class TestInfrastructureComprehensive:
     def test_background_task_manager_initialization(self, background_task_manager):
         """バックグラウンドタスクマネージャ初期化のテスト"""
         assert background_task_manager is not None
-        assert hasattr(background_task_manager, 'submit_task')
-        assert hasattr(background_task_manager, 'get_task_status')
-        assert hasattr(background_task_manager, 'cancel_task')
+        assert hasattr(background_task_manager, "submit_task")
+        assert hasattr(background_task_manager, "get_task_status")
+        assert hasattr(background_task_manager, "cancel_task")
 
     def test_concurrent_task_execution(self, background_task_manager):
         """同時タスク実行のテスト"""
@@ -130,7 +135,7 @@ class TestInfrastructureComprehensive:
         # すべてのタスクが完了するのを待つ
         for task_id in task_ids:
             status = background_task_manager.get_task_status(task_id)
-            while status['status'] not in ['completed', 'failed']:
+            while status["status"] not in ["completed", "failed"]:
                 time.sleep(0.01)
                 status = background_task_manager.get_task_status(task_id)
 
@@ -164,14 +169,16 @@ class TestInfrastructureComprehensive:
         gc.collect()
 
         # 大量データ保存
-        large_data = pd.DataFrame({
-            'timestamp': pd.date_range('2023-01-01', periods=10000, freq='1min'),
-            'open': np.random.randn(10000) + 100,
-            'high': np.random.randn(10000) + 101,
-            'low': np.random.randn(10000) + 99,
-            'close': np.random.randn(10000) + 100,
-            'volume': np.random.randint(1000, 10000, 10000)
-        })
+        large_data = pd.DataFrame(
+            {
+                "timestamp": pd.date_range("2023-01-01", periods=10000, freq="1min"),
+                "open": np.random.randn(10000) + 100,
+                "high": np.random.randn(10000) + 101,
+                "low": np.random.randn(10000) + 99,
+                "close": np.random.randn(10000) + 100,
+                "volume": np.random.randint(1000, 10000, 10000),
+            }
+        )
 
         # 保存処理
         ohlcv_repository.bulk_insert_ohlcv_data(large_data)
@@ -196,12 +203,12 @@ class TestInfrastructureComprehensive:
             background_task_manager.submit_task(queue_task, i)
 
         # キューの状態が監視される
-        assert hasattr(background_task_manager, 'task_queue')
+        assert hasattr(background_task_manager, "task_queue")
 
     def test_database_transaction_rollback(self, backtest_result_repository):
         """データベーストランザクションロールバックのテスト"""
         # トランザクションのモック
-        with patch.object(backtest_result_repository.db, 'begin') as mock_begin:
+        with patch.object(backtest_result_repository.db, "begin") as mock_begin:
             mock_begin.return_value.__enter__.return_value = None
             mock_begin.return_value.__exit__.side_effect = Exception("Rollback test")
 
@@ -219,15 +226,16 @@ class TestInfrastructureComprehensive:
         responses = [
             api_response.success({"data": "success"}),
             api_response.error("error occurred"),
-            api_response.not_found("not found")
+            api_response.not_found("not found"),
         ]
 
         for response in responses:
             assert isinstance(response, dict)
-            assert 'success' in response or 'error' in response
+            assert "success" in response or "error" in response
 
     def test_error_handling_in_background_tasks(self, background_task_manager):
         """バックグラウンドタスクのエラーハンドリングテスト"""
+
         def failing_task():
             raise Exception("Task failed")
 
@@ -235,23 +243,23 @@ class TestInfrastructureComprehensive:
         status = background_task_manager.get_task_status(task_id)
 
         # エラーが適切にキャプチャされる
-        assert status['status'] == 'failed'
+        assert status["status"] == "failed"
 
     def test_data_integrity_checks(self, ohlcv_repository):
         """データ完全性チェックのテスト"""
         # 完全性チェック
         data = {
-            'timestamp': '2023-01-01',
-            'open': 100,
-            'high': 101,
-            'low': 99,
-            'close': 100,
-            'volume': 1000
+            "timestamp": "2023-01-01",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000,
         }
 
         # データが有効
-        assert data['high'] >= data['low']
-        assert data['volume'] >= 0
+        assert data["high"] >= data["low"]
+        assert data["volume"] >= 0
 
     def test_repository_pattern_implementation(self, base_repository):
         """リポジトリパターン実装のテスト"""
@@ -260,7 +268,7 @@ class TestInfrastructureComprehensive:
     def test_database_index_optimization(self):
         """データベースインデックス最適化のテスト"""
         # インデックス対象カラム
-        indexed_columns = ['timestamp', 'symbol', 'timeframe']
+        indexed_columns = ["timestamp", "symbol", "timeframe"]
 
         for column in indexed_columns:
             assert isinstance(column, str)
@@ -268,11 +276,7 @@ class TestInfrastructureComprehensive:
     def test_cache_implementation(self):
         """キャッシュ実装のテスト"""
         # キャッシュ戦略
-        cache_strategies = [
-            'in_memory_cache',
-            'redis_cache',
-            'database_cache'
-        ]
+        cache_strategies = ["in_memory_cache", "redis_cache", "database_cache"]
 
         for strategy in cache_strategies:
             assert isinstance(strategy, str)
@@ -287,6 +291,7 @@ class TestInfrastructureComprehensive:
 
     def test_deadlock_prevention_in_concurrent_access(self, backtest_result_repository):
         """同時アクセスでのデッドロック防止テスト"""
+
         # 同時書き込み
         def concurrent_write():
             try:
@@ -309,30 +314,30 @@ class TestInfrastructureComprehensive:
         """データバックアップと回復戦略のテスト"""
         # バックアップ設定
         backup_config = {
-            'frequency': 'daily',
-            'retention_days': 30,
-            'storage_type': 'cloud'
+            "frequency": "daily",
+            "retention_days": 30,
+            "storage_type": "cloud",
         }
 
-        assert backup_config['frequency'] in ['daily', 'weekly', 'monthly']
-        assert backup_config['retention_days'] > 0
+        assert backup_config["frequency"] in ["daily", "weekly", "monthly"]
+        assert backup_config["retention_days"] > 0
 
     def test_task_scheduling_and_prioritization(self, background_task_manager):
         """タスクスケジューリングと優先順位付けのテスト"""
         # 優先度の種類
-        priorities = ['high', 'medium', 'low']
+        priorities = ["high", "medium", "low"]
 
         for priority in priorities:
-            assert priority in ['high', 'medium', 'low']
+            assert priority in ["high", "medium", "low"]
 
     def test_database_migration_safety(self):
         """データベース移行の安全性のテスト"""
         # 移行手順
         migration_steps = [
-            'backup_current_data',
-            'apply_schema_changes',
-            'validate_data_integrity',
-            'update_application'
+            "backup_current_data",
+            "apply_schema_changes",
+            "validate_data_integrity",
+            "update_application",
         ]
 
         for step in migration_steps:
@@ -342,23 +347,23 @@ class TestInfrastructureComprehensive:
         """リソース制限とスロットリングのテスト"""
         # 制限設定
         limits = {
-            'max_concurrent_tasks': 10,
-            'max_queue_size': 100,
-            'task_timeout': 300
+            "max_concurrent_tasks": 10,
+            "max_queue_size": 100,
+            "task_timeout": 300,
         }
 
-        assert limits['max_concurrent_tasks'] > 0
-        assert limits['max_queue_size'] > 0
-        assert limits['task_timeout'] > 0
+        assert limits["max_concurrent_tasks"] > 0
+        assert limits["max_queue_size"] > 0
+        assert limits["task_timeout"] > 0
 
     def test_health_check_endpoint(self):
         """ヘルスチェックエンドポイントのテスト"""
         # ヘルスチェック項目
         health_checks = [
-            'database_connection',
-            'task_queue_status',
-            'memory_usage',
-            'cpu_usage'
+            "database_connection",
+            "task_queue_status",
+            "memory_usage",
+            "cpu_usage",
         ]
 
         for check in health_checks:
@@ -367,18 +372,18 @@ class TestInfrastructureComprehensive:
     def test_circuit_breaker_pattern(self, background_task_manager):
         """サーキットブレーカーパターンのテスト"""
         # サーキットブレーカー状態
-        circuit_states = ['closed', 'open', 'half_open']
+        circuit_states = ["closed", "open", "half_open"]
 
         for state in circuit_states:
-            assert state in ['closed', 'open', 'half_open']
+            assert state in ["closed", "open", "half_open"]
 
     def test_eventual_consistency_model(self):
         """最終的一貫性モデルのテスト"""
         # 一貫性の種類
         consistency_models = [
-            'strong_consistency',
-            'eventual_consistency',
-            'causal_consistency'
+            "strong_consistency",
+            "eventual_consistency",
+            "causal_consistency",
         ]
 
         for model in consistency_models:
@@ -387,11 +392,7 @@ class TestInfrastructureComprehensive:
     def test_data_sharding_strategy(self):
         """データシャーディング戦略のテスト"""
         # シャードキー
-        shard_keys = [
-            'timestamp',
-            'symbol',
-            'user_id'
-        ]
+        shard_keys = ["timestamp", "symbol", "user_id"]
 
         for key in shard_keys:
             assert isinstance(key, str)
@@ -400,22 +401,18 @@ class TestInfrastructureComprehensive:
         """読み取りレプリカ設定のテスト"""
         # 設定項目
         replica_config = {
-            'read_replicas': 2,
-            'write_master': True,
-            'replication_lag': '1s'
+            "read_replicas": 2,
+            "write_master": True,
+            "replication_lag": "1s",
         }
 
-        assert replica_config['read_replicas'] >= 0
-        assert isinstance(replica_config['write_master'], bool)
+        assert replica_config["read_replicas"] >= 0
+        assert isinstance(replica_config["write_master"], bool)
 
     def test_connection_pool_monitoring(self):
         """接続プール監視のテスト"""
         # 監視指標
-        pool_metrics = [
-            'active_connections',
-            'idle_connections',
-            'pool_usage_rate'
-        ]
+        pool_metrics = ["active_connections", "idle_connections", "pool_usage_rate"]
 
         for metric in pool_metrics:
             assert isinstance(metric, str)
@@ -432,9 +429,9 @@ class TestInfrastructureComprehensive:
         """データ保持ポリシーのテスト"""
         # 保持期間
         retention_periods = {
-            'ohlcv_data': '2_years',
-            'backtest_results': '1_year',
-            'user_sessions': '30_days'
+            "ohlcv_data": "2_years",
+            "backtest_results": "1_year",
+            "user_sessions": "30_days",
         }
 
         for data_type, period in retention_periods.items():
@@ -444,11 +441,7 @@ class TestInfrastructureComprehensive:
     def test_load_balancing_strategy(self):
         """ロードバランシング戦略のテスト"""
         # バランシング方法
-        balancing_methods = [
-            'round_robin',
-            'least_connections',
-            'weighted_round_robin'
-        ]
+        balancing_methods = ["round_robin", "least_connections", "weighted_round_robin"]
 
         for method in balancing_methods:
             assert isinstance(method, str)
@@ -457,9 +450,9 @@ class TestInfrastructureComprehensive:
         """フェイルオーバーメカニズムのテスト"""
         # フェイルオーバー要件
         failover_requirements = [
-            'automatic_detection',
-            'fast_recovery',
-            'data_consistency'
+            "automatic_detection",
+            "fast_recovery",
+            "data_consistency",
         ]
 
         for requirement in failover_requirements:
@@ -469,23 +462,25 @@ class TestInfrastructureComprehensive:
         """監視とアラートシステムのテスト"""
         # 監視対象
         monitored_systems = [
-            'database_performance',
-            'task_completion_rate',
-            'error_rate'
+            "database_performance",
+            "task_completion_rate",
+            "error_rate",
         ]
 
         for system in monitored_systems:
             assert isinstance(system, str)
 
-    def test_final_infrastructure_validation(self, base_repository, background_task_manager):
+    def test_final_infrastructure_validation(
+        self, base_repository, background_task_manager
+    ):
         """最終インフラ検証"""
         # すべてのインフラコンポーネントが正常
         assert base_repository is not None
         assert background_task_manager is not None
 
         # 基本機能が存在
-        assert hasattr(base_repository, 'save')
-        assert hasattr(background_task_manager, 'submit_task')
+        assert hasattr(base_repository, "save")
+        assert hasattr(background_task_manager, "submit_task")
 
         # インフラが安定している
         assert True

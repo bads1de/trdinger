@@ -13,10 +13,10 @@ from .statistical_calculator import StatisticalCalculator
 from .adaptive_calculator import AdaptiveCalculator
 
 __all__ = [
-    'BaseTPSLCalculator',
-    'FixedPercentageCalculator',
-    'RiskRewardCalculator',
-    'VolatilityCalculator',
-    'StatisticalCalculator',
-    'AdaptiveCalculator',
+    "BaseTPSLCalculator",
+    "FixedPercentageCalculator",
+    "RiskRewardCalculator",
+    "VolatilityCalculator",
+    "StatisticalCalculator",
+    "AdaptiveCalculator",
 ]

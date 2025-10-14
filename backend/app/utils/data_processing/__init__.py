@@ -11,10 +11,4 @@ from . import transformers
 from . import pipelines
 from . import validators
 
-__all__ = [
-    'DataProcessor',
-    'data_processor',
-    'transformers',
-    'pipelines',
-    'validators'
-]
+__all__ = ["DataProcessor", "data_processor", "transformers", "pipelines", "validators"]

@@ -1,9 +1,12 @@
 """
 HybridIndividualEvaluatorのテスト
 """
+
 import pytest
 from unittest.mock import Mock, patch
-from app.services.auto_strategy.core.hybrid_individual_evaluator import HybridIndividualEvaluator
+from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+    HybridIndividualEvaluator,
+)
 from app.services.auto_strategy.config import GAConfig
 
 
@@ -15,8 +18,7 @@ class TestHybridIndividualEvaluator:
         self.mock_backtest_service = Mock()
         self.mock_hybrid_predictor = Mock()
         self.evaluator = HybridIndividualEvaluator(
-            self.mock_backtest_service,
-            self.mock_hybrid_predictor
+            self.mock_backtest_service, self.mock_hybrid_predictor
         )
 
     def test_init(self):
@@ -33,10 +35,10 @@ class TestHybridIndividualEvaluator:
                 "sharpe_ratio": 1.2,
                 "max_drawdown": 0.08,
                 "win_rate": 0.6,
-                "total_trades": 10
+                "total_trades": 10,
             },
             "equity_curve": [100, 110, 105, 120],
-            "trade_history": []
+            "trade_history": [],
         }
 
         # バックテストサービスのモック
@@ -51,7 +53,7 @@ class TestHybridIndividualEvaluator:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "win_rate": 0.1
+            "win_rate": 0.1,
         }
 
         result = self.evaluator.evaluate_individual(mock_individual, ga_config)
@@ -67,10 +69,10 @@ class TestHybridIndividualEvaluator:
                 "total_return": 0.15,
                 "sharpe_ratio": 1.2,
                 "max_drawdown": 0.08,
-                "win_rate": 0.6
+                "win_rate": 0.6,
             },
             "equity_curve": [],
-            "trade_history": []
+            "trade_history": [],
         }
 
         self.mock_backtest_service.run_backtest.return_value = mock_backtest_result
@@ -109,9 +111,9 @@ class TestHybridIndividualEvaluator:
                 "sharpe_ratio": 1.2,
                 "max_drawdown": 0.08,
                 "win_rate": 0.6,
-                "total_trades": 15
+                "total_trades": 15,
             },
-            "trade_history": []
+            "trade_history": [],
         }
 
         # GA設定（ハイブリッドモード有効）
@@ -124,14 +126,12 @@ class TestHybridIndividualEvaluator:
 
     def test_calculate_hybrid_score_zero_trades(self):
         """取引回数0のハイブリッドスコアテスト"""
-        backtest_result = {
-            "performance_metrics": {
-                "total_trades": 0
-            }
-        }
+        backtest_result = {"performance_metrics": {"total_trades": 0}}
         prediction_score = 0.9
 
-        score = self.evaluator._calculate_hybrid_score(backtest_result, prediction_score)
+        score = self.evaluator._calculate_hybrid_score(
+            backtest_result, prediction_score
+        )
 
         assert score == 0.1  # 取引回数0の特別処理
 
@@ -143,7 +143,7 @@ class TestHybridIndividualEvaluator:
                 "sharpe_ratio": 0.2,  # 低いシャープレシオ
                 "max_drawdown": 0.25,  # 高いドローダウン
                 "win_rate": 0.4,
-                "total_trades": 20
+                "total_trades": 20,
             }
         }
         prediction_score = 0.9
@@ -151,10 +151,12 @@ class TestHybridIndividualEvaluator:
         ga_config = GAConfig()
         ga_config.fitness_constraints = {
             "min_sharpe_ratio": 0.5,
-            "max_drawdown_limit": 0.2
+            "max_drawdown_limit": 0.2,
         }
 
-        score = self.evaluator._calculate_hybrid_score(backtest_result, prediction_score, ga_config)
+        score = self.evaluator._calculate_hybrid_score(
+            backtest_result, prediction_score, ga_config
+        )
 
         assert score == 0.0  # 制約違反で0.0
 
@@ -168,7 +170,7 @@ class TestHybridIndividualEvaluator:
                 "win_rate": 0.6,
                 "profit_factor": 1.9,
                 "sortino_ratio": 1.8,
-                "calmar_ratio": 1.5
+                "calmar_ratio": 1.5,
             }
         }
         prediction_score = 0.85
@@ -189,14 +191,14 @@ class TestHybridIndividualEvaluator:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "win_rate": 0.1
+            "win_rate": 0.1,
         }
 
         performance_metrics = {
             "total_return": 0.2,
             "sharpe_ratio": 1.5,
             "max_drawdown": 0.1,
-            "win_rate": 0.7
+            "win_rate": 0.7,
         }
 
         adjusted_weights = self.evaluator._adaptive_weight_adjustment(
@@ -211,7 +213,9 @@ class TestHybridIndividualEvaluator:
         base_score = 0.8
         confidence = 0.9
 
-        adjusted = self.evaluator._prediction_confidence_adjustment(base_score, confidence)
+        adjusted = self.evaluator._prediction_confidence_adjustment(
+            base_score, confidence
+        )
 
         assert isinstance(adjusted, float)
         assert adjusted >= base_score  # 信頼度が高いほどスコアが上がる
@@ -221,7 +225,9 @@ class TestHybridIndividualEvaluator:
         base_score = 0.8
         confidence = 0.3  # 低い信頼度
 
-        adjusted = self.evaluator._prediction_confidence_adjustment(base_score, confidence)
+        adjusted = self.evaluator._prediction_confidence_adjustment(
+            base_score, confidence
+        )
 
         assert adjusted <= base_score  # 信頼度が低いとスコアが下がる
 
@@ -257,14 +263,14 @@ class TestHybridIndividualEvaluator:
                 "sharpe_ratio": 1.2,
                 "max_drawdown": 0.08,
                 "win_rate": 0.6,
-                "total_trades": 25
+                "total_trades": 25,
             },
             "equity_curve": [100, 110, 105, 120, 115, 130],
             "trade_history": [
                 {"size": 1, "pnl": 10},
                 {"size": -1, "pnl": 5},
-                {"size": 1, "pnl": 15}
-            ]
+                {"size": 1, "pnl": 15},
+            ],
         }
         prediction_score = 0.85
 
@@ -273,7 +279,7 @@ class TestHybridIndividualEvaluator:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "prediction_score": 0.1
+            "prediction_score": 0.1,
         }
 
         fitness = self.evaluator._hybrid_fitness_calculation(
@@ -289,7 +295,9 @@ class TestHybridIndividualEvaluator:
         prediction_score = 0.8
 
         # 例外が発生するように設定
-        with patch.object(self.evaluator, '_extract_performance_metrics') as mock_extract:
+        with patch.object(
+            self.evaluator, "_extract_performance_metrics"
+        ) as mock_extract:
             mock_extract.side_effect = Exception("Test error")
 
             fitness = self.evaluator._hybrid_fitness_calculation(
@@ -307,10 +315,10 @@ class TestHybridIndividualEvaluator:
                 "sharpe_ratio": 1.2,
                 "max_drawdown": 0.08,
                 "win_rate": 0.6,
-                "total_trades": 12
+                "total_trades": 12,
             },
             "equity_curve": [],
-            "trade_history": []
+            "trade_history": [],
         }
 
         self.mock_backtest_service.run_backtest.return_value = mock_backtest_result
@@ -322,11 +330,13 @@ class TestHybridIndividualEvaluator:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "prediction_score": 0.1
+            "prediction_score": 0.1,
         }
 
         # レジーム検知器のモック
-        with patch('app.services.auto_strategy.core.hybrid_individual_evaluator.RegimeDetector') as mock_regime_class:
+        with patch(
+            "app.services.auto_strategy.core.hybrid_individual_evaluator.RegimeDetector"
+        ) as mock_regime_class:
             mock_regime_detector = Mock()
             mock_regime_detector.detect_regimes.return_value = [0, 1, 0, 2]
             mock_regime_class.return_value = mock_regime_detector
@@ -346,10 +356,10 @@ class TestHybridIndividualEvaluator:
                 "total_return": 0.15,
                 "sharpe_ratio": 1.2,
                 "max_drawdown": 0.08,
-                "total_trades": 8
+                "total_trades": 8,
             },
             "equity_curve": [],
-            "trade_history": []
+            "trade_history": [],
         }
 
         self.mock_backtest_service.run_backtest.return_value = mock_backtest_result
@@ -361,7 +371,7 @@ class TestHybridIndividualEvaluator:
             "total_return": 0.3,
             "sharpe_ratio": 0.4,
             "max_drawdown": 0.2,
-            "prediction_score": 0.1
+            "prediction_score": 0.1,
         }
 
         # レジーム検知器なし

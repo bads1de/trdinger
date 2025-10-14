@@ -156,7 +156,6 @@ class VolumeIndicators:
 
         return result
 
-
     @staticmethod
     @handle_pandas_ta_errors
     def vwap(
@@ -208,8 +207,6 @@ class VolumeIndicators:
         )
 
         return pd.Series(vwap, index=high.index if hasattr(high, "index") else None)
-
-
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -275,7 +272,6 @@ class VolumeIndicators:
 
         df = ta.cmf(high=high, low=low, close=close, volume=volume, window=length)
         return df if df is not None else pd.Series([], dtype=float)
-
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -349,8 +345,6 @@ class VolumeIndicators:
             df = pd.Series([], dtype=float)
 
         return df
-
-
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -493,7 +487,6 @@ class VolumeIndicators:
                 return result.iloc[:, 0], pd.Series(np.full(len(result), np.nan))
 
         return result, pd.Series(np.full(len(result), np.nan))
-
 
     @staticmethod
     @handle_pandas_ta_errors
