@@ -153,11 +153,6 @@ class TechnicalIndicatorService:
             df, config["function"], params
         )
         if not is_valid:
-            # STOCHの場合、詳細ログ
-            if config["function"] == "stoch":
-                logger.warning(
-                    f"STOCH データ長検証失敗: データ長={len(df)}, 最小必要長={min_length}, パラメータ={params}"
-                )
             return False
 
         # カラム検証
@@ -246,23 +241,12 @@ class TechnicalIndicatorService:
                     col_name = self._resolve_column_name(df, req_col)
                     if col_name is None:
                         logger.error(
-                            f"STOCH エラー: 必須カラム '{req_col}' が存在しません"
+                            f"必須カラム '{req_col}' が存在しません"
                         )
                         return None
                     positional_args.append(df[col_name])
 
-                # STOCHの場合、パラメータ名をpandas-ta仕様に変換
-                if config["function"] == "stoch":
-                    converted_params = params.copy()
-                    if "k_length" in params:
-                        converted_params["k"] = params["k_length"]
-                        del converted_params["k_length"]
-                    if "d_length" in params:
-                        converted_params["d"] = params["d_length"]
-                        del converted_params["d_length"]
-                    # smooth_kはそのまま
-                    params = converted_params
-
+                
                 return func(*positional_args, **params)
             else:
                 # 単一カラム処理
@@ -280,22 +264,11 @@ class TechnicalIndicatorService:
                     )
                     return None
 
-                # STOCHの場合、データ長チェック
-                if config["function"] == "stoch":
-                    min_length = (
-                        params.get("k_length", 14)
-                        + params.get("d_length", 3)
-                        + params.get("smooth_k", 3)
-                    )
-
+                
+                
                 return func(df[col_name], **params)
 
         except Exception as e:
-            # STOCHの場合、エラー詳細をログ
-            if config["function"] == "stoch":
-                logger.error(
-                    f"STOCH pandas-ta呼び出し失敗: {e}, パラメータ: {params}, データ長: {len(df)}"
-                )
             logger.error(
                 f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}, パラメータ: {params}"
             )
