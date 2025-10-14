@@ -58,7 +58,7 @@ def setup_logging():
     )
 
     # ログディレクトリが存在しない場合は作成
-    log_dir = "C:/Users/buti3/trading"
+    log_dir = "./logs"
     os.makedirs(log_dir, exist_ok=True)
 
 

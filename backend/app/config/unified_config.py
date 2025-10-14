@@ -69,14 +69,6 @@ class LoggingConfig(BaseSettings):
         extra = "ignore"
 
 
-class SecurityConfig(BaseSettings):
-    """セキュリティ設定"""
-
-    secret_key: str = Field(default="your-secret-key-here", alias="SECRET_KEY")
-
-    class Config:
-        env_prefix = "SECURITY_"
-        extra = "ignore"
 
 
 class MarketConfig(BaseSettings):
@@ -386,7 +378,6 @@ class UnifiedConfig(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
-    security: SecurityConfig = Field(default_factory=SecurityConfig)
     market: MarketConfig = Field(default_factory=MarketConfig)
     data_collection: DataCollectionConfig = Field(default_factory=DataCollectionConfig)
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)

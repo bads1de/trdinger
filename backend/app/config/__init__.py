@@ -11,7 +11,6 @@ from .unified_config import (
     LoggingConfig,
     MarketConfig,
     MLConfig,
-    SecurityConfig,
     UnifiedConfig,
     unified_config,
 )
@@ -27,7 +26,6 @@ __all__ = [
     "AppConfig",
     "DatabaseConfig",
     "LoggingConfig",
-    "SecurityConfig",
     "MarketConfig",
     "GAConfig",
     "MLConfig",

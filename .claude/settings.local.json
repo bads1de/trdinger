@@ -1,6 +1,19 @@
 {
   "permissions": {
-    "allow": ["Bash", "WebFetch", "Edit", "MultiEdit", "WebSearch", "Write"],
+    "allow": [
+      "Bash",
+      "WebFetch",
+      "Edit",
+      "MultiEdit",
+      "WebSearch",
+      "Write",
+      "mcp__context7__get-library-docs",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__find_symbol",
+      "mcp__serena__find_referencing_symbols",
+      "mcp__serena__list_dir",
+      "mcp__serena__check_onboarding_performed"
+    ],
     "deny": [],
     "ask": []
   },
