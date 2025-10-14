@@ -18,7 +18,6 @@ class TestIndicatorGenerator:
         config = Mock()
         config.min_indicators = 2
         config.max_indicators = 5
-        config.allowed_indicators = ["SMA", "EMA", "RSI"]
         return config
 
     @pytest.fixture
@@ -42,21 +41,16 @@ class TestIndicatorGenerator:
 
         for indicator in indicators:
             assert isinstance(indicator, IndicatorGene)
-            assert indicator.type in ["SMA", "EMA", "RSI"]
             assert indicator.enabled is True
 
     def test_generate_random_indicators_with_coverage(self, mock_config):
         """カバレッジモードでの指標生成テスト"""
-        mock_config.allowed_indicators = ["SMA", "EMA"]
         generator = IndicatorGenerator(mock_config)
-
-        # カバレッジピックを設定
-        generator._coverage_pick = "SMA"
 
         indicators = generator.generate_random_indicators()
 
-        # 最初の指標がSMAであることを確認
-        assert indicators[0].type == "SMA"
+        assert len(indicators) >= mock_config.min_indicators
+        assert len(indicators) <= mock_config.max_indicators
 
     def test_fallback_behavior(self, generator):
         """フォールバック動作テスト"""
@@ -88,8 +82,6 @@ class TestIndicatorGenerator:
 
     def test_setup_indicators_by_mode(self, mock_config):
         """モード別指標設定テスト"""
-        mock_config.allowed_indicators = ["SMA", "EMA"]
-
         with patch(
             "app.services.indicators.config.indicator_registry"
         ) as mock_registry:
@@ -97,9 +89,8 @@ class TestIndicatorGenerator:
 
             generator = IndicatorGenerator(mock_config)
 
-            # allowed_indicatorsが尊重される
-            assert "SMA" in generator.available_indicators
-            assert "EMA" in generator.available_indicators
+            # 技術指標が使用される
+            assert len(generator.available_indicators) > 0
 
     def test_error_handling(self, generator):
         """エラーハンドリングテスト"""
@@ -111,4 +102,4 @@ class TestIndicatorGenerator:
 
         # エラーが発生してもデフォルトのSMAが返される
         for indicator in indicators:
-            assert indicator.type in ["SMA", "EMA", "RSI"] or indicator.type == "SMA"
+            assert indicator.type == "SMA"

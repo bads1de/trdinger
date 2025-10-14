@@ -45,7 +45,6 @@ class IndicatorGenerator:
         """
         self.config = config
         self.indicator_service = TechnicalIndicatorService()
-        self._setup_coverage_tracking(config)
         self._valid_indicator_names = self._initialize_valid_indicators()
         self.composition_service = IndicatorCompositionService(config)
         self.available_indicators = self._setup_indicators_by_mode(config)
@@ -56,19 +55,6 @@ class IndicatorGenerator:
             return set(get_all_indicators())
         except Exception:
             return set()
-
-    def _setup_coverage_tracking(self, config: Any):
-        """カバレッジトラッキングを設定"""
-        try:
-            self._coverage_cycle = list(getattr(config, "allowed_indicators", []) or [])
-            if self._coverage_cycle:
-                random.shuffle(self._coverage_cycle)
-            self._coverage_idx = 0
-            self._coverage_pick = None
-        except Exception:
-            self._coverage_cycle = []
-            self._coverage_idx = 0
-            self._coverage_pick = None
 
     @safe_operation(
         default_return=IndicatorGene(
@@ -113,13 +99,6 @@ class IndicatorGenerator:
             f"指標モード: テクニカルオンリー ({len(available_indicators)}個の指標)"
         )
 
-        # allowed_indicators によりさらに絞り込み
-        allowed = set(getattr(config, "allowed_indicators", []) or [])
-        if allowed:
-            available_indicators = [
-                ind for ind in available_indicators if ind in allowed
-            ]
-
         # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
         if self._coverage_cycle:
             self._coverage_pick = self._coverage_cycle[
@@ -163,10 +142,6 @@ class IndicatorGenerator:
 
             indicator_gene = self._create_indicator_gene(indicator_type)
             indicators.append(indicator_gene)
-
-            # allowed_indicators が明示指定されている場合は早期リターン
-            if getattr(self.config, "allowed_indicators", None):
-                return indicators
 
         # 指標構成サービスで成立性を底上げ
         indicators = self._enhance_indicators_with_composition_service(indicators)

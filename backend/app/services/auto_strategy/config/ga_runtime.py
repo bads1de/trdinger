@@ -121,9 +121,7 @@ class GAConfig(BaseConfig):
     regime_adaptation_enabled: bool = False
     regime_detector_config: Optional["RegimeDetectorConfig"] = None
 
-    # 指標設定拡張
-    allowed_indicators: List[str] = field(default_factory=list)
-
+    
     # 遺伝子生成設定拡張
     price_data_weight: int = 3
     volume_data_weight: int = 1
@@ -246,20 +244,6 @@ class GAConfig(BaseConfig):
         except TypeError:
             errors.append("最大指標数は数値である必要があります")
 
-        if self.allowed_indicators:
-            try:
-                from app.services.indicators import TechnicalIndicatorService
-
-                valid_indicators = set(
-                    TechnicalIndicatorService().get_supported_indicators().keys()
-                )
-                invalid_indicators = set(self.allowed_indicators) - valid_indicators
-                if invalid_indicators:
-                    errors.append(f"無効な指標が含まれています: {invalid_indicators}")
-            except Exception:
-                # インポートできない場合は検証スキップ
-                logger.warning("指標検証がスキップされました")
-
         # パラメータ設定の検証
         for param_name, range_values in self.parameter_ranges.items():
             if not isinstance(range_values, list) or len(range_values) != 2:
@@ -303,7 +287,6 @@ class GAConfig(BaseConfig):
             "objective_weights": self.objective_weights,
             "dynamic_objective_reweighting": self.dynamic_objective_reweighting,
             "objective_dynamic_scalars": self.objective_dynamic_scalars,
-            "allowed_indicators": self.allowed_indicators,
             "parameter_ranges": self.parameter_ranges,
             "threshold_ranges": self.threshold_ranges,
             "fitness_constraints": self.fitness_constraints,
@@ -344,20 +327,6 @@ class GAConfig(BaseConfig):
     @classmethod
     def _preprocess_ga_dict(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """GAConfig特有のデータの前処理"""
-        # allowed_indicatorsが空の場合はデフォルトの指標リストを使用
-        if not data.get("allowed_indicators"):
-            try:
-                from app.services.indicators import TechnicalIndicatorService
-
-                indicator_service = TechnicalIndicatorService()
-                data["allowed_indicators"] = list(
-                    indicator_service.get_supported_indicators().keys()
-                )
-            except Exception:
-                # インポートできない場合はデフォルトを使用
-                logger.warning("指標サービスの取得が失敗しました")
-                data["allowed_indicators"] = []
-
         # fitness_weightsが指定されていない場合はデフォルト値を使用
         if not data.get("fitness_weights"):  # 空の辞書やNoneの場合
             data["fitness_weights"] = DEFAULT_FITNESS_WEIGHTS
@@ -487,25 +456,6 @@ class GAConfig(BaseConfig):
         self.fallback_start_date = getattr(
             ga_config, "fallback_start_date", "2024-01-01"
         )
-        self.fallback_end_date = getattr(ga_config, "fallback_end_date", "2024-04-09")
-
-        # レジーム適応設定（デフォルトはFalse、後続ステップで設定可能にする）
-        self.regime_adaptation_enabled = getattr(
-            ga_config, "regime_adaptation_enabled", False
-        )
-
-        # 許可指標リスト
-        if not self.allowed_indicators:
-            try:
-                from app.services.indicators import TechnicalIndicatorService
-
-                indicator_service = TechnicalIndicatorService()
-                self.allowed_indicators = list(
-                    indicator_service.get_supported_indicators().keys()
-                )
-            except Exception:
-                # Fallback: 設定から取得
-                self.allowed_indicators = config.indicators.valid_indicator_types[:]
 
     @classmethod
     def from_auto_strategy_config(cls, config: AutoStrategyConfig) -> "GAConfig":

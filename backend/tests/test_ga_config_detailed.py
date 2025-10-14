@@ -189,8 +189,6 @@ class TestGAConfig:
         config = GAConfig()
         constraints = {
             "max_indicators": 5,
-            "allowed_indicators": ["SMA", "RSI", "MACD", "BB", "ATR"],
-            "indicator_combinations": ["SMA+RSI", "MACD+BB"],
         }
         config.indicator_constraints = constraints
 

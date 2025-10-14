@@ -37,7 +37,6 @@ const initialConfig = {
     crossover_rate: 0.8,
     elite_size: 5,
     max_indicators: 5,
-    allowed_indicators: [],
     indicator_mode: "technical_only",
     fitness_weights: {
       total_return: 0.3,

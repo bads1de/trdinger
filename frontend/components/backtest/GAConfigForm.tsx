@@ -99,7 +99,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         crossover_rate: initialGAConfig.crossover_rate ?? 0.8,
         elite_size: initialGAConfig.elite_size ?? 5,
         max_indicators: initialGAConfig.max_indicators ?? 5,
-        allowed_indicators: initialGAConfig.allowed_indicators ?? [],
         indicator_mode: initialGAConfig.indicator_mode ?? "technical_only",
         fitness_weights: defaultFitnessWeights,
         fitness_constraints: defaultFitnessConstraints,

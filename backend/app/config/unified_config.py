@@ -253,10 +253,6 @@ class GAConfig(BaseSettings):
 
     # その他設定
     max_indicators: int = Field(default=5, alias="GA_MAX_INDICATORS")
-    allowed_indicators: List[str] = Field(
-        default=["SMA", "EMA", "RSI", "MACD", "BB", "ATR"],
-        alias="GA_ALLOWED_INDICATORS",
-    )
     enable_fitness_sharing: bool = Field(
         default=False, alias="GA_ENABLE_FITNESS_SHARING"
     )

@@ -194,19 +194,6 @@ class TestGAConfig:
         assert is_valid is False
         assert "個体数は数値である必要があります" in errors[0]
 
-    @patch("backend.app.services.auto_strategy.config.ga_runtime.logger")
-    def test_indicator_validation_with_import_error(self, mock_logger):
-        """指標検証時のインポートエラーハンドリング"""
-        config = GAConfig()
-        config.allowed_indicators = ["INVALID_INDICATOR"]
-
-        with patch(
-            "backend.app.services.indicators.TechnicalIndicatorService",
-            side_effect=ImportError,
-        ):
-            is_valid, errors = config.validate()
-            mock_logger.warning.assert_called_with("指標検証がスキップされました")
-
 
 class TestGAProgress:
     """GAProgressクラスのテスト"""

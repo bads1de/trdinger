@@ -49,8 +49,6 @@ export interface GAConfig {
     elite_size: number;
     /** 使用する指標の最大数（探索空間制御） */
     max_indicators: number;
-    /** 使用を許可する指標リスト（ホワイトリスト） */
-    allowed_indicators: string[];
     /** フィットネスの重み（加重合成の係数） */
     fitness_weights: {
       total_return: number;

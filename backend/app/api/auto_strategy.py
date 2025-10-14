@@ -51,7 +51,6 @@ class GAGenerationRequest(BaseModel):
                     "mutation_rate": 0.1,
                     "elite_size": 2,
                     "max_indicators": 3,
-                    "allowed_indicators": ["SMA", "EMA", "RSI", "MACD", "BB", "ATR"],
                     # 多目的最適化設定（オプション）
                     "enable_multi_objective": False,
                     "objectives": ["total_return"],

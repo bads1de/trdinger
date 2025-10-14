@@ -57,9 +57,9 @@ def indicator_service() -> TechnicalIndicatorService:
 
 
 class TestAllTechnicalIndicators:
-    """70個のテクニカルインジケーターの包括的テスト"""
+    """71個のテクニカルインジケーターの包括的テスト"""
 
-    # テスト対象の70個のインジケーター
+    # テスト対象の71個のインジケーター
     INDICATORS = [
         "ACCBANDS",
         "AD",
@@ -119,6 +119,7 @@ class TestAllTechnicalIndicators:
         "STOCH",
         "SUPERTREND",
         "SUPER_SMOOTHER",
+        "T3",
         "TEMA",
         "TRIMA",
         "TRIX",
