@@ -47,6 +47,9 @@ class IndicatorGenerator:
         self.indicator_service = TechnicalIndicatorService()
         self._valid_indicator_names = self._initialize_valid_indicators()
         self.composition_service = IndicatorCompositionService(config)
+        self._coverage_cycle = []  # 追加: カバレッジサイクルを初期化
+        self._coverage_idx = 0      # 追加: カバレッジインデックスを初期化
+        self._coverage_pick = None  # 追加: カバレッジピックを初期化
         self.available_indicators = self._setup_indicators_by_mode(config)
 
     def _initialize_valid_indicators(self) -> set:
@@ -100,11 +103,10 @@ class IndicatorGenerator:
         )
 
         # カバレッジモード: allowed 指定時は1つは巡回候補を確実に含める
-        if self._coverage_cycle:
-            self._coverage_pick = self._coverage_cycle[
-                self._coverage_idx % len(self._coverage_cycle)
-            ]
-            self._coverage_idx += 1
+        # 現在は通常モードで実行するため、カバレッジサイクルは設定しない
+        self._coverage_cycle = []  # カバレッジモード無効化
+        self._coverage_idx = 0
+        self._coverage_pick = None
 
         return available_indicators
 

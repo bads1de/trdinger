@@ -41,34 +41,8 @@ class IndicatorCompositionService:
         Returns:
             トレンド指標が追加された指標リスト
         """
-        try:
-            # トレンド系指標が存在するかチェック
-            trend_indicators_pool = [
-                name for name in available_indicators if self._is_trend_indicator(name)
-            ]
-
-            has_trend = any(self._is_trend_indicator(ind.type) for ind in indicators)
-
-            if not has_trend and trend_indicators_pool:
-                # 優先順位に従ってトレンド指標を選択
-                chosen = self._choose_preferred_trend_indicator(trend_indicators_pool)
-
-                # パラメータを設定して追加
-                default_params = self._get_default_params_for_indicator(chosen)
-                indicators.append(
-                    IndicatorGene(type=chosen, parameters=default_params, enabled=True)
-                )
-
-                # 上限を超えた場合は非トレンド指標を削除
-                if len(indicators) > self.config.max_indicators:
-                    removed = self._remove_non_trend_indicator(indicators)
-
-                    if removed:
-                        logger.debug(f"トレンド追加のため{removed}を削除")
-
-        except Exception as e:
-            logger.error(f"トレンド指標追加エラー: {e}")
-
+        # トレンド強制追加を完全に削除して多様性を確保
+        # トレンド指標が必要な場合はGAの評価関数で自然に選ばれるようにする
         return indicators
 
     def enhance_with_ma_cross_strategy(

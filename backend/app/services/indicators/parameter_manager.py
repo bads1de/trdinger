@@ -13,9 +13,6 @@ from app.services.indicators.config.indicator_config import (
 
 logger = logging.getLogger(__name__)
 
-# Constants
-DEFAULT_LENGTH = 14
-
 
 class IndicatorParameterManager:
     """
