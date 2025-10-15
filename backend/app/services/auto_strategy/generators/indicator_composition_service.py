@@ -49,7 +49,7 @@ class IndicatorCompositionService:
         self, indicators: List[IndicatorGene], available_indicators: List[str]
     ) -> List[IndicatorGene]:
         """
-        MAクロス戦略を可能にするために複数のMA指標を追加。
+        MAクロス戦略を可能にするために複数のMA指標を追加（確率的アプローチ）。
 
         Args:
             indicators: 現在の指標リスト
@@ -64,7 +64,8 @@ class IndicatorCompositionService:
                 1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS
             )
 
-            if ma_count < 2:
+            # 確率的にMAクロスを導入（強制的ではない）
+            if ma_count < 2 and random.random() < 0.25:  # 25%の確率で導入
                 # MA指標プールを準備
                 ma_pool = [
                     name
