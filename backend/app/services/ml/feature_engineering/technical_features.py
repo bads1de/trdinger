@@ -151,6 +151,161 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             logger.error(f"市場レジーム特徴量計算エラー: {e}")
             return df
 
+    def calculate_pattern_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> pd.DataFrame:
+        """
+        パターン特徴量を計算（TDDで追加されたメソッド）
+
+        Args:
+            df: OHLCV価格データ
+            lookback_periods: 計算期間設定
+
+        Returns:
+            パターン特徴量が追加されたDataFrame
+        """
+        try:
+            if not self.validate_input_data(df, ["Close", "High", "Low", "Open"]):
+                return df
+
+            result_df = self.create_result_dataframe(df)
+
+            # ドージ・ストキャスティクス（過熱・過売判断）
+            stoch_result = ta.stoch(
+                high=result_df["High"],
+                low=result_df["Low"],
+                close=result_df["Close"],
+                k=14,
+                d=3,
+                smooth_k=3,
+            )
+            if stoch_result is not None:
+                result_df["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
+                result_df["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
+                # ドージ・ストキャスティクス（KとDの乖離）
+                result_df["Stochastic_Divergence"] = (
+                    result_df["Stochastic_K"] - result_df["Stochastic_D"]
+                ).fillna(0.0)
+            else:
+                result_df["Stochastic_K"] = 50.0
+                result_df["Stochastic_D"] = 50.0
+                result_df["Stochastic_Divergence"] = 0.0
+
+            # ボリンジャーバンド（サポート・レジスタンス）
+            bb_result = ta.bbands(result_df["Close"], length=20, std=2)
+            if bb_result is not None:
+                result_df["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(result_df["Close"])
+                result_df["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(result_df["Close"])
+                result_df["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(result_df["Close"])
+                # ボリンジャーバンドからの乖離率
+                result_df["BB_Position"] = self.safe_ratio_calculation(
+                    result_df["Close"] - result_df["BB_Lower"],
+                    result_df["BB_Upper"] - result_df["BB_Lower"],
+                    fill_value=0.5
+                )
+            else:
+                result_df["BB_Upper"] = result_df["Close"]
+                result_df["BB_Middle"] = result_df["Close"]
+                result_df["BB_Lower"] = result_df["Close"]
+                result_df["BB_Position"] = 0.5
+
+            # 移動平均（トレンド判断）
+            short_ma = lookback_periods.get("short_ma", 10)
+            long_ma = lookback_periods.get("long_ma", 50)
+
+            ma_short = ta.sma(result_df["Close"], length=short_ma)
+            ma_long = ta.sma(result_df["Close"], length=long_ma)
+
+            if ma_short is not None and ma_long is not None:
+                result_df["MA_Short"] = ma_short.fillna(result_df["Close"])
+                result_df["MA_Long"] = ma_long.fillna(result_df["Close"])
+                # MAクロスシグナル（短期MAが長期MAを上回ると1、下回ると0）
+                result_df["MA_Cross"] = np.where(
+                    result_df["MA_Short"] > result_df["MA_Long"], 1.0, 0.0
+                )
+            else:
+                result_df["MA_Short"] = result_df["Close"]
+                result_df["MA_Long"] = result_df["Close"]
+                result_df["MA_Cross"] = 0.5
+
+            # 価格パターン（ダブルボトム、ヘッドアンドショルダー等の簡易検出）
+            result_df = self._detect_price_patterns(result_df)
+
+            # ボラティリティパターン（ATRを使用）
+            atr_values = ta.atr(
+                high=result_df["High"],
+                low=result_df["Low"],
+                close=result_df["Close"],
+                length=14
+            )
+            if atr_values is not None:
+                result_df["ATR"] = atr_values.fillna(0.0)
+                # 正規化されたボラティリティ
+                result_df["Normalized_Volatility"] = self.safe_ratio_calculation(
+                    result_df["ATR"],
+                    result_df["Close"],
+                    fill_value=0.01
+                )
+            else:
+                result_df["ATR"] = 0.0
+                result_df["Normalized_Volatility"] = 0.01
+
+            return result_df
+
+        except Exception as e:
+            logger.error(f"パターン特徴量計算エラー: {e}")
+            return df
+
+    def _detect_price_patterns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        簡易的な価格パターン検出
+
+        Args:
+            df: 価格データが含まれるDataFrame
+
+        Returns:
+            パターン特徴量が追加されたDataFrame
+        """
+        try:
+            # 局所的極値の検出（単純な方法）
+            df["Local_Min"] = (
+                (df["Close"] <= df["Close"].shift(1)) &
+                (df["Close"] <= df["Close"].shift(-1)) &
+                (df["Close"] < df["Close"].shift(2)) &
+                (df["Close"] < df["Close"].shift(-2))
+            ).astype(float)
+
+            df["Local_Max"] = (
+                (df["Close"] >= df["Close"].shift(1)) &
+                (df["Close"] >= df["Close"].shift(-1)) &
+                (df["Close"] > df["Close"].shift(2)) &
+                (df["Close"] > df["Close"].shift(-2))
+            ).astype(float)
+
+            # 簡易的なサポート・レジスタンスレベル
+            window_size = 20
+            df["Support_Level"] = df["Close"].rolling(window=window_size, min_periods=1).min()
+            df["Resistance_Level"] = df["Close"].rolling(window=window_size, min_periods=1).max()
+
+            # 価格がサポート/レジスタンスに近いことを示す特徴量
+            df["Near_Support"] = self.safe_ratio_calculation(
+                df["Close"] - df["Support_Level"],
+                df["Resistance_Level"] - df["Support_Level"],
+                fill_value=0.5
+            )
+            df["Near_Resistance"] = self.safe_ratio_calculation(
+                df["Resistance_Level"] - df["Close"],
+                df["Resistance_Level"] - df["Support_Level"],
+                fill_value=0.5
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(f"価格パターン検出エラー: {e}")
+            # エラー時は元のDataFrameを返す
+            return df
+
     def calculate_momentum_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
@@ -187,22 +342,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 result_df["MACD"] = 0.0
                 result_df["MACD_Signal"] = 0.0
                 result_df["MACD_Histogram"] = 0.0
-
-            # ストキャスティクス（pandas-ta使用）
-            stoch_result = ta.stoch(
-                high=result_df["High"],
-                low=result_df["Low"],
-                close=result_df["Close"],
-                k=14,
-                d=3,
-                smooth_k=3,
-            )
-            if stoch_result is not None:
-                result_df["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
-                result_df["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
-            else:
-                result_df["Stochastic_K"] = 50.0
-                result_df["Stochastic_D"] = 50.0
 
             # ウィリアムズ%R（pandas-ta使用）
             willr_values = ta.willr(
@@ -245,7 +384,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             return result_df
 
         except Exception as e:
-            logger.error(f"モメンタム特徴量計算エラー: {e}")
+            logger.error(f"モメンタム特征量計算エラー: {e}")
             return df
 
     def safe_ratio_calculation(
