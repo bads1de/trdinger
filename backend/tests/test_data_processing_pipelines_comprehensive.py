@@ -15,7 +15,11 @@ from app.utils.data_processing.pipelines.preprocessing_pipeline import (
 from app.utils.data_processing.pipelines.comprehensive_pipeline import (
     create_comprehensive_pipeline,
 )
-from app.utils.data_processing.validators.data_validator import DataValidator
+from app.utils.data_processing.validators.data_validator import (
+    validate_ohlcv_data,
+    validate_extended_data,
+    validate_data_integrity,
+)
 from app.utils.data_processing.transformers.outlier_remover import OutlierRemover
 from app.utils.data_processing.transformers.data_imputer import DataImputer
 from app.utils.data_processing.transformers.categorical_encoder import (
@@ -96,18 +100,28 @@ class TestDataProcessingPipelinesComprehensive:
 
     def test_data_validation_basic(self, sample_clean_data):
         """基本データ検証のテスト"""
-        validator = DataValidator()
-
-        is_valid, errors = validator.validate(sample_clean_data)
+        # 関数を使用して検証
+        try:
+            validate_ohlcv_data(sample_clean_data)
+            is_valid = True
+            errors = []
+        except Exception as e:
+            is_valid = False
+            errors = [str(e)]
 
         assert is_valid is True
         assert len(errors) == 0
 
     def test_data_validation_with_errors(self, sample_dirty_data):
         """エラーを含むデータ検証のテスト"""
-        validator = DataValidator()
-
-        is_valid, errors = validator.validate(sample_dirty_data)
+        # 関数を使用して検証
+        try:
+            validate_ohlcv_data(sample_dirty_data)
+            is_valid = True
+            errors = []
+        except Exception as e:
+            is_valid = False
+            errors = [str(e)]
 
         assert is_valid is False
         assert len(errors) > 0

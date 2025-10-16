@@ -1,3 +1,7 @@
+"""
+AutoStrategy APIテスト（修正版）
+"""
+
 import pytest
 from starlette.testclient import TestClient
 from unittest.mock import MagicMock, patch
@@ -14,8 +18,6 @@ def override_get_auto_strategy_service():
     return mock_auto_strategy_service
 
 app.dependency_overrides[get_auto_strategy_service] = override_get_auto_strategy_service
-
-client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
@@ -38,6 +40,9 @@ def test_generate_strategy_success():
         "ga_config": {"population_size": 10},
     }
 
+    # TestClientを関数内で作成
+    client = TestClient(app)
+
     # 実行
     response = client.post("/api/auto-strategy/generate", json=request_body)
 
@@ -52,6 +57,9 @@ def test_generate_strategy_validation_error():
     """異常系: POST /generate - 不正なリクエストボディ"""
     # 準備
     request_body = {"experiment_name": "Test"}  # 必須フィールドが不足
+
+    # TestClientを関数内で作成
+    client = TestClient(app)
 
     # 実行
     response = client.post("/api/auto-strategy/generate", json=request_body)
@@ -73,6 +81,9 @@ def test_generate_strategy_service_exception():
         "ga_config": {},
     }
 
+    # TestClientを関数内で作成
+    client = TestClient(app)
+
     # 実行
     # NOTE: safe_execute_asyncが例外をキャッチし、エラーレスポンスを返すため、
     # TestClientは例外を発生させない。レスポンスの内容をチェックする。
@@ -90,6 +101,9 @@ def test_list_experiments_success():
     # 準備
     mock_experiments = [{"id": "exp1"}]
     mock_auto_strategy_service.list_experiments.return_value = mock_experiments
+
+    # TestClientを関数内で作成
+    client = TestClient(app)
 
     # 実行
     response = client.get("/api/auto-strategy/experiments")
@@ -109,6 +123,9 @@ def test_stop_experiment_success():
         "message": "Stopped",
     }
 
+    # TestClientを関数内で作成
+    client = TestClient(app)
+
     # 実行
     response = client.post(f"/api/auto-strategy/experiments/{experiment_id}/stop")
 
@@ -125,6 +142,9 @@ def test_stop_experiment_not_found():
     mock_auto_strategy_service.stop_experiment.side_effect = ValueError(
         "Experiment not found"
     )
+
+    # TestClientを関数内で作成
+    client = TestClient(app)
 
     # 実行
     response = client.post(f"/api/auto-strategy/experiments/{experiment_id}/stop")
