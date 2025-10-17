@@ -377,7 +377,7 @@ class TestMLBugDetection:
         new_predictions = [0.3, 0.4, 0.2, 0.35]
 
         # 大きな変化
-        prediction_shift = np.mean(np.abs(np.array(old_predictions) - np.array(new_predictions))
+        prediction_shift = np.mean(np.abs(np.array(old_predictions) - np.array(new_predictions)))
         assert prediction_shift > 0.4
 
     def test_data_type_mismatch(self, sample_data):

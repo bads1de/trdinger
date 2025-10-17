@@ -139,7 +139,12 @@ class TestMLTrainingService:
         service = MLTrainingService()
         service.trainer = mock_trainer
 
-        optimization_settings = OptimizationSettings(enabled=True, n_calls=10)
+        # 最適化設定を正しく設定
+        optimization_settings = OptimizationSettings(
+            enabled=True,
+            n_calls=10,
+            parameter_space={"learning_rate": {"type": "real", "low": 0.01, "high": 0.1}}
+        )
         result = service.train_model(
             sample_training_data,
             save_model=False,

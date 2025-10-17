@@ -14,7 +14,7 @@ from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from app.services.auto_strategy.core.hybrid_individual_evaluator import HybridIndividualEvaluator
 from app.services.auto_strategy.core.drl_policy_adapter import DRLPolicyAdapter
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.ml.ml_training_service import MLTrainingService
 from app.services.backtest.backtest_service import BacktestService
 

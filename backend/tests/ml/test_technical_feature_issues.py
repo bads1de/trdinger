@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import numpy as np
 
-from backend.app.services.ml.feature_engineering.technical_feature_calculator import TechnicalFeatureCalculator
+from backend.app.services.ml.feature_engineering.technical_features import TechnicalFeatureCalculator
 
 
 class TestTechnicalFeatureCalculatorIssues:

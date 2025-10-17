@@ -60,7 +60,7 @@ class TestMLIntegrationComprehensive:
             return {"up": 0.6, "down": 0.3, "range": 0.1}
 
         adapter = DRLPolicyAdapter(predict_fn=custom_predict)
-        result = adapter.predict_signals(pd.DataFrame({"close": [100, 101, 102]))
+        result = adapter.predict_signals(pd.DataFrame({"close": [100, 101, 102]}))
 
         assert result["up"] == 0.6
         assert result["down"] == 0.3
