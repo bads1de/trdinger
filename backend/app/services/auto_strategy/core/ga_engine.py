@@ -5,9 +5,8 @@ DEAPライブラリを使用したGA実装。
 """
 
 import logging
-import random
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 from deap import tools
@@ -221,7 +220,17 @@ class GeneticAlgorithmEngine:
         return stats
 
     def _create_evolution_runner(self, toolbox, stats, population=None):
-        """独立したEvolutionRunnerインスタンスを作成"""
+        """
+        独立したEvolutionRunnerインスタンスを作成
+
+        Args:
+            toolbox: DEAPツールボックス
+            stats: 統計情報オブジェクト
+            population: 初期個体群（オプション）
+
+        Returns:
+            EvolutionRunnerインスタンス
+        """
         fitness_sharing = (
             self.fitness_sharing
             if hasattr(self, "fitness_sharing") and self.fitness_sharing
@@ -230,7 +239,16 @@ class GeneticAlgorithmEngine:
         return EvolutionRunner(toolbox, stats, fitness_sharing, population)
 
     def _create_initial_population(self, toolbox, config: GAConfig):
-        """初期個体群を生成"""
+        """
+        初期個体群を生成
+
+        Args:
+            toolbox: DEAPツールボックス
+            config: GA設定
+
+        Returns:
+            生成された個体群
+        """
         population = toolbox.population(n=config.population_size)
         # 初期評価
         fitnesses = toolbox.map(toolbox.evaluate, population)
@@ -239,7 +257,17 @@ class GeneticAlgorithmEngine:
         return population
 
     def _run_optimization(self, runner: EvolutionRunner, population, config: GAConfig):
-        """独立したEvolutionRunnerを使用して最適化アルゴリズムを実行"""
+        """
+        独立したEvolutionRunnerを使用して最適化アルゴリズムを実行
+
+        Args:
+            runner: EvolutionRunnerインスタンス
+            population: 初期個体群
+            config: GA設定
+
+        Returns:
+            最適化後の個体群とログブック
+        """
         if config.enable_multi_objective:
             return runner.run_multi_objective_evolution(population, config)
         else:
@@ -248,7 +276,18 @@ class GeneticAlgorithmEngine:
     def _process_results(
         self, population, config: GAConfig, logbook, start_time: float
     ):
-        """最適化結果を処理"""
+        """
+        最適化結果を処理
+
+        Args:
+            population: 最終個体群
+            config: GA設定
+            logbook: 進化ログ
+            start_time: 開始時刻（秒）
+
+        Returns:
+            処理された進化結果の辞書
+        """
         # 最良個体の取得とデコード
         best_individual, best_gene, best_strategies = self._extract_best_individuals(
             population, config
@@ -278,7 +317,16 @@ class GeneticAlgorithmEngine:
         return result
 
     def _extract_best_individuals(self, population, config: GAConfig):
-        """最良個体を抽出し、デコード"""
+        """
+        最良個体を抽出し、デコード
+
+        Args:
+            population: 最終個体群
+            config: GA設定
+
+        Returns:
+            最良個体、最良遺伝子、および最良戦略のタプル
+        """
         from ..models.strategy_models import StrategyGene
         from ..serializers.gene_serialization import GeneSerializer
 

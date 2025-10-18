@@ -100,7 +100,12 @@ class BackgroundTaskManager:
             )
 
     def _cleanup_task_resources(self, task_id: str):
-        """タスクのリソースをクリーンアップ"""
+        """
+        タスクのリソースをクリーンアップ
+
+        Args:
+            task_id: タスクID
+        """
         try:
             # クリーンアップコールバックを実行
             callbacks = self._cleanup_callbacks.get(task_id, [])
@@ -156,7 +161,9 @@ class BackgroundTaskManager:
             self.unregister_task(task_id, force_cleanup=True)
 
     def cleanup_all_tasks(self):
-        """すべてのアクティブなタスクをクリーンアップ"""
+        """
+        すべてのアクティブなタスクをクリーンアップ
+        """
         with self._lock:
             task_ids = list(self._active_tasks.keys())
 
@@ -166,7 +173,12 @@ class BackgroundTaskManager:
         logger.info(f"全バックグラウンドタスククリーンアップ完了: {len(task_ids)}個")
 
     def _get_memory_usage(self) -> float:
-        """現在のメモリ使用量を取得（MB単位）"""
+        """
+        現在のメモリ使用量を取得（MB単位）
+
+        Returns:
+            メモリ使用量（MB）
+        """
         try:
             import psutil
 
