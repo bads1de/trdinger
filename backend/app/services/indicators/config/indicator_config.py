@@ -144,15 +144,7 @@ class IndicatorConfig:
 
         return params
 
-    def add_parameter(self, param: ParameterConfig) -> None:
-        """互換性のためのダミー実装: パラメータを param_map に追加しないが呼び出しを許可する。"""
-        # 実際の実装ではパラメータリストを保持するが、ここでは最小限にとどめる
-        return None
-
-    def generate_json_name(self) -> str:
-        """JSON用の名称を生成（現状は indicator_name を返す）"""
-        return self.indicator_name
-
+    
     def get_parameter_ranges(self) -> Dict[str, Dict[str, Any]]:
         """パラメータ範囲を取得"""
         ranges = {}
@@ -219,14 +211,7 @@ class IndicatorConfigRegistry:
 
     def __init__(self):
         self._configs: Dict[str, IndicatorConfig] = {}
-        # 実験的インジケータ集合（ジェネレーターから参照）
-        self.experimental_indicators = {
-            "CMF",
-        }
-
-        # フォールバックマッピングをレジストリ内に定義
-        self._fallback_indicators = {}
-
+        
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
         self._configs[config.indicator_name] = config
@@ -245,10 +230,6 @@ class IndicatorConfigRegistry:
 
     def list_indicators(self) -> List[str]:
         """登録されているインジケーター名のリストを取得"""
-        return list(self._configs.keys())
-
-    def get_supported_indicator_names(self) -> List[str]:
-        """サポートされている指標の名前のリストを取得 (新規追加)"""
         return list(self._configs.keys())
 
     def get_all_indicators(self) -> Dict[str, IndicatorConfig]:

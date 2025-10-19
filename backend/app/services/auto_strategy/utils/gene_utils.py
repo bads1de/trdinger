@@ -213,7 +213,6 @@ class GeneticUtils:
         numeric_fields: Optional[List[str]] = None,
         enum_fields: Optional[List[str]] = None,
         choice_fields: Optional[List[str]] = None,
-        list_fields: Optional[List[str]] = None,
     ):
         """
         ジェネリック遺伝子交叉関数
@@ -225,7 +224,6 @@ class GeneticUtils:
             numeric_fields: 数値フィールドのリスト（平均化）
             enum_fields: Enumフィールドのリスト（ランダム選択）
             choice_fields: どちらかを選択するフィールドのリスト
-            list_fields: リストフィールドのリスト（未使用）
 
         Returns:
             (child1_gene, child2_gene) のタプル
