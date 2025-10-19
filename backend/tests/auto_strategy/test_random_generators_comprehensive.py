@@ -22,7 +22,7 @@ from app.services.auto_strategy.generators.random.position_sizing_generator impo
 from app.services.auto_strategy.generators.random.operand_generator import (
     OperandGenerator,
 )
-from app.services.auto_strategy.config.ga_config import GAConfig
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.models.strategy_models import (
     StrategyGene,
     IndicatorGene,
@@ -195,27 +195,6 @@ class TestRandomGeneratorsComprehensive:
         assert tpsl_gene.risk_reward_ratio >= 1.5
         assert tpsl_gene.risk_reward_ratio <= 3.0
 
-    def test_tpsl_generator_technical_only_mode(self, config):
-        """テクニカルオンリー時のTP/SL生成テスト"""
-        config.indicator_mode = "technical_only"
-
-        generator = TPSLGenerator(config)
-
-        # 複数回生成してバイアスが確認できるか
-        tp_values = []
-        sl_values = []
-        for _ in range(10):
-            tpsl_gene = generator.generate_tpsl_gene()
-            tp_values.append(tpsl_gene.take_profit_pct)
-            sl_values.append(tpsl_gene.stop_loss_pct)
-
-        # 小さめの値にバイアスがかかっているか
-        avg_tp = sum(tp_values) / len(tp_values)
-        avg_sl = sum(sl_values) / len(sl_values)
-
-        assert avg_tp < 0.1  # 小さめのTP
-        assert avg_sl < 0.05  # 小さめのSL
-
     def test_tpsl_generator_error_handling(self, config):
         """TP/SL生成のエラーハンドリング"""
         generator = TPSLGenerator(config)
@@ -378,16 +357,6 @@ class TestRandomGeneratorsComprehensive:
 
         assert generator.enable_smart_generation is True
         # コンテキストが設定される
-
-    def test_indicator_mode_aggressive_default(self, config):
-        """アグレッシブデフォルト設定テスト"""
-        # テクニカルオンリーかつthreshold_profile未指定
-        config.indicator_mode = "technical_only"
-
-        generator = RandomGeneGenerator(config, smart_context={})
-
-        # aggressiveが設定されるか確認（内部ロジックの確認）
-        # 実際の動作はスマートコンディショングェネレータに依存
 
     def test_condition_normalization(self, random_gene_generator):
         """条件正規化のテスト"""

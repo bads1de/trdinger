@@ -67,10 +67,6 @@ export interface GAConfig {
       min_sharpe_ratio: number;
     };
 
-    // 指標モード設定
-    /** 指標の生成モード（テクニカル/ML/混合） */
-    indicator_mode: "technical_only" | "ml_only" | "mixed";
-
     // 高度な設定
     /** フィットネスシェアリング有効化（多様性維持） */
     enable_fitness_sharing?: boolean;

@@ -82,24 +82,6 @@ class TPSLGenerator:
                     atr_min * 1.5, atr_max * 2.0
                 )
 
-            # テクニカルオンリー時はクローズ成立性を高めるため、固定小幅TP/SLにバイアス
-            try:
-                if getattr(self.config, "indicator_mode", None) == "technical_only":
-                    # 小さめの値にバイアスをかけつつ、メソッド自体は多様性を残す
-                    if random.random() < 0.5:
-                        tpsl_gene.method = TPSLMethod.FIXED_PERCENTAGE
-                    # 小さめの値に再サンプル
-                    tpsl_gene.stop_loss_pct = random.uniform(0.005, 0.02)
-                    tpsl_gene.take_profit_pct = random.uniform(0.01, 0.05)
-                    # RR連動のベースも縮小
-                    tpsl_gene.base_stop_loss = max(
-                        0.005, min(0.02, tpsl_gene.stop_loss_pct)
-                    )
-                    # RRは控えめ
-                    tpsl_gene.risk_reward_ratio = 1.5
-            except Exception:
-                pass
-
             return tpsl_gene
 
         except Exception as e:

@@ -37,7 +37,6 @@ const initialConfig = {
     crossover_rate: 0.8,
     elite_size: 5,
     max_indicators: 5,
-    indicator_mode: "technical_only",
     fitness_weights: {
       total_return: 0.3,
       sharpe_ratio: 0.4,
@@ -69,41 +68,6 @@ const renderWithTooltipProvider = (component: React.ReactElement) => {
 describe("GAConfigForm", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  test("デフォルトでindicator_modeがtechnical_onlyであること", () => {
-    renderWithTooltipProvider(
-      <GAConfigForm
-        onSubmit={mockOnSubmit}
-        onClose={mockOnClose}
-        initialConfig={initialConfig}
-      />
-    );
-
-    // 指標モードのセレクト要素を取得（TAラベルで特定）
-    const indicatorModeSelect = screen.getByText("TA");
-
-    // デフォルト値が"technical_only"であることを確認
-    expect(indicatorModeSelect).toBeInTheDocument();
-  });
-
-  test("指標モードの選択肢が正しく表示されること", () => {
-    renderWithTooltipProvider(
-      <GAConfigForm
-        onSubmit={mockOnSubmit}
-        onClose={mockOnClose}
-        initialConfig={initialConfig}
-      />
-    );
-
-    // 指標モードのセレクト要素を取得
-    const indicatorModeSelect = screen.getByText("TA");
-
-    // 要素が存在することを確認
-    expect(indicatorModeSelect).toBeInTheDocument();
-
-    // ラベルが存在することを確認
-    expect(screen.getByText("指標モード (indicator_mode)")).toBeInTheDocument();
   });
 
   test("自動最適化説明セクションがデフォルトで折りたたまれていること", () => {
@@ -168,43 +132,23 @@ describe("GAConfigForm", () => {
     expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
 
-    // indicator_modeがtechnical_onlyであることを確認
-    expect(submittedConfig.ga_config.indicator_mode).toBe("technical_only");
-  });
-
-  test("indicator_modeを変更できること", () => {
-    renderWithTooltipProvider(
-      <GAConfigForm
-        onSubmit={mockOnSubmit}
-        onClose={mockOnClose}
-        initialConfig={initialConfig}
-      />
-    );
-
-    // 現在の値がTAであることを確認
-    expect(screen.getByText("TA")).toBeInTheDocument();
-
-    // 指標モードのセレクトトリガーをクリック（ドロップダウンを開く）
-    const selectTrigger = screen
-      .getAllByRole("combobox")
-      .find((element) => element.textContent?.includes("TA"));
-    expect(selectTrigger).toBeTruthy();
-    fireEvent.click(selectTrigger!);
-
-    // MLオプションをクリック
-    const mlOption = screen.getByText("ML");
-    fireEvent.click(mlOption);
-
-    // 値が変更されたことを確認
-    expect(screen.getByText("ML")).toBeInTheDocument();
+    // 自動最適化セクションのテスト
+    fireEvent.click(screen.getByText("自動最適化"));
+    expect(screen.getByText("高度なGA設定")).toBeInTheDocument();
 
     // フォームを送信
     const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
     fireEvent.click(submitButton);
 
-    // onSubmitが正しい値で呼び出されたことを確認
+    // onSubmitが呼び出されたことを確認
+    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
-    expect(submittedConfig.ga_config.indicator_mode).toBe("ml_only");
+
+    // GA設定が正しく送信されることを確認（indicator_modeなし）
+    expect(submittedConfig.ga_config).toBeDefined();
+    expect(submittedConfig.ga_config.population_size).toBe(20);
+    expect(submittedConfig.ga_config.generations).toBe(15);
+    expect(submittedConfig.ga_config.max_indicators).toBe(5);
   });
 
   test("レジーム適応チェックボックスがデフォルトで未チェックであること", () => {

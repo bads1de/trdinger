@@ -23,13 +23,6 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 
-// 指標モードの選択肢
-const INDICATOR_MODE_OPTIONS = [
-  { value: "technical_only", label: "TA" },
-  { value: "ml_only", label: "ML" },
-  { value: "mixed", label: "混合" },
-];
-
 const DRL_POLICY_OPTIONS = [
   { value: "ppo", label: "PPO" },
   { value: "a2c", label: "A2C" },
@@ -99,7 +92,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         crossover_rate: initialGAConfig.crossover_rate ?? 0.8,
         elite_size: initialGAConfig.elite_size ?? 5,
         max_indicators: initialGAConfig.max_indicators ?? 5,
-        indicator_mode: initialGAConfig.indicator_mode ?? "technical_only",
         fitness_weights: defaultFitnessWeights,
         fitness_constraints: defaultFitnessConstraints,
         enable_multi_objective: initialGAConfig.enable_multi_objective ?? true,
@@ -295,21 +287,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           step={0.01}
           required
           description={GA_INFO_MESSAGES.crossover_rate}
-        />
-        <SelectField
-          label="指標モード (indicator_mode)"
-          value={config.ga_config.indicator_mode}
-          onChange={(value) =>
-            setConfig((prev) => ({
-              ...prev,
-              ga_config: {
-                ...prev.ga_config,
-                indicator_mode: value as "technical_only" | "ml_only" | "mixed",
-              },
-            }))
-          }
-          options={INDICATOR_MODE_OPTIONS}
-          required
         />
       </div>
 

@@ -73,16 +73,6 @@ class RandomGeneGenerator:
         # コンテキストがあれば適用
         try:
             smart_context = smart_context or {}
-            # デフォルトを強めに: テクニカルオンリー時は成功率改善のため aggressive を既定
-            try:
-                indicator_mode = getattr(config, "indicator_mode", "mixed")
-                if (
-                    "threshold_profile" not in smart_context
-                    and indicator_mode == "technical_only"
-                ):
-                    smart_context["threshold_profile"] = "aggressive"
-            except Exception:
-                pass
             self.smart_condition_generator.set_context(
                 timeframe=smart_context.get("timeframe"),
                 symbol=smart_context.get("symbol"),
