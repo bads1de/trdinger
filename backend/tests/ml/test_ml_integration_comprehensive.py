@@ -62,9 +62,9 @@ class TestMLIntegrationComprehensive:
         adapter = DRLPolicyAdapter(predict_fn=custom_predict)
         result = adapter.predict_signals(pd.DataFrame({"close": [100, 101, 102]}))
 
-        assert result["up"] == 0.6
-        assert result["down"] == 0.3
-        assert result["range"] == 0.1
+        assert pytest.approx(result["up"], rel=1e-10) == 0.6
+        assert pytest.approx(result["down"], rel=1e-10) == 0.3
+        assert pytest.approx(result["range"], rel=1e-10) == 0.1
 
     def test_drl_adapter_fallback_behavior(self, drl_adapter, sample_empty_features, sample_none_features):
         """DRLアダプタのフォールバック動作テスト"""

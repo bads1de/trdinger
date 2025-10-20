@@ -63,19 +63,19 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     };
 
     const effectiveBaseConfig = currentBacktestConfig || baseBacktestConfig;
-    const initialGAConfig = initialConfig.ga_config ?? {};
+    const initialGAConfig = (initialConfig.ga_config ?? {}) as any;
     const defaultFitnessWeights = {
       total_return: 0.3,
       sharpe_ratio: 0.4,
       max_drawdown: 0.2,
       win_rate: 0.1,
-      ...initialGAConfig.fitness_weights,
+      ...(initialGAConfig.fitness_weights || {}),
     };
     const defaultFitnessConstraints = {
       min_trades: 10,
       max_drawdown_limit: 0.3,
       min_sharpe_ratio: 0.5,
-      ...initialGAConfig.fitness_constraints,
+      ...(initialGAConfig.fitness_constraints || {}),
     };
 
     const defaultExperimentName =
@@ -181,7 +181,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             ...currentAutoml,
             drl: {
               ...currentDrl,
-              policy_type: value,
+              policy_type: value as "ppo" | "a2c" | "dqn",
             },
           },
         },

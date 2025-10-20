@@ -2,6 +2,7 @@ import React from "react";
 import { BacktestResult } from "@/types/backtest";
 import CollapsibleJson from "@/components/common/CollapsibleJson";
 import StrategyGeneDisplay from "../StrategyGeneDisplay";
+import StrategyParametersModal from "../StrategyParametersModal";
 import { formatPercentage } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 
@@ -13,11 +14,14 @@ export default function ParametersTab({ result }: ParametersTabProps) {
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-br from-gray-900/90 to-black/80 rounded-xl p-6 border border-gray-700/50 shadow-2xl backdrop-blur-sm">
-        <div className="flex items-center mb-6">
-          <div className="w-4 h-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full mr-3 animate-pulse shadow-lg shadow-cyan-500/50"></div>
-          <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-mono tracking-wide">
-            STRATEGY PARAMETERS
-          </h3>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full mr-3 animate-pulse shadow-lg shadow-cyan-500/50"></div>
+            <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-mono tracking-wide">
+              STRATEGY PARAMETERS
+            </h3>
+          </div>
+          <StrategyParametersModal result={result} />
         </div>
 
         {/* デバッグ情報 - 折りたたみ可能なJSON表示 */}

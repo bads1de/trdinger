@@ -163,7 +163,7 @@ const MLManagementPanel: React.FC = () => {
   );
 };
 
-export default function BacktestPage() {
+function BacktestPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -336,5 +336,13 @@ export default function BacktestPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BacktestPage() {
+  return (
+    <React.Suspense fallback={<LoadingSpinner />}>
+      <BacktestPageContent />
+    </React.Suspense>
   );
 }
