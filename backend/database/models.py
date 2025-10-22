@@ -19,9 +19,9 @@ from .connection import Base
 
 
 class OHLCVData(Base):
-    """
-    OHLCV価格データテーブル
+    """OHLCV価格データテーブル。
 
+    取引所から取得したOHLCV（始値、高値、安値、終値、出来高）データを保存します。
     """
 
     __tablename__ = "ohlcv_data"
@@ -183,8 +183,7 @@ class OpenInterestData(Base):
 
 
 class BacktestResult(Base):
-    """
-    バックテスト結果テーブル
+    """バックテスト結果テーブル。
 
     backtesting.pyライブラリを使用したバックテスト結果を保存します。
     """
@@ -258,8 +257,7 @@ class BacktestResult(Base):
 
 
 class GAExperiment(Base):
-    """
-    GA実験テーブル
+    """GA実験テーブル。
 
     遺伝的アルゴリズムによる戦略生成実験の情報を保存します。
     """
@@ -309,8 +307,7 @@ class GAExperiment(Base):
 
 
 class GeneratedStrategy(Base):
-    """
-    生成された戦略テーブル
+    """生成された戦略テーブル。
 
     GAによって生成された戦略の遺伝子情報を保存します。
     """

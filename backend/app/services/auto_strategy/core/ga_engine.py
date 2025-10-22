@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class GeneticAlgorithmEngine:
-    """
-    遺伝的アルゴリズムエンジン
+    """遺伝的アルゴリズムエンジン。
 
     DEAPライブラリを使用して戦略の自動生成・最適化を行います。
     複雑な分離構造を削除し、直接的で理解しやすい実装に変更しました。
@@ -48,17 +47,16 @@ class GeneticAlgorithmEngine:
         hybrid_predictor: Optional[Any] = None,
         hybrid_feature_adapter: Optional[Any] = None,
     ):
-        """
-        初期化
+        """初期化します。
 
         Args:
-            backtest_service: バックテストサービス
-            strategy_factory: 戦略ファクトリー
-            gene_generator: 遺伝子生成器
-            regime_detector: レジーム検知器（オプション、レジーム適応時に使用）
-            hybrid_mode: ハイブリッドGA+MLモードを有効化
-            hybrid_predictor: ハイブリッド予測器（hybrid_mode=Trueの場合）
-            hybrid_feature_adapter: 特徴量アダプタ（hybrid_mode=Trueの場合）
+            backtest_service (BacktestService): バックテストサービス。
+            strategy_factory (StrategyFactory): 戦略ファクトリー。
+            gene_generator (RandomGeneGenerator): 遺伝子生成器。
+            regime_detector (Optional[RegimeDetector]): レジーム検知器（オプション、レジーム適応時に使用）。
+            hybrid_mode (bool): ハイブリッドGA+MLモードを有効化。デフォルトはFalse。
+            hybrid_predictor (Optional[Any]): ハイブリッド予測器（hybrid_mode=Trueの場合）。
+            hybrid_feature_adapter (Optional[Any]): 特徴量アダプタ（hybrid_mode=Trueの場合）。
         """
         self.backtest_service = backtest_service
         self.strategy_factory = strategy_factory
@@ -92,11 +90,10 @@ class GeneticAlgorithmEngine:
         self.fitness_sharing = None  # setup_deap時に初期化
 
     def setup_deap(self, config: GAConfig):
-        """
-        DEAP環境のセットアップ（統合版）
+        """DEAP環境のセットアップ（統合版）を行います。
 
         Args:
-            config: GA設定
+            config (GAConfig): GA設定。
         """
         # DEAP環境をセットアップ（戦略個体生成メソッドで統合）
         self.deap_setup.setup_deap(
@@ -123,17 +120,16 @@ class GeneticAlgorithmEngine:
     def run_evolution(
         self, config: GAConfig, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """
-        進化アルゴリズムを実行
+        """進化アルゴリズムを実行します。
 
         独立したEvolutionRunnerを使って設定に応じて適切な最適化アルゴリズムを呼び出します。
 
         Args:
-            config: GA設定
-            backtest_config: バックテスト設定
+            config (GAConfig): GA設定。
+            backtest_config (Dict[str, Any]): バックテスト設定。
 
         Returns:
-            進化結果
+            Dict[str, Any]: 進化結果。
         """
         try:
             self.is_running = True
@@ -199,7 +195,11 @@ class GeneticAlgorithmEngine:
             self.is_running = False
 
     def _set_generator_context(self, backtest_config: Dict[str, Any]):
-        """ジェネレーターにコンテキストを設定"""
+        """ジェネレーターにコンテキストを設定します。
+
+        Args:
+            backtest_config (Dict[str, Any]): バックテスト設定。
+        """
         try:
             tf = backtest_config.get("timeframe")
             sym = backtest_config.get("symbol")
@@ -211,7 +211,11 @@ class GeneticAlgorithmEngine:
             pass
 
     def _create_statistics(self):
-        """統計情報収集オブジェクトを作成"""
+        """統計情報収集オブジェクトを作成します。
+
+        Returns:
+            DEAP Statistics: 統計情報収集オブジェクト。
+        """
         stats = tools.Statistics(lambda ind: ind.fitness.values)
         stats.register("avg", np.mean)
         stats.register("std", np.std)
@@ -220,16 +224,15 @@ class GeneticAlgorithmEngine:
         return stats
 
     def _create_evolution_runner(self, toolbox, stats, population=None):
-        """
-        独立したEvolutionRunnerインスタンスを作成
+        """独立したEvolutionRunnerインスタンスを作成します。
 
         Args:
-            toolbox: DEAPツールボックス
-            stats: 統計情報オブジェクト
-            population: 初期個体群（オプション）
+            toolbox: DEAPツールボックス。
+            stats: 統計情報オブジェクト。
+            population: 初期個体群（オプション）。
 
         Returns:
-            EvolutionRunnerインスタンス
+            EvolutionRunner: EvolutionRunnerインスタンス。
         """
         fitness_sharing = (
             self.fitness_sharing
@@ -239,15 +242,14 @@ class GeneticAlgorithmEngine:
         return EvolutionRunner(toolbox, stats, fitness_sharing, population)
 
     def _create_initial_population(self, toolbox, config: GAConfig):
-        """
-        初期個体群を生成
+        """初期個体群を生成します。
 
         Args:
-            toolbox: DEAPツールボックス
-            config: GA設定
+            toolbox: DEAPツールボックス。
+            config (GAConfig): GA設定。
 
         Returns:
-            生成された個体群
+            list: 生成された個体群。
         """
         population = toolbox.population(n=config.population_size)
         # 初期評価
@@ -257,16 +259,15 @@ class GeneticAlgorithmEngine:
         return population
 
     def _run_optimization(self, runner: EvolutionRunner, population, config: GAConfig):
-        """
-        独立したEvolutionRunnerを使用して最適化アルゴリズムを実行
+        """独立したEvolutionRunnerを使用して最適化アルゴリズムを実行します。
 
         Args:
-            runner: EvolutionRunnerインスタンス
-            population: 初期個体群
-            config: GA設定
+            runner (EvolutionRunner): EvolutionRunnerインスタンス。
+            population: 初期個体群。
+            config (GAConfig): GA設定。
 
         Returns:
-            最適化後の個体群とログブック
+            tuple: 最適化後の個体群とログブック。
         """
         if config.enable_multi_objective:
             return runner.run_multi_objective_evolution(population, config)
@@ -276,17 +277,16 @@ class GeneticAlgorithmEngine:
     def _process_results(
         self, population, config: GAConfig, logbook, start_time: float
     ):
-        """
-        最適化結果を処理
+        """最適化結果を処理します。
 
         Args:
-            population: 最終個体群
-            config: GA設定
-            logbook: 進化ログ
-            start_time: 開始時刻（秒）
+            population: 最終個体群。
+            config (GAConfig): GA設定。
+            logbook: 進化ログ。
+            start_time (float): 開始時刻（秒）。
 
         Returns:
-            処理された進化結果の辞書
+            Dict[str, Any]: 処理された進化結果の辞書。
         """
         # 最良個体の取得とデコード
         best_individual, best_gene, best_strategies = self._extract_best_individuals(
@@ -317,15 +317,14 @@ class GeneticAlgorithmEngine:
         return result
 
     def _extract_best_individuals(self, population, config: GAConfig):
-        """
-        最良個体を抽出し、デコード
+        """最良個体を抽出し、デコードします。
 
         Args:
-            population: 最終個体群
-            config: GA設定
+            population: 最終個体群。
+            config (GAConfig): GA設定。
 
         Returns:
-            最良個体、最良遺伝子、および最良戦略のタプル
+            tuple: 最良個体、最良遺伝子、および最良戦略のタプル。
         """
         from ..models.strategy_models import StrategyGene
         from ..serializers.gene_serialization import GeneSerializer
@@ -356,15 +355,14 @@ class GeneticAlgorithmEngine:
         return best_individual, best_gene, best_strategies
 
     def stop_evolution(self):
-        """進化を停止"""
+        """進化を停止します。"""
         self.is_running = False
 
     def _create_strategy_individual(self):
-        """
-        戦略個体生成
+        """戦略個体生成を行います。
 
         Returns:
-            Individualオブジェクト
+            Individual: Individualオブジェクト。
         """
         try:
             # RandomGeneGeneratorを使用して遺伝子を生成

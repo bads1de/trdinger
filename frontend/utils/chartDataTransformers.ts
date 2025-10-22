@@ -96,6 +96,32 @@ export const transformTradeHistory = (trades: Trade[]): ChartTradePoint[] => {
  * @param equityCurve 資産曲線データ
  * @returns 月次リターンデータ
  */
+export const generateMonthlyReturns = (
+  equityCurve: EquityPoint[]
+): { month: string; return: number }[] => {
+  if (!equityCurve || equityCurve.length === 0) {
+    return [];
+  }
+
+  const monthlyData = new Map<string, { startEquity: number; endEquity: number }>();
+
+  equityCurve.forEach((point) => {
+    const date = new Date(point.timestamp);
+    const monthKey = format(date, "yyyy-MM");
+
+    if (!monthlyData.has(monthKey)) {
+      monthlyData.set(monthKey, { startEquity: point.equity, endEquity: point.equity });
+    } else {
+      const current = monthlyData.get(monthKey)!;
+      current.endEquity = point.equity;
+    }
+  });
+
+  return Array.from(monthlyData.entries()).map(([month, data]) => ({
+    month,
+    return: data.startEquity > 0 ? (data.endEquity - data.startEquity) / data.startEquity : 0,
+  }));
+};
 
 /**
  * リターン分布を計算する
@@ -163,6 +189,16 @@ export const sampleData = <T>(data: T[], maxPoints: number = 1000): T[] => {
  * @param equityCurve 資産曲線データ
  * @returns Buy & Hold リターン率
  */
+export const calculateBuyAndHoldReturn = (equityCurve: EquityPoint[]): number => {
+  if (!equityCurve || equityCurve.length < 2) {
+    return 0;
+  }
+
+  const initialEquity = equityCurve[0].equity;
+  const finalEquity = equityCurve[equityCurve.length - 1].equity;
+
+  return initialEquity > 0 ? (finalEquity - initialEquity) / initialEquity : 0;
+};
 
 /**
  * 最大ドローダウンを計算する
@@ -170,6 +206,16 @@ export const sampleData = <T>(data: T[], maxPoints: number = 1000): T[] => {
  * @param equityCurve 資産曲線データ
  * @returns 最大ドローダウン率（0-1の範囲）
  */
+export const calculateMaxDrawdown = (equityCurve: EquityPoint[]): number => {
+  if (!equityCurve || equityCurve.length === 0) {
+    return 0;
+  }
+
+  const equityWithDrawdown = calculateDrawdown(equityCurve);
+  const drawdowns = equityWithDrawdown.map((point) => point.drawdown_pct || 0);
+
+  return Math.max(...drawdowns);
+};
 
 /**
  * 日付範囲でデータをフィルタリングする
@@ -180,3 +226,18 @@ export const sampleData = <T>(data: T[], maxPoints: number = 1000): T[] => {
  * @param dateField 日付フィールド名
  * @returns フィルタリングされたデータ
  */
+export const filterDataByDateRange = <T extends Record<string, any>>(
+  data: T[],
+  startDate: Date,
+  endDate: Date,
+  dateField: keyof T = "timestamp" as keyof T
+): T[] => {
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  return data.filter((item) => {
+    const itemDate = new Date(item[dateField] as string | number | Date);
+    return itemDate >= startDate && itemDate <= endDate;
+  });
+};

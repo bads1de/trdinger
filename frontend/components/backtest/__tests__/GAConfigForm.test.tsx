@@ -132,18 +132,6 @@ describe("GAConfigForm", () => {
     expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
 
-    // 自動最適化セクションのテスト
-    fireEvent.click(screen.getByText("自動最適化"));
-    expect(screen.getByText("高度なGA設定")).toBeInTheDocument();
-
-    // フォームを送信
-    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
-    fireEvent.click(submitButton);
-
-    // onSubmitが呼び出されたことを確認
-    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
-    const submittedConfig = mockOnSubmit.mock.calls[0][0];
-
     // GA設定が正しく送信されることを確認（indicator_modeなし）
     expect(submittedConfig.ga_config).toBeDefined();
     expect(submittedConfig.ga_config.population_size).toBe(20);

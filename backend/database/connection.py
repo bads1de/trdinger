@@ -34,11 +34,12 @@ Base = declarative_base()
 
 
 def get_db():
-    """
-    データベースセッションを取得
+    """データベースセッションを取得します。
+
+    FastAPIの依存性注入で使用するためのデータベースセッションジェネレータです。
 
     Yields:
-        Session: データベースセッション
+        Session: データベースセッション。
     """
     db = SessionLocal()
     try:
@@ -48,13 +49,13 @@ def get_db():
 
 
 def init_db():
-    """
-    データベースが初期化されていることを保証
-    初期化されていない場合は自動的に初期化を実行
-    接続テストも含む
+    """データベースが初期化されていることを保証します。
+
+    初期化されていない場合は自動的に初期化を実行します。
+    接続テストも含みます。
 
     Returns:
-        bool: 初期化成功の場合True
+        bool: 初期化成功の場合True。
     """
     try:
         # 接続テスト
@@ -84,11 +85,10 @@ def init_db():
 
 
 def test_connection():
-    """
-    データベース接続をテスト
+    """データベース接続をテストします。
 
     Returns:
-        bool: 接続成功の場合True
+        bool: 接続成功の場合True。
     """
     try:
         with engine.connect() as connection:
@@ -101,11 +101,10 @@ def test_connection():
 
 
 def check_db_initialized():
-    """
-    データベースが初期化されているかチェック
+    """データベースが初期化されているかチェックします。
 
     Returns:
-        bool: 初期化済みの場合True
+        bool: 初期化済みの場合True。
     """
     try:
         with engine.connect() as connection:

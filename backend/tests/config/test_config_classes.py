@@ -141,10 +141,10 @@ class TestGAConfig:
         """GA辞書前処理のデフォルト値設定テスト"""
         data = {}
         processed = GAConfig._preprocess_ga_dict(data)
-        assert processed["population_size"] == 50  # デフォルト値
-        assert processed["generations"] == 20
+        assert processed["population_size"] == 100  # デフォルト値
+        assert processed["generations"] == 50
         assert processed["crossover_rate"] == 0.8
-        assert processed["mutation_rate"] == 0.2
+        assert processed["mutation_rate"] == 0.1
 
     def test_fitness_weights_validation(self):
         """フィットネス重みの検証テスト"""

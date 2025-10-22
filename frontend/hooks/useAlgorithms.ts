@@ -16,6 +16,10 @@ import {
 } from "../constants/algorithms";
 
 // 後方互換性のための型定義（既存のコンポーネントで使用されている可能性があるため）
+/**
+ * アルゴリズム統計情報のインターフェース
+ * @deprecated 後方互換性のための型定義。新しい実装では直接定数を使用
+ */
 export interface AlgorithmSummary {
   total_algorithms: number;
   by_type: Record<string, string[]>;
@@ -30,6 +34,10 @@ export interface AlgorithmSummary {
   >;
 }
 
+/**
+ * アルゴリズム一覧取得APIレスポンスのインターフェース
+ * @deprecated 定数ベース実装のため使用されていないが、APIレスポンスとの互換性のために保持
+ */
 export interface AlgorithmsResponse {
   success: boolean;
   algorithms: Record<string, Algorithm>;
@@ -38,6 +46,10 @@ export interface AlgorithmsResponse {
   message: string;
 }
 
+/**
+ * 個別アルゴリズム情報取得APIレスポンスのインターフェース
+ * @deprecated 定数ベース実装のため使用されていないが、APIレスポンスとの互換性のために保持
+ */
 export interface AlgorithmInfoResponse {
   success: boolean;
   algorithm?: Algorithm;
@@ -47,8 +59,19 @@ export interface AlgorithmInfoResponse {
 }
 
 // 型をエクスポート（既存のコンポーネントとの互換性のため）
+/**
+ * アルゴリズム関連の型定義をエクスポート
+ * @see {@link Algorithm} アルゴリズムの詳細情報
+ * @see {@link AlgorithmType} アルゴリズムの種類
+ * @see {@link AlgorithmCapability} アルゴリズムの機能
+ */
 export type { Algorithm, AlgorithmType, AlgorithmCapability };
 
+/**
+ * アルゴリズム関連データの管理を行うカスタムフック
+ * 定数ベースの実装を提供し、アルゴリズムの検索、フィルタリング、推奨機能を提供
+ * @returns アルゴリズム関連のデータと機能を提供するオブジェクト
+ */
 export const useAlgorithms = () => {
   // 定数からアルゴリズム情報を取得（API呼び出し不要）
   const algorithms = useMemo(() => {
@@ -74,7 +97,12 @@ export const useAlgorithms = () => {
     []
   );
 
-  // アルゴリズム検索
+  /**
+   * アルゴリズムを検索する関数
+   * 名前、表示名、説明、利点、最適用途で検索可能
+   * @param query - 検索クエリ文字列
+   * @returns 検索条件にマッチするアルゴリズム配列
+   */
   const searchAlgorithms = useCallback(
     (query: string) => {
       if (!query.trim()) return algorithms;
@@ -92,7 +120,18 @@ export const useAlgorithms = () => {
     [algorithms]
   );
 
-  // アルゴリズム推奨
+  /**
+   * ユーザーの要件に基づいて推奨アルゴリズムを取得する関数
+   * データサイズ、必要な機能、性能要件に基づいてフィルタリング
+   * @param requirements - アルゴリズム選択の要件条件
+   * @param requirements.dataSize - データサイズ ("small" | "medium" | "large")
+   * @param requirements.needsProbability - 確率予測が必要かどうか
+   * @param requirements.needsFeatureImportance - 特徴量重要度が必要かどうか
+   * @param requirements.needsSpeed - 速度重視かどうか
+   * @param requirements.needsAccuracy - 精度重視かどうか
+   * @param requirements.hasNoise - データにノイズがあるかどうか
+   * @returns 条件に合致する推奨アルゴリズム配列
+   */
   const getRecommendedAlgorithms = useCallback(
     (requirements: {
       dataSize?: "small" | "medium" | "large";
@@ -196,7 +235,12 @@ export const useAlgorithms = () => {
   };
 };
 
-// 個別アルゴリズム情報取得用フック（定数ベース）
+/**
+ * 個別アルゴリズム情報を取得するカスタムフック
+ * 定数ベースの実装で、指定されたアルゴリズムの詳細情報を提供
+ * @param algorithmName - 取得したいアルゴリズムの名前
+ * @returns アルゴリズム情報と状態を含むオブジェクト
+ */
 export const useAlgorithmInfo = (algorithmName: string | null) => {
   const algorithmInfo = useMemo(() => {
     if (!algorithmName) return null;

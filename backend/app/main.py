@@ -27,7 +27,11 @@ from app.utils.duplicate_filter_handler import DuplicateFilter
 
 
 def setup_logging():
-    """ログ設定を初期化（重複ログフィルター付き）"""
+    """ログ設定を初期化します。
+
+    重複ログフィルターを適用してログ設定を初期化します。
+    コンソールハンドラーとフォーマッターを設定し、ログディレクトリを作成します。
+    """
     # ルートロガーを取得
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, unified_config.logging.level.upper()))
@@ -63,7 +67,14 @@ def setup_logging():
 
 
 def create_app() -> FastAPI:
-    """FastAPIアプリケーションを作成"""
+    """FastAPIアプリケーションを作成します。
+
+    ログ設定、CORS設定、ルーター登録、グローバル例外ハンドラ、ヘルスチェックエンドポイントを
+    含むFastAPIアプリケーションを構築します。
+
+    Returns:
+        FastAPI: 設定済みのFastAPIアプリケーションインスタンス。
+    """
 
     # ログ設定
     setup_logging()
@@ -102,17 +113,16 @@ def create_app() -> FastAPI:
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        """
-        グローバル例外ハンドラ
+        """グローバル例外ハンドラです。
 
-        未処理の例外をキャッチして標準化されたエラーレスポンスを返す
+        未処理の例外をキャッチして標準化されたエラーレスポンスを返します。
 
         Args:
-            request: HTTPリクエスト
-            exc: 例外オブジェクト
+            request (Request): HTTPリクエスト。
+            exc (Exception): 例外オブジェクト。
 
         Returns:
-            JSONResponse: 標準化されたエラーレスポンス
+            JSONResponse: 標準化されたエラーレスポンス。
         """
         logger.error(f"Unhandled exception: {exc}", exc_info=True)
         return JSONResponse(
@@ -127,13 +137,12 @@ def create_app() -> FastAPI:
     # ヘルスチェックエンドポイント
     @app.get("/health")
     async def health_check():
-        """
-        ヘルスチェックエンドポイント
+        """ヘルスチェックエンドポイントです。
 
-        アプリケーションの状態を確認するためのエンドポイント
+        アプリケーションの状態を確認するためのエンドポイントです。
 
         Returns:
-            dict: アプリケーションの状態情報
+            dict: アプリケーションの状態情報。
         """
         return {
             "status": "ok",

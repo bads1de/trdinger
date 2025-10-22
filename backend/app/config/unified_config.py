@@ -12,7 +12,10 @@ from pydantic_settings import BaseSettings
 
 
 class AppConfig(BaseSettings):
-    """アプリケーション基本設定"""
+    """アプリケーション基本設定。
+
+    アプリケーションの基本的な設定を管理します。CORS設定やデバッグモードなどを含みます。
+    """
 
     app_name: str = Field(default="Trdinger Trading API", alias="APP_NAME")
     app_version: str = Field(default="1.0.0", alias="APP_VERSION")
@@ -29,7 +32,10 @@ class AppConfig(BaseSettings):
 
 
 class DatabaseConfig(BaseSettings):
-    """データベース設定"""
+    """データベース設定。
+
+    PostgreSQLデータベース接続の設定を管理します。
+    """
 
     database_url: Optional[str] = Field(default=None, alias="DATABASE_URL")
     host: str = Field(default="localhost", alias="DB_HOST")
@@ -40,7 +46,14 @@ class DatabaseConfig(BaseSettings):
 
     @property
     def url_complete(self) -> str:
-        """完全なデータベースURLを生成"""
+        """完全なデータベースURLを生成します。
+
+        DATABASE_URLが設定されている場合はそれを返し、
+        そうでない場合は個別パラメータからURLを構築します。
+
+        Returns:
+            str: 完全なデータベース接続URL。
+        """
         if self.database_url:
             return self.database_url
         return (
@@ -54,7 +67,10 @@ class DatabaseConfig(BaseSettings):
 
 
 class LoggingConfig(BaseSettings):
-    """ログ設定"""
+    """ログ設定。
+
+    ロギングのレベル、フォーマット、ファイル出力などの設定を管理します。
+    """
 
     level: str = Field(default="DEBUG", alias="LOG_LEVEL")
     format: str = Field(
@@ -70,7 +86,10 @@ class LoggingConfig(BaseSettings):
 
 
 class MarketConfig(BaseSettings):
-    """市場データ設定"""
+    """市場データ設定。
+
+    取引所、シンボル、時間軸などの市場データ関連の設定を管理します。
+    """
 
     # 基本設定
     sandbox: bool = Field(default=False, alias="MARKET_DATA_SANDBOX")
@@ -120,7 +139,10 @@ class MarketConfig(BaseSettings):
 
 
 class DataCollectionConfig(BaseSettings):
-    """データ収集設定"""
+    """データ収集設定。
+
+    市場データ収集のAPI制限、タイムアウト、メモリ管理などの設定を管理します。
+    """
 
     # API制限設定
     default_limit: int = Field(default=100, description="デフォルト取得件数")
@@ -144,7 +166,10 @@ class DataCollectionConfig(BaseSettings):
 
 
 class BacktestConfig(BaseSettings):
-    """バックテスト設定"""
+    """バックテスト設定。
+
+    バックテストの初期資金、手数料、結果取得制限などの設定を管理します。
+    """
 
     # デフォルトパラメータ
     default_initial_capital: float = Field(default=10000.0, description="初期資金")
@@ -160,7 +185,10 @@ class BacktestConfig(BaseSettings):
 
 
 class AutoStrategyConfig(BaseSettings):
-    """自動戦略生成設定"""
+    """自動戦略生成設定。
+
+    遺伝的アルゴリズムによる自動戦略生成の各種パラメータを設定します。
+    """
 
     # 遺伝的アルゴリズム設定
     population_size: int = Field(default=50, description="個体数")
@@ -221,7 +249,10 @@ class AutoStrategyConfig(BaseSettings):
 
 
 class GAConfig(BaseSettings):
-    """遺伝的アルゴリズム設定"""
+    """遺伝的アルゴリズム設定。
+
+    遺伝的アルゴリズムの基本パラメータとバックテスト設定を管理します。
+    """
 
     # 基本設定
     fallback_symbol: str = Field(default="BTC/USDT", alias="GA_FALLBACK_SYMBOL")
@@ -265,7 +296,10 @@ class GAConfig(BaseSettings):
 
 
 class MLDataProcessingConfig(BaseSettings):
-    """ML データ処理設定"""
+    """ML データ処理設定。
+
+    MLモデルの学習と予測で使用するデータ処理パラメータを設定します。
+    """
 
     max_ohlcv_rows: int = Field(default=1000000, description="100万行まで")
     max_feature_rows: int = Field(default=1000000, description="100万行まで")
@@ -283,7 +317,10 @@ class MLDataProcessingConfig(BaseSettings):
 
 
 class MLModelConfig(BaseSettings):
-    """ML モデル設定"""
+    """ML モデル設定。
+
+    MLモデルの保存パスやバージョン管理などの設定を管理します。
+    """
 
     model_save_path: str = Field(default="models/")
     model_file_extension: str = Field(default=".pkl")
@@ -298,7 +335,10 @@ class MLModelConfig(BaseSettings):
 
 
 class MLPredictionConfig(BaseSettings):
-    """ML 予測設定"""
+    """ML 予測設定。
+
+    MLモデルの予測結果の確率値やデフォルト値を設定します。
+    """
 
     default_up_prob: float = Field(default=0.33)
     default_down_prob: float = Field(default=0.33)
@@ -314,7 +354,11 @@ class MLPredictionConfig(BaseSettings):
     default_indicator_length: int = Field(default=100)
 
     def get_default_predictions(self) -> Dict[str, float]:
-        """デフォルトの予測値を取得"""
+        """デフォルトの予測値を取得します。
+
+        Returns:
+            Dict[str, float]: 上昇、下降、レンジのデフォルト確率値。
+        """
         return {
             "up": self.default_up_prob,
             "down": self.default_down_prob,
@@ -322,7 +366,11 @@ class MLPredictionConfig(BaseSettings):
         }
 
     def get_fallback_predictions(self) -> Dict[str, float]:
-        """フォールバック予測値を取得"""
+        """フォールバック予測値を取得します。
+
+        Returns:
+            Dict[str, float]: 上昇、下降、レンジのフォールバック確率値。
+        """
         return {
             "up": self.fallback_up_prob,
             "down": self.fallback_down_prob,
@@ -335,7 +383,10 @@ class MLPredictionConfig(BaseSettings):
 
 
 class MLTrainingConfig(BaseSettings):
-    """ML 学習アルゴリズム設定"""
+    """ML 学習アルゴリズム設定。
+
+    各種MLアルゴリズムのハイパーパラメータと学習設定を管理します。
+    """
 
     # LightGBM デフォルトパラメータ
     lgb_n_estimators: int = Field(default=100, description="推定器数")
@@ -375,7 +426,10 @@ class MLTrainingConfig(BaseSettings):
 
 
 class MLConfig(BaseSettings):
-    """ML 統一設定クラス"""
+    """ML 統一設定クラス。
+
+    ML関連のすべての設定を統合的に管理します。
+    """
 
     data_processing: MLDataProcessingConfig = Field(
         default_factory=MLDataProcessingConfig
@@ -390,8 +444,7 @@ class MLConfig(BaseSettings):
 
 
 class UnifiedConfig(BaseSettings):
-    """
-    アプリケーション全体の統一設定クラス
+    """アプリケーション全体の統一設定クラス。
 
     全ての設定を階層的に管理し、環境変数からの設定読み込みをサポートします。
     """
