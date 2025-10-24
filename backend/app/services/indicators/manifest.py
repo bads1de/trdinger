@@ -332,6 +332,56 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "trend",
         },
     },
+    "BIAS": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "oscillator_plus_minus_100",
+            "category": "trend",
+            "adapter_function": "app.services.indicators.technical_indicators.trend.TrendIndicators.bias",
+            "required_data": ["close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": None,
+            "param_map": {"close": "data", "length": "length", "ma_type": "ma_type", "offset": "offset"},
+            "parameters": {
+                "length": {
+                    "default_value": 26,
+                    "min_value": 5,
+                    "max_value": 100,
+                    "description": "BIAS計算期間",
+                },
+                "ma_type": {
+                    "default_value": "sma",
+                    "min_value": None,
+                    "max_value": None,
+                    "description": "移動平均の種類 (sma, ema, wma, hma, zlma)",
+                },
+                "offset": {
+                    "default_value": 0,
+                    "min_value": -10,
+                    "max_value": 10,
+                    "description": "出力シフト量",
+                }
+            },
+            "pandas_function": "bias",
+            "data_column": "Close",
+            "data_columns": None,
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {"length": 26, "ma_type": "sma", "offset": 0},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "close > {left_operand} * 1.05",
+                "short": "close < {left_operand} * 0.95",
+            },
+            "scale_type": "oscillator_plus_minus_100",
+            "thresholds": {"all": {"long_lt": -5, "short_gt": 5}},
+            "type": "trend",
+        },
+    },
     "ATR": {
         "config": {
             "result_type": "single",
@@ -2679,6 +2729,62 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "scale_type": "price_absolute",
             "thresholds": None,
             "type": "trend",
+        },
+    },
+    "VHF": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "oscillator_0_100",
+            "category": "volatility",
+            "adapter_function": "app.services.indicators.technical_indicators.volatility.VolatilityIndicators.vhf",
+            "required_data": ["close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": None,
+            "param_map": {"length": "length", "scalar": "scalar", "drift": "drift", "offset": "offset"},
+            "parameters": {
+                "length": {
+                    "default_value": 28,
+                    "min_value": 10,
+                    "max_value": 100,
+                    "description": "VHF期間",
+                },
+                "scalar": {
+                    "default_value": 100.0,
+                    "min_value": 1.0,
+                    "max_value": 1000.0,
+                    "description": "VHFスカラー",
+                },
+                "drift": {
+                    "default_value": 1,
+                    "min_value": 1,
+                    "max_value": 10,
+                    "description": "ドリフト期間",
+                },
+                "offset": {
+                    "default_value": 0,
+                    "min_value": 0,
+                    "max_value": 10,
+                    "description": "オフセット",
+                }
+            },
+            "pandas_function": "vhf",
+            "data_column": "Close",
+            "data_columns": None,
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {"length": 28, "scalar": 100.0, "drift": 1, "offset": 0},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "close > {left_operand}",
+                "short": "close < {left_operand}",
+            },
+            "scale_type": "oscillator_0_100",
+            "thresholds": {"all": {"long_lt": 0.3, "short_gt": 0.7}},
+            "type": "volatility",
         },
     },
     "ZLMA": {

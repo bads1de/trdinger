@@ -57,9 +57,9 @@ def indicator_service() -> TechnicalIndicatorService:
 
 
 class TestAllTechnicalIndicators:
-    """71個のテクニカルインジケーターの包括的テスト"""
+    """73個のテクニカルインジケーターの包括的テスト（VHFとBIASを追加）"""
 
-    # テスト対象の71個のインジケーター
+    # テスト対象の73個のインジケーター（VHFとBIASを追加）
     INDICATORS = [
         "ACCBANDS",
         "AD",
@@ -73,6 +73,7 @@ class TestAllTechnicalIndicators:
         "ATR",
         "BB",
         "BOP",
+        "BIAS",  # 新規追加
         "CCI",
         "CG",
         "CHOP",
@@ -129,6 +130,7 @@ class TestAllTechnicalIndicators:
         "VORTEX",
         "VWAP",
         "VWMA",
+        "VHF",  # 新規追加
         "WILLR",
         "WMA",
         "ZLMA",

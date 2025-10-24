@@ -464,3 +464,54 @@ class TrendIndicators:
             return nan_series, nan_series
 
         return result.iloc[:, 0], result.iloc[:, 1]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def bias(
+        data: pd.Series,
+        length: int = 26,
+        ma_type: str = "sma",
+        offset: int = 0,
+    ) -> pd.Series:
+        """Bias Indicator - 移動平均からの乖離率"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if ma_type not in ["sma", "ema", "wma", "hma", "zlma"]:
+            raise ValueError(f"ma_type must be one of ['sma', 'ema', 'wma', 'hma', 'zlma']: {ma_type}")
+
+        # BIAS requires sufficient data length
+        min_length = length * 2
+        if len(data) < min_length:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        # pandas-taのbias関数を直接使用
+        try:
+            result = ta.bias(
+                close=data,
+                length=length,
+                ma_type=ma_type,
+                offset=offset,
+            )
+        except Exception:
+            # pandas-taのbiasが利用できない場合のフォールバック実装
+            ma_func = {
+                "sma": ta.sma,
+                "ema": ta.ema,
+                "wma": ta.wma,
+                "hma": ta.hma,
+                "zlma": ta.zlma,
+            }.get(ma_type, ta.sma)
+
+            ma_result = ma_func(data, length=length)
+            if ma_result is None or ma_result.isna().all():
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+            # BIAS = (close - ma) / ma * 100
+            result = ((data - ma_result) / ma_result) * 100
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        return result

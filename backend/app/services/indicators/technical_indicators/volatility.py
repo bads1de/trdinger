@@ -391,3 +391,40 @@ class VolatilityIndicators:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
 
         return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vhf(
+        data: pd.Series,
+        length: int = 28,
+        scalar: float = 100.0,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Vertical Horizontal Filter"""
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if scalar <= 0:
+            raise ValueError(f"scalar must be positive: {scalar}")
+        if drift <= 0:
+            raise ValueError(f"drift must be positive: {drift}")
+
+        # VHF requires sufficient data length
+        min_length = length * 2
+        if len(data) < min_length:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        result = ta.vhf(
+            close=data,
+            length=length,
+            scalar=scalar,
+            drift=drift,
+            offset=offset,
+        )
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        return result
