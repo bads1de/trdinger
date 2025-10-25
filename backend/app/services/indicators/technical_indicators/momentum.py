@@ -27,6 +27,7 @@
 - BOP (Balance of Power)
 - CG (Center of Gravity)
 - COPPOCK (Coppock Curve)
+- STOCHRSI (Stochastic RSI)
 """
 
 from typing import Optional, Tuple
@@ -188,6 +189,67 @@ class MomentumIndicators:
         if result is None or result.empty:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
+        return (result.iloc[:, 0], result.iloc[:, 1])
+
+    @staticmethod
+    def stochrsi(
+        data: pd.Series,
+        rsi_length: int = 14,
+        stoch_length: int = 14,
+        k: int = 3,
+        d: int = 3,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """
+        Stochastic RSI
+
+        RSIにストキャスティクス計算を適用したオシレーター。
+        RSIの買われすぎ・売られすぎをより敏感に検出します。
+
+        Args:
+            data: 価格データ (通常はclose)
+            rsi_length: RSI計算期間 (デフォルト: 14)
+            stoch_length: Stochastic計算期間 (デフォルト: 14)
+            k: %K平滑化期間 (デフォルト: 3)
+            d: %D平滑化期間 (デフォルト: 3)
+
+        Returns:
+            Tuple[pd.Series, pd.Series]: (%K, %D)
+        """
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if rsi_length <= 0:
+            raise ValueError(f"rsi_length must be positive: {rsi_length}")
+        if stoch_length <= 0:
+            raise ValueError(f"stoch_length must be positive: {stoch_length}")
+        if k <= 0:
+            raise ValueError(f"k must be positive: {k}")
+        if d <= 0:
+            raise ValueError(f"d must be positive: {d}")
+
+        # 空データの処理
+        if len(data) == 0:
+            empty_series = pd.Series([], dtype=float, index=data.index)
+            return empty_series, empty_series
+
+        # 最小必要データ長の確認
+        min_required_length = rsi_length + stoch_length
+        if len(data) < min_required_length:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series
+
+        result = ta.stochrsi(
+            close=data,
+            rsi_length=rsi_length,
+            stoch_length=stoch_length,
+            k=k,
+            d=d,
+        )
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series
+
+        # pandas-taの返り値は通常 STOCHRSIk_*, STOCHRSId_* の2列
         return (result.iloc[:, 0], result.iloc[:, 1])
 
     @staticmethod
@@ -792,7 +854,7 @@ class MomentumIndicators:
         close: pd.Series,
         tenkan_period: int = 9,
         kijun_period: int = 26,
-        senkou_span_b_period: int = 52
+        senkou_span_b_period: int = 52,
     ) -> dict:
         """Ichimoku Cloud (一目均衡表)
 
@@ -835,7 +897,7 @@ class MomentumIndicators:
                 "kijun_sen": empty_series,
                 "senkou_span_a": empty_series,
                 "senkou_span_b": empty_series,
-                "chikou_span": empty_series
+                "chikou_span": empty_series,
             }
 
         # pandas-taを使ってIchimoku Cloudを計算
@@ -846,7 +908,7 @@ class MomentumIndicators:
                 close=close,
                 tenkan=tenkan_period,
                 kijun=kijun_period,
-                senkou=senkou_span_b_period
+                senkou=senkou_span_b_period,
             )
 
             if result is None or result.empty:
@@ -857,7 +919,7 @@ class MomentumIndicators:
                     "kijun_sen": nan_series,
                     "senkou_span_a": nan_series,
                     "senkou_span_b": nan_series,
-                    "chikou_span": nan_series
+                    "chikou_span": nan_series,
                 }
 
             # 結果を処理
@@ -870,7 +932,9 @@ class MomentumIndicators:
                 # フォールバック計算
                 tenkan_high = high.rolling(window=tenkan_period).max()
                 tenkan_low = low.rolling(window=tenkan_period).min()
-                ichimoku_dict["tenkan_sen"] = ((tenkan_high + tenkan_low) / 2).fillna(np.nan)
+                ichimoku_dict["tenkan_sen"] = ((tenkan_high + tenkan_low) / 2).fillna(
+                    np.nan
+                )
 
             # kijun_sen (基準線) - 中期間の高値と安値の平均
             if "KIJUN" in result.columns:
@@ -878,16 +942,22 @@ class MomentumIndicators:
             else:
                 kijun_high = high.rolling(window=kijun_period).max()
                 kijun_low = low.rolling(window=kijun_period).min()
-                ichimoku_dict["kijun_sen"] = ((kijun_high + kijun_low) / 2).fillna(np.nan)
+                ichimoku_dict["kijun_sen"] = ((kijun_high + kijun_low) / 2).fillna(
+                    np.nan
+                )
 
             # senkou_span_a (先行スパンA) - tenkanとkijunの平均を前方にずらす
             if "SENKOU" in result.columns:
                 ichimoku_dict["senkou_span_a"] = result["SENKOU"].fillna(np.nan)
             else:
                 # フォールバック計算
-                senkou_a = (ichimoku_dict["tenkan_sen"] + ichimoku_dict["kijun_sen"]) / 2
+                senkou_a = (
+                    ichimoku_dict["tenkan_sen"] + ichimoku_dict["kijun_sen"]
+                ) / 2
                 # 前方にずらす (pandas-taは自動で処理してくれるが、フォールバックではNaNで埋める)
-                ichimoku_dict["senkou_span_a"] = senkou_a.shift(kijun_period).fillna(np.nan)
+                ichimoku_dict["senkou_span_a"] = senkou_a.shift(kijun_period).fillna(
+                    np.nan
+                )
 
             # senkou_span_b (先行スパンB) - 長期間の高値と安値の平均を前方にずらす
             if "SANSEN" in result.columns:
@@ -896,7 +966,9 @@ class MomentumIndicators:
                 senkou_b_high = high.rolling(window=senkou_span_b_period).max()
                 senkou_b_low = low.rolling(window=senkou_span_b_period).min()
                 senkou_b = (senkou_b_high + senkou_b_low) / 2
-                ichimoku_dict["senkou_span_b"] = senkou_b.shift(kijun_period).fillna(np.nan)
+                ichimoku_dict["senkou_span_b"] = senkou_b.shift(kijun_period).fillna(
+                    np.nan
+                )
 
             # chikou_span (遅行スパン) - 終値を後方にずらす
             if "CHIKOU" in result.columns:
@@ -907,7 +979,9 @@ class MomentumIndicators:
             return ichimoku_dict
 
         except Exception as e:
-            logger.warning(f"Ichimoku calculation failed with pandas-ta: {e}. Using fallback calculation.")
+            logger.warning(
+                f"Ichimoku calculation failed with pandas-ta: {e}. Using fallback calculation."
+            )
             # pandas-taが失敗した場合のフォールバック計算
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
 
@@ -920,11 +994,15 @@ class MomentumIndicators:
             kijun_low = low.rolling(window=kijun_period).min()
             kijun_sen = ((kijun_high + kijun_low) / 2).fillna(np.nan)
 
-            senkou_span_a = ((tenkan_sen + kijun_sen) / 2).shift(kijun_period).fillna(np.nan)
+            senkou_span_a = (
+                ((tenkan_sen + kijun_sen) / 2).shift(kijun_period).fillna(np.nan)
+            )
 
             senkou_b_high = high.rolling(window=senkou_span_b_period).max()
             senkou_b_low = low.rolling(window=senkou_span_b_period).min()
-            senkou_span_b = ((senkou_b_high + senkou_b_low) / 2).shift(kijun_period).fillna(np.nan)
+            senkou_span_b = (
+                ((senkou_b_high + senkou_b_low) / 2).shift(kijun_period).fillna(np.nan)
+            )
 
             chikou_span = close.shift(-kijun_period).fillna(np.nan)
 
@@ -933,5 +1011,5 @@ class MomentumIndicators:
                 "kijun_sen": kijun_sen,
                 "senkou_span_a": senkou_span_a,
                 "senkou_span_b": senkou_span_b,
-                "chikou_span": chikou_span
+                "chikou_span": chikou_span,
             }

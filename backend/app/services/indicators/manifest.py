@@ -2000,6 +2000,72 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "momentum",
         },
     },
+    "STOCHRSI": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "oscillator_0_100",
+            "category": "momentum",
+            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.stochrsi",
+            "required_data": ["close"],
+            "output_names": ["STOCHRSI_K", "STOCHRSI_D"],
+            "default_output": "STOCHRSI_K",
+            "aliases": ["STOCHRSI"],
+            "param_map": {
+                "close": "data",
+                "rsi_length": "rsi_length",
+                "stoch_length": "stoch_length",
+                "k": "k",
+                "d": "d",
+            },
+            "parameters": {
+                "rsi_length": {
+                    "default_value": 14,
+                    "min_value": 2,
+                    "max_value": 50,
+                    "description": "RSI計算期間",
+                },
+                "stoch_length": {
+                    "default_value": 14,
+                    "min_value": 2,
+                    "max_value": 50,
+                    "description": "Stochastic計算期間",
+                },
+                "k": {
+                    "default_value": 3,
+                    "min_value": 1,
+                    "max_value": 10,
+                    "description": "K平滑化期間",
+                },
+                "d": {
+                    "default_value": 3,
+                    "min_value": 1,
+                    "max_value": 10,
+                    "description": "D平滑化期間",
+                },
+            },
+            "pandas_function": "stochrsi",
+            "data_column": "Close",
+            "data_columns": None,
+            "returns": "multiple",
+            "return_cols": ["STOCHRSIk", "STOCHRSId"],
+            "multi_column": False,
+            "default_values": {"rsi_length": 14, "stoch_length": 14, "k": 3, "d": 3},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_0 > {threshold}",
+                "short": "{left_operand}_0 < {threshold}",
+            },
+            "scale_type": "oscillator_0_100",
+            "thresholds": {
+                "aggressive": {"long_gt": 70, "short_lt": 30},
+                "conservative": {"long_gt": 80, "short_lt": 20},
+                "normal": {"long_gt": 75, "short_lt": 25},
+            },
+            "type": "momentum",
+        },
+    },
     "SUPERTREND": {
         "config": {
             "result_type": "complex",
