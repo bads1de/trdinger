@@ -3630,6 +3630,67 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "momentum",
         },
     },
+    "ICHIMOKU": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "price_absolute",
+            "category": "momentum",
+            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.ichimoku",
+            "required_data": ["high", "low", "close"],
+            "output_names": ["ICHIMOKU_Tenkan", "ICHIMOKU_Kijun", "ICHIMOKU_Senkou_A", "ICHIMOKU_Senkou_B", "ICHIMOKU_Chikou"],
+            "default_output": "ICHIMOKU_Tenkan",
+            "aliases": ["ICHIMOKU"],
+            "param_map": {
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "tenkan_period": "tenkan_period",
+                "kijun_period": "kijun_period",
+                "senkou_span_b_period": "senkou_span_b_period"
+            },
+            "parameters": {
+                "tenkan_period": {
+                    "default_value": 9,
+                    "min_value": 3,
+                    "max_value": 50,
+                    "description": "Tenkan-sen (conversion line) period",
+                },
+                "kijun_period": {
+                    "default_value": 26,
+                    "min_value": 10,
+                    "max_value": 100,
+                    "description": "Kijun-sen (base line) period",
+                },
+                "senkou_span_b_period": {
+                    "default_value": 52,
+                    "min_value": 20,
+                    "max_value": 200,
+                    "description": "Senkou Span B (leading span B) period",
+                }
+            },
+            "pandas_function": "ichimoku",
+            "data_column": None,
+            "data_columns": ["High", "Low", "Close"],
+            "returns": "multiple",
+            "return_cols": ["TENKAN", "KIJUN", "SENKOU", "SANSEN", "CHIKOU"],
+            "multi_column": True,
+            "default_values": {"tenkan_period": 9, "kijun_period": 26, "senkou_span_b_period": 52},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_tenkan_sen > {left_operand}_kijun_sen",
+                "short": "{left_operand}_tenkan_sen < {left_operand}_kijun_sen",
+            },
+            "scale_type": "price_absolute",
+            "thresholds": {
+                "aggressive": {"tenkan_gt_kijun": True},
+                "conservative": {"tenkan_gt_kijun": False},
+                "normal": {"tenkan_gt_kijun": True},
+            },
+            "type": "momentum",
+        },
+    },
     "COPPOCK": {
         "config": {
             "result_type": "single",

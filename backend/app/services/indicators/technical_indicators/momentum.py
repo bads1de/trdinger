@@ -784,3 +784,154 @@ class MomentumIndicators:
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
         return result.bfill().fillna(0)
+
+    @staticmethod
+    def ichimoku(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        tenkan_period: int = 9,
+        kijun_period: int = 26,
+        senkou_span_b_period: int = 52
+    ) -> dict:
+        """Ichimoku Cloud (一目均衡表)
+
+        トレンド、サポート/レジスタンス、モメンタムを同時に分析する包括的なインジケーター。
+        5つのコンポーネントで構成される:
+        - Tenkan-sen (転換線): 短期トレンド
+        - Kijun-sen (基準線): 中期トレンド
+        - Senkou Span A (先行スパンA): 未来のサポート/レジスタンス
+        - Senkou Span B (先行スパンB): より長期のサポート/レジスタンス
+        - Chikou Span (遅行スパン): 遅行スパン
+
+        Args:
+            high: 高値の系列
+            low: 安値の系列
+            close: 終値の系列
+            tenkan_period: 転換線の期間 (default: 9)
+            kijun_period: 基準線の期間 (default: 26)
+            senkou_span_b_period: 先行スパンBの期間 (default: 52)
+
+        Returns:
+            dict: 各コンポーネントを含む辞書
+        """
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # データ長の検証
+        series_lengths = [len(high), len(low), len(close)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError("Ichimoku requires all series to have the same length")
+
+        if len(high) == 0:
+            # 空データの場合
+            empty_series = pd.Series(np.full(0, np.nan), index=high.index)
+            return {
+                "tenkan_sen": empty_series,
+                "kijun_sen": empty_series,
+                "senkou_span_a": empty_series,
+                "senkou_span_b": empty_series,
+                "chikou_span": empty_series
+            }
+
+        # pandas-taを使ってIchimoku Cloudを計算
+        try:
+            result = ta.ichimoku(
+                high=high,
+                low=low,
+                close=close,
+                tenkan=tenkan_period,
+                kijun=kijun_period,
+                senkou=senkou_span_b_period
+            )
+
+            if result is None or result.empty:
+                # pandas-taが失敗した場合のフォールバック
+                nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+                return {
+                    "tenkan_sen": nan_series,
+                    "kijun_sen": nan_series,
+                    "senkou_span_a": nan_series,
+                    "senkou_span_b": nan_series,
+                    "chikou_span": nan_series
+                }
+
+            # 結果を処理
+            ichimoku_dict = {}
+
+            # tenkan_sen (転換線) - 最短期間の高値と安値の平均
+            if "TENKAN" in result.columns:
+                ichimoku_dict["tenkan_sen"] = result["TENKAN"].fillna(np.nan)
+            else:
+                # フォールバック計算
+                tenkan_high = high.rolling(window=tenkan_period).max()
+                tenkan_low = low.rolling(window=tenkan_period).min()
+                ichimoku_dict["tenkan_sen"] = ((tenkan_high + tenkan_low) / 2).fillna(np.nan)
+
+            # kijun_sen (基準線) - 中期間の高値と安値の平均
+            if "KIJUN" in result.columns:
+                ichimoku_dict["kijun_sen"] = result["KIJUN"].fillna(np.nan)
+            else:
+                kijun_high = high.rolling(window=kijun_period).max()
+                kijun_low = low.rolling(window=kijun_period).min()
+                ichimoku_dict["kijun_sen"] = ((kijun_high + kijun_low) / 2).fillna(np.nan)
+
+            # senkou_span_a (先行スパンA) - tenkanとkijunの平均を前方にずらす
+            if "SENKOU" in result.columns:
+                ichimoku_dict["senkou_span_a"] = result["SENKOU"].fillna(np.nan)
+            else:
+                # フォールバック計算
+                senkou_a = (ichimoku_dict["tenkan_sen"] + ichimoku_dict["kijun_sen"]) / 2
+                # 前方にずらす (pandas-taは自動で処理してくれるが、フォールバックではNaNで埋める)
+                ichimoku_dict["senkou_span_a"] = senkou_a.shift(kijun_period).fillna(np.nan)
+
+            # senkou_span_b (先行スパンB) - 長期間の高値と安値の平均を前方にずらす
+            if "SANSEN" in result.columns:
+                ichimoku_dict["senkou_span_b"] = result["SANSEN"].fillna(np.nan)
+            else:
+                senkou_b_high = high.rolling(window=senkou_span_b_period).max()
+                senkou_b_low = low.rolling(window=senkou_span_b_period).min()
+                senkou_b = (senkou_b_high + senkou_b_low) / 2
+                ichimoku_dict["senkou_span_b"] = senkou_b.shift(kijun_period).fillna(np.nan)
+
+            # chikou_span (遅行スパン) - 終値を後方にずらす
+            if "CHIKOU" in result.columns:
+                ichimoku_dict["chikou_span"] = result["CHIKOU"].fillna(np.nan)
+            else:
+                ichimoku_dict["chikou_span"] = close.shift(-kijun_period).fillna(np.nan)
+
+            return ichimoku_dict
+
+        except Exception as e:
+            logger.warning(f"Ichimoku calculation failed with pandas-ta: {e}. Using fallback calculation.")
+            # pandas-taが失敗した場合のフォールバック計算
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+
+            # 単純なフォールバック計算
+            tenkan_high = high.rolling(window=tenkan_period).max()
+            tenkan_low = low.rolling(window=tenkan_period).min()
+            tenkan_sen = ((tenkan_high + tenkan_low) / 2).fillna(np.nan)
+
+            kijun_high = high.rolling(window=kijun_period).max()
+            kijun_low = low.rolling(window=kijun_period).min()
+            kijun_sen = ((kijun_high + kijun_low) / 2).fillna(np.nan)
+
+            senkou_span_a = ((tenkan_sen + kijun_sen) / 2).shift(kijun_period).fillna(np.nan)
+
+            senkou_b_high = high.rolling(window=senkou_span_b_period).max()
+            senkou_b_low = low.rolling(window=senkou_span_b_period).min()
+            senkou_span_b = ((senkou_b_high + senkou_b_low) / 2).shift(kijun_period).fillna(np.nan)
+
+            chikou_span = close.shift(-kijun_period).fillna(np.nan)
+
+            return {
+                "tenkan_sen": tenkan_sen,
+                "kijun_sen": kijun_sen,
+                "senkou_span_a": senkou_span_a,
+                "senkou_span_b": senkou_span_b,
+                "chikou_span": chikou_span
+            }
