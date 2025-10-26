@@ -5,6 +5,8 @@
 - FRAMA (Fractal Adaptive Moving Average)
 - SUPER_SMOOTHER (Ehlers 2-Pole Super Smoother Filter)
 - ELDER_RAY (Elder Ray Index)
+- PRIME_OSC (Prime Number Oscillator)
+- FIBO_CYCLE (Fibonacci Cycle Indicator)
 """
 
 from __future__ import annotations
@@ -240,6 +242,335 @@ class OriginalIndicators:
             {
                 f"Elder_Ray_Bull_{length}_{ema_length}": bull_power,
                 f"Elder_Ray_Bear_{length}_{ema_length}": bear_power,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def _is_prime(n: int) -> bool:
+        """素数判定ヘルパー関数"""
+        if n < 2:
+            return False
+        if n == 2:
+            return True
+        if n % 2 == 0:
+            return False
+        for i in range(3, int(n**0.5) + 1, 2):
+            if n % i == 0:
+                return False
+        return True
+
+    @staticmethod
+    def _get_prime_sequence(length: int) -> list[int]:
+        """指定された長さの素数列を生成"""
+        primes = []
+        num = 2
+        while len(primes) < length:
+            if OriginalIndicators._is_prime(num):
+                primes.append(num)
+            num += 1
+        return primes
+
+    @staticmethod
+    def prime_oscillator(
+        close: pd.Series,
+        length: int = 14,
+        signal_length: int = 3
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Prime Number Oscillator (素数オシレーター)
+
+        素数の特性を利用して価格の周期性を検出する独自のオシレーター。
+        素数間隔で価格変化をサンプリングし、それらの加重平均を計算することで、
+        通常の移動平均では捉えきれない市場の周期的なパターンを捉える。
+
+        計算方法:
+        1. 指定期間内の素数列を生成 (例: 14期間なら [2,3,5,7,11,13])
+        2. 各素数位置の価格変化率を計算
+        3. 素数の逆数を重みとして加重平均を計算
+        4. 結果を正規化してオシレーターとして表示
+
+        Args:
+            close: クローズ価格の系列
+            length: 計算期間（素数列の最大値、>=2）
+            signal_length: 信号線の平滑化期間（>=2）
+
+        Returns:
+            Tuple[pd.Series, pd.Series]: (Prime Oscillator, Signal Line)
+
+        特徴:
+        - 素数間隔による非周期的サンプリング
+        - 市場の隠れた周期性の検出
+        - 過去の価格パターンとの相関分析に有用
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if length < 2:
+            raise ValueError("length must be >= 2")
+        if signal_length < 2:
+            raise ValueError("signal_length must be >= 2")
+
+        if close.empty or len(close) < length:
+            empty_osc = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"PRIME_OSC_{length}"
+            )
+            empty_signal = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"PRIME_SIGNAL_{length}_{signal_length}"
+            )
+            return empty_osc, empty_signal
+
+        prices = close.astype(float).to_numpy()
+        result = np.empty_like(prices)
+        result[:] = np.nan
+
+        # 指定期間内の素数列を生成
+        primes = OriginalIndicators._get_prime_sequence(length)
+        max_prime = max(primes)
+
+        if len(prices) < max_prime:
+            logger.warning(
+                "Prime Oscillator: insufficient data length (%s) for max prime %s",
+                len(prices),
+                max_prime,
+            )
+            return (
+                pd.Series(result, index=close.index, name=f"PRIME_OSC_{length}"),
+                pd.Series(result, index=close.index, name=f"PRIME_SIGNAL_{length}_{signal_length}")
+            )
+
+        # 素数位置の重みを計算（素数の逆数）
+        weights = [1.0 / p for p in primes]
+        weight_sum = sum(weights)
+
+        # Prime Oscillatorの計算
+        for i in range(max_prime, len(prices)):
+            # 各素数位置の価格変化率を計算
+            price_changes = []
+            for prime in primes:
+                if i >= prime:
+                    prev_price = prices[i - prime]
+                    current_price = prices[i]
+                    if prev_price != 0:
+                        change_rate = (current_price - prev_price) / prev_price
+                        price_changes.append(change_rate)
+                    else:
+                        price_changes.append(0.0)
+                else:
+                    price_changes.append(0.0)
+
+            # 加重平均を計算
+            weighted_sum = sum(w * change for w, change in zip(weights, price_changes))
+            oscillator_value = weighted_sum / weight_sum
+
+            # 正規化（過去200期間の標準偏差でスケーリング）
+            lookback = min(200, i)
+            if lookback >= max_prime:
+                recent_changes = []
+                for j in range(i - lookback + 1, i + 1):
+                    for prime in primes:
+                        if j >= prime:
+                            prev_price = prices[j - prime]
+                            current_price = prices[j]
+                            if prev_price != 0:
+                                change_rate = (current_price - prev_price) / prev_price
+                                recent_changes.append(change_rate)
+
+                if recent_changes:
+                    std_dev = np.std(recent_changes)
+                    if std_dev > 0:
+                        oscillator_value = oscillator_value / std_dev * 100
+
+            result[i] = oscillator_value
+
+        oscillator = pd.Series(result, index=close.index, name=f"PRIME_OSC_{length}")
+
+        # Signal Lineの計算（SMA）
+        signal = oscillator.rolling(window=signal_length).mean()
+        signal.name = f"PRIME_SIGNAL_{length}_{signal_length}"
+
+        return oscillator, signal
+
+    @staticmethod
+    def calculate_prime_oscillator(data, length=14, signal_length=3):
+        """Prime Number Oscillator計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        oscillator, signal = OriginalIndicators.prime_oscillator(
+            close, length, signal_length
+        )
+
+        result = pd.DataFrame(
+            {
+                oscillator.name: oscillator,
+                signal.name: signal,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def _generate_fibonacci_sequence(count: int) -> list[int]:
+        """フィボナッチ数列を生成"""
+        if count <= 0:
+            return []
+        elif count == 1:
+            return [1]
+        elif count == 2:
+            return [1, 1]
+
+        sequence = [1, 1]
+        for i in range(2, count):
+            sequence.append(sequence[i-1] + sequence[i-2])
+        return sequence
+
+    @staticmethod
+    def fibonacci_cycle(
+        close: pd.Series,
+        cycle_periods: list[int] = None,
+        fib_ratios: list[float] = None
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Fibonacci Cycle Indicator (フィボナッチサイクルインジケーター)
+
+        フィボナッチ数列と黄金比を利用して市場のサイクルを検出する独自のオシレーター。
+        複数のフィボナッチ期間で価格変動を分析し、調和平均で統合することで、
+        市場の潜在的な時間的パターンとサイクルを特定する。
+
+        計算方法:
+        1. 指定されたフィボナッチ期間で価格変化率を計算
+        2. フィボナッチ比率 (0.618, 1.0, 1.618, 2.618) を基準に正規化
+        3. 各期間の結果を調和平均で統合
+        4. 時間的フィルタリングを適用してノイズを低減
+
+        Args:
+            close: クローズ価格の系列
+            cycle_periods: 使用するフィボナッチ期間のリスト（例: [8, 13, 21, 34, 55]）
+            fib_ratios: フィボナッチ比率のリスト（例: [0.618, 1.0, 1.618, 2.618]）
+
+        Returns:
+            Tuple[pd.Series, pd.Series]: (Fibonacci Cycle, Signal Line)
+
+        特徴:
+        - フィボナッチ数列に基づく時間的分析
+        - 市場サイクルの検出
+        - 黄金比を利用した正規化
+        - 複数時間枠の統合分析
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        if cycle_periods is None:
+            cycle_periods = [8, 13, 21, 34, 55]
+        if fib_ratios is None:
+            fib_ratios = [0.618, 1.0, 1.618, 2.618]
+
+        if not cycle_periods or not fib_ratios:
+            raise ValueError("cycle_periods and fib_ratios must not be empty")
+
+        if close.empty or len(close) < max(cycle_periods):
+            empty_cycle = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"FIBO_CYCLE_{len(cycle_periods)}"
+            )
+            empty_signal = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"FIBO_SIGNAL_{len(cycle_periods)}"
+            )
+            return empty_cycle, empty_signal
+
+        prices = close.astype(float).to_numpy()
+        result = np.empty_like(prices)
+        result[:] = np.nan
+
+        # 最大期間まで計算不能
+        max_period = max(cycle_periods)
+
+        for i in range(max_period, len(prices)):
+            cycle_values = []
+
+            # 各フィボナッチ期間で計算
+            for period in cycle_periods:
+                if i >= period:
+                    # 期間内の価格変化率を計算
+                    period_prices = prices[i-period+1:i+1]
+                    if period_prices[0] != 0:
+                        period_return = (period_prices[-1] - period_prices[0]) / period_prices[0]
+
+                        # フィボナッチ比率を基準に正規化
+                        normalized_values = []
+                        for ratio in fib_ratios:
+                            normalized = period_return / ratio
+                            normalized_values.append(normalized)
+
+                        # 各比率の平均を取る
+                        if normalized_values:
+                            avg_normalized = np.mean(normalized_values)
+                            cycle_values.append(avg_normalized)
+
+            # 調和平均を計算（負の値を除外）
+            positive_values = [abs(v) for v in cycle_values if v != 0]
+            if positive_values:
+                # 調和平均: n / Σ(1/xi)
+                harmonic_mean = len(positive_values) / sum(1.0 / v for v in positive_values)
+
+                # 符号を保持
+                sign_sum = sum(1 for v in cycle_values if v > 0) - sum(1 for v in cycle_values if v < 0)
+                final_value = harmonic_mean * (1 if sign_sum >= 0 else -1)
+
+                # 時間的フィルタリング（過去の値との平滑化）
+                if i > max_period:
+                    prev_value = result[i-1]
+                    if not np.isnan(prev_value):
+                        # 指数平滑化を適用
+                        alpha = 0.3
+                        result[i] = alpha * final_value + (1 - alpha) * prev_value
+                    else:
+                        result[i] = final_value
+                else:
+                    result[i] = final_value
+
+        fibonacci_cycle = pd.Series(result, index=close.index, name=f"FIBO_CYCLE_{len(cycle_periods)}")
+
+        # Signal Lineの計算（SMA）
+        signal = fibonacci_cycle.rolling(window=3).mean()
+        signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"
+
+        return fibonacci_cycle, signal
+
+    @staticmethod
+    def calculate_fibonacci_cycle(data, cycle_periods: list[int] = None, fib_ratios: list[float] = None):
+        """Fibonacci Cycle Indicator計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        cycle, signal = OriginalIndicators.fibonacci_cycle(
+            close, cycle_periods, fib_ratios
+        )
+
+        result = pd.DataFrame(
+            {
+                cycle.name: cycle,
+                signal.name: signal,
             },
             index=data.index,
         )

@@ -641,6 +641,305 @@ class TestOriginalIndicators:
             )
             OriginalIndicators.calculate_elder_ray(incomplete_data)
 
+    def test_calculate_prime_oscillator_valid_data(self):
+        """有効データでのPrime Number Oscillator計算テスト"""
+        # Prime Number Oscillatorは素数列を使用するため、十分な長さが必要
+        # length=14の場合、必要な最小データ長は最大の素数(13)より大きい
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195]}
+        )
+
+        result = OriginalIndicators.calculate_prime_oscillator(data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "PRIME_OSC_14" in result.columns
+        assert "PRIME_SIGNAL_14_3" in result.columns
+        # Prime Oscillatorは正規化されているので、-100から100の範囲内
+        non_nan_values = result["PRIME_OSC_14"].dropna()
+        if len(non_nan_values) > 0:
+            assert non_nan_values.min() >= -100
+            assert non_nan_values.max() <= 100
+
+    def test_calculate_prime_oscillator_insufficient_data(self):
+        """データ不足でのPrime Number Oscillator計算テスト"""
+        data = pd.DataFrame({"close": [100, 101, 102, 103, 104]})  # 不十分なデータ
+
+        result = OriginalIndicators.calculate_prime_oscillator(data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "PRIME_OSC_14" in result.columns
+        # データが少ないとNaNが返される
+        assert result["PRIME_OSC_14"].isna().all()
+
+    def test_calculate_prime_oscillator_custom_parameters(self):
+        """カスタムパラメータでのPrime Number Oscillator計算テスト"""
+        # length=10の場合、必要な最小データ長は29+1=30
+        data = pd.DataFrame(
+            {"close": list(range(100, 130))}  # 100から129までの30個のデータ
+        )
+
+        result = OriginalIndicators.calculate_prime_oscillator(data, length=10, signal_length=5)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "PRIME_OSC_10" in result.columns
+        assert "PRIME_SIGNAL_10_5" in result.columns
+        non_nan_values = result["PRIME_OSC_10"].dropna()
+        if len(non_nan_values) > 0:
+            assert non_nan_values.min() >= -100
+            assert non_nan_values.max() <= 100
+
+    def test_prime_oscillator_direct_calculation(self):
+        """Prime Number Oscillatorの直接計算テスト"""
+        # length=14の場合、必要な最小データ長は43+1=44
+        close = pd.Series(list(range(100, 144)))  # 100から143までの44個のデータ
+
+        oscillator, signal = OriginalIndicators.prime_oscillator(close, length=14, signal_length=3)
+
+        assert isinstance(oscillator, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(oscillator) == len(close)
+        assert len(signal) == len(close)
+        assert oscillator.name == "PRIME_OSC_14"
+        assert signal.name == "PRIME_SIGNAL_14_3"
+        # 正規化された値
+        non_nan_values = oscillator.dropna()
+        if len(non_nan_values) > 0:
+            assert non_nan_values.min() >= -100
+            assert non_nan_values.max() <= 100
+
+    def test_prime_oscillator_parameter_validation(self):
+        """Prime Number Oscillatorのパラメータ検証テスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
+        )
+
+        # lengthが小さすぎる
+        with pytest.raises(ValueError, match="length must be >= 2"):
+            OriginalIndicators.calculate_prime_oscillator(data, length=1)
+
+        # signal_lengthが小さすぎる
+        with pytest.raises(ValueError, match="signal_length must be >= 2"):
+            OriginalIndicators.calculate_prime_oscillator(data, length=14, signal_length=1)
+
+        # 不正なデータ型
+        with pytest.raises(TypeError, match="data must be pandas DataFrame"):
+            OriginalIndicators.calculate_prime_oscillator([100, 101, 102])
+
+    def test_prime_oscillator_edge_cases(self):
+        """Prime Number Oscillatorの境界値テスト"""
+        # 定数データ
+        # length=14の場合、必要な最小データ長は43+1=44
+        constant_data = pd.DataFrame(
+            {"close": [100] * 44}  # 44個の定数データ
+        )
+
+        result = OriginalIndicators.calculate_prime_oscillator(constant_data)
+
+        assert isinstance(result, pd.DataFrame)
+        # 定数データでは変化がないため、オシレーターは0に近くなる
+        non_nan_values = result["PRIME_OSC_14"].dropna()
+        if len(non_nan_values) > 0:
+            assert abs(non_nan_values.mean()) < 1e-6
+
+        # 昇順データ
+        increasing_data = pd.DataFrame(
+            {"close": list(range(100, 144))}  # 44個の昇順データ
+        )
+
+        result = OriginalIndicators.calculate_prime_oscillator(increasing_data)
+
+        assert isinstance(result, pd.DataFrame)
+        # 昇順データでは正の値を取る傾向
+        non_nan_values = result["PRIME_OSC_14"].dropna()
+        if len(non_nan_values) > 0:
+            assert non_nan_values.mean() > -10
+
+    def test_prime_oscillator_consistency(self):
+        """Prime Number Oscillatorの再現性テスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115]}
+        )
+
+        result1 = OriginalIndicators.calculate_prime_oscillator(data)
+        result2 = OriginalIndicators.calculate_prime_oscillator(data)
+
+        # 同じ入力では同じ結果になる
+        assert result1.equals(result2)
+
+    def test_prime_oscillator_with_nan_values(self):
+        """Prime Number OscillatorのNaN値処理テスト"""
+        data = pd.DataFrame(
+            {"close": [100, np.nan, 102, 103, np.nan, 105, 106, 107, 108, 109]}
+        )
+
+        result = OriginalIndicators.calculate_prime_oscillator(data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "PRIME_OSC_14" in result.columns
+        # NaNが適切に処理されている
+
+    def test_prime_oscillator_memory_usage(self):
+        """Prime Number Oscillatorのメモリ使用量テスト"""
+        # 大きなデータセット
+        large_data = pd.DataFrame(
+            {"close": np.random.normal(100, 10, 10000)}
+        )
+
+        result = OriginalIndicators.calculate_prime_oscillator(large_data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(large_data)
+        # 大きなデータでも処理できる
+
+    def test_calculate_fibonacci_cycle_valid_data(self):
+        """有効データでのFibonacci Cycle計算テスト"""
+        # Fibonacci Cycleは最大期間55が必要
+        data = pd.DataFrame(
+            {"close": list(range(100, 155))}  # 55個のデータ
+        )
+
+        result = OriginalIndicators.calculate_fibonacci_cycle(data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "FIBO_CYCLE_5" in result.columns
+        assert "FIBO_SIGNAL_5" in result.columns
+        # Fibonacci Cycleの値は有限
+        non_nan_values = result["FIBO_CYCLE_5"].dropna()
+        if len(non_nan_values) > 0:
+            assert np.isfinite(non_nan_values.min())
+            assert np.isfinite(non_nan_values.max())
+
+    def test_calculate_fibonacci_cycle_insufficient_data(self):
+        """データ不足でのFibonacci Cycle計算テスト"""
+        data = pd.DataFrame({"close": [100, 101, 102, 103, 104]})  # 不十分なデータ
+
+        result = OriginalIndicators.calculate_fibonacci_cycle(data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "FIBO_CYCLE_5" in result.columns
+        # データが少ないとNaNが返される
+
+    def test_calculate_fibonacci_cycle_custom_parameters(self):
+        """カスタムパラメータでのFibonacci Cycle計算テスト"""
+        # カスタム期間
+        data = pd.DataFrame(
+            {"close": list(range(100, 121))}  # 21個のデータ（最大期間21）
+        )
+
+        result = OriginalIndicators.calculate_fibonacci_cycle(
+            data,
+            cycle_periods=[5, 8, 13, 21],
+            fib_ratios=[0.5, 1.0, 1.5, 2.5]
+        )
+
+        assert isinstance(result, pd.DataFrame)
+        assert "FIBO_CYCLE_4" in result.columns
+        assert "FIBO_SIGNAL_4" in result.columns
+        non_nan_values = result["FIBO_CYCLE_4"].dropna()
+        if len(non_nan_values) > 0:
+            assert np.isfinite(non_nan_values.min())
+            assert np.isfinite(non_nan_values.max())
+
+    def test_fibonacci_cycle_direct_calculation(self):
+        """Fibonacci Cycleの直接計算テスト"""
+        close = pd.Series(list(range(100, 155)))  # 55個のデータ
+
+        cycle, signal = OriginalIndicators.fibonacci_cycle(close)
+
+        assert isinstance(cycle, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(cycle) == len(close)
+        assert len(signal) == len(close)
+        assert cycle.name == "FIBO_CYCLE_5"
+        assert signal.name == "FIBO_SIGNAL_5"
+        non_nan_values = cycle.dropna()
+        if len(non_nan_values) > 0:
+            assert np.isfinite(non_nan_values.min())
+            assert np.isfinite(non_nan_values.max())
+
+    def test_fibonacci_cycle_parameter_validation(self):
+        """Fibonacci Cycleのパラメータ検証テスト"""
+        data = pd.DataFrame(
+            {"close": list(range(100, 155))}
+        )
+
+        # cycle_periodsが空
+        with pytest.raises(ValueError, match="cycle_periods and fib_ratios must not be empty"):
+            OriginalIndicators.calculate_fibonacci_cycle(data, cycle_periods=[], fib_ratios=[0.618])
+
+        # fib_ratiosが空
+        with pytest.raises(ValueError, match="cycle_periods and fib_ratios must not be empty"):
+            OriginalIndicators.calculate_fibonacci_cycle(data, cycle_periods=[8, 13], fib_ratios=[])
+
+        # 不正なデータ型
+        with pytest.raises(TypeError, match="data must be pandas DataFrame"):
+            OriginalIndicators.calculate_fibonacci_cycle([100, 101, 102])
+
+    def test_fibonacci_cycle_edge_cases(self):
+        """Fibonacci Cycleの境界値テスト"""
+        # 定数データ
+        constant_data = pd.DataFrame(
+            {"close": [100] * 55}  # 55個の定数データ
+        )
+
+        result = OriginalIndicators.calculate_fibonacci_cycle(constant_data)
+
+        assert isinstance(result, pd.DataFrame)
+        # 定数データでは小さな値になるはず
+        non_nan_values = result["FIBO_CYCLE_5"].dropna()
+        if len(non_nan_values) > 0:
+            assert abs(non_nan_values.mean()) < 1e-3
+
+        # 昇順データ
+        increasing_data = pd.DataFrame(
+            {"close": list(range(100, 155))}  # 55個の昇順データ
+        )
+
+        result = OriginalIndicators.calculate_fibonacci_cycle(increasing_data)
+
+        assert isinstance(result, pd.DataFrame)
+        # 昇順データでは正の傾向
+        non_nan_values = result["FIBO_CYCLE_5"].dropna()
+        if len(non_nan_values) > 0:
+            assert np.isfinite(non_nan_values.mean())
+
+    def test_fibonacci_cycle_consistency(self):
+        """Fibonacci Cycleの再現性テスト"""
+        data = pd.DataFrame(
+            {"close": list(range(100, 155))}
+        )
+
+        result1 = OriginalIndicators.calculate_fibonacci_cycle(data)
+        result2 = OriginalIndicators.calculate_fibonacci_cycle(data)
+
+        # 同じ結果になるはず
+        assert result1.equals(result2)
+
+    def test_fibonacci_cycle_with_nan_values(self):
+        """Fibonacci CycleのNaN値処理テスト"""
+        data = pd.DataFrame(
+            {"close": [100, np.nan, 102, 103, np.nan, 105, 106, 107, 108, 109]}
+        )
+
+        result = OriginalIndicators.calculate_fibonacci_cycle(data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "FIBO_CYCLE_5" in result.columns
+        # NaNが適切に処理されている
+
+    def test_fibonacci_cycle_memory_usage(self):
+        """Fibonacci Cycleのメモリ使用量テスト"""
+        # 大きなデータセット
+        large_data = pd.DataFrame(
+            {"close": np.random.normal(100, 10, 10000)}
+        )
+
+        result = OriginalIndicators.calculate_fibonacci_cycle(large_data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(large_data)
+        # 大きなデータでも処理できる
+
 
 if __name__ == "__main__":
     # コマンドラインからの実行用

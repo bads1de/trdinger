@@ -4029,6 +4029,113 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "volatility",
         },
     },
+    "PRIME_OSC": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "momentum_zero_centered",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.prime_oscillator",
+            "required_data": ["close"],
+            "output_names": ["PRIME_OSC", "PRIME_SIGNAL"],
+            "default_output": "PRIME_OSC",
+            "aliases": ["Prime_Oscillator"],
+            "param_map": {
+                "close": "close",
+                "length": "length",
+                "signal_length": "signal_length",
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 14,
+                    "min_value": 2,
+                    "max_value": 50,
+                    "description": "Prime Number Oscillator計算期間",
+                },
+                "signal_length": {
+                    "default_value": 3,
+                    "min_value": 2,
+                    "max_value": 20,
+                    "description": "Signal line計算期間",
+                },
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "multiple",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {"length": 14, "signal_length": 3},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_0 > {left_operand}_1",
+                "short": "{left_operand}_0 < {left_operand}_1",
+            },
+            "scale_type": "momentum_zero_centered",
+            "thresholds": {
+                "aggressive": {"long_gt": 5, "short_lt": -5},
+                "conservative": {"long_gt": 15, "short_lt": -15},
+                "normal": {"long_gt": 10, "short_lt": -10},
+            },
+            "type": "original",
+        },
+    },
+    "FIBO_CYCLE": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "momentum_zero_centered",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.fibonacci_cycle",
+            "required_data": ["close"],
+            "output_names": ["FIBO_CYCLE", "FIBO_SIGNAL"],
+            "default_output": "FIBO_CYCLE",
+            "aliases": ["Fibonacci_Cycle"],
+            "param_map": {
+                "close": "close",
+                "cycle_periods": "cycle_periods",
+                "fib_ratios": "fib_ratios",
+            },
+            "parameters": {
+                "cycle_periods": {
+                    "default_value": [8, 13, 21, 34, 55],
+                    "min_value": [5, 8, 13],
+                    "max_value": [21, 34, 55, 89, 144],
+                    "description": "Fibonacci Cycle計算に使用する期間リスト",
+                },
+                "fib_ratios": {
+                    "default_value": [0.618, 1.0, 1.618, 2.618],
+                    "min_value": [0.5, 0.8, 1.2, 2.0],
+                    "max_value": [0.8, 1.2, 2.0, 3.0],
+                    "description": "Fibonacci比率リスト",
+                },
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "multiple",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {
+                "cycle_periods": [8, 13, 21, 34, 55],
+                "fib_ratios": [0.618, 1.0, 1.618, 2.618]
+            },
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_0 > {left_operand}_1",
+                "short": "{left_operand}_0 < {left_operand}_1",
+            },
+            "scale_type": "momentum_zero_centered",
+            "thresholds": {
+                "aggressive": {"long_gt": 0.5, "short_lt": -0.5},
+                "conservative": {"long_gt": 2.0, "short_lt": -2.0},
+                "normal": {"long_gt": 1.0, "short_lt": -1.0},
+            },
+            "type": "original",
+        },
+    },
 }
 
 
