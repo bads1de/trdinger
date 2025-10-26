@@ -3975,6 +3975,60 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "trend",
         },
     },
+    "GRI": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "momentum_zero_centered",
+            "category": "volatility",
+            "adapter_function": "app.services.indicators.technical_indicators.volatility.VolatilityIndicators.gri",
+            "required_data": ["high", "low", "close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": ["gopalakrishnan_range"],
+            "param_map": {
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "length": "length",
+                "offset": "offset",
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 14,
+                    "min_value": 2,
+                    "max_value": 100,
+                    "description": "GRI計算期間",
+                },
+                "offset": {
+                    "default_value": 0,
+                    "min_value": -10,
+                    "max_value": 10,
+                    "description": "出力オフセット",
+                },
+            },
+            "pandas_function": "kvo",
+            "data_column": None,
+            "data_columns": ["High", "Low", "Close"],
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {"length": 14, "offset": 0},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand} > {threshold}",
+                "short": "left_operand} < {threshold}",
+            },
+            "scale_type": "momentum_zero_centered",
+            "thresholds": {
+                "aggressive": {"long_gt": 10, "short_lt": -10},
+                "conservative": {"long_gt": 30, "short_lt": -30},
+                "normal": {"long_gt": 20, "short_lt": -20},
+            },
+            "type": "volatility",
+        },
+    },
 }
 
 

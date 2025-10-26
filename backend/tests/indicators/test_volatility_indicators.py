@@ -281,6 +281,53 @@ class TestVolatilityIndicators:
         with pytest.raises(ValueError, match="length must be positive"):
             VolatilityIndicators.rvi(data["close"], data["high"], data["low"], length=-1)
 
+    def test_calculate_gri_valid_data(self):
+        """有効データでのGRI計算テスト"""
+        data = pd.DataFrame(
+            {
+                "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
+                "low": [98, 99, 100, 101, 102, 103, 104, 105, 106, 107],
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+            }
+        )
+
+        result = VolatilityIndicators.gri(data["high"], data["low"], data["close"], length=5)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        # GRIは振動型指標なので、正負の値を取り得る
+        assert not result.isna().all()
+
+    def test_calculate_gri_insufficient_data(self):
+        """データ不足でのGRI計算テスト"""
+        data = pd.DataFrame(
+            {
+                "high": [102, 103],
+                "low": [98, 99],
+                "close": [100, 101],
+            }
+        )
+
+        result = VolatilityIndicators.gri(data["high"], data["low"], data["close"], length=14)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == 2
+        # 不十分なデータではNaN
+        assert result.isna().all()
+
+    def test_calculate_gri_invalid_length(self):
+        """無効な長さのGRIテスト"""
+        data = pd.DataFrame(
+            {
+                "high": [102, 103, 104],
+                "low": [98, 99, 100],
+                "close": [100, 101, 102],
+            }
+        )
+
+        with pytest.raises(ValueError, match="length must be positive"):
+            VolatilityIndicators.gri(data["high"], data["low"], data["close"], length=-1)
+
     def test_handle_invalid_data_types(self):
         """無効なデータ型のテスト"""
         # 数値以外のデータ
