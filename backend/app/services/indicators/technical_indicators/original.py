@@ -4,12 +4,13 @@
 現在の実装:
 - FRAMA (Fractal Adaptive Moving Average)
 - SUPER_SMOOTHER (Ehlers 2-Pole Super Smoother Filter)
+- ELDER_RAY (Elder Ray Index)
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Final
+from typing import Final, Tuple
 
 import numpy as np
 import pandas as pd
@@ -158,3 +159,89 @@ class OriginalIndicators:
             )
 
         return pd.Series(result, index=close.index, name="SUPER_SMOOTHER")
+
+    @staticmethod
+    def elder_ray(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 13,
+        ema_length: int = 16,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Elder Ray Index
+
+        Dr. Alexander Elderが開発したモメンタムインジケーター。
+        ブルパワー（高値 - EMA）とベアパワー（安値 - EMA）を計算し、
+        市場の買いと売りの勢いを測定する。
+
+        計算式:
+        - Bull Power = High - EMA(close, ema_length)
+        - Bear Power = Low - EMA(close, ema_length)
+
+        Args:
+            high: 高値の系列
+            low: 安値の系列
+            close: 終値の系列
+            length: 計算期間（未使用、将来の拡張用）
+            ema_length: EMA計算期間 (default: 16)
+
+        Returns:
+            Tuple[pd.Series, pd.Series]: (Bull Power, Bear Power)
+
+        References:
+            - Elder, Alexander. Trading for a Living (1993)
+        """
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # データ長の検証
+        series_lengths = [len(high), len(low), len(close)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError("Elder Ray requires all series to have the same length")
+
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+        if ema_length <= 0:
+            raise ValueError(f"ema_length must be positive: {ema_length}")
+
+        # EMAを計算
+        ema = close.ewm(span=ema_length, adjust=False).mean()
+
+        # ブルパワー: 高値 - EMA
+        bull_power = high - ema
+
+        # ベアパワー: 安値 - EMA
+        bear_power = low - ema
+
+        return bull_power, bear_power
+
+    @staticmethod
+    def calculate_elder_ray(data, length=13, ema_length=16):
+        """Elder Ray Index計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["high", "low", "close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        high = data["high"]
+        low = data["low"]
+        close = data["close"]
+
+        bull_power, bear_power = OriginalIndicators.elder_ray(high, low, close, length, ema_length)
+
+        result = pd.DataFrame(
+            {
+                f"Elder_Ray_Bull_{length}_{ema_length}": bull_power,
+                f"Elder_Ray_Bear_{length}_{ema_length}": bear_power,
+            },
+            index=data.index,
+        )
+
+        return result

@@ -552,6 +552,95 @@ class TestOriginalIndicators:
         assert len(result) == len(data)
         # 極端なパラメータでもエラーにならない
 
+    def test_calculate_elder_ray_valid_data(self):
+        """有効データでのElder Ray計算テスト"""
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+                "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
+                "low": [98, 99, 100, 101, 102, 103, 104, 105, 106, 107],
+            }
+        )
+
+        result = OriginalIndicators.calculate_elder_ray(data)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "Elder_Ray_Bull_13_16" in result.columns
+        assert "Elder_Ray_Bear_13_16" in result.columns
+        # Bull Powerは高値 - EMAなので、正の値も取り得る
+        # Bear Powerは安値 - EMAなので、負の値も取り得る
+
+    def test_calculate_elder_ray_insufficient_data(self):
+        """データ不足でのElder Ray計算テスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101], "high": [102, 103], "low": [98, 99]}
+        )
+
+        result = OriginalIndicators.calculate_elder_ray(data)
+
+        assert isinstance(result, pd.DataFrame)
+        # 少ないデータでも計算可能
+        assert "Elder_Ray_Bull_13_16" in result.columns
+        assert "Elder_Ray_Bear_13_16" in result.columns
+
+    def test_calculate_elder_ray_custom_parameters(self):
+        """カスタムパラメータでのElder Ray計算テスト"""
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+                "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
+                "low": [98, 99, 100, 101, 102, 103, 104, 105, 106, 107],
+            }
+        )
+
+        result = OriginalIndicators.calculate_elder_ray(data, length=10, ema_length=12)
+
+        assert isinstance(result, pd.DataFrame)
+        assert "Elder_Ray_Bull_10_12" in result.columns
+        assert "Elder_Ray_Bear_10_12" in result.columns
+
+    def test_elder_ray_direct_calculation(self):
+        """Elder Rayの直接計算テスト"""
+        high = pd.Series([102, 103, 104, 105, 106])
+        low = pd.Series([98, 99, 100, 101, 102])
+        close = pd.Series([100, 101, 102, 103, 104])
+
+        bull_power, bear_power = OriginalIndicators.elder_ray(high, low, close, length=13, ema_length=16)
+
+        assert isinstance(bull_power, pd.Series)
+        assert isinstance(bear_power, pd.Series)
+        assert len(bull_power) == len(high)
+        assert len(bear_power) == len(low)
+        # EMAを計算しているので、直接的な関係はないが計算は可能
+
+    def test_elder_ray_parameter_validation(self):
+        """Elder Rayのパラメータ検証テスト"""
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104],
+                "high": [102, 103, 104, 105, 106],
+                "low": [98, 99, 100, 101, 102],
+            }
+        )
+
+        # lengthが負
+        with pytest.raises(ValueError, match="length must be positive"):
+            OriginalIndicators.calculate_elder_ray(data, length=-1, ema_length=16)
+
+        # ema_lengthが負
+        with pytest.raises(ValueError, match="ema_length must be positive"):
+            OriginalIndicators.calculate_elder_ray(data, length=13, ema_length=-1)
+
+        # 不足のデータ
+        with pytest.raises(ValueError, match="All arrays must be of the same length"):
+            incomplete_data = pd.DataFrame(
+                {
+                    "close": [100, 101],
+                    "high": [102, 103, 104],  # 長さが異なる
+                }
+            )
+            OriginalIndicators.calculate_elder_ray(incomplete_data)
+
 
 if __name__ == "__main__":
     # コマンドラインからの実行用

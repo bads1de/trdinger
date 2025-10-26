@@ -981,6 +981,72 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "trend",
         },
     },
+    "ELDER_RAY": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "momentum_zero_centered",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.elder_ray",
+            "required_data": ["high", "low", "close"],
+            "output_names": ["ELDER_RAY_Bull", "ELDER_RAY_Bear"],
+            "default_output": "ELDER_RAY_Bull",
+            "aliases": None,
+            "param_map": {
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "length": "length",
+                "ema_length": "ema_length"
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 13,
+                    "min_value": 5,
+                    "max_value": 50,
+                    "description": "Elder Ray計算期間"
+                },
+                "ema_length": {
+                    "default_value": 16,
+                    "min_value": 5,
+                    "max_value": 50,
+                    "description": "EMA計算期間"
+                }
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": ["High", "Low", "Close"],
+            "returns": "multiple",
+            "return_cols": ["BULL", "BEAR"],
+            "multi_column": True,
+            "default_values": {
+                "length": 13,
+                "ema_length": 16
+            },
+            "min_length_func": None
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_0 > {threshold}",
+                "short": "{left_operand}_1 < {threshold}"
+            },
+            "scale_type": "momentum_zero_centered",
+            "thresholds": {
+                "aggressive": {
+                    "long_gt": 0.5,
+                    "short_lt": -0.5
+                },
+                "conservative": {
+                    "long_gt": 1.5,
+                    "short_lt": -1.5
+                },
+                "normal": {
+                    "long_gt": 1.0,
+                    "short_lt": -1.0
+                }
+            },
+            "type": "momentum"
+        }
+    },
     "EMA": {
         "config": {
             "result_type": "single",
