@@ -4081,6 +4081,105 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "original",
         },
     },
+    "WPR": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "oscillator_0_100",
+            "category": "momentum",
+            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.williams_r",
+            "required_data": ["high", "low", "close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": ["Williams_%R", "Williams_R"],
+            "param_map": {
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "length": "length",
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 14,
+                    "min_value": 2,
+                    "max_value": 100,
+                    "description": "Williams %R計算期間",
+                }
+            },
+            "pandas_function": "wpr",
+            "data_column": None,
+            "data_columns": ["High", "Low", "Close"],
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": True,
+            "default_values": {"length": 14},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand} < {threshold}",
+                "short": "{left_operand} > {threshold}",
+            },
+            "scale_type": "oscillator_0_100",
+            "thresholds": {
+                "aggressive": {"long_lt": 20, "short_gt": 80},
+                "conservative": {"long_lt": 10, "short_gt": 90},
+                "normal": {"long_lt": 15, "short_gt": 85},
+            },
+            "type": "momentum",
+        },
+    },
+    "PSY": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "oscillator_0_100",
+            "category": "momentum",
+            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.psychological_line",
+            "required_data": ["close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": ["Psychological_Line", "PSY"],
+            "param_map": {
+                "close": "close",
+                "length": "length",
+                "offset": "offset",
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 12,
+                    "min_value": 5,
+                    "max_value": 30,
+                    "description": "Psychological Line計算期間",
+                },
+                "offset": {
+                    "default_value": 0,
+                    "min_value": -10,
+                    "max_value": 10,
+                    "description": "出力オフセット",
+                }
+            },
+            "pandas_function": "psl",
+            "data_column": "Close",
+            "data_columns": None,
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {"length": 12, "offset": 0},
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand} > {threshold}",
+                "short": "{left_operand} < {threshold}",
+            },
+            "scale_type": "oscillator_0_100",
+            "thresholds": {
+                "aggressive": {"long_gt": 75, "short_lt": 25},
+                "conservative": {"long_gt": 80, "short_lt": 20},
+                "normal": {"long_gt": 70, "short_lt": 30},
+            },
+            "type": "momentum",
+        },
+    },
     "FIBO_CYCLE": {
         "config": {
             "result_type": "complex",

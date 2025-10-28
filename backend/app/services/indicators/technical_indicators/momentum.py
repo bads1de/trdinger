@@ -37,6 +37,8 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
+from ..utils import handle_pandas_ta_errors
+
 logger = logging.getLogger(__name__)
 
 
@@ -1013,3 +1015,91 @@ class MomentumIndicators:
                 "senkou_span_b": senkou_span_b,
                 "chikou_span": chikou_span,
             }
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def williams_r(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+        **kwargs,
+    ) -> pd.Series:
+        """ウィリアムズ%R"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # Williams %R requires sufficient data length
+        min_length = max(length * 2, 14)
+        if len(high) < min_length:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        # pandas-taのwpr関数を使用
+        try:
+            result = ta.wpr(
+                high=high,
+                low=low,
+                close=close,
+                length=length,
+                **kwargs,
+            )
+        except Exception:
+            # pandas-taが利用できない場合のフォールバック実装
+            # Williams %R = [(highest high - current close) / (highest high - lowest low)] * -100
+            
+            # 過去length期間の最高値と最低値を計算
+            highest_high = high.rolling(window=length, min_periods=1).max()
+            lowest_low = low.rolling(window=length, min_periods=1).min()
+            
+            # Williams %R計算
+            result = ((highest_high - close) / (highest_high - lowest_low)) * -100
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def psychological_line(
+        close: pd.Series,
+        length: int = 12,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Psychological Line (PSY) - 投資家の心理状態を測定するオシレーター"""
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # PSY requires sufficient data length
+        min_length = max(length * 2, 12)
+        if len(close) < min_length:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
+        # pandas-taのpsl関数を使用 (PSL = Psychological Line)
+        try:
+            result = ta.psl(
+                close=close,
+                length=length,
+                offset=offset,
+            )
+        except Exception:
+            # pandas-taが利用できない場合のフォールバック実装
+            # PSY = (上昇日数 / 総日数) * 100
+            
+            # 価格の変化を計算
+            price_change = close.diff()
+            
+            # 上昇日数をカウント
+            up_days = (price_change > 0).rolling(window=length, min_periods=1).sum()
+            
+            # PSY計算
+            result = (up_days / length) * 100
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
+        return result

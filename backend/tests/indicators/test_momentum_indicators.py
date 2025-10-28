@@ -468,3 +468,16 @@ class TestMomentumIndicators:
     def subTest(self, indicator):
         """サブテスト用ダミーメソッド"""
         pass
+
+    def test_psychological_line_valid_data(self):
+        """有効データでのPsychological Line計算テスト"""
+        data = pd.DataFrame({
+            "close": [100, 102, 101, 105, 103, 107, 105, 110, 108, 112]
+        })
+
+        result = MomentumIndicators.psychological_line(data["close"])
+
+        assert isinstance(result, pd.Series)
+        # PSYは0-100の範囲
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)

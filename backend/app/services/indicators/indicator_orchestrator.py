@@ -2,7 +2,7 @@
 テクニカル指標統合サービス（簡素化版）
 
 pandas-taの利点を最大限に活用しつつ、実装の複雑さを大幅に削減した効率的なサービス。
-71個のテクニカル指標を統一的に管理し、高い保守性と拡張性を確保。
+82個のテクニカル指標を統一的に管理し、高い保守性と拡張性を確保。
 
 主な特徴:
 - 5つの簡素メソッドによる処理分割
@@ -10,14 +10,15 @@ pandas-taの利点を最大限に活用しつつ、実装の複雑さを大幅�
 - 統一されたエラーハンドリング
 - 後方互換性の確保（アダプター方式統合）
 
-サポート指標数: 71個
-- Momentum: ADX, AO, APO, AROON, BOP, CCI, CG, CMO, COPPOCK, CTI, FISHER, KST, MACD, MASSI, MOM, PGO, PPO, PSL, QQE, ROC, RSI, SQUEEZE, STC, STOCH, TRIX, TSI, UO, WILLR (28個)
-- Trend: ALMA, AMAT, DEMA, DPO, EMA, FRAMA, HMA, LINREG, LINREGSLOPE, RMA, SAR, SMA, SUPER_SMOOTHER, T3, TEMA, TRIMA, VORTEX, VWMA, WMA, ZLMA (20個)
-- Volatility: ACCBANDS, ATR, BB, CHOP, DONCHIAN, KELTNER, NATR, RVI, SUPERTREND, UI (10個)
+サポート指標数: 82個
+- Momentum: ADX, AO, APO, AROON, BOP, CCI, CG, CMO, COPPOCK, CTI, FISHER, KST, MACD, MASSI, MOM, PGO, PPO, PSL, PSY, QQE, ROC, RSI, SQUEEZE, STC, STOCH, STOCHRSI, TRIX, TSI, UO, WILLR, WPR (31個)
+- Trend: ALMA, AMAT, DEMA, DPO, EMA, FRAMA, HMA, KAMA, LINREG, LINREGSLOPE, RMA, SAR, SMA, SUPER_SMOOTHER, T3, TEMA, TRIMA, VORTEX, VWMA, WMA, ZLMA (21個)
+- Volatility: ACCBANDS, ATR, BB, CHOP, DONCHIAN, KELTNER, NATR, RVI, SUPERTREND, UI, VHF (11個)
 - Volume: AD, ADOSC, CMF, EFI, EOM, KVO, MFI, NVI, OBV, PVO, PVT, VWAP (12個)
 - Price Transform: KAMA (1個)
+- Original: ELDER_RAY, FIBO_CYCLE, FRAMA, GRI, PRIME_OSC, SUPER_SMOOTHER (6個)
 
-※ 48個はpandas-ta直接対応、23個は独自実装によるアダプター方式
+※ 50個はpandas-ta直接対応、32個は独自実装によるアダプター方式
 
 """
 
