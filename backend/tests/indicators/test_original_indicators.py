@@ -79,6 +79,216 @@ class TestOriginalIndicators:
         assert len(result) == 1
         assert result.isna().all()
 
+    def test_adaptive_entropy_valid_data(self):
+        """有効データでのAdaptive Entropy計算テスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130]}
+        )
+
+        oscillator, signal, ratio = OriginalIndicators.adaptive_entropy(
+            data["close"], short_length=14, long_length=28, signal_length=5
+        )
+
+        assert isinstance(oscillator, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert isinstance(ratio, pd.Series)
+        assert len(oscillator) == len(data)
+        assert len(signal) == len(data)
+        assert len(ratio) == len(data)
+
+    def test_adaptive_entropy_insufficient_data(self):
+        """データ不足でのAdaptive Entropyテスト"""
+        data = pd.DataFrame({"close": [100, 101, 102, 103, 104]})
+
+        oscillator, signal, ratio = OriginalIndicators.adaptive_entropy(
+            data["close"], short_length=14, long_length=28, signal_length=5
+        )
+
+        # 不十分なデータの場合はNaNが返される
+        assert all(np.isnan(v) for v in oscillator)
+        assert all(np.isnan(v) for v in signal)
+        assert all(np.isnan(v) for v in ratio)
+
+    def test_adaptive_entropy_invalid_parameters(self):
+        """無効なパラメータでのAdaptive Entropyテスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104] * 10]
+        )
+
+        # short_lengthが短すぎる
+        with pytest.raises(ValueError, match="short_length must be >= 5"):
+            OriginalIndicators.adaptive_entropy(data["close"], short_length=3, long_length=28, signal_length=5)
+
+        # long_lengthが短すぎる
+        with pytest.raises(ValueError, match="long_length must be >= 10"):
+            OriginalIndicators.adaptive_entropy(data["close"], short_length=14, long_length=5, signal_length=5)
+
+        # signal_lengthが短すぎる
+        with pytest.raises(ValueError, match="signal_length must be >= 2"):
+            OriginalIndicators.adaptive_entropy(data["close"], short_length=14, long_length=28, signal_length=1)
+
+        # short_lengthがlong_length以上
+        with pytest.raises(ValueError, match="short_length must be < long_length"):
+            OriginalIndicators.adaptive_entropy(data["close"], short_length=30, long_length=28, signal_length=5)
+
+    def test_adaptive_entropy_calculate_method(self):
+        """calculate_adaptive_entropyメソッドのテスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130]}
+        )
+
+        result = OriginalIndicators.calculate_adaptive_entropy(
+            data, short_length=14, long_length=28, signal_length=5
+        )
+
+        assert isinstance(result, pd.DataFrame)
+        assert "ADAPTIVE_ENTROPY_OSC_14_28" in result.columns
+        assert "ADAPTIVE_ENTROPY_SIGNAL_14_28_5" in result.columns
+        assert "ADAPTIVE_ENTROPY_RATIO_14_28" in result.columns
+
+    def test_quantum_flow_valid_data(self):
+        """有効データでのQuantum Flow計算テスト"""
+        data = pd.DataFrame({
+            "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
+            "high": [105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125],
+            "low": [95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115],
+            "volume": [1000, 1050, 1010, 1080, 1020, 1060, 1030, 1070, 1040, 1080, 1050, 1090, 1060, 1100, 1070, 1110, 1080, 1120, 1090, 1130, 1100]
+        })
+
+        flow, signal = OriginalIndicators.quantum_flow(
+            data["close"], data["high"], data["low"], data["volume"], length=14, flow_length=9
+        )
+
+        assert isinstance(flow, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(flow) == len(data)
+        assert len(signal) == len(data)
+
+    def test_quantum_flow_insufficient_data(self):
+        """データ不足でのQuantum Flowテスト"""
+        data = pd.DataFrame({
+            "close": [100, 101, 102, 103, 104],
+            "high": [105, 106, 107, 108, 109],
+            "low": [95, 96, 97, 98, 99],
+            "volume": [1000, 1050, 1010, 1080, 1020]
+        })
+
+        empty_flow, empty_signal = OriginalIndicators.quantum_flow(
+            data["close"], data["high"], data["low"], data["volume"], length=14, flow_length=9
+        )
+
+        # 不十分なデータの場合はNaNが返される
+        assert all(np.isnan(v) for v in empty_flow)
+        assert all(np.isnan(v) for v in empty_signal)
+
+    def test_quantum_flow_invalid_parameters(self):
+        """無効なパラメータでのQuantum Flowテスト"""
+        data = pd.DataFrame({
+            "close": [100, 101, 102, 103, 104],
+            "high": [105, 106, 107, 108, 109],
+            "low": [95, 96, 97, 98, 99],
+            "volume": [1000, 1050, 1010, 1080, 1020]
+        })
+
+        # lengthが短すぎる
+        with pytest.raises(ValueError, match="length must be >= 5"):
+            OriginalIndicators.quantum_flow(data["close"], data["high"], data["low"], data["volume"], length=3, flow_length=9)
+
+        # flow_lengthが短すぎる
+        with pytest.raises(ValueError, match="flow_length must be >= 3"):
+            OriginalIndicators.quantum_flow(data["close"], data["high"], data["low"], data["volume"], length=14, flow_length=2)
+
+    def test_quantum_flow_missing_columns(self):
+        """欠損列でのQuantum Flowテスト"""
+        # volume列が欠損
+        data_missing_volume = pd.DataFrame({
+            "close": [100, 101, 102, 103, 104],
+            "high": [105, 106, 107, 108, 109],
+            "low": [95, 96, 97, 98, 99]
+            # volume列が欠損
+        })
+
+        with pytest.raises(ValueError, match="Missing required column"):
+            OriginalIndicators.calculate_quantum_flow(data_missing_volume)
+
+    def test_quantum_flow_calculate_method(self):
+        """calculate_quantum_flowメソッドのテスト"""
+        data = pd.DataFrame({
+            "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
+            "high": [105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125],
+            "low": [95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115],
+            "volume": [1000, 1050, 1010, 1080, 1020, 1060, 1030, 1070, 1040, 1080, 1050, 1090, 1060, 1100, 1070, 1110, 1080, 1120, 1090, 1130, 1100]
+        })
+
+        result = OriginalIndicators.calculate_quantum_flow(
+            data, length=14, flow_length=9
+        )
+
+        assert isinstance(result, pd.DataFrame)
+        assert "QUANTUM_FLOW" in result.columns
+        assert "QUANTUM_FLOW_SIGNAL" in result.columns
+
+    def test_frama_edge_cases(self):
+        """FRAMAのエッジケーステスト"""
+        # 空データのテスト
+        empty_data = pd.DataFrame({"close": []})
+        result_empty = OriginalIndicators.frama(empty_data["close"], length=16, slow=200)
+        assert len(result_empty) == 0
+        
+        # 単一データポイントのテスト
+        single_data = pd.DataFrame({"close": [100]})
+        result_single = OriginalIndicators.frama(single_data["close"], length=16, slow=200)
+        assert len(result_single) == 1
+        assert np.isnan(result_single.iloc[0])
+        
+        # 最小限のデータ長のテスト
+        min_data = pd.DataFrame({"close": [100, 101, 102, 103]})  # 4ポイント（最小）
+        result_min = OriginalIndicators.frama(min_data["close"], length=4, slow=200)
+        assert len(result_min) == 4
+        
+    def test_super_smoother_edge_cases(self):
+        """Super Smootherのエッジケーステスト"""
+        # 空データのテスト
+        empty_data = pd.DataFrame({"close": []})
+        result_empty = OriginalIndicators.super_smoother(empty_data["close"], length=10)
+        assert len(result_empty) == 0
+        
+        # 最小データ長のテスト
+        min_data = pd.DataFrame({"close": [100, 101]})  # 2ポイント（最小）
+        result_min = OriginalIndicators.super_smoother(min_data["close"], length=2)
+        assert len(result_min) == 2
+
+    def test_adaptive_entropy_edge_cases(self):
+        """Adaptive Entropyのエッジケーステスト"""
+        # ショートラインがロングラインと等しい場合のテスト
+        equal_length_data = pd.DataFrame({"close": [100, 101] * 50})
+        with pytest.raises(ValueError, match="short_length must be < long_length"):
+            OriginalIndicators.adaptive_entropy(equal_length_data["close"], short_length=14, long_length=14, signal_length=5)
+        
+        # 長さが0のデータ
+        zero_data = pd.DataFrame({"close": []})
+        osc, sig, ratio = OriginalIndicators.adaptive_entropy(zero_data["close"], short_length=14, long_length=28, signal_length=5)
+        assert all(np.isnan(x) for x in osc)
+        assert all(np.isnan(x) for x in sig)  
+        assert all(np.isnan(x) for x in ratio)
+
+    def test_quantum_flow_edge_cases(self):
+        """Quantum Flowのエッジケーステスト"""
+        # 長さが等しいデータのテスト
+        equal_length_data = pd.DataFrame({
+            "close": [100, 101] * 5,
+            "high": [105, 106] * 5, 
+            "low": [95, 96] * 5,
+            "volume": [1000, 1050] * 5
+        })
+        flow, signal = OriginalIndicators.quantum_flow(
+            equal_length_data["close"], equal_length_data["high"], 
+            equal_length_data["low"], equal_length_data["volume"], 
+            length=3, flow_length=2
+        )
+        assert len(flow) == len(equal_length_data)
+        assert len(signal) == len(equal_length_data)
+
     def test_calculate_frama_with_trend(self):
         """トレンドがあるデータのFRAMAテスト"""
         # 明確な上昇トレンド

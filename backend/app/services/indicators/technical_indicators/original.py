@@ -7,6 +7,8 @@
 - ELDER_RAY (Elder Ray Index)
 - PRIME_OSC (Prime Number Oscillator)
 - FIBO_CYCLE (Fibonacci Cycle Indicator)
+- ADAPTIVE_ENTROPY (Adaptive Entropy Oscillator)
+- QUANTUM_FLOW (Quantum-inspired Flow Analysis)
 """
 
 from __future__ import annotations
@@ -570,6 +572,347 @@ class OriginalIndicators:
         result = pd.DataFrame(
             {
                 cycle.name: cycle,
+                signal.name: signal,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def _entropy(data: np.ndarray, window: int) -> np.ndarray:
+        """エントロピー計算のヘルパー関数"""
+        if len(data) < window:
+            return np.full_like(data, np.nan)
+        
+        result = np.empty_like(data)
+        result[:window-1] = np.nan
+        
+        for i in range(window-1, len(data)):
+            window_data = data[i-window+1:i+1]
+            # ヒストグラムを作成
+            hist, _ = np.histogram(window_data, bins=min(10, len(window_data)), density=True)
+            # ゼロを避ける
+            hist = hist[hist > 0]
+            if len(hist) > 0:
+                # Shannonエントロピーを計算
+                entropy = -np.sum(hist * np.log(hist))
+                result[i] = entropy
+            else:
+                result[i] = np.nan
+        
+        return result
+
+    @staticmethod
+    def adaptive_entropy(
+        close: pd.Series,
+        short_length: int = 14,
+        long_length: int = 28,
+        signal_length: int = 5
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Adaptive Entropy Oscillator (適応的エントロピーオシレーター)
+
+        時系列データの複雑さと予測可能性を測定する独自のオシレーター。
+        シャノンエントロピーを利用して市場の混雑度と予測可能性を定量化し、
+        短期と長期のエントロピー比から市場の状態を判断する。
+
+        計算方法:
+        1. 短期ウィンドウと長期ウィンドウでエントロピーを計算
+        2. エントロピー比を計算 (短期/長期)
+        3. 結果を正規化して逆相関スケールに変換
+        4. 信号線で平滑化
+
+        Args:
+            close: クローズ価格の系列
+            short_length: 短期エントロピー計算期間（>=5）
+            long_length: 長期エントロピー計算期間（>=10）
+            signal_length: 信号線平滑化期間（>=2）
+
+        Returns:
+            Tuple[pd.Series, pd.Series, pd.Series]: (Entropy Oscillator, Signal Line, Raw Entropy Ratio)
+
+        特徴:
+        - 市場の混乱度と予測可能性の定量化
+        - 異常値に対してロバスト
+        - トレンド変化の早期検出
+        - ボラティリティと相関の組み合わせ分析
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if short_length < 5:
+            raise ValueError("short_length must be >= 5")
+        if long_length < 10:
+            raise ValueError("long_length must be >= 10")
+        if signal_length < 2:
+            raise ValueError("signal_length must be >= 2")
+        if short_length >= long_length:
+            raise ValueError("short_length must be < long_length")
+
+        if close.empty or len(close) < long_length:
+            empty_osc = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}"
+            )
+            empty_signal = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}"
+            )
+            empty_ratio = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}"
+            )
+            return empty_osc, empty_signal, empty_ratio
+
+        prices = close.astype(float).to_numpy()
+        
+        # 短期と長期のエントロピーを計算
+        short_entropy = OriginalIndicators._entropy(prices, short_length)
+        long_entropy = OriginalIndicators._entropy(prices, long_length)
+        
+        # エントロピー比を計算 (短期/長期)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            entropy_ratio = short_entropy / long_entropy
+        
+        # 結果を正規化 (逆相関スケール: 高い値 = より混雑)
+        # 0.5を基準として、1.0以上で混雑、0.5以下で秩序と解釈
+        normalized_osc = (entropy_ratio - 0.5) * 2.0
+        
+        # Signal Lineの計算（SMA）
+        signal = pd.Series(normalized_osc, index=close.index).rolling(window=signal_length).mean()
+        
+        # 結果をPandas Seriesに変換
+        oscillator = pd.Series(
+            normalized_osc, 
+            index=close.index, 
+            name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}"
+        )
+        signal.name = f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}"
+        ratio = pd.Series(
+            entropy_ratio,
+            index=close.index,
+            name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}"
+        )
+
+        return oscillator, signal, ratio
+
+    @staticmethod
+    def calculate_adaptive_entropy(data, short_length=14, long_length=28, signal_length=5):
+        """Adaptive Entropy Oscillator計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        oscillator, signal, ratio = OriginalIndicators.adaptive_entropy(
+            close, short_length, long_length, signal_length
+        )
+
+        result = pd.DataFrame(
+            {
+                oscillator.name: oscillator,
+                signal.name: signal,
+                ratio.name: ratio,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def _simple_wavelet_transform(data: np.ndarray, scale: int) -> np.ndarray:
+        """簡単なウェーブレット変換の近似"""
+        if len(data) < scale:
+            return np.full_like(data, np.nan)
+            
+        result = np.empty_like(data)
+        result[:scale-1] = np.nan
+        
+        # Haarウェーブレットの近似
+        for i in range(scale-1, len(data)):
+            window_start = max(0, i - scale + 1)
+            window_data = data[window_start:i+1]
+            
+            # 簡単なウェーブレット計算
+            half = len(window_data) // 2
+            if half > 0:
+                first_half = window_data[:half]
+                second_half = window_data[-half:]
+                
+                # 差分と平均を組み合わせた特徴量
+                diff = np.mean(second_half) - np.mean(first_half)
+                avg = np.mean(window_data)
+                
+                result[i] = diff * np.sqrt(len(window_data))
+            else:
+                result[i] = 0.0
+
+        return result
+
+    @staticmethod
+    def quantum_flow(
+        close: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        volume: pd.Series,
+        length: int = 14,
+        flow_length: int = 9
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Quantum Flow Analysis (量子インスパイアード・フローアナリシス)
+
+        量子力学の概念から着想を得た独自のフローアナリシス指標。
+        価格、ボラティリティ、Volumeの相互作用をウェーブレット変換で解析し、
+        市場のエネルギー流動を測定する。波動関数の確率解釈を応用した、
+        独特な市場状態評価手法。
+
+        計算方法:
+        1. 価格のウェーブレット変換で多スケール特性を抽出
+        2. 高低価格差とVolumeの相関を計算
+        3. 結果を統合してフロースコアを生成
+        4. 時間的平滑化でノイズを低減
+
+        Args:
+            close: クローズ価格の系列
+            high: 高値の系列
+            low: 安値の系列
+            volume: 出来高の系列
+            length: ウェーブレット計算期間（>=5）
+            flow_length: フロースコア計算期間（>=3）
+
+        Returns:
+            Tuple[pd.Series, pd.Series]: (Quantum Flow, Signal Line)
+
+        特徴:
+        - 量子力学の概念を応用した独自アルゴリズム
+        - 多スケール市場分析
+        - ボリュームと価格の相関分析
+        - 波動的市場状態の可視化
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+
+        # データ長の検証
+        series_lengths = [len(close), len(high), len(low), len(volume)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError("All series must have the same length")
+
+        if length < 5:
+            raise ValueError("length must be >= 5")
+        if flow_length < 3:
+            raise ValueError("flow_length must be >= 3")
+
+        if close.empty or len(close) < length:
+            empty_flow = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name="QUANTUM_FLOW"
+            )
+            empty_signal = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name="QUANTUM_FLOW_SIGNAL"
+            )
+            return empty_flow, empty_signal
+
+        # 価格データの前処理
+        prices = close.astype(float).to_numpy()
+        highs = high.astype(float).to_numpy()
+        lows = low.astype(float).to_numpy()
+        volumes = volume.astype(float).to_numpy()
+        
+        # ウェーブレット変換で多スケール特性を抽出
+        wavelet_result = OriginalIndicators._simple_wavelet_transform(prices, length)
+        
+        # 価格変動とVolumeの相関を計算
+        price_change = np.diff(prices, prepend=prices[0])
+        volume_change = np.diff(volumes, prepend=volumes[0])
+        
+        # 相関スコアの計算 (簡易版)
+        correlation_score = np.zeros_like(prices)
+        for i in range(length, len(prices)):
+            price_window = price_change[i-length+1:i+1]
+            volume_window = volume_change[i-length+1:i+1]
+            
+            if np.std(price_window) > 0 and np.std(volume_window) > 0:
+                # 簡単な相関計算
+                corr = np.corrcoef(price_window, volume_window)[0, 1]
+                correlation_score[i] = corr
+            else:
+                correlation_score[i] = 0.0
+        
+        # ボラティリティスコアの計算
+        volatility = (highs - lows) / prices
+        
+        # Quantum Flowの統合計算
+        quantum_flow = np.zeros_like(prices)
+        for i in range(length, len(prices)):
+            # ウェーブレット結果、相関、ボラティリティを統合
+            wavelet_component = wavelet_result[i] if np.isfinite(wavelet_result[i]) else 0
+            corr_component = correlation_score[i]
+            vol_component = volatility[i]
+            
+            # 統合スコア (正規化して[-1, 1]スケールに)
+            integrated = (wavelet_component * 0.4 + 
+                         corr_component * 0.3 + 
+                         vol_component * 0.3)
+            
+            # 正規化 (過去200期間の標準偏差でスケーリング)
+            lookback = min(200, i)
+            if lookback >= length:
+                recent_values = quantum_flow[i-lookback+1:i+1]
+                if len(recent_values) > 0 and np.std(recent_values) > 0:
+                    integrated = integrated / np.std(recent_values) * 0.5
+            
+            quantum_flow[i] = integrated
+        
+        # Signal Line (SMA)
+        signal = pd.Series(quantum_flow, index=close.index).rolling(window=flow_length).mean()
+        
+        # 結果をPandas Seriesに変換
+        flow_series = pd.Series(
+            quantum_flow,
+            index=close.index,
+            name="QUANTUM_FLOW"
+        )
+        signal.name = "QUANTUM_FLOW_SIGNAL"
+
+        return flow_series, signal
+
+    @staticmethod
+    def calculate_quantum_flow(data, length=14, flow_length=9):
+        """Quantum Flow Analysis計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close", "high", "low", "volume"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        high = data["high"]
+        low = data["low"]
+        volume = data["volume"]
+        
+        flow, signal = OriginalIndicators.quantum_flow(
+            close, high, low, volume, length, flow_length
+        )
+
+        result = pd.DataFrame(
+            {
+                flow.name: flow,
                 signal.name: signal,
             },
             index=data.index,

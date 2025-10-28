@@ -1047,6 +1047,145 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "momentum"
         }
     },
+    "ADAPTIVE_ENTROPY": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "oscillator_plus_minus_100",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.adaptive_entropy",
+            "required_data": ["close"],
+            "output_names": ["ADAPTIVE_ENTROPY_OSC", "ADAPTIVE_ENTROPY_SIGNAL", "ADAPTIVE_ENTROPY_RATIO"],
+            "default_output": "ADAPTIVE_ENTROPY_OSC",
+            "aliases": None,
+            "param_map": {
+                "close": "close",
+                "short_length": "short_length",
+                "long_length": "long_length",
+                "signal_length": "signal_length"
+            },
+            "parameters": {
+                "short_length": {
+                    "default_value": 14,
+                    "min_value": 5,
+                    "max_value": 50,
+                    "description": "短期エントロピー計算期間"
+                },
+                "long_length": {
+                    "default_value": 28,
+                    "min_value": 10,
+                    "max_value": 100,
+                    "description": "長期エントロピー計算期間"
+                },
+                "signal_length": {
+                    "default_value": 5,
+                    "min_value": 2,
+                    "max_value": 20,
+                    "description": "信号線平滑化期間"
+                }
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "multiple",
+            "return_cols": ["OSC", "SIGNAL", "RATIO"],
+            "multi_column": False,
+            "default_values": {
+                "short_length": 14,
+                "long_length": 28,
+                "signal_length": 5
+            },
+            "min_length_func": None
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_1 > {left_operand}_0",
+                "short": "{left_operand}_1 < {left_operand}_0"
+            },
+            "scale_type": "oscillator_zero_centered",
+            "thresholds": {
+                "aggressive": {
+                    "long_gt": 0.2,
+                    "short_lt": -0.2
+                },
+                "conservative": {
+                    "long_gt": 0.8,
+                    "short_lt": -0.8
+                },
+                "normal": {
+                    "long_gt": 0.5,
+                    "short_lt": -0.5
+                }
+            },
+            "type": "original"
+        }
+    },
+    "QUANTUM_FLOW": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "oscillator_plus_minus_100",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.quantum_flow",
+            "required_data": ["close", "high", "low", "volume"],
+            "output_names": ["QUANTUM_FLOW", "QUANTUM_FLOW_SIGNAL"],
+            "default_output": "QUANTUM_FLOW",
+            "aliases": None,
+            "param_map": {
+                "close": "close",
+                "high": "high",
+                "low": "low",
+                "volume": "volume",
+                "length": "length",
+                "flow_length": "flow_length"
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 14,
+                    "min_value": 5,
+                    "max_value": 50,
+                    "description": "ウェーブレット計算期間"
+                },
+                "flow_length": {
+                    "default_value": 9,
+                    "min_value": 3,
+                    "max_value": 20,
+                    "description": "フロースコア計算期間"
+                }
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": ["Close", "High", "Low", "Volume"],
+            "returns": "multiple",
+            "return_cols": ["FLOW", "SIGNAL"],
+            "multi_column": False,
+            "default_values": {
+                "length": 14,
+                "flow_length": 9
+            },
+            "min_length_func": None
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_1 > {left_operand}_0",
+                "short": "{left_operand}_1 < {left_operand}_0"
+            },
+            "scale_type": "oscillator_zero_centered",
+            "thresholds": {
+                "aggressive": {
+                    "long_gt": 0.1,
+                    "short_lt": -0.1
+                },
+                "conservative": {
+                    "long_gt": 0.3,
+                    "short_lt": -0.3
+                },
+                "normal": {
+                    "long_gt": 0.2,
+                    "short_lt": -0.2
+                }
+            },
+            "type": "original"
+        }
+    },
     "EMA": {
         "config": {
             "result_type": "single",
