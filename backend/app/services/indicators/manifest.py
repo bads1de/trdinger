@@ -1186,6 +1186,155 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "original"
         }
     },
+    "HARMONIC_RESONANCE": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "oscillator_plus_minus_100",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.harmonic_resonance",
+            "required_data": ["close", "high", "low"],
+            "output_names": ["HARMONIC_RESONANCE", "HRI_SIGNAL"],
+            "default_output": "HARMONIC_RESONANCE",
+            "aliases": None,
+            "param_map": {
+                "close": "close",
+                "high": "high",
+                "low": "low",
+                "length": "length",
+                "resonance_bands": "resonance_bands",
+                "signal_length": "signal_length"
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 20,
+                    "min_value": 10,
+                    "max_value": 50,
+                    "description": "主計算期間"
+                },
+                "resonance_bands": {
+                    "default_value": 5,
+                    "min_value": 3,
+                    "max_value": 10,
+                    "description": "共振バンド数"
+                },
+                "signal_length": {
+                    "default_value": 3,
+                    "min_value": 2,
+                    "max_value": 10,
+                    "description": "信号線平滑化期間"
+                }
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": ["Close", "High", "Low"],
+            "returns": "multiple",
+            "return_cols": ["HRI", "SIGNAL"],
+            "multi_column": False,
+            "default_values": {
+                "length": 20,
+                "resonance_bands": 5,
+                "signal_length": 3
+            },
+            "min_length_func": None
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_1 > {left_operand}_0",
+                "short": "{left_operand}_1 < {left_operand}_0"
+            },
+            "scale_type": "oscillator_plus_minus_100",
+            "thresholds": {
+                "aggressive": {
+                    "long_gt": 50,
+                    "short_lt": -50
+                },
+                "conservative": {
+                    "long_gt": 150,
+                    "short_lt": -150
+                },
+                "normal": {
+                    "long_gt": 100,
+                    "short_lt": -100
+                }
+            },
+            "type": "original"
+        }
+    },
+    "CHAOS_FRACTAL_DIM": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "oscillator_plus_minus_100",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.chaos_fractal_dimension",
+            "required_data": ["close", "high", "low", "volume"],
+            "output_names": ["CHAOS_FRACTAL_DIM", "CTFD_SIGNAL"],
+            "default_output": "CHAOS_FRACTAL_DIM",
+            "aliases": None,
+            "param_map": {
+                "close": "close",
+                "high": "high",
+                "low": "low",
+                "volume": "volume",
+                "length": "length",
+                "embedding_dim": "embedding_dim",
+                "signal_length": "signal_length"
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 25,
+                    "min_value": 15,
+                    "max_value": 60,
+                    "description": "主計算期間"
+                },
+                "embedding_dim": {
+                    "default_value": 3,
+                    "min_value": 2,
+                    "max_value": 5,
+                    "description": "埋め込み次元数"
+                },
+                "signal_length": {
+                    "default_value": 4,
+                    "min_value": 2,
+                    "max_value": 10,
+                    "description": "信号線平滑化期間"
+                }
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": ["Close", "High", "Low", "Volume"],
+            "returns": "multiple",
+            "return_cols": ["CTFD", "SIGNAL"],
+            "multi_column": False,
+            "default_values": {
+                "length": 25,
+                "embedding_dim": 3,
+                "signal_length": 4
+            },
+            "min_length_func": None
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand}_1 > {left_operand}_0",
+                "short": "{left_operand}_1 < {left_operand}_0"
+            },
+            "scale_type": "oscillator_plus_minus_100",
+            "thresholds": {
+                "aggressive": {
+                    "long_gt": 20,
+                    "short_lt": -20
+                },
+                "conservative": {
+                    "long_gt": 60,
+                    "short_lt": -60
+                },
+                "normal": {
+                    "long_gt": 40,
+                    "short_lt": -40
+                }
+            },
+            "type": "original"
+        }
+    },
     "EMA": {
         "config": {
             "result_type": "single",

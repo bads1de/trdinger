@@ -112,7 +112,7 @@ class TestOriginalIndicators:
     def test_adaptive_entropy_invalid_parameters(self):
         """無効なパラメータでのAdaptive Entropyテスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104] * 10]
+            {"close": [100, 101, 102, 103, 104] * 10}
         )
 
         # short_lengthが短すぎる

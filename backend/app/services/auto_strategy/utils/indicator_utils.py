@@ -51,6 +51,10 @@ def get_volatility_indicators() -> List[str]:
     return indicators_by_category("volatility")
 
 
+def get_original_indicators() -> List[str]:
+    return indicators_by_category("original")
+
+
 def get_all_indicators() -> List[str]:
     """全指標タイプを取得（テクニカル + 複合指標）"""
     # 遅延インポートで循環依存を回避
@@ -104,6 +108,7 @@ def get_valid_indicator_types() -> List[str]:
         + get_momentum_indicators()
         + get_trend_indicators()
         + get_volatility_indicators()
+        + get_original_indicators()
     )
 
     # 遅延インポートで循環依存を回避
