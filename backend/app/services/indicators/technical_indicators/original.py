@@ -15,6 +15,7 @@
 - KAUFMAN_EFFICIENCY_RATIO (Kaufman Efficiency Ratio)
 - CHANDE_KROLL_STOP (Chande Kroll Stop)
 - TREND_INTENSITY_INDEX (Trend Intensity Index)
+- CONNORS_RSI (Connors RSI)
 """
 
 from __future__ import annotations
@@ -1861,6 +1862,199 @@ class OriginalIndicators:
         result = pd.DataFrame(
             {
                 tii.name: tii,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def connors_rsi(
+        close: pd.Series,
+        rsi_periods: int = 3,
+        streak_periods: int = 2,
+        rank_periods: int = 100
+    ) -> pd.Series:
+        """Connors RSI (ローレンス・コナーズ RSI)
+
+        Laurence Connorsによって開発された複合モメンタム指標。
+        3つの異なる時間スケールの相対強度を組み合わせて市場の過熱・過冷状態を測定する。
+
+        計算式:
+        1. Close RSI: 通常の終値RSI (短期)
+        2. Streak RSI: 連勝/連敗ストリークのRSI
+        3. Rank: 価格変動のパーセンタイルランク
+        4. Connors RSI = (Close RSI + Streak RSI + Rank) / 3
+
+        Args:
+            close: クローズ価格の系列
+            rsi_periods: Close RSIの計算期間（通常3）
+            streak_periods: Streak RSIの計算期間（通常2）
+            rank_periods: ランク計算の期間（通常100）
+
+        Returns:
+            pd.Series: Connors RSI値（0-100スケール）
+
+        特徴:
+        - 70以上: 過熱（売りシグナル）
+        - 30以下: 過冷（買いシグナル）
+        - 複数時間スケールの統合分析
+        - スウィングトレードに特に有効
+
+        References:
+            - Connors, Laurence (2013) "Connors RSI" Technical Analysis
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if rsi_periods < 2:
+            raise ValueError("rsi_periods must be >= 2")
+        if streak_periods < 1:
+            raise ValueError("streak_periods must be >= 1")
+        if rank_periods < 2:
+            raise ValueError("rank_periods must be >= 2")
+
+        if close.empty or len(close) < max(rsi_periods, streak_periods, rank_periods):
+            return pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}"
+            )
+
+        prices = close.astype(float).to_numpy()
+        result = np.empty_like(prices)
+        result[:] = np.nan
+
+        # Connors RSI = (Close RSI + Streak RSI + Rank) / 3
+        close_rsi = np.empty_like(prices)
+        streak_rsi = np.empty_like(prices)
+        rank_values = np.empty_like(prices)
+
+        # 1. Close RSIの計算
+        close_rsi[:] = np.nan
+        if len(prices) >= rsi_periods + 1:
+            for i in range(rsi_periods, len(prices)):
+                window = prices[i - rsi_periods + 1:i + 1]
+                gains = []
+                losses = []
+                
+                for j in range(1, len(window)):
+                    change = window[j] - window[j-1]
+                    if change > 0:
+                        gains.append(change)
+                    elif change < 0:
+                        losses.append(abs(change))
+                
+                if len(gains) > 0 and len(losses) > 0:
+                    avg_gain = np.mean(gains)
+                    avg_loss = np.mean(losses)
+                    rs = avg_gain / avg_loss
+                    rsi_value = 100 - (100 / (1 + rs))
+                    close_rsi[i] = rsi_value
+                elif len(gains) > 0:
+                    close_rsi[i] = 100
+                else:
+                    close_rsi[i] = 0
+
+        # 2. Streak RSIの計算（連勝/連敗ストリーク）
+        streak_rsi[:] = np.nan
+        if len(prices) >= streak_periods + 1:
+            # ストリークの計算
+            streaks = np.zeros_like(prices)
+            for i in range(1, len(prices)):
+                if prices[i] > prices[i-1]:
+                    streaks[i] = max(streaks[i-1] + 1, 1)
+                elif prices[i] < prices[i-1]:
+                    streaks[i] = min(streaks[i-1] - 1, -1)
+                else:
+                    streaks[i] = 0
+            
+            # ストリークのRSIを計算
+            for i in range(streak_periods, len(prices)):
+                window = streaks[i - streak_periods + 1:i + 1]
+                gains = []
+                losses = []
+                
+                for j in range(1, len(window)):
+                    change = window[j] - window[j-1]
+                    if change > 0:
+                        gains.append(change)
+                    elif change < 0:
+                        losses.append(abs(change))
+                
+                if len(gains) > 0 and len(losses) > 0:
+                    avg_gain = np.mean(gains)
+                    avg_loss = np.mean(losses)
+                    rs = avg_gain / avg_loss
+                    streak_rsi[i] = 100 - (100 / (1 + rs))
+                elif len(gains) > 0:
+                    streak_rsi[i] = 100
+                else:
+                    streak_rsi[i] = 0
+
+        # 3. Rankの計算（価格変動のパーセンタイル）
+        rank_values[:] = np.nan
+        if len(prices) >= rank_periods:
+            for i in range(rank_periods, len(prices)):
+                window = prices[i - rank_periods + 1:i + 1]
+                current_price = prices[i]
+                
+                # 現在価格が窓内の何％の価格以下かを計算
+                count_lower = np.sum(window <= current_price)
+                total_count = len(window)
+                
+                if total_count > 0:
+                    percentile = (count_lower / total_count) * 100
+                    rank_values[i] = percentile
+
+        # Connors RSIの統合計算
+        for i in range(max(rsi_periods, streak_periods, rank_periods), len(prices)):
+            # 有効な値のみを使用
+            valid_components = []
+            if not np.isnan(close_rsi[i]):
+                valid_components.append(close_rsi[i])
+            if not np.isnan(streak_rsi[i]):
+                valid_components.append(streak_rsi[i])
+            if not np.isnan(rank_values[i]):
+                valid_components.append(rank_values[i])
+            
+            if valid_components:
+                # 3つの成分の平均を取る
+                if len(valid_components) == 3:
+                    connors_value = np.mean(valid_components)
+                elif len(valid_components) == 2:
+                    # 2つのみ有効な場合はフォールバック（平均に大きな重みを付ける）
+                    connors_value = np.mean(valid_components) * (3.0 / len(valid_components))
+                else:
+                    connors_value = valid_components[0]
+                
+                # 0-100の範囲にクランプ
+                result[i] = max(0, min(100, connors_value))
+
+        return pd.Series(
+            result,
+            index=close.index,
+            name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}"
+        )
+
+    @staticmethod
+    def calculate_connors_rsi(data, rsi_periods=3, streak_periods=2, rank_periods=100):
+        """Connors RSI計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        connors_rsi = OriginalIndicators.connors_rsi(
+            close, rsi_periods, streak_periods, rank_periods
+        )
+
+        result = pd.DataFrame(
+            {
+                connors_rsi.name: connors_rsi,
             },
             index=data.index,
         )

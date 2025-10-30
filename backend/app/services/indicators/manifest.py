@@ -4747,6 +4747,69 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "original",
         },
     },
+    "CONNORS_RSI": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "oscillator_0_100",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.connors_rsi",
+            "required_data": ["close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": ["ConnorsRSI"],
+            "param_map": {
+                "close": "close",
+                "rsi_periods": "rsi_periods",
+                "streak_periods": "streak_periods",
+                "rank_periods": "rank_periods",
+            },
+            "parameters": {
+                "rsi_periods": {
+                    "default_value": 3,
+                    "min_value": 2,
+                    "max_value": 20,
+                    "description": "Close RSI計算期間",
+                },
+                "streak_periods": {
+                    "default_value": 2,
+                    "min_value": 1,
+                    "max_value": 10,
+                    "description": "ストリークRSI計算期間",
+                },
+                "rank_periods": {
+                    "default_value": 100,
+                    "min_value": 10,
+                    "max_value": 200,
+                    "description": "ランク計算期間",
+                },
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {
+                "rsi_periods": 3,
+                "streak_periods": 2,
+                "rank_periods": 100
+            },
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand} > 70",
+                "short": "{left_operand} < 30",
+            },
+            "scale_type": "oscillator_0_100",
+            "thresholds": {
+                "aggressive": {"long_gt": 65, "short_lt": 35},
+                "conservative": {"long_gt": 80, "short_lt": 20},
+                "normal": {"long_gt": 70, "short_lt": 30},
+            },
+            "type": "original",
+        },
+    },
 }
 
 
