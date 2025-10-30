@@ -71,11 +71,12 @@ class DataProcessor:
         # データ検証
         try:
             # 必要なカラムに基づいて検証を実行
-            ohlcv_columns = {"open", "high", "low", "close", "volume"}
-            if any(col in required_columns for col in ohlcv_columns):
-                validate_ohlcv_data(result_df)
-            validate_extended_data(result_df)
-            validate_data_integrity(result_df)
+            if not result.empty:
+                ok_columns = {"open", "high", "low", "close", "volume"}
+                if any(col in required_columns for col in ohlcv_columns):
+                    validate_ohlcv_data(result_df)
+                validate_extended_data(result_df)
+                validate_data_integrity(result_df)
         except Exception as e:
             logger.error(f"データ検証でエラー: {e}")
             raise ValueError(f"データ検証に失敗しました: {e}")
@@ -175,7 +176,10 @@ class DataProcessor:
 
         # 7. NaNを含む行を除去
         logger.info("NaN値の除去を実行中")
-        valid_mask = features_clean.notna().all(axis=1) & labels_clean.notna()
+        # Pandasのブール比較問題を回避する安全な方法
+        features_notna = features_clean.notna().all(axis=1)
+        labels_notna = labels_clean.notna()
+        valid_mask = features_notna & labels_notna
         features_clean = features_clean[valid_mask]
         labels_clean = labels_clean[valid_mask]
 

@@ -140,6 +140,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 3. 学習用データを準備
             X, y = self._prepare_training_data(features_df, **training_params)
 
+            # 学習データが空でないことを確認
+            if X is None or X.empty or y is None or y.empty:
+                raise DataError("前処理後の学習データが空です")
+
             # 4. クロスバリデーションを実行するかチェック
             use_cross_validation = training_params.get("use_cross_validation", False)
 
@@ -1027,6 +1031,23 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             **training_params,
         )
 
+        # フォールド情報を追加
+        fold_result.update(
+            {
+                "fold": fold,
+                "train_samples": len(X_train_cv),
+                "test_samples": len(X_test_cv),
+                "train_period": f"{X_train_cv.index[0]} ～ {X_train_cv.index[-1]}",
+                "test_period": f"{X_test_cv.index[0]} ～ {X_test_cv.index[-1]}",
+            }
+        )
+
+        logger.info(
+            f"フォールド {fold} 完了: 精度={fold_result.get('accuracy', 0.0):.4f}"
+        )
+
+        return fold_result
+
     def _prepare_combined_training_data(
         self,
         X_train: pd.DataFrame,
@@ -1108,20 +1129,3 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self._ensemble_trainer = trainer  # 参照を保持
 
         return result
-
-        # フォールド情報を追加
-        fold_result.update(
-            {
-                "fold": fold,
-                "train_samples": len(X_train_cv),
-                "test_samples": len(X_test_cv),
-                "train_period": f"{X_train_cv.index[0]} ～ {X_train_cv.index[-1]}",
-                "test_period": f"{X_test_cv.index[0]} ～ {X_test_cv.index[-1]}",
-            }
-        )
-
-        logger.info(
-            f"フォールド {fold} 完了: 精度={fold_result.get('accuracy', 0.0):.4f}"
-        )
-
-        return fold_result

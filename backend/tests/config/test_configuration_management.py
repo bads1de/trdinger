@@ -18,8 +18,8 @@ from app.config.unified_config import (
     BacktestConfig,
     LoggingConfig,
 )
-from app.config.config_loader import ConfigLoader
-from app.config.config_validator import ConfigValidator
+# from app.config.config_loader import ConfigLoader  # 存在しないモジュールのためコメントアウト
+# from app.config.config_validator import ConfigValidator  # 存在しないモジュールのためコメントアウト
 
 
 class TestConfigurationManagementComprehensive:

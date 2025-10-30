@@ -87,6 +87,8 @@ GA_THRESHOLD_RANGES = {
 
 @dataclass
 class GASettings(BaseConfig):
+    # 後方互換性のため
+    GAConfig = None
     """遺伝的アルゴリズム設定"""
 
     # 基本GA設定
