@@ -4523,6 +4523,230 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "type": "original",
         },
     },
+    "MCGINLEY_DYNAMIC": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "price_absolute",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.mcginley_dynamic",
+            "required_data": ["close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": ["McGinley_Dynamic", "MD"],
+            "param_map": {
+                "close": "close",
+                "length": "length",
+                "k": "k",
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 10,
+                    "min_value": 1,
+                    "max_value": 200,
+                    "description": "McGinley Dynamic計算期間",
+                },
+                "k": {
+                    "default_value": 0.6,
+                    "min_value": 0.1,
+                    "max_value": 2.0,
+                    "description": "適応係数（小さいほど反応が速い）",
+                },
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {
+                "length": 10,
+                "k": 0.6
+            },
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "close > {left_operand}",
+                "short": "close < {left_operand}",
+            },
+            "scale_type": "price_absolute",
+            "thresholds": {
+                "aggressive": {"long_gt": 0.0, "short_lt": 0.0},
+                "conservative": {"long_gt": 0.0, "short_lt": 0.0},
+                "normal": {"long_gt": 0.0, "short_lt": 0.0},
+            },
+            "type": "original",
+        },
+    },
+    "KAUFMAN_EFFICIENCY_RATIO": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "oscillator_0_100",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.kaufman_efficiency_ratio",
+            "required_data": ["close"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": ["Kaufman_ER", "KER"],
+            "param_map": {
+                "close": "close",
+                "length": "length",
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 10,
+                    "min_value": 2,
+                    "max_value": 100,
+                    "description": "Efficiency Ratio計算期間",
+                },
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {
+                "length": 10
+            },
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand} > 0.5",
+                "short": "{left_operand} < 0.3",
+            },
+            "scale_type": "oscillator_0_100",
+            "thresholds": {
+                "aggressive": {"long_gt": 0.4, "short_lt": 0.4},
+                "conservative": {"long_gt": 0.6, "short_lt": 0.2},
+                "normal": {"long_gt": 0.5, "short_lt": 0.3},
+            },
+            "type": "original",
+        },
+    },
+    "CHANDE_KROLL_STOP": {
+        "config": {
+            "result_type": "complex",
+            "scale_type": "price_absolute",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.chande_kroll_stop",
+            "required_data": ["high", "low", "close"],
+            "output_names": ["CKS_LONG", "CKS_SHORT"],
+            "default_output": "CKS_LONG",
+            "aliases": ["Chande_Kroll", "CKS"],
+            "param_map": {
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "p": "p",
+                "x": "x",
+                "q": "q",
+            },
+            "parameters": {
+                "p": {
+                    "default_value": 10,
+                    "min_value": 1,
+                    "max_value": 50,
+                    "description": "初期ストップ計算期間",
+                },
+                "x": {
+                    "default_value": 1.0,
+                    "min_value": 0.1,
+                    "max_value": 5.0,
+                    "description": "ATR乗数",
+                },
+                "q": {
+                    "default_value": 9,
+                    "min_value": 1,
+                    "max_value": 50,
+                    "description": "平滑化期間",
+                },
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "multiple",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {
+                "p": 10,
+                "x": 1.0,
+                "q": 9
+            },
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "close > {left_operand}_0",
+                "short": "close < {left_operand}_1",
+            },
+            "scale_type": "price_absolute",
+            "thresholds": {
+                "aggressive": {"long_gt": 0.0, "short_lt": 0.0},
+                "conservative": {"long_gt": 0.0, "short_lt": 0.0},
+                "normal": {"long_gt": 0.0, "short_lt": 0.0},
+            },
+            "type": "original",
+        },
+    },
+    "TREND_INTENSITY_INDEX": {
+        "config": {
+            "result_type": "single",
+            "scale_type": "oscillator_0_100",
+            "category": "original",
+            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.trend_intensity_index",
+            "required_data": ["close", "high", "low"],
+            "output_names": None,
+            "default_output": None,
+            "aliases": ["TII"],
+            "param_map": {
+                "close": "close",
+                "high": "high",
+                "low": "low",
+                "length": "length",
+                "sma_length": "sma_length",
+            },
+            "parameters": {
+                "length": {
+                    "default_value": 14,
+                    "min_value": 1,
+                    "max_value": 100,
+                    "description": "カウント期間",
+                },
+                "sma_length": {
+                    "default_value": 30,
+                    "min_value": 1,
+                    "max_value": 200,
+                    "description": "SMA計算期間",
+                },
+            },
+            "pandas_function": None,
+            "data_column": None,
+            "data_columns": None,
+            "returns": "single",
+            "return_cols": None,
+            "multi_column": False,
+            "default_values": {
+                "length": 14,
+                "sma_length": 30
+            },
+            "min_length_func": None,
+        },
+        "yaml": {
+            "conditions": {
+                "long": "{left_operand} > 60",
+                "short": "{left_operand} < 40",
+            },
+            "scale_type": "oscillator_0_100",
+            "thresholds": {
+                "aggressive": {"long_gt": 55, "short_lt": 45},
+                "conservative": {"long_gt": 70, "short_lt": 30},
+                "normal": {"long_gt": 60, "short_lt": 40},
+            },
+            "type": "original",
+        },
+    },
 }
 
 

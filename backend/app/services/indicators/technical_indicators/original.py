@@ -9,6 +9,12 @@
 - FIBO_CYCLE (Fibonacci Cycle Indicator)
 - ADAPTIVE_ENTROPY (Adaptive Entropy Oscillator)
 - QUANTUM_FLOW (Quantum-inspired Flow Analysis)
+- HARMONIC_RESONANCE (Harmonic Resonance Indicator)
+- CHAOS_FRACTAL_DIM (Chaos Theory Fractal Dimension)
+- MCGINLEY_DYNAMIC (McGinley Dynamic)
+- KAUFMAN_EFFICIENCY_RATIO (Kaufman Efficiency Ratio)
+- CHANDE_KROLL_STOP (Chande Kroll Stop)
+- TREND_INTENSITY_INDEX (Trend Intensity Index)
 """
 
 from __future__ import annotations
@@ -1405,6 +1411,456 @@ class OriginalIndicators:
             {
                 ctf.name: ctf,
                 signal.name: signal,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def mcginley_dynamic(
+        close: pd.Series,
+        length: int = 10,
+        k: float = 0.6
+    ) -> pd.Series:
+        """McGinley Dynamic (MD)
+
+        John R. McGinley Jr.が1990年に開発した適応型移動平均線。
+        従来の移動平均線の遅延を最小化し、価格の変動に自動的に追従する。
+        市場の速度に応じて平滑化係数を動的に調整することで、
+        トレンド転換を早期に検出しながらノイズを効果的に除去する。
+
+        計算式:
+        MD[i] = MD[i-1] + ((Price - MD[i-1]) / (k * N * (Price/MD[i-1])^4))
+
+        ここで:
+        - N: 期間長（length）
+        - k: 調整係数（デフォルト0.6、範囲0.5-0.7）
+        - Price: 現在の価格
+        - MD[i-1]: 前のMcGinley Dynamic値
+
+        Args:
+            close: クローズ価格の系列
+            length: 計算期間（>=1、通常10-20）
+            k: 適応係数（>0、デフォルト0.6）
+                - 小さい値(0.5): より反応が速い
+                - 大きい値(0.7): よりスムーズ
+
+        Returns:
+            McGinley Dynamic値を表す Pandas Series
+
+        特徴:
+        - 価格変動に自動追従
+        - 従来のMAより遅延が少ない
+        - トレンド方向の判定に有効
+        - ストップロスレベルの設定に有用
+
+        References:
+            - McGinley, John R. (1990) "Market Timing with McGinley Dynamic"
+              Technical Analysis of Stocks & Commodities Magazine
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if length < 1:
+            raise ValueError("length must be >= 1")
+        if k <= 0:
+            raise ValueError("k must be > 0")
+
+        if close.empty:
+            return pd.Series(
+                np.full(0, np.nan),
+                index=close.index,
+                name=f"MCGINLEY_{length}"
+            )
+
+        prices = close.astype(float).to_numpy(copy=True)
+        result = np.empty_like(prices)
+        result[:] = np.nan
+
+        # 初期値は最初の価格
+        result[0] = prices[0]
+
+        # McGinley Dynamicの計算
+        for i in range(1, len(prices)):
+            price = prices[i]
+            prev_md = result[i - 1]
+
+            if np.isnan(prev_md):
+                result[i] = price
+                continue
+
+            # ゼロ除算を防止
+            if prev_md == 0:
+                result[i] = price
+                continue
+
+            # McGinley Dynamic式
+            # MD = MD[i-1] + ((Price - MD[i-1]) / (k * N * (Price/MD[i-1])^4))
+            ratio = price / prev_md
+
+            # オーバーフローを防ぐためにratioを制限
+            ratio = np.clip(ratio, 0.1, 10.0)
+
+            denominator = k * length * (ratio ** 4)
+
+            # 非常に小さい値での除算を防止
+            if denominator < 1e-10:
+                denominator = 1e-10
+
+            md_change = (price - prev_md) / denominator
+            result[i] = prev_md + md_change
+
+        return pd.Series(
+            result,
+            index=close.index,
+            name=f"MCGINLEY_{length}"
+        )
+
+    @staticmethod
+    def calculate_mcginley_dynamic(data, length=10, k=0.6):
+        """McGinley Dynamic計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        md = OriginalIndicators.mcginley_dynamic(close, length, k)
+
+        result = pd.DataFrame(
+            {
+                md.name: md,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def kaufman_efficiency_ratio(
+        close: pd.Series,
+        length: int = 10
+    ) -> pd.Series:
+        """Kaufman Efficiency Ratio (KER)
+
+        Perry Kaufmanが開発したトレンド効率性を測定する指標。
+        価格変動の方向性とノイズの比率を計算することで、
+        市場がトレンド状態かレンジ状態かを判定する。
+
+        計算式:
+        ER = (Net Change) / (Total Movement)
+        - Net Change = |Close[n] - Close[0]|
+        - Total Movement = Σ|Close[i] - Close[i-1]|
+
+        Args:
+            close: クローズ価格の系列
+            length: 計算期間（>=2）
+
+        Returns:
+            Efficiency Ratio（0-1の範囲）を表す Pandas Series
+
+        特徴:
+        - 0に近い: レンジ相場（ノイズが多い）
+        - 1に近い: 強いトレンド（効率的な動き）
+        - Kaufman's Adaptive Moving Average (KAMA)の基礎
+
+        References:
+            - Kaufman, Perry J. (1995) "Smarter Trading"
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if length < 2:
+            raise ValueError("length must be >= 2")
+
+        if close.empty or len(close) < length:
+            return pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"KER_{length}"
+            )
+
+        prices = close.astype(float).to_numpy()
+        result = np.empty_like(prices)
+        result[:] = np.nan
+
+        for i in range(length - 1, len(prices)):
+            window_start = i - length + 1
+            window = prices[window_start:i + 1]
+
+            # Net Change（方向性）
+            net_change = abs(window[-1] - window[0])
+
+            # Total Movement（総変動）
+            total_movement = np.sum(np.abs(np.diff(window)))
+
+            # Efficiency Ratio計算
+            if total_movement > 0:
+                er = net_change / total_movement
+                result[i] = np.clip(er, 0.0, 1.0)
+            else:
+                result[i] = 0.0
+
+        return pd.Series(
+            result,
+            index=close.index,
+            name=f"KER_{length}"
+        )
+
+    @staticmethod
+    def calculate_kaufman_efficiency_ratio(data, length=10):
+        """Kaufman Efficiency Ratio計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        ker = OriginalIndicators.kaufman_efficiency_ratio(close, length)
+
+        result = pd.DataFrame(
+            {
+                ker.name: ker,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def chande_kroll_stop(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        p: int = 10,
+        x: float = 1.0,
+        q: int = 9
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Chande Kroll Stop
+
+        Tushar ChandeとStanley Krollが開発した動的ストップロス指標。
+        ATRベースでボラティリティに応じたストップレベルを自動計算し、
+        トレンドフォロー戦略のリスク管理に使用される。
+
+        計算式:
+        Long Stop = Highest(p) - x * ATR(p)
+        Short Stop = Lowest(p) + x * ATR(p)
+        最終値 = それぞれのq期間SMA
+
+        Args:
+            high: 高値の系列
+            low: 安値の系列
+            close: 終値の系列
+            p: 初期ストップ計算期間（>=1）
+            x: ATR乗数（>0、通常1-3）
+            q: 平滑化期間（>=1）
+
+        Returns:
+            Tuple[pd.Series, pd.Series]: (Long Stop, Short Stop)
+
+        特徴:
+        - ボラティリティ適応型ストップロス
+        - トレンド継続判定
+        - ポジション保護に有効
+
+        References:
+            - Chande, Tushar & Kroll, Stanley (1994)
+              "The New Technical Trader"
+        """
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # データ長の検証
+        series_lengths = [len(high), len(low), len(close)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError("All series must have the same length")
+
+        if p < 1:
+            raise ValueError("p must be >= 1")
+        if x <= 0:
+            raise ValueError("x must be > 0")
+        if q < 1:
+            raise ValueError("q must be >= 1")
+
+        if close.empty or len(close) < max(p, q):
+            empty_long = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"CKS_LONG_{p}"
+            )
+            empty_short = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"CKS_SHORT_{p}"
+            )
+            return empty_long, empty_short
+
+        # ATRの計算
+        tr = pd.DataFrame({
+            'hl': high - low,
+            'hc': abs(high - close.shift(1)),
+            'lc': abs(low - close.shift(1))
+        }).max(axis=1)
+        atr = tr.rolling(window=p).mean()
+
+        # Highest High と Lowest Low
+        highest_high = high.rolling(window=p).max()
+        lowest_low = low.rolling(window=p).min()
+
+        # ストップレベルの計算
+        long_stop_initial = highest_high - x * atr
+        short_stop_initial = lowest_low + x * atr
+
+        # q期間で平滑化
+        long_stop = long_stop_initial.rolling(window=q).mean()
+        short_stop = short_stop_initial.rolling(window=q).mean()
+
+        long_stop.name = f"CKS_LONG_{p}"
+        short_stop.name = f"CKS_SHORT_{p}"
+
+        return long_stop, short_stop
+
+    @staticmethod
+    def calculate_chande_kroll_stop(data, p=10, x=1.0, q=9):
+        """Chande Kroll Stop計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["high", "low", "close"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        high = data["high"]
+        low = data["low"]
+        close = data["close"]
+
+        long_stop, short_stop = OriginalIndicators.chande_kroll_stop(
+            high, low, close, p, x, q
+        )
+
+        result = pd.DataFrame(
+            {
+                long_stop.name: long_stop,
+                short_stop.name: short_stop,
+            },
+            index=data.index,
+        )
+
+        return result
+
+    @staticmethod
+    def trend_intensity_index(
+        close: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        length: int = 14,
+        sma_length: int = 30
+    ) -> pd.Series:
+        """Trend Intensity Index (TII)
+
+        M.H. Peeが開発したトレンドの強さを測定する指標。
+        価格が移動平均線より上にある期間の割合を計算し、
+        トレンドの強さと方向性を0-100のスケールで表示する。
+
+        計算式:
+        1. SMA(close, sma_length)を計算
+        2. length期間内で終値がSMAより上の日数をカウント
+        3. TII = (上の日数 / length) * 100
+
+        Args:
+            close: クローズ価格の系列
+            high: 高値の系列
+            low: 安値の系列
+            length: カウント期間（>=1）
+            sma_length: SMA計算期間（>=1）
+
+        Returns:
+            Trend Intensity Index（0-100）を表す Pandas Series
+
+        特徴:
+        - 80以上: 強い上昇トレンド
+        - 20以下: 強い下降トレンド
+        - 40-60: レンジ相場
+        - トレンド転換の早期検出
+
+        References:
+            - Pee, M.H. "Trend Intensity Index"
+              Technical Analysis of Stocks & Commodities (2002)
+        """
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+
+        # データ長の検証
+        series_lengths = [len(close), len(high), len(low)]
+        if not all(length == series_lengths[0] for length in series_lengths):
+            raise ValueError("All series must have the same length")
+
+        if length < 1:
+            raise ValueError("length must be >= 1")
+        if sma_length < 1:
+            raise ValueError("sma_length must be >= 1")
+
+        if close.empty or len(close) < max(length, sma_length):
+            return pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"TII_{length}_{sma_length}"
+            )
+
+        # SMAの計算
+        sma = close.rolling(window=sma_length).mean()
+
+        # 終値がSMAより上かどうか
+        above_sma = (close > sma).astype(int)
+
+        # length期間内での上の日数をカウント
+        count_above = above_sma.rolling(window=length).sum()
+
+        # TIIの計算（パーセンテージ）
+        tii = (count_above / length) * 100
+
+        return pd.Series(
+            tii,
+            index=close.index,
+            name=f"TII_{length}_{sma_length}"
+        )
+
+    @staticmethod
+    def calculate_trend_intensity_index(data, length=14, sma_length=30):
+        """Trend Intensity Index計算のラッパーメソッド"""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be pandas DataFrame")
+
+        required_columns = ["close", "high", "low"]
+        for col in required_columns:
+            if col not in data.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        close = data["close"]
+        high = data["high"]
+        low = data["low"]
+
+        tii = OriginalIndicators.trend_intensity_index(
+            close, high, low, length, sma_length
+        )
+
+        result = pd.DataFrame(
+            {
+                tii.name: tii,
             },
             index=data.index,
         )

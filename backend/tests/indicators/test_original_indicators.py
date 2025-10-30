@@ -109,6 +109,205 @@ class TestOriginalIndicators:
         assert all(np.isnan(v) for v in signal)
         assert all(np.isnan(v) for v in ratio)
 
+    def test_mcginley_dynamic_valid_data(self):
+        """有効データでのMcGinley Dynamic計算テスト"""
+        data = pd.DataFrame(
+            {"close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116]}
+        )
+
+        result = OriginalIndicators.mcginley_dynamic(data["close"], length=10, k=0.6)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.name == "MCGINLEY_10"
+        # McGinley Dynamicは価格に追従するため、範囲内にある
+        assert result.dropna().min() >= 100
+        assert result.dropna().max() <= 116
+
+    def test_mcginley_dynamic_insufficient_data(self):
+        """データ不足でのMcGinley Dynamic計算テスト"""
+        data = pd.DataFrame({"close": [100]})
+
+        result = OriginalIndicators.mcginley_dynamic(data["close"], length=10)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == 1
+
+    def test_mcginley_dynamic_invalid_length(self):
+        """無効なlengthパラメータのMcGinley Dynamicテスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
+        )
+
+        with pytest.raises(ValueError, match="length must be >= 1"):
+            OriginalIndicators.mcginley_dynamic(data["close"], length=0)
+
+    def test_mcginley_dynamic_invalid_k(self):
+        """無効なkパラメータのMcGinley Dynamicテスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
+        )
+
+        with pytest.raises(ValueError, match="k must be > 0"):
+            OriginalIndicators.mcginley_dynamic(data["close"], length=10, k=0)
+
+    def test_mcginley_dynamic_empty_data(self):
+        """空データのMcGinley Dynamicテスト"""
+        data = pd.DataFrame({"close": []})
+
+        result = OriginalIndicators.mcginley_dynamic(data["close"], length=10)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == 0
+
+    def test_mcginley_dynamic_wrapper(self):
+        """McGinley Dynamic DataFrameラッパーメソッドのテスト"""
+        data = pd.DataFrame(
+            {"close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116]}
+        )
+
+        result = OriginalIndicators.calculate_mcginley_dynamic(data, length=10, k=0.6)
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(data)
+        assert "MCGINLEY_10" in result.columns
+
+    def test_kaufman_efficiency_ratio_valid_data(self):
+        """有効データでのKaufman Efficiency Ratio計算テスト"""
+        data = pd.DataFrame(
+            {"close": [100, 102, 104, 106, 105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121, 120]}
+        )
+
+        result = OriginalIndicators.kaufman_efficiency_ratio(data["close"], length=10)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.name == "KER_10"
+        # Efficiency Ratioは0-1の範囲
+        assert result.dropna().min() >= 0.0
+        assert result.dropna().max() <= 1.0
+
+    def test_kaufman_efficiency_ratio_invalid_length(self):
+        """無効なlengthパラメータのKERテスト"""
+        data = pd.DataFrame(
+            {"close": [100, 101, 102, 103, 104, 105]}
+        )
+
+        with pytest.raises(ValueError, match="length must be >= 2"):
+            OriginalIndicators.kaufman_efficiency_ratio(data["close"], length=1)
+
+    def test_kaufman_efficiency_ratio_wrapper(self):
+        """KER DataFrameラッパーメソッドのテスト"""
+        data = pd.DataFrame(
+            {"close": [100, 102, 104, 106, 105, 107, 109, 108, 110, 112, 111, 113, 115]}
+        )
+
+        result = OriginalIndicators.calculate_kaufman_efficiency_ratio(data, length=10)
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(data)
+        assert "KER_10" in result.columns
+
+    def test_chande_kroll_stop_valid_data(self):
+        """有効データでのChande Kroll Stop計算テスト"""
+        data = pd.DataFrame({
+            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121],
+            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 111],
+            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116]
+        })
+
+        long_stop, short_stop = OriginalIndicators.chande_kroll_stop(
+            data["high"], data["low"], data["close"], p=10, x=1, q=9
+        )
+
+        assert isinstance(long_stop, pd.Series)
+        assert isinstance(short_stop, pd.Series)
+        assert len(long_stop) == len(data)
+        assert len(short_stop) == len(data)
+        # Long stopはcloseより低く、Short stopはcloseより高い
+        valid_long = long_stop.dropna()
+        valid_short = short_stop.dropna()
+        if len(valid_long) > 0:
+            assert valid_long.max() <= data["close"].max()
+        if len(valid_short) > 0:
+            assert valid_short.min() >= data["close"].min()
+
+    def test_chande_kroll_stop_invalid_params(self):
+        """無効なパラメータのChande Kroll Stopテスト"""
+        data = pd.DataFrame({
+            "high": [105, 107, 109],
+            "low": [95, 97, 99],
+            "close": [100, 102, 104]
+        })
+
+        with pytest.raises(ValueError, match="p must be >= 1"):
+            OriginalIndicators.chande_kroll_stop(
+                data["high"], data["low"], data["close"], p=0
+            )
+
+    def test_chande_kroll_stop_wrapper(self):
+        """Chande Kroll Stop DataFrameラッパーメソッドのテスト"""
+        data = pd.DataFrame({
+            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116],
+            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106],
+            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111]
+        })
+
+        result = OriginalIndicators.calculate_chande_kroll_stop(data, p=10, x=1, q=9)
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(data)
+        assert "CKS_LONG_10" in result.columns
+        assert "CKS_SHORT_10" in result.columns
+
+    def test_trend_intensity_index_valid_data(self):
+        """有効データでのTrend Intensity Index計算テスト"""
+        data = pd.DataFrame({
+            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116, 115, 117, 119, 118, 120],
+            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121, 120, 122, 124, 123, 125],
+            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 111, 110, 112, 114, 113, 115]
+        })
+
+        result = OriginalIndicators.trend_intensity_index(
+            data["close"], data["high"], data["low"], length=14, sma_length=30
+        )
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.name == "TII_14_30"
+        # TIIは0-100の範囲
+        valid_result = result.dropna()
+        if len(valid_result) > 0:
+            assert valid_result.min() >= 0.0
+            assert valid_result.max() <= 100.0
+
+    def test_trend_intensity_index_invalid_length(self):
+        """無効なlengthパラメータのTIIテスト"""
+        data = pd.DataFrame({
+            "close": [100, 101, 102],
+            "high": [105, 106, 107],
+            "low": [95, 96, 97]
+        })
+
+        with pytest.raises(ValueError, match="length must be >= 1"):
+            OriginalIndicators.trend_intensity_index(
+                data["close"], data["high"], data["low"], length=0
+            )
+
+    def test_trend_intensity_index_wrapper(self):
+        """TII DataFrameラッパーメソッドのテスト"""
+        data = pd.DataFrame({
+            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116],
+            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121],
+            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 111]
+        })
+
+        result = OriginalIndicators.calculate_trend_intensity_index(data, length=14, sma_length=30)
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(data)
+        assert "TII_14_30" in result.columns
+
     def test_adaptive_entropy_invalid_parameters(self):
         """無効なパラメータでのAdaptive Entropyテスト"""
         data = pd.DataFrame(
