@@ -5,14 +5,13 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 
 from .enums import ThresholdMethod
 from .threshold import ThresholdCalculator
-from .transformer import PriceChangeTransformer
+
 
 logger = logging.getLogger(__name__)
 

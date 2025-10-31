@@ -2,54 +2,23 @@
 統合MLモデル管理サービス
 
 モデルの保存・読み込み・一覧・クリーンアップを一元管理するサービスです。
-バージョン管理、パフォーマンス監視、メタデータ管理などの高機能も提供します。
-既存のAPIとの互換性を保持しながら、拡張機能も利用できます。
+既存のAPIとの互換性を保持し、効率的なモデル管理を提供します。
 """
 
 import glob
-
 import logging
 import os
 import warnings
-
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import joblib
 
-
 from .config import ml_config
-
 from .exceptions import MLModelError
 from ...utils.error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
-
-
-class PerformanceMetric(Enum):
-    """パフォーマンス指標"""
-
-    ACCURACY = "accuracy"
-    BALANCED_ACCURACY = "balanced_accuracy"
-    F1_SCORE = "f1_score"
-    ROC_AUC = "roc_auc"
-    PR_AUC = "pr_auc"
-    PRECISION = "precision"
-    RECALL = "recall"
-
-
-@dataclass
-class PerformanceMonitoringConfig:
-    """パフォーマンス監視設定"""
-
-    enable_monitoring: bool = True
-    alert_threshold: float = 0.05  # パフォーマンス低下の閾値
-    monitoring_window: int = 100  # 監視ウィンドウサイズ
-    auto_retrain_threshold: float = 0.10  # 自動再学習の閾値
-    max_performance_history: int = 1000
 
 
 class ModelManager:
@@ -58,24 +27,16 @@ class ModelManager:
 
     モデルの保存、読み込み、バージョン管理、クリーンアップなど、
     モデル管理に関する全ての機能を提供します。
-    既存のAPIとの互換性を保持しながら、バージョン管理、パフォーマンス監視、
-    メタデータ管理などの高機能も提供します。
+    既存のAPIとの互換性を保持し、効率的なモデル管理を提供します。
     """
 
-    def __init__(self, monitoring_config: Optional[PerformanceMonitoringConfig] = None):
+    def __init__(self):
         """
         初期化
-
-        Args:
-            monitoring_config: パフォーマンス監視設定
         """
         # 既存設定の初期化
         self.config = ml_config.model
         self._ensure_directories()
-
-        # 拡張機能の初期化（ファイルシステムベース）
-        self.base_path = Path(self.config.MODEL_SAVE_PATH)
-        self.monitoring_config = monitoring_config or PerformanceMonitoringConfig()
 
     def _ensure_directories(self):
         """必要なディレクトリを作成"""

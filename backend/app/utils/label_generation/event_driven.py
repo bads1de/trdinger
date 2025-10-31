@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 
-from .enums import ThresholdMethod
 
 logger = logging.getLogger(__name__)
 

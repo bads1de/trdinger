@@ -5,12 +5,12 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import KBinsDiscretizer
-from sklearn.model_selection import GridSearchCV
+
 
 from .enums import ThresholdMethod
 

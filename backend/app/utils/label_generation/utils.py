@@ -7,7 +7,6 @@ Pipeline作成、AutoML用ターゲット計算、GridSearch最適化などの�
 import logging
 from typing import Any, Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.model_selection import GridSearchCV

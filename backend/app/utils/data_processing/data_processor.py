@@ -68,10 +68,13 @@ class DataProcessor:
         # 拡張データの範囲クリップ（funding_rateなど）
         result_df = self._clip_extended_data_ranges(result_df)
 
+        # 必要なカラムを定義
+        ohlcv_columns = ["open", "high", "low", "close", "volume"]
+        
         # データ検証
         try:
             # 必要なカラムに基づいて検証を実行
-            if not result.empty:
+            if not result_df.empty:
                 ok_columns = {"open", "high", "low", "close", "volume"}
                 if any(col in required_columns for col in ohlcv_columns):
                     validate_ohlcv_data(result_df)
