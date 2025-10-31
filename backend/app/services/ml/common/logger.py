@@ -6,10 +6,9 @@ ML関連サービス共通のログ出力機能を提供します。
 
 import json
 import logging
-import time
 from datetime import datetime
-from functools import wraps
-from typing import Any, Callable, Dict, Optional, TypeVar
+
+from typing import Dict, Optional, TypeVar
 
 from ..config import ml_config
 
@@ -127,3 +126,28 @@ def log_error(message: str, error: Optional[Exception] = None, **kwargs):
         ml_logger.log_error("error", error, context={"message": message}, **kwargs)
     else:
         ml_logger.log_operation("error", level="ERROR", message=message, **kwargs)
+
+
+def log_info(message: str, **kwargs):
+    """情報ログの出力"""
+    ml_logger.log_operation("info", level="INFO", message=message, **kwargs)
+
+
+def log_warning(message: str, **kwargs):
+    """警告ログの出力"""
+    ml_logger.log_operation("warning", level="WARNING", message=message, **kwargs)
+
+
+def log_ml_operation(operation: str, **kwargs):
+    """ML操作ログの出力"""
+    ml_logger.log_operation(operation, **kwargs)
+
+
+def log_ml_metrics(operation: str, metrics: Dict[str, float], **kwargs):
+    """MLメトリクスログの出力"""
+    ml_logger.log_performance(operation, metrics, **kwargs)
+
+
+def log_ml_data_summary(operation: str, **kwargs):
+    """MLデータサマリーログの出力"""
+    ml_logger.log_operation(f"data_summary_{operation}", level="INFO", **kwargs)
