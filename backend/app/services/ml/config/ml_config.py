@@ -186,94 +186,7 @@ class PredictionConfig(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_")
 
-    def get_default_predictions(self) -> Dict[str, float]:
-        """デフォルトの予測値を取得"""
-        return {
-            "up": self.DEFAULT_UP_PROB,
-            "down": self.DEFAULT_DOWN_PROB,
-            "range": self.DEFAULT_RANGE_PROB,
-        }
-
-    def get_fallback_predictions(self) -> Dict[str, float]:
-        """エラー時のフォールバック予測値を取得"""
-        return {
-            "up": self.FALLBACK_UP_PROB,
-            "down": self.FALLBACK_DOWN_PROB,
-            "range": self.FALLBACK_RANGE_PROB,
-        }
-
-    def validate_predictions(self, predictions: Dict[str, float]) -> bool:
-        """
-        予測値の妥当性を検証
-
-        Note: 実装は MLConfigValidator.validate_predictions を使用
-        """
-        try:
-            from app.config.validators import MLConfigValidator
-
-            return MLConfigValidator.validate_predictions(predictions)
-        except Exception:
-            return False
-
-    def validate_config(self) -> bool:
-        """設定値の妥当性を検証"""
-        try:
-            # デフォルト値の検証
-            default_predictions = self.get_default_predictions()
-            if not self.validate_predictions(default_predictions):
-                return False
-
-            # フォールバック値の検証
-            fallback_predictions = self.get_fallback_predictions()
-            if not self.validate_predictions(fallback_predictions):
-                return False
-
-            # 範囲値の検証
-            if not (0.0 <= self.MIN_PROBABILITY <= self.MAX_PROBABILITY <= 1.0):
-                return False
-
-            if not (0.0 < self.PROBABILITY_SUM_MIN <= self.PROBABILITY_SUM_MAX <= 2.0):
-                return False
-
-            # データ長の検証
-            if not (1 <= self.DEFAULT_INDICATOR_LENGTH <= 100000):
-                return False
-
-            return True
-
-        except Exception:
-            return False
-
-    def get_validation_errors(self) -> List[str]:
-        """設定値の検証エラーを取得"""
-        errors = []
-
-        try:
-            # デフォルト値の検証
-            default_predictions = self.get_default_predictions()
-            if not self.validate_predictions(default_predictions):
-                errors.append("デフォルト予測値が無効です")
-
-            # フォールバック値の検証
-            fallback_predictions = self.get_fallback_predictions()
-            if not self.validate_predictions(fallback_predictions):
-                errors.append("フォールバック予測値が無効です")
-
-            # 範囲値の検証
-            if not (0.0 <= self.MIN_PROBABILITY <= self.MAX_PROBABILITY <= 1.0):
-                errors.append("確率範囲設定が無効です")
-
-            if not (0.0 < self.PROBABILITY_SUM_MIN <= self.PROBABILITY_SUM_MAX <= 2.0):
-                errors.append("確率合計範囲設定が無効です")
-
-            # データ長の検証
-            if not (1 <= self.DEFAULT_INDICATOR_LENGTH <= 100000):
-                errors.append("デフォルト指標長が無効です")
-
-        except Exception as e:
-            errors.append(f"設定検証中にエラーが発生しました: {e}")
-
-        return errors
+    
 
 
 class RetrainingConfig(BaseSettings):
@@ -451,12 +364,41 @@ class MLConfig:
         return instance
 
     def _validate_all_configs(self):
-        """全設定の妥当性を検証"""
+        """全設定の妥当性を検証 (validate_config と get_validation_errors を内包)"""
         try:
             # 予測設定の検証
-            if not self.prediction.validate_config():
-                errors = self.prediction.get_validation_errors()
-                logging.warning(f"予測設定に問題があります: {errors}")
+            prediction_errors = []
+            default_predictions = {
+                "up": self.prediction.DEFAULT_UP_PROB,
+                "down": self.prediction.DEFAULT_DOWN_PROB,
+                "range": self.prediction.DEFAULT_RANGE_PROB,
+            }
+            if not (0.0 <= default_predictions["up"] <= 1.0 and
+                    0.0 <= default_predictions["down"] <= 1.0 and
+                    0.0 <= default_predictions["range"] <= 1.0):
+                prediction_errors.append("デフォルト予測値が範囲外です")
+
+            fallback_predictions = {
+                "up": self.prediction.FALLBACK_UP_PROB,
+                "down": self.prediction.FALLBACK_DOWN_PROB,
+                "range": self.prediction.FALLBACK_RANGE_PROB,
+            }
+            if not (0.0 <= fallback_predictions["up"] <= 1.0 and
+                    0.0 <= fallback_predictions["down"] <= 1.0 and
+                    0.0 <= fallback_predictions["range"] <= 1.0):
+                prediction_errors.append("フォールバック予測値が範囲外です")
+
+            if not (0.0 <= self.prediction.MIN_PROBABILITY <= self.prediction.MAX_PROBABILITY <= 1.0):
+                prediction_errors.append("確率範囲設定が無効です")
+
+            if not (0.0 < self.prediction.PROBABILITY_SUM_MIN <= self.prediction.PROBABILITY_SUM_MAX <= 2.0):
+                prediction_errors.append("確率合計範囲設定が無効です")
+
+            if not (1 <= self.prediction.DEFAULT_INDICATOR_LENGTH <= 100000):
+                prediction_errors.append("デフォルト指標長が無効です")
+
+            if prediction_errors:
+                logging.warning(f"予測設定に問題があります: {prediction_errors}")
 
             # データ処理設定の検証
             if self.data_processing.DEBUG_MODE:

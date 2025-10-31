@@ -38,15 +38,12 @@ class TSFreshFeatureCalculator:
             config: TSFresh設定
         """
         self.config = config or TSFreshConfig()
-        self.feature_cache = {}  # 使用しないが互換性のため保持
         self.selected_features = None
         self.last_extraction_info = {}
         self.feature_settings = FinancialFeatureSettings()
         self.current_market_regime = MarketRegime.TRENDING  # デフォルト
         self.feature_selector = AdvancedFeatureSelector()
         self.performance_optimizer = PerformanceOptimizer()
-        self.feature_settings = FinancialFeatureSettings()
-        self.current_market_regime = MarketRegime.TRENDING  # デフォルト
 
     @safe_ml_operation(
         default_return=None, context="TSFresh特徴量計算でエラーが発生しました"

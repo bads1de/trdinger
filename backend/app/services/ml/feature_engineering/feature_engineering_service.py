@@ -29,10 +29,7 @@ from .temporal_features import TemporalFeatureCalculator
 
 # AutoML関連のインポート（オプション）
 AutoFeatCalculator = None
-AutoMLConfig = None
-PerformanceOptimizer = None
 TSFreshFeatureCalculator = None
-EnhancedCryptoFeatures = None
 OptimizedCryptoFeatures = None
 
 try:

@@ -234,41 +234,11 @@ class PerformanceOptimizer:
         except Exception as e:
             logger.error(f"ガベージコレクションエラー: {e}")
 
-    def _cleanup_autofeat_model(self, autofeat_model):
-        """AutoFeatモデルの詳細クリーンアップ"""
-        try:
-            # AutoFeatモデル内部の属性をクリア
-            if hasattr(autofeat_model, "feateng_cols_"):
-                autofeat_model.feateng_cols_ = None
-            if hasattr(autofeat_model, "featsel_"):
-                autofeat_model.featsel_ = None
-            if hasattr(autofeat_model, "model_"):
-                autofeat_model.model_ = None
-            if hasattr(autofeat_model, "scaler_"):
-                autofeat_model.scaler_ = None
-            if hasattr(autofeat_model, "feature_importances_"):
-                autofeat_model.feature_importances_ = None
+    
 
-        except Exception as e:
-            logger.warning(f"AutoFeatモデルクリーンアップエラー: {e}")
+    
 
-    def _clear_numpy_cache(self):
-        """NumPyキャッシュのクリア"""
-        try:
-            # NumPyのキャッシュは自動管理されるため、
-            # 明示的なクリアは必要ないが、メモリ使用量をログ出力
-            logger.debug("NumPyキャッシュクリアは自動管理のためスキップ")
-        except Exception as e:
-            logger.debug(f"NumPyキャッシュクリアエラー: {e}")
-
-    def _clear_sklearn_cache(self):
-        """Scikit-learnキャッシュのクリア"""
-        try:
-            # Scikit-learnはメモリキャッシュを自動管理するため、
-            # 明示的なクリアは必要ないが、メモリ使用量をログ出力
-            logger.debug("Scikit-learnキャッシュクリアは自動管理のためスキップ")
-        except Exception as e:
-            logger.debug(f"Scikit-learnキャッシュクリアエラー: {e}")
+    
 
     def _get_memory_usage(self) -> float:
         """現在のメモリ使用量を取得（MB単位）"""
