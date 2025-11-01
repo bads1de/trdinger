@@ -61,7 +61,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         Returns:
             価格特徴量が追加されたDataFrame
         """
-        if not self.validate_input_data(df, ["close", "open", "high", "low"]):
+        if not self.validate_input_data(df, ["open", "high", "low", "close", "volume"]):
             return df
 
         result_df = self.create_result_dataframe(df)
@@ -72,33 +72,33 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         short_ma = lookback_periods.get("short_ma", 10)
         long_ma = lookback_periods.get("long_ma", 50)
 
-        ma_short = ta.sma(result_df["Close"], length=short_ma)
+        ma_short = ta.sma(result_df["close"], length=short_ma)
         if ma_short is not None:
             ma_short_series = pd.Series(ma_short, index=result_df.index)
-            result_df[f"MA_{short_ma}"] = ma_short_series.fillna(result_df["Close"])
+            result_df[f"MA_{short_ma}"] = ma_short_series.fillna(result_df["close"])
         else:
-            result_df[f"MA_{short_ma}"] = result_df["Close"]
-        ma_long = ta.sma(result_df["Close"], length=long_ma)
+            result_df[f"MA_{short_ma}"] = result_df["close"]
+        ma_long = ta.sma(result_df["close"], length=long_ma)
         if ma_long is not None:
             ma_long_series = pd.Series(ma_long, index=result_df.index)
-            result_df[f"MA_{long_ma}"] = ma_long_series.fillna(result_df["Close"])
+            result_df[f"MA_{long_ma}"] = ma_long_series.fillna(result_df["close"])
         else:
-            result_df[f"MA_{long_ma}"] = result_df["Close"]
+            result_df[f"MA_{long_ma}"] = result_df["close"]
 
         result_df["Price_MA_Ratio_Short"] = (
-            (result_df["Close"] / result_df[f"MA_{short_ma}"])
+            (result_df["close"] / result_df[f"MA_{short_ma}"])
             .replace([np.inf, -np.inf], np.nan)
             .fillna(1.0)
         )
         result_df["Price_MA_Ratio_Long"] = (
-            (result_df["Close"] / result_df[f"MA_{long_ma}"])
+            (result_df["close"] / result_df[f"MA_{long_ma}"])
             .replace([np.inf, -np.inf], np.nan)
             .fillna(1.0)
         )
 
         # 価格モメンタム（pandas-ta使用）
         momentum_period = lookback_periods.get("momentum", 14)
-        momentum_result = ta.mom(result_df["Close"], length=momentum_period)
+        momentum_result = ta.mom(result_df["close"], length=momentum_period)
         if momentum_result is not None:
             result_df["Price_Momentum_14"] = pd.Series(
                 momentum_result, index=result_df.index
@@ -107,8 +107,8 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             result_df["Price_Momentum_14"] = 0.0
 
         # 高値・安値ポジション
-        position_ratio = (result_df["Close"] - result_df["Low"]) / (
-            result_df["High"] - result_df["Low"]
+        position_ratio = (result_df["close"] - result_df["low"]) / (
+            result_df["high"] - result_df["low"]
         )
         position_ratio = np.where(np.isinf(position_ratio), np.nan, position_ratio)
         result_df["High_Low_Position"] = pd.Series(
@@ -116,19 +116,19 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         ).fillna(0.5)
 
         # 価格変化率（pandas-ta使用）
-        roc1 = ta.roc(result_df["Close"], length=1)
+        roc1 = ta.roc(result_df["close"], length=1)
         result_df["Price_Change_1"] = (
             pd.Series(roc1, index=result_df.index).fillna(0.0)
             if roc1 is not None
             else 0.0
         )
-        roc5 = ta.roc(result_df["Close"], length=5)
+        roc5 = ta.roc(result_df["close"], length=5)
         result_df["Price_Change_5"] = (
             pd.Series(roc5, index=result_df.index).fillna(0.0)
             if roc5 is not None
             else 0.0
         )
-        roc20 = ta.roc(result_df["Close"], length=20)
+        roc20 = ta.roc(result_df["close"], length=20)
         result_df["Price_Change_20"] = (
             pd.Series(roc20, index=result_df.index).fillna(0.0)
             if roc20 is not None
@@ -137,29 +137,29 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
         # 価格レンジ
         result_df["Price_Range"] = (
-            ((result_df["High"] - result_df["Low"]) / result_df["Close"])
+            ((result_df["high"] - result_df["low"]) / result_df["close"])
             .replace([np.inf, -np.inf], np.nan)
             .fillna(0.0)
         )
 
         # ボディサイズ（実体の大きさ）
         result_df["Body_Size"] = (
-            (abs(result_df["Close"] - result_df["Open"]) / result_df["Close"])
+            (abs(result_df["close"] - result_df["open"]) / result_df["close"])
             .replace([np.inf, -np.inf], np.nan)
             .fillna(0.0)
         )
 
         # 上ヒゲ・下ヒゲ
         upper_shadow = (
-            result_df["High"] - np.maximum(result_df["Open"], result_df["Close"])
-        ) / result_df["Close"]
+            result_df["high"] - np.maximum(result_df["open"], result_df["close"])
+        ) / result_df["close"]
         upper_shadow = np.where(np.isinf(upper_shadow), np.nan, upper_shadow)
         result_df["Upper_Shadow"] = pd.Series(
             upper_shadow, index=result_df.index
         ).fillna(0.0)
         lower_shadow = (
-            np.minimum(result_df["Open"], result_df["Close"]) - result_df["Low"]
-        ) / result_df["Close"]
+            np.minimum(result_df["open"], result_df["close"]) - result_df["low"]
+        ) / result_df["close"]
         lower_shadow = np.where(np.isinf(lower_shadow), np.nan, lower_shadow)
         result_df["Lower_Shadow"] = pd.Series(
             lower_shadow, index=result_df.index
@@ -168,7 +168,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         # 価格位置（期間内での相対位置）（pandasのrolling rankを使用）
         period = lookback_periods.get("volatility", 20)
         result_df["Price_Position"] = (
-            result_df["Close"]
+            result_df["close"]
             .rolling(window=period, min_periods=1)
             .rank(pct=True)
             .fillna(0.5)
@@ -177,8 +177,8 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         # ギャップ（前日終値との差）
         result_df["Gap"] = (
             (
-                (result_df["Open"] - result_df["Close"].shift(1))
-                / result_df["Close"].shift(1)
+                (result_df["open"] - result_df["close"].shift(1))
+                / result_df["close"].shift(1)
             )
             .replace([np.inf, -np.inf], np.nan)
             .fillna(0.0)
@@ -210,7 +210,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # リターンを計算（pandas-ta ROCP: fractional rate of change）
             import pandas_ta as ta
 
-            roc_result = ta.roc(result_df["Close"], length=1)
+            roc_result = ta.roc(result_df["close"], length=1)
             result_df["Returns"] = (
                 pd.Series(roc_result, index=result_df.index).fillna(0.0) / 100.0
                 if roc_result is not None
@@ -242,9 +242,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             # ATR（Average True Range）- pandas-ta
             atr_result = ta.atr(
-                high=result_df["High"],
-                low=result_df["Low"],
-                close=result_df["Close"],
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
                 length=volatility_period,
             )
             result_df["ATR_20"] = (
@@ -255,7 +255,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             # 正規化ATR（安全な計算）
             result_df["ATR_Normalized"] = (
-                (result_df["ATR_20"] / result_df["Close"])
+                (result_df["ATR_20"] / result_df["close"])
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.01)
             )
@@ -308,35 +308,35 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             import pandas_ta as ta
 
             # 出来高移動平均（pandas-ta使用）
-            volume_ma_result = ta.sma(result_df["Volume"], length=volume_period)
+            volume_ma_result = ta.sma(result_df["volume"], length=volume_period)
             volume_ma = (
                 pd.Series(volume_ma_result, index=result_df.index).fillna(
-                    result_df["Volume"]
+                    result_df["volume"]
                 )
                 if volume_ma_result is not None
-                else result_df["Volume"]
+                else result_df["volume"]
             )
             # 異常に大きな値をクリップ（最大値を制限）
             volume_max = (
-                result_df["Volume"].quantile(0.99) * 10
+                result_df["volume"].quantile(0.99) * 10
             )  # 99%分位点の10倍を上限とする
             result_df[f"Volume_MA_{volume_period}"] = np.clip(volume_ma, 0, volume_max)
 
             # 出来高比率
             result_df["Volume_Ratio"] = (
-                (result_df["Volume"] / result_df[f"Volume_MA_{volume_period}"])
+                (result_df["volume"] / result_df[f"Volume_MA_{volume_period}"])
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(1.0)
             )
 
             # 価格・出来高トレンド（pandas-ta使用）
-            price_change_result = ta.roc(result_df["Close"], length=1)
+            price_change_result = ta.roc(result_df["close"], length=1)
             price_change = (
                 pd.Series(price_change_result, index=result_df.index).fillna(0.0)
                 if price_change_result is not None
                 else 0.0
             )
-            volume_change_result = ta.roc(result_df["Volume"], length=1)
+            volume_change_result = ta.roc(result_df["volume"], length=1)
             volume_change = (
                 pd.Series(volume_change_result, index=result_df.index).fillna(0.0)
                 if volume_change_result is not None
@@ -346,32 +346,32 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             # 出来高加重平均価格（VWAP）（pandas-ta使用）
             result_df["VWAP"] = ta.vwap(
-                high=result_df["High"],
-                low=result_df["Low"],
-                close=result_df["Close"],
-                volume=result_df["Volume"],
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                volume=result_df["volume"],
                 length=volume_period,
-            ).fillna(result_df["Close"])
+            ).fillna(result_df["close"])
 
             # VWAPからの乖離
             result_df["VWAP_Deviation"] = (
-                ((result_df["Close"] - result_df["VWAP"]) / result_df["VWAP"])
+                ((result_df["close"] - result_df["VWAP"]) / result_df["VWAP"])
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )
 
             # 出来高スパイク
             vol_threshold = (
-                result_df["Volume"].rolling(window=volume_period).quantile(0.9)
+                result_df["volume"].rolling(window=volume_period).quantile(0.9)
             )
-            result_df["Volume_Spike"] = (result_df["Volume"] > vol_threshold).astype(
+            result_df["Volume_Spike"] = (result_df["volume"] > vol_threshold).astype(
                 int
             )
 
             # 出来高トレンド
             volume_trend = (
-                result_df["Volume"].rolling(window=5).mean()
-                / result_df["Volume"].rolling(window=volume_period).mean()
+                result_df["volume"].rolling(window=5).mean()
+                / result_df["volume"].rolling(window=volume_period).mean()
             )
             volume_trend = np.where(np.isinf(volume_trend), np.nan, volume_trend)
             result_df["Volume_Trend"] = pd.Series(

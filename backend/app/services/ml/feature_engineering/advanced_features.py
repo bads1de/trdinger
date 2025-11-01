@@ -89,19 +89,19 @@ class AdvancedFeatureEngineer:
         lag_periods = [1, 3, 6, 12, 24, 48]  # 1h, 3h, 6h, 12h, 24h, 48h
 
         for period in lag_periods:
-            data[f"Close_lag_{period}"] = data["Close"].shift(period)
-            data[f"Volume_lag_{period}"] = data["Volume"].shift(period)
-            data[f"High_lag_{period}"] = data["High"].shift(period)
-            data[f"Low_lag_{period}"] = data["Low"].shift(period)
+            data[f"close_lag_{period}"] = data["close"].shift(period)
+            data[f"volume_lag_{period}"] = data["volume"].shift(period)
+            data[f"high_lag_{period}"] = data["high"].shift(period)
+            data[f"low_lag_{period}"] = data["low"].shift(period)
 
         # 価格変化率のラグ
-        data["Returns"] = data["Close"].pct_change()
+        data["returns"] = data["close"].pct_change()
         for period in lag_periods:
-            data[f"Returns_lag_{period}"] = data["Returns"].shift(period)
+            data[f"returns_lag_{period}"] = data["returns"].shift(period)
 
         # 累積リターン
         for period in [6, 12, 24]:
-            data[f"Cumulative_Returns_{period}"] = data["Returns"].rolling(period).sum()
+            data[f"cumulative_returns_{period}"] = data["returns"].rolling(period).sum()
 
         return data
 
@@ -109,85 +109,85 @@ class AdvancedFeatureEngineer:
         """高度な技術指標を追加"""
         logger.info("📈 高度な技術指標を追加中...")
 
-        data["High"].values
-        data["Low"].values
-        data["Close"].values
-        data["Volume"].values
+        data["high"].values
+        data["low"].values
+        data["close"].values
+        data["volume"].values
 
         try:
             import pandas_ta as ta
 
             # モメンタム指標（pandas-ta使用）
             stoch_result = ta.stoch(
-                high=data["High"], low=data["Low"], close=data["Close"]
+                high=data["high"], low=data["low"], close=data["close"]
             )
             if stoch_result is not None and not stoch_result.empty:
-                data["Stochastic_K"] = stoch_result.iloc[:, 0]  # STOCHk
-                data["Stochastic_D"] = stoch_result.iloc[:, 1]  # STOCHd
+                data["stochastic_k"] = stoch_result.iloc[:, 0]  # STOCHk
+                data["stochastic_d"] = stoch_result.iloc[:, 1]  # STOCHd
 
             williams_r_result = ta.willr(
-                high=data["High"], low=data["Low"], close=data["Close"]
+                high=data["high"], low=data["low"], close=data["close"]
             )
             if williams_r_result is not None:
-                data["Williams_R"] = williams_r_result
+                data["williams_r"] = williams_r_result
 
-            cci_result = ta.cci(high=data["High"], low=data["Low"], close=data["Close"])
+            cci_result = ta.cci(high=data["high"], low=data["low"], close=data["close"])
             if cci_result is not None:
-                data["CCI"] = cci_result
+                data["cci"] = cci_result
 
             mfi_result = ta.mfi(
-                high=data["High"],
-                low=data["Low"],
-                close=data["Close"],
-                volume=data["Volume"],
+                high=data["high"],
+                low=data["low"],
+                close=data["close"],
+                volume=data["volume"],
             )
             if mfi_result is not None:
-                data["MFI"] = mfi_result
+                data["mfi"] = mfi_result
 
-            uo_result = ta.uo(high=data["High"], low=data["Low"], close=data["Close"])
+            uo_result = ta.uo(high=data["high"], low=data["low"], close=data["close"])
             if uo_result is not None:
-                data["Ultimate_Oscillator"] = uo_result
+                data["ultimate_oscillator"] = uo_result
 
             # トレンド指標（pandas-ta使用）
-            adx_result = ta.adx(high=data["High"], low=data["Low"], close=data["Close"])
+            adx_result = ta.adx(high=data["high"], low=data["low"], close=data["close"])
             if adx_result is not None and not adx_result.empty:
                 data["ADX"] = adx_result["ADX_14"]
                 data["DI_Plus"] = adx_result["DMP_14"]
                 data["DI_Minus"] = adx_result["DMN_14"]
 
-            aroon_result = ta.aroon(high=data["High"], low=data["Low"])
+            aroon_result = ta.aroon(high=data["high"], low=data["low"])
             if aroon_result is not None and not aroon_result.empty:
                 data["Aroon_Up"] = aroon_result["AROONU_14"]
                 data["Aroon_Down"] = aroon_result["AROOND_14"]
 
-            aroon_osc_result = ta.aroon(high=data["High"], low=data["Low"], scalar=100)
+            aroon_osc_result = ta.aroon(high=data["high"], low=data["low"], scalar=100)
             if aroon_osc_result is not None and not aroon_osc_result.empty:
                 data["AROONOSC"] = aroon_osc_result["AROONOSC_14"]
 
             # ボラティリティ指標（pandas-ta使用）
             data["ATR"] = ta.atr(
-                high=data["High"], low=data["Low"], close=data["Close"]
+                high=data["high"], low=data["low"], close=data["close"]
             )
             data["NATR"] = ta.natr(
-                high=data["High"], low=data["Low"], close=data["Close"]
+                high=data["high"], low=data["low"], close=data["close"]
             )
             data["TRANGE"] = ta.true_range(
-                high=data["High"], low=data["Low"], close=data["Close"]
+                high=data["high"], low=data["low"], close=data["close"]
             )
 
             # 出来高指標（pandas-ta使用）
-            data["OBV"] = ta.obv(close=data["Close"], volume=data["Volume"])
+            data["OBV"] = ta.obv(close=data["close"], volume=data["volume"])
             data["AD"] = ta.ad(
-                high=data["High"],
-                low=data["Low"],
-                close=data["Close"],
-                volume=data["Volume"],
+                high=data["high"],
+                low=data["low"],
+                close=data["close"],
+                volume=data["volume"],
             )
             data["ADOSC"] = ta.adosc(
-                high=data["High"],
-                low=data["Low"],
-                close=data["Close"],
-                volume=data["Volume"],
+                high=data["high"],
+                low=data["low"],
+                close=data["close"],
+                volume=data["volume"],
             )
 
         except Exception as e:
@@ -203,27 +203,27 @@ class AdvancedFeatureEngineer:
 
         for window in windows:
             # 移動統計
-            data[f"Close_mean_{window}"] = data["Close"].rolling(window).mean()
-            data[f"Close_std_{window}"] = data["Close"].rolling(window).std()
-            data[f"Close_skew_{window}"] = data["Close"].rolling(window).skew()
-            data[f"Close_kurt_{window}"] = data["Close"].rolling(window).kurt()
+            data[f"Close_mean_{window}"] = data["close"].rolling(window).mean()
+            data[f"Close_std_{window}"] = data["close"].rolling(window).std()
+            data[f"Close_skew_{window}"] = data["close"].rolling(window).skew()
+            data[f"Close_kurt_{window}"] = data["close"].rolling(window).kurt()
 
             # 分位数
-            data[f"Close_q25_{window}"] = data["Close"].rolling(window).quantile(0.25)
-            data[f"Close_q75_{window}"] = data["Close"].rolling(window).quantile(0.75)
-            data[f"Close_median_{window}"] = data["Close"].rolling(window).median()
+            data[f"Close_q25_{window}"] = data["close"].rolling(window).quantile(0.25)
+            data[f"Close_q75_{window}"] = data["close"].rolling(window).quantile(0.75)
+            data[f"Close_median_{window}"] = data["close"].rolling(window).median()
 
             # 範囲統計
             data[f"Close_range_{window}"] = (
-                data["High"].rolling(window).max() - data["Low"].rolling(window).min()
+                data["high"].rolling(window).max() - data["low"].rolling(window).min()
             )
             data[f"Close_iqr_{window}"] = (
                 data[f"Close_q75_{window}"] - data[f"Close_q25_{window}"]
             )
 
             # 出来高統計
-            data[f"Volume_mean_{window}"] = data["Volume"].rolling(window).mean()
-            data[f"Volume_std_{window}"] = data["Volume"].rolling(window).std()
+            data[f"Volume_mean_{window}"] = data["volume"].rolling(window).mean()
+            data[f"Volume_std_{window}"] = data["volume"].rolling(window).std()
 
         return data
 
@@ -233,23 +233,23 @@ class AdvancedFeatureEngineer:
 
         # 差分特徴量
         for period in [1, 6, 24]:
-            data[f"Close_diff_{period}"] = data["Close"].diff(period)
-            data[f"Volume_diff_{period}"] = data["Volume"].diff(period)
+            data[f"Close_diff_{period}"] = data["close"].diff(period)
+            data[f"Volume_diff_{period}"] = data["volume"].diff(period)
 
         # 変化率
         for period in [1, 6, 12, 24]:
-            data[f"Close_pct_change_{period}"] = data["Close"].pct_change(period)
-            data[f"Volume_pct_change_{period}"] = data["Volume"].pct_change(period)
+            data[f"Close_pct_change_{period}"] = data["close"].pct_change(period)
+            data[f"Volume_pct_change_{period}"] = data["volume"].pct_change(period)
 
         # 移動平均からの乖離
         for window in [5, 10, 20]:
-            ma = data["Close"].rolling(window).mean()
-            data[f"Close_deviation_from_ma_{window}"] = (data["Close"] - ma) / ma
+            ma = data["close"].rolling(window).mean()
+            data[f"Close_deviation_from_ma_{window}"] = (data["close"] - ma) / ma
 
         # トレンド強度（pandas-ta使用）
         for window in [10, 20, 50]:
             data[f"Trend_strength_{window}"] = ta.linreg(
-                data["Close"], length=window, slope=True
+                data["close"], length=window, slope=True
             )
 
         return data
@@ -259,7 +259,7 @@ class AdvancedFeatureEngineer:
         logger.info("📊 ボラティリティ特徴量を追加中...")
 
         # 実現ボラティリティ
-        data["Returns"] = data["Close"].pct_change()
+        data["Returns"] = data["close"].pct_change()
 
         for window in [5, 10, 20, 50]:
             data[f"Realized_Vol_{window}"] = data["Returns"].rolling(
@@ -273,7 +273,7 @@ class AdvancedFeatureEngineer:
 
         # Parkinson推定量（高値・安値ベースのボラティリティ）
         for window in [10, 20]:
-            hl_ratio = np.log(data["High"] / data["Low"])
+            hl_ratio = np.log(data["high"] / data["low"])
             data[f"Parkinson_Vol_{window}"] = hl_ratio.rolling(window).var() * (
                 1 / (4 * np.log(2))
             )
@@ -339,7 +339,7 @@ class AdvancedFeatureEngineer:
 
             # 建玉残高と価格の関係
             data["OI_Price_Correlation"] = (
-                oi_data["open_interest"].rolling(24).corr(data["Close"])
+                oi_data["open_interest"].rolling(24).corr(data["close"])
             )
 
         return data
@@ -349,12 +349,12 @@ class AdvancedFeatureEngineer:
         logger.info("🔗 相互作用特徴量を追加中...")
 
         # 価格と出来高の相互作用
-        data["Price_Volume_Product"] = data["Close"] * data["Volume"]
-        data["Price_Volume_Ratio"] = data["Close"] / (data["Volume"] + 1e-8)
+        data["Price_Volume_Product"] = data["close"] * data["volume"]
+        data["Price_Volume_Ratio"] = data["close"] / (data["volume"] + 1e-8)
 
         # ボラティリティと出来高
         if "Realized_Vol_20" in data.columns:
-            data["Vol_Volume_Product"] = data["Realized_Vol_20"] * data["Volume"]
+            data["Vol_Volume_Product"] = data["Realized_Vol_20"] * data["volume"]
 
         # 技術指標の組み合わせ
         if "RSI" in data.columns and "Stochastic_K" in data.columns:

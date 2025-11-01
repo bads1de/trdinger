@@ -74,8 +74,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             import pandas_ta as ta
 
-            ma_short = ta.sma(result_df["Close"], length=short_ma)
-            ma_long = ta.sma(result_df["Close"], length=long_ma)
+            ma_short = ta.sma(result_df["close"], length=short_ma)
+            ma_long = ta.sma(result_df["close"], length=long_ma)
 
             # Trend_Strength = (MA_short - MA_long) / MA_long
             if (
@@ -92,30 +92,30 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # レンジ相場判定（pandas-ta MAX/MIN使用）
             volatility_period = lookback_periods.get("volatility", 20)
-            high_vals = result_df["High"]
-            low_vals = result_df["Low"]
+            high_vals = result_df["high"]
+            low_vals = result_df["low"]
             high_20 = high_vals.rolling(window=volatility_period).max()
             low_20 = low_vals.rolling(window=volatility_period).min()
 
             result_df["Range_Bound_Ratio"] = self.safe_ratio_calculation(
-                result_df["Close"] - low_20, high_20 - low_20, fill_value=0.5
+                result_df["close"] - low_20, high_20 - low_20, fill_value=0.5
             )
 
             # ブレイクアウト強度（直前の高値・安値を使用）
             prev_high_20 = high_20.shift(1)
             prev_low_20 = low_20.shift(1)
             result_df["Breakout_Strength"] = np.where(
-                result_df["Close"] > prev_high_20,
-                (result_df["Close"] - prev_high_20) / prev_high_20,
+                result_df["close"] > prev_high_20,
+                (result_df["close"] - prev_high_20) / prev_high_20,
                 np.where(
-                    result_df["Close"] < prev_low_20,
-                    (prev_low_20 - result_df["Close"]) / prev_low_20,
+                    result_df["close"] < prev_low_20,
+                    (prev_low_20 - result_df["close"]) / prev_low_20,
                     0.0,
                 ),
             )
 
             # 市場効率性（価格のランダムウォーク度）
-            returns = result_df["Close"].pct_change().fillna(0)
+            returns = result_df["close"].pct_change().fillna(0)
 
             def safe_correlation(x):
                 try:
@@ -172,9 +172,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # ドージ・ストキャスティクス（過熱・過売判断）
             stoch_result = ta.stoch(
-                high=result_df["High"],
-                low=result_df["Low"],
-                close=result_df["Close"],
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
                 k=14,
                 d=3,
                 smooth_k=3,
@@ -192,40 +192,40 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 result_df["Stochastic_Divergence"] = 0.0
 
             # ボリンジャーバンド（サポート・レジスタンス）
-            bb_result = ta.bbands(result_df["Close"], length=20, std=2)
+            bb_result = ta.bbands(result_df["close"], length=20, std=2)
             if bb_result is not None:
-                result_df["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(result_df["Close"])
-                result_df["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(result_df["Close"])
-                result_df["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(result_df["Close"])
+                result_df["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(result_df["close"])
+                result_df["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(result_df["close"])
+                result_df["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(result_df["close"])
                 # ボリンジャーバンドからの乖離率
                 result_df["BB_Position"] = self.safe_ratio_calculation(
-                    result_df["Close"] - result_df["BB_Lower"],
+                    result_df["close"] - result_df["BB_Lower"],
                     result_df["BB_Upper"] - result_df["BB_Lower"],
                     fill_value=0.5
                 )
             else:
-                result_df["BB_Upper"] = result_df["Close"]
-                result_df["BB_Middle"] = result_df["Close"]
-                result_df["BB_Lower"] = result_df["Close"]
+                result_df["BB_Upper"] = result_df["close"]
+                result_df["BB_Middle"] = result_df["close"]
+                result_df["BB_Lower"] = result_df["close"]
                 result_df["BB_Position"] = 0.5
 
             # 移動平均（トレンド判断）
             short_ma = lookback_periods.get("short_ma", 10)
             long_ma = lookback_periods.get("long_ma", 50)
 
-            ma_short = ta.sma(result_df["Close"], length=short_ma)
-            ma_long = ta.sma(result_df["Close"], length=long_ma)
+            ma_short = ta.sma(result_df["close"], length=short_ma)
+            ma_long = ta.sma(result_df["close"], length=long_ma)
 
             if ma_short is not None and ma_long is not None:
-                result_df["MA_Short"] = ma_short.fillna(result_df["Close"])
-                result_df["MA_Long"] = ma_long.fillna(result_df["Close"])
+                result_df["MA_Short"] = ma_short.fillna(result_df["close"])
+                result_df["MA_Long"] = ma_long.fillna(result_df["close"])
                 # MAクロスシグナル（短期MAが長期MAを上回ると1、下回ると0）
                 result_df["MA_Cross"] = np.where(
                     result_df["MA_Short"] > result_df["MA_Long"], 1.0, 0.0
                 )
             else:
-                result_df["MA_Short"] = result_df["Close"]
-                result_df["MA_Long"] = result_df["Close"]
+                result_df["MA_Short"] = result_df["close"]
+                result_df["MA_Long"] = result_df["close"]
                 result_df["MA_Cross"] = 0.5
 
             # 価格パターン（ダブルボトム、ヘッドアンドショルダー等の簡易検出）
@@ -233,9 +233,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # ボラティリティパターン（ATRを使用）
             atr_values = ta.atr(
-                high=result_df["High"],
-                low=result_df["Low"],
-                close=result_df["Close"],
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
                 length=14
             )
             if atr_values is not None:
@@ -243,7 +243,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 # 正規化されたボラティリティ
                 result_df["Normalized_Volatility"] = self.safe_ratio_calculation(
                     result_df["ATR"],
-                    result_df["Close"],
+                    result_df["close"],
                     fill_value=0.01
                 )
             else:
@@ -269,32 +269,32 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         try:
             # 局所的極値の検出（単純な方法）
             df["Local_Min"] = (
-                (df["Close"] <= df["Close"].shift(1)) &
-                (df["Close"] <= df["Close"].shift(-1)) &
-                (df["Close"] < df["Close"].shift(2)) &
-                (df["Close"] < df["Close"].shift(-2))
+                (df["close"] <= df["close"].shift(1)) &
+                (df["close"] <= df["close"].shift(-1)) &
+                (df["close"] < df["close"].shift(2)) &
+                (df["close"] < df["close"].shift(-2))
             ).astype(float)
 
             df["Local_Max"] = (
-                (df["Close"] >= df["Close"].shift(1)) &
-                (df["Close"] >= df["Close"].shift(-1)) &
-                (df["Close"] > df["Close"].shift(2)) &
-                (df["Close"] > df["Close"].shift(-2))
+                (df["close"] >= df["close"].shift(1)) &
+                (df["close"] >= df["close"].shift(-1)) &
+                (df["close"] > df["close"].shift(2)) &
+                (df["close"] > df["close"].shift(-2))
             ).astype(float)
 
             # 簡易的なサポート・レジスタンスレベル
             window_size = 20
-            df["Support_Level"] = df["Close"].rolling(window=window_size, min_periods=1).min()
-            df["Resistance_Level"] = df["Close"].rolling(window=window_size, min_periods=1).max()
+            df["Support_Level"] = df["close"].rolling(window=window_size, min_periods=1).min()
+            df["Resistance_Level"] = df["close"].rolling(window=window_size, min_periods=1).max()
 
             # 価格がサポート/レジスタンスに近いことを示す特徴量
             df["Near_Support"] = self.safe_ratio_calculation(
-                df["Close"] - df["Support_Level"],
+                df["close"] - df["Support_Level"],
                 df["Resistance_Level"] - df["Support_Level"],
                 fill_value=0.5
             )
             df["Near_Resistance"] = self.safe_ratio_calculation(
-                df["Resistance_Level"] - df["Close"],
+                df["Resistance_Level"] - df["close"],
                 df["Resistance_Level"] - df["Support_Level"],
                 fill_value=0.5
             )
@@ -326,14 +326,14 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             result_df = self.create_result_dataframe(df)
 
             # RSI（pandas-ta使用）
-            rsi_values = ta.rsi(result_df["Close"], length=14)
+            rsi_values = ta.rsi(result_df["close"], length=14)
             if rsi_values is not None:
                 result_df["RSI"] = rsi_values.fillna(50.0)
             else:
                 result_df["RSI"] = 50.0
 
             # MACD（pandas-ta使用）
-            macd_result = ta.macd(result_df["Close"], fast=12, slow=26, signal=9)
+            macd_result = ta.macd(result_df["close"], fast=12, slow=26, signal=9)
             if macd_result is not None:
                 result_df["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
                 result_df["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
@@ -345,9 +345,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # ウィリアムズ%R（pandas-ta使用）
             willr_values = ta.willr(
-                high=result_df["High"],
-                low=result_df["Low"],
-                close=result_df["Close"],
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
                 length=14,
             )
             if willr_values is not None:
@@ -357,9 +357,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # CCI（Commodity Channel Index）（pandas-ta使用）
             cci_values = ta.cci(
-                high=result_df["High"],
-                low=result_df["Low"],
-                close=result_df["Close"],
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
                 length=20,
             )
             if cci_values is not None:
@@ -368,14 +368,14 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 result_df["CCI"] = 0.0
 
             # ROC（Rate of Change）（pandas-ta使用）
-            roc_values = ta.roc(result_df["Close"], length=12)
+            roc_values = ta.roc(result_df["close"], length=12)
             if roc_values is not None:
                 result_df["ROC"] = roc_values.fillna(0.0)
             else:
                 result_df["ROC"] = 0.0
 
             # モメンタム（pandas-ta使用）
-            momentum_values = ta.mom(result_df["Close"], length=10)
+            momentum_values = ta.mom(result_df["close"], length=10)
             if momentum_values is not None:
                 result_df["Momentum"] = momentum_values.fillna(0.0)
             else:
@@ -421,7 +421,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         """RSIを計算（内部使用）- pandas-ta使用"""
         import pandas_ta as ta
 
-        rsi_values = ta.rsi(df["Close"], length=period)
+        rsi_values = ta.rsi(df["close"], length=period)
         if rsi_values is None or not isinstance(rsi_values, pd.Series):
             return pd.Series([50.0] * len(df))
         return rsi_values.fillna(50.0)

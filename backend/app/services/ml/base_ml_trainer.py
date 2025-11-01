@@ -61,7 +61,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.config = ml_config
 
-        # AutoML設定の処理
+        # AutoML設定の処理（デフォルトで有効化）
         if automl_config:
             # AutoMLConfig.from_dict に統一
             automl_config_obj = AutoMLConfig.from_dict(automl_config)
@@ -69,11 +69,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 automl_config=automl_config_obj
             )
             self.use_automl = True
-            logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました")
+            logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました（明示的設定）")
         else:
-            # 従来の基本特徴量サービスを使用
-            self.feature_service = FeatureEngineeringService()
-            self.use_automl = False
+            # デフォルトで拡張特徴量エンジニアリングを有効化
+            self.feature_service = FeatureEngineeringService(
+                automl_config=AutoMLConfig.get_default_config()
+            )
+            self.use_automl = True
+            logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました（デフォルト設定）")
 
         # トレーナー設定の処理（脆弱性修正）
         self.trainer_config = trainer_config or {}

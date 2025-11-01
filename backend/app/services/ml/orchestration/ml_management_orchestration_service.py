@@ -84,10 +84,6 @@ class MLManagementOrchestrationService:
                                 }
                             )
 
-                    logger.info(
-                        f"✅ モデル詳細情報を取得: {model['name']} - 精度: {model_info.get('accuracy', 0.0):.3f}, F1: {model_info.get('f1_score', 0.0):.3f}, 特徴量: {model_info.get('feature_count', 0)}個"
-                    )
-
             except Exception as e:
                 logger.warning(f"モデル詳細情報取得エラー {model['name']}: {e}")
                 # エラーの場合はデフォルト値を設定
@@ -255,9 +251,6 @@ class MLManagementOrchestrationService:
                             if model_info["f1_score"] == 0.0:
                                 model_info["f1_score"] = macro_avg.get("f1-score", 0.0)
 
-                    logger.info(
-                        f"📊 ML Status API - モデル詳細情報を取得: 精度={model_info['accuracy']:.4f}, F1={model_info['f1_score']:.4f}, 特徴量={model_info['feature_count']}個"
-                    )
                 else:
                     model_info = {
                         "accuracy": 0.0,

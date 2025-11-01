@@ -7,7 +7,7 @@ OHLCV、OI、FR、FGデータの期間不一致を適切に処理し、
 """
 
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -51,9 +51,9 @@ class CryptoFeatures:
 
         # 統計的手法による補完
         optional_columns = ["open_interest", "funding_rate"]
-        result_df = data_preprocessor.interpolate_columns(
-            result_df, strategy="median", columns=optional_columns
-        )
+        for col in optional_columns:
+            if col in result_df.columns and result_df[col].isna().any():
+                result_df[col] = result_df[col].fillna(result_df[col].median())
 
         return result_df
 
@@ -64,34 +64,34 @@ class CryptoFeatures:
         result_df = df.copy()
 
         # 基本価格特徴量
-        result_df["price_range"] = (df["High"] - df["Low"]) / df["Close"]
+        result_df["price_range"] = (df["high"] - df["low"]) / df["close"]
         result_df["upper_shadow"] = (
-            df["High"] - np.maximum(df["Open"], df["Close"])
-        ) / df["Close"]
+            df["high"] - np.maximum(df["open"], df["close"])
+        ) / df["close"]
         result_df["lower_shadow"] = (
-            np.minimum(df["Open"], df["Close"]) - df["Low"]
-        ) / df["Close"]
-        result_df["body_size"] = abs(df["Close"] - df["Open"]) / df["Close"]
+            np.minimum(df["open"], df["close"]) - df["low"]
+        ) / df["close"]
+        result_df["body_size"] = abs(df["close"] - df["open"]) / df["close"]
 
         # 価格変動率（複数期間）
         for name, period in periods.items():
-            result_df[f"price_return_{name}"] = df["Close"].pct_change(period)
+            result_df[f"price_return_{name}"] = df["close"].pct_change(period)
             result_df[f"price_volatility_{name}"] = (
-                df["Close"].rolling(period).std() / df["Close"].rolling(period).mean()
+                df["close"].rolling(period).std() / df["close"].rolling(period).mean()
             )
 
             # 価格勢い
             result_df[f"price_momentum_{name}"] = (
-                df["Close"] / df["Close"].shift(period) - 1
+                df["close"] / df["close"].shift(period) - 1
             )
 
         # 価格レベル特徴量
         for period in [24, 168]:  # 1日、1週間
             result_df[f"price_vs_high_{period}h"] = (
-                df["Close"] / df["High"].rolling(period).max()
+                df["close"] / df["high"].rolling(period).max()
             )
             result_df[f"price_vs_low_{period}h"] = (
-                df["Close"] / df["Low"].rolling(period).min()
+                df["close"] / df["low"].rolling(period).min()
             )
 
         self.feature_groups["price"].extend(
@@ -112,24 +112,24 @@ class CryptoFeatures:
 
         # 出来高変動率
         for name, period in periods.items():
-            result_df[f"volume_change_{name}"] = df["Volume"].pct_change(period)
-            result_df[f"volume_ma_{name}"] = df["Volume"].rolling(period).mean()
+            result_df[f"volume_change_{name}"] = df["volume"].pct_change(period)
+            result_df[f"volume_ma_{name}"] = df["volume"].rolling(period).mean()
             result_df[f"volume_ratio_{name}"] = (
-                df["Volume"] / df["Volume"].rolling(period).mean()
+                df["volume"] / df["volume"].rolling(period).mean()
             )
 
         # VWAP（出来高加重平均価格）
         for period in [12, 24, 48]:
-            typical_price = (df["High"] + df["Low"] + df["Close"]) / 3
-            vwap = (typical_price * df["Volume"]).rolling(period).sum() / df[
-                "Volume"
+            typical_price = (df["high"] + df["low"] + df["close"]) / 3
+            vwap = (typical_price * df["volume"]).rolling(period).sum() / df[
+                "volume"
             ].rolling(period).sum()
             result_df[f"vwap_{period}h"] = vwap
-            result_df[f"price_vs_vwap_{period}h"] = (df["Close"] - vwap) / vwap
+            result_df[f"price_vs_vwap_{period}h"] = (df["close"] - vwap) / vwap
 
         # 出来高プロファイル
-        close_rolling_mean = df["Close"].rolling(24).mean()
-        volume_rolling = df["Volume"].rolling(24)
+        close_rolling_mean = df["close"].rolling(24).mean()
+        volume_rolling = df["volume"].rolling(24)
         result_df["volume_price_trend"] = volume_rolling.corr(close_rolling_mean).fillna(0.0)  # type: ignore
 
         self.feature_groups["volume"].extend(
@@ -150,7 +150,7 @@ class CryptoFeatures:
 
         # OI vs 価格の関係
         result_df["oi_price_divergence"] = (
-            df["open_interest"].pct_change() - df["Close"].pct_change()
+            df["open_interest"].pct_change() - df["close"].pct_change()
         )
 
         # OI勢い
@@ -204,7 +204,7 @@ class CryptoFeatures:
 
         # FR vs 価格の関係
         result_df["fr_price_alignment"] = (
-            np.sign(df["funding_rate"]) == np.sign(df["Close"].pct_change())
+            np.sign(df["funding_rate"]) == np.sign(df["close"].pct_change())
         ).astype(int)
 
         self.feature_groups["funding_rate"].extend(
@@ -223,7 +223,7 @@ class CryptoFeatures:
         import pandas_ta as ta
 
         for period in [14, 24]:
-            rsi_result = ta.rsi(df["Close"], length=period)
+            rsi_result = ta.rsi(df["close"], length=period)
             if rsi_result is not None:
                 result_df[f"rsi_{period}"] = rsi_result.fillna(50.0)
             else:
@@ -231,13 +231,13 @@ class CryptoFeatures:
 
         # ボリンジャーバンド（pandas-ta使用）
         for period in [20, 48]:
-            bb_result = ta.bbands(df["Close"], length=period, std=2)
+            bb_result = ta.bbands(df["close"], length=period, std=2)
             if bb_result is not None:
                 result_df[f"bb_upper_{period}"] = bb_result[f"BBU_{period}_2.0"].fillna(
-                    df["Close"]
+                    df["close"]
                 )
                 result_df[f"bb_lower_{period}"] = bb_result[f"BBL_{period}_2.0"].fillna(
-                    df["Close"]
+                    df["close"]
                 )
                 # BB Position計算
                 bb_width = (
@@ -245,19 +245,19 @@ class CryptoFeatures:
                 )
                 result_df[f"bb_position_{period}"] = (
                     (
-                        (df["Close"] - result_df[f"bb_lower_{period}"])
+                        (df["close"] - result_df[f"bb_lower_{period}"])
                         / (bb_width + 1e-10)
                     )
                     .clip(0, 1)
                     .fillna(0.5)
                 )
             else:
-                result_df[f"bb_upper_{period}"] = df["Close"]
-                result_df[f"bb_lower_{period}"] = df["Close"]
+                result_df[f"bb_upper_{period}"] = df["close"]
+                result_df[f"bb_lower_{period}"] = df["close"]
                 result_df[f"bb_position_{period}"] = 0.5
 
         # MACD（pandas-ta使用）
-        macd_result = ta.macd(df["Close"], fast=12, slow=26, signal=9)
+        macd_result = ta.macd(df["close"], fast=12, slow=26, signal=9)
         if macd_result is not None:
             result_df["macd"] = macd_result["MACD_12_26_9"].fillna(0.0)
             result_df["macd_signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
@@ -285,23 +285,27 @@ class CryptoFeatures:
 
         # 価格 vs OI の関係
         result_df["price_oi_correlation"] = (
-            df["Close"].rolling(24).corr(df["open_interest"])
+            df["close"].rolling(24).corr(df["open_interest"])
         )
 
         # 出来高 vs 価格変動の関係
-        result_df["volume_price_efficiency"] = df["Volume"] / (
-            abs(df["Close"].pct_change()) + 1e-10
+        result_df["volume_price_efficiency"] = df["volume"] / (
+            abs(df["close"].pct_change()) + 1e-10
         )
 
         # マルチファクター勢い
-        price_momentum = df["Close"].pct_change(24)
+        price_momentum = df["close"].pct_change(24)
         oi_momentum = df["open_interest"].pct_change(24)
         result_df["multi_momentum"] = (price_momentum + oi_momentum) / 2
 
-        # 市場ストレス指標
-        result_df["market_stress"] = (
-            result_df["price_volatility_short"] * result_df["fr_abs"]
-        )
+        # 市場ストレス指標（FRデータがある場合のみ）
+        if "fr_abs" in result_df.columns:
+            result_df["market_stress"] = (
+                result_df["price_volatility_short"] * result_df["fr_abs"]
+            )
+        else:
+            # FRデータがない場合、出来高で代替
+            result_df["market_stress"] = result_df["price_volatility_short"] * result_df["volume"].mean()
 
         self.feature_groups["composite"].extend(
             [
@@ -380,8 +384,57 @@ class CryptoFeatures:
 
         # 統計的手法による数値カラムの補完
         numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
-        result_df = data_preprocessor.interpolate_columns(
-            result_df, strategy="median", columns=numeric_cols
-        )
+        for col in numeric_cols:
+            if result_df[col].isna().any():
+                result_df[col] = result_df[col].fillna(result_df[col].median())
+
+        return result_df
+
+    def create_crypto_features(
+        self,
+        df: pd.DataFrame,
+        funding_rate_data: Optional[pd.DataFrame] = None,
+        open_interest_data: Optional[pd.DataFrame] = None,
+    ) -> pd.DataFrame:
+        """暗号通貨特化特徴量を生成するパブリックメソッド"""
+        logger.info("暗号通貨特化特徴量を計算中...")
+
+        # デフォルトの計算期間
+        periods = {
+            "short": 14,
+            "medium": 24,
+            "long": 72,
+            "very_long": 168,
+        }
+
+        result_df = self._ensure_data_quality(df)
+
+        # 各特徴量グループを計算
+        result_df = self._create_price_features(result_df, periods)
+        result_df = self._create_volume_features(result_df, periods)
+
+        if open_interest_data is not None and not open_interest_data.empty:
+            result_df = self._create_open_interest_features(result_df, periods)
+
+        if funding_rate_data is not None and not funding_rate_data.empty:
+            result_df = self._create_funding_rate_features(result_df, periods)
+
+        result_df = self._create_technical_features(result_df, periods)
+
+        # FRデータがある場合のみFR特徴量を計算
+        if funding_rate_data is not None and not funding_rate_data.empty:
+            result_df = self._create_funding_rate_features(result_df, periods)
+        else:
+            logger.debug("FRデータがないため、FR特徴量をスキップ")
+
+        result_df = self._create_composite_features(result_df, periods)
+        result_df = self._create_temporal_features(result_df)
+
+        # 特徴量をクリーニング
+        result_df = self._clean_features(result_df)
+
+        # 統計情報を記録
+        feature_count = len(result_df.columns) - len(df.columns)
+        logger.info(f"暗号通貨特化特徴量を追加: {feature_count}個")
 
         return result_df

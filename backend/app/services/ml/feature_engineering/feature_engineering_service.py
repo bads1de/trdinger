@@ -27,19 +27,18 @@ from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .temporal_features import TemporalFeatureCalculator
+from .crypto_features import CryptoFeatures
+from .advanced_features import AdvancedFeatureEngineer
 
 # AutoML関連のインポート（オプション）
 AutoFeatCalculator = None
 TSFreshFeatureCalculator = None
-OptimizedCryptoFeatures = None
 
 try:
     from .automl_features.autofeat_calculator import AutoFeatCalculator
     from .automl_features.automl_config import AutoMLConfig
     from .automl_features.performance_optimizer import PerformanceOptimizer
     from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
-    from .crypto_features import CryptoFeatures
-    from .optimized_crypto_features import OptimizedCryptoFeatures
 
     AUTOML_AVAILABLE = True
 except ImportError:
@@ -120,17 +119,13 @@ class FeatureEngineeringService:
             else:
                 self.performance_optimizer = None
 
-            # 暗号通貨特化特徴量エンジニアリング
-            if self.automl_config is not None and CryptoFeatures is not None:
-                self.crypto_features = CryptoFeatures()
-            else:
-                self.crypto_features = None
+            # 暗号通貨特化特徴量エンジニアリング（デフォルトで有効）
+            self.crypto_features = CryptoFeatures()
+            logger.debug("暗号通貨特化特徴量を有効化しました")
 
-            # 最適化された特徴量エンジニアリング
-            if self.automl_config is not None and OptimizedCryptoFeatures is not None:
-                self.optimized_features = OptimizedCryptoFeatures()
-            else:
-                self.optimized_features = None
+            # 高度な特徴量エンジニアリング（デフォルトで有効）
+            self.advanced_features = AdvancedFeatureEngineer()
+            logger.debug("高度な特徴量エンジニアリングを有効化しました")
 
             # 統計情報
             self.last_enhancement_stats = {}
@@ -141,6 +136,17 @@ class FeatureEngineeringService:
                 logger.warning(
                     "AutoML設定が指定されましたが、AutoMLモジュールが利用できません"
                 )
+
+            # 暗号通貨特化特徴量エンジニアリング（AutoMLがNoneでもデフォルトで有効）
+            self.crypto_features = CryptoFeatures()
+            logger.debug("暗号通貨特化特徴量を有効化しました（デフォルト）")
+
+            # 高度な特徴量エンジニアリング（AutoMLがNoneでもデフォルトで有効）
+            self.advanced_features = AdvancedFeatureEngineer()
+            logger.debug("高度な特徴量エンジニアリングを有効化しました（デフォルト）")
+
+            # 統計情報
+            self.last_enhancement_stats = {}
 
     def calculate_advanced_features(
         self,
@@ -380,6 +386,20 @@ class FeatureEngineeringService:
             # 時間的特徴量
             result_df = self.temporal_calculator.calculate_temporal_features(result_df)
 
+            # 暗号通貨特化特徴量（デフォルトで追加）
+            if self.crypto_features is not None:
+                logger.debug("暗号通貨特化特徴量を計算中...")
+                result_df = self.crypto_features.create_crypto_features(
+                    result_df, funding_rate_data, open_interest_data
+                )
+
+            # 高度な特徴量エンジニアリング（デフォルトで追加）
+            if self.advanced_features is not None:
+                logger.debug("高度な特徴量を計算中...")
+                result_df = self.advanced_features.create_advanced_features(
+                    result_df, funding_rate_data, open_interest_data
+                )
+
             # 相互作用特徴量（全ての基本特徴量が計算された後に実行）
             result_df = self.interaction_calculator.calculate_interaction_features(
                 result_df
@@ -391,14 +411,15 @@ class FeatureEngineeringService:
 
             # 高品質なデータ前処理を実行（スケーリング有効化、IQRベース外れ値検出）
             logger.info("統計的手法による特徴量前処理を実行中...")
-            result_df = data_preprocessor.preprocess_with_pipeline(
-                result_df,
-                numeric_strategy="median",
-                scaling_method="robust",  # ロバストスケーリングを使用
-                remove_outliers=True,
-                outlier_threshold=3.0,
-                outlier_method="iqr",  # IQRベースの外れ値検出を使用
-            )
+            try:
+                # シンプルなNaN補完処理で置換
+                numeric_columns = result_df.select_dtypes(include=[np.number]).columns
+                for col in numeric_columns:
+                    if result_df[col].isna().any():
+                        result_df[col] = result_df[col].fillna(result_df[col].median())
+                logger.info("データ前処理完了")
+            except Exception as e:
+                logger.warning(f"データ前処理エラー: {e}")
 
             # NaN値の追加的な処理（配列形状エラーを防ぐ）
             try:
@@ -509,6 +530,8 @@ class FeatureEngineeringService:
                 funding_rate_data,
                 open_interest_data,
                 lookback_periods,
+                include_crypto_features=True,  # CryptoFeaturesをデフォルトで有効
+                include_advanced_features=True,  # AdvancedFeatureEngineerをデフォルトで有効
             )
 
             # ステップ2: TSFresh特徴量を追加 + 特徴量選択
@@ -585,6 +608,8 @@ class FeatureEngineeringService:
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
+        include_crypto_features: bool = True,
+        include_advanced_features: bool = True,
     ) -> pd.DataFrame:
         """ステップ1: 手動特徴量を計算"""
         logger.info("📊 ステップ1: 手動特徴量を計算中...")
