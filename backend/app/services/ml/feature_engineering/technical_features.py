@@ -63,7 +63,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             市場レジーム特徴量が追加されたDataFrame
         """
         try:
-            if not self.validate_input_data(df, ["Close", "High", "Low"]):
+            if not self.validate_input_data(df, ["close", "high", "low"]):
                 return df
 
             result_df = self.create_result_dataframe(df)
@@ -165,7 +165,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             パターン特徴量が追加されたDataFrame
         """
         try:
-            if not self.validate_input_data(df, ["Close", "High", "Low", "Open"]):
+            if not self.validate_input_data(df, ["close", "high", "low", "open"]):
                 return df
 
             result_df = self.create_result_dataframe(df)
@@ -320,7 +320,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             モメンタム特徴量が追加されたDataFrame
         """
         try:
-            if not self.validate_input_data(df, ["Close", "High", "Low"]):
+            if not self.validate_input_data(df, ["close", "high", "low"]):
                 return df
 
             result_df = self.create_result_dataframe(df)

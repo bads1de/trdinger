@@ -1,5 +1,5 @@
 """
-暗号通貨特化の高度特徴量エンジニアリング
+暗号通貨特化の特徴量エンジニアリング
 
 実際の取引データの特性を考慮した、効果的な特徴量を生成します。
 OHLCV、OI、FR、FGデータの期間不一致を適切に処理し、
@@ -17,8 +17,8 @@ from ....utils.data_processing import data_processor as data_preprocessor
 logger = logging.getLogger(__name__)
 
 
-class EnhancedCryptoFeatures:
-    """暗号通貨特化の高度特徴量エンジニアリング"""
+class CryptoFeatures:
+    """暗号通貨特化の特徴量エンジニアリング"""
 
     def __init__(self):
         """初期化"""
@@ -37,7 +37,7 @@ class EnhancedCryptoFeatures:
         result_df = df.copy()
 
         # 必要なカラムの存在確認と補完
-        required_cols = ["Open", "High", "Low", "Close", "Volume"]
+        required_cols = ["open", "high", "low", "close", "volume"]
         for col in required_cols:
             if col not in result_df.columns:
                 logger.warning(f"必須カラム {col} が見つかりません")

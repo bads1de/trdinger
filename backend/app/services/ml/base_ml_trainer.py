@@ -509,7 +509,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         if training_data is None or training_data.empty:
             raise DataError("学習データが空です")
 
-        required_columns = ["Open", "High", "Low", "Close", "Volume"]
+        required_columns = ["open", "high", "low", "close", "volume"]
         missing_columns = [
             col for col in required_columns if col not in training_data.columns
         ]
@@ -532,6 +532,18 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         FeatureEngineeringServiceに移譲されました。
         """
         try:
+            # 入力データの検証
+            if ohlcv_data is None or ohlcv_data.empty:
+                raise ValueError("OHLCVデータが空です")
+
+            # 必要な列の存在確認
+            required_columns = ["open", "high", "low", "close", "volume"]
+            missing_columns = [
+                col for col in required_columns if col not in ohlcv_data.columns
+            ]
+            if missing_columns:
+                raise ValueError(f"必要な列が不足しています: {missing_columns}")
+
             # AutoMLを使用する場合は拡張特徴量計算を実行
             if self.use_automl and hasattr(
                 self.feature_service, "calculate_enhanced_features"
@@ -540,30 +552,97 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 target = self._calculate_target_for_automl(ohlcv_data)
 
                 logger.info("🤖 AutoML拡張特徴量計算を実行中...")
-                return self.feature_service.calculate_enhanced_features(
+                enhanced_features = self.feature_service.calculate_enhanced_features(
                     ohlcv_data=ohlcv_data,
                     funding_rate_data=funding_rate_data,
                     open_interest_data=open_interest_data,
                     automl_config=self.automl_config,
                     target=target,
                 )
+
+                # 拡張特徴量計算後の検証
+                if enhanced_features is not None and not enhanced_features.empty:
+                    return enhanced_features
+                else:
+                    logger.warning(
+                        "拡張特徴量計算で空の結果、基本特徴量にフォールバック"
+                    )
+
+            # 基本特徴量計算
+            logger.info("📊 基本特徴量計算を実行中...")
+            basic_features = self.feature_service.calculate_advanced_features(
+                ohlcv_data=ohlcv_data,
+                funding_rate_data=funding_rate_data,
+                open_interest_data=open_interest_data,
+            )
+
+            # 基本特徴量計算後の検証
+            if basic_features is not None and not basic_features.empty:
+                return basic_features
             else:
-                # 基本特徴量計算
-                logger.info("📊 基本特徴量計算を実行中...")
-                return self.feature_service.calculate_advanced_features(
-                    ohlcv_data=ohlcv_data,
-                    funding_rate_data=funding_rate_data,
-                    open_interest_data=open_interest_data,
-                )
+                raise ValueError("基本特徴量計算も失敗しました")
 
         except Exception as e:
             logger.warning(f"拡張特徴量計算でエラー、基本特徴量のみ使用: {e}")
-            # フォールバック：基本特徴量のみ
-            return self.feature_service.calculate_advanced_features(
-                ohlcv_data,
-                funding_rate_data,
-                open_interest_data,
-            )
+
+            try:
+                # フォールバック：基本特徴量のみ（エラーハンドリング強化）
+                logger.info("🔄 フォールバック: 基本特徴量計算を実行")
+                basic_features = self.feature_service.calculate_advanced_features(
+                    ohlcv_data,
+                    funding_rate_data,
+                    open_interest_data,
+                )
+
+                # フォールバック後の検証
+                if basic_features is not None and not basic_features.empty:
+                    # 最低限必要な特徴量の検証
+                    required_features = ["open", "high", "low", "close", "volume"]
+                    available_features = [
+                        col
+                        for col in required_features
+                        if col in basic_features.columns
+                    ]
+
+                    if len(available_features) >= 3:  # 最低3つの価格列が利用可能
+                        logger.info(
+                            f"✅ フォールバック成功: {len(basic_features.columns)}個の特徴量"
+                        )
+                        return basic_features
+                    else:
+                        raise ValueError(
+                            f"基本特徴量も不足しています: {available_features}"
+                        )
+                else:
+                    raise ValueError("基本特徴量計算結果が空です")
+
+            except Exception as fallback_error:
+                logger.error(f"フォールバックも失敗: {fallback_error}")
+
+                # 最後の手段：元データに最低の特徴量のみ追加
+                logger.warning("🆘 最終手段: 元データに基礎特徴量のみ追加")
+                result_df = ohlcv_data.copy()
+
+                try:
+                    # 最低価格変動率特徴量のみ計算
+                    if "close" in result_df.columns:
+                        result_df["returns"] = result_df["close"].pct_change()
+                        result_df["returns"] = result_df["returns"].fillna(0.0)
+
+                    if "volume" in result_df.columns:
+                        result_df["volume_change"] = result_df["volume"].pct_change()
+                        result_df["volume_change"] = result_df["volume_change"].fillna(
+                            0.0
+                        )
+
+                    logger.info(f"✅ 最終手段成功: {len(result_df.columns)}個の基本列")
+                    return result_df
+
+                except Exception as final_error:
+                    logger.error(f"最終手段も失敗: {final_error}")
+                    raise DataError(
+                        f"特徴量計算に完全に失敗しました: {str(e)} -> {str(fallback_error)} -> {str(final_error)}"
+                    )
 
     def _calculate_target_for_automl(
         self, ohlcv_data: pd.DataFrame

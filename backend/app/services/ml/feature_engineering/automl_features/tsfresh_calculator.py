@@ -249,7 +249,7 @@ class TSFreshFeatureCalculator:
             ts_data = []
 
             # 各価格系列を個別の時系列として扱う
-            price_columns = ["Open", "High", "Low", "Close", "Volume"]
+            price_columns = ["open", "high", "low", "close", "volume"]
             available_columns = [col for col in price_columns if col in df.columns]
 
             if not available_columns:

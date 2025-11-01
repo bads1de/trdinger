@@ -310,14 +310,30 @@ def create_preprocessing_pipeline(
                         X[self.numeric_columns_]
                     )
                     if isinstance(numeric_transformed, np.ndarray):
-                        numeric_df = pd.DataFrame(
-                            numeric_transformed,
-                            columns=self.numeric_columns_,
-                            index=X.index,
-                        )
+                        # Handle NaN values before creating DataFrame
+                        if np.isnan(numeric_transformed).all():
+                            # If all values are NaN, fill with zeros
+                            numeric_transformed = np.zeros_like(numeric_transformed)
+                        
+                        # Ensure columns match and handle empty columns
+                        available_columns = [col for col in self.numeric_columns_ if col in X.columns]
+                        if available_columns:
+                            numeric_df = pd.DataFrame(
+                                numeric_transformed,
+                                columns=available_columns,
+                                index=X.index,
+                            )
+                        else:
+                            numeric_df = pd.DataFrame(index=X.index)
+                        
+                        if numeric_df.empty and len(result_parts) == 0:
+                            # If no numeric columns, return empty DataFrame with proper index
+                            numeric_df = pd.DataFrame(index=X.index)
+                            numeric_df = numeric_df.add_prefix('numeric_')
+                        result_parts.append(numeric_df)
                     else:
                         numeric_df = numeric_transformed
-                    result_parts.append(numeric_df)
+                        result_parts.append(numeric_df)
 
                 # Transform categorical columns
                 if self.categorical_columns_:
@@ -325,6 +341,10 @@ def create_preprocessing_pipeline(
                         X[self.categorical_columns_]
                     )
                     if isinstance(categorical_transformed, np.ndarray):
+                        # Handle NaN values in categorical data
+                        if np.isnan(categorical_transformed).any():
+                            # Fill NaN with 0 for categorical data
+                            categorical_transformed = np.nan_to_num(categorical_transformed, nan=0.0)
                         categorical_df = pd.DataFrame(
                             categorical_transformed,
                             columns=self.categorical_columns_,
@@ -335,7 +355,10 @@ def create_preprocessing_pipeline(
                     result_parts.append(categorical_df)
 
                 # Combine results
-                if len(result_parts) == 1:
+                if len(result_parts) == 0:
+                    # If no columns were transformed, return original DataFrame
+                    return X
+                elif len(result_parts) == 1:
                     return result_parts[0]
                 else:
                     return pd.concat(result_parts, axis=1)
@@ -502,9 +525,16 @@ def create_preprocessing_pipeline(
                     # Impute column by column to maintain DataFrame
                     for col in result.columns:
                         if result[col].isnull().any():
-                            col_data = result[col].values.reshape(-1, 1)
-                            imputed = self.imputer.fit_transform(col_data)
-                            result[col] = imputed.flatten()
+                            # Check for all NaN values in the column
+                            if result[col].isnull().all():
+                                # Handle all-NaN column by filling with constant value
+                                constant_value = 0.0 if self.strategy in ['mean', 'median'] else 'Unknown'
+                                result[col] = result[col].fillna(constant_value)
+                            else:
+                                # Normal imputation for columns with some valid values
+                                col_data = result[col].values.reshape(-1, 1)
+                                imputed = self.imputer.fit_transform(col_data)
+                                result[col] = imputed.flatten()
 
                 # Apply encoding
                 if self.encoder is not None:
@@ -564,14 +594,30 @@ def create_preprocessing_pipeline(
                         X[self.numeric_columns_]
                     )
                     if isinstance(numeric_transformed, np.ndarray):
-                        numeric_df = pd.DataFrame(
-                            numeric_transformed,
-                            columns=self.numeric_columns_,
-                            index=X.index,
-                        )
+                        # Handle NaN values before creating DataFrame
+                        if np.isnan(numeric_transformed).all():
+                            # If all values are NaN, fill with zeros
+                            numeric_transformed = np.zeros_like(numeric_transformed)
+                        
+                        # Ensure columns match and handle empty columns
+                        available_columns = [col for col in self.numeric_columns_ if col in X.columns]
+                        if available_columns:
+                            numeric_df = pd.DataFrame(
+                                numeric_transformed,
+                                columns=available_columns,
+                                index=X.index,
+                            )
+                        else:
+                            numeric_df = pd.DataFrame(index=X.index)
+                        
+                        if numeric_df.empty and len(result_parts) == 0:
+                            # If no numeric columns, return empty DataFrame with proper index
+                            numeric_df = pd.DataFrame(index=X.index)
+                            numeric_df = numeric_df.add_prefix('numeric_')
+                        result_parts.append(numeric_df)
                     else:
                         numeric_df = numeric_transformed
-                    result_parts.append(numeric_df)
+                        result_parts.append(numeric_df)
 
                 # Transform categorical columns
                 if self.categorical_columns_:
@@ -579,6 +625,10 @@ def create_preprocessing_pipeline(
                         X[self.categorical_columns_]
                     )
                     if isinstance(categorical_transformed, np.ndarray):
+                        # Handle NaN values in categorical data
+                        if np.isnan(categorical_transformed).any():
+                            # Fill NaN with 0 for categorical data
+                            categorical_transformed = np.nan_to_num(categorical_transformed, nan=0.0)
                         categorical_df = pd.DataFrame(
                             categorical_transformed,
                             columns=self.categorical_columns_,
@@ -589,7 +639,10 @@ def create_preprocessing_pipeline(
                     result_parts.append(categorical_df)
 
                 # Combine results
-                if len(result_parts) == 1:
+                if len(result_parts) == 0:
+                    # If no columns were transformed, return original DataFrame
+                    return X
+                elif len(result_parts) == 1:
                     return result_parts[0]
                 else:
                     return pd.concat(result_parts, axis=1)

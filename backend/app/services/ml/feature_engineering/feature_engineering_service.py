@@ -15,6 +15,7 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 
 from ....utils.data_processing import data_processor as data_preprocessor
@@ -37,7 +38,7 @@ try:
     from .automl_features.automl_config import AutoMLConfig
     from .automl_features.performance_optimizer import PerformanceOptimizer
     from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
-    from .enhanced_crypto_features import EnhancedCryptoFeatures
+    from .crypto_features import CryptoFeatures
     from .optimized_crypto_features import OptimizedCryptoFeatures
 
     AUTOML_AVAILABLE = True
@@ -120,8 +121,8 @@ class FeatureEngineeringService:
                 self.performance_optimizer = None
 
             # 暗号通貨特化特徴量エンジニアリング
-            if self.automl_config is not None and EnhancedCryptoFeatures is not None:
-                self.crypto_features = EnhancedCryptoFeatures()
+            if self.automl_config is not None and CryptoFeatures is not None:
+                self.crypto_features = CryptoFeatures()
             else:
                 self.crypto_features = None
 
@@ -398,6 +399,48 @@ class FeatureEngineeringService:
                 outlier_threshold=3.0,
                 outlier_method="iqr",  # IQRベースの外れ値検出を使用
             )
+
+            # NaN値の追加的な処理（配列形状エラーを防ぐ）
+            try:
+                # 数値列のNaN値を安全に変換
+                numeric_columns = result_df.select_dtypes(include=[np.number]).columns
+                for col in numeric_columns:
+                    if result_df[col].isnull().any():
+                        # NaNや無限大をmedianで置換
+                        median_val = result_df[col].median()
+                        if pd.isna(median_val):
+                            median_val = 0.0
+                        result_df[col] = result_df[col].fillna(median_val)
+
+                        # 無限大値を有限値に置換
+                        result_df[col] = result_df[col].replace(
+                            [np.inf, -np.inf], median_val
+                        )
+
+                # 配列形状の検証と修正
+                if result_df.empty:
+                    raise ValueError("前処理後に空のDataFrameになりました")
+
+                # 全ての列が2D配列として扱えることを確認
+                for col in result_df.columns:
+                    if not isinstance(result_df[col].iloc[0], (int, float)):
+                        logger.warning(
+                            f"非数値列を検出: {col}, 型: {type(result_df[col].iloc[0])}"
+                        )
+                        # 非数値列を数値に変換または削除
+                        try:
+                            result_df[col] = pd.to_numeric(
+                                result_df[col], errors="coerce"
+                            )
+                            result_df[col] = result_df[col].fillna(0.0)
+                        except Exception:
+                            logger.warning(f"列 {col} を削除（非数値データ）")
+                            result_df = result_df.drop(columns=[col])
+
+            except Exception as nan_error:
+                logger.warning(f"NaN値処理エラー、基本情報のみ使用: {nan_error}")
+                # 基本的なNaN処理のみ実行
+                result_df = result_df.fillna(0.0)
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")
 
@@ -1231,10 +1274,14 @@ class FeatureEngineeringService:
 
             # 特徴量重要度を計算するためのモデル学習（簡易版）
             from sklearn.ensemble import RandomForestClassifier
-            from sklearn.model_selection import cross_val_predict
 
             # 欠損値処理
-            features_clean = features_df.fillna(features_df.median())
+            # 先にNaN値があるかチェック
+            if features_df.isnull().values.any():
+                # NaN値を0で埋める（scaler用に安全な値）
+                features_clean = features_df.fillna(0.0)
+            else:
+                features_clean = features_df.copy()
 
             # 特徴量重要度の推定
             model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)

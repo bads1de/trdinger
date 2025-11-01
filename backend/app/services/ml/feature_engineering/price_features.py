@@ -61,7 +61,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         Returns:
             価格特徴量が追加されたDataFrame
         """
-        if not self.validate_input_data(df, ["Close", "Open", "High", "Low"]):
+        if not self.validate_input_data(df, ["close", "open", "high", "low"]):
             return df
 
         result_df = self.create_result_dataframe(df)

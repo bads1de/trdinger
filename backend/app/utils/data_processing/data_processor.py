@@ -71,8 +71,17 @@ class DataProcessor:
         # 必要なカラムを定義
         ohlcv_columns = ["open", "high", "low", "close", "volume"]
         
-        # データ検証
+        # データ補間 (NaN/null値を先に処理)
+        if interpolate:
+            result_df = self._interpolate_data(result_df)
+
+        # データ検証 (補間後に実行)
         try:
+            # 空のデータは検証をスキップ
+            if result_df.empty:
+                logger.warning("データが空のため検証をスキップ")
+                return result_df
+                
             # 必要なカラムに基づいて検証を実行
             if not result_df.empty:
                 ok_columns = {"open", "high", "low", "close", "volume"}
@@ -83,10 +92,6 @@ class DataProcessor:
         except Exception as e:
             logger.error(f"データ検証でエラー: {e}")
             raise ValueError(f"データ検証に失敗しました: {e}")
-
-        # データ補間
-        if interpolate:
-            result_df = self._interpolate_data(result_df)
 
         # データ型最適化
         if optimize:
@@ -372,6 +377,37 @@ class DataProcessor:
                 result_df[col] = (
                     result_df[col].ffill().interpolate(method="linear").bfill()
                 )
+
+        # 特別なOHLCカラムの補間後検証と修正
+        if all(col in result_df.columns for col in ['open', 'high', 'low', 'close']):
+            # OHLCカラムが全て存在する場合のみ検証
+            for idx in result_df.index:
+                row = result_df.loc[idx]
+                
+                # NaN値が含まれている行はスキップ
+                if row[['open', 'high', 'low', 'close']].isnull().any():
+                    continue
+                    
+                # OHLC関係が崩れている場合は修正
+                ohlc_valid = (
+                    (row['low'] <= row['open']) and
+                    (row['open'] <= row['high']) and  
+                    (row['low'] <= row['close']) and
+                    (row['close'] <= row['high'])
+                )
+                
+                if not ohlc_valid:
+                    # OHLC関係を強制的に修正
+                    valid_min = min(row['open'], row['close'])
+                    valid_max = max(row['open'], row['close'])
+                    
+                    # lowが適切な最小値になるように修正
+                    if row['low'] > valid_min:
+                        result_df.loc[idx, 'low'] = valid_min
+                        
+                    # highが適切な最大値になるように修正  
+                    if row['high'] < valid_max:
+                        result_df.loc[idx, 'high'] = valid_max
 
         # カテゴリカルカラムの補間
         categorical_columns = result_df.select_dtypes(

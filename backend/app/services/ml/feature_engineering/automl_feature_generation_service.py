@@ -215,7 +215,7 @@ class AutoMLFeatureGenerationService:
                 df.set_index("timestamp", inplace=True)
 
             # データ型を確保
-            numeric_columns = ["Open", "High", "Low", "Close", "Volume"]
+            numeric_columns = ["open", "high", "low", "close", "volume"]
             for col in numeric_columns:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
