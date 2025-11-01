@@ -191,7 +191,9 @@ class MLManagementOrchestrationService:
         """
         # MLオーケストレーター削除により、デフォルトステータスを返す
         status = {
-            "is_loaded": False,
+            "is_model_loaded": False,
+            "is_loaded": False,  # 後方互換性のため保持
+            "is_trained": False,
             "model_path": None,
             "model_type": None,
             "feature_count": 0,
@@ -267,6 +269,17 @@ class MLManagementOrchestrationService:
                         "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
                         "feature_count": 0,
                     }
+                status.update(
+                    {
+                        "is_model_loaded": True,
+                        "is_loaded": True,
+                        "is_trained": True,
+                        "model_path": latest_model,
+                        "model_type": model_info.get("model_type"),
+                        "feature_count": model_info.get("feature_count", 0),
+                        "training_samples": model_info.get("training_samples", 0),
+                    }
+                )
                 status["model_info"] = model_info
 
                 # ModelManagerから直接メタデータを取得
@@ -327,6 +340,9 @@ class MLManagementOrchestrationService:
                     "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
                     "feature_count": 0,
                 }
+                status["is_model_loaded"] = False
+                status["is_loaded"] = False
+                status["is_trained"] = False
                 status["performance_metrics"] = {
                     "accuracy": 0.0,
                     "precision": 0.0,
@@ -361,6 +377,9 @@ class MLManagementOrchestrationService:
                 "feature_count": 0,
             }
             # モデルが存在しない場合でもperformance_metricsを含める
+            status["is_model_loaded"] = False
+            status["is_loaded"] = False
+            status["is_trained"] = False
             status["performance_metrics"] = {
                 "accuracy": 0.0,
                 "precision": 0.0,

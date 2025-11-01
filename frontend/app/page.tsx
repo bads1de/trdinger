@@ -51,7 +51,7 @@ export default function Home() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/ml"
+                href="/backtest?tab=ml"
                 className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-accent/10 transition-colors"
               >
                 ML管理を見る
@@ -72,7 +72,7 @@ export default function Home() {
             cta="結果を見る"
           />
           <FeatureCard
-            href="/ml"
+            href="/backtest?tab=ml"
             icon={<Brain className="h-5 w-5 text-green-400" />}
             title="ML管理"
             desc="特徴量重要度、単一/アンサンブル、学習/評価を統合管理。"
@@ -126,7 +126,7 @@ export default function Home() {
               Backtest
             </Link>
             <Link
-              href="/ml"
+              href="/backtest?tab=ml"
               className="hover:text-foreground transition-colors"
             >
               ML

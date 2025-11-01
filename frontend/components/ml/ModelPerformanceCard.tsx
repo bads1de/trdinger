@@ -315,10 +315,6 @@ export default function ModelPerformanceCard({
       </CardHeader>
 
       <CardContent>
-        {(() => {
-          return null;
-        })()}
-
         {!modelStatus?.is_model_loaded && !modelStatus?.is_training ? (
           <div className="flex flex-col items-center justify-center py-8 text-gray-400">
             <BarChart3 className="h-12 w-12 mb-4 opacity-50" />
@@ -338,10 +334,6 @@ export default function ModelPerformanceCard({
           </div>
         ) : (
           <div className="space-y-6">
-            {(() => {
-              return null;
-            })()}
-
             {/* 学習進行状況（学習中の場合） */}
             {modelStatus?.is_training && (
               <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
