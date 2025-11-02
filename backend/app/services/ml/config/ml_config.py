@@ -241,8 +241,8 @@ class EnsembleConfig(BaseSettings):
     )
     BAGGING_MAX_FEATURES: float = Field(default=1.0, description="特徴量使用割合")
 
-    # スタッキング設定（scikit-learn StackingClassifier対応）
-    STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "random_forest"])
+    # スタッキング設定（Essential 4 Modelsのみ対応）
+    STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "xgboost"])
     STACKING_META_MODEL: str = Field(
         default="logistic_regression", description="メタモデル"
     )

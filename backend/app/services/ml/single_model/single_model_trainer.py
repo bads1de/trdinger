@@ -43,19 +43,12 @@ class SingleModelTrainer(BaseMLTrainer):
         self.single_model = None
         self.last_training_results = None  # 最後の学習結果を保持
 
-        # サポートされているモデルタイプを確認
+        # サポートされているモデルタイプを確認（Essential 4 Modelsのみ）
         supported_models = [
             "lightgbm",
             "xgboost",
             "catboost",
             "tabnet",
-            "randomforest",
-            "extratrees",
-            "gradientboosting",
-            "adaboost",
-            "ridge",
-            "naivebayes",
-            "knn",
         ]
         if self.model_type not in supported_models:
             raise MLModelError(
@@ -145,40 +138,7 @@ class SingleModelTrainer(BaseMLTrainer):
 
                 return TabNetModel(automl_config=self.automl_config)
 
-            elif self.model_type == "randomforest":
-                from ..models.randomforest import RandomForestModel
 
-                return RandomForestModel(automl_config=self.automl_config)
-
-            elif self.model_type == "extratrees":
-                from ..models.extratrees import ExtraTreesModel
-
-                return ExtraTreesModel(automl_config=self.automl_config)
-
-            elif self.model_type == "gradientboosting":
-                from ..models.gradientboosting import GradientBoostingModel
-
-                return GradientBoostingModel(automl_config=self.automl_config)
-
-            elif self.model_type == "adaboost":
-                from ..models.adaboost import AdaBoostModel
-
-                return AdaBoostModel(automl_config=self.automl_config)
-
-            elif self.model_type == "ridge":
-                from ..models.ridge import RidgeModel
-
-                return RidgeModel(automl_config=self.automl_config)
-
-            elif self.model_type == "naivebayes":
-                from ..models.naivebayes import NaiveBayesModel
-
-                return NaiveBayesModel(automl_config=self.automl_config)
-
-            elif self.model_type == "knn":
-                from ..models.knn import KNNModel
-
-                return KNNModel(automl_config=self.automl_config)
 
             else:
                 raise MLModelError(f"未対応のモデルタイプ: {self.model_type}")
@@ -394,7 +354,7 @@ class SingleModelTrainer(BaseMLTrainer):
     @staticmethod
     def get_available_models() -> list:
         """
-        利用可能な単一モデルのリストを取得
+        利用可能な単一モデルのリストを取得（Essential 4 Modelsのみ）
 
         Returns:
             利用可能なモデルタイプのリスト
@@ -402,26 +362,11 @@ class SingleModelTrainer(BaseMLTrainer):
         available = []
         import importlib.util
 
-        # 依存ライブラリベースのモデル
-        libs = ["lightgbm", "xgboost", "catboost", "tabnet"]
-        for lib in libs:
-            if importlib.util.find_spec(lib):
-                available.append(lib)
-
-        # scikit-learnベースのモデル
-        sklearn_models = [
-            "randomforest",
-            "extratrees",
-            "gradientboosting",
-            "adaboost",
-            "ridge",
-            "naivebayes",
-            "knn",
-        ]
-
-        # scikit-learn自体がインストールされているかチェック
-        if importlib.util.find_spec("sklearn"):
-            available.extend(sklearn_models)
+        # Essential 4 Models（依存ライブラリベースのモデル）
+        essential_models = ["lightgbm", "xgboost", "catboost", "tabnet"]
+        for model in essential_models:
+            if importlib.util.find_spec(model):
+                available.append(model)
 
         return available
 

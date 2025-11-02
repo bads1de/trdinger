@@ -1,18 +1,13 @@
 /**
- * 機械学習アルゴリズム定数定義
+ * Essential 4 Models アルゴリズム定数定義
  * 
- * バックエンドのalgorithm_registry.pyと同期している必要があります。
- * アルゴリズムの基本情報を定数として定義し、API呼び出しを削減します。
+ * バックエンドのalgorithm_registry.pyと同期してEssential 4 Modelsのみ定義します。
+ * フロントエンドのアルゴリズム選択を簡潔で明確に保ちます。
  */
 
 // アルゴリズムタイプの定義
 export enum AlgorithmType {
-  TREE_BASED = 'tree_based',
-  LINEAR = 'linear',
-  ENSEMBLE = 'ensemble',
   BOOSTING = 'boosting',
-  PROBABILISTIC = 'probabilistic',
-  INSTANCE_BASED = 'instance_based',
   NEURAL_NETWORK = 'neural_network',
 }
 
@@ -22,7 +17,6 @@ export enum AlgorithmCapability {
   REGRESSION = 'regression',
   PROBABILITY_PREDICTION = 'probability_prediction',
   FEATURE_IMPORTANCE = 'feature_importance',
-  INCREMENTAL_LEARNING = 'incremental_learning',
   MULTICLASS = 'multiclass',
 }
 
@@ -43,12 +37,7 @@ export interface Algorithm {
 
 // アルゴリズムタイプの日本語マッピング
 export const ALGORITHM_TYPE_LABELS: Record<AlgorithmType, string> = {
-  [AlgorithmType.TREE_BASED]: 'ツリー系',
-  [AlgorithmType.LINEAR]: '線形系',
-  [AlgorithmType.ENSEMBLE]: 'アンサンブル系',
   [AlgorithmType.BOOSTING]: 'ブースティング系',
-  [AlgorithmType.PROBABILISTIC]: '確率的',
-  [AlgorithmType.INSTANCE_BASED]: 'インスタンスベース',
   [AlgorithmType.NEURAL_NETWORK]: 'ニューラルネットワーク',
 };
 
@@ -58,140 +47,152 @@ export const CAPABILITY_LABELS: Record<AlgorithmCapability, string> = {
   [AlgorithmCapability.REGRESSION]: '回帰',
   [AlgorithmCapability.PROBABILITY_PREDICTION]: '確率予測',
   [AlgorithmCapability.FEATURE_IMPORTANCE]: '特徴量重要度',
-  [AlgorithmCapability.INCREMENTAL_LEARNING]: '増分学習',
   [AlgorithmCapability.MULTICLASS]: '多クラス分類',
 };
 
-// 利用可能なアルゴリズム定義（バックエンドのalgorithm_registry.pyと同期）
+// Essential 4 Algorithms のみ
 export const ALGORITHMS: Record<string, Algorithm> = {
-  // ツリー系
-  randomforest: {
-    name: 'randomforest',
-    display_name: 'ランダムフォレスト',
-    description: 'ランダムフォレスト - 複数の決定木のアンサンブル',
-    type: AlgorithmType.TREE_BASED,
-    capabilities: [
-      AlgorithmCapability.CLASSIFICATION,
-      AlgorithmCapability.PROBABILITY_PREDICTION,
-      AlgorithmCapability.FEATURE_IMPORTANCE,
-      AlgorithmCapability.MULTICLASS,
-    ],
-    pros: ['高い精度', '特徴量重要度', 'オーバーフィッティング耐性'],
-    cons: ['解釈性が低い', 'メモリ使用量大'],
-    best_for: ['中規模データ', 'ノイズ耐性が必要', '特徴量重要度が必要'],
-    has_probability_prediction: true,
-    has_feature_importance: true,
-  },
-
-  extratrees: {
-    name: 'extratrees',
-    display_name: 'エクストラツリー',
-    description: 'エクストラツリー - より高いランダム性を持つ決定木アンサンブル',
-    type: AlgorithmType.TREE_BASED,
-    capabilities: [
-      AlgorithmCapability.CLASSIFICATION,
-      AlgorithmCapability.PROBABILITY_PREDICTION,
-      AlgorithmCapability.FEATURE_IMPORTANCE,
-      AlgorithmCapability.MULTICLASS,
-    ],
-    pros: ['高速学習', 'オーバーフィッティング耐性', '高い汎化性能'],
-    cons: ['解釈性が低い', 'ハイパーパラメータ調整が重要'],
-    best_for: ['大規模データ', '高速学習が必要', 'ノイズの多いデータ'],
-    has_probability_prediction: true,
-    has_feature_importance: true,
-  },
-
-  // ブースティング系
-  gradientboosting: {
-    name: 'gradientboosting',
-    display_name: 'グラディエントブースティング',
-    description: 'グラディエントブースティング - 逐次的に弱学習器を改善',
+  // LightGBM - 世界最高級実務モデル
+  lightgbm: {
+    name: 'lightgbm',
+    display_name: 'LightGBM',
+    description: 'Lightning Gradient Boosting - 世界最高級実務モデル',
     type: AlgorithmType.BOOSTING,
     capabilities: [
       AlgorithmCapability.CLASSIFICATION,
+      AlgorithmCapability.REGRESSION,
       AlgorithmCapability.PROBABILITY_PREDICTION,
       AlgorithmCapability.FEATURE_IMPORTANCE,
       AlgorithmCapability.MULTICLASS,
     ],
-    pros: ['高い精度', '特徴量重要度', '柔軟性'],
-    cons: ['オーバーフィッティングしやすい', '学習時間長'],
-    best_for: ['高精度が必要', '構造化データ', '特徴量エンジニアリング済み'],
+    pros: [
+      '世界最高級実務実績',
+      '最速処理',
+      'メモリ効率優秀',
+      '大規模データ対応',
+      '高精度予測'
+    ],
+    cons: [
+      'カテゴリ特徴量に直接対応しない',
+      'ハイパーパラメータ調整が重要'
+    ],
+    best_for: [
+      '大規模データ',
+      '高精度が必要',
+      'リアルタイム予測',
+      'メモリ制約環境',
+      '高速学習が必要'
+    ],
     has_probability_prediction: true,
     has_feature_importance: true,
   },
 
-  adaboost: {
-    name: 'adaboost',
-    display_name: 'アダブースト',
-    description: 'アダブースト - 適応的ブースティング',
+  // XGBoost - 最高精度
+  xgboost: {
+    name: 'xgboost',
+    display_name: 'XGBoost',
+    description: '精度で最高レベルの勾配ブースティング',
     type: AlgorithmType.BOOSTING,
     capabilities: [
       AlgorithmCapability.CLASSIFICATION,
+      AlgorithmCapability.REGRESSION,
       AlgorithmCapability.PROBABILITY_PREDICTION,
       AlgorithmCapability.FEATURE_IMPORTANCE,
       AlgorithmCapability.MULTICLASS,
     ],
-    pros: ['シンプル', '解釈しやすい', '少ないハイパーパラメータ'],
-    cons: ['ノイズに敏感', '外れ値に弱い'],
-    best_for: ['クリーンなデータ', 'シンプルなモデルが必要', '二値分類'],
+    pros: [
+      '最高レベル精度',
+      'Kaggle実績豊富',
+      '特徴量重要度完全サポート',
+      '堅牢性最高',
+      ' регуларизация 内蔵'
+    ],
+    cons: [
+      '学習時間長い',
+      'メモリ使用量大',
+      'パラメータ調整複雑'
+    ],
+    best_for: [
+      '最高精度が必要',
+      '重要プロジェクト',
+      '競争環境',
+      '特徴量エンジニアリング済み',
+      '予測精度が最重要'
+    ],
     has_probability_prediction: true,
     has_feature_importance: true,
   },
 
-  // 線形系
-  ridge: {
-    name: 'ridge',
-    display_name: 'リッジ分類器',
-    description: 'リッジ分類器 - L2正則化線形分類器',
-    type: AlgorithmType.LINEAR,
+  // CatBoost - カテゴリ対応
+  catboost: {
+    name: 'catboost',
+    display_name: 'CatBoost',
+    description: 'カテゴリ特徴量対応の勾配ブースティング',
+    type: AlgorithmType.BOOSTING,
     capabilities: [
       AlgorithmCapability.CLASSIFICATION,
+      AlgorithmCapability.REGRESSION,
+      AlgorithmCapability.PROBABILITY_PREDICTION,
       AlgorithmCapability.FEATURE_IMPORTANCE,
       AlgorithmCapability.MULTICLASS,
     ],
-    pros: ['高速', '解釈しやすい', '正則化効果'],
-    cons: ['確率予測なし', '非線形関係を捉えられない'],
-    best_for: ['線形関係', '高次元データ', '高速予測が必要'],
-    has_probability_prediction: false,
+    pros: [
+      'カテゴリ特徴量自動対応',
+      '過学習防止優秀',
+      '前処理時間最小',
+      '順序ブースティング',
+      'デフォルト性能良好'
+    ],
+    cons: [
+      '計算時間中程度',
+      'メモリ使用量中程度',
+      '較新技術のためコミュニティ小規模'
+    ],
+    best_for: [
+      'カテゴリデータ豊富',
+      '前処理時間短縮',
+      '自動でcategorical handling',
+      '混合データ型',
+      '初心者向け'
+    ],
+    has_probability_prediction: true,
     has_feature_importance: true,
-    note: 'predict_probaメソッドなし',
   },
 
-  // 確率的
-  naivebayes: {
-    name: 'naivebayes',
-    display_name: 'ナイーブベイズ',
-    description: 'ナイーブベイズ - ベイズの定理に基づく確率的分類器',
-    type: AlgorithmType.PROBABILISTIC,
+  // TabNet - 深層学習アプローチ
+  tabnet: {
+    name: 'tabnet',
+    display_name: 'TabNet',
+    description: '深層学習アプローチの表形式データ用',
+    type: AlgorithmType.NEURAL_NETWORK,
     capabilities: [
       AlgorithmCapability.CLASSIFICATION,
-      AlgorithmCapability.PROBABILITY_PREDICTION,
-      AlgorithmCapability.MULTICLASS,
-      AlgorithmCapability.INCREMENTAL_LEARNING,
-    ],
-    pros: ['高速', '少ないデータでも動作', '確率的解釈'],
-    cons: ['特徴量独立性の仮定', '連続値に制限'],
-    best_for: ['テキスト分類', '小規模データ', '高速学習が必要'],
-    has_probability_prediction: true,
-    has_feature_importance: false,
-  },
-
-  // インスタンスベース
-  knn: {
-    name: 'knn',
-    display_name: 'K近傍法',
-    description: 'K近傍法 - 近傍インスタンスに基づく分類',
-    type: AlgorithmType.INSTANCE_BASED,
-    capabilities: [
-      AlgorithmCapability.CLASSIFICATION,
+      AlgorithmCapability.REGRESSION,
       AlgorithmCapability.PROBABILITY_PREDICTION,
       AlgorithmCapability.MULTICLASS,
     ],
-    pros: ['シンプル', '非線形関係対応', '局所的パターン検出'],
-    cons: ['計算コスト高', 'メモリ使用量大', '次元の呪い'],
-    best_for: ['小規模データ', '局所的パターン', '非線形関係'],
+    pros: [
+      '自動特徴選択',
+      'Interpretability良好',
+      '複雑パターン対応',
+      ' внимания mechanism',
+      '段階的学習'
+    ],
+    cons: [
+      '計算リソース必要',
+      'ハイパーパラメータ複雑',
+      '学習時間長い',
+      'データサイズ Larger必要'
+    ],
+    best_for: [
+      '深層学習アプローチ',
+      '特徴量自動選択',
+      '複雑データパターン',
+      '高次元データ',
+      'Interpretability重視'
+    ],
     has_probability_prediction: true,
-    has_feature_importance: false,
+    has_feature_importance: false, // TabNet uses attention mechanisms
   },
 };
 

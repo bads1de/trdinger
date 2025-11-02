@@ -89,10 +89,10 @@ class BaseEnsemble(ABC):
 
     def _create_base_model(self, model_type: str) -> Any:
         """
-        ベースモデルを作成
+        ベースモデルを作成（Essential 4 Modelsのみサポート）
 
         Args:
-            model_type: モデルタイプ（lightgbm, xgboost, catboost, tabnet, random_forest等）
+            model_type: モデルタイプ（lightgbm, xgboost, catboost, tabnet）
 
         Returns:
             作成されたモデル
@@ -125,67 +125,6 @@ class BaseEnsemble(ABC):
                 return TabNetModel(automl_config=self.automl_config)
             except ImportError:
                 raise MLModelError("TabNetモデルラッパーのインポートに失敗しました")
-        elif (
-            model_type.lower() == "random_forest"
-            or model_type.lower() == "randomforest"
-        ):
-            from sklearn.ensemble import RandomForestClassifier
-
-            return RandomForestClassifier(
-                n_estimators=unified_config.ml.training.rf_n_estimators,
-                max_depth=unified_config.ml.training.rf_max_depth,
-                random_state=unified_config.ml.training.random_state,
-                n_jobs=-1,
-            )
-        elif (
-            model_type.lower() == "gradient_boosting"
-            or model_type.lower() == "gradientboosting"
-        ):
-            from sklearn.ensemble import GradientBoostingClassifier
-
-            return GradientBoostingClassifier(
-                n_estimators=unified_config.ml.training.gb_n_estimators,
-                learning_rate=unified_config.ml.training.gb_learning_rate,
-                max_depth=unified_config.ml.training.gb_max_depth,
-                subsample=unified_config.ml.training.gb_subsample,
-                random_state=unified_config.ml.training.random_state,
-                verbose=0,  # ログ抑制
-            )
-        elif model_type.lower() == "extratrees":
-            try:
-                from ..models.extratrees import ExtraTreesModel
-
-                return ExtraTreesModel(automl_config=self.automl_config)
-            except ImportError:
-                raise MLModelError("ExtraTreesモデルラッパーのインポートに失敗しました")
-        elif model_type.lower() == "adaboost":
-            try:
-                from ..models.adaboost import AdaBoostModel
-
-                return AdaBoostModel(automl_config=self.automl_config)
-            except ImportError:
-                raise MLModelError("AdaBoostモデルラッパーのインポートに失敗しました")
-        elif model_type.lower() == "ridge":
-            try:
-                from ..models.ridge import RidgeModel
-
-                return RidgeModel(automl_config=self.automl_config)
-            except ImportError:
-                raise MLModelError("Ridgeモデルラッパーのインポートに失敗しました")
-        elif model_type.lower() == "naivebayes":
-            try:
-                from ..models.naivebayes import NaiveBayesModel
-
-                return NaiveBayesModel(automl_config=self.automl_config)
-            except ImportError:
-                raise MLModelError("NaiveBayesモデルラッパーのインポートに失敗しました")
-        elif model_type.lower() == "knn":
-            try:
-                from ..models.knn import KNNModel
-
-                return KNNModel(automl_config=self.automl_config)
-            except ImportError:
-                raise MLModelError("KNNモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "logistic_regression":
             # scikit-learnのLogisticRegressionを直接使用
             from sklearn.linear_model import LogisticRegression
@@ -197,7 +136,7 @@ class BaseEnsemble(ABC):
                 verbose=0,  # ログ抑制
             )
         else:
-            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}")
+            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, catboost, tabnet, logistic_regression")
 
     def _evaluate_predictions(
         self,

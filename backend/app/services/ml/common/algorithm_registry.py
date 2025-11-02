@@ -20,7 +20,7 @@ class AlgorithmRegistry:
     アルゴリズム名の正規化・検証・取得機能を提供します。
     """
 
-    # クラス名からアルゴリズム名へのマッピング
+    # クラス名からアルゴリズム名へのマッピング（Essential 4 Modelsのみ）
     _CLASS_TO_ALGORITHM_MAPPING = {
         # LightGBM
         "lightgbmmodel": "lightgbm",
@@ -32,33 +32,6 @@ class AlgorithmRegistry:
         # CatBoost
         "catboostclassifier": "catboost",
         "catboostregressor": "catboost",
-        # RandomForest
-        "randomforestclassifier": "randomforest",
-        "randomforestregressor": "randomforest",
-        "randomforestmodel": "randomforest",
-        # ExtraTrees
-        "extratreesclassifier": "extratrees",
-        "extratreesregressor": "extratrees",
-        "extratreesmodel": "extratrees",
-        # GradientBoosting
-        "gradientboostingclassifier": "gradientboosting",
-        "gradientboostingregressor": "gradientboosting",
-        "gradientboostingmodel": "gradientboosting",
-        # AdaBoost
-        "adaboostclassifier": "adaboost",
-        "adaboostregressor": "adaboost",
-        "adaboostmodel": "adaboost",
-        # Ridge
-        "ridgeclassifier": "ridge",
-        "ridgeregressor": "ridge",
-        "ridgemodel": "ridge",
-        # NaiveBayes
-        "gaussiannb": "naivebayes",
-        "naivebayesmodel": "naivebayes",
-        # KNN
-        "kneighborsclassifier": "knn",
-        "kneighborsregressor": "knn",
-        "knnmodel": "knn",
         # TabNet
         "tabnetclassifier": "tabnet",
         "tabnetregressor": "tabnet",

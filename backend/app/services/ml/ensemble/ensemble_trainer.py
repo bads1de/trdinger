@@ -62,9 +62,8 @@ class EnsembleTrainer(BaseMLTrainer):
         """
         optimized_params = {
             "base_models": {
-                "lightgbm": {},
+                "light gbm": {},
                 "xgboost": {},
-                "randomforest": {},
                 "catboost": {},
                 "tabnet": {},
             },
@@ -83,12 +82,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 clean_name = param_name.replace("xgb_", "")
                 optimized_params["base_models"]["xgboost"][clean_name] = param_value
 
-            # RandomForestパラメータ
-            elif param_name.startswith("rf_"):
-                clean_name = param_name.replace("rf_", "")
-                optimized_params["base_models"]["randomforest"][
-                    clean_name
-                ] = param_value
+
 
             # CatBoostパラメータ
             elif param_name.startswith("cat_"):

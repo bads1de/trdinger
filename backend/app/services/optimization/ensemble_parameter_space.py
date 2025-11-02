@@ -42,21 +42,7 @@ class EnsembleParameterSpace:
             "xgb_gamma": ParameterSpace(type="real", low=0.0, high=0.5),
         }
 
-    @staticmethod
-    def get_randomforest_parameter_space() -> Dict[str, ParameterSpace]:
-        """RandomForestのパラメータ空間"""
-        return {
-            "rf_n_estimators": ParameterSpace(type="integer", low=50, high=300),
-            "rf_max_depth": ParameterSpace(type="integer", low=3, high=20),
-            "rf_min_samples_split": ParameterSpace(type="integer", low=2, high=20),
-            "rf_min_samples_leaf": ParameterSpace(type="integer", low=1, high=10),
-            "rf_max_features": ParameterSpace(
-                type="categorical", categories=["sqrt", "log2", "auto"]
-            ),
-            "rf_bootstrap": ParameterSpace(
-                type="categorical", categories=[True, False]
-            ),
-        }
+
 
     @staticmethod
     def get_catboost_parameter_space() -> Dict[str, ParameterSpace]:
@@ -90,96 +76,15 @@ class EnsembleParameterSpace:
             "tab_momentum": ParameterSpace(type="real", low=0.01, high=0.4),
         }
 
-    @staticmethod
-    def get_adaboost_parameter_space() -> Dict[str, ParameterSpace]:
-        """AdaBoostのパラメータ空間"""
-        return {
-            "ada_n_estimators": ParameterSpace(type="integer", low=50, high=300),
-            "ada_learning_rate": ParameterSpace(type="real", low=0.01, high=2.0),
-            "ada_algorithm": ParameterSpace(
-                type="categorical", categories=["SAMME", "SAMME.R"]
-            ),
-        }
 
-    @staticmethod
-    def get_extratrees_parameter_space() -> Dict[str, ParameterSpace]:
-        """ExtraTreesのパラメータ空間"""
-        return {
-            "et_n_estimators": ParameterSpace(type="integer", low=50, high=300),
-            "et_max_depth": ParameterSpace(type="integer", low=3, high=20),
-            "et_min_samples_split": ParameterSpace(type="integer", low=2, high=20),
-            "et_min_samples_leaf": ParameterSpace(type="integer", low=1, high=10),
-            "et_max_features": ParameterSpace(
-                type="categorical", categories=["sqrt", "log2", "auto"]
-            ),
-            "et_bootstrap": ParameterSpace(
-                type="categorical", categories=[True, False]
-            ),
-        }
 
-    @staticmethod
-    def get_gradientboosting_parameter_space() -> Dict[str, ParameterSpace]:
-        """GradientBoostingのパラメータ空間"""
-        return {
-            "gb_n_estimators": ParameterSpace(type="integer", low=50, high=300),
-            "gb_learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
-            "gb_max_depth": ParameterSpace(type="integer", low=3, high=15),
-            "gb_min_samples_split": ParameterSpace(type="integer", low=2, high=20),
-            "gb_min_samples_leaf": ParameterSpace(type="integer", low=1, high=10),
-            "gb_subsample": ParameterSpace(type="real", low=0.5, high=1.0),
-            "gb_max_features": ParameterSpace(
-                type="categorical", categories=["sqrt", "log2", "auto"]
-            ),
-        }
 
-    @staticmethod
-    def get_knn_parameter_space() -> Dict[str, ParameterSpace]:
-        """KNNのパラメータ空間（最適化された設定）"""
-        return {
-            "knn_n_neighbors": ParameterSpace(type="integer", low=3, high=20),
-            "knn_weights": ParameterSpace(
-                type="categorical", categories=["uniform", "distance"]
-            ),
-            "knn_algorithm": ParameterSpace(
-                type="categorical", categories=["auto", "ball_tree", "kd_tree", "brute"]
-            ),
-            "knn_leaf_size": ParameterSpace(type="integer", low=10, high=50),
-            "knn_p": ParameterSpace(type="integer", low=1, high=2),
-            "knn_metric": ParameterSpace(
-                type="categorical",
-                categories=["minkowski", "euclidean", "manhattan", "chebyshev"],
-            ),
-        }
 
-    @staticmethod
-    def get_ridge_parameter_space() -> Dict[str, ParameterSpace]:
-        """Ridgeのパラメータ空間"""
-        return {
-            "ridge_alpha": ParameterSpace(type="real", low=0.01, high=100.0),
-            "ridge_solver": ParameterSpace(
-                type="categorical",
-                categories=[
-                    "auto",
-                    "svd",
-                    "cholesky",
-                    "lsqr",
-                    "sparse_cg",
-                    "sag",
-                    "saga",
-                ],
-            ),
-            "ridge_max_iter": ParameterSpace(type="integer", low=100, high=2000),
-        }
 
-    @staticmethod
-    def get_naivebayes_parameter_space() -> Dict[str, ParameterSpace]:
-        """NaiveBayesのパラメータ空間"""
-        return {
-            "nb_alpha": ParameterSpace(type="real", low=0.01, high=10.0),
-            "nb_fit_prior": ParameterSpace(
-                type="categorical", categories=[True, False]
-            ),
-        }
+
+
+
+
 
     @staticmethod
     def get_bagging_parameter_space() -> Dict[str, ParameterSpace]:
@@ -229,32 +134,11 @@ class EnsembleParameterSpace:
         if "xgboost" in enabled_models:
             parameter_space.update(cls.get_xgboost_parameter_space())
 
-        if "randomforest" in enabled_models:
-            parameter_space.update(cls.get_randomforest_parameter_space())
-
         if "catboost" in enabled_models:
             parameter_space.update(cls.get_catboost_parameter_space())
 
         if "tabnet" in enabled_models:
             parameter_space.update(cls.get_tabnet_parameter_space())
-
-        if "adaboost" in enabled_models:
-            parameter_space.update(cls.get_adaboost_parameter_space())
-
-        if "extratrees" in enabled_models:
-            parameter_space.update(cls.get_extratrees_parameter_space())
-
-        if "gradientboosting" in enabled_models:
-            parameter_space.update(cls.get_gradientboosting_parameter_space())
-
-        if "knn" in enabled_models:
-            parameter_space.update(cls.get_knn_parameter_space())
-
-        if "ridge" in enabled_models:
-            parameter_space.update(cls.get_ridge_parameter_space())
-
-        if "naivebayes" in enabled_models:
-            parameter_space.update(cls.get_naivebayes_parameter_space())
 
         # アンサンブル手法固有のパラメータを追加
         if ensemble_method == "bagging":
@@ -302,36 +186,8 @@ class EnsembleParameterSpace:
             "xgb_gamma": trial.suggest_float("xgb_gamma", 0.0, 0.5),
         }
 
-    @staticmethod
-    def _suggest_randomforest_params(trial: optuna.Trial) -> Dict[str, Any]:
-        """RandomForestパラメータの提案"""
-        return {
-            "rf_n_estimators": trial.suggest_int("rf_n_estimators", 50, 300),
-            "rf_max_depth": trial.suggest_int("rf_max_depth", 3, 20),
-            "rf_min_samples_split": trial.suggest_int("rf_min_samples_split", 2, 20),
-            "rf_min_samples_leaf": trial.suggest_int("rf_min_samples_leaf", 1, 10),
-            "rf_max_features": trial.suggest_categorical(
-                "rf_max_features", ["sqrt", "log2", "auto"]
-            ),
-            "rf_bootstrap": trial.suggest_categorical("rf_bootstrap", [True, False]),
-        }
 
-    @staticmethod
-    def _suggest_knn_params(trial: optuna.Trial) -> Dict[str, Any]:
-        """KNNパラメータの提案（最適化された距離計算）"""
-        return {
-            "knn_n_neighbors": trial.suggest_int("knn_n_neighbors", 3, 20),
-            "knn_weights": trial.suggest_categorical(
-                "knn_weights", ["uniform", "distance"]
-            ),
-            "knn_algorithm": trial.suggest_categorical(
-                "knn_algorithm", ["auto", "ball_tree", "kd_tree", "brute"]
-            ),
-            "knn_leaf_size": trial.suggest_int("knn_leaf_size", 10, 50),
-            "knn_p": trial.suggest_int("knn_p", 1, 2),
-            "knn_metric": trial.suggest_categorical(
-                "knn_metric", ["minkowski", "euclidean", "manhattan", "chebyshev"]
-            ),
+
         }
 
     @staticmethod

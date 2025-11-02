@@ -40,8 +40,8 @@ class StackingEnsemble(BaseEnsemble):
         """
         super().__init__(config, automl_config)
 
-        # スタッキング固有の設定
-        self.base_models = config.get("base_models", ["lightgbm", "random_forest"])
+        # スタッキング固有の設定（Essential 4 Modelsのみ）
+        self.base_models = config.get("base_models", ["lightgbm", "xgboost"])
         self.meta_model: str = (
             config.get("meta_model", "logistic_regression") or "logistic_regression"
         )

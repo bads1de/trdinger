@@ -371,8 +371,8 @@ class MLTrainingOrchestrationService:
                                 "base_models": [
                                     "lightgbm",
                                     "xgboost",
-                                    "gradient_boosting",
-                                    "random_forest",
+                                    "catboost",
+                                    "tabnet",
                                 ],
                                 "meta_model": "lightgbm",
                                 "cv_folds": 5,

@@ -35,13 +35,6 @@ export default function SingleModelSettings({
     "xgboost",
     "catboost",
     "tabnet",
-    "randomforest",
-    "extratrees",
-    "gradientboosting",
-    "adaboost",
-    "ridge",
-    "naivebayes",
-    "knn",
   ],
 }: SingleModelSettingsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,13 +45,6 @@ export default function SingleModelSettings({
       "xgboost",
       "catboost",
       "tabnet",
-      "randomforest",
-      "extratrees",
-      "gradientboosting",
-      "adaboost",
-      "ridge",
-      "naivebayes",
-      "knn",
     ];
     const fromProps = (availableModels || []).map((m) =>
       String(m).toLowerCase().trim()

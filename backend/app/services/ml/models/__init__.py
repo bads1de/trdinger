@@ -15,106 +15,32 @@ MLモデルラッパーモジュール
 """
 
 # モデルラッパーのインポート（遅延インポートでImportErrorを回避）
+# Essential 4 Modelsのみ
 __all__ = [
     "LightGBMModel",
-    "XGBoostModel",
+    "XGBoostModel", 
     "CatBoostModel",
     "TabNetModel",
-    "RandomForestModel",
-    "ExtraTreesModel",
-    "GradientBoostingModel",
-    "AdaBoostModel",
-    "RidgeModel",
-    "NaiveBayesModel",
-    "KNNModel",
     "algorithm_registry",
 ]
 
 
 def get_available_models():
     """
-    利用可能なモデルラッパーのリストを取得
+    利用可能なモデルラッパーのリストを取得（Essential 4 Modelsのみ）
 
     Returns:
         利用可能なモデルタイプのリスト
     """
+    import importlib.util
+    
     available = []
 
-    try:
-        pass
-
-        available.append("lightgbm")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("xgboost")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("catboost")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("tabnet")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("randomforest")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("extratrees")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("gradientboosting")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("adaboost")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("ridge")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("naivebayes")
-    except ImportError:
-        pass
-
-    try:
-        pass
-
-        available.append("knn")
-    except ImportError:
-        pass
+    # Essential 4 Modelsのみをチェック
+    essential_models = ["lightgbm", "xgboost", "catboost", "tabnet"]
+    
+    for model in essential_models:
+        if importlib.util.find_spec(model):
+            available.append(model)
 
     return available
