@@ -33,7 +33,6 @@ export default function SingleModelSettings({
   availableModels = [
     "lightgbm",
     "xgboost",
-    "catboost",
     "tabnet",
   ],
 }: SingleModelSettingsProps) {
@@ -43,7 +42,6 @@ export default function SingleModelSettings({
     const fallback = [
       "lightgbm",
       "xgboost",
-      "catboost",
       "tabnet",
     ];
     const fromProps = (availableModels || []).map((m) =>

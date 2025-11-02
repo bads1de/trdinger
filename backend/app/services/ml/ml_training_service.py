@@ -529,7 +529,7 @@ class MLTrainingService(BaseResourceManager):
                         "method", "bagging"
                     )
                     enabled_models = effective_trainer.ensemble_config.get(
-                        "models", ["lightgbm", "xgboost", "catboost", "tabnet"]
+                        "models", ["lightgbm", "xgboost", "tabnet"]
                     )
                     parameter_space = optimizer.get_ensemble_parameter_space(
                         ensemble_method, enabled_models

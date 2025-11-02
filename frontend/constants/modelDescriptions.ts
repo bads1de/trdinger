@@ -3,7 +3,7 @@ export type ModelDescription = {
   description: string;
 };
 
-// Essential 4 Models のみのモデル説明
+// Essential 2 Models のみのモデル説明
 export const MODEL_DESCRIPTIONS: Record<string, ModelDescription> = {
   lightgbm: {
     title: "LightGBM",
@@ -14,11 +14,6 @@ export const MODEL_DESCRIPTIONS: Record<string, ModelDescription> = {
     title: "XGBoost", 
     description:
       "精度で最高レベルの勾配ブースティング。Kaggle実績豊富、最高レベルの精度と堅牢性、特徴量重要度完全サポート。重要プロジェクトに最適。",
-  },
-  catboost: {
-    title: "CatBoost",
-    description:
-      "カテゴリ特徴量対応の勾配ブースティング。カテゴリエンコーディング自動、過学習防止優秀、前処理時間最小、混合データ型に最適。",
   },
   tabnet: {
     title: "TabNet",

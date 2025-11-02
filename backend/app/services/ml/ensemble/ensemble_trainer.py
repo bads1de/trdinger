@@ -64,7 +64,6 @@ class EnsembleTrainer(BaseMLTrainer):
             "base_models": {
                 "light gbm": {},
                 "xgboost": {},
-                "catboost": {},
                 "tabnet": {},
             },
             "bagging": {},
@@ -83,11 +82,6 @@ class EnsembleTrainer(BaseMLTrainer):
                 optimized_params["base_models"]["xgboost"][clean_name] = param_value
 
 
-
-            # CatBoostパラメータ
-            elif param_name.startswith("cat_"):
-                clean_name = param_name.replace("cat_", "")
-                optimized_params["base_models"]["catboost"][clean_name] = param_value
 
             # TabNetパラメータ
             elif param_name.startswith("tab_"):

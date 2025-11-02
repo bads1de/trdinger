@@ -42,23 +42,6 @@ class EnsembleParameterSpace:
             "xgb_gamma": ParameterSpace(type="real", low=0.0, high=0.5),
         }
 
-
-
-    @staticmethod
-    def get_catboost_parameter_space() -> Dict[str, ParameterSpace]:
-        """CatBoostのパラメータ空間"""
-        return {
-            "cat_iterations": ParameterSpace(type="integer", low=100, high=1000),
-            "cat_learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
-            "cat_depth": ParameterSpace(type="integer", low=3, high=10),
-            "cat_l2_leaf_reg": ParameterSpace(type="real", low=1.0, high=10.0),
-            "cat_border_count": ParameterSpace(type="integer", low=32, high=255),
-            "cat_bagging_temperature": ParameterSpace(type="real", low=0.0, high=1.0),
-            "cat_random_strength": ParameterSpace(type="real", low=0.0, high=10.0),
-            "cat_subsample": ParameterSpace(type="real", low=0.5, high=1.0),
-            "cat_colsample_bylevel": ParameterSpace(type="real", low=0.5, high=1.0),
-        }
-
     @staticmethod
     def get_tabnet_parameter_space() -> Dict[str, ParameterSpace]:
         """TabNetのパラメータ空間"""
@@ -75,16 +58,6 @@ class EnsembleParameterSpace:
             "tab_n_shared": ParameterSpace(type="integer", low=1, high=5),
             "tab_momentum": ParameterSpace(type="real", low=0.01, high=0.4),
         }
-
-
-
-
-
-
-
-
-
-
 
     @staticmethod
     def get_bagging_parameter_space() -> Dict[str, ParameterSpace]:
@@ -134,9 +107,6 @@ class EnsembleParameterSpace:
         if "xgboost" in enabled_models:
             parameter_space.update(cls.get_xgboost_parameter_space())
 
-        if "catboost" in enabled_models:
-            parameter_space.update(cls.get_catboost_parameter_space())
-
         if "tabnet" in enabled_models:
             parameter_space.update(cls.get_tabnet_parameter_space())
 
@@ -184,10 +154,6 @@ class EnsembleParameterSpace:
             "xgb_reg_alpha": trial.suggest_float("xgb_reg_alpha", 0.0, 1.0),
             "xgb_reg_lambda": trial.suggest_float("xgb_reg_lambda", 0.0, 1.0),
             "xgb_gamma": trial.suggest_float("xgb_gamma", 0.0, 0.5),
-        }
-
-
-
         }
 
     @staticmethod

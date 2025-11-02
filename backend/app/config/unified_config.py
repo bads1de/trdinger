@@ -412,10 +412,6 @@ class MLTrainingConfig(BaseSettings):
     # LogisticRegression デフォルトパラメータ
     lr_max_iter: int = Field(default=1000, description="最大イテレーション数")
 
-    # CatBoost デフォルトパラメータ
-    cat_iterations: int = Field(default=1000, description="イテレーション数")
-    cat_learning_rate: float = Field(default=0.1, description="学習率")
-
     # 一般的な学習設定
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     random_state: int = Field(default=42, description="ランダムシード")

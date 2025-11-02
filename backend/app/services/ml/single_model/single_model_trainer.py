@@ -2,7 +2,7 @@
 単一モデルトレーナー
 
 BaseMLTrainerを継承し、単一の機械学習モデルでのトレーニングを提供します。
-LightGBM、XGBoost、CatBoost、TabNetをサポートします。
+LightGBM、XGBoost、TabNetをサポートします。
 """
 
 import logging
@@ -34,7 +34,7 @@ class SingleModelTrainer(BaseMLTrainer):
         初期化
 
         Args:
-            model_type: 使用するモデルタイプ（lightgbm, xgboost, catboost, tabnet）
+            model_type: 使用するモデルタイプ（lightgbm, xgboost, tabnet）
             automl_config: AutoML設定（オプション）
         """
         super().__init__(automl_config=automl_config)
@@ -43,11 +43,10 @@ class SingleModelTrainer(BaseMLTrainer):
         self.single_model = None
         self.last_training_results = None  # 最後の学習結果を保持
 
-        # サポートされているモデルタイプを確認（Essential 4 Modelsのみ）
+        # サポートされているモデルタイプを確認（Essential 2 Modelsのみ）
         supported_models = [
             "lightgbm",
             "xgboost",
-            "catboost",
             "tabnet",
         ]
         if self.model_type not in supported_models:
@@ -128,16 +127,10 @@ class SingleModelTrainer(BaseMLTrainer):
 
                 return XGBoostModel(automl_config=self.automl_config)
 
-            elif self.model_type == "catboost":
-                from ..models.catboost import CatBoostModel
-
-                return CatBoostModel(automl_config=self.automl_config)
-
             elif self.model_type == "tabnet":
                 from ..models.tabnet import TabNetModel
 
                 return TabNetModel(automl_config=self.automl_config)
-
 
 
             else:
@@ -362,8 +355,8 @@ class SingleModelTrainer(BaseMLTrainer):
         available = []
         import importlib.util
 
-        # Essential 4 Models（依存ライブラリベースのモデル）
-        essential_models = ["lightgbm", "xgboost", "catboost", "tabnet"]
+        # Essential 2 Models（依存ライブラリベースのモデル）
+        essential_models = ["lightgbm", "xgboost", "tabnet"]
         for model in essential_models:
             if importlib.util.find_spec(model):
                 available.append(model)

@@ -1,8 +1,7 @@
-// Essential 4 Models のみ
+// Essential 2 Models のみ
 export const AVAILABLE_MODEL_NAMES = [
   "lightgbm",
   "xgboost", 
-  "catboost",
   "tabnet",
 ];
 
@@ -18,11 +17,6 @@ export const AVAILABLE_MODELS = [
     description: "精度で最高レベルの勾配ブースティング",
   },
   {
-    value: "catboost",
-    label: "CatBoost",
-    description: "カテゴリ特徴量対応の勾配ブースティング",
-  },
-  {
     value: "tabnet",
     label: "TabNet",
     description: "深層学習アプローチの表形式データ用",
@@ -32,6 +26,5 @@ export const AVAILABLE_MODELS = [
 export const META_MODELS = [
   { value: "lightgbm", label: "LightGBM" },
   { value: "xgboost", label: "XGBoost" },
-  { value: "catboost", label: "CatBoost" },
   { value: "tabnet", label: "TabNet" },
 ];

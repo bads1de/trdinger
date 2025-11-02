@@ -322,7 +322,7 @@ class TestHybridPredictor:
 
         検証項目:
         - get_available_single_models()が正しく動作する
-        - LightGBM, XGBoost, CatBoost, RandomForestが含まれる
+        - LightGBM, XGBoost, RandomForestが含まれる
         """
 
         from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
@@ -331,5 +331,4 @@ class TestHybridPredictor:
 
         assert "lightgbm" in models
         assert "xgboost" in models
-        assert "catboost" in models
         assert "randomforest" in models

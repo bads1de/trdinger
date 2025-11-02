@@ -80,9 +80,10 @@ class XGBoostModel:
                 "verbosity": 0,
             }
 
-            # XGBoostデータセットを作成
-            dtrain = xgb.DMatrix(X_train, label=y_train)  # type: ignore
-            dtest = xgb.DMatrix(X_test, label=y_test)  # type: ignore
+            # XGBoostデータセットを作成（特徴量名を設定）
+            self.feature_names = self.feature_columns.copy()
+            dtrain = xgb.DMatrix(X_train, label=y_train, feature_names=self.feature_names)  # type: ignore
+            dtest = xgb.DMatrix(X_test, label=y_test, feature_names=self.feature_names)  # type: ignore
 
             # モデル学習
             self.model = xgb.train(  # type: ignore
@@ -113,20 +114,8 @@ class XGBoostModel:
             logger.info(f"XGBoost学習開始: {num_classes}クラス分類")
             logger.info(f"クラス分布: {dict(y_train.value_counts())}")
 
-            # 特徴量重要度を計算
-            feature_importance = {}
-            if self.model and hasattr(self.model, "get_score"):
-                try:
-                    importance_scores = self.model.get_score(importance_type="gain")
-                    # XGBoostの特徴量名をDataFrameのカラム名にマッピング
-                    for i, col in enumerate(self.feature_columns):
-                        feature_key = f"f{i}"
-                        if feature_key in importance_scores:
-                            feature_importance[col] = importance_scores[feature_key]
-                        else:
-                            feature_importance[col] = 0.0
-                except Exception as e:
-                    logger.warning(f"特徴量重要度の計算に失敗: {e}")
+            # 特徴量重要度を計算（修正版）
+            feature_importance = self._calculate_feature_importance()
 
             self.is_trained = True
 
@@ -156,6 +145,46 @@ class XGBoostModel:
         except Exception as e:
             logger.error(f"XGBoostモデル学習エラー: {e}")
             raise ModelError(f"XGBoostモデル学習に失敗しました: {e}")
+
+    def _calculate_feature_importance(self) -> Dict[str, float]:
+        """特徴量重要度を計算（修正版）"""
+        try:
+            if not self.model or not hasattr(self.model, "get_score"):
+                logger.warning("モデルまたはget_score()メソッドがありません")
+                return {col: 0.0 for col in self.feature_columns}
+
+            # get_score()で重要度を取得
+            importance_scores = self.model.get_score(importance_type="gain")
+            
+            logger.info(f"XGBoost get_score() result: {importance_scores}")
+
+            # 特徴量名を正しくマッピング
+            feature_importance = {}
+            
+            # feature_namesが存在する場合
+            if hasattr(self, 'feature_names') and self.feature_names:
+                for feature_name in self.feature_names:
+                    feature_importance[feature_name] = importance_scores.get(feature_name, 0.0)
+            else:
+                # フォールバック: インデックスを使用
+                for i, col in enumerate(self.feature_columns):
+                    feature_key = f"f{i}"
+                    feature_importance[col] = importance_scores.get(feature_key, 0.0)
+            
+            logger.info(f"計算された特徴量重要度: {len(feature_importance)}個")
+            
+            # デバッグログ: 0でない重要度の個数
+            non_zero_count = sum(1 for score in feature_importance.values() if score > 0)
+            logger.info(f"重要度が0でない特徴量数: {non_zero_count}/{len(feature_importance)}")
+            
+            return feature_importance
+            
+        except Exception as e:
+            logger.error(f"特徴量重要度計算エラー: {e}")
+            import traceback
+            traceback.print_exc()
+            # フォールバック: すべて0とする
+            return {col: 0.0 for col in self.feature_columns}
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -205,7 +234,7 @@ class XGBoostModel:
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
-        特徴量重要度を取得
+        特徴量重要度を取得（修正版）
 
         Args:
             top_n: 上位N個の特徴量
@@ -218,18 +247,12 @@ class XGBoostModel:
             return {}
 
         try:
-            # XGBoostの特徴量重要度を取得
-            importance_scores = self.model.get_score(importance_type="gain")
+            # 修正された特徴量重要度計算を使用
+            feature_importance = self._calculate_feature_importance()
 
-            if not self.feature_columns:
-                logger.warning("特徴量カラム情報がありません")
+            if not feature_importance:
+                logger.warning("特徴量重要度の計算に失敗")
                 return {}
-
-            # 特徴量名と重要度のペアを作成（存在しない特徴量は0とする）
-            feature_importance = {}
-            for i, feature in enumerate(self.feature_columns):
-                feature_key = f"f{i}"
-                feature_importance[feature] = importance_scores.get(feature_key, 0.0)
 
             # 重要度でソートして上位N個を取得
             sorted_importance = sorted(

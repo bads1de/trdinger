@@ -88,7 +88,7 @@ export interface GAConfig {
     // ハイブリッドGA+ML設定
     /** ハイブリッドモード有効化（GA+ML予測統合） */
     hybrid_mode?: boolean;
-    /** MLモデルタイプ（lightgbm, xgboost, catboost, tabnet） */
+    /** MLモデルタイプ（lightgbm, xgboost, tabnet） */
     hybrid_model_type?: string;
     /** 複数モデル平均の場合のモデルリスト */
     hybrid_model_types?: string[];

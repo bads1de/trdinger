@@ -1,7 +1,7 @@
 /**
- * Essential 4 Models アルゴリズム定数定義
+ * Essential 2 Models アルゴリズム定数定義
  * 
- * バックエンドのalgorithm_registry.pyと同期してEssential 4 Modelsのみ定義します。
+ * バックエンドのalgorithm_registry.pyと同期してEssential 2 Modelsのみ定義します。
  * フロントエンドのアルゴリズム選択を簡潔で明確に保ちます。
  */
 
@@ -118,42 +118,6 @@ export const ALGORITHMS: Record<string, Algorithm> = {
       '競争環境',
       '特徴量エンジニアリング済み',
       '予測精度が最重要'
-    ],
-    has_probability_prediction: true,
-    has_feature_importance: true,
-  },
-
-  // CatBoost - カテゴリ対応
-  catboost: {
-    name: 'catboost',
-    display_name: 'CatBoost',
-    description: 'カテゴリ特徴量対応の勾配ブースティング',
-    type: AlgorithmType.BOOSTING,
-    capabilities: [
-      AlgorithmCapability.CLASSIFICATION,
-      AlgorithmCapability.REGRESSION,
-      AlgorithmCapability.PROBABILITY_PREDICTION,
-      AlgorithmCapability.FEATURE_IMPORTANCE,
-      AlgorithmCapability.MULTICLASS,
-    ],
-    pros: [
-      'カテゴリ特徴量自動対応',
-      '過学習防止優秀',
-      '前処理時間最小',
-      '順序ブースティング',
-      'デフォルト性能良好'
-    ],
-    cons: [
-      '計算時間中程度',
-      'メモリ使用量中程度',
-      '較新技術のためコミュニティ小規模'
-    ],
-    best_for: [
-      'カテゴリデータ豊富',
-      '前処理時間短縮',
-      '自動でcategorical handling',
-      '混合データ型',
-      '初心者向け'
     ],
     has_probability_prediction: true,
     has_feature_importance: true,

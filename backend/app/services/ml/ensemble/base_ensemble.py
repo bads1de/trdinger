@@ -89,10 +89,10 @@ class BaseEnsemble(ABC):
 
     def _create_base_model(self, model_type: str) -> Any:
         """
-        ベースモデルを作成（Essential 4 Modelsのみサポート）
+        ベースモデルを作成（Essential 2 Modelsのみサポート）
 
         Args:
-            model_type: モデルタイプ（lightgbm, xgboost, catboost, tabnet）
+            model_type: モデルタイプ（lightgbm, xgboost, tabnet）
 
         Returns:
             作成されたモデル
@@ -111,13 +111,6 @@ class BaseEnsemble(ABC):
                 return XGBoostModel(automl_config=self.automl_config)
             except ImportError:
                 raise MLModelError("XGBoostモデルラッパーのインポートに失敗しました")
-        elif model_type.lower() == "catboost":
-            try:
-                from ..models.catboost import CatBoostModel
-
-                return CatBoostModel(automl_config=self.automl_config)
-            except ImportError:
-                raise MLModelError("CatBoostモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "tabnet":
             try:
                 from ..models.tabnet import TabNetModel
@@ -136,7 +129,7 @@ class BaseEnsemble(ABC):
                 verbose=0,  # ログ抑制
             )
         else:
-            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, catboost, tabnet, logistic_regression")
+            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, tabnet, logistic_regression")
 
     def _evaluate_predictions(
         self,

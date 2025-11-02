@@ -53,7 +53,7 @@ class BaggingParamsConfig(BaseModel):
     )
     base_model_type: str = Field(
         default="lightgbm",
-        description="ベースモデルタイプ（lightgbm, xgboost, catboost, tabnet）",
+        description="ベースモデルタイプ（lightgbm, xgboost, tabnet）",
     )
     mixed_models: Optional[List[str]] = Field(
         default=None,
@@ -73,11 +73,11 @@ class StackingParamsConfig(BaseModel):
     """スタッキングパラメータ設定（scikit-learn StackingClassifier対応）"""
 
     base_models: List[str] = Field(
-        default=["lightgbm", "xgboost"], description="ベースモデルのリスト（Essential 4 Modelsのみ）"
+        default=["lightgbm", "xgboost"], description="ベースモデルのリスト（Essential 2 Modelsのみ）"
     )
     meta_model: str = Field(
         default="logistic_regression",
-        description="メタモデル（logistic_regression, lightgbm, xgboost, catboost, tabnet）",
+        description="メタモデル（logistic_regression, lightgbm, xgboost, tabnet）",
     )
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     stack_method: str = Field(
@@ -110,7 +110,7 @@ class SingleModelConfig(BaseModel):
 
     model_type: str = Field(
         default="lightgbm",
-        description="使用するモデルタイプ (lightgbm, xgboost, catboost, tabnet)",
+        description="使用するモデルタイプ (lightgbm, xgboost, tabnet)",
     )
 
 
