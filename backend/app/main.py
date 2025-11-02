@@ -61,10 +61,6 @@ def setup_logging():
         getattr(logging, unified_config.logging.level.upper())
     )
 
-    # ログディレクトリが存在しない場合は作成
-    log_dir = "./logs"
-    os.makedirs(log_dir, exist_ok=True)
-
 
 def create_app() -> FastAPI:
     """FastAPIアプリケーションを作成します。
