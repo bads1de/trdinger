@@ -485,7 +485,7 @@ class FeatureEngineeringService:
         lookback_periods: Optional[Dict[str, int]] = None,
         automl_config: Optional[Dict] = None,
         target: Optional[pd.Series] = None,
-        max_features_per_step: int = 100,
+        max_features_per_step: int = 50,  # 特徴量数削減: 100 → 50
     ) -> pd.DataFrame:
         """
         拡張特徴量を計算（手動 + AutoML）- ステップ・バイ・ステップ方式
@@ -643,7 +643,7 @@ class FeatureEngineeringService:
         self,
         df: pd.DataFrame,
         target: Optional[pd.Series],
-        max_features: int = 100,
+        max_features: int = 50,  # 特徴量数削減: 100 → 50
     ) -> pd.DataFrame:
         """ステップ2: TSFresh特徴量を追加 + 特徴量選択"""
         logger.info("🤖 ステップ2: TSFresh特徴量を計算中...")
@@ -695,7 +695,7 @@ class FeatureEngineeringService:
         self,
         df: pd.DataFrame,
         target: Optional[pd.Series],
-        max_features: int = 100,
+        max_features: int = 50,  # 特徴量数削減: 100 → 50
     ) -> pd.DataFrame:
         """ステップ3: AutoFeat特徴量を追加 + 特徴量選択"""
         if target is None:

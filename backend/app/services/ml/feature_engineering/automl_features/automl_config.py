@@ -32,9 +32,9 @@ class TSFreshConfig:
     enabled: bool = True
     feature_selection: bool = True
     fdr_level: float = 0.1  # より緩い閾値で多くの特徴量を選択
-    feature_count_limit: int = 200  # 特徴量数制限を拡大
+    feature_count_limit: int = 80  # 特徴量数削減: 200 → 80
     parallel_jobs: int = 2
-    performance_mode: str = "comprehensive"  # より包括的なモードに変更
+    performance_mode: str = "fast"  # パフォーマンス最適化: comprehensive → fast
     custom_settings: Optional[Dict[str, Any]] = None
 
 
@@ -60,8 +60,8 @@ class AutoFeatConfig:
         tournament_size (int): 遺伝的アルゴリズムのトーナメントサイズ
     """
 
-    enabled: bool = True
-    max_features: int = 100
+    enabled: bool = False  # デフォルトで無効化: True → False
+    max_features: int = 30  # 特徴量数削減: 100 → 30（有効化時の制限）
     feateng_steps: int = 2
     max_gb: float = 1.0
     featsel_runs: int = 1  # 特徴量選択の実行回数（メモリ節約のため1に設定）
@@ -221,15 +221,15 @@ class AutoMLConfig:
             enabled=True,
             feature_selection=True,
             fdr_level=0.01,  # より厳しい選択
-            feature_count_limit=500,  # 金融データ用に大幅増加
+            feature_count_limit=100,  # 特徴量数削減: 500 → 100
             parallel_jobs=4,
-            performance_mode="financial_optimized",
+            performance_mode="fast",  # パフォーマンス最適化: financial_optimized → fast
         )
 
         autofeat_config = AutoFeatConfig(
-            enabled=True,
-            max_features=100,
-            feateng_steps=3,  # より多くの特徴量エンジニアリングステップ
+            enabled=False,  # 金融最適化でもデフォルト無効化: True → False
+            max_features=50,  # 特徴量数削減: 100 → 50（有効化時の制限）
+            feateng_steps=2,  # ステップ数削減: 3 → 2
             max_gb=2.0,  # より多くのメモリ使用を許可
             generations=20,
             population_size=50,
