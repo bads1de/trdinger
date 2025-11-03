@@ -22,7 +22,8 @@
       "mcp__serena__list_memories",
       "mcp__serena__initial_instructions",
       "mcp__serena__activate_project",
-      "mcp__serena__think_about_collected_information"
+      "mcp__serena__think_about_collected_information",
+      "mcp__serena__write_memory"
     ],
     "deny": [],
     "ask": []

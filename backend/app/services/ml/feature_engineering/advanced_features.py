@@ -85,29 +85,35 @@ class AdvancedFeatureEngineer:
         """ラグ特徴量を追加"""
         logger.info("📊 ラグ特徴量を追加中...")
 
+        new_features = {}
+
         # 価格のラグ特徴量
         lag_periods = [1, 3, 6, 12, 24, 48]  # 1h, 3h, 6h, 12h, 24h, 48h
 
         for period in lag_periods:
-            data[f"close_lag_{period}"] = data["close"].shift(period)
-            data[f"volume_lag_{period}"] = data["volume"].shift(period)
-            data[f"high_lag_{period}"] = data["high"].shift(period)
-            data[f"low_lag_{period}"] = data["low"].shift(period)
+            new_features[f"close_lag_{period}"] = data["close"].shift(period)
+            new_features[f"volume_lag_{period}"] = data["volume"].shift(period)
+            new_features[f"high_lag_{period}"] = data["high"].shift(period)
+            new_features[f"low_lag_{period}"] = data["low"].shift(period)
 
         # 価格変化率のラグ
-        data["returns"] = data["close"].pct_change()
+        new_features["returns"] = data["close"].pct_change()
         for period in lag_periods:
-            data[f"returns_lag_{period}"] = data["returns"].shift(period)
+            new_features[f"returns_lag_{period}"] = new_features["returns"].shift(period)
 
         # 累積リターン
         for period in [6, 12, 24]:
-            data[f"cumulative_returns_{period}"] = data["returns"].rolling(period).sum()
+            new_features[f"cumulative_returns_{period}"] = new_features["returns"].rolling(period).sum()
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_advanced_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """高度な技術指標を追加"""
         logger.info("📈 高度な技術指標を追加中...")
+
+        new_features = {}
 
         data["high"].values
         data["low"].values
@@ -122,18 +128,18 @@ class AdvancedFeatureEngineer:
                 high=data["high"], low=data["low"], close=data["close"]
             )
             if stoch_result is not None and not stoch_result.empty:
-                data["stochastic_k"] = stoch_result.iloc[:, 0]  # STOCHk
-                data["stochastic_d"] = stoch_result.iloc[:, 1]  # STOCHd
+                new_features["stochastic_k"] = stoch_result.iloc[:, 0]  # STOCHk
+                new_features["stochastic_d"] = stoch_result.iloc[:, 1]  # STOCHd
 
             williams_r_result = ta.willr(
                 high=data["high"], low=data["low"], close=data["close"]
             )
             if williams_r_result is not None:
-                data["williams_r"] = williams_r_result
+                new_features["williams_r"] = williams_r_result
 
             cci_result = ta.cci(high=data["high"], low=data["low"], close=data["close"])
             if cci_result is not None:
-                data["cci"] = cci_result
+                new_features["cci"] = cci_result
 
             mfi_result = ta.mfi(
                 high=data["high"],
@@ -142,48 +148,48 @@ class AdvancedFeatureEngineer:
                 volume=data["volume"],
             )
             if mfi_result is not None:
-                data["mfi"] = mfi_result
+                new_features["mfi"] = mfi_result
 
             uo_result = ta.uo(high=data["high"], low=data["low"], close=data["close"])
             if uo_result is not None:
-                data["ultimate_oscillator"] = uo_result
+                new_features["ultimate_oscillator"] = uo_result
 
             # トレンド指標（pandas-ta使用）
             adx_result = ta.adx(high=data["high"], low=data["low"], close=data["close"])
             if adx_result is not None and not adx_result.empty:
-                data["ADX"] = adx_result["ADX_14"]
-                data["DI_Plus"] = adx_result["DMP_14"]
-                data["DI_Minus"] = adx_result["DMN_14"]
+                new_features["ADX"] = adx_result["ADX_14"]
+                new_features["DI_Plus"] = adx_result["DMP_14"]
+                new_features["DI_Minus"] = adx_result["DMN_14"]
 
             aroon_result = ta.aroon(high=data["high"], low=data["low"])
             if aroon_result is not None and not aroon_result.empty:
-                data["Aroon_Up"] = aroon_result["AROONU_14"]
-                data["Aroon_Down"] = aroon_result["AROOND_14"]
+                new_features["Aroon_Up"] = aroon_result["AROONU_14"]
+                new_features["Aroon_Down"] = aroon_result["AROOND_14"]
 
             aroon_osc_result = ta.aroon(high=data["high"], low=data["low"], scalar=100)
             if aroon_osc_result is not None and not aroon_osc_result.empty:
-                data["AROONOSC"] = aroon_osc_result["AROONOSC_14"]
+                new_features["AROONOSC"] = aroon_osc_result["AROONOSC_14"]
 
             # ボラティリティ指標（pandas-ta使用）
-            data["ATR"] = ta.atr(
+            new_features["ATR"] = ta.atr(
                 high=data["high"], low=data["low"], close=data["close"]
             )
-            data["NATR"] = ta.natr(
+            new_features["NATR"] = ta.natr(
                 high=data["high"], low=data["low"], close=data["close"]
             )
-            data["TRANGE"] = ta.true_range(
+            new_features["TRANGE"] = ta.true_range(
                 high=data["high"], low=data["low"], close=data["close"]
             )
 
             # 出来高指標（pandas-ta使用）
-            data["OBV"] = ta.obv(close=data["close"], volume=data["volume"])
-            data["AD"] = ta.ad(
+            new_features["OBV"] = ta.obv(close=data["close"], volume=data["volume"])
+            new_features["AD"] = ta.ad(
                 high=data["high"],
                 low=data["low"],
                 close=data["close"],
                 volume=data["volume"],
             )
-            data["ADOSC"] = ta.adosc(
+            new_features["ADOSC"] = ta.adosc(
                 high=data["high"],
                 low=data["low"],
                 close=data["close"],
@@ -193,98 +199,112 @@ class AdvancedFeatureEngineer:
         except Exception as e:
             logger.warning(f"pandas-ta指標計算エラー: {e}")
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_statistical_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """統計的特徴量を追加"""
         logger.info("📊 統計的特徴量を追加中...")
 
+        new_features = {}
         windows = [5, 10, 20, 50]
 
         for window in windows:
             # 移動統計
-            data[f"Close_mean_{window}"] = data["close"].rolling(window).mean()
-            data[f"Close_std_{window}"] = data["close"].rolling(window).std()
-            data[f"Close_skew_{window}"] = data["close"].rolling(window).skew()
-            data[f"Close_kurt_{window}"] = data["close"].rolling(window).kurt()
+            new_features[f"Close_mean_{window}"] = data["close"].rolling(window).mean()
+            new_features[f"Close_std_{window}"] = data["close"].rolling(window).std()
+            new_features[f"Close_skew_{window}"] = data["close"].rolling(window).skew()
+            new_features[f"Close_kurt_{window}"] = data["close"].rolling(window).kurt()
 
             # 分位数
-            data[f"Close_q25_{window}"] = data["close"].rolling(window).quantile(0.25)
-            data[f"Close_q75_{window}"] = data["close"].rolling(window).quantile(0.75)
-            data[f"Close_median_{window}"] = data["close"].rolling(window).median()
+            new_features[f"Close_q25_{window}"] = data["close"].rolling(window).quantile(0.25)
+            new_features[f"Close_q75_{window}"] = data["close"].rolling(window).quantile(0.75)
+            new_features[f"Close_median_{window}"] = data["close"].rolling(window).median()
 
             # 範囲統計
-            data[f"Close_range_{window}"] = (
-                data["high"].rolling(window).max() - data["low"].rolling(window).min()
-            )
-            data[f"Close_iqr_{window}"] = (
-                data[f"Close_q75_{window}"] - data[f"Close_q25_{window}"]
-            )
+            high_max = data["high"].rolling(window).max()
+            low_min = data["low"].rolling(window).min()
+            new_features[f"Close_range_{window}"] = high_max - low_min
+
+            q75 = new_features[f"Close_q75_{window}"]
+            q25 = new_features[f"Close_q25_{window}"]
+            new_features[f"Close_iqr_{window}"] = q75 - q25
 
             # 出来高統計
-            data[f"Volume_mean_{window}"] = data["volume"].rolling(window).mean()
-            data[f"Volume_std_{window}"] = data["volume"].rolling(window).std()
+            new_features[f"Volume_mean_{window}"] = data["volume"].rolling(window).mean()
+            new_features[f"Volume_std_{window}"] = data["volume"].rolling(window).std()
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_time_series_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """時系列特徴量を追加"""
         logger.info("⏰ 時系列特徴量を追加中...")
 
+        new_features = {}
+
         # 差分特徴量
         for period in [1, 6, 24]:
-            data[f"Close_diff_{period}"] = data["close"].diff(period)
-            data[f"Volume_diff_{period}"] = data["volume"].diff(period)
+            new_features[f"Close_diff_{period}"] = data["close"].diff(period)
+            new_features[f"Volume_diff_{period}"] = data["volume"].diff(period)
 
         # 変化率
         for period in [1, 6, 12, 24]:
-            data[f"Close_pct_change_{period}"] = data["close"].pct_change(period)
-            data[f"Volume_pct_change_{period}"] = data["volume"].pct_change(period)
+            new_features[f"Close_pct_change_{period}"] = data["close"].pct_change(period)
+            new_features[f"Volume_pct_change_{period}"] = data["volume"].pct_change(period)
 
         # 移動平均からの乖離
         for window in [5, 10, 20]:
             ma = data["close"].rolling(window).mean()
-            data[f"Close_deviation_from_ma_{window}"] = (data["close"] - ma) / ma
+            new_features[f"Close_deviation_from_ma_{window}"] = (data["close"] - ma) / ma
 
         # トレンド強度（pandas-ta使用）
         for window in [10, 20, 50]:
-            data[f"Trend_strength_{window}"] = ta.linreg(
+            new_features[f"Trend_strength_{window}"] = ta.linreg(
                 data["close"], length=window, slope=True
             )
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_volatility_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """ボラティリティ特徴量を追加"""
         logger.info("📊 ボラティリティ特徴量を追加中...")
 
+        new_features = {}
+
         # 実現ボラティリティ
-        data["Returns"] = data["close"].pct_change()
+        new_features["Returns"] = data["close"].pct_change()
 
         for window in [5, 10, 20, 50]:
-            data[f"Realized_Vol_{window}"] = data["Returns"].rolling(
+            new_features[f"Realized_Vol_{window}"] = new_features["Returns"].rolling(
                 window
             ).std() * np.sqrt(
                 24
             )  # 日次換算
-            data[f"Vol_of_Vol_{window}"] = (
-                data[f"Realized_Vol_{window}"].rolling(window).std()
+            new_features[f"Vol_of_Vol_{window}"] = (
+                new_features[f"Realized_Vol_{window}"].rolling(window).std()
             )
 
         # Parkinson推定量（高値・安値ベースのボラティリティ）
         for window in [10, 20]:
             hl_ratio = np.log(data["high"] / data["low"])
-            data[f"Parkinson_Vol_{window}"] = hl_ratio.rolling(window).var() * (
+            new_features[f"Parkinson_Vol_{window}"] = hl_ratio.rolling(window).var() * (
                 1 / (4 * np.log(2))
             )
 
         # ボラティリティレジーム
-        vol_20 = data["Returns"].rolling(20).std()
-        data["Vol_Regime"] = pd.cut(
+        vol_20 = new_features["Returns"].rolling(20).std()
+        new_features["Vol_Regime"] = pd.cut(
             vol_20, bins=3, labels=[0, 1, 2]
         )  # 低・中・高ボラティリティ
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_funding_rate_features(
         self, data: pd.DataFrame, fr_data: pd.DataFrame
@@ -292,28 +312,32 @@ class AdvancedFeatureEngineer:
         """ファンディングレート特徴量を追加"""
         logger.info("💰 ファンディングレート特徴量を追加中...")
 
+        new_features = {}
+
         if "funding_rate" in fr_data.columns:
             # ファンディングレートの統計
             for window in [3, 7, 14]:  # 3回、7回、14回分（24h, 56h, 112h）
-                data[f"FR_mean_{window}"] = (
+                new_features[f"FR_mean_{window}"] = (
                     fr_data["funding_rate"].rolling(window).mean()
                 )
-                data[f"FR_std_{window}"] = fr_data["funding_rate"].rolling(window).std()
-                data[f"FR_sum_{window}"] = fr_data["funding_rate"].rolling(window).sum()
+                new_features[f"FR_std_{window}"] = fr_data["funding_rate"].rolling(window).std()
+                new_features[f"FR_sum_{window}"] = fr_data["funding_rate"].rolling(window).sum()
 
             # ファンディングレートの変化
-            data["FR_change"] = fr_data["funding_rate"].diff()
-            data["FR_change_abs"] = data["FR_change"].abs()
+            new_features["FR_change"] = fr_data["funding_rate"].diff()
+            new_features["FR_change_abs"] = new_features["FR_change"].abs()
 
             # 極端なファンディングレート
-            data["FR_extreme_positive"] = (
+            new_features["FR_extreme_positive"] = (
                 fr_data["funding_rate"] > fr_data["funding_rate"].quantile(0.95)
             ).astype(int)
-            data["FR_extreme_negative"] = (
+            new_features["FR_extreme_negative"] = (
                 fr_data["funding_rate"] < fr_data["funding_rate"].quantile(0.05)
             ).astype(int)
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_open_interest_features(
         self, data: pd.DataFrame, oi_data: pd.DataFrame
@@ -321,51 +345,61 @@ class AdvancedFeatureEngineer:
         """建玉残高特徴量を追加"""
         logger.info("📊 建玉残高特徴量を追加中...")
 
+        new_features = {}
+
         if "open_interest" in oi_data.columns:
             # 建玉残高の変化率
             for period in [1, 6, 24]:
-                data[f"OI_pct_change_{period}"] = oi_data["open_interest"].pct_change(
+                new_features[f"OI_pct_change_{period}"] = oi_data["open_interest"].pct_change(
                     period
                 )
 
             # 建玉残高の移動平均
             for window in [6, 24, 168]:  # 6h, 24h, 168h(1週間)
-                data[f"OI_ma_{window}"] = (
+                new_features[f"OI_ma_{window}"] = (
                     oi_data["open_interest"].rolling(window).mean()
                 )
-                data[f"OI_deviation_{window}"] = (
-                    oi_data["open_interest"] - data[f"OI_ma_{window}"]
-                ) / data[f"OI_ma_{window}"]
+                new_features[f"OI_deviation_{window}"] = (
+                    oi_data["open_interest"] - new_features[f"OI_ma_{window}"]
+                ) / new_features[f"OI_ma_{window}"]
 
             # 建玉残高と価格の関係
-            data["OI_Price_Correlation"] = (
+            new_features["OI_Price_Correlation"] = (
                 oi_data["open_interest"].rolling(24).corr(data["close"])
             )
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_interaction_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """相互作用特徴量を追加"""
         logger.info("🔗 相互作用特徴量を追加中...")
 
+        new_features = {}
+
         # 価格と出来高の相互作用
-        data["Price_Volume_Product"] = data["close"] * data["volume"]
-        data["Price_Volume_Ratio"] = data["close"] / (data["volume"] + 1e-8)
+        new_features["Price_Volume_Product"] = data["close"] * data["volume"]
+        new_features["Price_Volume_Ratio"] = data["close"] / (data["volume"] + 1e-8)
 
         # ボラティリティと出来高
         if "Realized_Vol_20" in data.columns:
-            data["Vol_Volume_Product"] = data["Realized_Vol_20"] * data["volume"]
+            new_features["Vol_Volume_Product"] = data["Realized_Vol_20"] * data["volume"]
 
         # 技術指標の組み合わせ
         if "RSI" in data.columns and "Stochastic_K" in data.columns:
-            data["RSI_Stoch_Avg"] = (data["RSI"] + data["Stochastic_K"]) / 2
-            data["RSI_Stoch_Diff"] = data["RSI"] - data["Stochastic_K"]
+            new_features["RSI_Stoch_Avg"] = (data["RSI"] + data["Stochastic_K"]) / 2
+            new_features["RSI_Stoch_Diff"] = data["RSI"] - data["Stochastic_K"]
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
     def _add_seasonal_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """季節性特徴量を追加"""
         logger.info("📅 季節性特徴量を追加中...")
+
+        new_features = {}
 
         # DatetimeIndexの確認
         if not isinstance(data.index, pd.DatetimeIndex):
@@ -381,34 +415,36 @@ class AdvancedFeatureEngineer:
             day = getattr(data.index, "day", 1)  # type: ignore
             month = getattr(data.index, "month", 1)  # type: ignore
 
-            data["Hour"] = hour
-            data["DayOfWeek"] = dayofweek
-            data["DayOfMonth"] = day
-            data["Month"] = month
+            new_features["Hour"] = hour
+            new_features["DayOfWeek"] = dayofweek
+            new_features["DayOfMonth"] = day
+            new_features["Month"] = month
         except (AttributeError, TypeError) as e:
             logger.warning(f"時間関連特徴量の生成でエラー: {e}")
-            data["Hour"] = 0
-            data["DayOfWeek"] = 0
-            data["DayOfMonth"] = 1
-            data["Month"] = 1
+            new_features["Hour"] = 0
+            new_features["DayOfWeek"] = 0
+            new_features["DayOfMonth"] = 1
+            new_features["Month"] = 1
 
         # 周期的エンコーディング
-        data["Hour_sin"] = np.sin(2 * np.pi * data["Hour"] / 24)
-        data["Hour_cos"] = np.cos(2 * np.pi * data["Hour"] / 24)
-        data["DayOfWeek_sin"] = np.sin(2 * np.pi * data["DayOfWeek"] / 7)
-        data["DayOfWeek_cos"] = np.cos(2 * np.pi * data["DayOfWeek"] / 7)
+        new_features["Hour_sin"] = np.sin(2 * np.pi * new_features["Hour"] / 24)
+        new_features["Hour_cos"] = np.cos(2 * np.pi * new_features["Hour"] / 24)
+        new_features["DayOfWeek_sin"] = np.sin(2 * np.pi * new_features["DayOfWeek"] / 7)
+        new_features["DayOfWeek_cos"] = np.cos(2 * np.pi * new_features["DayOfWeek"] / 7)
 
         # 市場時間特徴量
-        data["Is_Weekend"] = (data["DayOfWeek"] >= 5).astype(int)  # 土日
-        data["Is_Asian_Hours"] = ((data["Hour"] >= 0) & (data["Hour"] < 8)).astype(int)
-        data["Is_European_Hours"] = ((data["Hour"] >= 8) & (data["Hour"] < 16)).astype(
+        new_features["Is_Weekend"] = (new_features["DayOfWeek"] >= 5).astype(int)  # 土日
+        new_features["Is_Asian_Hours"] = ((new_features["Hour"] >= 0) & (new_features["Hour"] < 8)).astype(int)
+        new_features["Is_European_Hours"] = ((new_features["Hour"] >= 8) & (new_features["Hour"] < 16)).astype(
             int
         )
-        data["Is_American_Hours"] = ((data["Hour"] >= 16) & (data["Hour"] < 24)).astype(
+        new_features["Is_American_Hours"] = ((new_features["Hour"] >= 16) & (new_features["Hour"] < 24)).astype(
             int
         )
 
-        return data
+        # 一括で結合
+        new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
+        return new_df
 
 
 # グローバルインスタンス
