@@ -120,7 +120,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
 
             # ファンディングレートと価格の乖離（安全な計算）
             price_change = (
-                result_df["Close"]
+                result_df["close"]
                 .pct_change()
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
@@ -227,7 +227,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
 
             # ボラティリティ調整建玉残高（安全な計算）
             price_change = (
-                result_df["Close"]
+                result_df["close"]
                 .pct_change()
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
@@ -256,7 +256,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
 
             # 建玉残高と価格の関係
             price_change = (
-                result_df["Close"]
+                result_df["close"]
                 .pct_change()
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)

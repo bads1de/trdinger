@@ -9,6 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+import numpy as np
 import pandas as pd
 
 
@@ -137,3 +138,89 @@ class BaseFeatureCalculator(ABC):
             feature_type: 特徴量の種類
         """
         pass  # デバッグログを削除
+
+    def create_result_dataframe_efficient(
+        self, df: pd.DataFrame, new_features: Dict[str, pd.Series]
+    ) -> pd.DataFrame:
+        """
+        高速な結果DataFrame作成（DataFrame断片化回避）
+
+        新しい特徴量を辞書で収集し、pd.concat()で一括追加することで
+        DataFrameの断片化を防ぎ、高速処理を実現します。
+
+        Args:
+            df: 元のDataFrame
+            new_features: 追加する新特徴量の辞書（Seriesの辞書）
+
+        Returns:
+            新特徴量が追加されたDataFrame
+        """
+        if not new_features:
+            # 新規特徴量が空的場合は元のDataFrameを返す
+            return df.copy()
+
+        # DataFrame断片化を避けるため、辞書で収集 → pd.concat()で一括追加
+        result_df = pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+        return result_df
+
+    def batch_calculate_ratio(
+        self,
+        numerators: Dict[str, pd.Series],
+        denominators: Dict[str, pd.Series],
+        fill_value: float = 0.0,
+    ) -> Dict[str, pd.Series]:
+        """
+        比の一括計算（ゼロ除算対応）
+
+        複数の分子と分母のペアを受け取り、safe_ratio_calculationを使用して
+        一括で比を計算します。
+
+        Args:
+            numerators: 分子のSeries辞書
+            denominators: 分母のSeries辞書
+            fill_value: ゼロ除算時の埋め値
+
+        Returns:
+            計算結果のSeries辞書
+        """
+        results = {}
+
+        for name in numerators:
+            if name in denominators:
+                results[name] = self.safe_ratio_calculation(
+                    numerators[name], denominators[name], fill_value=fill_value
+                )
+            else:
+                logger.warning(f"分母'{name}'が見つかりません")
+
+        return results
+
+    def safe_ratio_calculation(
+        self,
+        numerator: pd.Series | Any,
+        denominator: pd.Series | Any,
+        fill_value: float = 0.0,
+    ) -> pd.Series:
+        """
+        ゼロ除算を防ぐための安全な比率計算
+
+        Args:
+            numerator: 分子
+            denominator: 分母
+            fill_value: ゼロ除算時の埋め値
+
+        Returns:
+            計算結果のSeries
+        """
+        if (
+            denominator is None
+            or numerator is None
+            or not isinstance(numerator, pd.Series)
+            or not isinstance(denominator, pd.Series)
+        ):
+            length = len(numerator) if isinstance(numerator, pd.Series) else 0
+            return pd.Series([fill_value] * length)
+
+        # ゼロ除算を防ぐ
+        ratio = numerator / denominator.replace(0, np.nan)
+        return ratio.replace([np.inf, -np.inf], np.nan).fillna(fill_value)

@@ -7,21 +7,23 @@ OHLCV、OI、FR、FGデータの期間不一致を適切に処理し、
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
 
+from .base_feature_calculator import BaseFeatureCalculator
 from ....utils.data_processing import data_processor as data_preprocessor
 
 logger = logging.getLogger(__name__)
 
 
-class CryptoFeatures:
-    """暗号通貨特化の特徴量エンジニアリング"""
+class CryptoFeatureCalculator(BaseFeatureCalculator):
+    """暗号通貨特化の特徴量エンジニアリング（BaseFeatureCalculator継承）"""
 
     def __init__(self):
         """初期化"""
+        super().__init__()
         self.feature_groups = {
             "price": [],
             "volume": [],
@@ -31,6 +33,26 @@ class CryptoFeatures:
             "composite": [],
             "temporal": [],
         }
+
+    def calculate_features(
+        self, df: pd.DataFrame, config: Dict[str, Any]
+    ) -> pd.DataFrame:
+        """
+        暗号通貨特徴量を計算（BaseFeatureCalculatorの抽象メソッド実装）
+
+        Args:
+            df: OHLCV価格データ
+            config: 計算設定（lookback_periodsを含む）
+
+        Returns:
+            暗号通貨特徴量が追加されたDataFrame
+        """
+        lookback_periods = config.get("lookback_periods", {})
+
+        # create_crypto_featuresを呼び出し（後方互換性のため）
+        result_df = self.create_crypto_features(df)
+
+        return result_df
 
     def _ensure_data_quality(self, df: pd.DataFrame) -> pd.DataFrame:
         """データ品質を確保"""
@@ -63,37 +85,44 @@ class CryptoFeatures:
         """価格関連特徴量"""
         result_df = df.copy()
 
+        # 新しい特徴量を辞書で収集（DataFrame断片化対策）
+        new_features = {}
+
         # 基本価格特徴量
-        result_df["price_range"] = (df["high"] - df["low"]) / df["close"]
-        result_df["upper_shadow"] = (
+        new_features["price_range"] = (df["high"] - df["low"]) / df["close"]
+        new_features["upper_shadow"] = (
             df["high"] - np.maximum(df["open"], df["close"])
         ) / df["close"]
-        result_df["lower_shadow"] = (
+        new_features["lower_shadow"] = (
             np.minimum(df["open"], df["close"]) - df["low"]
         ) / df["close"]
-        result_df["body_size"] = abs(df["close"] - df["open"]) / df["close"]
+        new_features["body_size"] = abs(df["close"] - df["open"]) / df["close"]
 
         # 価格変動率（複数期間）
         for name, period in periods.items():
-            result_df[f"price_return_{name}"] = df["close"].pct_change(period)
-            result_df[f"price_volatility_{name}"] = (
+            new_features[f"price_return_{name}"] = df["close"].pct_change(period)
+            new_features[f"price_volatility_{name}"] = (
                 df["close"].rolling(period).std() / df["close"].rolling(period).mean()
             )
 
             # 価格勢い
-            result_df[f"price_momentum_{name}"] = (
+            new_features[f"price_momentum_{name}"] = (
                 df["close"] / df["close"].shift(period) - 1
             )
 
         # 価格レベル特徴量
         for period in [24, 168]:  # 1日、1週間
-            result_df[f"price_vs_high_{period}h"] = (
+            new_features[f"price_vs_high_{period}h"] = (
                 df["close"] / df["high"].rolling(period).max()
             )
-            result_df[f"price_vs_low_{period}h"] = (
+            new_features[f"price_vs_low_{period}h"] = (
                 df["close"] / df["low"].rolling(period).min()
             )
 
+        # 一括で結合（DataFrame断片化回避）
+        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+
+        # feature_groups更新
         self.feature_groups["price"].extend(
             [
                 col
@@ -110,11 +139,14 @@ class CryptoFeatures:
         """出来高関連特徴量"""
         result_df = df.copy()
 
+        # 新しい特徴量を辞書で収集（DataFrame断片化対策）
+        new_features = {}
+
         # 出来高変動率
         for name, period in periods.items():
-            result_df[f"volume_change_{name}"] = df["volume"].pct_change(period)
-            result_df[f"volume_ma_{name}"] = df["volume"].rolling(period).mean()
-            result_df[f"volume_ratio_{name}"] = (
+            new_features[f"volume_change_{name}"] = df["volume"].pct_change(period)
+            new_features[f"volume_ma_{name}"] = df["volume"].rolling(period).mean()
+            new_features[f"volume_ratio_{name}"] = (
                 df["volume"] / df["volume"].rolling(period).mean()
             )
 
@@ -124,13 +156,16 @@ class CryptoFeatures:
             vwap = (typical_price * df["volume"]).rolling(period).sum() / df[
                 "volume"
             ].rolling(period).sum()
-            result_df[f"vwap_{period}h"] = vwap
-            result_df[f"price_vs_vwap_{period}h"] = (df["close"] - vwap) / vwap
+            new_features[f"vwap_{period}h"] = vwap
+            new_features[f"price_vs_vwap_{period}h"] = (df["close"] - vwap) / vwap
 
         # 出来高プロファイル
         close_rolling_mean = df["close"].rolling(24).mean()
         volume_rolling = df["volume"].rolling(24)
-        result_df["volume_price_trend"] = volume_rolling.corr(close_rolling_mean).fillna(0.0)  # type: ignore
+        new_features["volume_price_trend"] = volume_rolling.corr(close_rolling_mean).fillna(0.0)  # type: ignore
+
+        # 一括で結合（DataFrame断片化回避）
+        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
 
         self.feature_groups["volume"].extend(
             [col for col in result_df.columns if col.startswith(("volume_", "vwap_"))]
@@ -385,8 +420,13 @@ class CryptoFeatures:
         # 統計的手法による数値カラムの補完
         numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
         for col in numeric_cols:
-            if result_df[col].isna().any():
-                result_df[col] = result_df[col].fillna(result_df[col].median())
+            try:
+                # Seriesであることを確認
+                if isinstance(result_df[col], pd.Series) and result_df[col].isna().sum() > 0:
+                    result_df[col] = result_df[col].fillna(result_df[col].median())
+            except (ValueError, TypeError) as e:
+                # エラーが発生した列はスキップ
+                logger.warning(f"カラム {col} の補完でエラー: {e}")
 
         return result_df
 
@@ -438,3 +478,5 @@ class CryptoFeatures:
         logger.info(f"暗号通貨特化特徴量を追加: {feature_count}個")
 
         return result_df
+# 後方互換性のためのクラス別名
+CryptoFeatures = CryptoFeatureCalculator

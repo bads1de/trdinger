@@ -122,34 +122,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 ),
             )
 
-            # 市場効率性（価格のランダムウォーク度）
+            # 市場効率性（価格のランダムウォーク度）- 最適化版
+            # Vectorized computation of price autocorrelation
             returns = result_df["close"].pct_change().fillna(0)
+            returns_lag1 = returns.shift(1)
 
-            def safe_correlation(x):
-                try:
-                    if len(x) < 3:  # 最低3つのデータポイントが必要
-                        return 0.0
-                    x_clean = x.dropna()
-                    if len(x_clean) < 3:
-                        return 0.0
-                    x1, x2 = x_clean[:-1], x_clean[1:]
-                    if (
-                        len(x1) == 0
-                        or len(x2) == 0
-                        or np.std(x1) == 0
-                        or np.std(x2) == 0
-                    ):
-                        return 0.0
-                    corr_matrix = np.corrcoef(x1, x2)
-                    if np.isnan(corr_matrix[0, 1]):
-                        return 0.0
-                    return corr_matrix[0, 1]
-                except Exception:
-                    return 0.0
-
+            # Rolling correlation計算（pandas native使用、lambda回避）
+            # Note: Series.rolling().corr()は効率的にCython実装
             new_features["Market_Efficiency"] = (
                 returns.rolling(window=volatility_period, min_periods=3)
-                .apply(safe_correlation)
+                .corr(returns_lag1.rolling(window=volatility_period, min_periods=3).mean())
                 .fillna(0.0)
             )
 

@@ -200,7 +200,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             ボラティリティ特徴量が追加されたDataFrame
         """
         try:
-            if not self.validate_input_data(df, ["Close", "High", "Low"]):
+            if not self.validate_input_data(df, ["close", "high", "low"]):
                 return df
 
             result_df = self.create_result_dataframe(df)
@@ -297,7 +297,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             出来高特徴量が追加されたDataFrame
         """
         try:
-            if not self.validate_input_data(df, ["Volume", "Close", "High", "Low"]):
+            if not self.validate_input_data(df, ["volume", "close", "high", "low"]):
                 return df
 
             result_df = self.create_result_dataframe(df)

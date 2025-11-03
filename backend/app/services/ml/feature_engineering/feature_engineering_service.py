@@ -902,7 +902,7 @@ class FeatureEngineeringService:
             result_df = df.copy()
 
             # 価格変動率ベースの疑似ファンディングレート
-            returns = result_df["Close"].pct_change()
+            returns = result_df["close"].pct_change()
 
             # 疑似ファンディングレート（価格勢いベース）
             pseudo_fr = returns.rolling(8).mean() * 0.1
@@ -960,7 +960,7 @@ class FeatureEngineeringService:
             result_df = df.copy()
 
             # ボリュームベースの疑似建玉残高
-            pseudo_oi = result_df["Volume"].rolling(24).mean() * 10
+            pseudo_oi = result_df["volume"].rolling(24).mean() * 10
             # 明示的にpandas Seriesであることを保証
             pseudo_oi = pd.Series(pseudo_oi, index=result_df.index)
 
@@ -973,7 +973,7 @@ class FeatureEngineeringService:
             result_df["OI_Surge"] = (pseudo_oi > oi_threshold).astype(int)
 
             # ボラティリティ調整建玉残高
-            volatility = result_df["Close"].pct_change().rolling(24).std()
+            volatility = result_df["close"].pct_change().rolling(24).std()
             result_df["Volatility_Adjusted_OI"] = pseudo_oi / (volatility + 1e-8)
 
             # OI移動平均
@@ -984,7 +984,7 @@ class FeatureEngineeringService:
             result_df["OI_Trend"] = result_df["OI_MA_24"] / result_df["OI_MA_168"] - 1
 
             # OI価格相関（簡易実装）
-            price_change = result_df["Close"].pct_change()
+            price_change = result_df["close"].pct_change()
             oi_change = result_df["OI_Change_Rate"]
             result_df["OI_Price_Correlation"] = price_change * oi_change
 

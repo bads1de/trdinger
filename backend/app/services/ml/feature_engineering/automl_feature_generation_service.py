@@ -165,27 +165,27 @@ class AutoMLFeatureGenerationService:
                     data.append(
                         {
                             "timestamp": record.timestamp,
-                            "Open": (
+                            "open": (
                                 float(record.open)
                                 if hasattr(record, "open") and record.open is not None
                                 else 0.0
                             ),
-                            "High": (
+                            "high": (
                                 float(record.high)
                                 if hasattr(record, "high") and record.high is not None
                                 else 0.0
                             ),
-                            "Low": (
+                            "low": (
                                 float(record.low)
                                 if hasattr(record, "low") and record.low is not None
                                 else 0.0
                             ),
-                            "Close": (
+                            "close": (
                                 float(record.close)
                                 if hasattr(record, "close") and record.close is not None
                                 else 0.0
                             ),
-                            "Volume": (
+                            "volume": (
                                 float(record.volume)
                                 if hasattr(record, "volume")
                                 and record.volume is not None
@@ -197,13 +197,14 @@ class AutoMLFeatureGenerationService:
             elif isinstance(first_record, dict):
                 # 辞書の場合
                 df = pd.DataFrame(ohlcv_records)
-                # カラム名を正規化
+                # カラム名を正規化（すべて小文字に統一）
+                # 既に小文字の場合はそのまま使用
                 column_mapping = {
-                    "open": "Open",
-                    "high": "High",
-                    "low": "Low",
-                    "close": "Close",
-                    "volume": "Volume",
+                    "open": "open",
+                    "high": "high",
+                    "low": "low",
+                    "close": "close",
+                    "volume": "volume",
                 }
                 df = df.rename(columns=column_mapping)
             else:
@@ -242,12 +243,12 @@ class AutoMLFeatureGenerationService:
             ターゲット変数のSeries（計算できない場合はNone）
         """
         try:
-            if ohlcv_data.empty or "Close" not in ohlcv_data.columns:
+            if ohlcv_data.empty or "close" not in ohlcv_data.columns:
                 logger.warning("ターゲット変数計算用のデータが不足しています")
                 return None
 
             # 価格変化率を計算（次の期間の価格変化）
-            close_prices = ohlcv_data["Close"].copy()
+            close_prices = ohlcv_data["close"].copy()
 
             # 将来の価格変化率を計算（24時間後の変化率）
             prediction_horizon = 24  # デフォルト値

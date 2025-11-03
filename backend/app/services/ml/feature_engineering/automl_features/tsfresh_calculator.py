@@ -510,11 +510,11 @@ class TSFreshFeatureCalculator:
     def detect_market_regime(self, df: pd.DataFrame) -> MarketRegime:
         """市場レジームを検出"""
         try:
-            if "Close" not in df.columns or len(df) < 20:
+            if "close" not in df.columns or len(df) < 20:
                 return MarketRegime.TRENDING
 
             # 価格変動の統計を計算
-            returns = df["Close"].pct_change().dropna()
+            returns = df["close"].pct_change().dropna()
             volatility = returns.std()
             trend_strength = abs(returns.mean()) / volatility if volatility > 0 else 0
 
