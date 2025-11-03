@@ -6,17 +6,18 @@
 """
 
 import logging
-from typing import List
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
 
+from .base_feature_calculator import BaseFeatureCalculator
 from ....utils.error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 
 
-class TemporalFeatureCalculator:
+class TemporalFeatureCalculator(BaseFeatureCalculator):
     """
     時間的特徴量計算クラス
 
@@ -25,6 +26,27 @@ class TemporalFeatureCalculator:
 
     def __init__(self):
         """初期化"""
+        super().__init__()
+
+    def calculate_features(
+        self, df: pd.DataFrame, config: Dict[str, Any]
+    ) -> pd.DataFrame:
+        """
+        時間的特徴量を計算（BaseFeatureCalculatorの抽象メソッド実装）
+
+        Args:
+            df: OHLCV価格データ
+            config: 計算設定（lookback_periodsを含む）
+
+        Returns:
+            時間的特徴量が追加されたDataFrame
+        """
+        lookback_periods = config.get("lookback_periods", {})
+
+        # 時間的特徴量を計算
+        result_df = self.calculate_temporal_features(df)
+
+        return result_df
 
     def calculate_temporal_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -70,103 +92,135 @@ class TemporalFeatureCalculator:
         else:
             result_df.index = result_df.index.tz_convert("UTC")
 
+        # 新しい特徴量を辞書で収集（DataFrame断片化対策）
+        new_features = {}
+
         # 基本的な時間特徴量
-        result_df = self._calculate_basic_time_features(result_df)
+        new_features.update(self._calculate_basic_time_features_dict(result_df))
 
         # 取引セッション特徴量
-        result_df = self._calculate_trading_session_features(result_df)
+        new_features.update(self._calculate_trading_session_features_dict(result_df))
 
         # 周期的エンコーディング
-        result_df = self._calculate_cyclical_features(result_df)
+        new_features.update(self._calculate_cyclical_features_dict(result_df))
 
         # セッション重複時間
-        result_df = self._calculate_session_overlap_features(result_df)
+        new_features.update(self._calculate_session_overlap_features_dict(result_df))
+
+        # 一括で結合
+        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
 
         return result_df
 
-    def _calculate_basic_time_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """基本的な時間特徴量を計算"""
-        result_df = df.copy()
+    def _calculate_basic_time_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+        """基本的な時間特徴量を計算（辞書版）"""
+        new_features = {}
 
         # Pylance が df.index の型を正しく認識できるように明示的にキャスト
-        if not isinstance(result_df.index, pd.DatetimeIndex):
-            result_df.index = pd.to_datetime(result_df.index)
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+
+        hour_series = df.index.to_series().dt.hour
+        dayofweek_series = df.index.to_series().dt.dayofweek
 
         # 時間（0-23）
-        result_df["Hour_of_Day"] = result_df.index.to_series().dt.hour
+        new_features["Hour_of_Day"] = hour_series
 
         # 曜日（0=月曜日, 6=日曜日）
-        result_df["Day_of_Week"] = result_df.index.to_series().dt.dayofweek
+        new_features["Day_of_Week"] = dayofweek_series
 
         # 週末フラグ（土日）
-        result_df["Is_Weekend"] = result_df.index.to_series().dt.dayofweek.isin([5, 6])
+        new_features["Is_Weekend"] = dayofweek_series.isin([5, 6])
 
         # 月曜効果
-        result_df["Is_Monday"] = result_df.index.to_series().dt.dayofweek == 0
+        new_features["Is_Monday"] = dayofweek_series == 0
 
         # 金曜効果
-        result_df["Is_Friday"] = result_df.index.to_series().dt.dayofweek == 4
+        new_features["Is_Friday"] = dayofweek_series == 4
 
-        return result_df
+        return new_features
 
-    def _calculate_trading_session_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """取引セッション特徴量を計算"""
-        result_df = df.copy()
+    def _calculate_basic_time_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """基本的な時間特徴量を計算（レガシー互換用）"""
+        new_features = self._calculate_basic_time_features_dict(df)
+        return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+
+    def _calculate_trading_session_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+        """取引セッション特徴量を計算（辞書版）"""
+        new_features = {}
 
         # Pylance が df.index の型を正しく認識できるように明示的にキャスト
-        if not isinstance(result_df.index, pd.DatetimeIndex):
-            result_df.index = pd.to_datetime(result_df.index)
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
 
-        hour = result_df.index.to_series().dt.hour
+        hour = df.index.to_series().dt.hour
 
         # Asia Session (UTC 0:00-9:00)
-        result_df["Asia_Session"] = (hour >= 0) & (hour < 9)
+        new_features["Asia_Session"] = (hour >= 0) & (hour < 9)
 
         # Europe Session (UTC 7:00-16:00)
-        result_df["Europe_Session"] = (hour >= 7) & (hour < 16)
+        new_features["Europe_Session"] = (hour >= 7) & (hour < 16)
 
         # US Session (UTC 13:00-22:00)
-        result_df["US_Session"] = (hour >= 13) & (hour < 22)
+        new_features["US_Session"] = (hour >= 13) & (hour < 22)
 
-        return result_df
+        return new_features
 
-    def _calculate_cyclical_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """周期的エンコーディング特徴量を計算"""
-        result_df = df.copy()
+    def _calculate_trading_session_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """取引セッション特徴量を計算（レガシー互換用）"""
+        new_features = self._calculate_trading_session_features_dict(df)
+        return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+
+    def _calculate_cyclical_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+        """周期的エンコーディング特徴量を計算（辞書版）"""
+        new_features = {}
 
         # Pylance が df.index の型を正しく認識できるように明示的にキャスト
-        if not isinstance(result_df.index, pd.DatetimeIndex):
-            result_df.index = pd.to_datetime(result_df.index)
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+
+        hour = df.index.to_series().dt.hour
+        dayofweek = df.index.to_series().dt.dayofweek
 
         # 時間の周期的エンコーディング（24時間周期）
-        hour_angle = 2 * np.pi * result_df.index.to_series().dt.hour / 24
-        result_df["Hour_Sin"] = np.sin(hour_angle)
-        result_df["Hour_Cos"] = np.cos(hour_angle)
+        hour_angle = 2 * np.pi * hour / 24
+        new_features["Hour_Sin"] = np.sin(hour_angle)
+        new_features["Hour_Cos"] = np.cos(hour_angle)
 
         # 曜日の周期的エンコーディング（7日周期）
-        day_angle = 2 * np.pi * result_df.index.to_series().dt.dayofweek / 7
-        result_df["Day_Sin"] = np.sin(day_angle)
-        result_df["Day_Cos"] = np.cos(day_angle)
+        day_angle = 2 * np.pi * dayofweek / 7
+        new_features["Day_Sin"] = np.sin(day_angle)
+        new_features["Day_Cos"] = np.cos(day_angle)
 
-        return result_df
+        return new_features
 
-    def _calculate_session_overlap_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """セッション重複時間の特徴量を計算"""
-        result_df = df.copy()
+    def _calculate_cyclical_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """周期的エンコーディング特徴量を計算（レガシー互換用）"""
+        new_features = self._calculate_cyclical_features_dict(df)
+        return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+
+    def _calculate_session_overlap_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+        """セッション重複時間の特徴量を計算（辞書版）"""
+        new_features = {}
 
         # Pylance が df.index の型を正しく認識できるように明示的にキャスト
-        if not isinstance(result_df.index, pd.DatetimeIndex):
-            result_df.index = pd.to_datetime(result_df.index)
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
 
-        hour = result_df.index.to_series().dt.hour
+        hour = df.index.to_series().dt.hour
 
         # Asia-Europe overlap (UTC 7:00-9:00)
-        result_df["Session_Overlap_Asia_Europe"] = (hour >= 7) & (hour < 9)
+        new_features["Session_Overlap_Asia_Europe"] = (hour >= 7) & (hour < 9)
 
         # Europe-US overlap (UTC 13:00-16:00)
-        result_df["Session_Overlap_Europe_US"] = (hour >= 13) & (hour < 16)
+        new_features["Session_Overlap_Europe_US"] = (hour >= 13) & (hour < 16)
 
-        return result_df
+        return new_features
+
+    def _calculate_session_overlap_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """セッション重複時間の特徴量を計算（レガシー互換用）"""
+        new_features = self._calculate_session_overlap_features_dict(df)
+        return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
 
     def get_feature_names(self) -> List[str]:
         """生成される特徴量名のリストを取得"""

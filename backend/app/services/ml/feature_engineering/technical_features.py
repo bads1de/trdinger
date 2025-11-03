@@ -43,30 +43,38 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         """
         lookback_periods = config.get("lookback_periods", {})
 
-        # 複数のテクニカル特徴量を順次計算
+        # 複数のテクニカル特徴量を順次計算（全パターン生成）
         result_df = self.calculate_market_regime_features(df, lookback_periods)
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
+        result_df = self.calculate_pattern_features(result_df, lookback_periods)
 
         return result_df
 
     def calculate_market_regime_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
     ) -> pd.DataFrame:
         """
         市場レジーム特徴量を計算
 
         Args:
             df: OHLCV価格データ
-            lookback_periods: 計算期間設定
+            lookback_periods: 計算期間設定（オプション、旧API互換用）
 
         Returns:
             市場レジーム特徴量が追加されたDataFrame
         """
+        # 旧API互換：lookback_periodsがNoneの場合はデフォルト値を設定
+        if lookback_periods is None:
+            lookback_periods = {"short_ma": 10, "long_ma": 50, "volatility": 20}
+
         try:
             if not self.validate_input_data(df, ["close", "high", "low"]):
                 return df
 
             result_df = self.create_result_dataframe(df)
+
+            # 新しい特徴量を辞書で収集（DataFrame断片化対策）
+            new_features = {}
 
             # トレンド強度（pandas-ta SMA使用）
             short_ma = lookback_periods.get("short_ma", 10)
@@ -84,11 +92,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 and isinstance(ma_short, pd.Series)
                 and isinstance(ma_long, pd.Series)
             ):
-                result_df["Trend_Strength"] = self.safe_ratio_calculation(
+                new_features["Trend_Strength"] = self.safe_ratio_calculation(
                     ma_short - ma_long, ma_long
                 )
             else:
-                result_df["Trend_Strength"] = 0.0
+                new_features["Trend_Strength"] = 0.0
 
             # レンジ相場判定（pandas-ta MAX/MIN使用）
             volatility_period = lookback_periods.get("volatility", 20)
@@ -97,14 +105,14 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             high_20 = high_vals.rolling(window=volatility_period).max()
             low_20 = low_vals.rolling(window=volatility_period).min()
 
-            result_df["Range_Bound_Ratio"] = self.safe_ratio_calculation(
+            new_features["Range_Bound_Ratio"] = self.safe_ratio_calculation(
                 result_df["close"] - low_20, high_20 - low_20, fill_value=0.5
             )
 
             # ブレイクアウト強度（直前の高値・安値を使用）
             prev_high_20 = high_20.shift(1)
             prev_low_20 = low_20.shift(1)
-            result_df["Breakout_Strength"] = np.where(
+            new_features["Breakout_Strength"] = np.where(
                 result_df["close"] > prev_high_20,
                 (result_df["close"] - prev_high_20) / prev_high_20,
                 np.where(
@@ -139,11 +147,14 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 except Exception:
                     return 0.0
 
-            result_df["Market_Efficiency"] = (
+            new_features["Market_Efficiency"] = (
                 returns.rolling(window=volatility_period, min_periods=3)
                 .apply(safe_correlation)
                 .fillna(0.0)
             )
+
+            # 一括で結合（DataFrame断片化回避）
+            result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
 
             return result_df
 
@@ -152,23 +163,33 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             return df
 
     def calculate_pattern_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
     ) -> pd.DataFrame:
         """
         パターン特徴量を計算（TDDで追加されたメソッド）
 
         Args:
             df: OHLCV価格データ
-            lookback_periods: 計算期間設定
+            lookback_periods: 計算期間設定（オプション、旧API互換用）
 
         Returns:
             パターン特徴量が追加されたDataFrame
         """
+        # 旧API互換：lookback_periodsがNoneの場合はデフォルト値を設定
+        if lookback_periods is None:
+            lookback_periods = {"short_ma": 10, "long_ma": 50}
+
         try:
             if not self.validate_input_data(df, ["close", "high", "low", "open"]):
                 return df
 
             result_df = self.create_result_dataframe(df)
+
+            # カラム名を小文字に統一（大文字小文字の混在対応）
+            result_df.columns = [col.lower() for col in result_df.columns]
+
+            # 新しい特徴量を辞書で収集（DataFrame断片化対策）
+            new_features = {}
 
             # ドージ・ストキャスティクス（過熱・過売判断）
             stoch_result = ta.stoch(
@@ -180,34 +201,34 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 smooth_k=3,
             )
             if stoch_result is not None:
-                result_df["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
-                result_df["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
+                new_features["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
+                new_features["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
                 # ドージ・ストキャスティクス（KとDの乖離）
-                result_df["Stochastic_Divergence"] = (
-                    result_df["Stochastic_K"] - result_df["Stochastic_D"]
+                new_features["Stochastic_Divergence"] = (
+                    new_features["Stochastic_K"] - new_features["Stochastic_D"]
                 ).fillna(0.0)
             else:
-                result_df["Stochastic_K"] = 50.0
-                result_df["Stochastic_D"] = 50.0
-                result_df["Stochastic_Divergence"] = 0.0
+                new_features["Stochastic_K"] = 50.0
+                new_features["Stochastic_D"] = 50.0
+                new_features["Stochastic_Divergence"] = 0.0
 
             # ボリンジャーバンド（サポート・レジスタンス）
             bb_result = ta.bbands(result_df["close"], length=20, std=2)
             if bb_result is not None:
-                result_df["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(result_df["close"])
-                result_df["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(result_df["close"])
-                result_df["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(result_df["close"])
+                new_features["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(result_df["close"])
+                new_features["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(result_df["close"])
+                new_features["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(result_df["close"])
                 # ボリンジャーバンドからの乖離率
-                result_df["BB_Position"] = self.safe_ratio_calculation(
-                    result_df["close"] - result_df["BB_Lower"],
-                    result_df["BB_Upper"] - result_df["BB_Lower"],
+                new_features["BB_Position"] = self.safe_ratio_calculation(
+                    result_df["close"] - new_features["BB_Lower"],
+                    new_features["BB_Upper"] - new_features["BB_Lower"],
                     fill_value=0.5
                 )
             else:
-                result_df["BB_Upper"] = result_df["close"]
-                result_df["BB_Middle"] = result_df["close"]
-                result_df["BB_Lower"] = result_df["close"]
-                result_df["BB_Position"] = 0.5
+                new_features["BB_Upper"] = result_df["close"]
+                new_features["BB_Middle"] = result_df["close"]
+                new_features["BB_Lower"] = result_df["close"]
+                new_features["BB_Position"] = 0.5
 
             # 移動平均（トレンド判断）
             short_ma = lookback_periods.get("short_ma", 10)
@@ -217,19 +238,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             ma_long = ta.sma(result_df["close"], length=long_ma)
 
             if ma_short is not None and ma_long is not None:
-                result_df["MA_Short"] = ma_short.fillna(result_df["close"])
-                result_df["MA_Long"] = ma_long.fillna(result_df["close"])
+                new_features["MA_Short"] = ma_short.fillna(result_df["close"])
+                new_features["MA_Long"] = ma_long.fillna(result_df["close"])
                 # MAクロスシグナル（短期MAが長期MAを上回ると1、下回ると0）
-                result_df["MA_Cross"] = np.where(
-                    result_df["MA_Short"] > result_df["MA_Long"], 1.0, 0.0
+                new_features["MA_Cross"] = np.where(
+                    new_features["MA_Short"] > new_features["MA_Long"], 1.0, 0.0
                 )
             else:
-                result_df["MA_Short"] = result_df["close"]
-                result_df["MA_Long"] = result_df["close"]
-                result_df["MA_Cross"] = 0.5
-
-            # 価格パターン（ダブルボトム、ヘッドアンドショルダー等の簡易検出）
-            result_df = self._detect_price_patterns(result_df)
+                new_features["MA_Short"] = result_df["close"]
+                new_features["MA_Long"] = result_df["close"]
+                new_features["MA_Cross"] = 0.5
 
             # ボラティリティパターン（ATRを使用）
             atr_values = ta.atr(
@@ -239,16 +257,22 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 length=14
             )
             if atr_values is not None:
-                result_df["ATR"] = atr_values.fillna(0.0)
+                new_features["ATR"] = atr_values.fillna(0.0)
                 # 正規化されたボラティリティ
-                result_df["Normalized_Volatility"] = self.safe_ratio_calculation(
-                    result_df["ATR"],
+                new_features["Normalized_Volatility"] = self.safe_ratio_calculation(
+                    new_features["ATR"],
                     result_df["close"],
                     fill_value=0.01
                 )
             else:
-                result_df["ATR"] = 0.0
-                result_df["Normalized_Volatility"] = 0.01
+                new_features["ATR"] = 0.0
+                new_features["Normalized_Volatility"] = 0.01
+
+            # 一括で結合
+            result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+
+            # 価格パターン（ダブルボトム、ヘッドアンドショルダー等の簡易検出）
+            result_df = self._detect_price_patterns(result_df)
 
             return result_df
 
@@ -267,39 +291,48 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             パターン特徴量が追加されたDataFrame
         """
         try:
+            # 新しい特徴量を辞書で収集（DataFrame断片化対策）
+            new_features = {}
+
             # 局所的極値の検出（単純な方法）
-            df["Local_Min"] = (
+            new_features["Local_Min"] = (
                 (df["close"] <= df["close"].shift(1)) &
                 (df["close"] <= df["close"].shift(-1)) &
                 (df["close"] < df["close"].shift(2)) &
                 (df["close"] < df["close"].shift(-2))
             ).astype(float)
 
-            df["Local_Max"] = (
+            new_features["Local_Max"] = (
                 (df["close"] >= df["close"].shift(1)) &
                 (df["close"] >= df["close"].shift(-1)) &
                 (df["close"] > df["close"].shift(2)) &
                 (df["close"] > df["close"].shift(-2))
             ).astype(float)
 
-            # 簡易的なサポート・レジスタンスレベル
+            # 簡易的なサポート・レジスタントレベル
             window_size = 20
-            df["Support_Level"] = df["close"].rolling(window=window_size, min_periods=1).min()
-            df["Resistance_Level"] = df["close"].rolling(window=window_size, min_periods=1).max()
+            support_level = df["close"].rolling(window=window_size, min_periods=1).min()
+            resistance_level = df["close"].rolling(window=window_size, min_periods=1).max()
 
-            # 価格がサポート/レジスタンスに近いことを示す特徴量
-            df["Near_Support"] = self.safe_ratio_calculation(
-                df["close"] - df["Support_Level"],
-                df["Resistance_Level"] - df["Support_Level"],
+            new_features["Support_Level"] = support_level
+            new_features["Resistance_Level"] = resistance_level
+
+            # 価格がサポート/レジスタントに近いことを示す特徴量
+            new_features["Near_Support"] = self.safe_ratio_calculation(
+                df["close"] - support_level,
+                resistance_level - support_level,
                 fill_value=0.5
             )
-            df["Near_Resistance"] = self.safe_ratio_calculation(
-                df["Resistance_Level"] - df["close"],
-                df["Resistance_Level"] - df["Support_Level"],
+            new_features["Near_Resistance"] = self.safe_ratio_calculation(
+                resistance_level - df["close"],
+                resistance_level - support_level,
                 fill_value=0.5
             )
 
-            return df
+            # 一括で結合
+            new_df = pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+
+            return new_df
 
         except Exception as e:
             logger.error(f"価格パターン検出エラー: {e}")
@@ -307,41 +340,48 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             return df
 
     def calculate_momentum_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
     ) -> pd.DataFrame:
         """
         モメンタム特徴量を計算
 
         Args:
             df: OHLCV価格データ
-            lookback_periods: 計算期間設定
+            lookback_periods: 計算期間設定（オプション、旧API互換用）
 
         Returns:
             モメンタム特徴量が追加されたDataFrame
         """
+        # 旧API互換：lookback_periodsがNoneの場合はデフォルト値を設定
+        if lookback_periods is None:
+            lookback_periods = {"short_ma": 10, "long_ma": 50}
+
         try:
             if not self.validate_input_data(df, ["close", "high", "low"]):
                 return df
 
             result_df = self.create_result_dataframe(df)
 
+            # 新しい特徴量を辞書で収集（DataFrame断片化対策）
+            new_features = {}
+
             # RSI（pandas-ta使用）
             rsi_values = ta.rsi(result_df["close"], length=14)
             if rsi_values is not None:
-                result_df["RSI"] = rsi_values.fillna(50.0)
+                new_features["RSI"] = rsi_values.fillna(50.0)
             else:
-                result_df["RSI"] = 50.0
+                new_features["RSI"] = 50.0
 
             # MACD（pandas-ta使用）
             macd_result = ta.macd(result_df["close"], fast=12, slow=26, signal=9)
             if macd_result is not None:
-                result_df["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
-                result_df["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
-                result_df["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
+                new_features["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
+                new_features["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
+                new_features["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
             else:
-                result_df["MACD"] = 0.0
-                result_df["MACD_Signal"] = 0.0
-                result_df["MACD_Histogram"] = 0.0
+                new_features["MACD"] = 0.0
+                new_features["MACD_Signal"] = 0.0
+                new_features["MACD_Histogram"] = 0.0
 
             # ウィリアムズ%R（pandas-ta使用）
             willr_values = ta.willr(
@@ -351,9 +391,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 length=14,
             )
             if willr_values is not None:
-                result_df["Williams_R"] = willr_values.fillna(-50.0)
+                new_features["Williams_R"] = willr_values.fillna(-50.0)
             else:
-                result_df["Williams_R"] = -50.0
+                new_features["Williams_R"] = -50.0
 
             # CCI（Commodity Channel Index）（pandas-ta使用）
             cci_values = ta.cci(
@@ -363,23 +403,26 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 length=20,
             )
             if cci_values is not None:
-                result_df["CCI"] = cci_values.fillna(0.0)
+                new_features["CCI"] = cci_values.fillna(0.0)
             else:
-                result_df["CCI"] = 0.0
+                new_features["CCI"] = 0.0
 
             # ROC（Rate of Change）（pandas-ta使用）
             roc_values = ta.roc(result_df["close"], length=12)
             if roc_values is not None:
-                result_df["ROC"] = roc_values.fillna(0.0)
+                new_features["ROC"] = roc_values.fillna(0.0)
             else:
-                result_df["ROC"] = 0.0
+                new_features["ROC"] = 0.0
 
             # モメンタム（pandas-ta使用）
             momentum_values = ta.mom(result_df["close"], length=10)
             if momentum_values is not None:
-                result_df["Momentum"] = momentum_values.fillna(0.0)
+                new_features["Momentum"] = momentum_values.fillna(0.0)
             else:
-                result_df["Momentum"] = 0.0
+                new_features["Momentum"] = 0.0
+
+            # 一括で結合
+            result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
 
             return result_df
 
