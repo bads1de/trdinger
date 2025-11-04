@@ -271,7 +271,7 @@ export default function MLTraining() {
                     AutoML特徴量エンジニアリングを有効化
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    TSFresh, AutoFeat を使用した高度な特徴量生成
+                    AutoFeat を使用した高度な特徴量生成
                   </p>
                 </div>
                 <Switch
@@ -283,7 +283,6 @@ export default function MLTraining() {
                       setAutomlSettings(getDefaultAutoMLConfig());
                     } else {
                       setAutomlSettings({
-                        tsfresh: { ...automlSettings.tsfresh, enabled: false },
                         autofeat: {
                           ...automlSettings.autofeat,
                           enabled: false,

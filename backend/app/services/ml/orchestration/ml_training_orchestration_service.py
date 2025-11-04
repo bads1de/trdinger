@@ -466,7 +466,6 @@ class MLTrainingOrchestrationService:
 
             # AutoML関連のリソースをクリーンアップ
             self._cleanup_autofeat_resources()
-            self._cleanup_tsfresh_resources()
             self._cleanup_enhanced_feature_service()
             self._cleanup_ml_training_service()
             self._cleanup_data_processor()
@@ -518,30 +517,6 @@ class MLTrainingOrchestrationService:
 
         except Exception as e:
             logger.warning(f"AutoFeatクリーンアップエラー: {e}")
-
-    def _cleanup_tsfresh_resources(self):
-        """TSFresh関連リソースのクリーンアップ"""
-        try:
-            # TSFreshの一時ファイルをクリーンアップ
-            import os
-            import tempfile
-
-            temp_dir = tempfile.gettempdir()
-            for item in os.listdir(temp_dir):
-                if item.startswith("tsfresh_") or item.startswith("tmp_tsfresh"):
-                    temp_path = os.path.join(temp_dir, item)
-                    try:
-                        if os.path.isfile(temp_path):
-                            os.remove(temp_path)
-                    except Exception as e:
-                        logger.warning(
-                            f"TSFresh一時ファイル削除エラー {temp_path}: {e}"
-                        )
-
-            logger.debug("TSFreshリソースクリーンアップ完了")
-
-        except Exception as e:
-            logger.warning(f"TSFreshクリーンアップエラー: {e}")
 
     def _cleanup_enhanced_feature_service(self):
         """FeatureEngineeringService関連リソースのクリーンアップ"""

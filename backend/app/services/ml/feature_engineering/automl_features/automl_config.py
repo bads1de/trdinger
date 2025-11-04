@@ -2,40 +2,12 @@
 AutoML設定管理クラス
 
 AutoML特徴量エンジニアリングの設定を管理します。
-このモジュールでは、TSFreshとAutoFeatの2つの特徴量エンジニアリングライブラリの
+このモジュールでは、AutoFeat特徴量エンジニアリングライブラリの
 設定を管理し、データサイズに応じた動的な最適化機能を提供します。
 """
 
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
-
-
-@dataclass
-class TSFreshConfig:
-    """
-    TSFreshライブラリの設定を管理するデータクラス
-
-    TSFreshは時系列データから自動的に特徴量を抽出するライブラリです。
-    このクラスでは、特徴量選択、パフォーマンスモード、並列処理などの
-    設定を管理します。
-
-    Attributes:
-        enabled (bool): TSFreshを有効にするかどうか
-        feature_selection (bool): 特徴量選択を実行するかどうか
-        fdr_level (float): False Discovery Rateの閾値（0.0-1.0）
-        feature_count_limit (int): 生成する特徴量の最大数
-        parallel_jobs (int): 並列処理ジョブ数
-        performance_mode (str): パフォーマンスモード（"balanced", "fast", "financial_optimized"）
-        custom_settings (Optional[Dict[str, Any]]): カスタム設定辞書
-    """
-
-    enabled: bool = True
-    feature_selection: bool = True
-    fdr_level: float = 0.1  # より緩い閾値で多くの特徴量を選択
-    feature_count_limit: int = 50  # 特徴量数削減: 80 → 50（さらに最適化）
-    parallel_jobs: int = 2
-    performance_mode: str = "fast"  # パフォーマンス最適化: comprehensive → fast
-    custom_settings: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -60,8 +32,8 @@ class AutoFeatConfig:
         tournament_size (int): 遺伝的アルゴリズムのトーナメントサイズ
     """
 
-    enabled: bool = False  # デフォルトで無効化: True → False
-    max_features: int = 30  # 特徴量数削減: 100 → 30（有効化時の制限）
+    enabled: bool = True  # デフォルトで有効化
+    max_features: int = 30  # 特徴量数削減: 100 → 30
     feateng_steps: int = 2
     max_gb: float = 1.0
     featsel_runs: int = 1  # 特徴量選択の実行回数（メモリ節約のため1に設定）
@@ -166,31 +138,26 @@ class AutoMLConfig:
     """
     AutoML全体の設定を管理するメインクラス
 
-    TSFreshとAutoFeatの設定を統合管理し、プリセット設定の提供や
+    AutoFeatの設定を管理し、プリセット設定の提供や
     設定のシリアライズ/デシリアライズ機能を提供します。
     金融データ向けの最適化設定など、用途に応じた設定も提供します。
 
     Attributes:
-        tsfresh (TSFreshConfig): TSFreshライブラリの設定
         autofeat (AutoFeatConfig): AutoFeatライブラリの設定
     """
 
-    tsfresh: TSFreshConfig
     autofeat: AutoFeatConfig
 
     def __init__(
         self,
-        tsfresh_config: Optional[TSFreshConfig] = None,
         autofeat_config: Optional[AutoFeatConfig] = None,
     ):
         """
         AutoMLConfigを初期化します
 
         Args:
-            tsfresh_config (Optional[TSFreshConfig]): TSFresh設定、Noneの場合はデフォルト値を使用
             autofeat_config (Optional[AutoFeatConfig]): AutoFeat設定、Noneの場合はデフォルト値を使用
         """
-        self.tsfresh = tsfresh_config or TSFreshConfig()
         self.autofeat = autofeat_config or AutoFeatConfig()
 
     @classmethod
@@ -209,34 +176,21 @@ class AutoMLConfig:
         金融データ最適化設定を取得
 
         金融時系列データに特化した最適化設定を提供します。
-        より厳しい特徴量選択と、金融データ向けの特徴量生成パラメータを設定します。
 
         Returns:
             AutoMLConfig: 金融データ向けに最適化された設定
-
-        Note:
-            Featuretoolsは削除済み（後方互換プロパティは保持しない）
         """
-        tsfresh_config = TSFreshConfig(
-            enabled=True,
-            feature_selection=True,
-            fdr_level=0.01,  # より厳しい選択
-            feature_count_limit=100,  # 特徴量数削減: 500 → 100
-            parallel_jobs=4,
-            performance_mode="fast",  # パフォーマンス最適化: financial_optimized → fast
-        )
-
         autofeat_config = AutoFeatConfig(
-            enabled=False,  # 金融最適化でもデフォルト無効化: True → False
-            max_features=50,  # 特徴量数削減: 100 → 50（有効化時の制限）
-            feateng_steps=2,  # ステップ数削減: 3 → 2
-            max_gb=2.0,  # より多くのメモリ使用を許可
+            enabled=True,  # デフォルト有効化
+            max_features=50,  # 特徴量数削減
+            feateng_steps=2,  # ステップ数削減
+            max_gb=2.0,  # メモリ使用量
             generations=20,
             population_size=50,
             tournament_size=3,
         )
 
-        return cls(tsfresh_config, autofeat_config)
+        return cls(autofeat_config)
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -258,7 +212,6 @@ class AutoMLConfig:
         辞書から設定を作成
 
         シリアライズされた設定辞書からAutoMLConfigオブジェクトを復元します。
-        旧キー名の後方互換（例: 'generations' -> 'feateng_steps'）にも対応します。
 
         Args:
             config_dict (Dict[str, Any]): 設定辞書
@@ -270,14 +223,12 @@ class AutoMLConfig:
             - 不明なキーは無視され、デフォルト値が使用されます
             - 'autofeat.generations' が存在し 'feateng_steps' が無い場合は、feateng_steps に転記します
         """
-        tsfresh_raw = dict(config_dict.get("tsfresh", {}))
         autofeat_raw = dict(config_dict.get("autofeat", {}))
 
         # 後方互換: generations -> feateng_steps
         if "feateng_steps" not in autofeat_raw and "generations" in autofeat_raw:
             autofeat_raw["feateng_steps"] = autofeat_raw.get("generations")
 
-        tsfresh_config = TSFreshConfig(**tsfresh_raw)
         autofeat_config = AutoFeatConfig(**autofeat_raw)
 
-        return cls(tsfresh_config, autofeat_config)
+        return cls(autofeat_config)

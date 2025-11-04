@@ -40,24 +40,9 @@ export interface OptimizationSettingsConfig {
  * AutoML特徴量設定インターフェース
  *
  * 自動特徴量エンジニアリングの設定を定義します。
- * tsfreshとautofeatの2つの特徴量生成手法をサポートしています。
+ * autofeatの特徴量生成手法をサポートしています。
  */
 export interface AutoMLFeatureConfig {
-  /** tsfresh特徴量生成設定 */
-  tsfresh: {
-    /** tsfreshを有効にするかどうか */
-    enabled: boolean;
-    /** 特徴量選択を行うかどうか */
-    feature_selection: boolean;
-    /** False Discovery Rateレベル */
-    fdr_level: number;
-    /** 特徴量数の上限 */
-    feature_count_limit: number;
-    /** 並列処理ジョブ数 */
-    parallel_jobs: number;
-    /** パフォーマンスモード */
-    performance_mode: string;
-  };
   /** autofeat特徴量生成設定 */
   autofeat: {
     /** autofeatを有効にするかどうか */
@@ -183,19 +168,11 @@ export interface ProcessListResponse {
 /**
  * デフォルトのAutoML設定を作成
  *
- * 標準的なAutoML設定を返します。tsfreshが有効でautofeatは無効です。
+ * 標準的なAutoML設定を返します。autofeatは無効です。
  *
  * @returns {AutoMLFeatureConfig} デフォルトのAutoML設定
  */
 export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
-  tsfresh: {
-    enabled: true,
-    feature_selection: true,
-    fdr_level: 0.05,
-    feature_count_limit: 100,
-    parallel_jobs: 2,
-    performance_mode: "balanced",
-  },
   autofeat: {
     enabled: false, // デフォルトでは無効（計算コストが高いため）
     max_features: 50,
@@ -209,19 +186,11 @@ export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
  * 金融最適化AutoML設定を作成
  *
  * 金融データに最適化されたAutoML設定を返します。
- * tsfreshとautofeatの両方が有効で、より多くの特徴量を生成します。
+ * autofeatが有効で、より多くの特徴量を生成します。
  *
  * @returns {AutoMLFeatureConfig} 金融最適化されたAutoML設定
  */
 export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
-  tsfresh: {
-    enabled: true,
-    feature_selection: true,
-    fdr_level: 0.01,
-    feature_count_limit: 200,
-    parallel_jobs: 4,
-    performance_mode: "financial_optimized",
-  },
   autofeat: {
     enabled: true,
     max_features: 100,

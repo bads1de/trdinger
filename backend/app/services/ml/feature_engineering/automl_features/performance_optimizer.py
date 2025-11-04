@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class PerformanceOptimizer:
     """性能最適化クラス"""
 
-    def __init__(self, cache_dir: str = "cache/tsfresh", max_cache_size_mb: int = 1000):
+    def __init__(self, cache_dir: str = "cache/automl", max_cache_size_mb: int = 1000):
         """
         初期化
 

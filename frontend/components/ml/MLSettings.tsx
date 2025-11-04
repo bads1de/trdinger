@@ -71,12 +71,6 @@ export default function MLSettings() {
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      if (config.tsfresh.enabled && config.tsfresh.feature_count_limit > 300) {
-        warnings.push(
-          "TSFresh特徴量数が多すぎます。処理時間が長くなる可能性があります。"
-        );
-      }
-
       return {
         valid: errors.length === 0,
         errors,

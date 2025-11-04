@@ -212,7 +212,6 @@ class TestHybridFeatureAdapter:
         automl_config = {
             "enabled": True,
             "feature_generation": {
-                "tsfresh_enabled": True,
                 "autofeat_enabled": False,
             },
         }

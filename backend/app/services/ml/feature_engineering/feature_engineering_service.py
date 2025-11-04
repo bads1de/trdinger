@@ -8,7 +8,7 @@ OHLCV、ファンディングレート（FR）、建玉残高（OI）データ�
 AutoML機能も統合され、オプションで拡張特徴量計算が可能です。
 """
 
-# cSpell:ignore automl tsfresh
+# cSpell:ignore automl
 
 import logging
 import time
@@ -32,13 +32,11 @@ from .advanced_features import AdvancedFeatureEngineer
 
 # AutoML関連のインポート（オプション）
 AutoFeatCalculator = None
-TSFreshFeatureCalculator = None
 
 try:
     from .automl_features.autofeat_calculator import AutoFeatCalculator
     from .automl_features.automl_config import AutoMLConfig
     from .automl_features.performance_optimizer import PerformanceOptimizer
-    from .automl_features.tsfresh_calculator import TSFreshFeatureCalculator
 
     AUTOML_AVAILABLE = True
 except ImportError:
@@ -89,18 +87,6 @@ class FeatureEngineeringService:
                 self.automl_config = None
 
             # AutoML特徴量計算クラス
-            if (
-                self.automl_config is not None
-                and hasattr(self.automl_config, "tsfresh")
-                and self.automl_config.tsfresh is not None
-                and TSFreshFeatureCalculator is not None
-            ):
-                self.tsfresh_calculator = TSFreshFeatureCalculator(
-                    self.automl_config.tsfresh
-                )
-            else:
-                self.tsfresh_calculator = None
-
             if (
                 self.automl_config is not None
                 and hasattr(self.automl_config, "autofeat")
@@ -534,19 +520,7 @@ class FeatureEngineeringService:
                 include_advanced_features=True,  # AdvancedFeatureEngineerをデフォルトで有効
             )
 
-            # ステップ2: TSFresh特徴量を追加 + 特徴量選択
-            if (
-                self.automl_config is not None
-                and hasattr(self.automl_config, "tsfresh")
-                and self.automl_config.tsfresh is not None
-                and hasattr(self.automl_config.tsfresh, "enabled")
-                and self.automl_config.tsfresh.enabled
-            ):
-                result_df = self._step2_tsfresh_features(
-                    result_df, target, max_features_per_step
-                )
-
-            # ステップ3: AutoFeat特徴量を追加 + 特徴量選択
+            # ステップ2: AutoFeat特徴量を追加 + 特徴量選択
             if (
                 self.automl_config is not None
                 and hasattr(self.automl_config, "autofeat")
@@ -554,7 +528,7 @@ class FeatureEngineeringService:
                 and hasattr(self.automl_config.autofeat, "enabled")
                 and self.automl_config.autofeat.enabled
             ):
-                result_df = self._step3_autofeat_features(
+                result_df = self._step2_autofeat_features(
                     result_df, target, max_features_per_step
                 )
 
@@ -639,72 +613,20 @@ class FeatureEngineeringService:
         )
         return result_df
 
-    def _step2_tsfresh_features(
+    def _step2_autofeat_features(
         self,
         df: pd.DataFrame,
         target: Optional[pd.Series],
         max_features: int = 50,  # 特徴量数削減: 100 → 50
     ) -> pd.DataFrame:
-        """ステップ2: TSFresh特徴量を追加 + 特徴量選択"""
-        logger.info("🤖 ステップ2: TSFresh特徴量を計算中...")
-        start_time = time.time()
-        initial_feature_count = len(df.columns)
-
-        # TSFresh特徴量を計算
-        if self.tsfresh_calculator is None:
-            logger.warning("TSFresh calculator is not available")
-            return df
-
-        tsfresh_config = None
-        if (
-            self.automl_config is not None
-            and hasattr(self.automl_config, "tsfresh")
-            and self.automl_config.tsfresh is not None
-        ):
-            tsfresh_config = self.automl_config.tsfresh.feature_selection
-
-        result_df = self.tsfresh_calculator.calculate_tsfresh_features(
-            df=df,
-            target=target,
-            feature_selection=tsfresh_config,
-        )
-
-        # 特徴量数が制限を超えている場合は選択を実行
-        if len(result_df.columns) > max_features:
-            logger.info(f"特徴量数が制限({max_features})を超過。特徴量選択を実行中...")
-            result_df = self._select_top_features(result_df, target, max_features)
-
-        tsfresh_time = time.time() - start_time
-        added_features = len(result_df.columns) - initial_feature_count
-
-        # 統計情報を記録
-        if hasattr(self, "last_enhancement_stats"):
-            self.last_enhancement_stats.update(
-                {
-                    "tsfresh_features": added_features,
-                    "tsfresh_time": tsfresh_time,
-                }
-            )
-
-        logger.info(
-            f"✅ ステップ2完了: {added_features}個のTSFresh特徴量追加 ({tsfresh_time:.2f}秒)"
-        )
-        return result_df
-
-    def _step3_autofeat_features(
-        self,
-        df: pd.DataFrame,
-        target: Optional[pd.Series],
-        max_features: int = 50,  # 特徴量数削減: 100 → 50
-    ) -> pd.DataFrame:
-        """ステップ3: AutoFeat特徴量を追加 + 特徴量選択"""
+        """ステップ2: AutoFeat特徴量を追加 + 特徴量選択"""
         if target is None:
             logger.warning(
                 "ターゲット変数がないため、AutoFeat特徴量生成をスキップします"
             )
             return df
 
-        logger.info("🧬 ステップ3: AutoFeat特徴量を計算中...")
+        logger.info("🧬 ステップ2: AutoFeat特徴量を計算中...")
         start_time = time.time()
         initial_feature_count = len(df.columns)
 
@@ -747,7 +669,7 @@ class FeatureEngineeringService:
             )
 
         logger.info(
-            f"✅ ステップ3完了: {added_features}個のAutoFeat特徴量追加 ({autofeat_time:.2f}秒)"
+            f"✅ ステップ2完了: {added_features}個のAutoFeat特徴量追加 ({autofeat_time:.2f}秒)"
         )
         return result_df
 
@@ -1060,24 +982,6 @@ class FeatureEngineeringService:
             return
 
         try:
-            # TSFresh設定の更新
-            if "tsfresh" in config_dict and self.automl_config is not None:
-                tsfresh_config = config_dict["tsfresh"]
-                if (
-                    isinstance(tsfresh_config, dict)
-                    and hasattr(self.automl_config, "tsfresh")
-                    and self.automl_config.tsfresh is not None
-                ):
-                    for key, value in tsfresh_config.items():
-                        if hasattr(self.automl_config.tsfresh, key):
-                            setattr(self.automl_config.tsfresh, key, value)
-
-                    # TSFreshCalculatorの設定も更新
-                    if self.tsfresh_calculator is not None and hasattr(
-                        self.tsfresh_calculator, "config"
-                    ):
-                        self.tsfresh_calculator.config = self.automl_config.tsfresh
-
             # AutoFeat設定の更新
             if "autofeat" in config_dict and self.automl_config is not None:
                 autofeat_config = config_dict["autofeat"]
@@ -1113,11 +1017,6 @@ class FeatureEngineeringService:
             return {}
 
         return {
-            "tsfresh": (
-                self.tsfresh_calculator.get_feature_names()
-                if self.tsfresh_calculator
-                else []
-            ),
             "autofeat": (
                 self.autofeat_calculator.get_feature_names()
                 if self.autofeat_calculator
@@ -1131,8 +1030,6 @@ class FeatureEngineeringService:
             return
 
         try:
-            if self.tsfresh_calculator:
-                self.tsfresh_calculator.clear_cache()
             if self.autofeat_calculator:
                 self.autofeat_calculator.clear_model()
 
@@ -1180,38 +1077,6 @@ class FeatureEngineeringService:
                 errors.append("AutoML機能が利用できません")
                 return {"valid": False, "errors": errors, "warnings": warnings}
 
-            # TSFresh設定の検証
-            if hasattr(config, "tsfresh"):
-                tsfresh_config = config.tsfresh
-
-                # TSFreshが有効な場合のチェック
-                if tsfresh_config.enabled:
-                    if not (0.001 <= tsfresh_config.fdr_level <= 1.0):
-                        errors.append(
-                            "TSFreshのFDRレベルは0.001から1.0の範囲である必要があります"
-                        )
-
-                    if not (10 <= tsfresh_config.feature_count_limit <= 500):
-                        errors.append(
-                            "TSFreshの特徴量数制限は10から500の範囲である必要があります"
-                        )
-
-                    if not (1 <= tsfresh_config.parallel_jobs <= 8):
-                        errors.append(
-                            "TSFreshの並列ジョブ数は1から8の範囲である必要があります"
-                        )
-
-                    valid_modes = [
-                        "fast",
-                        "balanced",
-                        "financial_optimized",
-                        "comprehensive",
-                    ]
-                    if tsfresh_config.performance_mode not in valid_modes:
-                        errors.append(
-                            f"TSFreshのパフォーマンスモードは{valid_modes}のいずれかである必要があります"
-                        )
-
             # AutoFeat設定の検証
             if hasattr(config, "autofeat"):
                 autofeat_config = config.autofeat
@@ -1245,21 +1110,17 @@ class FeatureEngineeringService:
                         )
 
             # AutoML機能が利用可能かチェック
-            if not AUTOML_AVAILABLE and (
-                config.tsfresh.enabled or config.autofeat.enabled
-            ):
+            if not AUTOML_AVAILABLE and config.autofeat.enabled:
                 warnings.append(
                     "AutoML機能が利用できません。必要なライブラリがインストールされていない可能性があります"
                 )
 
             # 設定の整合性チェック
-            if config.tsfresh.enabled and config.autofeat.enabled:
-                total_features = (
-                    config.tsfresh.feature_count_limit + config.autofeat.max_features
-                )
-                if total_features > 300:
+            if config.autofeat.enabled:
+                total_features = config.autofeat.max_features
+                if total_features > 200:
                     warnings.append(
-                        f"TSFreshとAutoFeatの合計特徴量数({total_features}個)が300個を超えています。メモリ使用量に注意してください"
+                        f"AutoFeatの特徴量数({total_features}個)が200個を超えています。メモリ使用量に注意してください"
                     )
 
             return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
@@ -1342,12 +1203,6 @@ class FeatureEngineeringService:
                 # 統計情報をクリア
                 if hasattr(self, "last_enhancement_stats"):
                     self.last_enhancement_stats.clear()
-
-                # 各計算機のリソースを個別にクリーンアップ
-                if self.tsfresh_calculator and hasattr(
-                    self.tsfresh_calculator, "cleanup"
-                ):
-                    self.tsfresh_calculator.cleanup()
 
                 if self.autofeat_calculator and hasattr(
                     self.autofeat_calculator, "cleanup"

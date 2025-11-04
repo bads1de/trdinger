@@ -28,7 +28,7 @@ class FeatureAnalysis:
 
     feature_name: str
     importance: float
-    feature_type: str  # 'manual', 'tsfresh',  'autofeat'
+    feature_type: str  # 'manual', 'autofeat'
     category: str  # 特徴量のカテゴリ
     description: str  # 特徴量の説明
 
@@ -50,21 +50,6 @@ class AutoMLFeatureAnalyzer:
     def _initialize_feature_patterns(self) -> Dict[str, FeaturePatternConfig]:
         """特徴量パターンを初期化"""
         return {
-            "tsfresh": {  # TSFresh: Time Series Feature extraction library
-                "prefix": "TS_",
-                "patterns": [
-                    r".*__mean$",
-                    r".*__std$",
-                    r".*__variance$",
-                    r".*__skewness$",
-                    r".*__kurtosis$",
-                    r".*__autocorrelation__.*",
-                    r".*__fft_coefficient__.*",
-                    r".*__energy_ratio_by_chunks__.*",
-                    r".*__linear_trend__.*",
-                    r".*__agg_linear_trend__.*",
-                ],
-            },
             "autofeat": {  # AutoFeat: Automated Feature Engineering library
                 "prefix": "AF_",
                 "patterns": [
@@ -236,9 +221,7 @@ class AutoMLFeatureAnalyzer:
         """特徴量の説明を生成"""
         base_desc = self.category_descriptions.get(category, "特徴量")
 
-        if feature_type == "tsfresh":
-            return f"TSFresh生成: {base_desc}"
-        elif feature_type == "autofeat":
+        if feature_type == "autofeat":
             return f"AutoFeat生成: {base_desc}"
         elif feature_type == "manual":
             return f"手動作成: {base_desc}"
@@ -306,7 +289,7 @@ class AutoMLFeatureAnalyzer:
 
     def _analyze_automl_impact(self, features: List[FeatureAnalysis]) -> Dict[str, Any]:
         """AutoML効果を分析"""
-        automl_types = ["tsfresh", "autofeat"]
+        automl_types = ["autofeat"]
         manual_features = [f for f in features if f.feature_type == "manual"]
         automl_features = [f for f in features if f.feature_type in automl_types]
 

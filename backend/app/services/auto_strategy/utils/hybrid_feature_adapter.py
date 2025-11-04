@@ -36,7 +36,7 @@ class HybridFeatureAdapter:
         初期化
 
         Args:
-            automl_config: AutoML設定（tsfresh, autofeatなど）
+            automl_config: AutoML設定（autofeatなど）
         """
         self.automl_config = automl_config or {}
         self._automl_enabled = bool(self.automl_config.get("enabled", False))

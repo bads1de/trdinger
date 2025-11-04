@@ -55,8 +55,6 @@ interface FeatureAnalysisData {
 
 const FEATURE_TYPE_COLORS = {
   manual: "#10b981", // green
-  tsfresh: "#3b82f6", // blue
-  featuretools: "#8b5cf6", // purple
   autofeat: "#f59e0b", // amber
   unknown: "#6b7280", // gray
 };

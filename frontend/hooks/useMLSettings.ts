@@ -2,14 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 
 export interface AutoMLConfig {
-  tsfresh: {
-    enabled: boolean;
-    feature_selection: boolean;
-    fdr_level: number;
-    feature_count_limit: number;
-    parallel_jobs: number;
-    performance_mode: string;
-  };
   autofeat: {
     enabled: boolean;
     max_features: number;

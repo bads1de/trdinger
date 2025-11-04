@@ -24,20 +24,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/automl-features", tags=["AutoML Features"])
 
 
-# Pydantic モデル定義
-class TSFreshConfigModel(BaseModel):
-    """TSFresh設定モデル"""
-
-    enabled: bool = True
-    feature_selection: bool = True
-    fdr_level: float = Field(0.05, ge=0.001, le=0.1)
-    feature_count_limit: int = Field(100, ge=10, le=500)
-    parallel_jobs: int = Field(4, ge=1, le=8)
-    performance_mode: str = Field(
-        "balanced", pattern="^(fast|balanced|financial_optimized|comprehensive)$"
-    )
-
-
 class AutoFeatConfigModel(BaseModel):
     """AutoFeat設定モデル"""
 
@@ -51,7 +37,6 @@ class AutoFeatConfigModel(BaseModel):
 class AutoMLConfigModel(BaseModel):
     """AutoML設定モデル"""
 
-    tsfresh: TSFreshConfigModel
     autofeat: AutoFeatConfigModel
 
 
