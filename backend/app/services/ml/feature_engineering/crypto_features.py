@@ -82,35 +82,13 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     def _create_price_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """価格関連特徴量"""
+        """価格関連特徴量（PriceFeaturesと重複しない暗号通貨特化特徴量のみ）"""
         result_df = df.copy()
 
         # 新しい特徴量を辞書で収集（DataFrame断片化対策）
         new_features = {}
 
-        # 基本価格特徴量
-        new_features["price_range"] = (df["high"] - df["low"]) / df["close"]
-        new_features["upper_shadow"] = (
-            df["high"] - np.maximum(df["open"], df["close"])
-        ) / df["close"]
-        new_features["lower_shadow"] = (
-            np.minimum(df["open"], df["close"]) - df["low"]
-        ) / df["close"]
-        new_features["body_size"] = abs(df["close"] - df["open"]) / df["close"]
-
-        # 価格変動率（複数期間）
-        for name, period in periods.items():
-            new_features[f"price_return_{name}"] = df["close"].pct_change(period)
-            new_features[f"price_volatility_{name}"] = (
-                df["close"].rolling(period).std() / df["close"].rolling(period).mean()
-            )
-
-            # 価格勢い
-            new_features[f"price_momentum_{name}"] = (
-                df["close"] / df["close"].shift(period) - 1
-            )
-
-        # 価格レベル特徴量
+        # 価格レベル特徴量（暗号通貨特化）
         for period in [24, 168]:  # 1日、1週間
             new_features[f"price_vs_high_{period}h"] = (
                 df["close"] / df["high"].rolling(period).max()
@@ -127,7 +105,7 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
             [
                 col
                 for col in result_df.columns
-                if col.startswith(("price_", "upper_", "lower_", "body_"))
+                if col.startswith("price_vs_")
             ]
         )
 

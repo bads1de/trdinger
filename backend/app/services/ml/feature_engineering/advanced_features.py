@@ -82,27 +82,25 @@ class AdvancedFeatureEngineer:
         return features
 
     def _add_lag_features(self, data: pd.DataFrame) -> pd.DataFrame:
-        """ラグ特徴量を追加"""
+        """ラグ特徴量を追加（最適化版：期間削減）"""
         logger.info("📊 ラグ特徴量を追加中...")
 
         new_features = {}
 
-        # 価格のラグ特徴量
-        lag_periods = [1, 3, 6, 12, 24, 48]  # 1h, 3h, 6h, 12h, 24h, 48h
+        # 価格のラグ特徴量（期間を削減: 6→3期間）
+        lag_periods = [1, 6, 24]  # 1h, 6h, 24h
 
         for period in lag_periods:
             new_features[f"close_lag_{period}"] = data["close"].shift(period)
             new_features[f"volume_lag_{period}"] = data["volume"].shift(period)
-            new_features[f"high_lag_{period}"] = data["high"].shift(period)
-            new_features[f"low_lag_{period}"] = data["low"].shift(period)
 
         # 価格変化率のラグ
         new_features["returns"] = data["close"].pct_change()
         for period in lag_periods:
             new_features[f"returns_lag_{period}"] = new_features["returns"].shift(period)
 
-        # 累積リターン
-        for period in [6, 12, 24]:
+        # 累積リターン（主要期間のみ）
+        for period in [6, 24]:
             new_features[f"cumulative_returns_{period}"] = new_features["returns"].rolling(period).sum()
 
         # 一括で結合
