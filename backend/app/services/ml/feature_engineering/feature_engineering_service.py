@@ -18,17 +18,15 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from ....utils.data_processing import data_processor as data_preprocessor
-
 from ....utils.error_handler import safe_ml_operation
+from .advanced_features import AdvancedFeatureEngineer
+from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
 from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .temporal_features import TemporalFeatureCalculator
-from .crypto_features import CryptoFeatures
-from .advanced_features import AdvancedFeatureEngineer
 
 # AutoML関連のインポート（オプション）
 AutoFeatCalculator = None
@@ -251,32 +249,16 @@ class FeatureEngineeringService:
 
             # ファンディングレート特徴量（データがある場合）
             if funding_rate_data is not None and not funding_rate_data.empty:
-                result_df = self.market_data_calculator.calculate_funding_rate_features(
+                result_df = self.market_data_calculator.calculate_funding_rate_features(  # noqa: E501
                     result_df, funding_rate_data, lookback_periods
                 )
-                # 中間クリーニング
-                fr_columns = [
-                    "FR_MA_24",
-                    "FR_MA_168",
-                    "FR_Change",
-                    "FR_Change_Rate",
-                    "Price_FR_Divergence",
-                    "FR_Normalized",
-                    "FR_Trend",
-                    "FR_Volatility",
-                ]
-                existing_fr_columns = [
-                    col for col in fr_columns if col in result_df.columns
-                ]
-                if existing_fr_columns:
-                    try:
-                        # median で欠損を補完
-                        medians = result_df[existing_fr_columns].median()
-                        result_df[existing_fr_columns] = result_df[
-                            existing_fr_columns
-                        ].fillna(medians)
-                    except Exception as e:
-                        logger.warning(f"FR中間クリーニングでエラー: {e}")
+                # Removed: FR疑似特徴量の中間クリーニング
+                # (低寄与度特徴量削除: 2025-01-05)
+                # 削除された特徴量: FR_MA_24, FR_MA_168, FR_Change,
+                # FR_Change_Rate, Price_FR_Divergence, FR_Extreme_High,
+                # FR_Extreme_Low, FR_Normalized, FR_Trend, FR_Volatility
+                # 注: これらの特徴量はすべて削除されたため、
+                # 中間クリーニングは不要
             else:
                 # ファンディングレートデータが不足している場合、疑似データを生成
                 logger.warning(
@@ -288,25 +270,22 @@ class FeatureEngineeringService:
 
             # 建玉残高特徴量（データがある場合）
             if open_interest_data is not None and not open_interest_data.empty:
-                result_df = (
-                    self.market_data_calculator.calculate_open_interest_features(
-                        result_df, open_interest_data, lookback_periods
-                    )
+                result_df = self.market_data_calculator.calculate_open_interest_features(  # noqa: E501
+                    result_df, open_interest_data, lookback_periods
                 )
-                # 中間クリーニング
-                oi_columns = [
-                    "OI_Change_Rate",
+                # 中間クリーニング（削除された特徴量を除外）
+                # Removed: "OI_Change_Rate", "OI_Surge",
+                # "OI_Price_Correlation" (低寄与度: 2025-01-05)
+                existing_oi_columns = [
                     "OI_Change_Rate_24h",
-                    "OI_Surge",
                     "Volatility_Adjusted_OI",
                     "OI_MA_24",
                     "OI_MA_168",
                     "OI_Trend",
-                    "OI_Price_Correlation",
                     "OI_Normalized",
                 ]
                 existing_oi_columns = [
-                    col for col in oi_columns if col in result_df.columns
+                    col for col in existing_oi_columns if col in result_df.columns
                 ]
                 if existing_oi_columns:
                     try:
@@ -821,44 +800,14 @@ class FeatureEngineeringService:
             疑似特徴量が追加されたDataFrame
         """
         try:
+            # Removed: FR疑似特徴量生成（低寄与度特徴量削除: 2025-01-05）
+            # 削除された特徴量: fr_extreme_high, fr_extreme_low, fr_ma_24,
+            # fr_ma_168, fr_change, fr_change_rate, price_fr_divergence,
+            # fr_normalized, fr_trend, fr_volatility
             result_df = df.copy()
-
-            # 価格変動率ベースの疑似ファンディングレート
-            returns = result_df["close"].pct_change()
-
-            # 疑似ファンディングレート（価格勢いベース）
-            pseudo_fr = returns.rolling(8).mean() * 0.1
-            # 明示的にpandas Seriesであることを保証
-            pseudo_fr = pd.Series(pseudo_fr, index=result_df.index)
-
-            # FR特徴量を生成
-            result_df["FR_MA_24"] = pseudo_fr.rolling(24).mean()
-            result_df["FR_MA_168"] = pseudo_fr.rolling(168).mean()
-            result_df["FR_Change"] = pseudo_fr.diff()
-            result_df["FR_Change_Rate"] = pseudo_fr.pct_change()
-            result_df["Price_FR_Divergence"] = returns - pseudo_fr
-            result_df["FR_Normalized"] = (
-                pseudo_fr - pseudo_fr.rolling(168).mean()
-            ) / pseudo_fr.rolling(168).std()
-            result_df["FR_Trend"] = result_df["FR_MA_24"] / result_df["FR_MA_168"] - 1
-            result_df["FR_Volatility"] = pseudo_fr.rolling(24).std()
-
-            # NaN値を0で補完
-            fr_columns = [
-                "FR_MA_24",
-                "FR_MA_168",
-                "FR_Change",
-                "FR_Change_Rate",
-                "Price_FR_Divergence",
-                "FR_Normalized",
-                "FR_Trend",
-                "FR_Volatility",
-            ]
-            for col in fr_columns:
-                if col in result_df.columns:
-                    result_df[col] = result_df[col].fillna(0)
-
-            logger.info("ファンディングレート疑似特徴量を生成しました")
+            logger.info(
+                "ファンディングレート疑似特徴量の生成をスキップしました（低寄与度のため削除）"
+            )
             return result_df
 
         except Exception as e:
@@ -886,13 +835,10 @@ class FeatureEngineeringService:
             # 明示的にpandas Seriesであることを保証
             pseudo_oi = pd.Series(pseudo_oi, index=result_df.index)
 
-            # OI特徴量を生成
-            result_df["OI_Change_Rate"] = pseudo_oi.pct_change()
+            # OI特徴量を生成（削除された特徴量を除く）
+            # Removed: OI_Change_Rate, OI_Surge, OI_Price_Correlation
+            # (低寄与度: 2025-01-05)
             result_df["OI_Change_Rate_24h"] = pseudo_oi.pct_change(24)
-
-            # OI急増（ボリューム急増ベース）
-            oi_threshold = pseudo_oi.rolling(168).quantile(0.9)
-            result_df["OI_Surge"] = (pseudo_oi > oi_threshold).astype(int)
 
             # ボラティリティ調整建玉残高
             volatility = result_df["close"].pct_change().rolling(24).std()
@@ -905,29 +851,21 @@ class FeatureEngineeringService:
             # OIトレンド
             result_df["OI_Trend"] = result_df["OI_MA_24"] / result_df["OI_MA_168"] - 1
 
-            # OI価格相関（簡易実装）
-            price_change = result_df["close"].pct_change()
-            oi_change = result_df["OI_Change_Rate"]
-            result_df["OI_Price_Correlation"] = price_change * oi_change
-
             # OI正規化
             result_df["OI_Normalized"] = (
                 pseudo_oi - pseudo_oi.rolling(168).mean()
             ) / pseudo_oi.rolling(168).std()
 
             # NaN値を0で補完
-            oi_columns = [
-                "OI_Change_Rate",
+            remaining_oi_columns = [
                 "OI_Change_Rate_24h",
-                "OI_Surge",
                 "Volatility_Adjusted_OI",
                 "OI_MA_24",
                 "OI_MA_168",
                 "OI_Trend",
-                "OI_Price_Correlation",
                 "OI_Normalized",
             ]
-            for col in oi_columns:
+            for col in remaining_oi_columns:
                 if col in result_df.columns:
                     result_df[col] = result_df[col].fillna(0)
 
@@ -1083,30 +1021,28 @@ class FeatureEngineeringService:
 
                 # AutoFeatが有効な場合のチェック
                 if autofeat_config.enabled:
-                    if not (10 <= autofeat_config.max_features <= 200):
+                    # feateng_stepsのチェック
+                    if not (1 <= autofeat_config.feateng_steps <= 3):
                         errors.append(
-                            "AutoFeatの最大特徴量数は10から200の範囲である必要があります"
+                            "AutoFeatのfeateng_stepsは1から3の範囲である必要があります（推奨: 2）"
                         )
 
-                    if not (5 <= autofeat_config.generations <= 50):
+                    # featsel_runsのチェック
+                    if not (1 <= autofeat_config.featsel_runs <= 10):
                         errors.append(
-                            "AutoFeatの世代数は5から50の範囲である必要があります"
-                        )
-
-                    if not (20 <= autofeat_config.population_size <= 200):
-                        errors.append(
-                            "AutoFeatの集団サイズは20から200の範囲である必要があります"
-                        )
-
-                    if not (2 <= autofeat_config.tournament_size <= 10):
-                        errors.append(
-                            "AutoFeatのトーナメントサイズは2から10の範囲である必要があります"
+                            "AutoFeatのfeatsel_runsは1から10の範囲である必要があります（推奨: 5）"
                         )
 
                     # メモリ使用量の警告
                     if autofeat_config.max_gb > 4.0:
                         warnings.append(
                             "AutoFeatのメモリ使用量が4GBを超えています。メモリ不足の可能性があります"
+                        )
+
+                    # feateng_stepsの警告
+                    if autofeat_config.feateng_steps >= 3:
+                        warnings.append(
+                            "feateng_steps=3以上は指数関数的に特徴量が増加します。メモリ使用量に注意してください"
                         )
 
             # AutoML機能が利用可能かチェック
@@ -1117,10 +1053,12 @@ class FeatureEngineeringService:
 
             # 設定の整合性チェック
             if config.autofeat.enabled:
-                total_features = config.autofeat.max_features
-                if total_features > 200:
+                # feateng_stepsとメモリ使用量の整合性チェック
+                if config.autofeat.feateng_steps >= 3 and config.autofeat.max_gb < 2.0:
                     warnings.append(
-                        f"AutoFeatの特徴量数({total_features}個)が200個を超えています。メモリ使用量に注意してください"
+                        f"feateng_steps={config.autofeat.feateng_steps}で"
+                        f"max_gb={config.autofeat.max_gb}GBは少ない可能性があります。"
+                        "メモリ不足に注意してください"
                     )
 
             return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}

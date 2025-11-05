@@ -311,14 +311,15 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         oi_momentum = df["open_interest"].pct_change(24)
         result_df["multi_momentum"] = (price_momentum + oi_momentum) / 2
 
-        # 市場ストレス指標（FRデータがある場合のみ）
+        # 市場ストレス指標
+        # 削除された特徴量(price_volatility_short)の代わりに、その場でボラティリティを計算
+        price_volatility = df["close"].pct_change().rolling(14).std()
+        
         if "fr_abs" in result_df.columns:
-            result_df["market_stress"] = (
-                result_df["price_volatility_short"] * result_df["fr_abs"]
-            )
+            result_df["market_stress"] = price_volatility * result_df["fr_abs"]
         else:
             # FRデータがない場合、出来高で代替
-            result_df["market_stress"] = result_df["price_volatility_short"] * result_df["volume"].mean()
+            result_df["market_stress"] = price_volatility * result_df["volume"].mean()
 
         self.feature_groups["composite"].extend(
             [

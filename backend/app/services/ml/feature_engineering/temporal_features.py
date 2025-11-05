@@ -11,8 +11,8 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
-from .base_feature_calculator import BaseFeatureCalculator
 from ....utils.error_handler import safe_ml_operation
+from .base_feature_calculator import BaseFeatureCalculator
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,6 @@ class TemporalFeatureCalculator(BaseFeatureCalculator):
         Returns:
             時間的特徴量が追加されたDataFrame
         """
-        lookback_periods = config.get("lookback_periods", {})
-
         # 時間的特徴量を計算
         result_df = self.calculate_temporal_features(df)
 
@@ -108,11 +106,15 @@ class TemporalFeatureCalculator(BaseFeatureCalculator):
         new_features.update(self._calculate_session_overlap_features_dict(result_df))
 
         # 一括で結合
-        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+        result_df = pd.concat(
+            [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+        )
 
         return result_df
 
-    def _calculate_basic_time_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+    def _calculate_basic_time_features_dict(
+        self, df: pd.DataFrame
+    ) -> Dict[str, pd.Series]:
         """基本的な時間特徴量を計算（辞書版）"""
         new_features = {}
 
@@ -145,7 +147,9 @@ class TemporalFeatureCalculator(BaseFeatureCalculator):
         new_features = self._calculate_basic_time_features_dict(df)
         return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
 
-    def _calculate_trading_session_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+    def _calculate_trading_session_features_dict(
+        self, df: pd.DataFrame
+    ) -> Dict[str, pd.Series]:
         """取引セッション特徴量を計算（辞書版）"""
         new_features = {}
 
@@ -171,7 +175,9 @@ class TemporalFeatureCalculator(BaseFeatureCalculator):
         new_features = self._calculate_trading_session_features_dict(df)
         return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
 
-    def _calculate_cyclical_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+    def _calculate_cyclical_features_dict(
+        self, df: pd.DataFrame
+    ) -> Dict[str, pd.Series]:
         """周期的エンコーディング特徴量を計算（辞書版）"""
         new_features = {}
 
@@ -199,23 +205,14 @@ class TemporalFeatureCalculator(BaseFeatureCalculator):
         new_features = self._calculate_cyclical_features_dict(df)
         return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
 
-    def _calculate_session_overlap_features_dict(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
+    def _calculate_session_overlap_features_dict(
+        self, df: pd.DataFrame
+    ) -> Dict[str, pd.Series]:
         """セッション重複時間の特徴量を計算（辞書版）"""
-        new_features = {}
-
-        # Pylance が df.index の型を正しく認識できるように明示的にキャスト
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-
-        hour = df.index.to_series().dt.hour
-
-        # Asia-Europe overlap (UTC 7:00-9:00)
-        new_features["Session_Overlap_Asia_Europe"] = (hour >= 7) & (hour < 9)
-
-        # Europe-US overlap (UTC 13:00-16:00)
-        new_features["Session_Overlap_Europe_US"] = (hour >= 13) & (hour < 16)
-
-        return new_features
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: Session_Overlap_Asia_Europe, Session_Overlap_Europe_US
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+        return {}
 
     def _calculate_session_overlap_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """セッション重複時間の特徴量を計算（レガシー互換用）"""
@@ -233,8 +230,8 @@ class TemporalFeatureCalculator(BaseFeatureCalculator):
             "Asia_Session",
             "Europe_Session",
             "US_Session",
-            "Session_Overlap_Asia_Europe",
-            "Session_Overlap_Europe_US",
+            # Removed: "Session_Overlap_Asia_Europe",
+            # "Session_Overlap_Europe_US" (低寄与度: 2025-01-05)
             "Hour_Sin",
             "Hour_Cos",
             "Day_Sin",

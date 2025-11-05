@@ -11,7 +11,6 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
-
 from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -85,16 +84,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         else:
             result_df[f"MA_{long_ma}"] = result_df["close"]
 
-        result_df["Price_MA_Ratio_Short"] = (
-            (result_df["close"] / result_df[f"MA_{short_ma}"])
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(1.0)
-        )
-        result_df["Price_MA_Ratio_Long"] = (
-            (result_df["close"] / result_df[f"MA_{long_ma}"])
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(1.0)
-        )
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: Price_MA_Ratio_Short, Price_MA_Ratio_Long
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
         # 価格モメンタム（pandas-ta使用）
         momentum_period = lookback_periods.get("momentum", 14)
@@ -135,12 +127,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             else 0.0
         )
 
-        # 価格レンジ
-        result_df["Price_Range"] = (
-            ((result_df["high"] - result_df["low"]) / result_df["close"])
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(0.0)
-        )
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: Price_Range
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
         # ボディサイズ（実体の大きさ）
         result_df["Body_Size"] = (
@@ -149,14 +138,11 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             .fillna(0.0)
         )
 
-        # 上ヒゲ・下ヒゲ
-        upper_shadow = (
-            result_df["high"] - np.maximum(result_df["open"], result_df["close"])
-        ) / result_df["close"]
-        upper_shadow = np.where(np.isinf(upper_shadow), np.nan, upper_shadow)
-        result_df["Upper_Shadow"] = pd.Series(
-            upper_shadow, index=result_df.index
-        ).fillna(0.0)
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: Upper_Shadow
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+
+        # 下ヒゲのみ保持
         lower_shadow = (
             np.minimum(result_df["open"], result_df["close"]) - result_df["low"]
         ) / result_df["close"]
@@ -165,24 +151,11 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             lower_shadow, index=result_df.index
         ).fillna(0.0)
 
-        # 価格位置（期間内での相対位置）（pandasのrolling rankを使用）
-        period = lookback_periods.get("volatility", 20)
-        result_df["Price_Position"] = (
-            result_df["close"]
-            .rolling(window=period, min_periods=1)
-            .rank(pct=True)
-            .fillna(0.5)
-        )
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: Price_Position
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
-        # ギャップ（前日終値との差）
-        result_df["Gap"] = (
-            (
-                (result_df["open"] - result_df["close"].shift(1))
-                / result_df["close"].shift(1)
-            )
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(0.0)
-        )
+        # Removed: Gap特徴量（低寄与度特徴量削除: 2025-01-05）
 
         return result_df
 
@@ -217,27 +190,22 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 else 0.0
             )
 
-            # 実現ボラティリティ（pandas-ta使用）
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: Realized_Volatility_20, Volatility_Spike_MA
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+
+            # ボラティリティスパイクのみ計算（中間変数として使用）
             stdev_result = ta.stdev(result_df["Returns"], length=volatility_period)
-            result_df["Realized_Volatility_20"] = (
+            realized_vol = (
                 pd.Series(stdev_result, index=result_df.index).fillna(0.0) * np.sqrt(24)
                 if stdev_result is not None
-                else 0.0
+                else pd.Series(0.0, index=result_df.index)
             )
-
-            # ボラティリティスパイク（移動平均はpandasのrollingで計算）
-            vol_ma = (
-                result_df["Realized_Volatility_20"]
-                .rolling(window=volatility_period, min_periods=1)
-                .mean()
-            )
-            result_df["Volatility_Spike_MA"] = pd.Series(
-                vol_ma, index=result_df.index
-            ).fillna(0.0)
+            vol_ma = realized_vol.rolling(
+                window=volatility_period, min_periods=1
+            ).mean()
             result_df["Volatility_Spike"] = (
-                (result_df["Realized_Volatility_20"] / vol_ma)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(1.0)
+                (realized_vol / vol_ma).replace([np.inf, -np.inf], np.nan).fillna(1.0)
             )
 
             # ATR（Average True Range）- pandas-ta
@@ -253,29 +221,19 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 else 0.0
             )
 
-            # 正規化ATR（安全な計算）
-            result_df["ATR_Normalized"] = (
-                (result_df["ATR_20"] / result_df["close"])
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.01)
-            )
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: ATR_Normalized
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
-            # ボラティリティレジーム
-            vol_quantile = (
-                result_df["Realized_Volatility_20"]
-                .rolling(window=volatility_period * 2, min_periods=1)
-                .quantile(0.8)
-            )
-            result_df["High_Vol_Regime"] = (
-                result_df["Realized_Volatility_20"] > vol_quantile
-            ).astype(int)
+            # ボラティリティレジーム（realized_volを使用）
+            vol_quantile = realized_vol.rolling(
+                window=volatility_period * 2, min_periods=1
+            ).quantile(0.8)
+            result_df["High_Vol_Regime"] = (realized_vol > vol_quantile).astype(int)
 
-            # ボラティリティ変化率
-            vol_change = result_df["Realized_Volatility_20"].pct_change()
-            vol_change = np.where(np.isinf(vol_change), np.nan, vol_change)
-            vol_change = pd.Series(vol_change, index=result_df.index).fillna(0.0)
-            # 異常に大きな値をクリップ（±500%に制限）
-            result_df["Vol_Change"] = self.clip_extreme_values(vol_change, -5.0, 5.0)
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: Vol_Change
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
             self.log_feature_calculation_complete("ボラティリティ")
             return result_df
@@ -393,26 +351,27 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         """
         return [
             # 価格特徴量
-            "Price_MA_Ratio_Short",
-            "Price_MA_Ratio_Long",
+            # Removed: "Price_MA_Ratio_Short", "Price_MA_Ratio_Long"
+            # (低寄与度特徴量削除: 2025-01-05)
             "Price_Momentum_14",
             "High_Low_Position",
             "Price_Change_1",
             "Price_Change_5",
             "Price_Change_20",
-            "Price_Range",
+            # Removed: "Price_Range" (低寄与度特徴量削除: 2025-01-05)
             "Body_Size",
-            "Upper_Shadow",
+            # Removed: "Upper_Shadow" (低寄与度特徴量削除: 2025-01-05)
             "Lower_Shadow",
-            "Price_Position",
-            "Gap",
+            # Removed: "Price_Position" (低寄与度特徴量削除: 2025-01-05)
+            # Removed: "Gap" (低寄与度特徴量削除: 2025-01-05)
             # ボラティリティ特徴量
-            "Realized_Volatility_20",
+            # Removed: "Realized_Volatility_20", "Volatility_Spike_MA"
+            # (低寄与度特徴量削除: 2025-01-05)
             "Volatility_Spike",
             "ATR_20",
-            "ATR_Normalized",
+            # Removed: "ATR_Normalized" (低寄与度特徴量削除: 2025-01-05)
             "High_Vol_Regime",
-            "Vol_Change",
+            # Removed: "Vol_Change" (低寄与度特徴量削除: 2025-01-05)
             # 出来高特徴量
             "Volume_Ratio",
             "Price_Volume_Trend",

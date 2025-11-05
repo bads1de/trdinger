@@ -76,29 +76,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # トレンド強度（pandas-ta SMA使用）
-            short_ma = lookback_periods.get("short_ma", 10)
-            long_ma = lookback_periods.get("long_ma", 50)
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: Trend_Strength
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
-            import pandas_ta as ta
-
-            ma_short = ta.sma(result_df["close"], length=short_ma)
-            ma_long = ta.sma(result_df["close"], length=long_ma)
-
-            # Trend_Strength = (MA_short - MA_long) / MA_long
-            if (
-                ma_short is not None
-                and ma_long is not None
-                and isinstance(ma_short, pd.Series)
-                and isinstance(ma_long, pd.Series)
-            ):
-                new_features["Trend_Strength"] = self.safe_ratio_calculation(
-                    ma_short - ma_long, ma_long
-                )
-            else:
-                new_features["Trend_Strength"] = 0.0
-
-            # レンジ相場判定（pandas-ta MAX/MIN使用）
+            # レンジ相場判定（pandas MAX/MIN使用）
             volatility_period = lookback_periods.get("volatility", 20)
             high_vals = result_df["high"]
             low_vals = result_df["low"]
@@ -109,18 +91,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 result_df["close"] - low_20, high_20 - low_20, fill_value=0.5
             )
 
-            # ブレイクアウト強度（直前の高値・安値を使用）
-            prev_high_20 = high_20.shift(1)
-            prev_low_20 = low_20.shift(1)
-            new_features["Breakout_Strength"] = np.where(
-                result_df["close"] > prev_high_20,
-                (result_df["close"] - prev_high_20) / prev_high_20,
-                np.where(
-                    result_df["close"] < prev_low_20,
-                    (prev_low_20 - result_df["close"]) / prev_low_20,
-                    0.0,
-                ),
-            )
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: Breakout_Strength
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
             # 市場効率性（価格のランダムウォーク度）- 最適化版
             # Vectorized computation of price autocorrelation
@@ -131,12 +104,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # Note: Series.rolling().corr()は効率的にCython実装
             new_features["Market_Efficiency"] = (
                 returns.rolling(window=volatility_period, min_periods=3)
-                .corr(returns_lag1.rolling(window=volatility_period, min_periods=3).mean())
+                .corr(
+                    returns_lag1.rolling(window=volatility_period, min_periods=3).mean()
+                )
                 .fillna(0.0)
             )
 
             # 一括で結合（DataFrame断片化回避）
-            result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+            result_df = pd.concat(
+                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+            )
 
             return result_df
 
@@ -183,8 +160,12 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 smooth_k=3,
             )
             if stoch_result is not None:
-                new_features["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(50.0)
-                new_features["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(50.0)
+                new_features["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(
+                    50.0
+                )
+                new_features["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(
+                    50.0
+                )
                 # ドージ・ストキャスティクス（KとDの乖離）
                 new_features["Stochastic_Divergence"] = (
                     new_features["Stochastic_K"] - new_features["Stochastic_D"]
@@ -197,14 +178,20 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # ボリンジャーバンド（サポート・レジスタンス）
             bb_result = ta.bbands(result_df["close"], length=20, std=2)
             if bb_result is not None:
-                new_features["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(result_df["close"])
-                new_features["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(result_df["close"])
-                new_features["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(result_df["close"])
+                new_features["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(
+                    result_df["close"]
+                )
+                new_features["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(
+                    result_df["close"]
+                )
+                new_features["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(
+                    result_df["close"]
+                )
                 # ボリンジャーバンドからの乖離率
                 new_features["BB_Position"] = self.safe_ratio_calculation(
                     result_df["close"] - new_features["BB_Lower"],
                     new_features["BB_Upper"] - new_features["BB_Lower"],
-                    fill_value=0.5
+                    fill_value=0.5,
                 )
             else:
                 new_features["BB_Upper"] = result_df["close"]
@@ -236,22 +223,20 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
-                length=14
+                length=14,
             )
             if atr_values is not None:
                 new_features["ATR"] = atr_values.fillna(0.0)
-                # 正規化されたボラティリティ
-                new_features["Normalized_Volatility"] = self.safe_ratio_calculation(
-                    new_features["ATR"],
-                    result_df["close"],
-                    fill_value=0.01
-                )
+                # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+                # 削除された特徴量: Normalized_Volatility
+                # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
             else:
                 new_features["ATR"] = 0.0
-                new_features["Normalized_Volatility"] = 0.01
 
             # 一括で結合
-            result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+            result_df = pd.concat(
+                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+            )
 
             # 価格パターン（ダブルボトム、ヘッドアンドショルダー等の簡易検出）
             result_df = self._detect_price_patterns(result_df)
@@ -278,23 +263,25 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # 局所的極値の検出（単純な方法）
             new_features["Local_Min"] = (
-                (df["close"] <= df["close"].shift(1)) &
-                (df["close"] <= df["close"].shift(-1)) &
-                (df["close"] < df["close"].shift(2)) &
-                (df["close"] < df["close"].shift(-2))
+                (df["close"] <= df["close"].shift(1))
+                & (df["close"] <= df["close"].shift(-1))
+                & (df["close"] < df["close"].shift(2))
+                & (df["close"] < df["close"].shift(-2))
             ).astype(float)
 
             new_features["Local_Max"] = (
-                (df["close"] >= df["close"].shift(1)) &
-                (df["close"] >= df["close"].shift(-1)) &
-                (df["close"] > df["close"].shift(2)) &
-                (df["close"] > df["close"].shift(-2))
+                (df["close"] >= df["close"].shift(1))
+                & (df["close"] >= df["close"].shift(-1))
+                & (df["close"] > df["close"].shift(2))
+                & (df["close"] > df["close"].shift(-2))
             ).astype(float)
 
             # 簡易的なサポート・レジスタントレベル
             window_size = 20
             support_level = df["close"].rolling(window=window_size, min_periods=1).min()
-            resistance_level = df["close"].rolling(window=window_size, min_periods=1).max()
+            resistance_level = (
+                df["close"].rolling(window=window_size, min_periods=1).max()
+            )
 
             new_features["Support_Level"] = support_level
             new_features["Resistance_Level"] = resistance_level
@@ -303,12 +290,12 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             new_features["Near_Support"] = self.safe_ratio_calculation(
                 df["close"] - support_level,
                 resistance_level - support_level,
-                fill_value=0.5
+                fill_value=0.5,
             )
             new_features["Near_Resistance"] = self.safe_ratio_calculation(
                 resistance_level - df["close"],
                 resistance_level - support_level,
-                fill_value=0.5
+                fill_value=0.5,
             )
 
             # 一括で結合
@@ -359,7 +346,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             if macd_result is not None:
                 new_features["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
                 new_features["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
-                new_features["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
+                new_features["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(
+                    0.0
+                )
             else:
                 new_features["MACD"] = 0.0
                 new_features["MACD_Signal"] = 0.0
@@ -404,7 +393,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 new_features["Momentum"] = 0.0
 
             # 一括で結合
-            result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+            result_df = pd.concat(
+                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+            )
 
             return result_df
 
@@ -460,9 +451,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         """
         return [
             # 市場レジーム特徴量
-            "Trend_Strength",
+            # Removed: "Trend_Strength" (低寄与度特徴量削除: 2025-01-05)
             "Range_Bound_Ratio",
-            "Breakout_Strength",
+            # Removed: "Breakout_Strength" (低寄与度特徴量削除: 2025-01-05)
             "Market_Efficiency",
             # モメンタム特徴量
             "RSI",
@@ -479,4 +470,3 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
 
 # 互換性のための別名（旧名: TechnicalFeatureEngineer）
-

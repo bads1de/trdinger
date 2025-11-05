@@ -200,15 +200,10 @@ class AutoFeatCalculator:
 
                 logger.info(f"データサイズ: {data_size_mb:.2f}MB, 最適化設定適用")
 
-                # 設定の決定
-                max_feat = (
-                    max_features
-                    if max_features is not None
-                    else optimized_config.max_features
-                )
-
                 logger.info(
-                    f"AutoFeat特徴量生成開始: 最大特徴量={max_feat}, メモリ制限={optimized_config.max_gb}GB"
+                    f"AutoFeat特徴量生成開始: feateng_steps={optimized_config.feateng_steps}, "
+                    f"featsel_runs={optimized_config.featsel_runs}, "
+                    f"メモリ制限={optimized_config.max_gb}GB"
                 )
 
                 # データの前処理とメモリ最適化
@@ -279,7 +274,7 @@ class AutoFeatCalculator:
                         logger.info(f"入力列: {list(processed_df.columns)}")
                         logger.info(
                             f"AutoFeat設定詳細: feateng_steps={optimized_config.feateng_steps}, "
-                            f"max_gb={actual_max_gb}, max_features={optimized_config.max_features}"
+                            f"max_gb={actual_max_gb}, featsel_runs={optimized_config.featsel_runs}"
                         )
 
                         # AutoFeatの推奨方法：fit_transformを使用（メモリ効率が良い）

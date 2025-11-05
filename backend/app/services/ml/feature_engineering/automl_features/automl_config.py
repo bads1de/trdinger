@@ -15,41 +15,40 @@ class AutoFeatConfig:
     """
     AutoFeatライブラリの設定を管理するデータクラス
 
-    AutoFeatは遺伝的アルゴリズムを使用して自動特徴量エンジニアリングを行うライブラリです。
-    このクラスでは、特徴量生成のパラメータ、メモリ使用量制御、
-    遺伝的アルゴリズムの設定などを管理します。
+    AutoFeatは数学的変換と組み合わせにより自動特徴量エンジニアリングを行うライブラリです。
+    内部でLassoLarsCV/LogisticRegressionCVを使用して特徴量選択を行います。
+    このクラスでは、特徴量生成のパラメータとメモリ使用量制御を管理します。
 
     Attributes:
         enabled (bool): AutoFeatを有効にするかどうか
-        max_features (int): 生成する特徴量の最大数
-        feateng_steps (int): 特徴量エンジニアリングのステップ数
+        feateng_steps (int): 特徴量エンジニアリングのステップ数（1-3推奨、デフォルト2）
         max_gb (float): 使用メモリの最大量（GB）
-        featsel_runs (int): 特徴量選択の実行回数（メモリ節約のため1に設定）
+        featsel_runs (int): 特徴量選択の実行回数（デフォルト5、精度と速度のバランス）
         verbose (int): ログレベル（0=最小限、1=詳細）
-        n_jobs (int): 並列処理数（メモリ使用量制御のため1に設定）
-        generations (int): 遺伝的アルゴリズムの世代数
-        population_size (int): 遺伝的アルゴリズムの集団サイズ
-        tournament_size (int): 遺伝的アルゴリズムのトーナメントサイズ
+        n_jobs (int): 並列処理数（1推奨、メモリ使用量制御のため）
+
+    Note:
+        - AutoFeatは内部で数百〜数千の候補特徴量を生成し、featsel_runsによる
+          交差検証で最も有用な特徴量を自動選択します
+        - feateng_steps=2が推奨（バランスが良い）
+        - feateng_steps=3以上は指数関数的に特徴量が増加するため注意
+        - AutoFeat v2.1.3には遺伝的アルゴリズムのパラメータは存在しません
     """
 
     enabled: bool = True  # デフォルトで有効化
-    max_features: int = 30  # 特徴量数削減: 100 → 30
-    feateng_steps: int = 2
-    max_gb: float = 1.0
-    featsel_runs: int = 1  # 特徴量選択の実行回数（メモリ節約のため1に設定）
+    feateng_steps: int = 2  # 特徴量エンジニアリングのステップ数（推奨: 2）
+    max_gb: float = 2.0  # メモリ使用量の上限（GB）
+    featsel_runs: int = 5  # 特徴量選択の実行回数（推奨: 5、精度を確保）
     verbose: int = 0  # ログレベル（0=最小限、1=詳細）
     n_jobs: int = 1  # 並列処理数（メモリ使用量制御のため1に設定）
-    generations: int = 20  # 世代数
-    population_size: int = 50  # 集団サイズ
-    tournament_size: int = 3  # トーナメントサイズ
 
     def get_memory_optimized_config(self, data_size_mb: float) -> "AutoFeatConfig":
         """
         データサイズに基づいてメモリ最適化された設定を取得
 
         データサイズに応じて動的にパラメータを調整し、メモリ使用量を最適化します。
-        大量データの場合は特徴量数や計算リソースを制限し、小量データの場合は
-        より多くの特徴量生成を許可します。
+        AutoFeatの内部特徴量選択機能を活用し、適切なfeateng_stepsとfeatsel_runsで
+        バランスの取れた特徴量生成を実現します。
 
         Args:
             data_size_mb (float): データサイズ（MB）
@@ -58,78 +57,55 @@ class AutoFeatConfig:
             AutoFeatConfig: メモリ使用量が最適化された設定
 
         Note:
-            データサイズに基づく動的設定（メモリ使用量を大幅に制限）:
-            - 500MB以上: 最小限の特徴量と計算リソース
-            - 100MB以上: 中程度の制限
-            - 10MB以上: 緩やかな制限
-            - 1MB以上: 基本的な制限
-            - 1MB未満: 最小限の設定
+            データサイズに基づく推奨設定:
+            - 500MB以上: feateng_steps=1, メモリ優先、最小限の特徴量選択
+            - 100-500MB: feateng_steps=1-2, メモリ制約を考慮しつつ特徴量生成
+            - 10-100MB: feateng_steps=2, バランスの取れた設定（推奨）
+            - 10MB未満: feateng_steps=2, 十分なメモリでフル機能を活用
+
+        Examples:
+            >>> config = AutoFeatConfig()
+            >>> # 50MBのデータに最適化
+            >>> optimized = config.get_memory_optimized_config(50.0)
+            >>> print(optimized.feateng_steps)  # 2
+            >>> print(optimized.featsel_runs)   # 5
         """
-        # データサイズに基づく動的設定（メモリ使用量を大幅に制限）
+        # データサイズに基づく動的設定
         if data_size_mb > 500:  # 500MB以上の大量データ
             return AutoFeatConfig(
                 enabled=self.enabled,
-                max_features=10,  # 特徴量数を大幅制限
-                feateng_steps=1,  # ステップ数を最小限に
-                max_gb=0.2,  # メモリ使用量を厳しく制限
-                featsel_runs=1,
+                feateng_steps=1,  # メモリ優先、基本的な変換のみ
+                max_gb=1.0,  # メモリ使用量を制限
+                featsel_runs=1,  # 選択回数を最小限に
                 verbose=0,
                 n_jobs=1,
-                generations=5,  # 世代数を制限
-                population_size=20,  # 集団サイズを制限
-                tournament_size=2,  # トーナメントサイズを最小に
             )
-        elif data_size_mb > 100:  # 100MB以上の中量データ
+        elif data_size_mb > 100:  # 100-500MBの中量データ
             return AutoFeatConfig(
                 enabled=self.enabled,
-                max_features=15,  # 特徴量数を制限
-                feateng_steps=1,  # ステップ数を最小限に
-                max_gb=0.3,  # メモリ使用量を制限
-                featsel_runs=1,
+                feateng_steps=2,  # 適度な特徴量生成
+                max_gb=2.0,  # 適度なメモリ使用量
+                featsel_runs=3,  # 選択精度を確保
                 verbose=0,
                 n_jobs=1,
-                generations=10,
-                population_size=30,
-                tournament_size=3,
             )
-        elif data_size_mb > 10:  # 10MB以上の中小量データ
+        elif data_size_mb > 10:  # 10-100MBの中小量データ（推奨設定）
             return AutoFeatConfig(
                 enabled=self.enabled,
-                max_features=20,
-                feateng_steps=1,
-                max_gb=0.4,
-                featsel_runs=1,
+                feateng_steps=2,  # バランスの取れた特徴量生成
+                max_gb=2.0,  # 十分なメモリ
+                featsel_runs=5,  # デフォルトの選択精度
                 verbose=0,
                 n_jobs=1,
-                generations=15,
-                population_size=40,
-                tournament_size=3,
             )
-        elif data_size_mb > 1:  # 1MB以上の小量データ
+        else:  # 10MB未満の小量データ
             return AutoFeatConfig(
                 enabled=self.enabled,
-                max_features=10,
-                feateng_steps=1,
-                max_gb=0.2,
-                featsel_runs=1,
+                feateng_steps=2,  # フル機能を活用
+                max_gb=1.0,  # 小規模データには十分
+                featsel_runs=5,  # デフォルトの選択精度
                 verbose=0,
                 n_jobs=1,
-                generations=10,
-                population_size=30,
-                tournament_size=3,
-            )
-        else:  # 極小量データ（1MB未満）
-            return AutoFeatConfig(
-                enabled=self.enabled,
-                max_features=3,  # 極小量データでは最小限の特徴量
-                feateng_steps=1,  # ステップ数を最小限に
-                max_gb=0.05,  # 最小限のメモリ使用量（50MB）
-                featsel_runs=1,
-                verbose=0,
-                n_jobs=1,
-                generations=5,
-                population_size=20,
-                tournament_size=2,
             )
 
 
@@ -176,18 +152,24 @@ class AutoMLConfig:
         金融データ最適化設定を取得
 
         金融時系列データに特化した最適化設定を提供します。
+        暗号通貨取引データの特性を考慮し、適切な特徴量生成とメモリ使用量の
+        バランスを取った設定になっています。
 
         Returns:
             AutoMLConfig: 金融データ向けに最適化された設定
+
+        Note:
+            - feateng_steps=2: 価格、出来高、テクニカル指標の組み合わせに最適
+            - featsel_runs=5: 十分な交差検証で堅牢な特徴量を選択
+            - max_gb=2.0: 一般的な取引データサイズに対応
         """
         autofeat_config = AutoFeatConfig(
             enabled=True,  # デフォルト有効化
-            max_features=50,  # 特徴量数削減
-            feateng_steps=2,  # ステップ数削減
-            max_gb=2.0,  # メモリ使用量
-            generations=20,
-            population_size=50,
-            tournament_size=3,
+            feateng_steps=2,  # 金融データに最適なステップ数
+            max_gb=2.0,  # 適度なメモリ使用量
+            featsel_runs=5,  # 堅牢な特徴量選択
+            verbose=0,
+            n_jobs=1,
         )
 
         return cls(autofeat_config)
@@ -221,14 +203,24 @@ class AutoMLConfig:
 
         Note:
             - 不明なキーは無視され、デフォルト値が使用されます
-            - 'autofeat.generations' が存在し 'feateng_steps' が無い場合は、feateng_steps に転記します
+            - 古い設定ファイルとの互換性のため、存在しないパラメータは無視されます
+            - generations, population_size, tournament_sizeなどの旧パラメータは自動的にスキップされます
         """
         autofeat_raw = dict(config_dict.get("autofeat", {}))
 
-        # 後方互換: generations -> feateng_steps
-        if "feateng_steps" not in autofeat_raw and "generations" in autofeat_raw:
-            autofeat_raw["feateng_steps"] = autofeat_raw.get("generations")
+        # 有効なパラメータのみを抽出（旧パラメータを除外）
+        valid_params = {
+            "enabled",
+            "feateng_steps",
+            "max_gb",
+            "featsel_runs",
+            "verbose",
+            "n_jobs",
+        }
+        filtered_params = {
+            k: v for k, v in autofeat_raw.items() if k in valid_params
+        }
 
-        autofeat_config = AutoFeatConfig(**autofeat_raw)
+        autofeat_config = AutoFeatConfig(**filtered_params)
 
         return cls(autofeat_config)

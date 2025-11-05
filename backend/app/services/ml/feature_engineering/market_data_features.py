@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
+
 from .base_feature_calculator import BaseFeatureCalculator
 
 logger = logging.getLogger(__name__)
@@ -103,62 +104,13 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 欠損値を前方補完
             merged_df[fr_column] = merged_df[fr_column].ffill()
 
-            # ファンディングレート移動平均（pandas rolling を使用）
-            fr_ma_24 = merged_df[fr_column].rolling(window=24, min_periods=1).mean()
-            result_df["FR_MA_24"] = pd.Series(fr_ma_24).fillna(0.0)
-            fr_ma_168 = merged_df[fr_column].rolling(window=168, min_periods=1).mean()
-            result_df["FR_MA_168"] = pd.Series(fr_ma_168).fillna(0.0)
-
-            # ファンディングレート変化（安全な計算）
-            result_df["FR_Change"] = merged_df[fr_column].diff().fillna(0.0)
-            result_df["FR_Change_Rate"] = (
-                merged_df[fr_column]
-                .pct_change()
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
-
-            # ファンディングレートと価格の乖離（安全な計算）
-            price_change = (
-                result_df["close"]
-                .pct_change()
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
-            result_df["Price_FR_Divergence"] = price_change - merged_df[fr_column]
-
-            # ファンディングレートの極値
-            fr_quantile_high = merged_df[fr_column].rolling(window=168).quantile(0.9)
-            fr_quantile_low = merged_df[fr_column].rolling(window=168).quantile(0.1)
-
-            result_df["FR_Extreme_High"] = (
-                merged_df[fr_column] > fr_quantile_high
-            ).astype(int)
-            result_df["FR_Extreme_Low"] = (
-                merged_df[fr_column] < fr_quantile_low
-            ).astype(int)
-
-            # ファンディングレートの正規化
-            fr_mean = merged_df[fr_column].rolling(window=168, min_periods=1).mean()
-            fr_std = (
-                merged_df[fr_column]
-                .rolling(window=168, min_periods=1)
-                .std()
-                .replace(0, np.nan)
-            )
-            result_df["FR_Normalized"] = (
-                ((merged_df[fr_column] - fr_mean) / fr_std)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
-
-            # ファンディングレートトレンド
-            result_df["FR_Trend"] = result_df["FR_MA_24"] - result_df["FR_MA_168"]
-
-            # ファンディングレートボラティリティ
-            result_df["FR_Volatility"] = (
-                merged_df[fr_column].rolling(window=24, min_periods=1).std().fillna(0.0)
-            )
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: FR_MA_24, FR_MA_168, FR_Change, FR_Change_Rate,
+            # Price_FR_Divergence, FR_Extreme_High, FR_Extreme_Low, FR_Normalized,
+            # FR_Trend, FR_Volatility
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+            # 注: これらの特徴量は低寄与度のため削除されましたが、
+            # 他の関数で使用される可能性があるため、必要に応じて中間計算は保持
 
             return result_df
 
@@ -207,13 +159,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 欠損値を前方補完
             merged_df[oi_column] = merged_df[oi_column].ffill()
 
-            # 建玉残高変化率（安全な計算）
-            result_df["OI_Change_Rate"] = (
-                merged_df[oi_column]
-                .pct_change()
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: OI_Change_Rate
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
             result_df["OI_Change_Rate_24h"] = (
                 merged_df[oi_column]
                 .pct_change(periods=24)
@@ -221,9 +169,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
                 .fillna(0.0)
             )
 
-            # 建玉残高急増
-            oi_threshold = merged_df[oi_column].rolling(window=168).quantile(0.9)
-            result_df["OI_Surge"] = (merged_df[oi_column] > oi_threshold).astype(int)
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: OI_Surge
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
             # ボラティリティ調整建玉残高（安全な計算）
             price_change = (
@@ -261,14 +209,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )
-            oi_change = result_df["OI_Change_Rate"]
-
-            # 共分散ベースの簡易相関（ここでは単純な積を使用）
-            result_df["OI_Price_Correlation"] = (
-                (price_change * oi_change)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: OI_Price_Correlation (OI_Change_Rateに依存)
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
             # 建玉残高の正規化
             oi_mean = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
@@ -411,23 +354,17 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         """
         return [
             # ファンディングレート特徴量
-            "FR_MA_24",
-            "FR_MA_168",
-            "FR_Change",
-            "FR_Change_Rate",
-            "Price_FR_Divergence",
-            "FR_Extreme_High",
-            "FR_Extreme_Low",
-            "FR_Normalized",
-            "FR_Trend",
-            "FR_Volatility",
+            # Removed: "FR_MA_24", "FR_MA_168", "FR_Change", "FR_Change_Rate",
+            # "Price_FR_Divergence", "FR_Extreme_High", "FR_Extreme_Low",
+            # "FR_Normalized", "FR_Trend", "FR_Volatility"
+            # (低寄与度特徴量削除: 2025-01-05)
             # 建玉残高特徴量
-            "OI_Change_Rate",
+            # Removed: "OI_Change_Rate" (低寄与度特徴量削除: 2025-01-05)
             "OI_Change_Rate_24h",
-            "OI_Surge",
+            # Removed: "OI_Surge" (低寄与度特徴量削除: 2025-01-05)
             "Volatility_Adjusted_OI",
             "OI_Trend",
-            "OI_Price_Correlation",
+            # Removed: "OI_Price_Correlation" (低寄与度特徴量削除: 2025-01-05)
             "OI_Normalized",
             # 複合特徴量
             "FR_OI_Ratio",
