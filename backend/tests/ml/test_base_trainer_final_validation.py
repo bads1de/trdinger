@@ -22,18 +22,18 @@ class TestBaseMLTrainerDataProcessorIssues:
 
         return pd.DataFrame({
             'timestamp': dates,
-            'Open': 10000 + np.random.randn(len(dates)) * 200,
-            'High': 10000 + np.random.randn(len(dates)) * 300,
-            'Low': 10000 + np.random.randn(len(dates)) * 300,
-            'Close': 10000 + np.random.randn(len(dates)) * 200,
-            'Volume': 500 + np.random.randint(100, 1000, len(dates)),
+            'open': 10000 + np.random.randn(len(dates)) * 200,
+            'high': 10000 + np.random.randn(len(dates)) * 300,
+            'low': 10000 + np.random.randn(len(dates)) * 300,
+            'close': 10000 + np.random.randn(len(dates)) * 200,
+            'volume': 500 + np.random.randint(100, 1000, len(dates)),
             'returns': np.random.randn(len(dates)) * 0.02,
             'volatility': 0.01 + np.random.rand(len(dates)) * 0.02,
             'rsi': 30 + np.random.rand(len(dates)) * 40,
             'macd': np.random.randn(len(dates)) * 0.01,
             'signal': np.random.randn(len(dates)) * 0.005,
             'histogram': np.random.randn(len(dates)) * 0.005,
-            'target': np.random.choice([0, 1], len(dates)),
+            'target': np.random.choice([0, 1, 2], len(dates)),  # 3クラス分類に対応
         })
 
     def test_base_trainer_training_with_proper_timestamp_data(self, sample_training_data_with_proper_timestamp):

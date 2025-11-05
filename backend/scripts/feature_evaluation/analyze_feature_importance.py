@@ -158,7 +158,7 @@ class FeatureImportanceAnalyzer:
         oi_df: Optional[pd.DataFrame],
     ) -> pd.DataFrame:
         """
-        特徴量計算
+        特徴量計算（削減後の全特徴量147個を分析）
 
         Args:
             ohlcv_df: OHLCVデータ
@@ -168,29 +168,15 @@ class FeatureImportanceAnalyzer:
         Returns:
             特徴量DataFrame
         """
-        logger.info("特徴量計算開始")
+        logger.info("特徴量計算開始（削減後の全特徴量147個を分析）")
 
         try:
-            # 暗号通貨特化特徴量とadvanced特徴量をスキップして基本特徴量のみ計算
-            # crypto_featuresとadvanced_featuresを無効化
-            original_crypto = self.feature_service.crypto_features
-            original_advanced = self.feature_service.advanced_features
-            
-            try:
-                # 一時的に無効化
-                self.feature_service.crypto_features = None
-                self.feature_service.advanced_features = None
-                
-                # 特徴量計算
-                features_df = self.feature_service.calculate_advanced_features(
-                    ohlcv_data=ohlcv_df,
-                    funding_rate_data=fr_df,
-                    open_interest_data=oi_df,
-                )
-            finally:
-                # 元に戻す
-                self.feature_service.crypto_features = original_crypto
-                self.feature_service.advanced_features = original_advanced
+            # 削減後の全特徴量を計算（crypto_features + advanced_features含む）
+            features_df = self.feature_service.calculate_advanced_features(
+                ohlcv_data=ohlcv_df,
+                funding_rate_data=fr_df,
+                open_interest_data=oi_df,
+            )
 
             # 元のOHLCVカラムを除外
             ohlcv_cols = ["open", "high", "low", "close", "volume"]

@@ -24,7 +24,8 @@
       "mcp__serena__activate_project",
       "mcp__serena__think_about_collected_information",
       "mcp__serena__write_memory",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "mcp__tavily-mcp__tavily-search"
     ],
     "deny": [],
     "ask": []

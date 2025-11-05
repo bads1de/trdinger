@@ -385,7 +385,8 @@ class DataProcessor:
                 row = result_df.loc[idx]
                 
                 # NaN値が含まれている行はスキップ
-                if row[['open', 'high', 'low', 'close']].isnull().any():
+                ohlc_values = row[['open', 'high', 'low', 'close']]
+                if ohlc_values.isnull().any():
                     continue
                     
                 # OHLC関係が崩れている場合は修正

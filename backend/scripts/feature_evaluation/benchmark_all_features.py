@@ -18,7 +18,6 @@ FEATURE_FILES = [
     "crypto_features",
     "price_features",
     "technical_features",
-    "temporal_features",
 ]
 
 # 結果記録用
@@ -94,12 +93,6 @@ def measure_dataframe_fragmentation():
                     from app.services.ml.feature_engineering.technical_features import TechnicalFeatureCalculator
                     calculator = TechnicalFeatureCalculator()
                     config = {"lookback_periods": {"short_ma": 10, "long_ma": 50}}
-                    result = calculator.calculate_features(sample_data, config)
-
-                elif file_name == "temporal_features":
-                    from app.services.ml.feature_engineering.temporal_features import TemporalFeatureCalculator
-                    calculator = TemporalFeatureCalculator()
-                    config = {"lookback_periods": {}}
                     result = calculator.calculate_features(sample_data, config)
 
                 print(f"  [PASS] {file_name} - テスト完了")

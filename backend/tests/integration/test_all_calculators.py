@@ -7,7 +7,6 @@ sys.path.append('.')
 
 from app.services.ml.feature_engineering.price_features import PriceFeatureCalculator
 from app.services.ml.feature_engineering.technical_features import TechnicalFeatureCalculator
-from app.services.ml.feature_engineering.temporal_features import TemporalFeatureCalculator
 from app.services.ml.feature_engineering.market_data_features import MarketDataFeatureCalculator
 from app.services.ml.feature_engineering.interaction_features import InteractionFeatureCalculator
 from app.services.ml.feature_engineering.crypto_features import CryptoFeatures
@@ -75,7 +74,6 @@ def main():
     calculators = [
         ("PriceFeatureCalculator", PriceFeatureCalculator()),
         ("TechnicalFeatureCalculator", TechnicalFeatureCalculator()),
-        ("TemporalFeatureCalculator", TemporalFeatureCalculator()),
         ("MarketDataFeatureCalculator", MarketDataFeatureCalculator()),
         ("InteractionFeatureCalculator", InteractionFeatureCalculator()),
         ("CryptoFeatures", CryptoFeatures()),

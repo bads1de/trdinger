@@ -131,7 +131,9 @@ def validate_data_integrity(df: pd.DataFrame) -> bool:
             raise ValueError("duplicate timestamps found")
 
     # NaN/Null値は補間で処理されるため警告のみ
-    if df.isnull().any().any():
+    # 補間処理されるため無視（チェックのみ実行）
+    has_nulls = df.isnull().values.any()  # Seriesではなくbool値を直接取得
+    if has_nulls:
         pass  # 補間処理されるため無視
 
     return True

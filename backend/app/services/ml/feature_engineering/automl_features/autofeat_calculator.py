@@ -239,6 +239,13 @@ class AutoFeatCalculator:
                     else:
                         actual_max_gb = max(1, int(optimized_config.max_gb))  # 最低1GB
 
+                    # 軽量設定: transformationsパラメータを適用
+                    transformations = optimized_config.transformations or [
+                        "1/",
+                        "sqrt",
+                        "^2",
+                    ]
+
                     if task_type.lower() == "classification":
                         self.autofeat_model = AutoFeatClassifier(
                             feateng_steps=optimized_config.feateng_steps,
@@ -246,6 +253,7 @@ class AutoFeatCalculator:
                             verbose=optimized_config.verbose,
                             featsel_runs=optimized_config.featsel_runs,
                             n_jobs=optimized_config.n_jobs,  # 並列処理数を制御
+                            transformations=transformations,  # 軽量設定: 基本的な変換のみ
                             units=None,  # 単位を指定しない（メモリ節約）
                         )
                     else:
@@ -255,6 +263,7 @@ class AutoFeatCalculator:
                             verbose=optimized_config.verbose,
                             featsel_runs=optimized_config.featsel_runs,
                             n_jobs=optimized_config.n_jobs,  # 並列処理数を制御
+                            transformations=transformations,  # 軽量設定: 基本的な変換のみ
                             units=None,  # 単位を指定しない（メモリ節約）
                         )
 
@@ -572,12 +581,16 @@ class AutoFeatCalculator:
 
             # AutoFeatモデルを初期化（バッチ処理用の厳しい制限）
             batch_max_gb = max(1, int(optimized_config.max_gb))  # バッチ処理では1GB以上
+            # 軽量設定: バッチ処理でも基本的な変換のみ使用
+            batch_transformations = optimized_config.transformations or ["1/", "sqrt"]
+
             autofeat_model = AutoFeatRegressor(
                 feateng_steps=1,  # バッチ処理では常に1ステップ
                 max_gb=batch_max_gb,
                 verbose=0,  # バッチ処理では詳細ログを抑制
                 featsel_runs=1,  # バッチ処理では1回のみ
                 n_jobs=1,  # バッチ処理では並列処理を無効化
+                transformations=batch_transformations,  # 軽量設定: 最小限の変換
                 units=None,  # 単位を指定しない（メモリ節約）
             )
 

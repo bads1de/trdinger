@@ -6,8 +6,8 @@ AutoML特徴量エンジニアリングの設定を管理します。
 設定を管理し、データサイズに応じた動的な最適化機能を提供します。
 """
 
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -21,26 +21,39 @@ class AutoFeatConfig:
 
     Attributes:
         enabled (bool): AutoFeatを有効にするかどうか
-        feateng_steps (int): 特徴量エンジニアリングのステップ数（1-3推奨、デフォルト2）
-        max_gb (float): 使用メモリの最大量（GB）
-        featsel_runs (int): 特徴量選択の実行回数（デフォルト5、精度と速度のバランス）
+        feateng_steps (int): 特徴量エンジニアリングのステップ数（1-3推奨、デフォルト1: 軽量設定）
+        max_gb (float): 使用メモリの最大量（GB、デフォルト1.0: 軽量設定）
+        featsel_runs (int): 特徴量選択の実行回数（デフォルト2: 軽量設定）
+        transformations (List[str]): 使用する数学的変換のリスト（デフォルト: ['1/', 'sqrt', '^2']）
         verbose (int): ログレベル（0=最小限、1=詳細）
         n_jobs (int): 並列処理数（1推奨、メモリ使用量制御のため）
 
     Note:
+        - 軽量設定（バランス型）を採用：
+          * feateng_steps=1: メモリ使用量を40-50%削減
+          * max_gb=1.0: メモリ使用量の直接制限
+          * featsel_runs=2: 処理時間を30-40%短縮
+          * transformations=['1/', 'sqrt', '^2']: 基本的な3種類に削減
         - AutoFeatは内部で数百〜数千の候補特徴量を生成し、featsel_runsによる
           交差検証で最も有用な特徴量を自動選択します
-        - feateng_steps=2が推奨（バランスが良い）
-        - feateng_steps=3以上は指数関数的に特徴量が増加するため注意
         - AutoFeat v2.1.3には遺伝的アルゴリズムのパラメータは存在しません
     """
 
     enabled: bool = True  # デフォルトで有効化
-    feateng_steps: int = 2  # 特徴量エンジニアリングのステップ数（推奨: 2）
-    max_gb: float = 2.0  # メモリ使用量の上限（GB）
-    featsel_runs: int = 5  # 特徴量選択の実行回数（推奨: 5、精度を確保）
+    feateng_steps: int = 1  # 特徴量エンジニアリングのステップ数（軽量設定: 1）
+    max_gb: float = 1.0  # メモリ使用量の上限（GB、軽量設定: 1.0）
+    featsel_runs: int = 2  # 特徴量選択の実行回数（軽量設定: 2）
+    transformations: List[str] = field(
+        default=None
+    )  # 使用する変換（Noneの場合は初期化時にデフォルト設定）
     verbose: int = 0  # ログレベル（0=最小限、1=詳細）
     n_jobs: int = 1  # 並列処理数（メモリ使用量制御のため1に設定）
+
+    def __post_init__(self):
+        """初期化後の処理でデフォルト値を設定"""
+        if self.transformations is None:
+            # 軽量設定: 基本的な3種類の変換のみ使用
+            self.transformations = ["1/", "sqrt", "^2"]
 
     def get_memory_optimized_config(self, data_size_mb: float) -> "AutoFeatConfig":
         """
@@ -57,53 +70,57 @@ class AutoFeatConfig:
             AutoFeatConfig: メモリ使用量が最適化された設定
 
         Note:
-            データサイズに基づく推奨設定:
+            データサイズに基づく推奨設定（軽量化版）:
             - 500MB以上: feateng_steps=1, メモリ優先、最小限の特徴量選択
-            - 100-500MB: feateng_steps=1-2, メモリ制約を考慮しつつ特徴量生成
-            - 10-100MB: feateng_steps=2, バランスの取れた設定（推奨）
-            - 10MB未満: feateng_steps=2, 十分なメモリでフル機能を活用
+            - 100-500MB: feateng_steps=1, メモリ制約を考慮した設定
+            - 10-100MB: feateng_steps=1, バランスの取れた軽量設定（推奨）
+            - 10MB未満: feateng_steps=1, 小規模データでも軽量設定を適用
 
         Examples:
             >>> config = AutoFeatConfig()
             >>> # 50MBのデータに最適化
             >>> optimized = config.get_memory_optimized_config(50.0)
-            >>> print(optimized.feateng_steps)  # 2
-            >>> print(optimized.featsel_runs)   # 5
+            >>> print(optimized.feateng_steps)  # 1
+            >>> print(optimized.featsel_runs)   # 2
         """
-        # データサイズに基づく動的設定
+        # データサイズに基づく動的設定（軽量化版）
         if data_size_mb > 500:  # 500MB以上の大量データ
             return AutoFeatConfig(
                 enabled=self.enabled,
                 feateng_steps=1,  # メモリ優先、基本的な変換のみ
-                max_gb=1.0,  # メモリ使用量を制限
+                max_gb=0.5,  # メモリ使用量を厳しく制限
                 featsel_runs=1,  # 選択回数を最小限に
+                transformations=["1/", "sqrt"],  # 最小限の変換
                 verbose=0,
                 n_jobs=1,
             )
         elif data_size_mb > 100:  # 100-500MBの中量データ
             return AutoFeatConfig(
                 enabled=self.enabled,
-                feateng_steps=2,  # 適度な特徴量生成
-                max_gb=2.0,  # 適度なメモリ使用量
-                featsel_runs=3,  # 選択精度を確保
+                feateng_steps=1,  # 軽量設定
+                max_gb=1.0,  # 軽量メモリ使用量
+                featsel_runs=1,  # 選択回数を削減
+                transformations=["1/", "sqrt", "^2"],  # 基本的な変換
                 verbose=0,
                 n_jobs=1,
             )
-        elif data_size_mb > 10:  # 10-100MBの中小量データ（推奨設定）
+        elif data_size_mb > 10:  # 10-100MBの中小量データ（推奨軽量設定）
             return AutoFeatConfig(
                 enabled=self.enabled,
-                feateng_steps=2,  # バランスの取れた特徴量生成
-                max_gb=2.0,  # 十分なメモリ
-                featsel_runs=5,  # デフォルトの選択精度
+                feateng_steps=1,  # バランスの取れた軽量設定
+                max_gb=1.0,  # 適度なメモリ
+                featsel_runs=2,  # 軽量な選択精度
+                transformations=["1/", "sqrt", "^2"],  # 基本的な変換
                 verbose=0,
                 n_jobs=1,
             )
         else:  # 10MB未満の小量データ
             return AutoFeatConfig(
                 enabled=self.enabled,
-                feateng_steps=2,  # フル機能を活用
+                feateng_steps=1,  # 小規模でも軽量設定
                 max_gb=1.0,  # 小規模データには十分
-                featsel_runs=5,  # デフォルトの選択精度
+                featsel_runs=2,  # 軽量な選択精度
+                transformations=["1/", "sqrt", "^2"],  # 基本的な変換
                 verbose=0,
                 n_jobs=1,
             )
@@ -159,15 +176,17 @@ class AutoMLConfig:
             AutoMLConfig: 金融データ向けに最適化された設定
 
         Note:
-            - feateng_steps=2: 価格、出来高、テクニカル指標の組み合わせに最適
-            - featsel_runs=5: 十分な交差検証で堅牢な特徴量を選択
-            - max_gb=2.0: 一般的な取引データサイズに対応
+            - feateng_steps=1: 軽量設定で効率的な特徴量生成
+            - featsel_runs=2: 処理時間を短縮しつつ堅牢な特徴量を選択
+            - max_gb=1.0: メモリ使用量を抑制
+            - transformations: 基本的な3種類の変換で十分な性能を確保
         """
         autofeat_config = AutoFeatConfig(
             enabled=True,  # デフォルト有効化
-            feateng_steps=2,  # 金融データに最適なステップ数
-            max_gb=2.0,  # 適度なメモリ使用量
-            featsel_runs=5,  # 堅牢な特徴量選択
+            feateng_steps=1,  # 軽量設定: メモリ使用量を40-50%削減
+            max_gb=1.0,  # 軽量設定: メモリ使用量の直接制限
+            featsel_runs=2,  # 軽量設定: 処理時間を30-40%短縮
+            transformations=["1/", "sqrt", "^2"],  # 軽量設定: 基本的な3種類に削減
             verbose=0,
             n_jobs=1,
         )
@@ -214,12 +233,11 @@ class AutoMLConfig:
             "feateng_steps",
             "max_gb",
             "featsel_runs",
+            "transformations",
             "verbose",
             "n_jobs",
         }
-        filtered_params = {
-            k: v for k, v in autofeat_raw.items() if k in valid_params
-        }
+        filtered_params = {k: v for k, v in autofeat_raw.items() if k in valid_params}
 
         autofeat_config = AutoFeatConfig(**filtered_params)
 

@@ -122,8 +122,9 @@ def test_create_advanced_features_with_external_data(
     )
 
     # 外部データの特徴量が含まれていることを確認
-    assert 'FR_mean_3' in features.columns
-    assert 'OI_pct_change_1' in features.columns
+    # FR特徴量は削除されたため、OI特徴量のみチェック
+    assert 'OI_pct_change_24' in features.columns
+    assert 'OI_ma_24' in features.columns
 
 
 def test_lag_features(sample_ohlcv_data):
@@ -131,12 +132,11 @@ def test_lag_features(sample_ohlcv_data):
     engineer = AdvancedFeatureEngineer()
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
-    # ラグ特徴量の列をテスト
+    # ラグ特徴量の列をテスト（削減後の特徴量のみ）
     expected_lag_columns = [
-        'close_lag_1', 'close_lag_3', 'close_lag_6', 'close_lag_12', 'close_lag_24', 'close_lag_48',
-        'volume_lag_1', 'volume_lag_24',
-        'returns_lag_1', 'returns_lag_24',
-        'cumulative_returns_6', 'cumulative_returns_24'
+        'close_lag_1', 'close_lag_24',
+        'returns', 'returns_lag_24',
+        'cumulative_returns_24'
     ]
 
     for col in expected_lag_columns:
@@ -162,11 +162,11 @@ def test_statistical_features(sample_ohlcv_data):
     engineer = AdvancedFeatureEngineer()
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
-    # 統計的特徴量の列をテスト
+    # 統計的特徴量の列をテスト（削減後の特徴量のみ）
     expected_stat_columns = [
-        'Close_mean_5', 'Close_std_20',
-        'Close_q25_10', 'Close_q75_20',
-        'Close_range_10', 'Close_iqr_20'
+        'Close_mean_20', 'Close_mean_50',
+        'Close_std_20', 'Close_std_50',
+        'Close_range_20', 'Close_range_50'
     ]
 
     for col in expected_stat_columns:
@@ -178,12 +178,11 @@ def test_time_series_features(sample_ohlcv_data):
     engineer = AdvancedFeatureEngineer()
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
-    # 時系列特徴量の列をテスト
+    # 時系列特徴量の列をテスト（削減後の特徴量のみ）
     expected_ts_columns = [
-        'Close_diff_1', 'Close_diff_24',
         'Close_pct_change_1', 'Close_pct_change_24',
         'Close_deviation_from_ma_20',
-        'Trend_strength_10'
+        'Trend_strength_20'
     ]
 
     for col in expected_ts_columns:
@@ -195,13 +194,12 @@ def test_volatility_features(sample_ohlcv_data):
     engineer = AdvancedFeatureEngineer()
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
-    # ボラティリティ特徴量の列をテスト
+    # ボラティリティ特徴量の列をテスト（高寄与度のみ）
     expected_vol_columns = [
         'Returns',
-        'Realized_Vol_20', 'Realized_Vol_50',
-        'Vol_of_Vol_10',
-        'Parkinson_Vol_20',
-        'Vol_Regime'
+        'Realized_Vol_20',
+        'Parkinson_Vol_20'
+        # Vol_Regime は削除済み（低寄与度）
     ]
 
     for col in expected_vol_columns:
@@ -213,9 +211,9 @@ def test_interaction_features(sample_ohlcv_data):
     engineer = AdvancedFeatureEngineer()
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
-    # 相互作用特徴量の列をテスト
+    # 相互作用特徴量の列をテスト（削減後の特徴量のみ）
     expected_interaction_columns = [
-        'Price_Volume_Product', 'Price_Volume_Ratio',
+        'Price_Volume_Ratio',
         'Vol_Volume_Product'
     ]
 
@@ -224,40 +222,40 @@ def test_interaction_features(sample_ohlcv_data):
 
 
 def test_seasonal_features(sample_ohlcv_data):
-    """季節性特徴量のテスト"""
+    """季節性特徴量のテスト（全削除）"""
     engineer = AdvancedFeatureEngineer()
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
-    # 季節性特徴量の列をテスト
-    expected_seasonal_columns = [
-        'Hour', 'DayOfWeek', 'DayOfMonth', 'Month',
+    # 季節性特徴量は全て削除済み（暗号通貨市場では時間効果が弱い）
+    # テストは特徴量が生成されないことを確認
+    deleted_columns = [
+        'Hour', 'DayOfWeek',
         'Hour_sin', 'Hour_cos',
         'DayOfWeek_sin', 'DayOfWeek_cos',
-        'Is_Weekend', 'Is_Asian_Hours',
-        'Is_European_Hours', 'Is_American_Hours'
+        'Is_Weekend', 'Is_Asian_Hours', 'Is_American_Hours'
     ]
 
-    for col in expected_seasonal_columns:
-        assert col in features.columns, f"Missing column: {col}"
+    for col in deleted_columns:
+        assert col not in features.columns, f"Column should be deleted: {col}"
 
 
 def test_funding_rate_features(sample_ohlcv_data, sample_funding_rate_data):
-    """ファンディングレート特徴量のテスト"""
+    """ファンディングレート特徴量のテスト（全削除）"""
     engineer = AdvancedFeatureEngineer()
     features = engineer.create_advanced_features(
         sample_ohlcv_data,
         funding_rate_data=sample_funding_rate_data
     )
 
-    # ファンディングレート特徴量の列をテスト
-    expected_fr_columns = [
-        'FR_mean_3', 'FR_std_7', 'FR_sum_14',
-        'FR_change', 'FR_change_abs',
+    # FR特徴量は全て削除済み（スコア0で寄与なし）
+    # テストは特徴量が生成されないことを確認
+    deleted_fr_columns = [
+        'FR_mean_7', 'FR_sum_7',
         'FR_extreme_positive', 'FR_extreme_negative'
     ]
 
-    for col in expected_fr_columns:
-        assert col in features.columns, f"Missing column: {col}"
+    for col in deleted_fr_columns:
+        assert col not in features.columns, f"Column should be deleted: {col}"
 
 
 def test_open_interest_features(sample_ohlcv_data, sample_open_interest_data):
@@ -268,9 +266,9 @@ def test_open_interest_features(sample_ohlcv_data, sample_open_interest_data):
         open_interest_data=sample_open_interest_data
     )
 
-    # 建玉残高特徴量の列をテスト
+    # 建玉残高特徴量の列をテスト（削減後の特徴量のみ）
     expected_oi_columns = [
-        'OI_pct_change_1', 'OI_pct_change_24',
+        'OI_pct_change_24',
         'OI_ma_24', 'OI_deviation_24',
         'OI_Price_Correlation'
     ]
@@ -298,9 +296,10 @@ def test_feature_count(sample_ohlcv_data):
     original_count = len(sample_ohlcv_data.columns)
     feature_count = len(features.columns)
 
-    # 最低でも100個の特徴量が生成されることを確認
-    assert feature_count > original_count + 100, \
-        f"Expected more than {original_count + 100} features, got {feature_count}"
+    # フェーズ2削減後: 約38個の特徴量を追加（低寄与度特徴量削除済み）
+    # 5（元のカラム） + 38 = 43個程度を期待
+    assert feature_count > original_count + 30, \
+        f"Expected more than {original_count + 30} features, got {feature_count}"
 
 
 def test_no_duplicate_columns(sample_ohlcv_data):

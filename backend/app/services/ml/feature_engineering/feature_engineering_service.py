@@ -26,7 +26,6 @@ from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
-from .temporal_features import TemporalFeatureCalculator
 
 # AutoML関連のインポート（オプション）
 AutoFeatCalculator = None
@@ -67,7 +66,6 @@ class FeatureEngineeringService:
         self.price_calculator = PriceFeatureCalculator()
         self.market_data_calculator = MarketDataFeatureCalculator()
         self.technical_calculator = TechnicalFeatureCalculator()
-        self.temporal_calculator = TemporalFeatureCalculator()
         self.interaction_calculator = InteractionFeatureCalculator()
 
         # データ頻度統一マネージャー
@@ -348,9 +346,6 @@ class FeatureEngineeringService:
                 result_df, lookback_periods
             )
 
-            # 時間的特徴量
-            result_df = self.temporal_calculator.calculate_temporal_features(result_df)
-
             # 暗号通貨特化特徴量（デフォルトで追加）
             if self.crypto_features is not None:
                 logger.debug("暗号通貨特化特徴量を計算中...")
@@ -450,7 +445,7 @@ class FeatureEngineeringService:
         lookback_periods: Optional[Dict[str, int]] = None,
         automl_config: Optional[Dict] = None,
         target: Optional[pd.Series] = None,
-        max_features_per_step: int = 50,  # 特徴量数削減: 100 → 50
+        max_features_per_step: int = 25,  # 特徴量数削減: 100 → 50 → 25
     ) -> pd.DataFrame:
         """
         拡張特徴量を計算（手動 + AutoML）- ステップ・バイ・ステップ方式
@@ -550,7 +545,6 @@ class FeatureEngineeringService:
         feature_names.extend(self.price_calculator.get_feature_names())
         feature_names.extend(self.market_data_calculator.get_feature_names())
         feature_names.extend(self.technical_calculator.get_feature_names())
-        feature_names.extend(self.temporal_calculator.get_feature_names())
         feature_names.extend(self.interaction_calculator.get_feature_names())
 
         return feature_names
@@ -596,7 +590,7 @@ class FeatureEngineeringService:
         self,
         df: pd.DataFrame,
         target: Optional[pd.Series],
-        max_features: int = 50,  # 特徴量数削減: 100 → 50
+        max_features: int = 25,  # 特徴量数削減: 100 → 50 → 25
     ) -> pd.DataFrame:
         """ステップ2: AutoFeat特徴量を追加 + 特徴量選択"""
         if target is None:

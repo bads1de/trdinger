@@ -234,12 +234,6 @@ class PerformanceOptimizer:
         except Exception as e:
             logger.error(f"ガベージコレクションエラー: {e}")
 
-    
-
-    
-
-    
-
     def _get_memory_usage(self) -> float:
         """現在のメモリ使用量を取得（MB単位）"""
         try:

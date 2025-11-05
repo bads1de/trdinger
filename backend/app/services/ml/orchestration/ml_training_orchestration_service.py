@@ -11,7 +11,6 @@ from typing import Any, Dict
 
 from sqlalchemy.orm import Session
 
-from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
@@ -49,8 +48,11 @@ class MLTrainingOrchestrationService:
     def __init__(self):
         """初期化"""
 
-    def get_data_service(self, db: Session) -> BacktestDataService:
+    def get_data_service(self, db: Session):
         """データサービスの依存性注入"""
+        # 循環インポートを避けるため、関数内でインポート
+        from app.services.backtest.backtest_data_service import BacktestDataService
+
         ohlcv_repo = OHLCVRepository(db)
         oi_repo = OpenInterestRepository(db)
         fr_repo = FundingRateRepository(db)

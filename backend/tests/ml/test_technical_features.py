@@ -107,11 +107,9 @@ def test_market_regime_features(sample_ohlcv_data):
 
     result = calculator.calculate_market_regime_features(sample_ohlcv_data, lookback_periods)
 
-    # 期待される特徴量
+    # 期待される特徴量（削減後）
     expected_features = [
-        "Trend_Strength",
         "Range_Bound_Ratio",
-        "Breakout_Strength",
         "Market_Efficiency"
     ]
 
@@ -149,7 +147,7 @@ def test_pattern_features(sample_ohlcv_data):
 
     result = calculator.calculate_pattern_features(sample_ohlcv_data, lookback_periods)
 
-    # 期待される特徴量
+    # 期待される特徴量（削減後：Normalized_Volatilityは削除済み）
     expected_features = [
         "Stochastic_K",
         "Stochastic_D",
@@ -162,7 +160,6 @@ def test_pattern_features(sample_ohlcv_data):
         "MA_Long",
         "MA_Cross",
         "ATR",
-        "Normalized_Volatility",
         "Local_Min",
         "Local_Max",
         "Support_Level",

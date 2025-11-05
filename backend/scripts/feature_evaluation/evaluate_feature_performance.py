@@ -6,10 +6,10 @@
 
 実行方法:
     cd backend
-    python evaluate_feature_performance_all_models.py
-    python evaluate_feature_performance_all_models.py --models lightgbm
-    python evaluate_feature_performance_all_models.py --models lightgbm xgboost
-    python evaluate_feature_performance_all_models.py --models all
+    python -m scripts.feature_evaluation.evaluate_feature_performance
+    python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm
+    python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm xgboost
+    python -m scripts.feature_evaluation.evaluate_feature_performance --models all
 """
 
 import argparse
@@ -28,7 +28,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
 
 # プロジェクトのルートディレクトリをパスに追加
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
@@ -261,7 +261,7 @@ class BaseFeatureEvaluator(ABC):
         pass
 
     def load_unified_scores(
-        self, json_path: str = "feature_importance_analysis.json"
+        self, json_path: str = "../../feature_importance_analysis.json"
     ) -> Dict:
         """
         統合スコアをJSONから読み込み
@@ -1092,14 +1092,18 @@ class MultiModelFeatureEvaluator:
             results: 評価結果
         """
         try:
+            # data/feature_evaluationディレクトリのパス
+            output_dir = Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+            output_dir.mkdir(parents=True, exist_ok=True)
+
             # JSON保存
-            json_path = f"{model_name}_feature_performance_evaluation.json"
+            json_path = output_dir / f"{model_name}_feature_performance_evaluation.json"
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
             logger.info(f"[{model_name.upper()}] JSON保存完了: {json_path}")
 
             # CSV保存
-            csv_path = f"{model_name}_performance_comparison.csv"
+            csv_path = output_dir / f"{model_name}_performance_comparison.csv"
             scenarios_data = []
             for key, scenario in results.get("scenarios", {}).items():
                 if scenario:
@@ -1128,6 +1132,10 @@ class MultiModelFeatureEvaluator:
     def _save_integrated_results(self):
         """統合結果を保存"""
         try:
+            # data/feature_evaluationディレクトリのパス
+            output_dir = Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+            output_dir.mkdir(parents=True, exist_ok=True)
+
             # 統合JSON保存
             integrated_json = {
                 "evaluation_date": datetime.now().isoformat(),
@@ -1135,7 +1143,7 @@ class MultiModelFeatureEvaluator:
                 "models_results": self.all_results,
             }
 
-            json_path = "all_models_feature_performance_evaluation.json"
+            json_path = output_dir / "all_models_feature_performance_evaluation.json"
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(integrated_json, f, indent=2, ensure_ascii=False)
             logger.info(f"統合JSON保存完了: {json_path}")
@@ -1162,7 +1170,7 @@ class MultiModelFeatureEvaluator:
 
             if comparison_data:
                 df = pd.DataFrame(comparison_data)
-                csv_path = "all_models_performance_comparison.csv"
+                csv_path = output_dir / "all_models_performance_comparison.csv"
                 df.to_csv(csv_path, index=False)
                 logger.info(f"統合CSV保存完了: {csv_path}")
 

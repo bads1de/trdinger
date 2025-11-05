@@ -88,14 +88,13 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         # 新しい特徴量を辞書で収集（DataFrame断片化対策）
         new_features = {}
 
-        # 価格レベル特徴量（暗号通貨特化）
-        for period in [24, 168]:  # 1日、1週間
-            new_features[f"price_vs_high_{period}h"] = (
-                df["close"] / df["high"].rolling(period).max()
-            )
-            new_features[f"price_vs_low_{period}h"] = (
-                df["close"] / df["low"].rolling(period).min()
-            )
+        # 価格レベル特徴量（暗号通貨特化）- 24hのみに削減（1週間は冗長）
+        new_features["price_vs_high_24h"] = (
+            df["close"] / df["high"].rolling(24).max()
+        )
+        new_features["price_vs_low_24h"] = (
+            df["close"] / df["low"].rolling(24).min()
+        )
 
         # 一括で結合（DataFrame断片化回避）
         result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
@@ -114,28 +113,26 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     def _create_volume_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """出来高関連特徴量"""
+        """出来高関連特徴量（主要な期間のみに削減）"""
         result_df = df.copy()
 
         # 新しい特徴量を辞書で収集（DataFrame断片化対策）
         new_features = {}
 
-        # 出来高変動率
-        for name, period in periods.items():
-            new_features[f"volume_change_{name}"] = df["volume"].pct_change(period)
-            new_features[f"volume_ma_{name}"] = df["volume"].rolling(period).mean()
-            new_features[f"volume_ratio_{name}"] = (
-                df["volume"] / df["volume"].rolling(period).mean()
-            )
+        # 出来高変動率（主要な期間のみ：short, medium）
+        for name in ["short", "medium"]:
+            if name in periods:
+                period = periods[name]
+                new_features[f"volume_change_{name}"] = df["volume"].pct_change(period)
+                new_features[f"volume_ratio_{name}"] = (
+                    df["volume"] / df["volume"].rolling(period).mean()
+                )
 
-        # VWAP（出来高加重平均価格）
-        for period in [12, 24, 48]:
-            typical_price = (df["high"] + df["low"] + df["close"]) / 3
-            vwap = (typical_price * df["volume"]).rolling(period).sum() / df[
-                "volume"
-            ].rolling(period).sum()
-            new_features[f"vwap_{period}h"] = vwap
-            new_features[f"price_vs_vwap_{period}h"] = (df["close"] - vwap) / vwap
+        # VWAP（24hのみ - 最も重要）
+        typical_price = (df["high"] + df["low"] + df["close"]) / 3
+        vwap_24 = (typical_price * df["volume"]).rolling(24).sum() / df["volume"].rolling(24).sum()
+        new_features["vwap_24h"] = vwap_24
+        new_features["price_vs_vwap_24h"] = (df["close"] - vwap_24) / vwap_24
 
         # 出来高プロファイル
         close_rolling_mean = df["close"].rolling(24).mean()
@@ -154,36 +151,36 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     def _create_open_interest_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """建玉残高関連特徴量"""
+        """建玉残高関連特徴量（重要な特徴のみ）"""
         result_df = df.copy()
 
-        # OI変動率
-        for name, period in periods.items():
-            result_df[f"oi_change_{name}"] = df["open_interest"].pct_change(period)
+        # 新しい特徴量を辞書で収集
+        new_features = {}
 
-        # OI vs 価格の関係
-        result_df["oi_price_divergence"] = (
+        # OI変動率（medium期間のみ）
+        if "medium" in periods:
+            new_features["oi_change_medium"] = df["open_interest"].pct_change(periods["medium"])
+
+        # OI vs 価格の関係（最も重要）
+        new_features["oi_price_divergence"] = (
             df["open_interest"].pct_change() - df["close"].pct_change()
         )
 
-        # OI勢い
-        for period in [24, 72, 168]:
-            result_df[f"oi_momentum_{period}h"] = (
-                df["open_interest"]
-                .rolling(period)
-                .apply(
-                    lambda x: (
-                        (x.iloc[-1] - x.iloc[0]) / x.iloc[0]
-                        if len(x) > 0 and x.iloc[0] != 0
-                        else 0
-                    )
+        # OI勢い（24hのみ - 最も有用）
+        new_features["oi_momentum_24h"] = (
+            df["open_interest"]
+            .rolling(24)
+            .apply(
+                lambda x: (
+                    (x.iloc[-1] - x.iloc[0]) / x.iloc[0]
+                    if len(x) > 0 and x.iloc[0] != 0
+                    else 0
                 )
             )
-
-        # OI正規化
-        result_df["oi_normalized"] = (
-            df["open_interest"] / df["open_interest"].rolling(168).mean()
         )
+
+        # 一括で結合
+        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
 
         self.feature_groups["open_interest"].extend(
             [col for col in result_df.columns if col.startswith("oi_")]
@@ -194,91 +191,59 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     def _create_funding_rate_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """ファンディングレート関連特徴量"""
-        result_df = df.copy()
-
-        # FR基本特徴量
-        result_df["fr_abs"] = df["funding_rate"].abs()
-        result_df["fr_change"] = df["funding_rate"].diff()
-
-        # FR累積（トレンドの強さ）
-        for period in [24, 72, 168]:
-            result_df[f"fr_cumsum_{period}h"] = df["funding_rate"].rolling(period).sum()
-            result_df[f"fr_mean_{period}h"] = df["funding_rate"].rolling(period).mean()
-
-        # FR極値検出
-        fr_quantiles = df["funding_rate"].quantile([0.05, 0.95])
-        result_df["fr_extreme_positive"] = (
-            df["funding_rate"] > fr_quantiles[0.95]
-        ).astype(int)
-        result_df["fr_extreme_negative"] = (
-            df["funding_rate"] < fr_quantiles[0.05]
-        ).astype(int)
-
-        # FR vs 価格の関係
-        result_df["fr_price_alignment"] = (
-            np.sign(df["funding_rate"]) == np.sign(df["close"].pct_change())
-        ).astype(int)
-
-        self.feature_groups["funding_rate"].extend(
-            [col for col in result_df.columns if col.startswith("fr_")]
-        )
-
-        return result_df
+        """ファンディングレート関連特徴量（削除: 全てスコア0で寄与なし）"""
+        # 分析結果: FR関連特徴量は全てスコア0または負のため削除
+        # 削除された特徴量: fr_abs, fr_cumsum_24h, fr_mean_24h, fr_extreme_positive, fr_extreme_negative
+        return df
 
     def _create_technical_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """テクニカル指標"""
+        """テクニカル指標（標準期間のみ）"""
         result_df = df.copy()
 
-        # RSI（pandas-ta使用）
+        # 新しい特徴量を辞書で収集
+        new_features = {}
+
+        # RSI（14期間のみ - 標準）
         import pandas_ta as ta
 
-        for period in [14, 24]:
-            rsi_result = ta.rsi(df["close"], length=period)
-            if rsi_result is not None:
-                result_df[f"rsi_{period}"] = rsi_result.fillna(50.0)
-            else:
-                result_df[f"rsi_{period}"] = 50.0
+        rsi_result = ta.rsi(df["close"], length=14)
+        if rsi_result is not None:
+            new_features["rsi_14"] = rsi_result.fillna(50.0)
+        else:
+            new_features["rsi_14"] = 50.0
 
-        # ボリンジャーバンド（pandas-ta使用）
-        for period in [20, 48]:
-            bb_result = ta.bbands(df["close"], length=period, std=2)
-            if bb_result is not None:
-                result_df[f"bb_upper_{period}"] = bb_result[f"BBU_{period}_2.0"].fillna(
-                    df["close"]
-                )
-                result_df[f"bb_lower_{period}"] = bb_result[f"BBL_{period}_2.0"].fillna(
-                    df["close"]
-                )
-                # BB Position計算
-                bb_width = (
-                    result_df[f"bb_upper_{period}"] - result_df[f"bb_lower_{period}"]
-                )
-                result_df[f"bb_position_{period}"] = (
-                    (
-                        (df["close"] - result_df[f"bb_lower_{period}"])
-                        / (bb_width + 1e-10)
-                    )
-                    .clip(0, 1)
-                    .fillna(0.5)
-                )
-            else:
-                result_df[f"bb_upper_{period}"] = df["close"]
-                result_df[f"bb_lower_{period}"] = df["close"]
-                result_df[f"bb_position_{period}"] = 0.5
+        # ボリンジャーバンド（20期間のみ - 標準）
+        bb_result = ta.bbands(df["close"], length=20, std=2)
+        if bb_result is not None:
+            new_features["bb_upper_20"] = bb_result["BBU_20_2.0"].fillna(df["close"])
+            new_features["bb_lower_20"] = bb_result["BBL_20_2.0"].fillna(df["close"])
+            # BB Position計算
+            bb_width = new_features["bb_upper_20"] - new_features["bb_lower_20"]
+            new_features["bb_position_20"] = (
+                ((df["close"] - new_features["bb_lower_20"]) / (bb_width + 1e-10))
+                .clip(0, 1)
+                .fillna(0.5)
+            )
+        else:
+            new_features["bb_upper_20"] = df["close"]
+            new_features["bb_lower_20"] = df["close"]
+            new_features["bb_position_20"] = 0.5
 
         # MACD（pandas-ta使用）
         macd_result = ta.macd(df["close"], fast=12, slow=26, signal=9)
         if macd_result is not None:
-            result_df["macd"] = macd_result["MACD_12_26_9"].fillna(0.0)
-            result_df["macd_signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
-            result_df["macd_histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
+            new_features["macd"] = macd_result["MACD_12_26_9"].fillna(0.0)
+            new_features["macd_signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
+            new_features["macd_histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
         else:
-            result_df["macd"] = 0.0
-            result_df["macd_signal"] = 0.0
-            result_df["macd_histogram"] = 0.0
+            new_features["macd"] = 0.0
+            new_features["macd_signal"] = 0.0
+            new_features["macd_histogram"] = 0.0
+
+        # 一括で結合
+        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
 
         self.feature_groups["technical"].extend(
             [
@@ -293,101 +258,35 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     def _create_composite_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """複合特徴量（相互作用）"""
+        """複合特徴量（相互作用）- 高寄与度のみ残す"""
         result_df = df.copy()
 
-        # 価格 vs OI の関係
-        result_df["price_oi_correlation"] = (
-            df["close"].rolling(24).corr(df["open_interest"])
-        )
-
-        # 出来高 vs 価格変動の関係
+        # 出来高 vs 価格変動の関係（高寄与度: 0.0019）
         result_df["volume_price_efficiency"] = df["volume"] / (
             abs(df["close"].pct_change()) + 1e-10
         )
 
-        # マルチファクター勢い
-        price_momentum = df["close"].pct_change(24)
-        oi_momentum = df["open_interest"].pct_change(24)
-        result_df["multi_momentum"] = (price_momentum + oi_momentum) / 2
-
-        # 市場ストレス指標
-        # 削除された特徴量(price_volatility_short)の代わりに、その場でボラティリティを計算
-        price_volatility = df["close"].pct_change().rolling(14).std()
-        
-        if "fr_abs" in result_df.columns:
-            result_df["market_stress"] = price_volatility * result_df["fr_abs"]
-        else:
-            # FRデータがない場合、出来高で代替
-            result_df["market_stress"] = price_volatility * result_df["volume"].mean()
+        # 削除された特徴量（低寄与度）:
+        # - price_oi_correlation (スコア: 0.0)
+        # - multi_momentum (スコア: -1.33e-17)
+        # - market_stress (スコア: 0.0)
 
         self.feature_groups["composite"].extend(
             [
                 col
                 for col in result_df.columns
-                if col.startswith(("price_oi_", "volume_price_", "multi_", "market_"))
+                if col.startswith("volume_price_")
             ]
         )
 
         return result_df
 
     def _create_temporal_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """時間関連特徴量"""
-        result_df = df.copy()
-
-        # DatetimeIndexの確認
-        if not isinstance(result_df.index, pd.DatetimeIndex):
-            logger.warning(
-                "インデックスがDatetimeIndexではありません。時間関連特徴量をスキップします。"
-            )
-            return result_df
-
-        # 時間帯
-        try:
-            hour = getattr(result_df.index, "hour", 0)  # type: ignore
-            dayofweek = getattr(result_df.index, "dayofweek", 0)  # type: ignore
-            day = getattr(result_df.index, "day", 15)  # type: ignore
-
-            result_df["hour"] = hour
-            result_df["day_of_week"] = dayofweek
-            result_df["is_weekend"] = (pd.Series(dayofweek) >= 5).astype(int)
-
-            # 地域別取引時間
-            result_df["asia_hours"] = (
-                (pd.Series(hour) >= 0) & (pd.Series(hour) < 8)
-            ).astype(int)
-            result_df["europe_hours"] = (
-                (pd.Series(hour) >= 8) & (pd.Series(hour) < 16)
-            ).astype(int)
-            result_df["us_hours"] = (
-                (pd.Series(hour) >= 16) & (pd.Series(hour) < 24)
-            ).astype(int)
-
-            # 月末・月初効果
-            result_df["month_end"] = (pd.Series(day) >= 28).astype(int)
-            result_df["month_start"] = (pd.Series(day) <= 3).astype(int)
-        except (AttributeError, TypeError) as e:
-            logger.warning(f"時間関連特徴量の生成でエラー: {e}")
-            result_df["hour"] = 0
-            result_df["day_of_week"] = 0
-            result_df["is_weekend"] = 0
-            result_df["asia_hours"] = 0
-            result_df["europe_hours"] = 0
-            result_df["us_hours"] = 0
-            result_df["month_end"] = 0
-            result_df["month_start"] = 0
-
-        self.feature_groups["temporal"].extend(
-            [
-                col
-                for col in result_df.columns
-                if col.startswith(
-                    ("hour", "day_", "is_", "asia_", "europe_", "us_", "month_")
-                )
-            ]
-        )
-
-        return result_df
+        """時間関連特徴量（削除: 暗号通貨市場では24時間取引で時間効果が弱い）"""
+        # 分析結果: 時間・セッション関連特徴量は全て極めて低い寄与度のため削除
+        # 削除された特徴量: hour, day_of_week, is_weekend, asia_hours, us_hours
+        # 理由: 暗号通貨は24時間取引で地域別効果が弱い
+        return df
 
     def _clean_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """特徴量のクリーニング"""
@@ -435,17 +334,13 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         if open_interest_data is not None and not open_interest_data.empty:
             result_df = self._create_open_interest_features(result_df, periods)
 
-        if funding_rate_data is not None and not funding_rate_data.empty:
-            result_df = self._create_funding_rate_features(result_df, periods)
-
-        result_df = self._create_technical_features(result_df, periods)
-
-        # FRデータがある場合のみFR特徴量を計算
+        # FRデータがある場合のみFR特徴量を計算（重複呼び出しを削除）
         if funding_rate_data is not None and not funding_rate_data.empty:
             result_df = self._create_funding_rate_features(result_df, periods)
         else:
             logger.debug("FRデータがないため、FR特徴量をスキップ")
 
+        result_df = self._create_technical_features(result_df, periods)
         result_df = self._create_composite_features(result_df, periods)
         result_df = self._create_temporal_features(result_df)
 
