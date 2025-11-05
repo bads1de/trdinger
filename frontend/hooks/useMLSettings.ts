@@ -1,16 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 
-export interface AutoMLConfig {
-  autofeat: {
-    enabled: boolean;
-    max_features: number;
-    generations: number;
-    population_size: number;
-    tournament_size: number;
-  };
-}
-
 export interface MLConfig {
   data_processing: {
     max_ohlcv_rows: number;
@@ -86,7 +76,6 @@ export interface MLConfig {
  * ```tsx
  * const {
  *   config,
- *   automlConfig,
  *   isLoading,
  *   isSaving,
  *   fetchConfig,
@@ -111,7 +100,6 @@ export interface MLConfig {
  *
  * @returns {{
  *   config: MLConfig | null,
- *   automlConfig: AutoMLConfig | null,
  *   isLoading: boolean,
  *   isSaving: boolean,
  *   isResetting: boolean,
@@ -126,16 +114,10 @@ export interface MLConfig {
  *   cleanupOldModels: () => Promise<void>,
  *   updateConfig: (section: keyof MLConfig, key: string, value: any) => void,
  *   setConfig: (config: MLConfig) => void,
- *   fetchAutoMLConfig: () => Promise<void>,
- *   validateAutoMLConfig: (config: AutoMLConfig) => Promise<any>,
- *   generateAutoMLFeatures: (symbol: string, timeframe: string, limit: number, automlConfig?: AutoMLConfig, includeTarget?: boolean) => Promise<any>,
- *   clearAutoMLCache: () => Promise<any>,
- *   setAutomlConfig: (config: AutoMLConfig) => void
  * }} ML設定管理関連の状態と操作関数
  */
 export const useMLSettings = () => {
   const [config, setConfig] = useState<MLConfig | null>(null);
-  const [automlConfig, setAutomlConfig] = useState<AutoMLConfig | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const {
@@ -158,30 +140,11 @@ export const useMLSettings = () => {
     loading: isCleaning,
     error: cleanupError,
   } = useApiCall();
-  const {
-    execute: fetchAutoMLConfigApi,
-    loading: isAutomlLoading,
-    error: fetchAutoMLError,
-  } = useApiCall<{ config: AutoMLConfig }>();
-  const { execute: validateAutoMLConfigApi, error: validateAutoMLError } =
-    useApiCall();
-  const {
-    execute: generateAutoMLFeaturesApi,
-    loading: isAutomlSaving,
-    error: generateAutoMLError,
-  } = useApiCall();
-  const { execute: clearAutoMLCacheApi, error: clearAutoMLCacheError } =
-    useApiCall();
-
   const error =
     fetchError ||
     saveError ||
     resetError ||
-    cleanupError ||
-    fetchAutoMLError ||
-    validateAutoMLError ||
-    generateAutoMLError ||
-    clearAutoMLCacheError;
+    cleanupError;
 
   const showSuccessMessage = (message: string) => {
     setSuccessMessage(message);
@@ -240,78 +203,16 @@ export const useMLSettings = () => {
     setConfig(newConfig);
   };
 
-  const fetchAutoMLConfig = useCallback(async () => {
-    await fetchAutoMLConfigApi("/api/automl-features/default-config", {
-      onSuccess: (data) => setAutomlConfig(data.config),
-    });
-  }, [fetchAutoMLConfigApi]);
-
-  const validateAutoMLConfig = useCallback(
-    async (config: AutoMLConfig) => {
-      return await validateAutoMLConfigApi(
-        "/api/automl-features/validate-config",
-        {
-          method: "POST",
-          body: config,
-        }
-      );
-    },
-    [validateAutoMLConfigApi]
-  );
-
-  const generateAutoMLFeatures = useCallback(
-    async (
-      symbol: string,
-      timeframe: string = "1h",
-      limit: number = 1000,
-      automlConfig?: AutoMLConfig,
-      includeTarget: boolean = false
-    ) => {
-      const result = await generateAutoMLFeaturesApi(
-        "/api/automl-features/generate",
-        {
-          method: "POST",
-          body: {
-            symbol,
-            timeframe,
-            limit,
-            automl_config: automlConfig,
-            include_target: includeTarget,
-          },
-          onSuccess: () =>
-            showSuccessMessage("AutoML特徴量が正常に生成されました"),
-        }
-      );
-      return result;
-    },
-    [generateAutoMLFeaturesApi]
-  );
-
-  const clearAutoMLCache = useCallback(async () => {
-    const result = await clearAutoMLCacheApi(
-      "/api/automl-features/clear-cache",
-      {
-        method: "POST",
-        onSuccess: () =>
-          showSuccessMessage("AutoMLキャッシュがクリアされました"),
-      }
-    );
-    return result;
-  }, [clearAutoMLCacheApi]);
-
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
 
   return {
     config,
-    automlConfig,
     isLoading,
     isSaving,
     isResetting,
     isCleaning,
-    isAutomlLoading,
-    isAutomlSaving,
     error,
     successMessage,
     fetchConfig,
@@ -320,10 +221,5 @@ export const useMLSettings = () => {
     cleanupOldModels,
     updateConfig,
     setConfig,
-    fetchAutoMLConfig,
-    validateAutoMLConfig,
-    generateAutoMLFeatures,
-    clearAutoMLCache,
-    setAutomlConfig,
   };
 };

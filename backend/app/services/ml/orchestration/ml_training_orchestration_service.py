@@ -467,7 +467,6 @@ class MLTrainingOrchestrationService:
             memory_before = process.memory_info().rss / 1024 / 1024
 
             # AutoML関連のリソースをクリーンアップ
-            self._cleanup_autofeat_resources()
             self._cleanup_enhanced_feature_service()
             self._cleanup_ml_training_service()
             self._cleanup_data_processor()
@@ -489,36 +488,6 @@ class MLTrainingOrchestrationService:
 
         except Exception as e:
             logger.error(f"AutoMLクリーンアップエラー: {e}")
-
-    def _cleanup_autofeat_resources(self):
-        """AutoFeat関連リソースのクリーンアップ"""
-        try:
-
-            # AutoFeatの一時ファイルとキャッシュをクリア
-            import os
-            import shutil
-            import tempfile
-
-            # AutoFeatが作成する一時ディレクトリをクリーンアップ
-            temp_dir = tempfile.gettempdir()
-            for item in os.listdir(temp_dir):
-                if item.startswith("autofeat_"):
-                    temp_path = os.path.join(temp_dir, item)
-                    try:
-                        if os.path.isdir(temp_path):
-                            shutil.rmtree(temp_path)
-                        else:
-                            os.remove(temp_path)
-
-                    except Exception as e:
-                        logger.warning(
-                            f"AutoFeat一時ファイル削除エラー {temp_path}: {e}"
-                        )
-
-            logger.debug("AutoFeatリソースクリーンアップ完了")
-
-        except Exception as e:
-            logger.warning(f"AutoFeatクリーンアップエラー: {e}")
 
     def _cleanup_enhanced_feature_service(self):
         """FeatureEngineeringService関連リソースのクリーンアップ"""

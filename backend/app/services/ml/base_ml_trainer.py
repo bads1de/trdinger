@@ -25,7 +25,6 @@ from ...utils.error_handler import (
 )
 from .config import ml_config
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
-from .feature_engineering.automl_features.automl_config import AutoMLConfig
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .model_manager import model_manager
 
@@ -61,22 +60,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.config = ml_config
 
-        # AutoML設定の処理（デフォルトで有効化）
-        if automl_config:
-            # AutoMLConfig.from_dict に統一
-            automl_config_obj = AutoMLConfig.from_dict(automl_config)
-            self.feature_service = FeatureEngineeringService(
-                automl_config=automl_config_obj
-            )
-            self.use_automl = True
-            logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました（明示的設定）")
-        else:
-            # デフォルトで拡張特徴量エンジニアリングを有効化
-            self.feature_service = FeatureEngineeringService(
-                automl_config=AutoMLConfig.get_default_config()
-            )
-            self.use_automl = True
-            logger.debug("🤖 AutoML特徴量エンジニアリングを有効化しました（デフォルト設定）")
+        # 特徴量エンジニアリングサービスの初期化（autofeat機能は削除済み）
+        self.feature_service = FeatureEngineeringService(automl_config=None)
+        self.use_automl = False
+        logger.debug("特徴量エンジニアリングサービスを初期化しました")
 
         # トレーナー設定の処理（脆弱性修正）
         self.trainer_config = trainer_config or {}
@@ -547,31 +534,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             if missing_columns:
                 raise ValueError(f"必要な列が不足しています: {missing_columns}")
 
-            # AutoMLを使用する場合は拡張特徴量計算を実行
-            if self.use_automl and hasattr(
-                self.feature_service, "calculate_enhanced_features"
-            ):
-                # ターゲット変数を計算（AutoML特徴量生成用）
-                target = self._calculate_target_for_automl(ohlcv_data)
-
-                logger.info("🤖 AutoML拡張特徴量計算を実行中...")
-                enhanced_features = self.feature_service.calculate_enhanced_features(
-                    ohlcv_data=ohlcv_data,
-                    funding_rate_data=funding_rate_data,
-                    open_interest_data=open_interest_data,
-                    automl_config=self.automl_config,
-                    target=target,
-                )
-
-                # 拡張特徴量計算後の検証
-                if enhanced_features is not None and not enhanced_features.empty:
-                    return enhanced_features
-                else:
-                    logger.warning(
-                        "拡張特徴量計算で空の結果、基本特徴量にフォールバック"
-                    )
-
-            # 基本特徴量計算
+            # 基本特徴量計算（autofeat機能は削除済み）
             logger.info("📊 基本特徴量計算を実行中...")
             basic_features = self.feature_service.calculate_advanced_features(
                 ohlcv_data=ohlcv_data,

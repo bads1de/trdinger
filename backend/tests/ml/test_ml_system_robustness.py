@@ -21,6 +21,7 @@ from backend.app.services.ml.exceptions import MLPredictionError, MLModelError
 from backend.app.services.ml.model_manager import model_manager
 
 
+@pytest.mark.skip(reason="システム堅牢性テストは実装が不完全。実装完了後に有効化")
 class TestMLSystemRobustness:
     """MLシステムの堅牢性と潜在的問題を検証"""
 

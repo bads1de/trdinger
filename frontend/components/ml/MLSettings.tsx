@@ -8,8 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import InfoModal from "@/components/common/InfoModal";
-import { useMLSettings, AutoMLConfig } from "@/hooks/useMLSettings";
-import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
+import { useMLSettings } from "@/hooks/useMLSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Settings,
@@ -19,7 +18,7 @@ import {
   Brain,
   Trash2,
   Info,
-  Bot,
+  Database,
 } from "lucide-react";
 import { ML_INFO_MESSAGES } from "@/constants/info";
 
@@ -31,13 +30,10 @@ import { ML_INFO_MESSAGES } from "@/constants/info";
 export default function MLSettings() {
   const {
     config,
-    automlConfig,
     isLoading,
     isSaving,
     isResetting,
     isCleaning,
-    isAutomlLoading,
-    isAutomlSaving,
     error,
     successMessage,
     saveConfig,
@@ -58,33 +54,6 @@ export default function MLSettings() {
     setModalContent({ title, content });
     setIsInfoModalOpen(true);
   };
-
-  const handleAutoMLConfigChange = (newConfig: AutoMLConfig) => {
-    setAutomlConfig(newConfig);
-  };
-
-  const validateAutoMLConfig = async (config: AutoMLConfig) => {
-    try {
-      return await validateAutoMLConfigAPI(config);
-    } catch (error) {
-      // フォールバック：簡単な検証ロジック
-      const errors: string[] = [];
-      const warnings: string[] = [];
-
-      return {
-        valid: errors.length === 0,
-        errors,
-        warnings,
-      };
-    }
-  };
-
-  // AutoML設定を初期化
-  useEffect(() => {
-    if (!automlConfig) {
-      fetchAutoMLConfig();
-    }
-  }, [automlConfig, fetchAutoMLConfig]);
 
   if (isLoading) {
     return <LoadingSpinner text="設定を読み込んでいます..." />;
@@ -126,9 +95,9 @@ export default function MLSettings() {
             <Settings className="h-4 w-4" />
             基本設定
           </TabsTrigger>
-          <TabsTrigger value="automl" className="flex items-center gap-2">
-            <Bot className="h-4 w-4" />
-            AutoML特徴量
+          <TabsTrigger value="data-preprocessing" className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            データ前処理
           </TabsTrigger>
         </TabsList>
 
@@ -345,31 +314,22 @@ export default function MLSettings() {
           </div>
         </TabsContent>
 
-        {/* AutoML特徴量タブ */}
-        <TabsContent value="automl">
-          {isAutomlLoading ? (
-            <LoadingSpinner text="AutoML設定を読み込んでいます..." />
-          ) : automlConfig ? (
-            <AutoMLFeatureSettings
-              settings={automlConfig}
-              onChange={handleAutoMLConfigChange}
-              onValidate={validateAutoMLConfig}
-              isLoading={isAutomlSaving}
-            />
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">
-                AutoML設定を読み込めませんでした
-              </p>
-              <ActionButton
-                onClick={fetchAutoMLConfig}
-                variant="secondary"
-                size="sm"
-              >
-                再読み込み
-              </ActionButton>
-            </div>
-          )}
+        {/* データ前処理タブ */}
+        <TabsContent value="data-preprocessing">
+          <Card>
+            <CardHeader>
+              <CardTitle>データ前処理設定</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  このシステムは既存の108特徴量を使用しています。
+                  特徴量は自動的に計算され、最適化されます。
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

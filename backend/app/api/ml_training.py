@@ -11,7 +11,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.automl_features import AutoMLConfigModel
 from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
@@ -153,10 +152,7 @@ class MLTrainingConfig(BaseModel):
         None, description="ハイパーパラメータ最適化設定"
     )
 
-    # AutoML特徴量エンジニアリング設定
-    automl_config: Optional[AutoMLConfigModel] = Field(
-        None, description="AutoML特徴量エンジニアリング設定"
-    )
+    # AutoML特徴量エンジニアリング設定は削除されました（autofeat機能の削除に伴う）
 
     # アンサンブル学習設定
     ensemble_config: Optional[EnsembleConfig] = Field(

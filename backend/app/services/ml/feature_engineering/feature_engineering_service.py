@@ -27,17 +27,9 @@ from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 
-# AutoML関連のインポート（オプション）
-AutoFeatCalculator = None
-
-try:
-    from .automl_features.autofeat_calculator import AutoFeatCalculator
-    from .automl_features.automl_config import AutoMLConfig
-    from .automl_features.performance_optimizer import PerformanceOptimizer
-
-    AUTOML_AVAILABLE = True
-except ImportError:
-    AUTOML_AVAILABLE = False
+# AutoML関連のインポート（削除済み）
+# autofeat機能は不要と判断されたため削除
+AUTOML_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -71,64 +63,20 @@ class FeatureEngineeringService:
         # データ頻度統一マネージャー
         self.frequency_manager = DataFrequencyManager()
 
-        # AutoML機能の初期化（オプション）
-        self.automl_enabled = automl_config is not None and AUTOML_AVAILABLE
-        if self.automl_enabled:
-            # AutoMLConfigが利用可能な場合のみ使用
-            if AUTOML_AVAILABLE and AutoMLConfig is not None:
-                self.automl_config = (
-                    automl_config or AutoMLConfig.get_financial_optimized_config()
-                )
-            else:
-                self.automl_config = None
+        # AutoML機能は削除されました（autofeat不要のため）
+        self.automl_enabled = False
+        self.automl_config = None
 
-            # AutoML特徴量計算クラス
-            if (
-                self.automl_config is not None
-                and hasattr(self.automl_config, "autofeat")
-                and self.automl_config.autofeat is not None
-                and AutoFeatCalculator is not None
-            ):
-                self.autofeat_calculator = AutoFeatCalculator(
-                    self.automl_config.autofeat
-                )
-            else:
-                self.autofeat_calculator = None
+        # 暗号通貨特化特徴量エンジニアリング（デフォルトで有効）
+        self.crypto_features = CryptoFeatures()
+        logger.debug("暗号通貨特化特徴量を有効化しました")
 
-            # パフォーマンス最適化クラス
-            if self.automl_config is not None and PerformanceOptimizer is not None:
-                self.performance_optimizer = PerformanceOptimizer()
-            else:
-                self.performance_optimizer = None
+        # 高度な特徴量エンジニアリング（デフォルトで有効）
+        self.advanced_features = AdvancedFeatureEngineer()
+        logger.debug("高度な特徴量エンジニアリングを有効化しました")
 
-            # 暗号通貨特化特徴量エンジニアリング（デフォルトで有効）
-            self.crypto_features = CryptoFeatures()
-            logger.debug("暗号通貨特化特徴量を有効化しました")
-
-            # 高度な特徴量エンジニアリング（デフォルトで有効）
-            self.advanced_features = AdvancedFeatureEngineer()
-            logger.debug("高度な特徴量エンジニアリングを有効化しました")
-
-            # 統計情報
-            self.last_enhancement_stats = {}
-
-        else:
-            self.automl_config = None
-            if automl_config is not None and not AUTOML_AVAILABLE:
-                logger.warning(
-                    "AutoML設定が指定されましたが、AutoMLモジュールが利用できません"
-                )
-
-            # 暗号通貨特化特徴量エンジニアリング（AutoMLがNoneでもデフォルトで有効）
-            self.crypto_features = CryptoFeatures()
-            logger.debug("暗号通貨特化特徴量を有効化しました（デフォルト）")
-
-            # 高度な特徴量エンジニアリング（AutoMLがNoneでもデフォルトで有効）
-            self.advanced_features = AdvancedFeatureEngineer()
-            logger.debug("高度な特徴量エンジニアリングを有効化しました（デフォルト）")
-
-            # 統計情報
-            self.last_enhancement_stats = {}
+        # 統計情報
+        self.last_enhancement_stats = {}
 
     def calculate_advanced_features(
         self,
@@ -494,17 +442,7 @@ class FeatureEngineeringService:
                 include_advanced_features=True,  # AdvancedFeatureEngineerをデフォルトで有効
             )
 
-            # ステップ2: AutoFeat特徴量を追加 + 特徴量選択
-            if (
-                self.automl_config is not None
-                and hasattr(self.automl_config, "autofeat")
-                and self.automl_config.autofeat is not None
-                and hasattr(self.automl_config.autofeat, "enabled")
-                and self.automl_config.autofeat.enabled
-            ):
-                result_df = self._step2_autofeat_features(
-                    result_df, target, max_features_per_step
-                )
+            # ステップ2: AutoFeat特徴量は削除されました（不要のため）
 
             # 最終的な特徴量統計を記録
             final_feature_count = len(result_df.columns)
@@ -586,65 +524,7 @@ class FeatureEngineeringService:
         )
         return result_df
 
-    def _step2_autofeat_features(
-        self,
-        df: pd.DataFrame,
-        target: Optional[pd.Series],
-        max_features: int = 25,  # 特徴量数削減: 100 → 50 → 25
-    ) -> pd.DataFrame:
-        """ステップ2: AutoFeat特徴量を追加 + 特徴量選択"""
-        if target is None:
-            logger.warning(
-                "ターゲット変数がないため、AutoFeat特徴量生成をスキップします"
-            )
-            return df
-
-        logger.info("🧬 ステップ2: AutoFeat特徴量を計算中...")
-        start_time = time.time()
-        initial_feature_count = len(df.columns)
-
-        # AutoFeat特徴量を計算
-        if self.autofeat_calculator is None:
-            logger.warning("AutoFeat calculator is not available")
-            return df
-
-        autofeat_max_features = None
-        if (
-            self.automl_config is not None
-            and hasattr(self.automl_config, "autofeat")
-            and self.automl_config.autofeat is not None
-            and hasattr(self.automl_config.autofeat, "max_features")
-        ):
-            autofeat_max_features = self.automl_config.autofeat.max_features
-
-        result_df, generation_info = self.autofeat_calculator.generate_features(
-            df=df,
-            target=target,
-            task_type="regression",
-            max_features=autofeat_max_features,
-        )
-
-        # 特徴量数が制限を超えている場合は選択を実行
-        if len(result_df.columns) > max_features:
-            logger.info(f"特徴量数が制限({max_features})を超過。特徴量選択を実行中...")
-            result_df = self._select_top_features(result_df, target, max_features)
-
-        autofeat_time = time.time() - start_time
-        added_features = len(result_df.columns) - initial_feature_count
-
-        # 統計情報を記録
-        if hasattr(self, "last_enhancement_stats"):
-            self.last_enhancement_stats.update(
-                {
-                    "autofeat_features": added_features,
-                    "autofeat_time": autofeat_time,
-                }
-            )
-
-        logger.info(
-            f"✅ ステップ2完了: {added_features}個のAutoFeat特徴量追加 ({autofeat_time:.2f}秒)"
-        )
-        return result_df
+    # _step2_autofeat_features メソッドは削除されました（autofeat機能の削除に伴う）
 
     def _generate_cache_key(
         self,
@@ -914,23 +794,7 @@ class FeatureEngineeringService:
             return
 
         try:
-            # AutoFeat設定の更新
-            if "autofeat" in config_dict and self.automl_config is not None:
-                autofeat_config = config_dict["autofeat"]
-                if (
-                    isinstance(autofeat_config, dict)
-                    and hasattr(self.automl_config, "autofeat")
-                    and self.automl_config.autofeat is not None
-                ):
-                    for key, value in autofeat_config.items():
-                        if hasattr(self.automl_config.autofeat, key):
-                            setattr(self.automl_config.autofeat, key, value)
-
-                    # AutoFeatCalculatorの設定も更新
-                    if self.autofeat_calculator is not None and hasattr(
-                        self.autofeat_calculator, "config"
-                    ):
-                        self.autofeat_calculator.config = self.automl_config.autofeat
+            # AutoFeat設定は削除されました（autofeat機能の削除に伴う）
 
             logger.info("AutoML設定を更新しました")
 
@@ -948,13 +812,7 @@ class FeatureEngineeringService:
         if not self.automl_enabled:
             return {}
 
-        return {
-            "autofeat": (
-                self.autofeat_calculator.get_feature_names()
-                if self.autofeat_calculator
-                else []
-            ),
-        }
+        return {}  # AutoML特徴量は削除されました
 
     def clear_automl_cache(self):
         """AutoML特徴量のキャッシュをクリア"""
@@ -962,9 +820,7 @@ class FeatureEngineeringService:
             return
 
         try:
-            if self.autofeat_calculator:
-                self.autofeat_calculator.clear_model()
-
+            # AutoML特徴量キャッシュは削除されました
             # 強制ガベージコレクション
             import gc
 
@@ -1009,51 +865,7 @@ class FeatureEngineeringService:
                 errors.append("AutoML機能が利用できません")
                 return {"valid": False, "errors": errors, "warnings": warnings}
 
-            # AutoFeat設定の検証
-            if hasattr(config, "autofeat"):
-                autofeat_config = config.autofeat
-
-                # AutoFeatが有効な場合のチェック
-                if autofeat_config.enabled:
-                    # feateng_stepsのチェック
-                    if not (1 <= autofeat_config.feateng_steps <= 3):
-                        errors.append(
-                            "AutoFeatのfeateng_stepsは1から3の範囲である必要があります（推奨: 2）"
-                        )
-
-                    # featsel_runsのチェック
-                    if not (1 <= autofeat_config.featsel_runs <= 10):
-                        errors.append(
-                            "AutoFeatのfeatsel_runsは1から10の範囲である必要があります（推奨: 5）"
-                        )
-
-                    # メモリ使用量の警告
-                    if autofeat_config.max_gb > 4.0:
-                        warnings.append(
-                            "AutoFeatのメモリ使用量が4GBを超えています。メモリ不足の可能性があります"
-                        )
-
-                    # feateng_stepsの警告
-                    if autofeat_config.feateng_steps >= 3:
-                        warnings.append(
-                            "feateng_steps=3以上は指数関数的に特徴量が増加します。メモリ使用量に注意してください"
-                        )
-
-            # AutoML機能が利用可能かチェック
-            if not AUTOML_AVAILABLE and config.autofeat.enabled:
-                warnings.append(
-                    "AutoML機能が利用できません。必要なライブラリがインストールされていない可能性があります"
-                )
-
-            # 設定の整合性チェック
-            if config.autofeat.enabled:
-                # feateng_stepsとメモリ使用量の整合性チェック
-                if config.autofeat.feateng_steps >= 3 and config.autofeat.max_gb < 2.0:
-                    warnings.append(
-                        f"feateng_steps={config.autofeat.feateng_steps}で"
-                        f"max_gb={config.autofeat.max_gb}GBは少ない可能性があります。"
-                        "メモリ不足に注意してください"
-                    )
+            # AutoFeat設定の検証は削除されました（autofeat機能の削除に伴う）
 
             return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
 
@@ -1136,10 +948,7 @@ class FeatureEngineeringService:
                 if hasattr(self, "last_enhancement_stats"):
                     self.last_enhancement_stats.clear()
 
-                if self.autofeat_calculator and hasattr(
-                    self.autofeat_calculator, "cleanup"
-                ):
-                    self.autofeat_calculator.cleanup()
+                # AutoML特徴量キャッシュのクリーンアップは削除されました
 
                 # パフォーマンス最適化クラスのクリーンアップ
                 if self.performance_optimizer and hasattr(

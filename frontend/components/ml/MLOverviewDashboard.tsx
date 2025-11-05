@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import FeatureImportanceChart from "./FeatureImportanceChart";
-import AutoMLFeatureAnalysis from "./AutoMLFeatureAnalysis";
 import ModelInfoCard from "./ModelInfoCard";
 import ModelPerformanceCard from "./ModelPerformanceCard";
 import ModelManagement from "./ModelManagement";
@@ -176,12 +175,6 @@ export default function MLOverviewDashboard({
             key={`feature-importance-${refreshKey}`}
             topN={10}
             height={400}
-          />
-
-          {/* AutoML特徴量分析 */}
-          <AutoMLFeatureAnalysis
-            key={`automl-analysis-${refreshKey}`}
-            topN={20}
           />
         </div>
       </div>

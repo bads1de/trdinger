@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.auto_strategy import router as auto_strategy_router
-from app.api.automl_features import router as automl_features_router
 from app.api.backtest import router as backtest_router
 from app.api.data_collection import router as data_collection_router
 from app.api.data_reset import router as data_reset_router
@@ -104,7 +103,6 @@ def create_app() -> FastAPI:
     app.include_router(strategies_router)
     app.include_router(ml_training_router)
     app.include_router(ml_management_router)
-    app.include_router(automl_features_router)
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)

@@ -75,7 +75,6 @@ dependencies = [
     "optuna-dashboard>=0.13.0",
 
     # AutoML特徴量エンジニアリングライブラリ
-    "autofeat>=2.1.0",
     "dask>=2023.10.0",
 
     # メモリ管理ライブラリ

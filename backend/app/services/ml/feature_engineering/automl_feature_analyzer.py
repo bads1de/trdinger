@@ -49,14 +49,7 @@ class AutoMLFeatureAnalyzer:
 
     def _initialize_feature_patterns(self) -> Dict[str, FeaturePatternConfig]:
         """特徴量パターンを初期化"""
-        return {
-            "autofeat": {  # AutoFeat: Automated Feature Engineering library
-                "prefix": "AF_",
-                "patterns": [
-                    r"^AF_.*",
-                ],
-            },
-        }
+        return {}  # autofeat機能は削除されました
 
     def _initialize_category_descriptions(self) -> Dict[str, str]:
         """カテゴリ説明を初期化"""
@@ -205,9 +198,7 @@ class AutoMLFeatureAnalyzer:
         if any(inter in name_lower for inter in ["*", "+", "/", "interaction"]):
             return "interaction"
 
-        # AutoFeat特徴量
-        if feature_type == "autofeat":
-            return "genetic"
+        # autofeat機能は削除されました
 
         # 手動特徴量
         if feature_type == "manual":
@@ -221,9 +212,7 @@ class AutoMLFeatureAnalyzer:
         """特徴量の説明を生成"""
         base_desc = self.category_descriptions.get(category, "特徴量")
 
-        if feature_type == "autofeat":
-            return f"AutoFeat生成: {base_desc}"
-        elif feature_type == "manual":
+        if feature_type == "manual":
             return f"手動作成: {base_desc}"
         else:
             return base_desc
@@ -289,7 +278,7 @@ class AutoMLFeatureAnalyzer:
 
     def _analyze_automl_impact(self, features: List[FeatureAnalysis]) -> Dict[str, Any]:
         """AutoML効果を分析"""
-        automl_types = ["autofeat"]
+        automl_types = []  # autofeat機能は削除されました
         manual_features = [f for f in features if f.feature_type == "manual"]
         automl_features = [f for f in features if f.feature_type in automl_types]
 

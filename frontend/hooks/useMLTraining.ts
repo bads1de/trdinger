@@ -37,28 +37,6 @@ export interface OptimizationSettingsConfig {
 }
 
 /**
- * AutoML特徴量設定インターフェース
- *
- * 自動特徴量エンジニアリングの設定を定義します。
- * autofeatの特徴量生成手法をサポートしています。
- */
-export interface AutoMLFeatureConfig {
-  /** autofeat特徴量生成設定 */
-  autofeat: {
-    /** autofeatを有効にするかどうか */
-    enabled: boolean;
-    /** 最大特徴量数 */
-    max_features: number;
-    /** 世代数 */
-    generations: number;
-    /** 集団サイズ */
-    population_size: number;
-    /** トーナメントサイズ */
-    tournament_size: number;
-  };
-}
-
-/**
  * 単一モデル設定インターフェース
  *
  * 単一の機械学習モデルの設定を定義します。
@@ -90,8 +68,6 @@ export interface TrainingConfig {
   random_state: number;
   /** 最適化設定（オプション） */
   optimization_settings?: OptimizationSettingsConfig;
-  /** AutoML特徴量設定（オプション） */
-  automl_config?: AutoMLFeatureConfig;
   /** 単一モデル設定（オプション） */
   single_model_config?: SingleModelConfig;
 }
@@ -166,41 +142,6 @@ export interface ProcessListResponse {
 }
 
 /**
- * デフォルトのAutoML設定を作成
- *
- * 標準的なAutoML設定を返します。autofeatは無効です。
- *
- * @returns {AutoMLFeatureConfig} デフォルトのAutoML設定
- */
-export const getDefaultAutoMLConfig = (): AutoMLFeatureConfig => ({
-  autofeat: {
-    enabled: false, // デフォルトでは無効（計算コストが高いため）
-    max_features: 50,
-    generations: 10,
-    population_size: 30,
-    tournament_size: 3,
-  },
-});
-
-/**
- * 金融最適化AutoML設定を作成
- *
- * 金融データに最適化されたAutoML設定を返します。
- * autofeatが有効で、より多くの特徴量を生成します。
- *
- * @returns {AutoMLFeatureConfig} 金融最適化されたAutoML設定
- */
-export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
-  autofeat: {
-    enabled: true,
-    max_features: 100,
-    generations: 20,
-    population_size: 50,
-    tournament_size: 3,
-  },
-});
-
-/**
  * MLトレーニング管理フック
  *
  * 機械学習モデルのトレーニングを管理します。
@@ -217,7 +158,7 @@ export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
  * } = useMLTraining();
  *
  * // トレーニングを開始
- * startTraining(optimizationSettings, automlConfig);
+ * startTraining(optimizationSettings);
  *
  * // トレーニングを停止
  * stopTraining();
@@ -234,7 +175,7 @@ export const getFinancialOptimizedAutoMLConfig = (): AutoMLFeatureConfig => ({
  *   setError: (error: string | null) => void,
  *   startTrainingLoading: boolean,
  *   stopTrainingLoading: boolean,
- *   startTraining: (optimizationSettings?: OptimizationSettingsConfig, automlConfig?: AutoMLFeatureConfig, ensembleConfig?: EnsembleSettingsConfig, singleModelConfig?: SingleModelConfig) => Promise<void>,
+ *   startTraining: (optimizationSettings?: OptimizationSettingsConfig, ensembleConfig?: EnsembleSettingsConfig, singleModelConfig?: SingleModelConfig) => Promise<void>,
  *   stopTraining: (force?: boolean) => Promise<void>,
  *   getActiveProcesses: () => Promise<ProcessListResponse | null>,
  *   forceStopProcess: (processId: string) => Promise<void>,
@@ -315,20 +256,18 @@ export const useMLTraining = () => {
   const startTraining = useCallback(
     async (
       optimizationSettings?: OptimizationSettingsConfig,
-      automlConfig?: AutoMLFeatureConfig,
       ensembleConfig?: EnsembleSettingsConfig,
       singleModelConfig?: SingleModelConfig
     ) => {
       setError(null);
 
-      // 最適化設定、AutoML設定、アンサンブル設定、単一モデル設定を含むconfigを作成
+      // 最適化設定、アンサンブル設定、単一モデル設定を含むconfigを作成
       const trainingConfig = {
         ...config,
         optimization_settings: optimizationSettings?.enabled
           ? optimizationSettings
           : undefined,
-        automl_config: automlConfig,
-        ensemble_config: ensembleConfig, // 常にensembleConfigを送信（enabled: falseの場合も含む）
+        ensemble_config: ensembleConfig,
         single_model_config: singleModelConfig,
       };
 

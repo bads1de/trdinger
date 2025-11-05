@@ -211,9 +211,7 @@ class TestHybridFeatureAdapter:
 
         automl_config = {
             "enabled": True,
-            "feature_generation": {
-                "autofeat_enabled": False,
-            },
+            "feature_generation": {},
         }
 
         adapter = HybridFeatureAdapter(automl_config=automl_config)

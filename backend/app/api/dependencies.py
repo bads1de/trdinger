@@ -14,9 +14,6 @@ from app.services.backtest.backtest_service import BacktestService
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
-from app.services.ml.feature_engineering.automl_feature_generation_service import (
-    AutoMLFeatureGenerationService,
-)
 from app.services.auto_strategy.utils.strategy_integration_service import (
     StrategyIntegrationService,
 )
@@ -134,33 +131,7 @@ def get_strategy_integration_service_with_db(
     return StrategyIntegrationService(db)
 
 
-def get_automl_feature_generation_service(
-    db: Session = Depends(get_db),
-) -> AutoMLFeatureGenerationService:
-    """
-    AutoMLFeatureGenerationServiceのインスタンスを取得
-
-    Args:
-        db: データベースセッション
-
-    Returns:
-        AutoMLFeatureGenerationServiceインスタンス
-
-    Raises:
-        HTTPException: サービス初期化に失敗した場合
-    """
-    try:
-        return AutoMLFeatureGenerationService(db)
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.error(f"AutoMLFeatureGenerationService初期化エラー: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AutoMLFeatureGenerationServiceが利用できません。サーバーログを確認してください。",
-        )
-
+# get_automl_feature_generation_service は削除されました（autofeat機能の削除に伴う）
 
 # Dependency factories for various orchestration services (avoid direct new() in API modules)
 def get_data_collection_orchestration_service():

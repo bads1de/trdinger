@@ -17,9 +17,6 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  Bot,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,16 +24,11 @@ import { Switch } from "@/components/ui/switch";
 import OptimizationSettings, {
   OptimizationSettingsConfig,
 } from "./OptimizationSettings";
-import AutoMLFeatureSettings from "./AutoMLFeatureSettings";
 import DataPreprocessingSettings, {
   defaultDataPreprocessingConfig,
 } from "./DataPreprocessingSettings";
 import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
 import { SingleModelSettingsConfig } from "./SingleModelSettings";
-import {
-  AutoMLFeatureConfig,
-  getDefaultAutoMLConfig,
-} from "@/hooks/useMLTraining";
 import { StopTrainingDialog } from "@/components/common/ConfirmDialog";
 
 /**
@@ -66,10 +58,6 @@ export default function MLTraining() {
       parameter_space: {},
     });
 
-  const [automlSettings, setAutomlSettings] = useState<AutoMLFeatureConfig>(
-    getDefaultAutoMLConfig()
-  );
-
   const [preprocessingSettings, setPreprocessingSettings] = useState(
     defaultDataPreprocessingConfig
   );
@@ -98,14 +86,7 @@ export default function MLTraining() {
       model_type: "lightgbm",
     });
 
-  const [automlEnabled, setAutomlEnabled] = useState(false);
-  const [showAutoMLSettings, setShowAutoMLSettings] = useState(false);
   const [showStopDialog, setShowStopDialog] = useState(false);
-
-  // AutoML設定が有効かどうかを判定
-  const isAutoMLEnabled = () => {
-    return automlEnabled;
-  };
 
   const getStatusIcon = () => {
     switch (trainingStatus.status) {
@@ -250,96 +231,6 @@ export default function MLTraining() {
             />
           </div>
 
-          {/* AutoML特徴量エンジニアリング設定 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                <span>AutoML特徴量エンジニアリング</span>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                時系列データから自動で特徴量を生成・選択
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="automl-enabled"
-                    className="text-sm font-medium"
-                  >
-                    AutoML特徴量エンジニアリングを有効化
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    AutoFeat を使用した高度な特徴量生成
-                  </p>
-                </div>
-                <Switch
-                  id="automl-enabled"
-                  checked={automlEnabled}
-                  onCheckedChange={(checked) => {
-                    setAutomlEnabled(checked);
-                    if (checked) {
-                      setAutomlSettings(getDefaultAutoMLConfig());
-                    } else {
-                      setAutomlSettings({
-                        autofeat: {
-                          ...automlSettings.autofeat,
-                          enabled: false,
-                        },
-                      });
-                    }
-                  }}
-                  disabled={trainingStatus.is_training}
-                />
-              </div>
-
-              {automlEnabled && (
-                <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">詳細設定</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAutoMLSettings(!showAutoMLSettings)}
-                      disabled={trainingStatus.is_training}
-                    >
-                      {showAutoMLSettings ? (
-                        <>
-                          <ChevronUp className="h-4 w-4 mr-1" />
-                          隠す
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-4 w-4 mr-1" />
-                          表示
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  {showAutoMLSettings && (
-                    <div className="space-y-4">
-                      {/* AutoML詳細設定 */}
-                      <AutoMLFeatureSettings
-                        settings={automlSettings}
-                        onChange={setAutomlSettings}
-                        isLoading={trainingStatus.is_training}
-                      />
-
-                      {/* データ前処理設定 */}
-                      <DataPreprocessingSettings
-                        settings={preprocessingSettings}
-                        onChange={setPreprocessingSettings}
-                        isLoading={trainingStatus.is_training}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* アンサンブル設定 */}
           <EnsembleSettings
             settings={ensembleSettings}
@@ -353,12 +244,12 @@ export default function MLTraining() {
             {!trainingStatus.is_training ? (
               <ActionButton
                 onClick={() => {
-                  // 最適化設定、AutoML設定、アンサンブル設定、単一モデル設定を渡す
+                  // 最適化設定、アンサンブル設定、単一モデル設定を渡す
                   startTraining(
                     optimizationSettings,
-                    isAutoMLEnabled() ? automlSettings : undefined,
-                    ensembleSettings, // 常にensembleSettingsを送信（enabled: falseの場合も含む）
-                    singleModelSettings // 常にsingleModelSettingsを送信
+                    undefined, // AutoML機能は削除されました
+                    ensembleSettings,
+                    singleModelSettings
                   );
                 }}
                 variant="primary"
@@ -367,7 +258,6 @@ export default function MLTraining() {
                 {(() => {
                   const features = [];
                   if (optimizationSettings.enabled) features.push("最適化");
-                  if (isAutoMLEnabled()) features.push("AutoML");
                   if (ensembleSettings.enabled) {
                     features.push(`アンサンブル(${ensembleSettings.method})`);
                   } else {
