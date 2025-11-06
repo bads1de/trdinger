@@ -2,12 +2,12 @@
 データベース接続管理
 """
 
-import os
-from sqlalchemy import create_engine, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import QueuePool
 import logging
+import os
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import QueuePool
 
 logger = logging.getLogger(__name__)
 

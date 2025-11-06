@@ -5,7 +5,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -13,8 +13,11 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
-from app.services.auto_strategy.services.regime_detector import RegimeDetector
 from app.utils.label_generation import EventDrivenLabelGenerator
+
+# 循環インポート回避のため、型チェック時のみインポート
+if TYPE_CHECKING:
+    from app.services.auto_strategy.services.regime_detector import RegimeDetector
 
 from .data.data_conversion_service import DataConversionService
 from .data.data_integration_service import DataIntegrationError, DataIntegrationService
@@ -34,7 +37,7 @@ class BacktestDataService:
         ohlcv_repo: Optional[OHLCVRepository] = None,
         oi_repo: Optional[OpenInterestRepository] = None,
         fr_repo: Optional[FundingRateRepository] = None,
-        regime_detector: Optional[RegimeDetector] = None,
+        regime_detector: Optional["RegimeDetector"] = None,
         event_label_generator: Optional[EventDrivenLabelGenerator] = None,
     ):
         """
@@ -58,7 +61,7 @@ class BacktestDataService:
             retrieval_service=self._retrieval_service,
             conversion_service=self._conversion_service,
         )
-        self._regime_detector: Optional[RegimeDetector] = regime_detector
+        self._regime_detector: Optional["RegimeDetector"] = regime_detector
         self._event_label_generator = (
             event_label_generator or EventDrivenLabelGenerator()
         )
@@ -218,9 +221,11 @@ class BacktestDataService:
         """
         return self._integration_service.get_data_summary(df)
 
-    def _ensure_regime_detector(self) -> Optional[RegimeDetector]:
+    def _ensure_regime_detector(self) -> Optional["RegimeDetector"]:
         if self._regime_detector is None:
             try:
+                # 循環インポート回避のため、ここでインポート
+                from app.services.auto_strategy.services.regime_detector import RegimeDetector
                 self._regime_detector = RegimeDetector()
             except Exception as exc:  # noqa: BLE001
                 logger.warning(f"RegimeDetector初期化に失敗したため無効化します: {exc}")

@@ -273,7 +273,7 @@ class IndividualEvaluator:
 
             # レジーム別重み付け適用
             fitness_weights = config.fitness_weights.copy()
-            if regime_labels is not None:
+            if regime_labels is not None and len(regime_labels) > 0:
                 # レジーム分布を計算
                 unique, counts = np.unique(regime_labels, return_counts=True)
                 regime_distribution = dict(zip(unique, counts))

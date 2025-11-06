@@ -29,9 +29,10 @@
 2. **LightweightStackingEnsemble** - CPU 最適化スタッキング
 3. **RandomForestMetaLearner** - 過学習抑制メタモデル（2025 年最新研究）
 4. **Intel oneDAL 統合** - daal4py 変換で推論 2-3 倍高速化
-5. **CPU 最適化設定** - 各モデルの並列処理最適化
+5. **Intel Extension for scikit-learn** - sklearnex による透過的な高速化
+6. **CPU 最適化設定** - 各モデルの並列処理最適化
 
-**期待効果**: 予測精度 **4-7%向上**、推論速度 **2-3 倍向上**
+**期待効果**: 予測精度 **4-7%向上**、推論速度 **2-5 倍向上**（sklearnex 含む）
 
 ### 実装箇所
 
@@ -43,14 +44,16 @@ backend/app/services/ml/
 │   ├── lightweight_stacking.py          # 新規
 │   └── random_forest_meta.py            # 新規★
 ├── optimization/
-│   └── daal4py_converter.py             # 新規★
+│   ├── daal4py_converter.py             # 新規★
+│   └── sklearnex_optimizer.py           # 新規★★
 └── config/ml_config.py                  # CPU最適化設定追加
 
 backend/tests/ml/
 ├── test_tabnet_feature_extractor.py
 ├── test_lightweight_stacking.py
 ├── test_random_forest_meta.py           # 新規★
-└── test_daal4py_converter.py            # 新規★
+├── test_daal4py_converter.py            # 新規★
+└── test_sklearnex_optimizer.py          # 新規★★
 ```
 
 ### 主要クラス
@@ -102,6 +105,17 @@ class Daal4pyConverter:
     def get_speedup_info(self) -> Dict: ...
 ```
 
+#### SklearnexOptimizer
+
+```python
+class SklearnexOptimizer:
+    """Intel Extension for scikit-learn最適化（透過的パッチ適用）"""
+    def __init__(self): ...
+    def patch_sklearn(self) -> Dict: ...
+    def unpatch_sklearn(self) -> None: ...
+    def get_optimization_status(self) -> Dict: ...
+```
+
 ### CPU 最適化パラメータ
 
 **LightGBM**:
@@ -122,6 +136,22 @@ class Daal4pyConverter:
 {'device_name': 'cpu', 'n_steps': 3, 'batch_size': 256, 'max_epochs': 30}
 ```
 
+**NumPy/MKL 環境変数**:
+
+```python
+import os
+os.environ['MKL_NUM_THREADS'] = str(os.cpu_count())
+os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())
+```
+
+**Intel Extension for scikit-learn**:
+
+```python
+from sklearnex import patch_sklearn, unpatch_sklearn
+patch_sklearn()  # 透過的な高速化
+# 通常のscikit-learnと同じAPIを使用
+```
+
 ### テスト
 
 **主要テストケース**:
@@ -130,6 +160,7 @@ class Daal4pyConverter:
 - `test_lightweight_stacking.py`: init、fit、predict、CPU 設定
 - `test_random_forest_meta.py`: init、fit、predict、特徴重要度
 - `test_daal4py_converter.py`: 変換、予測、高速化確認
+- `test_sklearnex_optimizer.py`: パッチ適用、最適化状態、高速化確認
 
 ### 完了条件
 
@@ -144,33 +175,17 @@ class Daal4pyConverter:
 
 ---
 
-## 🎯 Phase 2: 市場マイクロストラクチャー指標（3-4 週間）
+## 🎯 Phase 2: 市場マイクロストラクチャー指標（2-3 週間）
 
 ### 概要
 
 **目的**: 市場の微細構造を捉える高度な指標追加
 
-**期待効果**: 予測精度 **3-6%向上**
+**期待効果**: 予測精度 **2-4%向上**
 
 ### 実装する指標
 
-#### 2.1 オンチェーンメトリクス（2024 年 VLDB 論文ベース）★NEW
-
-**ファイル**: `backend/app/services/ml/feature_engineering/onchain_features.py`
-
-```python
-def calculate_onchain_features(df, network_data=None, exchange_flow_data=None) -> pd.DataFrame:
-    """
-    オンチェーンメトリクス計算
-    - ネットワーク活動: アクティブアドレス、TX数/ボリューム、ハッシュレート
-    - 取引所フロー: 入出金量、ネットフロー、クジラ追跡
-    - NVT比率: ネットワーク価値評価
-    """
-```
-
-**データソース**: Glassnode API、CryptoQuant API、Blockchain.com API
-
-#### 2.2 出来高プロファイル指標
+#### 2.1 出来高プロファイル指標
 
 **ファイル**: `backend/app/services/ml/feature_engineering/volume_profile_features.py`
 
@@ -184,7 +199,7 @@ def calculate_volume_profile(df, price_col='close', volume_col='volume', n_bins=
     """
 ```
 
-#### 2.3 オーダーブック不均衡指標
+#### 2.2 オーダーブック不均衡指標
 
 **ファイル**: `backend/app/services/ml/feature_engineering/orderbook_features.py`
 
@@ -196,7 +211,7 @@ def calculate_orderbook_imbalance(df, bid_col='bid_volume', ask_col='ask_volume'
     """
 ```
 
-#### 2.4 資金調達率指標
+#### 2.3 資金調達率指標
 
 **ファイル**: `backend/app/services/ml/feature_engineering/funding_rate_features.py`
 
@@ -208,15 +223,85 @@ def calculate_funding_rate_features(df, funding_rate_col='funding_rate') -> pd.D
     """
 ```
 
+#### 2.4 マーケットマイクロストラクチャー拡張指標
+
+**ファイル**: `backend/app/services/ml/feature_engineering/microstructure_features.py`
+
+```python
+def calculate_microstructure_features(df, orderbook_df=None) -> pd.DataFrame:
+    """
+    マーケットマイクロストラクチャー指標計算
+    - オーダーブック不均衡: (bid_volume - ask_volume) / (bid_volume + ask_volume)
+    - 出来高加重ミッド価格: (bid_price * ask_volume + ask_price * bid_volume) / total_volume
+    - トレード完了確率指標（pT）
+    """
+```
+
 ### 完了条件
 
-- [ ] オンチェーンメトリクス実装
 - [ ] 出来高プロファイル実装
 - [ ] オーダーブック不均衡実装
 - [ ] 資金調達率実装
+- [ ] マーケットマイクロストラクチャー拡張実装
 - [ ] 各指標のユニットテスト
-- [ ] 予測精度 3%以上向上
+- [ ] 予測精度 2%以上向上
 - [ ] 特徴量重要度分析で有効性確認
+
+---
+
+## 🎯 Phase 2.75: 高度な特徴選択（mRMR 統合）（1-2 週間）★NEW
+
+### 概要
+
+**目的**: Boruta に mRMR を統合し、特徴選択精度を向上
+
+**期待効果**: 予測精度 **1-3%追加向上**、特徴削減率 **35-40%**
+
+### 主要コンポーネント
+
+#### MRMRSelector
+
+**ファイル**: `backend/app/services/ml/feature_engineering/mrmr_selector.py`
+
+```python
+class MRMRSelector:
+    """mRMR特徴選択（最大関連性・最小冗長性）"""
+    def __init__(self, n_features=10): ...
+    def fit(self, X, y) -> Dict: ...
+    def transform(self, X) -> pd.DataFrame: ...
+    def get_feature_scores(self) -> Dict: ...
+```
+
+**機能**: 相互情報量ベースの特徴選択、冗長性削減
+
+#### BoMGeneIntegrator
+
+**ファイル**: `backend/app/services/ml/feature_engineering/bomgene_integrator.py`
+
+```python
+class BoMGeneIntegrator:
+    """BorutaとmRMRの統合（BoMGene手法）"""
+    def __init__(self, max_features=20): ...
+    def fit_transform(self, X, y) -> Tuple[pd.DataFrame, Dict]: ...
+    def _mrmr_initial_selection(self, X, y) -> List: ...
+    def _boruta_verification(self, X, y, initial_features) -> List: ...
+    def _iterative_refinement(self, X, y, features) -> List: ...
+```
+
+**3 ステップアプローチ**:
+
+1. mRMR で初期候補選択（10-20 特徴）
+2. Boruta で検証と追加発見
+3. 相互情報量による反復的洗練
+
+### 完了条件
+
+- [ ] MRMRSelector 実装
+- [ ] BoMGeneIntegrator 実装
+- [ ] 特徴削減率 35-40%
+- [ ] 予測精度維持または向上
+- [ ] ユニットテスト全パス
+- [ ] Boruta 単独比較で優位性確認
 
 ---
 
@@ -265,8 +350,8 @@ class InteractionGenerator:
 4. Multi-timeframe momentum
 5. BB × RSI 組み合わせ
 6. VP × Price Momentum
-7. オンチェーン/価格比率
-8. 取引所フロー × Volatility
+7. Microstructure × Price Momentum
+8. Multi-timeframe Volume Profile
 
 ### 完了条件
 
@@ -277,6 +362,60 @@ class InteractionGenerator:
 - [ ] 予測精度維持または向上
 - [ ] ユニットテスト全パス
 - [ ] 過学習リスク定量的削減確認
+
+---
+
+## 🎯 Phase 3: モデル軽量化・推論最適化（2-3 週間）★NEW
+
+### 概要
+
+**目的**: モデル圧縮と推論速度の最適化
+
+**期待効果**: メモリ使用量 **30-40%削減**、推論速度 **1.5-2 倍向上**
+
+### 主要コンポーネント
+
+#### ModelQuantizer
+
+**ファイル**: `backend/app/services/ml/optimization/model_quantizer.py`
+
+```python
+class ModelQuantizer:
+    """モデル量子化（Post-Training Quantization）"""
+    def __init__(self, bits=8): ...
+    def quantize_model(self, model) -> Tuple[Any, Dict]: ...
+    def quantize_weights(self, weights) -> Tuple: ...
+    def dequantize_weights(self, quantized, scale, min_val) -> np.ndarray: ...
+```
+
+#### ModelPruner
+
+**ファイル**: `backend/app/services/ml/optimization/model_pruner.py`
+
+```python
+class ModelPruner:
+    """構造化プルーニング（ツリーモデル最適化）"""
+    def __init__(self, prune_ratio=0.2): ...
+    def prune_tree_model(self, model) -> Tuple[Any, Dict]: ...
+    def analyze_feature_importance(self, model) -> Dict: ...
+    def get_pruning_stats(self) -> Dict: ...
+```
+
+### 実装する最適化
+
+1. **Post-Training Quantization (PTQ)**: 32bit → 8bit 変換
+2. **構造化プルーニング**: 重要度の低い枝の削減（20-30%）
+3. **ハイパーパラメータ調整**: メモリ効率重視の設定
+4. **推論パイプライン最適化**: バッチ処理とキャッシング
+
+### 完了条件
+
+- [ ] ModelQuantizer 実装
+- [ ] ModelPruner 実装
+- [ ] メモリ使用量 30%以上削減
+- [ ] 推論速度 1.5 倍以上向上
+- [ ] 精度劣化 1%以内
+- [ ] ユニットテスト全パス
 
 ---
 
@@ -296,19 +435,21 @@ class InteractionGenerator:
 
 ---
 
-## 📅 実装スケジュール（7-9 週間）
+## 📅 実装スケジュール（8-11 週間）
 
-| Week | Phase     | 内容                                               |
-| ---- | --------- | -------------------------------------------------- |
-| 1    | Phase 1   | TabNetFeatureExtractor 実装・テスト                |
-| 2    | Phase 1   | LightweightStackingEnsemble 実装・統合テスト       |
-| 3    | Phase 1   | RandomForestMetaLearner 実装・比較評価             |
-| 4    | Phase 1   | Daal4pyConverter 実装・速度ベンチマーク            |
-| 5    | Phase 2   | オンチェーンメトリクス実装・API 統合               |
-| 6    | Phase 2   | 出来高プロファイル・オーダーブック・資金調達率実装 |
-| 7    | Phase 2.5 | BorutaSelector 実装・特徴削減評価                  |
-| 8    | Phase 2.5 | InteractionGenerator 実装・相互作用評価            |
-| 9    | 最終      | 統合テスト・パフォーマンステスト・ドキュメント     |
+| Week | Phase      | 内容                                                 |
+| ---- | ---------- | ---------------------------------------------------- |
+| 1    | Phase 1    | TabNetFeatureExtractor 実装・テスト                  |
+| 2    | Phase 1    | LightweightStackingEnsemble 実装・統合テスト         |
+| 3    | Phase 1    | RandomForestMetaLearner + SklearnexOptimizer 実装    |
+| 4    | Phase 1    | Daal4pyConverter 実装・速度ベンチマーク              |
+| 5    | Phase 2    | 出来高プロファイル・マイクロストラクチャー実装        |
+| 6    | Phase 2    | オーダーブック・資金調達率実装                        |
+| 7    | Phase 2.75 | MRMRSelector + BoMGeneIntegrator 実装                |
+| 8    | Phase 2.5  | InteractionGenerator 実装・相互作用評価              |
+| 9    | Phase 3    | ModelQuantizer + ModelPruner 実装                    |
+| 10   | Phase 3    | 推論パイプライン最適化・ベンチマーク                  |
+| 11   | 最終       | 統合テスト・パフォーマンステスト・ドキュメント        |
 
 ---
 
@@ -316,30 +457,34 @@ class InteractionGenerator:
 
 ### 予測精度向上
 
-| 指標                  | 現状         | 目標    | Phase 1 | Phase 2 | Phase 2.5 |
-| --------------------- | ------------ | ------- | ------- | ------- | --------- |
-| **Accuracy**          | ベースライン | +10-18% | +4-7%   | +3-6%   | +3-5%     |
-| **F1 Score**          | ベースライン | +8-15%  | +3-6%   | +3-5%   | +2-4%     |
-| **Balanced Accuracy** | ベースライン | +7-14%  | +3-5%   | +2-5%   | +2-4%     |
-| **RMSE 削減**         | ベースライン | -12-20% | -8-12%  | -4-8%   | N/A       |
+| 指標                  | 現状         | 目標    | Phase 1 | Phase 2 | Phase 2.75 | Phase 2.5 | Phase 3 |
+| --------------------- | ------------ | ------- | ------- | ------- | ---------- | --------- | ------- |
+| **Accuracy**          | ベースライン | +12-20% | +4-7%   | +2-4%   | +1-3%      | +3-5%     | ±0-1%   |
+| **F1 Score**          | ベースライン | +10-17% | +3-6%   | +2-3%   | +1-2%      | +2-4%     | ±0-1%   |
+| **Balanced Accuracy** | ベースライン | +9-16%  | +3-5%   | +1-3%   | +1-2%      | +2-4%     | ±0-1%   |
+| **RMSE 削減**         | ベースライン | -13-22% | -8-12%  | -2-6%   | -1-2%      | -2-2%     | ±0%     |
 
 ### パフォーマンス指標
 
-| 指標                 | 目標                      | 備考            |
-| -------------------- | ------------------------- | --------------- |
-| **学習時間**         | 10000 サンプルで 5 分以内 | 維持            |
-| **推論速度**         | 2000-3000 サンプル/秒     | oneDAL 利用時   |
-| **推論速度（通常）** | 1000 サンプル/秒          | oneDAL 未使用時 |
-| **メモリ使用量**     | 1-2GB 以内                | 維持            |
-| **CPU 使用率**       | 80%以上                   | 並列処理時      |
-| **特徴削減率**       | 30%以上                   | Boruta 適用後   |
+| 指標                           | 目標                      | 備考                 |
+| ------------------------------ | ------------------------- | -------------------- |
+| **学習時間**                   | 10000 サンプルで 5 分以内 | 維持                 |
+| **推論速度**                   | 2000-3000 サンプル/秒     | oneDAL 利用時        |
+| **推論速度（sklearnex）**      | 2500-4000 サンプル/秒     | sklearnex 利用時     |
+| **推論速度（通常）**           | 1000 サンプル/秒          | 最適化未使用時       |
+| **メモリ使用量（最適化前）**   | 1-2GB 以内                | Phase 1-2 完了時     |
+| **メモリ使用量（最適化後）**   | 0.6-1.4GB                 | Phase 3 完了後       |
+| **メモリ削減率**               | 30-40%                    | Phase 3 完了後       |
+| **CPU 使用率**                 | 80%以上                   | 並列処理時           |
+| **特徴削減率（Boruta）**       | 30%以上                   | Phase 2.5 適用後     |
+| **特徴削減率（BoMGene）**      | 35-40%                    | Phase 2.75 適用後    |
 
 ### 実装品質
 
 - **テストカバレッジ**: 80%以上
 - **コードスタイル**: Black、Flake8、MyPy 準拠
 - **ドキュメント**: 全クラス・関数に docstring
-- **新規ファイル数**: 12 ファイル（実装 6 + テスト 6）
+- **新規ファイル数**: 14 ファイル（実装 7 + テスト 7）
 
 ---
 
@@ -384,12 +529,6 @@ class InteractionGenerator:
 - **検討条件**: GPU 環境 + 十分な計算リソース
 - **期待効果**: 動的最適化（精度向上不明）
 
-### 5. オンチェーンデータソース拡張
-
-- **追加候補**: Santiment、IntoTheBlock、Nansen、Dune Analytics
-- **検討条件**: Phase 2 実装後、有効性確認、API 予算確保
-- **期待効果**: 2-5%追加向上
-
 ---
 
 ## 📚 参考文献
@@ -401,29 +540,30 @@ class InteractionGenerator:
 3. Mazinani et al. (2025) - "Transformer-based Cryptocurrency Prediction" - Journal of Big Data
 4. Urooj et al. (2024) - "Ensemble ML vs Deep Learning Methods" - 比較分析
 
-### 市場マイクロストラクチャー・オンチェーン分析
-
-5. "On-chain to Macro: Data Source Diversity" (2024) - VLDB
-6. Chainalysis (2025) - "Crypto Crime Report 2025"
-7. "Crypto Foretell" (2025) - Journal of Big Data
-
 ### 特徴量エンジニアリング
 
-8. "Deep Learning for Stock Market Prediction" - ResearchGate（Boruta アルゴリズム）
-9. "Forward Feature Selection: Empirical Analysis" - ResearchGate
+5. "Deep Learning for Stock Market Prediction" - ResearchGate（Boruta アルゴリズム）
+6. "Forward Feature Selection: Empirical Analysis" - ResearchGate
 
-### CPU 最適化
+### Intel 最適化・モデル圧縮
 
-10. Intel Developer (2024) - "Faster XGBoost/LightGBM on CPU"
-11. Intel Distribution for Python Release Notes - daal4py 変換
+7. Intel Developer (2024) - "Faster XGBoost/LightGBM on CPU"
+8. Intel Distribution for Python Release Notes - daal4py 変換
+9. Intel oneAPI Base Toolkit (2025) - https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit.html
+10. Benchmarking Classical ML on Google Cloud - https://cloud.google.com/blog/products/data-analytics/benchmarking-classical-ml
+11. Model Compression for LLMs - https://arxiv.org/html/2504.11651v2
+
+### 特徴選択・マイクロストラクチャー
+
+12. BoMGene: Boruta-mRMR Integration (2024) - https://arxiv.org/html/2510.00907v1
+13. Limit Order Book Microstructure (2025) - https://www.emergentmind.com/topics/limit-order-book-microstructure
+14. TimeGPT Cryptocurrency Forecasting (2024) - https://www.mdpi.com/2571-9394/7/3/48
 
 ### 技術ドキュメント
 
 - [LightGBM Parameters](https://lightgbm.readthedocs.io/en/latest/Parameters.html)
 - [XGBoost Tree Methods](https://xgboost.readthedocs.io/en/stable/treemethod.html)
 - [TabNet Paper](https://arxiv.org/abs/1908.07442)
-- [Glassnode API](https://docs.glassnode.com/)
-- [CryptoQuant API](https://cryptoquant.com/docs)
 - [Boruta Algorithm](https://www.jstatsoft.org/article/view/v036i11)
 
 ---
@@ -436,18 +576,21 @@ class InteractionGenerator:
 2. LightGBM 中心構成（最速・最軽量）
 3. Random Forest メタモデル（2025 年最新研究で実証）
 4. Intel oneDAL 統合（CPU 推論 2-3 倍高速化）
-5. オンチェーンデータ統合（2024 年 VLDB 論文で最重要特徴）
-6. 高度な特徴選択（Boruta、過学習 30%削減）
-7. 相互作用特徴量（ドメイン知識ベース 8 種類）
-8. 現実的期間（7-9 週間）
+5. **Intel Extension 統合**: sklearnex による透過的高速化
+6. **mRMR 統合**: BoMGene 手法で特徴選択精度向上
+7. **モデル軽量化**: 量子化・プルーニングで推論最適化
+8. **マイクロストラクチャー拡張**: オーダーブック詳細分析
+9. **相互作用特徴量**: ドメイン知識ベース 8 種類
+10. **現実的期間**: 8-11 週間
 
 ### 期待される効果
 
-- **予測精度向上**: 合計 **10-18%**（保守的見積もり）
-- **推論速度向上**: **2-3 倍**（Intel oneDAL 利用時）
-- **過学習リスク削減**: **30%**（Boruta 適用後）
-- **実装期間**: 7-9 週間
-- **メモリ使用量**: 1-2GB
+- **予測精度向上**: 合計 **12-20%**（保守的見積もり）
+- **推論速度向上**: **2-5 倍**（sklearnex + oneDAL 利用時）
+- **メモリ削減**: **30-40%**（量子化・プルーニング後）
+- **過学習リスク削減**: **35-40%**（BoMGene 適用後）
+- **実装期間**: 8-11 週間
+- **メモリ使用量（最適化後）**: 0.6-1.4GB
 - **CPU 使用率**: 80%以上
 - **個人環境で実用可能**: GPU 不要
 

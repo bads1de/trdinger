@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from datetime import datetime
 from sqlalchemy.orm import Session
 
+from app.main import app as main_app
 from app.api.auto_strategy import router as auto_strategy_router
 from app.api.backtest import router as backtest_router
 from app.api.ml_training import router as ml_training_router
@@ -29,12 +30,56 @@ class TestAPIEndpointsComprehensive:
     @pytest.fixture
     def mock_backtest_service(self):
         """モックバックテストサービス"""
-        return Mock(spec=BacktestOrchestrationService)
+        from unittest.mock import AsyncMock
+
+        mock_service = Mock(spec=BacktestOrchestrationService)
+        # get_backtest_resultsはasyncメソッドなのでAsyncMockを使用し、適切な戻り値を設定
+        mock_service.get_backtest_results = AsyncMock(
+            return_value={
+                "success": True,
+                "results": [],
+                "total": 0,
+                "error": None  # 明示的にNoneを設定
+            }
+        )
+        # get_supported_strategiesもasyncメソッド
+        mock_service.get_supported_strategies = AsyncMock(
+            return_value={
+                "success": True,
+                "strategies": [],
+                "error": None
+            }
+        )
+        return mock_service
 
     @pytest.fixture
     def mock_ml_training_service(self):
         """モックMLトレーニングサービス"""
-        return Mock(spec=MLTrainingOrchestrationService)
+        from unittest.mock import AsyncMock
+
+        mock_service = Mock(spec=MLTrainingOrchestrationService)
+        # start_trainingはasyncメソッド
+        mock_service.start_training = AsyncMock(
+            return_value={
+                "success": True,
+                "message": "Training started successfully",
+                "error": None
+            }
+        )
+        # get_training_statusはasyncメソッドで、MLStatusResponse用の辞書を返す
+        mock_service.get_training_status = AsyncMock(
+            return_value={
+                "is_training": False,
+                "progress": 0,
+                "status": "idle",
+                "message": "No training in progress",
+                "start_time": None,
+                "end_time": None,
+                "model_info": None,
+                "error": None
+            }
+        )
+        return mock_service
 
     @pytest.fixture
     def backtest_client(self, mock_backtest_service):

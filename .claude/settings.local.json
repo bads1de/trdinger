@@ -26,7 +26,8 @@
       "mcp__serena__think_about_whether_you_are_done",
       "mcp__serena__write_memory",
       "mcp__context7__resolve-library-id",
-      "mcp__tavily-mcp__tavily-search"
+      "mcp__tavily-mcp__tavily-search",
+      "mcp__serena__get_current_config"
     ],
     "deny": [],
     "ask": []

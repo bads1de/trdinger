@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.dependencies import (
     get_auto_strategy_service,
@@ -32,8 +32,8 @@ class GAGenerationRequest(BaseModel):
     base_config: Dict[str, Any] = Field(..., description="基本バックテスト設定")
     ga_config: Dict[str, Any] = Field(..., description="GA設定")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "experiment_name": "BTC_Strategy_Gen_001",
                 "base_config": {
@@ -58,6 +58,7 @@ class GAGenerationRequest(BaseModel):
                 },
             }
         }
+    )
 
 
 class GAGenerationResponse(BaseModel):

@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks
 
-from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
 from ..constants import DEFAULT_SYMBOL
@@ -58,6 +57,9 @@ class AutoStrategyService:
 
         @safe_operation(context="サービス初期化", is_api_call=False)
         def _init_services_impl():
+            # 循環インポート回避のため、ここでインポート
+            from app.services.backtest.backtest_data_service import BacktestDataService
+
             # データベースリポジトリの初期化
             with self.db_session_factory() as db:
                 from database.repositories.funding_rate_repository import (

@@ -74,5 +74,10 @@ def test_indicator_settings_and_service_support_new_indicators():
     assert len(natr_result) == rows
 
     kvo_result = service.calculate_indicator(df, "KVO", {})
-    # KVOは複雑な計算なので、少なくともある程度のデータが返される
-    assert len(kvo_result) >= rows - 50
+    # KVOはタプル（kvo_line, signal_line）を返すため、タプルであることを確認
+    assert isinstance(kvo_result, tuple)
+    assert len(kvo_result) == 2
+    # 各要素が適切な長さであることを確認
+    kvo_line, signal_line = kvo_result
+    assert len(kvo_line) >= rows - 50
+    assert len(signal_line) >= rows - 50

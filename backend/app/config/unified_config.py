@@ -8,7 +8,7 @@ SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppConfig(BaseSettings):
@@ -26,9 +26,7 @@ class AppConfig(BaseSettings):
         default=["http://localhost:3000"], alias="CORS_ORIGINS"
     )
 
-    class Config:
-        env_prefix = "APP_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="APP_", extra="ignore")
 
 
 class DatabaseConfig(BaseSettings):
@@ -61,9 +59,7 @@ class DatabaseConfig(BaseSettings):
             f"@{self.host}:{self.port}/{self.name}"
         )
 
-    class Config:
-        env_prefix = "DB_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="DB_", extra="ignore")
 
 
 class LoggingConfig(BaseSettings):
@@ -80,9 +76,7 @@ class LoggingConfig(BaseSettings):
     file: str = Field(default="market_data.log", alias="LOG_FILE")
     max_bytes: int = Field(default=10485760, alias="LOG_MAX_BYTES")
 
-    class Config:
-        env_prefix = "LOG_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="LOG_", extra="ignore")
 
 
 class MarketConfig(BaseSettings):
@@ -133,9 +127,7 @@ class MarketConfig(BaseSettings):
         }
     )
 
-    class Config:
-        env_prefix = "MARKET_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="MARKET_", extra="ignore")
 
 
 class DataCollectionConfig(BaseSettings):
@@ -160,9 +152,7 @@ class DataCollectionConfig(BaseSettings):
     memory_warning_threshold: int = Field(default=8000, description="メモリ警告閾値")
     memory_limit_threshold: int = Field(default=10000, description="メモリ制限閾値")
 
-    class Config:
-        env_prefix = "DATA_COLLECTION_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="DATA_COLLECTION_", extra="ignore")
 
 
 class BacktestConfig(BaseSettings):
@@ -179,9 +169,7 @@ class BacktestConfig(BaseSettings):
     max_results_limit: int = Field(default=50, description="結果取得最大件数")
     default_results_limit: int = Field(default=20, description="デフォルト結果件数")
 
-    class Config:
-        env_prefix = "BACKTEST_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="BACKTEST_", extra="ignore")
 
 
 class AutoStrategyConfig(BaseSettings):
@@ -243,9 +231,7 @@ class AutoStrategyConfig(BaseSettings):
     low_threshold: float = Field(default=-0.5, description="低い閾値")
     high_threshold: float = Field(default=1.5, description="高い閾値")
 
-    class Config:
-        env_prefix = "AUTO_STRATEGY_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="AUTO_STRATEGY_", extra="ignore")
 
 
 class GAConfig(BaseSettings):
@@ -290,9 +276,7 @@ class GAConfig(BaseSettings):
     sharing_radius: float = Field(default=0.1, alias="GA_SHARING_RADIUS")
     sharing_alpha: float = Field(default=1.0, alias="GA_SHARING_ALPHA")
 
-    class Config:
-        env_prefix = "GA_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="GA_", extra="ignore")
 
 
 class MLDataProcessingConfig(BaseSettings):
@@ -311,9 +295,7 @@ class MLDataProcessingConfig(BaseSettings):
     debug_mode: bool = Field(default=False)
     log_level: str = Field(default="INFO")
 
-    class Config:
-        env_prefix = "ML_DATA_PROCESSING_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="ML_DATA_PROCESSING_", extra="ignore")
 
 
 class MLModelConfig(BaseSettings):
@@ -329,9 +311,7 @@ class MLModelConfig(BaseSettings):
     max_model_versions: int = Field(default=10)
     model_retention_days: int = Field(default=30)
 
-    class Config:
-        env_prefix = "ML_MODEL_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="ML_MODEL_", extra="ignore")
 
 
 class MLPredictionConfig(BaseSettings):
@@ -377,9 +357,7 @@ class MLPredictionConfig(BaseSettings):
             "range": self.fallback_range_prob,
         }
 
-    class Config:
-        env_prefix = "ML_PREDICTION_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_", extra="ignore")
 
 
 class MLTrainingConfig(BaseSettings):
@@ -416,9 +394,7 @@ class MLTrainingConfig(BaseSettings):
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     random_state: int = Field(default=42, description="ランダムシード")
 
-    class Config:
-        env_prefix = "ML_TRAINING_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="ML_TRAINING_", extra="ignore")
 
 
 class MLConfig(BaseSettings):
@@ -434,9 +410,7 @@ class MLConfig(BaseSettings):
     prediction: MLPredictionConfig = Field(default_factory=MLPredictionConfig)
     training: MLTrainingConfig = Field(default_factory=MLTrainingConfig)
 
-    class Config:
-        env_prefix = "ML_"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_prefix="ML_", extra="ignore")
 
 
 class UnifiedConfig(BaseSettings):
@@ -455,9 +429,9 @@ class UnifiedConfig(BaseSettings):
     ga: GAConfig = Field(default_factory=GAConfig)
     ml: MLConfig = Field(default_factory=MLConfig)
 
-    class Config:
-        env_nested_delimiter = "__"  # ネストされた環境変数をサポート
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="__", extra="ignore"  # ネストされた環境変数をサポート
+    )
 
 
 # 統一設定のシングルトンインスタンス
