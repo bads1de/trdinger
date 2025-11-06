@@ -39,23 +39,19 @@ class TestTechnicalIndicatorService:
         """初期化テスト"""
         assert indicator_service.registry is not None
 
-    @patch("backend.app.services.indicators.indicator_orchestrator.indicator_registry")
-    def test_get_indicator_config(self, mock_registry, indicator_service):
+    def test_get_indicator_config(self, indicator_service):
         """指標設定取得テスト"""
-        mock_config = Mock()
-        mock_registry.get_indicator_config.return_value = mock_config
-
+        # 実際のregistryを使用してSMA設定を取得
         config = indicator_service._get_indicator_config("SMA")
-        assert config == mock_config
-        mock_registry.get_indicator_config.assert_called_with("SMA")
+        assert config is not None
+        assert config.indicator_name == "SMA"
+        assert config.adapter_function is not None
 
-    @patch("backend.app.services.indicators.indicator_orchestrator.indicator_registry")
-    def test_get_indicator_config_invalid(self, mock_registry, indicator_service):
+    def test_get_indicator_config_invalid(self, indicator_service):
         """無効な指標設定取得テスト"""
-        mock_registry.get_indicator_config.return_value = None
-
+        # 実際のregistryは存在しない指標に対してNoneを返すか、例外を発生させる
         with pytest.raises(ValueError, match="サポートされていない指標タイプ"):
-            indicator_service._get_indicator_config("INVALID")
+            indicator_service._get_indicator_config("INVALID_INDICATOR_THAT_DOES_NOT_EXIST")
 
     @patch.object(TechnicalIndicatorService, "_get_config")
     @patch.object(TechnicalIndicatorService, "_normalize_params")
@@ -185,7 +181,8 @@ class TestTechnicalIndicatorService:
     @patch("backend.app.services.indicators.indicator_orchestrator.ta")
     def test_call_pandas_ta_single_column(self, mock_ta, indicator_service, sample_df):
         """pandas-ta単一カラム呼び出しテスト"""
-        mock_func = Mock(return_value=pd.Series([1, 2, 3]))
+        expected_series = pd.Series([1, 2, 3])
+        mock_func = Mock(return_value=expected_series)
         mock_ta.sma = mock_func
 
         config = {"function": "sma", "data_column": "close", "multi_column": False}
@@ -193,7 +190,8 @@ class TestTechnicalIndicatorService:
 
         result = indicator_service._call_pandas_ta(sample_df, config, params)
 
-        assert result == pd.Series([1, 2, 3])
+        # pandas Seriesの比較は.equals()を使用
+        assert result.equals(expected_series)
         mock_func.assert_called_once()
 
     @patch("backend.app.services.indicators.indicator_orchestrator.create_nan_result")
@@ -224,22 +222,25 @@ class TestTechnicalIndicatorService:
         assert isinstance(processed, tuple)
         assert len(processed) == 2
 
-    @patch("backend.app.services.indicators.indicator_orchestrator.indicator_registry")
-    def test_get_supported_indicators(self, mock_registry, indicator_service):
+    def test_get_supported_indicators(self, indicator_service):
         """サポート指標取得テスト"""
-        mock_config = Mock()
-        mock_config.adapter_function = Mock()
-        mock_config.get_parameter_ranges.return_value = {"period": [5, 20]}
-        mock_config.result_type.value = "single"
-        mock_config.required_data = ["close"]
-        mock_config.scale_type.value = "price_absolute"
-
-        mock_registry._configs = {"SMA": mock_config}
-
+        # 実際のregistryを使用してサポート指標リストを取得
         result = indicator_service.get_supported_indicators()
+
+        # SMAが含まれていることを確認
         assert "SMA" in result
-        assert result["SMA"]["parameters"] == {"period": [5, 20]}
-        assert result["SMA"]["result_type"] == "single"
+
+        # SMA設定が正しい形式であることを確認
+        sma_config = result["SMA"]
+        assert "parameters" in sma_config
+        assert "result_type" in sma_config
+        assert "required_data" in sma_config
+
+        # lengthパラメータが存在することを確認
+        assert "length" in sma_config["parameters"]
+        assert "default" in sma_config["parameters"]["length"]
+        assert "min" in sma_config["parameters"]["length"]
+        assert "max" in sma_config["parameters"]["length"]
 
     def test_validate_data_length_with_fallback(self, indicator_service, sample_df):
         """データ長検証テスト"""

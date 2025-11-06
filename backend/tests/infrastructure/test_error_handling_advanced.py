@@ -15,7 +15,7 @@ from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.services.auto_strategy_service import AutoStrategyService
 from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from app.services.backtest.backtest_service import BacktestService
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga import GASettings as GAConfig
 from app.utils.error_handler import safe_operation, ErrorHandler
 
 

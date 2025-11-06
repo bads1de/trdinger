@@ -23,6 +23,7 @@
       "mcp__serena__initial_instructions",
       "mcp__serena__activate_project",
       "mcp__serena__think_about_collected_information",
+      "mcp__serena__think_about_whether_you_are_done",
       "mcp__serena__write_memory",
       "mcp__context7__resolve-library-id",
       "mcp__tavily-mcp__tavily-search"

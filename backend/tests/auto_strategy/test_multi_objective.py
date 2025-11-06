@@ -8,8 +8,8 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 
-from backend.app.services.auto_strategy.core.evolution_runner import EvolutionRunner
-from backend.app.services.auto_strategy.config.ga_runtime import GAConfig
+from app.services.auto_strategy.core.evolution_runner import EvolutionRunner
+from app.services.auto_strategy.config.ga_runtime import GAConfig
 
 
 class TestEvolutionRunnerMultiObjective:
@@ -67,25 +67,22 @@ class TestEvolutionRunnerMultiObjective:
         """多目的最適化の基本実行テスト"""
         runner = EvolutionRunner(mock_toolbox, mock_stats)
 
-        # モックの設定
-        mock_toolbox.select.side_effect = [
-            mock_population,
-            mock_population,
-        ]  # 初期選択と世代ループ
+        # モックの設定 - return_value not side_effect, and return the actual list
+        mock_toolbox.select.return_value = mock_population
 
         with patch(
-            "backend.app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
-            return_value=Mock(),
+            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
+            return_value=mock_toolbox.select,  # Return the mock select function
         ) as mock_sel_nsga2:
             with patch(
-                "backend.app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
+                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ) as mock_pareto_front:
                 result_pop, logbook = runner.run_multi_objective_evolution(
                     mock_population, mock_config
                 )
 
-        # NSGA-II選択が設定されたことを確認
-        assert mock_toolbox.select == mock_sel_nsga2.return_value
+        # NSGA-II選択が使用されたことを確認
+        mock_sel_nsga2.assert_called()
 
         # ParetoFrontが作成されたことを確認
         mock_pareto_front.assert_called_once()
@@ -109,10 +106,10 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select.side_effect = [mock_population, mock_population]
 
         with patch(
-            "backend.app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
+            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
         ):
             with patch(
-                "backend.app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
+                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ):
                 runner.run_multi_objective_evolution(mock_population, mock_config)
 
@@ -129,10 +126,10 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select.side_effect = [mock_population, mock_population]
 
         with patch(
-            "backend.app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
+            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
         ):
             with patch(
-                "backend.app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
+                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ):
                 runner.run_multi_objective_evolution(
                     mock_population, mock_config, halloffame=mock_halloffame
@@ -196,13 +193,13 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select.side_effect = [mock_population, mock_population]
 
         with patch(
-            "backend.app.services.auto_strategy.core.evolution_runner.logger"
+            "app.services.auto_strategy.core.evolution_runner.logger"
         ) as mock_logger:
             with patch(
-                "backend.app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
+                "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
             ):
                 with patch(
-                    "backend.app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
+                    "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
                 ):
                     runner.run_multi_objective_evolution(mock_population, mock_config)
 
@@ -221,10 +218,10 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select.side_effect = [mock_population, mock_population]
 
         with patch(
-            "backend.app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
+            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
         ) as mock_sel_nsga2:
             with patch(
-                "backend.app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
+                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ):
                 runner.run_multi_objective_evolution(mock_population, mock_config)
 
@@ -241,10 +238,10 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select.side_effect = [mock_population]
 
         with patch(
-            "backend.app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
+            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
         ):
             with patch(
-                "backend.app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
+                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ):
                 result_pop, logbook = runner.run_multi_objective_evolution(
                     mock_population, mock_config
@@ -263,14 +260,14 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select.side_effect = [mock_population, mock_population]
 
         with patch(
-            "backend.app.services.auto_strategy.core.evolution_runner.random.random",
+            "app.services.auto_strategy.core.evolution_runner.random.random",
             side_effect=[0.1, 0.1, 0.1, 0.1],
         ):  # 確率以下
             with patch(
-                "backend.app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
+                "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
             ):
                 with patch(
-                    "backend.app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
+                    "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
                 ):
                     runner.run_multi_objective_evolution(mock_population, mock_config)
 

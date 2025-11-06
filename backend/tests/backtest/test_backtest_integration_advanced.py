@@ -13,7 +13,7 @@ from typing import Dict, Any, List
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
 from app.services.backtest.backtest_service import BacktestService
 from app.services.backtest.backtest_data_service import BacktestDataService
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga import GASettings as GAConfig
 from app.services.auto_strategy.models.strategy_gene import StrategyGene
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.funding_rate_repository import FundingRateRepository
