@@ -34,7 +34,6 @@ class AlgorithmRegistry:
         "tabnetregressor": "tabnet",
         # Ensemble
         "ensembletrainer": "ensemble",
-        "baggingensemble": "bagging",
         "stackingensemble": "stacking",
         # Single Model
         "singlemodeltrainer": "single",

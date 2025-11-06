@@ -66,12 +66,6 @@ export default function MLTraining() {
     useState<EnsembleSettingsConfig>({
       enabled: false,
       method: "stacking",
-      bagging_params: {
-        n_estimators: 5,
-        bootstrap_fraction: 0.8,
-        base_model_type: "lightgbm",
-        random_state: 42,
-      },
       stacking_params: {
         base_models: ["lightgbm", "xgboost"],
         meta_model: "lightgbm",
@@ -259,7 +253,7 @@ export default function MLTraining() {
                   const features = [];
                   if (optimizationSettings.enabled) features.push("最適化");
                   if (ensembleSettings.enabled) {
-                    features.push(`アンサンブル(${ensembleSettings.method})`);
+                    features.push("アンサンブル(スタッキング)");
                   } else {
                     features.push(
                       `単一モデル(${singleModelSettings.model_type.toUpperCase()})`

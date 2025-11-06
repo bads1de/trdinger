@@ -60,15 +60,6 @@ class EnsembleParameterSpace:
         }
 
     @staticmethod
-    def get_bagging_parameter_space() -> Dict[str, ParameterSpace]:
-        """バギングアンサンブル固有のパラメータ空間"""
-        return {
-            "bagging_n_estimators": ParameterSpace(type="integer", low=3, high=10),
-            "bagging_max_samples": ParameterSpace(type="real", low=0.5, high=1.0),
-            "bagging_max_features": ParameterSpace(type="real", low=0.5, high=1.0),
-        }
-
-    @staticmethod
     def get_stacking_parameter_space() -> Dict[str, ParameterSpace]:
         """スタッキングアンサンブル固有のパラメータ空間"""
         return {
@@ -92,7 +83,7 @@ class EnsembleParameterSpace:
         アンサンブル手法と有効なモデルに基づいてパラメータ空間を構築
 
         Args:
-            ensemble_method: アンサンブル手法 ("bagging" or "stacking")
+            ensemble_method: アンサンブル手法 ("stacking")
             enabled_models: 有効なベースモデルのリスト
 
         Returns:
@@ -110,10 +101,8 @@ class EnsembleParameterSpace:
         if "tabnet" in enabled_models:
             parameter_space.update(cls.get_tabnet_parameter_space())
 
-        # アンサンブル手法固有のパラメータを追加
-        if ensemble_method == "bagging":
-            parameter_space.update(cls.get_bagging_parameter_space())
-        elif ensemble_method == "stacking":
+        # アンサンブル手法固有のパラメータを追加（スタッキング）
+        if ensemble_method == "stacking":
             parameter_space.update(cls.get_stacking_parameter_space())
 
         return parameter_space
@@ -154,17 +143,6 @@ class EnsembleParameterSpace:
             "xgb_reg_alpha": trial.suggest_float("xgb_reg_alpha", 0.0, 1.0),
             "xgb_reg_lambda": trial.suggest_float("xgb_reg_lambda", 0.0, 1.0),
             "xgb_gamma": trial.suggest_float("xgb_gamma", 0.0, 0.5),
-        }
-
-    @staticmethod
-    def _suggest_bagging_params(trial: optuna.Trial) -> Dict[str, Any]:
-        """バギングパラメータの提案"""
-        return {
-            "bagging_n_estimators": trial.suggest_int("bagging_n_estimators", 3, 10),
-            "bagging_max_samples": trial.suggest_float("bagging_max_samples", 0.5, 1.0),
-            "bagging_max_features": trial.suggest_float(
-                "bagging_max_features", 0.5, 1.0
-            ),
         }
 
     @staticmethod

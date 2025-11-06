@@ -377,7 +377,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """
         try:
             logger.info(
-                f"🎯 アンサンブル学習開始: {self.ensemble_config.get('method', 'bagging')}"
+                f"🎯 アンサンブル学習開始: {self.ensemble_config.get('method', 'stacking')}"
             )
 
             # 学習データを結合（旧実装との互換性維持）
@@ -394,7 +394,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.is_trained = True
 
             logger.info(
-                f"✅ アンサンブル学習完了: {self.ensemble_config.get('method', 'bagging')}"
+                f"✅ アンサンブル学習完了: {self.ensemble_config.get('method', 'stacking')}"
             )
             return result
 

@@ -86,7 +86,11 @@ class LightweightStackingEnsemble(BaseEnsemble):
 
 ```python
 class RandomForestMetaLearner:
-    """Random Forestメタモデル（過学習抑制、2025年最新研究）"""
+    """Random Forestメタモデル（過学習抑制、2025年最新研究）
+    
+    Note: Random Forestはバギング（Bootstrap Aggregating）を内蔵しているため、
+    独立したバギング実装は不要です。
+    """
     def __init__(self, n_estimators=100, max_depth=10, n_jobs=-1): ...
     def fit(self, X, y) -> Dict: ...
     def predict(self, X) -> np.ndarray: ...

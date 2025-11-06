@@ -359,16 +359,10 @@ class MLTrainingOrchestrationService:
                         logger.info(
                             "📋 アンサンブル設定が提供されていません。デフォルト（アンサンブル）を使用します"
                         )
-                        # デフォルトのアンサンブル設定を作成
+                        # デフォルトのアンサンブル設定を作成（スタッキング）
                         ensemble_config_dict = {
                             "enabled": True,
                             "method": "stacking",
-                            "bagging_params": {
-                                "n_estimators": 5,
-                                "bootstrap_fraction": 0.8,
-                                "base_model_type": "lightgbm",
-                                "random_state": 42,
-                            },
                             "stacking_params": {
                                 "base_models": [
                                     "lightgbm",

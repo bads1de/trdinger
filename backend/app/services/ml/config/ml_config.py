@@ -224,24 +224,10 @@ class EnsembleConfig(BaseSettings):
 
     # デフォルトアンサンブル設定
     DEFAULT_METHOD: str = Field(
-        default="bagging", description="デフォルトのアンサンブル手法（安定性重視）"
+        default="stacking", description="デフォルトのアンサンブル手法"
     )
 
-    # バギング設定（scikit-learn BaggingClassifier対応）
-    BAGGING_N_ESTIMATORS: int = Field(default=5, description="ベースモデル数")
-    BAGGING_BOOTSTRAP_FRACTION: float = Field(
-        default=0.8, description="ブートストラップサンプリング比率（max_samples）"
-    )
-    BAGGING_BASE_MODEL: str = Field(
-        default="lightgbm", description="ベースモデルタイプ"
-    )
-    BAGGING_N_JOBS: int = Field(default=-1, description="並列処理数")
-    BAGGING_BOOTSTRAP: bool = Field(
-        default=True, description="ブートストラップサンプリング使用"
-    )
-    BAGGING_MAX_FEATURES: float = Field(default=1.0, description="特徴量使用割合")
-
-    # スタッキング設定（Essential 4 Modelsのみ対応）
+    # スタッキング設定
     STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "xgboost"])
     STACKING_META_MODEL: str = Field(
         default="logistic_regression", description="メタモデル"
@@ -255,10 +241,6 @@ class EnsembleConfig(BaseSettings):
         default=False, description="元特徴量をメタモデルに渡すか"
     )
 
-    # 最適化設定
-    OPTIMIZATION_N_ESTIMATORS_RANGE: List[int] = Field(default=[3, 10])
-    OPTIMIZATION_BOOTSTRAP_FRACTION_RANGE: List[float] = Field(default=[0.6, 0.9])
-
     model_config = SettingsConfigDict(env_prefix="ML_ENSEMBLE_")
 
     def to_dict(self) -> Dict[str, Any]:
@@ -266,21 +248,16 @@ class EnsembleConfig(BaseSettings):
         return self.model_dump()
 
     def get_default_config(self) -> Dict[str, Any]:
-        """デフォルトのアンサンブル設定を取得（安定性重視のバギング）"""
-        return self.get_default_bagging_config()
-
-    def get_default_bagging_config(self) -> Dict[str, Any]:
-        """デフォルトのバギング設定を取得（scikit-learn BaggingClassifier対応）"""
+        """デフォルトのアンサンブル設定を取得（スタッキング）"""
         return {
-            "method": "bagging",
-            "bagging_params": {
-                "n_estimators": self.BAGGING_N_ESTIMATORS,
-                "bootstrap_fraction": self.BAGGING_BOOTSTRAP_FRACTION,
-                "base_model_type": self.BAGGING_BASE_MODEL,
-                "n_jobs": self.BAGGING_N_JOBS,
-                "bootstrap": self.BAGGING_BOOTSTRAP,
-                "max_features": self.BAGGING_MAX_FEATURES,
+            "method": "stacking",
+            "stacking_params": {
+                "base_models": self.STACKING_BASE_MODELS,
+                "meta_model": self.STACKING_META_MODEL,
+                "cv_folds": self.STACKING_CV_FOLDS,
+                "use_probas": True,
                 "random_state": 42,
+                "n_jobs": self.STACKING_N_JOBS,
             },
         }
 

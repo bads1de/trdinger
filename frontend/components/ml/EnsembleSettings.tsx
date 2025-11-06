@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { InputField } from "@/components/common/InputField";
 import { Badge } from "@/components/ui/badge";
-import { Layers, Shuffle, BarChart3,  Info } from "lucide-react";
+import { Layers, BarChart3, Info } from "lucide-react";
 import InfoModal from "@/components/common/InfoModal";
 import { ML_INFO_MESSAGES } from "@/constants/info";
 import {
@@ -25,14 +25,7 @@ import {
 
 export interface EnsembleSettingsConfig {
   enabled: boolean;
-  method: "bagging" | "stacking";
-  bagging_params: {
-    n_estimators: number;
-    bootstrap_fraction: number;
-    base_model_type: string;
-    mixed_models?: string[];
-    random_state?: number;
-  };
+  method: "stacking";
   stacking_params: {
     base_models: string[];
     meta_model: string;
@@ -82,30 +75,11 @@ export default function EnsembleSettings({
     setIsInfoModalOpen(true);
   };
 
-  const updateBaggingParams = (
-    updates: Partial<EnsembleSettingsConfig["bagging_params"]>
-  ) => {
-    updateSettings({
-      bagging_params: { ...settings.bagging_params, ...updates },
-    });
-  };
-
   const updateStackingParams = (
     updates: Partial<EnsembleSettingsConfig["stacking_params"]>
   ) => {
     updateSettings({
       stacking_params: { ...settings.stacking_params, ...updates },
-    });
-  };
-
-  const toggleMixedModel = (modelType: string) => {
-    const currentMixed = settings.bagging_params.mixed_models || [];
-    const newMixed = currentMixed.includes(modelType)
-      ? currentMixed.filter((m) => m !== modelType)
-      : [...currentMixed, modelType];
-
-    updateBaggingParams({
-      mixed_models: newMixed.length > 0 ? newMixed : undefined,
     });
   };
 
@@ -117,10 +91,6 @@ export default function EnsembleSettings({
 
     updateStackingParams({ base_models: updated });
   };
-
-  const isMixedBagging =
-    settings.bagging_params.mixed_models &&
-    settings.bagging_params.mixed_models.length > 0;
 
   return (
     <Card>
@@ -161,157 +131,8 @@ export default function EnsembleSettings({
 
         {settings.enabled && (
           <>
-            {/* アンサンブル手法選択 */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">アンサンブル手法</Label>
-              <Select
-                value={settings.method}
-                onValueChange={(method: "bagging" | "stacking") =>
-                  updateSettings({ method })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bagging">
-                    <div className="flex items-center space-x-2">
-                      <Shuffle className="h-4 w-4" />
-                      <div>
-                        <div className="font-medium">バギング</div>
-                        <div className="text-xs text-muted-foreground">
-                          同じモデルを複数学習して平均化
-                        </div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="stacking">
-                    <div className="flex items-center space-x-2">
-                      <BarChart3 className="h-4 w-4" />
-                      <div>
-                        <div className="font-medium">スタッキング</div>
-                        <div className="text-xs text-muted-foreground">
-                          異なるモデルの予測をメタモデルで統合
-                        </div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* バギング設定 */}
-            {settings.method === "bagging" && (
-              <div className="space-y-4 p-4 bg-muted/50 border rounded-lg">
-                <h4 className="font-medium flex items-center space-x-2">
-                  <Shuffle className="h-4 w-4" />
-                  <span>バギング設定</span>
-                </h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputField
-                    label="ベースモデル数"
-                    type="number"
-                    min={2}
-                    max={20}
-                    value={settings.bagging_params.n_estimators}
-                    onChange={(value) =>
-                      updateBaggingParams({ n_estimators: Number(value) })
-                    }
-                  />
-                  <InputField
-                    label="ブートストラップ比率"
-                    type="number"
-                    step={0.1}
-                    min={0.1}
-                    max={1.0}
-                    value={settings.bagging_params.bootstrap_fraction}
-                    onChange={(value) =>
-                      updateBaggingParams({ bootstrap_fraction: Number(value) })
-                    }
-                  />
-                </div>
-
-                {/* 混合バギング設定 */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">
-                      混合バギング（多様性重視）
-                    </Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (isMixedBagging) {
-                          updateBaggingParams({ mixed_models: undefined });
-                        } else {
-                          updateBaggingParams({
-                            mixed_models: ["lightgbm", "xgboost"],
-                          });
-                        }
-                      }}
-                    >
-                      {isMixedBagging ? "無効化" : "有効化"}
-                    </Button>
-                  </div>
-
-                  {isMixedBagging ? (
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        使用するモデルを選択してください：
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {AVAILABLE_MODELS.map((model, index) => (
-                          <Badge
-                            key={`bagging-model-${model.value}-${index}`}
-                            variant={
-                              settings.bagging_params.mixed_models?.includes(
-                                model.value
-                              )
-                                ? "default"
-                                : "outline"
-                            }
-                            className="cursor-pointer"
-                            onClick={() => toggleMixedModel(model.value)}
-                          >
-                            {model.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label className="text-sm">ベースモデルタイプ</Label>
-                      <Select
-                        value={settings.bagging_params.base_model_type}
-                        onValueChange={(value) =>
-                          updateBaggingParams({ base_model_type: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {AVAILABLE_MODELS.map((model, index) => (
-                            <SelectItem key={`base-model-${model.value}-${index}`} value={model.value}>
-                              <div>
-                                <div className="font-medium">{model.label}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {model.description}
-                                </div>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* スタッキング設定 */}
-            {settings.method === "stacking" && (
+            <div className="space-y-4 p-4 bg-muted/50 border rounded-lg">
               <div className="space-y-4 p-4 bg-muted/50 border rounded-lg">
                 <h4 className="font-medium flex items-center space-x-2">
                   <BarChart3 className="h-4 w-4" />
@@ -421,36 +242,18 @@ export default function EnsembleSettings({
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* 設定サマリー */}
             <div className="p-3 bg-primary/10 rounded-lg">
               <h5 className="font-medium text-primary/90 mb-2">設定サマリー</h5>
               <div className="text-sm text-primary/80 space-y-1">
+                <p>手法: スタッキング</p>
                 <p>
-                  手法:{" "}
-                  {settings.method === "bagging" ? "バギング" : "スタッキング"}
+                  ベースモデル:{" "}
+                  {settings.stacking_params.base_models.join(", ")}
                 </p>
-                {settings.method === "bagging" && (
-                  <>
-                    <p>モデル数: {settings.bagging_params.n_estimators}</p>
-                    <p>
-                      使用モデル:{" "}
-                      {isMixedBagging
-                        ? settings.bagging_params.mixed_models?.join(", ")
-                        : settings.bagging_params.base_model_type}
-                    </p>
-                  </>
-                )}
-                {settings.method === "stacking" && (
-                  <>
-                    <p>
-                      ベースモデル:{" "}
-                      {settings.stacking_params.base_models.join(", ")}
-                    </p>
-                    <p>メタモデル: {settings.stacking_params.meta_model}</p>
-                  </>
-                )}
+                <p>メタモデル: {settings.stacking_params.meta_model}</p>
               </div>
             </div>
           </>

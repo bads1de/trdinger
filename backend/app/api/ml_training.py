@@ -43,31 +43,6 @@ class OptimizationSettingsConfig(BaseModel):
     )
 
 
-class BaggingParamsConfig(BaseModel):
-    """バギングパラメータ設定（scikit-learn BaggingClassifier対応）"""
-
-    n_estimators: int = Field(default=5, description="ベースモデル数")
-    bootstrap_fraction: float = Field(
-        default=0.8, description="ブートストラップサンプリング比率（max_samples）"
-    )
-    base_model_type: str = Field(
-        default="lightgbm",
-        description="ベースモデルタイプ（lightgbm, xgboost, tabnet）",
-    )
-    mixed_models: Optional[List[str]] = Field(
-        default=None,
-        description="混合バギング用モデルリスト（指定時はbase_model_typeより優先、多様性確保）",
-    )
-    random_state: Optional[int] = Field(default=42, description="ランダムシード")
-    n_jobs: int = Field(default=-1, description="並列処理数（-1で全CPU使用）")
-    bootstrap: bool = Field(
-        default=True, description="ブートストラップサンプリングを使用するか"
-    )
-    max_features: float = Field(
-        default=1.0, description="各ベースモデルで使用する特徴量の割合"
-    )
-
-
 class StackingParamsConfig(BaseModel):
     """スタッキングパラメータ設定（scikit-learn StackingClassifier対応）"""
 
@@ -94,10 +69,7 @@ class EnsembleConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="アンサンブル学習を有効にするか")
     method: str = Field(
-        default="bagging", description="アンサンブル手法 (bagging, stacking)"
-    )
-    bagging_params: BaggingParamsConfig = Field(
-        default_factory=BaggingParamsConfig, description="バギングパラメータ"
+        default="stacking", description="アンサンブル手法 (stacking)"
     )
     stacking_params: StackingParamsConfig = Field(
         default_factory=StackingParamsConfig, description="スタッキングパラメータ"
@@ -198,10 +170,11 @@ async def start_ml_training(
     ),
 ):
     """
-    アンサンブル学習によるMLモデルのトレーニングを開始
+    スタッキングアンサンブル学習またはシングルモデルによるMLモデルのトレーニングを開始
 
-    デフォルトでバギング手法を使用し、複数のLightGBMモデルを組み合わせて
-    予測精度と頑健性を向上させます。スタッキング手法も選択可能です。
+    アンサンブル学習が有効な場合、スタッキング手法を使用して異なるモデルの
+    予測を統合し、予測精度と頑健性を向上させます。
+    アンサンブル学習が無効な場合は、単一のモデルでトレーニングを行います。
 
     Args:
         config: MLトレーニング設定（アンサンブル設定を含む）

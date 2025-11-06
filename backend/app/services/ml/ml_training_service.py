@@ -111,13 +111,15 @@ class MLTrainingService(BaseResourceManager):
             トレーナー設定辞書
         """
         if trainer_type.lower() == "ensemble":
-            # アンサンブル設定のデフォルト値
+            # アンサンブル設定のデフォルト値（スタッキング）
             default_ensemble_config = {
-                "method": "bagging",
-                "bagging_params": {
-                    "n_estimators": 5,
-                    "bootstrap_fraction": 0.8,
-                    "base_model_type": "lightgbm",
+                "method": "stacking",
+                "stacking_params": {
+                    "base_models": ["lightgbm", "xgboost"],
+                    "meta_model": "lightgbm",
+                    "cv_folds": 5,
+                    "use_probas": True,
+                    "random_state": 42,
                 },
             }
 
@@ -128,7 +130,7 @@ class MLTrainingService(BaseResourceManager):
 
             return {
                 "type": "ensemble",
-                "model_type": final_ensemble_config.get("method", "bagging"),
+                "model_type": final_ensemble_config.get("method", "stacking"),
                 "ensemble_config": final_ensemble_config,
             }
 
@@ -206,11 +208,13 @@ class MLTrainingService(BaseResourceManager):
         if effective_automl_config:
             # AutoML設定が提供された場合、新しいアンサンブルトレーナーインスタンスを作成
             ensemble_config = self.ensemble_config or {
-                "method": "bagging",
-                "bagging_params": {
-                    "n_estimators": 5,
-                    "bootstrap_fraction": 0.8,
-                    "base_model_type": "lightgbm",
+                "method": "stacking",
+                "stacking_params": {
+                    "base_models": ["lightgbm", "xgboost"],
+                    "meta_model": "lightgbm",
+                    "cv_folds": 5,
+                    "use_probas": True,
+                    "random_state": 42,
                 },
             }
             trainer = EnsembleTrainer(
@@ -526,10 +530,10 @@ class MLTrainingService(BaseResourceManager):
                 # アンサンブルトレーナーの場合は専用のパラメータ空間を使用
                 if hasattr(effective_trainer, "ensemble_config"):
                     ensemble_method = effective_trainer.ensemble_config.get(
-                        "method", "bagging"
+                        "method", "stacking"
                     )
                     enabled_models = effective_trainer.ensemble_config.get(
-                        "models", ["lightgbm", "xgboost", "tabnet"]
+                        "models", ["lightgbm", "xgboost"]
                     )
                     parameter_space = optimizer.get_ensemble_parameter_space(
                         ensemble_method, enabled_models
@@ -703,11 +707,13 @@ class MLTrainingService(BaseResourceManager):
                 # 一時的なアンサンブルトレーナーを作成（元のトレーナーに影響しないように）
                 # AutoML設定がある場合はそれを引き継ぐ
                 temp_ensemble_config = {
-                    "method": "bagging",
-                    "bagging_params": {
-                        "n_estimators": 3,  # 最適化中は高速化のため少なめ
-                        "bootstrap_fraction": 0.8,
-                        "base_model_type": "lightgbm",
+                    "method": "stacking",
+                    "stacking_params": {
+                        "base_models": ["lightgbm", "xgboost"],
+                        "meta_model": "lightgbm",
+                        "cv_folds": 3,  # 最適化中は高速化のため少なめ
+                        "use_probas": True,
+                        "random_state": 42,
                     },
                 }
 

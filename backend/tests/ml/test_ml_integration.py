@@ -84,7 +84,7 @@ class TestMLTrainingService:
         config = service._create_trainer_config("ensemble", None, None)
 
         assert config["type"] == "ensemble"
-        assert config["model_type"] == "bagging"
+        assert config["model_type"] == "stacking"
         assert "ensemble_config" in config
 
     def test_create_trainer_config_single(self):

@@ -189,7 +189,7 @@ class OptunaOptimizer:
         アンサンブル学習用のパラメータ空間を取得
 
         Args:
-            ensemble_method: アンサンブル手法 ("bagging" or "stacking")
+            ensemble_method: アンサンブル手法 ("stacking")
             enabled_models: 有効なベースモデルのリスト
 
         Returns:

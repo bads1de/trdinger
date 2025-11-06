@@ -133,7 +133,7 @@ class TestMLServiceComprehensive:
         # アンサンブル設定
         ensemble_config = Mock()
         ensemble_config.enabled = True
-        ensemble_config.method = "bagging"
+        ensemble_config.method = "stacking"
 
         # 単一モデル設定
         single_model_config = Mock()

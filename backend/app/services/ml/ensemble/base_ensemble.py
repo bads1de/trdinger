@@ -21,7 +21,7 @@ class BaseEnsemble(ABC):
     """
     アンサンブル学習の基底クラス
 
-    全てのアンサンブル手法（バギング、スタッキング等）の共通インターフェースを定義します。
+    スタッキングアンサンブル手法の共通インターフェースを定義します。
     """
 
     def __init__(
@@ -234,7 +234,7 @@ class BaseEnsemble(ABC):
 
     def save_models(self, base_path: str) -> List[str]:
         """
-        アンサンブルモデルを保存（scikit-learn実装対応）
+        アンサンブルモデルを保存（scikit-learn StackingClassifier対応）
 
         Args:
             base_path: 保存先ベースパス
@@ -248,24 +248,8 @@ class BaseEnsemble(ABC):
         saved_paths = []
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # scikit-learn実装の場合
-        if hasattr(self, "bagging_classifier") and self.bagging_classifier is not None:
-            # BaggingClassifier保存
-            model_path = f"{base_path}_bagging_classifier_{timestamp}.pkl"
-            model_data = {
-                "ensemble_classifier": self.bagging_classifier,
-                "config": self.config,
-                "automl_config": self.automl_config,
-                "feature_columns": self.feature_columns,
-                "is_fitted": self.is_fitted,
-                "ensemble_type": "BaggingEnsemble",
-                "sklearn_implementation": True,
-            }
-            joblib.dump(model_data, model_path)
-            saved_paths.append(model_path)
-            logger.info(f"BaggingClassifierを保存: {model_path}")
-
-        elif (
+        # scikit-learn StackingClassifierの保存
+        if (
             hasattr(self, "stacking_classifier")
             and self.stacking_classifier is not None
         ):
@@ -283,7 +267,6 @@ class BaseEnsemble(ABC):
             joblib.dump(model_data, model_path)
             saved_paths.append(model_path)
             logger.info(f"StackingClassifierを保存: {model_path}")
-
         else:
             # 従来の実装（後方互換性のため）
             logger.warning("従来のアンサンブル実装を保存")
@@ -336,7 +319,7 @@ class BaseEnsemble(ABC):
 
     def load_models(self, base_path: str) -> bool:
         """
-        アンサンブルモデルを読み込み（scikit-learn実装対応）
+        アンサンブルモデルを読み込み（scikit-learn StackingClassifier対応）
 
         Args:
             base_path: 読み込み元ベースパス
@@ -351,9 +334,8 @@ class BaseEnsemble(ABC):
         from sklearn.exceptions import InconsistentVersionWarning
 
         try:
-            # scikit-learn実装のファイルを検索
+            # scikit-learn StackingClassifierファイルを検索
             sklearn_patterns = [
-                f"{base_path}_bagging_classifier_*.pkl",
                 f"{base_path}_stacking_classifier_*.pkl",
             ]
 
@@ -362,23 +344,20 @@ class BaseEnsemble(ABC):
                 sklearn_files.extend(glob.glob(pattern))
 
             if sklearn_files:
-                # scikit-learn実装ファイルで読み込み
+                # scikit-learn StackingClassifierファイルで読み込み
                 sklearn_file = sorted(sklearn_files)[-1]  # 最新のファイルを選択
                 logger.info(
-                    f"scikit-learn実装ファイルでモデルを読み込み: {sklearn_file}"
+                    f"scikit-learn StackingClassifierファイルでモデルを読み込み: {sklearn_file}"
                 )
 
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
                     model_data = joblib.load(sklearn_file)
 
-                # scikit-learn実装からデータを復元
+                # scikit-learn StackingClassifierからデータを復元
                 if isinstance(model_data, dict) and "ensemble_classifier" in model_data:
-                    # BaggingClassifierまたはStackingClassifierを復元
-                    if "bagging_classifier" in sklearn_file:
-                        self.bagging_classifier = model_data["ensemble_classifier"]
-                        logger.info("BaggingClassifierを復元")
-                    elif "stacking_classifier" in sklearn_file:
+                    # StackingClassifierを復元
+                    if "stacking_classifier" in sklearn_file:
                         self.stacking_classifier = model_data["ensemble_classifier"]
                         logger.info("StackingClassifierを復元")
 
@@ -387,7 +366,7 @@ class BaseEnsemble(ABC):
                     self.feature_columns = model_data.get("feature_columns", [])
                     self.is_fitted = model_data.get("is_fitted", False)
 
-                    logger.info("scikit-learn実装モデルの読み込み完了")
+                    logger.info("scikit-learn StackingClassifierモデルの読み込み完了")
                     return True
 
             # 従来の統合ファイル形式を試す
@@ -397,7 +376,6 @@ class BaseEnsemble(ABC):
                 for f in glob.glob(algorithm_pattern)
                 if not f.endswith("_config.pkl")
                 and not f.endswith("_meta_model.pkl")
-                and "bagging_classifier" not in f
                 and "stacking_classifier" not in f
             ]
 

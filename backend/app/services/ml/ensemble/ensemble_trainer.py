@@ -1,8 +1,7 @@
 """
 アンサンブル学習トレーナー
 
-BaseMLTrainerを継承し、アンサンブル学習のオーケストレーションを行います。
-バギングとスタッキングの両方をサポートし、設定に応じて適切な手法を選択します。
+BaseMLTrainerを継承し、スタッキングアンサンブル学習のオーケストレーションを行います。
 """
 
 import logging
@@ -13,7 +12,6 @@ import pandas as pd
 
 from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
-from .bagging import BaggingEnsemble
 from .stacking import StackingEnsemble
 
 logger = logging.getLogger(__name__)
@@ -23,8 +21,7 @@ class EnsembleTrainer(BaseMLTrainer):
     """
     アンサンブル学習トレーナー
 
-    BaseMLTrainerを継承し、アンサンブル学習機能を提供します。
-    設定に応じてバギングまたはスタッキングを実行します。
+    BaseMLTrainerを継承し、スタッキングアンサンブル学習機能を提供します。
     """
 
     def __init__(
@@ -43,7 +40,7 @@ class EnsembleTrainer(BaseMLTrainer):
 
         self.ensemble_config = ensemble_config
         self.model_type = "EnsembleModel"
-        self.ensemble_method = ensemble_config.get("method", "bagging")
+        self.ensemble_method = ensemble_config.get("method", "stacking")
         self.ensemble_model = None
 
         logger.info(f"EnsembleTrainer初期化: method={self.ensemble_method}")
@@ -62,11 +59,10 @@ class EnsembleTrainer(BaseMLTrainer):
         """
         optimized_params = {
             "base_models": {
-                "light gbm": {},
+                "lightgbm": {},
                 "xgboost": {},
                 "tabnet": {},
             },
-            "bagging": {},
             "stacking": {},
         }
 
@@ -87,11 +83,6 @@ class EnsembleTrainer(BaseMLTrainer):
             elif param_name.startswith("tab_"):
                 clean_name = param_name.replace("tab_", "")
                 optimized_params["base_models"]["tabnet"][clean_name] = param_value
-
-            # バギングパラメータ
-            elif param_name.startswith("bagging_"):
-                clean_name = param_name.replace("bagging_", "")
-                optimized_params["bagging"][clean_name] = param_value
 
             # スタッキングパラメータ
             elif param_name.startswith("stacking_"):
@@ -185,30 +176,8 @@ class EnsembleTrainer(BaseMLTrainer):
             # ハイパーパラメータ最適化からのパラメータを分離
             optimized_params = self._extract_optimized_parameters(training_params)
 
-            # アンサンブル手法に応じてモデルを作成
-            if self.ensemble_method.lower() == "bagging":
-                # バギング設定を準備
-                bagging_config = self.ensemble_config.get("bagging_params", {})
-                # base_model_typeが指定されていない場合のみデフォルトを設定
-                if "base_model_type" not in bagging_config:
-                    bagging_config["base_model_type"] = "lightgbm"
-
-                # 最適化されたバギングパラメータを適用
-                if "bagging" in optimized_params:
-                    bagging_config.update(optimized_params["bagging"])
-
-                bagging_config.update(
-                    {
-                        "random_state": training_params.get("random_state", 42),
-                        "n_jobs": training_params.get("n_jobs", -1),  # 並列処理を有効化
-                    }
-                )
-
-                self.ensemble_model = BaggingEnsemble(
-                    config=bagging_config, automl_config=self.automl_config
-                )
-
-            elif self.ensemble_method.lower() == "stacking":
+            # スタッキングアンサンブルモデルを作成
+            if self.ensemble_method.lower() == "stacking":
                 # スタッキング設定を準備
                 stacking_config = self.ensemble_config.get("stacking_params", {})
 
@@ -427,29 +396,6 @@ class EnsembleTrainer(BaseMLTrainer):
                     f"アンサンブル最高性能モデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
                 )
                 return model_path
-            elif (
-                hasattr(self.ensemble_model, "bagging_classifier")
-                and self.ensemble_model.bagging_classifier is not None
-            ):
-                # BaggingClassifierの場合
-                bagging_model = self.ensemble_model.bagging_classifier
-
-                # 統一されたモデル保存を使用
-                model_path = model_manager.save_model(
-                    model=bagging_model,
-                    model_name=model_name,
-                    metadata=final_metadata,
-                    scaler=self.scaler,
-                    feature_columns=self.feature_columns,
-                )
-
-                if model_path is None:
-                    raise ModelError("モデル保存に失敗しました")
-
-                logger.info(
-                    f"バギングアンサンブルモデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
-                )
-                return model_path
             else:
                 raise ModelError(
                     f"アンサンブルモデルが保存可能な形式ではありません。base_models数: {len(self.ensemble_model.base_models)}"
@@ -502,13 +448,8 @@ class EnsembleTrainer(BaseMLTrainer):
                 self.scaler = metadata["scaler"]
                 self.is_trained = metadata["is_trained"]
 
-            # アンサンブルモデルを作成
-            if self.ensemble_method.lower() == "bagging":
-                bagging_config = self.ensemble_config.get("bagging_params", {})
-                self.ensemble_model = BaggingEnsemble(
-                    config=bagging_config, automl_config=self.automl_config
-                )
-            elif self.ensemble_method.lower() == "stacking":
+            # スタッキングアンサンブルモデルを作成
+            if self.ensemble_method.lower() == "stacking":
                 stacking_config = self.ensemble_config.get("stacking_params", {})
                 self.ensemble_model = StackingEnsemble(
                     config=stacking_config, automl_config=self.automl_config
