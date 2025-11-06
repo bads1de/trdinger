@@ -108,7 +108,6 @@ class GAConfig(BaseConfig):
     hybrid_mode: bool = False
     hybrid_model_type: str = "lightgbm"  # lightgbm, xgboost, randomforest
     hybrid_model_types: Optional[List[str]] = None  # 複数モデル平均の場合
-    hybrid_automl_config: Optional[Dict[str, Any]] = None  # AutoML特徴量生成設定
     log_level: str = "ERROR"
     save_intermediate_results: bool = True
     progress_callback: Optional[Callable[["GAProgress"], None]] = None

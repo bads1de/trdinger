@@ -82,16 +82,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             gene_identifier = getattr(gene, "id", "GENE")[:8]
             backtest_config["strategy_name"] = f"GA_Individual_{gene_identifier}"
 
-            desired_config = config.hybrid_automl_config or {}
-            current_config = getattr(self.feature_adapter, "automl_config", {})
-            if current_config != desired_config:
-                try:
-                    self.feature_adapter = self._create_feature_adapter(
-                        automl_config=desired_config
-                    )
-                except Exception as exc:
-                    logger.warning(f"FeatureAdapter再生成に失敗: {exc}")
-
             # レジーム適応が有効な場合、レジーム検知を行う
             regime_labels = None
             if config.regime_adaptation_enabled and self.regime_detector:
@@ -170,10 +160,15 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 return (0.0,)
 
     def _create_feature_adapter(
-        self, automl_config: Optional[Dict[str, Any]] = None
+        self,
+        wavelet_config: Optional[Dict[str, Any]] = None,
+        use_derived_features: bool = True,
     ) -> "HybridFeatureAdapter":
         adapter_cls = self._resolve_feature_adapter_cls()
-        return adapter_cls(automl_config=automl_config)
+        return adapter_cls(
+            wavelet_config=wavelet_config,
+            use_derived_features=use_derived_features,
+        )
 
     def _resolve_feature_adapter_cls(self) -> Type["HybridFeatureAdapter"]:
         module = importlib.import_module(
@@ -215,9 +210,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""
-
-        automl_config = getattr(ga_config, "hybrid_automl_config", None) or {}
-        return bool(automl_config.get("apply_preprocessing", False))
+        # デフォルトではFalseを返す（必要に応じてGAConfigに設定を追加）
+        return False
 
     def _fetch_ohlcv_data(
         self,

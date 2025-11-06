@@ -49,7 +49,6 @@ class MLTrainingService(BaseResourceManager):
     def __init__(
         self,
         trainer_type: str = "ensemble",
-        automl_config: Optional[Dict[str, Any]] = None,
         ensemble_config: Optional[Dict[str, Any]] = None,
         single_model_config: Optional[Dict[str, Any]] = None,
     ):
@@ -58,7 +57,6 @@ class MLTrainingService(BaseResourceManager):
 
         Args:
             trainer_type: 使用するトレーナーのタイプ（'ensemble' または 'single'）
-            automl_config: AutoML設定（辞書形式）
             ensemble_config: アンサンブル設定（辞書形式）
             single_model_config: 単一モデル設定（辞書形式）
         """
@@ -66,7 +64,6 @@ class MLTrainingService(BaseResourceManager):
         super().__init__()
 
         self.config = ml_config
-        self.automl_config = automl_config
         self.ensemble_config = ensemble_config
         self.single_model_config = single_model_config
 
@@ -79,14 +76,10 @@ class MLTrainingService(BaseResourceManager):
         if trainer_type.lower() == "single":
             model_type = trainer_config.get("model_type", "lightgbm")
             # 明示的に SingleModelTrainer を使用（テスト期待と一致）
-            self.trainer = SingleModelTrainer(
-                model_type=model_type, automl_config=automl_config
-            )
+            self.trainer = SingleModelTrainer(model_type=model_type)
         else:
             # デフォルトは統合 BaseMLTrainer
-            self.trainer = BaseMLTrainer(
-                automl_config=automl_config, trainer_config=trainer_config
-            )
+            self.trainer = BaseMLTrainer(trainer_config=trainer_config)
 
         self.trainer_type = trainer_type
 
@@ -180,7 +173,6 @@ class MLTrainingService(BaseResourceManager):
         save_model: bool = True,
         model_name: Optional[str] = None,
         optimization_settings: Optional[OptimizationSettings] = None,
-        automl_config: Optional[Dict[str, Any]] = None,
         **training_params,
     ) -> Dict[str, Any]:
         """
@@ -193,7 +185,6 @@ class MLTrainingService(BaseResourceManager):
             save_model: モデルを保存するか
             model_name: モデル名（オプション）
             optimization_settings: 最適化設定（オプション）
-            automl_config: AutoML特徴量エンジニアリング設定（オプション）
             **training_params: 追加の学習パラメータ
 
         Returns:
@@ -203,31 +194,7 @@ class MLTrainingService(BaseResourceManager):
             MLDataError: データが無効な場合
             MLModelError: 学習に失敗した場合
         """
-        # AutoML設定の処理
-        effective_automl_config = automl_config or self.automl_config
-        if effective_automl_config:
-            # AutoML設定が提供された場合、新しいアンサンブルトレーナーインスタンスを作成
-            ensemble_config = self.ensemble_config or {
-                "method": "stacking",
-                "stacking_params": {
-                    "base_models": ["lightgbm", "xgboost"],
-                    "meta_model": "lightgbm",
-                    "cv_folds": 5,
-                    "use_probas": True,
-                    "random_state": 42,
-                },
-            }
-            trainer = EnsembleTrainer(
-                ensemble_config=ensemble_config, automl_config=effective_automl_config
-            )
-            logger.info(
-                "🤖 AutoML特徴量エンジニアリングを使用してアンサンブル学習を実行します"
-            )
-        else:
-            trainer = self.trainer
-            logger.info(
-                "📊 基本特徴量エンジニアリングを使用してアンサンブル学習を実行します"
-            )
+        trainer = self.trainer
 
         # 最適化が有効な場合は最適化ワークフローを実行
         if optimization_settings and optimization_settings.enabled:
@@ -705,7 +672,6 @@ class MLTrainingService(BaseResourceManager):
                 training_params = {**base_training_params, **params}
 
                 # 一時的なアンサンブルトレーナーを作成（元のトレーナーに影響しないように）
-                # AutoML設定がある場合はそれを引き継ぐ
                 temp_ensemble_config = {
                     "method": "stacking",
                     "stacking_params": {
@@ -717,13 +683,7 @@ class MLTrainingService(BaseResourceManager):
                     },
                 }
 
-                if hasattr(effective_trainer, "automl_config"):
-                    temp_trainer = EnsembleTrainer(
-                        ensemble_config=temp_ensemble_config,
-                        automl_config=effective_trainer.automl_config,
-                    )
-                else:
-                    temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
+                temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
 
                 # ミニトレーニングを実行（保存はしない）
                 result = temp_trainer.train_model(
@@ -781,5 +741,5 @@ class MLTrainingService(BaseResourceManager):
             logger.warning(f"MLTrainingServiceモデルクリーンアップエラー: {e}")
 
 
-# グローバルインスタンス（デフォルトはアンサンブル、AutoML設定なし）
-ml_training_service = MLTrainingService(trainer_type="ensemble", automl_config=None)
+# グローバルインスタンス（デフォルトはアンサンブル）
+ml_training_service = MLTrainingService(trainer_type="ensemble")

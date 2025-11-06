@@ -240,10 +240,7 @@ class MLTrainingOrchestrationService:
             if not training_status["is_training"]:
                 raise ValueError("実行中のトレーニングがありません")
 
-            # AutoMLプロセスのクリーンアップ処理を実行
-            self._cleanup_automl_processes()
-
-            # バックグラウンドタスクマネージャーのクリーンアップも実行
+            # バックグラウンドタスクマネージャーのクリーンアップを実行
             background_task_manager.cleanup_all_tasks()
 
             # トレーニング停止（実際の実装では、トレーニングプロセスを停止する必要があります）
@@ -272,7 +269,6 @@ class MLTrainingOrchestrationService:
         # バックグラウンドタスクマネージャーを使用してリソース管理
         with background_task_manager.managed_task(
             task_name=f"MLトレーニング_{config.symbol}_{config.timeframe}",
-            cleanup_callbacks=[self._cleanup_automl_processes],
         ) as task_id:
             try:
                 # トレーニング開始
@@ -409,11 +405,6 @@ class MLTrainingOrchestrationService:
                     )
                     trainer_type = "ensemble"
 
-                # AutoML設定の準備
-                automl_config_dict = None
-                if config.automl_config:
-                    automl_config_dict = config.automl_config.model_dump()
-
                 # トレーナータイプの最終確認
                 logger.info(f"🎯 最終決定されたトレーナータイプ: {trainer_type}")
                 if trainer_type == "single":
@@ -428,7 +419,6 @@ class MLTrainingOrchestrationService:
                 # MLサービス初期化とトレーニング実行
                 self._execute_ml_training_with_error_handling(
                     trainer_type,
-                    automl_config_dict,
                     ensemble_config_dict,
                     single_model_config_dict,
                     config,
@@ -449,87 +439,11 @@ class MLTrainingOrchestrationService:
                     }
                 )
 
-    def _cleanup_automl_processes(self):
-        """AutoMLプロセスのクリーンアップ処理"""
-        try:
-            logger.info("🧹 AutoMLプロセスのクリーンアップを開始")
-
-            # メモリ使用量を記録
-            import psutil
-
-            process = psutil.Process()
-            memory_before = process.memory_info().rss / 1024 / 1024
-
-            # AutoML関連のリソースをクリーンアップ
-            self._cleanup_enhanced_feature_service()
-            self._cleanup_ml_training_service()
-            self._cleanup_data_processor()
-
-            # 強制ガベージコレクション
-            import gc
-
-            collected = gc.collect()
-
-            # メモリ使用量の変化を記録
-            memory_after = process.memory_info().rss / 1024 / 1024
-            memory_freed = memory_before - memory_after
-
-            logger.info(
-                f"✅ AutoMLクリーンアップ完了: "
-                f"{collected}オブジェクト回収, "
-                f"{memory_freed:.2f}MB解放"
-            )
-
-        except Exception as e:
-            logger.error(f"AutoMLクリーンアップエラー: {e}")
-
-    def _cleanup_enhanced_feature_service(self):
-        """FeatureEngineeringService関連リソースのクリーンアップ"""
-        try:
-            # FeatureEngineeringServiceのインスタンスを作成してクリーンアップ
-            from app.services.ml.feature_engineering.feature_engineering_service import (
-                FeatureEngineeringService,
-            )
-
-            # 一時的なインスタンスを作成してクリーンアップメソッドを呼び出し
-            temp_service = FeatureEngineeringService()
-            temp_service.cleanup_resources()
-
-            # インスタンスを削除
-            del temp_service
-
-        except Exception as e:
-            logger.warning(f"FeatureEngineeringServiceクリーンアップエラー: {e}")
-
-    def _cleanup_ml_training_service(self):
-        """MLTrainingService関連リソースのクリーンアップ"""
-        try:
-            # グローバルMLTrainingServiceインスタンスのクリーンアップ
-            from app.services.ml.ml_training_service import ml_training_service
-
-            if hasattr(ml_training_service, "cleanup_resources"):
-                ml_training_service.cleanup_resources()
-
-        except Exception as e:
-            logger.warning(f"MLTrainingServiceクリーンアップエラー: {e}")
-
-    def _cleanup_data_processor(self):
-        """DataProcessor関連リソースのクリーンアップ"""
-        try:
-            # グローバルDataProcessorインスタンスのクリーンアップ
-            from app.utils.data_processing import data_processor
-
-            if hasattr(data_processor, "clear_cache"):
-                data_processor.clear_cache()
-
-        except Exception as e:
-            logger.warning(f"DataProcessorクリーンアップエラー: {e}")
 
     @safe_ml_operation(context="MLトレーニング実行")
     def _execute_ml_training_with_error_handling(
         self,
         trainer_type: str,
-        automl_config_dict: Dict[str, Any],
         ensemble_config_dict: Dict[str, Any],
         single_model_config_dict: Dict[str, Any],
         config,
@@ -540,7 +454,6 @@ class MLTrainingOrchestrationService:
 
         Args:
             trainer_type: トレーナータイプ
-            automl_config_dict: AutoML設定辞書
             ensemble_config_dict: アンサンブル設定辞書
             single_model_config_dict: 単一モデル設定辞書
             config: トレーニング設定
@@ -552,7 +465,6 @@ class MLTrainingOrchestrationService:
             logger.info("🔧 MLTrainingService初期化開始")
             ml_service = MLTrainingService(
                 trainer_type=trainer_type,
-                automl_config=automl_config_dict,
                 ensemble_config=ensemble_config_dict,
                 single_model_config=single_model_config_dict,
             )
@@ -590,13 +502,9 @@ class MLTrainingOrchestrationService:
             training_data=training_data,
             save_model=config.save_model,
             optimization_settings=optimization_settings,
-            automl_config=automl_config_dict,
             test_size=1 - config.train_test_split,
             random_state=config.random_state,
         )
-
-        # トレーニング完了後のクリーンアップ処理
-        self._cleanup_automl_processes()
 
         # トレーニング完了
         training_status.update(

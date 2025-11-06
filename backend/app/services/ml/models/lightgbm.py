@@ -30,7 +30,6 @@ class LightGBMModel:
 
     def __init__(
         self,
-        automl_config: Optional[Dict[str, Any]] = None,
         random_state: int = 42,
         n_estimators: int = 100,
         learning_rate: float = 0.1,
@@ -40,7 +39,6 @@ class LightGBMModel:
         初期化
 
         Args:
-            automl_config: AutoML設定（現在は未使用）
             random_state: ランダムシード
             n_estimators: エスティメータ数
             learning_rate: 学習率
@@ -50,7 +48,6 @@ class LightGBMModel:
         self.is_trained = False
         self.feature_columns: Optional[List[str]] = None
         self.scaler = None
-        self.automl_config = automl_config
         self.classes_ = None  # sklearn互換性のため
 
         # sklearn互換性のためのパラメータ

@@ -27,7 +27,6 @@ class TestHybridIntegration:
             mutation_rate=0.2,
             hybrid_mode=True,
             hybrid_model_type="lightgbm",
-            hybrid_automl_config={"enabled": True},
         )
 
     @pytest.fixture
@@ -63,7 +62,6 @@ class TestHybridIntegration:
         adapter.adapt_features.return_value = pd.DataFrame(
             {"adapted_feature": [1, 2, 3]}
         )
-        adapter.automl_config = {"enabled": True}
         return adapter
 
     def test_ga_engine_hybrid_initialization(
@@ -235,7 +233,7 @@ class TestHybridIntegration:
         )
 
         # HybridFeatureAdapterの初期化テスト
-        adapter = HybridFeatureAdapter(automl_config={"enabled": True})
+        adapter = HybridFeatureAdapter()
 
         # 特徴量適応テスト
         original_features = pd.DataFrame(
@@ -333,21 +331,21 @@ class TestHybridIntegration:
         is_valid, errors = config.validate()
         assert is_valid is True
 
-    def test_hybrid_automl_integration(self):
-        """ハイブリッドAutoML統合テスト"""
-        automl_config = {
+    def test_hybrid_wavelet_integration(self):
+        """ハイブリッドウェーブレット統合テスト"""
+        wavelet_config = {
             "enabled": True,
-            "feature_selection": True,
-            "apply_preprocessing": True,
+            "base_wavelet": "haar",
+            "scales": [2, 4],
         }
 
-        config = GASettings(hybrid_mode=True, hybrid_automl_config=automl_config)
+        config = GASettings(hybrid_mode=True, wavelet_config=wavelet_config)
 
-        assert config.hybrid_automl_config == automl_config
+        assert config.wavelet_config == wavelet_config
 
-        # AutoML設定が正しく反映されていることを確認
-        assert config.hybrid_automl_config["enabled"] is True
-        assert config.hybrid_automl_config["feature_selection"] is True
+        # ウェーブレット設定が正しく反映されていることを確認
+        assert config.wavelet_config["enabled"] is True
+        assert config.wavelet_config["base_wavelet"] == "haar"
 
     def test_hybrid_multiple_models(self):
         """複数モデルハイブリッドテスト"""

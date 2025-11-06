@@ -171,26 +171,8 @@ async def get_current_model(
     return await ErrorHandler.safe_execute_async(_get_current_model)
 
 
-@router.get("/automl-feature-analysis")
-async def get_automl_feature_analysis(
-    top_n: int = 20,
-    ml_service: MLManagementOrchestrationService = Depends(
-        get_ml_management_orchestration_service
-    ),
-):
-    """
-    AutoML特徴量分析結果を取得
-
-    Args:
-        top_n: 上位N件の特徴量を取得
-        ml_service: ML管理サービス（依存性注入）
-    """
-
-    async def _get_automl_feature_analysis():
-        return await ml_service.get_automl_feature_analysis(top_n)
-
-    return await ErrorHandler.safe_execute_async(_get_automl_feature_analysis)
-
+# AutoML機能は削除されたため、/automl-feature-analysisエンドポイントは削除されました
+# 特徴量分析は /feature-importance エンドポイントを使用してください
 
 @router.get("/config")
 async def get_ml_config(

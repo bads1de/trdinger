@@ -27,18 +27,14 @@ class XGBoostModel:
     # アルゴリズム名（AlgorithmRegistryから取得）
     ALGORITHM_NAME = "xgboost"
 
-    def __init__(self, automl_config: Optional[Dict[str, Any]] = None):
+    def __init__(self):
         """
         初期化
-
-        Args:
-            automl_config: AutoML設定（現在は未使用）
         """
         self.model = None
         self.is_trained = False
         self.feature_columns = None
         self.scaler = None
-        self.automl_config = automl_config
 
     def _train_model_impl(
         self,

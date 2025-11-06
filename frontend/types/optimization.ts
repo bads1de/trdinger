@@ -22,14 +22,6 @@ export interface WaveletConfig {
   [key: string]: unknown;
 }
 
-export interface HybridAutoMLConfig {
-  drl?: DRLConfig;
-  wavelet?: WaveletConfig;
-  apply_preprocessing?: boolean;
-  feature_generation?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
 export interface GAConfig {
   /** 実験名（UI表示/識別用） */
   experiment_name: string;
@@ -92,8 +84,6 @@ export interface GAConfig {
     hybrid_model_type?: string;
     /** 複数モデル平均の場合のモデルリスト */
     hybrid_model_types?: string[];
-    /** ハイブリッドML/AutoML設定（DRL・ウェーブレット等） */
-    hybrid_automl_config?: HybridAutoMLConfig;
   };
 }
 

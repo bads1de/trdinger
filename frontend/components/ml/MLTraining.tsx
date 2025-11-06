@@ -241,7 +241,6 @@ export default function MLTraining() {
                   // 最適化設定、アンサンブル設定、単一モデル設定を渡す
                   startTraining(
                     optimizationSettings,
-                    undefined, // AutoML機能は削除されました
                     ensembleSettings,
                     singleModelSettings
                   );

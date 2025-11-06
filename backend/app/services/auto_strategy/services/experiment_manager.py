@@ -114,7 +114,6 @@ class ExperimentManager:
                 hybrid_predictor = HybridPredictor(
                     trainer_type="single",
                     model_types=model_types,
-                    automl_config=ga_config.hybrid_automl_config,
                 )
             else:
                 # 単一モデル
@@ -123,13 +122,10 @@ class ExperimentManager:
                 hybrid_predictor = HybridPredictor(
                     trainer_type="single",
                     model_type=model_type,
-                    automl_config=ga_config.hybrid_automl_config,
                 )
 
             # HybridFeatureAdapterの初期化
-            hybrid_feature_adapter = HybridFeatureAdapter(
-                automl_config=ga_config.hybrid_automl_config
-            )
+            hybrid_feature_adapter = HybridFeatureAdapter()
 
             logger.info("✅ ハイブリッドコンポーネント初期化完了")
             logger.info(

@@ -28,16 +28,14 @@ class SingleModelTrainer(BaseMLTrainer):
     def __init__(
         self,
         model_type: str = "lightgbm",
-        automl_config: Optional[Dict[str, Any]] = None,
     ):
         """
         初期化
 
         Args:
             model_type: 使用するモデルタイプ（lightgbm, xgboost, tabnet）
-            automl_config: AutoML設定（オプション）
         """
-        super().__init__(automl_config=automl_config)
+        super().__init__()
 
         self.model_type = model_type.lower()
         self.single_model = None
@@ -120,17 +118,17 @@ class SingleModelTrainer(BaseMLTrainer):
             if self.model_type == "lightgbm":
                 from ..models.lightgbm import LightGBMModel
 
-                return LightGBMModel(automl_config=self.automl_config)
+                return LightGBMModel()
 
             elif self.model_type == "xgboost":
                 from ..models.xgboost import XGBoostModel
 
-                return XGBoostModel(automl_config=self.automl_config)
+                return XGBoostModel()
 
             elif self.model_type == "tabnet":
                 from ..models.tabnet import TabNetModel
 
-                return TabNetModel(automl_config=self.automl_config)
+                return TabNetModel()
 
 
             else:

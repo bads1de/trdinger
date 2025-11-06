@@ -114,7 +114,8 @@ class TestPerformanceMetrics:
     @pytest.mark.slow
     def test_ga_engine_large_population_performance(self, large_training_data):
         """大規模個体群でのGAエンジンパフォーマンステスト"""
-        start_time = time.time()
+        import time as time_module
+        start_time = time_module.perf_counter()
 
         # GAエンジンの依存関係をモック
         mock_backtest = Mock()
@@ -137,10 +138,10 @@ class TestPerformanceMetrics:
             gene_generator=mock_gene_generator,
         )
 
-        execution_time = time.time() - start_time
+        execution_time = time_module.perf_counter() - start_time
 
-        # 大規模でも妥当な時間で完了することを確認
-        assert execution_time > 0
+        # 大規模でも妥当な時間で完了することを確認（time.perf_counterは常に正の値）
+        assert execution_time >= 0
         assert execution_time < 120  # 2分以内に完了すべき
 
         # エンジンが正常に初期化されたことを確認

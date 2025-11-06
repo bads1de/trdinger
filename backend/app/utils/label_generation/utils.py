@@ -1,7 +1,7 @@
 """
 ラベル生成ユーティリティ関数群
 
-Pipeline作成、AutoML用ターゲット計算、GridSearch最適化などのユーティリティ関数を提供します。
+Pipeline作成、GridSearch最適化などのユーティリティ関数を提供します。
 """
 
 import logging
@@ -46,102 +46,6 @@ def create_label_pipeline(
             ),
         ]
     )
-
-
-def calculate_target_for_automl(
-    ohlcv_data: pd.DataFrame, config: Any = None
-) -> Optional[pd.Series]:
-    """
-    AutoML特徴量生成用のターゲット変数を計算
-
-    BaseMLTrainerから移管されたロジック。
-    ラベル生成の責務を一元管理するため、このモジュールに配置。
-
-    Args:
-        ohlcv_data: OHLCVデータ
-        config: 設定オブジェクト（オプション）
-
-    Returns:
-        ターゲット変数のSeries（計算できない場合はNone）
-    """
-    try:
-        if ohlcv_data.empty or "Close" not in ohlcv_data.columns:
-            logger.warning("ターゲット変数計算用のデータが不足しています")
-            return None
-
-        # 価格変化率を計算（次の期間の価格変化）
-        close_prices = ohlcv_data["Close"].copy()
-
-        # 将来の価格変化率を計算（24時間後の変化率）
-        prediction_horizon = 24
-        if config and hasattr(config, "training"):
-            prediction_horizon = getattr(config.training, "PREDICTION_HORIZON", 24)
-
-        future_returns = close_prices.pct_change(periods=prediction_horizon).shift(
-            -prediction_horizon
-        )
-
-        # 動的閾値を使用してクラス分類
-        label_generator = LabelGenerator()
-
-        # 設定から動的閾値パラメータを取得
-        label_method = "dynamic_volatility"
-        if config and hasattr(config, "training"):
-            label_method = getattr(
-                config.training, "LABEL_METHOD", "dynamic_volatility"
-            )
-
-        if label_method == "dynamic_volatility":
-            # 動的ボラティリティベースのラベル生成
-            volatility_window = 24
-            threshold_multiplier = 0.5
-            min_threshold = 0.005
-            max_threshold = 0.05
-
-            if config and hasattr(config, "training"):
-                volatility_window = getattr(config.training, "VOLATILITY_WINDOW", 24)
-                threshold_multiplier = getattr(
-                    config.training, "THRESHOLD_MULTIPLIER", 0.5
-                )
-                min_threshold = getattr(config.training, "MIN_THRESHOLD", 0.005)
-                max_threshold = getattr(config.training, "MAX_THRESHOLD", 0.05)
-
-            labels, threshold_info = label_generator.generate_labels(
-                ohlcv_data["Close"],  # type: ignore[arg-type]
-                method=ThresholdMethod.DYNAMIC_VOLATILITY,
-                volatility_window=volatility_window,
-                threshold_multiplier=threshold_multiplier,
-                min_threshold=min_threshold,
-                max_threshold=max_threshold,
-            )
-            target = labels
-        else:
-            # 従来の固定閾値（後方互換性）
-            threshold_up = 0.02
-            threshold_down = -0.02
-
-            if config and hasattr(config, "training"):
-                threshold_up = getattr(config.training, "THRESHOLD_UP", 0.02)
-                threshold_down = getattr(config.training, "THRESHOLD_DOWN", -0.02)
-
-            # 3クラス分類：0=下落、1=横ばい、2=上昇
-            target = pd.Series(1, index=future_returns.index)  # デフォルトは横ばい
-            target[future_returns > threshold_up] = 2  # 上昇
-            target[future_returns < threshold_down] = 0  # 下落
-
-        # NaNを除去
-        target = target.dropna()
-
-        logger.info(f"AutoML用ターゲット変数を計算: {len(target)}サンプル")
-        logger.info(
-            f"クラス分布 - 下落: {(target == 0).sum()}, 横ばい: {(target == 1).sum()}, 上昇: {(target == 2).sum()}"
-        )
-
-        return target
-
-    except Exception as e:
-        logger.warning(f"AutoML用ターゲット変数計算エラー: {e}")
-        return None
 
 
 def optimize_label_generation_with_gridsearch(

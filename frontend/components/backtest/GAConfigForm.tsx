@@ -23,12 +23,6 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 
-const DRL_POLICY_OPTIONS = [
-  { value: "ppo", label: "PPO" },
-  { value: "a2c", label: "A2C" },
-  { value: "dqn", label: "DQN" },
-];
-
 interface GAConfigFormProps {
   onSubmit: (config: GAConfigType) => void;
   onClose?: () => void;
@@ -102,7 +96,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         hybrid_mode: initialGAConfig.hybrid_mode ?? false,
         hybrid_model_type: initialGAConfig.hybrid_model_type ?? "lightgbm",
         hybrid_model_types: initialGAConfig.hybrid_model_types,
-        hybrid_automl_config: initialGAConfig.hybrid_automl_config,
       },
     };
   });
@@ -136,86 +129,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     onSubmit(config);
   };
 
-  const drlConfig = config.ga_config.hybrid_automl_config?.drl;
-  const drlEnabled = Boolean(drlConfig?.enabled);
-  const drlPolicyType = drlConfig?.policy_type ?? "ppo";
-  const drlPolicyWeight = drlConfig?.policy_weight ?? 0.5;
-
-  const handleDRLEnabledChange = (enabled: boolean) => {
-    setConfig((prev) => {
-      const currentAutoml = prev.ga_config.hybrid_automl_config ?? {};
-      const currentDrl = currentAutoml.drl ?? {
-        policy_type: "ppo",
-        policy_weight: 0.5,
-      };
-
-      return {
-        ...prev,
-        ga_config: {
-          ...prev.ga_config,
-          hybrid_automl_config: {
-            ...currentAutoml,
-            drl: {
-              ...currentDrl,
-              enabled,
-            },
-          },
-        },
-      };
-    });
-  };
-
-  const handleDRLPolicyTypeChange = (value: string) => {
-    setConfig((prev) => {
-      const currentAutoml = prev.ga_config.hybrid_automl_config ?? {};
-      const currentDrl = currentAutoml.drl ?? {
-        enabled: false,
-        policy_weight: 0.5,
-      };
-
-      return {
-        ...prev,
-        ga_config: {
-          ...prev.ga_config,
-          hybrid_automl_config: {
-            ...currentAutoml,
-            drl: {
-              ...currentDrl,
-              policy_type: value as "ppo" | "a2c" | "dqn",
-            },
-          },
-        },
-      };
-    });
-  };
-
-  const handleDRLPolicyWeightChange = (value: number) => {
-    const safeValue = Number.isFinite(value)
-      ? Math.min(Math.max(value, 0), 1)
-      : 0.5;
-
-    setConfig((prev) => {
-      const currentAutoml = prev.ga_config.hybrid_automl_config ?? {};
-      const currentDrl = currentAutoml.drl ?? {
-        enabled: false,
-        policy_type: "ppo",
-      };
-
-      return {
-        ...prev,
-        ga_config: {
-          ...prev.ga_config,
-          hybrid_automl_config: {
-            ...currentAutoml,
-            drl: {
-              ...currentDrl,
-              policy_weight: safeValue,
-            },
-          },
-        },
-      };
-    });
-  };
 
   return (
     <div className="flex flex-col lg:flex-row min-h-0">
@@ -479,49 +392,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 step={0.05}
                 description="ML予測スコアの重み（0-1）"
               />
-              <div className="p-3 bg-slate-900/40 border border-slate-600/30 rounded-md space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-200">
-                    🧠 DRLポリシーブレンド
-                  </label>
-                  <input
-                    type="checkbox"
-                    checked={drlEnabled}
-                    onChange={(event) =>
-                      handleDRLEnabledChange(event.target.checked)
-                    }
-                    className="w-5 h-5 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
-                    aria-label="DRLポリシーブレンドを有効化"
-                  />
-                </div>
-                {drlEnabled && (
-                  <>
-                    <SelectField
-                      label="DRLポリシー"
-                      value={drlPolicyType}
-                      onChange={handleDRLPolicyTypeChange}
-                      options={DRL_POLICY_OPTIONS}
-                    />
-                    <InputField
-                      label="DRLブレンド重み"
-                      type="number"
-                      value={drlPolicyWeight}
-                      onChange={handleDRLPolicyWeightChange}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      description="DRLとML予測の混合比率（0-1）"
-                    />
-                    <div className="p-3 bg-slate-800/40 border border-slate-500/30 rounded-md text-xs text-slate-300 space-y-2">
-                      <h5 className="font-semibold text-slate-200 mb-2">🧠 DRLポリシーブレンドについて</h5>
-                      <p><strong>PPO</strong>: 資本効率的。安定志向のトレーダー向け。リターン/リスク比を改善。</p>
-                      <p><strong>A2C</strong>: 高リスク高リターン。アグレッシブなトレーディングスタイル。</p>
-                      <p><strong>DQN</strong>: 現在開発中。将来的にはディープQネットワークを実装予定。</p>
-                      <p className="text-slate-400">0.0=MLのみ, 1.0=DRLのみ, 中間値=ブレンド運用</p>
-                    </div>
-                  </>
-                )}
-              </div>
               <p className="text-xs text-indigo-300">
                 💡 事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
               </p>

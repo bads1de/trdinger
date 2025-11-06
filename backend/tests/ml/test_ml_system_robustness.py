@@ -111,14 +111,14 @@ class TestMLSystemRobustness:
         assert X_train.index.max() < X_test.index.min()
         print("✅ 時系列分割の整合性が確認")
 
-        # 2. AutoML特徴量計算のフォールバック
+        # 2. 特徴量計算のフォールバック
         try:
             features = trainer._calculate_features(sample_training_data)
             assert isinstance(features, pd.DataFrame)
             assert len(features) == len(sample_training_data)
-            print("✅ AutoML特徴量計算が成功")
+            print("✅ 特徴量計算が成功")
         except Exception as e:
-            print(f"⚠️ AutoML特徴量計算でエラー（フォールバック発動）: {e}")
+            print(f"⚠️ 特徴量計算でエラー（フォールバック発動）: {e}")
 
         # 3. 欠損値処理
         data_with_missing = sample_training_data.copy()

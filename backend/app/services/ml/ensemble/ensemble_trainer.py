@@ -27,16 +27,14 @@ class EnsembleTrainer(BaseMLTrainer):
     def __init__(
         self,
         ensemble_config: Dict[str, Any],
-        automl_config: Optional[Dict[str, Any]] = None,
     ):
         """
         初期化
 
         Args:
             ensemble_config: アンサンブル設定
-            automl_config: AutoML設定（オプション）
         """
-        super().__init__(automl_config=automl_config)
+        super().__init__()
 
         self.ensemble_config = ensemble_config
         self.model_type = "EnsembleModel"
@@ -192,9 +190,7 @@ class EnsembleTrainer(BaseMLTrainer):
                     }
                 )
 
-                self.ensemble_model = StackingEnsemble(
-                    config=stacking_config, automl_config=self.automl_config
-                )
+                self.ensemble_model = StackingEnsemble(config=stacking_config)
 
             else:
                 raise ModelError(
@@ -268,37 +264,16 @@ class EnsembleTrainer(BaseMLTrainer):
             else:
                 logger.info(f"特徴量重要度を取得: {len(feature_importance)}個")
 
-            # AutoML特徴量分析
-            automl_feature_analysis = None
-            if self.use_automl and hasattr(self, "feature_service"):
-                try:
-                    # 安全にメソッドを呼び出し
-                    analyze_method = getattr(
-                        self.feature_service, "analyze_features", None
-                    )
-                    if analyze_method is not None and callable(analyze_method):
-                        automl_feature_analysis = analyze_method(X_train, y_train)
-                    else:
-                        logger.debug("analyze_featuresメソッドが利用できません")
-                except AttributeError:
-                    logger.debug(
-                        "FeatureEngineeringServiceにanalyze_featuresメソッドがありません"
-                    )
-                except Exception as e:
-                    logger.warning(f"AutoML特徴量分析でエラー: {e}")
-
             # 結果をまとめ
             result = {
                 **detailed_metrics,
                 **training_result,
                 "classification_report": class_report,
                 "feature_importance": feature_importance,
-                "automl_feature_analysis": automl_feature_analysis,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
                 "model_type": self.model_type,
                 "ensemble_method": self.ensemble_method,
-                "automl_enabled": self.use_automl,
             }
 
             # 学習完了フラグを設定
@@ -360,7 +335,6 @@ class EnsembleTrainer(BaseMLTrainer):
                     ),
                     "selected_model_only": True,
                     "ensemble_config": self.ensemble_config,
-                    "automl_config": self.automl_config,
                 }
             )
 
@@ -441,7 +415,6 @@ class EnsembleTrainer(BaseMLTrainer):
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
                     metadata = joblib.load(metadata_path)
                 self.ensemble_config = metadata["ensemble_config"]
-                self.automl_config = metadata["automl_config"]
                 self.model_type = metadata["model_type"]
                 self.ensemble_method = metadata["ensemble_method"]
                 self.feature_columns = metadata["feature_columns"]
@@ -451,9 +424,7 @@ class EnsembleTrainer(BaseMLTrainer):
             # スタッキングアンサンブルモデルを作成
             if self.ensemble_method.lower() == "stacking":
                 stacking_config = self.ensemble_config.get("stacking_params", {})
-                self.ensemble_model = StackingEnsemble(
-                    config=stacking_config, automl_config=self.automl_config
-                )
+                self.ensemble_model = StackingEnsemble(config=stacking_config)
             else:
                 raise ModelError(
                     f"サポートされていないアンサンブル手法: {self.ensemble_method}"

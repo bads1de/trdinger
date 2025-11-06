@@ -187,7 +187,6 @@ class TrainingMetadata:
 
     # 学習設定
     model_type: str = ""
-    use_automl: bool = False
     use_cross_validation: bool = False
 
     # 閾値情報

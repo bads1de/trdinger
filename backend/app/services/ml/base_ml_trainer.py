@@ -41,7 +41,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def __init__(
         self,
-        automl_config: Optional[Dict[str, Any]] = None,
         trainer_config: Optional[Dict[str, Any]] = None,
         trainer_type: Optional[str] = None,
         model_type: Optional[str] = None,
@@ -50,7 +49,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         初期化
 
         Args:
-            automl_config: AutoML設定（辞書形式）
             trainer_config: トレーナー設定（単一モデル/アンサンブル設定）
             trainer_type: トレーナータイプ（脆弱性修正）
             model_type: モデルタイプ（脆弱性修正）
@@ -61,7 +59,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.config = ml_config
 
         # 特徴量エンジニアリングサービスの初期化（autofeat機能は削除済み）
-        self.feature_service = FeatureEngineeringService(automl_config=None)
+        self.feature_service = FeatureEngineeringService()
         self.use_automl = False
         logger.debug("特徴量エンジニアリングサービスを初期化しました")
 
@@ -83,8 +81,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.is_trained = False
         self.model = None
         self.models = {}  # アンサンブル用の複数モデル格納
-        # 呼び出し元が辞書を渡す想定のため、そのまま保持（特徴量サービス内ではオブジェクトを使用）
-        self.automl_config = automl_config
         self.last_training_results = None  # 最後の学習結果を保持
 
     # 重複ロジック削除:
@@ -610,17 +606,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                         f"特徴量計算に完全に失敗しました: {str(e)} -> {str(fallback_error)} -> {str(final_error)}"
                     )
 
-    def _calculate_target_for_automl(
-        self, ohlcv_data: pd.DataFrame
-    ) -> Optional[pd.Series]:
-        """
-        AutoML特徴量生成用のターゲット変数を計算
-
-        ラベル生成ロジックはlabel_generation.pyに移管されました。
-        """
-        from ...utils.label_generation import calculate_target_for_automl
-
-        return calculate_target_for_automl(ohlcv_data, self.config)
 
     def _prepare_training_data(
         self, features_df: pd.DataFrame, **training_params
@@ -996,10 +981,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """キャッシュのクリーンアップ"""
         try:
             # 特徴量サービスのキャッシュクリーンアップ
+            # AutoML機能は削除済みのため、特にクリーンアップ処理なし
             if self.feature_service is not None:
-                if hasattr(self.feature_service, "clear_automl_cache"):
-                    self.feature_service.clear_automl_cache()
-                    logger.debug("特徴量サービスキャッシュをクリアしました")
+                logger.debug("特徴量サービスキャッシュのクリーンアップをスキップ")
         except Exception as e:
             logger.warning(f"キャッシュクリーンアップ警告: {e}")
 
@@ -1018,9 +1002,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.feature_columns = None
             self.is_trained = False
 
-            # AutoML設定をクリア（THOROUGH レベルの場合のみ）
-            if level == CleanupLevel.THOROUGH:
-                self.automl_config = None
 
         except Exception as e:
             logger.warning(f"モデルクリーンアップ警告: {e}")
@@ -1029,8 +1010,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.scaler = None
             self.feature_columns = None
             self.is_trained = False
-            if level == CleanupLevel.THOROUGH:
-                self.automl_config = None
 
     @safe_ml_operation(
         default_return={
@@ -1135,9 +1114,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # 旧実装との互換性を維持しつつ、テンプレートメソッドパターンを適用
         from .single_model.single_model_trainer import SingleModelTrainer
 
-        trainer = SingleModelTrainer(
-            model_type=self.model_type, automl_config=self.automl_config
-        )
+        trainer = SingleModelTrainer(model_type=self.model_type)
 
         result = trainer.train_model(training_data, **training_params)
 
@@ -1162,9 +1139,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # 旧実装との互換性を維持しつつ、テンプレートメソッドパターンを適用
         from .ensemble.ensemble_trainer import EnsembleTrainer
 
-        trainer = EnsembleTrainer(
-            ensemble_config=self.ensemble_config, automl_config=self.automl_config
-        )
+        trainer = EnsembleTrainer(ensemble_config=self.ensemble_config)
 
         result = trainer.train_model(training_data, **training_params)
 

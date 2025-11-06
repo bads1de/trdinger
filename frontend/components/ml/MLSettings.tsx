@@ -40,11 +40,6 @@ export default function MLSettings() {
     resetToDefaults,
     cleanupOldModels,
     updateConfig,
-    fetchAutoMLConfig,
-    validateAutoMLConfig: validateAutoMLConfigAPI,
-    generateAutoMLFeatures,
-    clearAutoMLCache,
-    setAutomlConfig,
   } = useMLSettings();
 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);

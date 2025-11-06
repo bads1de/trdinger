@@ -25,17 +25,15 @@ class BaseEnsemble(ABC):
     """
 
     def __init__(
-        self, config: Dict[str, Any], automl_config: Optional[Dict[str, Any]] = None
+        self, config: Dict[str, Any]
     ):
         """
         初期化
 
         Args:
             config: アンサンブル設定
-            automl_config: AutoML設定（オプション）
         """
         self.config = config
-        self.automl_config = automl_config
         self.base_models: List[Any] = []
         self.meta_model: Optional[Any] = None
         self.is_fitted = False
@@ -101,21 +99,21 @@ class BaseEnsemble(ABC):
             try:
                 from ..models.lightgbm import LightGBMModel
 
-                return LightGBMModel(automl_config=self.automl_config)
+                return LightGBMModel()
             except ImportError:
                 raise MLModelError("LightGBMモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "xgboost":
             try:
                 from ..models.xgboost import XGBoostModel
 
-                return XGBoostModel(automl_config=self.automl_config)
+                return XGBoostModel()
             except ImportError:
                 raise MLModelError("XGBoostモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "tabnet":
             try:
                 from ..models.tabnet import TabNetModel
 
-                return TabNetModel(automl_config=self.automl_config)
+                return TabNetModel()
             except ImportError:
                 raise MLModelError("TabNetモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "logistic_regression":
@@ -258,7 +256,6 @@ class BaseEnsemble(ABC):
             model_data = {
                 "ensemble_classifier": self.stacking_classifier,
                 "config": self.config,
-                "automl_config": self.automl_config,
                 "feature_columns": self.feature_columns,
                 "is_fitted": self.is_fitted,
                 "ensemble_type": "StackingEnsemble",
@@ -279,7 +276,6 @@ class BaseEnsemble(ABC):
                 model_data = {
                     "model": self.base_models[0],
                     "config": self.config,
-                    "automl_config": self.automl_config,
                     "feature_columns": self.feature_columns,
                     "is_fitted": self.is_fitted,
                     "best_algorithm": algorithm_name,
@@ -306,7 +302,6 @@ class BaseEnsemble(ABC):
                 config_path = f"{base_path}_config_{timestamp}.pkl"
                 config_data = {
                     "config": self.config,
-                    "automl_config": self.automl_config,
                     "feature_columns": self.feature_columns,
                     "is_fitted": self.is_fitted,
                     "best_algorithm": getattr(self, "best_algorithm", None),
@@ -362,7 +357,6 @@ class BaseEnsemble(ABC):
                         logger.info("StackingClassifierを復元")
 
                     self.config = model_data.get("config", {})
-                    self.automl_config = model_data.get("automl_config", {})
                     self.feature_columns = model_data.get("feature_columns", [])
                     self.is_fitted = model_data.get("is_fitted", False)
 
@@ -392,7 +386,6 @@ class BaseEnsemble(ABC):
                 if isinstance(model_data, dict) and "model" in model_data:
                     self.base_models = [model_data["model"]]
                     self.config = model_data.get("config", {})
-                    self.automl_config = model_data.get("automl_config", {})
                     self.feature_columns = model_data.get("feature_columns", [])
                     self.is_fitted = model_data.get("is_fitted", False)
                     self.best_algorithm = model_data.get("best_algorithm", "unknown")
@@ -429,7 +422,6 @@ class BaseEnsemble(ABC):
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
                     config_data = joblib.load(config_path)
                 self.config = config_data["config"]
-                self.automl_config = config_data["automl_config"]
                 self.feature_columns = config_data["feature_columns"]
                 self.is_fitted = config_data["is_fitted"]
 

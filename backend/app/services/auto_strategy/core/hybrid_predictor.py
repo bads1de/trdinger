@@ -32,7 +32,7 @@ class HybridPredictor:
         model_types: Optional[List[str]] = None,
         single_model_config: Optional[Dict[str, Any]] = None,
         ensemble_config: Optional[Dict[str, Any]] = None,
-        automl_config: Optional[Dict[str, Any]] = None,
+        drl_config: Optional[Dict[str, Any]] = None,
         use_time_series_cv: bool = False,
         training_service_cls: Optional[Type["MLTrainingService"]] = None,
         model_manager_instance: Optional["ModelManager"] = None,
@@ -44,9 +44,8 @@ class HybridPredictor:
         self.model_types = model_types
         self.single_model_config = single_model_config or {}
         self.ensemble_config = ensemble_config
-        self.automl_config = automl_config
+        self.drl_config = drl_config
         self.use_time_series_cv = use_time_series_cv
-        self.drl_config = (automl_config or {}).get("drl") if automl_config else None
         self._drl_enabled = bool(
             self.drl_config and self.drl_config.get("enabled", False)
         )
@@ -80,7 +79,6 @@ class HybridPredictor:
                 service = self.training_service_cls(
                     trainer_type="single",
                     single_model_config=config,
-                    automl_config=automl_config,
                 )
                 self.services.append(service)
             self.service = self.services[0]
@@ -91,7 +89,6 @@ class HybridPredictor:
                     self.single_model_config if trainer_type == "single" else None
                 ),
                 ensemble_config=ensemble_config,
-                automl_config=automl_config,
             )
             self.services = [service]
             self.service = service

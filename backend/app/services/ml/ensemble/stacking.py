@@ -29,16 +29,15 @@ class StackingEnsemble(BaseEnsemble):
     """
 
     def __init__(
-        self, config: Dict[str, Any], automl_config: Optional[Dict[str, Any]] = None
+        self, config: Dict[str, Any]
     ):
         """
         初期化
 
         Args:
             config: スタッキング設定
-            automl_config: AutoML設定（オプション）
         """
-        super().__init__(config, automl_config)
+        super().__init__(config)
 
         # スタッキング固有の設定（Essential 4 Modelsのみ）
         self.base_models = config.get("base_models", ["lightgbm", "xgboost"])

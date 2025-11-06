@@ -114,20 +114,6 @@ class TestMLTrainingService:
         assert result["f1_score"] == 0.85
         mock_trainer.train_model.assert_called_once()
 
-    def test_train_model_with_automl(self, sample_training_data, mock_trainer):
-        """AutoML設定でのモデル学習テスト"""
-        automl_config = {"enabled": True}
-        service = MLTrainingService(automl_config=automl_config)
-
-        with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
-            return_value=mock_trainer,
-        ):
-            result = service.train_model(sample_training_data, save_model=False)
-
-        assert result["success"] is True
-        mock_trainer.train_model.assert_called_once()
-
     @patch("backend.app.services.ml.ml_training_service.OptunaOptimizer")
     def test_train_model_with_optimization(
         self, mock_optimizer_class, sample_training_data, mock_trainer

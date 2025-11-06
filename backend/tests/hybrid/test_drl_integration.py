@@ -49,7 +49,6 @@ class _DummyTrainingService:
         trainer_type: str = "single",
         single_model_config: Optional[Dict[str, Any]] = None,
         ensemble_config: Optional[Dict[str, Any]] = None,
-        automl_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.trainer = Mock()
         self.trainer.is_trained = True
@@ -68,16 +67,14 @@ def test_feature_adapter_adds_wavelet_features(
         HybridFeatureAdapter,
     )
 
-    automl_config = {
-        "wavelet": {
-            "enabled": True,
-            "base_wavelet": "haar",
-            "scales": [2, 4],
-            "target_columns": ["close"],
-        }
+    wavelet_config = {
+        "enabled": True,
+        "base_wavelet": "haar",
+        "scales": [2, 4],
+        "target_columns": ["close"],
     }
 
-    adapter = HybridFeatureAdapter(automl_config=automl_config)
+    adapter = HybridFeatureAdapter(wavelet_config=wavelet_config)
     feature_df = adapter.gene_to_features(
         sample_gene, sample_ohlcv, apply_preprocessing=False
     )
@@ -95,16 +92,16 @@ def test_hybrid_predictor_blends_drl_signals(sample_ohlcv: pd.DataFrame) -> None
     drl_adapter = Mock()
     drl_adapter.predict_signals.return_value = {"up": 0.8, "down": 0.1, "range": 0.1}
 
+    drl_config = {
+        "enabled": True,
+        "policy_type": "ppo",
+        "policy_weight": 0.6,
+    }
+
     predictor = HybridPredictor(
         trainer_type="single",
         model_type="lightgbm",
-        automl_config={
-            "drl": {
-                "enabled": True,
-                "policy_type": "ppo",
-                "policy_weight": 0.6,
-            }
-        },
+        drl_config=drl_config,
         training_service_cls=_DummyTrainingService,
         drl_policy_adapter=drl_adapter,
     )

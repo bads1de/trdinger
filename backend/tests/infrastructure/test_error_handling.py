@@ -129,6 +129,14 @@ class TestErrorHandler:
     def test_handle_timeout_windows(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト処理テスト"""
         mock_platform.return_value = "Windows"
+        
+        # MagicMockでコンテキストマネージャーをサポート
+        mock_executor = MagicMock()
+        mock_future = MagicMock()
+        mock_future.result.return_value = "success"
+        mock_executor.submit.return_value = mock_future
+        mock_executor_class.return_value.__enter__.return_value = mock_executor
+        mock_executor_class.return_value.__exit__.return_value = None
 
         def test_func():
             return "success"
@@ -153,12 +161,14 @@ class TestErrorHandler:
     def test_handle_timeout_windows_timeout(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト発生テスト"""
         mock_platform.return_value = "Windows"
-        mock_executor = Mock()
-        mock_future = Mock()
+        
+        # MagicMockでコンテキストマネージャーをサポート
+        mock_executor = MagicMock()
+        mock_future = MagicMock()
         mock_future.result.side_effect = TimeoutError("timeout")
-        mock_executor.__enter__.return_value = mock_executor
         mock_executor.submit.return_value = mock_future
-        mock_executor_class.return_value = mock_executor
+        mock_executor_class.return_value.__enter__.return_value = mock_executor
+        mock_executor_class.return_value.__exit__.return_value = None
 
         def test_func():
             return "success"

@@ -11,7 +11,6 @@ from .transformer import PriceChangeTransformer
 from .event_driven import EventDrivenLabelGenerator, BarrierProfile
 from .utils import (
     create_label_pipeline,
-    calculate_target_for_automl,
     optimize_label_generation_with_gridsearch,
 )
 
@@ -22,7 +21,6 @@ __all__ = [
     "PriceChangeTransformer",
     "ThresholdMethod",
     "create_label_pipeline",
-    "calculate_target_for_automl",
     "optimize_label_generation_with_gridsearch",
     "BarrierProfile",
 ]

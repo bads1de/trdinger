@@ -195,30 +195,31 @@ class TestHybridFeatureAdapter:
         with pytest.raises(MLFeatureError):
             adapter.gene_to_features(sample_strategy_gene, empty_data)
 
-    def test_gene_to_features_with_automl_config(
+    def test_gene_to_features_with_wavelet_config(
         self, sample_strategy_gene, sample_ohlcv_data
     ):
         """
-        AutoML設定を使用した特徴量変換テスト
+        ウェーブレット設定を使用した特徴量変換テスト
 
         検証項目:
-        - AutoML設定が特徴量生成に反映される
-        - 自動生成された特徴量が含まれる
+        - ウェーブレット設定が特徴量生成に反映される
+        - ウェーブレット派生特徴量が含まれる
         """
         from app.services.auto_strategy.utils.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
-        automl_config = {
+        wavelet_config = {
             "enabled": True,
-            "feature_generation": {},
+            "base_wavelet": "haar",
+            "scales": [2, 4],
         }
 
-        adapter = HybridFeatureAdapter(automl_config=automl_config)
+        adapter = HybridFeatureAdapter(wavelet_config=wavelet_config)
         features_df = adapter.gene_to_features(sample_strategy_gene, sample_ohlcv_data)
 
-        # AutoML特徴量が含まれることを確認
-        assert features_df.shape[1] > 10  # AutoMLで特徴量が増加
+        # ウェーブレット特徴量が含まれることを確認
+        assert features_df.shape[1] > 10  # ウェーブレット特徴量で増加
 
     def test_gene_to_features_batch(self, sample_ohlcv_data):
         """

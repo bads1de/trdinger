@@ -70,7 +70,7 @@ export interface MLConfig {
  * ML設定管理フック
  *
  * 機械学習関連の各種設定を取得・管理します。
- * 基本設定、AutoML設定、設定の保存・リセット、モデルのクリーンアップなどの機能を提供します。
+ * 基本設定、設定の保存・リセット、モデルのクリーンアップなどの機能を提供します。
  *
  * @example
  * ```tsx
@@ -81,11 +81,7 @@ export interface MLConfig {
  *   fetchConfig,
  *   saveConfig,
  *   resetToDefaults,
- *   cleanupOldModels,
- *   fetchAutoMLConfig,
- *   validateAutoMLConfig,
- *   generateAutoMLFeatures,
- *   clearAutoMLCache
+ *   cleanupOldModels
  * } = useMLSettings();
  *
  * // 設定を取得
@@ -93,9 +89,6 @@ export interface MLConfig {
  *
  * // 設定を保存
  * saveConfig(newConfig);
- *
- * // AutoML特徴量を生成
- * generateAutoMLFeatures('BTC/USDT:USDT', '1h', 1000);
  * ```
  *
  * @returns {{

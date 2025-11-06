@@ -4,21 +4,16 @@
 OHLCV、ファンディングレート（FR）、建玉残高（OI）データを受け取り、
 市場の歪みや偏りを捉える高度な特徴量を計算します。
 
-リファクタリング後：責任を分割し、各特徴量計算クラスを統合します。
-AutoML機能も統合され、オプションで拡張特徴量計算が可能です。
+各特徴量計算クラスを統合し、単一責任原則に従って実装されています。
 """
 
-# cSpell:ignore automl
-
 import logging
-import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
-from ....utils.error_handler import safe_ml_operation
 from .advanced_features import AdvancedFeatureEngineer
 from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
@@ -26,10 +21,6 @@ from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
-
-# AutoML関連のインポート（削除済み）
-# autofeat機能は不要と判断されたため削除
-AUTOML_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -40,16 +31,10 @@ class FeatureEngineeringService:
 
     各特徴量計算クラスを統合し、高度な特徴量を生成します。
     単一責任原則に従い、各特徴量タイプの計算は専用クラスに委譲します。
-    AutoML機能もオプションで利用可能です。
     """
 
-    def __init__(self, automl_config: Optional[Any] = None):
-        """
-        初期化
-
-        Args:
-            automl_config: AutoML設定（オプション）
-        """
+    def __init__(self):
+        """初期化"""
         self.feature_cache = {}
         self.max_cache_size = 10  # 最大キャッシュサイズ
         self.cache_ttl = 3600  # キャッシュ有効期限（秒）
@@ -63,10 +48,6 @@ class FeatureEngineeringService:
         # データ頻度統一マネージャー
         self.frequency_manager = DataFrequencyManager()
 
-        # AutoML機能は削除されました（autofeat不要のため）
-        self.automl_enabled = False
-        self.automl_config = None
-
         # 暗号通貨特化特徴量エンジニアリング（デフォルトで有効）
         self.crypto_features = CryptoFeatures()
         logger.debug("暗号通貨特化特徴量を有効化しました")
@@ -74,9 +55,6 @@ class FeatureEngineeringService:
         # 高度な特徴量エンジニアリング（デフォルトで有効）
         self.advanced_features = AdvancedFeatureEngineer()
         logger.debug("高度な特徴量エンジニアリングを有効化しました")
-
-        # 統計情報
-        self.last_enhancement_stats = {}
 
     def calculate_advanced_features(
         self,
@@ -382,94 +360,6 @@ class FeatureEngineeringService:
             logger.error(f"特徴量計算エラー: {e}")
             raise
 
-    @safe_ml_operation(
-        default_return=None, context="拡張特徴量計算でエラーが発生しました"
-    )
-    def calculate_enhanced_features(
-        self,
-        ohlcv_data: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
-        lookback_periods: Optional[Dict[str, int]] = None,
-        automl_config: Optional[Dict] = None,
-        target: Optional[pd.Series] = None,
-        max_features_per_step: int = 25,  # 特徴量数削減: 100 → 50 → 25
-    ) -> pd.DataFrame:
-        """
-        拡張特徴量を計算（手動 + AutoML）- ステップ・バイ・ステップ方式
-
-        Args:
-            ohlcv_data: OHLCV価格データ
-            funding_rate_data: ファンディングレートデータ
-            open_interest_data: 建玉残高データ
-            lookback_periods: 計算期間設定
-            automl_config: AutoML設定（辞書形式）
-            target: ターゲット変数（特徴量選択用）
-            max_features_per_step: 各ステップでの最大特徴量数
-
-        Returns:
-            拡張特徴量が追加されたDataFrame
-        """
-        if not self.automl_enabled:
-            logger.warning("AutoML機能が無効です。基本特徴量計算を実行します")
-            return self.calculate_advanced_features(
-                ohlcv_data=ohlcv_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
-                lookback_periods=lookback_periods,
-            )
-
-        if ohlcv_data is None or ohlcv_data.empty:
-            logger.warning("空のOHLCVデータが提供されました")
-            return ohlcv_data
-
-        start_time = time.time()
-
-        try:
-            # AutoML設定の更新
-            if automl_config:
-                self._update_automl_config(automl_config)
-
-            logger.info("🔄 ステップ・バイ・ステップ特徴量生成を開始")
-
-            # ステップ1: 手動特徴量を計算
-            result_df = self._step1_manual_features(
-                ohlcv_data,
-                funding_rate_data,
-                open_interest_data,
-                lookback_periods,
-                include_crypto_features=True,  # CryptoFeaturesをデフォルトで有効
-                include_advanced_features=True,  # AdvancedFeatureEngineerをデフォルトで有効
-            )
-
-            # ステップ2: AutoFeat特徴量は削除されました（不要のため）
-
-            # 最終的な特徴量統計を記録
-            final_feature_count = len(result_df.columns)
-            logger.info(
-                f"🎯 ステップ・バイ・ステップ特徴量生成完了: 最終特徴量数 {final_feature_count}個"
-            )
-
-            # 統計情報を更新
-            total_time = time.time() - start_time
-            stats_update = {
-                "total_features": final_feature_count,
-                "total_time": total_time,
-                "data_rows": len(result_df),
-                "processing_method": "step_by_step",
-            }
-            if self.automl_config is not None and hasattr(
-                self.automl_config, "to_dict"
-            ):
-                stats_update["automl_config_used"] = self.automl_config.to_dict()
-            self.last_enhancement_stats.update(stats_update)
-
-            return result_df
-
-        except Exception as e:
-            logger.error(f"拡張特徴量計算エラー: {e}")
-            raise
-
     def get_feature_names(self) -> List[str]:
         """
         生成される特徴量名のリストを取得
@@ -486,45 +376,6 @@ class FeatureEngineeringService:
         feature_names.extend(self.interaction_calculator.get_feature_names())
 
         return feature_names
-
-    def _step1_manual_features(
-        self,
-        ohlcv_data: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
-        lookback_periods: Optional[Dict[str, int]] = None,
-        include_crypto_features: bool = True,
-        include_advanced_features: bool = True,
-    ) -> pd.DataFrame:
-        """ステップ1: 手動特徴量を計算"""
-        logger.info("📊 ステップ1: 手動特徴量を計算中...")
-        start_time = time.time()
-
-        result_df = self.calculate_advanced_features(
-            ohlcv_data=ohlcv_data,
-            funding_rate_data=funding_rate_data,
-            open_interest_data=open_interest_data,
-            lookback_periods=lookback_periods,
-        )
-
-        manual_time = time.time() - start_time
-        manual_feature_count = len(result_df.columns)
-
-        # 統計情報を記録
-        if hasattr(self, "last_enhancement_stats"):
-            self.last_enhancement_stats.update(
-                {
-                    "manual_features": manual_feature_count,
-                    "manual_time": manual_time,
-                }
-            )
-
-        logger.info(
-            f"✅ ステップ1完了: {manual_feature_count}個の手動特徴量 ({manual_time:.2f}秒)"
-        )
-        return result_df
-
-    # _step2_autofeat_features メソッドは削除されました（autofeat機能の削除に伴う）
 
     def _generate_cache_key(
         self,
@@ -750,211 +601,13 @@ class FeatureEngineeringService:
             logger.error(f"建玉残高疑似特徴量生成エラー: {e}")
             return df
 
-    def _select_top_features(
-        self,
-        df: pd.DataFrame,
-        target: Optional[pd.Series],
-        max_features: int,
-    ) -> pd.DataFrame:
-        """特徴量選択を実行して上位特徴量を選択"""
-        if target is None or len(df.columns) <= max_features:
-            return df
-
-        try:
-            from sklearn.feature_selection import SelectKBest, f_regression
-            from sklearn.impute import SimpleImputer
-
-            logger.info(f"特徴量選択を実行中: {len(df.columns)} → {max_features}個")
-
-            # 欠損値を補完
-            imputer = SimpleImputer(strategy="median")
-            X_imputed = imputer.fit_transform(df)
-
-            # 特徴量選択を実行
-            selector = SelectKBest(score_func=f_regression, k=max_features)
-            X_selected = selector.fit_transform(X_imputed, target)
-
-            # 選択された特徴量のカラム名を取得
-            selected_features = df.columns[selector.get_support()]
-            result_df = pd.DataFrame(
-                X_selected, columns=selected_features, index=df.index
-            )
-
-            logger.info(f"特徴量選択完了: {len(selected_features)}個の特徴量を選択")
-            return result_df
-
-        except Exception as e:
-            logger.warning(f"特徴量選択でエラー: {e}. 元のDataFrameを返します")
-            return df
-
-    def _update_automl_config(self, config_dict: Dict[str, Any]):
-        """AutoML設定を更新"""
-        if not self.automl_enabled:
-            logger.warning("AutoML機能が無効のため、設定更新をスキップします")
-            return
-
-        try:
-            # AutoFeat設定は削除されました（autofeat機能の削除に伴う）
-
-            logger.info("AutoML設定を更新しました")
-
-        except Exception as e:
-            logger.error(f"AutoML設定更新エラー: {e}")
-
-    def get_enhancement_stats(self) -> Dict[str, Any]:
-        """最後の拡張処理の統計情報を取得"""
-        if not self.automl_enabled or not hasattr(self, "last_enhancement_stats"):
-            return {}
-        return self.last_enhancement_stats.copy()
-
-    def get_available_automl_features(self) -> Dict[str, List[str]]:
-        """利用可能なAutoML特徴量のリストを取得"""
-        if not self.automl_enabled:
-            return {}
-
-        return {}  # AutoML特徴量は削除されました
-
-    def clear_automl_cache(self):
-        """AutoML特徴量のキャッシュをクリア"""
-        if not self.automl_enabled:
-            return
-
-        try:
-            # AutoML特徴量キャッシュは削除されました
-            # 強制ガベージコレクション
-            import gc
-
-            collected = gc.collect()
-
-            logger.info(
-                f"AutoML特徴量キャッシュをクリアしました（{collected}オブジェクト回収）"
-            )
-        except Exception as e:
-            logger.error(f"AutoMLキャッシュクリアエラー: {e}")
-
-    def validate_automl_config(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        AutoML設定を検証
-
-        Args:
-            config_dict: AutoML設定辞書
-
-        Returns:
-            Dict[str, Any]: 検証結果
-                - valid: bool - 設定が有効かどうか
-                - errors: List[str] - エラーメッセージのリスト
-                - warnings: List[str] - 警告メッセージのリスト
-        """
-        try:
-            errors = []
-            warnings = []
-
-            # 必須キーのチェック
-            if not isinstance(config_dict, dict):
-                errors.append("設定は辞書形式である必要があります")
-                return {"valid": False, "errors": errors, "warnings": warnings}
-
-            # AutoMLConfigオブジェクトの作成を試行
-            if AutoMLConfig is not None:
-                try:
-                    config = AutoMLConfig.from_dict(config_dict)
-                except Exception as e:
-                    errors.append(f"AutoML設定の解析に失敗しました: {str(e)}")
-                    return {"valid": False, "errors": errors, "warnings": warnings}
-            else:
-                errors.append("AutoML機能が利用できません")
-                return {"valid": False, "errors": errors, "warnings": warnings}
-
-            # AutoFeat設定の検証は削除されました（autofeat機能の削除に伴う）
-
-            return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
-
-        except Exception as e:
-            logger.error(f"AutoML設定検証エラー: {e}")
-            return {
-                "valid": False,
-                "errors": [f"設定検証中に予期しないエラーが発生しました: {str(e)}"],
-                "warnings": [],
-            }
-
-    def analyze_features(
-        self, features_df: pd.DataFrame, target: pd.Series
-    ) -> Optional[Dict[str, Any]]:
-        """
-        特徴量を分析（AutoML特徴量分析）
-
-        Args:
-            features_df: 特徴量DataFrame
-            target: ターゲット変数
-
-        Returns:
-            特徴量分析結果の辞書（AutoMLが無効の場合はNone）
-        """
-        if not self.automl_enabled:
-            logger.info("AutoML機能が無効のため、特徴量分析をスキップします")
-            return None
-
-        try:
-            logger.info("特徴量分析を開始")
-
-            # AutoMLFeatureAnalyzerのインポートと初期化
-            from .automl_feature_analyzer import AutoMLFeatureAnalyzer
-
-            analyzer = AutoMLFeatureAnalyzer()
-
-            # 特徴量重要度を計算するためのモデル学習（簡易版）
-            from sklearn.ensemble import RandomForestClassifier
-
-            # 欠損値処理
-            # 先にNaN値があるかチェック
-            if features_df.isnull().values.any():
-                # NaN値を0で埋める（scaler用に安全な値）
-                features_clean = features_df.fillna(0.0)
-            else:
-                features_clean = features_df.copy()
-
-            # 特徴量重要度の推定
-            model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-            model.fit(features_clean, target)
-
-            # 特徴量重要度を取得
-            feature_importance = dict(
-                zip(features_df.columns, model.feature_importances_)
-            )
-
-            # AutoMLFeatureAnalyzerで分析
-            analysis_result = analyzer.analyze_feature_importance(feature_importance)
-
-            logger.info("特徴量分析が完了")
-            return analysis_result
-
-        except Exception as e:
-            logger.error(f"特徴量分析エラー: {e}")
-            return None
-
     def cleanup_resources(self):
-        """リソースの完全クリーンアップ"""
+        """リソースのクリーンアップ"""
         try:
             logger.info("FeatureEngineeringServiceのリソースクリーンアップを開始")
 
-            # 基本キャッシュをクリア
+            # キャッシュをクリア
             self.clear_cache()
-
-            if self.automl_enabled:
-                # AutoMLキャッシュをクリア
-                self.clear_automl_cache()
-
-                # 統計情報をクリア
-                if hasattr(self, "last_enhancement_stats"):
-                    self.last_enhancement_stats.clear()
-
-                # AutoML特徴量キャッシュのクリーンアップは削除されました
-
-                # パフォーマンス最適化クラスのクリーンアップ
-                if self.performance_optimizer and hasattr(
-                    self.performance_optimizer, "cleanup"
-                ):
-                    self.performance_optimizer.cleanup()
 
             logger.info("FeatureEngineeringServiceのリソースクリーンアップ完了")
 

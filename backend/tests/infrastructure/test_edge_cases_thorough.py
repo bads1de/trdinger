@@ -26,8 +26,8 @@ class TestEdgeCasesThorough:
         # 極端な市場データ
         extreme_data = {
             "flash_crash": {
-                "prices": [100, 50, 25, 75, 100],  # 50%下落、50%反発
-                "volume": [100000, 500000, 1000000, 300000],
+                "prices": [100, 50, 25, 75, 100],  # 50%下落後反発
+                "volume": [100000, 500000, 1000000, 300000, 200000],
             },
             "parabolic_rally": {
                 "prices": [100, 200, 400, 800, 1600],  # 2倍ずつ上昇
@@ -39,10 +39,11 @@ class TestEdgeCasesThorough:
         for scenario, data in extreme_data.items():
             if scenario == "flash_crash":
                 # 急落時の対応
-                max_drawdown = (min(data["prices"]) - max(data["prices"])) / max(
-                    data["prices"]
-                )
-                assert max_drawdown == -0.5  # 50%下落
+                prices = data["prices"]
+                max_price = max(prices)
+                min_price = min(prices)
+                max_drawdown = (min_price - max_price) / max_price
+                assert abs(max_drawdown - (-0.75)) < 0.01  # 約75%下落（25/100-1）
             elif scenario == "parabolic_rally":
                 # 指数上昇
                 growth = data["prices"][-1] / data["prices"][0]
@@ -143,14 +144,22 @@ class TestEdgeCasesThorough:
         ]
 
         for data in empty_structures:
-            if data is None or (hasattr(data, "empty") and data.empty):
-                # 空データのフォールバック
+            if data is None:
+                # Noneデータのフォールバック
                 fallback = []
                 assert isinstance(fallback, list)
-            elif data == "":
+            elif hasattr(data, '__len__') and len(data) == 0:
+                # 空コレクションのフォールバック
+                fallback = []
+                assert isinstance(fallback, list)
+            elif isinstance(data, str) and data == "":
                 # 空文字列
                 fallback = "default"
                 assert isinstance(fallback, str)
+            elif pd.isna(data):
+                # pandas NA/NaT
+                fallback = None
+                assert fallback is None
 
     def test_extremely_large_data_sets(self):
         """極大データセットのテスト"""

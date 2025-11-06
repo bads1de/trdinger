@@ -27,7 +27,8 @@ class HybridFeatureAdapter:
 
     def __init__(
         self,
-        automl_config: Optional[Dict[str, Any]] = None,
+        wavelet_config: Optional[Dict[str, Any]] = None,
+        use_derived_features: bool = True,
         preprocess_handler: Optional[
             Callable[[pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]]
         ] = None,
@@ -36,17 +37,15 @@ class HybridFeatureAdapter:
         初期化
 
         Args:
-            automl_config: AutoML設定（autofeatなど）
+            wavelet_config: ウェーブレット変換設定
+            use_derived_features: 派生特徴量を生成するか
+            preprocess_handler: 前処理ハンドラ
         """
-        self.automl_config = automl_config or {}
-        self._automl_enabled = bool(self.automl_config.get("enabled", False))
+        self._use_derived_features = use_derived_features
         self._preprocess_handler = preprocess_handler
         self._preprocess_trainer = None
         self._wavelet_transformer: Optional["WaveletFeatureTransformer"] = None
 
-        wavelet_config = (
-            self.automl_config.get("wavelet") if self.automl_config else None
-        )
         if isinstance(wavelet_config, dict) and wavelet_config.get("enabled", False):
             try:
                 self._wavelet_transformer = WaveletFeatureTransformer(wavelet_config)
@@ -166,12 +165,12 @@ class HybridFeatureAdapter:
                         exc,
                     )
 
-            # AutoML特徴量生成（有効な場合）
-            if self._automl_enabled:
+            # 派生特徴量生成（有効な場合）
+            if self._use_derived_features:
                 try:
-                    features_df = self._augment_with_automl_features(features_df)
+                    features_df = self._augment_with_derived_features(features_df)
                 except Exception as e:
-                    logger.warning(f"AutoML特徴量生成エラー: {e}")
+                    logger.warning(f"派生特徴量生成エラー: {e}")
 
             # 前処理（オプション）
             if apply_preprocessing:
@@ -179,7 +178,7 @@ class HybridFeatureAdapter:
             else:
                 features_df = self._fallback_preprocess(features_df)
 
-            # 重複カラムを排除（AutoML特徴量追加時の安全策）
+            # 重複カラムを排除（派生特徴量追加時の安全策）
             features_df = features_df.loc[:, ~features_df.columns.duplicated()]
 
             return features_df
@@ -321,7 +320,6 @@ class HybridFeatureAdapter:
 
             if self._preprocess_trainer is None:
                 self._preprocess_trainer = BaseMLTrainer(
-                    automl_config=None,
                     trainer_config={"type": "single", "model_type": "lightgbm"},
                 )
 
@@ -330,8 +328,8 @@ class HybridFeatureAdapter:
             logger.warning(f"BaseMLTrainer初期化に失敗しました: {exc}")
             return None
 
-    def _augment_with_automl_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
-        """AutoML設定が有効な場合に追加の派生特徴量を付与"""
+    def _augment_with_derived_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
+        """派生特徴量（ローリング統計量、リターン等）を生成"""
 
         augmented = features_df.copy()
         numeric_cols = augmented.select_dtypes(include=[np.number]).columns

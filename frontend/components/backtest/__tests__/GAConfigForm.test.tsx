@@ -205,37 +205,4 @@ describe("GAConfigForm", () => {
     // チェックされていることを確認
     expect(regimeCheckbox).toBeChecked();
   });
-
-  test("ハイブリッドモードでDRL設定を有効化できること", () => {
-    renderWithTooltipProvider(
-      <GAConfigForm
-        onSubmit={mockOnSubmit}
-        onClose={mockOnClose}
-        initialConfig={initialConfig}
-      />
-    );
-
-    const hybridToggle = screen.getByLabelText("ハイブリッドGA+MLモードを有効化");
-    fireEvent.click(hybridToggle);
-
-    const drlToggle = screen.getByLabelText("DRLポリシーブレンドを有効化");
-    fireEvent.click(drlToggle);
-
-    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
-    fireEvent.click(submitButton);
-
-    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
-    const submittedConfig = mockOnSubmit.mock.calls[0][0];
-
-    expect(submittedConfig.ga_config.hybrid_mode).toBe(true);
-    expect(
-      submittedConfig.ga_config.hybrid_automl_config?.drl?.enabled
-    ).toBe(true);
-    expect(
-      submittedConfig.ga_config.hybrid_automl_config?.drl?.policy_type
-    ).toBe("ppo");
-    expect(
-      submittedConfig.ga_config.hybrid_automl_config?.drl?.policy_weight
-    ).toBeCloseTo(0.5);
-  });
 });

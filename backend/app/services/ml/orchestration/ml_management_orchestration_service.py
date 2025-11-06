@@ -434,12 +434,6 @@ class MLManagementOrchestrationService:
         else:
             return {"feature_importance": []}
 
-    async def get_automl_feature_analysis(self, top_n: int = 20) -> Dict[str, Any]:
-        """
-        AutoML特徴量分析結果を取得
-        """
-        # MLオーケストレーター削除により、エラーメッセージを返す
-        return {"error": "AutoML機能は現在利用できません"}
 
     async def cleanup_old_models(self) -> Dict[str, str]:
         """
