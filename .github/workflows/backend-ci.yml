@@ -1,0 +1,66 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: backend
+    
+    steps:
+      - name: コードのチェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Python環境のセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: pipキャッシュの設定
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: 依存関係のインストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[test,dev]
+      
+      - name: Blackフォーマットチェック
+        run: black --check .
+      
+      - name: isortインポート順チェック
+        run: isort --check-only .
+      
+      - name: Flake8リンティング
+        run: flake8 app/
+      
+      - name: MyPy型チェック
+        run: mypy .
+      
+      - name: Pytestテスト実行
+        run: pytest --cov=app --cov-report=xml --cov-report=term
+      
+      - name: カバレッジレポートのアップロード
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
