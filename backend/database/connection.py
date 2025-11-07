@@ -48,6 +48,16 @@ def get_db():
         db.close()
 
 
+def get_session():
+    """
+    スクリプト用のデータベースセッションを取得
+    
+    Returns:
+        Session: データベースセッション
+    """
+    return SessionLocal()
+
+
 def init_db():
     """データベースが初期化されていることを保証します。
 

@@ -88,6 +88,30 @@ class OHLCVRepository(BaseRepository):
         )
         return data
 
+    def get_all_by_symbol(
+        self, symbol: str, timeframe: str
+    ) -> List[OHLCVData]:
+        """
+        指定されたシンボルと時間軸の全OHLCVデータを取得
+        
+        Args:
+            symbol: 取引ペア
+            timeframe: 時間軸
+            
+        Returns:
+            全OHLCVデータのリスト（時系列順）
+        """
+        filters = {"symbol": symbol, "timeframe": timeframe}
+        return self.get_filtered_data(
+            filters=filters,
+            time_range_column="timestamp",
+            start_time=None,
+            end_time=None,
+            order_by_column="timestamp",
+            order_asc=True,
+            limit=None,
+        )
+
     def get_latest_ohlcv_data(
         self,
         symbol: str,

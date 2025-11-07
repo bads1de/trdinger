@@ -227,8 +227,8 @@ class EnsembleTrainer(BaseMLTrainer):
                 # 3クラス分類でない場合は評価をスキップ
 
             # 統一された評価指標計算器を使用
-            from ..evaluation.enhanced_metrics import (
-                EnhancedMetricsCalculator,
+            from ..evaluation.metrics import (
+                MetricsCalculator,
                 MetricsConfig,
             )
 
@@ -242,7 +242,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 zero_division="0",
             )
 
-            metrics_calculator = EnhancedMetricsCalculator(config)
+            metrics_calculator = MetricsCalculator(config)
             detailed_metrics = metrics_calculator.calculate_comprehensive_metrics(
                 y_test, y_pred, y_pred_proba
             )

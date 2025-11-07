@@ -36,13 +36,13 @@ from .logger import (
     ml_logger,
 )
 
-# メトリクス機能は evaluation/enhanced_metrics.py に統合されました
-# 後方互換性のため、enhanced_metrics からインポート
-from ..evaluation.enhanced_metrics import (
+# メトリクス機能は evaluation/metrics.py に統合されています
+# MetricsCalculator ベースのメトリクス機能を提供
+from ..evaluation.metrics import (
     MetricData,
     ModelEvaluationMetrics,
     PerformanceMetrics,
-    enhanced_metrics_calculator as metrics_collector,
+    metrics_collector,
     record_error,
     record_metric,
     record_model_evaluation_metrics,

@@ -137,6 +137,27 @@ class FundingRateRepository(BaseRepository):
             limit=limit,
         )
 
+    def get_all_by_symbol(self, symbol: str) -> List[FundingRateData]:
+        """
+        指定されたシンボルの全ファンディングレートデータを取得
+        
+        Args:
+            symbol: 取引ペア
+            
+        Returns:
+            全ファンディングレートデータのリスト（時系列順）
+        """
+        filters = {"symbol": symbol}
+        return self.get_filtered_data(
+            filters=filters,
+            time_range_column="funding_timestamp",
+            start_time=None,
+            end_time=None,
+            order_by_column="funding_timestamp",
+            order_asc=True,
+            limit=None,
+        )
+
     def get_latest_funding_timestamp(self, symbol: str) -> Optional[datetime]:
         """
         指定されたシンボルの最新ファンディングタイムスタンプを取得

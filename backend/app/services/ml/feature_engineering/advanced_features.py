@@ -98,7 +98,9 @@ class AdvancedFeatureEngineer:
         new_features["returns_lag_24"] = new_features["returns"].shift(24)
 
         # 累積リターン（24hのみ）
-        new_features["cumulative_returns_24"] = new_features["returns"].rolling(24).sum()
+        new_features["cumulative_returns_24"] = (
+            new_features["returns"].rolling(24).sum()
+        )
 
         # 一括で結合
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
@@ -227,7 +229,9 @@ class AdvancedFeatureEngineer:
 
         # 変化率（主要期間のみ）
         for period in [1, 24]:
-            new_features[f"Close_pct_change_{period}"] = data["close"].pct_change(period)
+            new_features[f"Close_pct_change_{period}"] = data["close"].pct_change(
+                period
+            )
 
         # 移動平均からの乖離（20期間のみ）
         ma_20 = data["close"].rolling(20).mean()
@@ -250,11 +254,15 @@ class AdvancedFeatureEngineer:
 
         # 実現ボラティリティ（20期間のみ）- 高寄与度
         new_features["Returns"] = data["close"].pct_change()
-        new_features["Realized_Vol_20"] = new_features["Returns"].rolling(20).std() * np.sqrt(24)
+        new_features["Realized_Vol_20"] = new_features["Returns"].rolling(
+            20
+        ).std() * np.sqrt(24)
 
         # Parkinson推定量（20期間のみ）- 高寄与度
         hl_ratio = np.log(data["high"] / data["low"])
-        new_features["Parkinson_Vol_20"] = hl_ratio.rolling(20).var() * (1 / (4 * np.log(2)))
+        new_features["Parkinson_Vol_20"] = hl_ratio.rolling(20).var() * (
+            1 / (4 * np.log(2))
+        )
 
         # 削除された特徴量（低寄与度）:
         # - Vol_Regime (スコア: 5.38e-05)
@@ -267,14 +275,27 @@ class AdvancedFeatureEngineer:
     def _add_funding_rate_features(
         self, data: pd.DataFrame, fr_data: pd.DataFrame
     ) -> pd.DataFrame:
-        """ファンディングレート特徴量（削除: 全てスコア0で寄与なし）"""
+        """
+        ファンディングレート特徴量（新設計: Tier 1特徴量）
+
+        新しいFundingRateFeatureCalculatorを使用してTier 1特徴量を生成
+        """
         logger.info("💰 ファンディングレート特徴量を追加中...")
 
-        # 分析結果: FR関連特徴量は全てスコア0または負のため削除
-        # 削除された特徴量: FR_mean_7, FR_sum_7, FR_extreme_positive, FR_extreme_negative
-        # 理由: 重要度分析で全てスコア ≤ 0
-        
-        return data
+        from .funding_rate_features import FundingRateFeatureCalculator
+
+        try:
+            # FundingRateFeatureCalculatorを使用
+            fr_calculator = FundingRateFeatureCalculator()
+            result_df = fr_calculator.calculate_features(data, fr_data)
+
+            fr_features = [col for col in result_df.columns if col.startswith("fr_")]
+            logger.info(f"ファンディングレート特徴量を追加: {len(fr_features)}個")
+
+            return result_df
+        except Exception as e:
+            logger.warning(f"ファンディングレート特徴量の計算エラー: {e}")
+            return data
 
     def _add_open_interest_features(
         self, data: pd.DataFrame, oi_data: pd.DataFrame
@@ -314,7 +335,9 @@ class AdvancedFeatureEngineer:
 
         # ボラティリティと出来高
         if "Realized_Vol_20" in data.columns:
-            new_features["Vol_Volume_Product"] = data["Realized_Vol_20"] * data["volume"]
+            new_features["Vol_Volume_Product"] = (
+                data["Realized_Vol_20"] * data["volume"]
+            )
 
         # 一括で結合
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
@@ -328,7 +351,7 @@ class AdvancedFeatureEngineer:
         # 削除された特徴量: Hour, DayOfWeek, Hour_sin, Hour_cos, DayOfWeek_sin, DayOfWeek_cos,
         #                 Is_Weekend, Is_Asian_Hours, Is_American_Hours
         # 理由: 暗号通貨は24時間取引で時間帯効果が弱い（全てスコア < 0.0003）
-        
+
         return data
 
 

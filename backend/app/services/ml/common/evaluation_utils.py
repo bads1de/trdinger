@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ..evaluation.enhanced_metrics import EnhancedMetricsCalculator, MetricsConfig
+from ..evaluation.metrics import MetricsCalculator, MetricsConfig
 
 
 def evaluate_model_predictions(
@@ -40,7 +40,7 @@ def evaluate_model_predictions(
         zero_division="0",
     )
 
-    metrics_calculator = EnhancedMetricsCalculator(config)
+    metrics_calculator = MetricsCalculator(config)
 
     # numpy配列に変換（pandas Seriesの場合）
     y_true_array = y_true.values if hasattr(y_true, "values") else y_true

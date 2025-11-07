@@ -85,7 +85,7 @@ class ModelEvaluationMetrics:
     training_params: Dict[str, Any] = field(default_factory=dict)
 
 
-class EnhancedMetricsCalculator:
+class MetricsCalculator:
     """
     統合評価指標計算器・収集器
 
@@ -782,23 +782,23 @@ class EnhancedMetricsCalculator:
 
 
 # グローバルインスタンス（統合されたメトリクス計算器・収集器）
-enhanced_metrics_calculator = EnhancedMetricsCalculator()
+metrics_collector = MetricsCalculator()
 
 
 # 便利な関数エイリアス（後方互換性のため）
 def record_metric(name: str, value: float, **kwargs):
     """メトリクス記録"""
-    enhanced_metrics_calculator.record_metric(name, value, **kwargs)
+    metrics_collector.record_metric(name, value, **kwargs)
 
 
 def record_performance(operation: str, duration_ms: float, **kwargs):
     """パフォーマンス記録"""
-    enhanced_metrics_calculator.record_performance(operation, duration_ms, **kwargs)
+    metrics_collector.record_performance(operation, duration_ms, **kwargs)
 
 
 def record_error(operation: str, error_type: str, error_message: str):
     """エラー記録"""
-    enhanced_metrics_calculator.record_error(operation, error_type, error_message)
+    metrics_collector.record_error(operation, error_type, error_message)
 
 
 def record_model_evaluation_metrics(
@@ -809,7 +809,7 @@ def record_model_evaluation_metrics(
     training_params: Optional[Dict[str, Any]] = None,
 ):
     """モデル評価メトリクス記録"""
-    enhanced_metrics_calculator.record_model_evaluation_metrics(
+    metrics_collector.record_model_evaluation_metrics(
         model_name, model_type, evaluation_metrics, dataset_info, training_params
     )
 
@@ -823,11 +823,10 @@ def evaluate_and_record_model(
     **kwargs,
 ) -> Dict[str, Any]:
     """モデル評価と記録の便利関数"""
-    return enhanced_metrics_calculator.evaluate_and_record_model(
+    return metrics_collector.evaluate_and_record_model(
         model_name, model_type, y_true, y_pred, y_proba, **kwargs
     )
 
 
 # 後方互換性のためのエイリアス
-MLMetricsCollector = EnhancedMetricsCalculator
-metrics_collector = enhanced_metrics_calculator
+MLMetricsCollector = MetricsCalculator

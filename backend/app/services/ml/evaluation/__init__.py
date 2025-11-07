@@ -4,13 +4,12 @@ ML Evaluation パッケージ
 包括的な評価指標計算とメトリクス管理を提供します。
 """
 
-from .enhanced_metrics import (
-    EnhancedMetricsCalculator,
+from .metrics import (
+    MetricsCalculator,
     MetricsConfig,
     MetricData,
     PerformanceMetrics,
     ModelEvaluationMetrics,
-    enhanced_metrics_calculator,
     record_metric,
     record_performance,
     record_error,
@@ -22,13 +21,12 @@ from .enhanced_metrics import (
 
 __all__ = [
     # Core classes
-    "EnhancedMetricsCalculator",
+    "MetricsCalculator",
     "MetricsConfig",
     "MetricData",
     "PerformanceMetrics",
     "ModelEvaluationMetrics",
     # Global instances
-    "enhanced_metrics_calculator",
     "metrics_collector",
     "MLMetricsCollector",
     # Utility functions

@@ -89,23 +89,17 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         new_features = {}
 
         # 価格レベル特徴量（暗号通貨特化）- 24hのみに削減（1週間は冗長）
-        new_features["price_vs_high_24h"] = (
-            df["close"] / df["high"].rolling(24).max()
-        )
-        new_features["price_vs_low_24h"] = (
-            df["close"] / df["low"].rolling(24).min()
-        )
+        new_features["price_vs_high_24h"] = df["close"] / df["high"].rolling(24).max()
+        new_features["price_vs_low_24h"] = df["close"] / df["low"].rolling(24).min()
 
         # 一括で結合（DataFrame断片化回避）
-        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+        result_df = pd.concat(
+            [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+        )
 
         # feature_groups更新
         self.feature_groups["price"].extend(
-            [
-                col
-                for col in result_df.columns
-                if col.startswith("price_vs_")
-            ]
+            [col for col in result_df.columns if col.startswith("price_vs_")]
         )
 
         return result_df
@@ -130,7 +124,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
 
         # VWAP（24hのみ - 最も重要）
         typical_price = (df["high"] + df["low"] + df["close"]) / 3
-        vwap_24 = (typical_price * df["volume"]).rolling(24).sum() / df["volume"].rolling(24).sum()
+        vwap_24 = (typical_price * df["volume"]).rolling(24).sum() / df[
+            "volume"
+        ].rolling(24).sum()
         new_features["vwap_24h"] = vwap_24
         new_features["price_vs_vwap_24h"] = (df["close"] - vwap_24) / vwap_24
 
@@ -140,7 +136,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         new_features["volume_price_trend"] = volume_rolling.corr(close_rolling_mean).fillna(0.0)  # type: ignore
 
         # 一括で結合（DataFrame断片化回避）
-        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+        result_df = pd.concat(
+            [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+        )
 
         self.feature_groups["volume"].extend(
             [col for col in result_df.columns if col.startswith(("volume_", "vwap_"))]
@@ -159,7 +157,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
 
         # OI変動率（medium期間のみ）
         if "medium" in periods:
-            new_features["oi_change_medium"] = df["open_interest"].pct_change(periods["medium"])
+            new_features["oi_change_medium"] = df["open_interest"].pct_change(
+                periods["medium"]
+            )
 
         # OI vs 価格の関係（最も重要）
         new_features["oi_price_divergence"] = (
@@ -180,7 +180,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         )
 
         # 一括で結合
-        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+        result_df = pd.concat(
+            [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+        )
 
         self.feature_groups["open_interest"].extend(
             [col for col in result_df.columns if col.startswith("oi_")]
@@ -191,10 +193,42 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     def _create_funding_rate_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """ファンディングレート関連特徴量（削除: 全てスコア0で寄与なし）"""
-        # 分析結果: FR関連特徴量は全てスコア0または負のため削除
-        # 削除された特徴量: fr_abs, fr_cumsum_24h, fr_mean_24h, fr_extreme_positive, fr_extreme_negative
-        return df
+        """
+        ファンディングレート関連特徴量（新設計: Tier 1特徴量）
+
+        新しいFundingRateFeatureCalculatorを使用してTier 1特徴量（15個）を生成：
+        - 基本金利指標（4個）
+        - 時間サイクル（3個）
+        - モメンタム（3個）
+        - レジーム（2個）
+        - 価格相互作用（2個）
+        """
+        from .funding_rate_features import FundingRateFeatureCalculator
+
+        # funding_rateカラムが存在しない場合はスキップ
+        if "funding_rate" not in df.columns:
+            logger.debug("funding_rateカラムが見つからないため、FR特徴量をスキップ")
+            return df
+
+        # timestampカラムの確認
+        if "timestamp" not in df.columns:
+            logger.warning("timestampカラムが見つからないため、FR特徴量をスキップ")
+            return df
+
+        # ファンディングレートデータを抽出
+        funding_df = df[["timestamp", "funding_rate"]].copy()
+
+        # FundingRateFeatureCalculatorを使用してTier 1特徴量を計算
+        fr_calculator = FundingRateFeatureCalculator()
+        result_df = fr_calculator.calculate_features(df, funding_df)
+
+        # feature_groupsにFR特徴量を追加
+        fr_features = [col for col in result_df.columns if col.startswith("fr_")]
+        self.feature_groups["funding_rate"].extend(fr_features)
+
+        logger.info(f"ファンディングレート特徴量を追加: {len(fr_features)}個")
+
+        return result_df
 
     def _create_technical_features(
         self, df: pd.DataFrame, periods: Dict[str, int]
@@ -243,7 +277,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
             new_features["macd_histogram"] = 0.0
 
         # 一括で結合
-        result_df = pd.concat([result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1)
+        result_df = pd.concat(
+            [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+        )
 
         self.feature_groups["technical"].extend(
             [
@@ -272,11 +308,7 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         # - market_stress (スコア: 0.0)
 
         self.feature_groups["composite"].extend(
-            [
-                col
-                for col in result_df.columns
-                if col.startswith("volume_price_")
-            ]
+            [col for col in result_df.columns if col.startswith("volume_price_")]
         )
 
         return result_df
@@ -300,7 +332,10 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         for col in numeric_cols:
             try:
                 # Seriesであることを確認
-                if isinstance(result_df[col], pd.Series) and result_df[col].isna().sum() > 0:
+                if (
+                    isinstance(result_df[col], pd.Series)
+                    and result_df[col].isna().sum() > 0
+                ):
                     result_df[col] = result_df[col].fillna(result_df[col].median())
             except (ValueError, TypeError) as e:
                 # エラーが発生した列はスキップ
@@ -352,5 +387,7 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         logger.info(f"暗号通貨特化特徴量を追加: {feature_count}個")
 
         return result_df
+
+
 # 後方互換性のためのクラス別名
 CryptoFeatures = CryptoFeatureCalculator
