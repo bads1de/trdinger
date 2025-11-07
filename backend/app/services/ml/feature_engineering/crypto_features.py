@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from .base_feature_calculator import BaseFeatureCalculator
-from ....utils.data_processing import data_processor as data_preprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +46,6 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         Returns:
             暗号通貨特徴量が追加されたDataFrame
         """
-        lookback_periods = config.get("lookback_periods", {})
-
         # create_crypto_featuresを呼び出し（後方互換性のため）
         result_df = self.create_crypto_features(df)
 
@@ -65,11 +62,10 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
                 logger.warning(f"必須カラム {col} が見つかりません")
                 return result_df
 
-        # オプショナルカラムの補完
-        if "open_interest" not in result_df.columns:
-            result_df["open_interest"] = 0
-        if "funding_rate" not in result_df.columns:
-            result_df["funding_rate"] = 0
+        # オプショナルカラムの補完（削除: 生データは使用しない）
+        # Removed: open_interest and funding_rate raw data columns
+        # (低寄与度特徴量削除: 2025-01-07)
+        # 理由: 加工済み特徴量のみを使用する設計に変更
 
         # 統計的手法による補完
         optional_columns = ["open_interest", "funding_rate"]
@@ -133,7 +129,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         # 出来高プロファイル
         close_rolling_mean = df["close"].rolling(24).mean()
         volume_rolling = df["volume"].rolling(24)
-        new_features["volume_price_trend"] = volume_rolling.corr(close_rolling_mean).fillna(0.0)  # type: ignore
+        new_features["volume_price_trend"] = volume_rolling.corr(
+            close_rolling_mean
+        ).fillna(0.0)  # type: ignore
 
         # 一括で結合（DataFrame断片化回避）
         result_df = pd.concat(

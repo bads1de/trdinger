@@ -9,34 +9,27 @@
 ## スクリプト一覧
 
 ### 1. analyze_feature_importance.py
-- **目的**: 複数のML手法で特徴量重要度を統合分析
+- **目的**: RandomForest・Permutation Importance・相関・分散を用いた統合的な特徴量重要度分析
 - **実行**: 
   ```bash
   python -m scripts.feature_evaluation.analyze_feature_importance
   ```
 - **出力**:
-  - `feature_importance_analysis.json` - 統合スコアと詳細分析結果
-
-#### 詳細機能
-- LightGBM、Permutation Importance、SHAP値による多角的評価
-- 統合スコアによる総合評価
-- 重要度ランキングと推奨削除候補の提示
+  - `feature_importance_analysis.json`
+  - `feature_importance_summary.csv`
 
 ---
 
-### 2. benchmark_all_features.py
-- **目的**: 全特徴量を用いたベンチマーク評価
-- **実行**: 
+### 2. detect_low_importance_features.py
+- **目的**: XGBoost / LightGBM による特徴量重要度評価から低重要度特徴量を自動検出
+- **実行**:
   ```bash
-  python -m scripts.feature_evaluation.benchmark_all_features
+  python -m scripts.feature_evaluation.detect_low_importance_features --symbol BTC/USDT --timeframe 1h --lookback-days 90 --threshold 0.2 --output-dir data/feature_evaluation
   ```
 - **出力**:
-  - `data/feature_evaluation/benchmark_results.json` - ベンチマーク結果
-
-#### 詳細機能
-- 全特徴量を使用した基準性能の計測
-- TimeSeriesSplitによるクロスバリデーション
-- RMSE、MAE、R²などの評価指標
+  - `data/feature_evaluation/low_importance_features_report.md`
+  - `data/feature_evaluation/feature_importance_detailed.csv`
+  - `data/feature_evaluation/features_to_remove_auto.json`
 
 ---
 

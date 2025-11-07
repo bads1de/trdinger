@@ -203,8 +203,6 @@ class FeatureEngineeringService:
                 existing_oi_columns = [
                     "OI_Change_Rate_24h",
                     "Volatility_Adjusted_OI",
-                    "OI_MA_24",
-                    "OI_MA_168",
                     "OI_Trend",
                     "OI_Normalized",
                 ]
@@ -348,6 +346,19 @@ class FeatureEngineeringService:
                 logger.warning(f"NaN値処理エラー、基本情報のみ使用: {nan_error}")
                 # 基本的なNaN処理のみ実行
                 result_df = result_df.fillna(0.0)
+
+            # 重複カラムの削除（複数の計算クラスで生成される可能性がある）
+            if result_df.columns.duplicated().any():
+                duplicated_cols = result_df.columns[
+                    result_df.columns.duplicated()
+                ].tolist()
+                logger.warning(
+                    f"重複カラムを検出、最初のもののみ保持: {duplicated_cols}"
+                )
+                # 重複を保持せずに削除（keep='first'で最初のもののみ保持）
+                result_df = result_df.loc[
+                    :, ~result_df.columns.duplicated(keep="first")
+                ]
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")
 
@@ -569,12 +580,12 @@ class FeatureEngineeringService:
             volatility = result_df["close"].pct_change().rolling(24).std()
             result_df["Volatility_Adjusted_OI"] = pseudo_oi / (volatility + 1e-8)
 
-            # OI移動平均
-            result_df["OI_MA_24"] = pseudo_oi.rolling(24).mean()
-            result_df["OI_MA_168"] = pseudo_oi.rolling(168).mean()
+            # OI移動平均（中間計算用）
+            oi_ma_24 = pseudo_oi.rolling(24).mean()
+            oi_ma_168 = pseudo_oi.rolling(168).mean()
 
             # OIトレンド
-            result_df["OI_Trend"] = result_df["OI_MA_24"] / result_df["OI_MA_168"] - 1
+            result_df["OI_Trend"] = (oi_ma_24 / oi_ma_168).fillna(1.0) - 1
 
             # OI正規化
             result_df["OI_Normalized"] = (
@@ -585,8 +596,6 @@ class FeatureEngineeringService:
             remaining_oi_columns = [
                 "OI_Change_Rate_24h",
                 "Volatility_Adjusted_OI",
-                "OI_MA_24",
-                "OI_MA_168",
                 "OI_Trend",
                 "OI_Normalized",
             ]

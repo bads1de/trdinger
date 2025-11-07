@@ -1,9 +1,11 @@
-"""Connors RSIのテスト用モジュール"""
+"""Connors RSIのテスト用モジュール
 
-import pandas as pd
-import numpy as np
+Note: 旧 OriginalIndicators 実装に依存しており、現行コードベースでは無効のためスキップ。
+"""
+
 import pytest
-from ...original import OriginalIndicators
+
+pytestmark = pytest.mark.skip(reason="Depends on removed backend.app.services.original. Skipped as legacy test.")
 
 
 class TestConnorsRSI:

@@ -209,14 +209,15 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             if ma_short is not None and ma_long is not None:
                 new_features["MA_Short"] = ma_short.fillna(result_df["close"])
                 new_features["MA_Long"] = ma_long.fillna(result_df["close"])
+                # 削除: MA_Cross - 理由: ほぼゼロの重要度（分析日: 2025-01-07）
                 # MAクロスシグナル（短期MAが長期MAを上回ると1、下回ると0）
-                new_features["MA_Cross"] = np.where(
-                    new_features["MA_Short"] > new_features["MA_Long"], 1.0, 0.0
-                )
+                # new_features["MA_Cross"] = np.where(
+                #     new_features["MA_Short"] > new_features["MA_Long"], 1.0, 0.0
+                # )
             else:
                 new_features["MA_Short"] = result_df["close"]
                 new_features["MA_Long"] = result_df["close"]
-                new_features["MA_Cross"] = 0.5
+                # new_features["MA_Cross"] = 0.5
 
             # ボラティリティパターン（ATRを使用）
             atr_values = ta.atr(
@@ -283,7 +284,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 df["close"].rolling(window=window_size, min_periods=1).max()
             )
 
-            new_features["Support_Level"] = support_level
+            # 削除: Support_Level - 理由: Near_Supportで代替可能（分析日: 2025-01-07）
+            # new_features["Support_Level"] = support_level
             new_features["Resistance_Level"] = resistance_level
 
             # 価格がサポート/レジスタントに近いことを示す特徴量

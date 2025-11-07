@@ -158,11 +158,11 @@ def test_pattern_features(sample_ohlcv_data):
         "BB_Position",
         "MA_Short",
         "MA_Long",
-        "MA_Cross",
+        # "MA_Cross",  # 削除済み特徴量
         "ATR",
         "Local_Min",
         "Local_Max",
-        "Support_Level",
+        # "Support_Level",  # 現行では未提供
         "Resistance_Level",
         "Near_Support",
         "Near_Resistance"

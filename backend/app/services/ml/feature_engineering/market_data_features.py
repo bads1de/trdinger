@@ -104,6 +104,15 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 欠損値を前方補完
             merged_df[fr_column] = merged_df[fr_column].ffill()
 
+            # 削除: funding_rate (生データ) - 理由: 加工済み特徴量で代替（分析日: 2025-01-07）
+            # 生のファンディングレートデータは使用せず、加工済み特徴量（複合特徴量）のみを使用
+            # 実際に削除処理を実行
+            if fr_column in merged_df.columns:
+                result_df = merged_df.drop(columns=[fr_column])
+                logger.info(f"Removed raw funding_rate column: {fr_column}")
+            else:
+                result_df = merged_df.copy()
+
             # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
             # 削除された特徴量: FR_MA_24, FR_MA_168, FR_Change, FR_Change_Rate,
             # Price_FR_Divergence, FR_Extreme_High, FR_Extreme_Low, FR_Normalized,
@@ -159,6 +168,13 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 欠損値を前方補完
             merged_df[oi_column] = merged_df[oi_column].ffill()
 
+            # 削除: open_interest (生データ) - 理由: 加工済み特徴量で代替（分析日: 2025-01-07）
+            # 生の建玉残高データは使用せず、加工済み特徴量（変化率、正規化値等）のみを使用
+            # 実際に削除処理を実行
+            if oi_column in merged_df.columns:
+                result_df = result_df.drop(columns=[oi_column])
+                logger.info(f"Removed raw open_interest column: {oi_column}")
+
             # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
             # 削除された特徴量: OI_Change_Rate
             # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
@@ -191,16 +207,14 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
                 "Volatility_Adjusted_OI"
             ].fillna(merged_df[oi_column])
 
-            # 建玉残高移動平均
+            # 建玉残高移動平均（中間計算用）
             oi_ma_24 = merged_df[oi_column].rolling(window=24, min_periods=1).mean()
-            result_df["OI_MA_24"] = pd.Series(oi_ma_24).fillna(0.0)
             oi_ma_168 = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
-            result_df["OI_MA_168"] = pd.Series(oi_ma_168).fillna(0.0)
 
             # 建玉残高トレンド（安全な計算）
-            result_df["OI_Trend"] = (
-                result_df["OI_MA_24"] / result_df["OI_MA_168"]
-            ).replace([np.inf, -np.inf], np.nan).fillna(1.0) - 1
+            result_df["OI_Trend"] = ((oi_ma_24 / oi_ma_168)).replace(
+                [np.inf, -np.inf], np.nan
+            ).fillna(1.0) - 1
 
             # 建玉残高と価格の関係
             price_change = (

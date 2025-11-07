@@ -225,11 +225,12 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # 削除された特徴量: ATR_Normalized
             # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
+            # 削除: High_Vol_Regime - 理由: 極低重要度（分析日: 2025-01-07）
             # ボラティリティレジーム（realized_volを使用）
-            vol_quantile = realized_vol.rolling(
-                window=volatility_period * 2, min_periods=1
-            ).quantile(0.8)
-            result_df["High_Vol_Regime"] = (realized_vol > vol_quantile).astype(int)
+            # vol_quantile = realized_vol.rolling(
+            #     window=volatility_period * 2, min_periods=1
+            # ).quantile(0.8)
+            # result_df["High_Vol_Regime"] = (realized_vol > vol_quantile).astype(int)
 
             # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
             # 削除された特徴量: Vol_Change
@@ -280,12 +281,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             )  # 99%分位点の10倍を上限とする
             result_df[f"Volume_MA_{volume_period}"] = np.clip(volume_ma, 0, volume_max)
 
+            # 削除: Volume_Ratio - 理由: 低重要度（分析日: 2025-01-07）
             # 出来高比率
-            result_df["Volume_Ratio"] = (
-                (result_df["volume"] / result_df[f"Volume_MA_{volume_period}"])
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(1.0)
-            )
+            # result_df["Volume_Ratio"] = (
+            #     (result_df["volume"] / result_df[f"Volume_MA_{volume_period}"])
+            #     .replace([np.inf, -np.inf], np.nan)
+            #     .fillna(1.0)
+            # )
 
             # 価格・出来高トレンド（pandas-ta使用）
             price_change_result = ta.roc(result_df["close"], length=1)
@@ -318,13 +320,14 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 .fillna(0.0)
             )
 
+            # 削除: Volume_Spike - 理由: 低重要度（分析日: 2025-01-07）
             # 出来高スパイク
-            vol_threshold = (
-                result_df["volume"].rolling(window=volume_period).quantile(0.9)
-            )
-            result_df["Volume_Spike"] = (result_df["volume"] > vol_threshold).astype(
-                int
-            )
+            # vol_threshold = (
+            #     result_df["volume"].rolling(window=volume_period).quantile(0.9)
+            # )
+            # result_df["Volume_Spike"] = (result_df["volume"] > vol_threshold).astype(
+            #     int
+            # )
 
             # 出来高トレンド
             volume_trend = (
@@ -370,12 +373,12 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             "Volatility_Spike",
             "ATR_20",
             # Removed: "ATR_Normalized" (低寄与度特徴量削除: 2025-01-05)
-            "High_Vol_Regime",
+            # Removed: "High_Vol_Regime" (極低重要度: 2025-01-07)
             # Removed: "Vol_Change" (低寄与度特徴量削除: 2025-01-05)
             # 出来高特徴量
-            "Volume_Ratio",
+            # Removed: "Volume_Ratio" (低重要度: 2025-01-07)
             "Price_Volume_Trend",
             "VWAP_Deviation",
-            "Volume_Spike",
+            # Removed: "Volume_Spike" (低重要度: 2025-01-07)
             "Volume_Trend",
         ]

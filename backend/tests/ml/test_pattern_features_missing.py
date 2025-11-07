@@ -62,9 +62,10 @@ class TestCalculatePatternFeaturesMissing:
         expected_features = [
             "Stochastic_K", "Stochastic_D", "Stochastic_Divergence",
             "BB_Upper", "BB_Middle", "BB_Lower", "BB_Position",
-            "MA_Short", "MA_Long", "MA_Cross",
+            "MA_Short", "MA_Long",  # MA_Cross は削除済み
             "ATR",  # Normalized_Volatilityは未実装のため削除
-            "Local_Min", "Local_Max", "Support_Level", "Resistance_Level",
+            "Local_Min", "Local_Max", # "Support_Level",  # 現行では未提供
+            "Resistance_Level",
             "Near_Support", "Near_Resistance"
         ]
 
