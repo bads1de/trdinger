@@ -4,7 +4,7 @@ import {
   ohlcvColumns,
   fundingRateColumns,
   openInterestColumns,
-} from "@/components/common/TableColumns";
+} from "@/components/common";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";

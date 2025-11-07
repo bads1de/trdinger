@@ -8,7 +8,7 @@ export { default as TabButton } from "./TabButton";
 export {
   ohlcvColumns,
   fundingRateColumns,
-  openInterestColumns
+  openInterestColumns,
 } from "./TableColumns";
 export { default as TimeFrameSelector } from "./TimeFrameSelector";
 export { default as LoadingSpinner } from "./LoadingSpinner";
