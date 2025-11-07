@@ -42,22 +42,6 @@ class EnsembleParameterSpace:
             "xgb_gamma": ParameterSpace(type="real", low=0.0, high=0.5),
         }
 
-    @staticmethod
-    def get_tabnet_parameter_space() -> Dict[str, ParameterSpace]:
-        """TabNetのパラメータ空間"""
-        return {
-            "tab_n_d": ParameterSpace(type="integer", low=8, high=64),
-            "tab_n_a": ParameterSpace(type="integer", low=8, high=64),
-            "tab_n_steps": ParameterSpace(type="integer", low=3, high=10),
-            "tab_gamma": ParameterSpace(type="real", low=1.0, high=2.0),
-            "tab_lambda_sparse": ParameterSpace(type="real", low=1e-6, high=1e-3),
-            "tab_optimizer_lr": ParameterSpace(type="real", low=0.005, high=0.05),
-            "tab_scheduler_step_size": ParameterSpace(type="integer", low=10, high=50),
-            "tab_scheduler_gamma": ParameterSpace(type="real", low=0.8, high=0.99),
-            "tab_n_independent": ParameterSpace(type="integer", low=1, high=5),
-            "tab_n_shared": ParameterSpace(type="integer", low=1, high=5),
-            "tab_momentum": ParameterSpace(type="real", low=0.01, high=0.4),
-        }
 
     @staticmethod
     def get_stacking_parameter_space() -> Dict[str, ParameterSpace]:
@@ -98,8 +82,6 @@ class EnsembleParameterSpace:
         if "xgboost" in enabled_models:
             parameter_space.update(cls.get_xgboost_parameter_space())
 
-        if "tabnet" in enabled_models:
-            parameter_space.update(cls.get_tabnet_parameter_space())
 
         # アンサンブル手法固有のパラメータを追加（スタッキング）
         if ensemble_method == "stacking":

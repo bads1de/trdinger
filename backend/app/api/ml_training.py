@@ -51,7 +51,7 @@ class StackingParamsConfig(BaseModel):
     )
     meta_model: str = Field(
         default="logistic_regression",
-        description="メタモデル（logistic_regression, lightgbm, xgboost, tabnet）",
+        description="メタモデル（logistic_regression, lightgbm, xgboost）",
     )
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     stack_method: str = Field(
@@ -81,7 +81,7 @@ class SingleModelConfig(BaseModel):
 
     model_type: str = Field(
         default="lightgbm",
-        description="使用するモデルタイプ (lightgbm, xgboost, tabnet)",
+        description="使用するモデルタイプ (lightgbm, xgboost)",
     )
 
 

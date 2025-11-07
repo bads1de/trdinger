@@ -363,7 +363,6 @@ class MLTrainingOrchestrationService:
                                 "base_models": [
                                     "lightgbm",
                                     "xgboost",
-                                    "tabnet",
                                 ],
                                 "meta_model": "lightgbm",
                                 "cv_folds": 5,

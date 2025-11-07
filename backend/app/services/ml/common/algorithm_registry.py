@@ -29,9 +29,6 @@ class AlgorithmRegistry:
         # XGBoost
         "xgbclassifier": "xgboost",
         "xgbregressor": "xgboost",
-        # TabNet
-        "tabnetclassifier": "tabnet",
-        "tabnetregressor": "tabnet",
         # Ensemble
         "ensembletrainer": "ensemble",
         "stackingensemble": "stacking",

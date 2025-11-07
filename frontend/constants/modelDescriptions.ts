@@ -15,11 +15,6 @@ export const MODEL_DESCRIPTIONS: Record<string, ModelDescription> = {
     description:
       "精度で最高レベルの勾配ブースティング。Kaggle実績豊富、最高レベルの精度と堅牢性、特徴量重要度完全サポート。重要プロジェクトに最適。",
   },
-  tabnet: {
-    title: "TabNet",
-    description:
-      "深層学習アプローチの表形式データ用。自動特徴選択、注意力機構、複雑パターン対応、Interpretability良好。高次元データに最適。",
-  },
 };
 
 export function getModelDescription(key: string): ModelDescription | undefined {

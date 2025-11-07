@@ -90,7 +90,7 @@ class BaseEnsemble(ABC):
         ベースモデルを作成（Essential 2 Modelsのみサポート）
 
         Args:
-            model_type: モデルタイプ（lightgbm, xgboost, tabnet）
+            model_type: モデルタイプ（lightgbm, xgboost, logistic_regression）
 
         Returns:
             作成されたモデル
@@ -109,13 +109,6 @@ class BaseEnsemble(ABC):
                 return XGBoostModel()
             except ImportError:
                 raise MLModelError("XGBoostモデルラッパーのインポートに失敗しました")
-        elif model_type.lower() == "tabnet":
-            try:
-                from ..models.tabnet import TabNetModel
-
-                return TabNetModel()
-            except ImportError:
-                raise MLModelError("TabNetモデルラッパーのインポートに失敗しました")
         elif model_type.lower() == "logistic_regression":
             # scikit-learnのLogisticRegressionを直接使用
             from sklearn.linear_model import LogisticRegression
@@ -127,7 +120,7 @@ class BaseEnsemble(ABC):
                 verbose=0,  # ログ抑制
             )
         else:
-            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, tabnet, logistic_regression")
+            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, logistic_regression")
 
     def _evaluate_predictions(
         self,

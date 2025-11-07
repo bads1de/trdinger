@@ -30,20 +30,12 @@ interface SingleModelSettingsProps {
 export default function SingleModelSettings({
   singleModelSettings,
   onSingleModelChange,
-  availableModels = [
-    "lightgbm",
-    "xgboost",
-    "tabnet",
-  ],
+  availableModels = ["lightgbm", "xgboost"],
 }: SingleModelSettingsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const normalizedModels = useMemo(() => {
-    const fallback = [
-      "lightgbm",
-      "xgboost",
-      "tabnet",
-    ];
+    const fallback = ["lightgbm", "xgboost"]; 
     const fromProps = (availableModels || []).map((m) =>
       String(m).toLowerCase().trim()
     );

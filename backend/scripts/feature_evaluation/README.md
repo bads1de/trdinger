@@ -63,7 +63,7 @@
 - 推奨事項の自動生成
 
 #### コマンドライン引数
-- `--models`: 評価するモデルを指定（lightgbm、tabnet、xgboost、all）
+- `--models`: 評価するモデルを指定（lightgbm、xgboost、all）
 - `--symbol`: 分析対象シンボル（デフォルト: BTC/USDT:USDT）
 - `--limit`: データ取得件数（デフォルト: 2000）
 
@@ -143,7 +143,7 @@ backend/data/feature_evaluation/
 
 - lightgbm
 - xgboost
-- pytorch-tabnet（オプション、TabNet評価に必要）
+
 - scikit-learn
 - pandas
 - numpy
@@ -153,15 +153,15 @@ backend/data/feature_evaluation/
 
 1. **データベース接続**: 実データを使用するスクリプトはデータベースへの接続が必要です
 2. **計算リソース**: 大規模な評価には相応の計算時間とメモリが必要です
-3. **モデル依存**: TabNet評価には`pytorch-tabnet`のインストールが必要です
+
 
 ## トラブルシューティング
 
-### pytorch-tabnetがインストールされていない場合
 
-TabNet評価はスキップされます。インストールする場合：
+
+
 ```bash
-pip install pytorch-tabnet
+
 ```
 
 ### メモリ不足エラー

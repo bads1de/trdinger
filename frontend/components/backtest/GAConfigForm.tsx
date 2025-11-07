@@ -372,7 +372,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 options={[
                   { value: "lightgbm", label: "LightGBM" },
                   { value: "xgboost", label: "XGBoost" },
-                  { value: "tabnet", label: "TabNet" },
                 ]}
               />
               <InputField

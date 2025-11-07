@@ -19,7 +19,6 @@ MLモデルラッパーモジュール
 __all__ = [
     "LightGBMModel",
     "XGBoostModel", 
-    "TabNetModel",
     "algorithm_registry",
 ]
 
@@ -36,7 +35,7 @@ def get_available_models():
     available = []
 
     # Essential 2 Modelsのみをチェック
-    essential_models = ["lightgbm", "xgboost", "tabnet"]
+    essential_models = ["lightgbm", "xgboost"]
     
     for model in essential_models:
         if importlib.util.find_spec(model):

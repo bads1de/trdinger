@@ -59,7 +59,6 @@ class EnsembleTrainer(BaseMLTrainer):
             "base_models": {
                 "lightgbm": {},
                 "xgboost": {},
-                "tabnet": {},
             },
             "stacking": {},
         }
@@ -77,10 +76,6 @@ class EnsembleTrainer(BaseMLTrainer):
 
 
 
-            # TabNetパラメータ
-            elif param_name.startswith("tab_"):
-                clean_name = param_name.replace("tab_", "")
-                optimized_params["base_models"]["tabnet"][clean_name] = param_value
 
             # スタッキングパラメータ
             elif param_name.startswith("stacking_"):

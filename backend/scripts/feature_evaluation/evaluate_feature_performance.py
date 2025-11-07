@@ -1,5 +1,5 @@
 """
-全モデル（LightGBM、TabNet、XGBoost）での特徴量性能検証統合スクリプト
+全モデル（LightGBM、XGBoost）での特徴量性能検証統合スクリプト
 
 既存の93特徴量を3つのモデルで評価し、
 削減可能な特徴量を特定します。
@@ -576,7 +576,7 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
             return {}
 
 
-class TabNetEvaluator(BaseFeatureEvaluator):
+# TabNet は現在サポート対象外のため、関連クラスは削除済みです。
     """TabNetモデルでの特徴量性能評価クラス"""
 
     def __init__(self):
@@ -596,34 +596,24 @@ class TabNetEvaluator(BaseFeatureEvaluator):
         }
 
         # TabNetの利用可能性をチェック
-        self.tabnet_available = self._check_tabnet()
+
 
     def _check_tabnet(self) -> bool:
-        """TabNetの利用可能性をチェック"""
-        try:
-            from pytorch_tabnet.tab_model import TabNetRegressor
-
-            return True
-        except ImportError:
-            logger.warning(
-                "pytorch-tabnetがインストールされていません。TabNet評価はスキップされます。"
-            )
-            return False
+        """TabNetは現在サポート対象外のため常にFalseを返す"""
+        return False
 
     def evaluate_model_cv(
         self, X: pd.DataFrame, y: pd.Series, n_splits: int = 5
     ) -> Dict[str, float]:
         """TimeSeriesSplitでクロスバリデーション評価"""
-        if not self.tabnet_available:
-            logger.error("pytorch-tabnetがインストールされていません")
-            return {}
+        logger.error("TabNetは現在サポートされていません")
+        return {}
 
         try:
-            from pytorch_tabnet.tab_model import TabNetRegressor
             import torch.optim as optim
             from torch.optim.lr_scheduler import StepLR
         except ImportError:
-            logger.error("pytorch-tabnetがインストールされていません")
+            logger.error("TabNetは現在サポートされていません")
             return {}
 
         tscv = TimeSeriesSplit(n_splits=n_splits)
@@ -710,12 +700,10 @@ class TabNetEvaluator(BaseFeatureEvaluator):
         self, X: pd.DataFrame, y: pd.Series
     ) -> Dict[str, float]:
         """TabNetの特徴量重要度を取得"""
-        if not self.tabnet_available:
-            logger.error("pytorch-tabnetがインストールされていません")
-            return {}
+        logger.error("TabNetは現在サポートされていません")
+        return {}
 
         try:
-            from pytorch_tabnet.tab_model import TabNetRegressor
             import torch.optim as optim
             from torch.optim.lr_scheduler import StepLR
 
@@ -899,7 +887,7 @@ class MultiModelFeatureEvaluator:
         初期化
 
         Args:
-            models: 評価するモデルのリスト ['lightgbm', 'tabnet', 'xgboost']
+            models: 評価するモデルのリスト ['lightgbm', 'xgboost']
         """
         self.models = models
         self.evaluators = {}
@@ -908,8 +896,6 @@ class MultiModelFeatureEvaluator:
         # 評価器を初期化
         if "lightgbm" in models:
             self.evaluators["lightgbm"] = LightGBMEvaluator()
-        if "tabnet" in models:
-            self.evaluators["tabnet"] = TabNetEvaluator()
         if "xgboost" in models:
             self.evaluators["xgboost"] = XGBoostEvaluator()
 
@@ -1255,7 +1241,7 @@ def parse_arguments():
     parser.add_argument(
         "--models",
         nargs="+",
-        choices=["lightgbm", "tabnet", "xgboost", "all"],
+        choices=["lightgbm", "xgboost", "all"],
         default=["all"],
         help="評価するモデルを指定 (デフォルト: all)",
     )
@@ -1280,7 +1266,7 @@ def main():
 
         # モデルリストを決定
         if "all" in args.models:
-            models = ["lightgbm", "tabnet", "xgboost"]
+            models = ["lightgbm", "xgboost"]
         else:
             models = args.models
 

@@ -123,41 +123,6 @@ export const ALGORITHMS: Record<string, Algorithm> = {
     has_feature_importance: true,
   },
 
-  // TabNet - 深層学習アプローチ
-  tabnet: {
-    name: 'tabnet',
-    display_name: 'TabNet',
-    description: '深層学習アプローチの表形式データ用',
-    type: AlgorithmType.NEURAL_NETWORK,
-    capabilities: [
-      AlgorithmCapability.CLASSIFICATION,
-      AlgorithmCapability.REGRESSION,
-      AlgorithmCapability.PROBABILITY_PREDICTION,
-      AlgorithmCapability.MULTICLASS,
-    ],
-    pros: [
-      '自動特徴選択',
-      'Interpretability良好',
-      '複雑パターン対応',
-      ' внимания mechanism',
-      '段階的学習'
-    ],
-    cons: [
-      '計算リソース必要',
-      'ハイパーパラメータ複雑',
-      '学習時間長い',
-      'データサイズ Larger必要'
-    ],
-    best_for: [
-      '深層学習アプローチ',
-      '特徴量自動選択',
-      '複雑データパターン',
-      '高次元データ',
-      'Interpretability重視'
-    ],
-    has_probability_prediction: true,
-    has_feature_importance: false, // TabNet uses attention mechanisms
-  },
 };
 
 // アルゴリズム配列（表示用）
