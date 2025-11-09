@@ -150,22 +150,18 @@ def test_pattern_features(sample_ohlcv_data):
     # 期待される特徴量（削減後：Normalized_Volatilityは削除済み）
     expected_features = [
         "Stochastic_K",
-        "Stochastic_D",
         "Stochastic_Divergence",
         "BB_Upper",
         "BB_Middle",
         "BB_Lower",
         "BB_Position",
-        "MA_Short",
         "MA_Long",
-        # "MA_Cross",  # 削除済み特徴量
         "ATR",
         "Local_Min",
         "Local_Max",
-        # "Support_Level",  # 現行では未提供
         "Resistance_Level",
         "Near_Support",
-        "Near_Resistance"
+        "Near_Resistance",
     ]
 
     for feature in expected_features:

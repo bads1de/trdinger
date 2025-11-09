@@ -81,8 +81,8 @@ class InteractionFeatureCalculator:
     def _check_required_features(self, df: pd.DataFrame) -> bool:
         """必要な特徴量が存在するかチェック"""
         # 基本的な特徴量のリスト（必須ではない特徴量は除外）
+        # Removed: Price_Momentum_14（重複特徴量削除: 2025-01-09）
         basic_required_features = [
-            "Price_Momentum_14",
             "Price_Change_5",
             "RSI",
         ]
@@ -139,12 +139,19 @@ class InteractionFeatureCalculator:
                 atr_column = atr_variant
                 break
 
-        if atr_column and "Price_Momentum_14" in df.columns:
+        # Removed: ATR × Price_Momentum_14（重複特徴量削除: 2025-01-09）
+        # 理由: Price_Momentum_14が削除されたため
+
+        # Removed: Volatility_Spike × Price_Change_5（重複特徴量削除: 2025-01-09）
+        # 理由: Volatility_Spikeが削除されたため
+
+        # ATR × Momentum（代替特徴量を使用）
+        if atr_column and "Momentum" in df.columns:
             try:
                 # データ型を確認して安全に変換
                 atr_values = self._safe_numeric_conversion(pd.Series(df[atr_column]))
                 momentum_values = self._safe_numeric_conversion(
-                    pd.Series(df["Price_Momentum_14"])
+                    pd.Series(df["Momentum"])
                 )
 
                 if atr_values is not None and momentum_values is not None:
@@ -154,24 +161,6 @@ class InteractionFeatureCalculator:
                     result_df["Volatility_Momentum_Interaction"] = interaction
             except Exception as e:
                 logger.warning(f"Volatility_Momentum_Interaction計算エラー: {e}")
-
-        # Volatility_Spike × Price_Change_5
-        if "Volatility_Spike" in df.columns and "Price_Change_5" in df.columns:
-            try:
-                volatility_spike = self._safe_numeric_conversion(
-                    pd.Series(df["Volatility_Spike"])
-                )
-                price_change = self._safe_numeric_conversion(
-                    pd.Series(df["Price_Change_5"])
-                )
-
-                if volatility_spike is not None and price_change is not None:
-                    interaction = volatility_spike * price_change
-                    # 無限大値や極端に大きな値をクリップ
-                    interaction = np.clip(interaction, -1e6, 1e6)
-                    result_df["Volatility_Spike_Momentum"] = interaction
-            except Exception as e:
-                logger.warning(f"Volatility_Spike_Momentum計算エラー: {e}")
 
         return result_df
 
@@ -290,12 +279,14 @@ class InteractionFeatureCalculator:
             except Exception as e:
                 logger.warning(f"OI_Price_Divergence計算エラー: {e}")
 
-        # OI_Trend × Price_Momentum_14
-        if "OI_Trend" in df.columns and "Price_Momentum_14" in df.columns:
+        # OI_Trend × Momentum（代替特徴量を使用）
+        # Removed: OI_Trend × Price_Momentum_14（重複特徴量削除: 2025-01-09）
+        # 理由: Price_Momentum_14が削除されたため、Momentumを使用
+        if "OI_Trend" in df.columns and "Momentum" in df.columns:
             try:
                 oi_trend = self._safe_numeric_conversion(pd.Series(df["OI_Trend"]))
                 momentum = self._safe_numeric_conversion(
-                    pd.Series(df["Price_Momentum_14"])
+                    pd.Series(df["Momentum"])
                 )
 
                 if oi_trend is not None and momentum is not None:
@@ -343,7 +334,7 @@ class InteractionFeatureCalculator:
         """生成される特徴量名のリストを取得"""
         return [
             "Volatility_Momentum_Interaction",
-            "Volatility_Spike_Momentum",
+            # Removed: "Volatility_Spike_Momentum"（重複特徴量削除: 2025-01-09）
             "Volume_Trend_Interaction",
             "Volume_Breakout",
             "FR_RSI_Extreme",

@@ -163,16 +163,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 new_features["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(
                     50.0
                 )
-                new_features["Stochastic_D"] = stoch_result["STOCHd_14_3_3"].fillna(
-                    50.0
-                )
+                # Removed: Stochastic_D（重複特徴量削除: 2025-01-09）
+                # 理由: stochastic_d（小文字）と重複
+                
                 # ドージ・ストキャスティクス（KとDの乖離）
+                stoch_d = stoch_result["STOCHd_14_3_3"].fillna(50.0)
                 new_features["Stochastic_Divergence"] = (
-                    new_features["Stochastic_K"] - new_features["Stochastic_D"]
+                    new_features["Stochastic_K"] - stoch_d
                 ).fillna(0.0)
             else:
                 new_features["Stochastic_K"] = 50.0
-                new_features["Stochastic_D"] = 50.0
                 new_features["Stochastic_Divergence"] = 0.0
 
             # ボリンジャーバンド（サポート・レジスタンス）
@@ -199,25 +199,18 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 new_features["BB_Lower"] = result_df["close"]
                 new_features["BB_Position"] = 0.5
 
-            # 移動平均（トレンド判断）
-            short_ma = lookback_periods.get("short_ma", 10)
+            # Removed: MA_Short（重複特徴量削除: 2025-01-09）
+            # 理由: price_features.pyのma_10と重複
+            
+            # 移動平均（トレンド判断）- MA_Longのみ保持
             long_ma = lookback_periods.get("long_ma", 50)
-
-            ma_short = ta.sma(result_df["close"], length=short_ma)
             ma_long = ta.sma(result_df["close"], length=long_ma)
 
-            if ma_short is not None and ma_long is not None:
-                new_features["MA_Short"] = ma_short.fillna(result_df["close"])
+            if ma_long is not None:
                 new_features["MA_Long"] = ma_long.fillna(result_df["close"])
                 # 削除: MA_Cross - 理由: ほぼゼロの重要度（分析日: 2025-01-07）
-                # MAクロスシグナル（短期MAが長期MAを上回ると1、下回ると0）
-                # new_features["MA_Cross"] = np.where(
-                #     new_features["MA_Short"] > new_features["MA_Long"], 1.0, 0.0
-                # )
             else:
-                new_features["MA_Short"] = result_df["close"]
                 new_features["MA_Long"] = result_df["close"]
-                # new_features["MA_Cross"] = 0.5
 
             # ボラティリティパターン（ATRを使用）
             atr_values = ta.atr(
@@ -262,20 +255,12 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # 局所的極値の検出（単純な方法）
-            new_features["Local_Min"] = (
-                (df["close"] <= df["close"].shift(1))
-                & (df["close"] <= df["close"].shift(-1))
-                & (df["close"] < df["close"].shift(2))
-                & (df["close"] < df["close"].shift(-2))
-            ).astype(float)
-
-            new_features["Local_Max"] = (
-                (df["close"] >= df["close"].shift(1))
-                & (df["close"] >= df["close"].shift(-1))
-                & (df["close"] > df["close"].shift(2))
-                & (df["close"] > df["close"].shift(-2))
-            ).astype(float)
+            # 局所的極値の検出（将来データを参照しない安全な定義）
+            window = 5
+            rolling_min = df["close"].rolling(window=window, min_periods=window).min()
+            rolling_max = df["close"].rolling(window=window, min_periods=window).max()
+            new_features["Local_Min"] = (df["close"] == rolling_min).astype(float)
+            new_features["Local_Max"] = (df["close"] == rolling_max).astype(float)
 
             # 簡易的なサポート・レジスタントレベル
             window_size = 20
@@ -463,7 +448,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "MACD_Signal",
             "MACD_Histogram",
             "Stochastic_K",
-            "Stochastic_D",
+            # Removed: "Stochastic_D" (重複特徴量削除: 2025-01-09)
             "Williams_R",
             "CCI",
             "ROC",

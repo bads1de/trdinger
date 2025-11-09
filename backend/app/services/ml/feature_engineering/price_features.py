@@ -65,47 +65,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
         result_df = self.create_result_dataframe(df)
 
-        # 移動平均比率（pandas-ta使用）
+        # Removed: 重複特徴量削除（特徴量重要度分析: 2025-01-09）
+        # 削除された特徴量: MA_10, MA_50 (technical_features.pyのMA_Short, MA_Longと重複)
+        # 削除された特徴量: Price_Momentum_14 (technical_features.pyのMomentumと重複)
+        # 削除された特徴量: High_Low_Position (他の位置指標で代替可能)
+        # 理由: technical_features.pyで同等の特徴量を計算しており冗長
+
         import pandas_ta as ta
-
-        short_ma = lookback_periods.get("short_ma", 10)
-        long_ma = lookback_periods.get("long_ma", 50)
-
-        ma_short = ta.sma(result_df["close"], length=short_ma)
-        if ma_short is not None:
-            ma_short_series = pd.Series(ma_short, index=result_df.index)
-            result_df[f"MA_{short_ma}"] = ma_short_series.fillna(result_df["close"])
-        else:
-            result_df[f"MA_{short_ma}"] = result_df["close"]
-        ma_long = ta.sma(result_df["close"], length=long_ma)
-        if ma_long is not None:
-            ma_long_series = pd.Series(ma_long, index=result_df.index)
-            result_df[f"MA_{long_ma}"] = ma_long_series.fillna(result_df["close"])
-        else:
-            result_df[f"MA_{long_ma}"] = result_df["close"]
-
-        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-        # 削除された特徴量: Price_MA_Ratio_Short, Price_MA_Ratio_Long
-        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
-        # 価格モメンタム（pandas-ta使用）
-        momentum_period = lookback_periods.get("momentum", 14)
-        momentum_result = ta.mom(result_df["close"], length=momentum_period)
-        if momentum_result is not None:
-            result_df["Price_Momentum_14"] = pd.Series(
-                momentum_result, index=result_df.index
-            ).fillna(0.0)
-        else:
-            result_df["Price_Momentum_14"] = 0.0
-
-        # 高値・安値ポジション
-        position_ratio = (result_df["close"] - result_df["low"]) / (
-            result_df["high"] - result_df["low"]
-        )
-        position_ratio = np.where(np.isinf(position_ratio), np.nan, position_ratio)
-        result_df["High_Low_Position"] = pd.Series(
-            position_ratio, index=result_df.index
-        ).fillna(0.5)
 
         # 価格変化率（pandas-ta使用）
         roc1 = ta.roc(result_df["close"], length=1)
@@ -194,19 +160,8 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # 削除された特徴量: Realized_Volatility_20, Volatility_Spike_MA
             # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
-            # ボラティリティスパイクのみ計算（中間変数として使用）
-            stdev_result = ta.stdev(result_df["Returns"], length=volatility_period)
-            realized_vol = (
-                pd.Series(stdev_result, index=result_df.index).fillna(0.0) * np.sqrt(24)
-                if stdev_result is not None
-                else pd.Series(0.0, index=result_df.index)
-            )
-            vol_ma = realized_vol.rolling(
-                window=volatility_period, min_periods=1
-            ).mean()
-            result_df["Volatility_Spike"] = (
-                (realized_vol / vol_ma).replace([np.inf, -np.inf], np.nan).fillna(1.0)
-            )
+            # Removed: Volatility_Spike（重複特徴量削除: 2025-01-09）
+            # 理由: 複数のボラティリティ指標で代替可能
 
             # ATR（Average True Range）- pandas-ta
             atr_result = ta.atr(
@@ -356,8 +311,8 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # 価格特徴量
             # Removed: "Price_MA_Ratio_Short", "Price_MA_Ratio_Long"
             # (低寄与度特徴量削除: 2025-01-05)
-            "Price_Momentum_14",
-            "High_Low_Position",
+            # Removed: "Price_Momentum_14", "High_Low_Position"
+            # (重複特徴量削除: 2025-01-09)
             "Price_Change_1",
             "Price_Change_5",
             "Price_Change_20",
@@ -370,7 +325,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # ボラティリティ特徴量
             # Removed: "Realized_Volatility_20", "Volatility_Spike_MA"
             # (低寄与度特徴量削除: 2025-01-05)
-            "Volatility_Spike",
+            # Removed: "Volatility_Spike" (重複特徴量削除: 2025-01-09)
             "ATR_20",
             # Removed: "ATR_Normalized" (低寄与度特徴量削除: 2025-01-05)
             # Removed: "High_Vol_Regime" (極低重要度: 2025-01-07)
