@@ -24,15 +24,12 @@ from sklearn.inspection import permutation_importance
 from sklearn.preprocessing import StandardScaler
 
 # プロジェクトのルートディレクトリをパスに追加
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.services.ml.feature_engineering.feature_engineering_service import (
-    FeatureEngineeringService,
+from scripts.feature_evaluation.common_feature_evaluator import (
+    CommonFeatureEvaluator,
+    EvaluationData,
 )
-from database.connection import SessionLocal
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
 
 # ログ設定
 logging.basicConfig(
@@ -53,11 +50,7 @@ class FeatureImportanceAnalyzer:
 
     def __init__(self):
         """初期化"""
-        self.db = SessionLocal()
-        self.ohlcv_repo = OHLCVRepository(self.db)
-        self.fr_repo = FundingRateRepository(self.db)
-        self.oi_repo = OpenInterestRepository(self.db)
-        self.feature_service = FeatureEngineeringService()
+        self.common = CommonFeatureEvaluator()
         self.results = {}
 
     def __enter__(self):
@@ -66,7 +59,7 @@ class FeatureImportanceAnalyzer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """コンテキストマネージャー: 退場"""
-        self.db.close()
+        self.common.close()
 
     def fetch_data(
         self, symbol: str = "BTC/USDT:USDT", limit: int = 2000
@@ -84,10 +77,8 @@ class FeatureImportanceAnalyzer:
         logger.info(f"データ取得開始: {symbol}, limit={limit}")
 
         try:
-            # OHLCVデータ取得
-            ohlcv_df = self.ohlcv_repo.get_ohlcv_dataframe(
-                symbol=symbol, timeframe="1h", limit=limit
-            )
+            data = self.common.fetch_data(symbol=symbol, timeframe="1h", limit=limit)
+            ohlcv_df = data.ohlcv
 
             if ohlcv_df.empty:
                 logger.warning(f"OHLCVデータが見つかりません: {symbol}")
@@ -171,11 +162,10 @@ class FeatureImportanceAnalyzer:
         logger.info("特徴量計算開始（削減後の全特徴量147個を分析）")
 
         try:
-            # 削減後の全特徴量を計算（crypto_features + advanced_features含む）
-            features_df = self.feature_service.calculate_advanced_features(
-                ohlcv_data=ohlcv_df,
-                funding_rate_data=fr_df,
-                open_interest_data=oi_df,
+            data = EvaluationData(ohlcv=ohlcv_df, fr=fr_df, oi=oi_df)
+            features_df = self.common.build_basic_features(
+                data=data,
+                skip_crypto_and_advanced=False,
             )
 
             # 元のOHLCVカラムを除外

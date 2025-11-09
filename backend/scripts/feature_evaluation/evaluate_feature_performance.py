@@ -30,14 +30,7 @@ from sklearn.model_selection import TimeSeriesSplit
 # プロジェクトのルートディレクトリをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.services.ml.feature_engineering.feature_engineering_service import (
-    FeatureEngineeringService,
-)
-from database.connection import SessionLocal
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-
+from scripts.feature_evaluation.common_feature_evaluator import CommonFeatureEvaluator, EvaluationData
 # ログ設定
 logging.basicConfig(
     level=logging.INFO,
@@ -46,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class BaseFeatureEvaluator(ABC):
+class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完全統合予定
     """特徴量評価の基底クラス"""
 
     def __init__(self, model_name: str):
@@ -57,11 +50,7 @@ class BaseFeatureEvaluator(ABC):
             model_name: モデル名
         """
         self.model_name = model_name
-        self.db = SessionLocal()
-        self.ohlcv_repo = OHLCVRepository(self.db)
-        self.fr_repo = FundingRateRepository(self.db)
-        self.oi_repo = OpenInterestRepository(self.db)
-        self.feature_service = FeatureEngineeringService()
+        self.common = CommonFeatureEvaluator()
         self.results = {}
 
     def __enter__(self):
@@ -70,7 +59,7 @@ class BaseFeatureEvaluator(ABC):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """コンテキストマネージャー: 退場"""
-        self.db.close()
+        self.common.close()
 
     def fetch_data(
         self, symbol: str = "BTC/USDT:USDT", limit: int = 2000
@@ -85,75 +74,8 @@ class BaseFeatureEvaluator(ABC):
         Returns:
             (OHLCV, FR, OI)のタプル
         """
-        logger.info(f"[{self.model_name}] データ取得開始: {symbol}, limit={limit}")
-
-        try:
-            # OHLCVデータ取得
-            ohlcv_df = self.ohlcv_repo.get_ohlcv_dataframe(
-                symbol=symbol, timeframe="1h", limit=limit
-            )
-
-            if ohlcv_df.empty:
-                logger.warning(f"OHLCVデータが見つかりません: {symbol}")
-                return pd.DataFrame(), None, None
-
-            logger.info(f"OHLCV: {len(ohlcv_df)}行取得")
-
-            # 時間範囲を取得
-            start_time = ohlcv_df.index.min()
-            end_time = ohlcv_df.index.max()
-
-            # ファンディングレートデータ取得
-            try:
-                fr_records = self.fr_repo.get_funding_rate_data(
-                    symbol=symbol, start_time=start_time, end_time=end_time
-                )
-                if fr_records:
-                    fr_df = self.fr_repo.to_dataframe(
-                        records=fr_records,
-                        column_mapping={
-                            "funding_timestamp": "funding_timestamp",
-                            "funding_rate": "funding_rate",
-                        },
-                        index_column="funding_timestamp",
-                    )
-                    logger.info(f"FR: {len(fr_df)}行取得")
-                else:
-                    fr_df = None
-                    logger.warning("ファンディングレートデータなし")
-            except Exception as e:
-                logger.warning(f"FR取得エラー: {e}")
-                fr_df = None
-
-            # オープンインタレストデータ取得
-            try:
-                oi_records = self.oi_repo.get_open_interest_data(
-                    symbol=symbol, start_time=start_time, end_time=end_time
-                )
-                if oi_records:
-                    oi_df = pd.DataFrame(
-                        [
-                            {
-                                "data_timestamp": r.data_timestamp,
-                                "open_interest_value": r.open_interest_value,
-                            }
-                            for r in oi_records
-                        ]
-                    )
-                    oi_df.set_index("data_timestamp", inplace=True)
-                    logger.info(f"OI: {len(oi_df)}行取得")
-                else:
-                    oi_df = None
-                    logger.warning("オープンインタレストデータなし")
-            except Exception as e:
-                logger.warning(f"OI取得エラー: {e}")
-                oi_df = None
-
-            return ohlcv_df, fr_df, oi_df
-
-        except Exception as e:
-            logger.error(f"データ取得エラー: {e}")
-            raise
+        data = self.common.fetch_data(symbol=symbol, timeframe="1h", limit=limit)
+        return data.ohlcv, data.fr, data.oi
 
     def calculate_features(
         self,
@@ -176,32 +98,15 @@ class BaseFeatureEvaluator(ABC):
 
         try:
             # 暗号通貨特化特徴量とadvanced特徴量をスキップして基本特徴量のみ計算
-            original_crypto = self.feature_service.crypto_features
-            original_advanced = self.feature_service.advanced_features
-
-            try:
-                # 一時的に無効化
-                self.feature_service.crypto_features = None
-                self.feature_service.advanced_features = None
-
-                # 特徴量計算
-                features_df = self.feature_service.calculate_advanced_features(
-                    ohlcv_data=ohlcv_df,
-                    funding_rate_data=fr_df,
-                    open_interest_data=oi_df,
-                )
-            finally:
-                # 元に戻す
-                self.feature_service.crypto_features = original_crypto
-                self.feature_service.advanced_features = original_advanced
-
-            # closeカラムを保持しながら、OHLCVの基本カラムを除外
-            ohlcv_cols = ["open", "high", "low", "volume"]
-            feature_cols = [
-                col for col in features_df.columns if col not in ohlcv_cols
-            ]
-
-            result_df = features_df[feature_cols].copy()
+            data = EvaluationData(ohlcv=ohlcv_df, fr=fr_df, oi=oi_df)
+            features_df = self.common.build_basic_features(
+                data=data,
+                skip_crypto_and_advanced=True,
+            )
+            result_df = self.common.drop_ohlcv_columns(
+                features_df,
+                keep_close=True,
+            )
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量")
             return result_df
 
@@ -389,7 +294,7 @@ class BaseFeatureEvaluator(ABC):
             f"CV MAE: {cv_results['cv_mae']:.6f} (±{cv_results['cv_mae_std']:.6f})"
         )
         logger.info(
-            f"CV R²: {cv_results['cv_r2']:.6f} (±{cv_results['cv_r2_std']:.6f})"
+            f"CV R2: {cv_results['cv_r2']:.6f} (+/-{cv_results['cv_r2_std']:.6f})"
         )
         logger.info(f"学習時間: {cv_results['train_time_sec']:.2f}秒")
 
@@ -520,7 +425,7 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
                 r2_scores.append(r2)
 
                 logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R²={r2:.6f}, Time={train_time:.2f}s"
+                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R2={r2:.6f}, Time={train_time:.2f}s"
                 )
 
             except Exception as e:
@@ -676,7 +581,7 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
                 r2_scores.append(r2)
 
                 logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R²={r2:.6f}, Time={train_time:.2f}s"
+                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R2={r2:.6f}, Time={train_time:.2f}s"
                 )
 
             except Exception as e:
@@ -820,7 +725,7 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
                 r2_scores.append(r2)
 
                 logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R²={r2:.6f}, Time={train_time:.2f}s"
+                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R2={r2:.6f}, Time={train_time:.2f}s"
                 )
 
             except Exception as e:
@@ -1177,7 +1082,7 @@ class MultiModelFeatureEvaluator:
         print("\n" + "-" * 80)
         print("【モデル別ベースライン性能比較】")
         print("-" * 80)
-        print(f"{'モデル':<15} {'RMSE':<12} {'MAE':<12} {'R²':<10} {'学習時間(秒)':<15}")
+        print(f"{'モデル':<15} {'RMSE':<12} {'MAE':<12} {'R2':<10} {'学習時間(秒)':<15}")
         print("-" * 80)
 
         for model_name, result in self.all_results.items():

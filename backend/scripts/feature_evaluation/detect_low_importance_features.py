@@ -31,13 +31,10 @@ from tqdm import tqdm
 # プロジェクトのルートディレクトリをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.services.ml.feature_engineering.feature_engineering_service import (
-    FeatureEngineeringService,
+from scripts.feature_evaluation.common_feature_evaluator import (
+    CommonFeatureEvaluator,
+    EvaluationData,
 )
-from database.connection import SessionLocal
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
 
 # ログ設定
 logging.basicConfig(
@@ -81,14 +78,8 @@ class LowImportanceFeatureDetector:
         # 出力ディレクトリを作成
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # データベース接続
-        self.db = SessionLocal()
-        self.ohlcv_repo = OHLCVRepository(self.db)
-        self.fr_repo = FundingRateRepository(self.db)
-        self.oi_repo = OpenInterestRepository(self.db)
-
-        # 特徴量エンジニアリングサービス
-        self.feature_service = FeatureEngineeringService()
+        # 共通評価ユーティリティ
+        self.common = CommonFeatureEvaluator()
 
         # 結果格納用
         self.xgb_importance: Dict[str, Dict[str, float]] = {}
@@ -101,7 +92,7 @@ class LowImportanceFeatureDetector:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """コンテキストマネージャー: 退場"""
-        self.db.close()
+        self.common.close()
 
     def fetch_data(
         self,
@@ -115,76 +106,24 @@ class LowImportanceFeatureDetector:
         logger.info(f"データ取得開始: {self.symbol}, timeframe={self.timeframe}")
 
         try:
-            # 取得期間を計算
-            end_time = datetime.now()
+            end_time = datetime.now().astimezone()
             start_time = end_time - timedelta(days=self.lookback_days)
-
-            # OHLCVデータ取得
-            ohlcv_df = self.ohlcv_repo.get_ohlcv_dataframe(
+            data = self.common.fetch_data(
                 symbol=self.symbol,
                 timeframe=self.timeframe,
-                start_time=start_time,
-                end_time=end_time,
+                limit=10**9,
             )
-
+            idx = data.ohlcv.index
+            if getattr(idx, "tz", None) is None:
+                # tz-naive → naiveな範囲でフィルタ
+                ohlcv_df = data.ohlcv[(idx >= start_time.replace(tzinfo=None)) & (idx <= end_time.replace(tzinfo=None))]
+            else:
+                # tz-aware → awareな範囲でフィルタ
+                ohlcv_df = data.ohlcv[(idx >= start_time) & (idx <= end_time)]
             if ohlcv_df.empty:
                 logger.warning(f"OHLCVデータが見つかりません: {self.symbol}")
                 return pd.DataFrame(), None, None
-
-            logger.info(f"OHLCV: {len(ohlcv_df)}行取得")
-
-            # ファンディングレートデータ取得
-            try:
-                fr_records = self.fr_repo.get_funding_rate_data(
-                    symbol=self.symbol,
-                    start_time=ohlcv_df.index.min(),
-                    end_time=ohlcv_df.index.max(),
-                )
-                if fr_records:
-                    fr_df = self.fr_repo.to_dataframe(
-                        records=fr_records,
-                        column_mapping={
-                            "funding_timestamp": "funding_timestamp",
-                            "funding_rate": "funding_rate",
-                        },
-                        index_column="funding_timestamp",
-                    )
-                    logger.info(f"FR: {len(fr_df)}行取得")
-                else:
-                    fr_df = None
-                    logger.warning("ファンディングレートデータなし")
-            except Exception as e:
-                logger.warning(f"FR取得エラー: {e}")
-                fr_df = None
-
-            # オープンインタレストデータ取得
-            try:
-                oi_records = self.oi_repo.get_open_interest_data(
-                    symbol=self.symbol,
-                    start_time=ohlcv_df.index.min(),
-                    end_time=ohlcv_df.index.max(),
-                )
-                if oi_records:
-                    oi_df = pd.DataFrame(
-                        [
-                            {
-                                "data_timestamp": r.data_timestamp,
-                                "open_interest_value": r.open_interest_value,
-                            }
-                            for r in oi_records
-                        ]
-                    )
-                    oi_df.set_index("data_timestamp", inplace=True)
-                    logger.info(f"OI: {len(oi_df)}行取得")
-                else:
-                    oi_df = None
-                    logger.warning("オープンインタレストデータなし")
-            except Exception as e:
-                logger.warning(f"OI取得エラー: {e}")
-                oi_df = None
-
-            return ohlcv_df, fr_df, oi_df
-
+            return ohlcv_df, data.fr, data.oi
         except Exception as e:
             logger.error(f"データ取得エラー: {e}")
             raise
@@ -209,20 +148,11 @@ class LowImportanceFeatureDetector:
         logger.info("特徴量計算開始")
 
         try:
-            # 特徴量計算
-            features_df = self.feature_service.calculate_advanced_features(
-                ohlcv_data=ohlcv_df,
-                funding_rate_data=fr_df,
-                open_interest_data=oi_df,
-            )
-
-            # OHLCVカラムを除外
-            ohlcv_cols = ["open", "high", "low", "close", "volume"]
-            feature_cols = [col for col in features_df.columns if col not in ohlcv_cols]
-            X = features_df[feature_cols]
-
-            # ラベル生成（1時間先の価格変動率）
-            y = ohlcv_df["close"].pct_change(1).shift(-1)
+            data = EvaluationData(ohlcv=ohlcv_df, fr=fr_df, oi=oi_df)
+            # crypto_featuresはOI前提のため、このスクリプトでは無効化して基本+advancedの安定部分のみ使用
+            features_df = self.common.build_basic_features(data=data, skip_crypto_and_advanced=True)
+            X = self.common.drop_ohlcv_columns(features_df, keep_close=False)
+            y = self.common.create_forward_return_target(ohlcv_df["close"], periods=1)
 
             # NaN除去
             valid_idx = ~(X.isna().any(axis=1) | y.isna())

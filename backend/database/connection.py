@@ -4,16 +4,24 @@
 
 import logging
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 logger = logging.getLogger(__name__)
 
+# .env の自動読み込み（backend直下の.envを優先）
+ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+if ENV_PATH.exists():
+    load_dotenv(ENV_PATH)
+
 # データベース設定
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "sqlite:///./trdinger.db"  # 開発環境用にSQLiteを使用
+    "DATABASE_URL",
+    "sqlite:///./trdinger.db",  # 開発環境用にSQLiteを使用（デフォルトは相対パス）
 )
 
 # SQLAlchemy エンジンの作成
