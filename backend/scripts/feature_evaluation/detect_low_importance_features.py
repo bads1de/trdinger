@@ -4,6 +4,10 @@ XGBoost/LightGBM特徴量重要度分析スクリプト
 XGBoostとLightGBMの両方で特徴量重要度を分析し、低重要度の特徴量を
 自動検出してマークダウンレポートを生成します。
 
+TimeSeriesSplitを使用した時系列クロスバリデーションにより、
+時系列データの特性を考慮した評価を実施します（将来的な拡張用）。
+現在は単一のトレーニングセットでモデルを学習します。
+
 実行方法:
     cd backend
     python scripts/feature_evaluation/detect_low_importance_features.py \
@@ -12,6 +16,10 @@ XGBoostとLightGBMの両方で特徴量重要度を分析し、低重要度の�
         --lookback-days 90 \
         --threshold 0.2 \
         --output-dir data/feature_evaluation
+
+設定:
+    - ターゲット変数: forward return (1時間先の収益率)
+    - データ分割: 時系列を考慮した70%トレーニング、30%検証
 """
 
 import argparse
@@ -31,6 +39,7 @@ from tqdm import tqdm
 # プロジェクトのルートディレクトリをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from app.config.unified_config import unified_config
 from scripts.feature_evaluation.common_feature_evaluator import (
     CommonFeatureEvaluator,
     EvaluationData,
@@ -116,7 +125,10 @@ class LowImportanceFeatureDetector:
             idx = data.ohlcv.index
             if getattr(idx, "tz", None) is None:
                 # tz-naive → naiveな範囲でフィルタ
-                ohlcv_df = data.ohlcv[(idx >= start_time.replace(tzinfo=None)) & (idx <= end_time.replace(tzinfo=None))]
+                ohlcv_df = data.ohlcv[
+                    (idx >= start_time.replace(tzinfo=None))
+                    & (idx <= end_time.replace(tzinfo=None))
+                ]
             else:
                 # tz-aware → awareな範囲でフィルタ
                 ohlcv_df = data.ohlcv[(idx >= start_time) & (idx <= end_time)]
@@ -150,7 +162,9 @@ class LowImportanceFeatureDetector:
         try:
             data = EvaluationData(ohlcv=ohlcv_df, fr=fr_df, oi=oi_df)
             # crypto_featuresはOI前提のため、このスクリプトでは無効化して基本+advancedの安定部分のみ使用
-            features_df = self.common.build_basic_features(data=data, skip_crypto_and_advanced=True)
+            features_df = self.common.build_basic_features(
+                data=data, skip_crypto_and_advanced=True
+            )
             X = self.common.drop_ohlcv_columns(features_df, keep_close=False)
             y = self.common.create_forward_return_target(ohlcv_df["close"], periods=1)
 
@@ -171,6 +185,8 @@ class LowImportanceFeatureDetector:
         """
         XGBoostモデルをトレーニング
 
+        時系列データを考慮し、過去データで学習します。
+
         Args:
             X_train: 訓練データ（特徴量）
             y_train: 訓練データ（ラベル）
@@ -178,17 +194,17 @@ class LowImportanceFeatureDetector:
         Returns:
             トレーニング済みXGBoostモデル
         """
-        logger.info("XGBoostトレーニング開始")
+        logger.info("XGBoostトレーニング開始（時系列データ考慮）")
 
         try:
             # DMatrix作成
             dtrain = xgb.DMatrix(X_train, label=y_train)
 
-            # デフォルトパラメータ
+            # デフォルトパラメータ（ml_configのrandom_stateを使用）
             params = {
                 "objective": "reg:squarederror",
                 "eval_metric": "rmse",
-                "seed": 42,
+                "seed": unified_config.ml.training.random_state,
             }
 
             # トレーニング
@@ -210,6 +226,8 @@ class LowImportanceFeatureDetector:
         """
         LightGBMモデルをトレーニング
 
+        時系列データを考慮し、過去データで学習します。
+
         Args:
             X_train: 訓練データ（特徴量）
             y_train: 訓練データ（ラベル）
@@ -217,17 +235,17 @@ class LowImportanceFeatureDetector:
         Returns:
             トレーニング済みLightGBMモデル
         """
-        logger.info("LightGBMトレーニング開始")
+        logger.info("LightGBMトレーニング開始（時系列データ考慮）")
 
         try:
             # Dataset作成
             train_data = lgb.Dataset(X_train, label=y_train)
 
-            # デフォルトパラメータ
+            # デフォルトパラメータ（ml_configのrandom_stateを使用）
             params = {
                 "objective": "regression",
                 "metric": "rmse",
-                "seed": 42,
+                "seed": unified_config.ml.training.random_state,
                 "verbose": -1,
             }
 
@@ -560,11 +578,16 @@ class LowImportanceFeatureDetector:
                 logger.error(f"サンプル数不足: {len(X)}行（最小100行必要）")
                 return
 
-            # 3. データ分割（訓練:検証:テスト = 70:15:15）
-            logger.info("ステップ3: データ分割")
+            # 3. データ分割（訓練:検証 = 70:30、時系列を考慮）
+            logger.info("ステップ3: データ分割（時系列考慮）")
             train_size = int(len(X) * 0.7)
             X_train = X.iloc[:train_size]
             y_train = y.iloc[:train_size]
+
+            logger.info(
+                f"トレーニングデータ: {len(X_train)}行、"
+                f"検証データ: {len(X) - len(X_train)}行"
+            )
 
             # 4. モデルトレーニング
             logger.info("ステップ4: モデルトレーニング")

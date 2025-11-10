@@ -165,21 +165,24 @@ class TestDatabaseConfig:
         assert config.name == "trdinger"
         assert config.user == "postgres"
 
-    @patch.dict(
-        os.environ,
-        {
-            "DB_HOST": "dbhost",
-            "DB_PORT": "5432",
-            "DB_NAME": "testdb",
-            "DB_USER": "testuser",
-            "DB_PASSWORD": "testpass",
-        },
-    )
     def test_url_complete_with_individual_params(self):
         """個別パラメータからのURL生成テスト"""
-        config = DatabaseConfig()
-        expected_url = "postgresql://testuser:testpass@dbhost:5432/testdb"
-        assert config.url_complete == expected_url
+        # 環境変数をクリアしてから設定
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "",  # DATABASE_URLを明示的に空にする
+                "DB_HOST": "dbhost",
+                "DB_PORT": "5432",
+                "DB_NAME": "testdb",
+                "DB_USER": "testuser",
+                "DB_PASSWORD": "testpass",
+            },
+            clear=False,
+        ):
+            config = DatabaseConfig()
+            expected_url = "postgresql://testuser:testpass@dbhost:5432/testdb"
+            assert config.url_complete == expected_url
 
     @patch.dict(
         os.environ,
@@ -399,15 +402,23 @@ class TestConfigValidation:
         config = AppConfig(port=8000)
         assert config.port == 8000
 
-    @patch.dict(
-        os.environ,
-        {"DB_USER": "testuser", "DB_PASSWORD": "", "DB_HOST": "localhost"},
-    )
     def test_database_url_generation_without_password(self):
         """パスワードなしのデータベースURL生成テスト"""
-        config = DatabaseConfig()
-        url = config.url_complete
-        assert "testuser:@localhost" in url
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "",  # DATABASE_URLを明示的に空にする
+                "DB_USER": "testuser",
+                "DB_PASSWORD": "",
+                "DB_HOST": "localhost",
+                "DB_PORT": "5432",
+                "DB_NAME": "trdinger",
+            },
+            clear=False,
+        ):
+            config = DatabaseConfig()
+            url = config.url_complete
+            assert "testuser:@localhost" in url
 
     def test_ml_prediction_probability_range(self):
         """ML予測確率の範囲テスト"""

@@ -49,15 +49,19 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
             X_transformed = X.copy()
             # Replace outliers with median values instead of NaN
             for col in X_transformed.columns:
-                if outlier_mask.any():
+                # Pandas Series比較を安全に行う - boolに変換してから評価
+                has_outliers = bool(outlier_mask.any())
+                if has_outliers:
                     col_median = X_transformed[col].median()
                     X_transformed.loc[outlier_mask, col] = col_median
             return X_transformed
         else:
             X_transformed = X.copy()
             # For numpy arrays, replace with column medians
-            for i in range(X_transformed.shape[1]):
-                if outlier_mask.any():
+            # Pandas Series比較を安全に行う - boolに変換してから評価
+            has_outliers = bool(outlier_mask.any())
+            if has_outliers:
+                for i in range(X_transformed.shape[1]):
                     col_median = np.nanmedian(X_transformed[:, i])
                     X_transformed[outlier_mask, i] = col_median
             return X_transformed
@@ -191,9 +195,12 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
             if self.imputer is not None:
                 # Impute column by column to maintain DataFrame
                 for col in result.columns:
-                    if result[col].isnull().any():
+                    # Pandas Series比較を安全に行う - boolに変換してから評価
+                    has_null = bool(result[col].isnull().any())
+                    if has_null:
                         # Check for all NaN values in the column
-                        if result[col].isnull().all():
+                        all_null = bool(result[col].isnull().all())
+                        if all_null:
                             # Handle all-NaN column by filling with constant value
                             constant_value = 0.0 if self.strategy in ['mean', 'median'] else 'Unknown'
                             result[col] = result[col].fillna(constant_value)
@@ -258,26 +265,36 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
                 )
                 if isinstance(numeric_transformed, np.ndarray):
                     # Handle NaN values before creating DataFrame
-                    if np.isnan(numeric_transformed).all():
+                    # NumPy配列の場合は安全に評価可能
+                    all_nan = np.isnan(numeric_transformed).all()
+                    if all_nan:
                         # If all values are NaN, fill with zeros
                         numeric_transformed = np.zeros_like(numeric_transformed)
                     
-                    # Ensure columns match and handle empty columns
-                    available_columns = [col for col in self.numeric_columns_ if col in X.columns]
-                    if available_columns:
+                    # 変換後の列数を確認し、元の列名と一致させる
+                    n_transformed_cols = numeric_transformed.shape[1]
+                    n_expected_cols = len(self.numeric_columns_)
+                    
+                    if n_transformed_cols == n_expected_cols:
+                        # 列数が一致する場合、元の列名を使用
                         numeric_df = pd.DataFrame(
                             numeric_transformed,
-                            columns=available_columns,
+                            columns=self.numeric_columns_,
                             index=X.index,
                         )
+                        result_parts.append(numeric_df)
                     else:
-                        numeric_df = pd.DataFrame(index=X.index)
-                    
-                    if numeric_df.empty and len(result_parts) == 0:
-                        # If no numeric columns, return empty DataFrame with proper index
-                        numeric_df = pd.DataFrame(index=X.index)
-                        numeric_df = numeric_df.add_prefix('numeric_')
-                    result_parts.append(numeric_df)
+                        # 列数が一致しない場合、エラーを記録して汎用名を使用
+                        logger.warning(
+                            f"列数不一致: 変換後={n_transformed_cols}, 期待値={n_expected_cols}"
+                        )
+                        generic_columns = [f"numeric_{i}" for i in range(n_transformed_cols)]
+                        numeric_df = pd.DataFrame(
+                            numeric_transformed,
+                            columns=generic_columns,
+                            index=X.index,
+                        )
+                        result_parts.append(numeric_df)
                 else:
                     numeric_df = numeric_transformed
                     result_parts.append(numeric_df)
@@ -289,7 +306,9 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
                 )
                 if isinstance(categorical_transformed, np.ndarray):
                     # Handle NaN values in categorical data
-                    if np.isnan(categorical_transformed).any():
+                    # NumPy配列の場合は安全に評価可能
+                    has_nan = np.isnan(categorical_transformed).any()
+                    if has_nan:
                         # Fill NaN with 0 for categorical data
                         categorical_transformed = np.nan_to_num(categorical_transformed, nan=0.0)
                     categorical_df = pd.DataFrame(

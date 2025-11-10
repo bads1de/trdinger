@@ -163,16 +163,17 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 new_features["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(
                     50.0
                 )
-                # Removed: Stochastic_D（重複特徴量削除: 2025-01-09）
-                # 理由: stochastic_d（小文字）と重複
+                # Stochastic_D特徴量を追加
+                stoch_d = stoch_result["STOCHd_14_3_3"].fillna(50.0)
+                new_features["Stochastic_D"] = stoch_d
                 
                 # ドージ・ストキャスティクス（KとDの乖離）
-                stoch_d = stoch_result["STOCHd_14_3_3"].fillna(50.0)
                 new_features["Stochastic_Divergence"] = (
                     new_features["Stochastic_K"] - stoch_d
                 ).fillna(0.0)
             else:
                 new_features["Stochastic_K"] = 50.0
+                new_features["Stochastic_D"] = 50.0
                 new_features["Stochastic_Divergence"] = 0.0
 
             # ボリンジャーバンド（サポート・レジスタンス）
@@ -448,7 +449,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "MACD_Signal",
             "MACD_Histogram",
             "Stochastic_K",
-            # Removed: "Stochastic_D" (重複特徴量削除: 2025-01-09)
+            "Stochastic_D",
             "Williams_R",
             "CCI",
             "ROC",

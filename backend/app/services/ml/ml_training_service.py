@@ -18,8 +18,8 @@ from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
 from .base_ml_trainer import BaseMLTrainer
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
-from .single_model.single_model_trainer import SingleModelTrainer
 from .ensemble.ensemble_trainer import EnsembleTrainer
+from .single_model.single_model_trainer import SingleModelTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +186,10 @@ class MLTrainingService(BaseResourceManager):
             model_name: モデル名（オプション）
             optimization_settings: 最適化設定（オプション）
             **training_params: 追加の学習パラメータ
+                - use_time_series_split: 時系列分割を使用（デフォルト: ml_config.training.USE_TIME_SERIES_SPLIT）
+                - use_cross_validation: クロスバリデーションを使用（デフォルト: False）
+                - cv_splits: CV分割数（デフォルト: ml_config.training.CROSS_VALIDATION_FOLDS）
+                - max_train_size: TimeSeriesSplitの最大学習サイズ（デフォルト: ml_config.training.MAX_TRAIN_SIZE）
 
         Returns:
             学習結果の辞書
@@ -193,7 +197,11 @@ class MLTrainingService(BaseResourceManager):
         Raises:
             MLDataError: データが無効な場合
             MLModelError: 学習に失敗した場合
+            ValueError: 無効なパラメータ組み合わせの場合
         """
+        # TimeSeriesSplit関連パラメータをml_configから設定（未指定の場合）
+        training_params = self._prepare_training_params(training_params)
+
         trainer = self.trainer
 
         # 最適化が有効な場合は最適化ワークフローを実行
@@ -218,6 +226,58 @@ class MLTrainingService(BaseResourceManager):
                 model_name=model_name,
                 **training_params,
             )
+
+    def _prepare_training_params(
+        self, training_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        training_paramsにTimeSeriesSplit関連パラメータを設定
+
+        Args:
+            training_params: 元のtraining_params
+
+        Returns:
+            TimeSeriesSplit関連パラメータを含むtraining_params
+
+        Raises:
+            ValueError: 無効なパラメータ組み合わせの場合
+        """
+        # パラメータのコピーを作成
+        params = training_params.copy()
+
+        # TimeSeriesSplit利用フラグ（ml_configから取得、training_paramsで上書き可能）
+        if "use_time_series_split" not in params:
+            params["use_time_series_split"] = self.config.training.USE_TIME_SERIES_SPLIT
+
+        # クロスバリデーション利用時のパラメータ
+        use_cross_validation = params.get("use_cross_validation", False)
+        if use_cross_validation:
+            # CV分割数（ml_configから取得、training_paramsで上書き可能）
+            if "cv_splits" not in params:
+                params["cv_splits"] = self.config.training.CROSS_VALIDATION_FOLDS
+
+            # TimeSeriesSplitの最大学習サイズ（ml_configから取得、training_paramsで上書き可能）
+            if "max_train_size" not in params:
+                params["max_train_size"] = self.config.training.MAX_TRAIN_SIZE
+
+            # パラメータバリデーション
+            cv_splits = params.get("cv_splits")
+            if cv_splits is not None and cv_splits < 2:
+                raise ValueError(f"cv_splitsは2以上である必要があります: {cv_splits}")
+
+            max_train_size = params.get("max_train_size")
+            if max_train_size is not None and max_train_size <= 0:
+                raise ValueError(
+                    f"max_train_sizeは正の整数である必要があります: {max_train_size}"
+                )
+
+            logger.info(
+                f"TimeSeriesSplit設定: "
+                f"use_time_series_split={params['use_time_series_split']}, "
+                f"cv_splits={cv_splits}, max_train_size={max_train_size}"
+            )
+
+        return params
 
     def evaluate_model(
         self,
@@ -638,14 +698,12 @@ class MLTrainingService(BaseResourceManager):
             training_data: 学習用OHLCVデータ
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
+            trainer: カスタムトレーナー（オプション）
             **base_training_params: ベースとなる学習パラメータ
 
         Returns:
             目的関数（パラメータを受け取りスコアを返す関数）
         """
-        # 使用するトレーナーを決定
-        effective_trainer = trainer if trainer is not None else self.trainer
-
         # 試行回数カウンター
         evaluation_count = 0
 

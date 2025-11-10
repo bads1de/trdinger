@@ -84,32 +84,47 @@ class TestPerformanceMetrics:
         print(f"✅ GAエンジン実行時間テスト成功（実行時間: {execution_time:.4f}秒）")
 
     def test_ml_training_performance(self, small_training_data):
-        """ML学習のパフォーマンステスト"""
-        start_time = time.time()
-
+        """
+        ML学習のパフォーマンステスト
+        
+        注意: このテストはモックを使用しているため、実行時間は非常に短い（約1ミリ秒）。
+        実際のML学習処理ではなく、サービスのインターフェースと基本的な動作を検証する。
+        """
         with patch(
             "backend.app.services.ml.ml_training_service.SingleModelTrainer"
         ) as mock_trainer:
-            mock_trainer.return_value.train_model.return_value = {
+            # モックの設定
+            mock_instance = Mock()
+            mock_instance.train_model.return_value = {
                 "success": True,
                 "f1_score": 0.85,
                 "model_path": "/tmp/test_model.pkl",
             }
-            mock_trainer.return_value.is_trained = True
-            mock_trainer.return_value.feature_columns = ["close", "volume"]
-
+            mock_instance.is_trained = True
+            mock_instance.feature_columns = ["close", "volume"]
+            mock_trainer.return_value = mock_instance
+            
+            # 時間計測開始
+            start_time = time.time()
+            
             service = MLTrainingService(
                 trainer_type="single", single_model_config={"model_type": "lightgbm"}
             )
             result = service.train_model(small_training_data, save_model=False)
-
-        execution_time = time.time() - start_time
+            
+            execution_time = time.time() - start_time
 
         # 実行時間が妥当な範囲内であることを確認
-        assert execution_time > 0
+        # モック処理は非常に高速（約1ミリ秒）なので、0以上であることのみを確認
+        assert execution_time >= 0
         assert execution_time < 10  # 10秒以内に完了すべき
 
+        # 学習結果の検証
         assert result["success"] is True
+        assert result["f1_score"] == 0.85
+        
+        # モックが正しく呼び出されたことを確認
+        assert mock_instance.train_model.call_count == 1
 
     @pytest.mark.slow
     def test_ga_engine_large_population_performance(self, large_training_data):

@@ -47,16 +47,20 @@ def validate_ohlcv_data(df: pd.DataFrame) -> bool:
         
     # OHLC関係の検証
     ohlc_data = df[['low', 'open', 'high', 'close']].dropna()
-    if len(ohlc_data) > 0 and not (
-        (ohlc_data["low"] <= ohlc_data["open"]).all()
-        and (ohlc_data["open"] <= ohlc_data["high"]).all()
-        and (ohlc_data["low"] <= ohlc_data["close"]).all()
-        and (ohlc_data["close"] <= ohlc_data["high"]).all()
-    ):
-        raise ValueError("OHLC values do not satisfy low <= open/close <= high")
+    if len(ohlc_data) > 0:
+        # Pandas Series比較を安全に行う - 各all()の結果をboolに変換してから評価
+        low_le_open = bool((ohlc_data["low"] <= ohlc_data["open"]).all())
+        open_le_high = bool((ohlc_data["open"] <= ohlc_data["high"]).all())
+        low_le_close = bool((ohlc_data["low"] <= ohlc_data["close"]).all())
+        close_le_high = bool((ohlc_data["close"] <= ohlc_data["high"]).all())
+        
+        if not (low_le_open and open_le_high and low_le_close and close_le_high):
+            raise ValueError("OHLC values do not satisfy low <= open/close <= high")
         
     # ボリュームの非負確認
-    if (df["volume"] < 0).any():
+    # Pandas Series比較を安全に行う - boolに変換してから評価
+    has_negative_volume = bool((df["volume"] < 0).any())
+    if has_negative_volume:
         raise ValueError("Volume contains negative values")
 
     return True
@@ -90,7 +94,9 @@ def validate_extended_data(df: pd.DataFrame) -> bool:
         funding_rates = df["funding_rate"].dropna()
         if len(funding_rates) > 0:
             invalid_mask = ~((funding_rates >= -1) & (funding_rates <= 1))
-            if invalid_mask.any():
+            # Pandas Series比較を安全に行う - boolに変換してから評価
+            has_invalid = bool(invalid_mask.any())
+            if has_invalid:
                 invalid_values = funding_rates[invalid_mask].head(5).tolist()
                 raise ValueError(
                     f"funding_rate values must be between -1 and 1. "
@@ -123,11 +129,15 @@ def validate_data_integrity(df: pd.DataFrame) -> bool:
             raise ValueError("timestamp column must be datetime type")
 
         # タイムスタンプのソート確認
-        if not df["timestamp"].is_monotonic_increasing:
+        # Pandas Series比較を安全に行う - boolに変換してから評価
+        is_sorted = bool(df["timestamp"].is_monotonic_increasing)
+        if not is_sorted:
             raise ValueError("timestamp must be sorted in ascending order")
 
         # 重複タイムスタンプの確認
-        if df["timestamp"].duplicated().any():
+        # Pandas Series比較を安全に行う - boolに変換してから評価
+        has_duplicates = bool(df["timestamp"].duplicated().any())
+        if has_duplicates:
             raise ValueError("duplicate timestamps found")
 
     # NaN/Null値は補間で処理されるため警告のみ

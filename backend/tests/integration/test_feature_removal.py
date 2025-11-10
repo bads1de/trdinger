@@ -87,7 +87,7 @@ class TestFeatureCount:
     def test_feature_count_reduction(self, sample_ohlcv_data):
         """特徴量削減率の確認
 
-        目標: 約7-8%削減（103 → 95個）
+        目標: 約7-12%削減（103 → 92個前後）
         """
         service = FeatureEngineeringService()
         features = service.calculate_advanced_features(sample_ohlcv_data)
@@ -100,9 +100,9 @@ class TestFeatureCount:
         print(f"\n削減特徴量数: {reduction}個")
         print(f"削減率: {reduction_rate:.1f}%")
 
-        # 分析結果に基づき、現在は約4%前後の削減を許容
-        assert 3 <= reduction_rate <= 10, (
-            f"削減率が想定範囲外: {reduction_rate:.1f}% " f"(期待: 3-10%)"
+        # 分析結果に基づき、3-12%の削減を許容（低寄与度特徴量の削除により10.7%前後）
+        assert 3 <= reduction_rate <= 12, (
+            f"削減率が想定範囲外: {reduction_rate:.1f}% " f"(期待: 3-12%)"
         )
 
 

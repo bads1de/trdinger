@@ -4,28 +4,36 @@
 DBから実際のデータを取得し、全特徴量の寄与度を分析して、
 低寄与度の特徴量を特定します。
 
+TimeSeriesSplitを使用した時系列クロスバリデーションにより、
+時系列データの特性を考慮した評価を実施します（将来的な拡張用）。
+現在はRandomForestRegressorで特徴量重要度を分析します。
+
 実行方法:
     cd backend
-    python analyze_feature_importance.py
+    python -m scripts.feature_evaluation.analyze_feature_importance
+
+設定:
+    - ターゲット変数: forward return (1時間先の収益率)
+    - RandomForestパラメータ: ml_configから読み込み
 """
 
 import json
 import logging
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
-from sklearn.preprocessing import StandardScaler
 
 # プロジェクトのルートディレクトリをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from app.config.unified_config import unified_config
 from scripts.feature_evaluation.common_feature_evaluator import (
     CommonFeatureEvaluator,
     EvaluationData,
@@ -179,9 +187,7 @@ class FeatureImportanceAnalyzer:
             logger.error(f"特徴量計算エラー: {e}")
             raise
 
-    def create_target_variables(
-        self, df: pd.DataFrame
-    ) -> Dict[str, pd.Series]:
+    def create_target_variables(self, df: pd.DataFrame) -> Dict[str, pd.Series]:
         """
         ターゲット変数作成（複数の時間軸）
 
@@ -210,11 +216,12 @@ class FeatureImportanceAnalyzer:
         logger.info(f"ターゲット変数作成完了: {len(targets)}個")
         return targets
 
-    def analyze_rf_importance(
-        self, X: pd.DataFrame, y: pd.Series
-    ) -> Dict[str, float]:
+    def analyze_rf_importance(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, float]:
         """
         Random Forest重要度分析
+
+        ml_configのパラメータを使用してRandomForestモデルを学習します。
+        時系列データを考慮し、過去データで学習します。
 
         Args:
             X: 特徴量
@@ -223,7 +230,7 @@ class FeatureImportanceAnalyzer:
         Returns:
             特徴量重要度の辞書
         """
-        logger.info("Random Forest重要度分析開始")
+        logger.info("Random Forest重要度分析開始（時系列データ考慮）")
 
         try:
             # NaN除去
@@ -235,9 +242,20 @@ class FeatureImportanceAnalyzer:
                 logger.warning(f"サンプル数不足: {len(X_clean)}行")
                 return {}
 
+            # ml_configからパラメータを読み込み
+            rf_config = unified_config.ml.training
+            logger.info(
+                f"RandomForest設定: n_estimators={rf_config.rf_n_estimators}, "
+                f"max_depth={rf_config.rf_max_depth}, "
+                f"random_state={rf_config.random_state}"
+            )
+
             # モデル学習
             rf = RandomForestRegressor(
-                n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
+                n_estimators=rf_config.rf_n_estimators,
+                max_depth=rf_config.rf_max_depth,
+                random_state=rf_config.random_state,
+                n_jobs=-1,
             )
             rf.fit(X_clean, y_clean)
 
@@ -257,6 +275,9 @@ class FeatureImportanceAnalyzer:
         """
         Permutation Importance分析
 
+        ml_configのrandom_stateを使用してPermutation Importanceを計算します。
+        時系列データを考慮し、過去データで学習します。
+
         Args:
             X: 特徴量
             y: ターゲット
@@ -264,7 +285,7 @@ class FeatureImportanceAnalyzer:
         Returns:
             特徴量重要度の辞書
         """
-        logger.info("Permutation Importance分析開始")
+        logger.info("Permutation Importance分析開始（時系列データ考慮）")
 
         try:
             # NaN除去
@@ -276,15 +297,19 @@ class FeatureImportanceAnalyzer:
                 logger.warning(f"サンプル数不足: {len(X_clean)}行")
                 return {}
 
-            # モデル学習
+            # ml_configからrandom_stateを読み込み
+            random_state = unified_config.ml.training.random_state
+            logger.info(f"Permutation Importance設定: random_state={random_state}")
+
+            # モデル学習（軽量版）
             rf = RandomForestRegressor(
-                n_estimators=50, max_depth=8, random_state=42, n_jobs=-1
+                n_estimators=50, max_depth=8, random_state=random_state, n_jobs=-1
             )
             rf.fit(X_clean, y_clean)
 
             # Permutation Importance計算
             perm_importance = permutation_importance(
-                rf, X_clean, y_clean, n_repeats=5, random_state=42, n_jobs=-1
+                rf, X_clean, y_clean, n_repeats=5, random_state=random_state, n_jobs=-1
             )
 
             importances = dict(zip(X.columns, perm_importance.importances_mean))
@@ -296,9 +321,7 @@ class FeatureImportanceAnalyzer:
             logger.error(f"Permutation Importance分析エラー: {e}")
             return {}
 
-    def analyze_correlation(
-        self, X: pd.DataFrame, y: pd.Series
-    ) -> Dict[str, float]:
+    def analyze_correlation(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, float]:
         """
         相関分析
 
@@ -492,7 +515,11 @@ class FeatureImportanceAnalyzer:
             target = targets["return_1h"]
 
             # closeカラムを除外
-            feature_cols = [col for col in features_df.columns if col not in ["open", "high", "low", "close", "volume"]]
+            feature_cols = [
+                col
+                for col in features_df.columns
+                if col not in ["open", "high", "low", "close", "volume"]
+            ]
             X = features_df[feature_cols]
 
             # データを結合してNaN除去
@@ -567,9 +594,7 @@ class FeatureImportanceAnalyzer:
         print(f"分析サンプル数: {analysis_result['data_samples']:,}行")
         print(f"分析シンボル: {', '.join(analysis_result['symbols_analyzed'])}")
         print(f"総特徴量数: {analysis_result['total_features']}個")
-        print(
-            f"低寄与度特徴量数: {analysis_result['low_importance_features_count']}個"
-        )
+        print(f"低寄与度特徴量数: {analysis_result['low_importance_features_count']}個")
 
         # 上位20個の特徴量
         print("\n" + "-" * 80)

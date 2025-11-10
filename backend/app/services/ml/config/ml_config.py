@@ -130,6 +130,14 @@ class TrainingConfig(BaseSettings):
     TRAIN_TEST_SPLIT: float = Field(default=0.8)
     CROSS_VALIDATION_FOLDS: int = Field(default=5)
 
+    # TimeSeriesSplit設定（時系列CV対応）
+    USE_TIME_SERIES_SPLIT: bool = Field(
+        default=True, description="時系列分割をデフォルトで使用"
+    )
+    MAX_TRAIN_SIZE: Optional[int] = Field(
+        default=None, description="TimeSeriesSplitの最大学習サイズ（Noneで制限なし）"
+    )
+
     # ターゲット作成
     PREDICTION_HORIZON: int = Field(default=24)
 
@@ -185,8 +193,6 @@ class PredictionConfig(BaseSettings):
     DEFAULT_INDICATOR_LENGTH: int = Field(default=100)
 
     model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_")
-
-    
 
 
 class RetrainingConfig(BaseSettings):
@@ -350,9 +356,11 @@ class MLConfig:
                 "down": self.prediction.DEFAULT_DOWN_PROB,
                 "range": self.prediction.DEFAULT_RANGE_PROB,
             }
-            if not (0.0 <= default_predictions["up"] <= 1.0 and
-                    0.0 <= default_predictions["down"] <= 1.0 and
-                    0.0 <= default_predictions["range"] <= 1.0):
+            if not (
+                0.0 <= default_predictions["up"] <= 1.0
+                and 0.0 <= default_predictions["down"] <= 1.0
+                and 0.0 <= default_predictions["range"] <= 1.0
+            ):
                 prediction_errors.append("デフォルト予測値が範囲外です")
 
             fallback_predictions = {
@@ -360,15 +368,27 @@ class MLConfig:
                 "down": self.prediction.FALLBACK_DOWN_PROB,
                 "range": self.prediction.FALLBACK_RANGE_PROB,
             }
-            if not (0.0 <= fallback_predictions["up"] <= 1.0 and
-                    0.0 <= fallback_predictions["down"] <= 1.0 and
-                    0.0 <= fallback_predictions["range"] <= 1.0):
+            if not (
+                0.0 <= fallback_predictions["up"] <= 1.0
+                and 0.0 <= fallback_predictions["down"] <= 1.0
+                and 0.0 <= fallback_predictions["range"] <= 1.0
+            ):
                 prediction_errors.append("フォールバック予測値が範囲外です")
 
-            if not (0.0 <= self.prediction.MIN_PROBABILITY <= self.prediction.MAX_PROBABILITY <= 1.0):
+            if not (
+                0.0
+                <= self.prediction.MIN_PROBABILITY
+                <= self.prediction.MAX_PROBABILITY
+                <= 1.0
+            ):
                 prediction_errors.append("確率範囲設定が無効です")
 
-            if not (0.0 < self.prediction.PROBABILITY_SUM_MIN <= self.prediction.PROBABILITY_SUM_MAX <= 2.0):
+            if not (
+                0.0
+                < self.prediction.PROBABILITY_SUM_MIN
+                <= self.prediction.PROBABILITY_SUM_MAX
+                <= 2.0
+            ):
                 prediction_errors.append("確率合計範囲設定が無効です")
 
             if not (1 <= self.prediction.DEFAULT_INDICATOR_LENGTH <= 100000):

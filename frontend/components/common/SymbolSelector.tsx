@@ -40,10 +40,11 @@ const SymbolSelector: React.FC<SymbolSelectorProps> = ({
   if (mode === "compact") {
     return (
       <div className={className}>
-        <label className="block text-sm font-medium text-secondary-600 dark:text-secondary-400 mb-2">
+        <label htmlFor="symbol-selector" className="block text-sm font-medium text-secondary-600 dark:text-secondary-400 mb-2">
           通貨ペア
         </label>
         <select
+          id="symbol-selector"
           value={selectedSymbol}
           onChange={(e) => onSymbolChange(e.target.value)}
           disabled={disabled || loading}

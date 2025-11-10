@@ -299,8 +299,11 @@ class FeatureEngineeringService:
                 # シンプルなNaN補完処理で置換
                 numeric_columns = result_df.select_dtypes(include=[np.number]).columns
                 for col in numeric_columns:
-                    if result_df[col].isna().any():
-                        result_df[col] = result_df[col].fillna(result_df[col].median())
+                    # Pandas Series比較を安全に行う - boolに変換してから評価
+                    has_nan = bool(result_df[col].isna().any())
+                    if has_nan:
+                        median_val = result_df[col].median()
+                        result_df[col] = result_df[col].fillna(median_val)
                 logger.info("データ前処理完了")
             except Exception as e:
                 logger.warning(f"データ前処理エラー: {e}")
@@ -310,7 +313,9 @@ class FeatureEngineeringService:
                 # 数値列のNaN値を安全に変換
                 numeric_columns = result_df.select_dtypes(include=[np.number]).columns
                 for col in numeric_columns:
-                    if result_df[col].isnull().any():
+                    # Pandas Series比較を安全に行う - boolに変換してから評価
+                    has_null = bool(result_df[col].isnull().any())
+                    if has_null:
                         # NaNや無限大をmedianで置換
                         median_val = result_df[col].median()
                         if pd.isna(median_val):
@@ -348,7 +353,9 @@ class FeatureEngineeringService:
                 result_df = result_df.fillna(0.0)
 
             # 重複カラムの削除（複数の計算クラスで生成される可能性がある）
-            if result_df.columns.duplicated().any():
+            # Pandas Series比較を安全に行う - boolに変換してから評価
+            has_duplicates = bool(result_df.columns.duplicated().any())
+            if has_duplicates:
                 duplicated_cols = result_df.columns[
                     result_df.columns.duplicated()
                 ].tolist()
@@ -503,10 +510,10 @@ class FeatureEngineeringService:
                     optimized_df[col] = optimized_df[col].astype("float32")
                 elif optimized_df[col].dtype == "int64":
                     # int64をint32に変換（範囲が十分な場合）
-                    if (
-                        optimized_df[col].min() >= -2147483648
-                        and optimized_df[col].max() <= 2147483647
-                    ):
+                    # Pandas Series比較を安全に行う - スカラー値として評価
+                    col_min = float(optimized_df[col].min())
+                    col_max = float(optimized_df[col].max())
+                    if col_min >= -2147483648 and col_max <= 2147483647:
                         optimized_df[col] = optimized_df[col].astype("int32")
 
             return optimized_df

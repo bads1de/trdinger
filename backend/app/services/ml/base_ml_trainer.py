@@ -15,17 +15,17 @@ import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from .ml_metadata import ModelMetadata
 from ...utils.data_processing import data_processor as data_preprocessor
-from .exceptions import MLModelError
 from ...utils.error_handler import (
     DataError,
     ml_operation_context,
     safe_ml_operation,
 )
-from .config import ml_config
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
+from .config import ml_config
+from .exceptions import MLModelError
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
+from .ml_metadata import ModelMetadata
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -602,10 +602,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
                 except Exception as final_error:
                     logger.error(f"最終手段も失敗: {final_error}")
-                    raise DataError(
-                        f"特徴量計算に完全に失敗しました: {str(e)} -> {str(fallback_error)} -> {str(final_error)}"
+                    error_msg = (
+                        f"特徴量計算に完全に失敗しました: "
+                        f"{str(e)} -> {str(fallback_error)} -> {str(final_error)}"
                     )
-
+                    raise DataError(error_msg)
 
     def _prepare_training_data(
         self, features_df: pd.DataFrame, **training_params
@@ -637,16 +638,41 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """
-        データを分割（時系列対応）
+        データを分割（デフォルトで時系列分割）
 
-        時系列データでは、将来のデータが学習データに含まれることを防ぐため、
-        時間順序を保持した分割を行います。
+        Args:
+            X: 特徴量DataFrame
+            y: ラベルSeries
+            **training_params: 学習パラメータ
+                - use_time_series_split: 時系列分割を使用（デフォルト: 設定値またはTrue）
+                - use_random_split: ランダム分割を使用（下位互換性、デフォルト: False）
+                - test_size: テストデータの割合（デフォルト: 0.2）
+                - random_state: 乱数シード（デフォルト: 42）
+
+        Returns:
+            分割されたデータ (X_train, X_test, y_train, y_test)
+
+        Note:
+            時系列データでは、将来のデータが学習データに含まれることを防ぐため、
+            時間順序を保持した分割を行います。デフォルトでTimeSeriesSplitを使用します。
         """
         test_size = training_params.get("test_size", 0.2)
         random_state = training_params.get("random_state", 42)
-        use_time_series_split = training_params.get("use_time_series_split", True)
 
-        if use_time_series_split:
+        # 下位互換性: use_random_split=Trueが指定された場合はランダム分割
+        use_random_split = training_params.get("use_random_split", False)
+
+        # デフォルトで時系列分割を使用（設定から読み込み）
+        use_time_series_split = training_params.get(
+            "use_time_series_split",
+            (
+                self.config.training.USE_TIME_SERIES_SPLIT
+                if not use_random_split
+                else False
+            ),
+        )
+
+        if use_time_series_split and not use_random_split:
             # 時系列分割：時間順序を保持して分割
             logger.info("🕒 時系列分割を使用（データリーク防止）")
 
@@ -667,7 +693,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.info(f"テスト期間: {X_test.index[0]} ～ {X_test.index[-1]}")
 
         else:
-            # 従来のランダム分割（互換性維持）
+            # ランダム分割（下位互換性維持）
+            logger.info(
+                "🔀 ランダム分割を使用（use_random_split=True または use_time_series_split=False）"
+            )
 
             # 層化抽出は、ラベルが2種類以上ある場合にのみ有効
             stratify_param = y if y.nunique() > 1 else None
@@ -718,12 +747,19 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             X: 特徴量DataFrame
             y: ラベルSeries
             **training_params: 学習パラメータ
+                - cv_splits: 分割数（デフォルト: ml_config.training.CROSS_VALIDATION_FOLDS）
+                - max_train_size: 最大学習サイズ（デフォルト: ml_config.training.MAX_TRAIN_SIZE）
 
         Returns:
             クロスバリデーション結果の辞書
         """
-        n_splits = training_params.get("cv_splits", 5)
-        max_train_size = training_params.get("max_train_size", None)
+        # ml_configからデフォルト値を読み込み
+        n_splits = training_params.get(
+            "cv_splits", self.config.training.CROSS_VALIDATION_FOLDS
+        )
+        max_train_size = training_params.get(
+            "max_train_size", self.config.training.MAX_TRAIN_SIZE
+        )
 
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
@@ -1001,7 +1037,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.scaler = None
             self.feature_columns = None
             self.is_trained = False
-
 
         except Exception as e:
             logger.warning(f"モデルクリーンアップ警告: {e}")

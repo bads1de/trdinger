@@ -34,7 +34,7 @@ class TestCalculatePatternFeaturesMissing:
 
     def test_calculate_pattern_features_method_exists_after_fix(self):
         """calculate_pattern_featuresメソッドが実装されていることを確認"""
-        print("🔍 calculate_pattern_featuresメソッドの存在を確認...")
+        print("[ CHECK ] calculate_pattern_featuresメソッドの存在を確認...")
 
         calculator = TechnicalFeatureCalculator()
 
@@ -42,11 +42,11 @@ class TestCalculatePatternFeaturesMissing:
         assert hasattr(calculator, 'calculate_pattern_features'), \
             "calculate_pattern_featuresメソッドが実装されていません"
 
-        print("✅ calculate_pattern_featuresメソッドが正常に実装されています")
+        print("[ OK ] calculate_pattern_featuresメソッドが正常に実装されています")
 
     def test_calculate_pattern_features_functionality_after_fix(self, sample_price_data):
         """calculate_pattern_featuresメソッドの機能テスト（修正後）"""
-        print("🔍 calculate_pattern_featuresメソッドの機能をテスト...")
+        print("[ CHECK ] calculate_pattern_featuresメソッドの機能をテスト...")
 
         calculator = TechnicalFeatureCalculator()
 
@@ -62,7 +62,7 @@ class TestCalculatePatternFeaturesMissing:
         expected_features = [
             "Stochastic_K", "Stochastic_D", "Stochastic_Divergence",
             "BB_Upper", "BB_Middle", "BB_Lower", "BB_Position",
-            "MA_Short", "MA_Long",  # MA_Cross は削除済み
+            "MA_Long",  # MA_Short は price_features.py の ma_10 と重複のため削除済み
             "ATR",  # Normalized_Volatilityは未実装のため削除
             "Local_Min", "Local_Max", # "Support_Level",  # 現行では未提供
             "Resistance_Level",
@@ -72,11 +72,11 @@ class TestCalculatePatternFeaturesMissing:
         for feature in expected_features:
             assert feature in result.columns, f"{feature}が特徴量として追加されていません"
 
-        print("✅ calculate_pattern_featuresメソッドが正常に動作")
+        print("[ OK ] calculate_pattern_featuresメソッドが正常に動作")
 
     def test_existing_methods_are_available(self, sample_price_data):
         """既存のメソッドが正常に動作することを確認"""
-        print("🔍 既存のメソッドが正常に動作することを確認...")
+        print("[ CHECK ] 既存のメソッドが正常に動作することを確認...")
 
         calculator = TechnicalFeatureCalculator()
 
@@ -89,11 +89,11 @@ class TestCalculatePatternFeaturesMissing:
 
         assert isinstance(result, pd.DataFrame)
         assert len(result) == len(sample_price_data)
-        print("✅ 既存のcalculate_featuresメソッドが正常に動作")
+        print("[ OK ] 既存のcalculate_featuresメソッドが正常に動作")
 
     def test_pattern_features_would_be_called_from_feature_engineering_service(self):
         """パターン特徴量が特徴量エンジニアリングサービスから呼び出されることを確認"""
-        print("🔍 パターン特徴量が他のサービスから呼び出されることを確認...")
+        print("[ CHECK ] パターン特徴量が他のサービスから呼び出されることを確認...")
 
         # 実際の呼び出し元を確認（特徴量エンジニアリングサービス）
         try:
@@ -102,23 +102,23 @@ class TestCalculatePatternFeaturesMissing:
 
             # 実際に存在するメソッドを確認
             available_methods = [method for method in dir(service) if not method.startswith('_')]
-            print(f"✅ FeatureEngineeringServiceの利用可能メソッド: {len(available_methods)}個")
+            print(f"[ OK ] FeatureEngineeringServiceの利用可能メソッド: {len(available_methods)}個")
 
             # calculate_pattern_featuresが実際に呼び出されることを確認
             # calculate_pattern_featuresメソッドが存在するか確認
             if hasattr(service, 'calculate_pattern_features'):
-                print("✅ calculate_pattern_featuresメソッドが存在")
+                print("[ OK ] calculate_pattern_featuresメソッドが存在")
             else:
-                print("⚠️ calculate_pattern_featuresメソッドは存在しない")
+                print("[ WARN ] calculate_pattern_featuresメソッドは存在しない")
 
             # 他の重要なメソッドが存在すること
             assert hasattr(service, 'calculate_features') or hasattr(service, 'process_all_features')
-            print("✅ 特徴量計算サービスが正常に動作")
+            print("[ OK ] 特徴量計算サービスが正常に動作")
 
         except ImportError:
-            print("⚠️ FeatureEngineeringServiceのインポートに問題あり")
+            print("[ WARN ] FeatureEngineeringServiceのインポートに問題あり")
         except Exception as e:
-            print(f"⚠️ その他のエラー: {e}")
+            print(f"[ WARN ] その他のエラー: {e}")
 
 
 if __name__ == "__main__":

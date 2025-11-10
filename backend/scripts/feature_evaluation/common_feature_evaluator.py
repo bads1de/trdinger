@@ -8,17 +8,18 @@ feature_evaluationスクリプト間で共通する処理を集約する。
 from __future__ import annotations
 
 import logging
+
+# プロジェクトルートをパスに追加（スクリプト直実行対応）
+import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
-
-# プロジェクトルートをパスに追加（スクリプト直実行対応）
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -66,7 +67,9 @@ class CommonFeatureEvaluator:
         timeframe: str = "1h",
         limit: int = 2000,
     ) -> EvaluationData:
-        logger.info(f"[Common] データ取得開始: {symbol}, timeframe={timeframe}, limit={limit}")
+        logger.info(
+            f"[Common] データ取得開始: {symbol}, timeframe={timeframe}, limit={limit}"
+        )
 
         ohlcv_df = self.ohlcv_repo.get_ohlcv_dataframe(
             symbol=symbol,

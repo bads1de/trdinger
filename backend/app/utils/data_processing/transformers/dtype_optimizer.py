@@ -38,7 +38,15 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
         self.dtypes_ = {}
 
         for col in X.columns:
-            dtype = X[col].dtype
+            # 単一カラムのSeriesとして取得
+            col_series = X[col]
+            
+            # DataFrameではなくSeriesであることを確認
+            if isinstance(col_series, pd.DataFrame):
+                # 複数カラムが返された場合、最初のカラムを使用
+                col_series = col_series.iloc[:, 0]
+            
+            dtype = col_series.dtype
 
             # float64をfloat32に最適化
             if dtype == "float64":
@@ -46,8 +54,9 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
 
             # データ範囲に基づいてint64を最適化
             elif dtype == "int64":
-                min_val = X[col].min()
-                max_val = X[col].max()
+                # Pandas Series比較を安全に行う - スカラー値として評価
+                min_val = int(col_series.min())
+                max_val = int(col_series.max())
 
                 if min_val >= -128 and max_val <= 127:
                     self.dtypes_[col] = "int8"

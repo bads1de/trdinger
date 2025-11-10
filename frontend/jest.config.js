@@ -22,6 +22,9 @@ const customJestConfig = {
   // テスト実行前に読み込むセットアップファイル
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
 
+  // テストファイルのルートディレクトリ
+  roots: ["<rootDir>"],
+
   // モジュールパスのエイリアス設定
   moduleNameMapper: {
     // @/でルートディレクトリを参照するエイリアス（tsconfig.jsonのpaths設定と連動）

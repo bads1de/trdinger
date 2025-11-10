@@ -8,7 +8,7 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import GAConfigForm from "../GAConfigForm";
+import GAConfigForm from "@/components/backtest/GAConfigForm";
 
 // モック関数
 const mockOnSubmit = jest.fn();

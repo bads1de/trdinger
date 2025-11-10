@@ -50,7 +50,9 @@ class DataImputer(BaseEstimator, TransformerMixin):
 
         # 欠損値のある各列のインピューターを適合
         for col in X.columns:
-            if X[col].isnull().any():
+            # Pandas Series比較を安全に行う - boolに変換してから評価
+            has_null = bool(X[col].isnull().any())
+            if has_null:
                 imputer = SimpleImputer(strategy=self.strategy)
                 imputer.fit(X[[col]])
                 self.imputers_[col] = imputer

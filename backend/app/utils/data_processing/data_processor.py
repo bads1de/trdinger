@@ -100,7 +100,9 @@ class DataProcessor:
 
         # 時系列順にソート
         if hasattr(result_df.index, "is_monotonic_increasing"):
-            if not result_df.index.is_monotonic_increasing:
+            # Pandas Series/Index比較を安全に行う - boolに変換してから評価
+            is_sorted = bool(result_df.index.is_monotonic_increasing)
+            if not is_sorted:
                 result_df = result_df.sort_index()
 
         return result_df
@@ -222,6 +224,10 @@ class DataProcessor:
             前処理されたDataFrame
         """
         logger.info(f"Pipelineベース前処理開始: {pipeline_name}")
+        
+        # 元のカラム名を保存
+        original_columns = df.columns.tolist()
+        n_original_cols = len(original_columns)
 
         if fit_pipeline or pipeline_name not in self.fitted_pipelines:
             # 新しいパイプラインを作成
@@ -246,19 +252,38 @@ class DataProcessor:
             # sparse matrixの場合
             transformed_data = transformed_data.toarray()
 
-        # カラム名を生成
-        try:
-            feature_names = fitted_pipeline.get_feature_names_out()
-            if feature_names is None or len(feature_names) == 0:
-                feature_names = [
-                    f"feature_{i}" for i in range(transformed_data.shape[1])
+        # 列数を確認
+        n_transformed_cols = transformed_data.shape[1]
+        
+        if n_transformed_cols == n_original_cols:
+            # 列数が一致する場合、元のカラム名を使用
+            feature_names = original_columns
+            logger.info(f"元のカラム名を使用: {n_original_cols}列")
+        else:
+            # 列数が一致しない場合、警告を出して元のカラム名の範囲内で使用
+            logger.warning(
+                f"列数不一致: 変換後={n_transformed_cols}, 元={n_original_cols}"
+            )
+            if n_transformed_cols < n_original_cols:
+                # 列が減った場合（特徴選択など）
+                feature_names = original_columns[:n_transformed_cols]
+            else:
+                # 列が増えた場合、元のカラム名 + 汎用名
+                feature_names = original_columns + [
+                    f"generated_feature_{i}"
+                    for i in range(n_transformed_cols - n_original_cols)
                 ]
-        except Exception:
-            feature_names = [f"feature_{i}" for i in range(transformed_data.shape[1])]
 
         result_df = pd.DataFrame(
             transformed_data, index=df.index, columns=pd.Index(feature_names)
         )
+        
+        # 重複カラムを削除（最初のものを保持）
+        if result_df.columns.duplicated().any():
+            duplicated_cols = result_df.columns[result_df.columns.duplicated()].unique().tolist()
+            logger.warning(f"重複カラムを削除: {duplicated_cols}")
+            result_df = result_df.loc[:, ~result_df.columns.duplicated()]
+            logger.info(f"重複削除後: {len(result_df.columns)}列")
 
         logger.info(
             f"Pipeline前処理完了: {len(result_df)}行, {len(result_df.columns)}列"
@@ -372,7 +397,20 @@ class DataProcessor:
             # inf値をNaNに変換（補間前に）
             result_df[col] = result_df[col].replace([np.inf, -np.inf], np.nan)
 
-            if result_df[col].isnull().any():
+            # Pandas Series比較を安全に行う - .item()でスカラー値を取得
+            # .any()がSeriesを返す場合に備えて、明示的にitem()を使用
+            try:
+                has_null_check = result_df[col].isnull().any()
+                # has_null_checkがSeriesの場合、.item()でスカラー値を取得
+                if hasattr(has_null_check, 'item'):
+                    has_null = has_null_check.item()
+                else:
+                    has_null = bool(has_null_check)
+            except (ValueError, AttributeError):
+                # フォールバック: 要素ごとにチェック
+                has_null = result_df[col].isnull().values.any()
+            
+            if has_null:
                 # 前方補完 → 線形補完 → 後方補完
                 result_df[col] = (
                     result_df[col].ffill().interpolate(method="linear").bfill()
@@ -386,28 +424,36 @@ class DataProcessor:
                 
                 # NaN値が含まれている行はスキップ
                 ohlc_values = row[['open', 'high', 'low', 'close']]
-                if ohlc_values.isnull().any():
+                # Pandas Series比較を安全に行う - boolに変換してから評価
+                has_null_ohlc = bool(ohlc_values.isnull().any())
+                if has_null_ohlc:
                     continue
                     
                 # OHLC関係が崩れている場合は修正
+                # Pandas Series比較を安全に行う
+                low_val = float(row['low'])
+                open_val = float(row['open'])
+                high_val = float(row['high'])
+                close_val = float(row['close'])
+                
                 ohlc_valid = (
-                    (row['low'] <= row['open']) and
-                    (row['open'] <= row['high']) and  
-                    (row['low'] <= row['close']) and
-                    (row['close'] <= row['high'])
+                    (low_val <= open_val) and
+                    (open_val <= high_val) and
+                    (low_val <= close_val) and
+                    (close_val <= high_val)
                 )
                 
                 if not ohlc_valid:
                     # OHLC関係を強制的に修正
-                    valid_min = min(row['open'], row['close'])
-                    valid_max = max(row['open'], row['close'])
+                    valid_min = min(open_val, close_val)
+                    valid_max = max(open_val, close_val)
                     
                     # lowが適切な最小値になるように修正
-                    if row['low'] > valid_min:
+                    if low_val > valid_min:
                         result_df.loc[idx, 'low'] = valid_min
                         
-                    # highが適切な最大値になるように修正  
-                    if row['high'] < valid_max:
+                    # highが適切な最大値になるように修正
+                    if high_val < valid_max:
                         result_df.loc[idx, 'high'] = valid_max
 
         # カテゴリカルカラムの補間
@@ -416,7 +462,9 @@ class DataProcessor:
         ).columns
 
         for col in categorical_columns:
-            if result_df[col].isnull().any():
+            # Pandas Series比較を安全に行う - boolに変換してから評価
+            has_null = bool(result_df[col].isnull().any())
+            if has_null:
                 # 最頻値で補完
                 mode_value = result_df[col].mode()
                 if not mode_value.empty:
@@ -434,21 +482,26 @@ class DataProcessor:
             funding_rate_clean = result_df["funding_rate"].replace(
                 [np.inf, -np.inf], np.nan
             )
-            before_count = (funding_rate_clean < -1).sum() + (
-                funding_rate_clean > 1
-            ).sum()
+            # Pandas Series比較を安全に行う
+            below_min = (funding_rate_clean < -1).sum()
+            above_max = (funding_rate_clean > 1).sum()
+            before_count = below_min + above_max
 
             # 常にクリップを実行（範囲外値がなくてもNaN/infの処理のため）
             result_df["funding_rate"] = np.clip(funding_rate_clean.fillna(0), -1, 1)
-            after_count = (result_df["funding_rate"] < -1).sum() + (
-                result_df["funding_rate"] > 1
-            ).sum()
+            
+            # 修正後の範囲外値をカウント
+            below_min_after = (result_df["funding_rate"] < -1).sum()
+            above_max_after = (result_df["funding_rate"] > 1).sum()
+            after_count = below_min_after + above_max_after
+            
             if before_count > 0:
                 logger.info(f"範囲外値を修正: {before_count}件")
 
         # open_interestは負値にならないようにクリップ
         if "open_interest" in result_df.columns:
             oi_clean = result_df["open_interest"].replace([np.inf, -np.inf], np.nan)
+            # Pandas Series比較を安全に行う
             before_count = (oi_clean < 0).sum()
             if before_count > 0:
                 result_df["open_interest"] = np.maximum(oi_clean.fillna(0), 0)

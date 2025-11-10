@@ -4,12 +4,20 @@
 既存の93特徴量を3つのモデルで評価し、
 削減可能な特徴量を特定します。
 
+TimeSeriesSplitを使用した時系列クロスバリデーションにより、
+時系列データの特性を考慮した評価を実施します。
+
 実行方法:
     cd backend
     python -m scripts.feature_evaluation.evaluate_feature_performance
     python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm
-    python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm xgboost
+    python -m scripts.feature_evaluation.evaluate_feature_performance \
+        --models lightgbm xgboost
     python -m scripts.feature_evaluation.evaluate_feature_performance --models all
+
+設定:
+    - TimeSeriesSplit分割数: ml_config.training.cv_folds (デフォルト: 5)
+    - ターゲット変数: forward return (1時間先の収益率)
 """
 
 import argparse
@@ -30,7 +38,12 @@ from sklearn.model_selection import TimeSeriesSplit
 # プロジェクトのルートディレクトリをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from scripts.feature_evaluation.common_feature_evaluator import CommonFeatureEvaluator, EvaluationData
+from app.config.unified_config import unified_config
+from scripts.feature_evaluation.common_feature_evaluator import (
+    CommonFeatureEvaluator,
+    EvaluationData,
+)
+
 # ログ設定
 logging.basicConfig(
     level=logging.INFO,
@@ -134,15 +147,18 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
 
     @abstractmethod
     def evaluate_model_cv(
-        self, X: pd.DataFrame, y: pd.Series, n_splits: int = 5
+        self, X: pd.DataFrame, y: pd.Series, n_splits: Optional[int] = None
     ) -> Dict[str, float]:
         """
         TimeSeriesSplitでクロスバリデーション評価
 
+        時系列データの特性を考慮し、過去データで学習して未来データで評価します。
+        分割数はml_configから読み込まれます。
+
         Args:
             X: 特徴量
             y: ターゲット
-            n_splits: 分割数
+            n_splits: 分割数（Noneの場合はml_configから読み込み）
 
         Returns:
             評価指標の辞書
@@ -150,9 +166,7 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
         pass
 
     @abstractmethod
-    def get_feature_importance(
-        self, X: pd.DataFrame, y: pd.Series
-    ) -> Dict[str, float]:
+    def get_feature_importance(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, float]:
         """
         特徴量重要度を取得
 
@@ -248,9 +262,9 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
 
         if removed_features:
             logger.info(f"削除特徴量数: {len(removed_features)}")
-            logger.info(
-                f"削除特徴量: {', '.join(removed_features[:10])}{'...' if len(removed_features) > 10 else ''}"
-            )
+            features_preview = ", ".join(removed_features[:10])
+            suffix = "..." if len(removed_features) > 10 else ""
+            logger.info(f"削除特徴量: {features_preview}{suffix}")
 
         # 特徴量選択
         X_selected = X[features_to_use]
@@ -283,15 +297,17 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
             "removed_features": removed_features or [],
             **cv_results,
             "feature_importance_top10": [
-                {"feature": feat, "importance": float(imp)} for feat, imp in top_features
+                {"feature": feat, "importance": float(imp)}
+                for feat, imp in top_features
             ],
         }
 
         logger.info(
-            f"CV RMSE: {cv_results['cv_rmse']:.6f} (±{cv_results['cv_rmse_std']:.6f})"
+            f"CV RMSE: {cv_results['cv_rmse']:.6f} "
+            f"(±{cv_results['cv_rmse_std']:.6f})"
         )
         logger.info(
-            f"CV MAE: {cv_results['cv_mae']:.6f} (±{cv_results['cv_mae_std']:.6f})"
+            f"CV MAE: {cv_results['cv_mae']:.6f} " f"(±{cv_results['cv_mae_std']:.6f})"
         )
         logger.info(
             f"CV R2: {cv_results['cv_r2']:.6f} (+/-{cv_results['cv_r2_std']:.6f})"
@@ -311,9 +327,9 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
             推奨事項辞書
         """
         if not results.get("baseline"):
-            return {"message": "ベースライン評価が失敗したため、推奨事項を生成できません"}
-
-        baseline_rmse = results["baseline"]["cv_rmse"]
+            return {
+                "message": "ベースライン評価が失敗したため、推奨事項を生成できません"
+            }
 
         # 許容範囲（RMSE変化 < 1%）で最も多く削減できるシナリオを探す
         acceptable_scenarios = []
@@ -374,11 +390,25 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
         }
 
     def evaluate_model_cv(
-        self, X: pd.DataFrame, y: pd.Series, n_splits: int = 5
+        self, X: pd.DataFrame, y: pd.Series, n_splits: Optional[int] = None
     ) -> Dict[str, float]:
-        """TimeSeriesSplitでクロスバリデーション評価"""
+        """
+        TimeSeriesSplitでクロスバリデーション評価
+
+        Args:
+            X: 特徴量
+            y: ターゲット
+            n_splits: 分割数（Noneの場合はml_configから読み込み）
+
+        Returns:
+            評価指標の辞書
+        """
         import lightgbm as lgb
 
+        if n_splits is None:
+            n_splits = unified_config.ml.training.cv_folds
+
+        logger.info(f"TimeSeriesSplit使用: n_splits={n_splits}")
         tscv = TimeSeriesSplit(n_splits=n_splits)
 
         rmse_scores = []
@@ -425,7 +455,8 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
                 r2_scores.append(r2)
 
                 logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R2={r2:.6f}, Time={train_time:.2f}s"
+                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, "
+                    f"R2={r2:.6f}, Time={train_time:.2f}s"
                 )
 
             except Exception as e:
@@ -445,9 +476,7 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
             "train_time_sec": float(np.mean(train_times)),
         }
 
-    def get_feature_importance(
-        self, X: pd.DataFrame, y: pd.Series
-    ) -> Dict[str, float]:
+    def get_feature_importance(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, float]:
         """LightGBMの特徴量重要度を取得"""
         import lightgbm as lgb
 
@@ -481,178 +510,6 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
             return {}
 
 
-# TabNet は現在サポート対象外のため、関連クラスは削除済みです。
-    """TabNetモデルでの特徴量性能評価クラス"""
-
-    def __init__(self):
-        """初期化"""
-        super().__init__("TabNet")
-
-        # TabNetパラメータ
-        self.model_params = {
-            "n_d": 8,
-            "n_a": 8,
-            "n_steps": 3,
-            "gamma": 1.3,
-            "lambda_sparse": 1e-3,
-            "mask_type": "sparsemax",
-            "seed": 42,
-            "verbose": 0,
-        }
-
-        # TabNetの利用可能性をチェック
-
-
-    def _check_tabnet(self) -> bool:
-        """TabNetは現在サポート対象外のため常にFalseを返す"""
-        return False
-
-    def evaluate_model_cv(
-        self, X: pd.DataFrame, y: pd.Series, n_splits: int = 5
-    ) -> Dict[str, float]:
-        """TimeSeriesSplitでクロスバリデーション評価"""
-        logger.error("TabNetは現在サポートされていません")
-        return {}
-
-        try:
-            import torch.optim as optim
-            from torch.optim.lr_scheduler import StepLR
-        except ImportError:
-            logger.error("TabNetは現在サポートされていません")
-            return {}
-
-        tscv = TimeSeriesSplit(n_splits=n_splits)
-
-        rmse_scores = []
-        mae_scores = []
-        r2_scores = []
-        train_times = []
-
-        for fold, (train_idx, test_idx) in enumerate(tscv.split(X), 1):
-            try:
-                X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-                # 学習時間計測
-                start_time = time.time()
-
-                # TabNetモデル作成
-                model = TabNetRegressor(
-                    **self.model_params,
-                    optimizer_fn=optim.Adam,
-                    optimizer_params={"lr": 2e-2},
-                    scheduler_params={"step_size": 10, "gamma": 0.9},
-                    scheduler_fn=StepLR,
-                )
-
-                # データを numpy 配列に変換
-                X_train_np = X_train.values.astype(np.float32)
-                X_test_np = X_test.values.astype(np.float32)
-                y_train_np = y_train.values.reshape(-1, 1).astype(np.float32)
-                y_test_np = y_test.values.reshape(-1, 1).astype(np.float32)
-
-                # モデル学習
-                model.fit(
-                    X_train_np,
-                    y_train_np,
-                    eval_set=[(X_test_np, y_test_np)],
-                    eval_name=["test"],
-                    eval_metric=["rmse"],
-                    max_epochs=50,
-                    patience=10,
-                    batch_size=256,
-                    virtual_batch_size=128,
-                    drop_last=False,
-                )
-
-                train_time = time.time() - start_time
-                train_times.append(train_time)
-
-                # 予測
-                y_pred = model.predict(X_test_np).flatten()
-
-                # 評価
-                rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-                mae = mean_absolute_error(y_test, y_pred)
-                r2 = r2_score(y_test, y_pred)
-
-                rmse_scores.append(rmse)
-                mae_scores.append(mae)
-                r2_scores.append(r2)
-
-                logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R2={r2:.6f}, Time={train_time:.2f}s"
-                )
-
-            except Exception as e:
-                logger.warning(f"Fold {fold}でエラー: {e}")
-                continue
-
-        if not rmse_scores:
-            return {}
-
-        return {
-            "cv_rmse": float(np.mean(rmse_scores)),
-            "cv_rmse_std": float(np.std(rmse_scores)),
-            "cv_mae": float(np.mean(mae_scores)),
-            "cv_mae_std": float(np.std(mae_scores)),
-            "cv_r2": float(np.mean(r2_scores)),
-            "cv_r2_std": float(np.std(r2_scores)),
-            "train_time_sec": float(np.mean(train_times)),
-        }
-
-    def get_feature_importance(
-        self, X: pd.DataFrame, y: pd.Series
-    ) -> Dict[str, float]:
-        """TabNetの特徴量重要度を取得"""
-        logger.error("TabNetは現在サポートされていません")
-        return {}
-
-        try:
-            import torch.optim as optim
-            from torch.optim.lr_scheduler import StepLR
-
-            # TabNetモデル作成
-            model = TabNetRegressor(
-                **self.model_params,
-                optimizer_fn=optim.Adam,
-                optimizer_params={"lr": 2e-2},
-                scheduler_params={"step_size": 10, "gamma": 0.9},
-                scheduler_fn=StepLR,
-            )
-
-            # データを numpy 配列に変換
-            X_np = X.values.astype(np.float32)
-            y_np = y.values.reshape(-1, 1).astype(np.float32)
-
-            # モデル学習
-            model.fit(
-                X_np,
-                y_np,
-                max_epochs=50,
-                patience=10,
-                batch_size=256,
-                virtual_batch_size=128,
-            )
-
-            # 重要度取得
-            if hasattr(model, "feature_importances_"):
-                importance = model.feature_importances_
-
-                # 正規化
-                if importance.sum() > 0:
-                    importance = importance / importance.sum()
-
-                return dict(zip(X.columns, importance))
-            else:
-                logger.warning("TabNetモデルに特徴量重要度がありません")
-                return {}
-
-        except Exception as e:
-            logger.error(f"特徴量重要度取得エラー: {e}")
-            return {}
-
-
 class XGBoostEvaluator(BaseFeatureEvaluator):
     """XGBoostモデルでの特徴量性能評価クラス"""
 
@@ -675,11 +532,25 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
         }
 
     def evaluate_model_cv(
-        self, X: pd.DataFrame, y: pd.Series, n_splits: int = 5
+        self, X: pd.DataFrame, y: pd.Series, n_splits: Optional[int] = None
     ) -> Dict[str, float]:
-        """TimeSeriesSplitでクロスバリデーション評価"""
+        """
+        TimeSeriesSplitでクロスバリデーション評価
+
+        Args:
+            X: 特徴量
+            y: ターゲット
+            n_splits: 分割数（Noneの場合はml_configから読み込み）
+
+        Returns:
+            評価指標の辞書
+        """
         import xgboost as xgb
 
+        if n_splits is None:
+            n_splits = unified_config.ml.training.cv_folds
+
+        logger.info(f"TimeSeriesSplit使用: n_splits={n_splits}")
         tscv = TimeSeriesSplit(n_splits=n_splits)
 
         rmse_scores = []
@@ -725,7 +596,8 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
                 r2_scores.append(r2)
 
                 logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, R2={r2:.6f}, Time={train_time:.2f}s"
+                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, "
+                    f"R2={r2:.6f}, Time={train_time:.2f}s"
                 )
 
             except Exception as e:
@@ -745,9 +617,7 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
             "train_time_sec": float(np.mean(train_times)),
         }
 
-    def get_feature_importance(
-        self, X: pd.DataFrame, y: pd.Series
-    ) -> Dict[str, float]:
+    def get_feature_importance(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, float]:
         """XGBoostの特徴量重要度を取得"""
         import xgboost as xgb
 
@@ -804,9 +674,7 @@ class MultiModelFeatureEvaluator:
         if "xgboost" in models:
             self.evaluators["xgboost"] = XGBoostEvaluator()
 
-    def run_evaluation(
-        self, symbol: str = "BTC/USDT:USDT", limit: int = 2000
-    ) -> Dict:
+    def run_evaluation(self, symbol: str = "BTC/USDT:USDT", limit: int = 2000) -> Dict:
         """
         全モデルで評価を実行
 
@@ -894,7 +762,11 @@ class MultiModelFeatureEvaluator:
         return self.all_results
 
     def _run_model_scenarios(
-        self, evaluator: BaseFeatureEvaluator, X: pd.DataFrame, y: pd.Series, unified_scores: Dict
+        self,
+        evaluator: BaseFeatureEvaluator,
+        X: pd.DataFrame,
+        y: pd.Series,
+        unified_scores: Dict,
     ) -> Dict:
         """
         1つのモデルで全シナリオを実行
@@ -984,7 +856,9 @@ class MultiModelFeatureEvaluator:
         """
         try:
             # data/feature_evaluationディレクトリのパス
-            output_dir = Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+            output_dir = (
+                Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+            )
             output_dir.mkdir(parents=True, exist_ok=True)
 
             # JSON保存
@@ -1024,7 +898,9 @@ class MultiModelFeatureEvaluator:
         """統合結果を保存"""
         try:
             # data/feature_evaluationディレクトリのパス
-            output_dir = Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+            output_dir = (
+                Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+            )
             output_dir.mkdir(parents=True, exist_ok=True)
 
             # 統合JSON保存
@@ -1082,7 +958,9 @@ class MultiModelFeatureEvaluator:
         print("\n" + "-" * 80)
         print("【モデル別ベースライン性能比較】")
         print("-" * 80)
-        print(f"{'モデル':<15} {'RMSE':<12} {'MAE':<12} {'R2':<10} {'学習時間(秒)':<15}")
+        print(
+            f"{'モデル':<15} {'RMSE':<12} {'MAE':<12} {'R2':<10} {'学習時間(秒)':<15}"
+        )
         print("-" * 80)
 
         for model_name, result in self.all_results.items():
@@ -1122,7 +1000,8 @@ class MultiModelFeatureEvaluator:
 
         if best_model and best_scenario:
             print(
-                f"最も効果的な削減: {best_model.upper()}モデルで{best_reduction}個の特徴量削減が可能"
+                f"最も効果的な削減: {best_model.upper()}モデルで"
+                f"{best_reduction}個の特徴量削減が可能"
             )
             print(f"性能変化: {best_scenario.get('performance_change_pct', 0):.2f}%")
             print(f"削減後の特徴量数: {best_scenario.get('features_count_after')}個")
@@ -1133,16 +1012,16 @@ class MultiModelFeatureEvaluator:
                 for i, feat in enumerate(removed_features, 1):
                     print(f"  {i:2}. {feat}")
         else:
-            print("全モデルで性能を維持しながら削減できる特徴量は見つかりませんでした")
+            print(
+                "全モデルで性能を維持しながら" "削減できる特徴量は見つかりませんでした"
+            )
 
         print("\n" + "=" * 80 + "\n")
 
 
 def parse_arguments():
     """コマンドライン引数をパース"""
-    parser = argparse.ArgumentParser(
-        description="全モデルでの特徴量性能評価スクリプト"
-    )
+    parser = argparse.ArgumentParser(description="全モデルでの特徴量性能評価スクリプト")
     parser.add_argument(
         "--models",
         nargs="+",
