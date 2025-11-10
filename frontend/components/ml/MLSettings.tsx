@@ -10,6 +10,8 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import InfoModal from "@/components/common/InfoModal";
 import { useMLSettings } from "@/hooks/useMLSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LabelGenerationSettings } from "@/components/ml/LabelGenerationSettings";
+import { FeatureProfileSettings } from "@/components/ml/FeatureProfileSettings";
 import {
   Settings,
   Save,
@@ -19,6 +21,8 @@ import {
   Trash2,
   Info,
   Database,
+  Tag,
+  Layers,
 } from "lucide-react";
 import { ML_INFO_MESSAGES } from "@/constants/info";
 
@@ -85,10 +89,18 @@ export default function MLSettings() {
 
       {/* タブ形式の設定 */}
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             基本設定
+          </TabsTrigger>
+          <TabsTrigger value="label-generation" className="flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            ラベル生成
+          </TabsTrigger>
+          <TabsTrigger value="feature-engineering" className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            特徴量
           </TabsTrigger>
           <TabsTrigger value="data-preprocessing" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
@@ -305,6 +317,83 @@ export default function MLSettings() {
               icon={<Trash2 className="h-4 w-4" />}
             >
               古いモデルを削除
+            </ActionButton>
+          </div>
+        </TabsContent>
+
+        {/* ラベル生成タブ */}
+        <TabsContent value="label-generation" className="space-y-6">
+          {config.training?.label_generation && (
+            <LabelGenerationSettings
+              config={config.training.label_generation}
+              onChange={(key, value) => {
+                if (!config) return;
+                const newConfig = {
+                  ...config,
+                  training: {
+                    ...config.training,
+                    label_generation: {
+                      ...config.training.label_generation,
+                      [key]: value,
+                    },
+                  },
+                };
+                updateConfig("training", "label_generation", {
+                  ...config.training.label_generation,
+                  [key]: value,
+                });
+              }}
+            />
+          )}
+
+          {/* アクションボタン */}
+          <div className="flex flex-wrap gap-4">
+            <ActionButton
+              onClick={() => config && saveConfig(config)}
+              loading={isSaving}
+              icon={<Save className="h-4 w-4" />}
+            >
+              設定を保存
+            </ActionButton>
+            <ActionButton
+              onClick={resetToDefaults}
+              loading={isResetting}
+              variant="secondary"
+              icon={<RotateCcw className="h-4 w-4" />}
+            >
+              デフォルトに戻す
+            </ActionButton>
+          </div>
+        </TabsContent>
+
+        {/* 特徴量エンジニアリングタブ */}
+        <TabsContent value="feature-engineering" className="space-y-6">
+          {config.feature_engineering && (
+            <FeatureProfileSettings
+              config={config.feature_engineering}
+              onChange={(key, value) => {
+                if (!config) return;
+                updateConfig("feature_engineering", key, value);
+              }}
+            />
+          )}
+
+          {/* アクションボタン */}
+          <div className="flex flex-wrap gap-4">
+            <ActionButton
+              onClick={() => config && saveConfig(config)}
+              loading={isSaving}
+              icon={<Save className="h-4 w-4" />}
+            >
+              設定を保存
+            </ActionButton>
+            <ActionButton
+              onClick={resetToDefaults}
+              loading={isResetting}
+              variant="secondary"
+              icon={<RotateCcw className="h-4 w-4" />}
+            >
+              デフォルトに戻す
             </ActionButton>
           </div>
         </TabsContent>

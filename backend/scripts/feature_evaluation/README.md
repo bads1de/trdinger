@@ -1,184 +1,295 @@
 # 特徴量評価スクリプト
 
-このディレクトリには、機械学習モデルの特徴量を評価・分析するためのスクリプトが含まれています。
+機械学習モデルで使用する特徴量の重要度を評価し、低重要度の特徴量を特定するためのスクリプト群です。
 
 ## 概要
 
-特徴量エンジニアリングの品質を評価し、モデル性能への影響を分析するための包括的なツールセットを提供します。
+このディレクトリには、以下の4つのスクリプトが含まれています：
 
-## スクリプト一覧
+1. **`common_feature_evaluator.py`** - 共通ユーティリティクラス
+2. **`detect_low_importance_features.py`** - XGBoost/LightGBMでの低重要度特徴検出
+3. **`analyze_feature_importance.py`** - RandomForestでの特徴量重要度分析
+4. **`evaluate_feature_performance.py`** - 複数モデルでの特徴量パフォーマンス評価
+5. **`run_unified_analysis.py`** - 統合分析スクリプト（推奨）
 
-### 1. analyze_feature_importance.py
-- **目的**: RandomForest・Permutation Importance・相関・分散を用いた統合的な特徴量重要度分析
-- **実行**: 
-  ```bash
-  python -m scripts.feature_evaluation.analyze_feature_importance
-  ```
-- **出力**:
-  - `feature_importance_analysis.json`
-  - `feature_importance_summary.csv`
+## 推奨: 統合スクリプトの使用
 
----
+**`run_unified_analysis.py`** を使用することで、3つの分析を一貫したラベル生成設定で統合して実行できます。
 
-### 2. detect_low_importance_features.py
-- **目的**: XGBoost / LightGBM による特徴量重要度評価から低重要度特徴量を自動検出
-- **実行**:
-  ```bash
-  python -m scripts.feature_evaluation.detect_low_importance_features --symbol BTC/USDT --timeframe 1h --lookback-days 90 --threshold 0.2 --output-dir data/feature_evaluation
-  ```
-- **出力**:
-  - `data/feature_evaluation/low_importance_features_report.md`
-  - `data/feature_evaluation/feature_importance_detailed.csv`
-  - `data/feature_evaluation/features_to_remove_auto.json`
+### 基本的な使い方
 
----
+```bash
+cd backend
 
-### 3. evaluate_feature_performance.py
-- **目的**: 全モデル（LightGBM、TabNet、XGBoost）での特徴量性能検証
-- **実行**: 
-  ```bash
-  python -m scripts.feature_evaluation.evaluate_feature_performance
-  python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm
-  python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm xgboost
-  python -m scripts.feature_evaluation.evaluate_feature_performance --models all
-  ```
-- **出力**:
-  - `data/feature_evaluation/{model_name}_feature_performance_evaluation.json`
-  - `data/feature_evaluation/{model_name}_performance_comparison.csv`
-  - `data/feature_evaluation/all_models_feature_performance_evaluation.json`
-  - `data/feature_evaluation/all_models_performance_comparison.csv`
+# デフォルト設定で実行（設定ファイルからラベル生成設定を読み込み）
+python -m scripts.feature_evaluation.run_unified_analysis
 
-#### 詳細機能
-- DBから実データを取得して評価
-- TimeSeriesSplitでクロスバリデーション
-- 統合スコア下位N%削除の複数シナリオ評価
-- モデル固有の特徴量重要度ベース削除
-- 推奨事項の自動生成
+# 特定のプリセットを指定して実行
+python -m scripts.feature_evaluation.run_unified_analysis --preset 4h_4bars
 
-#### コマンドライン引数
-- `--models`: 評価するモデルを指定（lightgbm、xgboost、all）
-- `--symbol`: 分析対象シンボル（デフォルト: BTC/USDT:USDT）
-- `--limit`: データ取得件数（デフォルト: 2000）
-
----
-
-### 4. evaluate_models.py
-- **目的**: モデル性能の詳細評価と比較
-- **実行**: 
-  ```bash
-  python -m scripts.feature_evaluation.evaluate_models
-  ```
-- **出力**:
-  - `data/feature_evaluation/model_evaluation_results.json`
-
-#### 詳細機能
-- 複数モデルでの性能比較
-- 特徴量セットごとの評価
-- 詳細なメトリクス分析
-
----
-
-### 5. integrate_feature_evaluation_results.py
-- **目的**: 複数の評価結果を統合して分析レポート生成
-- **実行**: 
-  ```bash
-  python -m scripts.feature_evaluation.integrate_feature_evaluation_results
-  ```
-- **出力**:
-  - `data/feature_evaluation/integrated_evaluation_report.json`
-  - 統合分析レポート
-
-#### 詳細機能
-- 複数評価の結果統合
-- 総合推奨事項の生成
-- 削減可能特徴量の特定
-
----
-
-### 6. overfitting_analysis.py
-- **目的**: 過学習の検出と分析
-- **実行**: 
-  ```bash
-  python -m scripts.feature_evaluation.overfitting_analysis
-  ```
-- **出力**:
-  - `data/feature_evaluation/overfitting_analysis_results.json`
-  - 過学習診断レポート
-
-#### 詳細機能
-- 訓練/検証誤差の差分分析
-- 学習曲線の生成
-- 過学習リスクの定量評価
-- 正則化パラメータの推奨
-
----
-
-## 実行順序の推奨
-
-特徴量評価を体系的に行う場合、以下の順序で実行することを推奨します：
-
-1. **benchmark_all_features.py** - ベースライン性能の確立
-2. **analyze_feature_importance.py** - 特徴量重要度の分析
-3. **evaluate_feature_performance.py** - 全モデルでの性能検証
-4. **overfitting_analysis.py** - 過学習リスクの評価
-5. **integrate_feature_evaluation_results.py** - 総合レポート生成
-
-## 出力ファイルの場所
-
-全ての評価結果は以下のディレクトリに保存されます：
-```
-backend/data/feature_evaluation/
+# パラメータをカスタマイズ
+python -m scripts.feature_evaluation.run_unified_analysis \
+    --symbol BTC/USDT:USDT \
+    --timeframe 1h \
+    --limit 2000 \
+    --preset 1h_4bars_dynamic \
+    --output-dir backend/results/feature_analysis
 ```
 
-## 依存関係
+### コマンドライン引数
 
-以下のPythonパッケージが必要です：
+- `--symbol`: 分析対象シンボル（デフォルト: `BTC/USDT:USDT`）
+- `--timeframe`: 時間足（デフォルト: `1h`）
+- `--limit`: データ取得件数（デフォルト: `2000`）
+- `--preset`: ラベル生成プリセット名（例: `4h_4bars`, `1h_4bars_dynamic`）
+- `--output-dir`: 出力ディレクトリ（デフォルト: `backend/results/feature_analysis`）
 
-- lightgbm
-- xgboost
+### 利用可能なプリセット
 
-- scikit-learn
-- pandas
-- numpy
-- shap
+以下のラベル生成プリセットが利用可能です：
 
-## 注意事項
+- **`15m_4bars`**: 15分足、4本先（1時間先）、0.1%閾値
+- **`30m_4bars`**: 30分足、4本先（2時間先）、0.15%閾値
+- **`1h_4bars`**: 1時間足、4本先（4時間先）、0.2%閾値
+- **`4h_4bars`**: 4時間足、4本先（16時間先）、0.2%閾値（デフォルト推奨）
+- **`1d_4bars`**: 1日足、4本先（4日先）、0.5%閾値
+- **`4h_4bars_dynamic`**: 4時間足、動的閾値（KBinsDiscretizer）
+- **`1h_4bars_dynamic`**: 1時間足、動的閾値（KBinsDiscretizer）
 
-1. **データベース接続**: 実データを使用するスクリプトはデータベースへの接続が必要です
-2. **計算リソース**: 大規模な評価には相応の計算時間とメモリが必要です
+### 出力ファイル
 
+統合分析の結果は以下のファイルに保存されます：
+
+```
+backend/results/feature_analysis/
+├── feature_analysis_20240101_120000.json  # タイムスタンプ付き結果
+├── features_to_remove_20240101_120000.csv # 削除推奨特徴リスト
+├── feature_analysis_latest.json           # 最新の結果
+└── low_importance/                        # 個別分析結果
+    ├── low_importance_features_report.md
+    ├── feature_importance_detailed.csv
+    └── features_to_remove_auto.json
+```
+
+### 出力JSON形式
+
+```json
+{
+  "timestamp": "2024-01-01T12:00:00",
+  "symbol": "BTC/USDT:USDT",
+  "timeframe": "1h",
+  "label_config": {
+    "use_preset": true,
+    "preset_name": "4h_4bars",
+    "timeframe": "4h",
+    "horizon_n": 4,
+    "threshold": 0.002,
+    "threshold_method": "FIXED"
+  },
+  "low_importance_analysis": {
+    "total_features": 150,
+    "low_importance_count": 50,
+    "low_importance_features": ["feature1", "feature2", ...]
+  },
+  "importance_analysis": {
+    "total_features": 150,
+    "low_importance_count": 45,
+    "low_importance_features": ["featureA", "featureB", ...]
+  },
+  "performance_analysis": {
+    "models_used": ["lightgbm", "xgboost"],
+    "recommendations": {
+      "lightgbm": ["feature1", "feature2", ...],
+      "xgboost": ["feature3", "feature4", ...]
+    }
+  },
+  "recommended_production_allowlist": {
+    "features_to_remove": ["feature1", "feature2", ...],
+    "features_to_remove_count": 40,
+    "note": "production allowlistは全特徴から削除推奨特徴を除外したもの"
+  },
+  "analysis_summary": {
+    "total_features": 150,
+    "analyses_completed": 3,
+    "recommended_removal_count": 40,
+    "models_used": ["lightgbm", "xgboost"]
+  }
+}
+```
+
+## ラベル生成設定
+
+### 設定ファイルでの指定
+
+`unified_config.py`の`LabelGenerationConfig`でデフォルト設定を指定できます：
+
+```python
+# 環境変数での設定例
+ML__TRAINING__LABEL_GENERATION__USE_PRESET=true
+ML__TRAINING__LABEL_GENERATION__DEFAULT_PRESET=4h_4bars
+```
+
+### プリセットの選択基準
+
+- **短期取引（スキャルピング）**: `15m_4bars`, `30m_4bars`
+- **デイトレード**: `1h_4bars`, `4h_4bars`
+- **スイングトレード**: `1d_4bars`, `1d_7bars`
+- **動的閾値（推奨）**: `4h_4bars_dynamic`, `1h_4bars_dynamic`
+
+動的閾値（`*_dynamic`）は、データの分布に応じて自動的に閾値を調整するため、より汎用的です。
+
+## 個別スクリプトの使用（非推奨）
+
+個別のスクリプトも実行可能ですが、一貫性のために統合スクリプトの使用を推奨します。
+
+### 1. 低重要度特徴検出
+
+```bash
+python scripts/feature_evaluation/detect_low_importance_features.py \
+    --symbol BTC/USDT \
+    --timeframe 1h \
+    --lookback-days 90 \
+    --threshold 0.2
+```
+
+### 2. 特徴量重要度分析
+
+```bash
+python -m scripts.feature_evaluation.analyze_feature_importance
+```
+
+### 3. 特徴量パフォーマンス評価
+
+```bash
+# 全モデルで評価
+python -m scripts.feature_evaluation.evaluate_feature_performance --models all
+
+# 特定モデルのみ
+python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm xgboost
+```
+
+## CommonFeatureEvaluator API
+
+`CommonFeatureEvaluator`クラスは、以下の機能を提供します：
+
+### データ取得
+
+```python
+from scripts.feature_evaluation.common_feature_evaluator import CommonFeatureEvaluator
+
+evaluator = CommonFeatureEvaluator()
+data = evaluator.fetch_data(
+    symbol="BTC/USDT:USDT",
+    timeframe="1h",
+    limit=2000
+)
+```
+
+### 特徴量生成
+
+```python
+features_df = evaluator.build_basic_features(
+    data=data,
+    skip_crypto_and_advanced=False
+)
+```
+
+### ラベル生成（新機能）
+
+```python
+# 設定ファイルのプリセットを使用
+labels = evaluator.create_labels_from_config(ohlcv_df)
+
+# 特定のプリセットを指定
+labels = evaluator.create_labels_from_config(
+    ohlcv_df,
+    preset_name="4h_4bars"
+)
+
+# ラベル生成設定情報を取得
+label_config = evaluator.get_label_config_info()
+```
+
+### TimeSeriesSplit評価
+
+```python
+from sklearn.model_selection import TimeSeriesSplit
+
+# 時系列CVで評価
+cv_results = evaluator.time_series_cv(X, y, n_splits=5)
+```
 
 ## トラブルシューティング
 
-
-
+### データが取得できない
 
 ```bash
+# OHLCVデータの確認
+python -c "
+from database.connection import SessionLocal
+from database.repositories.ohlcv_repository import OHLCVRepository
 
+db = SessionLocal()
+repo = OHLCVRepository(db)
+df = repo.get_ohlcv_dataframe('BTC/USDT:USDT', '1h', limit=100)
+print(f'データ件数: {len(df)}')
+db.close()
+"
 ```
 
 ### メモリ不足エラー
 
-`--limit`パラメータでデータ取得件数を減らしてください：
-```bash
-python -m scripts.feature_evaluation.evaluate_feature_performance --limit 1000
-```
+- `--limit`パラメータを減らしてください（例: `--limit 1000`）
+- より短い時間足を使用してください
 
-## 関連ドキュメント
+### 分析時間が長すぎる
 
-- [モデル評価レポート](../../docs/feature_evaluation/MODEL_EVALUATION_REPORT.md)
-- [過学習分析レポート](../../docs/feature_evaluation/OVERFITTING_ANALYSIS_REPORT.md)
+- データ件数を減らす（`--limit`）
+- 特定のモデルのみで評価（`--models lightgbm`）
 
 ## 開発者向け情報
-
-### コードスタイル
-
-- Black（行長88文字）
-- Isort（profile=black）
-- MyPy（厳密な型チェック）
-- Flake8
 
 ### テスト
 
 ```bash
-pytest tests/feature/ -v
+cd backend
+python -m pytest tests/ -k feature_evaluation
+```
+
+### コード品質チェック
+
+```bash
+cd backend
+black scripts/feature_evaluation/
+isort scripts/feature_evaluation/
+flake8 scripts/feature_evaluation/
+```
+
+### 新しいプリセットの追加
+
+`app/utils/label_generation/presets.py`の`get_common_presets()`関数に追加してください：
+
+```python
+def get_common_presets() -> Dict[str, Dict[str, Any]]:
+    presets = {
+        # ... 既存のプリセット
+        "custom_preset": {
+            "timeframe": "2h",
+            "horizon_n": 6,
+            "threshold": 0.0025,
+            "threshold_method": ThresholdMethod.FIXED,
+            "description": "カスタムプリセットの説明",
+        },
+    }
+    return presets
+```
+
+## 参考リンク
+
+- [ML Refactor Plan](../../ml_refactor_plan.md)
+- [Unified Config](../../app/config/unified_config.py)
+- [Label Generation Presets](../../app/utils/label_generation/presets.py)
+
+## ライセンス
+
+このプロジェクトのライセンスに従います。

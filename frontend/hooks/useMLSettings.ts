@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
+import type {
+  LabelGenerationConfig,
+  FeatureEngineeringConfig,
+} from "@/types/ml-config";
+import {
+  DEFAULT_LABEL_PRESET,
+  DEFAULT_FEATURE_PROFILE,
+} from "@/constants/ml-config-constants";
 
 export interface MLConfig {
   data_processing: {
@@ -21,18 +29,6 @@ export interface MLConfig {
     max_model_versions: number;
     model_retention_days: number;
   };
-  training: {
-    train_test_split: number;
-    cross_validation_folds: number;
-    prediction_horizon: number;
-    label_method: string;
-    volatility_window: number;
-    threshold_multiplier: number;
-    min_threshold: number;
-    max_threshold: number;
-    threshold_up: number;
-    threshold_down: number;
-  };
   prediction: {
     default_up_prob: number;
     default_down_prob: number;
@@ -47,6 +43,22 @@ export interface MLConfig {
     expand_to_data_length: boolean;
     default_indicator_length: number;
   };
+  training: {
+    train_test_split: number;
+    cross_validation_folds: number;
+    prediction_horizon: number;
+    label_method: string;
+    volatility_window: number;
+    threshold_multiplier: number;
+    min_threshold: number;
+    max_threshold: number;
+    threshold_up: number;
+    threshold_down: number;
+    label_generation: LabelGenerationConfig;
+    cv_folds: number;
+    random_state: number;
+  };
+  feature_engineering: FeatureEngineeringConfig;
   ensemble: {
     enabled: boolean;
     algorithms: string[];
@@ -146,7 +158,29 @@ export const useMLSettings = () => {
 
   const fetchConfig = useCallback(async () => {
     await fetchConfigApi("/api/ml/config", {
-      onSuccess: setConfig,
+      onSuccess: (data) => {
+        // デフォルト値を追加（バックエンドから返されない場合）
+        const configWithDefaults = {
+          ...data,
+          training: {
+            ...data.training,
+            label_generation: data.training?.label_generation || {
+              usePreset: true,
+              defaultPreset: DEFAULT_LABEL_PRESET,
+              timeframe: "4h",
+              horizonN: 4,
+              threshold: 0.002,
+              priceColumn: "close",
+              thresholdMethod: "FIXED",
+            },
+          },
+          feature_engineering: data.feature_engineering || {
+            profile: DEFAULT_FEATURE_PROFILE,
+            customAllowlist: null,
+          },
+        };
+        setConfig(configWithDefaults);
+      },
     });
   }, [fetchConfigApi]);
 

@@ -14,6 +14,8 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from app.config.unified_config import unified_config
+
 from .advanced_features import AdvancedFeatureEngineer
 from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
@@ -23,6 +25,59 @@ from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 
 logger = logging.getLogger(__name__)
+
+
+# 特徴量プロファイル定義
+FEATURE_PROFILES: Dict[str, Optional[List[str]]] = {
+    "research": None,  # すべての特徴量を使用
+    "production": [
+        # === 基本的なテクニカル指標 ===
+        "RSI_14",
+        "MACD",
+        "MACD_signal",
+        "MACD_hist",
+        "MA_Short_7",
+        "MA_Long_25",
+        "BB_Upper",
+        "BB_Middle",
+        "BB_Lower",
+        "BB_Position",
+        "BB_Width",
+        "ATR_14",
+        # === ボリューム関連 ===
+        "Volume_MA_Ratio",
+        "Volume_Trend",
+        # === ボラティリティ関連 ===
+        "Volatility_20",
+        "Volatility_Ratio",
+        # === モメンタム指標 ===
+        "Momentum_14",
+        "ROC_10",
+        # === 価格関連 ===
+        "Price_Change_Pct",
+        "High_Low_Range",
+        "Close_Position_in_Range",
+        # === 市場レジーム ===
+        "Market_Regime",
+        "Trend_Strength",
+        # === 建玉残高関連（OI） ===
+        "OI_Change_Rate_24h",
+        "Volatility_Adjusted_OI",
+        "OI_Trend",
+        "OI_Normalized",
+        # === 複合指標 ===
+        "FR_OI_Ratio",
+        "Market_Heat_Index",
+        "Market_Stress",
+        "Market_Balance",
+        # === 暗号通貨特化特徴量 ===
+        "Price_Volume_Correlation",
+        "Funding_Rate_Impact",
+        # === 高度な特徴量（一部） ===
+        "Price_Momentum_Regime",
+        "Volatility_Regime",
+    ],
+}
 
 
 class FeatureEngineeringService:
@@ -62,6 +117,7 @@ class FeatureEngineeringService:
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
+        profile: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         高度な特徴量を計算
@@ -71,9 +127,22 @@ class FeatureEngineeringService:
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
             lookback_periods: 各特徴量の計算期間設定
+            profile: 特徴量プロファイル ('research' または 'production')。
+                    Noneの場合は設定から読み込み
 
         Returns:
             特徴量が追加されたDataFrame
+
+        Examples:
+            >>> # 研究用（全特徴量）
+            >>> features = service.calculate_advanced_features(
+            ...     ohlcv_data, profile="research"
+            ... )
+            >>>
+            >>> # 本番用（厳選特徴量）
+            >>> features = service.calculate_advanced_features(
+            ...     ohlcv_data, profile="production"
+            ... )
         """
         try:
             if ohlcv_data.empty:
@@ -369,6 +438,9 @@ class FeatureEngineeringService:
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")
 
+            # プロファイルベースの特徴量フィルタリング
+            result_df = self._apply_feature_profile(result_df, profile)
+
             # 結果をキャッシュに保存
             self._save_to_cache(cache_key, result_df)
 
@@ -520,6 +592,124 @@ class FeatureEngineeringService:
 
         except Exception as e:
             logger.warning(f"データ型最適化エラー: {e}")
+            return df
+
+    def _apply_feature_profile(
+        self, df: pd.DataFrame, profile: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        プロファイルベースの特徴量フィルタリングを適用
+
+        Args:
+            df: フィルタリング前のDataFrame
+            profile: 特徴量プロファイル ('research' または 'production')。
+                    Noneの場合は設定から読み込み
+
+        Returns:
+            フィルタリング後のDataFrame
+
+        Raises:
+            ValueError: 無効なプロファイル名が指定された場合
+        """
+        try:
+            # プロファイルを決定（パラメータ > 設定 > デフォルト）
+            if profile is None:
+                profile = unified_config.ml.feature_engineering.profile
+
+            logger.info(f"特徴量プロファイル '{profile}' を適用中...")
+
+            # プロファイルの検証
+            if profile not in FEATURE_PROFILES:
+                raise ValueError(
+                    f"無効なプロファイル: {profile}. "
+                    f"サポートされているプロファイル: {list(FEATURE_PROFILES.keys())}"
+                )
+
+            # researchプロファイルの場合はすべての特徴量を保持
+            if profile == "research":
+                logger.info(
+                    f"研究用プロファイル: {len(df.columns)}個の特徴量をすべて保持"
+                )
+                return df
+
+            # productionプロファイルまたはカスタムallowlistの場合
+            # カスタムallowlistの確認
+            custom_allowlist = unified_config.ml.feature_engineering.custom_allowlist
+            if custom_allowlist is not None:
+                allowlist = custom_allowlist
+                logger.info(
+                    f"カスタムallowlistを使用: {len(allowlist)}個の特徴量を指定"
+                )
+            else:
+                allowlist = FEATURE_PROFILES[profile]
+                if allowlist is None:
+                    # プロファイルがNoneの場合はすべて保持（研究用）
+                    logger.info(
+                        f"プロファイル '{profile}': "
+                        f"{len(df.columns)}個の特徴量をすべて保持"
+                    )
+                    return df
+
+            # 価格列など、必ず保持すべき基本カラム
+            essential_columns = ["open", "high", "low", "close", "volume"]
+
+            # 保持する列を決定
+            columns_to_keep = []
+
+            # 基本カラムを追加（存在する場合のみ）
+            for col in essential_columns:
+                if col in df.columns:
+                    columns_to_keep.append(col)
+
+            # allowlistの特徴量を追加（存在する場合のみ）
+            missing_features = []
+            for feature in allowlist:
+                if feature in df.columns:
+                    if feature not in columns_to_keep:
+                        columns_to_keep.append(feature)
+                else:
+                    missing_features.append(feature)
+
+            # 存在しない特徴量に対する警告
+            if missing_features:
+                logger.warning(
+                    f"allowlistに指定された{len(missing_features)}個の特徴量が "
+                    f"見つかりません: {missing_features[:10]}"
+                    + (
+                        f"... (他{len(missing_features) - 10}個)"
+                        if len(missing_features) > 10
+                        else ""
+                    )
+                )
+
+            # フィルタリング実行
+            original_count = len(df.columns)
+            filtered_df = df[columns_to_keep]
+            dropped_count = original_count - len(filtered_df.columns)
+
+            logger.info(
+                f"プロファイル '{profile}' 適用完了: "
+                f"{original_count}個 → {len(filtered_df.columns)}個の特徴量 "
+                f"({dropped_count}個をドロップ)"
+            )
+            essential_in_result = [
+                c for c in essential_columns if c in filtered_df.columns
+            ]
+            selected_count = len(filtered_df.columns) - len(essential_in_result)
+            logger.info(
+                f"保持された特徴量: "
+                f"基本カラム={len(essential_in_result)}個, "
+                f"選択特徴量={selected_count}個"
+            )
+
+            return filtered_df
+
+        except Exception as e:
+            logger.error(f"特徴量プロファイル適用エラー: {e}")
+            # エラー時は元のDataFrameを返す
+            logger.warning(
+                "エラーのため、フィルタリングをスキップして全特徴量を保持します"
+            )
             return df
 
     def clear_cache(self):

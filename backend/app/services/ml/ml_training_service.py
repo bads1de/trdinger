@@ -173,6 +173,7 @@ class MLTrainingService(BaseResourceManager):
         save_model: bool = True,
         model_name: Optional[str] = None,
         optimization_settings: Optional[OptimizationSettings] = None,
+        feature_profile: Optional[str] = None,
         **training_params,
     ) -> Dict[str, Any]:
         """
@@ -185,6 +186,8 @@ class MLTrainingService(BaseResourceManager):
             save_model: モデルを保存するか
             model_name: モデル名（オプション）
             optimization_settings: 最適化設定（オプション）
+            feature_profile: 特徴量プロファイル（'research'または'production'）。
+                           Noneの場合は設定から読み込み
             **training_params: 追加の学習パラメータ
                 - use_time_series_split: 時系列分割を使用（デフォルト: ml_config.training.USE_TIME_SERIES_SPLIT）
                 - use_cross_validation: クロスバリデーションを使用（デフォルト: False）
@@ -199,6 +202,14 @@ class MLTrainingService(BaseResourceManager):
             MLModelError: 学習に失敗した場合
             ValueError: 無効なパラメータ組み合わせの場合
         """
+        # feature_profileを設定から読み込む（未指定の場合）
+        if feature_profile is None:
+            feature_profile = self.config.feature_engineering.profile
+        
+        logger.info(f"🎯 特徴量プロファイル: {feature_profile}")
+        
+        # feature_profileをtraining_paramsに追加（トレーナーに伝播）
+        training_params["feature_profile"] = feature_profile
         # TimeSeriesSplit関連パラメータをml_configから設定（未指定の場合）
         training_params = self._prepare_training_params(training_params)
 

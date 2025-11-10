@@ -15,11 +15,17 @@ import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from ...config.unified_config import unified_config
 from ...utils.data_processing import data_processor as data_preprocessor
 from ...utils.error_handler import (
     DataError,
     ml_operation_context,
     safe_ml_operation,
+)
+from ...utils.label_generation.presets import (
+    apply_preset_by_name,
+    forward_classification_preset,
+    get_common_presets,
 )
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
@@ -516,6 +522,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         責務分割により、具体的な特徴量計算ロジックは
         FeatureEngineeringServiceに移譲されました。
+        
+        設定からfeature profileを読み込み、FeatureEngineeringServiceに渡します。
         """
         try:
             # 入力データの検証
@@ -530,13 +538,20 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             if missing_columns:
                 raise ValueError(f"必要な列が不足しています: {missing_columns}")
 
+            # 設定からprofileを取得
+            profile = unified_config.ml.feature_engineering.profile
+            logger.info(f"📊 特徴量計算を実行中（profile: {profile}）...")
+
             # 基本特徴量計算（autofeat機能は削除済み）
-            logger.info("📊 基本特徴量計算を実行中...")
             basic_features = self.feature_service.calculate_advanced_features(
                 ohlcv_data=ohlcv_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
+                profile=profile,
             )
+            
+            # 生成された特徴量数をログ出力
+            logger.info(f"✅ 特徴量生成完了: {len(basic_features.columns)}個の特徴量")
 
             # 基本特徴量計算後の検証
             if basic_features is not None and not basic_features.empty:
@@ -612,27 +627,173 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, features_df: pd.DataFrame, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
-        学習用データを準備（utils/data_processing.pyに委譲）
+        学習用データを準備
 
-        責務分割により、具体的なデータ前処理ロジックは
-        utils/data_processing.pyに移譲されました。
+        新しいラベル生成設定を使用し、プリセットまたはカスタム設定でラベルを生成します。
+        既存のtarget_columnパラメータが指定されている場合は、後方互換性のため
+        既存のロジックを使用します。
+
+        Args:
+            features_df: 特徴量DataFrame（OHLCVデータを含む）
+            **training_params: 学習パラメータ
+                - target_column: ターゲットカラム名（後方互換性用）
+                - その他のパラメータはdata_preprocessorに渡される
+
+        Returns:
+            Tuple[pd.DataFrame, pd.Series]: クリーンな特徴量とラベルのタプル
+
+        Raises:
+            DataError: ラベル生成に失敗した場合
+            ValueError: プリセット名が存在しない場合
+
+        Note:
+            - プリセット使用時: unified_config.ml.training.label_generation.use_preset=True
+            - カスタム設定使用時: use_preset=False（個別パラメータを使用）
+            - 後方互換性: target_columnが指定されている場合は既存ロジックを使用
         """
-        # ラベル生成器を直接使用（LabelGeneratorWrapperは削除）
-        from ...utils.label_generation import LabelGenerator
+        # ラベル生成設定を取得
+        label_config = unified_config.ml.training.label_generation
 
-        label_generator = LabelGenerator()
+        # target_columnが明示的に指定されている場合は既存ロジックを使用（後方互換性）
+        target_column = training_params.get("target_column")
+        if target_column is not None and target_column in features_df.columns:
+            logger.info(f"📌 後方互換性モード: target_column='{target_column}' を使用")
 
-        # データ前処理を委譲
-        features_clean, labels_clean, threshold_info = (
-            data_preprocessor.prepare_training_data(
-                features_df, label_generator, **training_params
+            # 既存のLabelGeneratorを使用
+            from ...utils.label_generation import LabelGenerator
+
+            label_generator = LabelGenerator()
+
+            # データ前処理を委譲
+            features_clean, labels_clean, threshold_info = (
+                data_preprocessor.prepare_training_data(
+                    features_df, label_generator, **training_params
+                )
             )
-        )
 
-        # 特徴量カラムを保存
-        self.feature_columns = features_clean.columns.tolist()
+            # 特徴量カラムを保存
+            self.feature_columns = features_clean.columns.tolist()
 
-        return features_clean, labels_clean
+            return features_clean, labels_clean
+
+        # 新しいプリセット/カスタム設定を使用
+        try:
+            logger.info("🎯 新しいラベル生成設定を使用")
+
+            # ラベル生成
+            if label_config.use_preset:
+                # プリセットを使用
+                try:
+                    labels, preset_info = apply_preset_by_name(
+                        features_df, label_config.default_preset
+                    )
+                    logger.info(f"✅ プリセット使用: {label_config.default_preset}")
+                    logger.info(f"   設定: {preset_info.get('description', 'N/A')}")
+                except ValueError as e:
+                    # プリセットが見つからない場合
+                    available_presets = list(get_common_presets().keys())
+                    logger.error(
+                        f"❌ プリセット '{label_config.default_preset}' が見つかりません。"
+                        f"利用可能なプリセット: {', '.join(sorted(available_presets[:5]))}..."
+                    )
+                    # フォールバック: カスタム設定を使用
+                    logger.warning("⚠️ フォールバック: カスタム設定を使用します")
+                    labels = forward_classification_preset(
+                        df=features_df,
+                        timeframe=label_config.timeframe,
+                        horizon_n=label_config.horizon_n,
+                        threshold=label_config.threshold,
+                        price_column=label_config.price_column,
+                        threshold_method=label_config.get_threshold_method_enum(),
+                    )
+            else:
+                # カスタム設定を使用
+                logger.info("🔧 カスタムラベル生成設定を使用")
+                labels = forward_classification_preset(
+                    df=features_df,
+                    timeframe=label_config.timeframe,
+                    horizon_n=label_config.horizon_n,
+                    threshold=label_config.threshold,
+                    price_column=label_config.price_column,
+                    threshold_method=label_config.get_threshold_method_enum(),
+                )
+                logger.info(
+                    f"   設定: {label_config.timeframe}, "
+                    f"horizon={label_config.horizon_n}, "
+                    f"threshold={label_config.threshold}, "
+                    f"method={label_config.threshold_method}"
+                )
+
+            # ラベル分布をログ出力
+            label_counts = labels.value_counts()
+            total_labels = len(labels.dropna())
+            if total_labels > 0:
+                logger.info("📊 ラベル分布:")
+                for label_value in ["UP", "RANGE", "DOWN"]:
+                    if label_value in label_counts.index:
+                        count = label_counts[label_value]
+                        pct = (count / total_labels) * 100
+                        logger.info(f"   {label_value}: {count}個 ({pct:.1f}%)")
+
+            # NaNを削除してクリーンなデータを作成
+            valid_idx = labels.notna()
+            features_clean = features_df[valid_idx].copy()
+            labels_clean = labels[valid_idx].copy()
+
+            # 文字列ラベルを数値に変換（既存のロジックとの互換性のため）
+            # "DOWN" -> 0, "RANGE" -> 1, "UP" -> 2
+            label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+            labels_numeric = labels_clean.map(label_mapping)
+
+            # 欠損値がないことを確認
+            if labels_numeric.isna().any():
+                logger.warning(
+                    f"⚠️ {labels_numeric.isna().sum()}個の不明なラベルを除外します"
+                )
+                valid_numeric_idx = labels_numeric.notna()
+                features_clean = features_clean[valid_numeric_idx]
+                labels_numeric = labels_numeric[valid_numeric_idx]
+
+            # 特徴量カラムを保存
+            self.feature_columns = features_clean.columns.tolist()
+
+            logger.info(
+                f"✅ ラベル生成完了: {len(features_clean)}サンプル "
+                f"({len(features_df) - len(features_clean)}個を除外)"
+            )
+
+            return features_clean, labels_numeric
+
+        except Exception as e:
+            logger.error(f"❌ 新しいラベル生成設定でエラー発生: {e}")
+            logger.warning("⚠️ フォールバック: 既存のLabelGeneratorを使用します")
+
+            # フォールバック: 既存のLabelGeneratorを使用
+            try:
+                from ...utils.label_generation import LabelGenerator
+
+                label_generator = LabelGenerator()
+
+                # データ前処理を委譲
+                features_clean, labels_clean, threshold_info = (
+                    data_preprocessor.prepare_training_data(
+                        features_df, label_generator, **training_params
+                    )
+                )
+
+                # 特徴量カラムを保存
+                self.feature_columns = features_clean.columns.tolist()
+
+                logger.info(
+                    "✅ フォールバック成功: 既存のLabelGeneratorでラベル生成完了"
+                )
+                return features_clean, labels_clean
+
+            except Exception as fallback_error:
+                logger.error(f"❌ フォールバックも失敗: {fallback_error}")
+                raise DataError(
+                    f"ラベル生成に完全に失敗しました: {str(e)} -> {str(fallback_error)}"
+                )
 
     def _split_data(
         self, X: pd.DataFrame, y: pd.Series, **training_params

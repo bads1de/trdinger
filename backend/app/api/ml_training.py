@@ -126,6 +126,12 @@ class MLTrainingConfig(BaseModel):
 
     # AutoML特徴量エンジニアリング設定は削除されました（autofeat機能の削除に伴う）
 
+    # 特徴量プロファイル設定
+    feature_profile: Optional[str] = Field(
+        None,
+        description="特徴量プロファイル（'research'または'production'）。Noneの場合は設定から読み込み",
+    )
+
     # アンサンブル学習設定
     ensemble_config: Optional[EnsembleConfig] = Field(
         default=None,  # デフォルトをNoneに変更してフロントエンドからの設定を優先

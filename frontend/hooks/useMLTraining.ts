@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { EnsembleSettingsConfig } from "@/components/ml/EnsembleSettings";
+import type {
+  LabelGenerationConfig,
+  FeatureProfile,
+} from "@/types/ml-config";
 // 利用可能モデルはフロント定数で管理
 import { ALGORITHMS } from "../constants/algorithms";
 
@@ -70,6 +74,12 @@ export interface TrainingConfig {
   optimization_settings?: OptimizationSettingsConfig;
   /** 単一モデル設定（オプション） */
   single_model_config?: SingleModelConfig;
+  /** ラベル生成設定（オプション） */
+  label_generation?: Partial<LabelGenerationConfig>;
+  /** 特徴量プロファイル（オプション） */
+  feature_profile?: FeatureProfile;
+  /** カスタム特徴量allowlist（オプション） */
+  custom_allowlist?: string[] | null;
 }
 
 /**
@@ -261,7 +271,7 @@ export const useMLTraining = () => {
     ) => {
       setError(null);
 
-      // 最適化設定、アンサンブル設定、単一モデル設定を含むconfigを作成
+      // 最適化設定、アンサンブル設定、単一モデル設定、ラベル生成設定、特徴量設定を含むconfigを作成
       const trainingConfig = {
         ...config,
         optimization_settings: optimizationSettings?.enabled
@@ -269,6 +279,11 @@ export const useMLTraining = () => {
           : undefined,
         ensemble_config: ensembleConfig,
         single_model_config: singleModelConfig,
+        // ラベル生成設定を含める（オプション）
+        label_generation: config.label_generation,
+        // 特徴量プロファイルとカスタムallowlistを含める（オプション）
+        feature_profile: config.feature_profile,
+        custom_allowlist: config.custom_allowlist,
       };
 
       // 送信データをログ出力
@@ -276,6 +291,9 @@ export const useMLTraining = () => {
       console.log("📋 ensemble_config:", ensembleConfig);
       console.log("📋 ensemble_config.enabled:", ensembleConfig?.enabled);
       console.log("📋 single_model_config:", singleModelConfig);
+      console.log("📋 label_generation:", config.label_generation);
+      console.log("📋 feature_profile:", config.feature_profile);
+      console.log("📋 custom_allowlist:", config.custom_allowlist);
       console.log("📋 trainingConfig全体:", trainingConfig);
 
       await startTrainingApi("/api/ml-training/train", {

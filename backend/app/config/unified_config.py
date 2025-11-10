@@ -5,10 +5,14 @@
 SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明確化します。
 """
 
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.utils.label_generation.enums import ThresholdMethod
+from app.utils.label_generation.presets import get_common_presets
 
 
 class AppConfig(BaseSettings):
@@ -360,6 +364,91 @@ class MLPredictionConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_", extra="ignore")
 
 
+@dataclass
+class LabelGenerationConfig:
+    """ラベル生成の設定。
+
+    機械学習モデルの学習に使用するラベル（目的変数）の生成方法を設定します。
+    プリセットを使用するか、カスタム設定を使用するかを選択できます。
+
+    環境変数の例:
+        ML__LABEL_GENERATION__DEFAULT_PRESET="4h_4bars"
+        ML__LABEL_GENERATION__USE_PRESET=true
+        ML__LABEL_GENERATION__TIMEFRAME="4h"
+        ML__LABEL_GENERATION__HORIZON_N=4
+        ML__LABEL_GENERATION__THRESHOLD=0.002
+        ML__LABEL_GENERATION__THRESHOLD_METHOD="FIXED"
+
+    Attributes:
+        default_preset: デフォルトのラベル生成プリセット名。
+            get_common_presets()で定義されているキーを指定します。
+            例: "4h_4bars", "1h_4bars_dynamic"
+        timeframe: 時間足（カスタム設定時に使用）。
+            サポートされている値: "15m", "30m", "1h", "4h", "1d"
+        horizon_n: N本先を見る（カスタム設定時に使用）。
+            例: 4本先を見る場合は4を指定
+        threshold: 閾値（カスタム設定時に使用）。
+            例: 0.002 = 0.2%
+        price_column: 価格カラム名（カスタム設定時に使用）。
+            通常は"close"を使用
+        threshold_method: 閾値計算方法（カスタム設定時に使用）。
+            ThresholdMethodのenum値文字列を指定します。
+            例: "FIXED", "STD_DEVIATION", "QUANTILE", "KBINS_DISCRETIZER"
+        use_preset: プリセットを使うか（True）、カスタム設定を使うか（False）。
+    """
+
+    default_preset: str = "4h_4bars"
+    timeframe: str = "4h"
+    horizon_n: int = 4
+    threshold: float = 0.002
+    price_column: str = "close"
+    threshold_method: str = "FIXED"
+    use_preset: bool = True
+
+    def __post_init__(self) -> None:
+        """初期化後のバリデーション。"""
+        # timeframeの検証
+        valid_timeframes = ["15m", "30m", "1h", "4h", "1d"]
+        if self.timeframe not in valid_timeframes:
+            raise ValueError(
+                f"無効な時間足です: {self.timeframe}. "
+                f"サポートされている時間足: {', '.join(valid_timeframes)}"
+            )
+
+        # threshold_methodの検証
+        valid_methods = [method.name for method in ThresholdMethod]
+        if self.threshold_method not in valid_methods:
+            raise ValueError(
+                f"無効な閾値計算方法です: {self.threshold_method}. "
+                f"サポートされている方法: {', '.join(valid_methods)}"
+            )
+
+        # use_presetがTrueの場合、プリセットの存在確認
+        if self.use_preset:
+            available_presets = get_common_presets()
+            if self.default_preset not in available_presets:
+                raise ValueError(
+                    f"プリセット '{self.default_preset}' が見つかりません。"
+                    f"利用可能なプリセット: {', '.join(sorted(available_presets.keys()))}"
+                )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """辞書形式に変換。
+
+        Returns:
+            Dict[str, Any]: 設定内容を辞書形式で返します。
+        """
+        return asdict(self)
+
+    def get_threshold_method_enum(self) -> ThresholdMethod:
+        """ThresholdMethod enumを取得。
+
+        Returns:
+            ThresholdMethod: 閾値計算方法のenum値。
+        """
+        return ThresholdMethod[self.threshold_method]
+
+
 class MLTrainingConfig(BaseSettings):
     """ML 学習アルゴリズム設定。
 
@@ -394,7 +483,79 @@ class MLTrainingConfig(BaseSettings):
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     random_state: int = Field(default=42, description="ランダムシード")
 
+    # ラベル生成設定
+    label_generation: LabelGenerationConfig = Field(
+        default_factory=LabelGenerationConfig,
+        description="ラベル生成の設定",
+    )
+
+    @field_validator("label_generation", mode="before")
+    @classmethod
+    def validate_label_generation(cls, v: Any) -> LabelGenerationConfig:
+        """ラベル生成設定のバリデーション。
+
+        環境変数から辞書形式で渡された場合もLabelGenerationConfigに変換します。
+
+        Args:
+            v: ラベル生成設定の値
+
+        Returns:
+            LabelGenerationConfig: 検証済みのラベル生成設定
+
+        Raises:
+            ValueError: バリデーションエラーの場合
+        """
+        if isinstance(v, LabelGenerationConfig):
+            return v
+        if isinstance(v, dict):
+            return LabelGenerationConfig(**v)
+        if v is None:
+            return LabelGenerationConfig()
+        raise ValueError(f"無効なlabel_generation設定: {type(v)}")
+
     model_config = SettingsConfigDict(env_prefix="ML_TRAINING_", extra="ignore")
+
+
+class FeatureEngineeringConfig(BaseSettings):
+    """特徴量エンジニアリング設定。
+
+    特徴量生成のプロファイル管理と特徴量選択設定を管理します。
+    """
+
+    profile: str = Field(
+        default="research",
+        description="特徴量プロファイル ('research' または 'production')",
+    )
+    custom_allowlist: Optional[List[str]] = Field(
+        default=None,
+        description="カスタム特徴量allowlist（指定時はproduction_allowlistを上書き）",
+    )
+
+    @field_validator("profile")
+    @classmethod
+    def validate_profile(cls, v: str) -> str:
+        """プロファイル値のバリデーション。
+
+        Args:
+            v: プロファイル値
+
+        Returns:
+            str: 検証済みのプロファイル値
+
+        Raises:
+            ValueError: 無効なプロファイル値の場合
+        """
+        valid_profiles = ["research", "production"]
+        if v not in valid_profiles:
+            raise ValueError(
+                f"無効なプロファイル: {v}. "
+                f"サポートされているプロファイル: {', '.join(valid_profiles)}"
+            )
+        return v
+
+    model_config = SettingsConfigDict(
+        env_prefix="ML_FEATURE_ENGINEERING_", extra="ignore"
+    )
 
 
 class MLConfig(BaseSettings):
@@ -409,6 +570,9 @@ class MLConfig(BaseSettings):
     model: MLModelConfig = Field(default_factory=MLModelConfig)
     prediction: MLPredictionConfig = Field(default_factory=MLPredictionConfig)
     training: MLTrainingConfig = Field(default_factory=MLTrainingConfig)
+    feature_engineering: FeatureEngineeringConfig = Field(
+        default_factory=FeatureEngineeringConfig
+    )
 
     model_config = SettingsConfigDict(env_prefix="ML_", extra="ignore")
 

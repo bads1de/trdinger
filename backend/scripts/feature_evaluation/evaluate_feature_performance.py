@@ -18,6 +18,12 @@ TimeSeriesSplitを使用した時系列クロスバリデーションにより�
 設定:
     - TimeSeriesSplit分割数: ml_config.training.cv_folds (デフォルト: 5)
     - ターゲット変数: forward return (1時間先の収益率)
+
+注意:
+    このスクリプトは個別に実行可能ですが、統合分析のため
+    run_unified_analysis.py の使用を推奨します。
+    統合スクリプトは一貫したラベル生成設定を使用し、
+    3つの分析を統合して実行します。
 """
 
 import argparse

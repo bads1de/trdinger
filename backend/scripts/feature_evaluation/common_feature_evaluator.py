@@ -23,8 +23,13 @@ from sklearn.model_selection import TimeSeriesSplit
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from app.config.unified_config import unified_config  # type: ignore
 from app.services.ml.feature_engineering.feature_engineering_service import (  # type: ignore  # noqa: E501
     FeatureEngineeringService,
+)
+from app.utils.label_generation.presets import (  # type: ignore
+    apply_preset_by_name,
+    forward_classification_preset,
 )
 from database.connection import SessionLocal  # type: ignore
 from database.repositories.funding_rate_repository import (  # type: ignore
@@ -182,9 +187,111 @@ class CommonFeatureEvaluator:
         close: pd.Series,
         periods: int = 1,
     ) -> pd.Series:
+        """後方互換性のための旧メソッド（非推奨）
+
+        注意: このメソッドは後方互換性のために残されていますが、
+        新しいコードでは create_labels_from_config() を使用してください。
+        """
         if close.empty:
             raise ValueError("closeシリーズが空です")
         return close.pct_change(periods).shift(-periods)
+
+    def create_labels_from_config(
+        self,
+        ohlcv_df: pd.DataFrame,
+        preset_name: Optional[str] = None,
+        price_column: str = "close",
+    ) -> pd.Series:
+        """統一設定から分類ラベルを生成
+
+        unified_configのlabel_generation設定を使用してラベルを生成します。
+        プリセット名を指定することで、設定を上書きすることも可能です。
+
+        Args:
+            ohlcv_df: OHLCVデータフレーム
+            preset_name: プリセット名（Noneの場合は設定から読み込み）
+            price_column: 価格カラム名（デフォルト: "close"）
+
+        Returns:
+            pd.Series: "UP" / "RANGE" / "DOWN" の分類ラベル
+
+        Raises:
+            ValueError: データフレームが不正な場合
+
+        Example:
+            >>> evaluator = CommonFeatureEvaluator()
+            >>> labels = evaluator.create_labels_from_config(ohlcv_df)
+            >>> # または特定のプリセットを使用
+            >>> labels = evaluator.create_labels_from_config(
+            ...     ohlcv_df, preset_name="1h_4bars"
+            ... )
+        """
+        if ohlcv_df.empty:
+            raise ValueError("OHLCVデータフレームが空です")
+
+        if price_column not in ohlcv_df.columns:
+            raise ValueError(
+                f"価格カラム '{price_column}' がデータフレームに存在しません"
+            )
+
+        # ラベル生成設定を取得
+        label_config = unified_config.ml.training.label_generation
+
+        # プリセット使用の場合
+        if label_config.use_preset or preset_name is not None:
+            preset_to_use = preset_name or label_config.default_preset
+            logger.info(f"プリセット '{preset_to_use}' を使用してラベル生成")
+
+            labels, preset_info = apply_preset_by_name(
+                df=ohlcv_df,
+                preset_name=preset_to_use,
+                price_column=price_column,
+            )
+
+            logger.info(f"ラベル生成完了: {preset_info['description']}")
+            return labels
+
+        # カスタム設定の場合
+        else:
+            logger.info(
+                f"カスタム設定を使用してラベル生成: "
+                f"timeframe={label_config.timeframe}, "
+                f"horizon_n={label_config.horizon_n}, "
+                f"threshold={label_config.threshold}"
+            )
+
+            labels = forward_classification_preset(
+                df=ohlcv_df,
+                timeframe=label_config.timeframe,
+                horizon_n=label_config.horizon_n,
+                threshold=label_config.threshold,
+                price_column=price_column,
+                threshold_method=label_config.get_threshold_method_enum(),
+            )
+
+            return labels
+
+    def get_label_config_info(self) -> Dict[str, any]:
+        """現在のラベル生成設定情報を取得
+
+        Returns:
+            Dict: ラベル生成設定の詳細情報
+        """
+        label_config = unified_config.ml.training.label_generation
+
+        info = {
+            "use_preset": label_config.use_preset,
+            "timeframe": label_config.timeframe,
+            "horizon_n": label_config.horizon_n,
+            "threshold": label_config.threshold,
+            "price_column": label_config.price_column,
+            "threshold_method": label_config.threshold_method,
+        }
+
+        if label_config.use_preset:
+            info["preset_name"] = label_config.default_preset
+
+        return info
 
     # ---- CV 評価 ----
 
