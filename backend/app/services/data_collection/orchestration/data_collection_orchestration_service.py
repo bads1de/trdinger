@@ -164,8 +164,8 @@ class DataCollectionOrchestrationService:
                 data=result,  # result全体を返す（data構造を含む）
             )
 
-        except Exception as e:
-            logger.error("一括差分更新エラー", e)
+        except Exception:
+            logger.error("一括差分更新エラー", exc_info=True)
             raise
 
     async def start_bitcoin_full_data_collection(
