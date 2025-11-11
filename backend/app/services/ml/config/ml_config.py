@@ -95,6 +95,12 @@ class LightGBMConfig(BaseSettings):
 class FeatureEngineeringConfig(BaseSettings):
     """特徴量エンジニアリング関連の設定"""
 
+    # 特徴量プロファイル設定
+    profile: str = Field(
+        default="research",
+        description="特徴量プロファイル ('research' または 'production')",
+    )
+
     # 計算期間のデフォルト値
     DEFAULT_LOOKBACK_PERIODS: Optional[Dict[str, int]] = Field(
         default_factory=lambda: {

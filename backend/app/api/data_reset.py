@@ -112,7 +112,7 @@ async def reset_open_interest_data(
     )
 
 
-@router.delete("/symbol/{symbol}")
+@router.delete("/symbol/{symbol:path}")
 async def reset_data_by_symbol(
     symbol: str,
     db: Session = Depends(get_db),

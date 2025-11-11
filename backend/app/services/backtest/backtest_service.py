@@ -219,24 +219,38 @@ class BacktestService:
         バックテストを実行し、結果をデータベースに保存
 
         Args:
-            request: BacktestRequestオブジェクト
+            request: BacktestRequestオブジェクトまたは辞書
             db_session: データベースセッション
 
         Returns:
             実行結果の辞書
         """
         try:
-            # リクエストから設定を作成
-            config = {
-                "strategy_name": request.strategy_name,
-                "symbol": request.symbol,
-                "timeframe": request.timeframe,
-                "start_date": request.start_date,
-                "end_date": request.end_date,
-                "initial_capital": request.initial_capital,
-                "commission_rate": request.commission_rate,
-                "strategy_config": request.strategy_config.model_dump(),
-            }
+            # リクエストから設定を作成（辞書とPydanticモデルの両方に対応）
+            if isinstance(request, dict):
+                # 辞書の場合
+                config = {
+                    "strategy_name": request["strategy_name"],
+                    "symbol": request["symbol"],
+                    "timeframe": request["timeframe"],
+                    "start_date": request["start_date"],
+                    "end_date": request["end_date"],
+                    "initial_capital": request["initial_capital"],
+                    "commission_rate": request["commission_rate"],
+                    "strategy_config": request["strategy_config"],
+                }
+            else:
+                # Pydanticモデルの場合
+                config = {
+                    "strategy_name": request.strategy_name,
+                    "symbol": request.symbol,
+                    "timeframe": request.timeframe,
+                    "start_date": request.start_date,
+                    "end_date": request.end_date,
+                    "initial_capital": request.initial_capital,
+                    "commission_rate": request.commission_rate,
+                    "strategy_config": request.strategy_config.model_dump(),
+                }
 
             # バックテストを実行
             result = self.run_backtest(config)
@@ -249,4 +263,4 @@ class BacktestService:
 
         except Exception as e:
             logger.error(f"バックテスト実行・保存エラー: {e}", exc_info=True)
-            raise
+            return {"success": False, "error": str(e), "status_code": 500}
