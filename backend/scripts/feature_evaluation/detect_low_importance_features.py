@@ -15,7 +15,7 @@ TimeSeriesSplitを使用した時系列クロスバリデーションにより�
         --timeframe 1h \
         --lookback-days 90 \
         --threshold 0.2 \
-        --output-dir data/feature_evaluation
+        --output-dir results/feature_analysis
 
 設定:
     - ターゲット変数: forward return (1時間先の収益率)
@@ -72,7 +72,7 @@ class LowImportanceFeatureDetector:
         timeframe: str = "1h",
         lookback_days: int = 90,
         threshold: float = 0.2,
-        output_dir: str = "data/feature_evaluation",
+        output_dir: str = "results/feature_analysis",
     ):
         """
         初期化
@@ -675,8 +675,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="data/feature_evaluation",
-        help="出力ディレクトリ（デフォルト: data/feature_evaluation）",
+        default="results/feature_analysis",
+        help="出力ディレクトリ（フラット構造: results/feature_analysis）",
     )
 
     return parser.parse_args()

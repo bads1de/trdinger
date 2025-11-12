@@ -518,40 +518,99 @@ class MLTrainingConfig(BaseSettings):
 
 class FeatureEngineeringConfig(BaseSettings):
     """特徴量エンジニアリング設定。
-
-    特徴量生成のプロファイル管理と特徴量選択設定を管理します。
+    
+    研究目的専用のため、プロファイル機能は簡素化されています。
     """
 
-    profile: str = Field(
-        default="research",
-        description="特徴量プロファイル ('research' または 'production')",
+    # プロファイル機能を削除し、allowlistのみで管理
+    # 2025-11-12: 特徴量重要度分析により8個の低寄与度特徴量を削除（93個→85個）
+    # 削除特徴量: atr_20, body_size, lower_shadow, price_change_1, 
+    #             price_change_20, price_change_5, returns, volume_ma_20
+    # 性能への影響: LightGBM -0.03%, XGBoost +0.21%（むしろ改善）
+    feature_allowlist: Optional[List[str]] = Field(
+        default=[
+            "AD",
+            "ADOSC",
+            "ADX",
+            "AROONOSC",
+            "ATR",
+            "Aroon_Down",
+            "Aroon_Up",
+            "BB_Lower",
+            "BB_Middle",
+            "BB_Position",
+            "BB_Upper",
+            "Close_deviation_from_ma_20",
+            "Close_mean_20",
+            "Close_mean_50",
+            "Close_pct_change_1",
+            "Close_pct_change_24",
+            "Close_range_20",
+            "Close_range_50",
+            "Close_std_20",
+            "Close_std_50",
+            "DI_Minus",
+            "DI_Plus",
+            "Local_Max",
+            "Local_Min",
+            "MA_Long",
+            "NATR",
+            "Near_Resistance",
+            "Near_Support",
+            "OBV",
+            "Parkinson_Vol_20",
+            "Price_Volume_Ratio",
+            "Realized_Vol_20",
+            "Resistance_Level",
+            "Stochastic_D",
+            "Stochastic_Divergence",
+            "Stochastic_K",
+            "TRANGE",
+            "Trend_strength_20",
+            "Vol_Volume_Product",
+            "bb_lower_20",
+            "bb_position_20",
+            "bb_upper_20",
+            "cci",
+            "close_lag_1",
+            "close_lag_24",
+            "cumulative_returns_24",
+            "macd",
+            "macd_histogram",
+            "macd_signal",
+            "market_efficiency",
+            "mfi",
+            "momentum",
+            "oi_change_rate_24h",
+            "oi_normalized",
+            "oi_trend",
+            "price_volume_trend",
+            "price_vs_high_24h",
+            "price_vs_low_24h",
+            "price_vs_vwap_24h",
+            "range_bound_ratio",
+            "returns_lag_24",
+            "roc",
+            "rsi",
+            "rsi_14",
+            "stochastic_d",
+            "stochastic_k",
+            "ultimate_oscillator",
+            "volatility_adjusted_oi",
+            "volume_change_medium",
+            "volume_change_short",
+            "volume_price_efficiency",
+            "volume_price_trend",
+            "volume_ratio_medium",
+            "volume_ratio_short",
+            "volume_trend",
+            "vwap",
+            "vwap_24h",
+            "vwap_deviation",
+            "williams_r",
+        ],
+        description="使用する特徴量のリスト（Noneの場合は全特徴量を使用）",
     )
-    custom_allowlist: Optional[List[str]] = Field(
-        default=None,
-        description="カスタム特徴量allowlist（指定時はproduction_allowlistを上書き）",
-    )
-
-    @field_validator("profile")
-    @classmethod
-    def validate_profile(cls, v: str) -> str:
-        """プロファイル値のバリデーション。
-
-        Args:
-            v: プロファイル値
-
-        Returns:
-            str: 検証済みのプロファイル値
-
-        Raises:
-            ValueError: 無効なプロファイル値の場合
-        """
-        valid_profiles = ["research", "production"]
-        if v not in valid_profiles:
-            raise ValueError(
-                f"無効なプロファイル: {v}. "
-                f"サポートされているプロファイル: {', '.join(valid_profiles)}"
-            )
-        return v
 
     model_config = SettingsConfigDict(
         env_prefix="ML_FEATURE_ENGINEERING_", extra="ignore"

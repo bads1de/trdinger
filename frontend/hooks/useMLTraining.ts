@@ -76,10 +76,8 @@ export interface TrainingConfig {
   single_model_config?: SingleModelConfig;
   /** ラベル生成設定（オプション） */
   label_generation?: Partial<LabelGenerationConfig>;
-  /** 特徴量プロファイル（オプション） */
-  feature_profile?: FeatureProfile;
-  /** カスタム特徴量allowlist（オプション） */
-  custom_allowlist?: string[] | null;
+  /** 使用する特徴量のリスト（オプション） */
+  feature_allowlist?: string[] | null;
 }
 
 /**
@@ -281,9 +279,8 @@ export const useMLTraining = () => {
         single_model_config: singleModelConfig,
         // ラベル生成設定を含める（オプション）
         label_generation: config.label_generation,
-        // 特徴量プロファイルとカスタムallowlistを含める（オプション）
-        feature_profile: config.feature_profile,
-        custom_allowlist: config.custom_allowlist,
+        // 特徴量allowlistを含める（オプション）
+        feature_allowlist: config.feature_allowlist,
       };
 
       // 送信データをログ出力
@@ -292,8 +289,7 @@ export const useMLTraining = () => {
       console.log("📋 ensemble_config.enabled:", ensembleConfig?.enabled);
       console.log("📋 single_model_config:", singleModelConfig);
       console.log("📋 label_generation:", config.label_generation);
-      console.log("📋 feature_profile:", config.feature_profile);
-      console.log("📋 custom_allowlist:", config.custom_allowlist);
+      console.log("📋 feature_allowlist:", config.feature_allowlist);
       console.log("📋 trainingConfig全体:", trainingConfig);
 
       await startTrainingApi("/api/ml-training/train", {

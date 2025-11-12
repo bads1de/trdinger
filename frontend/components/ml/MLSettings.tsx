@@ -11,7 +11,7 @@ import InfoModal from "@/components/common/InfoModal";
 import { useMLSettings } from "@/hooks/useMLSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabelGenerationSettings } from "@/components/ml/LabelGenerationSettings";
-import { FeatureProfileSettings } from "@/components/ml/FeatureProfileSettings";
+import { FeatureAllowlistSettings } from "@/components/ml/FeatureAllowlistSettings";
 import {
   Settings,
   Save,
@@ -369,7 +369,7 @@ export default function MLSettings() {
         {/* 特徴量エンジニアリングタブ */}
         <TabsContent value="feature-engineering" className="space-y-6">
           {config.feature_engineering && (
-            <FeatureProfileSettings
+            <FeatureAllowlistSettings
               config={config.feature_engineering}
               onChange={(key, value) => {
                 if (!config) return;

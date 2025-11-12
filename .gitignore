@@ -151,3 +151,6 @@ backend/models/*.pkl
 backend/data/feature_evaluation/*.json
 backend/data/feature_evaluation/plots/
 .claude/
+
+# Analysis results and outputs
+backend/results/

@@ -58,8 +58,8 @@ class CommonFeatureEvaluator:
         self.ohlcv_repo = OHLCVRepository(self.db)
         self.fr_repo = FundingRateRepository(self.db)
         self.oi_repo = OpenInterestRepository(self.db)
-        # プロファイルは必要に応じて切り替え可能（デフォルトはresearch）
-        self.feature_service = FeatureEngineeringService(profile="research")
+        # プロファイルはcalculate_advanced_features()のprofile引数で指定可能
+        self.feature_service = FeatureEngineeringService()
 
     def close(self) -> None:
         self.db.close()

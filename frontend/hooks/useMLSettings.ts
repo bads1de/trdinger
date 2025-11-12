@@ -175,8 +175,7 @@ export const useMLSettings = () => {
             },
           },
           feature_engineering: data.feature_engineering || {
-            profile: DEFAULT_FEATURE_PROFILE,
-            customAllowlist: null,
+            featureAllowlist: null,  // デフォルト35個の推奨特徴量を使用
           },
         };
         setConfig(configWithDefaults);

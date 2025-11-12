@@ -245,24 +245,22 @@ class TestMLConfigValidation:
         enum_value = config.get_threshold_method_enum()
         assert enum_value == ThresholdMethod.STD_DEVIATION
 
-    def test_feature_engineering_config_valid_profile(self):
-        """特徴量エンジニアリング設定の有効なプロファイルテスト"""
-        config = FeatureEngineeringConfig(profile="production")
-        assert config.profile == "production"
-
-        config = FeatureEngineeringConfig(profile="research")
-        assert config.profile == "research"
-
-    def test_feature_engineering_config_invalid_profile(self):
-        """特徴量エンジニアリング設定の無効なプロファイルテスト"""
-        with pytest.raises(ValidationError):
-            FeatureEngineeringConfig(profile="invalid_profile")
+    def test_feature_engineering_config_default_allowlist(self):
+        """特徴量エンジニアリング設定のデフォルトallowlist（None）テスト"""
+        config = FeatureEngineeringConfig()
+        # 研究目的のため、デフォルトはNone（全特徴量使用）
+        assert config.feature_allowlist is None
 
     def test_feature_engineering_config_custom_allowlist(self):
         """特徴量エンジニアリング設定のカスタムallowlistテスト"""
         custom_list = ["feature1", "feature2", "feature3"]
-        config = FeatureEngineeringConfig(custom_allowlist=custom_list)
-        assert config.custom_allowlist == custom_list
+        config = FeatureEngineeringConfig(feature_allowlist=custom_list)
+        assert config.feature_allowlist == custom_list
+        
+    def test_feature_engineering_config_empty_allowlist(self):
+        """特徴量エンジニアリング設定の空allowlistテスト"""
+        config = FeatureEngineeringConfig(feature_allowlist=[])
+        assert config.feature_allowlist == []
 
 
 class TestMarketConfigValidation:

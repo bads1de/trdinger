@@ -861,9 +861,9 @@ class MultiModelFeatureEvaluator:
             results: 評価結果
         """
         try:
-            # data/feature_evaluationディレクトリのパス
+            # results/feature_analysisディレクトリのパス（フラット構造）
             output_dir = (
-                Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+                Path(__file__).parent.parent.parent / "results" / "feature_analysis"
             )
             output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -903,9 +903,9 @@ class MultiModelFeatureEvaluator:
     def _save_integrated_results(self):
         """統合結果を保存"""
         try:
-            # data/feature_evaluationディレクトリのパス
+            # results/feature_analysisディレクトリのパス（フラット構造）
             output_dir = (
-                Path(__file__).parent.parent.parent / "data" / "feature_evaluation"
+                Path(__file__).parent.parent.parent / "results" / "feature_analysis"
             )
             output_dir.mkdir(parents=True, exist_ok=True)
 

@@ -94,12 +94,14 @@ class AdvancedFeatureEngineer:
             new_features[f"close_lag_{period}"] = data["close"].shift(period)
 
         # 価格変化率のラグ（24hのみ）
-        new_features["returns"] = data["close"].pct_change()
-        new_features["returns_lag_24"] = new_features["returns"].shift(24)
+        # NOTE: "returns" 自体は特徴量重要度分析で完全未使用と判定されたため削除
+        # 代わりに returns_lag_24 と cumulative_returns_24 のみ計算
+        returns_temp = data["close"].pct_change()
+        new_features["returns_lag_24"] = returns_temp.shift(24)
 
         # 累積リターン（24hのみ）
         new_features["cumulative_returns_24"] = (
-            new_features["returns"].rolling(24).sum()
+            returns_temp.rolling(24).sum()
         )
 
         # 一括で結合

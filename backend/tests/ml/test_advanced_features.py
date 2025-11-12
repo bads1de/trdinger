@@ -103,7 +103,8 @@ def test_create_advanced_features_basic(sample_ohlcv_data):
 
     # 基本的な列が含まれていることを確認
     assert 'close_lag_1' in features.columns
-    assert 'returns' in features.columns
+    # NOTE: 'returns' は特徴量重要度分析で完全未使用と判定されたため削除済み
+    assert 'returns_lag_24' in features.columns  # ラグ版は残っている
     assert 'ATR' in features.columns
     assert 'OBV' in features.columns
 
@@ -133,9 +134,10 @@ def test_lag_features(sample_ohlcv_data):
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
     # ラグ特徴量の列をテスト（削減後の特徴量のみ）
+    # NOTE: 'returns' は特徴量重要度分析で完全未使用と判定されたため削除済み
     expected_lag_columns = [
         'close_lag_1', 'close_lag_24',
-        'returns', 'returns_lag_24',
+        'returns_lag_24',  # returns 自体は削除されたがラグ版は残す
         'cumulative_returns_24'
     ]
 

@@ -27,10 +27,14 @@ from .technical_features import TechnicalFeatureCalculator
 logger = logging.getLogger(__name__)
 
 
-# 特徴量プロファイル定義
-FEATURE_PROFILES: Dict[str, Optional[List[str]]] = {
-    "research": None,  # すべての特徴量を使用
-    "production": [
+# デフォルト特徴量リスト
+# 研究目的のため、デフォルトでは全特徴量を使用（None）
+# 必要に応じて環境変数 ML_FEATURE_ENGINEERING__FEATURE_ALLOWLIST でカスタムリストを指定可能
+DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = None
+
+# 以下は参考用の特徴量リスト（過学習防止用に絞り込む場合に使用可能）
+"""
+RECOMMENDED_FEATURES = [
         # === 基本的なテクニカル指標 ===
         "RSI_14",
         "MACD",
@@ -76,8 +80,8 @@ FEATURE_PROFILES: Dict[str, Optional[List[str]]] = {
         # === 高度な特徴量（一部） ===
         "Price_Momentum_Regime",
         "Volatility_Regime",
-    ],
-}
+]
+"""
 
 
 class FeatureEngineeringService:
@@ -598,57 +602,31 @@ class FeatureEngineeringService:
         self, df: pd.DataFrame, profile: Optional[str] = None
     ) -> pd.DataFrame:
         """
-        プロファイルベースの特徴量フィルタリングを適用
+        特徴量フィルタリングを適用（研究目的用にシンプル化）
 
         Args:
             df: フィルタリング前のDataFrame
-            profile: 特徴量プロファイル ('research' または 'production')。
-                    Noneの場合は設定から読み込み
+            profile: 未使用（後方互換性のため残す）
 
         Returns:
             フィルタリング後のDataFrame
-
-        Raises:
-            ValueError: 無効なプロファイル名が指定された場合
         """
         try:
-            # プロファイルを決定（パラメータ > 設定 > デフォルト）
-            if profile is None:
-                profile = unified_config.ml.feature_engineering.profile
-
-            logger.info(f"特徴量プロファイル '{profile}' を適用中...")
-
-            # プロファイルの検証
-            if profile not in FEATURE_PROFILES:
-                raise ValueError(
-                    f"無効なプロファイル: {profile}. "
-                    f"サポートされているプロファイル: {list(FEATURE_PROFILES.keys())}"
-                )
-
-            # researchプロファイルの場合はすべての特徴量を保持
-            if profile == "research":
-                logger.info(
-                    f"研究用プロファイル: {len(df.columns)}個の特徴量をすべて保持"
-                )
-                return df
-
-            # productionプロファイルまたはカスタムallowlistの場合
-            # カスタムallowlistの確認
-            custom_allowlist = unified_config.ml.feature_engineering.custom_allowlist
-            if custom_allowlist is not None:
-                allowlist = custom_allowlist
-                logger.info(
-                    f"カスタムallowlistを使用: {len(allowlist)}個の特徴量を指定"
-                )
-            else:
-                allowlist = FEATURE_PROFILES[profile]
+            # 設定からallowlistを取得
+            allowlist = unified_config.ml.feature_engineering.feature_allowlist
+            
+            # allowlistが指定されていない場合は、デフォルトリストまたは全特徴量を使用
+            if allowlist is None:
+                # デフォルトリストを使用
+                allowlist = DEFAULT_FEATURE_ALLOWLIST
                 if allowlist is None:
-                    # プロファイルがNoneの場合はすべて保持（研究用）
-                    logger.info(
-                        f"プロファイル '{profile}': "
-                        f"{len(df.columns)}個の特徴量をすべて保持"
-                    )
+                    # デフォルトもNoneなら全特徴量を使用
+                    logger.info(f"全特徴量を使用: {len(df.columns)}個")
                     return df
+                else:
+                    logger.info(f"デフォルト特徴量リストを適用: {len(allowlist)}個")
+            else:
+                logger.info(f"カスタム特徴量リストを適用: {len(allowlist)}個")
 
             # 価格列など、必ず保持すべき基本カラム
             essential_columns = ["open", "high", "low", "close", "volume"]
@@ -688,7 +666,7 @@ class FeatureEngineeringService:
             dropped_count = original_count - len(filtered_df.columns)
 
             logger.info(
-                f"プロファイル '{profile}' 適用完了: "
+                f"特徴量フィルタリング完了: "
                 f"{original_count}個 → {len(filtered_df.columns)}個の特徴量 "
                 f"({dropped_count}個をドロップ)"
             )

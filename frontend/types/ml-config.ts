@@ -25,9 +25,10 @@ export type ThresholdMethod =
   | "KBINS_DISCRETIZER";
 
 /**
- * 特徴量プロファイル
+ * 特徴量プロファイル（削除予定）
+ * 研究目的専用のためプロファイル概念は不要になりました
  *
- * @see backend/app/config/unified_config.py:FeatureEngineeringConfig
+ * @deprecated この型は後方互換性のためのみ残されています
  */
 export type FeatureProfile = "research" | "production";
 
@@ -124,40 +125,29 @@ export interface LabelGenerationConfig {
 }
 
 /**
- * 特徴量エンジニアリング設定
+ * 特徴量エンジニアリング設定（簡素化版）
  *
- * 特徴量生成のプロファイル管理と特徴量選択設定を管理します。
+ * 研究目的専用のため、プロファイル概念を削除しallowlistのみで管理します。
  *
  * @see backend/app/config/unified_config.py:FeatureEngineeringConfig (line 519)
  *
  * @example
  * ```typescript
  * const config: FeatureEngineeringConfig = {
- *   profile: "production",
- *   customAllowlist: ["rsi_14", "macd_signal", "bb_upper"]
+ *   featureAllowlist: ["RSI_14", "MACD", "BB_Upper"]  // または null でデフォルト35個
  * };
  * ```
  */
 export interface FeatureEngineeringConfig {
   /**
-   * 特徴量プロファイル
+   * 使用する特徴量のリスト
    *
-   * - "research": 研究用（全特徴量を使用）
-   * - "production": 本番用（選択された特徴量のみ使用）
-   *
-   * @default "research"
-   */
-  profile: FeatureProfile;
-
-  /**
-   * カスタム特徴量allowlist
-   *
-   * 指定時はproduction_allowlistを上書きします。
-   * nullの場合はデフォルトのallowlistを使用します。
+   * - null: デフォルトの35個の推奨特徴量を使用
+   * - string[]: 指定した特徴量のみを使用
    *
    * @default null
    */
-  customAllowlist: string[] | null;
+  featureAllowlist: string[] | null;
 }
 
 /**
@@ -237,16 +227,9 @@ export interface MLTrainingRequestExtended {
   labelGeneration?: Partial<LabelGenerationConfig>;
 
   /**
-   * 特徴量プロファイル（オプション）
+   * 使用する特徴量のリスト（オプション）
    *
-   * 指定しない場合はバックエンドのデフォルト設定（"research"）が使用されます。
+   * 指定しない場合はバックエンドのデフォルト設定（35個の推奨特徴量）が使用されます。
    */
-  featureProfile?: FeatureProfile;
-
-  /**
-   * カスタム特徴量allowlist（オプション）
-   *
-   * featureProfileと組み合わせて使用します。
-   */
-  customAllowlist?: string[] | null;
+  featureAllowlist?: string[] | null;
 }

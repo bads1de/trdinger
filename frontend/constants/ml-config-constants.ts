@@ -64,23 +64,16 @@ export const THRESHOLD_METHOD_DESCRIPTIONS: Record<ThresholdMethod, string> = {
 };
 
 /**
- * 特徴量プロファイルの一覧
- *
- * @see backend/app/config/unified_config.py:FeatureEngineeringConfig
+ * 特徴量プロファイル関連の定数（削除予定）
+ * 
+ * @deprecated 研究目的専用のためプロファイル概念は不要になりました
+ * 後方互換性のためのみ残されています
  */
 export const FEATURE_PROFILES: FeatureProfile[] = ["research", "production"];
-
-/**
- * 特徴量プロファイルの表示名マッピング
- */
 export const FEATURE_PROFILE_LABELS: Record<FeatureProfile, string> = {
   research: "研究用（全特徴量）",
   production: "本番用（選択された特徴量）",
 };
-
-/**
- * 特徴量プロファイルの説明
- */
 export const FEATURE_PROFILE_DESCRIPTIONS: Record<FeatureProfile, string> = {
   research:
     "全ての特徴量を使用します。研究・実験用途に適しています。計算時間が長くなる可能性があります。",
@@ -243,7 +236,9 @@ export const LABEL_PRESETS: Record<string, LabelPresetInfo> = {
 export const DEFAULT_LABEL_PRESET = "4h_4bars";
 
 /**
- * デフォルトの特徴量プロファイル
+ * デフォルトの特徴量プロファイル（削除予定）
+ * 
+ * @deprecated プロファイル概念は不要になりました
  */
 export const DEFAULT_FEATURE_PROFILE: FeatureProfile = "research";
 
