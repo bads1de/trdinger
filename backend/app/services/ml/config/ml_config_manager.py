@@ -9,10 +9,9 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from app.services.ml.config.ml_config import MLConfig
-from app.services.ml.exceptions import MLValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -125,12 +124,9 @@ class MLConfigManager:
             更新成功フラグ
         """
         try:
-            # バリデーション
-            validation_errors = self.validate_config_updates(config_updates)
-            if validation_errors:
-                raise MLValidationError(
-                    f"設定バリデーションエラー: {validation_errors}"
-                )
+            # Pydanticの自動バリデーションを活用するため、
+            # 明示的なvalidate_config_updatesは不要
+            # MLConfig.from_dict()内でPydanticがバリデーションを自動実行
 
             # 現在の設定を取得
             current_config = self._ml_config.to_dict()
@@ -138,7 +134,7 @@ class MLConfigManager:
             # 設定を更新
             updated_config = self._merge_config_updates(current_config, config_updates)
 
-            # 更新された設定を適用
+            # 更新された設定を適用（Pydanticのバリデーションが自動実行される）
             self._ml_config = MLConfig.from_dict(updated_config)
 
             # ファイルに保存

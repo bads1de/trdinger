@@ -82,14 +82,6 @@ class LightGBMConfig(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="ML_LIGHTGBM_")
 
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        辞書形式で設定を返す（Pydantic自動シリアライゼーション使用）
-
-        手動マッピングを削除し、Pydanticの model_dump() を活用して
-        保守性を向上させました。
-        """
-        return self.model_dump()
 
 
 class FeatureEngineeringConfig(BaseSettings):
@@ -255,23 +247,6 @@ class EnsembleConfig(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="ML_ENSEMBLE_")
 
-    def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換"""
-        return self.model_dump()
-
-    def get_default_config(self) -> Dict[str, Any]:
-        """デフォルトのアンサンブル設定を取得（スタッキング）"""
-        return {
-            "method": "stacking",
-            "stacking_params": {
-                "base_models": self.STACKING_BASE_MODELS,
-                "meta_model": self.STACKING_META_MODEL,
-                "cv_folds": self.STACKING_CV_FOLDS,
-                "use_probas": True,
-                "random_state": 42,
-                "n_jobs": self.STACKING_N_JOBS,
-            },
-        }
 
 
 class MLConfig:

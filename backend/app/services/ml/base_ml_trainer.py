@@ -64,9 +64,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.config = ml_config
 
-        # 特徴量エンジニアリングサービスの初期化（autofeat機能は削除済み）
         self.feature_service = FeatureEngineeringService()
-        self.use_automl = False
         logger.debug("特徴量エンジニアリングサービスを初期化しました")
 
         # トレーナー設定の処理（脆弱性修正）
@@ -88,9 +86,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.model = None
         self.models = {}  # アンサンブル用の複数モデル格納
         self.last_training_results = None  # 最後の学習結果を保持
-
-    # 重複ロジック削除:
-    # _create_automl_config_from_dict は AutoMLConfig.from_dict に統一したため不要
 
     @safe_ml_operation(default_return={}, context="MLモデル学習でエラーが発生しました")
     def train_model(

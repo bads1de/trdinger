@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 class CleanupLevel(Enum):
     """クリーンアップレベルの定義"""
 
-    MINIMAL = "minimal"  # 基本的なクリーンアップのみ
     STANDARD = "standard"  # 通常のクリーンアップ
     THOROUGH = "thorough"  # 徹底的なクリーンアップ（メモリ最適化重視）
 
@@ -32,20 +31,7 @@ class BaseResourceManager(ABC):
 
     def __init__(self):
         self._cleanup_level = CleanupLevel.STANDARD
-        self._cleanup_callbacks: List[Callable[[], None]] = []
         self._is_cleaned_up = False
-
-    def __enter__(self):
-        """コンテキストマネージャーの開始"""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """コンテキストマネージャーの終了時に自動クリーンアップ"""
-        _ = exc_type, exc_val, exc_tb  # 未使用パラメータ
-        try:
-            self.cleanup_resources()
-        except Exception as e:
-            logger.error(f"コンテキストマネージャー終了時のクリーンアップエラー: {e}")
 
     def cleanup_resources(self, level: Optional[CleanupLevel] = None) -> Dict[str, Any]:
         """
@@ -111,10 +97,7 @@ class BaseResourceManager(ABC):
                 logger.warning(error_msg)
                 cleanup_stats["errors"].append(error_msg)
 
-            # 5. コールバック実行
-            self._execute_cleanup_callbacks(cleanup_stats)
-
-            # 6. ガベージコレクション
+            # 5. ガベージコレクション
             if cleanup_level in [CleanupLevel.STANDARD, CleanupLevel.THOROUGH]:
                 collected = self._force_garbage_collection()
                 cleanup_stats["objects_collected"] = collected
@@ -159,16 +142,6 @@ class BaseResourceManager(ABC):
     def _cleanup_other_resources(self, level: CleanupLevel):
         """その他のリソースクリーンアップ（オプション、サブクラスでオーバーライド可能）"""
         pass
-
-    def _execute_cleanup_callbacks(self, cleanup_stats: Dict[str, Any]):
-        """登録されたクリーンアップコールバックを実行"""
-        for i, callback in enumerate(self._cleanup_callbacks):
-            try:
-                callback()
-            except Exception as e:
-                error_msg = f"クリーンアップコールバック{i}実行エラー: {e}"
-                logger.warning(error_msg)
-                cleanup_stats["errors"].append(error_msg)
 
     def _force_garbage_collection(self) -> int:
         """強制ガベージコレクション"""

@@ -8,7 +8,6 @@ ML関連サービスで共通して使用される機能を提供します。
 from ..exceptions import (
     MLDataError,
     MLModelError,
-    MLTimeoutError,
     MLValidationError,
 )
 
@@ -27,12 +26,6 @@ from ....utils.error_handler import (
 
 from .logger import (
     MLStructuredLogger,
-    log_error,
-    log_info,
-    log_ml_data_summary,
-    log_ml_metrics,
-    log_ml_operation,
-    log_warning,
     ml_logger,
 )
 
@@ -43,12 +36,6 @@ from ..evaluation.metrics import (
     ModelEvaluationMetrics,
     PerformanceMetrics,
     metrics_collector,
-    record_error,
-    record_metric,
-    record_model_evaluation_metrics,
-    record_performance,
-    # 後方互換性エイリアス
-    MLMetricsCollector,
 )
 
 __all__ = [
@@ -65,29 +52,15 @@ __all__ = [
     "safe_ml_operation",
     "timeout_decorator",
     "ml_operation_context",
-    "MLTimeoutError",
     "MLValidationError",
     "MLDataError",
     "MLModelError",
     # Logging
     "MLStructuredLogger",
-    "log_ml_operation",
-    "log_ml_metrics",
-    "log_ml_data_summary",
     "ml_logger",
-    "log_info",
-    "log_warning",
-    "log_error",
     # Metrics
-    "MLMetricsCollector",
     "MetricData",
     "PerformanceMetrics",
-    "performance_monitor",
     "metrics_collector",
-    "record_metric",
-    "record_performance",
-    "record_error",
-    "record_model_evaluation_metrics",
     "ModelEvaluationMetrics",
-    "get_metrics_summary",
 ]

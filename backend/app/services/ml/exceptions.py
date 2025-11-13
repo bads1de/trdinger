@@ -76,39 +76,6 @@ class MLPredictionError(MLBaseError):
         super().__init__(message, "ML_PREDICTION_ERROR")
 
 
-class MLConfigurationError(MLBaseError):
-    """ML設定関連のエラー
-
-    ML設定の不正や不整合で発生する例外
-    """
-
-    def __init__(self, message: str, config_info: Optional[dict] = None):
-        self.config_info = config_info or {}
-        super().__init__(message, "ML_CONFIGURATION_ERROR")
-
-
-class MLResourceError(MLBaseError):
-    """MLリソース関連のエラー
-
-    メモリ不足、ディスク容量不足等のリソース問題で発生する例外
-    """
-
-    def __init__(self, message: str, resource_info: Optional[dict] = None):
-        self.resource_info = resource_info or {}
-        super().__init__(message, "ML_RESOURCE_ERROR")
-
-
-class MLTimeoutError(MLBaseError):
-    """MLタイムアウト関連のエラー
-
-    処理時間の制限を超過した場合に発生する例外
-    """
-
-    def __init__(self, message: str, timeout_info: Optional[dict] = None):
-        self.timeout_info = timeout_info or {}
-        super().__init__(message, "ML_TIMEOUT_ERROR")
-
-
 class MLFeatureError(MLBaseError):
     """ML特徴量関連のエラー
 

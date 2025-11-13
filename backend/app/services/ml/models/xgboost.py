@@ -6,7 +6,7 @@ XGBoostを使用してアンサンブル専用に最適化されたモデルで�
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -151,33 +151,40 @@ class XGBoostModel:
 
             # get_score()で重要度を取得
             importance_scores = self.model.get_score(importance_type="gain")
-            
+
             logger.info(f"XGBoost get_score() result: {importance_scores}")
 
             # 特徴量名を正しくマッピング
             feature_importance = {}
-            
+
             # feature_namesが存在する場合
-            if hasattr(self, 'feature_names') and self.feature_names:
+            if hasattr(self, "feature_names") and self.feature_names:
                 for feature_name in self.feature_names:
-                    feature_importance[feature_name] = importance_scores.get(feature_name, 0.0)
+                    feature_importance[feature_name] = importance_scores.get(
+                        feature_name, 0.0
+                    )
             else:
                 # フォールバック: インデックスを使用
                 for i, col in enumerate(self.feature_columns):
                     feature_key = f"f{i}"
                     feature_importance[col] = importance_scores.get(feature_key, 0.0)
-            
+
             logger.info(f"計算された特徴量重要度: {len(feature_importance)}個")
-            
+
             # デバッグログ: 0でない重要度の個数
-            non_zero_count = sum(1 for score in feature_importance.values() if score > 0)
-            logger.info(f"重要度が0でない特徴量数: {non_zero_count}/{len(feature_importance)}")
-            
+            non_zero_count = sum(
+                1 for score in feature_importance.values() if score > 0
+            )
+            logger.info(
+                f"重要度が0でない特徴量数: {non_zero_count}/{len(feature_importance)}"
+            )
+
             return feature_importance
-            
+
         except Exception as e:
             logger.error(f"特徴量重要度計算エラー: {e}")
             import traceback
+
             traceback.print_exc()
             # フォールバック: すべて0とする
             return {col: 0.0 for col in self.feature_columns}

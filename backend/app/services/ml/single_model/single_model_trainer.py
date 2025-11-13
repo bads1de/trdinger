@@ -305,12 +305,6 @@ class SingleModelTrainer(BaseMLTrainer):
         """学習済みモデルを取得（互換性のため）"""
         return self.single_model.model if self.single_model else None
 
-    @model.setter
-    def model(self, value):
-        """学習済みモデルを設定（互換性のため）"""
-        # BaseMLTrainerとの互換性のため、setterを提供
-        # 実際の設定は_train_model_implで行われる
-
     def get_model_info(self) -> Dict[str, Any]:
         """
         モデル情報を取得
@@ -368,10 +362,7 @@ class SingleModelTrainer(BaseMLTrainer):
         try:
             # 単一モデルから特徴量重要度を取得
             if hasattr(self.single_model, "get_feature_importance"):
-                try:
-                    return self.single_model.get_feature_importance()
-                except TypeError:
-                    return self.single_model.get_feature_importance()
+                return self.single_model.get_feature_importance()
             else:
                 logger.warning(
                     f"{self.model_type}モデルは特徴量重要度をサポートしていません"

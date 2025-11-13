@@ -10,12 +10,6 @@ from .metrics import (
     MetricData,
     PerformanceMetrics,
     ModelEvaluationMetrics,
-    record_metric,
-    record_performance,
-    record_error,
-    record_model_evaluation_metrics,
-    evaluate_and_record_model,
-    MLMetricsCollector,
     metrics_collector,
 )
 
@@ -28,11 +22,4 @@ __all__ = [
     "ModelEvaluationMetrics",
     # Global instances
     "metrics_collector",
-    "MLMetricsCollector",
-    # Utility functions
-    "record_metric",
-    "record_performance",
-    "record_error",
-    "record_model_evaluation_metrics",
-    "evaluate_and_record_model",
 ]
