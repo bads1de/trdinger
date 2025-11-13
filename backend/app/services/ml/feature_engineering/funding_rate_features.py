@@ -101,10 +101,15 @@ class FundingRateFeatureCalculator:
         # OHLCVデータをコピー
         result = ohlcv_df.copy()
 
-        # timestampカラムの存在確認
+        # timestampカラムの存在確認と自動補完
         if "timestamp" not in result.columns:
-            logger.warning("OHLCVデータにtimestampカラムがありません")
-            return result
+            # インデックスがDatetimeIndexの場合はカラムに変換
+            if isinstance(result.index, pd.DatetimeIndex):
+                result["timestamp"] = result.index
+                logger.debug("インデックスからtimestampカラムを生成しました")
+            else:
+                logger.warning("OHLCVデータにtimestampカラムがなく、インデックスもDatetimeIndexではありません")
+                return result
 
         if (
             "timestamp" not in funding_df.columns
@@ -215,7 +220,13 @@ class FundingRateFeatureCalculator:
             特徴量追加後のDataFrame
         """
         if "timestamp" not in df.columns:
-            return df
+            # インデックスがDatetimeIndexの場合はカラムに変換
+            if isinstance(df.index, pd.DatetimeIndex):
+                df["timestamp"] = df.index
+                logger.debug("時間サイクル特徴量: インデックスからtimestampカラムを生成")
+            else:
+                logger.warning("時間サイクル特徴量: timestampカラムがありません")
+                return df
 
         # 決済からの経過時間を計算
         # 決済時刻は0, 8, 16時なので、時刻を8で割った余り
