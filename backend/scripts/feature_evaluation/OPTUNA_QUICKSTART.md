@@ -560,8 +560,8 @@ python -m scripts.feature_evaluation.evaluate_feature_performance \
 ### 学習リソース
 
 1. **詳細ドキュメント**
-   - [`OPTUNA_OPTIMIZATION_REPORT.md`](../../../OPTUNA_OPTIMIZATION_REPORT.md) - 詳細な最適化レポート
-   - [`HYPERPARAMETER_OPTIMIZATION_SUMMARY.md`](../../../HYPERPARAMETER_OPTIMIZATION_SUMMARY.md) - プロジェクトサマリー
+   - [`Optuna最適化レポート.md`](../../../Optuna最適化レポート.md) - 詳細な最適化レポート
+   - [`ハイパーパラメータ最適化サマリー.md`](../../../ハイパーパラメータ最適化サマリー.md) - プロジェクトサマリー
    - [`README.md`](README.md) - 機能評価スクリプトの全体ガイド
 
 2. **関連実装**
