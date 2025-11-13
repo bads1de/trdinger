@@ -11,11 +11,9 @@ import argparse
 import logging
 from datetime import datetime, timezone
 
-# プロジェクトルートをPythonパスに追加
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-# ログ設定
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -23,13 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 async def collect_ohlcv_data(symbol: str, timeframe: str):
-    """
-    指定されたシンボルとタイムフレームのOHLCVデータを取得
-
-    Args:
-        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
-        timeframe: 時間軸（例: '15m', '30m', '1h', '4h', '1d'）
-    """
     logger.info(f"OHLCVデータ取得開始: {symbol} {timeframe}")
 
     try:
@@ -44,18 +35,16 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
             repository = OHLCVRepository(db)
             service = HistoricalDataService()
 
-            # データ件数を確認（取得前）
             initial_count = repository.get_data_count(symbol, timeframe)
             logger.info(f"取得前のデータ件数: {initial_count}")
 
             start_time = datetime.now(timezone.utc)
 
-            # OHLCVデータを取得
             result = await service.collect_historical_data_with_start_date(
                 symbol=symbol,
                 timeframe=timeframe,
                 repository=repository,
-                since_timestamp=None,  # 全期間取得
+                since_timestamp=None,
             )
 
             end_time = datetime.now(timezone.utc)
@@ -63,14 +52,12 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
 
             logger.info(f"取得結果: {result}件保存 (処理時間: {duration:.1f}秒)")
 
-            # データ件数を確認（取得後）
             final_count = repository.get_data_count(symbol, timeframe)
             saved_count = final_count - initial_count
             logger.info(
                 f"取得後のデータ件数: {final_count} (新規保存: {saved_count}件)"
             )
 
-            # 日付範囲を確認
             date_range = repository.get_date_range(
                 timestamp_column="timestamp",
                 filter_conditions={"symbol": symbol, "timeframe": timeframe},
@@ -108,7 +95,6 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
 
 
 def validate_timeframe(timeframe: str) -> str:
-    """タイムフレームの検証"""
     from app.config.unified_config import unified_config
 
     supported_timeframes = unified_config.market.supported_timeframes
@@ -122,8 +108,6 @@ def validate_timeframe(timeframe: str) -> str:
 
 
 def validate_symbol(symbol: str) -> str:
-    """シンボルの検証"""
-    # 基本的な形式チェック
     if ":" not in symbol:
         raise argparse.ArgumentTypeError(
             f"無効なシンボル形式: {symbol}. " "正しい形式: 'BTC/USDT:USDT'"
@@ -132,7 +116,6 @@ def validate_symbol(symbol: str) -> str:
 
 
 def main():
-    """メイン実行関数"""
     parser = argparse.ArgumentParser(
         description="OHLCVデータ取得スクリプト",
         formatter_class=argparse.RawDescriptionHelpFormatter,
