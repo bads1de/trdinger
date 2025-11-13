@@ -166,7 +166,119 @@ python -m scripts.feature_evaluation.evaluate_feature_performance --models all
 
 # 特定モデルのみ
 python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm xgboost
+
+# Optuna最適化を有効にして評価（推奨）
+python -m scripts.feature_evaluation.evaluate_feature_performance \
+    --models lightgbm xgboost \
+    --enable-optuna \
+    --n-trials 50
+
+# Optuna最適化のタイムアウトを設定
+python -m scripts.feature_evaluation.evaluate_feature_performance \
+    --models lightgbm \
+    --enable-optuna \
+    --n-trials 100 \
+    --optuna-timeout 3600
 ```
+
+## Optunaハイパーパラメータ最適化
+
+`evaluate_feature_performance.py`はOptunaを使用したハイパーパラメータ自動最適化をサポートしています。
+
+### 基本的な使い方
+
+```bash
+# Optuna最適化を有効化（デフォルト50試行）
+python -m scripts.feature_evaluation.evaluate_feature_performance --enable-optuna
+
+# 試行回数をカスタマイズ
+python -m scripts.feature_evaluation.evaluate_feature_performance \
+    --enable-optuna \
+    --n-trials 100
+
+# タイムアウトを設定（秒）
+python -m scripts.feature_evaluation.evaluate_feature_performance \
+    --enable-optuna \
+    --n-trials 200 \
+    --optuna-timeout 7200
+```
+
+### Optunaオプション
+
+- `--enable-optuna`: Optunaによるハイパーパラメータ最適化を有効化
+- `--n-trials`: Optunaの試行回数（デフォルト: 50）
+- `--optuna-timeout`: 最適化のタイムアウト（秒）。指定しない場合は制限なし
+
+### 最適化されるパラメータ
+
+#### LightGBM
+- `num_leaves`: 葉の数（20-200）
+- `learning_rate`: 学習率（0.001-0.3）
+- `feature_fraction`: 特徴量サンプリング率（0.4-1.0）
+- `bagging_fraction`: データサンプリング率（0.4-1.0）
+- `min_data_in_leaf`: 葉あたりの最小データ数（5-100）
+- `max_depth`: 最大深さ（3-15）
+
+#### XGBoost
+- `max_depth`: 最大深さ（3-15）
+- `learning_rate`: 学習率（0.001-0.3）
+- `subsample`: データサンプリング率（0.4-1.0）
+- `colsample_bytree`: 特徴量サンプリング率（0.4-1.0）
+- `min_child_weight`: 子ノードの最小重み（1-10）
+- `gamma`: 分割の最小損失減少（0-5）
+
+### 結果フォーマット
+
+Optuna最適化を有効にすると、結果に以下の情報が追加されます：
+
+```json
+{
+  "model": "lightgbm",
+  "optuna_enabled": true,
+  "best_params": {
+    "num_leaves": 89,
+    "learning_rate": 0.0523,
+    "feature_fraction": 0.78,
+    ...
+  },
+  "optimization_history": [
+    {"trial": 1, "value": 0.8234, "params": {...}},
+    {"trial": 2, "value": 0.8456, "params": {...}},
+    ...
+  ],
+  "n_trials": 50,
+  "best_trial": 23,
+  "optimization_time": 245.67,
+  "cv_results": {
+    "rmse_mean": 0.0234,
+    "mae_mean": 0.0187,
+    "r2_mean": 0.8923
+  }
+}
+```
+
+### Optunaなしの従来評価
+
+`--enable-optuna`フラグを指定しない場合、従来の固定パラメータで評価されます：
+
+```bash
+# 固定パラメータで評価（高速）
+python -m scripts.feature_evaluation.evaluate_feature_performance --models lightgbm
+```
+
+### パフォーマンス考慮事項
+
+- **試行回数**: より多くの試行は精度向上につながりますが、時間がかかります
+  - 軽量評価: 20-30試行
+  - 標準評価: 50-100試行
+  - 詳細評価: 100-200試行
+
+- **タイムアウト**: 長時間実行を防ぐため、タイムアウトを設定することを推奨
+  - 短時間: 1800秒（30分）
+  - 標準: 3600秒（1時間）
+  - 長時間: 7200秒（2時間）
+
+- **TimeSeriesSplit**: Optuna最適化はTimeSeriesSplitと統合されており、時系列データの評価が適切に行われます
 
 ## CommonFeatureEvaluator API
 

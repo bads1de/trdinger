@@ -523,10 +523,11 @@ class FeatureEngineeringConfig(BaseSettings):
     """
 
     # プロファイル機能を削除し、allowlistのみで管理
-    # 2025-11-12: 特徴量重要度分析により8個の低寄与度特徴量を削除（93個→85個）
-    # 削除特徴量: atr_20, body_size, lower_shadow, price_change_1, 
-    #             price_change_20, price_change_5, returns, volume_ma_20
-    # 性能への影響: LightGBM -0.03%, XGBoost +0.21%（むしろ改善）
+    # 2025-11-12: 特徴量重要度分析により19個の削除推奨特徴量を削除（79個→60個）
+    # 高相関による削除(5個): macd, Stochastic_K, Near_Resistance, MA_Long, BB_Position
+    # 低重要度による削除(14個): close_lag_24, cumulative_returns_24, Close_mean_20,
+    #   Local_Max, Aroon_Up, BB_Lower, Resistance_Level, BB_Middle,
+    #   stochastic_k, rsi_14, bb_lower_20, bb_upper_20, stochastic_d, Local_Min
     feature_allowlist: Optional[List[str]] = Field(
         default=[
             "AD",
@@ -535,13 +536,8 @@ class FeatureEngineeringConfig(BaseSettings):
             "AROONOSC",
             "ATR",
             "Aroon_Down",
-            "Aroon_Up",
-            "BB_Lower",
-            "BB_Middle",
-            "BB_Position",
             "BB_Upper",
             "Close_deviation_from_ma_20",
-            "Close_mean_20",
             "Close_mean_50",
             "Close_pct_change_1",
             "Close_pct_change_24",
@@ -551,31 +547,20 @@ class FeatureEngineeringConfig(BaseSettings):
             "Close_std_50",
             "DI_Minus",
             "DI_Plus",
-            "Local_Max",
-            "Local_Min",
-            "MA_Long",
             "NATR",
-            "Near_Resistance",
             "Near_Support",
             "OBV",
             "Parkinson_Vol_20",
             "Price_Volume_Ratio",
             "Realized_Vol_20",
-            "Resistance_Level",
             "Stochastic_D",
             "Stochastic_Divergence",
-            "Stochastic_K",
             "TRANGE",
             "Trend_strength_20",
             "Vol_Volume_Product",
-            "bb_lower_20",
             "bb_position_20",
-            "bb_upper_20",
             "cci",
             "close_lag_1",
-            "close_lag_24",
-            "cumulative_returns_24",
-            "macd",
             "macd_histogram",
             "macd_signal",
             "market_efficiency",
@@ -592,9 +577,6 @@ class FeatureEngineeringConfig(BaseSettings):
             "returns_lag_24",
             "roc",
             "rsi",
-            "rsi_14",
-            "stochastic_d",
-            "stochastic_k",
             "ultimate_oscillator",
             "volatility_adjusted_oi",
             "volume_change_medium",

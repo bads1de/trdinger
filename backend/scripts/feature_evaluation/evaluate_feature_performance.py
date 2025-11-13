@@ -17,7 +17,7 @@ TimeSeriesSplitを使用した時系列クロスバリデーションにより�
 
 設定:
     - TimeSeriesSplit分割数: ml_config.training.cv_folds (デフォルト: 5)
-    - ターゲット変数: forward return (1時間先の収益率)
+    - ターゲット変数: 3クラス分類（0=DOWN, 1=RANGE, 2=UP）
 
 注意:
     このスクリプトは個別に実行可能ですが、統合分析のため
@@ -34,17 +34,30 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import TimeSeriesSplit
 
 # プロジェクトのルートディレクトリをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.config.unified_config import unified_config
+from app.services.optimization.ensemble_parameter_space import EnsembleParameterSpace
+from app.services.optimization.optuna_optimizer import (
+    OptunaOptimizer,
+    ParameterSpace,
+)
+from app.utils.label_generation.enums import ThresholdMethod
+from app.utils.label_generation.main import LabelGenerator
 from scripts.feature_evaluation.common_feature_evaluator import (
     CommonFeatureEvaluator,
     EvaluationData,
@@ -103,7 +116,7 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
         oi_df: Optional[pd.DataFrame],
     ) -> pd.DataFrame:
         """
-        特徴量計算
+        特徴量計算（メインMLシステムと同じ完全な特徴量セットを使用）
 
         Args:
             ohlcv_df: OHLCVデータ
@@ -113,20 +126,23 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
         Returns:
             特徴量DataFrame
         """
-        logger.info(f"[{self.model_name}] 特徴量計算開始")
+        logger.info(f"[{self.model_name}] 特徴量計算開始（完全な特徴量セット）")
 
         try:
-            # 暗号通貨特化特徴量とadvanced特徴量をスキップして基本特徴量のみ計算
+            # メインMLシステムと同じ完全な特徴量セットを計算
+            # - 基本特徴量
+            # - 暗号通貨特化特徴量（CryptoFeatures）
+            # - 高度な特徴量（AdvancedFeatureEngineer）
             data = EvaluationData(ohlcv=ohlcv_df, fr=fr_df, oi=oi_df)
             features_df = self.common.build_basic_features(
                 data=data,
-                skip_crypto_and_advanced=True,
+                skip_crypto_and_advanced=False,  # メインシステムと同じく全特徴量を生成
             )
             result_df = self.common.drop_ohlcv_columns(
                 features_df,
                 keep_close=True,
             )
-            logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量")
+            logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量（完全セット）")
             return result_df
 
         except Exception as e:
@@ -135,21 +151,42 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
 
     def create_target(self, df: pd.DataFrame, periods: int = 1) -> pd.Series:
         """
-        ターゲット変数作成
+        ターゲット変数作成（3クラス分類）
+
+        メインシステムのLabelGeneratorを使用して、価格変化から
+        3クラス分類ラベル（0=DOWN, 1=RANGE, 2=UP）を生成します。
 
         Args:
             df: closeカラムを含むDataFrame
-            periods: 先読み期間
+            periods: 先読み期間（使用しない：互換性のため残す）
 
         Returns:
-            ターゲット変数
+            ターゲット変数（3クラス分類: 0=DOWN, 1=RANGE, 2=UP）
         """
         if "close" not in df.columns:
             raise ValueError("closeカラムが見つかりません")
 
-        # N時間先の収益率
-        target = df["close"].pct_change(periods).shift(-periods)
-        return target
+        # メインシステムのLabelGeneratorを使用
+        label_generator = LabelGenerator()
+
+        # 標準偏差法でラベル生成（デフォルトのstd_multiplier=0.5を使用）
+        labels, threshold_info = label_generator.generate_labels(
+            price_data=df["close"],
+            method=ThresholdMethod.STD_DEVIATION,
+            std_multiplier=0.5,
+        )
+
+        logger.info(
+            f"ラベル生成完了: "
+            f"UP={threshold_info['up_count']}"
+            f"({threshold_info['up_ratio']*100:.1f}%), "
+            f"DOWN={threshold_info['down_count']}"
+            f"({threshold_info['down_ratio']*100:.1f}%), "
+            f"RANGE={threshold_info['range_count']}"
+            f"({threshold_info['range_ratio']*100:.1f}%)"
+        )
+
+        return labels
 
     @abstractmethod
     def evaluate_model_cv(
@@ -254,7 +291,7 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
         Args:
             scenario_name: シナリオ名
             X: 全特徴量
-            y: ターゲット
+            y: ターゲット（3クラス分類）
             features_to_use: 使用する特徴量リスト
             removed_features: 削除した特徴量リスト
 
@@ -309,14 +346,16 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
         }
 
         logger.info(
-            f"CV RMSE: {cv_results['cv_rmse']:.6f} "
-            f"(±{cv_results['cv_rmse_std']:.6f})"
+            f"CV Accuracy: {cv_results['cv_accuracy']:.4f} "
+            f"(±{cv_results['cv_accuracy_std']:.4f})"
         )
         logger.info(
-            f"CV MAE: {cv_results['cv_mae']:.6f} " f"(±{cv_results['cv_mae_std']:.6f})"
+            f"CV F1 (Weighted): {cv_results['cv_f1_weighted']:.4f} "
+            f"(±{cv_results['cv_f1_weighted_std']:.4f})"
         )
         logger.info(
-            f"CV R2: {cv_results['cv_r2']:.6f} (+/-{cv_results['cv_r2_std']:.6f})"
+            f"CV Balanced Accuracy: {cv_results['cv_balanced_accuracy']:.4f} "
+            f"(±{cv_results['cv_balanced_accuracy_std']:.4f})"
         )
         logger.info(f"学習時間: {cv_results['train_time_sec']:.2f}秒")
 
@@ -324,7 +363,7 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
 
     def generate_recommendation(self, results: Dict) -> Dict:
         """
-        推奨事項を生成
+        推奨事項を生成（分類問題用）
 
         Args:
             results: 各シナリオの結果
@@ -337,7 +376,7 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
                 "message": "ベースライン評価が失敗したため、推奨事項を生成できません"
             }
 
-        # 許容範囲（RMSE変化 < 1%）で最も多く削減できるシナリオを探す
+        # 許容範囲（Accuracy変化 < 2%）で最も多く削減できるシナリオを探す
         acceptable_scenarios = []
 
         for key, result in results.items():
@@ -345,7 +384,7 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
                 continue
 
             change_pct = result.get("performance_change_pct", 100)
-            if abs(change_pct) < 1.0:  # 1%以内の変化
+            if abs(change_pct) < 2.0:  # 2%以内の変化（分類問題では少し緩めに）
                 acceptable_scenarios.append(
                     {
                         "scenario": key,
@@ -365,7 +404,7 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
                 "features_count_after": best["n_features"],
                 "features_removed_count": best["removed_count"],
                 "performance_change_pct": best["change_pct"],
-                "message": f"性能劣化が1%未満で{best['removed_count']}個の特徴量削減が可能です",
+                "message": f"性能劣化が2%未満で{best['removed_count']}個の特徴量削減が可能です",
             }
         else:
             return {
@@ -374,17 +413,183 @@ class BaseFeatureEvaluator(ABC):  # TODO: 後続でCommonFeatureEvaluatorに完�
             }
 
 
-class LightGBMEvaluator(BaseFeatureEvaluator):
-    """LightGBMモデルでの特徴量性能評価クラス"""
+class OptunaEnabledEvaluator(BaseFeatureEvaluator):
+    """Optuna最適化を有効にした評価器基底クラス"""
 
-    def __init__(self):
+    def __init__(
+        self,
+        model_name: str,
+        enable_optuna: bool = False,
+        n_trials: int = 50,
+        timeout: Optional[int] = None,
+    ):
+        """
+        初期化
+
+        Args:
+            model_name: モデル名
+            enable_optuna: Optuna最適化を有効化
+            n_trials: Optunaの試行回数
+            timeout: Optuna最適化のタイムアウト（秒）
+        """
+        super().__init__(model_name)
+        self.enable_optuna = enable_optuna
+        self.n_trials = n_trials
+        self.timeout = timeout
+        self.best_params: Optional[Dict] = None
+        self.optimization_history: List[Dict] = []
+
+    @abstractmethod
+    def get_parameter_space(self) -> Dict[str, ParameterSpace]:
+        """
+        モデル用のパラメータ空間を取得
+
+        Returns:
+            パラメータ空間の辞書
+        """
+        pass
+
+    def optimize_hyperparameters(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        parameter_space: Dict[str, ParameterSpace],
+    ) -> Dict[str, Any]:
+        """
+        Optunaでハイパーパラメータ最適化（分類問題用）
+
+        Args:
+            X_train: 学習データ
+            y_train: ターゲット（3クラス分類）
+            parameter_space: パラメータ空間
+
+        Returns:
+            最適化されたパラメータ
+        """
+        logger.info(
+            f"🚀 [{self.model_name}] Optuna最適化を開始: 試行回数={self.n_trials}"
+        )
+
+        optimizer = OptunaOptimizer()
+
+        def objective_function(params: Dict[str, Any]) -> float:
+            """最適化目的関数（Accuracyを最大化）"""
+            try:
+                # パラメータを使ってクロスバリデーション評価
+                temp_result = self._evaluate_with_params(X_train, y_train, params)
+                # Accuracyを最大化
+                return temp_result.get("cv_accuracy", 0.0)
+            except Exception as e:
+                logger.warning(f"目的関数評価エラー: {e}")
+                return 0.0
+
+        try:
+            result = optimizer.optimize(
+                objective_function=objective_function,
+                parameter_space=parameter_space,
+                n_calls=self.n_trials,
+            )
+
+            self.best_params = result.best_params
+            self.optimization_history = [
+                {"trial": i + 1, "value": trial.value, "params": trial.params}
+                for i, trial in enumerate(result.study.trials)
+                if trial.value is not None
+            ]
+
+            logger.info(
+                f"✅ [{self.model_name}] 最適化完了: ベストスコア(Accuracy)={result.best_score:.4f}"
+            )
+            logger.info(f"⚙️  最適パラメータ: {result.best_params}")
+
+            return result.best_params
+
+        except Exception as e:
+            logger.error(f"[{self.model_name}] 最適化エラー: {e}")
+            return {}
+
+    @abstractmethod
+    def _evaluate_with_params(
+        self, X: pd.DataFrame, y: pd.Series, params: Dict[str, Any]
+    ) -> Dict[str, float]:
+        """
+        指定されたパラメータで評価
+
+        Args:
+            X: 特徴量
+            y: ターゲット
+            params: モデルパラメータ
+
+        Returns:
+            評価指標の辞書
+        """
+        pass
+
+    def evaluate_model_cv_with_optuna(
+        self, X: pd.DataFrame, y: pd.Series, n_splits: Optional[int] = None
+    ) -> Dict[str, float]:
+        """
+        Optuna最適化+TimeSeriesSplit評価
+
+        Args:
+            X: 特徴量
+            y: ターゲット
+            n_splits: 分割数
+
+        Returns:
+            評価指標の辞書
+        """
+        if n_splits is None:
+            n_splits = unified_config.ml.training.cv_folds
+
+        logger.info(f"[{self.model_name}] Optuna最適化+CV評価開始")
+
+        # TimeSeriesSplitで学習/検証に分割
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+        train_idx, _ = list(tscv.split(X))[-1]  # 最後の分割を使用
+
+        X_train = X.iloc[train_idx]
+        y_train = y.iloc[train_idx]
+
+        # パラメータ空間を取得
+        parameter_space = self.get_parameter_space()
+
+        # ハイパーパラメータ最適化
+        best_params = self.optimize_hyperparameters(X_train, y_train, parameter_space)
+
+        if not best_params:
+            logger.warning("最適化失敗、デフォルトパラメータで評価")
+            return self.evaluate_model_cv(X, y, n_splits)
+
+        # 最適パラメータで全データを使ってCV評価
+        result = self._evaluate_with_params(X, y, best_params)
+
+        # Optuna情報を追加
+        result["optuna_enabled"] = True
+        result["best_params"] = best_params
+        result["n_trials"] = self.n_trials
+        result["optimization_history"] = self.optimization_history[:10]  # 上位10件のみ
+
+        return result
+
+
+class LightGBMEvaluator(OptunaEnabledEvaluator):
+    """LightGBMモデルでの特徴量性能評価クラス（分類問題・Optuna対応）"""
+
+    def __init__(
+        self,
+        enable_optuna: bool = False,
+        n_trials: int = 50,
+        timeout: Optional[int] = None,
+    ):
         """初期化"""
-        super().__init__("LightGBM")
+        super().__init__("LightGBM", enable_optuna, n_trials, timeout)
 
-        # LightGBMパラメータ
+        # LightGBMパラメータ（3クラス分類）
         self.model_params = {
-            "objective": "regression",
-            "metric": "rmse",
+            "objective": "multiclass",
+            "num_class": 3,
+            "metric": "multi_logloss",
             "boosting_type": "gbdt",
             "num_leaves": 31,
             "learning_rate": 0.05,
@@ -395,20 +600,135 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
             "random_state": 42,
         }
 
+    def get_parameter_space(self) -> Dict[str, ParameterSpace]:
+        """LightGBM用のパラメータ空間を取得"""
+        return EnsembleParameterSpace.get_lightgbm_parameter_space()
+
+    def _evaluate_with_params(
+        self, X: pd.DataFrame, y: pd.Series, params: Dict[str, Any]
+    ) -> Dict[str, float]:
+        """
+        指定されたパラメータでLightGBM評価（分類問題）
+
+        Args:
+            X: 特徴量
+            y: ターゲット（3クラス分類）
+            params: LightGBMパラメータ
+
+        Returns:
+            評価指標の辞書
+        """
+        import lightgbm as lgb
+
+        # パラメータ名の変換（lgb_プレフィックスを削除）
+        lgb_params = {
+            k.replace("lgb_", ""): v for k, v in params.items() if k.startswith("lgb_")
+        }
+
+        # ベースパラメータにマージ
+        model_params = {**self.model_params, **lgb_params}
+
+        # TimeSeriesSplitでCV
+        n_splits = unified_config.ml.training.cv_folds
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+
+        accuracy_scores = []
+        balanced_accuracy_scores = []
+        f1_macro_scores = []
+        f1_weighted_scores = []
+        precision_scores = []
+        recall_scores = []
+        train_times = []
+
+        for fold, (train_idx, test_idx) in enumerate(tscv.split(X), 1):
+            try:
+                X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+
+                start_time = time.time()
+
+                train_data = lgb.Dataset(X_train, label=y_train)
+                model = lgb.train(
+                    model_params,
+                    train_data,
+                    num_boost_round=100,
+                    valid_sets=[train_data],
+                    callbacks=[
+                        lgb.early_stopping(stopping_rounds=10),
+                        lgb.log_evaluation(0),
+                    ],
+                )
+
+                train_time = time.time() - start_time
+                train_times.append(train_time)
+
+                # 確率予測を取得してargmaxでクラス予測
+                y_pred_proba = model.predict(X_test)
+                y_pred = np.argmax(y_pred_proba, axis=1)
+
+                # 分類指標を計算
+                accuracy = accuracy_score(y_test, y_pred)
+                balanced_acc = balanced_accuracy_score(y_test, y_pred)
+                f1_macro = f1_score(y_test, y_pred, average="macro", zero_division=0)
+                f1_weighted = f1_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                precision = precision_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                recall = recall_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+
+                accuracy_scores.append(accuracy)
+                balanced_accuracy_scores.append(balanced_acc)
+                f1_macro_scores.append(f1_macro)
+                f1_weighted_scores.append(f1_weighted)
+                precision_scores.append(precision)
+                recall_scores.append(recall)
+
+            except Exception as e:
+                logger.warning(f"Fold {fold}でエラー: {e}")
+                continue
+
+        if not accuracy_scores:
+            return {}
+
+        return {
+            "cv_accuracy": float(np.mean(accuracy_scores)),
+            "cv_accuracy_std": float(np.std(accuracy_scores)),
+            "cv_balanced_accuracy": float(np.mean(balanced_accuracy_scores)),
+            "cv_balanced_accuracy_std": float(np.std(balanced_accuracy_scores)),
+            "cv_f1_macro": float(np.mean(f1_macro_scores)),
+            "cv_f1_macro_std": float(np.std(f1_macro_scores)),
+            "cv_f1_weighted": float(np.mean(f1_weighted_scores)),
+            "cv_f1_weighted_std": float(np.std(f1_weighted_scores)),
+            "cv_precision": float(np.mean(precision_scores)),
+            "cv_precision_std": float(np.std(precision_scores)),
+            "cv_recall": float(np.mean(recall_scores)),
+            "cv_recall_std": float(np.std(recall_scores)),
+            "train_time_sec": float(np.mean(train_times)),
+        }
+
     def evaluate_model_cv(
         self, X: pd.DataFrame, y: pd.Series, n_splits: Optional[int] = None
     ) -> Dict[str, float]:
         """
-        TimeSeriesSplitでクロスバリデーション評価
+        TimeSeriesSplitでクロスバリデーション評価（分類問題・Optuna対応）
 
         Args:
             X: 特徴量
-            y: ターゲット
+            y: ターゲット（3クラス分類）
             n_splits: 分割数（Noneの場合はml_configから読み込み）
 
         Returns:
             評価指標の辞書
         """
+        # Optuna最適化が有効な場合
+        if self.enable_optuna:
+            return self.evaluate_model_cv_with_optuna(X, y, n_splits)
+
+        # 従来の固定パラメータ評価
         import lightgbm as lgb
 
         if n_splits is None:
@@ -417,9 +737,12 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
         logger.info(f"TimeSeriesSplit使用: n_splits={n_splits}")
         tscv = TimeSeriesSplit(n_splits=n_splits)
 
-        rmse_scores = []
-        mae_scores = []
-        r2_scores = []
+        accuracy_scores = []
+        balanced_accuracy_scores = []
+        f1_macro_scores = []
+        f1_weighted_scores = []
+        precision_scores = []
+        recall_scores = []
         train_times = []
 
         for fold, (train_idx, test_idx) in enumerate(tscv.split(X), 1):
@@ -448,37 +771,58 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
                 train_time = time.time() - start_time
                 train_times.append(train_time)
 
-                # 予測
-                y_pred = model.predict(X_test)
+                # 予測（確率→クラス）
+                y_pred_proba = model.predict(X_test)
+                y_pred = np.argmax(y_pred_proba, axis=1)
 
-                # 評価
-                rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-                mae = mean_absolute_error(y_test, y_pred)
-                r2 = r2_score(y_test, y_pred)
+                # 分類指標を計算
+                accuracy = accuracy_score(y_test, y_pred)
+                balanced_acc = balanced_accuracy_score(y_test, y_pred)
+                f1_macro = f1_score(y_test, y_pred, average="macro", zero_division=0)
+                f1_weighted = f1_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                precision = precision_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                recall = recall_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
 
-                rmse_scores.append(rmse)
-                mae_scores.append(mae)
-                r2_scores.append(r2)
+                accuracy_scores.append(accuracy)
+                balanced_accuracy_scores.append(balanced_acc)
+                f1_macro_scores.append(f1_macro)
+                f1_weighted_scores.append(f1_weighted)
+                precision_scores.append(precision)
+                recall_scores.append(recall)
 
                 logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, "
-                    f"R2={r2:.6f}, Time={train_time:.2f}s"
+                    f"Fold {fold}: Accuracy={accuracy:.4f}, "
+                    f"F1(Weighted)={f1_weighted:.4f}, "
+                    f"Balanced Acc={balanced_acc:.4f}, "
+                    f"Time={train_time:.2f}s"
                 )
 
             except Exception as e:
                 logger.warning(f"Fold {fold}でエラー: {e}")
                 continue
 
-        if not rmse_scores:
+        if not accuracy_scores:
             return {}
 
         return {
-            "cv_rmse": float(np.mean(rmse_scores)),
-            "cv_rmse_std": float(np.std(rmse_scores)),
-            "cv_mae": float(np.mean(mae_scores)),
-            "cv_mae_std": float(np.std(mae_scores)),
-            "cv_r2": float(np.mean(r2_scores)),
-            "cv_r2_std": float(np.std(r2_scores)),
+            "cv_accuracy": float(np.mean(accuracy_scores)),
+            "cv_accuracy_std": float(np.std(accuracy_scores)),
+            "cv_balanced_accuracy": float(np.mean(balanced_accuracy_scores)),
+            "cv_balanced_accuracy_std": float(np.std(balanced_accuracy_scores)),
+            "cv_f1_macro": float(np.mean(f1_macro_scores)),
+            "cv_f1_macro_std": float(np.std(f1_macro_scores)),
+            "cv_f1_weighted": float(np.mean(f1_weighted_scores)),
+            "cv_f1_weighted_std": float(np.std(f1_weighted_scores)),
+            "cv_precision": float(np.mean(precision_scores)),
+            "cv_precision_std": float(np.std(precision_scores)),
+            "cv_recall": float(np.mean(recall_scores)),
+            "cv_recall_std": float(np.std(recall_scores)),
             "train_time_sec": float(np.mean(train_times)),
         }
 
@@ -516,17 +860,23 @@ class LightGBMEvaluator(BaseFeatureEvaluator):
             return {}
 
 
-class XGBoostEvaluator(BaseFeatureEvaluator):
-    """XGBoostモデルでの特徴量性能評価クラス"""
+class XGBoostEvaluator(OptunaEnabledEvaluator):
+    """XGBoostモデルでの特徴量性能評価クラス（分類問題・Optuna対応）"""
 
-    def __init__(self):
+    def __init__(
+        self,
+        enable_optuna: bool = False,
+        n_trials: int = 50,
+        timeout: Optional[int] = None,
+    ):
         """初期化"""
-        super().__init__("XGBoost")
+        super().__init__("XGBoost", enable_optuna, n_trials, timeout)
 
-        # XGBoostパラメータ
+        # XGBoostパラメータ（3クラス分類）
         self.model_params = {
-            "objective": "reg:squarederror",
-            "eval_metric": "rmse",
+            "objective": "multi:softprob",
+            "num_class": 3,
+            "eval_metric": "mlogloss",
             "booster": "gbtree",
             "max_depth": 6,
             "learning_rate": 0.05,
@@ -537,20 +887,135 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
             "verbosity": 0,
         }
 
+    def get_parameter_space(self) -> Dict[str, ParameterSpace]:
+        """XGBoost用のパラメータ空間を取得"""
+        return EnsembleParameterSpace.get_xgboost_parameter_space()
+
+    def _evaluate_with_params(
+        self, X: pd.DataFrame, y: pd.Series, params: Dict[str, Any]
+    ) -> Dict[str, float]:
+        """
+        指定されたパラメータでXGBoost評価（分類問題）
+
+        Args:
+            X: 特徴量
+            y: ターゲット（3クラス分類）
+            params: XGBoostパラメータ
+
+        Returns:
+            評価指標の辞書
+        """
+        import xgboost as xgb
+
+        # パラメータ名の変換（xgb_プレフィックスを削除）
+        xgb_params = {
+            k.replace("xgb_", ""): v for k, v in params.items() if k.startswith("xgb_")
+        }
+
+        # ベースパラメータにマージ
+        model_params = {**self.model_params, **xgb_params}
+
+        # TimeSeriesSplitでCV
+        n_splits = unified_config.ml.training.cv_folds
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+
+        accuracy_scores = []
+        balanced_accuracy_scores = []
+        f1_macro_scores = []
+        f1_weighted_scores = []
+        precision_scores = []
+        recall_scores = []
+        train_times = []
+
+        for fold, (train_idx, test_idx) in enumerate(tscv.split(X), 1):
+            try:
+                X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+
+                start_time = time.time()
+
+                dtrain = xgb.DMatrix(X_train, label=y_train)
+                dtest = xgb.DMatrix(X_test, label=y_test)
+
+                model = xgb.train(
+                    model_params,
+                    dtrain,
+                    num_boost_round=100,
+                    evals=[(dtrain, "train")],
+                    early_stopping_rounds=10,
+                    verbose_eval=False,
+                )
+
+                train_time = time.time() - start_time
+                train_times.append(train_time)
+
+                # 確率予測を取得してargmaxでクラス予測
+                y_pred_proba = model.predict(dtest)
+                y_pred = np.argmax(y_pred_proba, axis=1)
+
+                # 分類指標を計算
+                accuracy = accuracy_score(y_test, y_pred)
+                balanced_acc = balanced_accuracy_score(y_test, y_pred)
+                f1_macro = f1_score(y_test, y_pred, average="macro", zero_division=0)
+                f1_weighted = f1_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                precision = precision_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                recall = recall_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+
+                accuracy_scores.append(accuracy)
+                balanced_accuracy_scores.append(balanced_acc)
+                f1_macro_scores.append(f1_macro)
+                f1_weighted_scores.append(f1_weighted)
+                precision_scores.append(precision)
+                recall_scores.append(recall)
+
+            except Exception as e:
+                logger.warning(f"Fold {fold}でエラー: {e}")
+                continue
+
+        if not accuracy_scores:
+            return {}
+
+        return {
+            "cv_accuracy": float(np.mean(accuracy_scores)),
+            "cv_accuracy_std": float(np.std(accuracy_scores)),
+            "cv_balanced_accuracy": float(np.mean(balanced_accuracy_scores)),
+            "cv_balanced_accuracy_std": float(np.std(balanced_accuracy_scores)),
+            "cv_f1_macro": float(np.mean(f1_macro_scores)),
+            "cv_f1_macro_std": float(np.std(f1_macro_scores)),
+            "cv_f1_weighted": float(np.mean(f1_weighted_scores)),
+            "cv_f1_weighted_std": float(np.std(f1_weighted_scores)),
+            "cv_precision": float(np.mean(precision_scores)),
+            "cv_precision_std": float(np.std(precision_scores)),
+            "cv_recall": float(np.mean(recall_scores)),
+            "cv_recall_std": float(np.std(recall_scores)),
+            "train_time_sec": float(np.mean(train_times)),
+        }
+
     def evaluate_model_cv(
         self, X: pd.DataFrame, y: pd.Series, n_splits: Optional[int] = None
     ) -> Dict[str, float]:
         """
-        TimeSeriesSplitでクロスバリデーション評価
+        TimeSeriesSplitでクロスバリデーション評価（分類問題・Optuna対応）
 
         Args:
             X: 特徴量
-            y: ターゲット
+            y: ターゲット（3クラス分類）
             n_splits: 分割数（Noneの場合はml_configから読み込み）
 
         Returns:
             評価指標の辞書
         """
+        # Optuna最適化が有効な場合
+        if self.enable_optuna:
+            return self.evaluate_model_cv_with_optuna(X, y, n_splits)
+
+        # 従来の固定パラメータ評価
         import xgboost as xgb
 
         if n_splits is None:
@@ -559,9 +1024,12 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
         logger.info(f"TimeSeriesSplit使用: n_splits={n_splits}")
         tscv = TimeSeriesSplit(n_splits=n_splits)
 
-        rmse_scores = []
-        mae_scores = []
-        r2_scores = []
+        accuracy_scores = []
+        balanced_accuracy_scores = []
+        f1_macro_scores = []
+        f1_weighted_scores = []
+        precision_scores = []
+        recall_scores = []
         train_times = []
 
         for fold, (train_idx, test_idx) in enumerate(tscv.split(X), 1):
@@ -589,37 +1057,58 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
                 train_time = time.time() - start_time
                 train_times.append(train_time)
 
-                # 予測
-                y_pred = model.predict(dtest)
+                # 予測（確率→クラス）
+                y_pred_proba = model.predict(dtest)
+                y_pred = np.argmax(y_pred_proba, axis=1)
 
-                # 評価
-                rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-                mae = mean_absolute_error(y_test, y_pred)
-                r2 = r2_score(y_test, y_pred)
+                # 分類指標を計算
+                accuracy = accuracy_score(y_test, y_pred)
+                balanced_acc = balanced_accuracy_score(y_test, y_pred)
+                f1_macro = f1_score(y_test, y_pred, average="macro", zero_division=0)
+                f1_weighted = f1_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                precision = precision_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
+                recall = recall_score(
+                    y_test, y_pred, average="weighted", zero_division=0
+                )
 
-                rmse_scores.append(rmse)
-                mae_scores.append(mae)
-                r2_scores.append(r2)
+                accuracy_scores.append(accuracy)
+                balanced_accuracy_scores.append(balanced_acc)
+                f1_macro_scores.append(f1_macro)
+                f1_weighted_scores.append(f1_weighted)
+                precision_scores.append(precision)
+                recall_scores.append(recall)
 
                 logger.info(
-                    f"Fold {fold}: RMSE={rmse:.6f}, MAE={mae:.6f}, "
-                    f"R2={r2:.6f}, Time={train_time:.2f}s"
+                    f"Fold {fold}: Accuracy={accuracy:.4f}, "
+                    f"F1(Weighted)={f1_weighted:.4f}, "
+                    f"Balanced Acc={balanced_acc:.4f}, "
+                    f"Time={train_time:.2f}s"
                 )
 
             except Exception as e:
                 logger.warning(f"Fold {fold}でエラー: {e}")
                 continue
 
-        if not rmse_scores:
+        if not accuracy_scores:
             return {}
 
         return {
-            "cv_rmse": float(np.mean(rmse_scores)),
-            "cv_rmse_std": float(np.std(rmse_scores)),
-            "cv_mae": float(np.mean(mae_scores)),
-            "cv_mae_std": float(np.std(mae_scores)),
-            "cv_r2": float(np.mean(r2_scores)),
-            "cv_r2_std": float(np.std(r2_scores)),
+            "cv_accuracy": float(np.mean(accuracy_scores)),
+            "cv_accuracy_std": float(np.std(accuracy_scores)),
+            "cv_balanced_accuracy": float(np.mean(balanced_accuracy_scores)),
+            "cv_balanced_accuracy_std": float(np.std(balanced_accuracy_scores)),
+            "cv_f1_macro": float(np.mean(f1_macro_scores)),
+            "cv_f1_macro_std": float(np.std(f1_macro_scores)),
+            "cv_f1_weighted": float(np.mean(f1_weighted_scores)),
+            "cv_f1_weighted_std": float(np.std(f1_weighted_scores)),
+            "cv_precision": float(np.mean(precision_scores)),
+            "cv_precision_std": float(np.std(precision_scores)),
+            "cv_recall": float(np.mean(recall_scores)),
+            "cv_recall_std": float(np.std(recall_scores)),
             "train_time_sec": float(np.mean(train_times)),
         }
 
@@ -663,22 +1152,36 @@ class XGBoostEvaluator(BaseFeatureEvaluator):
 class MultiModelFeatureEvaluator:
     """複数モデルでの特徴量評価を統合管理するクラス"""
 
-    def __init__(self, models: List[str]):
+    def __init__(
+        self,
+        models: List[str],
+        enable_optuna: bool = False,
+        n_trials: int = 50,
+        timeout: Optional[int] = None,
+    ):
         """
         初期化
 
         Args:
             models: 評価するモデルのリスト ['lightgbm', 'xgboost']
+            enable_optuna: Optuna最適化を有効化
+            n_trials: Optunaの試行回数
+            timeout: Optuna最適化のタイムアウト（秒）
         """
         self.models = models
         self.evaluators = {}
         self.all_results = {}
+        self.enable_optuna = enable_optuna
 
         # 評価器を初期化
         if "lightgbm" in models:
-            self.evaluators["lightgbm"] = LightGBMEvaluator()
+            self.evaluators["lightgbm"] = LightGBMEvaluator(
+                enable_optuna, n_trials, timeout
+            )
         if "xgboost" in models:
-            self.evaluators["xgboost"] = XGBoostEvaluator()
+            self.evaluators["xgboost"] = XGBoostEvaluator(
+                enable_optuna, n_trials, timeout
+            )
 
     def run_evaluation(self, symbol: str = "BTC/USDT:USDT", limit: int = 2000) -> Dict:
         """
@@ -740,7 +1243,7 @@ class MultiModelFeatureEvaluator:
                     "model_name": model_name,
                     "data_samples": len(X),
                     "symbol": symbol,
-                    "target": "return_1h",
+                    "target": "3class_classification",
                     "model_params": evaluator.model_params,
                     "scenarios": model_results["scenarios"],
                     "recommendation": model_results["recommendation"],
@@ -838,13 +1341,15 @@ class MultiModelFeatureEvaluator:
                 )
             )
 
-        # 性能変化を計算
+        # 性能変化を計算（Accuracyベース）
         if results["baseline"]:
-            baseline_rmse = results["baseline"]["cv_rmse"]
+            baseline_accuracy = results["baseline"]["cv_accuracy"]
             for key in results:
                 if key != "baseline" and results[key]:
-                    scenario_rmse = results[key]["cv_rmse"]
-                    change_pct = ((scenario_rmse - baseline_rmse) / baseline_rmse) * 100
+                    scenario_accuracy = results[key]["cv_accuracy"]
+                    change_pct = (
+                        (scenario_accuracy - baseline_accuracy) / baseline_accuracy
+                    ) * 100
                     results[key]["performance_change_pct"] = float(change_pct)
 
         # 推奨事項生成
@@ -861,10 +1366,8 @@ class MultiModelFeatureEvaluator:
             results: 評価結果
         """
         try:
-            # results/feature_analysisディレクトリのパス（フラット構造）
-            output_dir = (
-                Path(__file__).parent.parent.parent / "results" / "feature_analysis"
-            )
+            # results/feature_analysisディレクトリのパス（backendディレクトリ直下）
+            output_dir = Path(__file__).parent.parent.parent / "results" / "feature_analysis"
             output_dir.mkdir(parents=True, exist_ok=True)
 
             # JSON保存
@@ -881,9 +1384,9 @@ class MultiModelFeatureEvaluator:
                     row = {
                         "scenario": key,
                         "n_features": scenario.get("n_features"),
-                        "cv_rmse": scenario.get("cv_rmse"),
-                        "cv_mae": scenario.get("cv_mae"),
-                        "cv_r2": scenario.get("cv_r2"),
+                        "cv_accuracy": scenario.get("cv_accuracy"),
+                        "cv_f1_weighted": scenario.get("cv_f1_weighted"),
+                        "cv_balanced_accuracy": scenario.get("cv_balanced_accuracy"),
                         "train_time_sec": scenario.get("train_time_sec"),
                         "performance_change_pct": scenario.get(
                             "performance_change_pct", 0.0
@@ -903,10 +1406,8 @@ class MultiModelFeatureEvaluator:
     def _save_integrated_results(self):
         """統合結果を保存"""
         try:
-            # results/feature_analysisディレクトリのパス（フラット構造）
-            output_dir = (
-                Path(__file__).parent.parent.parent / "results" / "feature_analysis"
-            )
+            # results/feature_analysisディレクトリのパス（backendディレクトリ直下）
+            output_dir = Path(__file__).parent.parent.parent / "results" / "feature_analysis"
             output_dir.mkdir(parents=True, exist_ok=True)
 
             # 統合JSON保存
@@ -930,9 +1431,11 @@ class MultiModelFeatureEvaluator:
                             "model": model_name.upper(),
                             "scenario": scenario_key,
                             "n_features": scenario.get("n_features"),
-                            "cv_rmse": scenario.get("cv_rmse"),
-                            "cv_mae": scenario.get("cv_mae"),
-                            "cv_r2": scenario.get("cv_r2"),
+                            "cv_accuracy": scenario.get("cv_accuracy"),
+                            "cv_f1_weighted": scenario.get("cv_f1_weighted"),
+                            "cv_balanced_accuracy": scenario.get(
+                                "cv_balanced_accuracy"
+                            ),
                             "train_time_sec": scenario.get("train_time_sec"),
                             "performance_change_pct": scenario.get(
                                 "performance_change_pct", 0.0
@@ -965,7 +1468,8 @@ class MultiModelFeatureEvaluator:
         print("【モデル別ベースライン性能比較】")
         print("-" * 80)
         print(
-            f"{'モデル':<15} {'RMSE':<12} {'MAE':<12} {'R2':<10} {'学習時間(秒)':<15}"
+            f"{'モデル':<15} {'Accuracy':<12} {'F1(Weight)':<12} "
+            f"{'Bal.Acc':<10} {'学習時間(秒)':<15}"
         )
         print("-" * 80)
 
@@ -973,8 +1477,10 @@ class MultiModelFeatureEvaluator:
             baseline = result.get("scenarios", {}).get("baseline", {})
             if baseline:
                 print(
-                    f"{model_name.upper():<15} {baseline['cv_rmse']:<12.6f} "
-                    f"{baseline['cv_mae']:<12.6f} {baseline['cv_r2']:<10.4f} "
+                    f"{model_name.upper():<15} "
+                    f"{baseline['cv_accuracy']:<12.4f} "
+                    f"{baseline['cv_f1_weighted']:<12.4f} "
+                    f"{baseline['cv_balanced_accuracy']:<10.4f} "
                     f"{baseline['train_time_sec']:<15.2f}"
                 )
 
@@ -1045,6 +1551,25 @@ def parse_arguments():
         "--limit", type=int, default=2000, help="データ取得件数 (デフォルト: 2000)"
     )
 
+    # Optuna関連の引数
+    parser.add_argument(
+        "--enable-optuna",
+        action="store_true",
+        help="Optunaによるハイパーパラメーター最適化を有効化",
+    )
+    parser.add_argument(
+        "--n-trials",
+        type=int,
+        default=50,
+        help="Optunaの試行回数（デフォルト: 50）",
+    )
+    parser.add_argument(
+        "--optuna-timeout",
+        type=int,
+        default=None,
+        help="Optuna最適化のタイムアウト（秒）",
+    )
+
     return parser.parse_args()
 
 
@@ -1062,8 +1587,22 @@ def main():
 
         logger.info(f"評価対象モデル: {', '.join([m.upper() for m in models])}")
 
+        # Optuna有効時のログ出力
+        if args.enable_optuna:
+            logger.info("=" * 80)
+            logger.info("🚀 Optuna最適化を有効化")
+            logger.info(f"試行回数: {args.n_trials}")
+            if args.optuna_timeout:
+                logger.info(f"タイムアウト: {args.optuna_timeout}秒")
+            logger.info("=" * 80)
+
         # 評価実行
-        evaluator = MultiModelFeatureEvaluator(models)
+        evaluator = MultiModelFeatureEvaluator(
+            models=models,
+            enable_optuna=args.enable_optuna,
+            n_trials=args.n_trials,
+            timeout=args.optuna_timeout,
+        )
         evaluator.run_evaluation(symbol=args.symbol, limit=args.limit)
 
     except Exception as e:

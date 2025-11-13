@@ -37,7 +37,7 @@ def evaluate_model_predictions(
         include_confusion_matrix=True,
         include_classification_report=True,
         average_method="weighted",
-        zero_division="0",
+        zero_division=0,
     )
 
     metrics_calculator = MetricsCalculator(config)
