@@ -99,11 +99,14 @@ class CommonFeatureEvaluator:
                 fr_df = self.fr_repo.to_dataframe(
                     records=fr_records,
                     column_mapping={
-                        "funding_timestamp": "funding_timestamp",
+                        "funding_timestamp": "timestamp",  # timestampに統一
                         "funding_rate": "funding_rate",
                     },
-                    index_column="funding_timestamp",
+                    index_column="timestamp",  # インデックス名も統一
                 )
+                # funding_timestampカラムが残っている場合は削除
+                if "funding_timestamp" in fr_df.columns:
+                    fr_df = fr_df.drop(columns=["funding_timestamp"])
             else:
                 fr_df = None
         except Exception as e:  # pragma: no cover - ロバストネス目的

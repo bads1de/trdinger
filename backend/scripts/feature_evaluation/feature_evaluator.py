@@ -109,7 +109,11 @@ class FeatureEvaluator:
 
         # タイムスタンプ付きサブディレクトリを作成
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # 絶対パスに変換（相対パスの場合）
         base_output_dir = Path(config.output_dir)
+        if not base_output_dir.is_absolute():
+            # backend/results/... の場合、backendディレクトリからの相対パス
+            base_output_dir = Path(__file__).parent.parent.parent / config.output_dir.replace("backend/", "")
         self.output_dir = base_output_dir / f"feature_eval_{timestamp}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -876,11 +880,16 @@ def main() -> None:
             # 評価器初期化
             evaluator = FeatureEvaluator(common_evaluator, config)
 
-            # 特徴量準備
+            # 特徴量準備（不要なカラムを除外）
+            exclude_cols = [
+                "open", "high", "low", "close", "volume",
+                "returns", "funding_timestamp",  # 中間計算用カラムを除外
+                "timestamp",  # タイムスタンプも除外
+            ]
             feature_cols = [
                 col
                 for col in features_df.columns
-                if col not in ["open", "high", "low", "close", "volume"]
+                if col not in exclude_cols
             ]
             X = features_df[feature_cols]
 
