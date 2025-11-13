@@ -123,12 +123,7 @@ class AdvancedFeatureEngineer:
             import pandas_ta as ta
 
             # モメンタム指標（pandas-ta使用）
-            stoch_result = ta.stoch(
-                high=data["high"], low=data["low"], close=data["close"]
-            )
-            if stoch_result is not None and not stoch_result.empty:
-                new_features["stochastic_k"] = stoch_result.iloc[:, 0]  # STOCHk
-                new_features["stochastic_d"] = stoch_result.iloc[:, 1]  # STOCHd
+            # Removed: stochastic_k, stochastic_d (低寄与度特徴量削除: 2025-11-13)
 
             williams_r_result = ta.willr(
                 high=data["high"], low=data["low"], close=data["close"]
@@ -210,8 +205,8 @@ class AdvancedFeatureEngineer:
         windows = [20, 50]  # 標準期間とトレンド期間のみ
 
         for window in windows:
-            # 移動統計（平均と標準偏差のみ）
-            new_features[f"Close_mean_{window}"] = data["close"].rolling(window).mean()
+            # Removed: Close_mean_20, Close_mean_50 (低寄与度特徴量削除: 2025-11-13)
+            # 移動統計（標準偏差のみ残す）
             new_features[f"Close_std_{window}"] = data["close"].rolling(window).std()
 
             # 範囲統計（重要な指標のみ）
@@ -229,11 +224,8 @@ class AdvancedFeatureEngineer:
 
         new_features = {}
 
-        # 変化率（主要期間のみ）
-        for period in [1, 24]:
-            new_features[f"Close_pct_change_{period}"] = data["close"].pct_change(
-                period
-            )
+        # Removed: Close_pct_change_1, Close_pct_change_24 (低寄与度特徴量削除: 2025-11-13)
+        # 変化率特徴量は削除
 
         # 移動平均からの乖離（20期間のみ）
         ma_20 = data["close"].rolling(20).mean()
@@ -255,10 +247,9 @@ class AdvancedFeatureEngineer:
         new_features = {}
 
         # 実現ボラティリティ（20期間のみ）- 高寄与度
-        new_features["Returns"] = data["close"].pct_change()
-        new_features["Realized_Vol_20"] = new_features["Returns"].rolling(
-            20
-        ).std() * np.sqrt(24)
+        # Removed: Returns (低寄与度特徴量削除: 2025-11-13)
+        returns_temp = data["close"].pct_change()
+        new_features["Realized_Vol_20"] = returns_temp.rolling(20).std() * np.sqrt(24)
 
         # Parkinson推定量（20期間のみ）- 高寄与度
         hl_ratio = np.log(data["high"] / data["low"])

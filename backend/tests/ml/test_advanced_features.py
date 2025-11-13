@@ -165,8 +165,8 @@ def test_statistical_features(sample_ohlcv_data):
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
     # 統計的特徴量の列をテスト（削減後の特徴量のみ）
+    # Removed: Close_mean_20, Close_mean_50 (低寄与度特徴量削除: 2025-11-13)
     expected_stat_columns = [
-        'Close_mean_20', 'Close_mean_50',
         'Close_std_20', 'Close_std_50',
         'Close_range_20', 'Close_range_50'
     ]
@@ -181,8 +181,8 @@ def test_time_series_features(sample_ohlcv_data):
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
     # 時系列特徴量の列をテスト（削減後の特徴量のみ）
+    # Removed: Close_pct_change_1, Close_pct_change_24 (低寄与度特徴量削除: 2025-11-13)
     expected_ts_columns = [
-        'Close_pct_change_1', 'Close_pct_change_24',
         'Close_deviation_from_ma_20',
         'Trend_strength_20'
     ]
@@ -197,8 +197,8 @@ def test_volatility_features(sample_ohlcv_data):
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
     # ボラティリティ特徴量の列をテスト（高寄与度のみ）
+    # Removed: Returns (低寄与度特徴量削除: 2025-11-13)
     expected_vol_columns = [
-        'Returns',
         'Realized_Vol_20',
         'Parkinson_Vol_20'
         # Vol_Regime は削除済み（低寄与度）
@@ -298,10 +298,10 @@ def test_feature_count(sample_ohlcv_data):
     original_count = len(sample_ohlcv_data.columns)
     feature_count = len(features.columns)
 
-    # フェーズ2削減後: 約38個の特徴量を追加（低寄与度特徴量削除済み）
-    # 5（元のカラム） + 38 = 43個程度を期待
-    assert feature_count > original_count + 30, \
-        f"Expected more than {original_count + 30} features, got {feature_count}"
+    # 2025-11-13削減後: 約30個の特徴量を追加（低寄与度特徴量17個削除済み）
+    # 5（元のカラム） + 30 = 35個程度を期待
+    assert feature_count > original_count + 20, \
+        f"Expected more than {original_count + 20} features, got {feature_count}"
 
 
 def test_no_duplicate_columns(sample_ohlcv_data):

@@ -256,23 +256,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # 局所的極値の検出（将来データを参照しない安全な定義）
-            window = 5
-            rolling_min = df["close"].rolling(window=window, min_periods=window).min()
-            rolling_max = df["close"].rolling(window=window, min_periods=window).max()
-            new_features["Local_Min"] = (df["close"] == rolling_min).astype(float)
-            new_features["Local_Max"] = (df["close"] == rolling_max).astype(float)
+            # Removed: Local_Min, Local_Max, Resistance_Level
+            # (低寄与度特徴量削除: 2025-11-13)
+            # これらの特徴量はモデルの予測精度向上に寄与しないため削除
 
-            # 簡易的なサポート・レジスタントレベル
+            # 簡易的なサポート・レジスタントレベル（計算用に残す）
             window_size = 20
             support_level = df["close"].rolling(window=window_size, min_periods=1).min()
             resistance_level = (
                 df["close"].rolling(window=window_size, min_periods=1).max()
             )
-
-            # 削除: Support_Level - 理由: Near_Supportで代替可能（分析日: 2025-01-07）
-            # new_features["Support_Level"] = support_level
-            new_features["Resistance_Level"] = resistance_level
 
             # 価格がサポート/レジスタントに近いことを示す特徴量
             new_features["Near_Support"] = self.safe_ratio_calculation(

@@ -867,6 +867,12 @@ def main() -> None:
                 preset_name=config.preset,
             )
 
+            # ラベルを数値に変換（"UP" -> 2, "RANGE" -> 1, "DOWN" -> 0）
+            # LightGBM多クラス分類では0から始まる必要がある
+            label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+            labels_numeric = labels.map(label_mapping)
+            logger.info(f"ラベルを数値に変換: {label_mapping}")
+
             # 評価器初期化
             evaluator = FeatureEvaluator(common_evaluator, config)
 
@@ -879,7 +885,7 @@ def main() -> None:
             X = features_df[feature_cols]
 
             # NaN除去
-            combined_df = pd.concat([X, labels.rename("label")], axis=1).dropna()
+            combined_df = pd.concat([X, labels_numeric.rename("label")], axis=1).dropna()
             X_clean = combined_df[feature_cols]
             y_clean = combined_df["label"]
 

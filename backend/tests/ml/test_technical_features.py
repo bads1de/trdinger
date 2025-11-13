@@ -148,6 +148,7 @@ def test_pattern_features(sample_ohlcv_data):
     result = calculator.calculate_pattern_features(sample_ohlcv_data, lookback_periods)
 
     # 期待される特徴量（削減後：Normalized_Volatilityは削除済み）
+    # Removed: Local_Min, Local_Max, Resistance_Level (低寄与度特徴量削除: 2025-11-13)
     expected_features = [
         "Stochastic_K",
         "Stochastic_Divergence",
@@ -157,9 +158,6 @@ def test_pattern_features(sample_ohlcv_data):
         "BB_Position",
         "MA_Long",
         "ATR",
-        "Local_Min",
-        "Local_Max",
-        "Resistance_Level",
         "Near_Support",
         "Near_Resistance",
     ]

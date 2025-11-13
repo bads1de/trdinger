@@ -119,11 +119,12 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
                 )
 
         # VWAP（24hのみ - 最も重要）
+        # Removed: vwap_24h (低寄与度特徴量削除: 2025-11-13)
+        # price_vs_vwap_24hは維持（相対値として重要）
         typical_price = (df["high"] + df["low"] + df["close"]) / 3
         vwap_24 = (typical_price * df["volume"]).rolling(24).sum() / df[
             "volume"
         ].rolling(24).sum()
-        new_features["vwap_24h"] = vwap_24
         new_features["price_vs_vwap_24h"] = (df["close"] - vwap_24) / vwap_24
 
         # 出来高プロファイル
@@ -237,31 +238,10 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         # 新しい特徴量を辞書で収集
         new_features = {}
 
-        # RSI（14期間のみ - 標準）
+        # Removed: rsi_14, bb_upper_20, bb_lower_20, bb_position_20 
+        # (低寄与度特徴量削除: 2025-11-13)
+        # これらの特徴量はtechnical_features.pyの標準版を使用
         import pandas_ta as ta
-
-        rsi_result = ta.rsi(df["close"], length=14)
-        if rsi_result is not None:
-            new_features["rsi_14"] = rsi_result.fillna(50.0)
-        else:
-            new_features["rsi_14"] = 50.0
-
-        # ボリンジャーバンド（20期間のみ - 標準）
-        bb_result = ta.bbands(df["close"], length=20, std=2)
-        if bb_result is not None:
-            new_features["bb_upper_20"] = bb_result["BBU_20_2.0"].fillna(df["close"])
-            new_features["bb_lower_20"] = bb_result["BBL_20_2.0"].fillna(df["close"])
-            # BB Position計算
-            bb_width = new_features["bb_upper_20"] - new_features["bb_lower_20"]
-            new_features["bb_position_20"] = (
-                ((df["close"] - new_features["bb_lower_20"]) / (bb_width + 1e-10))
-                .clip(0, 1)
-                .fillna(0.5)
-            )
-        else:
-            new_features["bb_upper_20"] = df["close"]
-            new_features["bb_lower_20"] = df["close"]
-            new_features["bb_position_20"] = 0.5
 
         # MACD（pandas-ta使用）
         macd_result = ta.macd(df["close"], fast=12, slow=26, signal=9)
