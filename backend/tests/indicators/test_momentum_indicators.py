@@ -17,21 +17,25 @@ class TestMomentumIndicators:
         """テスト前のセットアップ"""
         self.indicator_service = TechnicalIndicatorService()
         # 十分なデータを用意
-        self.valid_data = pd.DataFrame({
-            "open": np.random.uniform(90, 110, 100),
-            "high": np.random.uniform(100, 120, 100),
-            "low": np.random.uniform(80, 100, 100),
-            "close": np.random.uniform(90, 110, 100),
-            "volume": np.random.uniform(1000, 5000, 100)
-        })
+        self.valid_data = pd.DataFrame(
+            {
+                "open": np.random.uniform(90, 110, 100),
+                "high": np.random.uniform(100, 120, 100),
+                "low": np.random.uniform(80, 100, 100),
+                "close": np.random.uniform(90, 110, 100),
+                "volume": np.random.uniform(1000, 5000, 100),
+            }
+        )
         # 不十分なデータ
-        self.insufficient_data = pd.DataFrame({
-            "open": [100, 102],
-            "high": [105, 107],
-            "low": [95, 98],
-            "close": [100, 102],
-            "volume": [1000, 1500]
-        })
+        self.insufficient_data = pd.DataFrame(
+            {
+                "open": [100, 102],
+                "high": [105, 107],
+                "low": [95, 98],
+                "close": [100, 102],
+                "volume": [1000, 1500],
+            }
+        )
 
     def test_init(self):
         """初期化のテスト"""
@@ -242,9 +246,7 @@ class TestMomentumIndicators:
 
     def test_negative_values_handling(self):
         """負の値のハンドリングテスト"""
-        negative_data = pd.DataFrame({
-            "close": [-100, -102, -98, -105, -103] * 10
-        })
+        negative_data = pd.DataFrame({"close": [-100, -102, -98, -105, -103] * 10})
 
         result = self.indicator_service.calculate_indicator(
             negative_data, "RSI", {"length": 14}
@@ -254,9 +256,9 @@ class TestMomentumIndicators:
 
     def test_extreme_values(self):
         """極端な値のハンドリングテスト"""
-        extreme_data = pd.DataFrame({
-            "close": [1e10, 1e10 + 1, 1e10 - 1, 1e10 + 2, 1e10] * 10
-        })
+        extreme_data = pd.DataFrame(
+            {"close": [1e10, 1e10 + 1, 1e10 - 1, 1e10 + 2, 1e10] * 10}
+        )
 
         result = self.indicator_service.calculate_indicator(
             extreme_data, "RSI", {"length": 14}

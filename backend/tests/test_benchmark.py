@@ -6,16 +6,14 @@ import pandas as pd
 import numpy as np
 import time
 from datetime import datetime
-from app.services.ml.feature_engineering.advanced_features import AdvancedFeatureEngineer
+from app.services.ml.feature_engineering.advanced_features import (
+    AdvancedFeatureEngineer,
+)
 
 
 def generate_large_sample_data(n_samples=10000):
     """大量のサンプルデータを生成"""
-    dates = pd.date_range(
-        start=datetime(2023, 1, 1),
-        periods=n_samples,
-        freq='1h'
-    )
+    dates = pd.date_range(start=datetime(2023, 1, 1), periods=n_samples, freq="1h")
 
     np.random.seed(42)
     base_price = 50000
@@ -28,17 +26,19 @@ def generate_large_sample_data(n_samples=10000):
         low = base_price - abs(np.random.randn()) * 50
         volume = np.random.randint(100, 10000)
 
-        data.append({
-            'timestamp': date,
-            'open': base_price - change/2,
-            'high': high,
-            'low': low,
-            'close': base_price,
-            'volume': volume
-        })
+        data.append(
+            {
+                "timestamp": date,
+                "open": base_price - change / 2,
+                "high": high,
+                "low": low,
+                "close": base_price,
+                "volume": volume,
+            }
+        )
 
     df = pd.DataFrame(data)
-    df.set_index('timestamp', inplace=True)
+    df.set_index("timestamp", inplace=True)
     return df
 
 
@@ -92,11 +92,15 @@ def benchmark_feature_generation():
     print(f"   データ行数: {final_features.shape[0]}")
 
     # 欠損値の確認
-    missing_ratio = final_features.isnull().sum().sum() / (final_features.shape[0] * final_features.shape[1])
+    missing_ratio = final_features.isnull().sum().sum() / (
+        final_features.shape[0] * final_features.shape[1]
+    )
     print(f"   欠損値比率: {missing_ratio:.2%}")
 
     # 無限値の確認
-    infinite_count = np.isinf(final_features.select_dtypes(include=[np.number])).sum().sum()
+    infinite_count = (
+        np.isinf(final_features.select_dtypes(include=[np.number])).sum().sum()
+    )
     print(f"   無限値数: {infinite_count}")
 
     # NaNの確認

@@ -614,7 +614,7 @@ class FeatureEngineeringService:
         try:
             # 設定からallowlistを取得
             allowlist = unified_config.ml.feature_engineering.feature_allowlist
-            
+
             # allowlistが指定されていない場合は、デフォルトリストまたは全特徴量を使用
             if allowlist is None:
                 # デフォルトリストを使用

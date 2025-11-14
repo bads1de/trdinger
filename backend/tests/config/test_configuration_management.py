@@ -18,11 +18,14 @@ from app.config.unified_config import (
     BacktestConfig,
     LoggingConfig,
 )
+
 # from app.config.config_loader import ConfigLoader  # 存在しないモジュールのためコメントアウト
 # from app.config.config_validator import ConfigValidator  # 存在しないモジュールのためコメントアウト
 
 
-@pytest.mark.skip(reason="GAConfig schema changed - tests need update for fallback_symbol etc")
+@pytest.mark.skip(
+    reason="GAConfig schema changed - tests need update for fallback_symbol etc"
+)
 class TestConfigurationManagementComprehensive:
     """設定管理システム包括的テスト"""
 
@@ -74,13 +77,13 @@ class TestConfigurationManagementComprehensive:
     def test_unified_config_initialization(self):
         """統合設定初期化のテスト"""
         assert unified_config is not None
-        assert hasattr(unified_config, 'app')
-        assert hasattr(unified_config, 'ga')
-        assert hasattr(unified_config, 'auto_strategy')
-        assert hasattr(unified_config, 'ml')
-        assert hasattr(unified_config, 'market')
-        assert hasattr(unified_config, 'backtest')
-        assert hasattr(unified_config, 'logging')
+        assert hasattr(unified_config, "app")
+        assert hasattr(unified_config, "ga")
+        assert hasattr(unified_config, "auto_strategy")
+        assert hasattr(unified_config, "ml")
+        assert hasattr(unified_config, "market")
+        assert hasattr(unified_config, "backtest")
+        assert hasattr(unified_config, "logging")
 
     def test_ga_config_creation_and_validation(self, sample_ga_config_dict):
         """GA設定作成と検証のテスト"""
@@ -147,11 +150,14 @@ class TestConfigurationManagementComprehensive:
     def test_environment_variable_override(self):
         """環境変数オーバーライドのテスト"""
         # 環境変数を一時的に設定
-        with patch.dict(os.environ, {
-            "APP_DEBUG": "false",
-            "GA_POPULATION_SIZE": "100",
-            "ML_TRAINING_EPOCHS": "200",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "APP_DEBUG": "false",
+                "GA_POPULATION_SIZE": "100",
+                "ML_TRAINING_EPOCHS": "200",
+            },
+        ):
             # 設定を再読み込み
             reloaded_config = ConfigLoader.load_config()
 
@@ -212,7 +218,7 @@ class TestConfigurationManagementComprehensive:
         # デフォルト値が適用されていること
         assert ga_config.population_size == 50  # デフォルト値
         assert ga_config.generations == 100  # デフォルト値
-        assert ga_config.mutation_rate == 0.1   # デフォルト値
+        assert ga_config.mutation_rate == 0.1  # デフォルト値
 
     def test_config_file_loading(self):
         """設定ファイル読み込みのテスト"""
@@ -233,7 +239,7 @@ class TestConfigurationManagementComprehensive:
             max_concurrent_experiments: 3
         """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(config_content)
             config_file = f.name
 
@@ -339,9 +345,9 @@ class TestConfigurationManagementComprehensive:
         assert unified_config is not None
 
         # 主要設定が正しく初期化されていること
-        assert hasattr(unified_config, 'app')
-        assert hasattr(unified_config, 'ga')
-        assert hasattr(unified_config, 'ml')
+        assert hasattr(unified_config, "app")
+        assert hasattr(unified_config, "ga")
+        assert hasattr(unified_config, "ml")
 
         # 基本的な設定値が有効であること
         assert unified_config.app.app_name is not None
@@ -352,7 +358,9 @@ class TestConfigurationManagementComprehensive:
 
 
 # TDDアプローチによる設定管理テスト
-@pytest.mark.skip(reason="GAConfig schema changed - tests need update for fallback_symbol etc")
+@pytest.mark.skip(
+    reason="GAConfig schema changed - tests need update for fallback_symbol etc"
+)
 class TestConfigurationManagementTDD:
     """TDDアプローチによる設定管理テスト"""
 
@@ -376,7 +384,6 @@ class TestConfigurationManagementTDD:
         }
 
         config = GAConfig.model_validate(test_config)
-
 
         print("✅ 基本設定検証ワークフローテスト成功")
 
@@ -404,9 +411,9 @@ class TestConfigurationManagementTDD:
     def test_nested_config_structure(self):
         """ネストした設定構造のテスト"""
         # 統合設定のネスト構造をテスト
-        assert hasattr(unified_config, 'app')
-        assert hasattr(unified_config.app, 'app_name')
-        assert hasattr(unified_config, 'ga')
-        assert hasattr(unified_config.ga, 'population_size')
+        assert hasattr(unified_config, "app")
+        assert hasattr(unified_config.app, "app_name")
+        assert hasattr(unified_config, "ga")
+        assert hasattr(unified_config.ga, "population_size")
 
         print("✅ ネストした設定構造のテスト成功")

@@ -183,7 +183,9 @@ class UnifiedFeatureAnalyzer:
                 timeframe=self.timeframe,
                 lookback_days=90,  # デフォルト値
                 threshold=0.2,  # 下位20%
-                output_dir=str(self.output_dir),  # フラット構造: サブディレクトリを作らない
+                output_dir=str(
+                    self.output_dir
+                ),  # フラット構造: サブディレクトリを作らない
             ) as detector:
                 detector.run_analysis()
 

@@ -73,7 +73,9 @@ class TestOptunaOptimizer:
         assert abs(result.best_params["x"] - 2.0) < 5.0
         assert abs(result.best_params["y"] - 5) < 20
 
-    def test_optimize_with_multiple_parameters(self, optimizer, complex_parameter_space):
+    def test_optimize_with_multiple_parameters(
+        self, optimizer, complex_parameter_space
+    ):
         """正常系: 複数パラメータの最適化"""
 
         def objective(params: Dict[str, Any]) -> float:
@@ -306,7 +308,11 @@ class TestErrorHandling:
             return params["x"]
 
         # Optunaは例外を処理して最適化を継続
-        result = optimizer.optimize(objective_function=failing_objective, parameter_space=parameter_space, n_calls=10)
+        result = optimizer.optimize(
+            objective_function=failing_objective,
+            parameter_space=parameter_space,
+            n_calls=10,
+        )
 
         # 一部の試行は成功しているはず
         assert result.total_evaluations <= 10

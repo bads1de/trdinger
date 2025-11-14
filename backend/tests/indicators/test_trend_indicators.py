@@ -42,6 +42,7 @@ class TestTrendIndicators:
 
         # データ不足でPandasTAErrorが発生する
         from app.services.indicators.utils import PandasTAError
+
         with pytest.raises(PandasTAError):
             TrendIndicators.sma(data["close"], length=14)
 
@@ -83,7 +84,9 @@ class TestTrendIndicators:
 
     def test_calculate_wma_missing_parameters(self):
         """パラメータ不足のWMAテスト"""
-        with pytest.raises(ValueError, match="Either 'data' or 'close' must be provided"):
+        with pytest.raises(
+            ValueError, match="Either 'data' or 'close' must be provided"
+        ):
             TrendIndicators.wma(length=5)
 
     def test_calculate_trima_valid_data(self):
@@ -103,7 +106,9 @@ class TestTrendIndicators:
             {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
         )
 
-        result = TrendIndicators.alma(data["close"], length=10, sigma=6.0, distribution_offset=0.85)
+        result = TrendIndicators.alma(
+            data["close"], length=10, sigma=6.0, distribution_offset=0.85
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(data)
@@ -179,9 +184,7 @@ class TestTrendIndicators:
 
     def test_calculate_kama_valid_data(self):
         """有効データでのKAMA計算テスト"""
-        data = pd.DataFrame(
-            {"close": list(range(100, 150))}  # 50ポイントのデータ
-        )
+        data = pd.DataFrame({"close": list(range(100, 150))})  # 50ポイントのデータ
 
         # 十分なデータがあれば計算可能
         result = TrendIndicators.kama(data["close"], length=10)
@@ -219,7 +222,9 @@ class TestTrendIndicators:
         data_close = pd.DataFrame({"close": [100, 101, 102]})
         data_volume = pd.DataFrame({"volume": [1000, 1100]})  # 長さが異なる
 
-        with pytest.raises(ValueError, match="close and volume series must share the same length"):
+        with pytest.raises(
+            ValueError, match="close and volume series must share the same length"
+        ):
             TrendIndicators.vwma(data_close["close"], data_volume["volume"], length=3)
 
     def test_calculate_linreg_valid_data(self):
@@ -270,7 +275,36 @@ class TestTrendIndicators:
     def test_calculate_amat_valid_data(self):
         """有効データでのAMAT計算テスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                ]
+            }
         )
 
         # AMATは十分なデータがあれば計算可能
@@ -318,7 +352,9 @@ class TestTrendIndicators:
             }
         )
 
-        result = TrendIndicators.vortex(data["high"], data["low"], data["close"], length=5)
+        result = TrendIndicators.vortex(
+            data["high"], data["low"], data["close"], length=5
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 2
@@ -333,7 +369,9 @@ class TestTrendIndicators:
         data_close = pd.DataFrame({"close": [100, 101, 102]})
 
         # 長さが一致していれば計算可能
-        result = TrendIndicators.vortex(data_high["high"], data_low["low"], data_close["close"], length=3)
+        result = TrendIndicators.vortex(
+            data_high["high"], data_low["low"], data_close["close"], length=3
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 2
@@ -348,6 +386,7 @@ class TestTrendIndicators:
 
         # 無効なデータ型でもPandasTAErrorが発生
         from app.services.indicators.utils import PandasTAError
+
         with pytest.raises(PandasTAError):
             TrendIndicators.sma(data["close"], length=5)
 
@@ -383,6 +422,7 @@ class TestTrendIndicators:
 
         # 単一値でもPandasTAErrorが発生
         from app.services.indicators.utils import PandasTAError
+
         with pytest.raises(PandasTAError):
             TrendIndicators.sma(data["close"], length=5)
 

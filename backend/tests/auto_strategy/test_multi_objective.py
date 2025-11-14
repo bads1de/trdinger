@@ -29,7 +29,7 @@ class TestEvolutionRunnerMultiObjective:
                 self.values = values
 
             def __delattr__(self, name):
-                if name == 'values':
+                if name == "values":
                     self.valid = False
                     self.values = ()
                 else:
@@ -41,8 +41,8 @@ class TestEvolutionRunnerMultiObjective:
             # fitnessオブジェクトを作成
             try:
                 fitness = MockFitness(
-                    valid=getattr(ind.fitness, 'valid', True),
-                    values=getattr(ind.fitness, 'values', ())
+                    valid=getattr(ind.fitness, "valid", True),
+                    values=getattr(ind.fitness, "values", ()),
                 )
             except AttributeError:
                 fitness = MockFitness(valid=True, values=())
@@ -51,9 +51,11 @@ class TestEvolutionRunnerMultiObjective:
             return cloned
 
         toolbox.clone = Mock(side_effect=clone_func)
+
         # mapは関数をリストの各要素に適用
         def mock_map(func, items):
             return [func(item) for item in items]
+
         toolbox.map = mock_map
         toolbox.evaluate = Mock(return_value=(1.5, 0.8, 0.2))  # 多目的フィットネス
 
@@ -112,11 +114,12 @@ class TestEvolutionRunnerMultiObjective:
         # モックの設定 - return_value not side_effect, and return the actual list
         def mock_select(pop, k):
             return pop[:k]
+
         mock_toolbox.select = mock_select
 
         with patch(
             "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
-            side_effect=lambda pop, k: pop[:k]  # NSGA2選択のモック
+            side_effect=lambda pop, k: pop[:k],  # NSGA2選択のモック
         ) as mock_sel_nsga2:
             with patch(
                 "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
@@ -153,11 +156,12 @@ class TestEvolutionRunnerMultiObjective:
 
         def mock_select(pop, k):
             return pop[:k]
+
         mock_toolbox.select = mock_select
 
         with patch(
             "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
-            side_effect=lambda pop, k: pop[:k]
+            side_effect=lambda pop, k: pop[:k],
         ):
             with patch(
                 "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
@@ -179,9 +183,7 @@ class TestEvolutionRunnerMultiObjective:
 
         mock_toolbox.select.side_effect = [mock_population, mock_population]
 
-        with patch(
-            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
-        ):
+        with patch("app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"):
             with patch(
                 "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ):
@@ -291,9 +293,7 @@ class TestEvolutionRunnerMultiObjective:
 
         mock_toolbox.select.side_effect = [mock_population]
 
-        with patch(
-            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
-        ):
+        with patch("app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"):
             with patch(
                 "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ):
@@ -313,6 +313,7 @@ class TestEvolutionRunnerMultiObjective:
         # 交叉と突然変異が発生するように設定
         def mock_select(pop, k):
             return pop[:k]
+
         mock_toolbox.select = mock_select
 
         with patch(
@@ -321,7 +322,7 @@ class TestEvolutionRunnerMultiObjective:
         ):  # 確率以下
             with patch(
                 "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
-                side_effect=lambda pop, k: pop[:k]
+                side_effect=lambda pop, k: pop[:k],
             ):
                 with patch(
                     "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
@@ -329,7 +330,9 @@ class TestEvolutionRunnerMultiObjective:
                     with patch(
                         "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
                     ):
-                        runner.run_multi_objective_evolution(mock_population, mock_config)
+                        runner.run_multi_objective_evolution(
+                            mock_population, mock_config
+                        )
 
         # 交叉と突然変異が呼ばれたことを確認
         assert mock_toolbox.mate.called

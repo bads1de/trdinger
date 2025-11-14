@@ -59,8 +59,7 @@ def mock_backtest_stats():
         trades_data.append(
             {
                 "EntryTime": pd.Timestamp("2024-01-01") + timedelta(hours=i * 10),
-                "ExitTime": pd.Timestamp("2024-01-01")
-                + timedelta(hours=i * 10 + 5),
+                "ExitTime": pd.Timestamp("2024-01-01") + timedelta(hours=i * 10 + 5),
                 "EntryPrice": 100.0 + i,
                 "ExitPrice": 100.0 + i + (pnl / 10),
                 "Size": 1.0,

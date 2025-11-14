@@ -1050,11 +1050,11 @@ class MomentumIndicators:
         except Exception:
             # pandas-taが利用できない場合のフォールバック実装
             # Williams %R = [(highest high - current close) / (highest high - lowest low)] * -100
-            
+
             # 過去length期間の最高値と最低値を計算
             highest_high = high.rolling(window=length, min_periods=1).max()
             lowest_low = low.rolling(window=length, min_periods=1).min()
-            
+
             # Williams %R計算
             result = ((highest_high - close) / (highest_high - lowest_low)) * -100
 
@@ -1089,13 +1089,13 @@ class MomentumIndicators:
         except Exception:
             # pandas-taが利用できない場合のフォールバック実装
             # PSY = (上昇日数 / 総日数) * 100
-            
+
             # 価格の変化を計算
             price_change = close.diff()
-            
+
             # 上昇日数をカウント
             up_days = (price_change > 0).rolling(window=length, min_periods=1).sum()
-            
+
             # PSY計算
             result = (up_days / length) * 100
 

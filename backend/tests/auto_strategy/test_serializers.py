@@ -79,7 +79,10 @@ def base_strategy_gene() -> StrategyGene:
 
 # a. Round-trip 一貫性: Dict / JSON
 
-def test_strategy_gene_round_trip_dict(serializer: GeneSerializer, base_strategy_gene: StrategyGene) -> None:
+
+def test_strategy_gene_round_trip_dict(
+    serializer: GeneSerializer, base_strategy_gene: StrategyGene
+) -> None:
     """DictConverter経由のラウンドトリップで主要フィールドが保持されること."""
     data = serializer.strategy_gene_to_dict(base_strategy_gene)
     restored = serializer.dict_to_strategy_gene(data, StrategyGene)
@@ -127,7 +130,9 @@ def test_strategy_gene_round_trip_dict(serializer: GeneSerializer, base_strategy
     assert restored.metadata == base_strategy_gene.metadata
 
 
-def test_strategy_gene_round_trip_json(serializer: GeneSerializer, base_strategy_gene: StrategyGene) -> None:
+def test_strategy_gene_round_trip_json(
+    serializer: GeneSerializer, base_strategy_gene: StrategyGene
+) -> None:
     """JsonConverter経由のラウンドトリップ."""
     json_str = serializer.strategy_gene_to_json(base_strategy_gene)
     loaded: Dict[str, Any] = json.loads(json_str)
@@ -198,6 +203,7 @@ def test_position_sizing_gene_round_trip_via_dict(serializer: GeneSerializer) ->
 
 # b. 部分的/古いスキーマへの耐性
 
+
 @pytest.mark.parametrize(
     "extra_field_key, extra_field_value",
     [
@@ -206,7 +212,10 @@ def test_position_sizing_gene_round_trip_via_dict(serializer: GeneSerializer) ->
     ],
 )
 def test_decoder_ignores_unknown_fields_and_applies_defaults(
-    serializer: GeneSerializer, base_strategy_gene: StrategyGene, extra_field_key: str, extra_field_value: Any
+    serializer: GeneSerializer,
+    base_strategy_gene: StrategyGene,
+    extra_field_key: str,
+    extra_field_value: Any,
 ) -> None:
     """未知フィールド無視 + デフォルト補完挙動をドキュメント化."""
     data = serializer.strategy_gene_to_dict(base_strategy_gene)
@@ -234,6 +243,7 @@ def test_decoder_uses_default_when_data_empty(serializer: GeneSerializer) -> Non
 
 # c. エラー・バリデーション系
 
+
 def test_invalid_tpsl_dict_raises_or_falls_back(serializer: GeneSerializer) -> None:
     """
     TPSL dict が明らかに不正な場合の挙動を固定.
@@ -254,7 +264,9 @@ def test_invalid_tpsl_dict_raises_or_falls_back(serializer: GeneSerializer) -> N
     assert result is None or isinstance(result, TPSLGene)
 
 
-def test_invalid_position_sizing_dict_raises_or_falls_back(serializer: GeneSerializer) -> None:
+def test_invalid_position_sizing_dict_raises_or_falls_back(
+    serializer: GeneSerializer,
+) -> None:
     """
     PositionSizing dict が不正な場合の挙動.
 
@@ -271,6 +283,7 @@ def test_invalid_position_sizing_dict_raises_or_falls_back(serializer: GeneSeria
 
 
 # d. List/ネスト構造: ListEncoder/ListDecoder 安定性
+
 
 def test_strategy_list_encoding_and_decoding_is_stable(
     serializer: GeneSerializer, base_strategy_gene: StrategyGene
@@ -306,7 +319,9 @@ def test_strategy_list_encoding_and_decoding_is_stable(
         assert isinstance(restored.position_sizing_gene, PositionSizingGene)
 
 
-def test_list_decoder_fallback_to_default_on_short_list(serializer: GeneSerializer) -> None:
+def test_list_decoder_fallback_to_default_on_short_list(
+    serializer: GeneSerializer,
+) -> None:
     """短すぎるエンコードリストではデフォルトStrategyGeneにフォールバックする仕様を固定."""
     restored = serializer.from_list([0.1, 0.2], StrategyGene)
     assert isinstance(restored, StrategyGene)
@@ -326,6 +341,7 @@ def test_list_decoder_generates_metadata(serializer: GeneSerializer) -> None:
 
 
 # 追加: indicator/condition 単体の変換
+
 
 def test_indicator_gene_single_round_trip(serializer: GeneSerializer) -> None:
     """indicator_gene_to_dict / dict_to_indicator_gene のラウンドトリップ."""

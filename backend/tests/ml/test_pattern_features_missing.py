@@ -9,9 +9,12 @@ import numpy as np
 # TechnicalFeatureCalculatorを直接インポート（パスを修正）
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 
-from app.services.ml.feature_engineering.technical_features import TechnicalFeatureCalculator
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+
+from app.services.ml.feature_engineering.technical_features import (
+    TechnicalFeatureCalculator,
+)
 
 
 class TestCalculatePatternFeaturesMissing:
@@ -21,16 +24,18 @@ class TestCalculatePatternFeaturesMissing:
     def sample_price_data(self):
         """サンプル価格データ"""
         np.random.seed(42)
-        dates = pd.date_range(start='2023-01-01', end='2023-01-31', freq='D')
+        dates = pd.date_range(start="2023-01-01", end="2023-01-31", freq="D")
 
-        return pd.DataFrame({
-            'timestamp': dates,
-            'Open': 10000 + np.random.randn(len(dates)) * 100,
-            'High': 10100 + np.random.randn(len(dates)) * 150,
-            'Low': 9900 + np.random.randn(len(dates)) * 150,
-            'Close': 10000 + np.random.randn(len(dates)) * 100,
-            'Volume': 1000 + np.random.randint(100, 1000, len(dates)),
-        })
+        return pd.DataFrame(
+            {
+                "timestamp": dates,
+                "Open": 10000 + np.random.randn(len(dates)) * 100,
+                "High": 10100 + np.random.randn(len(dates)) * 150,
+                "Low": 9900 + np.random.randn(len(dates)) * 150,
+                "Close": 10000 + np.random.randn(len(dates)) * 100,
+                "Volume": 1000 + np.random.randint(100, 1000, len(dates)),
+            }
+        )
 
     def test_calculate_pattern_features_method_exists_after_fix(self):
         """calculate_pattern_featuresメソッドが実装されていることを確認"""
@@ -39,12 +44,15 @@ class TestCalculatePatternFeaturesMissing:
         calculator = TechnicalFeatureCalculator()
 
         # メソッドが存在することを確認（修正後の確認）
-        assert hasattr(calculator, 'calculate_pattern_features'), \
-            "calculate_pattern_featuresメソッドが実装されていません"
+        assert hasattr(
+            calculator, "calculate_pattern_features"
+        ), "calculate_pattern_featuresメソッドが実装されていません"
 
         print("[ OK ] calculate_pattern_featuresメソッドが正常に実装されています")
 
-    def test_calculate_pattern_features_functionality_after_fix(self, sample_price_data):
+    def test_calculate_pattern_features_functionality_after_fix(
+        self, sample_price_data
+    ):
         """calculate_pattern_featuresメソッドの機能テスト（修正後）"""
         print("[ CHECK ] calculate_pattern_featuresメソッドの機能をテスト...")
 
@@ -52,7 +60,9 @@ class TestCalculatePatternFeaturesMissing:
 
         # 実際の計算を実行
         lookback_periods = {"short_ma": 10, "long_ma": 50}
-        result = calculator.calculate_pattern_features(sample_price_data, lookback_periods)
+        result = calculator.calculate_pattern_features(
+            sample_price_data, lookback_periods
+        )
 
         # 結果が適切な形式であること
         assert isinstance(result, pd.DataFrame)
@@ -60,17 +70,26 @@ class TestCalculatePatternFeaturesMissing:
 
         # 新しく追加された特徴量が含まれていること
         expected_features = [
-            "Stochastic_K", "Stochastic_D", "Stochastic_Divergence",
-            "BB_Upper", "BB_Middle", "BB_Lower", "BB_Position",
+            "Stochastic_K",
+            "Stochastic_D",
+            "Stochastic_Divergence",
+            "BB_Upper",
+            "BB_Middle",
+            "BB_Lower",
+            "BB_Position",
             "MA_Long",  # MA_Short は price_features.py の ma_10 と重複のため削除済み
             "ATR",  # Normalized_Volatilityは未実装のため削除
-            "Local_Min", "Local_Max", # "Support_Level",  # 現行では未提供
+            "Local_Min",
+            "Local_Max",  # "Support_Level",  # 現行では未提供
             "Resistance_Level",
-            "Near_Support", "Near_Resistance"
+            "Near_Support",
+            "Near_Resistance",
         ]
 
         for feature in expected_features:
-            assert feature in result.columns, f"{feature}が特徴量として追加されていません"
+            assert (
+                feature in result.columns
+            ), f"{feature}が特徴量として追加されていません"
 
         print("[ OK ] calculate_pattern_featuresメソッドが正常に動作")
 
@@ -81,7 +100,7 @@ class TestCalculatePatternFeaturesMissing:
         calculator = TechnicalFeatureCalculator()
 
         # calculate_featuresメソッドが存在すること
-        assert hasattr(calculator, 'calculate_features')
+        assert hasattr(calculator, "calculate_features")
 
         # 実際に計算が動作すること
         config = {"lookback_periods": {}}
@@ -97,22 +116,31 @@ class TestCalculatePatternFeaturesMissing:
 
         # 実際の呼び出し元を確認（特徴量エンジニアリングサービス）
         try:
-            from backend.app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
+            from backend.app.services.ml.feature_engineering.feature_engineering_service import (
+                FeatureEngineeringService,
+            )
+
             service = FeatureEngineeringService()
 
             # 実際に存在するメソッドを確認
-            available_methods = [method for method in dir(service) if not method.startswith('_')]
-            print(f"[ OK ] FeatureEngineeringServiceの利用可能メソッド: {len(available_methods)}個")
+            available_methods = [
+                method for method in dir(service) if not method.startswith("_")
+            ]
+            print(
+                f"[ OK ] FeatureEngineeringServiceの利用可能メソッド: {len(available_methods)}個"
+            )
 
             # calculate_pattern_featuresが実際に呼び出されることを確認
             # calculate_pattern_featuresメソッドが存在するか確認
-            if hasattr(service, 'calculate_pattern_features'):
+            if hasattr(service, "calculate_pattern_features"):
                 print("[ OK ] calculate_pattern_featuresメソッドが存在")
             else:
                 print("[ WARN ] calculate_pattern_featuresメソッドは存在しない")
 
             # 他の重要なメソッドが存在すること
-            assert hasattr(service, 'calculate_features') or hasattr(service, 'process_all_features')
+            assert hasattr(service, "calculate_features") or hasattr(
+                service, "process_all_features"
+            )
             print("[ OK ] 特徴量計算サービスが正常に動作")
 
         except ImportError:

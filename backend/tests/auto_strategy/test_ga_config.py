@@ -17,10 +17,7 @@ class TestGAConfig:
     def test_custom_values(self):
         """カスタム値を設定できることを確認"""
         config = GASettings(
-            population_size=200,
-            generations=100,
-            crossover_rate=0.9,
-            mutation_rate=0.2
+            population_size=200, generations=100, crossover_rate=0.9, mutation_rate=0.2
         )
         assert config.population_size == 200
         assert config.generations == 100

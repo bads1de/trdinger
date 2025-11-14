@@ -118,9 +118,7 @@ class TestGetFormattedModels:
             "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
         ) as mock_manager:
             mock_manager.list_models.return_value = sample_model_list
-            mock_manager.load_model.return_value = {
-                "metadata": sample_model_metadata
-            }
+            mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
 
             result = await orchestration_service.get_formatted_models()
 
@@ -282,9 +280,7 @@ class TestDeleteModel:
             mock_manager.list_models.return_value = sample_model_list
 
             with pytest.raises(HTTPException) as exc_info:
-                await orchestration_service.delete_model(
-                    "model_20240101_120000.pkl"
-                )
+                await orchestration_service.delete_model("model_20240101_120000.pkl")
 
             assert exc_info.value.status_code == 404
 
@@ -395,9 +391,7 @@ class TestGetMLStatus:
             patch("os.path.getsize", return_value=10485760),
         ):
             mock_manager.get_latest_model.return_value = "/models/latest.pkl"
-            mock_manager.load_model.return_value = {
-                "metadata": sample_model_metadata
-            }
+            mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
 
             result = await orchestration_service.get_ml_status()
 
@@ -502,9 +496,7 @@ class TestGetFeatureImportance:
         Args:
             orchestration_service: オーケストレーションサービス
         """
-        feature_importance = {
-            f"feature{i}": 1.0 / (i + 1) for i in range(20)
-        }
+        feature_importance = {f"feature{i}": 1.0 / (i + 1) for i in range(20)}
 
         with (
             patch(
@@ -587,9 +579,7 @@ class TestLoadModel:
         ) as mock_manager:
             mock_manager.list_models.return_value = sample_model_list
 
-            result = await orchestration_service.load_model(
-                "model_20240101_120000.pkl"
-            )
+            result = await orchestration_service.load_model("model_20240101_120000.pkl")
 
             assert result["success"] is True
             assert "読み込み" in result["message"]
@@ -612,9 +602,7 @@ class TestLoadModel:
         ) as mock_manager:
             mock_manager.list_models.return_value = sample_model_list
 
-            result = await orchestration_service.load_model(
-                "nonexistent_model.pkl"
-            )
+            result = await orchestration_service.load_model("nonexistent_model.pkl")
 
             assert result["success"] is False
             assert "見つかりません" in result["error"]
@@ -644,9 +632,7 @@ class TestGetCurrentModelInfo:
             patch("os.path.getmtime", return_value=1704110400.0),
         ):
             mock_manager.get_latest_model.return_value = "/models/latest.pkl"
-            mock_manager.load_model.return_value = {
-                "metadata": sample_model_metadata
-            }
+            mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
 
             result = await orchestration_service.get_current_model_info()
 
@@ -713,9 +699,7 @@ class TestMLConfigManagement:
             mock_manager.update_config.return_value = True
             mock_manager.get_config_dict.return_value = {"updated": "config"}
 
-            result = await orchestration_service.update_ml_config(
-                {"key": "new_value"}
-            )
+            result = await orchestration_service.update_ml_config({"key": "new_value"})
 
             assert result["success"] is True
             assert "更新されました" in result["message"]
@@ -735,9 +719,7 @@ class TestMLConfigManagement:
         ) as mock_manager:
             mock_manager.update_config.return_value = False
 
-            result = await orchestration_service.update_ml_config(
-                {"key": "new_value"}
-            )
+            result = await orchestration_service.update_ml_config({"key": "new_value"})
 
             assert result["success"] is False
             assert "失敗" in result["message"]
@@ -802,9 +784,7 @@ class TestIsActiveModel:
         with patch(
             "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
         ) as mock_manager:
-            mock_manager.get_latest_model.return_value = sample_model_list[0][
-                "path"
-            ]
+            mock_manager.get_latest_model.return_value = sample_model_list[0]["path"]
 
             result = orchestration_service._is_active_model(sample_model_list[0])
 
@@ -825,9 +805,7 @@ class TestIsActiveModel:
         with patch(
             "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
         ) as mock_manager:
-            mock_manager.get_latest_model.return_value = sample_model_list[0][
-                "path"
-            ]
+            mock_manager.get_latest_model.return_value = sample_model_list[0]["path"]
 
             result = orchestration_service._is_active_model(sample_model_list[1])
 

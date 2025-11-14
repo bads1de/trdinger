@@ -234,9 +234,7 @@ class TestFetchAllFundingRateHistory:
             {"timestamp": 1609459300000, "fundingRate": 0.0002},
         ]
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
             with patch.object(
                 service, "_fetch_paginated_data", return_value=mock_data
             ) as mock_fetch:
@@ -281,9 +279,7 @@ class TestFetchIncrementalData:
             return_value=[{"id": 1}, {"id": 2}]
         )
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=mock_data)
                 mock_loop.return_value.run_in_executor = mock_executor
@@ -297,9 +293,7 @@ class TestFetchIncrementalData:
                     mock_repository_instance.insert_funding_rate_data = MagicMock(
                         return_value=2
                     )
-                    mock_config.repository_class.return_value = (
-                        mock_repository_instance
-                    )
+                    mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_funding_rate_data(
                         "BTC/USDT"
@@ -335,9 +329,7 @@ class TestFetchIncrementalData:
                     mock_repository_instance.insert_funding_rate_data = MagicMock(
                         return_value=1
                     )
-                    mock_config.repository_class.return_value = (
-                        mock_repository_instance
-                    )
+                    mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_funding_rate_data(
                         "BTC/USDT"
@@ -358,9 +350,7 @@ class TestFetchIncrementalData:
         )
         mock_repository.insert_funding_rate_data = MagicMock(return_value=1)
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=mock_data)
                 mock_loop.return_value.run_in_executor = mock_executor
@@ -446,12 +436,8 @@ class TestFetchAndSaveData:
             return_value=[{"id": 1}, {"id": 2}]
         )
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
-            with patch.object(
-                service, "_fetch_paginated_data", return_value=mock_data
-            ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
+            with patch.object(service, "_fetch_paginated_data", return_value=mock_data):
                 with patch(
                     "app.services.data_collection.bybit.bybit_service.get_db"
                 ) as mock_get_db:
@@ -461,9 +447,7 @@ class TestFetchAndSaveData:
                     mock_repository_instance.insert_funding_rate_data = MagicMock(
                         return_value=2
                     )
-                    mock_config.repository_class.return_value = (
-                        mock_repository_instance
-                    )
+                    mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_and_save_funding_rate_data(
                         "BTC/USDT", fetch_all=True

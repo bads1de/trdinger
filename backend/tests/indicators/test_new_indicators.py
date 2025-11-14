@@ -90,15 +90,11 @@ class TestVHFIndicator:
         assert isinstance(result, np.ndarray), "VHFの結果がnumpy配列でない"
         assert not np.isnan(result).all(), "VHFの結果がすべてNaN"
 
-    def test_vhf_insufficient_data(
-        self, indicator_service: TechnicalIndicatorService
-    ):
+    def test_vhf_insufficient_data(self, indicator_service: TechnicalIndicatorService):
         """VHFがデータ不足を適切に処理するかテスト"""
         # 短すぎるデータ
         df = pd.DataFrame({"Close": [100, 101, 102]})
-        result = indicator_service.calculate_indicator(
-            df, "VHF", {"length": 28}
-        )
+        result = indicator_service.calculate_indicator(df, "VHF", {"length": 28})
 
         # numpy配列が返されるべき
         assert isinstance(result, np.ndarray), "VHFの結果がnumpy配列でない"
@@ -158,15 +154,11 @@ class TestBIASIndicator:
         assert isinstance(result, np.ndarray), "BIASの結果がnumpy配列でない"
         assert not np.isnan(result).all(), "BIASの結果がすべてNaN"
 
-    def test_bias_insufficient_data(
-        self, indicator_service: TechnicalIndicatorService
-    ):
+    def test_bias_insufficient_data(self, indicator_service: TechnicalIndicatorService):
         """BIASがデータ不足を適切に処理するかテスト"""
         # 短すぎるデータ
         df = pd.DataFrame({"Close": [100, 101, 102]})
-        result = indicator_service.calculate_indicator(
-            df, "BIAS", {"length": 26}
-        )
+        result = indicator_service.calculate_indicator(df, "BIAS", {"length": 26})
 
         assert isinstance(result, np.ndarray), "BIASの結果がnumpy配列でない"
         # 十分なデータがない場合はNaNが含まれているべき
@@ -191,7 +183,9 @@ class TestBIASIndicator:
 class TestNewIndicatorsIntegration:
     """新規インジケーターの統合テスト"""
 
-    def test_new_indicators_in_registry(self, indicator_service: TechnicalIndicatorService):
+    def test_new_indicators_in_registry(
+        self, indicator_service: TechnicalIndicatorService
+    ):
         """新しいインジケーターがレジストリに登録されているか確認"""
         # VHFが登録されているか
         vhf_config = indicator_service.registry.get_indicator_config("VHF")
@@ -219,24 +213,22 @@ class TestNewIndicatorsIntegration:
         assert isinstance(bias_result, np.ndarray), "BIAS計算失敗"
         assert not np.isnan(bias_result).all(), "BIASがすべてNaN"
 
-    def test_new_indicators_performance(self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame):
+    def test_new_indicators_performance(
+        self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+    ):
         """新しいインジケーターのパフォーマンスをテスト"""
         import time
 
         # VHFのパフォーマンステスト
         start_time = time.time()
         for _ in range(10):
-            indicator_service.calculate_indicator(
-                sample_ohlcv, "VHF", {"length": 28}
-            )
+            indicator_service.calculate_indicator(sample_ohlcv, "VHF", {"length": 28})
         vhf_time = time.time() - start_time
 
         # BIASのパフォーマンステスト
         start_time = time.time()
         for _ in range(10):
-            indicator_service.calculate_indicator(
-                sample_ohlcv, "BIAS", {"length": 26}
-            )
+            indicator_service.calculate_indicator(sample_ohlcv, "BIAS", {"length": 26})
         bias_time = time.time() - start_time
 
         # 合理的なパフォーマンスであるか確認（10回実行で1秒以内）

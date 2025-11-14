@@ -58,10 +58,10 @@ class TestFeatureAllowlist:
             funding_rate_data=None,
             open_interest_data=None,
         )
-        
+
         # 基本カラムが含まれることを確認
         assert "close" in result.columns
         assert "volume" in result.columns
-        
+
         # 何らかの特徴量が生成されることを確認
         assert len(result.columns) >= len(sample_ohlcv_data.columns)

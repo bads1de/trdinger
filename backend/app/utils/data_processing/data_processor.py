@@ -70,7 +70,7 @@ class DataProcessor:
 
         # 必要なカラムを定義
         ohlcv_columns = ["open", "high", "low", "close", "volume"]
-        
+
         # データ補間 (NaN/null値を先に処理)
         if interpolate:
             result_df = self._interpolate_data(result_df)
@@ -81,7 +81,7 @@ class DataProcessor:
             if result_df.empty:
                 logger.warning("データが空のため検証をスキップ")
                 return result_df
-                
+
             # 必要なカラムに基づいて検証を実行
             if not result_df.empty:
                 ok_columns = {"open", "high", "low", "close", "volume"}
@@ -224,7 +224,7 @@ class DataProcessor:
             前処理されたDataFrame
         """
         logger.info(f"Pipelineベース前処理開始: {pipeline_name}")
-        
+
         # 元のカラム名を保存
         original_columns = df.columns.tolist()
         n_original_cols = len(original_columns)
@@ -254,7 +254,7 @@ class DataProcessor:
 
         # 列数を確認
         n_transformed_cols = transformed_data.shape[1]
-        
+
         if n_transformed_cols == n_original_cols:
             # 列数が一致する場合、元のカラム名を使用
             feature_names = original_columns
@@ -277,10 +277,12 @@ class DataProcessor:
         result_df = pd.DataFrame(
             transformed_data, index=df.index, columns=pd.Index(feature_names)
         )
-        
+
         # 重複カラムを削除（最初のものを保持）
         if result_df.columns.duplicated().any():
-            duplicated_cols = result_df.columns[result_df.columns.duplicated()].unique().tolist()
+            duplicated_cols = (
+                result_df.columns[result_df.columns.duplicated()].unique().tolist()
+            )
             logger.warning(f"重複カラムを削除: {duplicated_cols}")
             result_df = result_df.loc[:, ~result_df.columns.duplicated()]
             logger.info(f"重複削除後: {len(result_df.columns)}列")
@@ -402,14 +404,14 @@ class DataProcessor:
             try:
                 has_null_check = result_df[col].isnull().any()
                 # has_null_checkがSeriesの場合、.item()でスカラー値を取得
-                if hasattr(has_null_check, 'item'):
+                if hasattr(has_null_check, "item"):
                     has_null = has_null_check.item()
                 else:
                     has_null = bool(has_null_check)
             except (ValueError, AttributeError):
                 # フォールバック: 要素ごとにチェック
                 has_null = result_df[col].isnull().values.any()
-            
+
             if has_null:
                 # 前方補完 → 線形補完 → 後方補完
                 result_df[col] = (
@@ -417,44 +419,44 @@ class DataProcessor:
                 )
 
         # 特別なOHLCカラムの補間後検証と修正
-        if all(col in result_df.columns for col in ['open', 'high', 'low', 'close']):
+        if all(col in result_df.columns for col in ["open", "high", "low", "close"]):
             # OHLCカラムが全て存在する場合のみ検証
             for idx in result_df.index:
                 row = result_df.loc[idx]
-                
+
                 # NaN値が含まれている行はスキップ
-                ohlc_values = row[['open', 'high', 'low', 'close']]
+                ohlc_values = row[["open", "high", "low", "close"]]
                 # Pandas Series比較を安全に行う - boolに変換してから評価
                 has_null_ohlc = bool(ohlc_values.isnull().any())
                 if has_null_ohlc:
                     continue
-                    
+
                 # OHLC関係が崩れている場合は修正
                 # Pandas Series比較を安全に行う
-                low_val = float(row['low'])
-                open_val = float(row['open'])
-                high_val = float(row['high'])
-                close_val = float(row['close'])
-                
+                low_val = float(row["low"])
+                open_val = float(row["open"])
+                high_val = float(row["high"])
+                close_val = float(row["close"])
+
                 ohlc_valid = (
-                    (low_val <= open_val) and
-                    (open_val <= high_val) and
-                    (low_val <= close_val) and
-                    (close_val <= high_val)
+                    (low_val <= open_val)
+                    and (open_val <= high_val)
+                    and (low_val <= close_val)
+                    and (close_val <= high_val)
                 )
-                
+
                 if not ohlc_valid:
                     # OHLC関係を強制的に修正
                     valid_min = min(open_val, close_val)
                     valid_max = max(open_val, close_val)
-                    
+
                     # lowが適切な最小値になるように修正
                     if low_val > valid_min:
-                        result_df.loc[idx, 'low'] = valid_min
-                        
+                        result_df.loc[idx, "low"] = valid_min
+
                     # highが適切な最大値になるように修正
                     if high_val < valid_max:
-                        result_df.loc[idx, 'high'] = valid_max
+                        result_df.loc[idx, "high"] = valid_max
 
         # カテゴリカルカラムの補間
         categorical_columns = result_df.select_dtypes(
@@ -489,12 +491,12 @@ class DataProcessor:
 
             # 常にクリップを実行（範囲外値がなくてもNaN/infの処理のため）
             result_df["funding_rate"] = np.clip(funding_rate_clean.fillna(0), -1, 1)
-            
+
             # 修正後の範囲外値をカウント
             below_min_after = (result_df["funding_rate"] < -1).sum()
             above_max_after = (result_df["funding_rate"] > 1).sum()
             after_count = below_min_after + above_max_after
-            
+
             if before_count > 0:
                 logger.info(f"範囲外値を修正: {before_count}件")
 

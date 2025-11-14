@@ -97,7 +97,7 @@ class TestSaveStrategy:
             generation=10,
             fitness_score=0.85,
         )
-        
+
         # 結果が返されることを確認
         assert result is not None
         repository.db.add.assert_called_once()
@@ -109,7 +109,7 @@ class TestSaveStrategy:
     ) -> None:
         """遺伝子データが検証され、不足フィールドが補完される"""
         incomplete_gene_data = {"indicators": []}
-        
+
         # _validate_gene_dataメソッドが不足フィールドを補完するため、
         # 正常に保存される
         result = repository.save_strategy(
@@ -117,15 +117,15 @@ class TestSaveStrategy:
             gene_data=incomplete_gene_data,
             generation=10,
         )
-        
+
         # 結果が返されることを確認
         assert result is not None
-        
+
         # db.addに渡された引数を取得して検証
         call_args = repository.db.add.call_args
         assert call_args is not None
         saved_strategy = call_args[0][0]
-        
+
         # 補完された必須フィールドを確認
         assert "indicators" in saved_strategy.gene_data
         assert "entry_conditions" in saved_strategy.gene_data
@@ -157,16 +157,16 @@ class TestSaveStrategiesBatch:
                 "fitness_score": 0.90,
             },
         ]
-        
+
         # save_strategies_batchは@safe_operationデコレータ内で実行される
         result = repository.save_strategies_batch(strategies_data)
-        
+
         # 結果が返されることを確認
         assert result is not None
         assert len(result) == 2
         repository.db.add_all.assert_called_once()
         repository.db.commit.assert_called_once()
-        
+
         # refresh が各戦略に対して呼ばれる
         assert repository.db.refresh.call_count == 2
 
@@ -183,9 +183,9 @@ class TestGetStrategiesByExperiment:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_strategy_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_strategies_by_experiment(100)
-        
+
         assert len(results) == 1
         assert results[0].experiment_id == 100
 
@@ -198,9 +198,9 @@ class TestGetStrategiesByExperiment:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_strategy_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_strategies_by_experiment(100, generation=10)
-        
+
         assert len(results) == 1
 
 
@@ -216,9 +216,9 @@ class TestGetStrategiesByGeneration:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_strategy_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_strategies_by_generation(100, 10)
-        
+
         assert len(results) == 1
 
 
@@ -236,9 +236,9 @@ class TestGetStrategiesWithBacktestResults:
             sample_strategy_model
         ]
         repository.db.query.return_value = mock_query
-        
+
         results = repository.get_strategies_with_backtest_results(limit=10)
-        
+
         assert len(results) == 1
 
 
@@ -252,9 +252,9 @@ class TestDeleteAllStrategies:
         mock_query = MagicMock()
         mock_query.delete.return_value = 10
         repository.db.query.return_value = mock_query
-        
+
         count = repository.delete_all_strategies()
-        
+
         assert count == 10
         repository.db.commit.assert_called_once()
 
@@ -267,9 +267,9 @@ class TestValidateGeneData:
     ) -> None:
         """欠損フィールドが補完される"""
         incomplete_data = {"indicators": []}
-        
+
         validated = repository._validate_gene_data(incomplete_data)
-        
+
         assert "id" in validated
         assert "entry_conditions" in validated
         assert "exit_conditions" in validated
@@ -283,7 +283,7 @@ class TestValidateGeneData:
     ) -> None:
         """既存フィールドが保持される"""
         validated = repository._validate_gene_data(sample_gene_data)
-        
+
         assert validated["indicators"] == sample_gene_data["indicators"]
         assert validated["entry_conditions"] == sample_gene_data["entry_conditions"]
 
@@ -296,7 +296,7 @@ class TestErrorHandling:
     ) -> None:
         """保存エラーが適切に処理される"""
         repository.db.add.side_effect = Exception("DB Error")
-        
+
         with pytest.raises(Exception):
             repository.save_strategy(
                 experiment_id=100,

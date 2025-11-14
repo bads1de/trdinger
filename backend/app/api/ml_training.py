@@ -47,7 +47,8 @@ class StackingParamsConfig(BaseModel):
     """スタッキングパラメータ設定（scikit-learn StackingClassifier対応）"""
 
     base_models: List[str] = Field(
-        default=["lightgbm", "xgboost"], description="ベースモデルのリスト（Essential 2 Modelsのみ）"
+        default=["lightgbm", "xgboost"],
+        description="ベースモデルのリスト（Essential 2 Modelsのみ）",
     )
     meta_model: str = Field(
         default="logistic_regression",
@@ -68,9 +69,7 @@ class EnsembleConfig(BaseModel):
     """アンサンブル学習設定"""
 
     enabled: bool = Field(default=True, description="アンサンブル学習を有効にするか")
-    method: str = Field(
-        default="stacking", description="アンサンブル手法 (stacking)"
-    )
+    method: str = Field(default="stacking", description="アンサンブル手法 (stacking)")
     stacking_params: StackingParamsConfig = Field(
         default_factory=StackingParamsConfig, description="スタッキングパラメータ"
     )

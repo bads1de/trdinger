@@ -9,17 +9,15 @@ import numpy as np
 import time
 from datetime import datetime
 
-from app.services.ml.feature_engineering.technical_features import TechnicalFeatureCalculator
+from app.services.ml.feature_engineering.technical_features import (
+    TechnicalFeatureCalculator,
+)
 
 
 @pytest.fixture
 def sample_ohlcv_data():
     """サンプルOHLCVデータを生成"""
-    dates = pd.date_range(
-        start=datetime(2023, 1, 1),
-        periods=1000,
-        freq='1h'
-    )
+    dates = pd.date_range(start=datetime(2023, 1, 1), periods=1000, freq="1h")
 
     np.random.seed(42)
     base_price = 50000
@@ -32,28 +30,26 @@ def sample_ohlcv_data():
         low = base_price - abs(np.random.randn()) * 50
         volume = np.random.randint(100, 10000)
 
-        data.append({
-            'timestamp': date,
-            'open': base_price - change/2,
-            'high': high,
-            'low': low,
-            'close': base_price,
-            'volume': volume
-        })
+        data.append(
+            {
+                "timestamp": date,
+                "open": base_price - change / 2,
+                "high": high,
+                "low": low,
+                "close": base_price,
+                "volume": volume,
+            }
+        )
 
     df = pd.DataFrame(data)
-    df.set_index('timestamp', inplace=True)
+    df.set_index("timestamp", inplace=True)
     return df
 
 
 @pytest.fixture
 def large_ohlcv_data():
     """大きなベンチマーク用OHLCVデータを生成"""
-    dates = pd.date_range(
-        start=datetime(2023, 1, 1),
-        periods=20000,
-        freq='1h'
-    )
+    dates = pd.date_range(start=datetime(2023, 1, 1), periods=20000, freq="1h")
 
     np.random.seed(42)
     base_price = 50000
@@ -66,17 +62,19 @@ def large_ohlcv_data():
         low = base_price - abs(np.random.randn()) * 50
         volume = np.random.randint(100, 10000)
 
-        data.append({
-            'timestamp': date,
-            'open': base_price - change/2,
-            'high': high,
-            'low': low,
-            'close': base_price,
-            'volume': volume
-        })
+        data.append(
+            {
+                "timestamp": date,
+                "open": base_price - change / 2,
+                "high": high,
+                "low": low,
+                "close": base_price,
+                "volume": volume,
+            }
+        )
 
     df = pd.DataFrame(data)
-    df.set_index('timestamp', inplace=True)
+    df.set_index("timestamp", inplace=True)
     return df
 
 
@@ -84,7 +82,7 @@ def test_technical_feature_calculator_initialization():
     """TechnicalFeatureCalculatorの初期化をテスト"""
     calculator = TechnicalFeatureCalculator()
     assert calculator is not None
-    assert hasattr(calculator, 'calculate_features')
+    assert hasattr(calculator, "calculate_features")
 
 
 def test_calculate_features_basic(sample_ohlcv_data):
@@ -105,13 +103,12 @@ def test_market_regime_features(sample_ohlcv_data):
     calculator = TechnicalFeatureCalculator()
     lookback_periods = {"short_ma": 10, "long_ma": 50, "volatility": 20}
 
-    result = calculator.calculate_market_regime_features(sample_ohlcv_data, lookback_periods)
+    result = calculator.calculate_market_regime_features(
+        sample_ohlcv_data, lookback_periods
+    )
 
     # 期待される特徴量（削減後）
-    expected_features = [
-        "Range_Bound_Ratio",
-        "Market_Efficiency"
-    ]
+    expected_features = ["Range_Bound_Ratio", "Market_Efficiency"]
 
     for feature in expected_features:
         assert feature in result.columns, f"Missing feature: {feature}"
@@ -133,7 +130,7 @@ def test_momentum_features(sample_ohlcv_data):
         "Williams_R",
         "CCI",
         "ROC",
-        "Momentum"
+        "Momentum",
     ]
 
     for feature in expected_features:
@@ -177,8 +174,9 @@ def test_feature_values_validity(sample_ohlcv_data):
     for col in result.columns:
         if col not in sample_ohlcv_data.columns:
             # 特徴量列のみチェック
-            assert not result[col].isin([np.inf, -np.inf]).any(), \
-                f"Infinite values found in {col}"
+            assert (
+                not result[col].isin([np.inf, -np.inf]).any()
+            ), f"Infinite values found in {col}"
 
 
 def test_dataframe_not_fragmented(sample_ohlcv_data):
@@ -215,8 +213,9 @@ def test_performance_benchmark(large_ohlcv_data):
     print(f"[PERF] Throughput: {throughput:.0f} rows/sec")
     print(f"[PERF] Target: 10,000 rows/sec")
 
-    assert throughput >= 10000, \
-        f"Performance below target: {throughput:.0f} < 10000 rows/sec"
+    assert (
+        throughput >= 10000
+    ), f"Performance below target: {throughput:.0f} < 10000 rows/sec"
 
 
 def test_feature_count(sample_ohlcv_data):
@@ -230,8 +229,9 @@ def test_feature_count(sample_ohlcv_data):
     feature_count = len(result.columns)
 
     # 最低15個の特徴量が生成されることを確認
-    assert feature_count > original_count + 15, \
-        f"Expected more than {original_count + 15} features, got {feature_count}"
+    assert (
+        feature_count > original_count + 15
+    ), f"Expected more than {original_count + 15} features, got {feature_count}"
 
 
 def test_get_feature_names():

@@ -479,7 +479,9 @@ class TrendIndicators:
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
         if ma_type not in ["sma", "ema", "wma", "hma", "zlma"]:
-            raise ValueError(f"ma_type must be one of ['sma', 'ema', 'wma', 'hma', 'zlma']: {ma_type}")
+            raise ValueError(
+                f"ma_type must be one of ['sma', 'ema', 'wma', 'hma', 'zlma']: {ma_type}"
+            )
 
         # BIAS requires sufficient data length
         min_length = length * 2

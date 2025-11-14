@@ -40,12 +40,12 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
         for col in X.columns:
             # 単一カラムのSeriesとして取得
             col_series = X[col]
-            
+
             # DataFrameではなくSeriesであることを確認
             if isinstance(col_series, pd.DataFrame):
                 # 複数カラムが返された場合、最初のカラムを使用
                 col_series = col_series.iloc[:, 0]
-            
+
             dtype = col_series.dtype
 
             # float64をfloat32に最適化

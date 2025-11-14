@@ -144,7 +144,6 @@ class IndicatorConfig:
 
         return params
 
-    
     def get_parameter_ranges(self) -> Dict[str, Dict[str, Any]]:
         """パラメータ範囲を取得"""
         ranges = {}
@@ -211,7 +210,7 @@ class IndicatorConfigRegistry:
 
     def __init__(self):
         self._configs: Dict[str, IndicatorConfig] = {}
-        
+
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
         self._configs[config.indicator_name] = config

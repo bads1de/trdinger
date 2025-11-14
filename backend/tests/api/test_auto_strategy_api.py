@@ -299,7 +299,6 @@ class TestGenerateStrategy:
         # アサーション
         assert response.status_code == expected_status
 
-
     def test_generate_strategy_service_error(
         self,
         test_client: TestClient,

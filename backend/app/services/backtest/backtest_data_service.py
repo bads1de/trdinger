@@ -225,7 +225,10 @@ class BacktestDataService:
         if self._regime_detector is None:
             try:
                 # 循環インポート回避のため、ここでインポート
-                from app.services.auto_strategy.services.regime_detector import RegimeDetector
+                from app.services.auto_strategy.services.regime_detector import (
+                    RegimeDetector,
+                )
+
                 self._regime_detector = RegimeDetector()
             except Exception as exc:  # noqa: BLE001
                 logger.warning(f"RegimeDetector初期化に失敗したため無効化します: {exc}")

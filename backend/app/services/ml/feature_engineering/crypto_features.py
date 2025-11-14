@@ -132,7 +132,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         volume_rolling = df["volume"].rolling(24)
         new_features["volume_price_trend"] = volume_rolling.corr(
             close_rolling_mean
-        ).fillna(0.0)  # type: ignore
+        ).fillna(
+            0.0
+        )  # type: ignore
 
         # 一括で結合（DataFrame断片化回避）
         result_df = pd.concat(
@@ -238,7 +240,7 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         # 新しい特徴量を辞書で収集
         new_features = {}
 
-        # Removed: rsi_14, bb_upper_20, bb_lower_20, bb_position_20 
+        # Removed: rsi_14, bb_upper_20, bb_lower_20, bb_position_20
         # (低寄与度特徴量削除: 2025-11-13)
         # これらの特徴量はtechnical_features.pyの標準版を使用
         import pandas_ta as ta

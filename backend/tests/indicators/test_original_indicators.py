@@ -24,7 +24,26 @@ class TestOriginalIndicators:
     def test_calculate_frama_valid_data(self):
         """有効データでのFRAMA計算テスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                ]
+            }
         )
 
         result = OriginalIndicators.frama(data["close"], length=16, slow=200)
@@ -82,7 +101,41 @@ class TestOriginalIndicators:
     def test_adaptive_entropy_valid_data(self):
         """有効データでのAdaptive Entropy計算テスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                    126,
+                    127,
+                    128,
+                    129,
+                    130,
+                ]
+            }
         )
 
         oscillator, signal, ratio = OriginalIndicators.adaptive_entropy(
@@ -112,7 +165,25 @@ class TestOriginalIndicators:
     def test_mcginley_dynamic_valid_data(self):
         """有効データでのMcGinley Dynamic計算テスト"""
         data = pd.DataFrame(
-            {"close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116]}
+            {
+                "close": [
+                    100,
+                    102,
+                    104,
+                    103,
+                    105,
+                    107,
+                    106,
+                    108,
+                    110,
+                    109,
+                    111,
+                    113,
+                    112,
+                    114,
+                    116,
+                ]
+            }
         )
 
         result = OriginalIndicators.mcginley_dynamic(data["close"], length=10, k=0.6)
@@ -163,7 +234,25 @@ class TestOriginalIndicators:
     def test_mcginley_dynamic_wrapper(self):
         """McGinley Dynamic DataFrameラッパーメソッドのテスト"""
         data = pd.DataFrame(
-            {"close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116]}
+            {
+                "close": [
+                    100,
+                    102,
+                    104,
+                    103,
+                    105,
+                    107,
+                    106,
+                    108,
+                    110,
+                    109,
+                    111,
+                    113,
+                    112,
+                    114,
+                    116,
+                ]
+            }
         )
 
         result = OriginalIndicators.calculate_mcginley_dynamic(data, length=10, k=0.6)
@@ -175,7 +264,30 @@ class TestOriginalIndicators:
     def test_kaufman_efficiency_ratio_valid_data(self):
         """有効データでのKaufman Efficiency Ratio計算テスト"""
         data = pd.DataFrame(
-            {"close": [100, 102, 104, 106, 105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121, 120]}
+            {
+                "close": [
+                    100,
+                    102,
+                    104,
+                    106,
+                    105,
+                    107,
+                    109,
+                    108,
+                    110,
+                    112,
+                    111,
+                    113,
+                    115,
+                    114,
+                    116,
+                    118,
+                    117,
+                    119,
+                    121,
+                    120,
+                ]
+            }
         )
 
         result = OriginalIndicators.kaufman_efficiency_ratio(data["close"], length=10)
@@ -189,9 +301,7 @@ class TestOriginalIndicators:
 
     def test_kaufman_efficiency_ratio_invalid_length(self):
         """無効なlengthパラメータのKERテスト"""
-        data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105]}
-        )
+        data = pd.DataFrame({"close": [100, 101, 102, 103, 104, 105]})
 
         with pytest.raises(ValueError, match="length must be >= 2"):
             OriginalIndicators.kaufman_efficiency_ratio(data["close"], length=1)
@@ -210,11 +320,61 @@ class TestOriginalIndicators:
 
     def test_chande_kroll_stop_valid_data(self):
         """有効データでのChande Kroll Stop計算テスト"""
-        data = pd.DataFrame({
-            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121],
-            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 111],
-            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116]
-        })
+        data = pd.DataFrame(
+            {
+                "high": [
+                    105,
+                    107,
+                    109,
+                    108,
+                    110,
+                    112,
+                    111,
+                    113,
+                    115,
+                    114,
+                    116,
+                    118,
+                    117,
+                    119,
+                    121,
+                ],
+                "low": [
+                    95,
+                    97,
+                    99,
+                    98,
+                    100,
+                    102,
+                    101,
+                    103,
+                    105,
+                    104,
+                    106,
+                    108,
+                    107,
+                    109,
+                    111,
+                ],
+                "close": [
+                    100,
+                    102,
+                    104,
+                    103,
+                    105,
+                    107,
+                    106,
+                    108,
+                    110,
+                    109,
+                    111,
+                    113,
+                    112,
+                    114,
+                    116,
+                ],
+            }
+        )
 
         long_stop, short_stop = OriginalIndicators.chande_kroll_stop(
             data["high"], data["low"], data["close"], p=10, x=1, q=9
@@ -234,11 +394,9 @@ class TestOriginalIndicators:
 
     def test_chande_kroll_stop_invalid_params(self):
         """無効なパラメータのChande Kroll Stopテスト"""
-        data = pd.DataFrame({
-            "high": [105, 107, 109],
-            "low": [95, 97, 99],
-            "close": [100, 102, 104]
-        })
+        data = pd.DataFrame(
+            {"high": [105, 107, 109], "low": [95, 97, 99], "close": [100, 102, 104]}
+        )
 
         with pytest.raises(ValueError, match="p must be >= 1"):
             OriginalIndicators.chande_kroll_stop(
@@ -247,11 +405,13 @@ class TestOriginalIndicators:
 
     def test_chande_kroll_stop_wrapper(self):
         """Chande Kroll Stop DataFrameラッパーメソッドのテスト"""
-        data = pd.DataFrame({
-            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116],
-            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106],
-            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111]
-        })
+        data = pd.DataFrame(
+            {
+                "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116],
+                "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106],
+                "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111],
+            }
+        )
 
         result = OriginalIndicators.calculate_chande_kroll_stop(data, p=10, x=1, q=9)
 
@@ -262,11 +422,76 @@ class TestOriginalIndicators:
 
     def test_trend_intensity_index_valid_data(self):
         """有効データでのTrend Intensity Index計算テスト"""
-        data = pd.DataFrame({
-            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116, 115, 117, 119, 118, 120],
-            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121, 120, 122, 124, 123, 125],
-            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 111, 110, 112, 114, 113, 115]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [
+                    100,
+                    102,
+                    104,
+                    103,
+                    105,
+                    107,
+                    106,
+                    108,
+                    110,
+                    109,
+                    111,
+                    113,
+                    112,
+                    114,
+                    116,
+                    115,
+                    117,
+                    119,
+                    118,
+                    120,
+                ],
+                "high": [
+                    105,
+                    107,
+                    109,
+                    108,
+                    110,
+                    112,
+                    111,
+                    113,
+                    115,
+                    114,
+                    116,
+                    118,
+                    117,
+                    119,
+                    121,
+                    120,
+                    122,
+                    124,
+                    123,
+                    125,
+                ],
+                "low": [
+                    95,
+                    97,
+                    99,
+                    98,
+                    100,
+                    102,
+                    101,
+                    103,
+                    105,
+                    104,
+                    106,
+                    108,
+                    107,
+                    109,
+                    111,
+                    110,
+                    112,
+                    114,
+                    113,
+                    115,
+                ],
+            }
+        )
 
         result = OriginalIndicators.trend_intensity_index(
             data["close"], data["high"], data["low"], length=14, sma_length=30
@@ -283,11 +508,9 @@ class TestOriginalIndicators:
 
     def test_trend_intensity_index_invalid_length(self):
         """無効なlengthパラメータのTIIテスト"""
-        data = pd.DataFrame({
-            "close": [100, 101, 102],
-            "high": [105, 106, 107],
-            "low": [95, 96, 97]
-        })
+        data = pd.DataFrame(
+            {"close": [100, 101, 102], "high": [105, 106, 107], "low": [95, 96, 97]}
+        )
 
         with pytest.raises(ValueError, match="length must be >= 1"):
             OriginalIndicators.trend_intensity_index(
@@ -296,13 +519,65 @@ class TestOriginalIndicators:
 
     def test_trend_intensity_index_wrapper(self):
         """TII DataFrameラッパーメソッドのテスト"""
-        data = pd.DataFrame({
-            "close": [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 111, 113, 112, 114, 116],
-            "high": [105, 107, 109, 108, 110, 112, 111, 113, 115, 114, 116, 118, 117, 119, 121],
-            "low": [95, 97, 99, 98, 100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 111]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [
+                    100,
+                    102,
+                    104,
+                    103,
+                    105,
+                    107,
+                    106,
+                    108,
+                    110,
+                    109,
+                    111,
+                    113,
+                    112,
+                    114,
+                    116,
+                ],
+                "high": [
+                    105,
+                    107,
+                    109,
+                    108,
+                    110,
+                    112,
+                    111,
+                    113,
+                    115,
+                    114,
+                    116,
+                    118,
+                    117,
+                    119,
+                    121,
+                ],
+                "low": [
+                    95,
+                    97,
+                    99,
+                    98,
+                    100,
+                    102,
+                    101,
+                    103,
+                    105,
+                    104,
+                    106,
+                    108,
+                    107,
+                    109,
+                    111,
+                ],
+            }
+        )
 
-        result = OriginalIndicators.calculate_trend_intensity_index(data, length=14, sma_length=30)
+        result = OriginalIndicators.calculate_trend_intensity_index(
+            data, length=14, sma_length=30
+        )
 
         assert isinstance(result, pd.DataFrame)
         assert len(result) == len(data)
@@ -310,30 +585,70 @@ class TestOriginalIndicators:
 
     def test_adaptive_entropy_invalid_parameters(self):
         """無効なパラメータでのAdaptive Entropyテスト"""
-        data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104] * 10}
-        )
+        data = pd.DataFrame({"close": [100, 101, 102, 103, 104] * 10})
 
         # short_lengthが短すぎる
         with pytest.raises(ValueError, match="short_length must be >= 5"):
-            OriginalIndicators.adaptive_entropy(data["close"], short_length=3, long_length=28, signal_length=5)
+            OriginalIndicators.adaptive_entropy(
+                data["close"], short_length=3, long_length=28, signal_length=5
+            )
 
         # long_lengthが短すぎる
         with pytest.raises(ValueError, match="long_length must be >= 10"):
-            OriginalIndicators.adaptive_entropy(data["close"], short_length=14, long_length=5, signal_length=5)
+            OriginalIndicators.adaptive_entropy(
+                data["close"], short_length=14, long_length=5, signal_length=5
+            )
 
         # signal_lengthが短すぎる
         with pytest.raises(ValueError, match="signal_length must be >= 2"):
-            OriginalIndicators.adaptive_entropy(data["close"], short_length=14, long_length=28, signal_length=1)
+            OriginalIndicators.adaptive_entropy(
+                data["close"], short_length=14, long_length=28, signal_length=1
+            )
 
         # short_lengthがlong_length以上
         with pytest.raises(ValueError, match="short_length must be < long_length"):
-            OriginalIndicators.adaptive_entropy(data["close"], short_length=30, long_length=28, signal_length=5)
+            OriginalIndicators.adaptive_entropy(
+                data["close"], short_length=30, long_length=28, signal_length=5
+            )
 
     def test_adaptive_entropy_calculate_method(self):
         """calculate_adaptive_entropyメソッドのテスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                    126,
+                    127,
+                    128,
+                    129,
+                    130,
+                ]
+            }
         )
 
         result = OriginalIndicators.calculate_adaptive_entropy(
@@ -347,15 +662,110 @@ class TestOriginalIndicators:
 
     def test_quantum_flow_valid_data(self):
         """有効データでのQuantum Flow計算テスト"""
-        data = pd.DataFrame({
-            "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
-            "high": [105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125],
-            "low": [95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115],
-            "volume": [1000, 1050, 1010, 1080, 1020, 1060, 1030, 1070, 1040, 1080, 1050, 1090, 1060, 1100, 1070, 1110, 1080, 1120, 1090, 1130, 1100]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                ],
+                "high": [
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                ],
+                "low": [
+                    95,
+                    96,
+                    97,
+                    98,
+                    99,
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                ],
+                "volume": [
+                    1000,
+                    1050,
+                    1010,
+                    1080,
+                    1020,
+                    1060,
+                    1030,
+                    1070,
+                    1040,
+                    1080,
+                    1050,
+                    1090,
+                    1060,
+                    1100,
+                    1070,
+                    1110,
+                    1080,
+                    1120,
+                    1090,
+                    1130,
+                    1100,
+                ],
+            }
+        )
 
         flow, signal = OriginalIndicators.quantum_flow(
-            data["close"], data["high"], data["low"], data["volume"], length=14, flow_length=9
+            data["close"],
+            data["high"],
+            data["low"],
+            data["volume"],
+            length=14,
+            flow_length=9,
         )
 
         assert isinstance(flow, pd.Series)
@@ -365,15 +775,22 @@ class TestOriginalIndicators:
 
     def test_quantum_flow_insufficient_data(self):
         """データ不足でのQuantum Flowテスト"""
-        data = pd.DataFrame({
-            "close": [100, 101, 102, 103, 104],
-            "high": [105, 106, 107, 108, 109],
-            "low": [95, 96, 97, 98, 99],
-            "volume": [1000, 1050, 1010, 1080, 1020]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104],
+                "high": [105, 106, 107, 108, 109],
+                "low": [95, 96, 97, 98, 99],
+                "volume": [1000, 1050, 1010, 1080, 1020],
+            }
+        )
 
         empty_flow, empty_signal = OriginalIndicators.quantum_flow(
-            data["close"], data["high"], data["low"], data["volume"], length=14, flow_length=9
+            data["close"],
+            data["high"],
+            data["low"],
+            data["volume"],
+            length=14,
+            flow_length=9,
         )
 
         # 不十分なデータの場合はNaNが返される
@@ -382,42 +799,150 @@ class TestOriginalIndicators:
 
     def test_quantum_flow_invalid_parameters(self):
         """無効なパラメータでのQuantum Flowテスト"""
-        data = pd.DataFrame({
-            "close": [100, 101, 102, 103, 104],
-            "high": [105, 106, 107, 108, 109],
-            "low": [95, 96, 97, 98, 99],
-            "volume": [1000, 1050, 1010, 1080, 1020]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104],
+                "high": [105, 106, 107, 108, 109],
+                "low": [95, 96, 97, 98, 99],
+                "volume": [1000, 1050, 1010, 1080, 1020],
+            }
+        )
 
         # lengthが短すぎる
         with pytest.raises(ValueError, match="length must be >= 5"):
-            OriginalIndicators.quantum_flow(data["close"], data["high"], data["low"], data["volume"], length=3, flow_length=9)
+            OriginalIndicators.quantum_flow(
+                data["close"],
+                data["high"],
+                data["low"],
+                data["volume"],
+                length=3,
+                flow_length=9,
+            )
 
         # flow_lengthが短すぎる
         with pytest.raises(ValueError, match="flow_length must be >= 3"):
-            OriginalIndicators.quantum_flow(data["close"], data["high"], data["low"], data["volume"], length=14, flow_length=2)
+            OriginalIndicators.quantum_flow(
+                data["close"],
+                data["high"],
+                data["low"],
+                data["volume"],
+                length=14,
+                flow_length=2,
+            )
 
     def test_quantum_flow_missing_columns(self):
         """欠損列でのQuantum Flowテスト"""
         # volume列が欠損
-        data_missing_volume = pd.DataFrame({
-            "close": [100, 101, 102, 103, 104],
-            "high": [105, 106, 107, 108, 109],
-            "low": [95, 96, 97, 98, 99]
-            # volume列が欠損
-        })
+        data_missing_volume = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104],
+                "high": [105, 106, 107, 108, 109],
+                "low": [95, 96, 97, 98, 99],
+                # volume列が欠損
+            }
+        )
 
         with pytest.raises(ValueError, match="Missing required column"):
             OriginalIndicators.calculate_quantum_flow(data_missing_volume)
 
     def test_quantum_flow_calculate_method(self):
         """calculate_quantum_flowメソッドのテスト"""
-        data = pd.DataFrame({
-            "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
-            "high": [105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125],
-            "low": [95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115],
-            "volume": [1000, 1050, 1010, 1080, 1020, 1060, 1030, 1070, 1040, 1080, 1050, 1090, 1060, 1100, 1070, 1110, 1080, 1120, 1090, 1130, 1100]
-        })
+        data = pd.DataFrame(
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                ],
+                "high": [
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                ],
+                "low": [
+                    95,
+                    96,
+                    97,
+                    98,
+                    99,
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                ],
+                "volume": [
+                    1000,
+                    1050,
+                    1010,
+                    1080,
+                    1020,
+                    1060,
+                    1030,
+                    1070,
+                    1040,
+                    1080,
+                    1050,
+                    1090,
+                    1060,
+                    1100,
+                    1070,
+                    1110,
+                    1080,
+                    1120,
+                    1090,
+                    1130,
+                    1100,
+                ],
+            }
+        )
 
         result = OriginalIndicators.calculate_quantum_flow(
             data, length=14, flow_length=9
@@ -431,27 +956,31 @@ class TestOriginalIndicators:
         """FRAMAのエッジケーステスト"""
         # 空データのテスト
         empty_data = pd.DataFrame({"close": []})
-        result_empty = OriginalIndicators.frama(empty_data["close"], length=16, slow=200)
+        result_empty = OriginalIndicators.frama(
+            empty_data["close"], length=16, slow=200
+        )
         assert len(result_empty) == 0
-        
+
         # 単一データポイントのテスト
         single_data = pd.DataFrame({"close": [100]})
-        result_single = OriginalIndicators.frama(single_data["close"], length=16, slow=200)
+        result_single = OriginalIndicators.frama(
+            single_data["close"], length=16, slow=200
+        )
         assert len(result_single) == 1
         assert np.isnan(result_single.iloc[0])
-        
+
         # 最小限のデータ長のテスト
         min_data = pd.DataFrame({"close": [100, 101, 102, 103]})  # 4ポイント（最小）
         result_min = OriginalIndicators.frama(min_data["close"], length=4, slow=200)
         assert len(result_min) == 4
-        
+
     def test_super_smoother_edge_cases(self):
         """Super Smootherのエッジケーステスト"""
         # 空データのテスト
         empty_data = pd.DataFrame({"close": []})
         result_empty = OriginalIndicators.super_smoother(empty_data["close"], length=10)
         assert len(result_empty) == 0
-        
+
         # 最小データ長のテスト
         min_data = pd.DataFrame({"close": [100, 101]})  # 2ポイント（最小）
         result_min = OriginalIndicators.super_smoother(min_data["close"], length=2)
@@ -462,29 +991,41 @@ class TestOriginalIndicators:
         # ショートラインがロングラインと等しい場合のテスト
         equal_length_data = pd.DataFrame({"close": [100, 101] * 50})
         with pytest.raises(ValueError, match="short_length must be < long_length"):
-            OriginalIndicators.adaptive_entropy(equal_length_data["close"], short_length=14, long_length=14, signal_length=5)
-        
+            OriginalIndicators.adaptive_entropy(
+                equal_length_data["close"],
+                short_length=14,
+                long_length=14,
+                signal_length=5,
+            )
+
         # 長さが0のデータ
         zero_data = pd.DataFrame({"close": []})
-        osc, sig, ratio = OriginalIndicators.adaptive_entropy(zero_data["close"], short_length=14, long_length=28, signal_length=5)
+        osc, sig, ratio = OriginalIndicators.adaptive_entropy(
+            zero_data["close"], short_length=14, long_length=28, signal_length=5
+        )
         assert all(np.isnan(x) for x in osc)
-        assert all(np.isnan(x) for x in sig)  
+        assert all(np.isnan(x) for x in sig)
         assert all(np.isnan(x) for x in ratio)
 
     def test_quantum_flow_edge_cases(self):
         """Quantum Flowのエッジケーステスト"""
         # 長さが等しいデータのテスト
         # lengthは5以上が要求されるようになった
-        equal_length_data = pd.DataFrame({
-            "close": [100, 101] * 10,
-            "high": [105, 106] * 10, 
-            "low": [95, 96] * 10,
-            "volume": [1000, 1050] * 10
-        })
+        equal_length_data = pd.DataFrame(
+            {
+                "close": [100, 101] * 10,
+                "high": [105, 106] * 10,
+                "low": [95, 96] * 10,
+                "volume": [1000, 1050] * 10,
+            }
+        )
         flow, signal = OriginalIndicators.quantum_flow(
-            equal_length_data["close"], equal_length_data["high"], 
-            equal_length_data["low"], equal_length_data["volume"], 
-            length=5, flow_length=3
+            equal_length_data["close"],
+            equal_length_data["high"],
+            equal_length_data["low"],
+            equal_length_data["volume"],
+            length=5,
+            flow_length=3,
         )
         assert len(flow) == len(equal_length_data)
         assert len(signal) == len(equal_length_data)
@@ -663,7 +1204,26 @@ class TestOriginalIndicators:
     def test_frama_with_decreasing_data(self):
         """減少トレンドのFRAMAテスト"""
         decreasing_data = pd.DataFrame(
-            {"close": [115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104, 103, 102, 101, 100]}
+            {
+                "close": [
+                    115,
+                    114,
+                    113,
+                    112,
+                    111,
+                    110,
+                    109,
+                    108,
+                    107,
+                    106,
+                    105,
+                    104,
+                    103,
+                    102,
+                    101,
+                    100,
+                ]
+            }
         )
 
         result = OriginalIndicators.frama(decreasing_data["close"], length=16, slow=200)
@@ -715,7 +1275,26 @@ class TestOriginalIndicators:
     def test_frama_numpy_compatibility(self):
         """FRAMAのNumPy配列互換性テスト"""
         # NumPy配列でテスト
-        close_array = np.array([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115])
+        close_array = np.array(
+            [
+                100,
+                101,
+                102,
+                103,
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112,
+                113,
+                114,
+                115,
+            ]
+        )
 
         result = OriginalIndicators.frama(pd.Series(close_array), length=16, slow=200)
 
@@ -783,7 +1362,26 @@ class TestOriginalIndicators:
     def test_frama_different_length_combinations(self):
         """FRAMAの異なるパラメータ組み合わせテスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                ]
+            }
         )
 
         # 短期
@@ -815,7 +1413,26 @@ class TestOriginalIndicators:
     def test_frama_multiple_calls_consistency(self):
         """FRAMAの複数回呼び出しの一貫性テスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                ]
+            }
         )
 
         result1 = OriginalIndicators.frama(data["close"], length=16, slow=200)
@@ -839,9 +1456,7 @@ class TestOriginalIndicators:
     def test_frama_with_random_data(self):
         """FRAMAのランダムデータテスト"""
         np.random.seed(42)
-        random_data = pd.DataFrame(
-            {"close": np.random.normal(100, 10, 100)}
-        )
+        random_data = pd.DataFrame({"close": np.random.normal(100, 10, 100)})
 
         result = OriginalIndicators.frama(random_data["close"], length=16, slow=200)
 
@@ -852,9 +1467,7 @@ class TestOriginalIndicators:
     def test_super_smoother_with_random_data(self):
         """Super Smootherのランダムデータテスト"""
         np.random.seed(42)
-        random_data = pd.DataFrame(
-            {"close": np.random.normal(100, 10, 100)}
-        )
+        random_data = pd.DataFrame({"close": np.random.normal(100, 10, 100)})
 
         result = OriginalIndicators.super_smoother(random_data["close"], length=10)
 
@@ -915,9 +1528,7 @@ class TestOriginalIndicators:
     def test_frama_memory_usage(self):
         """FRAMAのメモリ使用量テスト"""
         # 大きなデータセット
-        large_data = pd.DataFrame(
-            {"close": np.random.normal(100, 10, 10000)}
-        )
+        large_data = pd.DataFrame({"close": np.random.normal(100, 10, 10000)})
 
         result = OriginalIndicators.frama(large_data["close"], length=16, slow=200)
 
@@ -928,9 +1539,7 @@ class TestOriginalIndicators:
     def test_super_smoother_memory_usage(self):
         """Super Smootherのメモリ使用量テスト"""
         # 大きなデータセット
-        large_data = pd.DataFrame(
-            {"close": np.random.normal(100, 10, 10000)}
-        )
+        large_data = pd.DataFrame({"close": np.random.normal(100, 10, 10000)})
 
         result = OriginalIndicators.super_smoother(large_data["close"], length=10)
 
@@ -984,9 +1593,7 @@ class TestOriginalIndicators:
 
     def test_calculate_elder_ray_insufficient_data(self):
         """データ不足でのElder Ray計算テスト"""
-        data = pd.DataFrame(
-            {"close": [100, 101], "high": [102, 103], "low": [98, 99]}
-        )
+        data = pd.DataFrame({"close": [100, 101], "high": [102, 103], "low": [98, 99]})
 
         result = OriginalIndicators.calculate_elder_ray(data)
 
@@ -1017,7 +1624,9 @@ class TestOriginalIndicators:
         low = pd.Series([98, 99, 100, 101, 102])
         close = pd.Series([100, 101, 102, 103, 104])
 
-        bull_power, bear_power = OriginalIndicators.elder_ray(high, low, close, length=13, ema_length=16)
+        bull_power, bear_power = OriginalIndicators.elder_ray(
+            high, low, close, length=13, ema_length=16
+        )
 
         assert isinstance(bull_power, pd.Series)
         assert isinstance(bear_power, pd.Series)
@@ -1058,7 +1667,106 @@ class TestOriginalIndicators:
         # Prime Number Oscillatorは素数列を使用するため、十分な長さが必要
         # length=14の場合、必要な最小データ長は最大の素数(13)より大きい
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                    126,
+                    127,
+                    128,
+                    129,
+                    130,
+                    131,
+                    132,
+                    133,
+                    134,
+                    135,
+                    136,
+                    137,
+                    138,
+                    139,
+                    140,
+                    141,
+                    142,
+                    143,
+                    144,
+                    145,
+                    146,
+                    147,
+                    148,
+                    149,
+                    150,
+                    151,
+                    152,
+                    153,
+                    154,
+                    155,
+                    156,
+                    157,
+                    158,
+                    159,
+                    160,
+                    161,
+                    162,
+                    163,
+                    164,
+                    165,
+                    166,
+                    167,
+                    168,
+                    169,
+                    170,
+                    171,
+                    172,
+                    173,
+                    174,
+                    175,
+                    176,
+                    177,
+                    178,
+                    179,
+                    180,
+                    181,
+                    182,
+                    183,
+                    184,
+                    185,
+                    186,
+                    187,
+                    188,
+                    189,
+                    190,
+                    191,
+                    192,
+                    193,
+                    194,
+                    195,
+                ]
+            }
         )
 
         result = OriginalIndicators.calculate_prime_oscillator(data)
@@ -1090,7 +1798,9 @@ class TestOriginalIndicators:
             {"close": list(range(100, 130))}  # 100から129までの30個のデータ
         )
 
-        result = OriginalIndicators.calculate_prime_oscillator(data, length=10, signal_length=5)
+        result = OriginalIndicators.calculate_prime_oscillator(
+            data, length=10, signal_length=5
+        )
 
         assert isinstance(result, pd.DataFrame)
         assert "PRIME_OSC_10" in result.columns
@@ -1105,7 +1815,9 @@ class TestOriginalIndicators:
         # length=14の場合、必要な最小データ長は43+1=44
         close = pd.Series(list(range(100, 144)))  # 100から143までの44個のデータ
 
-        oscillator, signal = OriginalIndicators.prime_oscillator(close, length=14, signal_length=3)
+        oscillator, signal = OriginalIndicators.prime_oscillator(
+            close, length=14, signal_length=3
+        )
 
         assert isinstance(oscillator, pd.Series)
         assert isinstance(signal, pd.Series)
@@ -1131,7 +1843,9 @@ class TestOriginalIndicators:
 
         # signal_lengthが小さすぎる
         with pytest.raises(ValueError, match="signal_length must be >= 2"):
-            OriginalIndicators.calculate_prime_oscillator(data, length=14, signal_length=1)
+            OriginalIndicators.calculate_prime_oscillator(
+                data, length=14, signal_length=1
+            )
 
         # 不正なデータ型
         with pytest.raises(TypeError, match="data must be pandas DataFrame"):
@@ -1141,9 +1855,7 @@ class TestOriginalIndicators:
         """Prime Number Oscillatorの境界値テスト"""
         # 定数データ
         # length=14の場合、必要な最小データ長は43+1=44
-        constant_data = pd.DataFrame(
-            {"close": [100] * 44}  # 44個の定数データ
-        )
+        constant_data = pd.DataFrame({"close": [100] * 44})  # 44個の定数データ
 
         result = OriginalIndicators.calculate_prime_oscillator(constant_data)
 
@@ -1169,7 +1881,26 @@ class TestOriginalIndicators:
     def test_prime_oscillator_consistency(self):
         """Prime Number Oscillatorの再現性テスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115]}
+            {
+                "close": [
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    107,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                ]
+            }
         )
 
         result1 = OriginalIndicators.calculate_prime_oscillator(data)
@@ -1193,9 +1924,7 @@ class TestOriginalIndicators:
     def test_prime_oscillator_memory_usage(self):
         """Prime Number Oscillatorのメモリ使用量テスト"""
         # 大きなデータセット
-        large_data = pd.DataFrame(
-            {"close": np.random.normal(100, 10, 10000)}
-        )
+        large_data = pd.DataFrame({"close": np.random.normal(100, 10, 10000)})
 
         result = OriginalIndicators.calculate_prime_oscillator(large_data)
 
@@ -1206,9 +1935,7 @@ class TestOriginalIndicators:
     def test_calculate_fibonacci_cycle_valid_data(self):
         """有効データでのFibonacci Cycle計算テスト"""
         # Fibonacci Cycleは最大期間55が必要
-        data = pd.DataFrame(
-            {"close": list(range(100, 155))}  # 55個のデータ
-        )
+        data = pd.DataFrame({"close": list(range(100, 155))})  # 55個のデータ
 
         result = OriginalIndicators.calculate_fibonacci_cycle(data)
 
@@ -1239,9 +1966,7 @@ class TestOriginalIndicators:
         )
 
         result = OriginalIndicators.calculate_fibonacci_cycle(
-            data,
-            cycle_periods=[5, 8, 13, 21],
-            fib_ratios=[0.5, 1.0, 1.5, 2.5]
+            data, cycle_periods=[5, 8, 13, 21], fib_ratios=[0.5, 1.0, 1.5, 2.5]
         )
 
         assert isinstance(result, pd.DataFrame)
@@ -1271,17 +1996,23 @@ class TestOriginalIndicators:
 
     def test_fibonacci_cycle_parameter_validation(self):
         """Fibonacci Cycleのパラメータ検証テスト"""
-        data = pd.DataFrame(
-            {"close": list(range(100, 155))}
-        )
+        data = pd.DataFrame({"close": list(range(100, 155))})
 
         # cycle_periodsが空
-        with pytest.raises(ValueError, match="cycle_periods and fib_ratios must not be empty"):
-            OriginalIndicators.calculate_fibonacci_cycle(data, cycle_periods=[], fib_ratios=[0.618])
+        with pytest.raises(
+            ValueError, match="cycle_periods and fib_ratios must not be empty"
+        ):
+            OriginalIndicators.calculate_fibonacci_cycle(
+                data, cycle_periods=[], fib_ratios=[0.618]
+            )
 
         # fib_ratiosが空
-        with pytest.raises(ValueError, match="cycle_periods and fib_ratios must not be empty"):
-            OriginalIndicators.calculate_fibonacci_cycle(data, cycle_periods=[8, 13], fib_ratios=[])
+        with pytest.raises(
+            ValueError, match="cycle_periods and fib_ratios must not be empty"
+        ):
+            OriginalIndicators.calculate_fibonacci_cycle(
+                data, cycle_periods=[8, 13], fib_ratios=[]
+            )
 
         # 不正なデータ型
         with pytest.raises(TypeError, match="data must be pandas DataFrame"):
@@ -1290,9 +2021,7 @@ class TestOriginalIndicators:
     def test_fibonacci_cycle_edge_cases(self):
         """Fibonacci Cycleの境界値テスト"""
         # 定数データ
-        constant_data = pd.DataFrame(
-            {"close": [100] * 55}  # 55個の定数データ
-        )
+        constant_data = pd.DataFrame({"close": [100] * 55})  # 55個の定数データ
 
         result = OriginalIndicators.calculate_fibonacci_cycle(constant_data)
 
@@ -1317,9 +2046,7 @@ class TestOriginalIndicators:
 
     def test_fibonacci_cycle_consistency(self):
         """Fibonacci Cycleの再現性テスト"""
-        data = pd.DataFrame(
-            {"close": list(range(100, 155))}
-        )
+        data = pd.DataFrame({"close": list(range(100, 155))})
 
         result1 = OriginalIndicators.calculate_fibonacci_cycle(data)
         result2 = OriginalIndicators.calculate_fibonacci_cycle(data)
@@ -1342,9 +2069,7 @@ class TestOriginalIndicators:
     def test_fibonacci_cycle_memory_usage(self):
         """Fibonacci Cycleのメモリ使用量テスト"""
         # 大きなデータセット
-        large_data = pd.DataFrame(
-            {"close": np.random.normal(100, 10, 10000)}
-        )
+        large_data = pd.DataFrame({"close": np.random.normal(100, 10, 10000)})
 
         result = OriginalIndicators.calculate_fibonacci_cycle(large_data)
 

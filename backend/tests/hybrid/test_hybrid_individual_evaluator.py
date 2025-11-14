@@ -10,7 +10,9 @@ from app.services.auto_strategy.core.hybrid_individual_evaluator import (
 from app.services.auto_strategy.config import GAConfig
 
 
-@pytest.mark.skip(reason="HybridIndividualEvaluator implementation changed - missing _calculate_hybrid_score method")
+@pytest.mark.skip(
+    reason="HybridIndividualEvaluator implementation changed - missing _calculate_hybrid_score method"
+)
 class TestHybridIndividualEvaluator:
     """HybridIndividualEvaluatorのテストクラス"""
 

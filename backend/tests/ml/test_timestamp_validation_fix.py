@@ -7,7 +7,9 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from backend.app.utils.data_processing.validators.data_validator import validate_data_integrity
+from backend.app.utils.data_processing.validators.data_validator import (
+    validate_data_integrity,
+)
 
 
 class TestTimestampValidationErrors:
@@ -17,32 +19,38 @@ class TestTimestampValidationErrors:
     def sample_data_with_timestamp(self):
         """タイムスタンプ付きのサンプルデータ"""
         np.random.seed(42)
-        dates = pd.date_range(start='2023-01-01', end='2023-01-31', freq='D')
+        dates = pd.date_range(start="2023-01-01", end="2023-01-31", freq="D")
 
-        return pd.DataFrame({
-            'timestamp': dates,
-            'Open': 10000 + np.random.randn(len(dates)) * 100,
-            'High': 10100 + np.random.randn(len(dates)) * 150,
-            'Low': 9900 + np.random.randn(len(dates)) * 150,
-            'Close': 10000 + np.random.randn(len(dates)) * 100,
-            'Volume': 1000 + np.random.randint(100, 1000, len(dates)),
-        })
+        return pd.DataFrame(
+            {
+                "timestamp": dates,
+                "Open": 10000 + np.random.randn(len(dates)) * 100,
+                "High": 10100 + np.random.randn(len(dates)) * 150,
+                "Low": 9900 + np.random.randn(len(dates)) * 150,
+                "Close": 10000 + np.random.randn(len(dates)) * 100,
+                "Volume": 1000 + np.random.randint(100, 1000, len(dates)),
+            }
+        )
 
     @pytest.fixture
     def sample_data_without_timestamp(self):
         """タイムスタンプなしのサンプルデータ"""
         np.random.seed(42)
-        dates = pd.date_range(start='2023-01-01', end='2023-01-31', freq='D')
+        dates = pd.date_range(start="2023-01-01", end="2023-01-31", freq="D")
 
-        return pd.DataFrame({
-            'Open': 10000 + np.random.randn(len(dates)) * 100,
-            'High': 10100 + np.random.randn(len(dates)) * 150,
-            'Low': 9900 + np.random.randn(len(dates)) * 150,
-            'Close': 10000 + np.random.randn(len(dates)) * 100,
-            'Volume': 1000 + np.random.randint(100, 1000, len(dates)),
-        })
+        return pd.DataFrame(
+            {
+                "Open": 10000 + np.random.randn(len(dates)) * 100,
+                "High": 10100 + np.random.randn(len(dates)) * 150,
+                "Low": 9900 + np.random.randn(len(dates)) * 150,
+                "Close": 10000 + np.random.randn(len(dates)) * 100,
+                "Volume": 1000 + np.random.randint(100, 1000, len(dates)),
+            }
+        )
 
-    def test_timestamp_column_validation_error_identification(self, sample_data_without_timestamp):
+    def test_timestamp_column_validation_error_identification(
+        self, sample_data_without_timestamp
+    ):
         """タイムスタンプカラム検証エラーを特定"""
         print("🔍 タイムスタンプカラム検証エラーを特定...")
 
@@ -76,10 +84,12 @@ class TestTimestampValidationErrors:
         print("🔍 タイムスタンプ型検証をテスト...")
 
         # 文字列型のタイムスタンプ
-        data_with_string_timestamp = pd.DataFrame({
-            'timestamp': ['2023-01-01', '2023-01-02', '2023-01-03'],
-            'Close': [10000, 10100, 9900]
-        })
+        data_with_string_timestamp = pd.DataFrame(
+            {
+                "timestamp": ["2023-01-01", "2023-01-02", "2023-01-03"],
+                "Close": [10000, 10100, 9900],
+            }
+        )
 
         try:
             validate_data_integrity(data_with_string_timestamp)
@@ -94,10 +104,8 @@ class TestTimestampValidationErrors:
         print("🔍 タイムスタンプ検証修正をテスト...")
 
         # 修正：タイムスタンプカラムを追加
-        sample_data_without_timestamp['timestamp'] = pd.date_range(
-            start='2023-01-01',
-            periods=len(sample_data_without_timestamp),
-            freq='D'
+        sample_data_without_timestamp["timestamp"] = pd.date_range(
+            start="2023-01-01", periods=len(sample_data_without_timestamp), freq="D"
         )
 
         # 修正後は検証が成功すること

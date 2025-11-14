@@ -49,7 +49,7 @@ class BaseFeatureCalculator(ABC):
         if df is None:
             logger.warning("入力データがNoneです")
             return False
-            
+
         # カラム名を小文字に統一して検証
         df_columns = [col.lower() for col in df.columns]
         if required_columns is not None:
@@ -62,7 +62,9 @@ class BaseFeatureCalculator(ABC):
         if required_columns:
             missing_columns = [col for col in required_columns if col not in df_columns]
             if missing_columns:
-                logger.warning(f"必須カラムが不足しています（小文字化対応）: {missing_columns}")
+                logger.warning(
+                    f"必須カラムが不足しています（小文字化対応）: {missing_columns}"
+                )
                 return False
 
         return True

@@ -30,7 +30,7 @@ def mock_session() -> MagicMock:
     session.rollback = MagicMock()
     session.scalar = MagicMock()
     session.scalars = MagicMock()
-    
+
     # bind属性をモック化
     mock_bind = MagicMock()
     mock_engine = MagicMock()
@@ -39,7 +39,7 @@ def mock_session() -> MagicMock:
     mock_engine.dialect = mock_dialect
     mock_bind.engine = mock_engine
     session.bind = mock_bind
-    
+
     return session
 
 
@@ -112,12 +112,10 @@ def sample_funding_rate_records() -> List[Dict[str, Any]]:
 class TestRepositoryInitialization:
     """リポジトリ初期化のテスト"""
 
-    def test_repository_initialization(
-        self, mock_session: MagicMock
-    ) -> None:
+    def test_repository_initialization(self, mock_session: MagicMock) -> None:
         """リポジトリが正しく初期化される"""
         repo = FundingRateRepository(mock_session)
-        
+
         assert repo.db == mock_session
         assert repo.model_class == FundingRateData
 
@@ -134,9 +132,9 @@ class TestInsertFundingRateData:
         mock_result = MagicMock()
         mock_result.rowcount = 1
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.insert_funding_rate_data(sample_funding_rate_records)
-        
+
         assert count == 2
         repository.db.commit.assert_called_once()
 
@@ -145,7 +143,7 @@ class TestInsertFundingRateData:
     ) -> None:
         """空のレコードで0が返される"""
         count = repository.insert_funding_rate_data([])
-        
+
         assert count == 0
 
     def test_insert_funding_rate_data_with_info_field(
@@ -162,13 +160,13 @@ class TestInsertFundingRateData:
                 "timestamp": 1704067200000,
             }
         ]
-        
+
         mock_result = MagicMock()
         mock_result.rowcount = 1
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.insert_funding_rate_data(records)
-        
+
         assert count == 1
 
     def test_insert_funding_rate_data_skips_invalid(
@@ -178,9 +176,9 @@ class TestInsertFundingRateData:
         records = [
             {"symbol": "BTC/USDT:USDT"},  # 必須フィールド不足
         ]
-        
+
         count = repository.insert_funding_rate_data(records)
-        
+
         assert count == 0
 
 
@@ -196,11 +194,9 @@ class TestGetFundingRateData:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_funding_rate_model]
         repository.db.scalars.return_value = mock_scalars
-        
-        results = repository.get_funding_rate_data(
-            symbol="BTC/USDT:USDT"
-        )
-        
+
+        results = repository.get_funding_rate_data(symbol="BTC/USDT:USDT")
+
         assert len(results) == 1
         assert results[0] == sample_funding_rate_model
 
@@ -213,16 +209,16 @@ class TestGetFundingRateData:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_funding_rate_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         start_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2024, 1, 2, tzinfo=timezone.utc)
-        
+
         results = repository.get_funding_rate_data(
             symbol="BTC/USDT:USDT",
             start_time=start_time,
             end_time=end_time,
         )
-        
+
         assert len(results) == 1
 
     def test_get_funding_rate_data_with_limit(
@@ -232,11 +228,9 @@ class TestGetFundingRateData:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
-        repository.get_funding_rate_data(
-            symbol="BTC/USDT:USDT", limit=10
-        )
-        
+
+        repository.get_funding_rate_data(symbol="BTC/USDT:USDT", limit=10)
+
         repository.db.scalars.assert_called_once()
 
 
@@ -252,9 +246,9 @@ class TestGetAllBySymbol:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_funding_rate_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_all_by_symbol("BTC/USDT:USDT")
-        
+
         assert len(results) == 1
 
 
@@ -267,9 +261,9 @@ class TestTimestampMethods:
         """最新ファンディングタイムスタンプが取得できる"""
         expected_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
-        
+
         result = repository.get_latest_funding_timestamp("BTC/USDT:USDT")
-        
+
         assert result == expected_time
 
     def test_get_oldest_funding_timestamp_success(
@@ -278,9 +272,9 @@ class TestTimestampMethods:
         """最古ファンディングタイムスタンプが取得できる"""
         expected_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
-        
+
         result = repository.get_oldest_funding_timestamp("BTC/USDT:USDT")
-        
+
         assert result == expected_time
 
 
@@ -292,9 +286,9 @@ class TestCountMethods:
     ) -> None:
         """ファンディングレートデータ件数が取得できる"""
         repository.db.scalar.return_value = 100
-        
+
         count = repository.get_funding_rate_count("BTC/USDT:USDT")
-        
+
         assert count == 100
 
 
@@ -308,9 +302,9 @@ class TestDeleteOperations:
         mock_result = MagicMock()
         mock_result.rowcount = 10
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.clear_all_funding_rate_data()
-        
+
         assert count == 10
         repository.db.commit.assert_called_once()
 
@@ -321,9 +315,9 @@ class TestDeleteOperations:
         mock_result = MagicMock()
         mock_result.rowcount = 5
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.clear_funding_rate_data_by_symbol("BTC/USDT:USDT")
-        
+
         assert count == 5
         repository.db.commit.assert_called_once()
 
@@ -334,16 +328,16 @@ class TestDeleteOperations:
         mock_result = MagicMock()
         mock_result.rowcount = 3
         repository.db.execute.return_value = mock_result
-        
+
         start_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2024, 1, 2, tzinfo=timezone.utc)
-        
+
         count = repository.clear_funding_rate_data_by_date_range(
             symbol="BTC/USDT:USDT",
             start_time=start_time,
             end_time=end_time,
         )
-        
+
         assert count == 3
 
 
@@ -359,11 +353,9 @@ class TestGetFundingRateDataframe:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_funding_rate_model]
         repository.db.scalars.return_value = mock_scalars
-        
-        df = repository.get_funding_rate_dataframe(
-            symbol="BTC/USDT:USDT"
-        )
-        
+
+        df = repository.get_funding_rate_dataframe(symbol="BTC/USDT:USDT")
+
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 1
         assert "funding_rate" in df.columns
@@ -375,11 +367,9 @@ class TestGetFundingRateDataframe:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
-        df = repository.get_funding_rate_dataframe(
-            symbol="BTC/USDT:USDT"
-        )
-        
+
+        df = repository.get_funding_rate_dataframe(symbol="BTC/USDT:USDT")
+
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 0
 
@@ -399,13 +389,13 @@ class TestDataValidation:
                 "timestamp": 1704067200000,
             }
         ]
-        
+
         mock_result = MagicMock()
         mock_result.rowcount = 1
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.insert_funding_rate_data(records)
-        
+
         assert count == 1
 
     def test_insert_handles_negative_funding_rate(
@@ -420,13 +410,13 @@ class TestDataValidation:
                 "timestamp": 1704067200000,
             }
         ]
-        
+
         mock_result = MagicMock()
         mock_result.rowcount = 1
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.insert_funding_rate_data(records)
-        
+
         assert count == 1
 
 
@@ -445,9 +435,9 @@ class TestErrorHandling:
                 "timestamp": 1704067200000,
             }
         ]
-        
+
         count = repository.insert_funding_rate_data(records)
-        
+
         # 変換エラーのレコードはスキップされる
         assert count == 0
 
@@ -456,7 +446,7 @@ class TestErrorHandling:
     ) -> None:
         """データベースエラー時の処理（safe_operationが例外をキャッチ）"""
         repository.db.execute.side_effect = Exception("DB Error")
-        
+
         records = [
             {
                 "symbol": "BTC/USDT:USDT",
@@ -465,9 +455,9 @@ class TestErrorHandling:
                 "timestamp": 1704067200000,
             }
         ]
-        
+
         # safe_operationデコレータがエラーを処理するため、例外は発生しない
         result = repository.insert_funding_rate_data(records)
-        
+
         # safe_operationによりエラー時は0が返される
         assert result == 0

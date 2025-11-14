@@ -25,6 +25,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_data_collection_orchestration_service() -> AsyncMock:
     """
@@ -46,17 +47,20 @@ def mock_db_session() -> Mock:
     """
     return Mock()
 
+
 @pytest.fixture(autouse=True)
 def override_dependencies(mock_db_session, mock_data_collection_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_data_collection_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_data_collection_orchestration_service] = lambda: mock_data_collection_orchestration_service
+    app.dependency_overrides[get_data_collection_orchestration_service] = (
+        lambda: mock_data_collection_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -70,8 +74,6 @@ def mock_background_tasks() -> Mock:
         Mock: モックされたBackgroundTasks
     """
     return Mock()
-
-
 
 
 @pytest.fixture
@@ -118,7 +120,6 @@ def sample_collection_status() -> Dict[str, Any]:
 class TestHistoricalDataCollection:
     """履歴データ収集のテストクラス"""
 
-
     def test_collect_historical_data_success(
         self,
         test_client: TestClient,
@@ -158,7 +159,6 @@ class TestHistoricalDataCollection:
         assert data["data"]["symbol"] == "BTC/USDT:USDT"
         assert data["data"]["timeframe"] == "1h"
 
-
     def test_collect_historical_data_with_custom_dates(
         self,
         test_client: TestClient,
@@ -196,7 +196,6 @@ class TestHistoricalDataCollection:
         data = response.json()
         assert data["success"] is True
 
-
     def test_collect_historical_data_db_init_failure(
         self,
         test_client: TestClient,
@@ -212,8 +211,10 @@ class TestHistoricalDataCollection:
             mock_data_collection_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_data_collection_orchestration_service.start_historical_data_collection.side_effect = Exception("DB init failed")
-        
+        mock_data_collection_orchestration_service.start_historical_data_collection.side_effect = Exception(
+            "DB init failed"
+        )
+
         # APIリクエスト
         response = test_client.post(
             "/api/data-collection/historical",
@@ -303,7 +304,6 @@ class TestBulkIncrementalUpdate:
 class TestBulkHistoricalDataCollection:
     """一括履歴データ収集のテストクラス"""
 
-
     def test_bulk_historical_collection_success(
         self,
         test_client: TestClient,
@@ -322,7 +322,10 @@ class TestBulkHistoricalDataCollection:
         mock_data_collection_orchestration_service.start_bulk_historical_data_collection.return_value = {
             "success": True,
             "message": "一括履歴データ収集を開始しました",
-            "data": {"symbols": ["BTC/USDT:USDT", "ETH/USDT:USDT"], "timeframes": ["1h", "4h"]},
+            "data": {
+                "symbols": ["BTC/USDT:USDT", "ETH/USDT:USDT"],
+                "timeframes": ["1h", "4h"],
+            },
         }
 
         # APIリクエスト
@@ -336,7 +339,6 @@ class TestBulkHistoricalDataCollection:
         data = response.json()
         assert data["success"] is True
         assert "一括履歴データ収集を開始" in data["message"]
-
 
     def test_bulk_historical_collection_without_force_update(
         self,
@@ -373,7 +375,6 @@ class TestBulkHistoricalDataCollection:
 class TestCollectionStatus:
     """データ収集状態取得のテストクラス"""
 
-
     def test_get_collection_status_success(
         self,
         test_client: TestClient,
@@ -408,7 +409,6 @@ class TestCollectionStatus:
         assert data["data"]["symbol"] == "BTC/USDT:USDT"
         assert data["data"]["timeframe"] == "1h"
         assert data["data"]["total_records"] == 5000
-
 
     def test_get_collection_status_with_auto_fetch(
         self,
@@ -450,8 +450,6 @@ class TestCollectionStatus:
             ("BNB/USDT:USDT", "1d"),
         ],
     )
-
-
     def test_get_collection_status_multiple_symbols(
         self,
         test_client: TestClient,
@@ -496,7 +494,6 @@ class TestCollectionStatus:
 
 class TestAllDataBulkCollection:
     """全データ一括収集のテストクラス"""
-
 
     def test_collect_all_data_bulk_success(
         self,
@@ -573,7 +570,6 @@ class TestErrorHandling:
         assert data["success"] is False
         assert "error" in data
 
-
     def test_unexpected_exception_handling(
         self,
         test_client: TestClient,
@@ -589,8 +585,8 @@ class TestErrorHandling:
             mock_data_collection_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_data_collection_orchestration_service.start_historical_data_collection.side_effect = (
-            Exception("Unexpected error")
+        mock_data_collection_orchestration_service.start_historical_data_collection.side_effect = Exception(
+            "Unexpected error"
         )
 
         # APIリクエスト
@@ -610,8 +606,6 @@ class TestEdgeCases:
         "timeframe",
         ["15m", "30m", "1h", "4h", "1d"],
     )
-
-
     def test_multiple_timeframes(
         self,
         test_client: TestClient,

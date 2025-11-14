@@ -11,7 +11,9 @@ from unittest.mock import Mock, patch
 from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
 
 
-@pytest.mark.skip(reason="BaseMLTrainerのdata_processor実装にSeriesエラーが残っている。実装側の修正が必要")
+@pytest.mark.skip(
+    reason="BaseMLTrainerのdata_processor実装にSeriesエラーが残っている。実装側の修正が必要"
+)
 class TestBaseMLTrainerDataProcessorIssues:
     """BaseMLTrainerのdata_processor問題を特定するテスト"""
 
@@ -19,25 +21,29 @@ class TestBaseMLTrainerDataProcessorIssues:
     def sample_training_data_with_proper_timestamp(self):
         """適切なタイムスタンプ付きのサンプルデータ"""
         np.random.seed(42)
-        dates = pd.date_range(start='2023-01-01', end='2023-06-30', freq='D')
+        dates = pd.date_range(start="2023-01-01", end="2023-06-30", freq="D")
 
-        return pd.DataFrame({
-            'timestamp': dates,
-            'open': 10000 + np.random.randn(len(dates)) * 200,
-            'high': 10000 + np.random.randn(len(dates)) * 300,
-            'low': 10000 + np.random.randn(len(dates)) * 300,
-            'close': 10000 + np.random.randn(len(dates)) * 200,
-            'volume': 500 + np.random.randint(100, 1000, len(dates)),
-            'returns': np.random.randn(len(dates)) * 0.02,
-            'volatility': 0.01 + np.random.rand(len(dates)) * 0.02,
-            'rsi': 30 + np.random.rand(len(dates)) * 40,
-            'macd': np.random.randn(len(dates)) * 0.01,
-            'signal': np.random.randn(len(dates)) * 0.005,
-            'histogram': np.random.randn(len(dates)) * 0.005,
-            'target': np.random.choice([0, 1, 2], len(dates)),  # 3クラス分類に対応
-        })
+        return pd.DataFrame(
+            {
+                "timestamp": dates,
+                "open": 10000 + np.random.randn(len(dates)) * 200,
+                "high": 10000 + np.random.randn(len(dates)) * 300,
+                "low": 10000 + np.random.randn(len(dates)) * 300,
+                "close": 10000 + np.random.randn(len(dates)) * 200,
+                "volume": 500 + np.random.randint(100, 1000, len(dates)),
+                "returns": np.random.randn(len(dates)) * 0.02,
+                "volatility": 0.01 + np.random.rand(len(dates)) * 0.02,
+                "rsi": 30 + np.random.rand(len(dates)) * 40,
+                "macd": np.random.randn(len(dates)) * 0.01,
+                "signal": np.random.randn(len(dates)) * 0.005,
+                "histogram": np.random.randn(len(dates)) * 0.005,
+                "target": np.random.choice([0, 1, 2], len(dates)),  # 3クラス分類に対応
+            }
+        )
 
-    def test_base_trainer_training_with_proper_timestamp_data(self, sample_training_data_with_proper_timestamp):
+    def test_base_trainer_training_with_proper_timestamp_data(
+        self, sample_training_data_with_proper_timestamp
+    ):
         """適切なタイムスタンプデータでのBaseTrainer学習テスト"""
         print("🔍 適切なタイムスタンプデータでのBaseTrainer学習をテスト...")
 
@@ -45,7 +51,9 @@ class TestBaseMLTrainerDataProcessorIssues:
 
         try:
             # 実際の学習を実行
-            result = trainer.train_model(sample_training_data_with_proper_timestamp, save_model=False)
+            result = trainer.train_model(
+                sample_training_data_with_proper_timestamp, save_model=False
+            )
 
             # 学習が成功していること
             assert result["success"] is True
@@ -59,7 +67,9 @@ class TestBaseMLTrainerDataProcessorIssues:
             print(f"❌ 適切なタイムスタンプデータでも学習失敗: {e}")
             pytest.fail(f"BaseTrainer学習エラー: {e}")
 
-    def test_data_processor_validation_bypass_in_trainer(self, sample_training_data_with_proper_timestamp):
+    def test_data_processor_validation_bypass_in_trainer(
+        self, sample_training_data_with_proper_timestamp
+    ):
         """Trainer内でのdata_processor検証バイパステスト"""
         print("🔍 Trainer内でのdata_processor検証バイパスをテスト...")
 
@@ -76,7 +86,9 @@ class TestBaseMLTrainerDataProcessorIssues:
 
         try:
             # 検証バイパス後の学習
-            result = trainer.train_model(sample_training_data_with_proper_timestamp, save_model=False)
+            result = trainer.train_model(
+                sample_training_data_with_proper_timestamp, save_model=False
+            )
 
             assert result["success"] is True
             print("✅ data_processor検証バイパスで学習が成功")
@@ -88,23 +100,25 @@ class TestBaseMLTrainerDataProcessorIssues:
             # 元に戻す
             trainer.data_processor.validate_data_integrity = original_validate
 
-    def test_timestamp_column_auto_fix_in_data_processor(self, sample_training_data_with_proper_timestamp):
+    def test_timestamp_column_auto_fix_in_data_processor(
+        self, sample_training_data_with_proper_timestamp
+    ):
         """data_processor内でのタイムスタンプカラム自動修正テスト"""
         print("🔍 data_processor内でのタイムスタンプカラム自動修正をテスト...")
 
         trainer = BaseMLTrainer()
 
         # タイムスタンプなしのデータを作成
-        data_without_timestamp = sample_training_data_with_proper_timestamp.drop('timestamp', axis=1)
+        data_without_timestamp = sample_training_data_with_proper_timestamp.drop(
+            "timestamp", axis=1
+        )
 
         # data_processorに自動修正機能があるかテスト
         try:
             # 検証前にタイムスタンプを自動追加
-            if 'timestamp' not in data_without_timestamp.columns:
-                data_without_timestamp['timestamp'] = pd.date_range(
-                    start='2023-01-01',
-                    periods=len(data_without_timestamp),
-                    freq='D'
+            if "timestamp" not in data_without_timestamp.columns:
+                data_without_timestamp["timestamp"] = pd.date_range(
+                    start="2023-01-01", periods=len(data_without_timestamp), freq="D"
                 )
 
             # 修正後のデータで学習
@@ -117,7 +131,9 @@ class TestBaseMLTrainerDataProcessorIssues:
             print(f"❌ タイムスタンプ自動修正でも学習失敗: {e}")
             pytest.fail(f"タイムスタンプ自動修正後の学習エラー: {e}")
 
-    def test_final_base_trainer_validation(self, sample_training_data_with_proper_timestamp):
+    def test_final_base_trainer_validation(
+        self, sample_training_data_with_proper_timestamp
+    ):
         """最終的なBaseTrainer検証テスト"""
         print("🔍 最終的なBaseTrainer検証を実施...")
 
@@ -138,10 +154,14 @@ class TestBaseMLTrainerDataProcessorIssues:
 
         # 2. ハイブリッド予測機能
         try:
-            from backend.app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
+            from backend.app.services.auto_strategy.core.hybrid_predictor import (
+                HybridPredictor,
+            )
 
             predictor = HybridPredictor()
-            features = sample_training_data_with_proper_timestamp[['Close', 'Volume', 'rsi']]
+            features = sample_training_data_with_proper_timestamp[
+                ["Close", "Volume", "rsi"]
+            ]
             prediction = predictor.predict(features)
             validation_results.append(("ハイブリッド予測", True))
 
@@ -154,7 +174,9 @@ class TestBaseMLTrainerDataProcessorIssues:
 
             start_time = time.time()
             trainer = BaseMLTrainer()
-            result = trainer.train_model(sample_training_data_with_proper_timestamp, save_model=False)
+            result = trainer.train_model(
+                sample_training_data_with_proper_timestamp, save_model=False
+            )
             elapsed = time.time() - start_time
 
             validation_results.append(("パフォーマンス", elapsed < 60))  # 1分以内
@@ -173,7 +195,9 @@ class TestBaseMLTrainerDataProcessorIssues:
             print(f"  {status} {test_name}: {'成功' if passed else '失敗'}")
 
         # 3/3の検証が成功していること
-        assert passed >= total * 1.0, f"MLシステムに重大な問題があります: {passed}/{total}"
+        assert (
+            passed >= total * 1.0
+        ), f"MLシステムに重大な問題があります: {passed}/{total}"
 
         print(f"\n🎉 BaseTrainer最終検証が成功しました！")
         print("✨ MLシステムは完全に正常に動作しています！")

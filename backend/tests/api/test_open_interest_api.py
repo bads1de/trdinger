@@ -24,6 +24,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_open_interest_orchestration_service() -> AsyncMock:
     """
@@ -45,20 +46,22 @@ def mock_db_session() -> Mock:
     """
     return Mock()
 
+
 @pytest.fixture(autouse=True)
 def override_dependencies(mock_db_session, mock_open_interest_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_open_interest_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_open_interest_orchestration_service] = lambda: mock_open_interest_orchestration_service
+    app.dependency_overrides[get_open_interest_orchestration_service] = (
+        lambda: mock_open_interest_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
-
 
 
 @pytest.fixture
@@ -224,7 +227,6 @@ class TestGetOpenInterestData:
             (1001, 200),  # エッジケース（実装では許容）
         ],
     )
-
     def test_get_open_interest_limit_validation(
         self,
         test_client: TestClient,
@@ -281,7 +283,6 @@ class TestGetOpenInterestData:
 class TestCollectOpenInterest:
     """オープンインタレスト収集のテストクラス"""
 
-
     def test_collect_open_interest_success(
         self,
         test_client: TestClient,
@@ -315,7 +316,6 @@ class TestCollectOpenInterest:
         assert data["success"] is True
         assert "収集" in data["message"]
 
-
     def test_collect_open_interest_fetch_all(
         self,
         test_client: TestClient,
@@ -348,7 +348,6 @@ class TestCollectOpenInterest:
         data = response.json()
         assert data["success"] is True
 
-
     def test_collect_open_interest_db_init_failure(
         self,
         test_client: TestClient,
@@ -369,7 +368,7 @@ class TestCollectOpenInterest:
             "message": "オープンインタレストデータを収集しました",
             "data": {"collected_count": 0},
         }
-        
+
         # APIリクエスト
         response = test_client.post(
             "/api/open-interest/collect",
@@ -398,7 +397,6 @@ class TestCollectOpenInterest:
 
 class TestBulkCollectOpenInterest:
     """オープンインタレスト一括収集のテストクラス"""
-
 
     def test_bulk_collect_success(
         self,
@@ -438,7 +436,6 @@ class TestBulkCollectOpenInterest:
         assert data["success"] is True
         assert "完了" in data["message"]
 
-
     def test_bulk_collect_db_init_failure(
         self,
         test_client: TestClient,
@@ -459,7 +456,7 @@ class TestBulkCollectOpenInterest:
             "message": "一括収集が完了しました",
             "data": {"results": []},
         }
-        
+
         # APIリクエスト
         response = test_client.post("/api/open-interest/bulk-collect")
 

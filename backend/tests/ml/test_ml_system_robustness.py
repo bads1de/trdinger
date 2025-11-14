@@ -29,29 +29,31 @@ class TestMLSystemRobustness:
     def sample_training_data(self):
         """サンプル学習データ"""
         np.random.seed(42)
-        dates = pd.date_range(start='2023-01-01', end='2023-06-30', freq='D')
+        dates = pd.date_range(start="2023-01-01", end="2023-06-30", freq="D")
 
-        data = pd.DataFrame({
-            'timestamp': dates,
-            'Open': 10000 + np.random.randn(len(dates)) * 200,
-            'High': 10000 + np.random.randn(len(dates)) * 300,
-            'Low': 10000 + np.random.randn(len(dates)) * 300,
-            'Close': 10000 + np.random.randn(len(dates)) * 200,
-            'Volume': 500 + np.random.randint(100, 1000, len(dates)),
-            'returns': np.random.randn(len(dates)) * 0.02,
-            'volatility': 0.01 + np.random.rand(len(dates)) * 0.02,
-            'rsi': 30 + np.random.rand(len(dates)) * 40,
-            'macd': np.random.randn(len(dates)) * 0.01,
-            'signal': np.random.randn(len(dates)) * 0.005,
-            'histogram': np.random.randn(len(dates)) * 0.005,
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": dates,
+                "Open": 10000 + np.random.randn(len(dates)) * 200,
+                "High": 10000 + np.random.randn(len(dates)) * 300,
+                "Low": 10000 + np.random.randn(len(dates)) * 300,
+                "Close": 10000 + np.random.randn(len(dates)) * 200,
+                "Volume": 500 + np.random.randint(100, 1000, len(dates)),
+                "returns": np.random.randn(len(dates)) * 0.02,
+                "volatility": 0.01 + np.random.rand(len(dates)) * 0.02,
+                "rsi": 30 + np.random.rand(len(dates)) * 40,
+                "macd": np.random.randn(len(dates)) * 0.01,
+                "signal": np.random.randn(len(dates)) * 0.005,
+                "histogram": np.random.randn(len(dates)) * 0.005,
+            }
+        )
 
         # OHLCの関係を確保
-        data['High'] = data[['Open', 'Close', 'High']].max(axis=1)
-        data['Low'] = data[['Open', 'Close', 'Low']].min(axis=1)
+        data["High"] = data[["Open", "Close", "High"]].max(axis=1)
+        data["Low"] = data[["Open", "Close", "Low"]].min(axis=1)
 
         # ラベルを生成（上昇:1, 下降:0）
-        data['target'] = (data['Close'].shift(-1) > data['Close']).astype(int)
+        data["target"] = (data["Close"].shift(-1) > data["Close"]).astype(int)
 
         return data.dropna()
 
@@ -59,23 +61,23 @@ class TestMLSystemRobustness:
     def hybrid_predictor(self):
         """ハイブリッド予測器"""
         return HybridPredictor(
-            trainer_type="single",
-            model_type="lightgbm",
-            use_time_series_cv=True
+            trainer_type="single", model_type="lightgbm", use_time_series_cv=True
         )
 
-    def test_hybrid_integration_with_edge_cases(self, sample_training_data, hybrid_predictor):
+    def test_hybrid_integration_with_edge_cases(
+        self, sample_training_data, hybrid_predictor
+    ):
         """エッジケースを含むハイブリッド統合テスト"""
         print("🔍 エッジケースを含むハイブリッド統合をテスト...")
 
         # 1. 不正なDRL重みのテスト
         hybrid_predictor._drl_weight = 1.5  # 範囲外の値
-        features_df = sample_training_data[['Close', 'Volume', 'rsi']]
+        features_df = sample_training_data[["Close", "Volume", "rsi"]]
 
         try:
             prediction = hybrid_predictor.predict(features_df)
             assert isinstance(prediction, dict)
-            assert 'up' in prediction and 'down' in prediction and 'range' in prediction
+            assert "up" in prediction and "down" in prediction and "range" in prediction
             print("✅ 範囲外DRL重みの自動調整が成功")
         except Exception as e:
             print(f"⚠️ 範囲外DRL重みでエラー: {e}")
@@ -87,7 +89,7 @@ class TestMLSystemRobustness:
         print("✅ モデル未学習時のデフォルト予測が成功")
 
         # 3. 特徴量不足時の予測
-        incomplete_features = pd.DataFrame({'Close': [10000]})
+        incomplete_features = pd.DataFrame({"Close": [10000]})
         prediction = hybrid_predictor.predict(incomplete_features)
         assert isinstance(prediction, dict)
         assert sum(prediction.values()) == pytest.approx(1.0)
@@ -99,8 +101,8 @@ class TestMLSystemRobustness:
 
         # 1. 時系列分割の整合性
         trainer = BaseMLTrainer()
-        X = sample_training_data[['Close', 'Volume', 'rsi']]
-        y = sample_training_data['target']
+        X = sample_training_data[["Close", "Volume", "rsi"]]
+        y = sample_training_data["target"]
 
         X_train, X_test, y_train, y_test = trainer._split_data(
             X, y, use_time_series_split=True
@@ -122,7 +124,7 @@ class TestMLSystemRobustness:
 
         # 3. 欠損値処理
         data_with_missing = sample_training_data.copy()
-        data_with_missing.loc[::10, 'Close'] = np.nan
+        data_with_missing.loc[::10, "Close"] = np.nan
 
         try:
             features_with_missing = trainer._calculate_features(data_with_missing)
@@ -143,7 +145,7 @@ class TestMLSystemRobustness:
 
         # 2. 不正なカラム名
         invalid_data = sample_training_data.copy()
-        invalid_data = invalid_data.rename(columns={'Close': 'close'})  # 小文字に
+        invalid_data = invalid_data.rename(columns={"Close": "close"})  # 小文字に
 
         try:
             result = trainer.train_model(invalid_data, save_model=False)
@@ -262,11 +264,10 @@ class TestMLSystemRobustness:
 
         # 複数モデルのハイブリッド予測器
         multi_predictor = HybridPredictor(
-            model_types=["lightgbm", "xgboost", "randomforest"],
-            trainer_type="single"
+            model_types=["lightgbm", "xgboost", "randomforest"], trainer_type="single"
         )
 
-        features_df = sample_training_data[['Close', 'Volume', 'rsi']]
+        features_df = sample_training_data[["Close", "Volume", "rsi"]]
 
         # 一貫性のある予測が得られること
         predictions = []
@@ -275,9 +276,9 @@ class TestMLSystemRobustness:
             predictions.append(pred)
 
         # 予測結果が安定していること
-        up_std = np.std([p['up'] for p in predictions])
-        down_std = np.std([p['down'] for p in predictions])
-        range_std = np.std([p['range'] for p in predictions])
+        up_std = np.std([p["up"] for p in predictions])
+        down_std = np.std([p["down"] for p in predictions])
+        range_std = np.std([p["range"] for p in predictions])
 
         assert up_std < 0.1, f"上昇予測のばらつきが大きい: {up_std:.4f}"
         assert down_std < 0.1, f"下降予測のばらつきが大きい: {down_std:.4f}"
@@ -290,11 +291,9 @@ class TestMLSystemRobustness:
         print("🔍 DRL統合のエッジケースをテスト...")
 
         # DRL無効時のテスト
-        predictor_no_drl = HybridPredictor(
-            automl_config={"drl": {"enabled": False}}
-        )
+        predictor_no_drl = HybridPredictor(automl_config={"drl": {"enabled": False}})
 
-        features_df = sample_training_data[['Close', 'Volume', 'rsi']]
+        features_df = sample_training_data[["Close", "Volume", "rsi"]]
         pred_no_drl = predictor_no_drl.predict(features_df)
         assert isinstance(pred_no_drl, dict)
         print("✅ DRL無効時の予測が成功")
@@ -309,8 +308,11 @@ class TestMLSystemRobustness:
         print("✅ DRL重み0時の予測が成功")
 
         # DRL予測失敗時のフォールバック
-        with patch.object(predictor_zero_weight.drl_policy_adapter, 'predict_signals',
-                        side_effect=Exception("DRL予測失敗")):
+        with patch.object(
+            predictor_zero_weight.drl_policy_adapter,
+            "predict_signals",
+            side_effect=Exception("DRL予測失敗"),
+        ):
             pred_fallback = predictor_zero_weight.predict(features_df)
             assert isinstance(pred_fallback, dict)
             print("✅ DRL予測失敗時のフォールバックが成功")
@@ -325,7 +327,7 @@ class TestMLSystemRobustness:
         stream_predictions = []
         for i in range(10):
             # 小さなデータチャンク
-            chunk = sample_training_data.iloc[i:i+5][['Close', 'Volume', 'rsi']]
+            chunk = sample_training_data.iloc[i : i + 5][["Close", "Volume", "rsi"]]
 
             if len(chunk) == 5:  # データが十分な場合のみ
                 pred = predictor.predict(chunk)
@@ -333,7 +335,7 @@ class TestMLSystemRobustness:
 
         # 予測が安定していること
         if len(stream_predictions) > 1:
-            up_values = [p['up'] for p in stream_predictions]
+            up_values = [p["up"] for p in stream_predictions]
             stability = np.std(up_values) < 0.1
             print(f"✅ リアルタイム予測の安定性: {'良好' if stability else '不安定'}")
 
@@ -345,7 +347,7 @@ class TestMLSystemRobustness:
         trainer.train_model(sample_training_data, save_model=False)
 
         # ドリフト検出が実装されていること
-        if hasattr(trainer, 'detect_model_drift'):
+        if hasattr(trainer, "detect_model_drift"):
             try:
                 drift_result = trainer.detect_model_drift(sample_training_data)
                 assert isinstance(drift_result, dict)
@@ -372,7 +374,7 @@ class TestMLSystemRobustness:
         # 2. ハイブリッド予測の検証
         try:
             predictor = HybridPredictor()
-            features = sample_training_data[['Close', 'Volume', 'rsi']]
+            features = sample_training_data[["Close", "Volume", "rsi"]]
             prediction = predictor.predict(features)
             validation_results.append(("ハイブリッド予測", True))
         except Exception as e:

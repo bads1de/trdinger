@@ -14,11 +14,7 @@ from app.services.ml.feature_engineering.crypto_features import CryptoFeatures
 @pytest.fixture
 def sample_ohlcv_data():
     """サンプルOHLCVデータを生成"""
-    dates = pd.date_range(
-        start=datetime(2023, 1, 1),
-        periods=1000,
-        freq='1h'
-    )
+    dates = pd.date_range(start=datetime(2023, 1, 1), periods=1000, freq="1h")
 
     np.random.seed(42)
     base_price = 50000
@@ -31,28 +27,26 @@ def sample_ohlcv_data():
         low = base_price - abs(np.random.randn()) * 50
         volume = np.random.randint(100, 10000)
 
-        data.append({
-            'timestamp': date,
-            'open': base_price - change/2,
-            'high': high,
-            'low': low,
-            'close': base_price,
-            'volume': volume
-        })
+        data.append(
+            {
+                "timestamp": date,
+                "open": base_price - change / 2,
+                "high": high,
+                "low": low,
+                "close": base_price,
+                "volume": volume,
+            }
+        )
 
     df = pd.DataFrame(data)
-    df.set_index('timestamp', inplace=True)
+    df.set_index("timestamp", inplace=True)
     return df
 
 
 @pytest.fixture
 def large_ohlcv_data():
     """大きなベンチマーク用OHLCVデータを生成"""
-    dates = pd.date_range(
-        start=datetime(2023, 1, 1),
-        periods=20000,
-        freq='1h'
-    )
+    dates = pd.date_range(start=datetime(2023, 1, 1), periods=20000, freq="1h")
 
     np.random.seed(42)
     base_price = 50000
@@ -65,17 +59,19 @@ def large_ohlcv_data():
         low = base_price - abs(np.random.randn()) * 50
         volume = np.random.randint(100, 10000)
 
-        data.append({
-            'timestamp': date,
-            'open': base_price - change/2,
-            'high': high,
-            'low': low,
-            'close': base_price,
-            'volume': volume
-        })
+        data.append(
+            {
+                "timestamp": date,
+                "open": base_price - change / 2,
+                "high": high,
+                "low": low,
+                "close": base_price,
+                "volume": volume,
+            }
+        )
 
     df = pd.DataFrame(data)
-    df.set_index('timestamp', inplace=True)
+    df.set_index("timestamp", inplace=True)
     return df
 
 
@@ -83,25 +79,30 @@ def test_crypto_features_initialization():
     """CryptoFeatureCalculatorの初期化をテスト"""
     calculator = CryptoFeatures()
     assert calculator is not None
-    assert hasattr(calculator, 'create_crypto_features')
-    assert hasattr(calculator, '_create_price_features')
+    assert hasattr(calculator, "create_crypto_features")
+    assert hasattr(calculator, "_create_price_features")
 
 
 def test_crypto_features_inherits_base_calculator():
     """CryptoFeatureCalculatorがBaseFeatureCalculatorを継承ことをテスト"""
-    from app.services.ml.feature_engineering.base_feature_calculator import BaseFeatureCalculator
+    from app.services.ml.feature_engineering.base_feature_calculator import (
+        BaseFeatureCalculator,
+    )
+
     calculator = CryptoFeatures()
 
-    assert isinstance(calculator, BaseFeatureCalculator), \
-        "CryptoFeatureCalculator should inherit from BaseFeatureCalculator"
+    assert isinstance(
+        calculator, BaseFeatureCalculator
+    ), "CryptoFeatureCalculator should inherit from BaseFeatureCalculator"
 
 
 def test_calculate_features_method_exists():
     """calculate_featuresメソッドの存在をテスト（BaseFeatureCalculator API互換）"""
     calculator = CryptoFeatures()
 
-    assert hasattr(calculator, 'calculate_features'), \
-        "CryptoFeatureCalculator must have calculate_features method"
+    assert hasattr(
+        calculator, "calculate_features"
+    ), "CryptoFeatureCalculator must have calculate_features method"
 
 
 def test_create_crypto_features_basic(sample_ohlcv_data):
@@ -156,7 +157,9 @@ def test_performance_benchmark_aggressive(large_ohlcv_data):
     print(f"\n[PERF] Duration: {duration:.2f}s")
     print(f"[PERF] Throughput: {throughput:.0f} rows/sec")
     print(f"[PERF] Target: 200,000 rows/sec")
-    print(f"[PERF] Status: {'EXCELLENT' if throughput >= 200000 else 'GOOD' if throughput >= 50000 else 'NEEDS_OPTIMIZATION'}")
+    print(
+        f"[PERF] Status: {'EXCELLENT' if throughput >= 200000 else 'GOOD' if throughput >= 50000 else 'NEEDS_OPTIMIZATION'}"
+    )
 
     # 一旦保留、このテストはMotionとする
     # assert throughput >= 200000, \

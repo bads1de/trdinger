@@ -285,9 +285,7 @@ class InteractionFeatureCalculator:
         if "OI_Trend" in df.columns and "Momentum" in df.columns:
             try:
                 oi_trend = self._safe_numeric_conversion(pd.Series(df["OI_Trend"]))
-                momentum = self._safe_numeric_conversion(
-                    pd.Series(df["Momentum"])
-                )
+                momentum = self._safe_numeric_conversion(pd.Series(df["Momentum"]))
 
                 if oi_trend is not None and momentum is not None:
                     interaction = oi_trend * momentum

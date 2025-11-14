@@ -121,9 +121,7 @@ class TestFetchOpenInterestHistory:
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
         1000,
     )
-    async def test_fetch_open_interest_history_with_since(
-        self, service, mock_exchange
-    ):
+    async def test_fetch_open_interest_history_with_since(self, service, mock_exchange):
         """sinceパラメータ付きでオープンインタレスト履歴が取得できることを確認"""
         since_timestamp = 1609459200000
         expected_data = [{"timestamp": 1609462800000, "openInterest": 105000.0}]
@@ -193,9 +191,7 @@ class TestFetchIncrementalData:
             return_value=[{"id": 1}, {"id": 2}]
         )
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=mock_data)
                 mock_loop.return_value.run_in_executor = mock_executor
@@ -209,9 +205,7 @@ class TestFetchIncrementalData:
                     mock_repository_instance.insert_open_interest_data = MagicMock(
                         return_value=2
                     )
-                    mock_config.repository_class.return_value = (
-                        mock_repository_instance
-                    )
+                    mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_open_interest_data(
                         "BTC/USDT"
@@ -247,9 +241,7 @@ class TestFetchIncrementalData:
                     mock_repository_instance.insert_open_interest_data = MagicMock(
                         return_value=1
                     )
-                    mock_config.repository_class.return_value = (
-                        mock_repository_instance
-                    )
+                    mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_open_interest_data(
                         "BTC/USDT"
@@ -269,9 +261,7 @@ class TestFetchIncrementalData:
             return_value=[{"id": 1}]
         )
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=mock_data)
                 mock_loop.return_value.run_in_executor = mock_executor
@@ -285,9 +275,7 @@ class TestFetchIncrementalData:
                     mock_repository_instance.insert_open_interest_data = MagicMock(
                         return_value=1
                     )
-                    mock_config.repository_class.return_value = (
-                        mock_repository_instance
-                    )
+                    mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_open_interest_data(
                         "BTC/USDT", interval="4h"
@@ -307,9 +295,7 @@ class TestFetchIncrementalData:
         )
         mock_repository.insert_open_interest_data = MagicMock(return_value=1)
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=mock_data)
                 mock_loop.return_value.run_in_executor = mock_executor
@@ -395,12 +381,8 @@ class TestFetchAndSaveData:
             return_value=[{"id": 1}, {"id": 2}]
         )
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=None
-        ):
-            with patch.object(
-                service, "_fetch_paginated_data", return_value=mock_data
-            ):
+        with patch.object(service, "_get_latest_timestamp_from_db", return_value=None):
+            with patch.object(service, "_fetch_paginated_data", return_value=mock_data):
                 with patch(
                     "app.services.data_collection.bybit.bybit_service.get_db"
                 ) as mock_get_db:
@@ -410,9 +392,7 @@ class TestFetchAndSaveData:
                     mock_repository_instance.insert_open_interest_data = MagicMock(
                         return_value=2
                     )
-                    mock_config.repository_class.return_value = (
-                        mock_repository_instance
-                    )
+                    mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_and_save_open_interest_data(
                         "BTC/USDT", fetch_all=True

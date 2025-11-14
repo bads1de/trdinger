@@ -24,6 +24,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_ml_management_orchestration_service() -> AsyncMock:
     """
@@ -73,13 +74,15 @@ def mock_ml_management_orchestration_service() -> Mock:
 def override_dependencies(mock_db_session, mock_ml_management_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_ml_management_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_ml_management_orchestration_service] = lambda: mock_ml_management_orchestration_service
+    app.dependency_overrides[get_ml_management_orchestration_service] = (
+        lambda: mock_ml_management_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -126,6 +129,7 @@ def sample_models_list(sample_model_info: Dict[str, Any]) -> List[Dict[str, Any]
 
 class TestGetModels:
     """モデル一覧取得のテストクラス"""
+
     def test_get_models_success(
         self,
         test_client: TestClient,
@@ -155,6 +159,7 @@ class TestGetModels:
         data = response.json()
         assert data["success"] is True
         assert len(data["data"]["models"]) == 3
+
     def test_get_models_empty(
         self,
         test_client: TestClient,
@@ -186,6 +191,7 @@ class TestGetModels:
 
 class TestDeleteModels:
     """モデル削除のテストクラス"""
+
     def test_delete_model_success(
         self,
         test_client: TestClient,
@@ -213,6 +219,7 @@ class TestDeleteModels:
         data = response.json()
         assert data["success"] is True
         assert "削除" in data["message"]
+
     def test_delete_model_not_found(
         self,
         test_client: TestClient,
@@ -238,6 +245,7 @@ class TestDeleteModels:
 
         # アサーション
         assert response.status_code in [200, 404]
+
     def test_delete_all_models_success(
         self,
         test_client: TestClient,
@@ -270,6 +278,7 @@ class TestDeleteModels:
 
 class TestModelStatus:
     """モデル状態取得のテストクラス"""
+
     def test_get_ml_status_success(
         self,
         test_client: TestClient,
@@ -305,6 +314,7 @@ class TestModelStatus:
 
 class TestFeatureImportance:
     """特徴量重要度取得のテストクラス"""
+
     def test_get_feature_importance_success(
         self,
         test_client: TestClient,
@@ -337,6 +347,7 @@ class TestFeatureImportance:
         data = response.json()
         assert data["success"] is True
         assert len(data["data"]["features"]) == 2
+
     def test_get_feature_importance_no_model(
         self,
         test_client: TestClient,
@@ -367,6 +378,7 @@ class TestFeatureImportance:
 
 class TestLoadModel:
     """モデル読み込みのテストクラス"""
+
     def test_load_model_success(
         self,
         test_client: TestClient,
@@ -393,6 +405,7 @@ class TestLoadModel:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+
     def test_get_current_model_success(
         self,
         test_client: TestClient,
@@ -426,6 +439,7 @@ class TestLoadModel:
 
 class TestMLConfig:
     """ML設定のテストクラス"""
+
     def test_get_ml_config_success(
         self,
         test_client: TestClient,
@@ -457,6 +471,7 @@ class TestMLConfig:
         data = response.json()
         assert data["success"] is True
         assert "data" in data
+
     def test_update_ml_config_success(
         self,
         test_client: TestClient,
@@ -485,6 +500,7 @@ class TestMLConfig:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+
     def test_reset_ml_config_success(
         self,
         test_client: TestClient,
@@ -516,6 +532,7 @@ class TestMLConfig:
 
 class TestCleanupModels:
     """モデルクリーンアップのテストクラス"""
+
     def test_cleanup_old_models_success(
         self,
         test_client: TestClient,
@@ -548,6 +565,7 @@ class TestCleanupModels:
 
 class TestErrorHandling:
     """エラーハンドリングのテストクラス"""
+
     def test_service_error_handling(
         self,
         test_client: TestClient,

@@ -34,6 +34,7 @@ def service(mock_exchange):
 
         return BybitMarketDataService()
 
+
 @pytest.fixture
 def mock_repository():
     """モックOHLCVリポジトリ"""
@@ -148,9 +149,7 @@ class TestFetchOHLCVData:
     async def test_fetch_ohlcv_data_invalid_symbol(self, service):
         """無効なシンボルでValueErrorが発生することを確認"""
         with pytest.raises(ValueError):
-            await service.fetch_ohlcv_data(
-                symbol="", timeframe="1h", limit=100
-            )
+            await service.fetch_ohlcv_data(symbol="", timeframe="1h", limit=100)
 
     @patch(
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
@@ -245,9 +244,7 @@ class TestOHLCVDataValidation:
 
     async def test_validate_ohlcv_data_non_numeric(self, service):
         """非数値データがValueErrorを発生させることを確認"""
-        invalid_data = [
-            [1609459200000, "29000.0", 29500.0, 28500.0, 29200.0, 100.5]
-        ]
+        invalid_data = [[1609459200000, "29000.0", 29500.0, 28500.0, 29200.0, 100.5]]
         with pytest.raises(ValueError, match="非数値が含まれています"):
             service._validate_ohlcv_data(invalid_data)
 

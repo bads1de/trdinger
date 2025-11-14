@@ -100,9 +100,7 @@ class AdvancedFeatureEngineer:
         new_features["returns_lag_24"] = returns_temp.shift(24)
 
         # 累積リターン（24hのみ）
-        new_features["cumulative_returns_24"] = (
-            returns_temp.rolling(24).sum()
-        )
+        new_features["cumulative_returns_24"] = returns_temp.rolling(24).sum()
 
         # 一括で結合
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)

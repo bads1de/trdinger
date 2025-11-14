@@ -58,7 +58,11 @@ def test_fixed_ratio_respects_risk_percentage_and_balance(
     expected: float,
 ) -> None:
     gene = PositionSizingGene(
-        **{**base_gene.__dict__, "method": PositionSizingMethod.FIXED_RATIO, "fixed_ratio": fixed_ratio}
+        **{
+            **base_gene.__dict__,
+            "method": PositionSizingMethod.FIXED_RATIO,
+            "fixed_ratio": fixed_ratio,
+        }
     )
     calculator = FixedRatioCalculator()
 
@@ -67,12 +71,20 @@ def test_fixed_ratio_respects_risk_percentage_and_balance(
     assert math.isclose(result["position_size"], expected, rel_tol=1e-9)
     assert result["details"]["fixed_ratio"] == fixed_ratio
     assert result["details"]["account_balance"] == balance
-    assert result["details"]["calculated_amount"] == pytest.approx(balance * fixed_ratio)
+    assert result["details"]["calculated_amount"] == pytest.approx(
+        balance * fixed_ratio
+    )
 
 
-def test_fixed_ratio_invalid_price_uses_safe_minimum(base_gene: PositionSizingGene) -> None:
+def test_fixed_ratio_invalid_price_uses_safe_minimum(
+    base_gene: PositionSizingGene,
+) -> None:
     gene = PositionSizingGene(
-        **{**base_gene.__dict__, "method": PositionSizingMethod.FIXED_RATIO, "fixed_ratio": 0.1}
+        **{
+            **base_gene.__dict__,
+            "method": PositionSizingMethod.FIXED_RATIO,
+            "fixed_ratio": 0.1,
+        }
     )
     calculator = FixedRatioCalculator()
 
@@ -85,7 +97,9 @@ def test_fixed_ratio_invalid_price_uses_safe_minimum(base_gene: PositionSizingGe
     assert result_negative["position_size"] >= gene.min_position_size
 
 
-def test_fixed_quantity_returns_constant_size_for_any_input(base_gene: PositionSizingGene) -> None:
+def test_fixed_quantity_returns_constant_size_for_any_input(
+    base_gene: PositionSizingGene,
+) -> None:
     fixed_qty = 3.0
     gene = PositionSizingGene(
         **{
@@ -103,7 +117,9 @@ def test_fixed_quantity_returns_constant_size_for_any_input(base_gene: PositionS
         ), "固定枚数方式は口座残高や価格に依存せず一定サイズを返すべき"
 
 
-def test_volatility_based_size_decreases_when_volatility_increases(base_gene: PositionSizingGene) -> None:
+def test_volatility_based_size_decreases_when_volatility_increases(
+    base_gene: PositionSizingGene,
+) -> None:
     """
     VolatilityBasedCalculator のビジネス仕様に基づくテスト。
 
@@ -141,7 +157,9 @@ def test_volatility_based_size_decreases_when_volatility_increases(base_gene: Po
     assert high_vol_result["position_size"] >= gene.min_position_size
 
 
-def test_volatility_based_respects_max_position_size(base_gene: PositionSizingGene) -> None:
+def test_volatility_based_respects_max_position_size(
+    base_gene: PositionSizingGene,
+) -> None:
     balance = 10_000_000.0
     price = 10.0
     max_size = 1.0
@@ -180,9 +198,7 @@ def test_half_optimal_f_fallback_to_simplified_when_trade_history_insufficient(
 
     # 不足トレード履歴（< 10 件）: 簡易版計算経由
     short_history = [{"pnl": 100}] * 3
-    result = calculator.calculate(
-        gene, balance, price, trade_history=short_history
-    )
+    result = calculator.calculate(gene, balance, price, trade_history=short_history)
 
     assert result["position_size"] >= gene.min_position_size
     assert "fallback_reason" in result["details"]
@@ -192,7 +208,9 @@ def test_half_optimal_f_fallback_to_simplified_when_trade_history_insufficient(
     )
 
 
-def test_half_optimal_f_uses_trade_history_when_sufficient(base_gene: PositionSizingGene) -> None:
+def test_half_optimal_f_uses_trade_history_when_sufficient(
+    base_gene: PositionSizingGene,
+) -> None:
     balance = 10000.0
     price = 100.0
     gene = PositionSizingGene(
@@ -208,9 +226,7 @@ def test_half_optimal_f_uses_trade_history_when_sufficient(base_gene: PositionSi
 
     # 20件の履歴 (win: +200, loss: -100) で win_rate > 0.5 を作る
     trade_history = [{"pnl": 200}] * 15 + [{"pnl": -100}] * 5
-    result = calculator.calculate(
-        gene, balance, price, trade_history=trade_history
-    )
+    result = calculator.calculate(gene, balance, price, trade_history=trade_history)
 
     assert result["position_size"] > gene.min_position_size
     assert result["position_size"] > 0.0
@@ -247,7 +263,9 @@ def test_position_sizing_service_invalid_inputs_returns_error_result(
     assert "error" in result.calculation_details
 
 
-def test_position_sizing_service_integration_fixed_ratio(base_gene: PositionSizingGene) -> None:
+def test_position_sizing_service_integration_fixed_ratio(
+    base_gene: PositionSizingGene,
+) -> None:
     # サービス経由で FixedRatioCalculator が正しく利用されることを確認
     gene = PositionSizingGene(
         **{
@@ -315,7 +333,9 @@ def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
     )
 
     # Service レベルの異常系
-    res = service.calculate_position_size(gene=gene, account_balance=-1000.0, current_price=100.0)
+    res = service.calculate_position_size(
+        gene=gene, account_balance=-1000.0, current_price=100.0
+    )
     assert res.position_size == pytest.approx(0.01)
     assert res.confidence_score == 0.0
 

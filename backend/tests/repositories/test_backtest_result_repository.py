@@ -80,9 +80,7 @@ def sample_backtest_model() -> BacktestResult:
             "final_balance": 11500.0,
         },
         equity_curve=[10000, 10500, 11000, 11500],
-        trade_history=[
-            {"entry": 50000, "exit": 51000, "profit": 100}
-        ],
+        trade_history=[{"entry": 50000, "exit": 51000, "profit": 100}],
         execution_time=5.5,
         status="completed",
         created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -121,12 +119,10 @@ def sample_backtest_data() -> Dict[str, Any]:
 class TestRepositoryInitialization:
     """リポジトリ初期化のテスト"""
 
-    def test_repository_initialization(
-        self, mock_session: MagicMock
-    ) -> None:
+    def test_repository_initialization(self, mock_session: MagicMock) -> None:
         """リポジトリが正しく初期化される"""
         repo = BacktestResultRepository(mock_session)
-        
+
         assert repo.db == mock_session
         assert repo.model_class == BacktestResult
 
@@ -141,7 +137,7 @@ class TestToDictMethod:
     ) -> None:
         """モデルインスタンスが辞書に変換される"""
         result = repository.to_dict(sample_backtest_model)
-        
+
         assert isinstance(result, dict)
         assert result["id"] == 1
         assert result["strategy_name"] == "test_strategy"
@@ -154,7 +150,7 @@ class TestToDictMethod:
     ) -> None:
         """パフォーマンスメトリクスがトップレベルに含まれる"""
         result = repository.to_dict(sample_backtest_model)
-        
+
         assert "total_return" in result
         assert "sharpe_ratio" in result
         assert "max_drawdown" in result
@@ -175,9 +171,9 @@ class TestSaveBacktestResult:
         """バックテスト結果が正常に保存される"""
         mock_backtest_result_class.return_value = sample_backtest_model
         sample_backtest_model.id = 1
-        
+
         result = repository.save_backtest_result(sample_backtest_data)
-        
+
         repository.db.add.assert_called_once()
         repository.db.commit.assert_called_once()
         repository.db.refresh.assert_called_once()
@@ -191,10 +187,10 @@ class TestSaveBacktestResult:
         """ISO形式の日付文字列が処理される"""
         sample_backtest_data["start_date"] = "2024-01-01T00:00:00+00:00"
         sample_backtest_data["end_date"] = "2024-01-31T00:00:00+00:00"
-        
+
         mock_result = MagicMock(spec=BacktestResult)
         mock_result.id = 1
-        
+
         with patch(
             "database.repositories.backtest_result_repository.BacktestResult",
             return_value=mock_result,
@@ -215,9 +211,9 @@ class TestGetBacktestResults:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_backtest_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_backtest_results(limit=10, offset=0)
-        
+
         assert len(results) == 1
         assert results[0]["id"] == 1
 
@@ -230,11 +226,9 @@ class TestGetBacktestResults:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_backtest_model]
         repository.db.scalars.return_value = mock_scalars
-        
-        results = repository.get_backtest_results(
-            symbol="BTC/USDT", limit=10
-        )
-        
+
+        results = repository.get_backtest_results(symbol="BTC/USDT", limit=10)
+
         assert len(results) == 1
         assert results[0]["symbol"] == "BTC/USDT"
 
@@ -247,11 +241,11 @@ class TestGetBacktestResults:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_backtest_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_backtest_results(
             strategy_name="test_strategy", limit=10
         )
-        
+
         assert len(results) == 1
         assert results[0]["strategy_name"] == "test_strategy"
 
@@ -262,9 +256,9 @@ class TestGetBacktestResults:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_backtest_results()
-        
+
         assert len(results) == 0
 
 
@@ -280,9 +274,9 @@ class TestGetBacktestResultById:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_backtest_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         result = repository.get_backtest_result_by_id(1)
-        
+
         assert result is not None
         assert result["id"] == 1
 
@@ -293,9 +287,9 @@ class TestGetBacktestResultById:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
+
         result = repository.get_backtest_result_by_id(999)
-        
+
         assert result is None
 
 
@@ -311,9 +305,9 @@ class TestDeleteBacktestResult:
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = sample_backtest_model
         repository.db.query.return_value = mock_query
-        
+
         result = repository.delete_backtest_result(1)
-        
+
         assert result is True
         repository.db.delete.assert_called_once()
         repository.db.commit.assert_called_once()
@@ -325,9 +319,9 @@ class TestDeleteBacktestResult:
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = None
         repository.db.query.return_value = mock_query
-        
+
         result = repository.delete_backtest_result(999)
-        
+
         assert result is False
         repository.db.delete.assert_not_called()
 
@@ -342,9 +336,9 @@ class TestDeleteAllBacktestResults:
         mock_query = MagicMock()
         mock_query.delete.return_value = 5
         repository.db.query.return_value = mock_query
-        
+
         count = repository.delete_all_backtest_results()
-        
+
         assert count == 5
         repository.db.commit.assert_called_once()
 
@@ -359,9 +353,9 @@ class TestCountBacktestResults:
         mock_query = MagicMock()
         mock_query.count.return_value = 10
         repository.db.query.return_value = mock_query
-        
+
         count = repository.count_backtest_results()
-        
+
         assert count == 10
 
     def test_count_backtest_results_with_symbol_filter(
@@ -371,9 +365,9 @@ class TestCountBacktestResults:
         mock_query = MagicMock()
         mock_query.filter.return_value.count.return_value = 3
         repository.db.query.return_value = mock_query
-        
+
         count = repository.count_backtest_results(symbol="BTC/USDT")
-        
+
         assert count == 3
 
     def test_count_backtest_results_with_strategy_filter(
@@ -383,11 +377,9 @@ class TestCountBacktestResults:
         mock_query = MagicMock()
         mock_query.filter.return_value.count.return_value = 2
         repository.db.query.return_value = mock_query
-        
-        count = repository.count_backtest_results(
-            strategy_name="test_strategy"
-        )
-        
+
+        count = repository.count_backtest_results(strategy_name="test_strategy")
+
         assert count == 2
 
 
@@ -403,9 +395,9 @@ class TestGetRecentBacktestResults:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_backtest_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_recent_backtest_results(limit=5)
-        
+
         assert len(results) == 1
         assert results[0]["id"] == 1
 
@@ -416,9 +408,9 @@ class TestGetRecentBacktestResults:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_recent_backtest_results(limit=3)
-        
+
         assert isinstance(results, list)
 
 
@@ -432,7 +424,7 @@ class TestDataNormalization:
     ) -> None:
         """完全なデータが正規化される"""
         normalized = repository._normalize_result_data(sample_backtest_data)
-        
+
         assert "strategy_name" in normalized
         assert "performance_metrics" in normalized
         assert "equity_curve" in normalized
@@ -452,9 +444,9 @@ class TestDataNormalization:
             "sharpe_ratio": 1.5,
             "max_drawdown": 0.10,
         }
-        
+
         normalized = repository._normalize_result_data(legacy_data)
-        
+
         assert "performance_metrics" in normalized
         assert normalized["performance_metrics"]["total_return"] == 0.15
 
@@ -467,23 +459,23 @@ class TestErrorHandling:
     ) -> None:
         """保存エラーが適切に処理される"""
         repository.db.add.side_effect = Exception("DB Error")
-        
-        with pytest.raises(Exception):
-            repository.save_backtest_result({
-                "strategy_name": "test",
-                "symbol": "BTC/USDT",
-                "timeframe": "1h",
-                "start_date": datetime.now(timezone.utc),
-                "end_date": datetime.now(timezone.utc),
-                "initial_capital": 10000,
-            })
 
-    def test_delete_handles_error(
-        self, repository: BacktestResultRepository
-    ) -> None:
+        with pytest.raises(Exception):
+            repository.save_backtest_result(
+                {
+                    "strategy_name": "test",
+                    "symbol": "BTC/USDT",
+                    "timeframe": "1h",
+                    "start_date": datetime.now(timezone.utc),
+                    "end_date": datetime.now(timezone.utc),
+                    "initial_capital": 10000,
+                }
+            )
+
+    def test_delete_handles_error(self, repository: BacktestResultRepository) -> None:
         """削除エラーが適切に処理される"""
         repository.db.query.side_effect = Exception("Delete Error")
-        
+
         with pytest.raises(Exception):
             repository.delete_backtest_result(1)
 
@@ -491,38 +483,32 @@ class TestErrorHandling:
 class TestJsonSafeConversion:
     """JSON変換のテスト"""
 
-    def test_to_json_safe_datetime(
-        self, repository: BacktestResultRepository
-    ) -> None:
+    def test_to_json_safe_datetime(self, repository: BacktestResultRepository) -> None:
         """datetimeがISO形式に変換される"""
         dt = datetime(2024, 1, 1, tzinfo=timezone.utc)
         result = repository._to_json_safe(dt)
-        
+
         assert isinstance(result, str)
         assert "2024-01-01" in result
 
-    def test_to_json_safe_dict(
-        self, repository: BacktestResultRepository
-    ) -> None:
+    def test_to_json_safe_dict(self, repository: BacktestResultRepository) -> None:
         """辞書が再帰的に変換される"""
         data = {
             "date": datetime(2024, 1, 1, tzinfo=timezone.utc),
             "value": 100,
         }
         result = repository._to_json_safe(data)
-        
+
         assert isinstance(result, dict)
         assert isinstance(result["date"], str)
 
-    def test_to_json_safe_list(
-        self, repository: BacktestResultRepository
-    ) -> None:
+    def test_to_json_safe_list(self, repository: BacktestResultRepository) -> None:
         """リストが再帰的に変換される"""
         data = [
             datetime(2024, 1, 1, tzinfo=timezone.utc),
             100,
         ]
         result = repository._to_json_safe(data)
-        
+
         assert isinstance(result, list)
         assert isinstance(result[0], str)

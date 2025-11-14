@@ -24,6 +24,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_ml_training_orchestration_service() -> AsyncMock:
     """
@@ -45,17 +46,20 @@ def mock_db_session() -> Mock:
     """
     return Mock()
 
+
 @pytest.fixture(autouse=True)
 def override_dependencies(mock_db_session, mock_ml_training_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_ml_training_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_ml_training_orchestration_service] = lambda: mock_ml_training_orchestration_service
+    app.dependency_overrides[get_ml_training_orchestration_service] = (
+        lambda: mock_ml_training_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -271,6 +275,7 @@ class TestStartTraining:
 
 class TestTrainingStatus:
     """トレーニング状態取得のテストクラス"""
+
     def test_get_training_status_in_progress(
         self,
         test_client: TestClient,
@@ -301,6 +306,7 @@ class TestTrainingStatus:
         data = response.json()
         assert data["is_training"] is True
         assert data["progress"] == 50
+
     def test_get_training_status_completed(
         self,
         test_client: TestClient,
@@ -334,6 +340,7 @@ class TestTrainingStatus:
         assert data["is_training"] is False
         assert data["progress"] == 100
         assert "model_info" in data
+
     def test_get_training_status_error(
         self,
         test_client: TestClient,
@@ -369,6 +376,7 @@ class TestTrainingStatus:
 
 class TestModelInfo:
     """モデル情報取得のテストクラス"""
+
     def test_get_model_info_success(
         self,
         test_client: TestClient,
@@ -402,6 +410,7 @@ class TestModelInfo:
         data = response.json()
         assert data["success"] is True
         assert "data" in data
+
     def test_get_model_info_no_model(
         self,
         test_client: TestClient,
@@ -432,6 +441,7 @@ class TestModelInfo:
 
 class TestStopTraining:
     """トレーニング停止のテストクラス"""
+
     def test_stop_training_success(
         self,
         test_client: TestClient,
@@ -459,6 +469,7 @@ class TestStopTraining:
         data = response.json()
         assert data["success"] is True
         assert "停止" in data["message"]
+
     def test_stop_training_not_running(
         self,
         test_client: TestClient,
@@ -521,6 +532,7 @@ class TestErrorHandling:
 
         # アサーション（ErrorHandlerによって処理される）
         assert response.status_code in [200, 500]
+
     def test_status_error_handling(
         self,
         test_client: TestClient,

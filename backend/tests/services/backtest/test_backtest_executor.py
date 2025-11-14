@@ -117,7 +117,9 @@ class TestBacktestExecution:
         """バックテストを正常に実行できること"""
         mock_data_service.get_data_for_backtest.return_value = sample_backtest_data
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt.run.return_value = mock_backtest_stats
             mock_bt_class.return_value = mock_bt
@@ -154,7 +156,9 @@ class TestBacktestExecution:
             "threshold": 0.02,
         }
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt.run.return_value = mock_backtest_stats
             mock_bt_class.return_value = mock_bt
@@ -245,9 +249,7 @@ class TestDataPreparation:
             end_date=datetime(2024, 1, 5),
         )
 
-    def test_get_backtest_data_empty_result(
-        self, backtest_executor, mock_data_service
-    ):
+    def test_get_backtest_data_empty_result(self, backtest_executor, mock_data_service):
         """空のデータ取得時のエラー処理"""
         mock_data_service.get_data_for_backtest.return_value = pd.DataFrame()
 
@@ -285,7 +287,9 @@ class TestBacktestInstanceCreation:
         self, backtest_executor, sample_backtest_data, sample_strategy_class
     ):
         """バックテストインスタンスを正常に作成できること"""
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt_class.return_value = mock_bt
 
@@ -317,7 +321,9 @@ class TestBacktestInstanceCreation:
             index=dates,
         )
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt_class.return_value = mock_bt
 
@@ -342,7 +348,9 @@ class TestBacktestInstanceCreation:
         self, backtest_executor, sample_backtest_data, sample_strategy_class
     ):
         """適切な設定でバックテストインスタンスが作成されること"""
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt_class.return_value = mock_bt
 
@@ -513,7 +521,9 @@ class TestPerformanceAndEdgeCases:
 
         mock_data_service.get_data_for_backtest.return_value = large_data
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt.run.return_value = mock_backtest_stats
             mock_bt_class.return_value = mock_bt
@@ -542,7 +552,9 @@ class TestPerformanceAndEdgeCases:
         """最小資金でのバックテスト実行"""
         mock_data_service.get_data_for_backtest.return_value = sample_backtest_data
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt.run.return_value = mock_backtest_stats
             mock_bt_class.return_value = mock_bt
@@ -571,7 +583,9 @@ class TestPerformanceAndEdgeCases:
         """高い手数料率でのバックテスト実行"""
         mock_data_service.get_data_for_backtest.return_value = sample_backtest_data
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt.run.return_value = mock_backtest_stats
             mock_bt_class.return_value = mock_bt
@@ -611,7 +625,9 @@ class TestPerformanceAndEdgeCases:
 
         mock_data_service.get_data_for_backtest.return_value = short_data
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt = MagicMock()
             mock_bt.run.return_value = mock_backtest_stats
             mock_bt_class.return_value = mock_bt
@@ -646,7 +662,9 @@ class TestErrorHandling:
         class InvalidStrategy:
             pass
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt_class.side_effect = Exception("無効な戦略クラス")
 
             with pytest.raises(BacktestExecutionError):
@@ -681,7 +699,9 @@ class TestErrorHandling:
 
         mock_data_service.get_data_for_backtest.return_value = invalid_data
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
             mock_bt_class.side_effect = KeyError("必須カラムが不足しています")
 
             with pytest.raises(BacktestExecutionError):
@@ -706,8 +726,12 @@ class TestErrorHandling:
         """負の初期資金でのエラー処理"""
         mock_data_service.get_data_for_backtest.return_value = sample_backtest_data
 
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as mock_bt_class:
-            mock_bt_class.side_effect = ValueError("初期資金は正の数値である必要があります")
+        with patch(
+            "app.services.backtest.execution.backtest_executor.FractionalBacktest"
+        ) as mock_bt_class:
+            mock_bt_class.side_effect = ValueError(
+                "初期資金は正の数値である必要があります"
+            )
 
             with pytest.raises(BacktestExecutionError):
                 backtest_executor.execute_backtest(

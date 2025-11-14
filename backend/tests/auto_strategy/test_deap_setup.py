@@ -12,7 +12,9 @@ from app.services.auto_strategy.core.deap_setup import DEAPSetup
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 
 
-pytestmark = pytest.mark.skip(reason="DEAP creator mocking is complex - tests need integration test approach instead of unit test mocking")
+pytestmark = pytest.mark.skip(
+    reason="DEAP creator mocking is complex - tests need integration test approach instead of unit test mocking"
+)
 
 
 class TestDEAPSetup:

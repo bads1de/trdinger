@@ -432,7 +432,9 @@ class TestMLPipelinesComprehensive:
         info = get_ml_pipeline_info(pipeline)
         assert info["has_preprocessing"]
 
-    @pytest.mark.skip(reason="パイプラインのエラーハンドリング実装が不完全。実装完了後に有効化")
+    @pytest.mark.skip(
+        reason="パイプラインのエラーハンドリング実装が不完全。実装完了後に有効化"
+    )
     def test_pipeline_error_handling(self):
         """パイプラインエラーハンドリングのテスト"""
         pipeline = create_ml_pipeline()

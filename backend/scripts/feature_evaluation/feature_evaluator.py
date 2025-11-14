@@ -113,7 +113,9 @@ class FeatureEvaluator:
         base_output_dir = Path(config.output_dir)
         if not base_output_dir.is_absolute():
             # backend/results/... の場合、backendディレクトリからの相対パス
-            base_output_dir = Path(__file__).parent.parent.parent / config.output_dir.replace("backend/", "")
+            base_output_dir = Path(
+                __file__
+            ).parent.parent.parent / config.output_dir.replace("backend/", "")
         self.output_dir = base_output_dir / f"feature_eval_{timestamp}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -882,19 +884,24 @@ def main() -> None:
 
             # 特徴量準備（不要なカラムを除外）
             exclude_cols = [
-                "open", "high", "low", "close", "volume",
-                "returns", "funding_timestamp",  # 中間計算用カラムを除外
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "returns",
+                "funding_timestamp",  # 中間計算用カラムを除外
                 "timestamp",  # タイムスタンプも除外
             ]
             feature_cols = [
-                col
-                for col in features_df.columns
-                if col not in exclude_cols
+                col for col in features_df.columns if col not in exclude_cols
             ]
             X = features_df[feature_cols]
 
             # NaN除去
-            combined_df = pd.concat([X, labels_numeric.rename("label")], axis=1).dropna()
+            combined_df = pd.concat(
+                [X, labels_numeric.rename("label")], axis=1
+            ).dropna()
             X_clean = combined_df[feature_cols]
             y_clean = combined_df["label"]
 

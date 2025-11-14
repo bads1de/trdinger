@@ -65,7 +65,10 @@ class TestTPSLGene:
         }
         gene = TPSLGene.from_dict(data)
         # from_dictは文字列として格納する（Enumへの変換は実装依存）
-        assert gene.method == "volatility_based" or gene.method == TPSLMethod.VOLATILITY_BASED
+        assert (
+            gene.method == "volatility_based"
+            or gene.method == TPSLMethod.VOLATILITY_BASED
+        )
         assert gene.stop_loss_pct == 0.04
         assert gene.take_profit_pct == 0.08
         assert gene.risk_reward_ratio == 2.5
@@ -174,9 +177,7 @@ class TestTPSLGene:
         gene = TPSLGene()
 
         # TPSL_LIMITSのインポートエラーをシミュレート
-        with patch(
-            "app.services.auto_strategy.constants.TPSL_LIMITS", {}
-        ):
+        with patch("app.services.auto_strategy.constants.TPSL_LIMITS", {}):
             with patch(
                 "app.services.auto_strategy.models.tpsl_gene.logger"
             ) as mock_logger:

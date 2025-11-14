@@ -438,7 +438,6 @@ class MLTrainingOrchestrationService:
                     }
                 )
 
-
     @safe_ml_operation(context="MLトレーニング実行")
     def _execute_ml_training_with_error_handling(
         self,

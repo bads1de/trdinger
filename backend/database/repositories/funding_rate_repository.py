@@ -140,10 +140,10 @@ class FundingRateRepository(BaseRepository):
     def get_all_by_symbol(self, symbol: str) -> List[FundingRateData]:
         """
         指定されたシンボルの全ファンディングレートデータを取得
-        
+
         Args:
             symbol: 取引ペア
-            
+
         Returns:
             全ファンディングレートデータのリスト（時系列順）
         """

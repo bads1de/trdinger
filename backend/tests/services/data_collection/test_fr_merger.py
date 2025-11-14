@@ -196,9 +196,7 @@ class TestConvertFRToDataFrame:
 class TestErrorHandling:
     """エラーハンドリングテスト"""
 
-    def test_merge_fr_data_with_exception(
-        self, merger, mock_fr_repository, sample_df
-    ):
+    def test_merge_fr_data_with_exception(self, merger, mock_fr_repository, sample_df):
         """例外発生時にゼロで埋められることを確認"""
         mock_fr_repository.get_funding_rate_data.side_effect = Exception(
             "Database error"
@@ -256,9 +254,7 @@ class TestEdgeCases:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(
-            single_row_df, "BTC/USDT", start_date, end_date
-        )
+        result = merger.merge_fr_data(single_row_df, "BTC/USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         assert len(result) == 1
@@ -290,7 +286,9 @@ class TestEdgeCases:
         fr_data = []
         for i in range(1000):
             fr = MagicMock(spec=FundingRateData)
-            fr.funding_timestamp = datetime(2021, 1, 1, 0, 0) + pd.Timedelta(hours=i * 8)
+            fr.funding_timestamp = datetime(2021, 1, 1, 0, 0) + pd.Timedelta(
+                hours=i * 8
+            )
             fr.funding_rate = 0.0001 + (i * 0.00001)
             fr_data.append(fr)
 

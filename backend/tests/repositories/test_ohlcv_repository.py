@@ -25,7 +25,7 @@ def mock_session() -> MagicMock:
     session.rollback = MagicMock()
     session.scalar = MagicMock()
     session.scalars = MagicMock()
-    
+
     # bind属性をモック化
     mock_bind = MagicMock()
     mock_engine = MagicMock()
@@ -34,7 +34,7 @@ def mock_session() -> MagicMock:
     mock_engine.dialect = mock_dialect
     mock_bind.engine = mock_engine
     session.bind = mock_bind
-    
+
     return session
 
 
@@ -113,18 +113,16 @@ class TestInsertOHLCVData:
         mock_result = MagicMock()
         mock_result.rowcount = 1
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.insert_ohlcv_data(sample_ohlcv_records)
-        
+
         assert count == 2
         repository.db.commit.assert_called_once()
 
-    def test_insert_ohlcv_data_empty(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_insert_ohlcv_data_empty(self, repository: OHLCVRepository) -> None:
         """空のレコードで0が返される"""
         count = repository.insert_ohlcv_data([])
-        
+
         assert count == 0
 
     @patch("database.repositories.ohlcv_repository.DataValidator")
@@ -136,7 +134,7 @@ class TestInsertOHLCVData:
     ) -> None:
         """検証失敗時にエラーが発生する"""
         mock_validator.validate_ohlcv_records_simple.return_value = False
-        
+
         with pytest.raises(ValueError):
             repository.insert_ohlcv_data(sample_ohlcv_records)
 
@@ -153,33 +151,31 @@ class TestGetOHLCVData:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_ohlcv_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_ohlcv_data(
             symbol="BTC/USDT:USDT",
             timeframe="1h",
         )
-        
+
         assert len(results) == 1
         assert results[0] == sample_ohlcv_model
 
-    def test_get_ohlcv_data_with_time_range(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_get_ohlcv_data_with_time_range(self, repository: OHLCVRepository) -> None:
         """時間範囲指定でデータが取得できる"""
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
+
         start_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
         end_time = datetime(2024, 1, 2, tzinfo=timezone.utc)
-        
+
         repository.get_ohlcv_data(
             symbol="BTC/USDT:USDT",
             timeframe="1h",
             start_time=start_time,
             end_time=end_time,
         )
-        
+
         repository.db.scalars.assert_called_once()
 
 
@@ -195,9 +191,9 @@ class TestGetAllBySymbol:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_ohlcv_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_all_by_symbol("BTC/USDT:USDT", "1h")
-        
+
         assert len(results) == 1
 
 
@@ -213,73 +209,65 @@ class TestGetLatestOHLCVData:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_ohlcv_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_latest_ohlcv_data(
             symbol="BTC/USDT:USDT",
             timeframe="1h",
             limit=100,
         )
-        
+
         assert len(results) == 1
 
 
 class TestTimestampOverrides:
     """タイムスタンプメソッドのオーバーライドテスト"""
 
-    def test_get_latest_timestamp_success(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_get_latest_timestamp_success(self, repository: OHLCVRepository) -> None:
         """最新タイムスタンプが取得できる"""
         expected_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
-        
+
         result = repository.get_latest_timestamp(
             "timestamp", {"symbol": "BTC/USDT:USDT"}
         )
-        
+
         assert result == expected_time
 
-    def test_get_oldest_timestamp_success(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_get_oldest_timestamp_success(self, repository: OHLCVRepository) -> None:
         """最古タイムスタンプが取得できる"""
         expected_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
-        
+
         result = repository.get_oldest_timestamp(
             "timestamp", {"symbol": "BTC/USDT:USDT"}
         )
-        
+
         assert result == expected_time
 
 
 class TestCountMethods:
     """カウントメソッドのテスト"""
 
-    def test_get_data_count_success(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_get_data_count_success(self, repository: OHLCVRepository) -> None:
         """データ件数が取得できる"""
         repository.db.scalar.return_value = 100
-        
+
         count = repository.get_data_count("BTC/USDT:USDT", "1h")
-        
+
         assert count == 100
 
 
 class TestDeleteOperations:
     """削除操作のテスト"""
 
-    def test_clear_all_ohlcv_data_success(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_clear_all_ohlcv_data_success(self, repository: OHLCVRepository) -> None:
         """全OHLCVデータが削除される"""
         mock_result = MagicMock()
         mock_result.rowcount = 10
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.clear_all_ohlcv_data()
-        
+
         assert count == 10
 
     def test_clear_ohlcv_data_by_symbol_success(
@@ -289,9 +277,9 @@ class TestDeleteOperations:
         mock_result = MagicMock()
         mock_result.rowcount = 5
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.clear_ohlcv_data_by_symbol("BTC/USDT:USDT")
-        
+
         assert count == 5
 
     def test_clear_ohlcv_data_by_symbol_and_timeframe_success(
@@ -301,11 +289,11 @@ class TestDeleteOperations:
         mock_result = MagicMock()
         mock_result.rowcount = 3
         repository.db.execute.return_value = mock_result
-        
+
         count = repository.clear_ohlcv_data_by_symbol_and_timeframe(
             "BTC/USDT:USDT", "1h"
         )
-        
+
         assert count == 3
 
 
@@ -321,28 +309,26 @@ class TestGetOHLCVDataframe:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_ohlcv_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         df = repository.get_ohlcv_dataframe(
             symbol="BTC/USDT:USDT",
             timeframe="1h",
         )
-        
+
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 1
 
-    def test_get_ohlcv_dataframe_empty(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_get_ohlcv_dataframe_empty(self, repository: OHLCVRepository) -> None:
         """データがない場合空のDataFrameが返される"""
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
+
         df = repository.get_ohlcv_dataframe(
             symbol="BTC/USDT:USDT",
             timeframe="1h",
         )
-        
+
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 0
 
@@ -359,9 +345,9 @@ class TestSanitizeOHLCVData:
     ) -> None:
         """OHLCVデータがサニタイズされる"""
         mock_validator.sanitize_ohlcv_data.return_value = sample_ohlcv_records
-        
+
         result = repository.sanitize_ohlcv_data(sample_ohlcv_records)
-        
+
         assert result == sample_ohlcv_records
         mock_validator.sanitize_ohlcv_data.assert_called_once()
 
@@ -379,22 +365,18 @@ class TestErrorHandling:
         """データベースエラーが処理される（safe_operationが例外をキャッチ）"""
         mock_validator.validate_ohlcv_records_simple.return_value = True
         repository.db.execute.side_effect = Exception("DB Error")
-        
+
         # safe_operationデコレータがエラーを処理するため、例外は発生しない
         result = repository.insert_ohlcv_data(sample_ohlcv_records)
-        
+
         # safe_operationによりエラー時は0が返される
         assert result == 0
 
-    def test_delete_handles_error(
-        self, repository: OHLCVRepository
-    ) -> None:
+    def test_delete_handles_error(self, repository: OHLCVRepository) -> None:
         """削除エラーが処理される"""
         repository.db.execute.side_effect = Exception("Delete Error")
-        
+
         with pytest.raises(Exception):
-            repository.clear_ohlcv_data_by_symbol_and_timeframe(
-                "BTC/USDT:USDT", "1h"
-            )
-        
+            repository.clear_ohlcv_data_by_symbol_and_timeframe("BTC/USDT:USDT", "1h")
+
         repository.db.rollback.assert_called()

@@ -190,7 +190,9 @@ class TestDataRetrieval:
             "create_backtest_dataframe",
             side_effect=DataIntegrationError("統合エラー"),
         ):
-            with pytest.raises(ValueError, match="バックテスト用データの作成に失敗しました"):
+            with pytest.raises(
+                ValueError, match="バックテスト用データの作成に失敗しました"
+            ):
                 backtest_data_service.get_data_for_backtest(
                     symbol="BTC/USDT",
                     timeframe="1h",
@@ -204,14 +206,17 @@ class TestOHLCVDataRetrieval:
 
     def test_get_ohlcv_data_success(self, backtest_data_service, sample_ohlcv_data):
         """OHLCVデータを正常に取得できること"""
-        with patch.object(
-            backtest_data_service._retrieval_service,
-            "get_ohlcv_data",
-            return_value=[],
-        ), patch.object(
-            backtest_data_service._conversion_service,
-            "convert_ohlcv_to_dataframe",
-            return_value=sample_ohlcv_data,
+        with (
+            patch.object(
+                backtest_data_service._retrieval_service,
+                "get_ohlcv_data",
+                return_value=[],
+            ),
+            patch.object(
+                backtest_data_service._conversion_service,
+                "convert_ohlcv_to_dataframe",
+                return_value=sample_ohlcv_data,
+            ),
         ):
             result = backtest_data_service.get_ohlcv_data(
                 symbol="BTC/USDT",
@@ -231,14 +236,17 @@ class TestOHLCVDataRetrieval:
         self, backtest_data_service, sample_ohlcv_data
     ):
         """OHLCVデータが数値型に変換されること"""
-        with patch.object(
-            backtest_data_service._retrieval_service,
-            "get_ohlcv_data",
-            return_value=[],
-        ), patch.object(
-            backtest_data_service._conversion_service,
-            "convert_ohlcv_to_dataframe",
-            return_value=sample_ohlcv_data,
+        with (
+            patch.object(
+                backtest_data_service._retrieval_service,
+                "get_ohlcv_data",
+                return_value=[],
+            ),
+            patch.object(
+                backtest_data_service._conversion_service,
+                "convert_ohlcv_to_dataframe",
+                return_value=sample_ohlcv_data,
+            ),
         ):
             result = backtest_data_service.get_ohlcv_data(
                 symbol="BTC/USDT",
@@ -255,14 +263,17 @@ class TestOHLCVDataRetrieval:
 
     def test_get_ohlcv_data_empty_result(self, backtest_data_service):
         """OHLCVデータが空の場合の処理"""
-        with patch.object(
-            backtest_data_service._retrieval_service,
-            "get_ohlcv_data",
-            return_value=[],
-        ), patch.object(
-            backtest_data_service._conversion_service,
-            "convert_ohlcv_to_dataframe",
-            return_value=pd.DataFrame(),
+        with (
+            patch.object(
+                backtest_data_service._retrieval_service,
+                "get_ohlcv_data",
+                return_value=[],
+            ),
+            patch.object(
+                backtest_data_service._conversion_service,
+                "convert_ohlcv_to_dataframe",
+                return_value=pd.DataFrame(),
+            ),
         ):
             result = backtest_data_service.get_ohlcv_data(
                 symbol="BTC/USDT",
@@ -326,7 +337,9 @@ class TestMLTrainingData:
             "create_ml_training_dataframe",
             side_effect=DataIntegrationError("統合エラー"),
         ):
-            with pytest.raises(ValueError, match="MLトレーニング用データの作成に失敗しました"):
+            with pytest.raises(
+                ValueError, match="MLトレーニング用データの作成に失敗しました"
+            ):
                 backtest_data_service.get_ml_training_data(
                     symbol="BTC/USDT",
                     timeframe="1h",
@@ -353,14 +366,17 @@ class TestEventLabeledData:
             "label_distribution": {"HRHP": 50, "LRLP": 50},
         }
 
-        with patch.object(
-            backtest_data_service._integration_service,
-            "create_ml_training_dataframe",
-            return_value=sample_ohlcv_data,
-        ), patch.object(
-            backtest_data_service._event_label_generator,
-            "generate_hrhp_lrlp_labels",
-            return_value=(labels_df, profile_info),
+        with (
+            patch.object(
+                backtest_data_service._integration_service,
+                "create_ml_training_dataframe",
+                return_value=sample_ohlcv_data,
+            ),
+            patch.object(
+                backtest_data_service._event_label_generator,
+                "generate_hrhp_lrlp_labels",
+                return_value=(labels_df, profile_info),
+            ),
         ):
             labeled_df, info = backtest_data_service.get_event_labeled_training_data(
                 symbol="BTC/USDT",
@@ -414,18 +430,22 @@ class TestEventLabeledData:
         mock_regime_detector = MagicMock()
         mock_regime_detector.detect_regimes.return_value = regime_labels
 
-        with patch.object(
-            backtest_data_service._integration_service,
-            "create_ml_training_dataframe",
-            return_value=sample_ohlcv_data,
-        ), patch.object(
-            backtest_data_service,
-            "_ensure_regime_detector",
-            return_value=mock_regime_detector,
-        ), patch.object(
-            backtest_data_service._event_label_generator,
-            "generate_hrhp_lrlp_labels",
-            return_value=(labels_df, profile_info),
+        with (
+            patch.object(
+                backtest_data_service._integration_service,
+                "create_ml_training_dataframe",
+                return_value=sample_ohlcv_data,
+            ),
+            patch.object(
+                backtest_data_service,
+                "_ensure_regime_detector",
+                return_value=mock_regime_detector,
+            ),
+            patch.object(
+                backtest_data_service._event_label_generator,
+                "generate_hrhp_lrlp_labels",
+                return_value=(labels_df, profile_info),
+            ),
         ):
             labeled_df, info = backtest_data_service.get_event_labeled_training_data(
                 symbol="BTC/USDT",
@@ -512,14 +532,17 @@ class TestDataValidation:
         self, backtest_data_service, sample_ohlcv_data
     ):
         """OHLCVデータの構造が正しいこと"""
-        with patch.object(
-            backtest_data_service._retrieval_service,
-            "get_ohlcv_data",
-            return_value=[],
-        ), patch.object(
-            backtest_data_service._conversion_service,
-            "convert_ohlcv_to_dataframe",
-            return_value=sample_ohlcv_data,
+        with (
+            patch.object(
+                backtest_data_service._retrieval_service,
+                "get_ohlcv_data",
+                return_value=[],
+            ),
+            patch.object(
+                backtest_data_service._conversion_service,
+                "convert_ohlcv_to_dataframe",
+                return_value=sample_ohlcv_data,
+            ),
         ):
             result = backtest_data_service.get_ohlcv_data(
                 symbol="BTC/USDT",
@@ -603,7 +626,9 @@ class TestErrorHandling:
             "create_backtest_dataframe",
             side_effect=DataIntegrationError("開始日が終了日より後です"),
         ):
-            with pytest.raises(ValueError, match="バックテスト用データの作成に失敗しました"):
+            with pytest.raises(
+                ValueError, match="バックテスト用データの作成に失敗しました"
+            ):
                 backtest_data_service.get_data_for_backtest(
                     symbol="BTC/USDT",
                     timeframe="1h",

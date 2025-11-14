@@ -74,9 +74,6 @@ class EnsembleTrainer(BaseMLTrainer):
                 clean_name = param_name.replace("xgb_", "")
                 optimized_params["base_models"]["xgboost"][clean_name] = param_value
 
-
-
-
             # スタッキングパラメータ
             elif param_name.startswith("stacking_"):
                 clean_name = param_name.replace("stacking_", "")

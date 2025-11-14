@@ -31,7 +31,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=5)
+        result = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=5
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(data)
@@ -50,7 +52,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=14)
+        result = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=14
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == 2
@@ -67,7 +71,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.natr(data["high"], data["low"], data["close"], length=5)
+        result = VolatilityIndicators.natr(
+            data["high"], data["low"], data["close"], length=5
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(data)
@@ -86,7 +92,9 @@ class TestVolatilityIndicators:
         )
 
         with pytest.raises(ValueError, match="length must be positive"):
-            VolatilityIndicators.natr(data["high"], data["low"], data["close"], length=-1)
+            VolatilityIndicators.natr(
+                data["high"], data["low"], data["close"], length=-1
+            )
 
     def test_calculate_bbands_valid_data(self):
         """有効データでのBBands計算テスト"""
@@ -132,7 +140,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.keltner(data["high"], data["low"], data["close"], period=5, scalar=2.0)
+        result = VolatilityIndicators.keltner(
+            data["high"], data["low"], data["close"], period=5, scalar=2.0
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -151,7 +161,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.keltner(data["high"], data["low"], data["close"], period=20, scalar=2.0)
+        result = VolatilityIndicators.keltner(
+            data["high"], data["low"], data["close"], period=20, scalar=2.0
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -189,7 +201,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.supertrend(data["high"], data["low"], data["close"], period=7, multiplier=3.0)
+        result = VolatilityIndicators.supertrend(
+            data["high"], data["low"], data["close"], period=7, multiplier=3.0
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -210,7 +224,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.supertrend(data["high"], data["low"], data["close"], period=14, multiplier=3.0)
+        result = VolatilityIndicators.supertrend(
+            data["high"], data["low"], data["close"], period=14, multiplier=3.0
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -230,7 +246,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.accbands(data["high"], data["low"], data["close"], period=5)
+        result = VolatilityIndicators.accbands(
+            data["high"], data["low"], data["close"], period=5
+        )
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -287,7 +305,9 @@ class TestVolatilityIndicators:
         )
 
         # RVIは負の長さでもエラーを発生させず、NaNを返す（pandas-taの仕様）
-        result = VolatilityIndicators.rvi(data["close"], data["high"], data["low"], length=0)
+        result = VolatilityIndicators.rvi(
+            data["close"], data["high"], data["low"], length=0
+        )
         assert isinstance(result, pd.Series)
         assert result.isna().all()
 
@@ -301,7 +321,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.gri(data["high"], data["low"], data["close"], length=5)
+        result = VolatilityIndicators.gri(
+            data["high"], data["low"], data["close"], length=5
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(data)
@@ -318,7 +340,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.gri(data["high"], data["low"], data["close"], length=14)
+        result = VolatilityIndicators.gri(
+            data["high"], data["low"], data["close"], length=14
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == 2
@@ -336,15 +360,21 @@ class TestVolatilityIndicators:
         )
 
         with pytest.raises(ValueError, match="length must be positive"):
-            VolatilityIndicators.gri(data["high"], data["low"], data["close"], length=-1)
+            VolatilityIndicators.gri(
+                data["high"], data["low"], data["close"], length=-1
+            )
 
     def test_handle_invalid_data_types(self):
         """無効なデータ型のテスト"""
         # 数値以外のデータ
-        data = pd.DataFrame({"high": ["invalid", "data"], "low": [98, 99], "close": [100, 101]})
+        data = pd.DataFrame(
+            {"high": ["invalid", "data"], "low": [98, 99], "close": [100, 101]}
+        )
 
         # pandas-taはエラーではなくNaNを返す
-        result = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=14)
+        result = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=14
+        )
         assert isinstance(result, pd.Series)
         assert result.isna().all()
 
@@ -354,7 +384,9 @@ class TestVolatilityIndicators:
         data2 = pd.DataFrame({"close": [100, 101]})  # 長さが異なる
 
         # pandas-taは長さ不一致でもエラーではなくNaNを返す
-        result = VolatilityIndicators.atr(data1["high"], data1["low"], data2["close"], length=3)
+        result = VolatilityIndicators.atr(
+            data1["high"], data1["low"], data2["close"], length=3
+        )
         assert isinstance(result, pd.Series)
 
     def test_handle_negative_length(self):
@@ -368,7 +400,9 @@ class TestVolatilityIndicators:
         )
 
         # pandas-taは負の長さでもエラーではなくNaNを返す
-        result = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=-1)
+        result = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=-1
+        )
         assert isinstance(result, pd.Series)
         assert result.isna().all()
 
@@ -376,7 +410,9 @@ class TestVolatilityIndicators:
         """空データのテスト"""
         data = pd.DataFrame({"high": [], "low": [], "close": []})
 
-        result = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=5)
+        result = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=5
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == 0
@@ -385,7 +421,9 @@ class TestVolatilityIndicators:
         """単一値のテスト"""
         data = pd.DataFrame({"high": [102], "low": [98], "close": [100]})
 
-        result = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=5)
+        result = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=5
+        )
 
         assert isinstance(result, pd.Series)
         assert len(result) == 1
@@ -454,7 +492,9 @@ class TestVolatilityIndicators:
 
         # エラーが適切に処理されるかテスト
         try:
-            VolatilityIndicators.atr(short_data["high"], short_data["low"], short_data["close"], length=14)
+            VolatilityIndicators.atr(
+                short_data["high"], short_data["low"], short_data["close"], length=14
+            )
             # エラーにならずNaNが返される
         except Exception as e:
             assert "length" in str(e) or "data" in str(e)
@@ -466,7 +506,9 @@ class TestVolatilityIndicators:
             assert "length" in str(e) or "data" in str(e)
 
         # 無効なパラメータ（pandas-taはエラーではなくNaNを返す）
-        result = VolatilityIndicators.atr(short_data["high"], short_data["low"], short_data["close"], length=-1)
+        result = VolatilityIndicators.atr(
+            short_data["high"], short_data["low"], short_data["close"], length=-1
+        )
         assert isinstance(result, pd.Series)
         assert result.isna().all()
 
@@ -489,7 +531,14 @@ class TestVolatilityIndicators:
         upper2, middle2, lower2 = result2
 
         # NaN値を除外してから比較
-        valid_idx = ~(middle1.isna() | middle2.isna() | upper1.isna() | upper2.isna() | lower1.isna() | lower2.isna())
+        valid_idx = ~(
+            middle1.isna()
+            | middle2.isna()
+            | upper1.isna()
+            | upper2.isna()
+            | lower1.isna()
+            | lower2.isna()
+        )
         if valid_idx.any():
             # 中心線は同じ
             assert np.allclose(middle1[valid_idx], middle2[valid_idx], rtol=1e-5)
@@ -508,9 +557,13 @@ class TestVolatilityIndicators:
         )
 
         # multiplier=2.0
-        result1 = VolatilityIndicators.supertrend(data["high"], data["low"], data["close"], period=7, multiplier=2.0)
+        result1 = VolatilityIndicators.supertrend(
+            data["high"], data["low"], data["close"], period=7, multiplier=2.0
+        )
         # multiplier=3.0
-        result2 = VolatilityIndicators.supertrend(data["high"], data["low"], data["close"], period=7, multiplier=3.0)
+        result2 = VolatilityIndicators.supertrend(
+            data["high"], data["low"], data["close"], period=7, multiplier=3.0
+        )
 
         assert isinstance(result1, tuple)
         assert isinstance(result2, tuple)
@@ -536,9 +589,13 @@ class TestVolatilityIndicators:
         )
 
         # 短期ATR
-        result_short = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=5)
+        result_short = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=5
+        )
         # 長期ATR
-        result_long = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=10)
+        result_long = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=10
+        )
 
         assert isinstance(result_short, pd.Series)
         assert isinstance(result_long, pd.Series)

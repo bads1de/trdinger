@@ -52,15 +52,15 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
     # 特別な処理が必要な既知のインジケーター（除外リスト）
     known_special_cases = {
         "DONCHIAN",  # 特別なデータ構造が必要
-        "PVT",       # volume引数が必要
-        "NVI",       # volume引数が必要
-        "VWMA",      # volume引数が必要
-        "AO",        # 特別な処理が必要
-        "AROON",     # 特別な処理が必要
-        "BOP",       # 特別な処理が必要
-        "CHOP",      # 特別な処理が必要
-        "GRI",       # 特別な処理が必要
-        "WPR",       # pandas_taに存在しない
+        "PVT",  # volume引数が必要
+        "NVI",  # volume引数が必要
+        "VWMA",  # volume引数が必要
+        "AO",  # 特別な処理が必要
+        "AROON",  # 特別な処理が必要
+        "BOP",  # 特別な処理が必要
+        "CHOP",  # 特別な処理が必要
+        "GRI",  # 特別な処理が必要
+        "WPR",  # pandas_taに存在しない
     }
 
     for name, config in indicator_registry.get_all_indicators().items():

@@ -73,9 +73,7 @@ class TestServiceInitialization:
             orchestration_service: オーケストレーションサービス
         """
         assert orchestration_service is not None
-        assert isinstance(
-            orchestration_service, DataCollectionOrchestrationService
-        )
+        assert isinstance(orchestration_service, DataCollectionOrchestrationService)
         assert orchestration_service.historical_service is not None
 
 
@@ -117,9 +115,7 @@ class TestValidateSymbolAndTimeframe:
             mock_market_config.supported_symbols = ["BTC/USDT:USDT"]
             mock_market_config.supported_timeframes = ["1h"]
 
-            result = orchestration_service.validate_symbol_and_timeframe(
-                "BTC", "1h"
-            )
+            result = orchestration_service.validate_symbol_and_timeframe("BTC", "1h")
             assert result == "BTC/USDT:USDT"
 
             assert result == "BTC/USDT:USDT"
@@ -561,12 +557,10 @@ class TestStartBulkHistoricalDataCollection:
             mock_repo.get_data_count.return_value = 0
             mock_repo_class.return_value = mock_repo
 
-            result = (
-                await orchestration_service.start_bulk_historical_data_collection(
-                    background_tasks=mock_background_tasks,
-                    db=mock_db_session,
-                    force_update=False,
-                )
+            result = await orchestration_service.start_bulk_historical_data_collection(
+                background_tasks=mock_background_tasks,
+                db=mock_db_session,
+                force_update=False,
             )
 
             assert result["success"] is True
@@ -597,12 +591,10 @@ class TestStartBulkHistoricalDataCollection:
             mock_repo.clear_ohlcv_data_by_symbol_and_timeframe.return_value = 1000
             mock_repo_class.return_value = mock_repo
 
-            result = (
-                await orchestration_service.start_bulk_historical_data_collection(
-                    background_tasks=mock_background_tasks,
-                    db=mock_db_session,
-                    force_update=True,
-                )
+            result = await orchestration_service.start_bulk_historical_data_collection(
+                background_tasks=mock_background_tasks,
+                db=mock_db_session,
+                force_update=True,
             )
 
             assert result["success"] is True

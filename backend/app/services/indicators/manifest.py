@@ -342,7 +342,12 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "output_names": None,
             "default_output": None,
             "aliases": None,
-            "param_map": {"close": "data", "length": "length", "ma_type": "ma_type", "offset": "offset"},
+            "param_map": {
+                "close": "data",
+                "length": "length",
+                "ma_type": "ma_type",
+                "offset": "offset",
+            },
             "parameters": {
                 "length": {
                     "default_value": 26,
@@ -361,7 +366,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                     "min_value": -10,
                     "max_value": 10,
                     "description": "出力シフト量",
-                }
+                },
             },
             "pandas_function": "bias",
             "data_column": "Close",
@@ -996,21 +1001,21 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                 "low": "low",
                 "close": "close",
                 "length": "length",
-                "ema_length": "ema_length"
+                "ema_length": "ema_length",
             },
             "parameters": {
                 "length": {
                     "default_value": 13,
                     "min_value": 5,
                     "max_value": 50,
-                    "description": "Elder Ray計算期間"
+                    "description": "Elder Ray計算期間",
                 },
                 "ema_length": {
                     "default_value": 16,
                     "min_value": 5,
                     "max_value": 50,
-                    "description": "EMA計算期間"
-                }
+                    "description": "EMA計算期間",
+                },
             },
             "pandas_function": None,
             "data_column": None,
@@ -1018,34 +1023,22 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "multiple",
             "return_cols": ["BULL", "BEAR"],
             "multi_column": True,
-            "default_values": {
-                "length": 13,
-                "ema_length": 16
-            },
-            "min_length_func": None
+            "default_values": {"length": 13, "ema_length": 16},
+            "min_length_func": None,
         },
         "yaml": {
             "conditions": {
                 "long": "{left_operand}_0 > {threshold}",
-                "short": "{left_operand}_1 < {threshold}"
+                "short": "{left_operand}_1 < {threshold}",
             },
             "scale_type": "momentum_zero_centered",
             "thresholds": {
-                "aggressive": {
-                    "long_gt": 0.5,
-                    "short_lt": -0.5
-                },
-                "conservative": {
-                    "long_gt": 1.5,
-                    "short_lt": -1.5
-                },
-                "normal": {
-                    "long_gt": 1.0,
-                    "short_lt": -1.0
-                }
+                "aggressive": {"long_gt": 0.5, "short_lt": -0.5},
+                "conservative": {"long_gt": 1.5, "short_lt": -1.5},
+                "normal": {"long_gt": 1.0, "short_lt": -1.0},
             },
-            "type": "momentum"
-        }
+            "type": "momentum",
+        },
     },
     "ADAPTIVE_ENTROPY": {
         "config": {
@@ -1054,34 +1047,38 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "category": "original",
             "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.adaptive_entropy",
             "required_data": ["close"],
-            "output_names": ["ADAPTIVE_ENTROPY_OSC", "ADAPTIVE_ENTROPY_SIGNAL", "ADAPTIVE_ENTROPY_RATIO"],
+            "output_names": [
+                "ADAPTIVE_ENTROPY_OSC",
+                "ADAPTIVE_ENTROPY_SIGNAL",
+                "ADAPTIVE_ENTROPY_RATIO",
+            ],
             "default_output": "ADAPTIVE_ENTROPY_OSC",
             "aliases": None,
             "param_map": {
                 "close": "close",
                 "short_length": "short_length",
                 "long_length": "long_length",
-                "signal_length": "signal_length"
+                "signal_length": "signal_length",
             },
             "parameters": {
                 "short_length": {
                     "default_value": 14,
                     "min_value": 5,
                     "max_value": 50,
-                    "description": "短期エントロピー計算期間"
+                    "description": "短期エントロピー計算期間",
                 },
                 "long_length": {
                     "default_value": 28,
                     "min_value": 10,
                     "max_value": 100,
-                    "description": "長期エントロピー計算期間"
+                    "description": "長期エントロピー計算期間",
                 },
                 "signal_length": {
                     "default_value": 5,
                     "min_value": 2,
                     "max_value": 20,
-                    "description": "信号線平滑化期間"
-                }
+                    "description": "信号線平滑化期間",
+                },
             },
             "pandas_function": None,
             "data_column": None,
@@ -1092,32 +1089,23 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "default_values": {
                 "short_length": 14,
                 "long_length": 28,
-                "signal_length": 5
+                "signal_length": 5,
             },
-            "min_length_func": None
+            "min_length_func": None,
         },
         "yaml": {
             "conditions": {
                 "long": "{left_operand}_1 > {left_operand}_0",
-                "short": "{left_operand}_1 < {left_operand}_0"
+                "short": "{left_operand}_1 < {left_operand}_0",
             },
             "scale_type": "oscillator_zero_centered",
             "thresholds": {
-                "aggressive": {
-                    "long_gt": 0.2,
-                    "short_lt": -0.2
-                },
-                "conservative": {
-                    "long_gt": 0.8,
-                    "short_lt": -0.8
-                },
-                "normal": {
-                    "long_gt": 0.5,
-                    "short_lt": -0.5
-                }
+                "aggressive": {"long_gt": 0.2, "short_lt": -0.2},
+                "conservative": {"long_gt": 0.8, "short_lt": -0.8},
+                "normal": {"long_gt": 0.5, "short_lt": -0.5},
             },
-            "type": "original"
-        }
+            "type": "original",
+        },
     },
     "QUANTUM_FLOW": {
         "config": {
@@ -1135,21 +1123,21 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                 "low": "low",
                 "volume": "volume",
                 "length": "length",
-                "flow_length": "flow_length"
+                "flow_length": "flow_length",
             },
             "parameters": {
                 "length": {
                     "default_value": 14,
                     "min_value": 5,
                     "max_value": 50,
-                    "description": "ウェーブレット計算期間"
+                    "description": "ウェーブレット計算期間",
                 },
                 "flow_length": {
                     "default_value": 9,
                     "min_value": 3,
                     "max_value": 20,
-                    "description": "フロースコア計算期間"
-                }
+                    "description": "フロースコア計算期間",
+                },
             },
             "pandas_function": None,
             "data_column": None,
@@ -1157,34 +1145,22 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "multiple",
             "return_cols": ["FLOW", "SIGNAL"],
             "multi_column": False,
-            "default_values": {
-                "length": 14,
-                "flow_length": 9
-            },
-            "min_length_func": None
+            "default_values": {"length": 14, "flow_length": 9},
+            "min_length_func": None,
         },
         "yaml": {
             "conditions": {
                 "long": "{left_operand}_1 > {left_operand}_0",
-                "short": "{left_operand}_1 < {left_operand}_0"
+                "short": "{left_operand}_1 < {left_operand}_0",
             },
             "scale_type": "oscillator_zero_centered",
             "thresholds": {
-                "aggressive": {
-                    "long_gt": 0.1,
-                    "short_lt": -0.1
-                },
-                "conservative": {
-                    "long_gt": 0.3,
-                    "short_lt": -0.3
-                },
-                "normal": {
-                    "long_gt": 0.2,
-                    "short_lt": -0.2
-                }
+                "aggressive": {"long_gt": 0.1, "short_lt": -0.1},
+                "conservative": {"long_gt": 0.3, "short_lt": -0.3},
+                "normal": {"long_gt": 0.2, "short_lt": -0.2},
             },
-            "type": "original"
-        }
+            "type": "original",
+        },
     },
     "HARMONIC_RESONANCE": {
         "config": {
@@ -1202,27 +1178,27 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                 "low": "low",
                 "length": "length",
                 "resonance_bands": "resonance_bands",
-                "signal_length": "signal_length"
+                "signal_length": "signal_length",
             },
             "parameters": {
                 "length": {
                     "default_value": 20,
                     "min_value": 10,
                     "max_value": 50,
-                    "description": "主計算期間"
+                    "description": "主計算期間",
                 },
                 "resonance_bands": {
                     "default_value": 5,
                     "min_value": 3,
                     "max_value": 10,
-                    "description": "共振バンド数"
+                    "description": "共振バンド数",
                 },
                 "signal_length": {
                     "default_value": 3,
                     "min_value": 2,
                     "max_value": 10,
-                    "description": "信号線平滑化期間"
-                }
+                    "description": "信号線平滑化期間",
+                },
             },
             "pandas_function": None,
             "data_column": None,
@@ -1230,35 +1206,22 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "multiple",
             "return_cols": ["HRI", "SIGNAL"],
             "multi_column": False,
-            "default_values": {
-                "length": 20,
-                "resonance_bands": 5,
-                "signal_length": 3
-            },
-            "min_length_func": None
+            "default_values": {"length": 20, "resonance_bands": 5, "signal_length": 3},
+            "min_length_func": None,
         },
         "yaml": {
             "conditions": {
                 "long": "{left_operand}_1 > {left_operand}_0",
-                "short": "{left_operand}_1 < {left_operand}_0"
+                "short": "{left_operand}_1 < {left_operand}_0",
             },
             "scale_type": "oscillator_plus_minus_100",
             "thresholds": {
-                "aggressive": {
-                    "long_gt": 50,
-                    "short_lt": -50
-                },
-                "conservative": {
-                    "long_gt": 150,
-                    "short_lt": -150
-                },
-                "normal": {
-                    "long_gt": 100,
-                    "short_lt": -100
-                }
+                "aggressive": {"long_gt": 50, "short_lt": -50},
+                "conservative": {"long_gt": 150, "short_lt": -150},
+                "normal": {"long_gt": 100, "short_lt": -100},
             },
-            "type": "original"
-        }
+            "type": "original",
+        },
     },
     "CHAOS_FRACTAL_DIM": {
         "config": {
@@ -1277,27 +1240,27 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                 "volume": "volume",
                 "length": "length",
                 "embedding_dim": "embedding_dim",
-                "signal_length": "signal_length"
+                "signal_length": "signal_length",
             },
             "parameters": {
                 "length": {
                     "default_value": 25,
                     "min_value": 15,
                     "max_value": 60,
-                    "description": "主計算期間"
+                    "description": "主計算期間",
                 },
                 "embedding_dim": {
                     "default_value": 3,
                     "min_value": 2,
                     "max_value": 5,
-                    "description": "埋め込み次元数"
+                    "description": "埋め込み次元数",
                 },
                 "signal_length": {
                     "default_value": 4,
                     "min_value": 2,
                     "max_value": 10,
-                    "description": "信号線平滑化期間"
-                }
+                    "description": "信号線平滑化期間",
+                },
             },
             "pandas_function": None,
             "data_column": None,
@@ -1305,35 +1268,22 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "multiple",
             "return_cols": ["CTFD", "SIGNAL"],
             "multi_column": False,
-            "default_values": {
-                "length": 25,
-                "embedding_dim": 3,
-                "signal_length": 4
-            },
-            "min_length_func": None
+            "default_values": {"length": 25, "embedding_dim": 3, "signal_length": 4},
+            "min_length_func": None,
         },
         "yaml": {
             "conditions": {
                 "long": "{left_operand}_1 > {left_operand}_0",
-                "short": "{left_operand}_1 < {left_operand}_0"
+                "short": "{left_operand}_1 < {left_operand}_0",
             },
             "scale_type": "oscillator_plus_minus_100",
             "thresholds": {
-                "aggressive": {
-                    "long_gt": 20,
-                    "short_lt": -20
-                },
-                "conservative": {
-                    "long_gt": 60,
-                    "short_lt": -60
-                },
-                "normal": {
-                    "long_gt": 40,
-                    "short_lt": -40
-                }
+                "aggressive": {"long_gt": 20, "short_lt": -20},
+                "conservative": {"long_gt": 60, "short_lt": -60},
+                "normal": {"long_gt": 40, "short_lt": -40},
             },
-            "type": "original"
-        }
+            "type": "original",
+        },
     },
     "EMA": {
         "config": {
@@ -3161,7 +3111,12 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "output_names": None,
             "default_output": None,
             "aliases": None,
-            "param_map": {"length": "length", "scalar": "scalar", "drift": "drift", "offset": "offset"},
+            "param_map": {
+                "length": "length",
+                "scalar": "scalar",
+                "drift": "drift",
+                "offset": "offset",
+            },
             "parameters": {
                 "length": {
                     "default_value": 28,
@@ -3186,7 +3141,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                     "min_value": 0,
                     "max_value": 10,
                     "description": "オフセット",
-                }
+                },
             },
             "pandas_function": "vhf",
             "data_column": "Close",
@@ -4057,7 +4012,13 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "category": "momentum",
             "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.ichimoku",
             "required_data": ["high", "low", "close"],
-            "output_names": ["ICHIMOKU_Tenkan", "ICHIMOKU_Kijun", "ICHIMOKU_Senkou_A", "ICHIMOKU_Senkou_B", "ICHIMOKU_Chikou"],
+            "output_names": [
+                "ICHIMOKU_Tenkan",
+                "ICHIMOKU_Kijun",
+                "ICHIMOKU_Senkou_A",
+                "ICHIMOKU_Senkou_B",
+                "ICHIMOKU_Chikou",
+            ],
             "default_output": "ICHIMOKU_Tenkan",
             "aliases": ["ICHIMOKU"],
             "param_map": {
@@ -4066,7 +4027,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                 "close": "close",
                 "tenkan_period": "tenkan_period",
                 "kijun_period": "kijun_period",
-                "senkou_span_b_period": "senkou_span_b_period"
+                "senkou_span_b_period": "senkou_span_b_period",
             },
             "parameters": {
                 "tenkan_period": {
@@ -4086,7 +4047,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                     "min_value": 20,
                     "max_value": 200,
                     "description": "Senkou Span B (leading span B) period",
-                }
+                },
             },
             "pandas_function": "ichimoku",
             "data_column": None,
@@ -4094,7 +4055,11 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "multiple",
             "return_cols": ["TENKAN", "KIJUN", "SENKOU", "SANSEN", "CHIKOU"],
             "multi_column": True,
-            "default_values": {"tenkan_period": 9, "kijun_period": 26, "senkou_span_b_period": 52},
+            "default_values": {
+                "tenkan_period": 9,
+                "kijun_period": 26,
+                "senkou_span_b_period": 52,
+            },
             "min_length_func": None,
         },
         "yaml": {
@@ -4443,7 +4408,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
                     "min_value": -10,
                     "max_value": 10,
                     "description": "出力オフセット",
-                }
+                },
             },
             "pandas_function": "psl",
             "data_column": "Close",
@@ -4505,7 +4470,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {
                 "cycle_periods": [8, 13, 21, 34, 55],
-                "fib_ratios": [0.618, 1.0, 1.618, 2.618]
+                "fib_ratios": [0.618, 1.0, 1.618, 2.618],
             },
             "min_length_func": None,
         },
@@ -4558,10 +4523,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "single",
             "return_cols": None,
             "multi_column": False,
-            "default_values": {
-                "length": 10,
-                "k": 0.6
-            },
+            "default_values": {"length": 10, "k": 0.6},
             "min_length_func": None,
         },
         "yaml": {
@@ -4606,9 +4568,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "single",
             "return_cols": None,
             "multi_column": False,
-            "default_values": {
-                "length": 10
-            },
+            "default_values": {"length": 10},
             "min_length_func": None,
         },
         "yaml": {
@@ -4669,11 +4629,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "multiple",
             "return_cols": None,
             "multi_column": False,
-            "default_values": {
-                "p": 10,
-                "x": 1.0,
-                "q": 9
-            },
+            "default_values": {"p": 10, "x": 1.0, "q": 9},
             "min_length_func": None,
         },
         "yaml": {
@@ -4727,10 +4683,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "returns": "single",
             "return_cols": None,
             "multi_column": False,
-            "default_values": {
-                "length": 14,
-                "sma_length": 30
-            },
+            "default_values": {"length": 14, "sma_length": 30},
             "min_length_func": None,
         },
         "yaml": {
@@ -4792,7 +4745,7 @@ MANIFEST: Dict[str, Dict[str, Any]] = {
             "default_values": {
                 "rsi_periods": 3,
                 "streak_periods": 2,
-                "rank_periods": 100
+                "rank_periods": 100,
             },
             "min_length_func": None,
         },

@@ -108,7 +108,9 @@ class FundingRateFeatureCalculator:
                 result["timestamp"] = result.index
                 logger.debug("インデックスからtimestampカラムを生成しました")
             else:
-                logger.warning("OHLCVデータにtimestampカラムがなく、インデックスもDatetimeIndexではありません")
+                logger.warning(
+                    "OHLCVデータにtimestampカラムがなく、インデックスもDatetimeIndexではありません"
+                )
                 return result
 
         if (
@@ -223,7 +225,9 @@ class FundingRateFeatureCalculator:
             # インデックスがDatetimeIndexの場合はカラムに変換
             if isinstance(df.index, pd.DatetimeIndex):
                 df["timestamp"] = df.index
-                logger.debug("時間サイクル特徴量: インデックスからtimestampカラムを生成")
+                logger.debug(
+                    "時間サイクル特徴量: インデックスからtimestampカラムを生成"
+                )
             else:
                 logger.warning("時間サイクル特徴量: timestampカラムがありません")
                 return df

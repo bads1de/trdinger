@@ -120,7 +120,8 @@ class TestRequiredFieldsValidation:
         del valid_config["strategy_name"]
 
         with pytest.raises(
-            BacktestConfigValidationError, match="必須フィールド 'strategy_name' が見つかりません"
+            BacktestConfigValidationError,
+            match="必須フィールド 'strategy_name' が見つかりません",
         ):
             validator.validate_config(valid_config)
 
@@ -129,7 +130,8 @@ class TestRequiredFieldsValidation:
         del valid_config["symbol"]
 
         with pytest.raises(
-            BacktestConfigValidationError, match="必須フィールド 'symbol' が見つかりません"
+            BacktestConfigValidationError,
+            match="必須フィールド 'symbol' が見つかりません",
         ):
             validator.validate_config(valid_config)
 
@@ -138,7 +140,8 @@ class TestRequiredFieldsValidation:
         del valid_config["timeframe"]
 
         with pytest.raises(
-            BacktestConfigValidationError, match="必須フィールド 'timeframe' が見つかりません"
+            BacktestConfigValidationError,
+            match="必須フィールド 'timeframe' が見つかりません",
         ):
             validator.validate_config(valid_config)
 
@@ -147,7 +150,8 @@ class TestRequiredFieldsValidation:
         del valid_config["start_date"]
 
         with pytest.raises(
-            BacktestConfigValidationError, match="必須フィールド 'start_date' が見つかりません"
+            BacktestConfigValidationError,
+            match="必須フィールド 'start_date' が見つかりません",
         ):
             validator.validate_config(valid_config)
 
@@ -199,7 +203,8 @@ class TestFieldValueValidation:
         valid_config["symbol"] = ""
 
         with pytest.raises(
-            BacktestConfigValidationError, match="symbolは空でない文字列である必要があります"
+            BacktestConfigValidationError,
+            match="symbolは空でない文字列である必要があります",
         ):
             validator.validate_config(valid_config)
 
@@ -356,7 +361,8 @@ class TestNumericFieldValidation:
         valid_config["initial_capital"] = "not a number"
 
         with pytest.raises(
-            BacktestConfigValidationError, match="initial_capitalは数値である必要があります"
+            BacktestConfigValidationError,
+            match="initial_capitalは数値である必要があります",
         ):
             validator.validate_config(valid_config)
 
@@ -393,7 +399,8 @@ class TestNumericFieldValidation:
         valid_config["commission_rate"] = "invalid"
 
         with pytest.raises(
-            BacktestConfigValidationError, match="commission_rateは数値である必要があります"
+            BacktestConfigValidationError,
+            match="commission_rateは数値である必要があります",
         ):
             validator.validate_config(valid_config)
 
@@ -427,7 +434,8 @@ class TestStrategyConfigValidation:
         valid_config["strategy_config"] = "not a dict"
 
         with pytest.raises(
-            BacktestConfigValidationError, match="strategy_configは辞書である必要があります"
+            BacktestConfigValidationError,
+            match="strategy_configは辞書である必要があります",
         ):
             validator.validate_config(valid_config)
 
@@ -446,7 +454,8 @@ class TestStrategyConfigValidation:
         }
 
         with pytest.raises(
-            BacktestConfigValidationError, match="strategy_typeは文字列である必要があります"
+            BacktestConfigValidationError,
+            match="strategy_typeは文字列である必要があります",
         ):
             validator.validate_config(valid_config)
 

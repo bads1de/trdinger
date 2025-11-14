@@ -435,7 +435,10 @@ def safe_operation(
                         raise ErrorHandler.handle_api_error(e, context)
                     else:
                         logger.error(f"エラー in {context}: {e}")
-                        if isinstance(default_return, str) and default_return == "RAISE_EXCEPTION":
+                        if (
+                            isinstance(default_return, str)
+                            and default_return == "RAISE_EXCEPTION"
+                        ):
                             raise e
                         return default_return
 

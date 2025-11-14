@@ -24,6 +24,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_funding_rate_orchestration_service() -> AsyncMock:
     """
@@ -45,20 +46,22 @@ def mock_db_session() -> Mock:
     """
     return Mock()
 
+
 @pytest.fixture(autouse=True)
 def override_dependencies(mock_db_session, mock_funding_rate_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_funding_rate_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_funding_rate_orchestration_service] = lambda: mock_funding_rate_orchestration_service
+    app.dependency_overrides[get_funding_rate_orchestration_service] = (
+        lambda: mock_funding_rate_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
-
 
 
 @pytest.fixture
@@ -79,7 +82,9 @@ def sample_funding_rate() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_funding_rates_list(sample_funding_rate: Dict[str, Any]) -> List[Dict[str, Any]]:
+def sample_funding_rates_list(
+    sample_funding_rate: Dict[str, Any],
+) -> List[Dict[str, Any]]:
     """
     サンプルファンディングレートリスト
 
@@ -217,7 +222,6 @@ class TestGetFundingRates:
             (1001, 200),  # エッジケース（実装では許容）
         ],
     )
-
     def test_get_funding_rates_limit_validation(
         self,
         test_client: TestClient,
@@ -270,7 +274,6 @@ class TestGetFundingRates:
 class TestCollectFundingRates:
     """ファンディングレート収集のテストクラス"""
 
-
     def test_collect_funding_rates_success(
         self,
         test_client: TestClient,
@@ -304,7 +307,6 @@ class TestCollectFundingRates:
         assert data["success"] is True
         assert "収集" in data["message"]
 
-
     def test_collect_funding_rates_fetch_all(
         self,
         test_client: TestClient,
@@ -337,7 +339,6 @@ class TestCollectFundingRates:
         data = response.json()
         assert data["success"] is True
 
-
     def test_collect_funding_rates_db_init_failure(
         self,
         test_client: TestClient,
@@ -358,7 +359,7 @@ class TestCollectFundingRates:
             "message": "ファンディングレートデータを収集しました",
             "data": {"collected_count": 0},
         }
-        
+
         # APIリクエスト
         response = test_client.post(
             "/api/funding-rates/collect",
@@ -388,7 +389,6 @@ class TestCollectFundingRates:
 class TestBulkCollectFundingRates:
     """ファンディングレート一括収集のテストクラス"""
 
-
     def test_bulk_collect_success(
         self,
         test_client: TestClient,
@@ -409,7 +409,11 @@ class TestBulkCollectFundingRates:
             "message": "一括収集が完了しました",
             "data": {
                 "results": [
-                    {"symbol": "BTC/USDT:USDT", "collected_count": 5000, "success": True}
+                    {
+                        "symbol": "BTC/USDT:USDT",
+                        "collected_count": 5000,
+                        "success": True,
+                    }
                 ]
             },
         }
@@ -422,7 +426,6 @@ class TestBulkCollectFundingRates:
         data = response.json()
         assert data["success"] is True
         assert "完了" in data["message"]
-
 
     def test_bulk_collect_db_init_failure(
         self,
@@ -444,7 +447,7 @@ class TestBulkCollectFundingRates:
             "message": "一括収集が完了しました",
             "data": {"results": []},
         }
-        
+
         # APIリクエスト
         response = test_client.post("/api/funding-rates/bulk-collect")
 

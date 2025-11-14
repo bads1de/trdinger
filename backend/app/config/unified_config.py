@@ -518,7 +518,7 @@ class MLTrainingConfig(BaseSettings):
 
 class FeatureEngineeringConfig(BaseSettings):
     """特徴量エンジニアリング設定。
-    
+
     研究目的専用のため、プロファイル機能は簡素化されています。
     """
 

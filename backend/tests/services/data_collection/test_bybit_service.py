@@ -59,7 +59,9 @@ class TestServiceInitialization:
 
     async def test_service_initialization(self):
         """サービスが正しく初期化されることを確認"""
-        with patch("app.services.data_collection.bybit.bybit_service.ccxt.bybit") as mock:
+        with patch(
+            "app.services.data_collection.bybit.bybit_service.ccxt.bybit"
+        ) as mock:
             mock_exchange = MagicMock()
             mock.return_value = mock_exchange
 
@@ -90,17 +92,23 @@ class TestParameterValidation:
 
     async def test_validate_symbol_invalid_empty(self, service):
         """空のシンボルがValueErrorを発生させることを確認"""
-        with pytest.raises(ValueError, match="シンボルは有効な文字列である必要があります"):
+        with pytest.raises(
+            ValueError, match="シンボルは有効な文字列である必要があります"
+        ):
             service._validate_symbol("")
 
     async def test_validate_symbol_invalid_none(self, service):
         """Noneシンボルが ValueErrorを発生させることを確認"""
-        with pytest.raises(ValueError, match="シンボルは有効な文字列である必要があります"):
+        with pytest.raises(
+            ValueError, match="シンボルは有効な文字列である必要があります"
+        ):
             service._validate_symbol(None)
 
     async def test_validate_symbol_invalid_type(self, service):
         """無効な型のシンボルがValueErrorを発生させることを確認"""
-        with pytest.raises(ValueError, match="シンボルは有効な文字列である必要があります"):
+        with pytest.raises(
+            ValueError, match="シンボルは有効な文字列である必要があります"
+        ):
             service._validate_symbol(123)
 
     @patch("app.services.data_collection.bybit.bybit_service.unified_config")
@@ -115,21 +123,27 @@ class TestParameterValidation:
     async def test_validate_limit_invalid_zero(self, mock_unified_config, service):
         """ゼロのlimitがValueErrorを発生させることを確認"""
         mock_unified_config.data_collection.max_limit = 1000
-        with pytest.raises(ValueError, match="limitは1から1000の間の整数である必要があります"):
+        with pytest.raises(
+            ValueError, match="limitは1から1000の間の整数である必要があります"
+        ):
             service._validate_limit(0)
 
     @patch("app.services.data_collection.bybit.bybit_service.unified_config")
     async def test_validate_limit_invalid_negative(self, mock_unified_config, service):
         """負のlimitがValueErrorを発生させることを確認"""
         mock_unified_config.data_collection.max_limit = 1000
-        with pytest.raises(ValueError, match="limitは1から1000の間の整数である必要があります"):
+        with pytest.raises(
+            ValueError, match="limitは1から1000の間の整数である必要があります"
+        ):
             service._validate_limit(-1)
 
     @patch("app.services.data_collection.bybit.bybit_service.unified_config")
     async def test_validate_limit_invalid_exceed(self, mock_unified_config, service):
         """最大値を超えるlimitがValueErrorを発生させることを確認"""
         mock_unified_config.data_collection.max_limit = 1000
-        with pytest.raises(ValueError, match="limitは1から1000の間の整数である必要があります"):
+        with pytest.raises(
+            ValueError, match="limitは1から1000の間の整数である必要があります"
+        ):
             service._validate_limit(1001)
 
     @patch("app.services.data_collection.bybit.bybit_service.unified_config")
@@ -210,9 +224,7 @@ class TestCCXTErrorHandling:
         test_func = MagicMock(side_effect=ccxt.ExchangeError("Exchange error"))
 
         with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(
-                side_effect=ccxt.ExchangeError("Exchange error")
-            )
+            mock_executor = AsyncMock(side_effect=ccxt.ExchangeError("Exchange error"))
             mock_loop.return_value.run_in_executor = mock_executor
 
             with pytest.raises(DataError, match="取引所エラー"):
@@ -354,9 +366,7 @@ class TestProcessPageData:
         )
 
         assert len(result) == 2
-        assert all(
-            item["timestamp"] > latest_existing_timestamp for item in result
-        )
+        assert all(item["timestamp"] > latest_existing_timestamp for item in result)
 
 
 @pytest.mark.asyncio
@@ -384,9 +394,7 @@ class TestDatabaseSessionManagement:
         mock_func = AsyncMock(return_value="result")
         mock_repo = MagicMock()
 
-        result = await service._execute_with_db_session(
-            mock_func, repository=mock_repo
-        )
+        result = await service._execute_with_db_session(mock_func, repository=mock_repo)
 
         assert result == "result"
         mock_func.assert_called_once_with(db=None, repository=mock_repo)

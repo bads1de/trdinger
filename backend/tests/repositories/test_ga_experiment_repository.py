@@ -68,14 +68,14 @@ class TestCreateExperiment:
         """実験が正常に作成される"""
         repository.db.add = MagicMock()
         repository.db.commit = MagicMock()
-        repository.db.refresh = MagicMock(side_effect=lambda x: setattr(x, 'id', 1))
-        
+        repository.db.refresh = MagicMock(side_effect=lambda x: setattr(x, "id", 1))
+
         experiment = repository.create_experiment(
             name="test_experiment",
             config={"population": 50},
             total_generations=100,
         )
-        
+
         repository.db.add.assert_called_once()
         repository.db.commit.assert_called_once()
         assert experiment.name == "test_experiment"
@@ -87,14 +87,14 @@ class TestCreateExperiment:
         repository.db.add = MagicMock()
         repository.db.commit = MagicMock()
         repository.db.refresh = MagicMock()
-        
+
         experiment = repository.create_experiment(
             name="test_experiment",
             config={},
             total_generations=100,
             status="pending",
         )
-        
+
         assert experiment.status == "pending"
 
 
@@ -108,9 +108,9 @@ class TestUpdateExperimentStatus:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_experiment_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         result = repository.update_experiment_status(1, "completed")
-        
+
         assert result is True
         repository.db.commit.assert_called_once()
 
@@ -121,9 +121,9 @@ class TestUpdateExperimentStatus:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
+
         result = repository.update_experiment_status(999, "completed")
-        
+
         assert result is False
 
     def test_update_experiment_status_with_completed_at(
@@ -133,10 +133,10 @@ class TestUpdateExperimentStatus:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_experiment_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         completed_at = datetime(2024, 1, 2, tzinfo=timezone.utc)
         result = repository.update_experiment_status(1, "completed", completed_at)
-        
+
         assert result is True
 
 
@@ -150,9 +150,9 @@ class TestGetExperimentsByStatus:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_experiment_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_experiments_by_status("running")
-        
+
         assert len(results) == 1
         assert results[0].status == "running"
 
@@ -163,9 +163,9 @@ class TestGetExperimentsByStatus:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = []
         repository.db.scalars.return_value = mock_scalars
-        
+
         repository.get_experiments_by_status("running", limit=10)
-        
+
         repository.db.scalars.assert_called_once()
 
 
@@ -179,9 +179,9 @@ class TestGetRecentExperiments:
         mock_scalars = MagicMock()
         mock_scalars.all.return_value = [sample_experiment_model]
         repository.db.scalars.return_value = mock_scalars
-        
+
         results = repository.get_recent_experiments(limit=5)
-        
+
         assert len(results) == 1
 
 
@@ -196,9 +196,9 @@ class TestCompleteExperiment:
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = mock_experiment
         repository.db.query.return_value = mock_query
-        
+
         result = repository.complete_experiment(1, 0.90, 100)
-        
+
         assert result is True
         repository.db.commit.assert_called_once()
 
@@ -209,9 +209,9 @@ class TestCompleteExperiment:
         mock_query = MagicMock()
         mock_query.filter.return_value.first.return_value = None
         repository.db.query.return_value = mock_query
-        
+
         result = repository.complete_experiment(999, 0.90, 100)
-        
+
         assert result is False
 
 
@@ -225,9 +225,9 @@ class TestDeleteAllExperiments:
         mock_query = MagicMock()
         mock_query.delete.return_value = 5
         repository.db.query.return_value = mock_query
-        
+
         count = repository.delete_all_experiments()
-        
+
         assert count == 5
         repository.db.commit.assert_called_once()
 
@@ -240,6 +240,6 @@ class TestErrorHandling:
     ) -> None:
         """作成エラーが適切に処理される"""
         repository.db.add.side_effect = Exception("DB Error")
-        
+
         with pytest.raises(Exception):
             repository.create_experiment("test", {}, 100)

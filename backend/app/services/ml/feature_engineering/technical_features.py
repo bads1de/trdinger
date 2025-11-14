@@ -166,7 +166,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 # Stochastic_D特徴量を追加
                 stoch_d = stoch_result["STOCHd_14_3_3"].fillna(50.0)
                 new_features["Stochastic_D"] = stoch_d
-                
+
                 # ドージ・ストキャスティクス（KとDの乖離）
                 new_features["Stochastic_Divergence"] = (
                     new_features["Stochastic_K"] - stoch_d
@@ -202,7 +202,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # Removed: MA_Short（重複特徴量削除: 2025-01-09）
             # 理由: price_features.pyのma_10と重複
-            
+
             # 移動平均（トレンド判断）- MA_Longのみ保持
             long_ma = lookback_periods.get("long_ma", 50)
             ma_long = ta.sma(result_df["close"], length=long_ma)

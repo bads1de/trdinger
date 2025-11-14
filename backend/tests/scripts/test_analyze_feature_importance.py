@@ -65,9 +65,9 @@ def sample_features():
     )
 
     # 高相関特徴量を作成
-    df["feature_high_corr_2"] = df["feature_high_corr_1"] * 0.98 + np.random.randn(
-        n_samples
-    ) * 0.01
+    df["feature_high_corr_2"] = (
+        df["feature_high_corr_1"] * 0.98 + np.random.randn(n_samples) * 0.01
+    )
 
     return df
 
@@ -177,7 +177,9 @@ class TestFeatureImportanceAnalyzer:
 
         # 基本カラムを除外
         exclude_cols = ["open", "high", "low", "close", "volume"]
-        X = sample_features[[col for col in sample_features.columns if col not in exclude_cols]]
+        X = sample_features[
+            [col for col in sample_features.columns if col not in exclude_cols]
+        ]
 
         high_corr_pairs = analyzer.analyze_correlation(X, threshold=0.95)
 
@@ -323,9 +325,7 @@ class TestFeatureImportanceAnalyzer:
         )
 
         # LightGBM重要度
-        lgbm_importance = analyzer.analyze_lightgbm_importance(
-            X_train, X_val, y_train
-        )
+        lgbm_importance = analyzer.analyze_lightgbm_importance(X_train, X_val, y_train)
 
         # モデル学習
         from lightgbm import LGBMClassifier

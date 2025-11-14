@@ -83,7 +83,6 @@ class LightGBMConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ML_LIGHTGBM_")
 
 
-
 class FeatureEngineeringConfig(BaseSettings):
     """特徴量エンジニアリング関連の設定"""
 
@@ -246,7 +245,6 @@ class EnsembleConfig(BaseSettings):
     )
 
     model_config = SettingsConfigDict(env_prefix="ML_ENSEMBLE_")
-
 
 
 class MLConfig:

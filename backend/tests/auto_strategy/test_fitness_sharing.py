@@ -145,7 +145,9 @@ class TestFitnessSharing:
                 assert len(result) == len(sample_population)
             except Exception as e:
                 # Small populations may cause silhouette errors, that's expected
-                pytest.skip(f"Silhouette-based sharing failed with small population: {e}")
+                pytest.skip(
+                    f"Silhouette-based sharing failed with small population: {e}"
+                )
         else:
             pytest.skip("silhouette_based_sharing method not implemented yet")
 

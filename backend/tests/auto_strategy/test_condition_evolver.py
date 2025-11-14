@@ -22,9 +22,11 @@ from app.services.backtest.backtest_service import BacktestService
 # seabornが利用可能な場合のみインポート
 try:
     import seaborn as sns
+
     HAS_SEABORN = True
 except ImportError:
     HAS_SEABORN = False
+
 
 # StrategyComparisonをローカルで定義
 class StrategyComparison:
@@ -39,17 +41,24 @@ class StrategyComparison:
             "success": True,
             "results": [],
             "statistical_summary": {"overall_performance": {}},
-            "report_path": "test_report.html"
+            "report_path": "test_report.html",
         }
 
     def _analyze_comparison_results(self, ga_results, random_results):
         return {"success": True}
 
     def _perform_statistical_test(self, ga_data, random_data):
-        return {"t_statistic": 0.0, "p_value": 0.0, "cohens_d": 0.0, "sample_size_ga": 1, "sample_size_random": 1}
+        return {
+            "t_statistic": 0.0,
+            "p_value": 0.0,
+            "cohens_d": 0.0,
+            "sample_size_ga": 1,
+            "sample_size_random": 1,
+        }
 
     def _generate_comparison_report(self, all_results, statistical_summary):
         from pathlib import Path
+
         return Path("test_report.html")
 
 

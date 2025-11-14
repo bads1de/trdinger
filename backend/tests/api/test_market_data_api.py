@@ -24,6 +24,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_db_session() -> Mock:
     """
@@ -52,13 +53,15 @@ def mock_market_data_orchestration_service() -> Mock:
 def override_dependencies(mock_db_session, mock_market_data_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_market_data_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_market_data_orchestration_service] = lambda: mock_market_data_orchestration_service
+    app.dependency_overrides[get_market_data_orchestration_service] = (
+        lambda: mock_market_data_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -101,6 +104,7 @@ def sample_ohlcv_list(sample_ohlcv_data: Dict[str, Any]) -> List[Dict[str, Any]]
 
 class TestGetOHLCVData:
     """OHLCVデータ取得のテストクラス"""
+
     def test_get_ohlcv_success(
         self,
         test_client: TestClient,
@@ -142,6 +146,7 @@ class TestGetOHLCVData:
         assert len(data["data"]) == 3
         assert data["symbol"] == "BTC/USDT:USDT"
         assert data["timeframe"] == "1h"
+
     def test_get_ohlcv_with_date_range(
         self,
         test_client: TestClient,
@@ -228,6 +233,7 @@ class TestGetOHLCVData:
         data = response.json()
         assert data["success"] is True
         assert data["timeframe"] == timeframe
+
     def test_get_ohlcv_empty_result(
         self,
         test_client: TestClient,
@@ -379,6 +385,7 @@ class TestGetOHLCVData:
         data = response.json()
         assert data["success"] is True
         assert data["symbol"] == symbol
+
     def test_get_ohlcv_default_parameters(
         self,
         test_client: TestClient,
@@ -417,6 +424,7 @@ class TestGetOHLCVData:
 
 class TestErrorHandling:
     """エラーハンドリングのテストクラス"""
+
     def test_service_error_handling(
         self,
         test_client: TestClient,
@@ -443,6 +451,7 @@ class TestErrorHandling:
 
         # アサーション（ErrorHandlerによって処理される）
         assert response.status_code in [200, 500]
+
     def test_invalid_timeframe(
         self,
         test_client: TestClient,
@@ -471,6 +480,7 @@ class TestErrorHandling:
 
         # アサーション
         assert response.status_code in [200, 400]
+
     def test_invalid_date_format(
         self,
         test_client: TestClient,

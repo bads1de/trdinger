@@ -193,9 +193,7 @@ class TestMLPipelineScaling:
         )
 
     @pytest.mark.parametrize("scaler_method", ["standard", "minmax", "robust"])
-    def test_different_scalers(
-        self, scaler_method: str, sample_data: pd.DataFrame
-    ):
+    def test_different_scalers(self, scaler_method: str, sample_data: pd.DataFrame):
         """正常系: 複数のスケーリング手法をテスト.
 
         Args:
@@ -236,9 +234,7 @@ class TestMLPipelineFeatureSelection:
         np.random.seed(42)
         n_samples = 200
         return pd.DataFrame(
-            {
-                f"feature_{i}": np.random.randn(n_samples) for i in range(20)
-            }
+            {f"feature_{i}": np.random.randn(n_samples) for i in range(20)}
         )
 
     @pytest.fixture
@@ -261,9 +257,7 @@ class TestMLPipelineFeatureSelection:
 
         assert transformed.shape[1] == n_features_to_select
 
-    @pytest.mark.parametrize(
-        "selection_method", ["f_regression", "mutual_info"]
-    )
+    @pytest.mark.parametrize("selection_method", ["f_regression", "mutual_info"])
     def test_different_selection_methods(
         self,
         selection_method: str,
@@ -296,9 +290,7 @@ class TestRegressionPipeline:
     def regression_data(self) -> tuple[pd.DataFrame, pd.Series]:
         """回帰用データ."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(100) for i in range(10)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(100) for i in range(10)})
         y = pd.Series(np.random.randn(100))
         return X, y
 
@@ -314,9 +306,7 @@ class TestRegressionPipeline:
     ):
         """正常系: ロバストスケーリングを使用した回帰パイプライン."""
         X, y = regression_data
-        pipeline = create_regression_pipeline(
-            scaling=True, scaling_method="robust"
-        )
+        pipeline = create_regression_pipeline(scaling=True, scaling_method="robust")
 
         pipeline.fit(X, y)
         transformed = pipeline.transform(X)
@@ -332,9 +322,7 @@ class TestClassificationPipeline:
     def classification_data(self) -> tuple[pd.DataFrame, pd.Series]:
         """分類用データ."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(100) for i in range(10)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(100) for i in range(10)})
         y = pd.Series(np.random.choice([0, 1], 100))
         return X, y
 
@@ -369,9 +357,7 @@ class TestPipelineInfo:
     def fitted_pipeline(self) -> tuple[Pipeline, pd.DataFrame]:
         """適合済みパイプライン."""
         np.random.seed(42)
-        data = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(50) for i in range(5)}
-        )
+        data = pd.DataFrame({f"feature_{i}": np.random.randn(50) for i in range(5)})
         target = pd.Series(np.random.randn(50))
 
         pipeline = create_ml_pipeline(
@@ -381,9 +367,7 @@ class TestPipelineInfo:
 
         return pipeline, data
 
-    def test_get_ml_pipeline_info(
-        self, fitted_pipeline: tuple[Pipeline, pd.DataFrame]
-    ):
+    def test_get_ml_pipeline_info(self, fitted_pipeline: tuple[Pipeline, pd.DataFrame]):
         """正常系: パイプライン情報の取得."""
         pipeline, _ = fitted_pipeline
         info = get_ml_pipeline_info(pipeline)
@@ -415,9 +399,7 @@ class TestOptimizePipeline:
     def optimization_data(self) -> tuple[pd.DataFrame, pd.Series]:
         """最適化用データ."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(500) for i in range(50)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(500) for i in range(50)})
         y = pd.Series(np.random.randn(500))
         return X, y
 
@@ -434,9 +416,7 @@ class TestOptimizePipeline:
     def test_optimize_ml_pipeline_classification(self):
         """正常系: 分類タスク用の最適化."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(500) for i in range(50)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(500) for i in range(50)})
         y = pd.Series(np.random.choice([0, 1], 500))
 
         pipeline = optimize_ml_pipeline(X, y, task_type="classification")
@@ -519,9 +499,7 @@ class TestPipelinePerformance:
     def test_pipeline_caching_behavior(self):
         """正常系: パイプラインのキャッシング動作."""
         np.random.seed(42)
-        data = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(100) for i in range(10)}
-        )
+        data = pd.DataFrame({f"feature_{i}": np.random.randn(100) for i in range(10)})
 
         pipeline = create_ml_pipeline(scaling=True)
 
@@ -574,9 +552,7 @@ class TestPipelineIntegration:
             }
         )
 
-    def test_end_to_end_pipeline(
-        self, realistic_market_data: pd.DataFrame
-    ):
+    def test_end_to_end_pipeline(self, realistic_market_data: pd.DataFrame):
         """正常系: エンドツーエンドパイプライン."""
         target = pd.Series(np.random.randn(len(realistic_market_data)))
 
@@ -597,9 +573,7 @@ class TestPipelineIntegration:
         assert len(result) == len(realistic_market_data)
         assert result.shape[1] == 3  # 3つの特徴量が選択されている
 
-    def test_pipeline_with_all_options(
-        self, realistic_market_data: pd.DataFrame
-    ):
+    def test_pipeline_with_all_options(self, realistic_market_data: pd.DataFrame):
         """正常系: すべてのオプションを有効にしたパイプライン."""
         target = pd.Series(np.random.randn(len(realistic_market_data)))
 

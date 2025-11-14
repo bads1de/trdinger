@@ -59,13 +59,15 @@ def mock_backtest_orchestration_service() -> AsyncMock:
 def override_dependencies(mock_db_session, mock_backtest_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_backtest_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_backtest_orchestration_service] = lambda: mock_backtest_orchestration_service
+    app.dependency_overrides[get_backtest_orchestration_service] = (
+        lambda: mock_backtest_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
 

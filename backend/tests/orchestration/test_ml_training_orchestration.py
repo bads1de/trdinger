@@ -74,9 +74,7 @@ def sample_training_config() -> MagicMock:
         "method": "stacking",
     }
     config.single_model_config = MagicMock()
-    config.single_model_config.model_dump.return_value = {
-        "model_type": "lightgbm"
-    }
+    config.single_model_config.model_dump.return_value = {"model_type": "lightgbm"}
     config.optimization_settings = MagicMock()
     config.optimization_settings.enabled = False
     return config
@@ -149,7 +147,9 @@ class TestGetDataService:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with patch.object(orchestration_service, "get_data_service") as mock_get_data_service:
+        with patch.object(
+            orchestration_service, "get_data_service"
+        ) as mock_get_data_service:
             mock_backtest_data_service = MagicMock()
             mock_get_data_service.return_value = mock_backtest_data_service
 
@@ -366,9 +366,7 @@ class TestGetModelInfo:
 
                 assert result["success"] is True
                 assert result["data"]["model_status"]["is_loaded"] is True
-                assert (
-                    result["data"]["model_status"]["model_type"] == "LightGBM"
-                )
+                assert result["data"]["model_status"]["model_type"] == "LightGBM"
 
     @pytest.mark.asyncio
     async def test_get_model_info_no_model(

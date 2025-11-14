@@ -88,14 +88,10 @@ class TestOptunaEnabledEvaluator:
             LightGBMEvaluator,
             OptunaEnabledEvaluator,
         )
-        
+
         # OptunaEnabledEvaluatorは抽象クラスなので、LightGBMEvaluatorを使ってテスト
-        evaluator = LightGBMEvaluator(
-            enable_optuna=True,
-            n_trials=10,
-            timeout=60
-        )
-        
+        evaluator = LightGBMEvaluator(enable_optuna=True, n_trials=10, timeout=60)
+
         # OptunaEnabledEvaluatorを継承していることを確認
         assert isinstance(evaluator, OptunaEnabledEvaluator)
         assert evaluator.enable_optuna is True
@@ -109,7 +105,9 @@ class TestOptunaEnabledEvaluator:
         # 実装後にパスするテスト
         pytest.skip("実装待ち: OptunaEnabledEvaluatorクラス")
 
-    def test_optimize_hyperparameters(self, sample_training_data, mock_optuna_optimizer):
+    def test_optimize_hyperparameters(
+        self, sample_training_data, mock_optuna_optimizer
+    ):
         """ハイパーパラメータ最適化メソッドテスト"""
         # 実装後にパスするテスト
         pytest.skip("実装待ち: optimize_hyperparametersメソッド")

@@ -24,6 +24,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_data_management_orchestration_service() -> AsyncMock:
     """
@@ -45,17 +46,20 @@ def mock_db_session() -> Mock:
     """
     return Mock()
 
+
 @pytest.fixture(autouse=True)
 def override_dependencies(mock_db_session, mock_data_management_orchestration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_data_management_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_data_management_orchestration_service] = lambda: mock_data_management_orchestration_service
+    app.dependency_overrides[get_data_management_orchestration_service] = (
+        lambda: mock_data_management_orchestration_service
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -299,7 +303,6 @@ class TestResetDataBySymbol:
         "symbol",
         ["BTC/USDT:USDT", "ETH/USDT:USDT", "BNB/USDT:USDT"],
     )
-
     def test_reset_by_different_symbols(
         self,
         test_client: TestClient,

@@ -42,7 +42,8 @@ class TestTechnicalIndicatorService:
         data = pd.DataFrame(
             {
                 "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109] * 2,
-                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900] * 2,
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
+                * 2,
             }
         )
 
@@ -67,7 +68,8 @@ class TestTechnicalIndicatorService:
         data = pd.DataFrame(
             {
                 "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109] * 2,
-                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900] * 2,
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
+                * 2,
             }
         )
 
@@ -81,11 +83,14 @@ class TestTechnicalIndicatorService:
         data = pd.DataFrame(
             {
                 "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109] * 3,
-                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900] * 3,
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
+                * 3,
             }
         )
 
-        result = self.service.calculate_indicator(data, "MACD", {"fast": 12, "slow": 26, "signal": 9})
+        result = self.service.calculate_indicator(
+            data, "MACD", {"fast": 12, "slow": 26, "signal": 9}
+        )
 
         # MACDは複数の値を返す（tuple）
         assert result is not None
@@ -104,9 +109,7 @@ class TestTechnicalIndicatorService:
 
     def test_validate_data_length_insufficient(self):
         """データ不足の検証テスト"""
-        data = pd.DataFrame(
-            {"close": [100, 101, 102], "volume": [1000, 1100, 1200]}
-        )
+        data = pd.DataFrame({"close": [100, 101, 102], "volume": [1000, 1100, 1200]})
 
         is_valid, min_length = self.service.validate_data_length_with_fallback(
             data, "SMA", {"length": 14}

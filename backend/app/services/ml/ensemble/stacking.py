@@ -28,9 +28,7 @@ class StackingEnsemble(BaseEnsemble):
     各モデルの強みを活かした予測を行います。
     """
 
-    def __init__(
-        self, config: Dict[str, Any]
-    ):
+    def __init__(self, config: Dict[str, Any]):
         """
         初期化
 

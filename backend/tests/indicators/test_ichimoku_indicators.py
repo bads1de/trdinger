@@ -29,20 +29,16 @@ class TestIchimokuIndicators:
         high_prices = close_prices + np.random.normal(1, 0.5, 100)
         low_prices = close_prices - np.random.normal(1, 0.5, 100)
 
-        df = pd.DataFrame({
-            "high": high_prices,
-            "low": low_prices,
-            "close": close_prices
-        }, index=dates)
+        df = pd.DataFrame(
+            {"high": high_prices, "low": low_prices, "close": close_prices}, index=dates
+        )
 
         return df
 
     def test_ichimoku_basic_calculation(self, sample_data):
         """Ichimoku Cloudの基本計算をテスト"""
         result = MomentumIndicators.ichimoku(
-            high=sample_data["high"],
-            low=sample_data["low"],
-            close=sample_data["close"]
+            high=sample_data["high"], low=sample_data["low"], close=sample_data["close"]
         )
 
         # 結果が辞書形式であることを確認
@@ -50,11 +46,11 @@ class TestIchimokuIndicators:
 
         # 必要なコンポーネントが含まれていることを確認
         expected_components = [
-            "tenkan_sen",    # 転換線
-            "kijun_sen",     # 基準線
-            "senkou_span_a", # 先行スパンA
-            "senkou_span_b", # 先行スパンB
-            "chikou_span"    # 遅行スパン
+            "tenkan_sen",  # 転換線
+            "kijun_sen",  # 基準線
+            "senkou_span_a",  # 先行スパンA
+            "senkou_span_b",  # 先行スパンB
+            "chikou_span",  # 遅行スパン
         ]
 
         for component in expected_components:
@@ -70,13 +66,16 @@ class TestIchimokuIndicators:
             close=sample_data["close"],
             tenkan_period=10,
             kijun_period=30,
-            senkou_span_b_period=60
+            senkou_span_b_period=60,
         )
 
         assert isinstance(result, dict)
         expected_components = [
-            "tenkan_sen", "kijun_sen", "senkou_span_a",
-            "senkou_span_b", "chikou_span"
+            "tenkan_sen",
+            "kijun_sen",
+            "senkou_span_a",
+            "senkou_span_b",
+            "chikou_span",
         ]
 
         for component in expected_components:
@@ -88,15 +87,16 @@ class TestIchimokuIndicators:
         empty_series = pd.Series([], dtype=float)
 
         result = MomentumIndicators.ichimoku(
-            high=empty_series,
-            low=empty_series,
-            close=empty_series
+            high=empty_series, low=empty_series, close=empty_series
         )
 
         assert isinstance(result, dict)
         expected_components = [
-            "tenkan_sen", "kijun_sen", "senkou_span_a",
-            "senkou_span_b", "chikou_span"
+            "tenkan_sen",
+            "kijun_sen",
+            "senkou_span_a",
+            "senkou_span_b",
+            "chikou_span",
         ]
 
         for component in expected_components:
@@ -110,16 +110,19 @@ class TestIchimokuIndicators:
         short_data = pd.Series([100, 101, 102, 103, 104])
 
         result = MomentumIndicators.ichimoku(
-            high=short_data,
-            low=short_data - 1,
-            close=short_data - 0.5
+            high=short_data, low=short_data - 1, close=short_data - 0.5
         )
 
         assert isinstance(result, dict)
 
         # 各コンポーネントがSeriesであることを確認
-        for component in ["tenkan_sen", "kijun_sen", "senkou_span_a",
-                         "senkou_span_b", "chikou_span"]:
+        for component in [
+            "tenkan_sen",
+            "kijun_sen",
+            "senkou_span_a",
+            "senkou_span_b",
+            "chikou_span",
+        ]:
             assert component in result
             assert isinstance(result[component], pd.Series)
 
@@ -137,9 +140,7 @@ class TestIchimokuIndicators:
         # pandas Series以外のデータ型でテスト（エラーになることを確認）
         with pytest.raises(TypeError):
             MomentumIndicators.ichimoku(
-                high=[100, 101, 102],
-                low=[98, 99, 100],
-                close=[99, 100, 101]
+                high=[100, 101, 102], low=[98, 99, 100], close=[99, 100, 101]
             )
 
     def test_ichimoku_series_length_validation(self):
@@ -155,9 +156,7 @@ class TestIchimokuIndicators:
     def test_ichimoku_component_properties(self, sample_data):
         """各コンポーネントの特性をテスト"""
         result = MomentumIndicators.ichimoku(
-            high=sample_data["high"],
-            low=sample_data["low"],
-            close=sample_data["close"]
+            high=sample_data["high"], low=sample_data["low"], close=sample_data["close"]
         )
 
         # tenkan_sen (転換線) は短期の平均
@@ -190,22 +189,34 @@ class TestIchimokuIndicators:
 
         # 正常な範囲のパラメータ
         result1 = MomentumIndicators.ichimoku(
-            high=high, low=low, close=close,
-            tenkan_period=9, kijun_period=26, senkou_span_b_period=52
+            high=high,
+            low=low,
+            close=close,
+            tenkan_period=9,
+            kijun_period=26,
+            senkou_span_b_period=52,
         )
         assert isinstance(result1, dict)
 
         # 小さなパラメータ
         result2 = MomentumIndicators.ichimoku(
-            high=high, low=low, close=close,
-            tenkan_period=3, kijun_period=5, senkou_span_b_period=10
+            high=high,
+            low=low,
+            close=close,
+            tenkan_period=3,
+            kijun_period=5,
+            senkou_span_b_period=10,
         )
         assert isinstance(result2, dict)
 
         # 大きなパラメータ
         result3 = MomentumIndicators.ichimoku(
-            high=high, low=low, close=close,
-            tenkan_period=50, kijun_period=100, senkou_span_b_period=200
+            high=high,
+            low=low,
+            close=close,
+            tenkan_period=50,
+            kijun_period=100,
+            senkou_span_b_period=200,
         )
         assert isinstance(result3, dict)
 
@@ -221,14 +232,17 @@ class TestIchimokuIndicators:
         close_with_nan.iloc[30:35] = np.nan
 
         result = MomentumIndicators.ichimoku(
-            high=high_with_nan,
-            low=low_with_nan,
-            close=close_with_nan
+            high=high_with_nan, low=low_with_nan, close=close_with_nan
         )
 
         assert isinstance(result, dict)
-        for component in ["tenkan_sen", "kijun_sen", "senkou_span_a",
-                         "senkou_span_b", "chikou_span"]:
+        for component in [
+            "tenkan_sen",
+            "kijun_sen",
+            "senkou_span_a",
+            "senkou_span_b",
+            "chikou_span",
+        ]:
             assert component in result
             assert isinstance(result[component], pd.Series)
             # NaNが適切に処理されていることを確認

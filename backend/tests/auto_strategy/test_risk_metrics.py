@@ -7,7 +7,9 @@ from datetime import datetime, timedelta
 import pytest
 
 # メトリクスモジュールが存在しないため、テストをスキップ
-pytestmark = pytest.mark.skip(reason="app.services.auto_strategy.core.metrics module not implemented")
+pytestmark = pytest.mark.skip(
+    reason="app.services.auto_strategy.core.metrics module not implemented"
+)
 
 
 def test_calculate_ulcer_index_returns_root_mean_square() -> None:

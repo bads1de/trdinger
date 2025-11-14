@@ -88,16 +88,14 @@ class OHLCVRepository(BaseRepository):
         )
         return data
 
-    def get_all_by_symbol(
-        self, symbol: str, timeframe: str
-    ) -> List[OHLCVData]:
+    def get_all_by_symbol(self, symbol: str, timeframe: str) -> List[OHLCVData]:
         """
         指定されたシンボルと時間軸の全OHLCVデータを取得
-        
+
         Args:
             symbol: 取引ペア
             timeframe: 時間軸
-            
+
         Returns:
             全OHLCVデータのリスト（時系列順）
         """

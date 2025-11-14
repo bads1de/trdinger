@@ -358,7 +358,9 @@ class TestEdgeCases:
         mock_oi_repository.get_open_interest_data.return_value = oi_data
 
         # 時間足DataFrame
-        index = pd.date_range(start="2021-01-01", periods=168, freq="h")  # 1週間分の時間足
+        index = pd.date_range(
+            start="2021-01-01", periods=168, freq="h"
+        )  # 1週間分の時間足
         hourly_df = pd.DataFrame({"close": range(168)}, index=index)
 
         start_date = datetime(2021, 1, 1, 0, 0)

@@ -129,7 +129,7 @@ class TestErrorHandler:
     def test_handle_timeout_windows(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト処理テスト"""
         mock_platform.return_value = "Windows"
-        
+
         # MagicMockでコンテキストマネージャーをサポート
         mock_executor = MagicMock()
         mock_future = MagicMock()
@@ -161,7 +161,7 @@ class TestErrorHandler:
     def test_handle_timeout_windows_timeout(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト発生テスト"""
         mock_platform.return_value = "Windows"
-        
+
         # MagicMockでコンテキストマネージャーをサポート
         mock_executor = MagicMock()
         mock_future = MagicMock()

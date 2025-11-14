@@ -48,7 +48,7 @@ class IndicatorGenerator:
         self._valid_indicator_names = self._initialize_valid_indicators()
         self.composition_service = IndicatorCompositionService(config)
         self._coverage_cycle = []  # 追加: カバレッジサイクルを初期化
-        self._coverage_idx = 0      # 追加: カバレッジインデックスを初期化
+        self._coverage_idx = 0  # 追加: カバレッジインデックスを初期化
         self._coverage_pick = None  # 追加: カバレッジピックを初期化
         self.available_indicators = self._setup_indicators_by_mode(config)
 

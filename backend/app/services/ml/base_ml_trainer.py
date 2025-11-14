@@ -517,7 +517,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         責務分割により、具体的な特徴量計算ロジックは
         FeatureEngineeringServiceに移譲されました。
-        
+
         設定からfeature profileを読み込み、FeatureEngineeringServiceに渡します。
         """
         try:
@@ -544,7 +544,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 open_interest_data=open_interest_data,
                 profile=profile,
             )
-            
+
             # 生成された特徴量数をログ出力
             logger.info(f"✅ 特徴量生成完了: {len(basic_features.columns)}個の特徴量")
 

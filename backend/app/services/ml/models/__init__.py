@@ -18,7 +18,7 @@ MLモデルラッパーモジュール
 # Essential 2 Modelsのみ
 __all__ = [
     "LightGBMModel",
-    "XGBoostModel", 
+    "XGBoostModel",
     "algorithm_registry",
 ]
 
@@ -31,12 +31,12 @@ def get_available_models():
         利用可能なモデルタイプのリスト
     """
     import importlib.util
-    
+
     available = []
 
     # Essential 2 Modelsのみをチェック
     essential_models = ["lightgbm", "xgboost"]
-    
+
     for model in essential_models:
         if importlib.util.find_spec(model):
             available.append(model)

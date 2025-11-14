@@ -175,9 +175,7 @@ class TestCategoricalEncoderTransformer:
         assert pd.api.types.is_numeric_dtype(result["category1"])
         assert pd.api.types.is_numeric_dtype(result["category2"])
 
-    def test_encoding_with_missing_values(
-        self, data_with_missing: pd.DataFrame
-    ):
+    def test_encoding_with_missing_values(self, data_with_missing: pd.DataFrame):
         """正常系: 欠損値を含むデータのエンコーディング."""
         transformer = CategoricalEncoderTransformer(encoding_type="label")
         transformer.fit(data_with_missing)
@@ -213,12 +211,8 @@ class TestDtypeOptimizerTransformer:
         return pd.DataFrame(
             {
                 "small_int": np.array([1, 2, 3, 4, 5] * 20, dtype=np.int64),
-                "medium_int": np.array(
-                    [100, 200, 300, 400, 500] * 20, dtype=np.int64
-                ),
-                "float_col": np.array(
-                    [1.1, 2.2, 3.3, 4.4, 5.5] * 20, dtype=np.float64
-                ),
+                "medium_int": np.array([100, 200, 300, 400, 500] * 20, dtype=np.int64),
+                "float_col": np.array([1.1, 2.2, 3.3, 4.4, 5.5] * 20, dtype=np.float64),
             }
         )
 
@@ -339,7 +333,7 @@ class TestCategoricalPipelineTransformer:
                 "category2": ["X", "Y", "Z", "X", "Y"] * 20,
             }
         )
-        
+
         transformer = CategoricalPipelineTransformer(encoding=False)
         transformer.fit(clean_categorical)
         result = transformer.transform(clean_categorical)
@@ -383,17 +377,11 @@ class TestMixedTypeTransformer:
     @pytest.fixture
     def categorical_pipeline(self):
         """カテゴリカルパイプライン."""
-        return CategoricalPipelineTransformer(
-            strategy="most_frequent", encoding=True
-        )
+        return CategoricalPipelineTransformer(strategy="most_frequent", encoding=True)
 
-    def test_transformer_initialization(
-        self, numeric_pipeline, categorical_pipeline
-    ):
+    def test_transformer_initialization(self, numeric_pipeline, categorical_pipeline):
         """正常系: トランスフォーマーの初期化."""
-        transformer = MixedTypeTransformer(
-            numeric_pipeline, categorical_pipeline
-        )
+        transformer = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
 
         assert transformer is not None
         assert transformer.numeric_pipeline is not None
@@ -403,9 +391,7 @@ class TestMixedTypeTransformer:
         self, mixed_data: pd.DataFrame, numeric_pipeline, categorical_pipeline
     ):
         """正常系: fitメソッド."""
-        transformer = MixedTypeTransformer(
-            numeric_pipeline, categorical_pipeline
-        )
+        transformer = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
         transformer.fit(mixed_data)
 
         assert transformer.numeric_columns_ is not None
@@ -417,9 +403,7 @@ class TestMixedTypeTransformer:
         self, mixed_data: pd.DataFrame, numeric_pipeline, categorical_pipeline
     ):
         """正常系: transformメソッド."""
-        transformer = MixedTypeTransformer(
-            numeric_pipeline, categorical_pipeline
-        )
+        transformer = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
         transformer.fit(mixed_data)
         result = transformer.transform(mixed_data)
 
@@ -431,9 +415,7 @@ class TestMixedTypeTransformer:
         self, mixed_data: pd.DataFrame, numeric_pipeline, categorical_pipeline
     ):
         """正常系: 数値とカテゴリが別々に処理される."""
-        transformer = MixedTypeTransformer(
-            numeric_pipeline, categorical_pipeline
-        )
+        transformer = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
         transformer.fit(mixed_data)
         result = transformer.transform(mixed_data)
 
@@ -445,9 +427,7 @@ class TestMixedTypeTransformer:
         np.random.seed(42)
         data = np.random.randn(100, 4)
 
-        transformer = MixedTypeTransformer(
-            numeric_pipeline, categorical_pipeline
-        )
+        transformer = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
         result = transformer.fit_transform(data)
 
         assert result is not None
@@ -456,9 +436,7 @@ class TestMixedTypeTransformer:
         self, mixed_data: pd.DataFrame, numeric_pipeline, categorical_pipeline
     ):
         """正常系: 特徴名の取得."""
-        transformer = MixedTypeTransformer(
-            numeric_pipeline, categorical_pipeline
-        )
+        transformer = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
         transformer.fit(mixed_data)
 
         output_names = transformer.get_feature_names_out()
@@ -474,11 +452,11 @@ class TestPreprocessingPipelineIntegration:
     def complex_data(self) -> pd.DataFrame:
         """複雑なデータ."""
         np.random.seed(42)
-        
+
         # カテゴリカルデータを作成（欠損値なし）
         cat1_values = ["A", "B", "C", "D"] * 50
         cat2_values = ["X", "Y", "W", "Z"] * 50
-        
+
         data = pd.DataFrame(
             {
                 "numeric1": np.random.randn(200),
@@ -494,7 +472,7 @@ class TestPreprocessingPipelineIntegration:
         # カテゴリ列に欠損値を追加（np.nanを使用）
         data.loc[20:25, "category1"] = np.nan
         data.loc[30:35, "category2"] = np.nan
-        
+
         return data
 
     def test_full_pipeline_execution(self, complex_data: pd.DataFrame):
@@ -512,9 +490,7 @@ class TestPreprocessingPipelineIntegration:
         assert result is not None
         assert isinstance(result, pd.DataFrame)
 
-    def test_pipeline_without_outlier_removal(
-        self, complex_data: pd.DataFrame
-    ):
+    def test_pipeline_without_outlier_removal(self, complex_data: pd.DataFrame):
         """正常系: 外れ値除去なしのパイプライン."""
         pipeline = create_preprocessing_pipeline(
             outlier_method=None, categorical_encoding="label"
@@ -531,9 +507,7 @@ class TestPreprocessingPipelineIntegration:
         step_names = [step[0] for step in pipeline.steps]
         assert "preprocessor" in step_names
 
-    def test_pipeline_preserves_data_integrity(
-        self, complex_data: pd.DataFrame
-    ):
+    def test_pipeline_preserves_data_integrity(self, complex_data: pd.DataFrame):
         """正常系: データの整合性が保たれる."""
         pipeline = create_preprocessing_pipeline()
         result = pipeline.fit_transform(complex_data)
@@ -587,9 +561,7 @@ class TestTransformerEdgeCases:
     def test_high_cardinality_category(self):
         """エッジケース: 高いカーディナリティのカテゴリ."""
         np.random.seed(42)
-        data = pd.DataFrame(
-            {"category": [f"cat_{i}" for i in range(1000)]}
-        )
+        data = pd.DataFrame({"category": [f"cat_{i}" for i in range(1000)]})
 
         encoder = CategoricalEncoderTransformer()
         result = encoder.fit_transform(data)
@@ -613,9 +585,7 @@ class TestTransformerConsistency:
             }
         )
 
-    def test_repeated_transform_consistency(
-        self, sample_data: pd.DataFrame
-    ):
+    def test_repeated_transform_consistency(self, sample_data: pd.DataFrame):
         """正常系: 繰り返しのtransformの一貫性."""
         transformer = OutlierRemovalTransformer()
         transformer.fit(sample_data)

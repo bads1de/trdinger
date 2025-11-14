@@ -24,9 +24,7 @@ class BaseEnsemble(ABC):
     スタッキングアンサンブル手法の共通インターフェースを定義します。
     """
 
-    def __init__(
-        self, config: Dict[str, Any]
-    ):
+    def __init__(self, config: Dict[str, Any]):
         """
         初期化
 
@@ -120,7 +118,9 @@ class BaseEnsemble(ABC):
                 verbose=0,  # ログ抑制
             )
         else:
-            raise MLModelError(f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, logistic_regression")
+            raise MLModelError(
+                f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, logistic_regression"
+            )
 
     def _evaluate_predictions(
         self,

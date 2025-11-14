@@ -1,6 +1,7 @@
 """
 MLバグ検出テスト - 潜在的な問題を網羅的に検出
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -12,10 +13,14 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 
 from app.services.ml.ml_training_service import MLTrainingService
-from app.services.ml.orchestration.ml_training_orchestration_service import MLTrainingOrchestrationService
+from app.services.ml.orchestration.ml_training_orchestration_service import (
+    MLTrainingOrchestrationService,
+)
 from app.utils.data_processing.pipelines.ml_pipeline import create_ml_pipeline
 from app.services.auto_strategy.core.drl_policy_adapter import DRLPolicyAdapter
-from app.services.auto_strategy.core.hybrid_individual_evaluator import HybridIndividualEvaluator
+from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+    HybridIndividualEvaluator,
+)
 
 
 class TestMLBugDetection:
@@ -35,12 +40,14 @@ class TestMLBugDetection:
     def sample_data(self):
         """サンプルデータ"""
         np.random.seed(42)
-        return pd.DataFrame({
-            'feature1': np.random.randn(100),
-            'feature2': np.random.randn(100),
-            'feature3': np.random.randn(100),
-            'target': np.random.choice([0, 1], 100)
-        })
+        return pd.DataFrame(
+            {
+                "feature1": np.random.randn(100),
+                "feature2": np.random.randn(100),
+                "feature3": np.random.randn(100),
+                "target": np.random.choice([0, 1], 100),
+            }
+        )
 
     @pytest.fixture
     def sample_empty_data(self):
@@ -50,21 +57,23 @@ class TestMLBugDetection:
     @pytest.fixture
     def sample_nan_data(self):
         """NaNデータ"""
-        return pd.DataFrame({
-            'feature1': [np.nan, np.nan, np.nan],
-            'feature2': [np.nan, np.nan, np.nan],
-            'target': [np.nan, np.nan, np.nan]
-        })
+        return pd.DataFrame(
+            {
+                "feature1": [np.nan, np.nan, np.nan],
+                "feature2": [np.nan, np.nan, np.nan],
+                "target": [np.nan, np.nan, np.nan],
+            }
+        )
 
     def test_memory_leak_in_large_scale_training(self, training_service, sample_data):
         """大規模トレーニングでのメモリリーク検出"""
         import gc
 
         # 大規模データ
-        large_data = pd.DataFrame({
-            f'feature_{i}': np.random.randn(10000) for i in range(200)
-        })
-        large_data['target'] = np.random.choice([0, 1], 10000)
+        large_data = pd.DataFrame(
+            {f"feature_{i}": np.random.randn(10000) for i in range(200)}
+        )
+        large_data["target"] = np.random.choice([0, 1], 10000)
 
         initial_objects = len(gc.get_objects())
         gc.collect()
@@ -123,6 +132,7 @@ class TestMLBugDetection:
     @pytest.mark.skip(reason="並行処理機能が未実装。実装完了後に有効化")
     def test_deadlock_in_concurrent_training(self, orchestration_service):
         """同時トレーニングでのデッドロック検出"""
+
         # トレーニング状態の競合
         def training_thread():
             orchestration_service.start_training({}, Mock())
@@ -141,12 +151,12 @@ class TestMLBugDetection:
     @pytest.mark.skip(reason="並行処理機能が未実装。実装完了後に有効化")
     def test_race_condition_in_status_update(self, orchestration_service):
         """ステータス更新での競合状態検出"""
+
         # 競合状態のシミュレート
         def update_status():
             for _ in range(100):
                 orchestration_service.update_training_progress(
-                    np.random.randint(0, 100),
-                    f"Phase {np.random.randint(1, 10)}"
+                    np.random.randint(0, 100), f"Phase {np.random.randint(1, 10)}"
                 )
 
         with ThreadPoolExecutor(max_workers=5) as executor:
@@ -161,6 +171,7 @@ class TestMLBugDetection:
 
     def test_stack_overflow_in_recursive_operations(self):
         """再帰操作でのスタックオーバーフロー検出"""
+
         # 深い再帰を避ける
         def deep_operation(depth=0):
             if depth > 100:  # 安全リミット
@@ -192,14 +203,13 @@ class TestMLBugDetection:
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
 
-            pipeline = create_ml_pipeline(
-                feature_selection=True,
-                n_features=2
-            )
+            pipeline = create_ml_pipeline(feature_selection=True, n_features=2)
 
             try:
                 # NaNデータでフィット
-                pipeline.fit(sample_nan_data[['feature1', 'feature2']], sample_nan_data['target'])
+                pipeline.fit(
+                    sample_nan_data[["feature1", "feature2"]], sample_nan_data["target"]
+                )
                 # 警告が発生するか確認
                 assert True
             except Exception:
@@ -211,8 +221,8 @@ class TestMLBugDetection:
         from sklearn.model_selection import train_test_split
 
         # 正しい分割
-        X = sample_data[['feature1', 'feature2', 'feature3']]
-        y = sample_data['target']
+        X = sample_data[["feature1", "feature2", "feature3"]]
+        y = sample_data["target"]
 
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42
@@ -230,16 +240,18 @@ class TestMLBugDetection:
         from sklearn.preprocessing import StandardScaler
 
         # 極端な値
-        extreme_data = pd.DataFrame({
-            'feature1': [1e10, -1e10, 1e10, -1e10],
-            'feature2': [1, 2, 3, 4],
-            'target': [0, 1, 0, 1]
-        })
+        extreme_data = pd.DataFrame(
+            {
+                "feature1": [1e10, -1e10, 1e10, -1e10],
+                "feature2": [1, 2, 3, 4],
+                "target": [0, 1, 0, 1],
+            }
+        )
 
         scaler = StandardScaler()
 
         try:
-            scaled = scaler.fit_transform(extreme_data[['feature1', 'feature2']])
+            scaled = scaler.fit_transform(extreme_data[["feature1", "feature2"]])
             # 無限大やNaNが含まれない
             assert not np.any(np.isinf(scaled))
             assert not np.any(np.isnan(scaled))
@@ -310,9 +322,7 @@ class TestMLBugDetection:
     def test_categorical_encoding_error(self):
         """カテゴリカルエンコーディングエラー検出"""
         # カテゴリカルデータ
-        categorical_data = pd.DataFrame({
-            'category': ['A', 'B', 'C', 'A', 'B']
-        })
+        categorical_data = pd.DataFrame({"category": ["A", "B", "C", "A", "B"]})
 
         # エンコーディング
         try:
@@ -334,15 +344,15 @@ class TestMLBugDetection:
     def test_feature_correlation_leakage(self, sample_data):
         """特徴量相関リーク検出"""
         # 相関が高すぎる特徴量
-        sample_data['feature1_squared'] = sample_data['feature1'] ** 2
+        sample_data["feature1_squared"] = sample_data["feature1"] ** 2
 
-        correlation = sample_data['feature1'].corr(sample_data['feature1_squared'])
+        correlation = sample_data["feature1"].corr(sample_data["feature1_squared"])
         assert correlation > 0.8  # 高相関
 
     def test_target_encoding_leakage(self, sample_data):
         """ターゲットエンコーディングリーク検出"""
         # ターゲットエンコーディング
-        mean_target_by_feature = sample_data.groupby('feature1')['target'].mean()
+        mean_target_by_feature = sample_data.groupby("feature1")["target"].mean()
 
         # リークの可能性
         assert len(mean_target_by_feature) > 0
@@ -350,18 +360,20 @@ class TestMLBugDetection:
     def test_time_series_leakage(self):
         """時系列リーク検出"""
         # 時系列データ
-        ts_data = pd.DataFrame({
-            'date': pd.date_range('2023-01-01', periods=100),
-            'price': np.random.randn(100),
-            'target': np.random.choice([0, 1], 100)
-        })
+        ts_data = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=100),
+                "price": np.random.randn(100),
+                "target": np.random.choice([0, 1], 100),
+            }
+        )
 
         # 時系列順に分割
         train_data = ts_data[:80]
         test_data = ts_data[80:]
 
         # 時系列リークがない
-        assert train_data['date'].max() < test_data['date'].min()
+        assert train_data["date"].max() < test_data["date"].min()
 
     def test_model_drift_detection(self):
         """モデルドリフト検出"""
@@ -380,46 +392,52 @@ class TestMLBugDetection:
         new_predictions = [0.3, 0.4, 0.2, 0.35]
 
         # 大きな変化
-        prediction_shift = np.mean(np.abs(np.array(old_predictions) - np.array(new_predictions)))
+        prediction_shift = np.mean(
+            np.abs(np.array(old_predictions) - np.array(new_predictions))
+        )
         assert prediction_shift > 0.4
 
     def test_data_type_mismatch(self, sample_data):
         """データ型不一致検出"""
         # 不正なデータ型
-        sample_data['feature1'] = sample_data['feature1'].astype(str)
+        sample_data["feature1"] = sample_data["feature1"].astype(str)
 
         # 型の不一致
-        assert sample_data['feature1'].dtype == 'object'
+        assert sample_data["feature1"].dtype == "object"
 
     def test_missing_value_handling_failure(self, sample_data):
         """欠損値処理失敗検出"""
         # 欠損値を含むデータ
         data_with_missing = sample_data.copy()
-        data_with_missing.loc[:50, 'feature1'] = np.nan
+        data_with_missing.loc[:50, "feature1"] = np.nan
 
         # 欠損値の割合
-        missing_ratio = data_with_missing['feature1'].isnull().sum() / len(data_with_missing)
+        missing_ratio = data_with_missing["feature1"].isnull().sum() / len(
+            data_with_missing
+        )
         assert missing_ratio > 0.4  # 40%以上が欠損
 
     def test_outlier_impact_on_model(self, sample_data):
         """外れ値のモデルへの影響検出"""
         # 外れ値を追加
-        sample_data.loc[0, 'feature1'] = 1000  # 極端な値
+        sample_data.loc[0, "feature1"] = 1000  # 極端な値
 
         # 外れ値の影響
-        feature_mean = sample_data['feature1'].mean()
-        feature_std = sample_data['feature1'].std()
+        feature_mean = sample_data["feature1"].mean()
+        feature_std = sample_data["feature1"].std()
 
-        outlier_influence = abs(sample_data.loc[0, 'feature1'] - feature_mean) > 3 * feature_std
+        outlier_influence = (
+            abs(sample_data.loc[0, "feature1"] - feature_mean) > 3 * feature_std
+        )
         assert outlier_influence
 
     def test_dimensionality_curse(self):
         """次元の呪い検出"""
         # 高次元データ
-        high_dim_data = pd.DataFrame({
-            f'feature_{i}': np.random.randn(100) for i in range(200)
-        })
-        high_dim_data['target'] = np.random.choice([0, 1], 100)
+        high_dim_data = pd.DataFrame(
+            {f"feature_{i}": np.random.randn(100) for i in range(200)}
+        )
+        high_dim_data["target"] = np.random.choice([0, 1], 100)
 
         n_samples, n_features = high_dim_data.shape
         curse_of_dimensionality = n_features > n_samples
@@ -429,9 +447,11 @@ class TestMLBugDetection:
     def test_multicollinearity_detection(self, sample_data):
         """多重共線性検出"""
         # 相関の高い特徴量を追加
-        sample_data['feature1_copy'] = sample_data['feature1'] * 2 + np.random.normal(0, 0.01, 100)
+        sample_data["feature1_copy"] = sample_data["feature1"] * 2 + np.random.normal(
+            0, 0.01, 100
+        )
 
-        correlation = sample_data['feature1'].corr(sample_data['feature1_copy'])
+        correlation = sample_data["feature1"].corr(sample_data["feature1_copy"])
         assert abs(correlation) > 0.9
 
     def test_vanishing_gradient(self):
@@ -474,7 +494,18 @@ class TestMLBugDetection:
     def test_local_minimum_trapping(self):
         """局所最適解トラップ検出"""
         # 局所最適解の兆候
-        loss_values = [0.5, 0.4, 0.45, 0.42, 0.44, 0.41, 0.43, 0.42, 0.43, 0.42]  # 小さく変動
+        loss_values = [
+            0.5,
+            0.4,
+            0.45,
+            0.42,
+            0.44,
+            0.41,
+            0.43,
+            0.42,
+            0.43,
+            0.42,
+        ]  # 小さく変動
 
         # 小さな変動
         small_variance = np.var(loss_values) < 0.001
@@ -488,8 +519,8 @@ class TestMLBugDetection:
         scaler.transform = Mock()
 
         # 検証データでfit
-        X_val = sample_data[['feature1', 'feature2']]
-        y_val = sample_data['target']
+        X_val = sample_data[["feature1", "feature2"]]
+        y_val = sample_data["target"]
 
         scaler.fit(X_val)  # 間違った使い方
 
@@ -558,7 +589,7 @@ class TestMLBugDetection:
         data_anomalies = [
             "unexpected_data_patterns",
             "malicious_samples",
-            "label_corruption"
+            "label_corruption",
         ]
 
         for anomaly in data_anomalies:
@@ -570,7 +601,7 @@ class TestMLBugDetection:
         privacy_risks = [
             "membership_inference",
             "model_inversion",
-            "data_reconstruction"
+            "data_reconstruction",
         ]
 
         for risk in privacy_risks:
@@ -583,7 +614,7 @@ class TestMLBugDetection:
             "memory_leak",
             "data_leakage",
             "overfitting",
-            "gradient_issues"
+            "gradient_issues",
         ]
 
         for bug in bugs_detected:

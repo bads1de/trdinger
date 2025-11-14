@@ -202,7 +202,11 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
                         all_null = bool(result[col].isnull().all())
                         if all_null:
                             # Handle all-NaN column by filling with constant value
-                            constant_value = 0.0 if self.strategy in ['mean', 'median'] else 'Unknown'
+                            constant_value = (
+                                0.0
+                                if self.strategy in ["mean", "median"]
+                                else "Unknown"
+                            )
                             result[col] = result[col].fillna(constant_value)
                         else:
                             # Normal imputation for columns with some valid values
@@ -270,11 +274,11 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
                     if all_nan:
                         # If all values are NaN, fill with zeros
                         numeric_transformed = np.zeros_like(numeric_transformed)
-                    
+
                     # 変換後の列数を確認し、元の列名と一致させる
                     n_transformed_cols = numeric_transformed.shape[1]
                     n_expected_cols = len(self.numeric_columns_)
-                    
+
                     if n_transformed_cols == n_expected_cols:
                         # 列数が一致する場合、元の列名を使用
                         numeric_df = pd.DataFrame(
@@ -288,7 +292,9 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
                         logger.warning(
                             f"列数不一致: 変換後={n_transformed_cols}, 期待値={n_expected_cols}"
                         )
-                        generic_columns = [f"numeric_{i}" for i in range(n_transformed_cols)]
+                        generic_columns = [
+                            f"numeric_{i}" for i in range(n_transformed_cols)
+                        ]
                         numeric_df = pd.DataFrame(
                             numeric_transformed,
                             columns=generic_columns,
@@ -310,7 +316,9 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
                     has_nan = np.isnan(categorical_transformed).any()
                     if has_nan:
                         # Fill NaN with 0 for categorical data
-                        categorical_transformed = np.nan_to_num(categorical_transformed, nan=0.0)
+                        categorical_transformed = np.nan_to_num(
+                            categorical_transformed, nan=0.0
+                        )
                     categorical_df = pd.DataFrame(
                         categorical_transformed,
                         columns=self.categorical_columns_,

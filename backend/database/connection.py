@@ -59,7 +59,7 @@ def get_db():
 def get_session():
     """
     スクリプト用のデータベースセッションを取得
-    
+
     Returns:
         Session: データベースセッション
     """

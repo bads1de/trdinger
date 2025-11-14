@@ -51,7 +51,9 @@ class TestTechnicalIndicatorService:
         """無効な指標設定取得テスト"""
         # 実際のregistryは存在しない指標に対してNoneを返すか、例外を発生させる
         with pytest.raises(ValueError, match="サポートされていない指標タイプ"):
-            indicator_service._get_indicator_config("INVALID_INDICATOR_THAT_DOES_NOT_EXIST")
+            indicator_service._get_indicator_config(
+                "INVALID_INDICATOR_THAT_DOES_NOT_EXIST"
+            )
 
     @patch.object(TechnicalIndicatorService, "_get_config")
     @patch.object(TechnicalIndicatorService, "_normalize_params")

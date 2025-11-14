@@ -64,12 +64,12 @@ def create_ml_pipeline(
             if X.isnull().values.any():
                 # Fill NaN values with 0 before conversion
                 X = X.fillna(0.0)
-            
+
             # Handle empty DataFrames
             if X.empty:
                 # Return empty 2D array with proper shape
                 return np.array([]).reshape(0, 0)
-            
+
             return X.values
         return X
 
@@ -156,12 +156,12 @@ def create_classification_pipeline(
             if X.isnull().values.any():
                 # Fill NaN values with 0 before conversion
                 X = X.fillna(0.0)
-            
+
             # Handle empty DataFrames
             if X.empty:
                 # Return empty 2D array with proper shape
                 return np.array([]).reshape(0, 0)
-            
+
             return X.values
         return X
 

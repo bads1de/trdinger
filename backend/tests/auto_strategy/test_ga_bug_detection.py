@@ -4,7 +4,9 @@ GAアルゴリズムの包括的バグ検出テスト
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="GA implementation changed - bug detection tests need update")
+pytestmark = pytest.mark.skip(
+    reason="GA implementation changed - bug detection tests need update"
+)
 from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 from deap import base, creator, tools

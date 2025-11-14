@@ -40,7 +40,7 @@ class TestGAConfigValidation:
         monkeypatch.setenv("GA_CROSSOVER_RATE", "0.8")
         monkeypatch.setenv("GA_MUTATION_RATE", "0.2")
         monkeypatch.setenv("GA_ELITE_SIZE", "10")
-        
+
         config = GAConfig()
         assert config.population_size == 100
         assert config.generations == 50
@@ -58,7 +58,9 @@ class TestGAConfigValidation:
             ("elite_size", "10", 10),
         ],
     )
-    def test_ga_config_type_conversion(self, monkeypatch, field: str, value: str, expected: Any):
+    def test_ga_config_type_conversion(
+        self, monkeypatch, field: str, value: str, expected: Any
+    ):
         """型変換テスト: 文字列から適切な型へ変換"""
         env_var = f"GA_{field.upper()}"
         monkeypatch.setenv(env_var, value)
@@ -87,7 +89,7 @@ class TestGAConfigValidation:
         monkeypatch.setenv("GA_ENABLE_MULTI_OBJECTIVE", "true")
         monkeypatch.setenv("GA_OBJECTIVES", '["total_return", "sharpe_ratio"]')
         monkeypatch.setenv("GA_OBJECTIVE_WEIGHTS", "[1.0, 0.5]")
-        
+
         config = GAConfig()
         assert config.enable_multi_objective is True
         assert len(config.objectives) == 2
@@ -98,7 +100,7 @@ class TestGAConfigValidation:
         monkeypatch.setenv("GA_ENABLE_FITNESS_SHARING", "true")
         monkeypatch.setenv("GA_SHARING_RADIUS", "0.15")
         monkeypatch.setenv("GA_SHARING_ALPHA", "2.0")
-        
+
         config = GAConfig()
         assert config.enable_fitness_sharing is True
         assert config.sharing_radius == 0.15
@@ -256,7 +258,7 @@ class TestMLConfigValidation:
         custom_list = ["feature1", "feature2", "feature3"]
         config = FeatureEngineeringConfig(feature_allowlist=custom_list)
         assert config.feature_allowlist == custom_list
-        
+
     def test_feature_engineering_config_empty_allowlist(self):
         """特徴量エンジニアリング設定の空allowlistテスト"""
         config = FeatureEngineeringConfig(feature_allowlist=[])
@@ -432,7 +434,7 @@ class TestEnvironmentVariableOverride:
 
     def test_ml_config_env_override(self, monkeypatch):
         """ML設定の環境変数オーバーライド
-        
+
         注意: MLDataProcessingConfigは直接env_prefixを使用しないため、
         UnifiedConfig経由でテストする必要があります。
         """
@@ -605,7 +607,7 @@ class TestTypeConversion:
 
     def test_bool_string_false_value(self, monkeypatch):
         """Bool文字列のFalse値テスト
-        
+
         注意: Pydanticのboolパースでは、"false"や"0"は文字列として
         扱われ、空でない文字列はTrueと評価されます。
         Falseにするには空文字列または環境変数を設定しないことが必要です。

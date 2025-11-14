@@ -131,7 +131,9 @@ class TestFixedPercentageCalculator:
         assert result.expected_performance["sl_price"] == pytest.approx(sl_price)
         assert result.expected_performance["tp_price"] == pytest.approx(tp_price)
 
-    def test_fixed_percentage_fallback_on_exception(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_fixed_percentage_fallback_on_exception(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         calc = FixedPercentageCalculator()
 
         def broken_make_prices(*_: Any, **__: Any) -> Any:
@@ -158,7 +160,9 @@ class TestRiskRewardCalculator:
         [
             # Gene あり: base_stop_loss or stop_loss_pct, risk_reward_ratio
             (
-                TPSLGene(base_stop_loss=0.02, stop_loss_pct=0.03, risk_reward_ratio=3.0),
+                TPSLGene(
+                    base_stop_loss=0.02, stop_loss_pct=0.03, risk_reward_ratio=3.0
+                ),
                 None,
                 None,
                 None,
@@ -218,7 +222,9 @@ class TestRiskRewardCalculator:
             result.take_profit_pct / result.stop_loss_pct
         )
 
-    def test_risk_reward_fallback_on_exception(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_risk_reward_fallback_on_exception(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """
         RiskRewardCalculator 内部で例外が発生しても、呼び出し側に未処理例外を伝播させないことを確認するテスト。
 
@@ -289,7 +295,9 @@ class TestVolatilityCalculator:
         assert result.take_profit_pct == pytest.approx(base_atr_pct * 3.0)
         assert result.expected_performance["atr_value"] == pytest.approx(atr_value)
 
-    def test_volatility_based_fallback_on_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_volatility_based_fallback_on_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         calc = VolatilityCalculator()
 
         def broken_get_atr(*_: Any, **__: Any) -> float:
@@ -346,7 +354,9 @@ class TestStatisticalCalculator:
         assert result.stop_loss_pct == pytest.approx(0.03)
         assert result.take_profit_pct == pytest.approx(0.06)
 
-    def test_statistical_fallback_on_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_statistical_fallback_on_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         calc = StatisticalCalculator()
 
         def broken_levels(*_: Any, **__: Any) -> Any:
@@ -421,7 +431,9 @@ class TestAdaptiveCalculator:
 
         assert isinstance(result, TPSLResult)
 
-    def test_adaptive_fallback_to_fixed_on_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_adaptive_fallback_to_fixed_on_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         calc = AdaptiveCalculator()
 
         def broken_select(*_: Any, **__: Any) -> str:
@@ -454,9 +466,13 @@ class TestUnifiedTPSLGenerator:
             ("adaptive", TPSLMethod.ADAPTIVE),
         ],
     )
-    def test_generate_tpsl_dispatch(self, method: str, expected_enum: TPSLMethod) -> None:
+    def test_generate_tpsl_dispatch(
+        self, method: str, expected_enum: TPSLMethod
+    ) -> None:
         generator = UnifiedTPSLGenerator()
-        result = generator.generate_tpsl(method, stop_loss_pct=0.03, take_profit_pct=0.06)
+        result = generator.generate_tpsl(
+            method, stop_loss_pct=0.03, take_profit_pct=0.06
+        )
         assert isinstance(result, TPSLResult)
         # result.method_used は各 Strategy 実装に依存するため、
         # ここでは例外なく到達しうることと、Unknown でないことを確認
@@ -547,9 +563,7 @@ class TestTPSLService:
 
     def test_is_advanced_tpsl_used_detection(self) -> None:
         service = TPSLService()
-        assert service._is_advanced_tpsl_used(
-            {"_tpsl_strategy": "volatility_adaptive"}
-        )
+        assert service._is_advanced_tpsl_used({"_tpsl_strategy": "volatility_adaptive"})
         assert service._is_advanced_tpsl_used({"_risk_reward_ratio": 2.0})
         assert not service._is_advanced_tpsl_used({"stop_loss_pct": 0.03})
 

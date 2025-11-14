@@ -6,7 +6,9 @@ import warnings
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from app.services.ml.feature_engineering.advanced_features import AdvancedFeatureEngineer
+from app.services.ml.feature_engineering.advanced_features import (
+    AdvancedFeatureEngineer,
+)
 
 
 def test_no_fragmentation_warning():
@@ -19,11 +21,7 @@ def test_no_fragmentation_warning():
         warnings.simplefilter("always")
 
         # サンプルデータを生成
-        dates = pd.date_range(
-            start=datetime(2023, 1, 1),
-            periods=2000,
-            freq='1h'
-        )
+        dates = pd.date_range(start=datetime(2023, 1, 1), periods=2000, freq="1h")
 
         np.random.seed(42)
         base_price = 50000
@@ -36,17 +34,19 @@ def test_no_fragmentation_warning():
             low = base_price - abs(np.random.randn()) * 50
             volume = np.random.randint(100, 10000)
 
-            data.append({
-                'timestamp': date,
-                'open': base_price - change/2,
-                'high': high,
-                'low': low,
-                'close': base_price,
-                'volume': volume
-            })
+            data.append(
+                {
+                    "timestamp": date,
+                    "open": base_price - change / 2,
+                    "high": high,
+                    "low": low,
+                    "close": base_price,
+                    "volume": volume,
+                }
+            )
 
         df = pd.DataFrame(data)
-        df.set_index('timestamp', inplace=True)
+        df.set_index("timestamp", inplace=True)
 
         # 特徴量を生成
         engineer = AdvancedFeatureEngineer()
@@ -54,7 +54,8 @@ def test_no_fragmentation_warning():
 
         # fragmentationに関する警告をチェック
         fragmentation_warnings = [
-            warning for warning in w
+            warning
+            for warning in w
             if "fragment" in str(warning.message).lower()
             or "insert" in str(warning.message).lower()
         ]
@@ -81,11 +82,7 @@ def test_large_dataset_performance():
     print("=" * 60)
 
     # より大きなデータセットを生成（20,000行）
-    dates = pd.date_range(
-        start=datetime(2020, 1, 1),
-        periods=20000,
-        freq='1h'
-    )
+    dates = pd.date_range(start=datetime(2020, 1, 1), periods=20000, freq="1h")
 
     np.random.seed(42)
     base_price = 50000
@@ -98,17 +95,19 @@ def test_large_dataset_performance():
         low = base_price - abs(np.random.randn()) * 50
         volume = np.random.randint(100, 10000)
 
-        data.append({
-            'timestamp': date,
-            'open': base_price - change/2,
-            'high': high,
-            'low': low,
-            'close': base_price,
-            'volume': volume
-        })
+        data.append(
+            {
+                "timestamp": date,
+                "open": base_price - change / 2,
+                "high": high,
+                "low": low,
+                "close": base_price,
+                "volume": volume,
+            }
+        )
 
     df = pd.DataFrame(data)
-    df.set_index('timestamp', inplace=True)
+    df.set_index("timestamp", inplace=True)
 
     print(f"データサイズ: {df.shape}")
 
@@ -132,9 +131,15 @@ def test_large_dataset_performance():
     # DataFrame健全性チェック
     print("\nDataFrame健全性:")
     print(f"  - 形状: {features.shape}")
-    print(f"  - 欠損値: {features.isnull().sum().sum()} ({features.isnull().sum().sum() / features.size * 100:.2f}%)")
-    print(f"  - 無限値: {np.isinf(features.select_dtypes(include=[np.number])).sum().sum()}")
-    print(f"  - NaN: {np.isnan(features.select_dtypes(include=[np.number])).sum().sum()}")
+    print(
+        f"  - 欠損値: {features.isnull().sum().sum()} ({features.isnull().sum().sum() / features.size * 100:.2f}%)"
+    )
+    print(
+        f"  - 無限値: {np.isinf(features.select_dtypes(include=[np.number])).sum().sum()}"
+    )
+    print(
+        f"  - NaN: {np.isnan(features.select_dtypes(include=[np.number])).sum().sum()}"
+    )
 
     return True
 

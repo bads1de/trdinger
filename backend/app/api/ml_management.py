@@ -174,6 +174,7 @@ async def get_current_model(
 # AutoML機能は削除されたため、/automl-feature-analysisエンドポイントは削除されました
 # 特徴量分析は /feature-importance エンドポイントを使用してください
 
+
 @router.get("/config")
 async def get_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(

@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 # ログハンドラのエンコーディングをUTF-8に設定
 for handler in logging.root.handlers:
     if isinstance(handler, logging.StreamHandler):
-        handler.stream.reconfigure(encoding='utf-8')
+        handler.stream.reconfigure(encoding="utf-8")
 
 
 class OptunaModelOptimizer:
@@ -162,7 +162,7 @@ class OptunaModelOptimizer:
         common_index = features_df.index.intersection(labels.index)
         features_df = features_df.loc[common_index]
         labels = labels.loc[common_index]
-        
+
         # NaN除去
         valid_idx = ~labels.isna()
         features_df = features_df.loc[valid_idx]

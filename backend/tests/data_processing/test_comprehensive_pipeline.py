@@ -52,9 +52,7 @@ class TestComprehensivePipeline:
             特徴量DataFrameとターゲットSeriesのタプル
         """
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(200) for i in range(10)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(200) for i in range(10)})
         y = pd.Series(np.random.randn(200))
         return X, y
 
@@ -83,9 +81,7 @@ class TestComprehensivePipeline:
     ):
         """正常系: 特徴量選択機能のテスト."""
         X, y = sample_data_with_target
-        pipeline = create_comprehensive_pipeline(
-            feature_selection=True, n_features=5
-        )
+        pipeline = create_comprehensive_pipeline(feature_selection=True, n_features=5)
         pipeline.fit(X, y)
         result = pipeline.transform(X)
 
@@ -107,9 +103,7 @@ class TestComprehensivePipeline:
         assert pipeline is not None
         assert isinstance(pipeline, Pipeline)
 
-    def test_pipeline_with_polynomial_features(
-        self, sample_data: pd.DataFrame
-    ):
+    def test_pipeline_with_polynomial_features(self, sample_data: pd.DataFrame):
         """正常系: 多項式特徴量の追加."""
         pipeline = create_comprehensive_pipeline(
             polynomial_features=True, polynomial_degree=2, interaction_only=False
@@ -129,9 +123,7 @@ class TestPipelineConfiguration:
     def sample_data(self) -> pd.DataFrame:
         """テスト用データ."""
         np.random.seed(42)
-        return pd.DataFrame(
-            {f"feature_{i}": np.random.randn(100) for i in range(10)}
-        )
+        return pd.DataFrame({f"feature_{i}": np.random.randn(100) for i in range(10)})
 
     def test_outlier_removal_configuration(self, sample_data: pd.DataFrame):
         """正常系: 外れ値除去の設定."""
@@ -164,9 +156,7 @@ class TestPipelineConfiguration:
             result = pipeline.fit_transform(sample_data)
             assert result is not None
 
-    def test_feature_selection_methods(
-        self, sample_data: pd.DataFrame
-    ):
+    def test_feature_selection_methods(self, sample_data: pd.DataFrame):
         """正常系: 特徴量選択手法のテスト."""
         target = pd.Series(np.random.randn(len(sample_data)))
 
@@ -188,9 +178,7 @@ class TestProductionPipeline:
     def production_data(self) -> tuple[pd.DataFrame, pd.Series]:
         """本番環境用データ."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(500) for i in range(30)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(500) for i in range(30)})
         y = pd.Series(np.random.randn(500), name="target")
         return X, y
 
@@ -275,9 +263,7 @@ class TestEDAPipeline:
         result = pipeline.fit_transform(eda_data)
         assert result is not None
 
-    def test_eda_pipeline_with_feature_engineering(
-        self, eda_data: pd.DataFrame
-    ):
+    def test_eda_pipeline_with_feature_engineering(self, eda_data: pd.DataFrame):
         """正常系: 特徴量エンジニアリング付きEDAパイプライン."""
         pipeline = create_eda_pipeline(
             include_detailed_preprocessing=True,
@@ -295,15 +281,11 @@ class TestPipelineCaching:
     def sample_data(self) -> pd.DataFrame:
         """キャッシングテスト用データ."""
         np.random.seed(42)
-        return pd.DataFrame(
-            {f"feature_{i}": np.random.randn(1000) for i in range(20)}
-        )
+        return pd.DataFrame({f"feature_{i}": np.random.randn(1000) for i in range(20)})
 
     def test_pipeline_performance(self, sample_data: pd.DataFrame):
         """正常系: パイプラインのパフォーマンス."""
-        pipeline = create_comprehensive_pipeline(
-            outlier_removal=True, scaling=True
-        )
+        pipeline = create_comprehensive_pipeline(outlier_removal=True, scaling=True)
 
         # 1回目の実行
         start_time = time.time()
@@ -331,9 +313,7 @@ class TestPipelineCaching:
         if isinstance(result1, np.ndarray) and isinstance(result2, np.ndarray):
             np.testing.assert_array_almost_equal(result1, result2)
         else:
-            pd.testing.assert_frame_equal(
-                pd.DataFrame(result1), pd.DataFrame(result2)
-            )
+            pd.testing.assert_frame_equal(pd.DataFrame(result1), pd.DataFrame(result2))
 
 
 class TestPipelineInfo:
@@ -343,9 +323,7 @@ class TestPipelineInfo:
     def fitted_pipeline(self) -> tuple[Pipeline, pd.DataFrame]:
         """適合済みパイプライン."""
         np.random.seed(42)
-        data = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(100) for i in range(10)}
-        )
+        data = pd.DataFrame({f"feature_{i}": np.random.randn(100) for i in range(10)})
         target = pd.Series(np.random.randn(100))
 
         pipeline = create_comprehensive_pipeline(
@@ -388,9 +366,7 @@ class TestPipelineValidation:
     def validation_data(self) -> tuple[pd.DataFrame, pd.Series]:
         """検証用データ."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(150) for i in range(8)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(150) for i in range(8)})
         y = pd.Series(np.random.randn(150))
         return X, y
 
@@ -415,7 +391,7 @@ class TestPipelineValidation:
         # 極小データでエラーを発生させる
         invalid_data = pd.DataFrame({"feature1": [1]})
         target = pd.Series([1])
-        
+
         pipeline = create_comprehensive_pipeline(
             feature_selection=True, n_features=10  # データより多い特徴量を要求
         )
@@ -436,9 +412,7 @@ class TestPipelineOptimization:
     def optimization_data(self) -> tuple[pd.DataFrame, pd.Series]:
         """最適化用データ."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(800) for i in range(40)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(800) for i in range(40)})
         y = pd.Series(np.random.randn(800))
         return X, y
 
@@ -447,9 +421,7 @@ class TestPipelineOptimization:
     ):
         """正常系: 回帰タスク用の最適化."""
         X, y = optimization_data
-        pipeline = optimize_comprehensive_pipeline(
-            X, y, task_type="regression"
-        )
+        pipeline = optimize_comprehensive_pipeline(X, y, task_type="regression")
 
         assert pipeline is not None
         assert isinstance(pipeline, Pipeline)
@@ -457,14 +429,10 @@ class TestPipelineOptimization:
     def test_optimize_comprehensive_pipeline_classification(self):
         """正常系: 分類タスク用の最適化."""
         np.random.seed(42)
-        X = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(800) for i in range(40)}
-        )
+        X = pd.DataFrame({f"feature_{i}": np.random.randn(800) for i in range(40)})
         y = pd.Series(np.random.choice([0, 1], 800))
 
-        pipeline = optimize_comprehensive_pipeline(
-            X, y, task_type="classification"
-        )
+        pipeline = optimize_comprehensive_pipeline(X, y, task_type="classification")
 
         assert pipeline is not None
         assert isinstance(pipeline, Pipeline)
@@ -499,9 +467,7 @@ class TestPipelineOptimization:
         )
         y = pd.Series(np.random.randn(data_size))
 
-        pipeline = optimize_comprehensive_pipeline(
-            X, y, task_type="regression"
-        )
+        pipeline = optimize_comprehensive_pipeline(X, y, task_type="regression")
 
         assert pipeline is not None
         # データサイズに応じて適切な設定がなされる
@@ -529,9 +495,7 @@ class TestPipelineErrorHandling:
     def test_invalid_configuration(self):
         """異常系: 無効な設定."""
         with pytest.raises(ValueError):
-            create_comprehensive_pipeline(
-                scaling=True, scaling_method="invalid_method"
-            )
+            create_comprehensive_pipeline(scaling=True, scaling_method="invalid_method")
 
     def test_mismatched_dimensions(self):
         """異常系: 次元の不一致."""
@@ -539,9 +503,7 @@ class TestPipelineErrorHandling:
         X_train = pd.DataFrame(
             {f"feature_{i}": np.random.randn(100) for i in range(10)}
         )
-        X_test = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(50) for i in range(5)}
-        )
+        X_test = pd.DataFrame({f"feature_{i}": np.random.randn(50) for i in range(5)})
 
         pipeline = create_comprehensive_pipeline(scaling=True)
         pipeline.fit(X_train)
@@ -561,9 +523,7 @@ class TestPipelinePerformance:
             {f"feature_{i}": np.random.randn(20000) for i in range(30)}
         )
 
-        pipeline = create_comprehensive_pipeline(
-            outlier_removal=True, scaling=True
-        )
+        pipeline = create_comprehensive_pipeline(outlier_removal=True, scaling=True)
 
         start_time = time.time()
         result = pipeline.fit_transform(large_data)
@@ -576,9 +536,7 @@ class TestPipelinePerformance:
     def test_memory_efficiency(self):
         """正常系: メモリ効率のテスト."""
         np.random.seed(42)
-        data = pd.DataFrame(
-            {f"feature_{i}": np.random.randn(5000) for i in range(50)}
-        )
+        data = pd.DataFrame({f"feature_{i}": np.random.randn(5000) for i in range(50)})
 
         pipeline = create_comprehensive_pipeline(optimize_dtypes=True)
         result = pipeline.fit_transform(data)
@@ -673,13 +631,9 @@ class TestPipelineIntegration:
         assert result is not None
         assert result.shape[1] == 4  # 特徴量選択により4つの特徴量
 
-    def test_production_ready_pipeline(
-        self, realistic_trading_data: pd.DataFrame
-    ):
+    def test_production_ready_pipeline(self, realistic_trading_data: pd.DataFrame):
         """正常系: 本番環境対応パイプライン."""
-        target = pd.Series(
-            np.random.randn(len(realistic_trading_data)), name="returns"
-        )
+        target = pd.Series(np.random.randn(len(realistic_trading_data)), name="returns")
 
         pipeline = create_production_pipeline(
             target_column="returns",

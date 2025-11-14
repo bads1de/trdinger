@@ -24,6 +24,7 @@ def test_client() -> TestClient:
     """
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_db_session() -> Mock:
     """
@@ -52,13 +53,15 @@ def mock_strategy_integration_service() -> Mock:
 def override_dependencies(mock_db_session, mock_strategy_integration_service):
     """
     FastAPIの依存性注入をオーバーライド
-    
+
     Args:
         mock_db_session: モックDBセッション
         mock_strategy_integration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_strategy_integration_service_with_db] = lambda: mock_strategy_integration_service
+    app.dependency_overrides[get_strategy_integration_service_with_db] = (
+        lambda: mock_strategy_integration_service
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -118,6 +121,7 @@ def sample_strategies_list(sample_strategy: Dict[str, Any]) -> List[Dict[str, An
 
 class TestGetStrategies:
     """戦略一覧取得のテストクラス"""
+
     def test_get_strategies_success(
         self,
         test_client: TestClient,
@@ -151,6 +155,7 @@ class TestGetStrategies:
         assert data["success"] is True
         assert len(data["strategies"]) == 3
         assert data["total_count"] == 3
+
     def test_get_strategies_with_filters(
         self,
         test_client: TestClient,
@@ -192,6 +197,7 @@ class TestGetStrategies:
         assert data["success"] is True
         assert len(data["strategies"]) == 1
         assert data["strategies"][0]["risk_level"] == "medium"
+
     def test_get_strategies_with_sorting(
         self,
         test_client: TestClient,
@@ -230,9 +236,11 @@ class TestGetStrategies:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["strategies"][0]["fitness_score"] >= data["strategies"][1][
-            "fitness_score"
-        ]
+        assert (
+            data["strategies"][0]["fitness_score"]
+            >= data["strategies"][1]["fitness_score"]
+        )
+
     def test_get_strategies_with_pagination(
         self,
         test_client: TestClient,
@@ -269,6 +277,7 @@ class TestGetStrategies:
         assert data["success"] is True
         assert len(data["strategies"]) == 2
         assert data["has_more"] is True
+
     def test_get_strategies_empty(
         self,
         test_client: TestClient,
@@ -426,6 +435,7 @@ class TestGetStrategies:
         assert data["success"] is True
         if len(data["strategies"]) > 0:
             assert data["strategies"][0]["risk_level"] == risk_level
+
     def test_get_strategies_experiment_id_filter(
         self,
         test_client: TestClient,
@@ -461,6 +471,7 @@ class TestGetStrategies:
         data = response.json()
         assert data["success"] is True
         assert data["strategies"][0]["experiment_id"] == 100
+
     def test_get_strategies_min_fitness_filter(
         self,
         test_client: TestClient,
@@ -477,7 +488,9 @@ class TestGetStrategies:
             sample_strategies_list: サンプル戦略リスト
         """
         # モックの設定
-        filtered_strategies = [s for s in sample_strategies_list if s["fitness_score"] >= 0.8]
+        filtered_strategies = [
+            s for s in sample_strategies_list if s["fitness_score"] >= 0.8
+        ]
         mock_strategy_integration_service.get_strategies_with_response.return_value = {
             "success": True,
             "strategies": filtered_strategies,
@@ -502,6 +515,7 @@ class TestGetStrategies:
 
 class TestErrorHandling:
     """エラーハンドリングのテストクラス"""
+
     def test_service_error_handling(
         self,
         test_client: TestClient,
@@ -525,6 +539,7 @@ class TestErrorHandling:
 
         # アサーション（ErrorHandlerによって処理される）
         assert response.status_code in [200, 500]
+
     def test_invalid_sort_order(
         self,
         test_client: TestClient,

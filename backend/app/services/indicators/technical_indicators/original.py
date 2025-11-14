@@ -247,7 +247,9 @@ class OriginalIndicators:
         low = data["low"]
         close = data["close"]
 
-        bull_power, bear_power = OriginalIndicators.elder_ray(high, low, close, length, ema_length)
+        bull_power, bear_power = OriginalIndicators.elder_ray(
+            high, low, close, length, ema_length
+        )
 
         result = pd.DataFrame(
             {
@@ -286,9 +288,7 @@ class OriginalIndicators:
 
     @staticmethod
     def prime_oscillator(
-        close: pd.Series,
-        length: int = 14,
-        signal_length: int = 3
+        close: pd.Series, length: int = 14, signal_length: int = 3
     ) -> Tuple[pd.Series, pd.Series]:
         """Prime Number Oscillator (素数オシレーター)
 
@@ -326,12 +326,12 @@ class OriginalIndicators:
             empty_osc = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"PRIME_OSC_{length}"
+                name=f"PRIME_OSC_{length}",
             )
             empty_signal = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"PRIME_SIGNAL_{length}_{signal_length}"
+                name=f"PRIME_SIGNAL_{length}_{signal_length}",
             )
             return empty_osc, empty_signal
 
@@ -351,7 +351,11 @@ class OriginalIndicators:
             )
             return (
                 pd.Series(result, index=close.index, name=f"PRIME_OSC_{length}"),
-                pd.Series(result, index=close.index, name=f"PRIME_SIGNAL_{length}_{signal_length}")
+                pd.Series(
+                    result,
+                    index=close.index,
+                    name=f"PRIME_SIGNAL_{length}_{signal_length}",
+                ),
             )
 
         # 素数位置の重みを計算（素数の逆数）
@@ -444,14 +448,14 @@ class OriginalIndicators:
 
         sequence = [1, 1]
         for i in range(2, count):
-            sequence.append(sequence[i-1] + sequence[i-2])
+            sequence.append(sequence[i - 1] + sequence[i - 2])
         return sequence
 
     @staticmethod
     def fibonacci_cycle(
         close: pd.Series,
         cycle_periods: list[int] = None,
-        fib_ratios: list[float] = None
+        fib_ratios: list[float] = None,
     ) -> Tuple[pd.Series, pd.Series]:
         """Fibonacci Cycle Indicator (フィボナッチサイクルインジケーター)
 
@@ -494,12 +498,12 @@ class OriginalIndicators:
             empty_cycle = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"FIBO_CYCLE_{len(cycle_periods)}"
+                name=f"FIBO_CYCLE_{len(cycle_periods)}",
             )
             empty_signal = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"FIBO_SIGNAL_{len(cycle_periods)}"
+                name=f"FIBO_SIGNAL_{len(cycle_periods)}",
             )
             return empty_cycle, empty_signal
 
@@ -517,9 +521,11 @@ class OriginalIndicators:
             for period in cycle_periods:
                 if i >= period:
                     # 期間内の価格変化率を計算
-                    period_prices = prices[i-period+1:i+1]
+                    period_prices = prices[i - period + 1 : i + 1]
                     if period_prices[0] != 0:
-                        period_return = (period_prices[-1] - period_prices[0]) / period_prices[0]
+                        period_return = (
+                            period_prices[-1] - period_prices[0]
+                        ) / period_prices[0]
 
                         # フィボナッチ比率を基準に正規化
                         normalized_values = []
@@ -536,15 +542,19 @@ class OriginalIndicators:
             positive_values = [abs(v) for v in cycle_values if v != 0]
             if positive_values:
                 # 調和平均: n / Σ(1/xi)
-                harmonic_mean = len(positive_values) / sum(1.0 / v for v in positive_values)
+                harmonic_mean = len(positive_values) / sum(
+                    1.0 / v for v in positive_values
+                )
 
                 # 符号を保持
-                sign_sum = sum(1 for v in cycle_values if v > 0) - sum(1 for v in cycle_values if v < 0)
+                sign_sum = sum(1 for v in cycle_values if v > 0) - sum(
+                    1 for v in cycle_values if v < 0
+                )
                 final_value = harmonic_mean * (1 if sign_sum >= 0 else -1)
 
                 # 時間的フィルタリング（過去の値との平滑化）
                 if i > max_period:
-                    prev_value = result[i-1]
+                    prev_value = result[i - 1]
                     if not np.isnan(prev_value):
                         # 指数平滑化を適用
                         alpha = 0.3
@@ -554,7 +564,9 @@ class OriginalIndicators:
                 else:
                     result[i] = final_value
 
-        fibonacci_cycle = pd.Series(result, index=close.index, name=f"FIBO_CYCLE_{len(cycle_periods)}")
+        fibonacci_cycle = pd.Series(
+            result, index=close.index, name=f"FIBO_CYCLE_{len(cycle_periods)}"
+        )
 
         # Signal Lineの計算（SMA）
         signal = fibonacci_cycle.rolling(window=3).mean()
@@ -563,7 +575,9 @@ class OriginalIndicators:
         return fibonacci_cycle, signal
 
     @staticmethod
-    def calculate_fibonacci_cycle(data, cycle_periods: list[int] = None, fib_ratios: list[float] = None):
+    def calculate_fibonacci_cycle(
+        data, cycle_periods: list[int] = None, fib_ratios: list[float] = None
+    ):
         """Fibonacci Cycle Indicator計算のラッパーメソッド"""
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be pandas DataFrame")
@@ -593,14 +607,16 @@ class OriginalIndicators:
         """エントロピー計算のヘルパー関数"""
         if len(data) < window:
             return np.full_like(data, np.nan)
-        
+
         result = np.empty_like(data)
-        result[:window-1] = np.nan
-        
-        for i in range(window-1, len(data)):
-            window_data = data[i-window+1:i+1]
+        result[: window - 1] = np.nan
+
+        for i in range(window - 1, len(data)):
+            window_data = data[i - window + 1 : i + 1]
             # ヒストグラムを作成
-            hist, _ = np.histogram(window_data, bins=min(10, len(window_data)), density=True)
+            hist, _ = np.histogram(
+                window_data, bins=min(10, len(window_data)), density=True
+            )
             # ゼロを避ける
             hist = hist[hist > 0]
             if len(hist) > 0:
@@ -609,7 +625,7 @@ class OriginalIndicators:
                 result[i] = entropy
             else:
                 result[i] = np.nan
-        
+
         return result
 
     @staticmethod
@@ -617,7 +633,7 @@ class OriginalIndicators:
         close: pd.Series,
         short_length: int = 14,
         long_length: int = 28,
-        signal_length: int = 5
+        signal_length: int = 5,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Adaptive Entropy Oscillator (適応的エントロピーオシレーター)
 
@@ -661,54 +677,62 @@ class OriginalIndicators:
             empty_osc = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}"
+                name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}",
             )
             empty_signal = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}"
+                name=f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}",
             )
             empty_ratio = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}"
+                name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}",
             )
             return empty_osc, empty_signal, empty_ratio
 
         prices = close.astype(float).to_numpy()
-        
+
         # 短期と長期のエントロピーを計算
         short_entropy = OriginalIndicators._entropy(prices, short_length)
         long_entropy = OriginalIndicators._entropy(prices, long_length)
-        
+
         # エントロピー比を計算 (短期/長期)
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             entropy_ratio = short_entropy / long_entropy
-        
+
         # 結果を正規化 (逆相関スケール: 高い値 = より混雑)
         # 0.5を基準として、1.0以上で混雑、0.5以下で秩序と解釈
         normalized_osc = (entropy_ratio - 0.5) * 2.0
-        
+
         # Signal Lineの計算（SMA）
-        signal = pd.Series(normalized_osc, index=close.index).rolling(window=signal_length).mean()
-        
+        signal = (
+            pd.Series(normalized_osc, index=close.index)
+            .rolling(window=signal_length)
+            .mean()
+        )
+
         # 結果をPandas Seriesに変換
         oscillator = pd.Series(
-            normalized_osc, 
-            index=close.index, 
-            name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}"
+            normalized_osc,
+            index=close.index,
+            name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}",
         )
-        signal.name = f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}"
+        signal.name = (
+            f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}"
+        )
         ratio = pd.Series(
             entropy_ratio,
             index=close.index,
-            name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}"
+            name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}",
         )
 
         return oscillator, signal, ratio
 
     @staticmethod
-    def calculate_adaptive_entropy(data, short_length=14, long_length=28, signal_length=5):
+    def calculate_adaptive_entropy(
+        data, short_length=14, long_length=28, signal_length=5
+    ):
         """Adaptive Entropy Oscillator計算のラッパーメソッド"""
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be pandas DataFrame")
@@ -739,25 +763,25 @@ class OriginalIndicators:
         """簡単なウェーブレット変換の近似"""
         if len(data) < scale:
             return np.full_like(data, np.nan)
-            
+
         result = np.empty_like(data)
-        result[:scale-1] = np.nan
-        
+        result[: scale - 1] = np.nan
+
         # Haarウェーブレットの近似
-        for i in range(scale-1, len(data)):
+        for i in range(scale - 1, len(data)):
             window_start = max(0, i - scale + 1)
-            window_data = data[window_start:i+1]
-            
+            window_data = data[window_start : i + 1]
+
             # 簡単なウェーブレット計算
             half = len(window_data) // 2
             if half > 0:
                 first_half = window_data[:half]
                 second_half = window_data[-half:]
-                
+
                 # 差分と平均を組み合わせた特徴量
                 diff = np.mean(second_half) - np.mean(first_half)
                 avg = np.mean(window_data)
-                
+
                 result[i] = diff * np.sqrt(len(window_data))
             else:
                 result[i] = 0.0
@@ -771,7 +795,7 @@ class OriginalIndicators:
         low: pd.Series,
         volume: pd.Series,
         length: int = 14,
-        flow_length: int = 9
+        flow_length: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """Quantum Flow Analysis (量子インスパイアード・フローアナリシス)
 
@@ -824,14 +848,12 @@ class OriginalIndicators:
 
         if close.empty or len(close) < length:
             empty_flow = pd.Series(
-                np.full(len(close), np.nan),
-                index=close.index,
-                name="QUANTUM_FLOW"
+                np.full(len(close), np.nan), index=close.index, name="QUANTUM_FLOW"
             )
             empty_signal = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name="QUANTUM_FLOW_SIGNAL"
+                name="QUANTUM_FLOW_SIGNAL",
             )
             return empty_flow, empty_signal
 
@@ -840,61 +862,63 @@ class OriginalIndicators:
         highs = high.astype(float).to_numpy()
         lows = low.astype(float).to_numpy()
         volumes = volume.astype(float).to_numpy()
-        
+
         # ウェーブレット変換で多スケール特性を抽出
         wavelet_result = OriginalIndicators._simple_wavelet_transform(prices, length)
-        
+
         # 価格変動とVolumeの相関を計算
         price_change = np.diff(prices, prepend=prices[0])
         volume_change = np.diff(volumes, prepend=volumes[0])
-        
+
         # 相関スコアの計算 (簡易版)
         correlation_score = np.zeros_like(prices)
         for i in range(length, len(prices)):
-            price_window = price_change[i-length+1:i+1]
-            volume_window = volume_change[i-length+1:i+1]
-            
+            price_window = price_change[i - length + 1 : i + 1]
+            volume_window = volume_change[i - length + 1 : i + 1]
+
             if np.std(price_window) > 0 and np.std(volume_window) > 0:
                 # 簡単な相関計算
                 corr = np.corrcoef(price_window, volume_window)[0, 1]
                 correlation_score[i] = corr
             else:
                 correlation_score[i] = 0.0
-        
+
         # ボラティリティスコアの計算
         volatility = (highs - lows) / prices
-        
+
         # Quantum Flowの統合計算
         quantum_flow = np.zeros_like(prices)
         for i in range(length, len(prices)):
             # ウェーブレット結果、相関、ボラティリティを統合
-            wavelet_component = wavelet_result[i] if np.isfinite(wavelet_result[i]) else 0
+            wavelet_component = (
+                wavelet_result[i] if np.isfinite(wavelet_result[i]) else 0
+            )
             corr_component = correlation_score[i]
             vol_component = volatility[i]
-            
+
             # 統合スコア (正規化して[-1, 1]スケールに)
-            integrated = (wavelet_component * 0.4 + 
-                         corr_component * 0.3 + 
-                         vol_component * 0.3)
-            
+            integrated = (
+                wavelet_component * 0.4 + corr_component * 0.3 + vol_component * 0.3
+            )
+
             # 正規化 (過去200期間の標準偏差でスケーリング)
             lookback = min(200, i)
             if lookback >= length:
-                recent_values = quantum_flow[i-lookback+1:i+1]
+                recent_values = quantum_flow[i - lookback + 1 : i + 1]
                 if len(recent_values) > 0 and np.std(recent_values) > 0:
                     integrated = integrated / np.std(recent_values) * 0.5
-            
+
             quantum_flow[i] = integrated
-        
+
         # Signal Line (SMA)
-        signal = pd.Series(quantum_flow, index=close.index).rolling(window=flow_length).mean()
-        
-        # 結果をPandas Seriesに変換
-        flow_series = pd.Series(
-            quantum_flow,
-            index=close.index,
-            name="QUANTUM_FLOW"
+        signal = (
+            pd.Series(quantum_flow, index=close.index)
+            .rolling(window=flow_length)
+            .mean()
         )
+
+        # 結果をPandas Seriesに変換
+        flow_series = pd.Series(quantum_flow, index=close.index, name="QUANTUM_FLOW")
         signal.name = "QUANTUM_FLOW_SIGNAL"
 
         return flow_series, signal
@@ -914,7 +938,7 @@ class OriginalIndicators:
         high = data["high"]
         low = data["low"]
         volume = data["volume"]
-        
+
         flow, signal = OriginalIndicators.quantum_flow(
             close, high, low, volume, length, flow_length
         )
@@ -930,32 +954,36 @@ class OriginalIndicators:
         return result
 
     @staticmethod
-    def _find_dominant_frequencies(prices: np.ndarray, max_freq: int = 50) -> np.ndarray:
+    def _find_dominant_frequencies(
+        prices: np.ndarray, max_freq: int = 50
+    ) -> np.ndarray:
         """主要周波数を検出するヘルパー関数"""
         # FFTを計算
         n = len(prices)
         if n < 4:
             return np.array([])
-            
+
         # ハミングウィンドウを適用
         window = signal.windows.hamming(n)
         windowed_prices = prices * window
-        
+
         # FFTと周波数軸の計算
         fft_result = fft(windowed_prices)
-        frequencies = np.fft.fftfreq(n)[:n//2]
-        magnitude = np.abs(fft_result[:n//2])
-        
+        frequencies = np.fft.fftfreq(n)[: n // 2]
+        magnitude = np.abs(fft_result[: n // 2])
+
         # 主要ピークを検出
-        peaks, _ = signal.find_peaks(magnitude[:max_freq], height=np.mean(magnitude[:max_freq]))
-        
+        peaks, _ = signal.find_peaks(
+            magnitude[:max_freq], height=np.mean(magnitude[:max_freq])
+        )
+
         if len(peaks) == 0:
             return np.array([0.1, 0.2, 0.3])  # デフォルト周波数
-        
+
         # 上位3つの周波数を選択
         peak_magnitudes = magnitude[peaks]
         sorted_indices = np.argsort(peak_magnitudes)[-3:][::-1]
-        
+
         return frequencies[peaks[sorted_indices]]
 
     @staticmethod
@@ -965,7 +993,7 @@ class OriginalIndicators:
         low: pd.Series,
         length: int = 20,
         resonance_bands: int = 5,
-        signal_length: int = 3
+        signal_length: int = 3,
     ) -> Tuple[pd.Series, pd.Series]:
         """Harmonic Resonance Indicator (HRI)
 
@@ -1019,12 +1047,10 @@ class OriginalIndicators:
             empty_hri = pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name="HARMONIC_RESONANCE"
+                name="HARMONIC_RESONANCE",
             )
             empty_signal = pd.Series(
-                np.full(len(close), np.nan),
-                index=close.index,
-                name="HRI_SIGNAL"
+                np.full(len(close), np.nan), index=close.index, name="HRI_SIGNAL"
             )
             return empty_hri, empty_signal
 
@@ -1032,68 +1058,72 @@ class OriginalIndicators:
         prices = close.astype(float).to_numpy()
         highs = high.astype(float).to_numpy()
         lows = low.astype(float).to_numpy()
-        
+
         result = np.empty_like(prices)
         result[:] = np.nan
-        
+
         # 最小要件を満たす期間から計算開始
         min_period = max(length, 30)
-        
+
         for i in range(min_period, len(prices)):
             # ローリングウインドウで分析
             window_start = i - length + 1
-            price_window = prices[window_start:i+1]
-            high_window = highs[window_start:i+1]
-            low_window = lows[window_start:i+1]
-            
+            price_window = prices[window_start : i + 1]
+            high_window = highs[window_start : i + 1]
+            low_window = lows[window_start : i + 1]
+
             # 波動性を計算
             volatility = (high_window - low_window) / price_window
-            
+
             # 主要周波数を検出
             dominant_freqs = OriginalIndicators._find_dominant_frequencies(price_window)
-            
+
             if len(dominant_freqs) == 0:
                 result[i] = 0.0
                 continue
-            
+
             # 共振度の計算
             resonance_score = 0.0
-            for freq in dominant_freqs[:min(resonance_bands, len(dominant_freqs))]:
+            for freq in dominant_freqs[: min(resonance_bands, len(dominant_freqs))]:
                 if freq <= 0:
                     continue
-                    
+
                 # バンドパスフィルターを適用
                 try:
                     # カーソルフィルター設計
                     nyquist = 0.5
                     lowcut = max(freq * 0.8, 0.01)
                     highcut = min(freq * 1.2, nyquist * 0.9)
-                    
+
                     if lowcut < highcut:
-                        b, a = signal.butter(
-                            3, [lowcut, highcut], btype='band', fs=1.0
-                        )
+                        b, a = signal.butter(3, [lowcut, highcut], btype="band", fs=1.0)
                         filtered = signal.filtfilt(b, a, price_window)
-                        
+
                         # 共振強度を計算
-                        correlation = np.corrcoef(
-                            filtered[:-1], filtered[1:], rowvar=False
-                        )[0, 1] if len(filtered) > 1 else 0
-                        
+                        correlation = (
+                            np.corrcoef(filtered[:-1], filtered[1:], rowvar=False)[0, 1]
+                            if len(filtered) > 1
+                            else 0
+                        )
+
                         # 振幅と周波数の重み付け
                         amplitude = np.std(filtered)
                         freq_weight = 1.0 / (1.0 + freq * 10)  # 高周波数にペナルティ
-                        
+
                         resonance_score += abs(correlation) * amplitude * freq_weight
-                        
+
                 except Exception:
                     # フィルター設計失敗時のフォールバック
                     resonance_score += 0.1
-            
+
             # 正規化 (過去期間の統計を使用)
             lookback = min(200, i)
             if lookback >= min_period:
-                recent_scores = [result[j] for j in range(i-lookback+1, i) if not np.isnan(result[j])]
+                recent_scores = [
+                    result[j]
+                    for j in range(i - lookback + 1, i)
+                    if not np.isnan(result[j])
+                ]
                 if recent_scores:
                     mean_score = np.mean(recent_scores)
                     std_score = np.std(recent_scores)
@@ -1105,24 +1135,24 @@ class OriginalIndicators:
                     result[i] = resonance_score
             else:
                 result[i] = resonance_score
-        
+
         # Signal Lineの計算
-        signal = pd.Series(result, index=close.index).rolling(
-            window=signal_length, min_periods=1
-        ).mean()
-        
-        # 結果をPandas Seriesに変換
-        hri_series = pd.Series(
-            result,
-            index=close.index,
-            name="HARMONIC_RESONANCE"
+        signal = (
+            pd.Series(result, index=close.index)
+            .rolling(window=signal_length, min_periods=1)
+            .mean()
         )
+
+        # 結果をPandas Seriesに変換
+        hri_series = pd.Series(result, index=close.index, name="HARMONIC_RESONANCE")
         signal.name = "HRI_SIGNAL"
 
         return hri_series, signal
 
     @staticmethod
-    def calculate_harmonic_resonance(data, length=20, resonance_bands=5, signal_length=3):
+    def calculate_harmonic_resonance(
+        data, length=20, resonance_bands=5, signal_length=3
+    ):
         """Harmonic Resonance Indicator計算のラッパーメソッド"""
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be pandas DataFrame")
@@ -1135,7 +1165,7 @@ class OriginalIndicators:
         close = data["close"]
         high = data["high"]
         low = data["low"]
-        
+
         hri, signal = OriginalIndicators.harmonic_resonance(
             close, high, low, length, resonance_bands, signal_length
         )
@@ -1152,40 +1182,38 @@ class OriginalIndicators:
 
     @staticmethod
     def _calculate_correlation_dimension(
-        prices: np.ndarray, 
-        embedding_dim: int = 3, 
-        time_delay: int = 1
+        prices: np.ndarray, embedding_dim: int = 3, time_delay: int = 1
     ) -> float:
         """相関次元の近似計算"""
         if len(prices) < embedding_dim * 2:
             return 1.0
-            
+
         # タイムディレイ埋め込み
         try:
             n_points = len(prices) - (embedding_dim - 1) * time_delay
             if n_points <= 0:
                 return 1.0
-                
+
             # 埋め込みベクトルの作成
             embedded = np.zeros((n_points, embedding_dim))
             for i in range(embedding_dim):
                 start_idx = i * time_delay
-                embedded[:, i] = prices[start_idx:start_idx + n_points]
-            
+                embedded[:, i] = prices[start_idx : start_idx + n_points]
+
             # 相関積分の計算
             distances = []
             for i in range(n_points):
-                for j in range(i+1, n_points):
+                for j in range(i + 1, n_points):
                     dist = np.linalg.norm(embedded[i] - embedded[j])
                     distances.append(dist)
-            
+
             if not distances:
                 return 1.0
-                
+
             # 距離の分布を分析
             distances = np.array(distances)
             sorted_distances = np.sort(distances)
-            
+
             # 相関次元の推定 (簡易版)
             # log(C(r)) ≈ D * log(r) の関係を利用
             if len(sorted_distances) > 10:
@@ -1194,20 +1222,22 @@ class OriginalIndicators:
                 if mid_point > 1:
                     low_distances = sorted_distances[1:mid_point]
                     high_distances = sorted_distances[mid_point:]
-                    
+
                     if len(low_distances) > 1 and len(high_distances) > 1:
                         low_mean = np.mean(np.log(low_distances))
                         high_mean = np.mean(np.log(high_distances))
-                        
+
                         low_log_c = np.log(mid_point / len(sorted_distances))
                         high_log_c = np.log(0.5)
-                        
+
                         if high_mean != low_mean:
-                            dimension = (high_log_c - low_log_c) / (high_mean - low_mean)
+                            dimension = (high_log_c - low_log_c) / (
+                                high_mean - low_mean
+                            )
                             return max(1.0, min(5.0, dimension))  # 制限範囲
-            
+
             return 1.0
-            
+
         except Exception:
             return 1.0
 
@@ -1219,7 +1249,7 @@ class OriginalIndicators:
         volume: pd.Series,
         length: int = 25,
         embedding_dim: int = 3,
-        signal_length: int = 4
+        signal_length: int = 4,
     ) -> Tuple[pd.Series, pd.Series]:
         """Chaos Theory Fractal Dimension (CTFD)
 
@@ -1274,14 +1304,10 @@ class OriginalIndicators:
 
         if close.empty or len(close) < length:
             empty_ctfd = pd.Series(
-                np.full(len(close), np.nan),
-                index=close.index,
-                name="CHAOS_FRACTAL_DIM"
+                np.full(len(close), np.nan), index=close.index, name="CHAOS_FRACTAL_DIM"
             )
             empty_signal = pd.Series(
-                np.full(len(close), np.nan),
-                index=close.index,
-                name="CTFD_SIGNAL"
+                np.full(len(close), np.nan), index=close.index, name="CTFD_SIGNAL"
             )
             return empty_ctfd, empty_signal
 
@@ -1290,30 +1316,30 @@ class OriginalIndicators:
         highs = high.astype(float).to_numpy()
         lows = low.astype(float).to_numpy()
         volumes = volume.astype(float).to_numpy()
-        
+
         result = np.empty_like(prices)
         result[:] = np.nan
-        
+
         # 最小要件を満たす期間から計算開始
         min_period = max(length, 30)
-        
+
         for i in range(min_period, len(prices)):
             # ローリングウインドウで分析
             window_start = i - length + 1
-            price_window = prices[window_start:i+1]
-            high_window = highs[window_start:i+1]
-            low_window = lows[window_start:i+1]
-            volume_window = volumes[window_start:i+1]
-            
+            price_window = prices[window_start : i + 1]
+            high_window = highs[window_start : i + 1]
+            low_window = lows[window_start : i + 1]
+            volume_window = volumes[window_start : i + 1]
+
             # 基本統計量の計算
             price_change = np.diff(price_window, prepend=price_window[0])
             volume_change = np.diff(volume_window, prepend=volume_window[0])
-            
+
             # 相関次元の計算
             correlation_dim = OriginalIndicators._calculate_correlation_dimension(
                 price_window, embedding_dim
             )
-            
+
             # 非線形性の測定
             # 価格変動と出来高変動の非線形相関を計算
             if len(price_change) > 5 and len(volume_change) > 5:
@@ -1323,36 +1349,40 @@ class OriginalIndicators:
                     poly_fit = np.polyfit(price_change, volume_change, 2)
                     poly_predict = np.polyval(poly_fit, price_change)
                     nonlinear_residual = np.std(volume_change - poly_predict)
-                    
+
                     # 価格の自己相関の非線形性
-                    price_squared = price_change ** 2
-                    linear_corr = np.corrcoef(price_change, price_squared)[0, 1] if len(price_change) > 1 else 0
-                    
+                    price_squared = price_change**2
+                    linear_corr = (
+                        np.corrcoef(price_change, price_squared)[0, 1]
+                        if len(price_change) > 1
+                        else 0
+                    )
+
                     # カオス性スコアの計算
                     chaos_score = (
-                        correlation_dim * 0.4 +
-                        abs(linear_corr) * 0.3 +
-                        (nonlinear_residual / (np.std(volume_change) + 1e-6)) * 0.3
+                        correlation_dim * 0.4
+                        + abs(linear_corr) * 0.3
+                        + (nonlinear_residual / (np.std(volume_change) + 1e-6)) * 0.3
                     )
-                    
+
                 except Exception:
                     # フィッティング失敗時のフォールバック
                     chaos_score = correlation_dim * 0.7 + 0.3
             else:
                 chaos_score = correlation_dim
-            
+
             # 予測可能性への変換 (逆スケール)
             # 高い値 = より予測可能、低い値 = よりカオス的
             predictability = 1.0 / (1.0 + chaos_score)
-            
+
             # 正規化 (過去期間の統計を使用)
             lookback = min(200, i)
             if lookback >= min_period:
                 recent_scores = []
-                for j in range(i-lookback+1, i):
+                for j in range(i - lookback + 1, i):
                     if not np.isnan(result[j]):
                         recent_scores.append(result[j])
-                
+
                 if len(recent_scores) > 10:
                     mean_score = np.mean(recent_scores)
                     std_score = np.std(recent_scores)
@@ -1367,28 +1397,23 @@ class OriginalIndicators:
                     result[i] = predictability
             else:
                 result[i] = predictability
-        
+
         # Signal Lineの計算
-        signal = pd.Series(result, index=close.index).rolling(
-            window=signal_length, min_periods=1
-        ).mean()
-        
-        # 結果をPandas Seriesに変換
-        ctf_series = pd.Series(
-            result,
-            index=close.index,
-            name="CHAOS_FRACTAL_DIM"
+        signal = (
+            pd.Series(result, index=close.index)
+            .rolling(window=signal_length, min_periods=1)
+            .mean()
         )
+
+        # 結果をPandas Seriesに変換
+        ctf_series = pd.Series(result, index=close.index, name="CHAOS_FRACTAL_DIM")
         signal.name = "CTFD_SIGNAL"
 
         return ctf_series, signal
 
     @staticmethod
     def calculate_chaos_fractal_dimension(
-        data, 
-        length=25, 
-        embedding_dim=3, 
-        signal_length=4
+        data, length=25, embedding_dim=3, signal_length=4
     ):
         """Chaos Theory Fractal Dimension計算のラッパーメソッド"""
         if not isinstance(data, pd.DataFrame):
@@ -1403,7 +1428,7 @@ class OriginalIndicators:
         high = data["high"]
         low = data["low"]
         volume = data["volume"]
-        
+
         ctf, signal = OriginalIndicators.chaos_fractal_dimension(
             close, high, low, volume, length, embedding_dim, signal_length
         )
@@ -1420,9 +1445,7 @@ class OriginalIndicators:
 
     @staticmethod
     def mcginley_dynamic(
-        close: pd.Series,
-        length: int = 10,
-        k: float = 0.6
+        close: pd.Series, length: int = 10, k: float = 0.6
     ) -> pd.Series:
         """McGinley Dynamic (MD)
 
@@ -1469,9 +1492,7 @@ class OriginalIndicators:
 
         if close.empty:
             return pd.Series(
-                np.full(0, np.nan),
-                index=close.index,
-                name=f"MCGINLEY_{length}"
+                np.full(0, np.nan), index=close.index, name=f"MCGINLEY_{length}"
             )
 
         prices = close.astype(float).to_numpy(copy=True)
@@ -1502,7 +1523,7 @@ class OriginalIndicators:
             # オーバーフローを防ぐためにratioを制限
             ratio = np.clip(ratio, 0.1, 10.0)
 
-            denominator = k * length * (ratio ** 4)
+            denominator = k * length * (ratio**4)
 
             # 非常に小さい値での除算を防止
             if denominator < 1e-10:
@@ -1511,11 +1532,7 @@ class OriginalIndicators:
             md_change = (price - prev_md) / denominator
             result[i] = prev_md + md_change
 
-        return pd.Series(
-            result,
-            index=close.index,
-            name=f"MCGINLEY_{length}"
-        )
+        return pd.Series(result, index=close.index, name=f"MCGINLEY_{length}")
 
     @staticmethod
     def calculate_mcginley_dynamic(data, length=10, k=0.6):
@@ -1541,10 +1558,7 @@ class OriginalIndicators:
         return result
 
     @staticmethod
-    def kaufman_efficiency_ratio(
-        close: pd.Series,
-        length: int = 10
-    ) -> pd.Series:
+    def kaufman_efficiency_ratio(close: pd.Series, length: int = 10) -> pd.Series:
         """Kaufman Efficiency Ratio (KER)
 
         Perry Kaufmanが開発したトレンド効率性を測定する指標。
@@ -1578,9 +1592,7 @@ class OriginalIndicators:
 
         if close.empty or len(close) < length:
             return pd.Series(
-                np.full(len(close), np.nan),
-                index=close.index,
-                name=f"KER_{length}"
+                np.full(len(close), np.nan), index=close.index, name=f"KER_{length}"
             )
 
         prices = close.astype(float).to_numpy()
@@ -1589,7 +1601,7 @@ class OriginalIndicators:
 
         for i in range(length - 1, len(prices)):
             window_start = i - length + 1
-            window = prices[window_start:i + 1]
+            window = prices[window_start : i + 1]
 
             # Net Change（方向性）
             net_change = abs(window[-1] - window[0])
@@ -1604,11 +1616,7 @@ class OriginalIndicators:
             else:
                 result[i] = 0.0
 
-        return pd.Series(
-            result,
-            index=close.index,
-            name=f"KER_{length}"
-        )
+        return pd.Series(result, index=close.index, name=f"KER_{length}")
 
     @staticmethod
     def calculate_kaufman_efficiency_ratio(data, length=10):
@@ -1640,7 +1648,7 @@ class OriginalIndicators:
         close: pd.Series,
         p: int = 10,
         x: float = 1.0,
-        q: int = 9
+        q: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """Chande Kroll Stop
 
@@ -1694,23 +1702,21 @@ class OriginalIndicators:
 
         if close.empty or len(close) < max(p, q):
             empty_long = pd.Series(
-                np.full(len(close), np.nan),
-                index=close.index,
-                name=f"CKS_LONG_{p}"
+                np.full(len(close), np.nan), index=close.index, name=f"CKS_LONG_{p}"
             )
             empty_short = pd.Series(
-                np.full(len(close), np.nan),
-                index=close.index,
-                name=f"CKS_SHORT_{p}"
+                np.full(len(close), np.nan), index=close.index, name=f"CKS_SHORT_{p}"
             )
             return empty_long, empty_short
 
         # ATRの計算
-        tr = pd.DataFrame({
-            'hl': high - low,
-            'hc': abs(high - close.shift(1)),
-            'lc': abs(low - close.shift(1))
-        }).max(axis=1)
+        tr = pd.DataFrame(
+            {
+                "hl": high - low,
+                "hc": abs(high - close.shift(1)),
+                "lc": abs(low - close.shift(1)),
+            }
+        ).max(axis=1)
         atr = tr.rolling(window=p).mean()
 
         # Highest High と Lowest Low
@@ -1765,7 +1771,7 @@ class OriginalIndicators:
         high: pd.Series,
         low: pd.Series,
         length: int = 14,
-        sma_length: int = 30
+        sma_length: int = 30,
     ) -> pd.Series:
         """Trend Intensity Index (TII)
 
@@ -1819,7 +1825,7 @@ class OriginalIndicators:
             return pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"TII_{length}_{sma_length}"
+                name=f"TII_{length}_{sma_length}",
             )
 
         # SMAの計算
@@ -1834,11 +1840,7 @@ class OriginalIndicators:
         # TIIの計算（パーセンテージ）
         tii = (count_above / length) * 100
 
-        return pd.Series(
-            tii,
-            index=close.index,
-            name=f"TII_{length}_{sma_length}"
-        )
+        return pd.Series(tii, index=close.index, name=f"TII_{length}_{sma_length}")
 
     @staticmethod
     def calculate_trend_intensity_index(data, length=14, sma_length=30):
@@ -1873,7 +1875,7 @@ class OriginalIndicators:
         close: pd.Series,
         rsi_periods: int = 3,
         streak_periods: int = 2,
-        rank_periods: int = 100
+        rank_periods: int = 100,
     ) -> pd.Series:
         """Connors RSI (ローレンス・コナーズ RSI)
 
@@ -1917,7 +1919,7 @@ class OriginalIndicators:
             return pd.Series(
                 np.full(len(close), np.nan),
                 index=close.index,
-                name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}"
+                name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}",
             )
 
         prices = close.astype(float).to_numpy()
@@ -1933,17 +1935,17 @@ class OriginalIndicators:
         close_rsi[:] = np.nan
         if len(prices) >= rsi_periods + 1:
             for i in range(rsi_periods, len(prices)):
-                window = prices[i - rsi_periods + 1:i + 1]
+                window = prices[i - rsi_periods + 1 : i + 1]
                 gains = []
                 losses = []
-                
+
                 for j in range(1, len(window)):
-                    change = window[j] - window[j-1]
+                    change = window[j] - window[j - 1]
                     if change > 0:
                         gains.append(change)
                     elif change < 0:
                         losses.append(abs(change))
-                
+
                 if len(gains) > 0 and len(losses) > 0:
                     avg_gain = np.mean(gains)
                     avg_loss = np.mean(losses)
@@ -1961,26 +1963,26 @@ class OriginalIndicators:
             # ストリークの計算
             streaks = np.zeros_like(prices)
             for i in range(1, len(prices)):
-                if prices[i] > prices[i-1]:
-                    streaks[i] = max(streaks[i-1] + 1, 1)
-                elif prices[i] < prices[i-1]:
-                    streaks[i] = min(streaks[i-1] - 1, -1)
+                if prices[i] > prices[i - 1]:
+                    streaks[i] = max(streaks[i - 1] + 1, 1)
+                elif prices[i] < prices[i - 1]:
+                    streaks[i] = min(streaks[i - 1] - 1, -1)
                 else:
                     streaks[i] = 0
-            
+
             # ストリークのRSIを計算
             for i in range(streak_periods, len(prices)):
-                window = streaks[i - streak_periods + 1:i + 1]
+                window = streaks[i - streak_periods + 1 : i + 1]
                 gains = []
                 losses = []
-                
+
                 for j in range(1, len(window)):
-                    change = window[j] - window[j-1]
+                    change = window[j] - window[j - 1]
                     if change > 0:
                         gains.append(change)
                     elif change < 0:
                         losses.append(abs(change))
-                
+
                 if len(gains) > 0 and len(losses) > 0:
                     avg_gain = np.mean(gains)
                     avg_loss = np.mean(losses)
@@ -1995,13 +1997,13 @@ class OriginalIndicators:
         rank_values[:] = np.nan
         if len(prices) >= rank_periods:
             for i in range(rank_periods, len(prices)):
-                window = prices[i - rank_periods + 1:i + 1]
+                window = prices[i - rank_periods + 1 : i + 1]
                 current_price = prices[i]
-                
+
                 # 現在価格が窓内の何％の価格以下かを計算
                 count_lower = np.sum(window <= current_price)
                 total_count = len(window)
-                
+
                 if total_count > 0:
                     percentile = (count_lower / total_count) * 100
                     rank_values[i] = percentile
@@ -2016,24 +2018,26 @@ class OriginalIndicators:
                 valid_components.append(streak_rsi[i])
             if not np.isnan(rank_values[i]):
                 valid_components.append(rank_values[i])
-            
+
             if valid_components:
                 # 3つの成分の平均を取る
                 if len(valid_components) == 3:
                     connors_value = np.mean(valid_components)
                 elif len(valid_components) == 2:
                     # 2つのみ有効な場合はフォールバック（平均に大きな重みを付ける）
-                    connors_value = np.mean(valid_components) * (3.0 / len(valid_components))
+                    connors_value = np.mean(valid_components) * (
+                        3.0 / len(valid_components)
+                    )
                 else:
                     connors_value = valid_components[0]
-                
+
                 # 0-100の範囲にクランプ
                 result[i] = max(0, min(100, connors_value))
 
         return pd.Series(
             result,
             index=close.index,
-            name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}"
+            name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}",
         )
 
     @staticmethod

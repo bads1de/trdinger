@@ -133,6 +133,7 @@ def get_strategy_integration_service_with_db(
 
 # get_automl_feature_generation_service は削除されました（autofeat機能の削除に伴う）
 
+
 # Dependency factories for various orchestration services (avoid direct new() in API modules)
 def get_data_collection_orchestration_service():
     """

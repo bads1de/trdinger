@@ -144,17 +144,21 @@ class TestBacktestDataframeCreation:
             sample_ohlcv_data
         )
 
-        with patch.object(
-            integration_service,
-            "_integrate_open_interest_data",
-            return_value=sample_ohlcv_data,
-        ), patch.object(
-            integration_service,
-            "_integrate_funding_rate_data",
-            return_value=sample_ohlcv_data,
-        ), patch(
-            "app.services.backtest.data.data_integration_service.data_processor"
-        ) as mock_processor:
+        with (
+            patch.object(
+                integration_service,
+                "_integrate_open_interest_data",
+                return_value=sample_ohlcv_data,
+            ),
+            patch.object(
+                integration_service,
+                "_integrate_funding_rate_data",
+                return_value=sample_ohlcv_data,
+            ),
+            patch(
+                "app.services.backtest.data.data_integration_service.data_processor"
+            ) as mock_processor,
+        ):
             mock_processor.clean_and_validate_data.return_value = sample_ohlcv_data
 
             result = integration_service.create_backtest_dataframe(
@@ -185,17 +189,21 @@ class TestBacktestDataframeCreation:
         integrated_data = sample_ohlcv_data.copy()
         integrated_data["open_interest"] = 5000.0
 
-        with patch.object(
-            integration_service,
-            "_integrate_open_interest_data",
-            return_value=integrated_data,
-        ), patch.object(
-            integration_service,
-            "_integrate_funding_rate_data",
-            return_value=integrated_data,
-        ), patch(
-            "app.services.backtest.data.data_integration_service.data_processor"
-        ) as mock_processor:
+        with (
+            patch.object(
+                integration_service,
+                "_integrate_open_interest_data",
+                return_value=integrated_data,
+            ),
+            patch.object(
+                integration_service,
+                "_integrate_funding_rate_data",
+                return_value=integrated_data,
+            ),
+            patch(
+                "app.services.backtest.data.data_integration_service.data_processor"
+            ) as mock_processor,
+        ):
             mock_processor.clean_and_validate_data.return_value = integrated_data
 
             result = integration_service.create_backtest_dataframe(
@@ -222,11 +230,16 @@ class TestBacktestDataframeCreation:
             sample_ohlcv_data
         )
 
-        with patch.object(
-            integration_service, "_integrate_funding_rate_data", return_value=sample_ohlcv_data
-        ), patch(
-            "app.services.backtest.data.data_integration_service.data_processor"
-        ) as mock_processor:
+        with (
+            patch.object(
+                integration_service,
+                "_integrate_funding_rate_data",
+                return_value=sample_ohlcv_data,
+            ),
+            patch(
+                "app.services.backtest.data.data_integration_service.data_processor"
+            ) as mock_processor,
+        ):
             result_data = sample_ohlcv_data.copy()
             result_data["open_interest"] = 0.0
             mock_processor.clean_and_validate_data.return_value = result_data
@@ -256,11 +269,16 @@ class TestBacktestDataframeCreation:
             sample_ohlcv_data
         )
 
-        with patch.object(
-            integration_service, "_integrate_open_interest_data", return_value=sample_ohlcv_data
-        ), patch(
-            "app.services.backtest.data.data_integration_service.data_processor"
-        ) as mock_processor:
+        with (
+            patch.object(
+                integration_service,
+                "_integrate_open_interest_data",
+                return_value=sample_ohlcv_data,
+            ),
+            patch(
+                "app.services.backtest.data.data_integration_service.data_processor"
+            ) as mock_processor,
+        ):
             result_data = sample_ohlcv_data.copy()
             result_data["funding_rate"] = 0.0
             mock_processor.clean_and_validate_data.return_value = result_data
@@ -309,9 +327,7 @@ class TestMLTrainingDataframeCreation:
             assert not result.empty
             assert len(result) == 100
 
-    def test_create_ml_training_dataframe_includes_all_data(
-        self, integration_service
-    ):
+    def test_create_ml_training_dataframe_includes_all_data(self, integration_service):
         """MLトレーニング用DataFrameに全データが含まれること"""
         with patch.object(
             integration_service, "create_backtest_dataframe"
@@ -573,13 +589,9 @@ class TestDataSummary:
 class TestErrorHandling:
     """エラーハンドリングテスト"""
 
-    def test_handle_retrieval_error(
-        self, integration_service, mock_retrieval_service
-    ):
+    def test_handle_retrieval_error(self, integration_service, mock_retrieval_service):
         """データ取得エラーの処理"""
-        mock_retrieval_service.get_ohlcv_data.side_effect = Exception(
-            "Database error"
-        )
+        mock_retrieval_service.get_ohlcv_data.side_effect = Exception("Database error")
 
         # safe_operationデコレーターにより空のDataFrameが返される
         result = integration_service.create_backtest_dataframe(
@@ -635,13 +647,21 @@ class TestEdgeCases:
         mock_retrieval_service.get_ohlcv_data.return_value = []
         mock_conversion_service.convert_ohlcv_to_dataframe.return_value = minimal_data
 
-        with patch.object(
-            integration_service, "_integrate_open_interest_data", return_value=minimal_data
-        ), patch.object(
-            integration_service, "_integrate_funding_rate_data", return_value=minimal_data
-        ), patch(
-            "app.services.backtest.data.data_integration_service.data_processor"
-        ) as mock_processor:
+        with (
+            patch.object(
+                integration_service,
+                "_integrate_open_interest_data",
+                return_value=minimal_data,
+            ),
+            patch.object(
+                integration_service,
+                "_integrate_funding_rate_data",
+                return_value=minimal_data,
+            ),
+            patch(
+                "app.services.backtest.data.data_integration_service.data_processor"
+            ) as mock_processor,
+        ):
             mock_processor.clean_and_validate_data.return_value = minimal_data
 
             result = integration_service.create_backtest_dataframe(
@@ -675,13 +695,21 @@ class TestEdgeCases:
         mock_retrieval_service.get_ohlcv_data.return_value = []
         mock_conversion_service.convert_ohlcv_to_dataframe.return_value = large_data
 
-        with patch.object(
-            integration_service, "_integrate_open_interest_data", return_value=large_data
-        ), patch.object(
-            integration_service, "_integrate_funding_rate_data", return_value=large_data
-        ), patch(
-            "app.services.backtest.data.data_integration_service.data_processor"
-        ) as mock_processor:
+        with (
+            patch.object(
+                integration_service,
+                "_integrate_open_interest_data",
+                return_value=large_data,
+            ),
+            patch.object(
+                integration_service,
+                "_integrate_funding_rate_data",
+                return_value=large_data,
+            ),
+            patch(
+                "app.services.backtest.data.data_integration_service.data_processor"
+            ) as mock_processor,
+        ):
             mock_processor.clean_and_validate_data.return_value = large_data
 
             result = integration_service.create_backtest_dataframe(
@@ -715,17 +743,21 @@ class TestEdgeCases:
             incomplete_data
         )
 
-        with patch.object(
-            integration_service,
-            "_integrate_open_interest_data",
-            return_value=incomplete_data,
-        ), patch.object(
-            integration_service,
-            "_integrate_funding_rate_data",
-            return_value=incomplete_data,
-        ), patch(
-            "app.services.backtest.data.data_integration_service.data_processor"
-        ) as mock_processor:
+        with (
+            patch.object(
+                integration_service,
+                "_integrate_open_interest_data",
+                return_value=incomplete_data,
+            ),
+            patch.object(
+                integration_service,
+                "_integrate_funding_rate_data",
+                return_value=incomplete_data,
+            ),
+            patch(
+                "app.services.backtest.data.data_integration_service.data_processor"
+            ) as mock_processor,
+        ):
             # clean_and_validate_dataが欠けているカラムを補完すると仮定
             complete_data = incomplete_data.copy()
             complete_data["high"] = 105.0

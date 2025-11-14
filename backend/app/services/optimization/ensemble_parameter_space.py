@@ -42,7 +42,6 @@ class EnsembleParameterSpace:
             "xgb_gamma": ParameterSpace(type="real", low=0.0, high=0.5),
         }
 
-
     @staticmethod
     def get_stacking_parameter_space() -> Dict[str, ParameterSpace]:
         """スタッキングアンサンブル固有のパラメータ空間"""
@@ -81,7 +80,6 @@ class EnsembleParameterSpace:
 
         if "xgboost" in enabled_models:
             parameter_space.update(cls.get_xgboost_parameter_space())
-
 
         # アンサンブル手法固有のパラメータを追加（スタッキング）
         if ensemble_method == "stacking":

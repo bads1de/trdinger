@@ -138,13 +138,15 @@ class TestBacktestSystemComprehensive:
     def test_data_integration_with_market_indicators(self, backtest_data_service):
         """市場指標とのデータ統合テスト"""
         # データサマリー取得でデータ統合機能をテスト
-        test_df = pd.DataFrame({
-            "open": [100, 101, 102],
-            "high": [102, 103, 104],
-            "low": [98, 99, 100],
-            "close": [100, 101, 102],
-            "volume": [1000, 1100, 1200]
-        })
+        test_df = pd.DataFrame(
+            {
+                "open": [100, 101, 102],
+                "high": [102, 103, 104],
+                "low": [98, 99, 100],
+                "close": [100, 101, 102],
+                "volume": [1000, 1100, 1200],
+            }
+        )
         summary = backtest_data_service.get_data_summary(test_df)
 
         # サマリーが取得される
@@ -204,7 +206,7 @@ class TestBacktestSystemComprehensive:
             "timeframe": "1d",
             "initial_capital": 10000,
             "commission_rate": 0.001,
-            "strategy_config": {}
+            "strategy_config": {},
         }
 
         try:
@@ -238,18 +240,22 @@ class TestBacktestSystemComprehensive:
         class DummyStrategy(Strategy):
             def init(self):
                 pass
+
             def next(self):
                 pass
 
         # ダミーデータでbacktestを作成
         dates = pd.date_range("2023-01-01", periods=100, freq="D")
-        data = pd.DataFrame({
-            "Open": [100] * 100,
-            "High": [102] * 100,
-            "Low": [98] * 100,
-            "Close": [100] * 100,
-            "Volume": [1000] * 100,
-        }, index=dates)
+        data = pd.DataFrame(
+            {
+                "Open": [100] * 100,
+                "High": [102] * 100,
+                "Low": [98] * 100,
+                "Close": [100] * 100,
+                "Volume": [1000] * 100,
+            },
+            index=dates,
+        )
 
         bt = Backtest(data, DummyStrategy, cash=10000, commission=0.001)
         stats = bt.run()
@@ -263,7 +269,7 @@ class TestBacktestSystemComprehensive:
             initial_capital=10000,
             start_date="2023-01-01",
             end_date="2023-12-31",
-            config_json={}
+            config_json={},
         )
         assert isinstance(converted, dict)
 
@@ -292,21 +298,28 @@ class TestBacktestSystemComprehensive:
 
         # イベントラベル付きデータ取得でレジーム検出を使用
         dates = pd.date_range("2023-01-01", periods=100, freq="D")
-        test_df = pd.DataFrame({
-            "open": np.random.randn(100) + 100,
-            "high": np.random.randn(100) + 101,
-            "low": np.random.randn(100) + 99,
-            "close": np.random.randn(100) + 100,
-            "volume": np.random.randint(1000, 10000, 100),
-        }, index=dates)
+        test_df = pd.DataFrame(
+            {
+                "open": np.random.randn(100) + 100,
+                "high": np.random.randn(100) + 101,
+                "low": np.random.randn(100) + 99,
+                "close": np.random.randn(100) + 100,
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
 
         # _integration_serviceをモック
-        with patch.object(backtest_data_service._integration_service, "create_ml_training_dataframe") as mock_create:
+        with patch.object(
+            backtest_data_service._integration_service, "create_ml_training_dataframe"
+        ) as mock_create:
             mock_create.return_value = test_df
 
             try:
-                labeled_data, profile = backtest_data_service.get_event_labeled_training_data(
-                    "BTC/USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
+                labeled_data, profile = (
+                    backtest_data_service.get_event_labeled_training_data(
+                        "BTC/USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
+                    )
                 )
                 # データが取得される
                 assert isinstance(labeled_data, pd.DataFrame)
@@ -368,7 +381,7 @@ class TestBacktestSystemComprehensive:
                 "close": np.random.randn(10000) + 100,
                 "volume": np.random.randint(1000, 10000, 10000),
             },
-            index=dates
+            index=dates,
         )
 
         initial_memory = len(gc.get_objects())

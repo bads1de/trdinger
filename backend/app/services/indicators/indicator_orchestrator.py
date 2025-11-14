@@ -241,13 +241,10 @@ class TechnicalIndicatorService:
                 for req_col in required_columns:
                     col_name = self._resolve_column_name(df, req_col)
                     if col_name is None:
-                        logger.error(
-                            f"必須カラム '{req_col}' が存在しません"
-                        )
+                        logger.error(f"必須カラム '{req_col}' が存在しません")
                         return None
                     positional_args.append(df[col_name])
 
-                
                 return func(*positional_args, **params)
             else:
                 # 単一カラム処理
@@ -265,8 +262,6 @@ class TechnicalIndicatorService:
                     )
                     return None
 
-                
-                
                 return func(df[col_name], **params)
 
         except Exception as e:

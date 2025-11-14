@@ -46,10 +46,7 @@ class TestOperandGroupingSystem:
         )
 
         # ACCBANDS is actually PRICE_BASED in current implementation
-        assert (
-            grouping_system.get_operand_group("ACCBANDS")
-            == OperandGroup.PRICE_BASED
-        )
+        assert grouping_system.get_operand_group("ACCBANDS") == OperandGroup.PRICE_BASED
 
     def test_get_operand_group_zero_centered(self, grouping_system):
         """ZERO_CENTEREDグループのオペランド分類"""

@@ -94,7 +94,9 @@ class TestCollectHistoricalData:
     ):
         """ページネーション処理が正しく行われることを確認"""
         # 最初のページ: 完全なデータ
-        first_page = [[i, 29000.0, 29500.0, 28500.0, 29200.0, 100.5] for i in range(1000)]
+        first_page = [
+            [i, 29000.0, 29500.0, 28500.0, 29200.0, 100.5] for i in range(1000)
+        ]
         # 2ページ目: データなし（終了）
         mock_market_service.fetch_ohlcv_data.side_effect = [first_page, []]
         mock_repository.get_latest_timestamp.return_value = None
@@ -154,9 +156,7 @@ class TestCollectBulkIncrementalData:
         self, service, mock_market_service, mock_repository
     ):
         """一括差分データ収集が成功することを確認"""
-        mock_data = [
-            [1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
-        ]
+        mock_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]]
         mock_market_service.fetch_ohlcv_data.return_value = mock_data
         mock_repository.get_latest_timestamp.return_value = None
 
@@ -175,9 +175,7 @@ class TestCollectBulkIncrementalData:
         self, service, mock_market_service, mock_repository
     ):
         """全時間足でデータ収集が行われることを確認"""
-        mock_data = [
-            [1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
-        ]
+        mock_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]]
         mock_market_service.fetch_ohlcv_data.return_value = mock_data
         mock_repository.get_latest_timestamp.return_value = None
 
@@ -197,9 +195,7 @@ class TestCollectBulkIncrementalData:
         self, service, mock_market_service, mock_repository
     ):
         """ファンディングレートを含む一括収集を確認"""
-        mock_data = [
-            [1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
-        ]
+        mock_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]]
         mock_market_service.fetch_ohlcv_data.return_value = mock_data
         mock_repository.get_latest_timestamp.return_value = None
 
@@ -238,9 +234,7 @@ class TestCollectHistoricalDataWithStartDate:
         self, service, mock_market_service, mock_repository
     ):
         """開始日付指定でのデータ収集が成功することを確認"""
-        mock_data = [
-            [1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
-        ]
+        mock_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]]
         mock_market_service.fetch_ohlcv_data.return_value = mock_data
         mock_repository.get_latest_timestamp.return_value = None
 
@@ -259,7 +253,9 @@ class TestCollectHistoricalDataWithStartDate:
     ):
         """ページネーションが正しく行われることを確認"""
         # 最初: 1000件、次: データなし
-        first_page = [[i, 29000.0, 29500.0, 28500.0, 29200.0, 100.5] for i in range(1000)]
+        first_page = [
+            [i, 29000.0, 29500.0, 28500.0, 29200.0, 100.5] for i in range(1000)
+        ]
         mock_market_service.fetch_ohlcv_data.side_effect = [first_page, []]
         mock_repository.get_latest_timestamp.return_value = None
 
@@ -297,9 +293,7 @@ class TestErrorHandling:
         self, service, mock_market_service, mock_repository
     ):
         """一般的な例外が適切に処理されることを確認"""
-        mock_market_service.fetch_ohlcv_data.side_effect = Exception(
-            "Unexpected error"
-        )
+        mock_market_service.fetch_ohlcv_data.side_effect = Exception("Unexpected error")
         mock_repository.get_latest_timestamp.return_value = None
 
         result = await service.collect_historical_data(
@@ -319,11 +313,9 @@ class TestEdgeCases:
         self, service, mock_market_service, mock_repository
     ):
         """既存データありでの収集を確認"""
-        mock_data = [
-            [1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
-        ]
+        mock_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]]
         mock_market_service.fetch_ohlcv_data.return_value = mock_data
-        
+
         # 既存データのタイムスタンプを設定
         existing_timestamp = datetime.fromtimestamp(1609459200)
         mock_repository.get_latest_timestamp.return_value = existing_timestamp
