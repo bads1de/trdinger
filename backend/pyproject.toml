@@ -23,7 +23,7 @@ classifiers = [
 dependencies = [
     # データ分析・数値計算
     "pandas",
-    "pandas-ta",
+    "pandas-ta==0.3.14b0",
     "numpy",
     "psutil",
     "pandera",
