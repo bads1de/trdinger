@@ -80,9 +80,8 @@ class TestCalculatePatternFeaturesMissing:
             "BB_Position",
             "MA_Long",  # MA_Short は price_features.py の ma_10 と重複のため削除済み
             "ATR",  # Normalized_Volatilityは未実装のため削除
-            "Local_Min",
-            "Local_Max",  # "Support_Level",  # 現行では未提供
-            "Resistance_Level",
+            # Removed: "Local_Min", "Local_Max", "Resistance_Level"
+            # (低寄与度特徴量削除: 2025-11-13)
             "Near_Support",
             "Near_Resistance",
         ]

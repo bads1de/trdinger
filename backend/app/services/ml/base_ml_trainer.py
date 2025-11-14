@@ -83,7 +83,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.scaler = StandardScaler()
         self.feature_columns = None
         self.is_trained = False
-        self.model = None
+        self._model = None  # プライベート属性として定義（子クラスのプロパティと競合を回避）
         self.models = {}  # アンサンブル用の複数モデル格納
         self.last_training_results = None  # 最後の学習結果を保持
 
@@ -409,7 +409,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         Returns:
             予測結果
         """
-        if self.model is None:
+        if self._model is None:
             raise ValueError("単一モデルが学習されていません")
 
         try:
@@ -417,11 +417,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             processed_features = self._preprocess_features_for_prediction(features_df)
 
             # 予測実行
-            if hasattr(self.model, "predict"):
-                predictions = self.model.predict(processed_features)
+            if hasattr(self._model, "predict"):
+                predictions = self._model.predict(processed_features)
             else:
                 # SingleModelTrainerの場合
-                predictions = self.model.predict(features_df)
+                predictions = self._model.predict(features_df)
 
             return predictions
 
@@ -439,12 +439,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         Returns:
             予測結果
         """
-        if self.model is None:
+        if self._model is None:
             raise ValueError("アンサンブルモデルが学習されていません")
 
         try:
             # EnsembleTrainerの予測メソッドを使用
-            predictions = self.model.predict(features_df)
+            predictions = self._model.predict(features_df)
             return predictions
 
         except Exception as e:
@@ -1100,9 +1100,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     )
 
         # モデルが特徴量重要度を提供する場合
-        if hasattr(self.model, "get_feature_importance"):
+        if hasattr(self._model, "get_feature_importance"):
             try:
-                feature_importance = self.model.get_feature_importance(top_n)
+                feature_importance = self._model.get_feature_importance(top_n)
                 if feature_importance:
                     logger.info(
                         f"モデルから特徴量重要度を取得: {len(feature_importance)}個"
@@ -1112,9 +1112,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 logger.error(f"モデルからの特徴量重要度取得エラー: {e}")
 
         # LightGBMモデルの場合
-        if hasattr(self.model, "feature_importance") and self.feature_columns:
+        if hasattr(self._model, "feature_importance") and self.feature_columns:
             try:
-                importance_scores = self.model.feature_importance(
+                importance_scores = self._model.feature_importance(
                     importance_type="gain"
                 )
                 feature_importance = dict(zip(self.feature_columns, importance_scores))
@@ -1154,11 +1154,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             return False
 
         # モデルデータから各要素を取得
-        self.model = model_data.get("model")
+        self._model = model_data.get("model")
         self.scaler = model_data.get("scaler")
         self.feature_columns = model_data.get("feature_columns")
 
-        if self.model is None:
+        if self._model is None:
             raise MLModelError("モデルデータにモデルが含まれていません")
 
         self.is_trained = True
@@ -1189,7 +1189,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     logger.debug("特徴量サービスをクリーンアップしました")
 
             # モデルとスケーラーをクリア
-            self.model = None
+            self._model = None
             self.scaler = None
             self.feature_columns = None
             self.is_trained = False
@@ -1197,7 +1197,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         except Exception as e:
             logger.warning(f"モデルクリーンアップ警告: {e}")
             # エラーが発生してもクリーンアップは続行
-            self.model = None
+            self._model = None
             self.scaler = None
             self.feature_columns = None
             self.is_trained = False
@@ -1310,7 +1310,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         result = trainer.train_model(training_data, **training_params)
 
         # モデルを保存
-        self.model = trainer.model
+        self._model = trainer.model
 
         return result
 
@@ -1336,7 +1336,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         # モデルを保存
         self.models = trainer.models
-        self.model = trainer  # アンサンブルトレーナー自体を保存
+        self._model = trainer  # アンサンブルトレーナー自体を保存
         self._ensemble_trainer = trainer  # 参照を保持
 
         return result

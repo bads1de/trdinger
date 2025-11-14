@@ -89,7 +89,9 @@ class TestValidateSymbolAndTimeframe:
         Args:
             orchestration_service: オーケストレーションサービス
         """
-        with patch("app.config.unified_config.unified_config") as mock_config:
+        with patch(
+            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+        ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
             mock_config.market.supported_timeframes = ["1h", "4h", "1d"]
@@ -129,7 +131,9 @@ class TestValidateSymbolAndTimeframe:
         Args:
             orchestration_service: オーケストレーションサービス
         """
-        with patch("app.config.unified_config.unified_config") as mock_config:
+        with patch(
+            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+        ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
             mock_config.market.supported_timeframes = ["1h"]
@@ -148,7 +152,9 @@ class TestValidateSymbolAndTimeframe:
         Args:
             orchestration_service: オーケストレーションサービス
         """
-        with patch("app.config.unified_config.unified_config") as mock_config:
+        with patch(
+            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+        ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
             mock_config.market.supported_timeframes = ["1h"]
@@ -178,7 +184,9 @@ class TestStartHistoricalDataCollection:
             mock_background_tasks: BackgroundTasksモック
         """
         with (
-            patch("app.config.unified_config.unified_config") as mock_config,
+            patch(
+                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
             ) as mock_repo_class,
@@ -219,7 +227,9 @@ class TestStartHistoricalDataCollection:
             mock_background_tasks: BackgroundTasksモック
         """
         with (
-            patch("app.config.unified_config.unified_config") as mock_config,
+            patch(
+                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
             ) as mock_repo_class,
@@ -261,7 +271,9 @@ class TestStartHistoricalDataCollection:
             mock_background_tasks: BackgroundTasksモック
         """
         with (
-            patch("app.config.unified_config.unified_config") as mock_config,
+            patch(
+                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
             ) as mock_repo_class,
@@ -421,7 +433,9 @@ class TestGetCollectionStatus:
         from datetime import datetime
 
         with (
-            patch("app.config.unified_config.unified_config") as mock_config,
+            patch(
+                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
             ) as mock_repo_class,
@@ -464,7 +478,9 @@ class TestGetCollectionStatus:
             mock_background_tasks: BackgroundTasksモック
         """
         with (
-            patch("app.config.unified_config.unified_config") as mock_config,
+            patch(
+                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
             ) as mock_repo_class,
@@ -505,7 +521,9 @@ class TestGetCollectionStatus:
             mock_background_tasks: BackgroundTasksモック
         """
         with (
-            patch("app.config.unified_config.unified_config") as mock_config,
+            patch(
+                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
             ) as mock_repo_class,
@@ -655,7 +673,9 @@ class TestErrorHandling:
             mock_db_session: DBセッションモック
             mock_background_tasks: BackgroundTasksモック
         """
-        with patch("app.config.unified_config.unified_config") as mock_config:
+        with patch(
+            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+        ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
             mock_config.market.supported_timeframes = ["1h"]
