@@ -4,19 +4,21 @@
 StrategyGeneから動的にbacktesting.py互換のStrategy継承クラスを生成します。
 """
 
-from ..models.strategy_models import Condition
 import logging
 from typing import List, Tuple, Type, Union, cast
 
-
 from backtesting import Strategy
 
-from ..services.indicator_service import IndicatorCalculator
-from ..positions.position_sizing_service import PositionSizingService
-from ..tpsl.tpsl_service import TPSLService
 from ..core.condition_evaluator import ConditionEvaluator
-from ..models.strategy_models import IndicatorGene, StrategyGene, ConditionGroup
-
+from ..models.strategy_models import (
+    Condition,
+    ConditionGroup,
+    IndicatorGene,
+    StrategyGene,
+)
+from ..positions.position_sizing_service import PositionSizingService
+from ..services.indicator_service import IndicatorCalculator
+from ..tpsl.tpsl_service import TPSLService
 
 logger = logging.getLogger(__name__)
 

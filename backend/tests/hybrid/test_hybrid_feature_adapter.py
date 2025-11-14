@@ -5,15 +5,16 @@ StrategyGene → 特徴量DataFrame変換のテスト
 TDD: テストファースト
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
 
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.services.auto_strategy.models.indicator_gene import IndicatorGene
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.auto_strategy.models.condition import Condition
+from app.services.auto_strategy.models.indicator_gene import IndicatorGene
+from app.services.auto_strategy.models.strategy_gene import StrategyGene
 from app.services.ml.exceptions import MLFeatureError
 
 

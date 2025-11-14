@@ -3,10 +3,11 @@ TechnicalFeatureCalculatorの欠如メソッド検出テスト
 TDDアプローチによる問題特定と修正
 """
 
-import pytest
 from unittest.mock import Mock, patch
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import pytest
 
 from backend.app.services.ml.feature_engineering.technical_features import (
     TechnicalFeatureCalculator,
@@ -205,11 +206,11 @@ class TestCircularImportDetection:
 
         # 複数のサービスを同時にインポート
         try:
-            from backend.app.services.backtest.backtest_data_service import (
-                BacktestDataService,
-            )
             from backend.app.services.auto_strategy.services.auto_strategy_service import (
                 AutoStrategyService,
+            )
+            from backend.app.services.backtest.backtest_data_service import (
+                BacktestDataService,
             )
             from backend.app.services.ml.ml_training_service import MLTrainingService
 

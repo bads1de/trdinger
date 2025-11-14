@@ -7,14 +7,14 @@ import pytest
 pytestmark = pytest.mark.skip(
     reason="ExperimentPersistenceService implementation changed - methods need update"
 )
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
 
+from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.models.strategy_models import StrategyGene
 from app.services.auto_strategy.services.experiment_persistence_service import (
     ExperimentPersistenceService,
 )
-from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.models.strategy_models import StrategyGene
 
 
 class TestExperimentPersistenceService:

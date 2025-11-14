@@ -684,7 +684,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     )
                     logger.info(f"✅ プリセット使用: {label_config.default_preset}")
                     logger.info(f"   設定: {preset_info.get('description', 'N/A')}")
-                except ValueError as e:
+                except ValueError:
                     # プリセットが見つからない場合
                     available_presets = list(get_common_presets().keys())
                     logger.error(

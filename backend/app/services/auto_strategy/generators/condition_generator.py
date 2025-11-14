@@ -1,24 +1,24 @@
 import logging
 import random
-from typing import List, Tuple, Union, Dict, Optional
+from typing import Dict, List, Optional, Tuple, Union
+
+from app.services.backtest.backtest_service import BacktestService
+from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
+
 from ..constants import (
     IndicatorType,
 )
-from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
-from app.services.indicators.config import indicator_registry
-from app.services.backtest.backtest_service import BacktestService
-from ..utils.yaml_utils import YamlIndicatorUtils
 from ..core.condition_evolver import (
     ConditionEvolver,
-    YamlIndicatorUtils as CoreYamlIndicatorUtils,
 )
-
-from ..models.strategy_models import Condition, IndicatorGene, ConditionGroup
+from ..core.condition_evolver import YamlIndicatorUtils as CoreYamlIndicatorUtils
+from ..models.strategy_models import Condition, ConditionGroup, IndicatorGene
+from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
+from ..utils.yaml_utils import YamlIndicatorUtils
 from .strategies import (
     ComplexConditionsStrategy,
 )
-
 
 logger = logging.getLogger(__name__)
 

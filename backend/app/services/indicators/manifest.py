@@ -6,13 +6,12 @@ from typing import Any, Callable, Dict, Optional
 
 from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
+    IndicatorConfigRegistry,
     IndicatorResultType,
     IndicatorScaleType,
     ParameterConfig,
-    IndicatorConfigRegistry,
     indicator_registry,
 )
-
 
 logger = logging.getLogger(__name__)
 

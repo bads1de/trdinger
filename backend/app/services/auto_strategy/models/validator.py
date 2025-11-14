@@ -24,8 +24,8 @@ class GeneValidator:
     def __init__(self) -> None:
         """初期化"""
         from ..constants import (
-            OPERATORS,
             DATA_SOURCES,
+            OPERATORS,
         )
 
         # 定数ではなくユーティリティの動的取得を使用

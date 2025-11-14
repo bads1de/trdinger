@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.indicators.indicator_orchestrator import TechnicalIndicatorService
 from app.services.indicators.config.indicator_config import indicator_registry
+from app.services.indicators.indicator_orchestrator import TechnicalIndicatorService
 
 
 @pytest.fixture

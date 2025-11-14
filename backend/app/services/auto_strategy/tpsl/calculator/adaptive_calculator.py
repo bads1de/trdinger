@@ -12,8 +12,8 @@ from ...models.tpsl_result import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator
-from .volatility_calculator import VolatilityCalculator
 from .statistical_calculator import StatisticalCalculator
+from .volatility_calculator import VolatilityCalculator
 
 logger = logging.getLogger(__name__)
 

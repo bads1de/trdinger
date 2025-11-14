@@ -5,11 +5,11 @@
 """
 
 import logging
+from numbers import Real
 from typing import Any, Dict, List, Union
 
-import pandas as pd
 import numpy as np
-from numbers import Real
+import pandas as pd
 
 from app.utils.error_handler import safe_operation
 

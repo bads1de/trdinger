@@ -4,13 +4,12 @@ TP/SL 遺伝子
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Any
-
-from .enums import TPSLMethod
-from ..utils.gene_utils import BaseGene
-
 import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
+
+from ..utils.gene_utils import BaseGene
+from .enums import TPSLMethod
 
 logger = logging.getLogger(__name__)
 

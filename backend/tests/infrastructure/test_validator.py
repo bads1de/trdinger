@@ -2,8 +2,9 @@
 GeneValidatorのテスト
 """
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from app.services.auto_strategy.models.validator import GeneValidator
 

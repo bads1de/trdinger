@@ -7,7 +7,6 @@ ML関連サービス共通のログ出力機能を提供します。
 import json
 import logging
 from datetime import datetime
-
 from typing import Dict, Optional, TypeVar
 
 from ..config import ml_config

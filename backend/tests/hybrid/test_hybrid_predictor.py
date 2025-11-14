@@ -5,13 +5,14 @@ MLTrainingServiceを使用したバッチ予測のテスト
 TDD: テストファースト
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
 
-from app.services.ml.exceptions import MLPredictionError, MLModelError
+import numpy as np
+import pandas as pd
+import pytest
+
+from app.services.ml.exceptions import MLModelError, MLPredictionError
 
 
 class TestHybridPredictor:

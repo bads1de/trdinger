@@ -2,9 +2,10 @@
 相互作用特徴量計算のテスト（カラム名小文字統一対応）
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.feature_engineering.interaction_features import (
     InteractionFeatureCalculator,
 )

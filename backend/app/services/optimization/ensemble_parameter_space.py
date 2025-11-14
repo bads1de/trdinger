@@ -6,6 +6,7 @@
 """
 
 from typing import Any, Dict
+
 import optuna
 
 from .optuna_optimizer import ParameterSpace

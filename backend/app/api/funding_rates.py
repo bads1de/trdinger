@@ -10,12 +10,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_funding_rate_orchestration_service
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
-from app.api.dependencies import get_funding_rate_orchestration_service
 from app.utils.error_handler import ErrorHandler
-from database.connection import init_db, get_db
+from database.connection import get_db, init_db
 
 logger = logging.getLogger(__name__)
 

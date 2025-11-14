@@ -2,14 +2,15 @@
 オープンインタレストデータのリポジトリクラス
 """
 
-from typing import List, Optional
-from datetime import datetime
-from sqlalchemy.orm import Session
 import logging
+from datetime import datetime
+from typing import List, Optional
 
-from .base_repository import BaseRepository
+from sqlalchemy.orm import Session
+
 from database.models import OpenInterestData
 
+from .base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 

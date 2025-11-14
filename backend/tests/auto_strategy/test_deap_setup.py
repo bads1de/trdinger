@@ -4,13 +4,13 @@ DEAP環境初期化のテストモジュール
 DEAPSetupクラスの機能をテストする。
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from deap import base, creator, tools
 
-from app.services.auto_strategy.core.deap_setup import DEAPSetup
 from app.services.auto_strategy.config.ga_runtime import GAConfig
-
+from app.services.auto_strategy.core.deap_setup import DEAPSetup
 
 pytestmark = pytest.mark.skip(
     reason="DEAP creator mocking is complex - tests need integration test approach instead of unit test mocking"

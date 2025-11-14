@@ -4,11 +4,11 @@ OHLCVデータ取得スクリプト
 指定されたシンボルとタイムフレームの全期間データを取得します
 """
 
-import sys
-import os
-import asyncio
 import argparse
+import asyncio
 import logging
+import os
+import sys
 from datetime import datetime, timezone
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,11 +24,11 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
     logger.info(f"OHLCVデータ取得開始: {symbol} {timeframe}")
 
     try:
-        from database.connection import SessionLocal
-        from database.repositories.ohlcv_repository import OHLCVRepository
         from app.services.data_collection.historical.historical_data_service import (
             HistoricalDataService,
         )
+        from database.connection import SessionLocal
+        from database.repositories.ohlcv_repository import OHLCVRepository
 
         db = SessionLocal()
         try:

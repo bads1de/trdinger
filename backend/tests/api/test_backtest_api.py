@@ -12,8 +12,8 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.api.dependencies import get_backtest_orchestration_service, get_db
+from app.main import app
 
 
 @pytest.fixture

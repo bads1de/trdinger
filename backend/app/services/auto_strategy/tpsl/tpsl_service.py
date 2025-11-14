@@ -9,6 +9,7 @@ import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
+from ..models.strategy_models import TPSLGene, TPSLMethod
 from .calculator import (
     AdaptiveCalculator,
     FixedPercentageCalculator,
@@ -16,7 +17,6 @@ from .calculator import (
     StatisticalCalculator,
     VolatilityCalculator,
 )
-from ..models.strategy_models import TPSLGene, TPSLMethod
 
 logger = logging.getLogger(__name__)
 

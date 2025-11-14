@@ -7,13 +7,13 @@
 
 import logging
 from typing import Any, Dict, List
-import numpy as np
 
+import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
-from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import StrategyGene
+from ..serializers.gene_serialization import GeneSerializer
 
 logger = logging.getLogger(__name__)
 

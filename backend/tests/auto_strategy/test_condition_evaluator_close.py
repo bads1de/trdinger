@@ -3,15 +3,17 @@
 condition_evaluatorのcloseオペランド取得機能をテスト
 """
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import Mock
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.models.strategy_models import Condition
 

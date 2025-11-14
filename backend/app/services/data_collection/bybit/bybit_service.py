@@ -11,12 +11,12 @@ from typing import Any, Callable, Dict, List, Optional
 
 import ccxt
 
+from app.config.unified_config import unified_config
 from app.utils.error_handler import (
     DataError,
     ErrorHandler,
 )
 from database.connection import get_db
-from app.config.unified_config import unified_config
 
 logger = logging.getLogger(__name__)
 

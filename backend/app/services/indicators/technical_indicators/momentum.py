@@ -30,8 +30,8 @@
 - STOCHRSI (Stochastic RSI)
 """
 
-from typing import Optional, Tuple
 import logging
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd

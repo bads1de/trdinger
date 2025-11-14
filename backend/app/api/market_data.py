@@ -11,14 +11,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
-
+from app.api.dependencies import get_market_data_orchestration_service
 from app.config.unified_config import unified_config
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
-from app.api.dependencies import get_market_data_orchestration_service
 from app.utils.error_handler import ErrorHandler
-
 
 logger = logging.getLogger(__name__)
 

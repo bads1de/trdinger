@@ -2,26 +2,27 @@
 バックテストシステムの包括的テスト
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 from sqlalchemy.orm import Session
 
-from app.services.backtest.backtest_service import BacktestService
+from app.services.auto_strategy.services.regime_detector import RegimeDetector
 from app.services.backtest.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.conversion.backtest_result_converter import (
+    BacktestResultConverter,
+)
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from app.services.backtest.validation.backtest_config_validator import (
     BacktestConfigValidator,
 )
-from app.services.backtest.conversion.backtest_result_converter import (
-    BacktestResultConverter,
-)
-from app.services.auto_strategy.services.regime_detector import RegimeDetector
+from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.funding_rate_repository import FundingRateRepository
 
 
 class TestBacktestSystemComprehensive:

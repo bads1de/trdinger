@@ -3,10 +3,11 @@ BaseMLTrainerのdata_processor検証問題特定テスト
 TDDアプローチによる根本的問題の修正
 """
 
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
 

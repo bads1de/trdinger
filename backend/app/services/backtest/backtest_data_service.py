@@ -9,11 +9,10 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 import pandas as pd
 
+from app.utils.label_generation import EventDrivenLabelGenerator
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-
-from app.utils.label_generation import EventDrivenLabelGenerator
 
 # 循環インポート回避のため、型チェック時のみインポート
 if TYPE_CHECKING:

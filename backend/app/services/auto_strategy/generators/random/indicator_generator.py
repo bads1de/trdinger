@@ -7,11 +7,12 @@
 
 import logging
 import random
-from typing import List, Any
+from typing import Any, List
 
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
+
 from ...models.strategy_models import IndicatorGene
 from ...utils.indicator_utils import get_all_indicators
 from ..indicator_composition_service import IndicatorCompositionService

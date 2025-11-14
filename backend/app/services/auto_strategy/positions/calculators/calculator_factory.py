@@ -6,7 +6,6 @@
 
 from typing import Dict
 
-
 from .base_calculator import BaseCalculator
 from .fixed_quantity_calculator import FixedQuantityCalculator
 from .fixed_ratio_calculator import FixedRatioCalculator

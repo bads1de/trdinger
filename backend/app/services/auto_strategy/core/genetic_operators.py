@@ -14,11 +14,11 @@ import numpy as np
 
 from ..models.strategy_models import (
     StrategyGene,
-    crossover_tpsl_genes,
-    crossover_position_sizing_genes,
     create_random_tpsl_gene,
-    mutate_tpsl_gene,
+    crossover_position_sizing_genes,
+    crossover_tpsl_genes,
     mutate_position_sizing_gene,
+    mutate_tpsl_gene,
 )
 
 logger = logging.getLogger(__name__)
@@ -129,8 +129,8 @@ def _mutate_indicators(mutated, gene, mutation_rate):
 
         if len(mutated.indicators) < max_indicators and random.random() < 0.5:
             # 新しい指標を追加
-            from ..generators.random_gene_generator import RandomGeneGenerator
             from ..config import GAConfig
+            from ..generators.random_gene_generator import RandomGeneGenerator
 
             generator = RandomGeneGenerator(GAConfig())
             new_indicators = generator.indicator_generator.generate_random_indicators()

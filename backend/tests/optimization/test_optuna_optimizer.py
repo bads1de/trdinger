@@ -13,8 +13,8 @@ import optuna
 import pytest
 
 from app.services.optimization.optuna_optimizer import (
-    OptunaOptimizer,
     OptimizationResult,
+    OptunaOptimizer,
     ParameterSpace,
 )
 

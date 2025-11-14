@@ -8,8 +8,8 @@ import random
 from typing import Dict, List
 
 from ..utils.gene_utils import GeneticUtils
-from .tpsl_gene import TPSLGene
 from .position_sizing_gene import PositionSizingGene
+from .tpsl_gene import TPSLGene
 
 
 def mutate_position_sizing_gene(

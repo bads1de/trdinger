@@ -8,10 +8,7 @@ from typing import List
 
 import pandas as pd
 
-
 from app.utils.error_handler import safe_operation
-
-
 from database.models import (
     OHLCVData,
 )

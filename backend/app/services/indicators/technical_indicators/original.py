@@ -25,9 +25,8 @@ from typing import Final, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy import signal
-from scipy.fft import fft, ifft
-
+from scipy import signal as scipy_signal
+from scipy.fft import fft
 
 logger = logging.getLogger(__name__)
 
@@ -780,7 +779,6 @@ class OriginalIndicators:
 
                 # 差分と平均を組み合わせた特徴量
                 diff = np.mean(second_half) - np.mean(first_half)
-                avg = np.mean(window_data)
 
                 result[i] = diff * np.sqrt(len(window_data))
             else:
@@ -964,7 +962,7 @@ class OriginalIndicators:
             return np.array([])
 
         # ハミングウィンドウを適用
-        window = signal.windows.hamming(n)
+        window = scipy_signal.windows.hamming(n)
         windowed_prices = prices * window
 
         # FFTと周波数軸の計算
@@ -973,7 +971,7 @@ class OriginalIndicators:
         magnitude = np.abs(fft_result[: n // 2])
 
         # 主要ピークを検出
-        peaks, _ = signal.find_peaks(
+        peaks, _ = scipy_signal.find_peaks(
             magnitude[:max_freq], height=np.mean(magnitude[:max_freq])
         )
 
@@ -1056,8 +1054,6 @@ class OriginalIndicators:
 
         # 価格データの前処理
         prices = close.astype(float).to_numpy()
-        highs = high.astype(float).to_numpy()
-        lows = low.astype(float).to_numpy()
 
         result = np.empty_like(prices)
         result[:] = np.nan
@@ -1069,11 +1065,6 @@ class OriginalIndicators:
             # ローリングウインドウで分析
             window_start = i - length + 1
             price_window = prices[window_start : i + 1]
-            high_window = highs[window_start : i + 1]
-            low_window = lows[window_start : i + 1]
-
-            # 波動性を計算
-            volatility = (high_window - low_window) / price_window
 
             # 主要周波数を検出
             dominant_freqs = OriginalIndicators._find_dominant_frequencies(price_window)
@@ -1096,8 +1087,10 @@ class OriginalIndicators:
                     highcut = min(freq * 1.2, nyquist * 0.9)
 
                     if lowcut < highcut:
-                        b, a = signal.butter(3, [lowcut, highcut], btype="band", fs=1.0)
-                        filtered = signal.filtfilt(b, a, price_window)
+                        b, a = scipy_signal.butter(
+                            3, [lowcut, highcut], btype="band", fs=1.0
+                        )
+                        filtered = scipy_signal.filtfilt(b, a, price_window)
 
                         # 共振強度を計算
                         correlation = (
@@ -1313,8 +1306,6 @@ class OriginalIndicators:
 
         # 価格データの前処理
         prices = close.astype(float).to_numpy()
-        highs = high.astype(float).to_numpy()
-        lows = low.astype(float).to_numpy()
         volumes = volume.astype(float).to_numpy()
 
         result = np.empty_like(prices)
@@ -1327,8 +1318,6 @@ class OriginalIndicators:
             # ローリングウインドウで分析
             window_start = i - length + 1
             price_window = prices[window_start : i + 1]
-            high_window = highs[window_start : i + 1]
-            low_window = lows[window_start : i + 1]
             volume_window = volumes[window_start : i + 1]
 
             # 基本統計量の計算

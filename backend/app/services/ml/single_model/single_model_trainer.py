@@ -11,8 +11,8 @@ from typing import Any, Dict, Optional, cast
 import numpy as np
 import pandas as pd
 
-from ..exceptions import MLModelError
 from ..base_ml_trainer import BaseMLTrainer
+from ..exceptions import MLModelError
 
 logger = logging.getLogger(__name__)
 

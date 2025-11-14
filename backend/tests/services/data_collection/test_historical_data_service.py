@@ -9,10 +9,11 @@ HistoricalDataServiceクラスの全機能をテストします:
 - エラーハンドリング
 """
 
-import ccxt
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import ccxt
+import pytest
 
 from app.services.data_collection.historical.historical_data_service import (
     HistoricalDataService,

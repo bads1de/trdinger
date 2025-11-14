@@ -10,6 +10,7 @@ from typing import List
 
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
+
 from ...core.operand_grouping import operand_grouping_system
 from ...utils.indicator_utils import get_all_indicators
 

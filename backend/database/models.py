@@ -3,18 +3,19 @@
 """
 
 from sqlalchemy import (
+    JSON,
     Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
     Integer,
     String,
-    Float,
-    DateTime,
-    Index,
     Text,
-    JSON,
-    ForeignKey,
 )
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from .connection import Base
 
 

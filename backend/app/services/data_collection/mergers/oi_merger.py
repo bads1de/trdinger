@@ -5,12 +5,12 @@ Open Interest データのマージロジックを提供します。
 """
 
 import logging
-from app.utils.error_handler import ErrorHandler
 from datetime import datetime
 from typing import List
 
 import pandas as pd
 
+from app.utils.error_handler import ErrorHandler
 from database.models import OpenInterestData
 from database.repositories.open_interest_repository import OpenInterestRepository
 

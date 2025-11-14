@@ -28,9 +28,9 @@ class GeneSerializer:
         """
         # コンポーネントの初期化
         from .dict_converter import DictConverter
-        from .list_encoder import ListEncoder
-        from .list_decoder import ListDecoder
         from .json_converter import JsonConverter
+        from .list_decoder import ListDecoder
+        from .list_encoder import ListEncoder
 
         self.dict_converter = DictConverter(enable_smart_generation)
         self.list_encoder = ListEncoder()

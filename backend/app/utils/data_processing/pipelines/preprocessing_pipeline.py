@@ -8,19 +8,17 @@ dtype最適化のための複数のトランスフォーマーを組み合わせ
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer
-
 # パイプラインのための簡略化されたトランスフォーマー
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import IsolationForest
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder
 
 
 class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):

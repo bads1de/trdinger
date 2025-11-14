@@ -8,7 +8,6 @@
 
 import logging
 import threading
-
 import warnings
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -26,9 +25,9 @@ from sklearn.metrics import (
     confusion_matrix,
     log_loss,
     matthews_corrcoef,
+    multilabel_confusion_matrix,
     precision_recall_fscore_support,
     roc_auc_score,
-    multilabel_confusion_matrix,
 )
 
 from app.utils.error_handler import safe_operation

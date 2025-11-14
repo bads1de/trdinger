@@ -5,8 +5,8 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import List, Tuple, TypeAlias
-from ...models.strategy_models import IndicatorGene, Condition
 
+from ...models.strategy_models import Condition, IndicatorGene
 
 ConditionList: TypeAlias = List[Condition]
 

@@ -10,9 +10,9 @@ from typing import List
 
 import pandas as pd
 
+from app.utils.error_handler import ErrorHandler
 from database.models import FundingRateData
 from database.repositories.funding_rate_repository import FundingRateRepository
-from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 

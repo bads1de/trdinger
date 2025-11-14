@@ -7,31 +7,27 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 
 import logging
 import random
-from typing import List, Union, cast, Any
-
+from typing import Any, List, Union, cast
 
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
-from ..serializers.gene_serialization import GeneSerializer
 from ..models.strategy_models import (
     Condition,
     ConditionGroup,
     IndicatorGene,
-    StrategyGene,
     PositionSizingGene,
     PositionSizingMethod,
+    StrategyGene,
     TPSLGene,
 )
-
+from ..serializers.gene_serialization import GeneSerializer
 from .condition_generator import ConditionGenerator
-
-
-from .random.indicator_generator import IndicatorGenerator
 from .random.condition_generator import ConditionGenerator as RandomConditionGenerator
-from .random.tpsl_generator import TPSLGenerator
-from .random.position_sizing_generator import PositionSizingGenerator
+from .random.indicator_generator import IndicatorGenerator
 from .random.operand_generator import OperandGenerator
+from .random.position_sizing_generator import PositionSizingGenerator
+from .random.tpsl_generator import TPSLGenerator
 
 logger = logging.getLogger(__name__)
 

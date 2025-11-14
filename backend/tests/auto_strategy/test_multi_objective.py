@@ -4,12 +4,13 @@
 EvolutionRunnerの多目的最適化機能をテストする。
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import numpy as np
+from unittest.mock import MagicMock, Mock, patch
 
-from app.services.auto_strategy.core.evolution_runner import EvolutionRunner
+import numpy as np
+import pytest
+
 from app.services.auto_strategy.config.ga_runtime import GAConfig
+from app.services.auto_strategy.core.evolution_runner import EvolutionRunner
 
 
 class TestEvolutionRunnerMultiObjective:

@@ -4,17 +4,16 @@ IndicatorSettingsクラス
 テクニカル指標設定を管理します。
 """
 
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from dataclasses import dataclass, field
-
-from .base import BaseConfig
 from ..constants import (
-    OPERATORS,
     DATA_SOURCES,
+    OPERATORS,
 )
 from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
 from ..utils.indicator_utils import get_valid_indicator_types
+from .base import BaseConfig
 
 
 @dataclass

@@ -7,7 +7,6 @@ JSON変換コンポーネント
 import json
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -3,15 +3,17 @@ IndicatorCompositionService
 ロジックをRandomGeneGeneratorから分離し、指標の構成を責任とするサービス。
 """
 
-import random
 import logging
+import random
 from typing import List
+
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
+
 from ..constants import (
+    MA_INDICATORS_NEEDING_PERIOD,
     MOVING_AVERAGE_INDICATORS,
     PREFERRED_MA_INDICATORS,
-    MA_INDICATORS_NEEDING_PERIOD,
 )
 from ..models.strategy_models import IndicatorGene
 

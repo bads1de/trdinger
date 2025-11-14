@@ -2,16 +2,17 @@
 OHLCV データのリポジトリクラス
 """
 
-from typing import List, Optional, Dict, Any
-from datetime import datetime
-from sqlalchemy.orm import Session
-import pandas as pd
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
+from sqlalchemy.orm import Session
+
+from app.utils.data_validation import DataValidator
+from database.models import OHLCVData
 
 from .base_repository import BaseRepository
-from database.models import OHLCVData
-from app.utils.data_validation import DataValidator
-
 
 logger = logging.getLogger(__name__)
 

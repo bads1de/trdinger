@@ -11,7 +11,6 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
-
 from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)

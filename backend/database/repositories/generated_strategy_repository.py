@@ -4,13 +4,15 @@
 GAによって生成された戦略の永続化処理を管理します。
 """
 
-from typing import List, Optional, Dict, Any, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, cast, Float
 import logging
+from typing import Any, Dict, List, Optional, Tuple
+
+from sqlalchemy import Float, cast, desc
+from sqlalchemy.orm import Session
+
+from database.models import GeneratedStrategy
 
 from .base_repository import BaseRepository
-from database.models import GeneratedStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -234,8 +236,8 @@ class GeneratedStrategyRepository(BaseRepository):
         """
         フィルタリングとソートを適用して戦略を取得
         """
-        from database.models import BacktestResult
         from app.utils.error_handler import safe_operation
+        from database.models import BacktestResult
 
         @safe_operation(
             context="フィルタリング戦略取得", is_api_call=False, default_return=(0, [])

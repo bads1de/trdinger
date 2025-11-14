@@ -7,9 +7,8 @@ BaseConfigクラス
 import json
 import logging
 from abc import ABC
-from dataclasses import dataclass, field, fields, MISSING
+from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Dict, List, Tuple
-
 
 logger = logging.getLogger(__name__)
 

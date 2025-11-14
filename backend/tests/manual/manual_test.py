@@ -4,19 +4,20 @@
 自動テストが通らない場合のデバッグ用
 """
 
-import pandas as pd
-import numpy as np
-import sys
 import os
+import sys
+
+import numpy as np
+import pandas as pd
 
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.utils.data_processing.validators.data_validator import validate_data_integrity
-from app.services.ml.feature_engineering.price_features import PriceFeatureCalculator
 from app.services.ml.feature_engineering.base_feature_calculator import (
     BaseFeatureCalculator,
 )
+from app.services.ml.feature_engineering.price_features import PriceFeatureCalculator
+from app.utils.data_processing.validators.data_validator import validate_data_integrity
 
 
 def test_timestamp_validation():

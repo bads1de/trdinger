@@ -21,8 +21,8 @@
 - VORTEX (Vortex Indicator)
 """
 
-import warnings
 import logging
+import warnings
 from typing import Tuple
 
 import numpy as np
@@ -30,7 +30,6 @@ import pandas as pd
 import pandas_ta as ta
 
 from ..utils import handle_pandas_ta_errors
-
 
 logger = logging.getLogger(__name__)
 

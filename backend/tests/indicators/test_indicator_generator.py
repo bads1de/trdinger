@@ -1,7 +1,8 @@
 """IndicatorGeneratorのテスト"""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from app.services.auto_strategy.generators.random.indicator_generator import (
     IndicatorGenerator,

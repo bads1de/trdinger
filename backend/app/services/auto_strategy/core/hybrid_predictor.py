@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app.services.ml.exceptions import MLPredictionError
+
 from .drl_policy_adapter import DRLPolicyAdapter
 
 logger = logging.getLogger(__name__)

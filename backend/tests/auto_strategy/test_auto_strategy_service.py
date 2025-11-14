@@ -1,14 +1,14 @@
 import unittest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import BackgroundTasks
 from fastapi.exceptions import HTTPException
 
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.services.auto_strategy_service import (
     AutoStrategyService,
 )
-from app.services.auto_strategy.config import GAConfig
 
 
 @pytest.fixture

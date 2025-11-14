@@ -6,9 +6,7 @@
 
 import logging
 from datetime import datetime, timezone
-
 from typing import Any, Dict, List
-
 
 logger = logging.getLogger(__name__)
 

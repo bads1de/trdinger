@@ -7,7 +7,6 @@
 import logging
 from typing import List
 
-
 from ..utils.gene_utils import GeneUtils
 
 logger = logging.getLogger(__name__)

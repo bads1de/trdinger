@@ -2,10 +2,12 @@
 DataFrameのfragmentation修正前後のパフォーマンス比較テスト
 """
 
-import pandas as pd
-import numpy as np
 import time
 from datetime import datetime
+
+import numpy as np
+import pandas as pd
+
 from app.services.ml.feature_engineering.advanced_features import (
     AdvancedFeatureEngineer,
 )

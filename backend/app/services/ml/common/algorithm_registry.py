@@ -8,7 +8,6 @@ MLモデルのアルゴリズム名を一元管理するクラスを提供しま
 
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 

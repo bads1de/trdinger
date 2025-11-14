@@ -12,16 +12,14 @@ import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
 
-from .transformers.dtype_optimizer import DtypeOptimizer
-
-from .pipelines.preprocessing_pipeline import get_pipeline_info
-from .pipelines.ml_pipeline import create_ml_pipeline
 from .pipelines.comprehensive_pipeline import create_comprehensive_pipeline
-
+from .pipelines.ml_pipeline import create_ml_pipeline
+from .pipelines.preprocessing_pipeline import get_pipeline_info
+from .transformers.dtype_optimizer import DtypeOptimizer
 from .validators.data_validator import (
-    validate_ohlcv_data,
-    validate_extended_data,
     validate_data_integrity,
+    validate_extended_data,
+    validate_ohlcv_data,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,7 +82,6 @@ class DataProcessor:
 
             # 必要なカラムに基づいて検証を実行
             if not result_df.empty:
-                ok_columns = {"open", "high", "low", "close", "volume"}
                 if any(col in required_columns for col in ohlcv_columns):
                     validate_ohlcv_data(result_df)
                 validate_extended_data(result_df)
@@ -491,11 +488,6 @@ class DataProcessor:
 
             # 常にクリップを実行（範囲外値がなくてもNaN/infの処理のため）
             result_df["funding_rate"] = np.clip(funding_rate_clean.fillna(0), -1, 1)
-
-            # 修正後の範囲外値をカウント
-            below_min_after = (result_df["funding_rate"] < -1).sum()
-            above_max_after = (result_df["funding_rate"] > 1).sum()
-            after_count = below_min_after + above_max_after
 
             if before_count > 0:
                 logger.info(f"範囲外値を修正: {before_count}件")

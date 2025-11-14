@@ -29,10 +29,9 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from .config import IndicatorConfig, indicator_registry, IndicatorResultType
-from .data_validation import validate_data_length_with_fallback, create_nan_result
+from .config import IndicatorConfig, IndicatorResultType, indicator_registry
 from .config.indicator_config import POSITIONAL_DATA_FUNCTIONS
-
+from .data_validation import create_nan_result, validate_data_length_with_fallback
 
 logger = logging.getLogger(__name__)
 

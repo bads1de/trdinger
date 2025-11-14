@@ -7,6 +7,7 @@
 import logging
 import random
 from typing import Any, Dict
+
 from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
 )

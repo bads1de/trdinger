@@ -8,10 +8,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .condition import Condition, ConditionGroup
-from .indicator_gene import IndicatorGene
-from .tpsl_gene import TPSLGene
-from .position_sizing_gene import PositionSizingGene
 from .enums import PositionSizingMethod
+from .indicator_gene import IndicatorGene
+from .position_sizing_gene import PositionSizingGene
+from .tpsl_gene import TPSLGene
 
 
 @dataclass

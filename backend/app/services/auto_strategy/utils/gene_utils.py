@@ -6,10 +6,10 @@ auto_strategy全体で使用される遺伝子関連の共通機能を提供し�
 
 import logging
 import random
-from typing import Any, Dict, List, Optional, Union, Tuple
-from datetime import datetime
-from abc import ABC, abstractmethod
 import uuid
+from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -395,11 +395,11 @@ class GeneUtils:
             # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
             # ここでは基本的な構造のみを提供
             from ..models.strategy_models import (
-                IndicatorGene,
                 Condition,
-                TPSLGene,
+                IndicatorGene,
                 PositionSizingGene,
                 PositionSizingMethod,
+                TPSLGene,
             )
 
             indicators = [

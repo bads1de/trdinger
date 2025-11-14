@@ -5,21 +5,21 @@
 """
 
 import logging
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
 
-from .market_regime_detector import (
-    MarketRegimeDetector,
-    MarketRegime,
-    RegimeDetectionResult,
-    RegimeDetectionMethod,
-)
-
-from ..ml_training_service import MLTrainingService
 from ....utils.error_handler import safe_ml_operation
+from ..ml_training_service import MLTrainingService
+from .market_regime_detector import (
+    MarketRegime,
+    MarketRegimeDetector,
+    RegimeDetectionMethod,
+    RegimeDetectionResult,
+)
 
 logger = logging.getLogger(__name__)
 

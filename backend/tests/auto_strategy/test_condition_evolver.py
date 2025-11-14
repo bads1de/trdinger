@@ -5,17 +5,18 @@ ConditionEvolver統合テスト - TDDアプローチ
 import pytest
 
 pytestmark = pytest.mark.skip(reason="ConditionEvolver implementation changed")
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
+from typing import Any, Dict
 from unittest.mock import Mock, patch
-from typing import Dict, Any
+
+import numpy as np
+import pandas as pd
 
 from app.services.auto_strategy.core.condition_evolver import (
-    ConditionEvolver,
-    YamlIndicatorUtils,
     Condition,
+    ConditionEvolver,
     EvolutionConfig,
+    YamlIndicatorUtils,
 )
 from app.services.backtest.backtest_service import BacktestService
 

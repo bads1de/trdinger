@@ -9,23 +9,9 @@ from __future__ import annotations
 
 # Core models
 from .condition import Condition, ConditionGroup
-from .indicator_gene import IndicatorGene
-from .position_sizing_gene import PositionSizingGene
-from .tpsl_gene import TPSLGene
-from .strategy_gene import StrategyGene
-from .tpsl_result import TPSLResult
 
 # Enums
 from .enums import PositionSizingMethod, TPSLMethod
-
-# Validator
-from .validator import GeneValidator
-
-# Utilities
-from .gene_random import (
-    create_random_position_sizing_gene,
-    create_random_tpsl_gene,
-)
 from .gene_crossover import (
     crossover_position_sizing_genes,
     crossover_tpsl_genes,
@@ -34,6 +20,20 @@ from .gene_mutation import (
     mutate_position_sizing_gene,
     mutate_tpsl_gene,
 )
+
+# Utilities
+from .gene_random import (
+    create_random_position_sizing_gene,
+    create_random_tpsl_gene,
+)
+from .indicator_gene import IndicatorGene
+from .position_sizing_gene import PositionSizingGene
+from .strategy_gene import StrategyGene
+from .tpsl_gene import TPSLGene
+from .tpsl_result import TPSLResult
+
+# Validator
+from .validator import GeneValidator
 
 __all__ = [
     # Core models

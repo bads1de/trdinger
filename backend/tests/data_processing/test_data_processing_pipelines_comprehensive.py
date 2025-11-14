@@ -7,27 +7,28 @@ import pytest
 # DataTypeOptimizerが未実装のためスキップ
 pytestmark = pytest.mark.skip(reason="DataTypeOptimizer not implemented")
 
-from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
-import numpy as np
 import warnings
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pandas as pd
 
 from app.utils.data_processing.data_processor import DataProcessor
-from app.utils.data_processing.pipelines.preprocessing_pipeline import (
-    create_preprocessing_pipeline,
-)
 from app.utils.data_processing.pipelines.comprehensive_pipeline import (
     create_comprehensive_pipeline,
 )
-from app.utils.data_processing.validators.data_validator import (
-    validate_ohlcv_data,
-    validate_extended_data,
-    validate_data_integrity,
+from app.utils.data_processing.pipelines.preprocessing_pipeline import (
+    create_preprocessing_pipeline,
 )
-from app.utils.data_processing.transformers.outlier_remover import OutlierRemover
-from app.utils.data_processing.transformers.data_imputer import DataImputer
 from app.utils.data_processing.transformers.categorical_encoder import (
     CategoricalEncoder,
+)
+from app.utils.data_processing.transformers.data_imputer import DataImputer
+from app.utils.data_processing.transformers.outlier_remover import OutlierRemover
+from app.utils.data_processing.validators.data_validator import (
+    validate_data_integrity,
+    validate_extended_data,
+    validate_ohlcv_data,
 )
 
 

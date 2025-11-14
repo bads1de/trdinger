@@ -1,8 +1,9 @@
 import pytest
+
+from backend.app.services.auto_strategy.config.ga import GASettings
 from backend.app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from backend.app.services.auto_strategy.config.ga import GASettings
 
 
 class TestRandomGeneGenerator:

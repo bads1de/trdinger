@@ -3,20 +3,21 @@
 統合設定システムの包括的テスト
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import tempfile
 import os
-from typing import Dict, Any, List
+import tempfile
+from typing import Any, Dict, List
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 from app.config.unified_config import (
-    unified_config,
-    GAConfig,
     AutoStrategyConfig,
-    MLConfig,
-    MarketConfig,
     BacktestConfig,
+    GAConfig,
     LoggingConfig,
+    MarketConfig,
+    MLConfig,
+    unified_config,
 )
 
 # from app.config.config_loader import ConfigLoader  # 存在しないモジュールのためコメントアウト

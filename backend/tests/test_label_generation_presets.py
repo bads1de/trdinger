@@ -9,21 +9,21 @@
 5. BaseMLTrainer._prepare_training_data統合
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any
+from typing import Any, Dict
+from unittest.mock import MagicMock, Mock, patch
 
+import numpy as np
+import pandas as pd
+import pytest
+
+from app.config.unified_config import LabelGenerationConfig
+from app.utils.label_generation.enums import ThresholdMethod
 from app.utils.label_generation.presets import (
+    SUPPORTED_TIMEFRAMES,
+    apply_preset_by_name,
     forward_classification_preset,
     get_common_presets,
-    apply_preset_by_name,
-    SUPPORTED_TIMEFRAMES,
 )
-from app.utils.label_generation.enums import ThresholdMethod
-from app.config.unified_config import LabelGenerationConfig
-
 
 # ============================================================================
 # フィクスチャ: テストデータ生成

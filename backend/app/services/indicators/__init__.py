@@ -5,8 +5,10 @@
 新しいnumpy配列ベースのオートストラテジー最適化版も含みます。
 """
 
+from .data_validation import (
+    validate_data_length_with_fallback,
+)
 from .indicator_orchestrator import TechnicalIndicatorService
-
 from .technical_indicators.momentum import MomentumIndicators
 from .technical_indicators.trend import TrendIndicators
 from .technical_indicators.volatility import VolatilityIndicators
@@ -14,9 +16,6 @@ from .technical_indicators.volume import VolumeIndicators
 from .utils import (
     PandasTAError,
     validate_input,
-)
-from .data_validation import (
-    validate_data_length_with_fallback,
 )
 
 # 公開API

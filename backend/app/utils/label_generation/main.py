@@ -12,7 +12,6 @@ import pandas as pd
 from .enums import ThresholdMethod
 from .threshold import ThresholdCalculator
 
-
 logger = logging.getLogger(__name__)
 
 

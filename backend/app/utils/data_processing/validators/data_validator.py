@@ -1,5 +1,6 @@
-import pandas as pd
 from typing import Sequence
+
+import pandas as pd
 
 
 def _validate_empty_data(df: pd.DataFrame) -> bool:

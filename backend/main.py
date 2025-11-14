@@ -6,7 +6,9 @@ Trdinger Trading API を起動します。
 
 import os
 import sys
+
 import uvicorn
+
 from app.config.unified_config import unified_config
 
 # Pythonパス調整（プロダクションモードでのインポート問題を解決）

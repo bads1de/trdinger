@@ -14,8 +14,8 @@ from app.api.dependencies import (
     get_auto_strategy_service,
 )
 from app.services.auto_strategy import AutoStrategyService
-from app.utils.response import api_response, error_response
 from app.utils.error_handler import ErrorHandler
+from app.utils.response import api_response, error_response
 
 logger = logging.getLogger(__name__)
 

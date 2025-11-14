@@ -8,13 +8,13 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
-from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import KBinsDiscretizer
 
+from .enums import ThresholdMethod  # noqa: F401
+from .main import LabelGenerator  # noqa: F401
 from .transformer import PriceChangeTransformer
-from .main import LabelGenerator
-from .enums import ThresholdMethod
 
 logger = logging.getLogger(__name__)
 

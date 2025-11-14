@@ -2,14 +2,15 @@
 StrategyFactory のテスト
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from backtesting import Strategy
 
 from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
 from app.services.auto_strategy.models.strategy_models import (
-    StrategyGene,
     IndicatorGene,
+    StrategyGene,
 )
 
 

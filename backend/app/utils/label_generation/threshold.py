@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import KBinsDiscretizer
 
-
 from .enums import ThresholdMethod
 
 logger = logging.getLogger(__name__)

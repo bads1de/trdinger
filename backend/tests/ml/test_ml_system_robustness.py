@@ -2,22 +2,23 @@
 MLシステム包括的テスト - 潜在的問題と堅牢性を検証
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import tempfile
-import os
 import gc
+import os
+import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
 
-from backend.app.services.ml.ml_training_service import MLTrainingService
+import numpy as np
+import pandas as pd
+import pytest
+
 from backend.app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
-from backend.app.services.ml.exceptions import MLPredictionError, MLModelError
+from backend.app.services.ml.exceptions import MLModelError, MLPredictionError
+from backend.app.services.ml.ml_training_service import MLTrainingService
 from backend.app.services.ml.model_manager import model_manager
 
 

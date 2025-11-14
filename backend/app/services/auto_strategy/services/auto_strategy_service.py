@@ -11,10 +11,10 @@ from fastapi import BackgroundTasks
 
 from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
-from ..constants import DEFAULT_SYMBOL
 
-from .experiment_manager import ExperimentManager
 from ..config import GAConfig
+from ..constants import DEFAULT_SYMBOL
+from .experiment_manager import ExperimentManager
 from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)

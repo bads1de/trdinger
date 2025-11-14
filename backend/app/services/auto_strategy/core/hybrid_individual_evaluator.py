@@ -8,12 +8,12 @@ import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
-from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
 from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
+from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
 from app.services.auto_strategy.models.strategy_gene import StrategyGene
 from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer
 from app.services.backtest.backtest_service import BacktestService
-from app.services.ml.exceptions import MLTrainingError, MLPredictionError
+from app.services.ml.exceptions import MLPredictionError, MLTrainingError
 
 logger = logging.getLogger(__name__)
 

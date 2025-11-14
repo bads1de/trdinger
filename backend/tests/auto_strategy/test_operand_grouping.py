@@ -4,15 +4,16 @@
 OperandGroupingSystemの機能をテストする。
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import patch, Mock
 
 from backend.app.services.auto_strategy.core.operand_grouping import (
-    OperandGroupingSystem,
     OperandGroup,
-    operand_grouping_system,
-    get_operand_group,
+    OperandGroupingSystem,
     get_compatibility_score,
+    get_operand_group,
+    operand_grouping_system,
     validate_condition,
 )
 

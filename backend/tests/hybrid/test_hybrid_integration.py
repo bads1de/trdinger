@@ -4,13 +4,14 @@
 ハイブリッドGA+ML統合機能をテストする。
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
-import numpy as np
+from unittest.mock import MagicMock, Mock, patch
 
-from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.auto_strategy.config.ga import GASettings
+from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
 
 
 @pytest.mark.skip(reason="GASettings schema changed - no hybrid_mode field")

@@ -2,10 +2,12 @@
 BaseGeneクラスのテスト
 """
 
-import pytest
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any
+from typing import Any, Dict
+
+import pytest
+
 from app.services.auto_strategy.utils.gene_utils import BaseGene
 
 

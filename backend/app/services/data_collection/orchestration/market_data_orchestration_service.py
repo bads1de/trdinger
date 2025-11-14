@@ -8,8 +8,8 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.response import api_response
 from app.utils.data_conversion import OHLCVDataConverter
+from app.utils.response import api_response
 from database.repositories.ohlcv_repository import OHLCVRepository
 
 logger = logging.getLogger(__name__)

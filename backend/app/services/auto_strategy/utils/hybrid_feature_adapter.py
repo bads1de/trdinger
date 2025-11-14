@@ -5,12 +5,12 @@ StrategyGene → ML特徴量DataFrame変換を担当
 GA + ML ハイブリッドアプローチの特徴量エンジニアリング
 """
 
-import logging
 import hashlib
+import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from app.services.auto_strategy.models.strategy_gene import StrategyGene
 from app.services.ml.exceptions import MLFeatureError

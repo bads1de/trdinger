@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.dependencies import get_db, get_funding_rate_orchestration_service
 from app.main import app
-from app.api.dependencies import get_funding_rate_orchestration_service, get_db
 
 
 @pytest.fixture

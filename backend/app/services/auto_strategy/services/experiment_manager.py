@@ -9,10 +9,10 @@ from typing import Any, Dict, Optional
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..core.ga_engine import GeneticAlgorithmEngine
-from ..generators.strategy_factory import StrategyFactory
-from ..generators.random_gene_generator import RandomGeneGenerator
 from ..config.ga_runtime import GAConfig
+from ..core.ga_engine import GeneticAlgorithmEngine
+from ..generators.random_gene_generator import RandomGeneGenerator
+from ..generators.strategy_factory import StrategyFactory
 from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)

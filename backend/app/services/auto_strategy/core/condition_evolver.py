@@ -8,17 +8,16 @@ YAML設定ファイルから指標情報を読み込み、DEAPベースのGAエ�
 
 import logging
 import random
-import yaml
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
+import yaml
 from deap import base, creator, tools
 
 from app.services.backtest.backtest_service import BacktestService
-
-from app.utils.error_handler import safe_operation
 from app.services.indicators.manifest import manifest_to_yaml_dict
+from app.utils.error_handler import safe_operation
 
 logger = logging.getLogger(__name__)
 

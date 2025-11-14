@@ -3,9 +3,9 @@ timestamp検証エラー特定テスト
 TDDアプローチによるデータパイプライン問題の修正
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 from backend.app.utils.data_processing.validators.data_validator import (
     validate_data_integrity,

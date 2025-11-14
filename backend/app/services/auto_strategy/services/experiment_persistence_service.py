@@ -7,7 +7,6 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
-
 from sqlalchemy.orm import Session
 
 from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer

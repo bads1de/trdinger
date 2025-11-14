@@ -11,12 +11,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_open_interest_orchestration_service
 from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
-from app.api.dependencies import get_open_interest_orchestration_service
 from app.utils.error_handler import ErrorHandler
-from database.connection import init_db, get_db
+from database.connection import get_db, init_db
 
 logger = logging.getLogger(__name__)
 

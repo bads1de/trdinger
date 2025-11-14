@@ -3,7 +3,11 @@
 Note: 旧 OriginalIndicators 実装に依存しており、現行コードベースでは無効のためスキップ。
 """
 
+import numpy as np
+import pandas as pd
 import pytest
+
+from app.services.indicators.technical_indicators.original import OriginalIndicators
 
 pytestmark = pytest.mark.skip(
     reason="Depends on removed backend.app.services.original. Skipped as legacy test."

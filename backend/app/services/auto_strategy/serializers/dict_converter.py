@@ -5,21 +5,20 @@
 """
 
 import logging
+import uuid
 from typing import Any, Dict, Optional
-
 
 from ..models.strategy_models import (
     Condition,
     IndicatorGene,
-    TPSLGene,
     PositionSizingGene,
+    TPSLGene,
 )
+from ..utils.gene_utils import GeneUtils
 from ..utils.indicator_utils import (
     get_all_indicator_ids,
     get_id_to_indicator_mapping,
 )
-from ..utils.gene_utils import GeneUtils
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +179,7 @@ class DictConverter:
     def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
         """Condition または ConditionGroup を辞書に変換"""
         try:
-            from ..models.strategy_models import ConditionGroup, Condition
+            from ..models.strategy_models import Condition, ConditionGroup
 
             if isinstance(obj, ConditionGroup):
                 return {

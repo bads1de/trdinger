@@ -7,9 +7,9 @@
 import logging
 
 from ...models.strategy_models import (
-    create_random_position_sizing_gene,
     PositionSizingGene,
     PositionSizingMethod,
+    create_random_position_sizing_gene,
 )
 
 logger = logging.getLogger(__name__)

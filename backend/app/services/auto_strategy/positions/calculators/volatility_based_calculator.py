@@ -5,11 +5,11 @@
 import logging
 from typing import Any, Dict, List
 
-from .base_calculator import BaseCalculator
 from ..risk_metrics import (
     calculate_expected_shortfall,
     calculate_historical_var,
 )
+from .base_calculator import BaseCalculator
 
 logger = logging.getLogger(__name__)
 

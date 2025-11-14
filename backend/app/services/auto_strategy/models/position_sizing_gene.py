@@ -7,8 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from .enums import PositionSizingMethod
 from ..utils.gene_utils import BaseGene
+from .enums import PositionSizingMethod
 
 
 @dataclass

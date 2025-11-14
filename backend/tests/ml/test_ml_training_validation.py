@@ -2,20 +2,21 @@
 MLトレーニング検証テスト - 実際のトレーニング実行と問題検出を重視
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import tempfile
-import os
 import gc
+import os
+import tempfile
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
 
+import numpy as np
+import pandas as pd
+import pytest
+
+from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
 from backend.app.services.ml.ml_training_service import MLTrainingService
 from backend.app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
-from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
 
 
 @pytest.mark.skip(reason="MLトレーニング検証は実装が不完全。実装完了後に有効化")

@@ -12,8 +12,8 @@ from fastapi import HTTPException
 
 from app.services.ml.config.ml_config_manager import ml_config_manager
 from app.services.ml.model_manager import model_manager
-from app.utils.response import api_response
 from app.utils.error_handler import ErrorHandler
+from app.utils.response import api_response
 
 logger = logging.getLogger(__name__)
 

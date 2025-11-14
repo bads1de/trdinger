@@ -7,33 +7,34 @@ import pytest
 pytestmark = pytest.mark.skip(
     reason="GA implementation changed - bug detection tests need update"
 )
-from unittest.mock import Mock, patch, MagicMock
+import random
+from unittest.mock import MagicMock, Mock, patch
+
 import numpy as np
 from deap import base, creator, tools
-import random
 
 from app.services.auto_strategy.config.ga import GASettings as GAConfig
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.models.strategy_models import (
-    StrategyGene,
-    IndicatorGene,
-    Condition,
-    TPSLGene,
-)
 from app.services.auto_strategy.core.genetic_operators import (
-    crossover_strategy_genes_pure,
-    mutate_strategy_gene_pure,
-    uniform_crossover,
-    _crossover_tpsl_genes,
     _crossover_position_sizing_genes,
-    _mutate_indicators,
+    _crossover_tpsl_genes,
     _mutate_conditions,
+    _mutate_indicators,
     adaptive_mutate_strategy_gene_pure,
     create_deap_crossover_wrapper,
     create_deap_mutate_wrapper,
+    crossover_strategy_genes_pure,
+    mutate_strategy_gene_pure,
+    uniform_crossover,
 )
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
+)
+from app.services.auto_strategy.models.strategy_models import (
+    Condition,
+    IndicatorGene,
+    StrategyGene,
+    TPSLGene,
 )
 
 

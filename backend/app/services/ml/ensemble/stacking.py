@@ -318,9 +318,10 @@ class StackingEnsemble(BaseEnsemble):
             return saved_paths
 
         try:
-            import joblib
             import os
             from datetime import datetime
+
+            import joblib
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             model_path = f"{base_path}_stacking_classifier_{timestamp}.pkl"
@@ -370,10 +371,11 @@ class StackingEnsemble(BaseEnsemble):
             読み込み成功フラグ
         """
         try:
-            import joblib
-            import os
-            import json
             import glob
+            import json
+            import os
+
+            import joblib
 
             # 最新のモデルファイルを探す
             pattern = f"{base_path}_stacking_classifier_*.pkl"

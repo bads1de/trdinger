@@ -4,9 +4,10 @@
 
 import logging
 from typing import List
-from .base_strategy import ConditionStrategy
-from ...models.strategy_models import IndicatorGene
+
 from ...constants import IndicatorType
+from ...models.strategy_models import IndicatorGene
+from .base_strategy import ConditionStrategy
 
 logger = logging.getLogger(__name__)
 

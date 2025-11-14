@@ -2,28 +2,28 @@
 遺伝的演算子のテスト
 """
 
-import pytest
-import numpy as np
 from unittest.mock import Mock, patch
 
-from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
+import numpy as np
+import pytest
 
+from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
 from app.services.auto_strategy.core.genetic_operators import (
+    _crossover_position_sizing_genes,
+    _crossover_tpsl_genes,
+    _mutate_conditions,
+    _mutate_indicators,
+    adaptive_mutate_strategy_gene_pure,
     crossover_strategy_genes_pure,
     mutate_strategy_gene_pure,
     uniform_crossover,
-    _crossover_tpsl_genes,
-    _crossover_position_sizing_genes,
-    _mutate_indicators,
-    _mutate_conditions,
-    adaptive_mutate_strategy_gene_pure,
 )
 from app.services.auto_strategy.models.strategy_models import (
-    StrategyGene,
-    IndicatorGene,
     Condition,
-    TPSLGene,
+    IndicatorGene,
     PositionSizingGene,
+    StrategyGene,
+    TPSLGene,
 )
 
 

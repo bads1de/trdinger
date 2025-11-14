@@ -4,12 +4,13 @@ TPSL関連モデルのテストモジュール
 TPSLGene, TPSLResultなどのTPSL関連モデルをテストする。
 """
 
-import pytest
 from unittest.mock import patch
 
+import pytest
+
+from backend.app.services.auto_strategy.models.enums import TPSLMethod
 from backend.app.services.auto_strategy.models.tpsl_gene import TPSLGene
 from backend.app.services.auto_strategy.models.tpsl_result import TPSLResult
-from backend.app.services.auto_strategy.models.enums import TPSLMethod
 
 
 class TestTPSLGene:

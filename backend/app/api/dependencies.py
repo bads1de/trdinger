@@ -9,13 +9,13 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.services.auto_strategy import AutoStrategyService
+from app.services.auto_strategy.utils.strategy_integration_service import (
+    StrategyIntegrationService,
+)
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
-)
-from app.services.auto_strategy.utils.strategy_integration_service import (
-    StrategyIntegrationService,
 )
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -255,11 +255,11 @@ def get_funding_rate_orchestration_service(
     FundingRateOrchestrationService のインスタンスを取得（依存性注入用）
     """
     try:
-        from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
-            FundingRateOrchestrationService,
-        )
         from app.services.data_collection.bybit.funding_rate_service import (
             BybitFundingRateService,
+        )
+        from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
+            FundingRateOrchestrationService,
         )
 
         return FundingRateOrchestrationService(BybitFundingRateService())

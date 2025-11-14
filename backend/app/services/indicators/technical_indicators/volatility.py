@@ -12,8 +12,8 @@
 - Relative Volatility Index (RVI)
 """
 
-from typing import Optional, Tuple
 import logging
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -21,10 +21,9 @@ import pandas_ta as ta
 
 from ..utils import handle_pandas_ta_errors
 
-
 TA_LIB_AVAILABLE = False
 try:
-    import talib
+    import talib  # noqa: F401
 
     TA_LIB_AVAILABLE = True
 except ImportError:

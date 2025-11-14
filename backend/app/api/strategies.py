@@ -11,11 +11,11 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from app.api.dependencies import get_strategy_integration_service_with_db
+from app.config.unified_config import unified_config
 from app.services.auto_strategy.utils.strategy_integration_service import (
     StrategyIntegrationService,
 )
 from app.utils.error_handler import ErrorHandler
-from app.config.unified_config import unified_config
 
 logger = logging.getLogger(__name__)
 

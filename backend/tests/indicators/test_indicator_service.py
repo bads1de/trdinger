@@ -4,10 +4,11 @@ IndicatorServiceのテストモジュール
 TechnicalIndicatorServiceの機能をテストする。
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
+from unittest.mock import MagicMock, Mock, patch
+
 import numpy as np
+import pandas as pd
+import pytest
 
 from backend.app.services.indicators.indicator_orchestrator import (
     TechnicalIndicatorService,

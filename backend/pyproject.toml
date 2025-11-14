@@ -24,7 +24,7 @@ dependencies = [
     # データ分析・数値計算
     "pandas",
     "ft-pandas-ta>=0.3.16",
-    "numpy",
+    "numpy>=1.24.0,<2.0.0",  # pandas_ta互換性のため2.0未満に固定
     "psutil",
     "pandera",
 
@@ -137,6 +137,7 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [

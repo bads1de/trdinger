@@ -2,18 +2,19 @@
 MLパイプラインの包括的テスト
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
+from unittest.mock import MagicMock, Mock, patch
+
 import numpy as np
+import pandas as pd
+import pytest
 from sklearn.pipeline import Pipeline
 
 from app.utils.data_processing.pipelines.ml_pipeline import (
-    create_ml_pipeline,
     create_classification_pipeline,
+    create_ml_pipeline,
     create_regression_pipeline,
-    optimize_ml_pipeline,
     get_ml_pipeline_info,
+    optimize_ml_pipeline,
 )
 from app.utils.data_processing.pipelines.preprocessing_pipeline import (
     create_preprocessing_pipeline,

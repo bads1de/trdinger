@@ -14,9 +14,9 @@ from typing import Any, Dict, List, Optional
 
 import joblib
 
+from ...utils.error_handler import safe_ml_operation
 from .config import ml_config
 from .exceptions import MLModelError
-from ...utils.error_handler import safe_ml_operation
 
 logger = logging.getLogger(__name__)
 

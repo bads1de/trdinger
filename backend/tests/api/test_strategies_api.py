@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.dependencies import get_db, get_strategy_integration_service_with_db
 from app.main import app
-from app.api.dependencies import get_strategy_integration_service_with_db, get_db
 
 
 @pytest.fixture

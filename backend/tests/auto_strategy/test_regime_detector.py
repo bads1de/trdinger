@@ -1,12 +1,13 @@
 """レジーム検知のテスト"""
 
+from unittest.mock import Mock, patch
+
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import Mock, patch
+from pydantic import BaseModel, ValidationError
 
 from app.services.auto_strategy.services.regime_detector import RegimeDetector
-from pydantic import BaseModel, ValidationError
 
 
 class TestRegimeDetector:

@@ -2,17 +2,18 @@
 フィットネス共有のテスト
 """
 
-import pytest
-import numpy as np
 from unittest.mock import Mock, patch
+
+import numpy as np
+import pytest
 
 from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
 from app.services.auto_strategy.models.strategy_models import (
-    StrategyGene,
-    IndicatorGene,
     Condition,
-    TPSLGene,
+    IndicatorGene,
     PositionSizingGene,
+    StrategyGene,
+    TPSLGene,
 )
 
 

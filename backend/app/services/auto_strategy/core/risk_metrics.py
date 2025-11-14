@@ -6,7 +6,6 @@ import math
 from datetime import datetime
 from typing import Any, Iterable, Mapping, MutableSequence, Optional, Sequence
 
-
 REFERENCE_TRADES_PER_DAY = 8.0
 
 

@@ -12,12 +12,12 @@ from typing import Any, Dict
 from sqlalchemy.orm import Session
 
 from app.services.ml.ml_training_service import MLTrainingService
+from app.services.ml.model_manager import model_manager
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
-from app.services.ml.model_manager import model_manager
-from app.utils.response import api_response
 from app.utils.error_handler import safe_ml_operation
+from app.utils.response import api_response
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -234,8 +234,6 @@ class MLTrainingOrchestrationService:
         Returns:
             停止結果
         """
-        global training_status
-
         try:
             if not training_status["is_training"]:
                 raise ValueError("実行中のトレーニングがありません")
@@ -264,8 +262,6 @@ class MLTrainingOrchestrationService:
 
     async def _train_ml_model_background(self, config, db: Session):
         """バックグラウンドでMLモデルをトレーニング"""
-        global training_status
-
         # バックグラウンドタスクマネージャーを使用してリソース管理
         with background_task_manager.managed_task(
             task_name=f"MLトレーニング_{config.symbol}_{config.timeframe}",
@@ -457,8 +453,6 @@ class MLTrainingOrchestrationService:
             config: トレーニング設定
             training_data: 学習データ
         """
-        global training_status
-
         try:
             logger.info("🔧 MLTrainingService初期化開始")
             ml_service = MLTrainingService(
@@ -466,9 +460,7 @@ class MLTrainingOrchestrationService:
                 ensemble_config=ensemble_config_dict,
                 single_model_config=single_model_config_dict,
             )
-            logger.info(
-                f"✅ MLTrainingService初期化完了: trainer_type={ml_service.trainer_type}"
-            )
+            logger.info(f"✅ MLTrainingService初期化完了: {ml_service.trainer_type}")
 
             # 実際に作成されたトレーナーの確認
             trainer_class_name = type(ml_service.trainer).__name__

@@ -7,16 +7,16 @@
 
 import logging
 import warnings
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, cast, Union
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
+from hmmlearn import hmm
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.preprocessing import StandardScaler
-from hmmlearn import hmm
 
 logger = logging.getLogger(__name__)
 
