@@ -6,7 +6,7 @@ duplicate_filter_handler.pyのテスト
 
 import logging
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 

@@ -4,8 +4,6 @@
 OperandGroupingSystemの機能をテストする。
 """
 
-from unittest.mock import Mock, patch
-
 import pytest
 
 from backend.app.services.auto_strategy.core.operand_grouping import (
@@ -164,9 +162,6 @@ class TestGlobalInterface:
 
     def test_operand_grouping_system_singleton(self):
         """operand_grouping_systemがシングルトンであることをテスト"""
-        from backend.app.services.auto_strategy.core.operand_grouping import (
-            operand_grouping_system,
-        )
 
         instance1 = operand_grouping_system
         instance2 = operand_grouping_system

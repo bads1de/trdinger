@@ -237,9 +237,9 @@ class UnifiedFeatureAnalyzer:
                     )
                 else:
                     logger.warning("特徴量重要度分析結果ファイルが見つかりません")
-                    self.results["importance_analysis"][
-                        "error"
-                    ] = "結果ファイルが見つかりません"
+                    self.results["importance_analysis"]["error"] = (
+                        "結果ファイルが見つかりません"
+                    )
 
         except Exception as e:
             logger.error(f"特徴量重要度分析エラー: {e}")

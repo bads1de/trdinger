@@ -10,7 +10,6 @@ import optuna
 import pytest
 
 from app.services.optimization.ensemble_parameter_space import EnsembleParameterSpace
-from app.services.optimization.optuna_optimizer import ParameterSpace
 
 
 class TestEnsembleParameterSpace:

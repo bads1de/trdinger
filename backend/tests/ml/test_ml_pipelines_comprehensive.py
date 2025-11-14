@@ -2,7 +2,7 @@
 MLパイプラインの包括的テスト
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
@@ -15,9 +15,6 @@ from app.utils.data_processing.pipelines.ml_pipeline import (
     create_regression_pipeline,
     get_ml_pipeline_info,
     optimize_ml_pipeline,
-)
-from app.utils.data_processing.pipelines.preprocessing_pipeline import (
-    create_preprocessing_pipeline,
 )
 
 
@@ -529,8 +526,6 @@ class TestMLPipelinesComprehensive:
 
     def test_pipeline_documentation(self):
         """パイプラインドキュメントのテスト"""
-        pipeline = create_ml_pipeline()
-
         # ドキュメントが存在
         assert create_ml_pipeline.__doc__ is not None
         assert create_classification_pipeline.__doc__ is not None

@@ -7,8 +7,7 @@ BacktestResultConverterの機能をテストします。
 
 import logging
 from datetime import datetime, timedelta
-from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest

@@ -97,8 +97,6 @@ class TestRegimeDetector:
         regimes = detector.detect_regimes(data_df)
 
         # 最初の部分がトレンド（0）、後半がレンジ（1）であることを確認
-        first_half_regimes = regimes[:n_samples]
-        second_half_regimes = regimes[n_samples:]
 
         # 遷移の確認（トレンドからレンジへの遷移があること）
         assert len(set(regimes)) >= 2  # 少なくとも2つの異なるレジーム
@@ -195,6 +193,5 @@ class TestRegimeDetector:
             regimes = detector.detect_regimes(data)
 
             # ラベルのマッピングを確認（0=トレンド、1=レンジ、2=高ボラ）
-            expected_labels = ["trend", "range", "high_volatility", "trend", "range"]
             assert len(regimes) == 5
             # 実際のラベルは実装依存だが、数値で返されることを確認

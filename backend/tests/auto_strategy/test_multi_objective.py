@@ -4,12 +4,10 @@
 EvolutionRunnerの多目的最適化機能をテストする。
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import numpy as np
 import pytest
 
-from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.evolution_runner import EvolutionRunner
 
 
@@ -121,7 +119,7 @@ class TestEvolutionRunnerMultiObjective:
         with patch(
             "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
             side_effect=lambda pop, k: pop[:k],  # NSGA2選択のモック
-        ) as mock_sel_nsga2:
+        ):
             with patch(
                 "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ) as mock_pareto_front:
@@ -274,9 +272,7 @@ class TestEvolutionRunnerMultiObjective:
 
         mock_toolbox.select.side_effect = [mock_population, mock_population]
 
-        with patch(
-            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
-        ) as mock_sel_nsga2:
+        with patch("app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"):
             with patch(
                 "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
             ):

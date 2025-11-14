@@ -212,7 +212,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             oi_ma_168 = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
 
             # 建玉残高トレンド（安全な計算）
-            result_df["OI_Trend"] = ((oi_ma_24 / oi_ma_168)).replace(
+            result_df["OI_Trend"] = (oi_ma_24 / oi_ma_168).replace(
                 [np.inf, -np.inf], np.nan
             ).fillna(1.0) - 1
 

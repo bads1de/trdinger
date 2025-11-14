@@ -90,7 +90,6 @@ class TestTimeSeriesCVIntegration:
             patch.object(BaseMLTrainer, "_prepare_training_data") as mock_prepare_data,
             patch.object(BaseMLTrainer, "_train_model_impl") as mock_train_impl,
         ):
-
             # モックの設定
             mock_calc_features.return_value = X
             mock_prepare_data.return_value = (X, y)
@@ -151,7 +150,6 @@ class TestTimeSeriesCVIntegration:
             patch.object(BaseMLTrainer, "_prepare_training_data") as mock_prepare_data,
             patch.object(BaseMLTrainer, "_train_model_impl") as mock_train_impl,
         ):
-
             mock_calc_features.return_value = X
             mock_prepare_data.return_value = (X, y)
             mock_train_impl.return_value = {
@@ -214,7 +212,6 @@ class TestTimeSeriesCVIntegration:
             patch.object(BaseMLTrainer, "_prepare_training_data") as mock_prepare_data,
             patch.object(BaseMLTrainer, "_train_model_impl") as mock_train_impl,
         ):
-
             mock_calc_features.return_value = X
             mock_prepare_data.return_value = (X, y)
             mock_train_impl.return_value = {"accuracy": 0.85}
@@ -264,7 +261,6 @@ class TestTimeSeriesCVIntegration:
             patch.object(BaseMLTrainer, "_prepare_training_data") as mock_prepare_data,
             patch.object(BaseMLTrainer, "_train_model_impl") as mock_train_impl,
         ):
-
             mock_calc_features.return_value = X
             mock_prepare_data.return_value = (X, y)
             mock_train_impl.return_value = {
@@ -419,7 +415,6 @@ class TestTimeSeriesCVIntegration:
             patch.object(BaseMLTrainer, "_prepare_training_data") as mock_prepare_data,
             patch.object(BaseMLTrainer, "_train_model_impl") as mock_train_impl,
         ):
-
             mock_calc_features.return_value = X
             mock_prepare_data.return_value = (X, y)
             mock_train_impl.return_value = {"accuracy": 0.85}

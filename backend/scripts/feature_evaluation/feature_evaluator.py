@@ -272,7 +272,7 @@ class FeatureEvaluator:
         low_importance = [feat for feat, _ in sorted_features[:n_remove]]
 
         logger.info(
-            f"低重要度特徴量: {len(low_importance)}個（下位{threshold*100:.0f}%）"
+            f"低重要度特徴量: {len(low_importance)}個（下位{threshold * 100:.0f}%）"
         )
 
         return low_importance

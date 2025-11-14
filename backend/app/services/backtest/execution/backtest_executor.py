@@ -120,7 +120,6 @@ class BacktestExecutor:
     ) -> Backtest:
         """バックテストインスタンスを作成"""
         try:
-
             # backtesting.pyライブラリが大文字のカラム名を期待するため変換
             data = data.copy()
             data.columns = data.columns.str.capitalize()
@@ -146,7 +145,6 @@ class BacktestExecutor:
     def _run_backtest(self, bt: Backtest, strategy_parameters: Dict[str, Any]) -> Any:
         """バックテストを実行"""
         try:
-
             # 警告を一時的に無効化
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)

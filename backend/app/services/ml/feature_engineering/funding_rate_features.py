@@ -397,8 +397,7 @@ def validate_funding_rate_data(df: pd.DataFrame) -> bool:
         if len(fr) > 0:
             if (fr < -1.0).any() or (fr > 1.0).any():
                 raise ValueError(
-                    f"ファンディングレートが範囲外です: "
-                    f"min={fr.min()}, max={fr.max()}"
+                    f"ファンディングレートが範囲外です: min={fr.min()}, max={fr.max()}"
                 )
 
     # タイムスタンプのソート確認

@@ -359,7 +359,6 @@ class BacktestResultConverter:
                 if current_total_return == 0 or current_total_return is None:
                     equity_df = getattr(actual_stats, "_equity_curve", None)
                     if equity_df is not None:
-
                         if len(equity_df) > 0:
                             first_equity = None
                             last_equity = None

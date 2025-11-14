@@ -87,13 +87,13 @@ class TPSLGene(BaseGene):
             sl_min, sl_max = TPSL_LIMITS["stop_loss_pct"]
             if not (sl_min <= self.stop_loss_pct <= sl_max):
                 errors.append(
-                    f"stop_loss_pct must be between {sl_min*100:.1f}% and {sl_max*100:.0f}%"
+                    f"stop_loss_pct must be between {sl_min * 100:.1f}% and {sl_max * 100:.0f}%"
                 )
 
             tp_min, tp_max = TPSL_LIMITS["take_profit_pct"]
             if not (tp_min <= self.take_profit_pct <= tp_max):
                 errors.append(
-                    f"take_profit_pct must be between {tp_min*100:.1f}% and {tp_max*100:.0f}%"
+                    f"take_profit_pct must be between {tp_min * 100:.1f}% and {tp_max * 100:.0f}%"
                 )
 
             # 他のパラメータ検証

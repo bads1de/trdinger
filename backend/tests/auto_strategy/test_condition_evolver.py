@@ -4,29 +4,20 @@ ConditionEvolver統合テスト - TDDアプローチ
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="ConditionEvolver implementation changed")
 from datetime import datetime, timedelta
 from typing import Any, Dict
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
-import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.core.condition_evolver import (
     Condition,
     ConditionEvolver,
-    EvolutionConfig,
     YamlIndicatorUtils,
 )
 from app.services.backtest.backtest_service import BacktestService
 
-# seabornが利用可能な場合のみインポート
-try:
-    import seaborn as sns
-
-    HAS_SEABORN = True
-except ImportError:
-    HAS_SEABORN = False
+pytestmark = pytest.mark.skip(reason="ConditionEvolver implementation changed")
 
 
 # StrategyComparisonをローカルで定義
@@ -238,7 +229,7 @@ class TestConditionEvolverIntegration:
 
     def _generate_comparison_report(self, strategy_results: Dict[str, Any]) -> str:
         """比較レポート生成（HTML形式）"""
-        html = f"""
+        html = """
         <html>
         <head><title>戦略比較レポート</title></head>
         <body>
@@ -251,9 +242,9 @@ class TestConditionEvolverIntegration:
             html += f"""
             <tr>
             <td>{strategy_name}</td>
-            <td>{metrics['total_return']}</td>
-            <td>{metrics['sharpe_ratio']}</td>
-            <td>{metrics['max_drawdown']}</td>
+            <td>{metrics["total_return"]}</td>
+            <td>{metrics["sharpe_ratio"]}</td>
+            <td>{metrics["max_drawdown"]}</td>
             </tr>
             """
 
@@ -529,7 +520,7 @@ class TestTDDApproach:
             analysis["performance_comparison"]["total_return"]["random_mean"]
             == expected_random_return
         )
-        assert analysis["performance_comparison"]["total_return"]["ga_wins"] == True
+        assert analysis["performance_comparison"]["total_return"]["ga_wins"]
 
         print("✅ TDDモックデータ分析テスト成功")
 
@@ -537,7 +528,6 @@ class TestTDDApproach:
         """TDD: 統計的妥当性の検証"""
         # 統計的検定の要件
         sample_size = 5
-        significance_level = 0.05
 
         comparison = StrategyComparison()
 

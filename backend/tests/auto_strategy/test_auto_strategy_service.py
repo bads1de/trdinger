@@ -1,5 +1,4 @@
-import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import BackgroundTasks
@@ -63,7 +62,6 @@ def auto_strategy_service(
             return_value=mock_experiment_manager,
         ),
     ):
-
         service = AutoStrategyService()
         # _init_servicesで上書きされるため、再度モックを割り当てる
         service.db_session_factory = mock_db_session_factory

@@ -5,8 +5,7 @@ StrategyGene → 特徴量DataFrame変換のテスト
 TDD: テストファースト
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -153,8 +152,7 @@ class TestHybridFeatureAdapter:
             HybridFeatureAdapter,
         )
 
-        adapter = HybridFeatureAdapter()
-        features_df = adapter.gene_to_features(
+        HybridFeatureAdapter().gene_to_features(
             sample_strategy_gene, sample_ohlcv_data, apply_preprocessing=True
         )
 

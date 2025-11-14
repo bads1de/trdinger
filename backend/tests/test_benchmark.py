@@ -75,7 +75,7 @@ def benchmark_feature_generation():
             print(f"   初回実行時間: {elapsed:.2f}秒")
             print(f"   生成された特徴量数: {features.shape[1]}")
         else:
-            print(f"   実行 {i+1}/{num_runs}: {elapsed:.2f}秒")
+            print(f"   実行 {i + 1}/{num_runs}: {elapsed:.2f}秒")
 
     # 統計情報を表示
     print("\n" + "=" * 60)

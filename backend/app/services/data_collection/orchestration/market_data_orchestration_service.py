@@ -28,7 +28,6 @@ class MarketDataOrchestrationService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> Dict[str, Any]:
-
         start_time = None
         end_time = None
 

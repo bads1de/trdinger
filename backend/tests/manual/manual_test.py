@@ -13,9 +13,6 @@ import pandas as pd
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.services.ml.feature_engineering.base_feature_calculator import (
-    BaseFeatureCalculator,
-)
 from app.services.ml.feature_engineering.price_features import PriceFeatureCalculator
 from app.utils.data_processing.validators.data_validator import validate_data_integrity
 

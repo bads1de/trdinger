@@ -6,10 +6,8 @@ Optunaベースの最適化エンジンの各機能を包括的にテストし�
 
 import time
 from typing import Any, Dict
-from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
-import optuna
 import pytest
 
 from app.services.optimization.optuna_optimizer import (

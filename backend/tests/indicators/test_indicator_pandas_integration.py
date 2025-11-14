@@ -87,6 +87,6 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
         if result is None:
             failing.append(config.indicator_name)
 
-    assert (
-        not failing
-    ), f"pandas-ta 直接呼び出しに失敗したインジケーター: {sorted(failing)}"
+    assert not failing, (
+        f"pandas-ta 直接呼び出しに失敗したインジケーター: {sorted(failing)}"
+    )

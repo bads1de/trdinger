@@ -7,7 +7,7 @@ evaluate_feature_performance.pyにOptunaハイパーパラメータ最適化を
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd

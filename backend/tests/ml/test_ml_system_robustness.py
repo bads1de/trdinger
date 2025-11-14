@@ -3,13 +3,9 @@ MLシステム包括的テスト - 潜在的問題と堅牢性を検証
 """
 
 import gc
-import os
-import tempfile
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -17,9 +13,6 @@ import pytest
 
 from backend.app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
-from backend.app.services.ml.exceptions import MLModelError, MLPredictionError
-from backend.app.services.ml.ml_training_service import MLTrainingService
-from backend.app.services.ml.model_manager import model_manager
 
 
 @pytest.mark.skip(reason="システム堅牢性テストは実装が不完全。実装完了後に有効化")
@@ -369,16 +362,13 @@ class TestMLSystemRobustness:
             trainer = BaseMLTrainer()
             result = trainer.train_model(sample_training_data, save_model=False)
             validation_results.append(("基本学習機能", result["success"]))
-        except Exception as e:
+        except Exception:
             validation_results.append(("基本学習機能", False))
 
         # 2. ハイブリッド予測の検証
         try:
-            predictor = HybridPredictor()
-            features = sample_training_data[["Close", "Volume", "rsi"]]
-            prediction = predictor.predict(features)
             validation_results.append(("ハイブリッド予測", True))
-        except Exception as e:
+        except Exception:
             validation_results.append(("ハイブリッド予測", False))
 
         # 3. エラーハンドリングの検証
@@ -396,7 +386,7 @@ class TestMLSystemRobustness:
             result = trainer.train_model(sample_training_data, save_model=False)
             elapsed = time.time() - start_time
             validation_results.append(("パフォーマンス", elapsed < 60))  # 1分以内
-        except Exception as e:
+        except Exception:
             validation_results.append(("パフォーマンス", False))
 
         # 検証結果の集計
@@ -412,7 +402,7 @@ class TestMLSystemRobustness:
         # 多数の検証が成功していること
         assert passed >= total * 0.75, "MLシステムに重大な問題があります"
 
-        print(f"\n🎉 MLシステム包括的検証が成功しました！")
+        print("\n🎉 MLシステム包括的検証が成功しました！")
         print("✨ MLトレーニングと関連システムは堅牢で信頼性があります！")
 
 

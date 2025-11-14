@@ -93,6 +93,7 @@ dev = [
     "isort",
     "flake8",
     "mypy",
+    "ruff",
 ]
 
 

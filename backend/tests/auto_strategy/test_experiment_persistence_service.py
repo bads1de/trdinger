@@ -2,19 +2,21 @@
 ExperimentPersistenceServiceのテスト
 """
 
-import pytest
+from datetime import datetime
+from unittest.mock import Mock, patch
 
-pytestmark = pytest.mark.skip(
-    reason="ExperimentPersistenceService implementation changed - methods need update"
-)
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+import pytest
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.models.strategy_models import StrategyGene
 from app.services.auto_strategy.services.experiment_persistence_service import (
     ExperimentPersistenceService,
 )
+
+pytestmark = pytest.mark.skip(
+    reason="ExperimentPersistenceService implementation changed - methods need update"
+)
+
 
 
 class TestExperimentPersistenceService:

@@ -212,12 +212,10 @@ class TestGeneValidator:
 
     def test_is_indicator_name_with_params(self, validator):
         """パラメータ付き指標名の検証"""
-        result = validator._is_indicator_name("SMA_20")
         # 実際のindicator_typesに依存するので、テストは汎用的に
 
     def test_is_indicator_name_ui_not_corrected(self, validator):
         """'UI'指標名が修正されないことを確認"""
-        result = validator._is_indicator_name("UI")
         # UIが有効な指標でない限りFalseになるべき
 
     def test_clean_condition_valid(self, validator):

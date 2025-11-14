@@ -2,9 +2,8 @@
 フィットネス共有のテスト
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
-import numpy as np
 import pytest
 
 from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
@@ -122,13 +121,9 @@ class TestFitnessSharing:
         """シルエットベース共有の基本テスト"""
         # 関数が存在するか確認（実装前にテストを書く）
         if hasattr(fitness_sharing, "silhouette_based_sharing"):
-            original_fitness = [ind.fitness.values for ind in sample_population]
-
             result = fitness_sharing.silhouette_based_sharing(sample_population)
 
             assert len(result) == len(sample_population)
-            # シルエットスコアに基づいて調整されているはず
-            adjusted_fitness = [ind.fitness.values for ind in result]
             # 具体的な検証は実装後に追加
             pass
         else:
@@ -167,8 +162,6 @@ class TestFitnessSharing:
     ):
         """拡張されたapply_fitness_sharingのテスト（シルエット適用後）"""
         if hasattr(fitness_sharing, "silhouette_based_sharing"):
-            original_fitness = [ind.fitness.values for ind in sample_population]
-
             result = fitness_sharing.apply_fitness_sharing(sample_population)
 
             assert len(result) == len(sample_population)

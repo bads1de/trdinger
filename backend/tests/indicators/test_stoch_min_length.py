@@ -2,8 +2,6 @@
 STOCHのmin_length設定に関するテストケース
 """
 
-import pytest
-
 from app.services.indicators.config.indicator_config import indicator_registry
 
 

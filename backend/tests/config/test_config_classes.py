@@ -5,8 +5,7 @@ UnifiedConfig, GAConfig, GAProgressなどの設定クラスをテストする。
 """
 
 import os
-from typing import Dict
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -15,15 +14,11 @@ from backend.app.config.unified_config import (
     AutoStrategyConfig,
     BacktestConfig,
     DatabaseConfig,
-    DataCollectionConfig,
     GAConfig,
     LoggingConfig,
     MarketConfig,
     MLConfig,
-    MLDataProcessingConfig,
-    MLModelConfig,
     MLPredictionConfig,
-    MLTrainingConfig,
     UnifiedConfig,
 )
 from backend.app.services.auto_strategy.config.ga_runtime import (

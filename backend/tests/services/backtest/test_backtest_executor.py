@@ -5,12 +5,12 @@ BacktestExecutorの機能をテストします。
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-from backtesting import Backtest, Strategy
+from backtesting import Strategy
 
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.execution.backtest_executor import (

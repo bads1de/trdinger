@@ -145,9 +145,9 @@ class TestAllTechnicalIndicators:
                 # 各インジケーターの設定を取得できるか確認
                 config = indicator_service.registry.get_indicator_config(indicator)
                 assert config is not None, f"{indicator}の設定が見つかりません"
-                assert (
-                    config.adapter_function is not None
-                ), f"{indicator}のアダプター関数がありません"
+                assert config.adapter_function is not None, (
+                    f"{indicator}のアダプター関数がありません"
+                )
             except Exception as e:
                 pytest.fail(f"{indicator}の初期化に失敗: {e}")
 
@@ -335,27 +335,27 @@ class TestAllTechnicalIndicators:
 
             # 結果の形式を検証
             if config.result_type == "single":
-                assert isinstance(
-                    result, np.ndarray
-                ), f"{indicator}の結果がndarrayではありません"
-                assert result.shape[0] == len(
-                    sample_ohlcv
-                ), f"{indicator}の結果の長さが不正"
+                assert isinstance(result, np.ndarray), (
+                    f"{indicator}の結果がndarrayではありません"
+                )
+                assert result.shape[0] == len(sample_ohlcv), (
+                    f"{indicator}の結果の長さが不正"
+                )
                 # NaNを含む場合があるが、最後の数ポイントは有効な場合がある
                 assert result.shape[0] > 0, f"{indicator}の結果が空"
 
             elif config.result_type == "complex" or config.result_type == "multiple":
-                assert isinstance(
-                    result, tuple
-                ), f"{indicator}の結果がtupleではありません"
+                assert isinstance(result, tuple), (
+                    f"{indicator}の結果がtupleではありません"
+                )
                 assert len(result) > 0, f"{indicator}の結果が空のtuple"
                 for i, series in enumerate(result):
-                    assert isinstance(
-                        series, np.ndarray
-                    ), f"{indicator}の結果[{i}]がndarrayではありません"
-                    assert series.shape[0] == len(
-                        sample_ohlcv
-                    ), f"{indicator}の結果[{i}]の長さが不正{indicator}"
+                    assert isinstance(series, np.ndarray), (
+                        f"{indicator}の結果[{i}]がndarrayではありません"
+                    )
+                    assert series.shape[0] == len(sample_ohlcv), (
+                        f"{indicator}の結果[{i}]の長さが不正{indicator}"
+                    )
 
         except Exception as e:
             pytest.fail(f"{indicator}のテストでエラー: {e}")
@@ -413,9 +413,9 @@ class TestAllTechnicalIndicators:
                     if isinstance(result, np.ndarray):
                         valid_values = result[np.isfinite(result)]
                         if len(valid_values) > 0:
-                            assert all(
-                                0 <= val <= 100 for val in valid_values
-                            ), f"{indicator}の値が範囲外"
+                            assert all(0 <= val <= 100 for val in valid_values), (
+                                f"{indicator}の値が範囲外"
+                            )
 
                 elif indicator == "MFI":
                     result = indicator_service.calculate_indicator(
@@ -424,9 +424,9 @@ class TestAllTechnicalIndicators:
                     if isinstance(result, np.ndarray):
                         valid_values = result[np.isfinite(result)]
                         if len(valid_values) > 0:
-                            assert all(
-                                0 <= val <= 100 for val in valid_values
-                            ), f"{indicator}の値が範囲外"
+                            assert all(0 <= val <= 100 for val in valid_values), (
+                                f"{indicator}の値が範囲外"
+                            )
 
                 elif indicator == "WILLR":
                     result = indicator_service.calculate_indicator(
@@ -435,9 +435,9 @@ class TestAllTechnicalIndicators:
                     if isinstance(result, np.ndarray):
                         valid_values = result[np.isfinite(result)]
                         if len(valid_values) > 0:
-                            assert all(
-                                -100 <= val <= 0 for val in valid_values
-                            ), f"{indicator}の値が範囲外"
+                            assert all(-100 <= val <= 0 for val in valid_values), (
+                                f"{indicator}の値が範囲外"
+                            )
 
             except Exception:
                 pass  # 他のインジケーターは範囲チェックをスキップ
@@ -496,9 +496,9 @@ class TestAllTechnicalIndicators:
         supported = indicator_service.get_supported_indicators()
 
         for indicator in self.INDICATORS:
-            assert (
-                indicator in supported
-            ), f"{indicator}がレジストリに登録されていません"
+            assert indicator in supported, (
+                f"{indicator}がレジストリに登録されていません"
+            )
             assert supported[indicator]["parameters"] is not None
             assert supported[indicator]["result_type"] is not None
 

@@ -267,8 +267,10 @@ class FeatureEngineeringService:
 
             # 建玉残高特徴量（データがある場合）
             if open_interest_data is not None and not open_interest_data.empty:
-                result_df = self.market_data_calculator.calculate_open_interest_features(  # noqa: E501
-                    result_df, open_interest_data, lookback_periods
+                result_df = (
+                    self.market_data_calculator.calculate_open_interest_features(  # noqa: E501
+                        result_df, open_interest_data, lookback_periods
+                    )
                 )
                 # 中間クリーニング（削除された特徴量を除外）
                 # Removed: "OI_Change_Rate", "OI_Surge",

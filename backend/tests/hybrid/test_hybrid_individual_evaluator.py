@@ -109,7 +109,6 @@ class TestHybridIndividualEvaluator:
     def test_hybrid_score_integration(self):
         """ハイブリッド評価の統合テスト"""
         # モックされた評価を通じて、ハイブリッドスコアが総合的に機能することを確認
-        mock_individual = [1, 2, 3, 4, 5]
         mock_backtest_result = {
             "performance_metrics": {
                 "total_return": 0.15,

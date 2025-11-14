@@ -69,7 +69,10 @@ class DEAPSetup:
         # 個体生成関数の登録
         self.toolbox.register("individual", create_individual_func)
         self.toolbox.register(
-            "population", tools.initRepeat, list, self.toolbox.individual  # type: ignore
+            "population",
+            tools.initRepeat,
+            list,
+            self.toolbox.individual,  # type: ignore
         )
 
         # 評価関数の登録

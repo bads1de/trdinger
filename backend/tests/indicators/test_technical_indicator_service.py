@@ -2,11 +2,8 @@
 TechnicalIndicatorServiceのテスト
 """
 
-from unittest.mock import Mock, patch
-
 import numpy as np
 import pandas as pd
-import pytest
 
 from app.services.indicators import TechnicalIndicatorService
 

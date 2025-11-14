@@ -84,7 +84,10 @@ class LabelGenerator:
 
             # 閾値を計算
             threshold_info = self.threshold_calculator.calculate_thresholds(
-                price_change_clean, method, target_distribution, **kwargs  # type: ignore[arg-type]
+                price_change_clean,
+                method,
+                target_distribution,
+                **kwargs,  # type: ignore[arg-type]
             )
 
             threshold_up = threshold_info["threshold_up"]
@@ -123,9 +126,9 @@ class LabelGenerator:
             threshold_info.update(distribution_info)
 
             logger.info(
-                f"ラベル生成完了: 上昇={distribution_info['up_count']}({distribution_info['up_ratio']*100:.1f}%), "
-                f"下落={distribution_info['down_count']}({distribution_info['down_ratio']*100:.1f}%), "
-                f"レンジ={distribution_info['range_count']}({distribution_info['range_ratio']*100:.1f}%)"
+                f"ラベル生成完了: 上昇={distribution_info['up_count']}({distribution_info['up_ratio'] * 100:.1f}%), "
+                f"下落={distribution_info['down_count']}({distribution_info['down_ratio'] * 100:.1f}%), "
+                f"レンジ={distribution_info['range_count']}({distribution_info['range_ratio'] * 100:.1f}%)"
             )
 
             # 返却仕様の互換性:
@@ -177,12 +180,12 @@ class LabelGenerator:
 
             if ratio < min_class_ratio:
                 validation_result["warnings"].append(
-                    f"{class_name}クラスの比率が低すぎます: {ratio*100:.2f}% < {min_class_ratio*100:.2f}%"
+                    f"{class_name}クラスの比率が低すぎます: {ratio * 100:.2f}% < {min_class_ratio * 100:.2f}%"
                 )
 
             if ratio > max_class_ratio:
                 validation_result["errors"].append(
-                    f"{class_name}クラスの比率が高すぎます: {ratio*100:.2f}% > {max_class_ratio*100:.2f}%"
+                    f"{class_name}クラスの比率が高すぎます: {ratio * 100:.2f}% > {max_class_ratio * 100:.2f}%"
                 )
                 validation_result["is_valid"] = False
 

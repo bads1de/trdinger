@@ -4,9 +4,8 @@
 ErrorHandlerと統一エラーハンドリング機能をテストする。
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pandas as pd
 import pytest
 from fastapi import HTTPException

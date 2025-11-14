@@ -574,7 +574,8 @@ class UnifiedConfig(BaseSettings):
     ml: MLConfig = Field(default_factory=MLConfig)
 
     model_config = SettingsConfigDict(
-        env_nested_delimiter="__", extra="ignore"  # ネストされた環境変数をサポート
+        env_nested_delimiter="__",
+        extra="ignore",  # ネストされた環境変数をサポート
     )
 
 

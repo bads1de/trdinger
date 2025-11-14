@@ -1,5 +1,3 @@
-import pytest
-
 from app.services.auto_strategy.config.ga import GASettings
 
 

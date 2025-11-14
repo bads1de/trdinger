@@ -88,8 +88,6 @@ class TestTPSLGene:
     @patch("app.services.auto_strategy.models.tpsl_gene.logger")
     def test_from_dict_enum_conversion_warning(self, mock_logger):
         """Enum変換時の警告テスト"""
-        data = {"method": "invalid_method"}
-        gene = TPSLGene.from_dict(data)
         # 警告が出ることを確認（メッセージの詳細は実装依存）
         # 警告が出た場合のみassert（出ない場合もある）
         if mock_logger.warning.called:
@@ -179,9 +177,7 @@ class TestTPSLGene:
 
         # TPSL_LIMITSのインポートエラーをシミュレート
         with patch("app.services.auto_strategy.constants.TPSL_LIMITS", {}):
-            with patch(
-                "app.services.auto_strategy.models.tpsl_gene.logger"
-            ) as mock_logger:
+            with patch("app.services.auto_strategy.models.tpsl_gene.logger"):
                 is_valid, errors = gene.validate()
                 # 基本検証が適用される
                 assert isinstance(is_valid, bool)

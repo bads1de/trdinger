@@ -6,11 +6,9 @@ UnifiedConfigシステムの包括的なバリデーションテストを実装�
 無効な値の拒否などをテストします。
 """
 
-import os
-from typing import Any, Dict
+from typing import Any
 
 import pytest
-from pydantic import ValidationError
 
 from app.config.unified_config import (
     AutoStrategyConfig,
@@ -66,7 +64,7 @@ class TestGAConfigValidation:
         monkeypatch.setenv(env_var, value)
         config = GAConfig()
         assert getattr(config, field) == expected
-        assert type(getattr(config, field)) == type(expected)
+        assert isinstance(getattr(config, field), type(expected))
 
     @pytest.mark.parametrize(
         "field,value",
@@ -613,10 +611,8 @@ class TestTypeConversion:
         Falseにするには空文字列または環境変数を設定しないことが必要です。
         """
         # 環境変数を設定しない場合はデフォルト値が使用される
-        config = MarketConfig()
         # デフォルトはTrueなので、Falseをテストするには別のフィールドを使用
         monkeypatch.setenv("MARKET_DATA_SANDBOX", "false")
-        config2 = MarketConfig()
         # Pydanticは"false"文字列を正しくFalseにパースしない可能性があるため
         # このテストは実装の挙動を文書化するものとする
         # 実際の使用では、明示的にboolを設定するか、環境変数を省略することを推奨

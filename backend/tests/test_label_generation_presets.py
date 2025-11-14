@@ -9,8 +9,7 @@
 5. BaseMLTrainer._prepare_training_data統合
 """
 
-from typing import Any, Dict
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -130,9 +129,9 @@ class TestForwardClassificationPreset:
         # Assert
         assert isinstance(labels, pd.Series), "ラベルはpd.Seriesである必要があります"
         assert labels.dtype == object, "ラベルは文字列型である必要があります"
-        assert set(labels.dropna().unique()).issubset(
-            {"UP", "RANGE", "DOWN"}
-        ), "ラベルはUP/RANGE/DOWNのいずれかである必要があります"
+        assert set(labels.dropna().unique()).issubset({"UP", "RANGE", "DOWN"}), (
+            "ラベルはUP/RANGE/DOWNのいずれかである必要があります"
+        )
         assert len(labels) < len(df), "horizon_n分のラベルが欠損するはずです"
 
     @pytest.mark.parametrize("timeframe", SUPPORTED_TIMEFRAMES)
@@ -186,9 +185,9 @@ class TestForwardClassificationPreset:
 
         # Assert
         assert isinstance(labels, pd.Series)
-        assert (
-            len(labels.dropna()) > 0
-        ), f"{threshold_method.value}でラベルが生成されませんでした"
+        assert len(labels.dropna()) > 0, (
+            f"{threshold_method.value}でラベルが生成されませんでした"
+        )
 
     @pytest.mark.parametrize("horizon_n", [1, 4, 8, 16])
     def test_forward_classification_preset_different_horizons(
@@ -212,9 +211,9 @@ class TestForwardClassificationPreset:
         assert isinstance(labels, pd.Series)
         # horizon_n本先を見るため、元データよりも短くなる
         # LabelGenerator内部で最後の行が除外されるため、len(df) - 1 よりも短い
-        assert len(labels) < len(
-            df
-        ), f"ラベル長({len(labels)})は元データ長({len(df)})より短い必要があります"
+        assert len(labels) < len(df), (
+            f"ラベル長({len(labels)})は元データ長({len(df)})より短い必要があります"
+        )
         # 有効なラベルが生成されていることを確認
         assert len(labels.dropna()) > 0, "有効なラベルが生成されませんでした"
 
@@ -361,9 +360,9 @@ class TestForwardClassificationPreset:
         # Assert
         unique_labels = set(labels.dropna().unique())
         assert len(unique_labels) >= 2, "最低2種類のラベルが必要です"
-        assert unique_labels.issubset(
-            {"UP", "RANGE", "DOWN"}
-        ), "ラベルはUP/RANGE/DOWNのみである必要があります"
+        assert unique_labels.issubset({"UP", "RANGE", "DOWN"}), (
+            "ラベルはUP/RANGE/DOWNのみである必要があります"
+        )
 
 
 # ============================================================================
@@ -415,14 +414,14 @@ class TestGetCommonPresets:
         }
 
         for preset_name, preset_params in presets.items():
-            assert isinstance(
-                preset_params, dict
-            ), f"{preset_name}のパラメータが辞書ではありません"
+            assert isinstance(preset_params, dict), (
+                f"{preset_name}のパラメータが辞書ではありません"
+            )
 
             missing_keys = required_keys - set(preset_params.keys())
-            assert (
-                len(missing_keys) == 0
-            ), f"{preset_name}に必要なキーが不足: {missing_keys}"
+            assert len(missing_keys) == 0, (
+                f"{preset_name}に必要なキーが不足: {missing_keys}"
+            )
 
     def test_get_common_presets_valid_timeframes(self):
         """
@@ -434,9 +433,9 @@ class TestGetCommonPresets:
         # Assert
         for preset_name, preset_params in presets.items():
             timeframe = preset_params["timeframe"]
-            assert (
-                timeframe in SUPPORTED_TIMEFRAMES
-            ), f"{preset_name}の時間足が無効: {timeframe}"
+            assert timeframe in SUPPORTED_TIMEFRAMES, (
+                f"{preset_name}の時間足が無効: {timeframe}"
+            )
 
     def test_get_common_presets_valid_threshold_methods(self):
         """
@@ -450,9 +449,9 @@ class TestGetCommonPresets:
 
         for preset_name, preset_params in presets.items():
             method = preset_params["threshold_method"]
-            assert (
-                method in valid_methods
-            ), f"{preset_name}の閾値計算方法が無効: {method}"
+            assert method in valid_methods, (
+                f"{preset_name}の閾値計算方法が無効: {method}"
+            )
 
     def test_get_common_presets_name_format(self):
         """
@@ -465,9 +464,9 @@ class TestGetCommonPresets:
         for preset_name in presets.keys():
             # プリセット名は「時間足_本数」または「時間足_本数_特徴」の形式
             parts = preset_name.split("_")
-            assert (
-                len(parts) >= 2
-            ), f"{preset_name}の形式が無効です（最低2つのパートが必要）"
+            assert len(parts) >= 2, (
+                f"{preset_name}の形式が無効です（最低2つのパートが必要）"
+            )
 
             # 時間足部分が有効か確認
             timeframe_part = parts[0]
@@ -541,9 +540,9 @@ class TestApplyPresetByName:
 
         # Assert
         assert isinstance(result, tuple), "結果はタプルである必要があります"
-        assert (
-            len(result) == 2
-        ), "タプルは2要素（labels, preset_info）である必要があります"
+        assert len(result) == 2, (
+            "タプルは2要素（labels, preset_info）である必要があります"
+        )
 
         labels, preset_info = result
         assert isinstance(labels, pd.Series)
@@ -764,9 +763,9 @@ class TestBaseMLTrainerIntegration:
             assert isinstance(y, pd.Series), "ラベルはSeriesである必要があります"
             assert len(X) == len(y), "特徴量とラベルの長さが一致する必要があります"
             assert y.dtype in [np.int32, np.int64], "ラベルは数値型である必要があります"
-            assert set(y.unique()).issubset(
-                {0, 1, 2}
-            ), "ラベルは0/1/2である必要があります"
+            assert set(y.unique()).issubset({0, 1, 2}), (
+                "ラベルは0/1/2である必要があります"
+            )
 
     def test_prepare_training_data_with_custom_config(
         self, mock_base_ml_trainer, sample_ohlcv_data
@@ -925,13 +924,13 @@ class TestBaseMLTrainerIntegration:
             X, y = trainer._prepare_training_data(features_df)
 
             # Assert
-            assert (
-                trainer.feature_columns is not None
-            ), "特徴量カラムが保存されていません"
+            assert trainer.feature_columns is not None, (
+                "特徴量カラムが保存されていません"
+            )
             assert len(trainer.feature_columns) > 0, "特徴量カラムが空です"
-            assert all(
-                col in X.columns for col in trainer.feature_columns
-            ), "特徴量カラムとXのカラムが一致しません"
+            assert all(col in X.columns for col in trainer.feature_columns), (
+                "特徴量カラムとXのカラムが一致しません"
+            )
 
 
 # ============================================================================

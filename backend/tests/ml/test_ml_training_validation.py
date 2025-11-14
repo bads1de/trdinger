@@ -5,18 +5,13 @@ MLトレーニング検証テスト - 実際のトレーニング実行と問題
 import gc
 import os
 import tempfile
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
 from backend.app.services.ml.ml_training_service import MLTrainingService
-from backend.app.services.ml.orchestration.ml_training_orchestration_service import (
-    MLTrainingOrchestrationService,
-)
 
 
 @pytest.mark.skip(reason="MLトレーニング検証は実装が不完全。実装完了後に有効化")
@@ -136,9 +131,9 @@ class TestMLTrainingValidation:
 
             # メモリリークがないこと
             current_objects = len(gc.get_objects())
-            assert (
-                current_objects - initial_objects
-            ) < 500, f"トレーニング{i+1}回目でメモリリークが検出されました"
+            assert (current_objects - initial_objects) < 500, (
+                f"トレーニング{i + 1}回目でメモリリークが検出されました"
+            )
 
         gc.collect()
         final_objects = len(gc.get_objects())
@@ -164,9 +159,9 @@ class TestMLTrainingValidation:
 
         # スコアが安定していること（収束している）
         score_std = np.std(scores)
-        assert (
-            score_std < 0.1
-        ), f"モデルが収束していません - スコア標準偏差: {score_std:.4f}"
+        assert score_std < 0.1, (
+            f"モデルが収束していません - スコア標準偏差: {score_std:.4f}"
+        )
 
         print(f"✅ モデル収束確認 - スコア標準偏差: {score_std:.4f}")
 
@@ -357,9 +352,9 @@ class TestMLTrainingValidation:
         assert result["success"] is True
 
         # トレーニング時間が適切な範囲内であること（10分以内）
-        assert (
-            training_duration < 600
-        ), f"トレーニング時間が長すぎます: {training_duration:.2f}秒"
+        assert training_duration < 600, (
+            f"トレーニング時間が長すぎます: {training_duration:.2f}秒"
+        )
 
         print(f"✅ トレーニング時間監視成功 - 所要時間: {training_duration:.2f}秒")
 
@@ -377,7 +372,7 @@ class TestMLTrainingValidation:
             )
             result = service.train_model(sample_training_data, save_model=False)
             validation_checks.append(("基本トレーニング", result["success"]))
-        except Exception as e:
+        except Exception:
             validation_checks.append(("基本トレーニング", False))
 
         # 2. 最適化トレーニング
@@ -394,7 +389,7 @@ class TestMLTrainingValidation:
                 optimization_settings=optimization_settings,
             )
             validation_checks.append(("最適化トレーニング", result["success"]))
-        except Exception as e:
+        except Exception:
             validation_checks.append(("最適化トレーニング", False))
 
         # 3. モデル評価
@@ -403,9 +398,8 @@ class TestMLTrainingValidation:
                 trainer_type="single", single_model_type="lightgbm"
             )
             result = service.train_model(sample_training_data, save_model=False)
-            eval_result = service.evaluate_model(sample_training_data)
             validation_checks.append(("モデル評価", True))
-        except Exception as e:
+        except Exception:
             validation_checks.append(("モデル評価", False))
 
         # 4. 予測機能
@@ -417,14 +411,14 @@ class TestMLTrainingValidation:
             features = sample_training_data.drop(["target"], axis=1, errors="ignore")
             predictions = service.predict(features)
             validation_checks.append(("予測機能", "predictions" in predictions))
-        except Exception as e:
+        except Exception:
             validation_checks.append(("予測機能", False))
 
         # 検証結果の集計
         passed_checks = sum(1 for _, passed in validation_checks if passed)
         total_checks = len(validation_checks)
 
-        print(f"\n📊 検証結果:")
+        print("\n📊 検証結果:")
         for check_name, passed in validation_checks:
             status = "✅" if passed else "❌"
             print(f"  {status} {check_name}: {'成功' if passed else '失敗'}")
@@ -432,11 +426,11 @@ class TestMLTrainingValidation:
         print(f"\n🎯 総合評価: {passed_checks}/{total_checks} のチェックが成功")
 
         # 大多数のチェックが成功していること
-        assert (
-            passed_checks >= total_checks * 0.75
-        ), "MLトレーニングが正常に動作していません"
+        assert passed_checks >= total_checks * 0.75, (
+            "MLトレーニングが正常に動作していません"
+        )
 
-        print(f"🎉 MLトレーニング検証が成功しました！")
+        print("🎉 MLトレーニング検証が成功しました！")
 
 
 # トレーニングパイプラインの包括的テスト
@@ -551,9 +545,9 @@ class TestMLTrainingPipeline:
         print(f"\n堅牢性テスト結果: {passed_robustness}/{len(robustness_tests)} 成功")
 
         # 多くの堅牢性テストが成功していること
-        assert (
-            passed_robustness >= len(robustness_tests) * 0.6
-        ), "MLトレーニングの堅牢性が不十分です"
+        assert passed_robustness >= len(robustness_tests) * 0.6, (
+            "MLトレーニングの堅牢性が不十分です"
+        )
 
         print("✅ MLトレーニングの堅牢性確認成功")
 

@@ -110,7 +110,7 @@ def validate_timeframe(timeframe: str) -> str:
 def validate_symbol(symbol: str) -> str:
     if ":" not in symbol:
         raise argparse.ArgumentTypeError(
-            f"無効なシンボル形式: {symbol}. " "正しい形式: 'BTC/USDT:USDT'"
+            f"無効なシンボル形式: {symbol}. 正しい形式: 'BTC/USDT:USDT'"
         )
     return symbol
 
@@ -150,7 +150,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     print("=" * 60)
-    print(f"OHLCVデータ取得スクリプト")
+    print("OHLCVデータ取得スクリプト")
     print(f"シンボル: {args.symbol}")
     print(f"タイムフレーム: {args.timeframe}")
     print("=" * 60)

@@ -67,7 +67,6 @@ class StrategyFactory:
             strategy_gene = gene  # デフォルト値として元のgeneを設定
 
             def __init__(self, broker=None, data=None, params=None):
-
                 # paramsがNoneの場合は空辞書を設定
                 if params is None:
                     params = {}

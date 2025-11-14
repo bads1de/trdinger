@@ -6,7 +6,7 @@ MarketDataOrchestrationServiceの正常系、異常系、エッジケースを�
 
 from datetime import datetime
 from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

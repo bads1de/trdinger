@@ -5,7 +5,6 @@ GA実験リポジトリの機能をテストします。
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict
 from unittest.mock import MagicMock
 
 import pytest

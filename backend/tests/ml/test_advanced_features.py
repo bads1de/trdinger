@@ -3,7 +3,7 @@ advanced_features.pyのテスト
 DataFrameのfragmentation問題をテストで確認します。
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -286,9 +286,9 @@ def test_feature_count(sample_ohlcv_data):
 
     # 2025-11-13削減後: 約30個の特徴量を追加（低寄与度特徴量17個削除済み）
     # 5（元のカラム） + 30 = 35個程度を期待
-    assert (
-        feature_count > original_count + 20
-    ), f"Expected more than {original_count + 20} features, got {feature_count}"
+    assert feature_count > original_count + 20, (
+        f"Expected more than {original_count + 20} features, got {feature_count}"
+    )
 
 
 def test_no_duplicate_columns(sample_ohlcv_data):
@@ -297,9 +297,9 @@ def test_no_duplicate_columns(sample_ohlcv_data):
     features = engineer.create_advanced_features(sample_ohlcv_data)
 
     # 列名の重複をチェック
-    assert len(features.columns) == len(
-        set(features.columns)
-    ), "Duplicate columns found"
+    assert len(features.columns) == len(set(features.columns)), (
+        "Duplicate columns found"
+    )
 
 
 def test_dataframe_not_fragmented(sample_ohlcv_data):

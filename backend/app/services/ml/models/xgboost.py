@@ -78,7 +78,9 @@ class XGBoostModel:
 
             # XGBoostデータセットを作成（特徴量名を設定）
             self.feature_names = self.feature_columns.copy()
-            dtrain = xgb.DMatrix(X_train, label=y_train, feature_names=self.feature_names)  # type: ignore
+            dtrain = xgb.DMatrix(
+                X_train, label=y_train, feature_names=self.feature_names
+            )  # type: ignore
             dtest = xgb.DMatrix(X_test, label=y_test, feature_names=self.feature_names)  # type: ignore
 
             # モデル学習

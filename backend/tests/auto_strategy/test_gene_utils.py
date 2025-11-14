@@ -4,9 +4,7 @@ BaseGeneクラスのテスト
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict
 
-import pytest
 
 from app.services.auto_strategy.utils.gene_utils import BaseGene
 

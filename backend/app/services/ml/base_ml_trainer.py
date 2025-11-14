@@ -83,7 +83,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.scaler = StandardScaler()
         self.feature_columns = None
         self.is_trained = False
-        self._model = None  # プライベート属性として定義（子クラスのプロパティと競合を回避）
+        self._model = (
+            None  # プライベート属性として定義（子クラスのプロパティと競合を回避）
+        )
         self.models = {}  # アンサンブル用の複数モデル格納
         self.last_training_results = None  # 最後の学習結果を保持
 

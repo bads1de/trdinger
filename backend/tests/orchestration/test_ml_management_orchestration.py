@@ -6,7 +6,7 @@ MLManagementOrchestrationServiceの正常系、異常系、エッジケースを
 
 from datetime import datetime
 from typing import Any, Dict, List
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from urllib.parse import quote
 
 import pytest

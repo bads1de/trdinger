@@ -6,7 +6,6 @@
 """
 
 import time
-from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -393,7 +392,8 @@ class TestPipelineValidation:
         target = pd.Series([1])
 
         pipeline = create_comprehensive_pipeline(
-            feature_selection=True, n_features=10  # データより多い特徴量を要求
+            feature_selection=True,
+            n_features=10,  # データより多い特徴量を要求
         )
 
         validation_results = validate_comprehensive_pipeline(

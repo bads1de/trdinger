@@ -10,9 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from unittest.mock import Mock
 
-import numpy as np
 import pandas as pd
-import pytest
 
 from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.models.strategy_models import Condition
@@ -129,7 +127,7 @@ class TestConditionEvaluatorClose:
         result = self.evaluator.evaluate_single_condition(condition, mock_strategy)
 
         # Should be True because last close (105.0) > 100
-        assert result == True
+        assert result
 
     def test_condition_evaluation_close_vs_open(self):
         """close vs openの条件評価テスト"""
@@ -153,7 +151,7 @@ class TestConditionEvaluatorClose:
         result = self.evaluator.evaluate_single_condition(condition, mock_strategy)
 
         # Should be True because last close (105.0) > last open (102.0)
-        assert result == True
+        assert result
 
     def test_error_handling_with_invalid_operand(self):
         """無効なオペランドでのエラーハンドリングテスト"""
@@ -176,7 +174,7 @@ class TestConditionEvaluatorClose:
         result = self.evaluator.evaluate_conditions([condition], None)
 
         # エラーが発生してもデコレーターによりFalseが返される
-        assert result == False
+        assert not result
 
     def test_error_handling_in_condition_group(self):
         """条件グループでのエラーハンドリングテスト"""
@@ -189,4 +187,4 @@ class TestConditionEvaluatorClose:
         result = self.evaluator._evaluate_condition_group(group, mock_strategy)
 
         # 空のグループなのでFalseが返される
-        assert result == False
+        assert not result

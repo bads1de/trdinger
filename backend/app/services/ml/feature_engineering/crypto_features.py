@@ -132,9 +132,7 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         volume_rolling = df["volume"].rolling(24)
         new_features["volume_price_trend"] = volume_rolling.corr(
             close_rolling_mean
-        ).fillna(
-            0.0
-        )  # type: ignore
+        ).fillna(0.0)  # type: ignore
 
         # 一括で結合（DataFrame断片化回避）
         result_df = pd.concat(

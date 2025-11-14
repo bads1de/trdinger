@@ -82,9 +82,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     meta_param = clean_name.replace("meta_", "")
                     if "meta_model_params" not in optimized_params["stacking"]:
                         optimized_params["stacking"]["meta_model_params"] = {}
-                    optimized_params["stacking"]["meta_model_params"][
-                        meta_param
-                    ] = param_value
+                    optimized_params["stacking"]["meta_model_params"][meta_param] = (
+                        param_value
+                    )
                 else:
                     optimized_params["stacking"][clean_name] = param_value
 

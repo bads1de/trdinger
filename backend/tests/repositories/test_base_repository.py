@@ -6,11 +6,10 @@ BaseRepositoryのテストモジュール
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
-from sqlalchemy import Column, DateTime, Float, Integer, String
 from sqlalchemy.orm import Session
 
 from database.models import OHLCVData

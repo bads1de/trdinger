@@ -5,7 +5,7 @@ ML管理APIエンドポイントの正常系、異常系、エッジケースを
 """
 
 from typing import Any, Dict, List
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,17 +23,6 @@ def test_client() -> TestClient:
         TestClient: テスト用のFastAPIクライアント
     """
     return TestClient(app)
-
-
-@pytest.fixture
-def mock_ml_management_orchestration_service() -> AsyncMock:
-    """
-    オーケストレーションサービスのモック
-
-    Returns:
-        AsyncMock: モックされたオーケストレーションサービス
-    """
-    return AsyncMock()
 
 
 @pytest.fixture

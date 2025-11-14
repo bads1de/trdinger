@@ -5,9 +5,9 @@ GA実行からバックテストまでの完全なフローをテストします
 """
 
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -314,13 +314,6 @@ class TestHybridMode:
             mock_ml_model: モックMLモデル
             mock_feature_adapter: モック特徴量アダプタ
         """
-        # ハイブリッド設定
-        config = {
-            "use_ml_predictions": True,
-            "ml_model": mock_ml_model,
-            "feature_adapter": mock_feature_adapter,
-        }
-
         # ML予測の取得
         predictions = mock_ml_model.predict(np.array([[1.0, 2.0]]))
 

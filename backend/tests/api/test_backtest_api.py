@@ -4,12 +4,10 @@
 バックテストAPIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from datetime import datetime
 from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_backtest_orchestration_service, get_db

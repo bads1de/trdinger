@@ -138,7 +138,7 @@ class FeatureSelector:
             X_selected = pd.DataFrame(X_selected)
 
         logger.info(f"✅ 特徴量選択完了: {len(selected_features)}個の特徴量を選択")
-        logger.info(f"選択率: {len(selected_features)/X.shape[1]*100:.1f}%")
+        logger.info(f"選択率: {len(selected_features) / X.shape[1] * 100:.1f}%")
 
         return X_selected, results
 

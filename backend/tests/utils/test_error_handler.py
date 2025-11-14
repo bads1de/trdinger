@@ -4,14 +4,10 @@ error_handler.pyのテスト
 エラーハンドリング機能の包括的なテストを提供します。
 """
 
-import concurrent.futures
 import logging
 import platform
 import time
-from typing import Any
-from unittest.mock import MagicMock, Mock, patch
 
-import numpy as np
 import pandas as pd
 import pytest
 from fastapi import HTTPException

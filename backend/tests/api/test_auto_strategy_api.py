@@ -674,7 +674,7 @@ class TestBackgroundTaskExecution:
         responses = []
         for i in range(3):
             request_data = sample_ga_generation_request.copy()
-            request_data["experiment_id"] = f"test-exp-00{i+1}"
+            request_data["experiment_id"] = f"test-exp-00{i + 1}"
             response = test_client.post(
                 "/api/auto-strategy/generate", json=request_data
             )

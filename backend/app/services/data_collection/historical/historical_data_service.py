@@ -72,7 +72,7 @@ class HistoricalDataService:
                 )
 
                 if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i+1}でデータ終了")
+                    logger.info(f"全期間データ取得完了: バッチ{i + 1}でデータ終了")
                     break
 
                 # 最初のデータは重複している可能性があるので、最新のタイムスタンプと比較
@@ -88,7 +88,7 @@ class HistoricalDataService:
                     ]
 
                 if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i+1}で重複データのみ")
+                    logger.info(f"全期間データ取得完了: バッチ{i + 1}で重複データのみ")
                     break
 
                 saved_count = await self.market_service._save_ohlcv_to_database(
@@ -100,7 +100,7 @@ class HistoricalDataService:
                 end_timestamp = historical_data[0][0]
 
                 logger.info(
-                    f"バッチ {i+1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
+                    f"バッチ {i + 1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
                 )
 
                 if len(historical_data) < max_limit:
@@ -177,7 +177,7 @@ class HistoricalDataService:
                 )
 
                 if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i+1}でデータ終了")
+                    logger.info(f"全期間データ取得完了: バッチ{i + 1}でデータ終了")
                     break
 
                 # データベースの最新データと比較して重複を避ける
@@ -193,7 +193,7 @@ class HistoricalDataService:
                     ]
 
                 if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i+1}で重複データのみ")
+                    logger.info(f"全期間データ取得完了: バッチ{i + 1}で重複データのみ")
                     break
 
                 saved_count = await self.market_service._save_ohlcv_to_database(
@@ -206,7 +206,7 @@ class HistoricalDataService:
                 end_timestamp = historical_data[0][0] - 1
 
                 logger.info(
-                    f"バッチ {i+1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
+                    f"バッチ {i + 1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
                 )
 
                 # 取得件数が最大件数未満の場合は最後のページ

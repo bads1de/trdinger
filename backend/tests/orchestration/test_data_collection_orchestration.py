@@ -4,7 +4,6 @@
 DataCollectionOrchestrationServiceの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

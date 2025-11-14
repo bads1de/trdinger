@@ -387,7 +387,6 @@ class MLTrainingService(BaseResourceManager):
             予測確率の辞書 {"up": float, "down": float, "range": float}
         """
         try:
-
             if not self.trainer.is_trained or self.trainer.model is None:
                 # モデル未学習時は警告レベルでログ出力
                 logger.warning("モデルが学習されていません。デフォルト値を返します。")

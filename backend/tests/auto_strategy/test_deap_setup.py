@@ -4,10 +4,10 @@ DEAP環境初期化のテストモジュール
 DEAPSetupクラスの機能をテストする。
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
-from deap import base, creator, tools
+from deap import base
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.deap_setup import DEAPSetup

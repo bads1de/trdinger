@@ -84,7 +84,9 @@ class ConditionGenerator:
             self.context["regime_thresholds"] = regime_thresholds
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
-    def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
+    def generate_balanced_conditions(
+        self, indicators: List[IndicatorGene]
+    ) -> Tuple[
         List[Union[Condition, ConditionGroup]],
         List[Union[Condition, ConditionGroup]],
         List[Condition],

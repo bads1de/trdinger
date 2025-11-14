@@ -458,7 +458,9 @@ class OptunaModelOptimizer:
         logger.info(f"評価指標を保存: {metrics_path}")
 
     def visualize_optimization(
-        self, study: optuna.Study, model_type: str  # type: ignore
+        self,
+        study: optuna.Study,
+        model_type: str,  # type: ignore
     ) -> None:
         """
         最適化プロセスを可視化

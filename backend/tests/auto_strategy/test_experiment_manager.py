@@ -2,19 +2,16 @@
 ExperimentManagerのテスト
 """
 
-import pytest
-
-pytestmark = pytest.mark.skip(reason="ExperimentManager implementation changed")
-from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.generators.random_gene_generator import (
-    RandomGeneGenerator,
-)
 from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
 from app.services.auto_strategy.services.experiment_manager import ExperimentManager
+
+pytestmark = pytest.mark.skip(reason="ExperimentManager implementation changed")
 
 
 class TestExperimentManager:

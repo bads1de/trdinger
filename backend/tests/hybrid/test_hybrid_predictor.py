@@ -5,14 +5,13 @@ MLTrainingServiceを使用したバッチ予測のテスト
 TDD: テストファースト
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.ml.exceptions import MLModelError, MLPredictionError
+from app.services.ml.exceptions import MLPredictionError
 
 
 class TestHybridPredictor:
@@ -142,7 +141,8 @@ class TestHybridPredictor:
         mock_service_class.return_value = mock_service
 
         predictor = HybridPredictor(
-            trainer_type="single", model_types=["lightgbm", "xgboost"]  # 複数モデル
+            trainer_type="single",
+            model_types=["lightgbm", "xgboost"],  # 複数モデル
         )
 
         result = predictor.predict(sample_features_df)

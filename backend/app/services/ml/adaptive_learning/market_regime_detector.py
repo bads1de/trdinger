@@ -479,7 +479,9 @@ class MarketRegimeDetector:
 
             if self.kmeans_model is None:
                 self.kmeans_model = KMeans(
-                    n_clusters=self.n_clusters, random_state=42, n_init="auto"  # type: ignore
+                    n_clusters=self.n_clusters,
+                    random_state=42,
+                    n_init="auto",  # type: ignore
                 )
 
             # 十分なデータがある場合のみ学習

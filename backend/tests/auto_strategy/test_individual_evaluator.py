@@ -2,14 +2,12 @@
 IndividualEvaluatorのテスト
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import numpy as np
-import pytest
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
-from app.services.auto_strategy.models.strategy_models import StrategyGene
 from app.services.auto_strategy.services.regime_detector import RegimeDetector
 
 

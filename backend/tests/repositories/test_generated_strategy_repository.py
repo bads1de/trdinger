@@ -4,8 +4,8 @@ GeneratedStrategyRepositoryのテストモジュール
 生成戦略リポジトリの機能をテストします。
 """
 
-from typing import Any, Dict, List
-from unittest.mock import MagicMock, patch
+from typing import Any, Dict
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session

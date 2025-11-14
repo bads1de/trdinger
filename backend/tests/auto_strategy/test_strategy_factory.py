@@ -2,7 +2,7 @@
 StrategyFactory のテスト
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from backtesting import Strategy

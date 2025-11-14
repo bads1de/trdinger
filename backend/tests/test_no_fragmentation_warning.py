@@ -124,7 +124,7 @@ def test_large_dataset_performance():
         features = engineer.create_advanced_features(df)
         end = time.time()
         times.append(end - start)
-        print(f"実行 {i+1}/3: {times[-1]:.2f}秒")
+        print(f"実行 {i + 1}/3: {times[-1]:.2f}秒")
 
     print(f"\n平均実行時間: {np.mean(times):.2f}秒")
     print(f"最終特徴量数: {features.shape[1]}")

@@ -77,23 +77,20 @@ class TestInteractionFeatureCalculator:
         for feature in expected_features:
             if feature in result_df.columns:
                 # 特徴量が有限値であることを確認
-                assert (
-                    not result_df[feature].isna().all()
-                ), f"特徴量 {feature} がすべてNaNです"
-                assert np.isfinite(
-                    result_df[feature]
-                ).any(), f"特徴量 {feature} に有限値がありません"
+                assert not result_df[feature].isna().all(), (
+                    f"特徴量 {feature} がすべてNaNです"
+                )
+                assert np.isfinite(result_df[feature]).any(), (
+                    f"特徴量 {feature} に有限値がありません"
+                )
 
     def test_data_preprocessing_no_ambiguous_truth(self, sample_data):
         """Seriesの真理値エラーのないデータ前処理テスト"""
-        calculator = InteractionFeatureCalculator()
-
         # 警告が発生しないことを確認
         import warnings
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result_df = calculator.calculate_interaction_features(sample_data)
 
             # "The truth value of a Series is ambiguous" 相关的警告をチェック
             ambiguous_warnings = [
@@ -103,9 +100,9 @@ class TestInteractionFeatureCalculator:
                 or "ambiguous" in str(warning.message).lower()
             ]
 
-            assert (
-                len(ambiguous_warnings) == 0
-            ), f"Series真理値警告が発生: {ambiguous_warnings}"
+            assert len(ambiguous_warnings) == 0, (
+                f"Series真理値警告が発生: {ambiguous_warnings}"
+            )
 
     def test_safe_numeric_conversion(self, sample_data):
         """安全な数値変換のテスト"""
@@ -146,9 +143,6 @@ class TestInteractionFeatureCalculator:
 
     def test_column_case_consistency(self, sample_data):
         """カラム名の大文字小文字一貫性のテスト"""
-        calculator = InteractionFeatureCalculator()
-        result_df = calculator.calculate_interaction_features(sample_data)
-
         # OHLCVカラムがすべて小文字であることを確認
         ohlcv_columns = ["open", "high", "low", "close", "volume"]
         for col in ohlcv_columns:
@@ -171,9 +165,9 @@ class TestInteractionFeatureCalculator:
                 # 無限大値をチェック
                 finite_values = result_df[col][np.isfinite(result_df[col])]
                 if len(finite_values) > 0:
-                    assert (
-                        abs(finite_values.max()) < 1e6
-                    ), f"特徴量 {col} に極端な値があります"
+                    assert abs(finite_values.max()) < 1e6, (
+                        f"特徴量 {col} に極端な値があります"
+                    )
 
     def test_atr_column_variants(self):
         """ATRカラムのバリエーションテスト（基本特徴量含む）"""
@@ -237,9 +231,9 @@ class TestInteractionFeatureCalculator:
         for feature, description in interactions.items():
             if feature in result_df.columns:
                 # 特徴量が生成されていることを確認
-                assert (
-                    feature in result_df.columns
-                ), f"{description} の特徴量 {feature} が生成されていません"
+                assert feature in result_df.columns, (
+                    f"{description} の特徴量 {feature} が生成されていません"
+                )
                 # 数値であることを確認
                 assert pd.api.types.is_numeric_dtype(result_df[feature])
 

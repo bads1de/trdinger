@@ -178,12 +178,12 @@ class BaseRepository(Generic[T]):
                 # rowcountが-1を返すドライバもあるため、0でないことをもって成功とみなす
                 if getattr(result, "rowcount", 0) != 0:
                     inserted_count += 1
-                    logger.debug(f"レコード {i+1} 挿入成功")
+                    logger.debug(f"レコード {i + 1} 挿入成功")
                 else:
-                    logger.debug(f"レコード {i+1} 挿入失敗（挿入件数0）")
+                    logger.debug(f"レコード {i + 1} 挿入失敗（挿入件数0）")
             except Exception as e:
                 # 重複エラーは無視
-                logger.debug(f"レコード {i+1} 挿入エラー（無視）: {e}")
+                logger.debug(f"レコード {i + 1} 挿入エラー（無視）: {e}")
                 continue
 
         return inserted_count

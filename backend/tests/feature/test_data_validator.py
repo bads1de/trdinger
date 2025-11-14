@@ -7,7 +7,6 @@ import os
 import sys
 from datetime import datetime, timezone
 
-import numpy as np
 import pandas as pd
 
 # Add backend directory to Python path
@@ -41,7 +40,7 @@ def test_validate_ohlcv_data():
     )
     try:
         result = validate_ohlcv_data(valid_data)
-        assert result == True
+        assert result
         print("[PASS] Valid OHLCV data test passed")
     except Exception as e:
         print(f"[FAIL] Valid OHLCV data test failed: {e}")
@@ -85,7 +84,7 @@ def test_validate_ohlcv_data():
     empty_df = pd.DataFrame()
     try:
         result = validate_ohlcv_data(empty_df)
-        assert result == True
+        assert result
         print("[PASS] Empty DataFrame test passed")
     except Exception as e:
         print(f"[FAIL] Empty DataFrame test failed: {e}")
@@ -107,7 +106,7 @@ def test_validate_extended_data():
     )
     try:
         result = validate_extended_data(valid_extended)
-        assert result == True
+        assert result
         print("[PASS] Valid extended data test passed")
     except Exception as e:
         print(f"[FAIL] Valid extended data test failed: {e}")
@@ -130,7 +129,7 @@ def test_validate_extended_data():
     no_extended = pd.DataFrame({"price": [100, 105, 103]})
     try:
         result = validate_extended_data(no_extended)
-        assert result == True
+        assert result
         print("[PASS] No extended columns test passed")
     except Exception as e:
         print(f"[FAIL] No extended columns test failed: {e}")
@@ -152,7 +151,7 @@ def test_validate_data_integrity():
     )
     try:
         result = validate_data_integrity(valid_integrity)
-        assert result == True
+        assert result
         print("[PASS] Valid timestamp data test passed")
     except Exception as e:
         print(f"[FAIL] Valid timestamp data test failed: {e}")
@@ -180,7 +179,7 @@ def test_validate_data_integrity():
     no_timestamp = pd.DataFrame({"price": [100, 105, 103]})
     try:
         result = validate_data_integrity(no_timestamp)
-        assert result == True
+        assert result
         print("[PASS] No timestamp column test passed")
     except Exception as e:
         print(f"[FAIL] No timestamp column test failed: {e}")

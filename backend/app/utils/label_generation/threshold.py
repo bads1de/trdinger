@@ -94,7 +94,7 @@ class ThresholdCalculator:
             "threshold_up": threshold_up,
             "threshold_down": threshold_down,
             "threshold_value": base_thr,
-            "description": f"固定閾値（上{threshold_up*100:.2f}%, 下{threshold_down*100:.2f}%）",
+            "description": f"固定閾値（上{threshold_up * 100:.2f}%, 下{threshold_down * 100:.2f}%）",
         }
 
     def _calculate_quantile_thresholds(
@@ -126,7 +126,7 @@ class ThresholdCalculator:
                 "threshold_down": threshold_down,
                 "target_down_ratio": perc_down,
                 "target_up_ratio": 1 - perc_up,  # 上側割合（参考情報）
-                "description": f"分位数ベース（ダウン{perc_down*100:.0f}パーセンタイル、アップ{perc_up*100:.0f}パーセンタイル）",
+                "description": f"分位数ベース（ダウン{perc_down * 100:.0f}パーセンタイル、アップ{perc_up * 100:.0f}パーセンタイル）",
             }
 
         # フォールバック: 明示分位が無い場合はKBinsDiscretizer(quantile)に委譲
@@ -160,7 +160,7 @@ class ThresholdCalculator:
                 "threshold_down": threshold_down,
                 "target_down_ratio": down_ratio,
                 "target_up_ratio": up_ratio,
-                "description": f"分位数ベース（下落{down_ratio*100:.0f}%、上昇{up_ratio*100:.0f}%）",
+                "description": f"分位数ベース（下落{down_ratio * 100:.0f}%、上昇{up_ratio * 100:.0f}%）",
             }
 
     def _calculate_std_thresholds(
@@ -206,7 +206,7 @@ class ThresholdCalculator:
                     "threshold_down": threshold_down,
                     "target_down_ratio": float(user_thr_dn),
                     "target_up_ratio": 1 - float(user_thr_up),
-                    "description": f"適応（ユーザー分位: ダウン{float(user_thr_dn)*100:.0f}%, アップ{float(user_thr_up)*100:.0f}%）",
+                    "description": f"適応（ユーザー分位: ダウン{float(user_thr_dn) * 100:.0f}%, アップ{float(user_thr_up) * 100:.0f}%）",
                 }
             # 標準偏差倍率指定
             else:
@@ -256,7 +256,10 @@ class ThresholdCalculator:
                     params = {**params, "target_distribution": target_distribution}
 
                 threshold_info = self.calculate_thresholds(
-                    price_change, method, None, **params  # type: ignore[arg-type]
+                    price_change,
+                    method,
+                    None,
+                    **params,  # type: ignore[arg-type]
                 )
 
                 # 実際の分布を計算
@@ -373,7 +376,7 @@ class ThresholdCalculator:
             "max_threshold": max_threshold,
             "volatility_stats": volatility_stats,
             "threshold_stats": threshold_stats,
-            "description": f"動的ボラティリティベース（平均閾値±{avg_threshold*100:.2f}%）",
+            "description": f"動的ボラティリティベース（平均閾値±{avg_threshold * 100:.2f}%）",
         }
 
     def _calculate_kbins_discretizer_thresholds(

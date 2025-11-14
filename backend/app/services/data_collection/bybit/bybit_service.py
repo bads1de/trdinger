@@ -545,7 +545,9 @@ class BybitService(ABC):
             else (
                 f"{symbol}:USDT"
                 if symbol.endswith("/USDT")
-                else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+                else f"{symbol}:USD"
+                if symbol.endswith("/USD")
+                else f"{symbol}:USDT"
             )
         )
         fetch_history_method = getattr(self.exchange, config.fetch_history_method_name)
@@ -652,7 +654,9 @@ class BybitService(ABC):
             else (
                 f"{symbol}:USDT"
                 if symbol.endswith("/USDT")
-                else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+                else f"{symbol}:USD"
+                if symbol.endswith("/USD")
+                else f"{symbol}:USDT"
             )
         )
         if fetch_all:

@@ -36,7 +36,6 @@ def funding_rate_repository(mock_db_session):
 @pytest.fixture
 def sample_ohlcv_data() -> List[OHLCVData]:
     """サンプルOHLCVデータ"""
-    base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     data = []
     for i in range(5):
         ohlcv = OHLCVData(

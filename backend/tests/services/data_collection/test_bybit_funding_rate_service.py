@@ -10,7 +10,6 @@ BybitFundingRateServiceクラスの全機能をテストします:
 - データベース保存
 """
 
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
