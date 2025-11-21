@@ -285,6 +285,21 @@ def get_common_presets() -> Dict[str, Dict[str, Any]]:
             "threshold_method": ThresholdMethod.KBINS_DISCRETIZER,
             "description": "1時間足、4本先、動的閾値（KBinsDiscretizer）",
         },
+        # 新規ML改善計画追加プリセット
+        "4h_4bars_050": {
+            "timeframe": "4h",
+            "horizon_n": 4,
+            "threshold": 0.005,  # 0.5%
+            "threshold_method": ThresholdMethod.FIXED,
+            "description": "4時間足、4本先（16時間先）、0.5%閾値",
+        },
+        "4h_4bars_100": {
+            "timeframe": "4h",
+            "horizon_n": 4,
+            "threshold": 0.010,  # 1.0%
+            "threshold_method": ThresholdMethod.FIXED,
+            "description": "4時間足、4本先（16時間先）、1.0%閾値",
+        },
     }
 
     return presets

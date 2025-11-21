@@ -76,10 +76,29 @@ class XGBoostModel:
                 "verbosity": 0,
             }
 
+            # class_weightの処理
+            sample_weight = None
+            class_weight = kwargs.get("class_weight")
+            if class_weight:
+                try:
+                    from sklearn.utils.class_weight import compute_sample_weight
+
+                    sample_weight = compute_sample_weight(
+                        class_weight=class_weight, y=y_train
+                    )
+                    logger.info(
+                        f"class_weight={class_weight} を適用してsample_weightを計算しました"
+                    )
+                except Exception as e:
+                    logger.warning(f"sample_weightの計算に失敗しました: {e}")
+
             # XGBoostデータセットを作成（特徴量名を設定）
             self.feature_names = self.feature_columns.copy()
             dtrain = xgb.DMatrix(
-                X_train, label=y_train, feature_names=self.feature_names
+                X_train,
+                label=y_train,
+                feature_names=self.feature_names,
+                weight=sample_weight,
             )  # type: ignore
             dtest = xgb.DMatrix(X_test, label=y_test, feature_names=self.feature_names)  # type: ignore
 

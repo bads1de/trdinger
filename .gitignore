@@ -3,7 +3,7 @@ node_modules/
 backend/__pycache__/
 backend/src/**/__pycache__/
 backend/tests/__pycache__/
-.serena/
+
 
 
 
@@ -155,5 +155,4 @@ backend/data/feature_evaluation/plots/
 # Analysis results and outputs
 backend/results/
 
-# Ignore backend docs
-backend/docs/
+

@@ -27,6 +27,7 @@ from ...utils.label_generation.presets import (
     forward_classification_preset,
     get_common_presets,
 )
+from .data_processing.sampling import ImbalanceSampler
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
 from .exceptions import MLModelError
@@ -935,6 +936,44 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             X_test_cv = X.iloc[test_idx]
             y_train_cv = y.iloc[train_idx]
             y_test_cv = y.iloc[test_idx]
+
+            # SMOTE/ADASYNによるオーバーサンプリング（学習データのみ）
+            use_smote = training_params.get(
+                "use_smote", getattr(self.config.training, "use_smote", False)
+            )
+            if use_smote:
+                smote_method = training_params.get(
+                    "smote_method",
+                    getattr(self.config.training, "smote_method", "smote"),
+                )
+                try:
+                    sampler = ImbalanceSampler(method=smote_method, random_state=42)
+                    # DataFrame/Seriesのまま渡すと警告が出る場合があるため、必要に応じて変換
+                    # ImbalanceSamplerの実装によるが、ここではそのまま渡す
+                    X_train_resampled, y_train_resampled = sampler.fit_resample(
+                        X_train_cv, y_train_cv
+                    )
+
+                    logger.info(
+                        f"オーバーサンプリング実行 ({smote_method}): {len(X_train_cv)} -> {len(X_train_resampled)}サンプル"
+                    )
+
+                    # リサンプリング後のデータを使用（DataFrame/Seriesに戻す必要があるか確認）
+                    # imblearnは通常numpy arrayまたはDataFrameを返すが、カラム名が失われる可能性がある
+                    if isinstance(X_train_resampled, np.ndarray):
+                        X_train_cv = pd.DataFrame(
+                            X_train_resampled, columns=X_train_cv.columns
+                        )
+                    else:
+                        X_train_cv = X_train_resampled
+
+                    if isinstance(y_train_resampled, np.ndarray):
+                        y_train_cv = pd.Series(y_train_resampled, name=y_train_cv.name)
+                    else:
+                        y_train_cv = y_train_resampled
+
+                except Exception as e:
+                    logger.warning(f"オーバーサンプリングに失敗しました: {e}")
 
             # データを前処理
             X_train_scaled, X_test_scaled = self._preprocess_data(X_train_cv, X_test_cv)

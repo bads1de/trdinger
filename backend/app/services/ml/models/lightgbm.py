@@ -60,7 +60,10 @@ class LightGBMModel:
             setattr(self, key, value)
 
     def fit(
-        self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]
+        self,
+        X: Union[pd.DataFrame, np.ndarray],
+        y: Union[pd.Series, np.ndarray],
+        **kwargs,
     ) -> "LightGBMModel":
         """
         sklearn互換のfitメソッド
@@ -68,6 +71,7 @@ class LightGBMModel:
         Args:
             X: 学習用特徴量（DataFrame or numpy array）
             y: 学習用ターゲット（Series or numpy array）
+            **kwargs: その他のパラメータ（class_weightなど）
 
         Returns:
             self: 学習済みモデル
@@ -101,7 +105,7 @@ class LightGBMModel:
             y_val = cast(pd.Series, y_val)
 
             # 内部の学習メソッドを呼び出し
-            self._train_model_impl(X_train, X_val, y_train, y_val)
+            self._train_model_impl(X_train, X_val, y_train, y_val, **kwargs)
 
             # classes_属性を設定（sklearn互換性のため）
             self.classes_ = np.unique(y)
@@ -136,8 +140,24 @@ class LightGBMModel:
             # 特徴量カラムを保存
             self.feature_columns = X_train.columns.tolist()
 
+            # class_weightの処理
+            sample_weight = None
+            class_weight = kwargs.get("class_weight")
+            if class_weight:
+                try:
+                    from sklearn.utils.class_weight import compute_sample_weight
+
+                    sample_weight = compute_sample_weight(
+                        class_weight=class_weight, y=y_train
+                    )
+                    logger.info(
+                        f"class_weight={class_weight} を適用してsample_weightを計算しました"
+                    )
+                except Exception as e:
+                    logger.warning(f"sample_weightの計算に失敗しました: {e}")
+
             # LightGBMデータセットを作成
-            train_data = lgb.Dataset(X_train, label=y_train)
+            train_data = lgb.Dataset(X_train, label=y_train, weight=sample_weight)
             valid_data = lgb.Dataset(X_test, label=y_test, reference=train_data)
 
             # クラス数を判定

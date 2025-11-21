@@ -397,7 +397,7 @@ class LabelGenerationConfig:
         use_preset: プリセットを使うか（True）、カスタム設定を使うか（False）。
     """
 
-    default_preset: str = "4h_4bars"
+    default_preset: str = "4h_4bars_dynamic"
     timeframe: str = "4h"
     horizon_n: int = 4
     threshold: float = 0.002
@@ -482,6 +482,18 @@ class MLTrainingConfig(BaseSettings):
     # 一般的な学習設定
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     random_state: int = Field(default=42, description="ランダムシード")
+
+    # クラス不均衡対策
+    use_class_weight: bool = Field(
+        default=False, description="class_weightを使用するか"
+    )
+    class_weight_mode: str = Field(
+        default="balanced", description="class_weightモード ('balanced' or custom dict)"
+    )
+    use_smote: bool = Field(default=False, description="SMOTE/ADASYNを使用するか")
+    smote_method: str = Field(
+        default="smote", description="サンプリング方法 ('smote' or 'adasyn')"
+    )
 
     # ラベル生成設定
     label_generation: LabelGenerationConfig = Field(

@@ -393,7 +393,7 @@ class TestGetCommonPresets:
 
         # Assert
         # 実際のプリセット数を確認（現在は13個）
-        assert len(presets) == 13, f"プリセット数が13ではありません: {len(presets)}"
+        assert len(presets) == 15, f"プリセット数が15ではありません: {len(presets)}"
         # プリセットが少なくとも10個以上あることを確認
         assert len(presets) >= 10, "プリセットが10個未満です"
 
@@ -604,7 +604,7 @@ class TestLabelGenerationConfig:
         config = LabelGenerationConfig()
 
         # Assert
-        assert config.default_preset == "4h_4bars"
+        assert config.default_preset == "4h_4bars_dynamic"
         assert config.timeframe == "4h"
         assert config.horizon_n == 4
         assert config.threshold == 0.002
