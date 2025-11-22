@@ -62,32 +62,38 @@ trading/
 
 ### バックエンドの実行
 
-バックエンドは、`pip` と `setuptools` で管理される標準的な Python プロジェクトです。
+バックエンドは、**Conda 環境 `trading`** で管理されます。すべてのコマンドは `conda run -n trading` を使用して実行してください。
 
-1. **仮想環境のセットアップ**:
+> **重要**: アクティベーションを忘れてグローバル環境を汚染することを防ぐため、`conda run`パターンを標準としています。
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate # Windows の場合: venv\Scripts\activate
+1. **開発サーバーの起動**: アプリケーションは Uvicorn を使用して提供されます。
+
+   ```powershell
+   conda run -n trading uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-2. **依存関係のインストール**: `backend` ディレクトリに移動し、依存関係をインストールします。`.[test,dev]` エクストラには、テストとリンティング用のパッケージが含まれています。
+2. **テストの実行**: テストは `pytest` を使用して実行されます。
 
-   ```bash
-   cd backend
-   pip install -e .[test,dev]
+   ```powershell
+   # すべてのテスト
+   conda run -n trading pytest backend/tests/
+
+   # カバレッジ付き
+   conda run -n trading pytest --cov=app backend/tests/
    ```
 
-3. **開発サーバーの起動**: アプリケーションは Uvicorn を使用して提供されます。
+3. **リンティングとフォーマット**:
 
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
+   ```powershell
+   # フォーマット
+   conda run -n trading black backend/app backend/tests
+   conda run -n trading isort backend/app backend/tests
 
-4. **テストの実行**: テストは `pytest` を使用して実行されます。
+   # リンティング
+   conda run -n trading flake8 backend/app backend/tests
 
-   ```bash
-   pytest
+   # 型チェック
+   conda run -n trading mypy backend/app
    ```
 
 ### フロントエンドの実行

@@ -181,4 +181,6 @@ class RegimeDetector:
                 ]
             )
 
+        # 無限大を有限な値に置換 (HMMが無限大を受け付けないため)
+        features = np.nan_to_num(features, nan=0.0, posinf=1e10, neginf=-1e10)
         return features
