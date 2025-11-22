@@ -321,8 +321,13 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
         # ML予測スコアを追加（predictorが設定され、予測が成功した場合）
         if prediction_signals:
-            # prediction_score = up確率 - down確率
-            prediction_score = prediction_signals["up"] - prediction_signals["down"]
+            # prediction_score計算
+            if "trend" in prediction_signals:
+                # ボラティリティ予測の場合: トレンド確率 - 0.5 (中心化)
+                prediction_score = prediction_signals["trend"] - 0.5
+            else:
+                # 方向予測の場合: up確率 - down確率
+                prediction_score = prediction_signals.get("up", 0.0) - prediction_signals.get("down", 0.0)
 
             # 予測重みを取得（デフォルト0.1）
             prediction_weight = config.fitness_weights.get("prediction_score", 0.1)
@@ -374,7 +379,10 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
             # ML予測スコアを計算
             if prediction_signals:
-                prediction_score = prediction_signals["up"] - prediction_signals["down"]
+                if "trend" in prediction_signals:
+                    prediction_score = prediction_signals["trend"] - 0.5
+                else:
+                    prediction_score = prediction_signals.get("up", 0.0) - prediction_signals.get("down", 0.0)
                 fitness_list[pred_score_index] = prediction_score
             else:
                 # 予測がない場合はデフォルト値

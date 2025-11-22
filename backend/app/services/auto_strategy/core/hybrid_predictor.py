@@ -97,7 +97,9 @@ class HybridPredictor:
         self.drl_policy_adapter = self._resolve_drl_adapter(drl_policy_adapter)
 
     @staticmethod
-    def _default_prediction() -> Dict[str, float]:
+    def _default_prediction(mode: str = "direction") -> Dict[str, float]:
+        if mode == "volatility":
+            return {"trend": 0.5, "range": 0.5}
         return {"up": 0.33, "down": 0.33, "range": 0.34}
 
     @staticmethod
@@ -119,7 +121,9 @@ class HybridPredictor:
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率辞書 {"up": float, "down": float, "range": float}
+            予測確率辞書 
+            - 方向予測: {"up": float, "down": float, "range": float}
+            - ボラティリティ予測: {"trend": float, "range": float}
 
         Raises:
             MLPredictionError: 予測に失敗した場合
@@ -143,17 +147,24 @@ class HybridPredictor:
 
                 if not predictions:
                     logger.warning("全てのモデルで予測失敗、デフォルト値を返します")
+                    # デフォルトは方向予測と仮定（コンテキストがないため）
                     ml_prediction = self._default_prediction()
                 else:
-                    ml_prediction = {
-                        "up": float(np.mean([p.get("up", 0.0) for p in predictions])),
-                        "down": float(
-                            np.mean([p.get("down", 0.0) for p in predictions])
-                        ),
-                        "range": float(
-                            np.mean([p.get("range", 0.0) for p in predictions])
-                        ),
-                    }
+                    # 最初の予測結果からキーを取得してモード判定
+                    first_pred = predictions[0]
+                    if "trend" in first_pred:
+                        # ボラティリティ予測の平均化
+                        ml_prediction = {
+                            "trend": float(np.mean([p.get("trend", 0.0) for p in predictions])),
+                            "range": float(np.mean([p.get("range", 0.0) for p in predictions])),
+                        }
+                    else:
+                        # 方向予測の平均化
+                        ml_prediction = {
+                            "up": float(np.mean([p.get("up", 0.0) for p in predictions])),
+                            "down": float(np.mean([p.get("down", 0.0) for p in predictions])),
+                            "range": float(np.mean([p.get("range", 0.0) for p in predictions])),
+                        }
             else:
                 # 単一モデルの場合
                 service = self.services[0]
@@ -167,6 +178,11 @@ class HybridPredictor:
                     self._run_time_series_cv(service, features_df)
                     ml_prediction = service.generate_signals(features_df)
 
+            # DRLとのブレンド（ボラティリティ予測の場合はブレンドスキップまたは別途対応が必要）
+            # 現状は方向予測のみDRLブレンドをサポート
+            if "trend" in ml_prediction:
+                return self._normalise_prediction(ml_prediction)
+            
             blended = self._blend_with_drl(ml_prediction, features_df)
             return blended
 
@@ -357,16 +373,50 @@ class HybridPredictor:
         weight = min(max(weight, 0.0), 1.0)
         ml_weight = 1.0 - weight
 
-        blended = {
-            key: weight * float(drl_prediction.get(key, 0.0))
-            + ml_weight * float(ml_prediction.get(key, 0.0))
-            for key in {"up", "down", "range"}
-        }
+        # モード判定
+        is_volatility = "trend" in ml_prediction
+
+        if is_volatility:
+            # ボラティリティ予測の場合
+            # DRLの予測 (up, down, range) を (trend, range) に変換
+            drl_trend = float(drl_prediction.get("up", 0.0)) + float(drl_prediction.get("down", 0.0))
+            drl_range = float(drl_prediction.get("range", 0.0))
+            
+            # 正規化
+            total = drl_trend + drl_range
+            if total > 0:
+                drl_trend /= total
+                drl_range /= total
+            
+            blended = {
+                "trend": weight * drl_trend + ml_weight * float(ml_prediction.get("trend", 0.0)),
+                "range": weight * drl_range + ml_weight * float(ml_prediction.get("range", 0.0))
+            }
+        else:
+            # 方向予測の場合
+            blended = {
+                key: weight * float(drl_prediction.get(key, 0.0))
+                + ml_weight * float(ml_prediction.get(key, 0.0))
+                for key in {"up", "down", "range"}
+            }
 
         return self._normalise_prediction(blended)
 
     @staticmethod
     def _normalise_prediction(prediction: Dict[str, float]) -> Dict[str, float]:
+        # ボラティリティ予測の場合
+        if "trend" in prediction:
+            trend = float(prediction.get("trend", 0.0))
+            range_score = float(prediction.get("range", 0.0))
+            total = trend + range_score
+            if total <= 0 or not np.isfinite(total):
+                return {"trend": 0.5, "range": 0.5}
+            return {
+                "trend": trend / total,
+                "range": range_score / total,
+            }
+            
+        # 方向予測の場合
         up = float(prediction.get("up", 0.0))
         down = float(prediction.get("down", 0.0))
         range_score = float(prediction.get("range", 0.0))

@@ -102,8 +102,15 @@ class MLTrainingConfig(BaseModel):
     end_date: str = Field(..., description="終了日（YYYY-MM-DD）")
     validation_split: float = Field(default=0.2, description="検証データ分割比率")
     prediction_horizon: int = Field(default=24, description="予測期間（時間）")
-    threshold_up: float = Field(default=0.02, description="上昇判定閾値")
-    threshold_down: float = Field(default=-0.02, description="下落判定閾値")
+    threshold_up: float = Field(default=0.02, description="上昇判定閾値（方向予測用）")
+    threshold_down: float = Field(default=-0.02, description="下落判定閾値（方向予測用）")
+    # ボラティリティ予測用パラメータ
+    quantile_threshold: float = Field(
+        default=0.33, description="トレンド判定の分位数閾値（上位N%）"
+    )
+    threshold_method: str = Field(
+        default="QUANTILE", description="閾値判定方法 (QUANTILE, FIXED)"
+    )
     save_model: bool = Field(default=True, description="モデルを保存するか")
     # 新しい設定項目
     train_test_split: float = Field(

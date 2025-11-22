@@ -154,14 +154,17 @@ class SingleModelTrainer(BaseMLTrainer):
             # 単一モデルで予測確率を取得
             predictions = self.single_model.predict_proba(features_df)
 
-            # 予測確率が3クラス分類であることを確認
-            if predictions.ndim == 2 and predictions.shape[1] == 3:
-                return predictions
-            else:
-                raise MLModelError(
-                    f"予期しない予測確率の形状: {predictions.shape}. "
-                    f"3クラス分類 (down, range, up) の確率が期待されます。"
-                )
+            # 予測確率が3クラスまたは2クラス分類であることを確認
+            if predictions.ndim == 2:
+                if predictions.shape[1] == 3:
+                    return predictions
+                elif predictions.shape[1] == 2:
+                    return predictions
+
+            raise MLModelError(
+                f"予期しない予測確率の形状: {predictions.shape}. "
+                f"3クラス分類 (down, range, up) または 2クラス分類 (range, trend) の確率が期待されます。"
+            )
 
         except Exception as e:
             logger.error(f"{self.model_type.upper()}モデルの予測エラー: {e}")

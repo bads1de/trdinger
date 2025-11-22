@@ -171,11 +171,17 @@ class PredictionConfig(BaseSettings):
     DEFAULT_UP_PROB: float = Field(default=0.33)
     DEFAULT_DOWN_PROB: float = Field(default=0.33)
     DEFAULT_RANGE_PROB: float = Field(default=0.34)
+    # ボラティリティ予測用デフォルト
+    DEFAULT_TREND_PROB: float = Field(default=0.5)
+    DEFAULT_VOLATILITY_RANGE_PROB: float = Field(default=0.5)
 
     # エラー時フォールバック値
     FALLBACK_UP_PROB: float = Field(default=0.33)
     FALLBACK_DOWN_PROB: float = Field(default=0.33)
     FALLBACK_RANGE_PROB: float = Field(default=0.34)
+    # ボラティリティ予測用フォールバック
+    FALLBACK_TREND_PROB: float = Field(default=0.5)
+    FALLBACK_VOLATILITY_RANGE_PROB: float = Field(default=0.5)
 
     # 予測値検証
     MIN_PROBABILITY: float = Field(default=0.0)

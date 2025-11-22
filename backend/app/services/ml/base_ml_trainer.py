@@ -738,9 +738,22 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             features_clean = features_df[valid_idx].copy()
             labels_clean = labels[valid_idx].copy()
 
-            # 文字列ラベルを数値に変換（既存のロジックとの互換性のため）
+            # 文字列ラベルを数値に変換
             # "DOWN" -> 0, "RANGE" -> 1, "UP" -> 2
-            label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+            # "TREND" -> 1, "RANGE" -> 0 (ボラティリティ予測用)
+            
+            # ラベルの種類を確認してマッピングを決定
+            unique_labels = set(labels_clean.unique())
+            
+            if "TREND" in unique_labels:
+                # ボラティリティ予測モード
+                label_mapping = {"RANGE": 0, "TREND": 1}
+                logger.info("🎯 ボラティリティ予測モード: RANGE=0, TREND=1")
+            else:
+                # 方向予測モード（互換性維持）
+                label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+                logger.info("🎯 方向予測モード: DOWN=0, RANGE=1, UP=2")
+                
             labels_numeric = labels_clean.map(label_mapping)
 
             # 欠損値がないことを確認

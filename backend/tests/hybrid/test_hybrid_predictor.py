@@ -334,3 +334,65 @@ class TestHybridPredictor:
         assert "xgboost" in models
         # randomforestはサポートされていない
         assert len(models) >= 2  # 少なくとも2つのモデルがサポートされている
+
+    @patch("app.services.ml.ml_training_service.MLTrainingService")
+    def test_predict_volatility_mode(self, mock_service_class, sample_features_df):
+        """
+        ボラティリティ予測モードのテスト
+
+        検証項目:
+        - trend/rangeの2クラス予測が正しく処理される
+        - 確率の合計が1.0になる
+        """
+        from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
+
+        # モックの設定 (ボラティリティ予測)
+        mock_service = Mock()
+        mock_service.generate_signals.return_value = {
+            "trend": 0.7,
+            "range": 0.3,
+        }
+        mock_service_class.return_value = mock_service
+
+        predictor = HybridPredictor(trainer_type="single", model_type="lightgbm")
+
+        result = predictor.predict(sample_features_df)
+
+        # 予測結果の検証
+        assert "trend" in result
+        assert "range" in result
+        assert "up" not in result  # 方向予測キーは含まれないはず
+        assert 0 <= result["trend"] <= 1
+        assert 0 <= result["range"] <= 1
+        assert abs(sum(result.values()) - 1.0) < 0.01
+
+    @patch("app.services.ml.ml_training_service.MLTrainingService")
+    def test_predict_volatility_with_multiple_models(self, mock_service_class, sample_features_df):
+        """
+        複数モデルによるボラティリティ予測テスト
+
+        検証項目:
+        - 複数モデルのtrend/range予測が平均化される
+        """
+        from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
+
+        # 複数モデルの予測結果をモック
+        mock_service = Mock()
+        mock_service.generate_signals.side_effect = [
+            {"trend": 0.8, "range": 0.2},  # LightGBM
+            {"trend": 0.6, "range": 0.4},  # XGBoost
+        ]
+        mock_service_class.return_value = mock_service
+
+        predictor = HybridPredictor(
+            trainer_type="single",
+            model_types=["lightgbm", "xgboost"],
+        )
+
+        result = predictor.predict(sample_features_df)
+
+        # 平均化された結果を検証
+        assert "trend" in result
+        # (0.8 + 0.6) / 2 = 0.7
+        assert abs(result["trend"] - 0.7) < 0.01
+

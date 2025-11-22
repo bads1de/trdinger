@@ -486,7 +486,7 @@ class MLTrainingService(BaseResourceManager):
             else:
                 latest_pred = predictions
 
-            # 予測結果を3クラス（down, range, up）の確率に変換
+            # 予測結果をクラス確率に変換
             if latest_pred.shape[0] == 3:
                 predictions = {
                     "down": float(latest_pred[0]),
@@ -494,10 +494,17 @@ class MLTrainingService(BaseResourceManager):
                     "up": float(latest_pred[2]),
                 }
                 return predictions
+            elif latest_pred.shape[0] == 2:
+                # ボラティリティ予測 (RANGE=0, TREND=1)
+                predictions = {
+                    "range": float(latest_pred[0]),
+                    "trend": float(latest_pred[1]),
+                }
+                return predictions
             else:
-                # 3クラス以外の場合はエラー
+                # 予期しない形式
                 logger.error(
-                    f"予期しない予測結果の形式: {latest_pred.shape}. 3クラス分類が期待されます。"
+                    f"予期しない予測結果の形式: {latest_pred.shape}. 2クラスまたは3クラス分類が期待されます。"
                 )
                 default_predictions = self.config.prediction.get_default_predictions()
                 return default_predictions

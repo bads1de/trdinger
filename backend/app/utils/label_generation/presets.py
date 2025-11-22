@@ -300,6 +300,15 @@ def get_common_presets() -> Dict[str, Dict[str, Any]]:
             "threshold_method": ThresholdMethod.FIXED,
             "description": "4時間足、4本先（16時間先）、1.0%閾値",
         },
+        # ボラティリティ予測用プリセット
+        "volatility_4h_14bars": {
+            "timeframe": "4h",
+            "horizon_n": 14,
+            "threshold": 0.0,  # QUANTILE使用時は無視
+            "threshold_method": ThresholdMethod.QUANTILE,
+            "quantile_threshold": 0.33,  # 上位33%をトレンドとする
+            "description": "4時間足、14本先、ボラティリティ予測（上位33%）",
+        },
     }
 
     return presets
@@ -365,10 +374,19 @@ def apply_preset_by_name(
 
     logger.info(f"プリセット '{preset_name}' を使用: {description}")
 
-    # ラベル生成
-    labels = forward_classification_preset(
-        df=df, price_column=price_column, **preset_params
-    )
+    # ボラティリティ予測プリセットかどうかを判定
+    is_volatility = "volatility" in preset_name or "trend" in preset_name
+
+    if is_volatility:
+        # ボラティリティ予測用プリセット
+        labels = volatility_classification_preset(
+            df=df, price_column=price_column, **preset_params
+        )
+    else:
+        # 従来の方向予測プリセット
+        labels = forward_classification_preset(
+            df=df, price_column=price_column, **preset_params
+        )
 
     # プリセット情報を返却
     preset_info = {
@@ -378,3 +396,120 @@ def apply_preset_by_name(
     }
 
     return labels, preset_info
+
+
+def volatility_classification_preset(
+    df: pd.DataFrame,
+    timeframe: str = "4h",
+    horizon_n: int = 14,
+    threshold: float = 0.0,  # QUANTILEなどの場合は無視されることが多い
+    price_column: str = "close",
+    threshold_method: ThresholdMethod = ThresholdMethod.QUANTILE,
+    quantile_threshold: float = 0.33,  # 上位33%をトレンドとする
+) -> pd.Series:
+    """
+    ボラティリティ（トレンド発生有無）予測用のプリセット関数。
+
+    N本先の価格変化率の絶対値に基づいて、TREND/RANGEの2値分類ラベルを生成します。
+    TREND: 大きく動いた (UP or DOWN)
+    RANGE: あまり動かなかった
+
+    Args:
+        df: OHLCV データフレーム
+        timeframe: 時間足
+        horizon_n: N本先を見る
+        threshold: 閾値（FIXEDメソッド用）
+        price_column: 価格カラム名
+        threshold_method: 閾値計算方法 (推奨: QUANTILE)
+        quantile_threshold: 分位数閾値 (例: 0.33 = 上位33%をTRENDとする)
+
+    Returns:
+        pd.Series: "TREND" / "RANGE" の2値ラベル（文字列）
+    """
+    # 時間足の検証
+    if timeframe not in SUPPORTED_TIMEFRAMES:
+        raise ValueError(f"未サポートの時間足です: {timeframe}")
+
+    # データフレームの検証
+    if not isinstance(df, pd.DataFrame) or len(df) == 0:
+        raise ValueError("有効なデータフレームが必要です")
+
+    # ログ出力
+    logger.info(
+        f"ボラティリティラベル生成開始: timeframe={timeframe}, horizon_n={horizon_n}, "
+        f"method={threshold_method.value}, quantile={quantile_threshold}"
+    )
+
+    try:
+        # LabelGeneratorを使用してラベル生成
+        label_generator = LabelGenerator()
+
+        # N本先の価格データを取得
+        price_series = df[price_column].shift(-horizon_n)
+
+        # 変化率を計算
+        returns = (price_series - df[price_column]) / df[price_column]
+        abs_returns = returns.abs()
+
+        # ラベル生成ロジック
+        labels = pd.Series(index=df.index, dtype="object")
+        
+        if threshold_method == ThresholdMethod.QUANTILE:
+            # 分位数で閾値を決定（動的）
+            # abs_returnsの分布を見て、上位 quantile_threshold を TREND とする
+            # 例: quantile_threshold=0.33 なら、上位33%がTREND
+            
+            # NaNを除外して計算
+            valid_returns = abs_returns.dropna()
+            if len(valid_returns) == 0:
+                raise ValueError("有効なリターンデータがありません")
+                
+            # 閾値を計算 (1 - quantile_threshold の分位点)
+            # 例: 上位33% -> 67%タイル値を閾値にする
+            dynamic_threshold = valid_returns.quantile(1.0 - quantile_threshold)
+            
+            logger.info(f"動的閾値 (Quantile {1.0-quantile_threshold:.2f}): {dynamic_threshold:.5f}")
+            
+            # ラベル付け
+            labels[abs_returns >= dynamic_threshold] = "TREND"
+            labels[abs_returns < dynamic_threshold] = "RANGE"
+            
+        elif threshold_method == ThresholdMethod.FIXED:
+            # 固定閾値
+            labels[abs_returns >= threshold] = "TREND"
+            labels[abs_returns < threshold] = "RANGE"
+            
+        else:
+            # その他のメソッドは一旦未対応（必要に応じて追加）
+            # 既存のLabelGeneratorを使ってUP/DOWN/RANGEを出し、UP/DOWNをTRENDに統合する
+            numeric_labels, _ = label_generator.generate_labels(
+                price_data=price_series,
+                method=threshold_method,
+                threshold=threshold,
+            )
+            # 0: DOWN, 1: RANGE, 2: UP
+            # DOWN(0) -> TREND, UP(2) -> TREND, RANGE(1) -> RANGE
+            label_map = {0: "TREND", 1: "RANGE", 2: "TREND"}
+            labels = numeric_labels.map(label_map)
+
+        # NaN処理（horizon_n分は判定不能）
+        labels[abs_returns.isna()] = None
+
+        # ログ出力（分布情報）
+        counts = labels.value_counts()
+        total = len(labels.dropna())
+        if total > 0:
+            trend_pct = (counts.get("TREND", 0) / total) * 100
+            range_pct = (counts.get("RANGE", 0) / total) * 100
+            logger.info(
+                f"ラベル生成完了: "
+                f"TREND={counts.get('TREND', 0)}({trend_pct:.1f}%), "
+                f"RANGE={counts.get('RANGE', 0)}({range_pct:.1f}%)"
+            )
+
+        return labels
+
+    except Exception as e:
+        logger.error(f"ボラティリティラベル生成エラー: {e}")
+        raise
+
