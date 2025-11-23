@@ -2,9 +2,7 @@
 HybridIndividualEvaluatorのテスト
 """
 
-from unittest.mock import Mock, patch
-
-import pytest
+from unittest.mock import Mock
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.hybrid_individual_evaluator import (

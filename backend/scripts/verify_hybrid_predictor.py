@@ -1,17 +1,17 @@
 import sys
-import os
 from pathlib import Path
 import pandas as pd
 import numpy as np
 import logging
 from unittest.mock import MagicMock
+from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
+from app.services.ml.ml_training_service import MLTrainingService
 
 # Add backend directory to path
 backend_dir = Path(__file__).parent.parent
 sys.path.append(str(backend_dir))
 
-from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
-from app.services.ml.ml_training_service import MLTrainingService
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

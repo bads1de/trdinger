@@ -15,17 +15,18 @@ MLモデルラッパーモジュール
 """
 
 # モデルラッパーのインポート（遅延インポートでImportErrorを回避）
-# Essential 2 Modelsのみ
+# Essential 3 Models
 __all__ = [
     "LightGBMModel",
     "XGBoostModel",
+    "CatBoostModel",
     "algorithm_registry",
 ]
 
 
 def get_available_models():
     """
-    利用可能なモデルラッパーのリストを取得（Essential 4 Modelsのみ）
+    利用可能なモデルラッパーのリストを取得（Essential 3 Models）
 
     Returns:
         利用可能なモデルタイプのリスト
@@ -34,8 +35,8 @@ def get_available_models():
 
     available = []
 
-    # Essential 2 Modelsのみをチェック
-    essential_models = ["lightgbm", "xgboost"]
+    # Essential 3 Modelsをチェック
+    essential_models = ["lightgbm", "xgboost", "catboost"]
 
     for model in essential_models:
         if importlib.util.find_spec(model):

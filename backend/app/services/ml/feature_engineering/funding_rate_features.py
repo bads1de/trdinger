@@ -367,6 +367,85 @@ class FundingRateFeatureCalculator:
 
         return df
 
+    def _add_market_distortion_features(
+        self, df: pd.DataFrame, ohlcv_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        市場の歪みを捉える特徴量（RANGE検出のための重要指標）
+        
+        ドキュメントSection 7.1で推奨される特徴量:
+        - Funding Rateの移動平均からの乖離（過熱感の検出）
+        - FR変化の加速度（トレンド転換の予兆）
+        - FRのボラティリティ（市場の不安定性）
+        - FR極値フラグ（異常値の検出）
+        - FRヒートマップ（市場心理の数値化）
+        
+        Args:
+            df: 入力DataFrame（FR特徴量を含む）
+            ohlcv_df: 元のOHLCVデータ
+            
+        Returns:
+            特徴量追加後のDataFrame
+        """
+        if "funding_rate_raw" not in df.columns:
+            return df
+        
+        fr = df["funding_rate_raw"]
+        
+        # 1. FR移動平均からの乖離（過熱感の指標）
+        # 過去N期間の平均から現在のFRがどれだけ離れているか
+        for window in [24, 72, 168]:  # 1日、3日、1週間
+            ma = fr.rolling(window=window).mean()
+            df[f"fr_deviation_from_ma{window}h"] = fr - ma
+            
+            # 標準化版（何σ離れているか）
+            std = fr.rolling(window=window).std()
+            df[f"fr_zscore_{window}h"] = (fr - ma) / (std + 1e-8)
+        
+        # 2. FR変化の加速度（トレンド転換の予兆）
+        # 1次微分（速度）は既に fr_velocity として存在
+        # 2次微分（加速度）を計算
+        df["fr_acceleration"] = df.get("fr_velocity", fr.pct_change()).pct_change()
+        
+        # 3. FRのボラティリティ（市場の不安定性）
+        # 高ボラティリティ = RANGE相場の可能性
+        for window in [24, 72]:
+            df[f"fr_volatility_{window}h"] = fr.rolling(window=window).std()
+        
+        # 4. FR極値フラグ（異常値の検出）
+        # 過去30日の95パーセンタイルを超える場合
+        rolling_percentile_high = fr.rolling(window=720).quantile(0.95)  # 30日
+        rolling_percentile_low = fr.rolling(window=720).quantile(0.05)
+        
+        df["fr_extreme_high"] = (fr > rolling_percentile_high).astype(int)
+        df["fr_extreme_low"] = (fr < rolling_percentile_low).astype(int)
+        
+        # 5. FRヒートマップ（-1: 超低金利、0: 通常、1: 過熱）
+        # これは既存の fr_regime_encoded を正規化したもの
+        if "fr_regime_encoded" in df.columns:
+            df["fr_heatmap"] = df["fr_regime_encoded"] / 2.0  # -1 ~ 1 に正規化
+        
+        # 6. FR変化の方向性（連続上昇/下降の検出）
+        # 連続的に上昇しているか、下降しているか
+        fr_diff = fr.diff()
+        df["fr_consecutive_rise"] = (
+            (fr_diff > 0).astype(int).groupby((fr_diff <= 0).cumsum()).cumsum()
+        )
+        df["fr_consecutive_fall"] = (
+            (fr_diff < 0).astype(int).groupby((fr_diff >= 0).cumsum()).cumsum()
+        )
+        
+        # 7. FRスプレッド（現在のFRと過去のFRの差の拡大/縮小）
+        # スプレッドが広がる = 市場の不確実性増加 = RANGE化の可能性
+        if "fr_lag_1p" in df.columns and "fr_lag_3p" in df.columns:
+            df["fr_spread_short_term"] = abs(fr - df["fr_lag_1p"])
+            df["fr_spread_long_term"] = abs(fr - df["fr_lag_3p"])
+            df["fr_spread_expansion"] = df["fr_spread_long_term"] - df["fr_spread_short_term"]
+        
+        logger.debug("市場歪み特徴量を追加しました")
+        
+        return df
+
 
 def validate_funding_rate_data(df: pd.DataFrame) -> bool:
     """

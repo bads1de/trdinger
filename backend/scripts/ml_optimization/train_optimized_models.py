@@ -1,10 +1,12 @@
 """
-Optunaを使用したLightGBMとXGBoostのハイパーパラメータ最適化スクリプト
+Optunaを使用したLightGBMとXGBoostのハイパーパラメータ最適化スクリプト（レンジ vs トレンド 2値分類版）
 
 このスクリプトは以下を実行します：
 1. データベースからOHLCVデータを取得
 2. FeatureEngineeringServiceを使用して特徴量を生成
-3. ラベル生成（3クラス分類: UP/RANGE/DOWN）
+3. ラベル生成（2クラス分類: TREND(1) vs RANGE(0)）
+   - UP/DOWN -> TREND (1)
+   - RANGE -> RANGE (0)
 4. Optunaを使用してLightGBMとXGBoostのハイパーパラメータを最適化
 5. 最適化されたモデルを保存
 6. 最適化プロセスの詳細レポートを出力
@@ -38,7 +40,6 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -70,7 +71,7 @@ for handler in logging.root.handlers:
 
 
 class OptunaModelOptimizer:
-    """Optunaを使用したモデル最適化クラス"""
+    """Optunaを使用したモデル最適化クラス（2値分類: TREND vs RANGE）"""
 
     def __init__(
         self,
@@ -101,11 +102,11 @@ class OptunaModelOptimizer:
         self.feature_service = FeatureEngineeringService()
         self.evaluator = CommonFeatureEvaluator()
 
-        # モデル保存ディレクトリ（変更なし）
+        # モデル保存ディレクトリ
         self.models_dir = Path(__file__).parent.parent.parent / "models"
         self.models_dir.mkdir(parents=True, exist_ok=True)
 
-        # 結果出力ディレクトリ（新規追加）
+        # 結果出力ディレクトリ
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.results_dir = (
             Path(__file__).parent.parent.parent
@@ -148,7 +149,7 @@ class OptunaModelOptimizer:
 
         logger.info(f"特徴量生成完了: {len(features_df.columns)}個の特徴量")
 
-        # ラベル生成（3クラス分類）
+        # ラベル生成（まずは3クラスで生成し、後で統合）
         logger.info("ラベル生成を開始")
         labels = self.evaluator.create_labels_from_config(
             ohlcv_df=data.ohlcv, price_column="close"
@@ -156,7 +157,7 @@ class OptunaModelOptimizer:
 
         # ラベルの分布を確認
         label_counts = labels.value_counts()
-        logger.info(f"ラベル分布:\n{label_counts}")
+        logger.info(f"元のラベル分布:\n{label_counts}")
 
         # データのアライメント（共通インデックスを使用）
         common_index = features_df.index.intersection(labels.index)
@@ -181,9 +182,13 @@ class OptunaModelOptimizer:
             logger.warning("特徴量にNaN値が含まれています。中央値で補完します。")
             X = X.fillna(X.median())
 
-        # ラベルを数値に変換
-        label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+        # ラベルを数値に変換（2値分類: TREND=1, RANGE=0）
+        # UP/DOWN -> TREND(1)
+        # RANGE -> RANGE(0)
+        label_mapping = {"DOWN": 1, "RANGE": 0, "UP": 1}
         y = labels.map(label_mapping)
+        
+        logger.info(f"2値分類ラベル分布:\n{y.value_counts()}")
 
         logger.info(f"データ準備完了: X={X.shape}, y={y.shape}")
 
@@ -203,7 +208,7 @@ class OptunaModelOptimizer:
         y_val: pd.Series,  # type: ignore
     ) -> Tuple[Dict[str, Any], optuna.Study]:
         """
-        LightGBMのハイパーパラメータ最適化
+        LightGBMのハイパーパラメータ最適化 (Binary)
 
         Args:
             X_train: 訓練データ特徴量
@@ -219,9 +224,8 @@ class OptunaModelOptimizer:
         def objective(trial: optuna.Trial) -> float:  # type: ignore
             """Optuna目的関数"""
             params = {
-                "objective": "multiclass",
-                "num_class": 3,
-                "metric": "multi_logloss",
+                "objective": "binary",
+                "metric": "binary_logloss",
                 "verbosity": -1,
                 "boosting_type": "gbdt",
                 "n_estimators": trial.suggest_int("n_estimators", 50, 500),
@@ -234,6 +238,7 @@ class OptunaModelOptimizer:
                 "subsample": trial.suggest_float("subsample", 0.6, 1.0),
                 "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
                 "random_state": 42,
+                "is_unbalance": trial.suggest_categorical("is_unbalance", [True, False]),
             }
 
             # モデル学習
@@ -247,7 +252,7 @@ class OptunaModelOptimizer:
 
             # 予測と評価
             y_pred = model.predict(X_val)
-            f1 = f1_score(y_val, y_pred, average="macro")
+            f1 = f1_score(y_val, y_pred)  # Binary F1
 
             return f1
 
@@ -268,7 +273,7 @@ class OptunaModelOptimizer:
         y_val: pd.Series,  # type: ignore
     ) -> Tuple[Dict[str, Any], optuna.Study]:
         """
-        XGBoostのハイパーパラメータ最適化
+        XGBoostのハイパーパラメータ最適化 (Binary)
 
         Args:
             X_train: 訓練データ特徴量
@@ -284,9 +289,8 @@ class OptunaModelOptimizer:
         def objective(trial: optuna.Trial) -> float:  # type: ignore
             """Optuna目的関数"""
             params = {
-                "objective": "multi:softprob",
-                "num_class": 3,
-                "eval_metric": "mlogloss",
+                "objective": "binary:logistic",
+                "eval_metric": "logloss",
                 "verbosity": 0,
                 "n_estimators": trial.suggest_int("n_estimators", 50, 500),
                 "learning_rate": trial.suggest_float(
@@ -299,6 +303,14 @@ class OptunaModelOptimizer:
                 "gamma": trial.suggest_float("gamma", 0, 5),
                 "random_state": 42,
             }
+            
+            # クラス重みの調整
+            use_scale_pos_weight = trial.suggest_categorical("use_scale_pos_weight", [True, False])
+            if use_scale_pos_weight:
+                # 負例数 / 正例数
+                neg_count = len(y_train) - sum(y_train)
+                pos_count = sum(y_train)
+                params["scale_pos_weight"] = neg_count / pos_count
 
             # モデル学習
             model = xgb.XGBClassifier(**params)
@@ -311,7 +323,7 @@ class OptunaModelOptimizer:
 
             # 予測と評価
             y_pred = model.predict(X_val)
-            f1 = f1_score(y_val, y_pred, average="macro")
+            f1 = f1_score(y_val, y_pred)  # Binary F1
 
             return f1
 
@@ -351,9 +363,8 @@ class OptunaModelOptimizer:
 
         if model_type == "lightgbm":
             params = {
-                "objective": "multiclass",
-                "num_class": 3,
-                "metric": "multi_logloss",
+                "objective": "binary",
+                "metric": "binary_logloss",
                 "verbosity": -1,
                 "boosting_type": "gbdt",
                 "random_state": 42,
@@ -369,13 +380,20 @@ class OptunaModelOptimizer:
 
         elif model_type == "xgboost":
             params = {
-                "objective": "multi:softprob",
-                "num_class": 3,
-                "eval_metric": "mlogloss",
+                "objective": "binary:logistic",
+                "eval_metric": "logloss",
                 "verbosity": 0,
                 "random_state": 42,
                 **best_params,
             }
+            # use_scale_pos_weightはXGBClassifierのパラメータではないので処理
+            if "use_scale_pos_weight" in params:
+                use_weight = params.pop("use_scale_pos_weight")
+                if use_weight:
+                    neg_count = len(y_train) - sum(y_train)
+                    pos_count = sum(y_train)
+                    params["scale_pos_weight"] = neg_count / pos_count
+
             model = xgb.XGBClassifier(**params)
             model.fit(
                 X_train,
@@ -389,31 +407,23 @@ class OptunaModelOptimizer:
 
         # モデル評価
         y_pred = model.predict(X_test)
-        y_pred_proba = model.predict_proba(X_test)
+        y_pred_proba = model.predict_proba(X_test)[:, 1]
 
         # 評価指標を計算
         metrics = {
             "accuracy": float(accuracy_score(y_test, y_pred)),
-            "precision": float(precision_score(y_test, y_pred, average="macro")),
-            "recall": float(recall_score(y_test, y_pred, average="macro")),
-            "f1_score": float(f1_score(y_test, y_pred, average="macro")),
+            "precision": float(precision_score(y_test, y_pred)),
+            "recall": float(recall_score(y_test, y_pred)),
+            "f1_score": float(f1_score(y_test, y_pred)),
+            "roc_auc": float(roc_auc_score(y_test, y_pred_proba)),
         }
-
-        # ROC-AUC（マルチクラス: ovr方式）
-        try:
-            metrics["roc_auc"] = float(
-                roc_auc_score(y_test, y_pred_proba, multi_class="ovr", average="macro")
-            )
-        except Exception as e:
-            logger.warning(f"ROC-AUC計算エラー: {e}")
-            metrics["roc_auc"] = 0.0
 
         # 混同行列
         cm = confusion_matrix(y_test, y_pred)
         metrics["confusion_matrix"] = cm.tolist()
 
         # 分類レポート
-        class_names = ["DOWN", "RANGE", "UP"]
+        class_names = ["RANGE", "TREND"]
         report = classification_report(
             y_test, y_pred, target_names=class_names, output_dict=True
         )
@@ -508,15 +518,21 @@ class OptunaModelOptimizer:
             # データ準備
             X, y = self.prepare_data()
 
-            # データ分割（訓練:検証:テスト = 60:20:20）
-            X_temp, X_test, y_temp, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42, stratify=y
-            )
-            X_train, X_val, y_train, y_val = train_test_split(
-                X_temp, y_temp, test_size=0.25, random_state=42, stratify=y_temp
-            )
+            # 時系列分割（先読みバイアス防止）
+            logger.info("時系列データ分割を開始（先読みバイアス防止）")
+            total_samples = len(X)
+            test_size = int(total_samples * 0.2)
+            val_size = int(total_samples * 0.2)
+            
+            X_train = X.iloc[:-(test_size + val_size)]
+            X_val = X.iloc[-(test_size + val_size):-test_size]
+            X_test = X.iloc[-test_size:]
+            
+            y_train = y.iloc[:-(test_size + val_size)]
+            y_val = y.iloc[-(test_size + val_size):-test_size]
+            y_test = y.iloc[-test_size:]
 
-            logger.info("データ分割完了:")
+            logger.info("データ分割完了（時系列順）:")
             logger.info(f"  訓練: {X_train.shape}")
             logger.info(f"  検証: {X_val.shape}")
             logger.info(f"  テスト: {X_test.shape}")
@@ -618,7 +634,7 @@ class OptunaModelOptimizer:
         report_path = self.results_dir / "optimization_report.md"
 
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write("# ML最適化レポート\n\n")
+            f.write("# ML最適化レポート (Trend vs Range)\n\n")
             f.write(f"**生成日時**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
 
             # 実行設定
@@ -691,7 +707,7 @@ class OptunaModelOptimizer:
 
 def main() -> None:
     """メイン関数"""
-    parser = argparse.ArgumentParser(description="OptunaでLightGBMとXGBoostを最適化")
+    parser = argparse.ArgumentParser(description="OptunaでLightGBMとXGBoostを最適化 (Trend vs Range)")
     parser.add_argument(
         "--symbol",
         type=str,
@@ -717,7 +733,7 @@ def main() -> None:
     args = parser.parse_args()
 
     logger.info("=" * 80)
-    logger.info("Optunaハイパーパラメータ最適化スクリプト")
+    logger.info("Optunaハイパーパラメータ最適化スクリプト (Trend vs Range)")
     logger.info("=" * 80)
     logger.info("設定:")
     logger.info(f"  シンボル: {args.symbol}")

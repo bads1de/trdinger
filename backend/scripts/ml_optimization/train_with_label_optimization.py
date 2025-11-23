@@ -1,5 +1,5 @@
 """
-Optuna統合: ラベル生成パラメータ + モデルハイパーパラメータの同時最適化
+Optuna統合: ラベル生成パラメータ + モデルハイパーパラメータの同時最適化（レンジ vs トレンド 2値分類版）
 
 Phase 1.5実装: プリセットの手動変更を不要にし、動的に最適解を発見します。
 
@@ -29,6 +29,11 @@ from sklearn.model_selection import train_test_split
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# Windowsでの文字化け対策
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from app.services.ml.feature_engineering.feature_engineering_service import (  # type: ignore  # noqa: E501
     FeatureEngineeringService,
 )
@@ -52,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 
 class IntegratedOptimizer:
-    """ラベル生成とモデルハイパーパラメータの統合最適化"""
+    """ラベル生成とモデルハイパーパラメータの統合最適化（Trend vs Range）"""
 
     def __init__(
         self,
@@ -183,8 +188,10 @@ class IntegratedOptimizer:
                 X_clean = X_aligned.loc[valid_idx]
                 labels_clean = labels_aligned.loc[valid_idx]
 
-                # ラベルを数値に変換
-                label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+                # ラベルを数値に変換 (TREND=1, RANGE=0)
+                # UP/DOWN -> 1
+                # RANGE -> 0
+                label_mapping = {"DOWN": 1, "RANGE": 0, "UP": 1}
                 y = labels_clean.map(label_mapping)
 
                 # データ数チェック
@@ -192,21 +199,27 @@ class IntegratedOptimizer:
                     logger.warning(f"データ数不足: {len(y)}行")
                     raise optuna.exceptions.TrialPruned()
 
-                # データ分割 (Train:Val:Test = 60:20:20)
-                X_temp, X_test, y_temp, y_test = train_test_split(
-                    X_clean, y, test_size=0.2, random_state=42, stratify=y
-                )
-                X_train, X_val, y_train, y_val = train_test_split(
-                    X_temp, y_temp, test_size=0.25, random_state=42, stratify=y_temp
-                )
+                # データ分割 (時系列順: Train 60%, Val 20%, Test 20%)
+                # 先読みバイアス（リーク）を防ぐため、シャッフルせずに時系列順に分割
+                n_total = len(X_clean)
+                test_start_idx = int(n_total * 0.8)
+                val_start_idx = int(n_total * 0.6)
 
-                # ========== クラス不均衡対策 ==========
-                use_class_weight = trial.suggest_categorical(
-                    "use_class_weight", [True, False]
-                )
-                use_smote = trial.suggest_categorical("use_smote", [True, False])
+                X_train = X_clean.iloc[:val_start_idx]
+                y_train = y.iloc[:val_start_idx]
+                
+                X_val = X_clean.iloc[val_start_idx:test_start_idx]
+                y_val = y.iloc[val_start_idx:test_start_idx]
+                
+                X_test = X_clean.iloc[test_start_idx:]
+                y_test = y.iloc[test_start_idx:]
 
-                # SMOTEによるオーバーサンプリング
+                # ========== クラス不均衡対策 (レンジ検出強化のため強制有効化) ==========
+                use_class_weight = True
+                # use_smote = trial.suggest_categorical("use_smote", [True, False])
+                use_smote = False # Class Weightだけで十分な場合が多いので一旦無効化
+
+                # SMOTEによるオーバーサンプリング (今回は無効化)
                 if use_smote:
                     try:
                         from imblearn.over_sampling import SMOTE
@@ -227,9 +240,8 @@ class IntegratedOptimizer:
                     if model_type == "lightgbm":
                         # LightGBMパラメータ
                         params = {
-                            "objective": "multiclass",
-                            "num_class": 3,
-                            "metric": "multi_logloss",
+                            "objective": "binary",
+                            "metric": "binary_logloss",
                             "verbosity": -1,
                             "n_estimators": trial.suggest_int("n_estimators", 50, 500),
                             "learning_rate": trial.suggest_float(
@@ -241,10 +253,8 @@ class IntegratedOptimizer:
                             "subsample": trial.suggest_float("subsample", 0.5, 1.0),
                             "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
                             "random_state": 42,
+                            "class_weight": "balanced" # 強制有効化
                         }
-
-                        if use_class_weight:
-                            params["class_weight"] = "balanced"
 
                         model = lgb.LGBMClassifier(**params)
                         model.fit(
@@ -259,9 +269,8 @@ class IntegratedOptimizer:
 
                         # XGBoostパラメータ
                         params = {
-                            "objective": "multi:softprob",
-                            "num_class": 3,
-                            "eval_metric": "mlogloss",
+                            "objective": "binary:logistic",
+                            "eval_metric": "logloss",
                             "verbosity": 0,
                             "n_estimators": trial.suggest_int("n_estimators", 50, 500),
                             "learning_rate": trial.suggest_float(
@@ -278,8 +287,12 @@ class IntegratedOptimizer:
                         }
 
                         # XGBoostはscale_pos_weightでクラスウェイト対応
-                        if use_class_weight:
-                            # 多クラスなので簡易的な対応
+                        neg_count = len(y_train) - sum(y_train)
+                        pos_count = sum(y_train)
+                        # ゼロ除算防止
+                        if pos_count > 0:
+                            params["scale_pos_weight"] = neg_count / pos_count
+                        else:
                             params["scale_pos_weight"] = 1.0
 
                         model = xgb.XGBClassifier(**params)
@@ -294,32 +307,42 @@ class IntegratedOptimizer:
                     logger.warning(f"学習エラー ({model_type}): {e}")
                     raise optuna.exceptions.TrialPruned()
 
-                # ========== Validation精度評価 ==========
+                # ========== Validation精度評価 (カスタムスコア: 期待値最大化) ==========
                 y_val_pred = model.predict(X_val)
-                val_f1 = f1_score(y_val, y_val_pred, average="weighted")
-
+                
+                from sklearn.metrics import classification_report
+                val_report = classification_report(y_val, y_val_pred, output_dict=True, zero_division=0)
+                
+                # クラス 0: RANGE, 1: TREND
+                trend_recall = val_report['1']['recall']
+                trend_precision = val_report['1']['precision']
+                range_recall = val_report['0']['recall']
+                
+                # カスタムスコア: トレンド検出数(Recall)と確度(Precision)を重視し、レンジ回避(Range Recall)は補助的に
+                # これにより「高勝率だが低回数」ではなく「十分な回数でトータルプラス」を目指す
+                custom_score = (trend_recall * 1.5) + trend_precision + (range_recall * 0.5)
+                
                 # ========== Test精度評価 (過学習チェック) ==========
                 y_test_pred = model.predict(X_test)
-                test_f1 = f1_score(y_test, y_test_pred, average="weighted")
+                # test_f1 = f1_score(y_test, y_test_pred, average="macro") # もう使わないのでコメントアウト
 
                 # クラス別精度を取得
-                from sklearn.metrics import classification_report
+                # from sklearn.metrics import classification_report # 上でimport済み
 
                 report = classification_report(
-                    y_test, y_test_pred, target_names=["DOWN", "RANGE", "UP"], output_dict=True
+                    y_test, y_test_pred, target_names=["RANGE", "TREND"], output_dict=True
                 )
 
-                down_f1 = report["DOWN"]["f1-score"]
                 range_f1 = report["RANGE"]["f1-score"]
-                up_f1 = report["UP"]["f1-score"]
+                trend_f1 = report["TREND"]["f1-score"]
 
                 logger.info(
-                    f"Trial {trial.number} ({model_type}): Val_F1={val_f1:.4f}, Test_F1={test_f1:.4f}, "
-                    f"DOWN={down_f1:.4f}, RANGE={range_f1:.4f}, UP={up_f1:.4f}"
+                    f"Trial {trial.number} ({model_type}): Custom_Score={custom_score:.4f}, "
+                    f"Trend_Rec={trend_recall:.4f}, Trend_Prec={trend_precision:.4f}, Range_Rec={range_recall:.4f}"
                 )
 
                 # Validation精度を返す（過学習を防ぐため）
-                return val_f1
+                return custom_score
 
             # Optunaで最適化
             pruner = optuna.pruners.MedianPruner(n_startup_trials=10)
@@ -330,7 +353,7 @@ class IntegratedOptimizer:
             )
 
             logger.info("=" * 80)
-            logger.info("統合最適化開始")
+            logger.info("統合最適化開始 (Trend vs Range)")
             logger.info("=" * 80)
 
             study.optimize(objective, n_trials=self.n_trials, n_jobs=1)
@@ -359,6 +382,7 @@ class IntegratedOptimizer:
         # ベストtrialからTest精度を再計算
         best_trial = study.best_trial
         best_params = best_trial.params
+        best_params["use_class_weight"] = True # 強制的に追加
 
         # 最適パラメータで最終評価
         logger.info("=" * 80)
@@ -386,15 +410,15 @@ class IntegratedOptimizer:
         # 拡張マークダウンレポート
         md_path = self.results_dir / "report.md"
         with open(md_path, "w", encoding="utf-8") as f:
-            f.write("# 統合最適化レポート (Phase 1.5 拡張版)\n\n")
+            f.write("# 統合最適化レポート (Phase 1.5 拡張版 - Trend vs Range)\n\n")
             f.write(f"**生成日時**: {datetime.now()}\n\n")
 
             # ベスト結果
             f.write("## ベスト結果\n\n")
             f.write(f"- **選択モデル**: {best_params.get('model_type', 'lightgbm').upper()}\n")
-            f.write(f"- **Validation F1スコア**: {study.best_value:.4f}\n")
+            f.write(f"- **Validation Custom Score**: {study.best_value:.4f}\n")
             f.write(f"- **Test F1スコア**: {final_metrics['test_f1']:.4f}\n")
-            f.write(f"- **過学習度**: {(study.best_value - final_metrics['test_f1']) * 100:.2f}%\n")
+            # f.write(f"- **過学習度**: {(study.best_value - final_metrics['test_f1']) * 100:.2f}%\n") # 比較不能なので削除
             f.write(f"- **実行時間**: {elapsed_time:.1f}秒\n")
             f.write(f"- **試行回数**: {len(study.trials)}\n\n")
 
@@ -402,7 +426,7 @@ class IntegratedOptimizer:
             f.write("## クラス別性能 (Test)\n\n")
             f.write("| クラス | Precision | Recall | F1-Score | Support |\n")
             f.write("|--------|-----------|--------|----------|----------|\n")
-            for cls in ["DOWN", "RANGE", "UP"]:
+            for cls in ["RANGE", "TREND"]:
                 metrics = final_metrics["class_report"][cls]
                 f.write(
                     f"| {cls} | {metrics['precision']:.4f} | "
@@ -417,7 +441,7 @@ class IntegratedOptimizer:
             f.write(f"- **threshold_method**: {best_params['threshold_method']}\n")
             threshold_key = [k for k in best_params if "threshold" in k and k != "threshold_method"][0]
             f.write(f"- **threshold**: {best_params[threshold_key]:.4f}\n")
-            f.write(f"- **use_class_weight**: {best_params['use_class_weight']}\n")
+            f.write(f"- **use_class_weight**: True (Fixed)\n")
             f.write(f"- **use_smote**: {best_params.get('use_smote', False)}\n\n")
 
             # 最適モデルハイパーパラメータ
@@ -456,8 +480,8 @@ class IntegratedOptimizer:
             else:
                 f.write("✅ **過学習なし**: ValidationとTestの差が小さく、良好です。\n\n")
 
-            if final_metrics["class_report"]["DOWN"]["recall"] < 0.5:
-                f.write("⚠️ **DOWNクラスのRecallが低い**: 下降トレンドの検出が不十分です。\n")
+            if final_metrics["class_report"]["TREND"]["recall"] < 0.5:
+                f.write("⚠️ **TRENDクラスのRecallが低い**: トレンドの検出が不十分です。\n")
                 f.write("- SMOTEの有効化を検討してください\n")
                 f.write("- class_weightの調整を検討してください\n\n")
 
@@ -499,17 +523,23 @@ class IntegratedOptimizer:
         X_clean = X_aligned.loc[valid_idx]
         labels_clean = labels_aligned.loc[valid_idx]
 
-        # ラベルを数値に変換
-        label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+        # ラベルを数値に変換 (Trend=1, Range=0)
+        label_mapping = {"DOWN": 1, "RANGE": 0, "UP": 1}
         y = labels_clean.map(label_mapping)
 
-        # データ分割
-        X_temp, X_test, y_temp, y_test = train_test_split(
-            X_clean, y, test_size=0.2, random_state=42, stratify=y
-        )
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_temp, y_temp, test_size=0.25, random_state=42, stratify=y_temp
-        )
+        # データ分割 (時系列順: Train 60%, Val 20%, Test 20%)
+        n_total = len(X_clean)
+        test_start_idx = int(n_total * 0.8)
+        val_start_idx = int(n_total * 0.6)
+
+        X_train = X_clean.iloc[:val_start_idx]
+        y_train = y.iloc[:val_start_idx]
+        
+        X_val = X_clean.iloc[val_start_idx:test_start_idx]
+        y_val = y.iloc[val_start_idx:test_start_idx]
+        
+        X_test = X_clean.iloc[test_start_idx:]
+        y_test = y.iloc[test_start_idx:]
 
         # SMOTE適用
         if best_params.get("use_smote", False):
@@ -526,9 +556,8 @@ class IntegratedOptimizer:
 
         if model_type == "lightgbm":
             params = {
-                "objective": "multiclass",
-                "num_class": 3,
-                "metric": "multi_logloss",
+                "objective": "binary",
+                "metric": "binary_logloss",
                 "verbosity": -1,
                 "n_estimators": best_params["n_estimators"],
                 "learning_rate": best_params["learning_rate"],
@@ -540,7 +569,7 @@ class IntegratedOptimizer:
                 "random_state": 42,
             }
 
-            if best_params["use_class_weight"]:
+            if best_params.get("use_class_weight", True):
                 params["class_weight"] = "balanced"
 
             model = lgb.LGBMClassifier(**params)
@@ -555,9 +584,8 @@ class IntegratedOptimizer:
             import xgboost as xgb
 
             params = {
-                "objective": "multi:softprob",
-                "num_class": 3,
-                "eval_metric": "mlogloss",
+                "objective": "binary:logistic",
+                "eval_metric": "logloss",
                 "verbosity": 0,
                 "n_estimators": best_params["n_estimators"],
                 "learning_rate": best_params["learning_rate"],
@@ -571,8 +599,13 @@ class IntegratedOptimizer:
                 "random_state": 42,
             }
 
-            if best_params["use_class_weight"]:
-                params["scale_pos_weight"] = 1.0
+            if best_params.get("use_class_weight", True):
+                neg_count = len(y_train) - sum(y_train)
+                pos_count = sum(y_train)
+                if pos_count > 0:
+                    params["scale_pos_weight"] = neg_count / pos_count
+                else:
+                    params["scale_pos_weight"] = 1.0
 
             model = xgb.XGBClassifier(**params)
             model.fit(
@@ -584,7 +617,7 @@ class IntegratedOptimizer:
 
         # Test精度評価
         y_test_pred = model.predict(X_test)
-        test_f1 = f1_score(y_test, y_test_pred, average="weighted")
+        test_f1 = f1_score(y_test, y_test_pred, average="macro") # Macro F1
 
         # クラス別レポート
         from sklearn.metrics import classification_report
@@ -592,16 +625,15 @@ class IntegratedOptimizer:
         report = classification_report(
             y_test,
             y_test_pred,
-            target_names=["DOWN", "RANGE", "UP"],
+            target_names=["RANGE", "TREND"],
             output_dict=True,
         )
 
         return {"test_f1": test_f1, "class_report": report}
 
 
-
 def main():
-    parser = argparse.ArgumentParser(description="統合最適化: ラベル生成+モデル")
+    parser = argparse.ArgumentParser(description="統合最適化: ラベル生成+モデル (Trend vs Range)")
     parser.add_argument("--symbol", default="BTC/USDT:USDT", help="シンボル")
     parser.add_argument("--timeframe", default="1h", help="時間軸")
     parser.add_argument("--n-trials", type=int, default=50, help="試行回数")
@@ -609,7 +641,7 @@ def main():
     args = parser.parse_args()
 
     logger.info("=" * 80)
-    logger.info("Phase 1.5: Optuna統合最適化")
+    logger.info("Phase 1.5: Optuna統合最適化 (Trend vs Range)")
     logger.info("=" * 80)
     logger.info(f"シンボル: {args.symbol}")
     logger.info(f"時間軸: {args.timeframe}")
