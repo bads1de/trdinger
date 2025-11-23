@@ -392,8 +392,8 @@ class TestGetCommonPresets:
         presets = get_common_presets()
 
         # Assert
-        # 実際のプリセット数を確認（現在は13個）
-        assert len(presets) == 15, f"プリセット数が15ではありません: {len(presets)}"
+        # 実際のプリセット数を確認（現在は16個）
+        assert len(presets) == 16, f"プリセット数が16ではありません: {len(presets)}"
         # プリセットが少なくとも10個以上あることを確認
         assert len(presets) >= 10, "プリセットが10個未満です"
 
@@ -463,16 +463,17 @@ class TestGetCommonPresets:
         # Assert
         for preset_name in presets.keys():
             # プリセット名は「時間足_本数」または「時間足_本数_特徴」の形式
+            # または「volatility_時間足_本数」などの特殊形式
             parts = preset_name.split("_")
             assert len(parts) >= 2, (
                 f"{preset_name}の形式が無効です（最低2つのパートが必要）"
             )
 
-            # 時間足部分が有効か確認
-            timeframe_part = parts[0]
-            assert any(
-                tf in timeframe_part for tf in ["15m", "30m", "1h", "4h", "1d"]
-            ), f"{preset_name}の時間足部分が無効: {timeframe_part}"
+            # 時間足部分が有効か確認（volatilityなどの接頭辞がある場合も考慮）
+            has_valid_timeframe = any(
+                tf in preset_name for tf in ["15m", "30m", "1h", "4h", "1d"]
+            )
+            assert has_valid_timeframe, f"{preset_name}に有効な時間足が含まれていません"
 
 
 # ============================================================================
