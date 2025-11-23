@@ -2,14 +2,13 @@
 ファンディングレート特徴量計算
 
 8時間ごとのファンディングレートデータから、
-1時間足の価格予測に有効なTier 1特徴量（15個）を生成します。
+1時間足の価格予測に有効な特徴量を生成します。
 
-特徴量設計:
-- 基本金利指標（4個）: raw, lag_1p, lag_2p, lag_3p
-- 時間サイクル（3個）: hours_since_settlement, cycle_sin, cycle_cos
-- モメンタム（3個）: velocity, ema_3periods, ema_7periods
-- レジーム（2個）: regime_encoded, regime_duration
-- 価格相互作用（2個）: price_corr_24h, volatility_adjusted
+【加工方針 2025-11-24】
+実データの46%が0.01%(ベースライン)に張り付いているため、
+生の比率(ratio)ではなく、以下のように加工して学習効率を高める。
+1. bps単位への変換 (x 10000)
+2. ベースライン(1.0bps)からの乖離 (deviation) を中心化
 """
 
 import logging
@@ -24,22 +23,15 @@ logger = logging.getLogger(__name__)
 class FundingRateFeatureCalculator:
     """
     ファンディングレート特徴量計算クラス
-
-    8時間ごとのファンディングレートデータから、
-    1時間足の価格予測に有効な特徴量を生成します。
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         初期化
-
-        Args:
-            config: 特徴量計算の設定
-                - settlement_interval: 決済間隔（デフォルト: 8時間）
-                - baseline_rate: ベースライン金利（デフォルト: 0.0001 = 0.01%）
         """
         config = config or {}
         self.settlement_interval = config.get("settlement_interval", 8)
+        # ベースラインは通常0.01% (0.0001)
         self.baseline_rate = config.get("baseline_rate", 0.0001)
 
         logger.info(
@@ -53,13 +45,6 @@ class FundingRateFeatureCalculator:
     ) -> pd.DataFrame:
         """
         全特徴量を計算
-
-        Args:
-            ohlcv_df: OHLCVデータ（1時間足）
-            funding_df: ファンディングレートデータ（8時間ごと）
-
-        Returns:
-            特徴量を追加したDataFrame
         """
         logger.info("ファンディングレート特徴量の計算を開始...")
 
@@ -72,13 +57,17 @@ class FundingRateFeatureCalculator:
 
         # 2. 欠損値処理
         df = self._handle_missing_values(df)
+        
+        # 3. 数値加工 (bps変換とベースライン乖離) - ここが重要
+        df = self._transform_data(df)
 
-        # 3. Tier 1特徴量の計算
+        # 4. 特徴量の計算 (加工済みデータを使用)
         df = self._add_basic_rate_features(df)
         df = self._add_time_cycle_features(df)
         df = self._add_momentum_features(df)
         df = self._add_regime_features(df)
         df = self._add_price_interaction_features(df, ohlcv_df)
+        df = self._add_market_distortion_features(df, ohlcv_df)
 
         added_features = [col for col in df.columns if col.startswith("fr_")]
         logger.info(f"ファンディングレート特徴量を追加: {len(added_features)}個")
@@ -88,43 +77,33 @@ class FundingRateFeatureCalculator:
     def _prepare_data(
         self, ohlcv_df: pd.DataFrame, funding_df: pd.DataFrame
     ) -> pd.DataFrame:
-        """
-        データの前処理とマージ
-
-        Args:
-            ohlcv_df: OHLCVデータ（1時間足）
-            funding_df: ファンディングレートデータ（8時間ごと）
-
-        Returns:
-            マージされたDataFrame
-        """
-        # OHLCVデータをコピー
+        """データの前処理とマージ"""
         result = ohlcv_df.copy()
 
-        # timestampカラムの存在確認と自動補完
-        if "timestamp" not in result.columns:
-            # インデックスがDatetimeIndexの場合はカラムに変換
-            if isinstance(result.index, pd.DatetimeIndex):
-                result["timestamp"] = result.index
-                logger.debug("インデックスからtimestampカラムを生成しました")
-            else:
-                logger.warning(
-                    "OHLCVデータにtimestampカラムがなく、インデックスもDatetimeIndexではありません"
-                )
-                return result
+        # timestampカラムの正規化
+        if isinstance(result.index, pd.DatetimeIndex):
+            if "timestamp" in result.columns:
+                result = result.drop(columns=["timestamp"])
+            result = result.reset_index()
+            if "index" in result.columns and "timestamp" not in result.columns:
+                result = result.rename(columns={"index": "timestamp"})
+            elif result.index.name == "timestamp":
+                pass 
+            if "timestamp" not in result.columns:
+                 result = result.rename(columns={result.columns[0]: "timestamp"})
 
-        if (
-            "timestamp" not in funding_df.columns
-            or "funding_rate" not in funding_df.columns
-        ):
+        elif "timestamp" not in result.columns:
+            logger.warning("OHLCVデータにtimestampカラムがなく、インデックスもDatetimeIndexではありません")
+            return result
+
+        if "timestamp" not in funding_df.columns or "funding_rate" not in funding_df.columns:
             logger.warning("ファンディングレートデータに必要なカラムがありません")
             return result
 
-        # ファンディングレートデータを前方補完でマージ
-        # 8時間ごとの値を1時間足に展開
         funding_sorted = funding_df.sort_values("timestamp").copy()
+        result["timestamp"] = pd.to_datetime(result["timestamp"])
+        funding_sorted["timestamp"] = pd.to_datetime(funding_sorted["timestamp"])
 
-        # merge_asofで最も近い過去の値をマージ
         result = pd.merge_asof(
             result.sort_values("timestamp"),
             funding_sorted[["timestamp", "funding_rate"]],
@@ -132,114 +111,78 @@ class FundingRateFeatureCalculator:
             direction="backward",
         )
 
-        # funding_rate_rawとして保存
         if "funding_rate" in result.columns:
             result["funding_rate_raw"] = result["funding_rate"]
-
+            
+        result = result.set_index("timestamp")
         return result
 
     def _handle_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        階層的欠損値処理
-
-        1. 決済時刻の真の欠損を検出
-        2. 決済時刻の欠損のみ線形補間（最大2期間）
-        3. 非決済時刻は前方補完済み（merge_asofで処理済み）
-        4. 補完フラグを追加
-
-        Args:
-            df: 入力DataFrame
-
-        Returns:
-            欠損値処理後のDataFrame
-        """
+        """階層的欠損値処理"""
         if "funding_rate_raw" not in df.columns:
             return df
 
-        # 補完フラグを初期化
         df["fr_imputed_flag"] = 0
-
-        # 欠損値の位置を記録
         missing_mask = df["funding_rate_raw"].isna()
 
         if missing_mask.sum() > 0:
-            # 線形補間（最大2期間）
+            # FutureWarning対応: method='linear'は非推奨
             df["funding_rate_raw"] = df["funding_rate_raw"].interpolate(
-                method="linear", limit=2, limit_direction="both"
+                limit=2, limit_direction="both"
             )
-
-            # 補間されたデータにフラグを設定
             df.loc[missing_mask & ~df["funding_rate_raw"].isna(), "fr_imputed_flag"] = 1
-
-            # 残った欠損値は前方補完
             df["funding_rate_raw"] = df["funding_rate_raw"].ffill()
-
-            # それでも残る欠損値は後方補完
             df["funding_rate_raw"] = df["funding_rate_raw"].bfill()
-
-            logger.debug(f"欠損値処理: {missing_mask.sum()}個の欠損値を補完")
 
         return df
 
-    def _add_basic_rate_features(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _transform_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        基本金利指標特徴量
-
-        - funding_rate_raw: Raw値（既に追加済み）
-        - fr_lag_1p: 1期間前（8時間前）
-        - fr_lag_2p: 2期間前（16時間前）
-        - fr_lag_3p: 3期間前（24時間前）
-
-        Args:
-            df: 入力DataFrame
-
-        Returns:
-            特徴量追加後のDataFrame
+        データを機械学習しやすい形に加工
+        
+        1. fr_bps: ベーシスポイント単位 (x10000)
+           - 0.0001 -> 1.0
+           - スケールが大きくなり、計算誤差が減る
+           
+        2. fr_deviation_bps: ベースライン(0.01%)からの乖離
+           - 通常時(0.01%)は 0.0 になる
+           - 0を中心とした分布になり、モデルが「異常」を検知しやすくなる
         """
         if "funding_rate_raw" not in df.columns:
             return df
+            
+        # bps変換
+        df["fr_bps"] = df["funding_rate_raw"] * 10000
+        
+        # ベースライン乖離 (0.01% = 1.0bps)
+        baseline_bps = self.baseline_rate * 10000
+        df["fr_deviation_bps"] = df["fr_bps"] - baseline_bps
+        
+        return df
 
-        # ラグ特徴量（期間 = settlement_interval）
+    def _add_basic_rate_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """基本金利指標特徴量 (bpsベースに変更)"""
+        if "fr_bps" not in df.columns:
+            return df
+
+        # 生のrawデータよりも、deviationの方が情報価値が高い可能性があるが、
+        # 基本特徴量としてはbps値を使う
         lag_periods = [1, 2, 3]
         for lag in lag_periods:
             shift_hours = lag * self.settlement_interval
-            df[f"fr_lag_{lag}p"] = df["funding_rate_raw"].shift(shift_hours)
+            df[f"fr_lag_{lag}p"] = df["fr_bps"].shift(shift_hours)
 
         return df
 
     def _add_time_cycle_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        時間サイクル特徴量
+        """時間サイクル特徴量"""
+        if not isinstance(df.index, pd.DatetimeIndex):
+             return df
 
-        - fr_hours_since_settlement: 決済からの経過時間（0-7）
-        - fr_cycle_sin: サイクルのsin成分
-        - fr_cycle_cos: サイクルのcos成分
-
-        Args:
-            df: 入力DataFrame
-
-        Returns:
-            特徴量追加後のDataFrame
-        """
-        if "timestamp" not in df.columns:
-            # インデックスがDatetimeIndexの場合はカラムに変換
-            if isinstance(df.index, pd.DatetimeIndex):
-                df["timestamp"] = df.index
-                logger.debug(
-                    "時間サイクル特徴量: インデックスからtimestampカラムを生成"
-                )
-            else:
-                logger.warning("時間サイクル特徴量: timestampカラムがありません")
-                return df
-
-        # 決済からの経過時間を計算
-        # 決済時刻は0, 8, 16時なので、時刻を8で割った余り
         df["fr_hours_since_settlement"] = (
-            df["timestamp"].dt.hour % self.settlement_interval
+            df.index.hour % self.settlement_interval
         )
 
-        # サイクルの三角関数表現（0-8時間の周期）
-        # 2π / 8 = π/4
         cycle_phase = (
             2 * np.pi * df["fr_hours_since_settlement"] / self.settlement_interval
         )
@@ -249,81 +192,51 @@ class FundingRateFeatureCalculator:
         return df
 
     def _add_momentum_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        モメンタム特徴量
-
-        - fr_velocity: 変化率（1期間の変化）
-        - fr_ema_3periods: 3期間EMA（24時間）
-        - fr_ema_7periods: 7期間EMA（56時間）
-
-        Args:
-            df: 入力DataFrame
-
-        Returns:
-            特徴量追加後のDataFrame
-        """
-        if "funding_rate_raw" not in df.columns:
+        """モメンタム特徴量 (deviationベースに変更)"""
+        if "fr_deviation_bps" not in df.columns:
             return df
 
-        # 変化率（velocity）
-        df["fr_velocity"] = df["funding_rate_raw"].pct_change(
-            periods=self.settlement_interval
-        )
+        # 変化量（差分）
+        # deviationの変化を見ることで、過熱感の加速/減速を捉える
+        df["fr_velocity"] = df["fr_deviation_bps"].diff(periods=self.settlement_interval)
 
-        # EMA（期間はsettlement_interval単位）
-        # 3期間 = 24時間、7期間 = 56時間
         span_3 = 3 * self.settlement_interval
         span_7 = 7 * self.settlement_interval
 
+        # EMAもdeviationに対してかける（通常時0への回帰を見やすくする）
         df["fr_ema_3periods"] = (
-            df["funding_rate_raw"].ewm(span=span_3, adjust=False).mean()
+            df["fr_deviation_bps"].ewm(span=span_3, adjust=False).mean()
         )
         df["fr_ema_7periods"] = (
-            df["funding_rate_raw"].ewm(span=span_7, adjust=False).mean()
+            df["fr_deviation_bps"].ewm(span=span_7, adjust=False).mean()
         )
 
         return df
 
     def _add_regime_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        レジーム特徴量
-
-        レジーム分類:
-        - -2: 超低金利（FR < -0.01%）
-        - -1: 低金利（-0.01% ≤ FR < 0%）
-        -  0: 通常（0% ≤ FR ≤ 0.05%）
-        -  1: 過熱（0.05% < FR ≤ 0.15%）
-        -  2: 極端過熱（FR > 0.15%）
-
-        特徴量:
-        - fr_regime_encoded: レジームコード
-        - regime_duration: 現在のレジーム継続期間
-
-        Args:
-            df: 入力DataFrame
-
-        Returns:
-            特徴量追加後のDataFrame
-        """
-        if "funding_rate_raw" not in df.columns:
+        """レジーム特徴量 (bps基準で判定)"""
+        if "fr_bps" not in df.columns:
             return df
 
-        # レジーム分類
-        fr = df["funding_rate_raw"]
+        fr_bps = df["fr_bps"]
 
+        # 閾値もbps換算
+        # -0.01% -> -1.0
+        # 0.00% -> 0.0
+        # 0.05% -> 5.0
+        # 0.15% -> 15.0
+        
         conditions = [
-            fr < -0.0001,  # 超低金利
-            (fr >= -0.0001) & (fr < 0),  # 低金利
-            (fr >= 0) & (fr <= 0.0005),  # 通常
-            (fr > 0.0005) & (fr <= 0.0015),  # 過熱
-            fr > 0.0015,  # 極端過熱
+            fr_bps < -1.0,
+            (fr_bps >= -1.0) & (fr_bps < 0.0),
+            (fr_bps >= 0.0) & (fr_bps <= 5.0),
+            (fr_bps > 5.0) & (fr_bps <= 15.0),
+            fr_bps > 15.0,
         ]
         choices = [-2, -1, 0, 1, 2]
 
         df["fr_regime_encoded"] = np.select(conditions, choices, default=0)
 
-        # レジーム継続期間を計算
-        # レジームが変わるたびにリセット
         regime_changes = df["fr_regime_encoded"] != df["fr_regime_encoded"].shift(1)
         df["regime_duration"] = regime_changes.cumsum()
         df["regime_duration"] = df.groupby("regime_duration").cumcount()
@@ -333,37 +246,22 @@ class FundingRateFeatureCalculator:
     def _add_price_interaction_features(
         self, df: pd.DataFrame, ohlcv_df: pd.DataFrame
     ) -> pd.DataFrame:
-        """
-        価格相互作用特徴量
-
-        - fr_price_corr_24h: 24時間の価格との相関
-        - fr_volatility_adjusted: ボラティリティ調整済みFR
-
-        Args:
-            df: 入力DataFrame（FR特徴量を含む）
-            ohlcv_df: 元のOHLCVデータ
-
-        Returns:
-            特徴量追加後のDataFrame
-        """
-        if "funding_rate_raw" not in df.columns or "close" not in df.columns:
+        """価格相互作用特徴量"""
+        if "fr_deviation_bps" not in df.columns or "close" not in df.columns:
             return df
 
-        # 24時間の価格との相関
         window = 24
-        # ローリング相関を計算（両方のSeriesを同時にローリング）
+        # 乖離と価格の相関（過熱時に価格が上がっているか、逆行しているか）
         df["fr_price_corr_24h"] = (
-            df["funding_rate_raw"].rolling(window=window).corr(df["close"])
+            df["fr_deviation_bps"].rolling(window=window).corr(df["close"])
         )
 
-        # ボラティリティ調整済みFR
-        # FR / realized_volatility
-        returns = df["close"].pct_change()
+        returns = df["close"].pct_change(fill_method=None)
         realized_vol = returns.rolling(window=24).std() * np.sqrt(24)
 
-        # ゼロ除算を避ける
         realized_vol = realized_vol.replace(0, np.nan)
-        df["fr_volatility_adjusted"] = df["funding_rate_raw"] / (realized_vol + 1e-8)
+        # ボラティリティ1単位あたりのFR乖離量
+        df["fr_volatility_adjusted"] = df["fr_deviation_bps"] / (realized_vol * 100 + 1e-8)
 
         return df
 
@@ -371,63 +269,39 @@ class FundingRateFeatureCalculator:
         self, df: pd.DataFrame, ohlcv_df: pd.DataFrame
     ) -> pd.DataFrame:
         """
-        市場の歪みを捉える特徴量（RANGE検出のための重要指標）
-        
-        ドキュメントSection 7.1で推奨される特徴量:
-        - Funding Rateの移動平均からの乖離（過熱感の検出）
-        - FR変化の加速度（トレンド転換の予兆）
-        - FRのボラティリティ（市場の不安定性）
-        - FR極値フラグ（異常値の検出）
-        - FRヒートマップ（市場心理の数値化）
-        
-        Args:
-            df: 入力DataFrame（FR特徴量を含む）
-            ohlcv_df: 元のOHLCVデータ
-            
-        Returns:
-            特徴量追加後のDataFrame
+        市場の歪みを捉える特徴量（deviationベースで再設計）
         """
-        if "funding_rate_raw" not in df.columns:
+        if "fr_deviation_bps" not in df.columns:
             return df
         
-        fr = df["funding_rate_raw"]
+        # deviation（乖離）を使うことで、ベースラインからの距離を直接扱う
+        dev = df["fr_deviation_bps"]
         
-        # 1. FR移動平均からの乖離（過熱感の指標）
-        # 過去N期間の平均から現在のFRがどれだけ離れているか
-        for window in [24, 72, 168]:  # 1日、3日、1週間
-            ma = fr.rolling(window=window).mean()
-            df[f"fr_deviation_from_ma{window}h"] = fr - ma
-            
-            # 標準化版（何σ離れているか）
-            std = fr.rolling(window=window).std()
-            df[f"fr_zscore_{window}h"] = (fr - ma) / (std + 1e-8)
-        
-        # 2. FR変化の加速度（トレンド転換の予兆）
-        # 1次微分（速度）は既に fr_velocity として存在
-        # 2次微分（加速度）を計算
-        df["fr_acceleration"] = df.get("fr_velocity", fr.pct_change()).pct_change()
-        
-        # 3. FRのボラティリティ（市場の不安定性）
-        # 高ボラティリティ = RANGE相場の可能性
+        # 1. 累積乖離エネルギー (Cumulative Deviation)
+        # ベースラインから離れた状態がどれだけ続いているか（＝マグマの蓄積）
+        # 単純累積だと無限に増えるので、過去N期間のWindow累積にする
         for window in [24, 72]:
-            df[f"fr_volatility_{window}h"] = fr.rolling(window=window).std()
+            df[f"fr_cumulative_deviation_{window}h"] = dev.rolling(window=window).sum()
         
-        # 4. FR極値フラグ（異常値の検出）
-        # 過去30日の95パーセンタイルを超える場合
-        rolling_percentile_high = fr.rolling(window=720).quantile(0.95)  # 30日
-        rolling_percentile_low = fr.rolling(window=720).quantile(0.05)
+        # 2. FR移動平均からの乖離（トレンドからの乖離）
+        for window in [24, 72, 168]:
+            ma = dev.rolling(window=window).mean()
+            df[f"fr_zscore_{window}h"] = (dev - ma) / (dev.rolling(window=window).std() + 1e-8)
         
-        df["fr_extreme_high"] = (fr > rolling_percentile_high).astype(int)
-        df["fr_extreme_low"] = (fr < rolling_percentile_low).astype(int)
+        # 3. FR変化の加速度
+        df["fr_acceleration"] = df.get("fr_velocity", dev.diff()).diff()
         
-        # 5. FRヒートマップ（-1: 超低金利、0: 通常、1: 過熱）
-        # これは既存の fr_regime_encoded を正規化したもの
+        # 4. FR極値フラグ（絶対値ベース）
+        abs_dev = dev.abs()
+        rolling_percentile_95 = abs_dev.rolling(window=720).quantile(0.95)
+        df["fr_extreme_flag"] = (abs_dev > rolling_percentile_95).astype(int)
+        
+        # 5. FRヒートマップ
         if "fr_regime_encoded" in df.columns:
-            df["fr_heatmap"] = df["fr_regime_encoded"] / 2.0  # -1 ~ 1 に正規化
+            df["fr_heatmap"] = df["fr_regime_encoded"] / 2.0
         
-        # 6. FR変化の方向性（連続上昇/下降の検出）
-        # 連続的に上昇しているか、下降しているか
-        fr_diff = fr.diff()
+        # 6. FR変化の方向性
+        fr_diff = dev.diff()
         df["fr_consecutive_rise"] = (
             (fr_diff > 0).astype(int).groupby((fr_diff <= 0).cumsum()).cumsum()
         )
@@ -435,31 +309,13 @@ class FundingRateFeatureCalculator:
             (fr_diff < 0).astype(int).groupby((fr_diff >= 0).cumsum()).cumsum()
         )
         
-        # 7. FRスプレッド（現在のFRと過去のFRの差の拡大/縮小）
-        # スプレッドが広がる = 市場の不確実性増加 = RANGE化の可能性
-        if "fr_lag_1p" in df.columns and "fr_lag_3p" in df.columns:
-            df["fr_spread_short_term"] = abs(fr - df["fr_lag_1p"])
-            df["fr_spread_long_term"] = abs(fr - df["fr_lag_3p"])
-            df["fr_spread_expansion"] = df["fr_spread_long_term"] - df["fr_spread_short_term"]
-        
-        logger.debug("市場歪み特徴量を追加しました")
+        logger.debug("市場歪み特徴量(加工版)を追加しました")
         
         return df
 
 
 def validate_funding_rate_data(df: pd.DataFrame) -> bool:
-    """
-    ファンディングレートデータの検証
-
-    Args:
-        df: 検証するDataFrame
-
-    Returns:
-        検証成功: True、失敗: False
-
-    Raises:
-        ValueError: データが無効な場合
-    """
+    """ファンディングレートデータの検証"""
     if df.empty:
         logger.warning("ファンディングレートデータが空です")
         return True
@@ -470,19 +326,8 @@ def validate_funding_rate_data(df: pd.DataFrame) -> bool:
     if missing_cols:
         raise ValueError(f"必須カラムが見つかりません: {missing_cols}")
 
-    # ファンディングレートの範囲チェック（-100% ~ 100%）
-    if "funding_rate" in df.columns:
-        fr = df["funding_rate"].dropna()
-        if len(fr) > 0:
-            if (fr < -1.0).any() or (fr > 1.0).any():
-                raise ValueError(
-                    f"ファンディングレートが範囲外です: min={fr.min()}, max={fr.max()}"
-                )
-
-    # タイムスタンプのソート確認
     if "timestamp" in df.columns and len(df) > 1:
         if not df["timestamp"].is_monotonic_increasing:
             raise ValueError("タイムスタンプがソートされていません")
 
-    logger.debug("ファンディングレートデータの検証成功")
     return True

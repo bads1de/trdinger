@@ -2,7 +2,7 @@
 ML統合パイプライン: 最適化・学習・スタッキング・評価・分析
 
 このスクリプト一本で以下のフローを実行します:
-1. Optunaによるハイパーパラメータ＆ラベル生成パラメータの最適化 (LightGBM & XGBoost & CatBoost)
+1. Optunaによるハイパーパラメータ＆ラベル生成パラメータの最適化 (LightGBM & XGBoost & CatBoost & GRU & LSTM)
 2. ベストパラメータによるモデルの再学習
 3. スタッキング（アンサンブル）モデルの構築
 4. 閾値調整シミュレーションとモデル比較評価
@@ -38,6 +38,7 @@ import xgboost as xgb
 import catboost as cb
 from sklearn.metrics import classification_report, f1_score
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -53,6 +54,8 @@ from app.services.ml.feature_engineering.feature_engineering_service import (
 )
 from app.services.ml.label_cache import LabelCache
 from app.services.ml.stacking_service import StackingService
+from app.services.ml.models.gru_model import GRUModel
+from app.services.ml.models.lstm_model import LSTMModel
 from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
 from scripts.feature_evaluation.common_feature_evaluator import (
@@ -128,13 +131,13 @@ class MLPipeline:
             col for col in features_df.columns
             if col not in ["open", "high", "low", "volume"]
         ]
-        # NaN補完
-        X = features_df[feature_cols].copy().fillna(features_df[feature_cols].median())
+        # NaN補完 (feature_engineering_serviceで処理済みだが念のため)
+        X = features_df[feature_cols].copy().fillna(0)
         
         return X, data.ohlcv
 
     def optimize(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame):
-        """Optunaによる最適化 (LightGBM & XGBoost & CatBoost)"""
+        """Optunaによる最適化 (LightGBM & XGBoost & CatBoost & GRU & LSTM)"""
         logger.info("=" * 60)
         logger.info("ハイパーパラメータ最適化を開始")
         logger.info("=" * 60)
@@ -143,7 +146,7 @@ class MLPipeline:
 
         def objective(trial):
             # モデル選択
-            model_type = trial.suggest_categorical("model_type", ["lightgbm", "xgboost", "catboost"])
+            model_type = trial.suggest_categorical("model_type", ["lightgbm", "xgboost", "catboost", "gru", "lstm"])
 
             # ラベル生成パラメータ
             horizon_n = trial.suggest_int("horizon_n", 4, 16, step=2)
@@ -223,6 +226,7 @@ class MLPipeline:
                     "verbosity": 0,
                     "random_state": 42,
                     "scale_pos_weight": scale_pos_weight,
+                    "missing": np.inf,
                     "n_estimators": trial.suggest_int("n_estimators", 50, 500),
                     "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.5, log=True),
                     "max_depth": trial.suggest_int("max_depth", 3, 15),
@@ -236,7 +240,7 @@ class MLPipeline:
                 model = xgb.XGBClassifier(**params)
                 model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
                 
-            else: # catboost
+            elif model_type == "catboost":
                 neg_count = len(y_train) - sum(y_train)
                 pos_count = sum(y_train)
                 scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
@@ -257,12 +261,40 @@ class MLPipeline:
                 }
                 model = cb.CatBoostClassifier(**params)
                 model.fit(X_train, y_train, eval_set=[(X_val, y_val)], early_stopping_rounds=50, verbose=False)
+                
+            else: # gru or lstm
+                # スケーリング
+                scaler = StandardScaler()
+                X_train_scaled = scaler.fit_transform(X_train)
+                X_val_scaled = scaler.transform(X_val)
+                
+                params = {
+                    "input_dim": X_train.shape[1],
+                    "hidden_dim": trial.suggest_categorical("hidden_dim", [32, 64, 128]),
+                    "num_layers": trial.suggest_int("num_layers", 1, 3),
+                    "seq_len": trial.suggest_categorical("seq_len", [12, 24, 48]),
+                    "batch_size": trial.suggest_categorical("batch_size", [32, 64]),
+                    "epochs": 10,
+                    "learning_rate": trial.suggest_float("learning_rate", 0.0001, 0.01, log=True),
+                    "dropout": trial.suggest_float("dropout", 0.0, 0.5),
+                }
+                
+                if model_type == "gru":
+                    model = GRUModel(**params)
+                else:
+                    model = LSTMModel(**params)
+                    
+                model.fit(X_train_scaled, y_train)
+                y_pred = model.predict_proba(X_val_scaled)
 
-            # 評価 (Custom Score: Trend Recall重視)
-            y_pred = model.predict(X_val)
-            report = classification_report(y_val, y_pred, output_dict=True, zero_division=0)
+            # 評価
+            if model_type not in ["gru", "lstm"]:
+                y_pred = model.predict_proba(X_val)[:, 1]
             
-            # 0: RANGE, 1: TREND
+            y_pred_bin = (y_pred >= 0.5).astype(int)
+            
+            report = classification_report(y_val, y_pred_bin, output_dict=True, zero_division=0)
+            
             trend_rec = report['1']['recall']
             trend_prec = report['1']['precision']
             range_rec = report['0']['recall']
@@ -292,7 +324,7 @@ class MLPipeline:
         return best_params
 
     def train_final_models(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, best_params: Dict[str, Any]):
-        """ベストパラメータでLGBM, XGBoost, CatBoostの全モデルを学習"""
+        """ベストパラメータで全モデルを学習"""
         logger.info("=" * 60)
         logger.info("最終モデル学習 & スタッキング準備")
         logger.info("=" * 60)
@@ -318,7 +350,7 @@ class MLPipeline:
         X_clean = X_aligned.loc[valid_idx]
         y = y.loc[valid_idx]
 
-        # 時系列分割 (Train+Val 80%, Test 20%)
+        # 時系列分割
         n_total = len(X_clean)
         test_start = int(n_total * 0.8)
         
@@ -327,8 +359,7 @@ class MLPipeline:
         X_test = X_clean.iloc[test_start:]
         y_test = y.iloc[test_start:]
         
-        # スタッキング学習用にTrainをさらに分割 (TrainBase 80%, MetaVal 20%)
-        # これによりメタモデルは未知のデータに対する予測値で学習できる
+        # スタッキング学習用にTrainをさらに分割
         n_train = len(X_full_train)
         meta_val_start = int(n_train * 0.8)
         
@@ -353,7 +384,6 @@ class MLPipeline:
             "objective": "binary", "metric": "binary_logloss", 
             "verbosity": -1, "random_state": 42, "class_weight": "balanced"
         })
-        
         model_lgb = lgb.LGBMClassifier(**lgb_params)
         model_lgb.fit(X_train_base, y_train_base)
         joblib.dump(model_lgb, self.results_dir / "model_lgb.joblib")
@@ -367,9 +397,9 @@ class MLPipeline:
 
         xgb_params.update({
             "objective": "binary:logistic", "eval_metric": "logloss",
-            "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight
+            "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight,
+            "missing": np.inf
         })
-        
         model_xgb = xgb.XGBClassifier(**xgb_params)
         model_xgb.fit(X_train_base, y_train_base)
         joblib.dump(model_xgb, self.results_dir / "model_xgb.joblib")
@@ -389,10 +419,35 @@ class MLPipeline:
             "od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, 
             "scale_pos_weight": scale_pos_weight, "allow_writing_files": False
         })
-        
         model_cat = cb.CatBoostClassifier(**cat_params)
         model_cat.fit(X_train_base, y_train_base, eval_set=[(X_val_meta, y_val_meta)], early_stopping_rounds=50, verbose=False)
         joblib.dump(model_cat, self.results_dir / "model_cat.joblib")
+
+        # --- GRU & LSTM ---
+        # スケーリング
+        scaler = StandardScaler()
+        X_train_base_scaled = scaler.fit_transform(X_train_base)
+        X_val_meta_scaled = scaler.transform(X_val_meta)
+        X_test_scaled = scaler.transform(X_test)
+        
+        joblib.dump(scaler, self.results_dir / "scaler.joblib")
+
+        dl_params = {k: v for k, v in best_params.items() if k in [
+            "hidden_dim", "num_layers", "seq_len", "batch_size", "learning_rate", "dropout"
+        ]}
+        if not dl_params:
+            dl_params = {
+                "hidden_dim": 64, "num_layers": 2, "seq_len": 24, 
+                "batch_size": 64, "learning_rate": 0.001, "dropout": 0.2
+            }
+        dl_params["input_dim"] = X_train_base.shape[1]
+        dl_params["epochs"] = 20
+        
+        model_gru = GRUModel(**dl_params)
+        model_gru.fit(X_train_base_scaled, y_train_base)
+        
+        model_lstm = LSTMModel(**dl_params)
+        model_lstm.fit(X_train_base_scaled, y_train_base)
 
         # --- Stacking Meta Model (Ridge NNLS) ---
         logger.info("メタモデル (Ridge NNLS) を学習中...")
@@ -400,11 +455,15 @@ class MLPipeline:
         prob_lgb_meta = model_lgb.predict_proba(X_val_meta)[:, 1]
         prob_xgb_meta = model_xgb.predict_proba(X_val_meta)[:, 1]
         prob_cat_meta = model_cat.predict_proba(X_val_meta)[:, 1]
+        prob_gru_meta = model_gru.predict_proba(X_val_meta_scaled)
+        prob_lstm_meta = model_lstm.predict_proba(X_val_meta_scaled)
         
         X_meta_train = pd.DataFrame({
             'LightGBM': prob_lgb_meta,
             'XGBoost': prob_xgb_meta,
-            'CatBoost': prob_cat_meta
+            'CatBoost': prob_cat_meta,
+            'GRU': prob_gru_meta,
+            'LSTM': prob_lstm_meta
         })
         
         stacking_service = StackingService()
@@ -414,9 +473,9 @@ class MLPipeline:
         logger.info(f"学習された重み: {weights}")
         joblib.dump(stacking_service, self.results_dir / "stacking_service.joblib")
 
-        return model_lgb, model_xgb, model_cat, stacking_service, X_test, y_test
+        return model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled
 
-    def evaluate_and_stacking(self, model_lgb, model_xgb, model_cat, stacking_service, X_test, y_test):
+    def evaluate_and_stacking(self, model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled):
         """閾値シミュレーションとスタッキング評価"""
         logger.info("=" * 60)
         logger.info("モデル評価 & スタッキング")
@@ -426,22 +485,28 @@ class MLPipeline:
         prob_lgb = model_lgb.predict_proba(X_test)[:, 1]
         prob_xgb = model_xgb.predict_proba(X_test)[:, 1]
         prob_cat = model_cat.predict_proba(X_test)[:, 1]
+        prob_gru = model_gru.predict_proba(X_test_scaled)
+        prob_lstm = model_lstm.predict_proba(X_test_scaled)
         
         # スタッキング (Ridge NNLS)
         X_meta_test = pd.DataFrame({
             'LightGBM': prob_lgb,
             'XGBoost': prob_xgb,
-            'CatBoost': prob_cat
+            'CatBoost': prob_cat,
+            'GRU': prob_gru,
+            'LSTM': prob_lstm
         })
         prob_stack = stacking_service.predict(X_meta_test)
         
         # Soft Voting
-        prob_avg = (prob_lgb + prob_xgb + prob_cat) / 3
+        prob_avg = (prob_lgb + prob_xgb + prob_cat + prob_gru + prob_lstm) / 5
 
         models = {
             "LightGBM": prob_lgb,
             "XGBoost": prob_xgb,
             "CatBoost": prob_cat,
+            "GRU": prob_gru,
+            "LSTM": prob_lstm,
             "Stacking (Avg)": prob_avg,
             "Stacking (Ridge)": prob_stack
         }
@@ -522,10 +587,10 @@ class MLPipeline:
                 best_params = json.load(f)[ "best_params"]
 
         # 3. 最終モデル学習 (LGBM & XGB & Stacking)
-        model_lgb, model_xgb, model_cat, stacking_service, X_test, y_test = self.train_final_models(X, ohlcv, best_params)
+        model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled = self.train_final_models(X, ohlcv, best_params)
 
         # 4. スタッキング評価
-        self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, stacking_service, X_test, y_test)
+        self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled)
 
         # 5. 特徴量分析
         self.analyze_feature_importance(model_lgb, X_test)

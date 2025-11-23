@@ -371,60 +371,21 @@ class FeatureEngineeringService:
             # 高品質なデータ前処理を実行（スケーリング有効化、IQRベース外れ値検出）
             logger.info("統計的手法による特徴量前処理を実行中...")
             try:
-                # シンプルなNaN補完処理で置換
                 numeric_columns = result_df.select_dtypes(include=[np.number]).columns
                 for col in numeric_columns:
-                    # Pandas Series比較を安全に行う - boolに変換してから評価
-                    has_nan = bool(result_df[col].isna().any())
-                    if has_nan:
+                    # 無限大値をNaNに変換 (XGBoostError対策)
+                    result_df[col] = result_df[col].replace([np.inf, -np.inf], np.nan)
+                    
+                    # NaN値を中央値で補完
+                    if result_df[col].isna().any():
                         median_val = result_df[col].median()
+                        if pd.isna(median_val): # 全てNaNの列の場合
+                            median_val = 0.0
                         result_df[col] = result_df[col].fillna(median_val)
                 logger.info("データ前処理完了")
             except Exception as e:
                 logger.warning(f"データ前処理エラー: {e}")
-
-            # NaN値の追加的な処理（配列形状エラーを防ぐ）
-            try:
-                # 数値列のNaN値を安全に変換
-                numeric_columns = result_df.select_dtypes(include=[np.number]).columns
-                for col in numeric_columns:
-                    # Pandas Series比較を安全に行う - boolに変換してから評価
-                    has_null = bool(result_df[col].isnull().any())
-                    if has_null:
-                        # NaNや無限大をmedianで置換
-                        median_val = result_df[col].median()
-                        if pd.isna(median_val):
-                            median_val = 0.0
-                        result_df[col] = result_df[col].fillna(median_val)
-
-                        # 無限大値を有限値に置換
-                        result_df[col] = result_df[col].replace(
-                            [np.inf, -np.inf], median_val
-                        )
-
-                # 配列形状の検証と修正
-                if result_df.empty:
-                    raise ValueError("前処理後に空のDataFrameになりました")
-
-                # 全ての列が2D配列として扱えることを確認
-                for col in result_df.columns:
-                    if not isinstance(result_df[col].iloc[0], (int, float)):
-                        logger.warning(
-                            f"非数値列を検出: {col}, 型: {type(result_df[col].iloc[0])}"
-                        )
-                        # 非数値列を数値に変換または削除
-                        try:
-                            result_df[col] = pd.to_numeric(
-                                result_df[col], errors="coerce"
-                            )
-                            result_df[col] = result_df[col].fillna(0.0)
-                        except Exception:
-                            logger.warning(f"列 {col} を削除（非数値データ）")
-                            result_df = result_df.drop(columns=[col])
-
-            except Exception as nan_error:
-                logger.warning(f"NaN値処理エラー、基本情報のみ使用: {nan_error}")
-                # 基本的なNaN処理のみ実行
+                # エラーが発生しても続行できるよう、最低限のNaN処理
                 result_df = result_df.fillna(0.0)
 
             # 重複カラムの削除（複数の計算クラスで生成される可能性がある）
@@ -443,6 +404,11 @@ class FeatureEngineeringService:
                 ]
 
             logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")
+
+            # 数値的な不安定性を防ぐため、特徴量データをクリッピング
+            numeric_columns = result_df.select_dtypes(include=[np.number]).columns
+            for col in numeric_columns:
+                result_df[col] = np.clip(result_df[col], -1e10, 1e10) # 非常に大きな値を除去
 
             # プロファイルベースの特徴量フィルタリング
             result_df = self._apply_feature_profile(result_df, profile)
