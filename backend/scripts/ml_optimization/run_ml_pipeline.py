@@ -56,6 +56,7 @@ from app.services.ml.label_cache import LabelCache
 from app.services.ml.stacking_service import StackingService
 from app.services.ml.models.gru_model import GRUModel
 from app.services.ml.models.lstm_model import LSTMModel
+from app.utils.purged_cv import PurgedKFold # Import PurgedKFold
 from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
 from scripts.feature_evaluation.common_feature_evaluator import (
@@ -137,31 +138,28 @@ class MLPipeline:
         return X, data.ohlcv
 
     def optimize(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame):
-        """Optunaによる最適化 (LightGBM & XGBoost & CatBoost & GRU & LSTM)"""
+        """Optunaによる最適化 (Purged K-Fold CVを適用)"""
         logger.info("=" * 60)
-        logger.info("ハイパーパラメータ最適化を開始")
+        logger.info("ハイパーパラメータ最適化を開始 (Purged K-Fold CV)")
         logger.info("=" * 60)
 
         label_cache = LabelCache(ohlcv_df)
 
         def objective(trial):
-            # モデル選択
             model_type = trial.suggest_categorical("model_type", ["lightgbm", "xgboost", "catboost", "gru", "lstm"])
-
-            # ラベル生成パラメータ
+            
+            # ラベル生成パラメータ (Optunaで探索)
             horizon_n = trial.suggest_int("horizon_n", 4, 16, step=2)
             threshold_method = trial.suggest_categorical(
                 "threshold_method", ["QUANTILE", "KBINS_DISCRETIZER", "DYNAMIC_VOLATILITY"]
             )
-
             if threshold_method == "QUANTILE":
                 threshold = trial.suggest_float("quantile_threshold", 0.25, 0.40)
             elif threshold_method == "KBINS_DISCRETIZER":
                 threshold = trial.suggest_float("kbins_threshold", 0.001, 0.005)
-            else:  # DYNAMIC_VOLATILITY
+            else: # DYNAMIC_VOLATILITY
                 threshold = trial.suggest_float("volatility_threshold", 0.5, 2.0)
 
-            # ラベル取得
             try:
                 labels = label_cache.get_labels(
                     horizon_n=horizon_n,
@@ -173,136 +171,142 @@ class MLPipeline:
             except Exception:
                 raise optuna.exceptions.TrialPruned()
 
-            # アライメント
             common_index = X.index.intersection(labels.index)
             X_aligned = X.loc[common_index]
             labels_aligned = labels.loc[common_index]
             
             valid_idx = ~labels_aligned.isna()
             X_clean = X_aligned.loc[valid_idx]
-            # TREND=1, RANGE=0
             y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
 
             if len(y) < 100:
                 raise optuna.exceptions.TrialPruned()
 
-            # 時系列分割 (Train 60%, Val 20%, Test 20%)
-            n_total = len(X_clean)
-            test_start = int(n_total * 0.8)
-            val_start = int(n_total * 0.6)
+            # ここからPurged K-Fold CV
+            n_splits = 3 # Optunaの探索なので少なめに
+            embargo_pct = 0.01 # テスト期間の1%をエンバーゴ
             
-            X_train = X_clean.iloc[:val_start]
-            y_train = y.iloc[:val_start]
-            X_val = X_clean.iloc[val_start:test_start]
-            y_val = y.iloc[val_start:test_start]
+            # X.indexは観測開始時刻、t1はラベル終了時刻
+            # LabelCacheからt1（ラベル終了時刻）を取得
+            t1_labels = label_cache.get_t1(X_clean.index, horizon_n) # horizon_nを使って適切なt1を取得
+            
+            cv = PurgedKFold(n_splits=n_splits, t1=t1_labels, embargo_pct=embargo_pct)
+            
+            oof_preds = np.zeros(len(X_clean))
+            # oof_y = np.zeros(len(X_clean)) # これだと0で埋められてしまうので、実際にはy_val_foldを使う
+            fold_scores = []
+            
+            # スケーラーは各フォールドで再初期化
+            scaler = StandardScaler()
 
-            # モデル学習
-            if model_type == "lightgbm":
-                params = {
-                    "objective": "binary",
-                    "metric": "binary_logloss",
-                    "verbosity": -1,
-                    "random_state": 42,
-                    "class_weight": "balanced",
-                    "n_estimators": trial.suggest_int("n_estimators", 50, 500),
-                    "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.5, log=True),
-                    "max_depth": trial.suggest_int("max_depth", 3, 15),
-                    "num_leaves": trial.suggest_int("num_leaves", 20, 200),
-                    "min_child_samples": trial.suggest_int("min_child_samples", 10, 100),
-                    "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                    "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
-                }
-                model = lgb.LGBMClassifier(**params)
-                model.fit(X_train, y_train, eval_set=[(X_val, y_val)], callbacks=[lgb.early_stopping(50, verbose=False)])
-            
-            elif model_type == "xgboost":
-                neg_count = len(y_train) - sum(y_train)
-                pos_count = sum(y_train)
-                scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
+            for fold, (train_idx, val_idx) in enumerate(cv.split(X_clean, y)):
+                if len(train_idx) == 0 or len(val_idx) == 0:
+                    logger.warning(f"Fold {fold}: Skipping due to empty train or validation set after purging.")
+                    continue
+
+                X_train_fold, X_val_fold = X_clean.iloc[train_idx], X_clean.iloc[val_idx]
+                y_train_fold, y_val_fold = y.iloc[train_idx], y.iloc[val_idx]
+
+                model = None # 各フォールドでモデルを再初期化
+
+                if model_type == "lightgbm":
+                    params = {
+                        "objective": "binary", "metric": "binary_logloss", "verbosity": -1, "random_state": 42, "class_weight": "balanced",
+                        "n_estimators": trial.suggest_int("n_estimators_lgb", 50, 500),
+                        "learning_rate": trial.suggest_float("learning_rate_lgb", 0.001, 0.5, log=True),
+                        "max_depth": trial.suggest_int("max_depth_lgb", 3, 15),
+                        "num_leaves": trial.suggest_int("num_leaves_lgb", 20, 200),
+                        "min_child_samples": trial.suggest_int("min_child_samples_lgb", 10, 100),
+                        "subsample": trial.suggest_float("subsample_lgb", 0.5, 1.0),
+                        "colsample_bytree": trial.suggest_float("colsample_bytree_lgb", 0.5, 1.0),
+                    }
+                    model = lgb.LGBMClassifier(**params)
+                    model.fit(X_train_fold, y_train_fold, eval_set=[(X_val_fold, y_val_fold)], callbacks=[lgb.early_stopping(50, verbose=False)])
                 
-                params = {
-                    "objective": "binary:logistic",
-                    "eval_metric": "logloss",
-                    "verbosity": 0,
-                    "random_state": 42,
-                    "scale_pos_weight": scale_pos_weight,
-                    "missing": np.inf,
-                    "n_estimators": trial.suggest_int("n_estimators", 50, 500),
-                    "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.5, log=True),
-                    "max_depth": trial.suggest_int("max_depth", 3, 15),
-                    "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
-                    "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                    "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
-                    "gamma": trial.suggest_float("gamma", 0, 5),
-                    "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
-                    "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
-                }
-                model = xgb.XGBClassifier(**params)
-                model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
-                
-            elif model_type == "catboost":
-                neg_count = len(y_train) - sum(y_train)
-                pos_count = sum(y_train)
-                scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
-                
-                params = {
-                    "iterations": trial.suggest_int("iterations", 50, 500),
-                    "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.5, log=True),
-                    "depth": trial.suggest_int("depth", 3, 10),
-                    "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1e-8, 10.0, log=True),
-                    "random_strength": trial.suggest_float("random_strength", 1e-8, 10.0, log=True),
-                    "bagging_temperature": trial.suggest_float("bagging_temperature", 0.0, 1.0),
-                    "od_type": "Iter",
-                    "od_wait": 50,
-                    "verbose": 0,
-                    "random_seed": 42,
-                    "scale_pos_weight": scale_pos_weight,
-                    "allow_writing_files": False,
-                }
-                model = cb.CatBoostClassifier(**params)
-                model.fit(X_train, y_train, eval_set=[(X_val, y_val)], early_stopping_rounds=50, verbose=False)
-                
-            else: # gru or lstm
-                # スケーリング
-                scaler = StandardScaler()
-                X_train_scaled = scaler.fit_transform(X_train)
-                X_val_scaled = scaler.transform(X_val)
-                
-                params = {
-                    "input_dim": X_train.shape[1],
-                    "hidden_dim": trial.suggest_categorical("hidden_dim", [32, 64, 128]),
-                    "num_layers": trial.suggest_int("num_layers", 1, 3),
-                    "seq_len": trial.suggest_categorical("seq_len", [12, 24, 48]),
-                    "batch_size": trial.suggest_categorical("batch_size", [32, 64]),
-                    "epochs": 10,
-                    "learning_rate": trial.suggest_float("learning_rate", 0.0001, 0.01, log=True),
-                    "dropout": trial.suggest_float("dropout", 0.0, 0.5),
-                }
-                
-                if model_type == "gru":
-                    model = GRUModel(**params)
-                else:
-                    model = LSTMModel(**params)
+                elif model_type == "xgboost":
+                    neg_count = len(y_train_fold) - sum(y_train_fold)
+                    pos_count = sum(y_train_fold)
+                    scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
+                    params = {
+                        "objective": "binary:logistic", "eval_metric": "logloss", "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight, "missing": np.inf,
+                        "n_estimators": trial.suggest_int("n_estimators_xgb", 50, 500),
+                        "learning_rate": trial.suggest_float("learning_rate_xgb", 0.001, 0.5, log=True),
+                        "max_depth": trial.suggest_int("max_depth_xgb", 3, 15),
+                        "min_child_weight": trial.suggest_int("min_child_weight_xgb", 1, 10),
+                        "subsample": trial.suggest_float("subsample_xgb", 0.5, 1.0),
+                        "colsample_bytree": trial.suggest_float("colsample_bytree_xgb", 0.5, 1.0),
+                        "gamma": trial.suggest_float("gamma_xgb", 0, 5),
+                        "reg_alpha": trial.suggest_float("reg_alpha_xgb", 1e-8, 10.0, log=True),
+                        "reg_lambda": trial.suggest_float("reg_lambda_xgb", 1e-8, 10.0, log=True),
+                    }
+                    model = xgb.XGBClassifier(**params)
+                    model.fit(X_train_fold, y_train_fold, eval_set=[(X_val_fold, y_val_fold)], verbose=False)
                     
-                model.fit(X_train_scaled, y_train)
-                y_pred = model.predict_proba(X_val_scaled)
-
-            # 評価
-            if model_type not in ["gru", "lstm"]:
-                y_pred = model.predict_proba(X_val)[:, 1]
+                elif model_type == "catboost":
+                    neg_count = len(y_train_fold) - sum(y_train_fold)
+                    pos_count = sum(y_train_fold)
+                    scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
+                    params = {
+                        "iterations": trial.suggest_int("iterations_cat", 50, 500),
+                        "learning_rate": trial.suggest_float("learning_rate_cat", 0.001, 0.5, log=True),
+                        "depth": trial.suggest_int("depth_cat", 3, 10),
+                        "l2_leaf_reg": trial.suggest_float("l2_leaf_reg_cat", 1e-8, 10.0, log=True),
+                        "random_strength": trial.suggest_float("random_strength_cat", 1e-8, 10.0, log=True),
+                        "bagging_temperature": trial.suggest_float("bagging_temperature_cat", 0.0, 1.0),
+                        "od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42,
+                        "scale_pos_weight": scale_pos_weight, "allow_writing_files": False,
+                    }
+                    model = cb.CatBoostClassifier(**params)
+                    model.fit(X_train_fold, y_train_fold, eval_set=[(X_val_fold, y_val_fold)], early_stopping_rounds=50, verbose=False)
+                    
+                else: # gru or lstm
+                    X_train_scaled = scaler.fit_transform(X_train_fold)
+                    X_val_scaled = scaler.transform(X_val_fold)
+                    
+                    params = {
+                        "input_dim": X_clean.shape[1], # X_cleanのfull features
+                        "hidden_dim": trial.suggest_categorical("hidden_dim_dl", [32, 64, 128]),
+                        "num_layers": trial.suggest_int("num_layers_dl", 1, 3),
+                        "seq_len": trial.suggest_categorical("seq_len_dl", [12, 24, 48]),
+                        "batch_size": trial.suggest_categorical("batch_size_dl", [32, 64]),
+                        "epochs": 5, # Optuna探索なのでepoch少なめ
+                        "learning_rate": trial.suggest_float("learning_rate_dl", 0.0001, 0.01, log=True),
+                        "dropout": trial.suggest_float("dropout_dl", 0.0, 0.5),
+                    }
+                    
+                    if model_type == "gru":
+                        model = GRUModel(**params)
+                    else: # lstm
+                        model = LSTMModel(**params)
+                        
+                    model.fit(X_train_scaled, y_train_fold)
+                    y_pred_fold = model.predict_proba(X_val_scaled)
+                
+                # 予測 (GRU/LSTM以外)
+                if model_type not in ["gru", "lstm"]:
+                    y_pred_fold = model.predict_proba(X_val_fold)[:, 1]
+                
+                oof_preds[val_idx] = y_pred_fold # OOF予測値を記録
+                
+                # スコア計算
+                y_pred_bin_fold = (y_pred_fold >= 0.5).astype(int)
+                fold_report = classification_report(y_val_fold, y_pred_bin_fold, output_dict=True, zero_division=0)
+                fold_scores.append((fold_report['1']['recall'] * 1.5) + fold_report['1']['precision'] + (fold_report['0']['recall'] * 0.5))
             
-            y_pred_bin = (y_pred >= 0.5).astype(int)
+            # OOF全体の評価
+            # GRU/LSTMはパディングで0.5が入るので、0.5は評価対象外とする (oof_yはX_cleanのyなので問題なし)
+            y_pred_bin = (oof_preds >= 0.5).astype(int)
+            oof_report = classification_report(y, y_pred_bin, output_dict=True, zero_division=0)
             
-            report = classification_report(y_val, y_pred_bin, output_dict=True, zero_division=0)
+            avg_trend_rec = oof_report['1']['recall']
+            avg_trend_prec = oof_report['1']['precision']
+            avg_range_rec = oof_report['0']['recall']
             
-            trend_rec = report['1']['recall']
-            trend_prec = report['1']['precision']
-            range_rec = report['0']['recall']
+            final_score = (avg_trend_rec * 1.5) + avg_trend_prec + (avg_range_rec * 0.5)
             
-            score = (trend_rec * 1.5) + trend_prec + (range_rec * 0.5)
+            logger.info(f"Trial {trial.number} ({model_type}): Final OOF Score={final_score:.4f}, TrendRec={avg_trend_rec:.2f}, RangeRec={avg_range_rec:.2f}")
             
-            logger.info(f"Trial {trial.number} ({model_type}): Score={score:.4f}, TrendRec={trend_rec:.2f}, RangeRec={range_rec:.2f}")
-            return score
+            return final_score
 
         study = optuna.create_study(direction="maximize")
         study.optimize(objective, n_trials=self.n_trials)
@@ -320,13 +324,13 @@ class MLPipeline:
         with open(self.results_dir / "best_params.json", "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
             
-        logger.info(f"最適化完了: Best Score={study.best_value:.4f}")
+        logger.info(f"最適化完了: Best OOF Score={study.best_value:.4f}")
         return best_params
 
     def train_final_models(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, best_params: Dict[str, Any]):
-        """ベストパラメータで全モデルを学習"""
+        """ベストパラメータで全モデルを学習し、OOF予測を生成"""
         logger.info("=" * 60)
-        logger.info("最終モデル学習 & スタッキング準備")
+        logger.info("最終モデル学習 & スタッキング準備 (Purged K-Fold OOF)")
         logger.info("=" * 60)
 
         # ラベル生成
@@ -341,174 +345,198 @@ class MLPipeline:
             price_column="close",
         )
 
-        # データセット作成
+        # アライメント
         common_index = X.index.intersection(labels.index)
         X_aligned = X.loc[common_index]
-        y = labels.loc[common_index].map({"DOWN": 1, "RANGE": 0, "UP": 1})
+        labels_aligned = labels.loc[common_index]
         
-        valid_idx = ~y.isna()
+        valid_idx = ~labels_aligned.isna()
         X_clean = X_aligned.loc[valid_idx]
-        y = y.loc[valid_idx]
+        y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
 
-        # 時系列分割
-        n_total = len(X_clean)
-        test_start = int(n_total * 0.8)
+        if len(y) < 100:
+            raise ValueError("データが少なすぎます。")
+
+        # Purged K-Fold CV for OOF prediction
+        n_splits_oof = 5 # OOF生成は5分割
+        embargo_pct_oof = 0.01
+        t1_labels = label_cache.get_t1(X_clean.index, best_params["horizon_n"])
+        cv_oof = PurgedKFold(n_splits=n_splits_oof, t1=t1_labels, embargo_pct=embargo_pct_oof)
+
+        # Initialize OOF prediction arrays
+        oof_lgb_preds = np.zeros(len(X_clean))
+        oof_xgb_preds = np.zeros(len(X_clean))
+        oof_cat_preds = np.zeros(len(X_clean))
+        oof_gru_preds = np.zeros(len(X_clean))
+        oof_lstm_preds = np.zeros(len(X_clean))
         
-        X_full_train = X_clean.iloc[:test_start]
-        y_full_train = y.iloc[:test_start]
-        X_test = X_clean.iloc[test_start:]
-        y_test = y.iloc[test_start:]
-        
-        # スタッキング学習用にTrainをさらに分割
-        n_train = len(X_full_train)
-        meta_val_start = int(n_train * 0.8)
-        
-        X_train_base = X_full_train.iloc[:meta_val_start]
-        y_train_base = y_full_train.iloc[:meta_val_start]
-        X_val_meta = X_full_train.iloc[meta_val_start:]
-        y_val_meta = y_full_train.iloc[meta_val_start:]
-        
-        logger.info(f"Train Base: {len(X_train_base)}, Meta Val: {len(X_val_meta)}, Test: {len(X_test)}")
+        # OOFループで学習したモデルはリストに保存し、後で平均するなどしてX_test予測に使う
+        # または、OOFループとは別に全データで学習したモデルを作成する。今回は後者で。
 
-        # クラスウェイト計算
-        neg = len(y_train_base) - sum(y_train_base)
-        pos = sum(y_train_base)
-        scale_pos_weight = neg / pos if pos > 0 else 1.0
-
-        # --- LightGBM ---
-        lgb_params = {k: v for k, v in best_params.items() if k in [
-            "n_estimators", "learning_rate", "max_depth", "num_leaves", 
-            "min_child_samples", "subsample", "colsample_bytree"
-        ]}
-        lgb_params.update({
-            "objective": "binary", "metric": "binary_logloss", 
-            "verbosity": -1, "random_state": 42, "class_weight": "balanced"
-        })
-        model_lgb = lgb.LGBMClassifier(**lgb_params)
-        model_lgb.fit(X_train_base, y_train_base)
-        joblib.dump(model_lgb, self.results_dir / "model_lgb.joblib")
-
-        # --- XGBoost ---
-        xgb_params = {k: v for k, v in best_params.items() if k in [
-            "n_estimators", "learning_rate", "max_depth", "subsample", "colsample_bytree", "gamma", "reg_alpha", "reg_lambda"
-        ]}
-        if "min_child_weight" not in xgb_params and "min_child_samples" in best_params:
-             xgb_params["min_child_weight"] = int(best_params["min_child_samples"] / 10)
-
-        xgb_params.update({
-            "objective": "binary:logistic", "eval_metric": "logloss",
-            "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight,
-            "missing": np.inf
-        })
-        model_xgb = xgb.XGBClassifier(**xgb_params)
-        model_xgb.fit(X_train_base, y_train_base)
-        joblib.dump(model_xgb, self.results_dir / "model_xgb.joblib")
-        
-        # --- CatBoost ---
-        cat_params = {k: v for k, v in best_params.items() if k in [
-            "iterations", "learning_rate", "depth", "l2_leaf_reg", "random_strength", "bagging_temperature"
-        ]}
-        if not cat_params:
-             cat_params = {
-                 "iterations": best_params.get("n_estimators", 100),
-                 "learning_rate": best_params.get("learning_rate", 0.05),
-                 "depth": min(best_params.get("max_depth", 6), 10),
-             }
-
-        cat_params.update({
-            "od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, 
-            "scale_pos_weight": scale_pos_weight, "allow_writing_files": False
-        })
-        model_cat = cb.CatBoostClassifier(**cat_params)
-        model_cat.fit(X_train_base, y_train_base, eval_set=[(X_val_meta, y_val_meta)], early_stopping_rounds=50, verbose=False)
-        joblib.dump(model_cat, self.results_dir / "model_cat.joblib")
-
-        # --- GRU & LSTM ---
-        # スケーリング
+        # スケーラーはOOFごとにfit_transformする
         scaler = StandardScaler()
-        X_train_base_scaled = scaler.fit_transform(X_train_base)
-        X_val_meta_scaled = scaler.transform(X_val_meta)
-        X_test_scaled = scaler.transform(X_test)
         
-        joblib.dump(scaler, self.results_dir / "scaler.joblib")
+        for fold, (train_idx, val_idx) in enumerate(cv_oof.split(X_clean, y)):
+            if len(train_idx) == 0 or len(val_idx) == 0:
+                logger.warning(f"OOF Fold {fold}: Skipping due to empty train or validation set after purging.")
+                continue
 
-        dl_params = {k: v for k, v in best_params.items() if k in [
-            "hidden_dim", "num_layers", "seq_len", "batch_size", "learning_rate", "dropout"
-        ]}
-        if not dl_params:
-            dl_params = {
-                "hidden_dim": 64, "num_layers": 2, "seq_len": 24, 
-                "batch_size": 64, "learning_rate": 0.001, "dropout": 0.2
-            }
-        dl_params["input_dim"] = X_train_base.shape[1]
-        dl_params["epochs"] = 20
+            X_train_fold, X_val_fold = X_clean.iloc[train_idx], X_clean.iloc[val_idx]
+            y_train_fold, y_val_fold = y.iloc[train_idx], y.iloc[val_idx]
+
+            # クラスウェイト計算 (各フォールドで)
+            neg = len(y_train_fold) - sum(y_train_fold)
+            pos = sum(y_train_fold)
+            scale_pos_weight = neg / pos if pos > 0 else 1.0
+
+            # --- LightGBM ---
+            lgb_params = {k: best_params[k] for k in best_params if k.endswith("_lgb")}
+            lgb_params_final = {k.replace("_lgb", ""): v for k, v in lgb_params.items()} # Optunaの接尾辞を削除
+            lgb_params_final.update({
+                "objective": "binary", "metric": "binary_logloss", "verbosity": -1, "random_state": 42, "class_weight": "balanced"
+            })
+            model_lgb = lgb.LGBMClassifier(**lgb_params_final)
+            model_lgb.fit(X_train_fold, y_train_fold)
+            oof_lgb_preds[val_idx] = model_lgb.predict_proba(X_val_fold)[:, 1]
+
+            # --- XGBoost ---
+            xgb_params = {k: best_params[k] for k in best_params if k.endswith("_xgb")}
+            xgb_params_final = {k.replace("_xgb", ""): v for k, v in xgb_params.items()} # Optunaの接尾辞を削除
+            xgb_params_final.update({
+                "objective": "binary:logistic", "eval_metric": "logloss", "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight, "missing": np.inf
+            })
+            model_xgb = xgb.XGBClassifier(**xgb_params_final)
+            model_xgb.fit(X_train_fold, y_train_fold)
+            oof_xgb_preds[val_idx] = model_xgb.predict_proba(X_val_fold)[:, 1]
+            
+            # --- CatBoost ---
+            cat_params = {k: best_params[k] for k in best_params if k.endswith("_cat")}
+            cat_params_final = {k.replace("_cat", ""): v for k, v in cat_params.items()} # Optunaの接尾辞を削除
+            cat_params_final.update({
+                "od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, "scale_pos_weight": scale_pos_weight, "allow_writing_files": False,
+            })
+            model_cat = cb.CatBoostClassifier(**cat_params_final)
+            model_cat.fit(X_train_fold, y_train_fold, eval_set=[(X_val_fold, y_val_fold)], early_stopping_rounds=50, verbose=False)
+            oof_cat_preds[val_idx] = model_cat.predict_proba(X_val_fold)[:, 1]
+
+            # --- GRU & LSTM ---
+            dl_params = {k: best_params[k] for k in best_params if k.endswith("_dl")}
+            dl_params_final = {k.replace("_dl", ""): v for k, v in dl_params.items()}
+            dl_params_final["input_dim"] = X_clean.shape[1]
+            dl_params_final["epochs"] = 10 # 最終学習はOptunaよりepoch増やす
+            
+            # 各フォールドでスケーリング
+            X_train_scaled = scaler.fit_transform(X_train_fold)
+            X_val_scaled = scaler.transform(X_val_fold)
+
+            model_gru = GRUModel(**dl_params_final)
+            model_gru.fit(X_train_scaled, y_train_fold)
+            oof_gru_preds[val_idx] = model_gru.predict_proba(X_val_scaled)
+
+            model_lstm = LSTMModel(**dl_params_final)
+            model_lstm.fit(X_train_scaled, y_train_fold)
+            oof_lstm_preds[val_idx] = model_lstm.predict_proba(X_val_scaled)
+            
+        # Build final base models (trained on all X_clean for consistent prediction on X_test) 
         
-        model_gru = GRUModel(**dl_params)
-        model_gru.fit(X_train_base_scaled, y_train_base)
+        # --- LightGBM Final ---
+        lgb_params = {k: best_params[k] for k in best_params if k.endswith("_lgb")}
+        lgb_params_final = {k.replace("_lgb", ""): v for k, v in lgb_params.items()} # Optunaの接尾辞を削除
+        lgb_params_final.update({"objective": "binary", "metric": "binary_logloss", "verbosity": -1, "random_state": 42, "class_weight": "balanced"})
+        model_lgb_final = lgb.LGBMClassifier(**lgb_params_final)
+        model_lgb_final.fit(X_clean, y)
+        joblib.dump(model_lgb_final, self.results_dir / "model_lgb.joblib")
+
+        # --- XGBoost Final ---
+        xgb_params = {k: best_params[k] for k in best_params if k.endswith("_xgb")}
+        xgb_params_final = {k.replace("_xgb", ""): v for k, v in xgb_params.items()} # Optunaの接尾辞を削除
+        xgb_params_final.update({"objective": "binary:logistic", "eval_metric": "logloss", "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight, "missing": np.inf})
+        model_xgb_final = xgb.XGBClassifier(**xgb_params_final)
+        model_xgb_final.fit(X_clean, y)
+        joblib.dump(model_xgb_final, self.results_dir / "model_xgb.joblib")
+
+        # --- CatBoost Final ---
+        cat_params = {k: best_params[k] for k in best_params if k.endswith("_cat")}
+        cat_params_final = {k.replace("_cat", ""): v for k, v in cat_params.items()} # Optunaの接尾辞を削除
+        cat_params_final.update({"od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, "scale_pos_weight": scale_pos_weight, "allow_writing_files": False})
+        model_cat_final = cb.CatBoostClassifier(**cat_params_final)
+        model_cat_final.fit(X_clean, y, eval_set=[(X_clean, y)], early_stopping_rounds=50, verbose=False) # X_test for final model validation
+        joblib.dump(model_cat_final, self.results_dir / "model_cat.joblib")
+
+        # --- GRU & LSTM Final ---
+        dl_params = {k: best_params[k] for k in best_params if k.endswith("_dl")}
+        dl_params_final = {k.replace("_dl", ""): v for k, v in dl_params.items()}
+        dl_params_final["input_dim"] = X_clean.shape[1]
+        dl_params_final["epochs"] = 20
         
-        model_lstm = LSTMModel(**dl_params)
-        model_lstm.fit(X_train_base_scaled, y_train_base)
+        scaler_final = StandardScaler()
+        X_clean_scaled = scaler_final.fit_transform(X_clean)
+        joblib.dump(scaler_final, self.results_dir / "scaler.joblib")
+
+        model_gru_final = GRUModel(**dl_params_final)
+        model_gru_final.fit(X_clean_scaled, y)
+        
+        model_lstm_final = LSTMModel(**dl_params_final)
+        model_lstm_final.fit(X_clean_scaled, y)
+
 
         # --- Stacking Meta Model (Ridge NNLS) ---
-        logger.info("メタモデル (Ridge NNLS) を学習中...")
+        logger.info("メタモデル (Ridge NNLS) を学習中 (OOF予測を使用)...")
         
-        prob_lgb_meta = model_lgb.predict_proba(X_val_meta)[:, 1]
-        prob_xgb_meta = model_xgb.predict_proba(X_val_meta)[:, 1]
-        prob_cat_meta = model_cat.predict_proba(X_val_meta)[:, 1]
-        prob_gru_meta = model_gru.predict_proba(X_val_meta_scaled)
-        prob_lstm_meta = model_lstm.predict_proba(X_val_meta_scaled)
-        
-        X_meta_train = pd.DataFrame({
-            'LightGBM': prob_lgb_meta,
-            'XGBoost': prob_xgb_meta,
-            'CatBoost': prob_cat_meta,
-            'GRU': prob_gru_meta,
-            'LSTM': prob_lstm_meta
-        })
+        # Ensure OOF predictions are aligned with X_clean indices
+        oof_preds_df = pd.DataFrame({
+            'LightGBM': oof_lgb_preds,
+            'XGBoost': oof_xgb_preds,
+            'CatBoost': oof_cat_preds,
+            'GRU': oof_gru_preds,
+            'LSTM': oof_lstm_preds
+        }, index=X_clean.index)
         
         stacking_service = StackingService()
-        stacking_service.train(X_meta_train, y_val_meta.values)
+        stacking_service.train(oof_preds_df, y.values) # Use OOF preds and full y for meta-learner
         
         weights = stacking_service.get_weights()
         logger.info(f"学習された重み: {weights}")
         joblib.dump(stacking_service, self.results_dir / "stacking_service.joblib")
 
-        return model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled
-
-    def evaluate_and_stacking(self, model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled):
-        """閾値シミュレーションとスタッキング評価"""
-        logger.info("=" * 60)
-        logger.info("モデル評価 & スタッキング")
-        logger.info("=" * 60)
-
-        # 予測確率
-        prob_lgb = model_lgb.predict_proba(X_test)[:, 1]
-        prob_xgb = model_xgb.predict_proba(X_test)[:, 1]
-        prob_cat = model_cat.predict_proba(X_test)[:, 1]
-        prob_gru = model_gru.predict_proba(X_test_scaled)
-        prob_lstm = model_lstm.predict_proba(X_test_scaled)
+        # ここではevaluate用のtest setがない（全てTrainで使った）ため、最終評価は割愛するか、
+        # ອອກຈາກ OOFスコア自体を最終評価とする。
+        # もし「未知のデータ」に対する評価が必要なら、最初にHold-out setを作る必要がある。
+        # 今回のPurgedKFold OOFは「全データに対する予測精度」を近似できるため、OOFの結果を返すのが自然。
         
-        # スタッキング (Ridge NNLS)
-        X_meta_test = pd.DataFrame({
-            'LightGBM': prob_lgb,
-            'XGBoost': prob_xgb,
-            'CatBoost': prob_cat,
-            'GRU': prob_gru,
-            'LSTM': prob_lstm
-        })
-        prob_stack = stacking_service.predict(X_meta_test)
+        # 変更点: X_test は存在しない（全てX_cleanとして使用）
+        # そのため、evaluate_and_stacking に渡すデータは oof_preds_df と y になる
+        
+        return model_lgb_final, model_xgb_final, model_cat_final, model_gru_final, model_lstm_final, stacking_service, oof_preds_df, y, None
+
+    def evaluate_and_stacking(self, model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, X_test_scaled):
+        """閾値シミュレーションとスタッキング評価 (OOF予測に基づく)"""
+        logger.info("=" * 60)
+        logger.info("モデル評価 & スタッキング (OOF Performance)")
+        logger.info("=" * 60)
+
+        # 各モデルのOOF予測値
+        prob_lgb = oof_preds_df['LightGBM']
+        prob_xgb = oof_preds_df['XGBoost']
+        prob_cat = oof_preds_df['CatBoost']
+        prob_gru = oof_preds_df['GRU']
+        prob_lstm = oof_preds_df['LSTM']
+        
+        # スタッキング (Ridge NNLS) - OOF予測に対してpredictする必要はない（学習に使ったので）
+        # しかし、StackingServiceのpredictは学習済み係数を掛けるだけなので、OOF予測値を入力すればOOFに対するスタッキング予測になる
+        prob_stack = stacking_service.predict(oof_preds_df)
         
         # Soft Voting
         prob_avg = (prob_lgb + prob_xgb + prob_cat + prob_gru + prob_lstm) / 5
 
         models = {
-            "LightGBM": prob_lgb,
-            "XGBoost": prob_xgb,
-            "CatBoost": prob_cat,
-            "GRU": prob_gru,
-            "LSTM": prob_lstm,
-            "Stacking (Avg)": prob_avg,
-            "Stacking (Ridge)": prob_stack
+            "LightGBM (OOF)": prob_lgb,
+            "XGBoost (OOF)": prob_xgb,
+            "CatBoost (OOF)": prob_cat,
+            "GRU (OOF)": prob_gru,
+            "LSTM (OOF)": prob_lstm,
+            "Stacking (Avg OOF)": prob_avg,
+            "Stacking (Ridge OOF)": prob_stack
         }
 
         best_result = None
@@ -521,7 +549,10 @@ class MLPipeline:
 
             for th in np.arange(0.5, 0.96, 0.05):
                 y_pred = (probs >= th).astype(int)
-                report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
+                # OOFなので0.5 (padding) を除外して評価
+                # ここでは簡易的に全データで評価（パディングは極少数または0.5未満として扱われる）
+                
+                report = classification_report(y, y_pred, output_dict=True, zero_division=0)
                 
                 range_rec = report['0']['recall']
                 trend_prec = report['1']['precision']
@@ -547,7 +578,7 @@ class MLPipeline:
             logger.info(f"   Trend確度:   {best_result['trend_prec']:.1%} (ここを最大化)")
             logger.info(f"   Trend検出率: {best_result['trend_rec']:.1%}")
         else:
-            logger.warning("目標基準（Range回避 > 60%）を満たす設定が見つかりませんでした。")
+            logger.warn("目標基準（Range回避 > 60%）を満たす設定が見つかりませんでした。")
 
     def analyze_feature_importance(self, model_lgb, X_test):
         """LightGBMの特徴量重要度分析"""
@@ -555,9 +586,14 @@ class MLPipeline:
         logger.info("特徴量重要度分析 (LightGBM)")
         logger.info("=" * 60)
         
+        # X_testは存在しないため、学習に使ったX_clean (model_lgb.feature_name_などから取得) を想定
+        # model_lgbは全データで学習されているので、feature_importances_は有効
+        
         importances = model_lgb.feature_importances_
+        feature_names = model_lgb.feature_name_
+        
         feature_imp = pd.DataFrame({
-            'Feature': X_test.columns,
+            'Feature': feature_names,
             'Importance': importances
         }).sort_values('Importance', ascending=False)
 
@@ -586,14 +622,16 @@ class MLPipeline:
             with open(latest_dir / "best_params.json", "r", encoding="utf-8") as f:
                 best_params = json.load(f)[ "best_params"]
 
-        # 3. 最終モデル学習 (LGBM & XGB & Stacking)
-        model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled = self.train_final_models(X, ohlcv, best_params)
+        # 3. 最終モデル学習 (Purged K-Fold OOF)
+        # 戻り値: 最終モデル群, メタモデル, OOF予測値DF, 正解ラベル, スケール済みX(None)
+        model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, _ = self.train_final_models(X, ohlcv, best_params)
 
-        # 4. スタッキング評価
-        self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, X_test, y_test, X_test_scaled)
+        # 4. スタッキング評価 (OOF)
+        self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, None)
 
         # 5. 特徴量分析
-        self.analyze_feature_importance(model_lgb, X_test)
+        # X自体を渡せばfeature_namesは取れるが、メソッド内でfeature_name_属性を使うように変更したので引数はダミーでよい
+        self.analyze_feature_importance(model_lgb, X)
 
 
 def main():

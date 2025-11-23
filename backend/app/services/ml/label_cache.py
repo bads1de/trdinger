@@ -124,6 +124,39 @@ class LabelCache:
 
         return labels
 
+    def get_t1(self, indices: pd.DatetimeIndex, horizon_n: int, timeframe: str = "1h") -> pd.Series:
+        """
+        各観測点のラベル終了時刻 (t1) を取得
+
+        PurgedKFoldで使用するために、各サンプルのラベルがいつ確定するかを返します。
+        単純なホライズン加算ですが、Triple Barrier Methodなどの複雑なロジックに
+        拡張する場合はここで計算ロジックを変更できます。
+
+        Args:
+            indices: 観測開始時刻のインデックス
+            horizon_n: N本先
+            timeframe: 時間足 (デフォルト "1h")
+
+        Returns:
+            pd.Series: t1 (ラベル終了時刻)
+        """
+        # タイムフレームに応じてtimedeltaを計算
+        if timeframe == "1h":
+            delta = pd.Timedelta(hours=horizon_n)
+        elif timeframe == "4h":
+            delta = pd.Timedelta(hours=4 * horizon_n)
+        elif timeframe == "1d":
+            delta = pd.Timedelta(days=horizon_n)
+        elif timeframe == "15m":
+            delta = pd.Timedelta(minutes=15 * horizon_n)
+        else:
+            # デフォルトは1hとみなす（簡易実装）
+            delta = pd.Timedelta(hours=horizon_n)
+            
+        # t1を計算
+        t1 = pd.Series(indices + delta, index=indices)
+        return t1
+
     def get_hit_rate(self) -> float:
         """キャッシュヒット率を取得
 
