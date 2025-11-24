@@ -110,14 +110,50 @@ class LabelCache:
             )
 
         # ラベル生成
-        labels = forward_classification_preset(
-            df=self.ohlcv_df,
-            timeframe=timeframe,
-            horizon_n=horizon_n,
-            threshold=threshold,
-            price_column=price_column,
-            threshold_method=threshold_method_enum,
-        )
+        if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
+            from app.utils.label_generation.triple_barrier import TripleBarrier
+            
+            close_prices = self.ohlcv_df[price_column]
+            # ボラティリティ計算 (日次標準偏差を推定、単純なリターンの標準偏差)
+            returns = close_prices.pct_change(fill_method=None)
+            volatility = returns.rolling(window=24).std() # 24時間ローリングボラティリティ
+            
+            # 垂直バリア (horizon_n 時間後)
+            t1 = self.get_t1(close_prices.index, horizon_n, timeframe)
+            
+            # Triple Barrier 実行
+            # threshold を pt と sl の倍率として使用 (例: threshold=1.0 なら 1*volatility)
+            # min_ret は小さめに設定して、小さい変動でも方向性を捉えるようにする（またはレンジ判定に使う）
+            tb = TripleBarrier(pt=threshold, sl=threshold, min_ret=0.0001)
+            
+            events = tb.get_events(
+                close=close_prices,
+                t_events=close_prices.index,
+                pt_sl=[threshold, threshold],
+                target=volatility,
+                min_ret=0.0001,
+                vertical_barrier_times=t1
+            )
+            
+            labels_df = tb.get_bins(events, close_prices)
+            
+            # ラベルをSeriesに変換 (1, -1, 0) -> ("UP", "DOWN", "RANGE")
+            labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
+            labels = labels_df['bin'].map(labels_map)
+            
+            # インデックスを合わせてNaN処理
+            labels = labels.reindex(close_prices.index)
+            
+        else:
+            # 既存のロジック
+            labels = forward_classification_preset(
+                df=self.ohlcv_df,
+                timeframe=timeframe,
+                horizon_n=horizon_n,
+                threshold=threshold,
+                price_column=price_column,
+                threshold_method=threshold_method_enum,
+            )
 
         # キャッシュに保存
         self.cache[cache_key] = labels

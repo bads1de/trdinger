@@ -17,3 +17,4 @@ class ThresholdMethod(Enum):
     ADAPTIVE = "adaptive"  # 適応的閾値（GridSearchCVを使用）
     DYNAMIC_VOLATILITY = "dynamic_volatility"  # 動的ボラティリティベース
     KBINS_DISCRETIZER = "kbins_discretizer"  # KBinsDiscretizerベース（推奨）
+    TRIPLE_BARRIER = "triple_barrier" # Triple Barrier Method (利確/損切り/時間切れ)
