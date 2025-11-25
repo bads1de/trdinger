@@ -392,8 +392,8 @@ class TestGetCommonPresets:
         presets = get_common_presets()
 
         # Assert
-        # 実際のプリセット数を確認（現在は16個）
-        assert len(presets) == 16, f"プリセット数が16ではありません: {len(presets)}"
+        # 実際のプリセット数を確認（現在は19個）
+        assert len(presets) == 19, f"プリセット数が19ではありません: {len(presets)}"
         # プリセットが少なくとも10個以上あることを確認
         assert len(presets) >= 10, "プリセットが10個未満です"
 
@@ -405,11 +405,22 @@ class TestGetCommonPresets:
         presets = get_common_presets()
 
         # Assert
-        required_keys = {
+        # 通常のプリセットに必要なキー
+        forward_classification_keys = {
             "timeframe",
             "horizon_n",
             "threshold",
             "threshold_method",
+            "description",
+        }
+        
+        # TBM（Triple Barrier Method）プリセットに必要なキー
+        tbm_keys = {
+            "timeframe",
+            "horizon_n",
+            "pt",
+            "sl",
+            "min_ret",
             "description",
         }
 
@@ -417,6 +428,12 @@ class TestGetCommonPresets:
             assert isinstance(preset_params, dict), (
                 f"{preset_name}のパラメータが辞書ではありません"
             )
+
+            # TBMプリセットかどうかを判定
+            if preset_name.startswith("tbm_"):
+                required_keys = tbm_keys
+            else:
+                required_keys = forward_classification_keys
 
             missing_keys = required_keys - set(preset_params.keys())
             assert len(missing_keys) == 0, (
@@ -448,6 +465,10 @@ class TestGetCommonPresets:
         valid_methods = [m for m in ThresholdMethod]
 
         for preset_name, preset_params in presets.items():
+            # TBMプリセットはthreshold_methodを持たないのでスキップ
+            if preset_name.startswith("tbm_"):
+                continue
+            
             method = preset_params["threshold_method"]
             assert method in valid_methods, (
                 f"{preset_name}の閾値計算方法が無効: {method}"

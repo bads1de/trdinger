@@ -36,7 +36,8 @@ class TestFundingRateFeatureCalculator:
         # timestampカラムが1つだけ存在することを確認 (重複していないこと)
         # DataFrame.columnsに重複がある場合は len(df.columns) != len(set(df.columns)) になるわけではないが、
         # ここではマージ後の挙動としてエラーが出ないことが最重要
-        assert "fr_lag_1p" in result_df.columns
+        # 実装が変更されてfr_lag_3pのみが生成されるようになった
+        assert "fr_lag_3p" in result_df.columns
         assert not result_df.columns.duplicated().any()
 
     def test_missing_timestamp_column(self):
@@ -61,4 +62,5 @@ class TestFundingRateFeatureCalculator:
         
         # timestampカラムはインデックスに設定される仕様のため、インデックスの型を確認
         assert isinstance(result_df.index, pd.DatetimeIndex)
-        assert "fr_lag_1p" in result_df.columns
+        # 実装が変更されてfr_lag_3pのみが生成されるようになった
+        assert "fr_lag_3p" in result_df.columns
