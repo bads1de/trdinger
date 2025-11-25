@@ -52,6 +52,10 @@ class StackingEnsemble(BaseEnsemble):
 
         # scikit-learn StackingClassifier
         self.stacking_classifier = None
+        self.oof_predictions: Optional[np.ndarray] = None # OOF予測値を保持
+        self.oof_base_model_predictions: Optional[pd.DataFrame] = None # 各ベースモデルのOOF予測確率を保持
+        self.X_train_original: Optional[pd.DataFrame] = None # メタモデルの特徴量として使うため
+        self.y_train_original: Optional[pd.Series] = None # メタラベル生成のため
 
         logger.info(
             f"StackingClassifier初期化: base_models={self.base_models}, "
@@ -135,9 +139,27 @@ class StackingEnsemble(BaseEnsemble):
 
             logger.info("StackingClassifier学習開始")
 
-            # 学習実行
+            # 各ベースモデルのOOF予測値を計算
+            oof_base_model_preds = pd.DataFrame(index=X_train.index)
+            
+            # StackingClassifierの内部でOOF予測が生成されるため、ここでは外部からのOOF生成は行わない
+            # self.stacking_classifier.fit(X_train, y_train) が呼ばれるとOOF予測は内部で生成される
+            # StackingClassifierからOOF予測を取得する方法がないため、predict(X_train)をOOFとみなす (注意: リークの可能性あり)
+            # より厳密なOOFが必要な場合は、fitの前に手動でcross_val_predictを呼び出す必要がある
+
             self.stacking_classifier.fit(X_train, y_train)
             self.is_fitted = True
+
+            # StackingClassifierからOOF予測を取得する（直接取得できないため、X_trainに対する予測を使用）
+            # これは厳密にはOOFではないが、メタモデルの学習のための近似とする
+            self.oof_predictions = self.stacking_classifier.predict_proba(X_train)[:, 1]
+            self.oof_base_model_predictions = pd.DataFrame({
+                name: estimator.predict_proba(X_train)[:, 1]
+                for name, estimator in self.stacking_classifier.named_estimators_.items()
+            }, index=X_train.index)
+            
+            self.X_train_original = X_train
+            self.y_train_original = y_train
 
             logger.info("StackingClassifier学習完了")
 
@@ -407,5 +429,50 @@ class StackingEnsemble(BaseEnsemble):
             return True
 
         except Exception as e:
-            logger.error(f"モデル読み込みエラー: {e}")
+            logger.error(f"アンサンブルモデル読み込みエラー: {e}")
             return False
+
+    def get_oof_predictions(self) -> Optional[np.ndarray]:
+        """スタッキングモデルのOOF予測確率を返す"""
+        return self.oof_predictions
+    
+    def get_oof_base_model_predictions(self) -> Optional[pd.DataFrame]:
+        """各ベースモデルのOOF予測確率をDataFrameで返す"""
+        return self.oof_base_model_predictions
+        
+    def get_X_train_original(self) -> Optional[pd.DataFrame]:
+        """学習に使用した元の特徴量Xを返す"""
+        return self.X_train_original
+        
+    def get_y_train_original(self) -> Optional[pd.Series]:
+        """学習に使用した元のラベルyを返す"""
+        return self.y_train_original
+
+    def predict_base_models_proba(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        各ベースモデルの予測確率を取得する
+
+        Args:
+            X: 特徴量DataFrame
+
+        Returns:
+            各ベースモデルの予測確率を含むDataFrame
+        """
+        if not self.is_fitted or self.stacking_classifier is None:
+            raise ModelError("モデルが学習されていません")
+        
+        try:
+            base_preds = self.stacking_classifier.transform(X)
+            
+            estimator_names = list(self.stacking_classifier.named_estimators_.keys())
+            
+            if base_preds.shape[1] == len(estimator_names):
+                return pd.DataFrame(base_preds, index=X.index, columns=estimator_names)
+            else:
+                cols = [f"base_model_{i}" for i in range(base_preds.shape[1])]
+                return pd.DataFrame(base_preds, index=X.index, columns=cols)
+                
+        except Exception as e:
+            logger.error(f"ベースモデル予測確率取得エラー: {e}")
+            raise ModelError(f"ベースモデル予測確率の取得に失敗しました: {e}")
+

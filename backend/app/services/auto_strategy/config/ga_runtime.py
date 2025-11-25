@@ -120,6 +120,10 @@ class GAConfig(BaseConfig):
     regime_adaptation_enabled: bool = False
     regime_detector_config: Optional["RegimeDetectorConfig"] = None
 
+    # MLフィルター設定
+    ml_filter_enabled: bool = False
+    ml_model_path: Optional[str] = None
+
     # 遺伝子生成設定拡張
     price_data_weight: int = 3
     volume_data_weight: int = 1

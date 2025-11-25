@@ -301,6 +301,123 @@ class TestIndividualEvaluator:
 
         assert result == (0.0,)  # 未知の目的は0.0
 
+    def test_evaluate_individual_with_ml_filter(self):
+        """MLフィルターが有効な場合の個体評価テスト"""
+        mock_individual = [1, 2, 3, 4, 5]
+
+        # MLフィルターなしの場合のバックテスト結果（ベースライン）
+        mock_result_no_ml_filter = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 1.5,
+                "max_drawdown": 0.1,
+                "win_rate": 0.6,
+                "profit_factor": 1.8,
+                "total_trades": 100, # MLフィルターなしでは取引が多い
+            },
+            "equity_curve": [100, 110, 105, 120],
+            "trade_history": [{"size": 1, "pnl": 10}] * 100,
+        }
+
+        # MLフィルターありの場合のバックテスト結果（取引が減る想定）
+        mock_result_with_ml_filter = {
+            "performance_metrics": {
+                "total_return": 0.15, # 改善される想定
+                "sharpe_ratio": 2.0,   # 改善される想定
+                "max_drawdown": 0.08,
+                "win_rate": 0.7,
+                "profit_factor": 2.5,
+                "total_trades": 50, # MLフィルターにより取引が半分になる想定
+            },
+            "equity_curve": [100, 115, 110, 130],
+            "trade_history": [{"size": 1, "pnl": 15}] * 50,
+        }
+
+        # GA設定 - MLフィルター無効
+        ga_config_no_ml = GAConfig()
+        ga_config_no_ml.enable_multi_objective = False
+        ga_config_no_ml.fitness_weights = {
+            "total_return": 1.0,
+            "sharpe_ratio": 0.0,
+            "max_drawdown": 0.0,
+            "win_rate": 0.0,
+            "balance_score": 0.0,
+            "ulcer_index_penalty": 0.0,
+            "trade_frequency_penalty": 0.0,
+        }
+        ga_config_no_ml.fitness_constraints = {
+            "min_trades": 0, # 制約を無効化
+            "max_drawdown_limit": 1.0,
+            "min_sharpe_ratio": 0.0,
+        }
+        ga_config_no_ml.ml_filter_enabled = False
+        ga_config_no_ml.ml_model_path = None
+
+        # GA設定 - MLフィルター有効
+        ga_config_with_ml = GAConfig()
+        ga_config_with_ml.enable_multi_objective = False
+        ga_config_with_ml.fitness_weights = {
+            "total_return": 1.0,
+            "sharpe_ratio": 0.0,
+            "max_drawdown": 0.0,
+            "win_rate": 0.0,
+            "balance_score": 0.0,
+            "ulcer_index_penalty": 0.0,
+            "trade_frequency_penalty": 0.0,
+        }
+        ga_config_with_ml.fitness_constraints = {
+            "min_trades": 0, # 制約を無効化
+            "max_drawdown_limit": 1.0,
+            "min_sharpe_ratio": 0.0,
+        }
+        ga_config_with_ml.ml_filter_enabled = True
+        ga_config_with_ml.ml_model_path = "/path/to/ml_model.pkl" # 仮のパス
+
+        # backtest_service.run_backtestがGAconfigの内容に応じて異なる結果を返すようにモックを設定
+        def run_backtest_side_effect(**kwargs):
+            backtest_config = kwargs.get("backtest_config", {}) # backtest_configをkwargsから取得
+            strategy_config = backtest_config.get("strategy_config", {}) # strategy_configはbacktest_configの中にある
+            if strategy_config.get("ml_filter_enabled"):
+                return mock_result_with_ml_filter
+            return mock_result_no_ml_filter
+
+        self.mock_backtest_service.run_backtest.side_effect = run_backtest_side_effect
+
+        # 1. MLフィルター無効で評価
+        result_no_ml = self.evaluator.evaluate_individual(mock_individual, ga_config_no_ml)
+        # run_backtestがMLフィルターなしの引数で呼ばれたことを検証
+        # call_args.kwargsからbacktest_configを取り出し、その中のstrategy_configをチェック
+        call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
+        backtest_config_passed = call_kwargs["backtest_config"]
+        assert backtest_config_passed["strategy_config"]["ml_filter_enabled"] == False
+        assert backtest_config_passed["strategy_config"]["ml_model_path"] == None
+        assert backtest_config_passed["strategy_config"]["parameters"]["strategy_gene"] is not None
+        assert backtest_config_passed.get("regime_labels") == None
+        
+        # 評価結果の検証
+        # _calculate_fitnessを直接呼び出して期待値を計算 (テスト対象ではないが、比較のために使用)
+        expected_fitness_no_ml = self.evaluator._calculate_fitness(mock_result_no_ml_filter, ga_config_no_ml)
+        assert result_no_ml[0] == expected_fitness_no_ml
+
+        # 2. MLフィルター有効で評価
+        result_with_ml = self.evaluator.evaluate_individual(mock_individual, ga_config_with_ml)
+        # run_backtestがMLフィルターありの引数で呼ばれたことを検証
+        call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
+        backtest_config_passed = call_kwargs["backtest_config"]
+        assert backtest_config_passed["strategy_config"]["ml_filter_enabled"] == True
+        assert backtest_config_passed["strategy_config"]["ml_model_path"] == "/path/to/ml_model.pkl"
+        assert backtest_config_passed["strategy_config"]["parameters"]["strategy_gene"] is not None
+        assert backtest_config_passed.get("regime_labels") == None
+
+        # 評価結果の検証
+        expected_fitness_with_ml = self.evaluator._calculate_fitness(mock_result_with_ml_filter, ga_config_with_ml)
+        assert result_with_ml[0] == expected_fitness_with_ml
+
+        # MLフィルターによって結果が改善されたことを検証 (total_returnが改善)
+        assert result_with_ml[0] > result_no_ml[0]
+
+
+
 
 class TestIndividualEvaluatorRegimeAdaptation:
     """IndividualEvaluatorのレジーム適応評価機能のテストクラス"""
@@ -940,3 +1057,4 @@ class TestIndividualEvaluatorRegimeAdaptation:
         assert isinstance(result, tuple)
         assert len(result) == 4
         assert all(isinstance(v, float) for v in result)
+

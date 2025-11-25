@@ -13,6 +13,7 @@ import pandas as pd
 from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
 from .stacking import StackingEnsemble
+from ..meta_labeling_service import MetaLabelingService # Added
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,8 @@ class EnsembleTrainer(BaseMLTrainer):
         self.model_type = "EnsembleModel"
         self.ensemble_method = ensemble_config.get("method", "stacking")
         self.ensemble_model = None
+        self.meta_labeling_service = None # メタラベリングサービスを追加
+        self.meta_model_threshold = 0.5 # メタモデルの予測閾値
 
         logger.info(f"EnsembleTrainer初期化: method={self.ensemble_method}")
 
@@ -90,36 +93,82 @@ class EnsembleTrainer(BaseMLTrainer):
 
         return optimized_params
 
-    def predict(self, features_df: pd.DataFrame) -> np.ndarray:
+    def predict_proba(self, features_df: pd.DataFrame) -> np.ndarray:
         """
-        アンサンブルモデルで予測を実行
+        アンサンブルモデルで予測確率を取得（フィルタリングなし）
 
         Args:
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率の配列 [下落確率, レンジ確率, 上昇確率]
+            予測確率の配列 (2クラス分類)
         """
         if self.ensemble_model is None or not self.ensemble_model.is_fitted:
             raise ModelError("学習済みアンサンブルモデルがありません")
 
         try:
-            # アンサンブルモデルは主にLightGBMベースなのでスケーリング不要
             features_scaled = features_df
-
-            # アンサンブルモデルで予測確率を取得
             predictions = self.ensemble_model.predict_proba(features_scaled)
 
-            # 予測確率が3クラス分類であることを確認
-            if predictions.ndim == 2 and predictions.shape[1] == 3:
-                # 3クラス分類の場合、そのまま返す
+            # StackingEnsembleのpredict_probaは2クラスの確率を返す想定
+            if predictions.ndim == 2 and predictions.shape[1] == 2:
                 return predictions
             else:
-                # 予期しない形状の場合はエラー
                 raise ModelError(
                     f"予期しない予測確率の形状: {predictions.shape}. "
-                    f"3クラス分類 (down, range, up) の確率が期待されます。"
+                    f"2クラス分類の確率が期待されます。"
                 )
+
+        except Exception as e:
+            logger.error(f"アンサンブル予測確率取得エラー: {e}")
+            raise ModelError(f"アンサンブル予測確率の取得に失敗しました: {e}")
+
+    def predict(self, features_df: pd.DataFrame) -> np.ndarray:
+        """
+        アンサンブルモデルで予測を実行（メタラベリング適用）
+
+        Args:
+            features_df: 特徴量DataFrame
+
+        Returns:
+            予測クラスの配列 (0=Range, 1=Trend)
+        """
+        if self.ensemble_model is None or not self.ensemble_model.is_fitted:
+            raise ModelError("学習済みアンサンブルモデルがありません")
+
+        try:
+            features_scaled = features_df # アンサンブルモデルは主にLightGBMベースなのでスケーリング不要
+
+            # StackingEnsembleから予測確率を取得
+            predictions_proba = self.ensemble_model.predict_proba(features_scaled)
+
+            # ポジティブクラス（Trend）の確率を取得
+            primary_proba = predictions_proba[:, 1]
+            primary_proba_series = pd.Series(primary_proba, index=features_df.index) # ここで定義
+
+            # メタラベリング適用
+            if self.meta_labeling_service and self.meta_labeling_service.is_trained:
+                logger.debug("メタラベリングによる予測フィルタリングを適用中...")
+                
+                # 各ベースモデルの予測確率を取得
+
+                try:
+                    base_model_probs_df = self.ensemble_model.predict_base_models_proba(features_scaled)
+                except Exception as e:
+                    logger.warning(f"ベースモデル予測確率の取得に失敗したため、空のDataFrameを使用します: {e}")
+                    base_model_probs_df = pd.DataFrame(index=features_scaled.index) # indexをfeatures_scaledに合わせる
+
+                # メタモデルは0/1を返す
+                filtered_predictions = self.meta_labeling_service.predict(
+                    X=features_scaled, # Xをfeatures_scaledに修正
+                    primary_proba=primary_proba_series,
+                    base_model_probs_df=base_model_probs_df
+                )
+                return filtered_predictions.values # Seriesをnp.ndarrayに変換
+            else:
+                logger.debug("メタラベリングは有効化されていません。StackingEnsembleの直接予測を使用。")
+                # メタラベリングが有効でない場合は、StackingEnsembleの直接予測を2値に変換
+                return (primary_proba >= self.meta_model_threshold).astype(int)
 
         except Exception as e:
             logger.error(f"アンサンブル予測エラー: {e}")
@@ -243,7 +292,7 @@ class EnsembleTrainer(BaseMLTrainer):
             from sklearn.metrics import classification_report
 
             class_report = classification_report(
-                y_test, y_pred, output_dict=True, zero_division="0"
+                y_test, y_pred, output_dict=True, zero_division=0.0
             )
 
             # 特徴量重要度
@@ -276,6 +325,41 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.info(
                 f"アンサンブルモデル学習完了: method={self.ensemble_method}, 精度={accuracy:.4f}"
             )
+
+            # --- メタラベリングモデルの学習 ---
+            try:
+                logger.info("メタラベリングモデルの学習を開始...")
+                # アンサンブルモデルのOOF予測値を取得 (これが一次モデルの確信度となる)
+                # StackingServiceにOOF予測の公開メソッドがあればそれを使う
+                # 現状はrun_ml_pipeline.pyで計算しているものを渡す必要あり
+                # ここでは簡易的にX_trainで予測したものをOOFとみなす（厳密にはリークするが、ここでは動作確認）
+                # TODO: StackingServiceからOOF予測値を公開するように修正
+                primary_oof_proba_train = self.ensemble_model.get_oof_predictions()
+                primary_oof_series_train = pd.Series(primary_oof_proba_train, index=X_train.index) # X_trainのindexを使う
+
+                oof_base_model_probs_df = self.ensemble_model.get_oof_base_model_predictions()
+                X_train_original_for_meta = self.ensemble_model.get_X_train_original()
+                y_train_original_for_meta = self.ensemble_model.get_y_train_original()
+
+                if oof_base_model_probs_df is None or X_train_original_for_meta is None or y_train_original_for_meta is None:
+                    logger.warning("StackingEnsembleからOOF予測値またはオリジナルデータが取得できませんでした。メタラベリング学習をスキップします。")
+                    return result
+
+                self.meta_labeling_service = MetaLabelingService()
+                meta_result = self.meta_labeling_service.train(
+                    X_train=X_train_original_for_meta, # オリジナルのX_trainを使用
+                    y_train=y_train_original_for_meta, # オリジナルのy_trainを使用
+                    primary_proba_train=primary_oof_series_train,
+                    base_model_probs_df=oof_base_model_probs_df # 各ベースモデルのOOF予測確率DataFrameを渡す
+                )
+                if meta_result["status"] == "success":
+                    logger.info("メタラベリングモデルの学習が完了しました。")
+                else:
+                    logger.warning(f"メタラベリングモデルの学習がスキップされました: {meta_result.get('reason')}")
+            except Exception as e:
+                logger.error(f"メタラベリングモデル学習エラー: {e}")
+                logger.warning("メタラベリングモデルの学習をスキップしました。")
+
 
             return result
 
@@ -330,6 +414,20 @@ class EnsembleTrainer(BaseMLTrainer):
                 }
             )
 
+            # --- メタラベリングモデルの保存 ---
+            meta_model_path = None
+            if self.meta_labeling_service and self.meta_labeling_service.is_trained:
+                meta_model_path = model_manager.save_model(
+                    model=self.meta_labeling_service,
+                    model_name=f"{model_name}_meta", # メタモデル用の名前
+                    metadata={"primary_model_name": model_name},
+                    scaler=None, # メタモデルはスケーラーを使わない
+                    feature_columns=self.feature_columns # メタモデルも元の特徴量を使う
+                )
+                final_metadata["meta_model_path"] = meta_model_path
+                logger.info(f"メタラベリングモデル保存完了: {meta_model_path}")
+            # ----------------------------------
+
             # 特徴量重要度をメタデータに追加
             try:
                 feature_importance = self.get_feature_importance(top_n=100)
@@ -342,30 +440,24 @@ class EnsembleTrainer(BaseMLTrainer):
                 logger.warning(f"特徴量重要度の取得に失敗: {e}")
 
             # アンサンブルモデルの保存
-            if len(self.ensemble_model.base_models) == 1:
-                # 単一モデル（通常のアンサンブル）の場合
-                best_model = self.ensemble_model.base_models[0]
-
-                # 統一されたモデル保存を使用
-                model_path = model_manager.save_model(
-                    model=best_model,
-                    model_name=model_name,
-                    metadata=final_metadata,
-                    scaler=self.scaler,
-                    feature_columns=self.feature_columns,
-                )
-
-                if model_path is None:
-                    raise ModelError("モデル保存に失敗しました")
-
-                logger.info(
-                    f"アンサンブル最高性能モデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
-                )
-                return model_path
+            # StackingEnsembleクラスのsave_modelsを使う
+            if self.ensemble_model:
+                model_paths = self.ensemble_model.save_models(base_path=model_manager.model_save_path / model_name)
+                # StackingEnsemble.save_modelsが複数パスを返すので、最初のものを代表パスとする
+                model_path = model_paths[0] if model_paths else None
             else:
-                raise ModelError(
-                    f"アンサンブルモデルが保存可能な形式ではありません。base_models数: {len(self.ensemble_model.base_models)}"
-                )
+                model_path = None
+
+            if model_path is None:
+                raise ModelError("モデル保存に失敗しました")
+            
+            # 統一されたモデル保存のメタデータ更新
+            model_manager.update_model_metadata(model_path, final_metadata)
+
+            logger.info(
+                f"アンサンブル最高性能モデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
+            )
+            return model_path
 
         except Exception as e:
             logger.error(f"アンサンブルモデル保存エラー: {e}")
@@ -412,6 +504,19 @@ class EnsembleTrainer(BaseMLTrainer):
                 self.feature_columns = metadata["feature_columns"]
                 self.scaler = metadata["scaler"]
                 self.is_trained = metadata["is_trained"]
+
+                # --- メタラベリングモデルのロード ---
+                if "meta_model_path" in metadata and metadata["meta_model_path"]:
+                    try:
+                        from ..model_manager import model_manager
+                        self.meta_labeling_service = model_manager.load_model(metadata["meta_model_path"])
+                        if self.meta_labeling_service:
+                            logger.info(f"メタラベリングモデルをロードしました: {metadata['meta_model_path']}")
+                        else:
+                            logger.warning(f"メタラベリングモデルのロードに失敗しました: {metadata['meta_model_path']}")
+                    except Exception as e:
+                        logger.error(f"メタラベリングモデルのロードエラー: {e}")
+                # ------------------------------------
 
             # スタッキングアンサンブルモデルを作成
             if self.ensemble_method.lower() == "stacking":

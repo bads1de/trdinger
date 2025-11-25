@@ -149,12 +149,12 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # リターンを計算（pandas-ta ROCP: fractional rate of change）
             import pandas_ta as ta
 
-            roc_result = ta.roc(result_df["close"], length=1)
-            result_df["Returns"] = (
-                pd.Series(roc_result, index=result_df.index).fillna(0.0) / 100.0
-                if roc_result is not None
-                else 0.0
-            )
+            # roc_result = ta.roc(result_df["close"], length=1)
+            # result_df["Returns"] = ( # 低重要度のためコメントアウト
+            #     pd.Series(roc_result, index=result_df.index).fillna(0.0) / 100.0
+            #     if roc_result is not None
+            #     else 0.0
+            # )
 
             # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
             # 削除された特徴量: Realized_Volatility_20, Volatility_Spike_MA

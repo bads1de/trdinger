@@ -166,7 +166,7 @@ class FundingRateFeatureCalculator:
 
         # 生のrawデータよりも、deviationの方が情報価値が高い可能性があるが、
         # 基本特徴量としてはbps値を使う
-        lag_periods = [2, 3] # fr_lag_1p は低重要度のため削除
+        lag_periods = [3] # fr_lag_1p, 2p は低重要度のため削除
         for lag in lag_periods:
             shift_hours = lag * self.settlement_interval
             df[f"fr_lag_{lag}p"] = df["fr_bps"].shift(shift_hours)

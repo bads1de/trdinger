@@ -190,6 +190,26 @@ def test_volatility_features(sample_ohlcv_data):
     for col in expected_vol_columns:
         assert col in features.columns, f"Missing column: {col}"
 
+def test_historical_volatility_skewness_kurtosis_features(sample_ohlcv_data):
+    """ヒストリカルボラティリティ、スキューネス、尖度の特徴量テスト"""
+    engineer = AdvancedFeatureEngineer()
+    features = engineer.create_advanced_features(sample_ohlcv_data)
+
+    assert "Historical_Volatility_20" in features.columns
+    assert "Price_Skewness_20" in features.columns
+    assert "Price_Kurtosis_20" in features.columns
+
+    # 少なくとも、数値として存在することを確認
+    assert np.issubdtype(features["Historical_Volatility_20"].dtype, np.number)
+    assert np.issubdtype(features["Price_Skewness_20"].dtype, np.number)
+    assert np.issubdtype(features["Price_Kurtosis_20"].dtype, np.number)
+
+    # NaNがないことを確認 (計算可能な範囲で)
+    assert not features["Historical_Volatility_20"].isnull().all()
+    assert not features["Price_Skewness_20"].isnull().all()
+    assert not features["Price_Kurtosis_20"].isnull().all()
+
+
 
 def test_interaction_features(sample_ohlcv_data):
     """相互作用特徴量のテスト"""

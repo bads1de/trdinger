@@ -111,7 +111,7 @@ class AdvancedFeatureEngineer:
         new_features["returns_lag_24"] = returns_temp.shift(24)
 
         # 累積リターン（24hのみ）
-        # # new_features["cumulative_returns_24"] = returns_temp.rolling(24).sum() # 低重要度のためコメントアウト
+        new_features["cumulative_returns_24"] = returns_temp.rolling(24).sum()
 
         # 一括で結合
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
@@ -230,6 +230,14 @@ class AdvancedFeatureEngineer:
             high_max = data["high"].rolling(window).max()
             low_min = data["low"].rolling(window).min()
             new_features[f"Close_range_{window}"] = high_max - low_min
+
+            # ヒストリカルボラティリティ (対数リターンの標準偏差)
+            log_returns = np.log(data["close"] / data["close"].shift(1))
+            new_features[f"Historical_Volatility_{window}"] = log_returns.rolling(window).std() * np.sqrt(252) # 年率換算 (日足の場合)
+
+            # スキューネスと尖度
+            new_features[f"Price_Skewness_{window}"] = data["close"].rolling(window).skew()
+            new_features[f"Price_Kurtosis_{window}"] = data["close"].rolling(window).kurt()
 
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
         return new_df

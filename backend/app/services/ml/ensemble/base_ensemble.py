@@ -89,25 +89,42 @@ class BaseEnsemble(ABC):
         ベースモデルを作成（Essential 2 Modelsのみサポート）
 
         Args:
-            model_type: モデルタイプ（lightgbm, xgboost, logistic_regression）
+            model_type: モデルタイプ（lightgbm, xgboost, logistic_regression, catboost）
 
         Returns:
             作成されたモデル
         """
         if model_type.lower() == "lightgbm":
             try:
-                from ..models.lightgbm import LightGBMModel
-
-                return LightGBMModel()
+                import lightgbm as lgb
+                # デフォルトパラメータは後でset_paramsで上書きされるか、fitの引数で渡される
+                return lgb.LGBMClassifier(
+                    n_jobs=1, # 並列処理はStackingClassifier側で制御
+                    random_state=unified_config.ml.training.random_state
+                )
             except ImportError:
-                raise MLModelError("LightGBMモデルラッパーのインポートに失敗しました")
+                raise MLModelError("LightGBMのインポートに失敗しました")
         elif model_type.lower() == "xgboost":
             try:
-                from ..models.xgboost import XGBoostModel
-
-                return XGBoostModel()
+                import xgboost as xgb
+                return xgb.XGBClassifier(
+                    n_jobs=1,
+                    random_state=unified_config.ml.training.random_state,
+                    eval_metric="logloss"
+                )
             except ImportError:
-                raise MLModelError("XGBoostモデルラッパーのインポートに失敗しました")
+                raise MLModelError("XGBoostのインポートに失敗しました")
+        elif model_type.lower() == "catboost":
+            try:
+                import catboost as cb
+                return cb.CatBoostClassifier(
+                    thread_count=1,
+                    random_seed=unified_config.ml.training.random_state,
+                    verbose=0,
+                    allow_writing_files=False
+                )
+            except ImportError:
+                raise MLModelError("CatBoostのインポートに失敗しました")
         elif model_type.lower() == "logistic_regression":
             # scikit-learnのLogisticRegressionを直接使用
             from sklearn.linear_model import LogisticRegression
@@ -120,7 +137,7 @@ class BaseEnsemble(ABC):
             )
         else:
             raise MLModelError(
-                f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, logistic_regression"
+                f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, catboost, logistic_regression"
             )
 
     def _evaluate_predictions(

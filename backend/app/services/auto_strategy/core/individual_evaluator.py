@@ -14,6 +14,7 @@ from app.services.backtest.backtest_service import BacktestService
 from ..config import GAConfig
 from ..services.regime_detector import RegimeDetector
 from .risk_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
+from app.services.ml.model_manager import model_manager  # Added
 
 logger = logging.getLogger(__name__)
 
@@ -87,14 +88,12 @@ class IndividualEvaluator:
                 )
 
             # 戦略設定を追加（test_strategy_generationと同じ形式）
-            from app.services.auto_strategy.serializers.gene_serialization import (
-                GeneSerializer,
-            )
-
             serializer = GeneSerializer()
             backtest_config["strategy_config"] = {
                 "strategy_type": "GENERATED_GA",
                 "parameters": {"strategy_gene": serializer.strategy_gene_to_dict(gene)},
+                "ml_filter_enabled": config.ml_filter_enabled,
+                "ml_model_path": config.ml_model_path,
             }
 
             # strategy_nameフィールドを追加
@@ -112,7 +111,6 @@ class IndividualEvaluator:
 
                     if symbol and timeframe and start_date and end_date:
                         # data_serviceからデータを取得（backtest_serviceのdata_serviceを使用）
-                        self.backtest_service._ensure_data_service_initialized()
                         ohlcv_data = self.backtest_service.data_service.get_ohlcv_data(
                             symbol, timeframe, start_date, end_date
                         )
@@ -136,7 +134,20 @@ class IndividualEvaluator:
                     logger.error(f"レジーム検知エラー: {e}")
                     regime_labels = None
 
-            result = self.backtest_service.run_backtest(backtest_config)
+            # MLフィルターが有効な場合、MLモデルをロードし、backtest_configに渡す
+            if config.ml_filter_enabled and config.ml_model_path:
+                try:
+                    logger.info(f"MLフィルターモデルをロード中: {config.ml_model_path}")
+                    ml_model = model_manager.load_model(config.ml_model_path)
+                    backtest_config["ml_filter_model"] = ml_model
+                    logger.info("MLフィルターモデルのロードに成功しました")
+                except Exception as e:
+                    logger.error(f"MLフィルターモデルのロードに失敗しました: {e}")
+                    # モデルロード失敗時はMLフィルターを無効にする
+                    backtest_config["ml_filter_enabled"] = False
+                    backtest_config["ml_filter_model"] = None
+            
+            result = self.backtest_service.run_backtest(backtest_config=backtest_config)
 
             # フィットネス計算（単一目的・多目的対応、レジーム考慮）
             if config.enable_multi_objective:

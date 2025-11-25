@@ -8,7 +8,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Tuple, Any, List
+from typing import Dict, Tuple, Any, List, Optional
 
 import joblib
 import lightgbm as lgb
@@ -56,10 +56,23 @@ logger = logging.getLogger(__name__)
 
 
 class MLPipeline:
-    def __init__(self, symbol: str = "BTC/USDT:USDT", timeframe: str = "1h", n_trials: int = 20):
+    def __init__(
+        self,
+        symbol: str = "BTC/USDT:USDT",
+        timeframe: str = "1h",
+        n_trials: int = 20,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        pipeline_type: str = "train_and_evaluate",
+        enable_meta_labeling: bool = True
+    ):
         self.symbol = symbol
         self.timeframe = timeframe
         self.n_trials = n_trials
+        self.start_date = start_date
+        self.end_date = end_date
+        self.pipeline_type = pipeline_type
+        self.enable_meta_labeling = enable_meta_labeling
         
         self.db = SessionLocal()
         self.evaluator = CommonFeatureEvaluator()
@@ -75,6 +88,7 @@ class MLPipeline:
         self.results_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info(f"ML Pipeline Init: {symbol} {timeframe}")
+        logger.info(f"Period: {start_date} - {end_date}")
         logger.info(f"Results Dir: {self.results_dir}")
 
     def get_latest_results_dir(self) -> Path:
@@ -97,9 +111,19 @@ class MLPipeline:
     def prepare_data(self, limit: int = 10000) -> Tuple[pd.DataFrame, pd.DataFrame]:
         logger.info("Preparing data...")
         
-        data = self.evaluator.fetch_data(
-            symbol=self.symbol, timeframe=self.timeframe, limit=limit
-        )
+        # start_date/end_dateが指定されている場合はそれを使用し、そうでない場合はlimitを使用
+        if self.start_date and self.end_date:
+            data = self.evaluator.fetch_data(
+                symbol=self.symbol, 
+                timeframe=self.timeframe, 
+                limit=limit, # fetch_dataの互換性のため渡すが、start/endが優先される
+                start_date=self.start_date,
+                end_date=self.end_date
+            )
+        else:
+            data = self.evaluator.fetch_data(
+                symbol=self.symbol, timeframe=self.timeframe, limit=limit
+            )
         
         features_df = self.feature_service.calculate_advanced_features(
             ohlcv_data=data.ohlcv,
@@ -460,33 +484,38 @@ class MLPipeline:
         joblib.dump(stacking_service, self.results_dir / "stacking_service.joblib")
 
         # --- Meta Labeling ---
-        logger.info("Training Meta-Labeling Model...")
-        
-        # スタッキングモデルのOOF予測値を取得 (これが一次モデルの確信度となる)
-        primary_oof_proba = stacking_service.predict(oof_preds_df)
-        primary_oof_series = pd.Series(primary_oof_proba, index=X_clean.index)
-        
-        meta_service = MetaLabelingService()
-        # メタモデルの学習
-        # X_cleanはスケーリング前の元の特徴量 (RandomForestなのでスケール不要)
-        meta_result = meta_service.train(
-            X_train=X_clean,
-            y_train=y,
-            primary_proba_train=primary_oof_series,
-            base_model_probs_df=oof_preds_df, # 個別ベースモデルのOOF予測確率DataFrameを渡す
-            threshold=0.5
-        )
-        
-        if meta_result["status"] == "success":
-            joblib.dump(meta_service, self.results_dir / "meta_labeling_service.joblib")
-            logger.info("Meta-Labeling Model trained and saved.")
+        if self.enable_meta_labeling:
+            logger.info("Training Meta-Labeling Model...")
+            
+            # スタッキングモデルのOOF予測値を取得 (これが一次モデルの確信度となる)
+            primary_oof_proba = stacking_service.predict(oof_preds_df)
+            primary_oof_series = pd.Series(primary_oof_proba, index=X_clean.index)
+            
+            meta_service = MetaLabelingService()
+            # メタモデルの学習
+            # X_cleanはスケーリング前の元の特徴量 (RandomForestなのでスケール不要)
+            meta_result = meta_service.train(
+                X_train=X_clean,
+                y_train=y,
+                primary_proba_train=primary_oof_series,
+                base_model_probs_df=oof_preds_df, # 個別ベースモデルのOOF予測確率DataFrameを渡す
+                threshold=0.5
+            )
+            
+            if meta_result["status"] == "success":
+                joblib.dump(meta_service, self.results_dir / "meta_labeling_service.joblib")
+                logger.info("Meta-Labeling Model trained and saved.")
+                models_result["meta_service"] = meta_service
+            else:
+                logger.warning(f"Meta-Labeling training skipped: {meta_result.get('reason')}")
+                models_result["meta_service"] = None
         else:
-            logger.warning(f"Meta-Labeling training skipped: {meta_result.get('reason')}")
+            logger.info("Meta-Labeling disabled.")
+            models_result["meta_service"] = None
 
         models_result["stacking_service"] = stacking_service
         models_result["oof_preds_df"] = oof_preds_df
         models_result["y"] = y
-        models_result["meta_service"] = meta_service
         models_result["X_clean"] = X_clean # X_cleanを追加
 
         return models_result
@@ -584,23 +613,16 @@ class MLPipeline:
             primary_oof_proba = stacking_service.predict(oof_preds_df)
             primary_oof_series = pd.Series(primary_oof_proba, index=oof_preds_df.index)
             
-            # 注意: ここではX_cleanそのものが渡されていないため、厳密な評価はできない
-            # ただし、メタモデルはX_cleanの一部（Trend予測分）で学習されている
-            # 簡易的に、メタラベリングの効果（フィルタリング率）を表示する
-            
             threshold = 0.5
             trend_mask = primary_oof_series >= threshold
             n_primary_trends = trend_mask.sum()
             
             if n_primary_trends > 0:
-                # メタモデルの予測（学習データに対する予測なので参考値）
-                # 本来は特徴量Xが必要だが、ここではevaluate_and_stackingの引数にXがない
                 logger.info(f"Primary Model Trend Predictions: {n_primary_trends} / {len(y)} ({n_primary_trends/len(y):.1%})")
                 
-                # 実際の精度（Precision）
                 actual_hits = y[trend_mask].sum()
                 primary_precision = actual_hits / n_primary_trends
-            logger.info("Primary Model Precision: {primary_precision:.1%}")
+                logger.info(f"Primary Model Precision: {primary_precision:.1%}")
             
             # メタモデルの評価
             meta_eval_results = meta_service.evaluate(
@@ -616,7 +638,7 @@ class MLPipeline:
             logger.info(f"Precision Improvement: {meta_eval_results['improvement_precision']:.1%}")
             
         else:
-            logger.info("Primary model made no trend predictions.")
+            logger.info("Primary model made no trend predictions or Meta-Labeling disabled.")
 
     def analyze_feature_importance(self, model_lgb, X_test):
         logger.info("\n" + "=" * 60)
@@ -667,7 +689,7 @@ class MLPipeline:
         stacking_service = models_result["stacking_service"]
         oof_preds_df = models_result["oof_preds_df"]
         y = models_result["y"]
-        meta_service = models_result["meta_service"]
+        meta_service = models_result.get("meta_service")
         X_clean = models_result["X_clean"] # X_cleanを追加
         
         self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, meta_service, X_clean)
@@ -683,12 +705,23 @@ def main():
     parser.add_argument("--n-trials", type=int, default=20)
     parser.add_argument("--skip-optimize", action="store_true", help="Skip optimization and use previous best params")
     parser.add_argument("--models", nargs="+", default=["lightgbm", "xgboost", "catboost"], help="List of models to use (e.g. lightgbm xgboost)")
+    
+    # 追加引数
+    parser.add_argument("--start_date", type=str, help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--end_date", type=str, help="End date (YYYY-MM-DD)")
+    parser.add_argument("--pipeline_type", type=str, default="train_and_evaluate", help="Pipeline type (train_and_evaluate)")
+    parser.add_argument("--enable_meta_labeling", action="store_true", help="Enable meta-labeling")
+    
     args = parser.parse_args()
 
     pipeline = MLPipeline(
         symbol=args.symbol,
         timeframe=args.timeframe,
-        n_trials=args.n_trials
+        n_trials=args.n_trials,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        pipeline_type=args.pipeline_type,
+        enable_meta_labeling=args.enable_meta_labeling
     )
     pipeline.run(skip_optimize=args.skip_optimize, selected_models=args.models)
 

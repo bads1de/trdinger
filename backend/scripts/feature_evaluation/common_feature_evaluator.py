@@ -71,15 +71,24 @@ class CommonFeatureEvaluator:
         symbol: str = "BTC/USDT:USDT",
         timeframe: str = "1h",
         limit: int = 2000,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> EvaluationData:
         logger.info(
-            f"[Common] データ取得開始: {symbol}, timeframe={timeframe}, limit={limit}"
+            f"[Common] データ取得開始: {symbol}, timeframe={timeframe}, limit={limit}, start={start_date}, end={end_date}"
         )
+
+        # 日付文字列をdatetimeオブジェクトに変換
+        from datetime import datetime
+        start_time = datetime.fromisoformat(start_date) if start_date else None
+        end_time = datetime.fromisoformat(end_date) if end_date else None
 
         ohlcv_df = self.ohlcv_repo.get_ohlcv_dataframe(
             symbol=symbol,
             timeframe=timeframe,
             limit=limit,
+            start_time=start_time,
+            end_time=end_time,
         )
         if ohlcv_df.empty:
             logger.warning("OHLCVデータが空です")

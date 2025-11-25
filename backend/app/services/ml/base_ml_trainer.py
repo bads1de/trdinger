@@ -448,7 +448,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             raise ValueError("アンサンブルモデルが学習されていません")
 
         try:
-            # EnsembleTrainerの予測メソッドを使用
+            # EnsembleTrainerの予測メソッドを使用 (既にメタラベリングが適用される)
             predictions = self._model.predict(features_df)
             return predictions
 

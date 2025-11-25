@@ -5,7 +5,7 @@ GASettingsクラス
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .base import BaseConfig
 
@@ -133,6 +133,10 @@ class GASettings(BaseConfig):
     ga_objective_weights: List[float] = field(
         default_factory=lambda: DEFAULT_GA_OBJECTIVE_WEIGHTS.copy()
     )
+
+    # MLフィルター設定
+    ml_filter_enabled: bool = False
+    ml_model_path: Optional[str] = None
 
     def get_default_values(self) -> Dict[str, Any]:
         """デフォルト値を取得（自動生成を利用）"""
