@@ -27,6 +27,8 @@ from ...utils.label_generation.presets import (
     forward_classification_preset,
     get_common_presets,
 )
+from ...utils.cross_validation import PurgedKFold  # PurgedKFoldをインポート
+
 from .data_processing.sampling import ImbalanceSampler
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
@@ -741,10 +743,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 文字列ラベルを数値に変換
             # "DOWN" -> 0, "RANGE" -> 1, "UP" -> 2
             # "TREND" -> 1, "RANGE" -> 0 (ボラティリティ予測用)
-            
+
             # ラベルの種類を確認してマッピングを決定
             unique_labels = set(labels_clean.unique())
-            
+
             if "TREND" in unique_labels:
                 # ボラティリティ予測モード
                 label_mapping = {"RANGE": 0, "TREND": 1}
@@ -753,7 +755,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 # 方向予測モード（互換性維持）
                 label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
                 logger.info("🎯 方向予測モード: DOWN=0, RANGE=1, UP=2")
-                
+
             labels_numeric = labels_clean.map(label_mapping)
 
             # 欠損値がないことを確認
@@ -935,15 +937,53 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
-        # TimeSeriesSplitを初期化
-        tscv = TimeSeriesSplit(n_splits=n_splits, max_train_size=max_train_size)
+        splitter = None
+        if self.config.training.USE_PURGED_KFOLD:
+            logger.info("🔪 Purged K-Fold Cross Validation を使用します。")
+
+            # ラベル生成設定からt1を計算するために必要な情報を取得
+            label_config = unified_config.ml.training.label_generation
+
+            # t1 Seriesを生成
+            # Xは既にラベル生成でクリーンアップされた後のDataFrame
+            # horizon_nとtimeframeはラベル生成時に使用された値を使用
+            if label_config.use_preset:
+                # プリセットの場合は、そのプリセットの情報からhorizon_nとtimeframeを取得
+                preset_name = label_config.default_preset
+                all_presets = get_common_presets()
+                preset_info = all_presets.get(preset_name)
+                if preset_info:
+                    t1_horizon_n = preset_info.get(
+                        "horizon_n", self.config.training.PREDICTION_HORIZON
+                    )
+                    t1_timeframe = preset_info.get("timeframe", "1h")
+                else:
+                    logger.warning(
+                        f"プリセット '{preset_name}' が見つかりません。デフォルトのhorizon_nとtimeframeを使用します。"
+                    )
+                    t1_horizon_n = self.config.training.PREDICTION_HORIZON
+                    t1_timeframe = "1h"
+            else:
+                # カスタム設定の場合は直接使用
+                t1_horizon_n = label_config.horizon_n
+                t1_timeframe = label_config.timeframe
+
+            t1 = self._get_t1_series(X.index, t1_horizon_n, t1_timeframe)
+
+            # PurgedKFoldを初期化
+            # pct_embargoは設定可能にするか、デフォルト0.01を使用
+            splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=0.01)
+
+        else:
+            logger.info("🕒 TimeSeriesSplit を使用します。")
+            # TimeSeriesSplitを初期化
+            splitter = TimeSeriesSplit(n_splits=n_splits, max_train_size=max_train_size)
 
         cv_scores = []
         fold_results = []
 
-        for fold, (train_idx, test_idx) in enumerate(tscv.split(X), 1):
+        for fold, (train_idx, test_idx) in enumerate(splitter.split(X), 1):
             logger.info(f"フォールド {fold}/{n_splits} を実行中...")
-
             # データを分割
             X_train_cv = X.iloc[train_idx]
             X_test_cv = X.iloc[test_idx]
@@ -1391,6 +1431,30 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # モデルを保存
         self.models = trainer.models
         self._model = trainer  # アンサンブルトレーナー自体を保存
-        self._ensemble_trainer = trainer  # 参照を保持
-
         return result
+
+    @staticmethod
+    def _get_t1_series(
+        indices: pd.DatetimeIndex, horizon_n: int, timeframe: str
+    ) -> pd.Series:
+        """
+        各観測点のラベル終了時刻 (t1) を取得
+
+        PurgedKFoldで使用するために、各サンプルのラベルがいつ確定するかを返します。
+        """
+        # タイムフレームに応じてtimedeltaを計算
+        if timeframe == "1h":
+            delta = pd.Timedelta(hours=horizon_n)
+        elif timeframe == "4h":
+            delta = pd.Timedelta(hours=4 * horizon_n)
+        elif timeframe == "1d":
+            delta = pd.Timedelta(days=horizon_n)
+        elif timeframe == "15m":
+            delta = pd.Timedelta(minutes=15 * horizon_n)
+        else:
+            # デフォルトは1hとみなす（簡易実装）
+            delta = pd.Timedelta(hours=horizon_n)
+
+        # t1を計算
+        t1 = pd.Series(indices + delta, index=indices)
+        return t1

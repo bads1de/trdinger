@@ -95,6 +95,16 @@ export const LabelGenerationSettings: React.FC<LabelGenerationSettingsProps> = (
                     <p>
                       <strong>閾値:</strong> {selectedPreset.threshold * 100}%
                     </p>
+                    {selectedPreset.pt !== undefined && (
+                      <p>
+                        <strong>PT (利確):</strong> {selectedPreset.pt}σ
+                      </p>
+                    )}
+                    {selectedPreset.sl !== undefined && (
+                      <p>
+                        <strong>SL (損切):</strong> {selectedPreset.sl}σ
+                      </p>
+                    )}
                     <p>
                       <strong>閾値計算方法:</strong>{" "}
                       {THRESHOLD_METHOD_LABELS[selectedPreset.thresholdMethod]}

@@ -84,25 +84,92 @@
 | **Phase 3** | **FR 特徴量加工 & RANGE 指標** | Range 回避率が **100%** 近くまで向上。レンジ相場での損失リスクが激減。  |
 | **Phase 4** | **Purged K-Fold CV 導入**      | 評価スコアが現実的な値に収束。Trend 検出率が 0.1% -> **10.0%** に改善。 |
 
-## 6. 今後のロードマップ (Next Steps)
+## 6. Triple Barrier Method (TBM) の実装 ✅
 
-モデルの「守り（レンジ回避）」と「信頼性（検証）」は確立されました。次は「攻め（トレード機会の増加）」に焦点を当てます。
+Marcos Lopez de Prado の「Advances in Financial Machine Learning」で提唱された **Triple Barrier Method** を実装し、より洗練されたラベル生成手法を実現しました。
 
-1. **Triple Barrier Method (TBM) の導入**:
+### 6.1 従来手法の課題
 
-   - 現在の単純な「n 期間後のリターン」によるラベル付けを廃止。
-   - 「利確ライン」「損切りライン」「時間切れ」の 3 つのバリアを用いた動的なラベリングに変更する。
-   - 期待効果: リスクリワード比の良いエントリーポイントを学習できるようになり、Trend 検出率がさらに向上する。
+従来の固定ホライズン方式（「N 本先のリターンで分類」）には以下の問題がありました:
 
-2. **メタラベリング (Meta-Labeling)**:
+- **時間軸の柔軟性ゼロ**: トレンドの発生速度に関係なく、常に N 本先で評価するため、早い段階で利益が出ても損失方向に反転すれば「DOWN」とラベル付けされる矛盾が生じる。
+- **リスク管理の欠如**: 損切りラインを無視したラベリングであり、実際のトレードで許容できる最大損失を学習できない。
+- **ノイズの混入**: 垂直バリア(時間切れ)のみで判定するため、微小な変動がラベルに反映され、学習効率が低下。
+
+### 6.2 TBM の仕組み
+
+TBM は、各観測点(t0)から **3 つのバリア**を設定し、**最初に触れたバリア**でラベルを確定します:
+
+1. **Upper Barrier (利確ライン, PT)**: `close[t] > close[t0] * (1 + volatility * pt_multiplier)` を満たす最初の時刻。
+2. **Lower Barrier (損切りライン, SL)**: `close[t] < close[t0] * (1 - volatility * sl_multiplier)` を満たす最初の時刻。
+3. **Vertical Barrier (時間切れ)**: `t0 + horizon_n` の時刻。PT/SL のどちらにも触れなかった場合に評価。
+
+#### ラベル決定ロジック
+
+```python
+# TripleBarrier.get_bins() より
+if ret > target * pt * 0.999:
+    label = 1.0  # UP (利確成功)
+elif ret < -target * sl * 0.999:
+    label = -1.0  # DOWN (損切り)
+else:
+    label = 0.0  # RANGE (時間切れ、微小変動)
+```
+
+- **Volatility-Based Thresholds**: バリア幅は固定値ではなく、過去 24 時間のローリングボラティリティ(`returns.rolling(24).std()`)に基づいて動的に調整されます。
+- **min_ret フィルタ**: ボラティリティが極小(`< 0.0001`)のイベントは除外され、ノイズラベルの混入を防ぎます。
+
+### 6.3 実装の特徴
+
+| 項目                   | 内容                                                                                                       |
+| :--------------------- | :--------------------------------------------------------------------------------------------------------- |
+| **ファイル**           | `backend/app/utils/label_generation/triple_barrier.py`                                                     |
+| **統合先**             | `backend/app/services/ml/label_cache.py` (`ThresholdMethod.TRIPLE_BARRIER`)                                |
+| **動的バリア幅**       | 過去 24 時間のボラティリティを使用 (`volatility = returns.rolling(24).std()`)                              |
+| **PT/SL 比率**         | `pt_multiplier` と `sl_multiplier` を Optuna で最適化可能（例: `threshold=1.5` → 1.5σ の変動で判定）       |
+| **テスト**             | `backend/tests/utils/label_generation/test_triple_barrier.py` で利確/損切り/時間切れの全パターンを検証済み |
+| **Purged K-Fold 対応** | `LabelCache.get_t1()` メソッドで各サンプルのラベル確定時刻(t1)を取得し、情報リークを完全に防止             |
+
+### 6.4 期待される効果
+
+- ✅ **リアルな勝率の学習**: 実際のトレードで使用する「利確 2%、損切り 1%」などのルールをモデルが直接学習できる。
+- ✅ **早期利確の捕捉**: トレンドが早い段階で発生した場合、固定ホライズンを待たずにラベルが確定するため、シグナルの遅延が減少。
+- ✅ **レンジ相場の明確化**: PT/SL のどちらにも触れない「往復ビンタ」パターンを `RANGE (0)` として明示的に学習。
+
+### 6.5 使用例 (Optuna 最適化)
+
+```python
+# backend/scripts/ml_optimization/run_ml_pipeline.py より
+trial.suggest_categorical("threshold_method", ["QUANTILE", "KBINS_DISCRETIZER", "TRIPLE_BARRIER"])
+if threshold_method == "TRIPLE_BARRIER":
+    threshold = trial.suggest_float("threshold", 0.5, 3.0)  # 0.5σ ~ 3.0σ
+```
+
+最適化結果(例):
+
+```json
+{
+  "threshold_method": "TRIPLE_BARRIER",
+  "threshold": 1.8,
+  "horizon_n": 6
+}
+```
+
+→ **1.8σ の変動** を利確/損切りラインとし、**6 時間** 以内にバリアに触れない場合は RANGE と判定。
+
+## 7. 今後のロードマップ (Next Steps)
+
+モデルの「守り（レンジ回避）」「信頼性（検証）」「ラベル品質（TBM）」が確立されました。次は「攻め（トレード機会の増加）」に焦点を当てます。
+
+1. **メタラベリング (Meta-Labeling)**:
 
    - 1 次モデルが「エントリー」と判断したシグナルに対し、2 次モデルが「勝てる確率」を判定する構成にする。
    - 期待効果: サイズの大きなベットを行うべき局面の選定。
 
-3. **特徴量の追加調査**:
+2. **特徴量の追加調査**:
    - On-chain データや Sentiment データの導入検討。
 
-## 7. ファイル構造 (Key Files)
+## 8. ファイル構造 (Key Files)
 
 - `backend/scripts/ml_optimization/run_ml_pipeline.py`: パイプラインのエントリーポイント。Optuna 最適化、OOF 生成、スタッキング実行を統括。
 - `backend/app/services/ml/feature_engineering/`: 特徴量計算ロジック。
@@ -112,3 +179,4 @@
   - `gru_model.py`, `lstm_model.py`: PyTorch 実装の DL モデル。
 - `backend/app/services/ml/stacking_service.py`: Ridge Regression によるメタ学習器。
 - `backend/app/utils/purged_cv.py`: Purged K-Fold の実装。
+- `backend/app/utils/label_generation/triple_barrier.py`: Triple Barrier Method の実装。

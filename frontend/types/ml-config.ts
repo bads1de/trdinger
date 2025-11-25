@@ -187,6 +187,15 @@ export interface LabelPresetInfo {
 
   /** プリセットの説明 */
   description: string;
+
+  /** Profit Taking multiplier (TBM用) */
+  pt?: number;
+
+  /** Stop Loss multiplier (TBM用) */
+  sl?: number;
+
+  /** 最小リターン (TBM用) */
+  minRet?: number;
 }
 
 /**

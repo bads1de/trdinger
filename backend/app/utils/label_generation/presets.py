@@ -8,10 +8,12 @@
 import logging
 from typing import Any, Dict, Tuple
 
+import numpy as np
 import pandas as pd
 
 from .enums import ThresholdMethod
 from .main import LabelGenerator
+from .triple_barrier import TripleBarrier
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +158,106 @@ def forward_classification_preset(
 
     except Exception as e:
         logger.error(f"ラベル生成エラー: {e}")
+        raise
+
+
+def triple_barrier_method_preset(
+    df: pd.DataFrame,
+    timeframe: str = "4h",
+    horizon_n: int = 4,
+    pt: float = 1.0,
+    sl: float = 1.0,
+    min_ret: float = 0.001,
+    price_column: str = "close",
+    volatility_window: int = 20,
+) -> pd.Series:
+    """
+    Triple Barrier Method (TBM) ラベル生成プリセット。
+
+    Args:
+        df: OHLCV データフレーム
+        timeframe: 時間足
+        horizon_n: 垂直バリア（時間切れ）までのバー数
+        pt: Profit Taking multiplier (volatility * pt)
+        sl: Stop Loss multiplier (volatility * sl)
+        min_ret: 最小リターン閾値
+        price_column: 価格カラム名
+        volatility_window: ボラティリティ計算ウィンドウ
+
+    Returns:
+        pd.Series: "UP" / "RANGE" / "DOWN" の3値ラベル
+    """
+    if timeframe not in SUPPORTED_TIMEFRAMES:
+        raise ValueError(f"未サポートの時間足です: {timeframe}")
+
+    logger.info(
+        f"TBMラベル生成開始: timeframe={timeframe}, horizon={horizon_n}, "
+        f"pt={pt}, sl={sl}, min_ret={min_ret}, vol_window={volatility_window}"
+    )
+
+    try:
+        # 1. 準備
+        close = df[price_column]
+        
+        # ボラティリティ計算 (日次ボラティリティなど、ここでは単純なRolling STDを使用)
+        # Returns usually calculated as pct_change
+        returns = close.pct_change()
+        volatility = returns.rolling(window=volatility_window).std()
+        
+        # t_events: 全てのバーをイベント候補とする (あるいはCUSUMフィルタなどを適用可だが、ここでは全バー)
+        t_events = close.index
+
+        # vertical_barrier_times: horizon_n本後の時刻
+        # indexがDatetimeIndexであることを前提
+        # pd.Series(index, index=index) で時刻のSeriesを作り、それをシフトさせることで
+        # 各時刻のN本後の時刻を取得する。
+        vertical_barrier_times = pd.Series(close.index, index=close.index).shift(-horizon_n)
+
+        # 2. Triple Barrier 実行
+        tb = TripleBarrier(
+            pt=pt,
+            sl=sl,
+            min_ret=min_ret,
+            num_threads=1
+        )
+        
+        events = tb.get_events(
+            close=close,
+            t_events=t_events,
+            pt_sl=[pt, sl],
+            target=volatility,
+            min_ret=min_ret,
+            vertical_barrier_times=vertical_barrier_times
+        )
+        
+        # 3. ラベル生成 (get_bins)
+        bins = tb.get_bins(events, close)
+        
+        # 4. ラベル変換 (-1, 0, 1 -> DOWN, RANGE, UP)
+        label_map = {-1.0: "DOWN", 0.0: "RANGE", 1.0: "UP"}
+        string_labels = bins['bin'].map(label_map)
+        
+        # 元のインデックスに合わせる (計算できなかった箇所はNaN)
+        string_labels = string_labels.reindex(df.index)
+        
+        # 分布ログ
+        counts = string_labels.value_counts()
+        total = len(string_labels.dropna())
+        if total > 0:
+            up_pct = (counts.get("UP", 0) / total) * 100
+            range_pct = (counts.get("RANGE", 0) / total) * 100
+            down_pct = (counts.get("DOWN", 0) / total) * 100
+            logger.info(
+                f"TBMラベル生成完了: "
+                f"UP={counts.get('UP', 0)}({up_pct:.1f}%), "
+                f"RANGE={counts.get('RANGE', 0)}({range_pct:.1f}%), "
+                f"DOWN={counts.get('DOWN', 0)}({down_pct:.1f}%)"
+            )
+            
+        return string_labels
+
+    except Exception as e:
+        logger.error(f"TBMラベル生成エラー: {e}")
         raise
 
 
@@ -309,6 +411,31 @@ def get_common_presets() -> Dict[str, Dict[str, Any]]:
             "quantile_threshold": 0.33,  # 上位33%をトレンドとする
             "description": "4時間足、14本先、ボラティリティ予測（上位33%）",
         },
+        # TBMプリセット
+        "tbm_4h_1.0_1.0": {
+            "timeframe": "4h",
+            "horizon_n": 12,  # 48時間
+            "pt": 1.0,
+            "sl": 1.0,
+            "min_ret": 0.001,
+            "description": "TBM (4h): PT=1.0σ, SL=1.0σ, Horizon=12bars",
+        },
+        "tbm_4h_2.0_2.0": {
+            "timeframe": "4h",
+            "horizon_n": 12,
+            "pt": 2.0,
+            "sl": 2.0,
+            "min_ret": 0.001,
+            "description": "TBM (4h): PT=2.0σ, SL=2.0σ, Horizon=12bars",
+        },
+        "tbm_15m_1.0_1.0": {
+            "timeframe": "15m",
+            "horizon_n": 24, # 6時間
+            "pt": 1.0,
+            "sl": 1.0,
+            "min_ret": 0.0005,
+            "description": "TBM (15m): PT=1.0σ, SL=1.0σ, Horizon=24bars",
+        },
     }
 
     return presets
@@ -376,8 +503,14 @@ def apply_preset_by_name(
 
     # ボラティリティ予測プリセットかどうかを判定
     is_volatility = "volatility" in preset_name or "trend" in preset_name
+    is_tbm = preset_name.startswith("tbm_") or "pt" in preset_params
 
-    if is_volatility:
+    if is_tbm:
+        # Triple Barrier Method プリセット
+        labels = triple_barrier_method_preset(
+            df=df, price_column=price_column, **preset_params
+        )
+    elif is_volatility:
         # ボラティリティ予測用プリセット
         labels = volatility_classification_preset(
             df=df, price_column=price_column, **preset_params

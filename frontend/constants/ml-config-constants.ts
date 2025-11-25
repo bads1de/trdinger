@@ -228,6 +228,41 @@ export const LABEL_PRESETS: Record<string, LabelPresetInfo> = {
     thresholdMethod: "KBINS_DISCRETIZER",
     description: "1時間足、4本先、動的閾値（KBinsDiscretizer）",
   },
+
+  // TBMプリセット
+  "tbm_4h_1.0_1.0": {
+    name: "tbm_4h_1.0_1.0",
+    timeframe: "4h",
+    horizonN: 12,
+    threshold: 0.001, // min_retとして使用
+    thresholdMethod: "DYNAMIC_VOLATILITY", // 近似的なメソッドとして指定
+    description: "TBM (4h): PT=1.0σ, SL=1.0σ, Horizon=12bars",
+    pt: 1.0,
+    sl: 1.0,
+    minRet: 0.001,
+  },
+  "tbm_4h_2.0_2.0": {
+    name: "tbm_4h_2.0_2.0",
+    timeframe: "4h",
+    horizonN: 12,
+    threshold: 0.001,
+    thresholdMethod: "DYNAMIC_VOLATILITY",
+    description: "TBM (4h): PT=2.0σ, SL=2.0σ, Horizon=12bars",
+    pt: 2.0,
+    sl: 2.0,
+    minRet: 0.001,
+  },
+  "tbm_15m_1.0_1.0": {
+    name: "tbm_15m_1.0_1.0",
+    timeframe: "15m",
+    horizonN: 24,
+    threshold: 0.0005,
+    thresholdMethod: "DYNAMIC_VOLATILITY",
+    description: "TBM (15m): PT=1.0σ, SL=1.0σ, Horizon=24bars",
+    pt: 1.0,
+    sl: 1.0,
+    minRet: 0.0005,
+  },
 };
 
 /**
@@ -252,6 +287,7 @@ export const PRESET_CATEGORIES = {
   "4時間足": ["4h_4bars", "4h_6bars"],
   "1日足": ["1d_4bars", "1d_7bars"],
   "動的閾値（推奨）": ["4h_4bars_dynamic", "1h_4bars_dynamic"],
+  "Triple Barrier": ["tbm_4h_1.0_1.0", "tbm_4h_2.0_2.0", "tbm_15m_1.0_1.0"],
 };
 
 /**

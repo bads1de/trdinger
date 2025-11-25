@@ -131,6 +131,9 @@ class TrainingConfig(BaseSettings):
     USE_TIME_SERIES_SPLIT: bool = Field(
         default=True, description="時系列分割をデフォルトで使用"
     )
+    USE_PURGED_KFOLD: bool = Field(
+        default=True, description="Purged K-Fold Cross Validation を使用するか"
+    )
     MAX_TRAIN_SIZE: Optional[int] = Field(
         default=None, description="TimeSeriesSplitの最大学習サイズ（Noneで制限なし）"
     )
