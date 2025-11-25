@@ -37,6 +37,7 @@ from app.services.ml.feature_engineering.feature_engineering_service import (
 )
 from app.services.ml.label_cache import LabelCache
 from app.services.ml.stacking_service import StackingService
+from app.services.ml.meta_labeling_service import MetaLabelingService # Added
 from app.services.ml.models.gru_model import GRUModel
 from app.services.ml.models.lstm_model import LSTMModel
 from app.utils.purged_cv import PurgedKFold
@@ -114,7 +115,7 @@ class MLPipeline:
         
         return X, data.ohlcv
 
-    def optimize(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame):
+    def optimize(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, selected_models: List[str]):
         logger.info("=" * 60)
         logger.info("Starting Hyperparameter Optimization (Purged K-Fold CV)")
         logger.info("=" * 60)
@@ -122,7 +123,7 @@ class MLPipeline:
         label_cache = LabelCache(ohlcv_df)
 
         def objective(trial):
-            model_type = trial.suggest_categorical("model_type", ["lightgbm", "xgboost", "catboost", "gru", "lstm"])
+            model_type = trial.suggest_categorical("model_type", selected_models)
             
             horizon_n = trial.suggest_int("horizon_n", 4, 16, step=2)
             threshold_method = trial.suggest_categorical(
@@ -293,7 +294,7 @@ class MLPipeline:
         logger.info(f"Optimization Done: Best Score={study.best_value:.4f}")
         return best_params
 
-    def train_final_models(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, best_params: Dict[str, Any]):
+    def train_final_models(self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, best_params: Dict[str, Any], selected_models: List[str]):
         logger.info("=" * 60)
         logger.info("Training Final Models & Stacking (Purged K-Fold OOF)")
         logger.info("=" * 60)
@@ -325,11 +326,8 @@ class MLPipeline:
         t1_labels = label_cache.get_t1(X_clean.index, best_params["horizon_n"])
         cv_oof = PurgedKFold(n_splits=n_splits_oof, t1=t1_labels, embargo_pct=embargo_pct_oof)
 
-        oof_lgb_preds = np.zeros(len(X_clean))
-        oof_xgb_preds = np.zeros(len(X_clean))
-        oof_cat_preds = np.zeros(len(X_clean))
-        oof_gru_preds = np.zeros(len(X_clean))
-        oof_lstm_preds = np.zeros(len(X_clean))
+        oof_preds = {model: np.zeros(len(X_clean)) for model in selected_models}
+        models_result = {}
         
         scaler = StandardScaler()
         
@@ -345,98 +343,114 @@ class MLPipeline:
             scale_pos_weight = neg / pos if pos > 0 else 1.0
 
             # --- LightGBM ---
-            lgb_params = {k: best_params[k] for k in best_params if k.endswith("_lgb")}
-            lgb_params_final = {k.replace("_lgb", ""): v for k, v in lgb_params.items()}
-            lgb_params_final.update({
-                "objective": "binary", "metric": "binary_logloss", "verbosity": -1, "random_state": 42, "class_weight": "balanced"
-            })
-            model_lgb = lgb.LGBMClassifier(**lgb_params_final)
-            model_lgb.fit(X_train_fold, y_train_fold)
-            oof_lgb_preds[val_idx] = model_lgb.predict_proba(X_val_fold)[:, 1]
+            if "lightgbm" in selected_models:
+                lgb_params = {k: best_params[k] for k in best_params if k.endswith("_lgb")}
+                lgb_params_final = {k.replace("_lgb", ""): v for k, v in lgb_params.items()}
+                lgb_params_final.update({
+                    "objective": "binary", "metric": "binary_logloss", "verbosity": -1, "random_state": 42, "class_weight": "balanced"
+                })
+                model_lgb = lgb.LGBMClassifier(**lgb_params_final)
+                model_lgb.fit(X_train_fold, y_train_fold)
+                oof_preds["lightgbm"][val_idx] = model_lgb.predict_proba(X_val_fold)[:, 1]
 
             # --- XGBoost ---
-            xgb_params = {k: best_params[k] for k in best_params if k.endswith("_xgb")}
-            xgb_params_final = {k.replace("_xgb", ""): v for k, v in xgb_params.items()}
-            xgb_params_final.update({
-                "objective": "binary:logistic", "eval_metric": "logloss", "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight, "missing": np.inf
-            })
-            model_xgb = xgb.XGBClassifier(**xgb_params_final)
-            model_xgb.fit(X_train_fold, y_train_fold)
-            oof_xgb_preds[val_idx] = model_xgb.predict_proba(X_val_fold)[:, 1]
+            if "xgboost" in selected_models:
+                xgb_params = {k: best_params[k] for k in best_params if k.endswith("_xgb")}
+                xgb_params_final = {k.replace("_xgb", ""): v for k, v in xgb_params.items()}
+                xgb_params_final.update({
+                    "objective": "binary:logistic", "eval_metric": "logloss", "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight, "missing": np.inf
+                })
+                model_xgb = xgb.XGBClassifier(**xgb_params_final)
+                model_xgb.fit(X_train_fold, y_train_fold)
+                oof_preds["xgboost"][val_idx] = model_xgb.predict_proba(X_val_fold)[:, 1]
             
             # --- CatBoost ---
-            cat_params = {k: best_params[k] for k in best_params if k.endswith("_cat")}
-            cat_params_final = {k.replace("_cat", ""): v for k, v in cat_params.items()}
-            cat_params_final.update({
-                "od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, "scale_pos_weight": scale_pos_weight, "allow_writing_files": False,
-            })
-            model_cat = cb.CatBoostClassifier(**cat_params_final)
-            model_cat.fit(X_train_fold, y_train_fold, eval_set=[(X_val_fold, y_val_fold)], early_stopping_rounds=50, verbose=False)
-            oof_cat_preds[val_idx] = model_cat.predict_proba(X_val_fold)[:, 1]
+            if "catboost" in selected_models:
+                cat_params = {k: best_params[k] for k in best_params if k.endswith("_cat")}
+                cat_params_final = {k.replace("_cat", ""): v for k, v in cat_params.items()}
+                cat_params_final.update({
+                    "od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, "scale_pos_weight": scale_pos_weight, "allow_writing_files": False,
+                })
+                model_cat = cb.CatBoostClassifier(**cat_params_final)
+                model_cat.fit(X_train_fold, y_train_fold, eval_set=[(X_val_fold, y_val_fold)], early_stopping_rounds=50, verbose=False)
+                oof_preds["catboost"][val_idx] = model_cat.predict_proba(X_val_fold)[:, 1]
 
             # --- GRU & LSTM ---
+            if "gru" in selected_models or "lstm" in selected_models:
+                dl_params = {k: best_params[k] for k in best_params if k.endswith("_dl")}
+                dl_params_final = {k.replace("_dl", ""): v for k, v in dl_params.items()}
+                dl_params_final["input_dim"] = X_clean.shape[1]
+                dl_params_final["epochs"] = 10
+                
+                X_train_scaled = scaler.fit_transform(X_train_fold)
+                X_val_scaled = scaler.transform(X_val_fold)
+
+                if "gru" in selected_models:
+                    model_gru = GRUModel(**dl_params_final)
+                    model_gru.fit(X_train_scaled, y_train_fold)
+                    oof_preds["gru"][val_idx] = model_gru.predict_proba(X_val_scaled)
+
+                if "lstm" in selected_models:
+                    model_lstm = LSTMModel(**dl_params_final)
+                    model_lstm.fit(X_train_scaled, y_train_fold)
+                    oof_preds["lstm"][val_idx] = model_lstm.predict_proba(X_val_scaled)
+            
+        # Final Models
+        if "lightgbm" in selected_models:
+            lgb_params = {k: best_params[k] for k in best_params if k.endswith("_lgb")}
+            lgb_params_final = {k.replace("_lgb", ""): v for k, v in lgb_params.items()}
+            lgb_params_final.update({"objective": "binary", "metric": "binary_logloss", "verbosity": -1, "random_state": 42, "class_weight": "balanced"})
+            model_lgb_final = lgb.LGBMClassifier(**lgb_params_final)
+            model_lgb_final.fit(X_clean, y)
+            joblib.dump(model_lgb_final, self.results_dir / "model_lgb.joblib")
+            models_result["lightgbm"] = model_lgb_final
+
+        if "xgboost" in selected_models:
+            xgb_params = {k: best_params[k] for k in best_params if k.endswith("_xgb")}
+            xgb_params_final = {k.replace("_xgb", ""): v for k, v in xgb_params.items()}
+            xgb_params_final.update({"objective": "binary:logistic", "eval_metric": "logloss", "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight, "missing": np.inf})
+            model_xgb_final = xgb.XGBClassifier(**xgb_params_final)
+            model_xgb_final.fit(X_clean, y)
+            joblib.dump(model_xgb_final, self.results_dir / "model_xgb.joblib")
+            models_result["xgboost"] = model_xgb_final
+
+        if "catboost" in selected_models:
+            cat_params = {k: best_params[k] for k in best_params if k.endswith("_cat")}
+            cat_params_final = {k.replace("_cat", ""): v for k, v in cat_params.items()}
+            cat_params_final.update({"od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, "scale_pos_weight": scale_pos_weight, "allow_writing_files": False})
+            model_cat_final = cb.CatBoostClassifier(**cat_params_final)
+            model_cat_final.fit(X_clean, y, eval_set=[(X_clean, y)], early_stopping_rounds=50, verbose=False)
+            joblib.dump(model_cat_final, self.results_dir / "model_cat.joblib")
+            models_result["catboost"] = model_cat_final
+
+        if "gru" in selected_models or "lstm" in selected_models:
             dl_params = {k: best_params[k] for k in best_params if k.endswith("_dl")}
             dl_params_final = {k.replace("_dl", ""): v for k, v in dl_params.items()}
             dl_params_final["input_dim"] = X_clean.shape[1]
-            dl_params_final["epochs"] = 10
+            dl_params_final["epochs"] = 20
             
-            X_train_scaled = scaler.fit_transform(X_train_fold)
-            X_val_scaled = scaler.transform(X_val_fold)
+            scaler_final = StandardScaler()
+            X_clean_scaled = scaler_final.fit_transform(X_clean)
+            joblib.dump(scaler_final, self.results_dir / "scaler.joblib")
 
-            model_gru = GRUModel(**dl_params_final)
-            model_gru.fit(X_train_scaled, y_train_fold)
-            oof_gru_preds[val_idx] = model_gru.predict_proba(X_val_scaled)
-
-            model_lstm = LSTMModel(**dl_params_final)
-            model_lstm.fit(X_train_scaled, y_train_fold)
-            oof_lstm_preds[val_idx] = model_lstm.predict_proba(X_val_scaled)
+            if "gru" in selected_models:
+                model_gru_final = GRUModel(**dl_params_final)
+                model_gru_final.fit(X_clean_scaled, y)
+                models_result["gru"] = model_gru_final
             
-        # Final Models
-        lgb_params = {k: best_params[k] for k in best_params if k.endswith("_lgb")}
-        lgb_params_final = {k.replace("_lgb", ""): v for k, v in lgb_params.items()}
-        lgb_params_final.update({"objective": "binary", "metric": "binary_logloss", "verbosity": -1, "random_state": 42, "class_weight": "balanced"})
-        model_lgb_final = lgb.LGBMClassifier(**lgb_params_final)
-        model_lgb_final.fit(X_clean, y)
-        joblib.dump(model_lgb_final, self.results_dir / "model_lgb.joblib")
-
-        xgb_params = {k: best_params[k] for k in best_params if k.endswith("_xgb")}
-        xgb_params_final = {k.replace("_xgb", ""): v for k, v in xgb_params.items()}
-        xgb_params_final.update({"objective": "binary:logistic", "eval_metric": "logloss", "verbosity": 0, "random_state": 42, "scale_pos_weight": scale_pos_weight, "missing": np.inf})
-        model_xgb_final = xgb.XGBClassifier(**xgb_params_final)
-        model_xgb_final.fit(X_clean, y)
-        joblib.dump(model_xgb_final, self.results_dir / "model_xgb.joblib")
-
-        cat_params = {k: best_params[k] for k in best_params if k.endswith("_cat")}
-        cat_params_final = {k.replace("_cat", ""): v for k, v in cat_params.items()}
-        cat_params_final.update({"od_type": "Iter", "od_wait": 50, "verbose": 0, "random_seed": 42, "scale_pos_weight": scale_pos_weight, "allow_writing_files": False})
-        model_cat_final = cb.CatBoostClassifier(**cat_params_final)
-        model_cat_final.fit(X_clean, y, eval_set=[(X_clean, y)], early_stopping_rounds=50, verbose=False)
-        joblib.dump(model_cat_final, self.results_dir / "model_cat.joblib")
-
-        dl_params = {k: best_params[k] for k in best_params if k.endswith("_dl")}
-        dl_params_final = {k.replace("_dl", ""): v for k, v in dl_params.items()}
-        dl_params_final["input_dim"] = X_clean.shape[1]
-        dl_params_final["epochs"] = 20
-        
-        scaler_final = StandardScaler()
-        X_clean_scaled = scaler_final.fit_transform(X_clean)
-        joblib.dump(scaler_final, self.results_dir / "scaler.joblib")
-
-        model_gru_final = GRUModel(**dl_params_final)
-        model_gru_final.fit(X_clean_scaled, y)
-        
-        model_lstm_final = LSTMModel(**dl_params_final)
-        model_lstm_final.fit(X_clean_scaled, y)
+            if "lstm" in selected_models:
+                model_lstm_final = LSTMModel(**dl_params_final)
+                model_lstm_final.fit(X_clean_scaled, y)
+                models_result["lstm"] = model_lstm_final
 
         logger.info("Training Meta Model (Ridge NNLS)...")
         
-        oof_preds_df = pd.DataFrame({
-            'LightGBM': oof_lgb_preds,
-            'XGBoost': oof_xgb_preds,
-            'CatBoost': oof_cat_preds,
-            'GRU': oof_gru_preds,
-            'LSTM': oof_lstm_preds
-        }, index=X_clean.index)
+        oof_preds_mapping = {
+            'lightgbm': 'LightGBM', 'xgboost': 'XGBoost', 'catboost': 'CatBoost', 'gru': 'GRU', 'lstm': 'LSTM'
+        }
+        
+        oof_preds_dict = {oof_preds_mapping[k]: v for k, v in oof_preds.items() if k in selected_models}
+        oof_preds_df = pd.DataFrame(oof_preds_dict, index=X_clean.index)
         
         stacking_service = StackingService()
         stacking_service.train(oof_preds_df, y.values)
@@ -445,31 +459,83 @@ class MLPipeline:
         logger.info(f"Learned Weights: {weights}")
         joblib.dump(stacking_service, self.results_dir / "stacking_service.joblib")
 
-        return model_lgb_final, model_xgb_final, model_cat_final, model_gru_final, model_lstm_final, stacking_service, oof_preds_df, y
+        # --- Meta Labeling ---
+        logger.info("Training Meta-Labeling Model...")
+        
+        # スタッキングモデルのOOF予測値を取得 (これが一次モデルの確信度となる)
+        primary_oof_proba = stacking_service.predict(oof_preds_df)
+        primary_oof_series = pd.Series(primary_oof_proba, index=X_clean.index)
+        
+        meta_service = MetaLabelingService()
+        # メタモデルの学習
+        # X_cleanはスケーリング前の元の特徴量 (RandomForestなのでスケール不要)
+        meta_result = meta_service.train(
+            X_train=X_clean,
+            y_train=y,
+            primary_proba_train=primary_oof_series,
+            base_model_probs_df=oof_preds_df, # 個別ベースモデルのOOF予測確率DataFrameを渡す
+            threshold=0.5
+        )
+        
+        if meta_result["status"] == "success":
+            joblib.dump(meta_service, self.results_dir / "meta_labeling_service.joblib")
+            logger.info("Meta-Labeling Model trained and saved.")
+        else:
+            logger.warning(f"Meta-Labeling training skipped: {meta_result.get('reason')}")
 
-    def evaluate_and_stacking(self, model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, _):
+        models_result["stacking_service"] = stacking_service
+        models_result["oof_preds_df"] = oof_preds_df
+        models_result["y"] = y
+        models_result["meta_service"] = meta_service
+        models_result["X_clean"] = X_clean # X_cleanを追加
+
+        return models_result
+
+    def evaluate_and_stacking(self, model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, meta_service, X_clean):
         logger.info("=" * 60)
         logger.info("Model Evaluation & Stacking (OOF Performance)")
         logger.info("=" * 60)
 
-        prob_lgb = oof_preds_df['LightGBM']
-        prob_xgb = oof_preds_df['XGBoost']
-        prob_cat = oof_preds_df['CatBoost']
-        prob_gru = oof_preds_df['GRU']
-        prob_lstm = oof_preds_df['LSTM']
+        models = {}
+        prob_sum = np.zeros(len(y))
+        model_count = 0
+
+        if 'LightGBM' in oof_preds_df.columns:
+            prob_lgb = oof_preds_df['LightGBM']
+            models["LightGBM (OOF)"] = prob_lgb
+            prob_sum += prob_lgb
+            model_count += 1
+        
+        if 'XGBoost' in oof_preds_df.columns:
+            prob_xgb = oof_preds_df['XGBoost']
+            models["XGBoost (OOF)"] = prob_xgb
+            prob_sum += prob_xgb
+            model_count += 1
+
+        if 'CatBoost' in oof_preds_df.columns:
+            prob_cat = oof_preds_df['CatBoost']
+            models["CatBoost (OOF)"] = prob_cat
+            prob_sum += prob_cat
+            model_count += 1
+
+        if 'GRU' in oof_preds_df.columns:
+            prob_gru = oof_preds_df['GRU']
+            models["GRU (OOF)"] = prob_gru
+            prob_sum += prob_gru
+            model_count += 1
+
+        if 'LSTM' in oof_preds_df.columns:
+            prob_lstm = oof_preds_df['LSTM']
+            models["LSTM (OOF)"] = prob_lstm
+            prob_sum += prob_lstm
+            model_count += 1
         
         prob_stack = stacking_service.predict(oof_preds_df)
-        prob_avg = (prob_lgb + prob_xgb + prob_cat + prob_gru + prob_lstm) / 5
+        models["Stacking (Ridge OOF)"] = prob_stack
 
-        models = {
-            "LightGBM (OOF)": prob_lgb,
-            "XGBoost (OOF)": prob_xgb,
-            "CatBoost (OOF)": prob_cat,
-            "GRU (OOF)": prob_gru,
-            "LSTM (OOF)": prob_lstm,
-            "Stacking (Avg OOF)": prob_avg,
-            "Stacking (Ridge OOF)": prob_stack
-        }
+        if model_count > 0:
+            prob_avg = prob_sum / model_count
+            models["Stacking (Avg OOF)"] = prob_avg
 
         best_result = None
         best_score = -1
@@ -508,6 +574,50 @@ class MLPipeline:
         else:
             logger.warning("No configuration met the criteria.")
 
+        # --- Meta Labeling Evaluation ---
+        if meta_service and meta_service.is_trained:
+            logger.info("\n" + "=" * 60)
+            logger.info("Meta-Labeling Performance (In-Sample Check)")
+            logger.info("=" * 60)
+            
+            # スタッキングのOOF予測値を使用
+            primary_oof_proba = stacking_service.predict(oof_preds_df)
+            primary_oof_series = pd.Series(primary_oof_proba, index=oof_preds_df.index)
+            
+            # 注意: ここではX_cleanそのものが渡されていないため、厳密な評価はできない
+            # ただし、メタモデルはX_cleanの一部（Trend予測分）で学習されている
+            # 簡易的に、メタラベリングの効果（フィルタリング率）を表示する
+            
+            threshold = 0.5
+            trend_mask = primary_oof_series >= threshold
+            n_primary_trends = trend_mask.sum()
+            
+            if n_primary_trends > 0:
+                # メタモデルの予測（学習データに対する予測なので参考値）
+                # 本来は特徴量Xが必要だが、ここではevaluate_and_stackingの引数にXがない
+                logger.info(f"Primary Model Trend Predictions: {n_primary_trends} / {len(y)} ({n_primary_trends/len(y):.1%})")
+                
+                # 実際の精度（Precision）
+                actual_hits = y[trend_mask].sum()
+                primary_precision = actual_hits / n_primary_trends
+            logger.info("Primary Model Precision: {primary_precision:.1%}")
+            
+            # メタモデルの評価
+            meta_eval_results = meta_service.evaluate(
+                X_test=X_clean, # X_cleanを渡す
+                y_test=y,
+                primary_proba_test=primary_oof_series,
+                base_model_probs_df=oof_preds_df
+            )
+            
+            logger.info(f"Meta Model Accuracy: {meta_eval_results['meta_accuracy']:.1%}")
+            logger.info(f"Meta Model Precision: {meta_eval_results['meta_precision']:.1%}")
+            logger.info(f"Meta Model Recall: {meta_eval_results['meta_recall']:.1%}")
+            logger.info(f"Precision Improvement: {meta_eval_results['improvement_precision']:.1%}")
+            
+        else:
+            logger.info("Primary model made no trend predictions.")
+
     def analyze_feature_importance(self, model_lgb, X_test):
         logger.info("\n" + "=" * 60)
         logger.info("Feature Importance (LightGBM)")
@@ -532,22 +642,38 @@ class MLPipeline:
         plt.savefig(self.results_dir / "feature_importance.png")
         logger.info(f"Results saved to: {self.results_dir}")
 
-    def run(self, skip_optimize: bool = False):
+    def run(self, skip_optimize: bool = False, selected_models: List[str] = None):
+        if selected_models is None:
+            selected_models = ["lightgbm", "xgboost", "catboost"]
+            
         X, ohlcv = self.prepare_data()
 
         if not skip_optimize:
-            best_params = self.optimize(X, ohlcv)
+            best_params = self.optimize(X, ohlcv, selected_models)
         else:
             latest_dir = self.get_latest_results_dir()
             logger.info(f"Loading previous results: {latest_dir}")
             with open(latest_dir / "best_params.json", "r", encoding="utf-8") as f:
                 best_params = json.load(f)[ "best_params"]
 
-        model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y = self.train_final_models(X, ohlcv, best_params)
+        models_result = self.train_final_models(X, ohlcv, best_params, selected_models)
+        
+        # Unpack results dynamically
+        model_lgb = models_result.get("lightgbm")
+        model_xgb = models_result.get("xgboost")
+        model_cat = models_result.get("catboost")
+        model_gru = models_result.get("gru")
+        model_lstm = models_result.get("lstm")
+        stacking_service = models_result["stacking_service"]
+        oof_preds_df = models_result["oof_preds_df"]
+        y = models_result["y"]
+        meta_service = models_result["meta_service"]
+        X_clean = models_result["X_clean"] # X_cleanを追加
+        
+        self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, meta_service, X_clean)
 
-        self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, None)
-
-        self.analyze_feature_importance(model_lgb, X)
+        if model_lgb:
+            self.analyze_feature_importance(model_lgb, X)
 
 
 def main():
@@ -556,6 +682,7 @@ def main():
     parser.add_argument("--timeframe", default="1h")
     parser.add_argument("--n-trials", type=int, default=20)
     parser.add_argument("--skip-optimize", action="store_true", help="Skip optimization and use previous best params")
+    parser.add_argument("--models", nargs="+", default=["lightgbm", "xgboost", "catboost"], help="List of models to use (e.g. lightgbm xgboost)")
     args = parser.parse_args()
 
     pipeline = MLPipeline(
@@ -563,7 +690,7 @@ def main():
         timeframe=args.timeframe,
         n_trials=args.n_trials
     )
-    pipeline.run(skip_optimize=args.skip_optimize)
+    pipeline.run(skip_optimize=args.skip_optimize, selected_models=args.models)
 
 
 if __name__ == "__main__":

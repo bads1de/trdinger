@@ -130,7 +130,6 @@ class FundingRateFeatureCalculator:
             df["funding_rate_raw"] = df["funding_rate_raw"].interpolate(
                 limit=2, limit_direction="both"
             )
-            df.loc[missing_mask & ~df["funding_rate_raw"].isna(), "fr_imputed_flag"] = 1
             df["funding_rate_raw"] = df["funding_rate_raw"].ffill()
             df["funding_rate_raw"] = df["funding_rate_raw"].bfill()
 
@@ -167,7 +166,7 @@ class FundingRateFeatureCalculator:
 
         # 生のrawデータよりも、deviationの方が情報価値が高い可能性があるが、
         # 基本特徴量としてはbps値を使う
-        lag_periods = [1, 2, 3]
+        lag_periods = [2, 3] # fr_lag_1p は低重要度のため削除
         for lag in lag_periods:
             shift_hours = lag * self.settlement_interval
             df[f"fr_lag_{lag}p"] = df["fr_bps"].shift(shift_hours)
@@ -186,8 +185,6 @@ class FundingRateFeatureCalculator:
         cycle_phase = (
             2 * np.pi * df["fr_hours_since_settlement"] / self.settlement_interval
         )
-        df["fr_cycle_sin"] = np.sin(cycle_phase)
-        df["fr_cycle_cos"] = np.cos(cycle_phase)
 
         return df
 
@@ -198,17 +195,12 @@ class FundingRateFeatureCalculator:
 
         # 変化量（差分）
         # deviationの変化を見ることで、過熱感の加速/減速を捉える
-        df["fr_velocity"] = df["fr_deviation_bps"].diff(periods=self.settlement_interval)
 
         span_3 = 3 * self.settlement_interval
-        span_7 = 7 * self.settlement_interval
 
         # EMAもdeviationに対してかける（通常時0への回帰を見やすくする）
         df["fr_ema_3periods"] = (
             df["fr_deviation_bps"].ewm(span=span_3, adjust=False).mean()
-        )
-        df["fr_ema_7periods"] = (
-            df["fr_deviation_bps"].ewm(span=span_7, adjust=False).mean()
         )
 
         return df
@@ -261,7 +253,6 @@ class FundingRateFeatureCalculator:
 
         realized_vol = realized_vol.replace(0, np.nan)
         # ボラティリティ1単位あたりのFR乖離量
-        df["fr_volatility_adjusted"] = df["fr_deviation_bps"] / (realized_vol * 100 + 1e-8)
 
         return df
 
@@ -281,6 +272,8 @@ class FundingRateFeatureCalculator:
         # ベースラインから離れた状態がどれだけ続いているか（＝マグマの蓄積）
         # 単純累積だと無限に増えるので、過去N期間のWindow累積にする
         for window in [24, 72]:
+            if window == 24: # fr_cumulative_deviation_24h は低重要度のためコメントアウト
+                continue
             df[f"fr_cumulative_deviation_{window}h"] = dev.rolling(window=window).sum()
         
         # 2. FR移動平均からの乖離（トレンドからの乖離）
@@ -289,25 +282,15 @@ class FundingRateFeatureCalculator:
             df[f"fr_zscore_{window}h"] = (dev - ma) / (dev.rolling(window=window).std() + 1e-8)
         
         # 3. FR変化の加速度
-        df["fr_acceleration"] = df.get("fr_velocity", dev.diff()).diff()
         
         # 4. FR極値フラグ（絶対値ベース）
         abs_dev = dev.abs()
         rolling_percentile_95 = abs_dev.rolling(window=720).quantile(0.95)
-        df["fr_extreme_flag"] = (abs_dev > rolling_percentile_95).astype(int)
         
         # 5. FRヒートマップ
-        if "fr_regime_encoded" in df.columns:
-            df["fr_heatmap"] = df["fr_regime_encoded"] / 2.0
         
         # 6. FR変化の方向性
         fr_diff = dev.diff()
-        df["fr_consecutive_rise"] = (
-            (fr_diff > 0).astype(int).groupby((fr_diff <= 0).cumsum()).cumsum()
-        )
-        df["fr_consecutive_fall"] = (
-            (fr_diff < 0).astype(int).groupby((fr_diff >= 0).cumsum()).cumsum()
-        )
         
         logger.debug("市場歪み特徴量(加工版)を追加しました")
         

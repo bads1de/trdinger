@@ -3,8 +3,8 @@ export const AVAILABLE_MODEL_NAMES = [
   "lightgbm",
   "xgboost",
   "catboost",
-  "gru",
-  "lstm",
+  // "gru", // GRUはGBDTと比べて計算コストが高く、今回の検証では精度向上に寄与しなかったためコメントアウト
+  // "lstm", // LSTMはGBDTと比べて計算コストが高く、今回の検証では精度向上に寄与しなかったためコメントアウト
 ];
 
 export const AVAILABLE_MODELS = [
@@ -23,6 +23,7 @@ export const AVAILABLE_MODELS = [
     label: "CatBoost",
     description: "Categorical Boosting - 時系列やカテゴリカル変数に強い",
   },
+  /*
   {
     value: "gru",
     label: "GRU",
@@ -33,6 +34,7 @@ export const AVAILABLE_MODELS = [
     label: "LSTM",
     description: "Long Short-Term Memory - 長期的な依存関係を捉えるRNN",
   },
+  */
 ];
 
 export const META_MODELS = [

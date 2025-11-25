@@ -228,7 +228,7 @@ class EnsembleConfig(BaseSettings):
 
     # アルゴリズムリスト
     ALGORITHMS: List[str] = Field(
-        default=["lightgbm", "xgboost"], description="使用するアルゴリズム"
+        default=["lightgbm", "xgboost", "catboost"], description="使用するアルゴリズム"
     )
 
     # 投票方法
@@ -240,7 +240,7 @@ class EnsembleConfig(BaseSettings):
     )
 
     # スタッキング設定
-    STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "xgboost"])
+    STACKING_BASE_MODELS: List[str] = Field(default=["lightgbm", "xgboost", "catboost"])
     STACKING_META_MODEL: str = Field(
         default="logistic_regression", description="メタモデル"
     )

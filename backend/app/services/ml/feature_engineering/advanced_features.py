@@ -111,7 +111,7 @@ class AdvancedFeatureEngineer:
         new_features["returns_lag_24"] = returns_temp.shift(24)
 
         # 累積リターン（24hのみ）
-        new_features["cumulative_returns_24"] = returns_temp.rolling(24).sum()
+        # # new_features["cumulative_returns_24"] = returns_temp.rolling(24).sum() # 低重要度のためコメントアウト
 
         # 一括で結合
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
@@ -165,8 +165,6 @@ class AdvancedFeatureEngineer:
             if bbands is not None and not bbands.empty:
                 if "BBB_5_2.0" in bbands.columns:
                     new_features["BBW"] = bbands["BBB_5_2.0"]
-                if "BBP_5_2.0" in bbands.columns:
-                    new_features["BB_Percent"] = bbands["BBP_5_2.0"]
 
             # トレンド指標
             adx_result = ta.adx(high=data["high"], low=data["low"], close=data["close"])
@@ -381,7 +379,6 @@ class AdvancedFeatureEngineer:
             mtf_features = pd.DataFrame(index=resampled.index)
             
             # 上位足のトレンド (RSI, EMA乖離)
-            mtf_features[f"MTF_{timeframe_hours}h_RSI"] = ta.rsi(resampled["close"], length=14)
             
             ema_50 = ta.ema(resampled["close"], length=50)
             if ema_50 is not None:
@@ -485,7 +482,7 @@ class AdvancedFeatureEngineer:
             new_features_dict = {}
             
             # 1. 価格レンジの狭さ（正規化）
-            for window in [24, 72, 168]:
+            for window in [72, 168]: # Price_Range_Normalized_24h は低重要度のため削除
                 high_max = data["high"].rolling(window=window).max()
                 low_min = data["low"].rolling(window=window).min()
                 price_range = high_max - low_min
@@ -498,16 +495,13 @@ class AdvancedFeatureEngineer:
                     lambda x: pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
                 )
                 new_features_dict["Volatility_Regime_Rank"] = vol_rank
-                new_features_dict["Low_Volatility_Flag"] = (vol_rank < 0.25).astype(int)
             
             # 3. トレンド強度の欠如
             if "ADX" in data.columns:
-                new_features_dict["Weak_Trend_Flag"] = (data["ADX"] < 25).astype(int)
                 new_features_dict["ADX_Momentum"] = data["ADX"].pct_change(periods=24, fill_method=None)
             
             # 4. Choppiness指標
             if "CHOP" in data.columns:
-                new_features_dict["Strong_Range_Flag"] = (data["CHOP"] > 61.8).astype(int)
                 new_features_dict["CHOP_MA_24h"] = data["CHOP"].rolling(window=24).mean()
             
             # 5. 価格の往復運動
@@ -527,7 +521,6 @@ class AdvancedFeatureEngineer:
                     lambda x: pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
                 )
                 new_features_dict["BBW_Squeeze_Rank"] = bbw_rank
-                new_features_dict["BB_Squeeze_Flag"] = (bbw_rank < 0.10).astype(int)
             
             # 8. 価格変化の絶対値平均
             abs_returns = data["close"].pct_change(fill_method=None).abs()
@@ -536,20 +529,8 @@ class AdvancedFeatureEngineer:
             abs_returns_rank = abs_returns.rolling(window=720).apply(
                 lambda x: pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
             )
-            new_features_dict["Small_Movement_Flag"] = (abs_returns_rank < 0.25).astype(int)
             
             # 9. RANGE総合スコア
-            # 一旦DataFrameにして計算
-            temp_df = pd.DataFrame(new_features_dict)
-            range_signals = []
-            signal_cols = ["Low_Volatility_Flag", "Weak_Trend_Flag", "Strong_Range_Flag", "BB_Squeeze_Flag", "Small_Movement_Flag"]
-            
-            for col in signal_cols:
-                if col in temp_df.columns:
-                    range_signals.append(temp_df[col])
-            
-            if range_signals:
-                new_features_dict["RANGE_Composite_Score"] = pd.concat(range_signals, axis=1).mean(axis=1)
             
             # 結合
             new_features_df = pd.DataFrame(new_features_dict, index=data.index)
