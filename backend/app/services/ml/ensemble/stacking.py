@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import StackingClassifier
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import cross_val_predict
 
 from ....utils.error_handler import ModelError
 from .base_ensemble import BaseEnsemble
@@ -128,9 +128,22 @@ class StackingEnsemble(BaseEnsemble):
                 )
 
             # クロスバリデーション設定
-            cv = StratifiedKFold(
-                n_splits=self.cv_folds, shuffle=True, random_state=self.random_state
-            )
+            # 時系列データのため、デフォルトではTimeSeriesSplitを使用
+            # テストや特定のケースではKFoldなども選択可能にする
+            from sklearn.model_selection import TimeSeriesSplit, StratifiedKFold
+
+            cv_strategy = self.config.get("cv_strategy", "time_series")
+            
+            if cv_strategy == "kfold":
+                # 通常のKFold (シャッフルなし)
+                from sklearn.model_selection import KFold
+                cv = KFold(n_splits=self.cv_folds, shuffle=False)
+            elif cv_strategy == "stratified_kfold":
+                # 層化KFold (シャッフルなし)
+                cv = StratifiedKFold(n_splits=self.cv_folds, shuffle=False)
+            else:
+                # デフォルト: TimeSeriesSplit (シャッフルなし)
+                cv = TimeSeriesSplit(n_splits=self.cv_folds)
 
             # StackingClassifierを初期化
             self.stacking_classifier = StackingClassifier(
@@ -144,9 +157,6 @@ class StackingEnsemble(BaseEnsemble):
             )
 
             logger.info("StackingClassifier学習開始")
-
-            # --- 正しいOOF予測の生成（データリーク対策） ---
-            from sklearn.model_selection import cross_val_predict
 
             logger.info(
                 f"各ベースモデルのOOF予測を計算中（{self.cv_folds}フォールドCV）..."

@@ -88,15 +88,14 @@ class LightGBMModel:
             if not isinstance(y, pd.Series):
                 y = pd.Series(y)
 
-            # データを80:20で分割（バリデーション用）
-            from sklearn.model_selection import train_test_split
+            # 時系列データのため、シャッフルせずに分割（最後の20%を検証用）
+            # train_test_splitはランダムシャッフルを行うため、時系列データには不適切
+            split_index = int(len(X) * 0.8)
 
-            # stratifyパラメータは分類タスクでのみ使用可能
-            stratify_param = y if len(np.unique(y)) < 20 else None
-
-            X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=0.2, random_state=42, stratify=stratify_param
-            )
+            X_train = X.iloc[:split_index]
+            X_val = X.iloc[split_index:]
+            y_train = y.iloc[:split_index]
+            y_val = y.iloc[split_index:]
 
             # 明示的な型キャストを追加
             X_train = cast(pd.DataFrame, X_train)

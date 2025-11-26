@@ -75,11 +75,14 @@ class MLTrainingService(BaseResourceManager):
         # トレーナーを選択して初期化
         if trainer_type.lower() == "single":
             model_type = trainer_config.get("model_type", "lightgbm")
-            # 明示的に SingleModelTrainer を使用（テスト期待と一致）
+            # 明示的に SingleModelTrainer を使用
             self.trainer = SingleModelTrainer(model_type=model_type)
+        elif trainer_type.lower() == "ensemble":
+            # アンサンブル設定を取得
+            ens_config = trainer_config.get("ensemble_config", ensemble_config or {})
+            self.trainer = EnsembleTrainer(ensemble_config=ens_config)
         else:
-            # デフォルトは統合 BaseMLTrainer
-            self.trainer = BaseMLTrainer(trainer_config=trainer_config)
+            raise ValueError(f"未対応のトレーナータイプ: {trainer_type}")
 
         self.trainer_type = trainer_type
 

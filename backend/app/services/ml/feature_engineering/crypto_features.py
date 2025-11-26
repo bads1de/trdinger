@@ -132,7 +132,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         volume_rolling = df["volume"].rolling(24)
         new_features["volume_price_trend"] = volume_rolling.corr(
             close_rolling_mean
-        ).fillna(0.0)  # type: ignore
+        ).fillna(
+            0.0
+        )  # type: ignore
 
         # 一括で結合（DataFrame断片化回避）
         result_df = pd.concat(
@@ -305,19 +307,8 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         # 無限値をNaNに変換
         result_df = result_df.replace([np.inf, -np.inf], np.nan)
 
-        # 統計的手法による数値カラムの補完
-        numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
-        for col in numeric_cols:
-            try:
-                # Seriesであることを確認
-                if (
-                    isinstance(result_df[col], pd.Series)
-                    and result_df[col].isna().sum() > 0
-                ):
-                    result_df[col] = result_df[col].fillna(result_df[col].median())
-            except (ValueError, TypeError) as e:
-                # エラーが発生した列はスキップ
-                logger.warning(f"カラム {col} の補完でエラー: {e}")
+        # データリーク防止のため、ここでの中央値補完は行わない
+        # 補完はFeatureEngineeringServiceの最後で一括してffillで行う
 
         return result_df
 

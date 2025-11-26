@@ -1,6 +1,5 @@
 import logging
 import pandas as pd
-import numpy as np
 from typing import Dict, Any, Optional, Tuple, List
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
@@ -9,8 +8,6 @@ from sklearn.metrics import (
     recall_score,
     accuracy_score,
 )
-from sklearn.model_selection import train_test_split
-import joblib
 
 logger = logging.getLogger(__name__)
 

@@ -162,8 +162,12 @@ class DataProcessor:
         # 5. ラベル生成
         logger.info("ラベル生成を実行")
         try:
+            # target_columnがパラメータに含まれていると戻り値の形式が変わるため除外
+            label_params = training_params.copy()
+            label_params.pop("target_column", None)
+            
             labels, threshold_info = label_generator.generate_labels(
-                price_data, **training_params
+                price_data, **label_params
             )
             logger.info(f"ラベル生成完了: {len(labels)}行")
         except Exception as label_error:

@@ -11,7 +11,6 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
-from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ class AdvancedFeatureEngineer:
 
     def __init__(self):
         """初期化"""
-        self.scaler = StandardScaler()
+        pass
 
     # 旧API互換（create_features -> create_advanced_features）
     def create_features(self, ohlcv_data: pd.DataFrame) -> pd.DataFrame:
@@ -390,7 +389,7 @@ class AdvancedFeatureEngineer:
             # 確実にDatetimeIndexであることを確認
             if not isinstance(ohlcv.index, pd.DatetimeIndex):
                 logger.warning(
-                    f"MTF特徴量計算スキップ: インデックスがDatetimeIndexではありません"
+                    "MTF特徴量計算スキップ: インデックスがDatetimeIndexではありません"
                 )
                 return features
 
@@ -594,8 +593,10 @@ class AdvancedFeatureEngineer:
             abs_returns_rank = abs_returns.rolling(window=720).apply(
                 lambda x: pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
             )
+            new_features_dict["Abs_Returns_Rank"] = abs_returns_rank
 
             # 9. RANGE総合スコア
+            # (将来的に実装予定)
 
             # 結合
             new_features_df = pd.DataFrame(new_features_dict, index=data.index)

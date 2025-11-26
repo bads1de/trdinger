@@ -23,7 +23,7 @@ from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
-from app.services.indicators.regime.regime_indicators import ( # 新規追加
+from app.services.indicators.regime.regime_indicators import (  # 新規追加
     calculate_choppiness_index,
     calculate_fractal_dimension_index,
 )
@@ -250,8 +250,8 @@ class FeatureEngineeringService:
 
             # レジーム特徴量 (Choppiness Index, Fractal Dimension Index)
             logger.info("レジーム特徴量を計算中...")
-            window_ci = 14 # Choppiness Index の期間
-            window_fdi = 10 # Fractal Dimension Index の期間
+            window_ci = 14  # Choppiness Index の期間
+            window_fdi = 10  # Fractal Dimension Index の期間
 
             result_df[f"Choppiness_Index_{window_ci}"] = calculate_choppiness_index(
                 high=result_df["high"],
@@ -259,11 +259,12 @@ class FeatureEngineeringService:
                 close=result_df["close"],
                 window=window_ci,
             )
-            result_df[f"Fractal_Dimension_Index_{window_fdi}"] = calculate_fractal_dimension_index(
-                close=result_df["close"],
-                window=window_fdi,
+            result_df[f"Fractal_Dimension_Index_{window_fdi}"] = (
+                calculate_fractal_dimension_index(
+                    close=result_df["close"],
+                    window=window_fdi,
+                )
             )
-
 
             # ファンディングレート特徴量（データがある場合）
             if funding_rate_data is not None and not funding_rate_data.empty:
@@ -288,31 +289,14 @@ class FeatureEngineeringService:
 
             # 建玉残高特徴量（データがある場合）
             if open_interest_data is not None and not open_interest_data.empty:
-                result_df = (
-                    self.market_data_calculator.calculate_open_interest_features(  # noqa: E501
-                        result_df, open_interest_data, lookback_periods
-                    )
+                result_df = self.market_data_calculator.calculate_open_interest_features(  # noqa: E501
+                    result_df, open_interest_data, lookback_periods
                 )
                 # 中間クリーニング（削除された特徴量を除外）
                 # Removed: "OI_Change_Rate", "OI_Surge",
                 # "OI_Price_Correlation" (低寄与度: 2025-01-05)
-                existing_oi_columns = [
-                    "OI_Change_Rate_24h",
-                    "Volatility_Adjusted_OI",
-                    "OI_Trend",
-                    "OI_Normalized",
-                ]
-                existing_oi_columns = [
-                    col for col in existing_oi_columns if col in result_df.columns
-                ]
-                if existing_oi_columns:
-                    try:
-                        medians = result_df[existing_oi_columns].median()
-                        result_df[existing_oi_columns] = result_df[
-                            existing_oi_columns
-                        ].fillna(medians)
-                    except Exception as e:
-                        logger.warning(f"OI中間クリーニングでエラー: {e}")
+                # データリーク防止のため、ここでの中央値補完は行わない
+                pass
             else:
                 # 建玉残高データが不足している場合、疑似データを生成
                 logger.warning(
@@ -333,23 +317,8 @@ class FeatureEngineeringService:
                     result_df, funding_rate_data, open_interest_data, lookback_periods
                 )
                 # 中間クリーニング
-                composite_columns = [
-                    "FR_OI_Ratio",
-                    "Market_Heat_Index",
-                    "Market_Stress",
-                    "Market_Balance",
-                ]
-                existing_composite_columns = [
-                    col for col in composite_columns if col in result_df.columns
-                ]
-                if existing_composite_columns:
-                    try:
-                        medians = result_df[existing_composite_columns].median()
-                        result_df[existing_composite_columns] = result_df[
-                            existing_composite_columns
-                        ].fillna(medians)
-                    except Exception as e:
-                        logger.warning(f"Composite中間クリーニングでエラー: {e}")
+                # データリーク防止のため、ここでの中央値補完は行わない
+                pass
 
             # 市場レジーム特徴量
             result_df = self.technical_calculator.calculate_market_regime_features(
@@ -396,13 +365,13 @@ class FeatureEngineeringService:
                 for col in numeric_columns:
                     # 無限大値をNaNに変換 (XGBoostError対策)
                     result_df[col] = result_df[col].replace([np.inf, -np.inf], np.nan)
-                    
-                    # NaN値を中央値で補完
-                    if result_df[col].isna().any():
-                        median_val = result_df[col].median()
-                        if pd.isna(median_val): # 全てNaNの列の場合
-                            median_val = 0.0
-                        result_df[col] = result_df[col].fillna(median_val)
+
+                    # NaN値を前方補完(ffill)で埋める（データリーク防止）
+                    # 全体の中央値を使うと未来の情報が漏れるため厳禁
+                    result_df[col] = result_df[col].ffill()
+
+                    # ffillで埋まらなかった部分（先頭など）は0で埋める
+                    result_df[col] = result_df[col].fillna(0.0)
                 logger.info("データ前処理完了")
             except Exception as e:
                 logger.warning(f"データ前処理エラー: {e}")
@@ -429,7 +398,9 @@ class FeatureEngineeringService:
             # 数値的な不安定性を防ぐため、特徴量データをクリッピング
             numeric_columns = result_df.select_dtypes(include=[np.number]).columns
             for col in numeric_columns:
-                result_df[col] = np.clip(result_df[col], -1e10, 1e10) # 非常に大きな値を除去
+                result_df[col] = np.clip(
+                    result_df[col], -1e10, 1e10
+                )  # 非常に大きな値を除去
 
             # プロファイルベースの特徴量フィルタリング
             result_df = self._apply_feature_profile(result_df, profile)

@@ -452,17 +452,12 @@ class MarketRegimeDetector:
             features_array = np.array(features)
 
             # 特徴量の正規化
-            features_scaled: np.ndarray
-            if len(self.feature_history) == 0:
-                # 初回は現在のデータで正規化
-                features_scaled = cast(
-                    np.ndarray, self.scaler.fit_transform(features_array)
-                )
-            else:
-                # 既存のスケーラーを使用
-                features_scaled = cast(
-                    np.ndarray, self.scaler.transform(features_array)
-                )
+            # レジーム判定はそのウィンドウ内での相対的な状態を見るため、
+            # 常にそのウィンドウのデータで正規化を行う（fit_transform）
+            # これにより、過去の統計情報（初期値）に依存せず、現在の市場環境に適応できる
+            features_scaled = cast(
+                np.ndarray, self.scaler.fit_transform(features_array)
+            )
 
             return features_scaled
 

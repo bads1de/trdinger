@@ -57,7 +57,7 @@ class FundingRateFeatureCalculator:
 
         # 2. 欠損値処理
         df = self._handle_missing_values(df)
-        
+
         # 3. 数値加工 (bps変換とベースライン乖離) - ここが重要
         df = self._transform_data(df)
 
@@ -88,15 +88,20 @@ class FundingRateFeatureCalculator:
             if "index" in result.columns and "timestamp" not in result.columns:
                 result = result.rename(columns={"index": "timestamp"})
             elif result.index.name == "timestamp":
-                pass 
+                pass
             if "timestamp" not in result.columns:
-                 result = result.rename(columns={result.columns[0]: "timestamp"})
+                result = result.rename(columns={result.columns[0]: "timestamp"})
 
         elif "timestamp" not in result.columns:
-            logger.warning("OHLCVデータにtimestampカラムがなく、インデックスもDatetimeIndexではありません")
+            logger.warning(
+                "OHLCVデータにtimestampカラムがなく、インデックスもDatetimeIndexではありません"
+            )
             return result
 
-        if "timestamp" not in funding_df.columns or "funding_rate" not in funding_df.columns:
+        if (
+            "timestamp" not in funding_df.columns
+            or "funding_rate" not in funding_df.columns
+        ):
             logger.warning("ファンディングレートデータに必要なカラムがありません")
             return result
 
@@ -113,7 +118,7 @@ class FundingRateFeatureCalculator:
 
         if "funding_rate" in result.columns:
             result["funding_rate_raw"] = result["funding_rate"]
-            
+
         result = result.set_index("timestamp")
         return result
 
@@ -127,10 +132,10 @@ class FundingRateFeatureCalculator:
 
         if missing_mask.sum() > 0:
             # FutureWarning対応: method='linear'は非推奨
-            df["funding_rate_raw"] = df["funding_rate_raw"].interpolate(
-                limit=2, limit_direction="both"
-            )
+            # limit_direction="both" は未来のデータを参照するため、ffillのみを使用する
+            # ファンディングレートは通常8時間ごとに更新されるため、次の更新までは前回の値を維持するのが適切
             df["funding_rate_raw"] = df["funding_rate_raw"].ffill()
+            # 最初のデータより前の欠損はbfillで埋める（やむを得ない場合のみ）
             df["funding_rate_raw"] = df["funding_rate_raw"].bfill()
 
         return df
@@ -138,25 +143,25 @@ class FundingRateFeatureCalculator:
     def _transform_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         データを機械学習しやすい形に加工
-        
+
         1. fr_bps: ベーシスポイント単位 (x10000)
            - 0.0001 -> 1.0
            - スケールが大きくなり、計算誤差が減る
-           
+
         2. fr_deviation_bps: ベースライン(0.01%)からの乖離
            - 通常時(0.01%)は 0.0 になる
            - 0を中心とした分布になり、モデルが「異常」を検知しやすくなる
         """
         if "funding_rate_raw" not in df.columns:
             return df
-            
+
         # bps変換
         df["fr_bps"] = df["funding_rate_raw"] * 10000
-        
+
         # ベースライン乖離 (0.01% = 1.0bps)
         baseline_bps = self.baseline_rate * 10000
         df["fr_deviation_bps"] = df["fr_bps"] - baseline_bps
-        
+
         return df
 
     def _add_basic_rate_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -166,7 +171,7 @@ class FundingRateFeatureCalculator:
 
         # 生のrawデータよりも、deviationの方が情報価値が高い可能性があるが、
         # 基本特徴量としてはbps値を使う
-        lag_periods = [3] # fr_lag_1p, 2p は低重要度のため削除
+        lag_periods = [3]  # fr_lag_1p, 2p は低重要度のため削除
         for lag in lag_periods:
             shift_hours = lag * self.settlement_interval
             df[f"fr_lag_{lag}p"] = df["fr_bps"].shift(shift_hours)
@@ -176,15 +181,15 @@ class FundingRateFeatureCalculator:
     def _add_time_cycle_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """時間サイクル特徴量"""
         if not isinstance(df.index, pd.DatetimeIndex):
-             return df
+            return df
 
-        df["fr_hours_since_settlement"] = (
-            df.index.hour % self.settlement_interval
-        )
+        df["fr_hours_since_settlement"] = df.index.hour % self.settlement_interval
 
         cycle_phase = (
             2 * np.pi * df["fr_hours_since_settlement"] / self.settlement_interval
         )
+        df["fr_cycle_sin"] = np.sin(cycle_phase)
+        df["fr_cycle_cos"] = np.cos(cycle_phase)
 
         return df
 
@@ -217,7 +222,7 @@ class FundingRateFeatureCalculator:
         # 0.00% -> 0.0
         # 0.05% -> 5.0
         # 0.15% -> 15.0
-        
+
         conditions = [
             fr_bps < -1.0,
             (fr_bps >= -1.0) & (fr_bps < 0.0),
@@ -264,36 +269,42 @@ class FundingRateFeatureCalculator:
         """
         if "fr_deviation_bps" not in df.columns:
             return df
-        
+
         # deviation（乖離）を使うことで、ベースラインからの距離を直接扱う
         dev = df["fr_deviation_bps"]
-        
+
         # 1. 累積乖離エネルギー (Cumulative Deviation)
         # ベースラインから離れた状態がどれだけ続いているか（＝マグマの蓄積）
         # 単純累積だと無限に増えるので、過去N期間のWindow累積にする
         for window in [24, 72]:
-            if window == 24: # fr_cumulative_deviation_24h は低重要度のためコメントアウト
+            if (
+                window == 24
+            ):  # fr_cumulative_deviation_24h は低重要度のためコメントアウト
                 continue
             df[f"fr_cumulative_deviation_{window}h"] = dev.rolling(window=window).sum()
-        
+
         # 2. FR移動平均からの乖離（トレンドからの乖離）
         for window in [24, 72, 168]:
             ma = dev.rolling(window=window).mean()
-            df[f"fr_zscore_{window}h"] = (dev - ma) / (dev.rolling(window=window).std() + 1e-8)
-        
+            df[f"fr_zscore_{window}h"] = (dev - ma) / (
+                dev.rolling(window=window).std() + 1e-8
+            )
+
         # 3. FR変化の加速度
-        
+
         # 4. FR極値フラグ（絶対値ベース）
         abs_dev = dev.abs()
         rolling_percentile_95 = abs_dev.rolling(window=720).quantile(0.95)
-        
+        df["fr_extreme_flag"] = (abs_dev > rolling_percentile_95).astype(int)
+
         # 5. FRヒートマップ
-        
+
         # 6. FR変化の方向性
         fr_diff = dev.diff()
-        
+        df["fr_trend_direction"] = np.sign(fr_diff).fillna(0)
+
         logger.debug("市場歪み特徴量(加工版)を追加しました")
-        
+
         return df
 
 
