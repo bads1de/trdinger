@@ -57,6 +57,11 @@ class LabelCache:
         threshold: float,
         timeframe: str = "1h",
         price_column: str = "close",
+        pt_factor: float = 1.0,
+        sl_factor: float = 1.0,
+        use_atr: bool = False,
+        atr_period: int = 14,
+        binary_label: bool = False,
     ) -> pd.Series:
         """キャッシュを使ってラベルを取得
 
@@ -69,15 +74,31 @@ class LabelCache:
             threshold: 閾値
             timeframe: 時間足
             price_column: 価格カラム名
+            pt_factor: Profit Taking multiplier for Triple Barrier.
+            sl_factor: Stop Loss multiplier for Triple Barrier.
+            use_atr: Use ATR for volatility in Triple Barrier.
+            atr_period: ATR calculation period.
+            binary_label: Return binary (0/1) labels for Triple Barrier.
 
         Returns:
-            pd.Series: ラベル（"UP"/"RANGE"/"DOWN"）
+            pd.Series: ラベル（"UP"/"RANGE"/"DOWN" または 0/1）
 
         Raises:
             ValueError: threshold_methodが無効な場合
         """
         # キャッシュキーを生成（タプルは hashable なので辞書のキーに使える）
-        cache_key = (horizon_n, threshold_method, threshold, timeframe, price_column)
+        cache_key = (
+            horizon_n,
+            threshold_method,
+            threshold,
+            timeframe,
+            price_column,
+            pt_factor,
+            sl_factor,
+            use_atr,
+            atr_period,
+            binary_label,
+        )
 
         # キャッシュヒット
         if cache_key in self.cache:
@@ -114,32 +135,48 @@ class LabelCache:
             from app.utils.label_generation.triple_barrier import TripleBarrier
             
             close_prices = self.ohlcv_df[price_column]
-            # ボラティリティ計算 (日次標準偏差を推定、単純なリターンの標準偏差)
-            returns = close_prices.pct_change(fill_method=None)
-            volatility = returns.rolling(window=24).std() # 24時間ローリングボラティリティ
+
+            # ボラティリティ計算
+            if use_atr:
+                high_prices = self.ohlcv_df["high"]
+                low_prices = self.ohlcv_df["low"]
+                prev_close = close_prices.shift(1)
+                
+                tr1 = high_prices - low_prices
+                tr2 = (high_prices - prev_close).abs()
+                tr3 = (low_prices - prev_close).abs()
+                
+                tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+                volatility = tr.rolling(window=atr_period).mean()
+                volatility = volatility / close_prices # 価格比率に変換
+            else:
+                # 従来の標準偏差
+                returns = close_prices.pct_change(fill_method=None)
+                volatility = returns.rolling(window=24).std() # 24時間ローリングボラティリティ
             
             # 垂直バリア (horizon_n 時間後)
-            t1 = self.get_t1(close_prices.index, horizon_n, timeframe)
+            t1_vertical_barrier = pd.Series(close_prices.index, index=close_prices.index).shift(-horizon_n)
             
             # Triple Barrier 実行
-            # threshold を pt と sl の倍率として使用 (例: threshold=1.0 なら 1*volatility)
-            # min_ret は小さめに設定して、小さい変動でも方向性を捉えるようにする（またはレンジ判定に使う）
-            tb = TripleBarrier(pt=threshold, sl=threshold, min_ret=0.0001)
+            tb = TripleBarrier(pt=pt_factor, sl=sl_factor, min_ret=0.0001) # min_retは小さい値で固定
             
             events = tb.get_events(
                 close=close_prices,
-                t_events=close_prices.index,
-                pt_sl=[threshold, threshold],
+                t_events=close_prices.index, # 全てのバーをイベント候補とする
+                pt_sl=[pt_factor, sl_factor],
                 target=volatility,
                 min_ret=0.0001,
-                vertical_barrier_times=t1
+                vertical_barrier_times=t1_vertical_barrier
             )
             
-            labels_df = tb.get_bins(events, close_prices)
+            labels_df = tb.get_bins(events, close_prices, binary_label=binary_label)
             
-            # ラベルをSeriesに変換 (1, -1, 0) -> ("UP", "DOWN", "RANGE")
-            labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
-            labels = labels_df['bin'].map(labels_map)
+            if binary_label:
+                labels = labels_df['bin']
+            else:
+                # ラベルをSeriesに変換 (1, -1, 0) -> ("UP", "DOWN", "RANGE")
+                labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
+                labels = labels_df['bin'].map(labels_map)
             
             # インデックスを合わせてNaN処理
             labels = labels.reindex(close_prices.index)

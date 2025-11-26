@@ -62,6 +62,7 @@ class TripleBarrier:
         events = pd.DataFrame(index=target.index)
         events['t1'] = pd.NaT # Time of barrier touch
         events['trgt'] = target
+        events['side'] = None # Barrier side touched ('pt', 'sl', 'vertical')
         
         if side is None:
             # Check both sides (volatility based)
@@ -75,7 +76,7 @@ class TripleBarrier:
 
         # Loop through events (can be parallelized, but using loop for simplicity/safety)
         for loc, t0 in enumerate(events.index):
-            t1_vertical = vertical_barrier_times.iloc[loc]
+            t1_vertical = vertical_barrier_times.loc[t0]
             trgt = target.iloc[loc]
             
             # Slice price data from t0 to t1_vertical (or end if NaT)
@@ -84,14 +85,18 @@ class TripleBarrier:
             # Calculate returns relative to t0
             # returns = (df0 / close[t0]) - 1 
             # Optimized: avoid division by scalar in loop if possible, but pandas series op is fast enough
+            if pd.isna(close.at[t0]):
+                 continue
+                 
             returns = (df0 / close.at[t0]) - 1
             
-            out_bounds = pd.DataFrame()
+            out_bounds = pd.DataFrame(columns=['touch_type'])
             
             # Check upper barrier (Profit Taking)
             if pt_mult > 0:
                 # Upper barrier threshold
                 upper_thresh = trgt * pt_mult
+                
                 # Find first time return exceeds threshold
                 # We want the first index where returns > upper_thresh
                 # Note: returns includes t0 where ret=0. So we check from t0+1
@@ -109,20 +114,29 @@ class TripleBarrier:
 
             # Determine which barrier was touched first
             if not out_bounds.empty:
-                events.at[t0, 't1'] = out_bounds.index.min()
+                first_touch_time = out_bounds.index.min()
+                events.at[t0, 't1'] = first_touch_time
+                
+                touch_type = out_bounds.loc[first_touch_time, 'touch_type']
+                if isinstance(touch_type, pd.Series):
+                     # Pick first one (unlikely)
+                     touch_type = touch_type.iloc[0]
+                events.at[t0, 'side'] = touch_type
             else:
                 # No barrier touched, use vertical barrier
                 events.at[t0, 't1'] = t1_vertical
+                events.at[t0, 'side'] = 'vertical'
 
         return events
 
-    def get_bins(self, events: pd.DataFrame, close: pd.Series) -> pd.DataFrame:
+    def get_bins(self, events: pd.DataFrame, close: pd.Series, binary_label: bool = False) -> pd.DataFrame:
         """
         Generates labels based on the barrier touch events.
 
         Args:
             events (pd.DataFrame): Output from get_events.
             close (pd.Series): Close prices.
+            binary_label (bool): If True, returns 0/1 labels for Meta-Labeling (1=Trend/PT, 0=Fake/SL/Vertical).
 
         Returns:
             pd.DataFrame: Labels with 'ret' (return) and 'bin' (label).
@@ -167,51 +181,42 @@ class TripleBarrier:
         out['ret'] = px_end / px_init - 1
         
         # 4. Assign labels (bins)
-        out['bin'] = 0.0 # Default to 0 (Vertical Barrier / Time expiration with small return)
+        out['bin'] = 0.0 # Default to 0
         
-        # Assign 1 if PT touched
-        # Check if return exceeded target * pt
-        # We need the target and pt info.
-        # Instead of re-calculating, we can infer from return sign and magnitude relative to target?
-        # Or simpler: 
-        # - If touched PT (high return) -> 1
-        # - If touched SL (low return) -> -1
-        # - If vertical barrier -> 0 (or sign of return if configured)
-        
-        # Standard implementation:
-        # If ret > 0 -> 1 ? No, we want to know WHICH barrier was touched.
-        # But get_events logic already filtered by barrier.
-        
-        # Let's use the logic: 
-        # if ret > 0 and ret > target * pt -> 1 (PT)
-        # if ret < 0 and ret < -target * sl -> -1 (SL)
-        # else -> 0
-        
-        # However, we don't have target/pt available in get_bins easily unless passed or stored.
-        # Simpler logic used in practice:
-        # 1 if ret > 0
-        # -1 if ret < 0
-        # 0 if ret == 0 (rare)
-        # But this ignores the "Vertical Barrier = 0" logic which is useful for conservative labeling.
-        
-        # Better Logic:
-        # If ret > target * pt * 0.99 (allow tolerance) -> 1
-        # If ret < -target * sl * 0.99 -> -1
-        # Else -> 0
-        
-        # Join target from events
+        # Join target and side from events
         out['trgt'] = events_['trgt']
         
-        # Labeling
-        # Using min_ret as a filter for 0 class
-        # If abs(ret) < min_ret, treat as 0
+        has_side_info = 'side' in events_.columns
         
-        # Upper barrier check
-        if self.pt > 0:
-            out.loc[out['ret'] > out['trgt'] * self.pt * 0.999, 'bin'] = 1.0
+        if binary_label:
+            # Meta-Labeling Mode: 1 if PT touched, 0 otherwise
+            if has_side_info:
+                # Use explicit side info if available
+                out.loc[events_['side'] == 'pt', 'bin'] = 1.0
+                out.loc[events_['side'] == 'sl', 'bin'] = 0.0
+                out.loc[events_['side'] == 'vertical', 'bin'] = 0.0
+            else:
+                # Fallback to return-based logic
+                # Upper barrier check (PT)
+                if self.pt > 0:
+                    # Strict check: Must be > PT threshold
+                    out.loc[out['ret'] > out['trgt'] * self.pt * 0.999, 'bin'] = 1.0
+                # SL and Vertical are implicitly 0
+        else:
+            # Standard Mode: 1 (PT), -1 (SL), 0 (Vertical/Range)
             
-        # Lower barrier check
-        if self.sl > 0:
-            out.loc[out['ret'] < -out['trgt'] * self.sl * 0.999, 'bin'] = -1.0
+            if has_side_info:
+                out.loc[events_['side'] == 'pt', 'bin'] = 1.0
+                out.loc[events_['side'] == 'sl', 'bin'] = -1.0
+                out.loc[events_['side'] == 'vertical', 'bin'] = 0.0
+            else:
+                # Fallback to return-based logic
+                # Upper barrier check
+                if self.pt > 0:
+                    out.loc[out['ret'] > out['trgt'] * self.pt * 0.999, 'bin'] = 1.0
+                    
+                # Lower barrier check
+                if self.sl > 0:
+                    out.loc[out['ret'] < -out['trgt'] * self.sl * 0.999, 'bin'] = -1.0
             
         return out

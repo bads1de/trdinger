@@ -1,13 +1,19 @@
 import logging
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, precision_score, recall_score, accuracy_score
+from sklearn.metrics import (
+    classification_report,
+    precision_score,
+    recall_score,
+    accuracy_score,
+)
 from sklearn.model_selection import train_test_split
 import joblib
 
 logger = logging.getLogger(__name__)
+
 
 class MetaLabelingService:
     """
@@ -17,16 +23,19 @@ class MetaLabelingService:
     その予測が正解（収益につながる）かどうかを判定する二次モデル（Meta Model）を構築します。
     """
 
-    def __init__(self, model_type: str = "random_forest"):
+    def __init__(
+        self,
+        model_type: str = "random_forest",
+        base_model_names: Optional[List[str]] = None,
+    ):
         self.model_type = model_type
         self.model = None
         self.is_trained = False
+        self.oof_preds_df = None
+        self.base_model_names = base_model_names  # 追加
 
     def create_meta_labels(
-        self, 
-        primary_preds_proba: pd.Series, 
-        y_true: pd.Series, 
-        threshold: float = 0.5
+        self, primary_preds_proba: pd.Series, y_true: pd.Series, threshold: float = 0.5
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
         メタラベルとフィルタリングされた特徴量を作成します。
@@ -42,10 +51,10 @@ class MetaLabelingService:
         """
         # 一次モデルが「トレンド」と予測したサンプルのみを対象にする
         trend_mask = primary_preds_proba >= threshold
-        
+
         # フィルタリングされたインデックス
         indices = primary_preds_proba.index[trend_mask]
-        
+
         if len(indices) == 0:
             logger.warning("一次モデルがトレンドと予測したサンプルがありません。")
             return pd.DataFrame(), pd.Series()
@@ -55,21 +64,21 @@ class MetaLabelingService:
         # 一次モデルがTrend(1)と予測したが、正解はRange(0)なら -> 0 (Pass)
         # ※ trend_maskでフィルタリング済みなので、単純に y_true と一致します。
         y_meta = y_true.loc[indices]
-        
+
         # メタモデルの特徴量は、ここでは呼び出し元で結合することを想定し、
         # インデックス情報を保持するためにフィルタリングした予測確率を返す
         # 実際には、呼び出し元で元の特徴量Xと結合する必要があります。
         # ここでは便宜上、メタラベル作成ロジックのみを提供します。
-        
+
         return trend_mask, y_meta
 
     def train(
-        self, 
-        X_train: pd.DataFrame, 
+        self,
+        X_train: pd.DataFrame,
         y_train: pd.Series,
         primary_proba_train: pd.Series,
-        base_model_probs_df: pd.DataFrame, # 追加: 各ベースモデルの予測確率
-        threshold: float = 0.5
+        base_model_probs_df: pd.DataFrame,  # 追加: 各ベースモデルの予測確率
+        threshold: float = 0.5,
     ) -> Dict[str, Any]:
         """
         メタモデルを学習します。
@@ -84,28 +93,39 @@ class MetaLabelingService:
         Returns:
             学習結果メトリクス
         """
+        self.oof_preds_df = base_model_probs_df
+        self.base_model_names = (
+            base_model_probs_df.columns.tolist()
+        )  # base_model_namesを保存
+
         # メタラベルの作成
-        trend_mask, y_meta = self.create_meta_labels(primary_proba_train, y_train, threshold)
-        
-        if len(y_meta) < 50: # 学習データが少なすぎる場合はスキップ
-            logger.warning(f"メタモデルの学習データが不足しています: {len(y_meta)}サンプル")
+        trend_mask, y_meta = self.create_meta_labels(
+            primary_proba_train, y_train, threshold
+        )
+
+        if len(y_meta) < 50:  # 学習データが少なすぎる場合はスキップ
+            logger.warning(
+                f"メタモデルの学習データが不足しています: {len(y_meta)}サンプル"
+            )
             return {"status": "skipped", "reason": "insufficient_data"}
 
         # メタモデル用の特徴量を作成
         X_meta = X_train.loc[trend_mask].copy()
         X_meta["primary_proba"] = primary_proba_train.loc[trend_mask]
-        
+
         # 各ベースモデルの予測確率を追加
         X_meta = pd.concat([X_meta, base_model_probs_df.loc[trend_mask]], axis=1)
-        
+
         # モデル間の合意度・不一致度を示す統計量を追加
         # primary_probaはスタッキング結果なので、base_model_probs_dfから統計量を計算
         base_probs_filtered = base_model_probs_df.loc[trend_mask]
         X_meta["base_prob_mean"] = base_probs_filtered.mean(axis=1)
-        X_meta["base_prob_std"] = base_probs_filtered.std(axis=1).fillna(0) # 1モデルしかない場合はNaNになるため
+        X_meta["base_prob_std"] = base_probs_filtered.std(axis=1).fillna(
+            0
+        )  # 1モデルしかない場合はNaNになるため
         X_meta["base_prob_min"] = base_probs_filtered.min(axis=1)
         X_meta["base_prob_max"] = base_probs_filtered.max(axis=1)
-        
+
         # モデルの初期化と学習
         if self.model_type == "random_forest":
             self.model = RandomForestClassifier(
@@ -113,23 +133,25 @@ class MetaLabelingService:
                 max_depth=5,
                 class_weight="balanced",
                 random_state=42,
-                n_jobs=-1
+                n_jobs=-1,
             )
         else:
             raise ValueError(f"未サポートのモデルタイプ: {self.model_type}")
 
-        logger.info(f"メタモデル学習開始: {len(X_meta)}サンプル, Positive Rate: {y_meta.mean():.2%}")
+        logger.info(
+            f"メタモデル学習開始: {len(X_meta)}サンプル, Positive Rate: {y_meta.mean():.2%}"
+        )
         self.model.fit(X_meta, y_meta)
         self.is_trained = True
-        
+
         return {"status": "success", "samples": len(X_meta)}
 
     def predict(
-        self, 
-        X: pd.DataFrame, 
+        self,
+        X: pd.DataFrame,
         primary_proba: pd.Series,
-        base_model_probs_df: pd.DataFrame, # 追加: 各ベースモデルの予測確率
-        threshold: float = 0.5
+        base_model_probs_df: pd.DataFrame,  # 追加: 各ベースモデルの予測確率
+        threshold: float = 0.5,
     ) -> pd.Series:
         """
         メタモデルによるフィルタリング予測を行います。
@@ -150,33 +172,34 @@ class MetaLabelingService:
 
         # デフォルトは全て0 (Pass)
         final_pred = pd.Series(0, index=X.index)
-        
+
         # 一次モデルがトレンドと予測した箇所を特定
         trend_mask = primary_proba >= threshold
-        
+
         if not trend_mask.any():
             return final_pred
 
         # メタモデル用特徴量
         X_meta = X.loc[trend_mask].copy()
         X_meta["primary_proba"] = primary_proba.loc[trend_mask]
-        
+
         # 各ベースモデルの予測確率を追加
         X_meta = pd.concat([X_meta, base_model_probs_df.loc[trend_mask]], axis=1)
 
         # モデル間の合意度・不一致度を示す統計量を追加
-        base_probs_filtered = base_model_probs_df.loc[trend_mask]
+        # self.base_model_names を使用して統計量を計算
+        base_probs_filtered = base_model_probs_df[self.base_model_names].loc[trend_mask]
         X_meta["base_prob_mean"] = base_probs_filtered.mean(axis=1)
         X_meta["base_prob_std"] = base_probs_filtered.std(axis=1).fillna(0)
         X_meta["base_prob_min"] = base_probs_filtered.min(axis=1)
         X_meta["base_prob_max"] = base_probs_filtered.max(axis=1)
-        
+
         # メタモデル予測 (1=Execute, 0=Pass)
         meta_pred = self.model.predict(X_meta)
-        
+
         # 結果を格納
         final_pred.loc[trend_mask] = meta_pred
-        
+
         return final_pred
 
     def evaluate(
@@ -184,30 +207,41 @@ class MetaLabelingService:
         X_test: pd.DataFrame,
         y_test: pd.Series,
         primary_proba_test: pd.Series,
-        base_model_probs_df: pd.DataFrame, # 追加
-        threshold: float = 0.5
+        base_model_probs_df: pd.DataFrame,  # 追加
+        threshold: float = 0.5,
     ) -> Dict[str, float]:
         """
         メタラベリング適用後のパフォーマンスを評価します。
         """
         # メタラベリング適用後の最終予測
-        final_pred = self.predict(X_test, primary_proba_test, base_model_probs_df, threshold)
-        
+        final_pred = self.predict(
+            X_test, primary_proba_test, base_model_probs_df, threshold
+        )
+
         # 評価指標の計算
         # ここでの「正解(1)」は「実際にトレンドが発生した」こと
         # final_predが1になるのは「一次モデルがTrend予測 AND メタモデルがGOサイン」の場合
-        
-        report = classification_report(y_test, final_pred, output_dict=True, zero_division=0)
-        
-        # 一次モデル単体の性能（比較用）
+
+        report = classification_report(
+            y_test, final_pred, output_dict=True, zero_division=0
+        )
         primary_pred_bin = (primary_proba_test >= threshold).astype(int)
-        primary_report = classification_report(y_test, primary_pred_bin, output_dict=True, zero_division=0)
-        
+        primary_report = classification_report(
+            y_test, primary_pred_bin, output_dict=True, zero_division=0
+        )
+
         return {
             "meta_accuracy": accuracy_score(y_test, final_pred),
             "meta_precision": precision_score(y_test, final_pred, zero_division=0),
             "meta_recall": recall_score(y_test, final_pred, zero_division=0),
-            "primary_precision": precision_score(y_test, primary_pred_bin, zero_division=0),
+            "primary_precision": precision_score(
+                y_test, primary_pred_bin, zero_division=0
+            ),
             "primary_recall": recall_score(y_test, primary_pred_bin, zero_division=0),
-            "improvement_precision": precision_score(y_test, final_pred, zero_division=0) - precision_score(y_test, primary_pred_bin, zero_division=0)
+            "improvement_precision": precision_score(
+                y_test, final_pred, zero_division=0
+            )
+            - precision_score(y_test, primary_pred_bin, zero_division=0),
+            "meta_classification_report": report,
+            "primary_classification_report": primary_report,
         }

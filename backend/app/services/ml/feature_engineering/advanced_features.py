@@ -85,7 +85,7 @@ class AdvancedFeatureEngineer:
             features = self._add_market_dynamics_features(
                 features, ohlcv_data, funding_rate_data, open_interest_data
             )
-            
+
         # 11. RANGE検出特化特徴量 (2025-11-24追加)
         features = self._add_range_detection_features(features)
 
@@ -150,12 +150,16 @@ class AdvancedFeatureEngineer:
 
             # === レンジ/トレンド判定強化 ===
             # 1. Choppiness Index (CHOP)
-            chop_result = ta.chop(high=data["high"], low=data["low"], close=data["close"])
+            chop_result = ta.chop(
+                high=data["high"], low=data["low"], close=data["close"]
+            )
             if chop_result is not None:
                 new_features["CHOP"] = chop_result
 
             # 2. Vortex Indicator (VI)
-            vortex_result = ta.vortex(high=data["high"], low=data["low"], close=data["close"])
+            vortex_result = ta.vortex(
+                high=data["high"], low=data["low"], close=data["close"]
+            )
             if vortex_result is not None and not vortex_result.empty:
                 new_features["VI_Plus"] = vortex_result["VTXP_14"]
                 new_features["VI_Minus"] = vortex_result["VTXM_14"]
@@ -233,11 +237,19 @@ class AdvancedFeatureEngineer:
 
             # ヒストリカルボラティリティ (対数リターンの標準偏差)
             log_returns = np.log(data["close"] / data["close"].shift(1))
-            new_features[f"Historical_Volatility_{window}"] = log_returns.rolling(window).std() * np.sqrt(252) # 年率換算 (日足の場合)
+            new_features[f"Historical_Volatility_{window}"] = log_returns.rolling(
+                window
+            ).std() * np.sqrt(
+                252
+            )  # 年率換算 (日足の場合)
 
             # スキューネスと尖度
-            new_features[f"Price_Skewness_{window}"] = data["close"].rolling(window).skew()
-            new_features[f"Price_Kurtosis_{window}"] = data["close"].rolling(window).kurt()
+            new_features[f"Price_Skewness_{window}"] = (
+                data["close"].rolling(window).skew()
+            )
+            new_features[f"Price_Kurtosis_{window}"] = (
+                data["close"].rolling(window).kurt()
+            )
 
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
         return new_df
@@ -313,7 +325,9 @@ class AdvancedFeatureEngineer:
         if "open_interest" in oi_data.columns:
             # 建玉残高の変化率（24hのみ）
             # FutureWarning対応
-            new_features["OI_pct_change_24"] = oi_data["open_interest"].pct_change(24, fill_method=None)
+            new_features["OI_pct_change_24"] = oi_data["open_interest"].pct_change(
+                24, fill_method=None
+            )
 
             # 建玉残高の移動平均（24hのみ）
             new_features["OI_ma_24"] = oi_data["open_interest"].rolling(24).mean()
@@ -372,25 +386,31 @@ class AdvancedFeatureEngineer:
                 "close": lambda x: x.iloc[-1] if len(x) > 0 else np.nan,
                 "volume": "sum",
             }
-            
+
             # 確実にDatetimeIndexであることを確認
             if not isinstance(ohlcv.index, pd.DatetimeIndex):
-                logger.warning(f"MTF特徴量計算スキップ: インデックスがDatetimeIndexではありません")
+                logger.warning(
+                    f"MTF特徴量計算スキップ: インデックスがDatetimeIndexではありません"
+                )
                 return features
 
             resampled = ohlcv.resample(f"{timeframe_hours}h").agg(agg_dict).dropna()
 
             if resampled.empty:
-                logger.warning(f"MTF特徴量計算: リサンプリング後のデータが空です ({timeframe_hours}h)")
+                logger.warning(
+                    f"MTF特徴量計算: リサンプリング後のデータが空です ({timeframe_hours}h)"
+                )
                 return features
 
             mtf_features = pd.DataFrame(index=resampled.index)
-            
+
             # 上位足のトレンド (RSI, EMA乖離)
-            
+
             ema_50 = ta.ema(resampled["close"], length=50)
             if ema_50 is not None:
-                mtf_features[f"MTF_{timeframe_hours}h_EMA50_Diff"] = (resampled["close"] - ema_50) / ema_50
+                mtf_features[f"MTF_{timeframe_hours}h_EMA50_Diff"] = (
+                    resampled["close"] - ema_50
+                ) / ema_50
 
             # 上位足のボラティリティ (BBW)
             bbands = ta.bbands(resampled["close"], length=20, std=2)
@@ -398,24 +418,31 @@ class AdvancedFeatureEngineer:
                 mtf_features[f"MTF_{timeframe_hours}h_BBW"] = bbands["BBB_20_2.0"]
 
             # 上位足のトレンド方向 (ADX)
-            adx = ta.adx(resampled["high"], resampled["low"], resampled["close"], length=14)
+            adx = ta.adx(
+                resampled["high"], resampled["low"], resampled["close"], length=14
+            )
             if adx is not None and "ADX_14" in adx.columns:
                 mtf_features[f"MTF_{timeframe_hours}h_ADX"] = adx["ADX_14"]
 
-            # 元の時間軸に合わせてリインデックス (ffillで直前の値を採用 = 未来の情報をリークさせない)
+            # 重要: 未来情報のリークを防ぐため、リサンプリングデータを1つシフトする
+            # (例: 10:00の4h足データは10:00-14:00の内容を含むため、14:00以降でのみ使用可能)
+            mtf_features = mtf_features.shift(1)
+
+            # 元の時間軸に合わせてリインデックス (ffillで直前の値を採用)
             mtf_features_aligned = mtf_features.reindex(features.index).ffill()
 
             # 結合
             new_df = pd.concat([features, mtf_features_aligned], axis=1)
-            
+
             added_cols = len(new_df.columns) - len(features.columns)
             logger.info(f"MTF特徴量を追加: {added_cols}個")
-            
+
             return new_df
 
         except Exception as e:
             logger.warning(f"MTF特徴量計算エラー: {e}")
             import traceback
+
             logger.warning(traceback.format_exc())
             return features
 
@@ -434,12 +461,12 @@ class AdvancedFeatureEngineer:
         try:
             # データの準備 (リインデックスして結合)
             combined = features[["close"]].copy()
-            
+
             # Funding Rateの結合
             if "funding_rate" in fr_data.columns:
                 fr_aligned = fr_data["funding_rate"].reindex(features.index).ffill()
                 combined["fr"] = fr_aligned
-            
+
             # Open Interestの結合
             if "open_interest" in oi_data.columns:
                 oi_aligned = oi_data["open_interest"].reindex(features.index).ffill()
@@ -447,108 +474,138 @@ class AdvancedFeatureEngineer:
 
             # 必須カラムが揃っているか確認
             if "fr" not in combined.columns or "oi" not in combined.columns:
-                logger.warning("FRまたはOIデータが不足しているため、ダイナミクス特徴量をスキップします")
+                logger.warning(
+                    "FRまたはOIデータが不足しているため、ダイナミクス特徴量をスキップします"
+                )
                 return features
 
             new_features_dict = {}
 
             # 1. OI Weighted FR
             new_features_dict["OI_Weighted_FR"] = combined["fr"] * combined["oi"]
-            
+
             # 2. Cumulative OI Weighted FR
-            new_features_dict["Cumulative_OI_Weighted_FR_24h"] = new_features_dict["OI_Weighted_FR"].rolling(24).sum()
+            new_features_dict["Cumulative_OI_Weighted_FR_24h"] = (
+                new_features_dict["OI_Weighted_FR"].rolling(24).sum()
+            )
 
             # 3. OI/Price Divergence
             price_pct = combined["close"].pct_change(fill_method=None)
             oi_pct = combined["oi"].pct_change(fill_method=None)
             epsilon = 1e-6
-            new_features_dict["OI_Price_Divergence"] = oi_pct / (price_pct.abs() + epsilon)
+            new_features_dict["OI_Price_Divergence"] = oi_pct / (
+                price_pct.abs() + epsilon
+            )
 
             # 4. FR/Price Divergence
-            new_features_dict["FR_Price_Correlation_24h"] = combined["fr"].rolling(24).corr(combined["close"])
+            new_features_dict["FR_Price_Correlation_24h"] = (
+                combined["fr"].rolling(24).corr(combined["close"])
+            )
 
             # 結合
             new_features_df = pd.DataFrame(new_features_dict, index=features.index)
             new_df = pd.concat([features, new_features_df], axis=1)
-            
+
             added_cols = len(new_df.columns) - len(features.columns)
             logger.info(f"市場ダイナミクス特徴量を追加: {added_cols}個")
-            
+
             return new_df
 
         except Exception as e:
             logger.warning(f"市場ダイナミクス特徴量計算エラー: {e}")
             return features
-    
+
     def _add_range_detection_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         RANGE検出に特化した特徴量
         """
         logger.info("🎯 RANGE検出特化特徴量を追加中...")
-        
+
         try:
             new_features_dict = {}
-            
+
             # 1. 価格レンジの狭さ（正規化）
-            for window in [72, 168]: # Price_Range_Normalized_24h は低重要度のため削除
+            for window in [72, 168]:  # Price_Range_Normalized_24h は低重要度のため削除
                 high_max = data["high"].rolling(window=window).max()
                 low_min = data["low"].rolling(window=window).min()
                 price_range = high_max - low_min
-                new_features_dict[f"Price_Range_Normalized_{window}h"] = price_range / (data["close"] + 1e-8)
-            
+                new_features_dict[f"Price_Range_Normalized_{window}h"] = price_range / (
+                    data["close"] + 1e-8
+                )
+
             # 2. ボラティリティレジーム
             if "Realized_Vol_20" in data.columns:
                 realized_vol = data["Realized_Vol_20"]
                 vol_rank = realized_vol.rolling(window=720).apply(
-                    lambda x: pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
+                    lambda x: (
+                        pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
+                    )
                 )
                 new_features_dict["Volatility_Regime_Rank"] = vol_rank
-            
+
             # 3. トレンド強度の欠如
             if "ADX" in data.columns:
-                new_features_dict["ADX_Momentum"] = data["ADX"].pct_change(periods=24, fill_method=None)
-            
+                new_features_dict["ADX_Momentum"] = data["ADX"].pct_change(
+                    periods=24, fill_method=None
+                )
+
             # 4. Choppiness指標
             if "CHOP" in data.columns:
-                new_features_dict["CHOP_MA_24h"] = data["CHOP"].rolling(window=24).mean()
-            
+                new_features_dict["CHOP_MA_24h"] = (
+                    data["CHOP"].rolling(window=24).mean()
+                )
+
             # 5. 価格の往復運動
             price_direction = (data["close"].diff() > 0).astype(int)
-            direction_changes = (price_direction != price_direction.shift(1)).astype(int)
-            new_features_dict["Direction_Change_Count_24h"] = direction_changes.rolling(window=24).sum()
-            
+            direction_changes = (price_direction != price_direction.shift(1)).astype(
+                int
+            )
+            new_features_dict["Direction_Change_Count_24h"] = direction_changes.rolling(
+                window=24
+            ).sum()
+
             # 6. 価格密度
             for window in [24, 72]:
                 price_std = data["close"].rolling(window=window).std()
                 price_mean = data["close"].rolling(window=window).mean()
-                new_features_dict[f"Price_Density_{window}h"] = price_std / (price_mean + 1e-8)
-            
+                new_features_dict[f"Price_Density_{window}h"] = price_std / (
+                    price_mean + 1e-8
+                )
+
             # 7. ボリンジャーバンド収縮度
             if "BBW" in data.columns:
-                bbw_rank = data["BBW"].rolling(window=720).apply(
-                    lambda x: pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
+                bbw_rank = (
+                    data["BBW"]
+                    .rolling(window=720)
+                    .apply(
+                        lambda x: (
+                            pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
+                        )
+                    )
                 )
                 new_features_dict["BBW_Squeeze_Rank"] = bbw_rank
-            
+
             # 8. 価格変化の絶対値平均
             abs_returns = data["close"].pct_change(fill_method=None).abs()
-            new_features_dict["Abs_Returns_MA_24h"] = abs_returns.rolling(window=24).mean()
-            
+            new_features_dict["Abs_Returns_MA_24h"] = abs_returns.rolling(
+                window=24
+            ).mean()
+
             abs_returns_rank = abs_returns.rolling(window=720).apply(
                 lambda x: pd.Series(x).rank(pct=True).iloc[-1] if len(x) > 0 else 0.5
             )
-            
+
             # 9. RANGE総合スコア
-            
+
             # 結合
             new_features_df = pd.DataFrame(new_features_dict, index=data.index)
             result = pd.concat([data, new_features_df], axis=1)
-            
+
             added_cols = len(result.columns) - len(data.columns)
             logger.info(f"RANGE検出特化特徴量を追加: {added_cols}個")
-            
+
             return result
-            
+
         except Exception as e:
             logger.warning(f"RANGE検出特徴量計算エラー: {e}")
             return data

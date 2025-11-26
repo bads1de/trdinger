@@ -170,6 +170,9 @@ def triple_barrier_method_preset(
     min_ret: float = 0.001,
     price_column: str = "close",
     volatility_window: int = 20,
+    use_atr: bool = False,
+    atr_period: int = 14,
+    binary_label: bool = False,
 ) -> pd.Series:
     """
     Triple Barrier Method (TBM) ラベル生成プリセット。
@@ -182,35 +185,73 @@ def triple_barrier_method_preset(
         sl: Stop Loss multiplier (volatility * sl)
         min_ret: 最小リターン閾値
         price_column: 価格カラム名
-        volatility_window: ボラティリティ計算ウィンドウ
+        volatility_window: ボラティリティ計算ウィンドウ（use_atr=Falseの場合）
+        use_atr: ATRをボラティリティとして使用するか
+        atr_period: ATR計算期間
+        binary_label: 0/1のバイナリラベルを生成するか（メタラベリング用）
 
     Returns:
-        pd.Series: "UP" / "RANGE" / "DOWN" の3値ラベル
+        pd.Series: "UP"/"RANGE"/"DOWN" (binary_label=False) または 0/1 (binary_label=True)
     """
     if timeframe not in SUPPORTED_TIMEFRAMES:
         raise ValueError(f"未サポートの時間足です: {timeframe}")
 
     logger.info(
         f"TBMラベル生成開始: timeframe={timeframe}, horizon={horizon_n}, "
-        f"pt={pt}, sl={sl}, min_ret={min_ret}, vol_window={volatility_window}"
+        f"pt={pt}, sl={sl}, min_ret={min_ret}, use_atr={use_atr}"
     )
 
     try:
         # 1. 準備
         close = df[price_column]
         
-        # ボラティリティ計算 (日次ボラティリティなど、ここでは単純なRolling STDを使用)
-        # Returns usually calculated as pct_change
-        returns = close.pct_change()
-        volatility = returns.rolling(window=volatility_window).std()
+        # ボラティリティ計算
+        if use_atr:
+            # ATR計算
+            high = df["high"]
+            low = df["low"]
+            prev_close = close.shift(1)
+            
+            tr1 = high - low
+            tr2 = (high - prev_close).abs()
+            tr3 = (low - prev_close).abs()
+            
+            tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+            # ATRはTRの移動平均
+            volatility = tr.rolling(window=atr_period).mean()
+            
+            # ATRは価格単位なので、リターン単位に変換（正規化）
+            volatility = volatility / close
+            
+        else:
+            # 従来: リターンの標準偏差
+            returns = close.pct_change()
+            volatility = returns.rolling(window=volatility_window).std()
         
-        # t_events: 全てのバーをイベント候補とする (あるいはCUSUMフィルタなどを適用可だが、ここでは全バー)
+        # t_events: 全てのバーをイベント候補とする
         t_events = close.index
 
         # vertical_barrier_times: horizon_n本後の時刻
-        # indexがDatetimeIndexであることを前提
-        # pd.Series(index, index=index) で時刻のSeriesを作り、それをシフトさせることで
-        # 各時刻のN本後の時刻を取得する。
+        # 現在の時刻 + N本分の時間 を設定する
+        # pandas の shift はデータをずらすので、
+        # index.shift(N) は時刻をN本分未来に進める（周波数が設定されている場合）
+        # しかし DatetimeIndex が freq を持っていない場合もあるため、
+        # ここでは close.index を N 個ずらしてマッピングする
+        
+        # 例: 
+        # t_events[i] の垂直バリアは t_events[i + horizon_n]
+        
+        # 安全な実装:
+        # 1. インデックスのリストを取得
+        idx_list = close.index.tolist()
+        # 2. N個ずらしたマッピングを作成
+        vert_barriers = pd.Series(index=close.index, dtype='datetime64[ns]')
+        
+        # ベクトル化された処理は難しいので、シフトしたSeriesを作る
+        # shift(-N) は未来の値を現在に持ってくる -> t_events[i] に t_events[i+N] の値が入る
+        # これで正しい
+        
+        # vertical_barrier_times: horizon_n本後の時刻
         vertical_barrier_times = pd.Series(close.index, index=close.index).shift(-horizon_n)
 
         # 2. Triple Barrier 実行
@@ -231,30 +272,34 @@ def triple_barrier_method_preset(
         )
         
         # 3. ラベル生成 (get_bins)
-        bins = tb.get_bins(events, close)
+        bins = tb.get_bins(events, close, binary_label=binary_label)
         
-        # 4. ラベル変換 (-1, 0, 1 -> DOWN, RANGE, UP)
-        label_map = {-1.0: "DOWN", 0.0: "RANGE", 1.0: "UP"}
-        string_labels = bins['bin'].map(label_map)
-        
-        # 元のインデックスに合わせる (計算できなかった箇所はNaN)
-        string_labels = string_labels.reindex(df.index)
-        
-        # 分布ログ
-        counts = string_labels.value_counts()
-        total = len(string_labels.dropna())
-        if total > 0:
-            up_pct = (counts.get("UP", 0) / total) * 100
-            range_pct = (counts.get("RANGE", 0) / total) * 100
-            down_pct = (counts.get("DOWN", 0) / total) * 100
-            logger.info(
-                f"TBMラベル生成完了: "
-                f"UP={counts.get('UP', 0)}({up_pct:.1f}%), "
-                f"RANGE={counts.get('RANGE', 0)}({range_pct:.1f}%), "
-                f"DOWN={counts.get('DOWN', 0)}({down_pct:.1f}%)"
-            )
+        # 4. ラベル変換
+        if binary_label:
+            return bins['bin']
+        else:
+            # (-1, 0, 1 -> DOWN, RANGE, UP)
+            label_map = {-1.0: "DOWN", 0.0: "RANGE", 1.0: "UP"}
+            string_labels = bins['bin'].map(label_map)
             
-        return string_labels
+            # 元のインデックスに合わせる
+            string_labels = string_labels.reindex(df.index)
+            
+            # 分布ログ
+            counts = string_labels.value_counts()
+            total = len(string_labels.dropna())
+            if total > 0:
+                up_pct = (counts.get("UP", 0) / total) * 100
+                range_pct = (counts.get("RANGE", 0) / total) * 100
+                down_pct = (counts.get("DOWN", 0) / total) * 100
+                logger.info(
+                    f"TBMラベル生成完了: "
+                    f"UP={counts.get('UP', 0)}({up_pct:.1f}%), "
+                    f"RANGE={counts.get('RANGE', 0)}({range_pct:.1f}%), "
+                    f"DOWN={counts.get('DOWN', 0)}({down_pct:.1f}%)"
+                )
+                
+            return string_labels
 
     except Exception as e:
         logger.error(f"TBMラベル生成エラー: {e}")
@@ -645,4 +690,3 @@ def volatility_classification_preset(
     except Exception as e:
         logger.error(f"ボラティリティラベル生成エラー: {e}")
         raise
-

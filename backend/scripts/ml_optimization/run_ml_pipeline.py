@@ -64,7 +64,7 @@ class MLPipeline:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         pipeline_type: str = "train_and_evaluate",
-        enable_meta_labeling: bool = True
+        enable_meta_labeling: bool = False
     ):
         self.symbol = symbol
         self.timeframe = timeframe
@@ -161,15 +161,25 @@ class MLPipeline:
             elif threshold_method == "DYNAMIC_VOLATILITY":
                 threshold = trial.suggest_float("volatility_threshold", 0.5, 2.0)
             else: # TRIPLE_BARRIER
-                threshold = trial.suggest_float("tb_threshold", 1.0, 3.0)
+                pt_factor = trial.suggest_float("pt_factor", 0.5, 3.0)
+                sl_factor = trial.suggest_float("sl_factor", 0.5, 3.0)
+                use_atr = trial.suggest_categorical("use_atr", [True]) # Trueに固定 (マルコスの推奨)
+                atr_period = trial.suggest_int("atr_period", 7, 28, step=7)
+                binary_label = True # メタラベリングのためTrueに固定
 
             try:
+                # TBMの最適化でbinary_labelをFalseにしたい場合、後で引数にする
                 labels = label_cache.get_labels(
                     horizon_n=horizon_n,
                     threshold_method=threshold_method,
                     threshold=threshold,
                     timeframe=self.timeframe,
                     price_column="close",
+                    pt_factor=pt_factor if threshold_method == "TRIPLE_BARRIER" else 1.0,
+                    sl_factor=sl_factor if threshold_method == "TRIPLE_BARRIER" else 1.0,
+                    use_atr=use_atr if threshold_method == "TRIPLE_BARRIER" else False,
+                    atr_period=atr_period if threshold_method == "TRIPLE_BARRIER" else 14,
+                    binary_label=binary_label if threshold_method == "TRIPLE_BARRIER" else False,
                 )
             except Exception:
                 raise optuna.exceptions.TrialPruned()
@@ -180,7 +190,12 @@ class MLPipeline:
             
             valid_idx = ~labels_aligned.isna()
             X_clean = X_aligned.loc[valid_idx]
-            y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
+            
+            # ラベルがすでに0/1の場合、mapを適用しない
+            if threshold_method == "TRIPLE_BARRIER" and binary_label:
+                y = labels_aligned.loc[valid_idx].astype(int)
+            else:
+                y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
 
             if len(y) < 100:
                 raise optuna.exceptions.TrialPruned()
@@ -290,13 +305,23 @@ class MLPipeline:
             y_pred_bin = (oof_preds >= 0.5).astype(int)
             oof_report = classification_report(y, y_pred_bin, output_dict=True, zero_division=0)
             
-            avg_trend_rec = oof_report['1']['recall']
-            avg_trend_prec = oof_report['1']['precision']
-            avg_range_rec = oof_report['0']['recall']
+            trend_metrics = oof_report['1']
+            precision = trend_metrics['precision']
+            recall = trend_metrics['recall']
+            f1 = trend_metrics['f1-score']
             
-            final_score = (avg_trend_rec * 1.5) + avg_trend_prec + (avg_range_rec * 0.5)
+            # トレード回数（ポジティブ判定数）
+            n_trades = y_pred_bin.sum()
             
-            logger.info(f"Trial {trial.number} ({model_type}): Final OOF Score={final_score:.4f}, TrendRec={avg_trend_rec:.2f}, RangeRec={avg_range_rec:.2f}")
+            # 最低限の精度(0.55)と回数(10)がないとスコア0
+            if precision < 0.55 or n_trades < 10:
+                final_score = 0.0
+            else:
+                # F1スコア × log(トレード回数)
+                # 機会数が多いほどスコアが高くなるように調整（対数スケール）
+                final_score = f1 * np.log1p(n_trades)
+            
+            logger.info(f"Trial {trial.number} ({model_type}): Final Score={final_score:.4f}, F1={f1:.4f}, Trades={n_trades}, Prec={precision:.4f}")
             
             return final_score
 
@@ -304,12 +329,12 @@ class MLPipeline:
         study.optimize(objective, n_trials=self.n_trials)
         
         best_params = study.best_params
-        best_params["use_class_weight"] = True
+        best_params["use_class_weight"] = True # Optuna trial is not supposed to optimize this parameter.
         
         results = {
             "best_value": study.best_value,
             "best_params": best_params,
-            "trials": len(study.trials)
+            "trials": len(study.trials),
         }
         
         with open(self.results_dir / "best_params.json", "w", encoding="utf-8") as f:
@@ -324,14 +349,30 @@ class MLPipeline:
         logger.info("=" * 60)
 
         label_cache = LabelCache(ohlcv_df)
-        threshold_key = [k for k in best_params if "threshold" in k and k != "threshold_method"][0]
+        threshold_key = [k for k in best_params if "threshold" in k and k != "threshold_method"][0] # threshold_methodは含まない
         
+        # TBMパラメータをbest_paramsから取得またはデフォルト設定
+        pt_factor = best_params.get("pt_factor", 1.0)
+        sl_factor = best_params.get("sl_factor", 1.0)
+        use_atr = best_params.get("use_atr", False)
+        atr_period = best_params.get("atr_period", 14)
+        # train_final_modelsでは常にbinary_label=Trueとする
+        binary_label = True
+        
+        # threshold_methodをbest_paramsから取得
+        threshold_method = best_params["threshold_method"]
+
         labels = label_cache.get_labels(
             horizon_n=best_params["horizon_n"],
-            threshold_method=best_params["threshold_method"],
+            threshold_method=threshold_method,
             threshold=best_params[threshold_key],
             timeframe=self.timeframe,
             price_column="close",
+            pt_factor=pt_factor,
+            sl_factor=sl_factor,
+            use_atr=use_atr,
+            atr_period=atr_period,
+            binary_label=binary_label
         )
 
         common_index = X.index.intersection(labels.index)
@@ -340,7 +381,12 @@ class MLPipeline:
         
         valid_idx = ~labels_aligned.isna()
         X_clean = X_aligned.loc[valid_idx]
-        y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
+        
+        # ラベルがすでに0/1の場合、mapを適用しない
+        if threshold_method == "TRIPLE_BARRIER" and binary_label:
+            y = labels_aligned.loc[valid_idx].astype(int)
+        else:
+            y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
 
         if len(y) < 100:
             raise ValueError("Not enough data.")
@@ -692,6 +738,13 @@ class MLPipeline:
         meta_service = models_result.get("meta_service")
         X_clean = models_result["X_clean"] # X_cleanを追加
         
+        # best_params.jsonにfeature_namesを追加
+        with open(self.results_dir / "best_params.json", "r", encoding="utf-8") as f:
+            best_params_data = json.load(f)
+        best_params_data["feature_names"] = X_clean.columns.tolist()
+        with open(self.results_dir / "best_params.json", "w", encoding="utf-8") as f:
+            json.dump(best_params_data, f, indent=2, ensure_ascii=False)
+        
         self.evaluate_and_stacking(model_lgb, model_xgb, model_cat, model_gru, model_lstm, stacking_service, oof_preds_df, y, meta_service, X_clean)
 
         if model_lgb:
@@ -710,7 +763,7 @@ def main():
     parser.add_argument("--start_date", type=str, help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end_date", type=str, help="End date (YYYY-MM-DD)")
     parser.add_argument("--pipeline_type", type=str, default="train_and_evaluate", help="Pipeline type (train_and_evaluate)")
-    parser.add_argument("--enable_meta_labeling", action="store_true", help="Enable meta-labeling")
+    parser.add_argument("--enable_meta_labeling", action="store_true", help="Enable meta-labeling") # Argparseで定義
     
     args = parser.parse_args()
 
@@ -721,7 +774,7 @@ def main():
         start_date=args.start_date,
         end_date=args.end_date,
         pipeline_type=args.pipeline_type,
-        enable_meta_labeling=args.enable_meta_labeling
+        enable_meta_labeling=args.enable_meta_labeling # argsから直接渡す
     )
     pipeline.run(skip_optimize=args.skip_optimize, selected_models=args.models)
 

@@ -23,6 +23,10 @@ from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
+from app.services.indicators.regime.regime_indicators import ( # 新規追加
+    calculate_choppiness_index,
+    calculate_fractal_dimension_index,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +247,23 @@ class FeatureEngineeringService:
             result_df = self.price_calculator.calculate_volume_features(
                 result_df, lookback_periods
             )
+
+            # レジーム特徴量 (Choppiness Index, Fractal Dimension Index)
+            logger.info("レジーム特徴量を計算中...")
+            window_ci = 14 # Choppiness Index の期間
+            window_fdi = 10 # Fractal Dimension Index の期間
+
+            result_df[f"Choppiness_Index_{window_ci}"] = calculate_choppiness_index(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                window=window_ci,
+            )
+            result_df[f"Fractal_Dimension_Index_{window_fdi}"] = calculate_fractal_dimension_index(
+                close=result_df["close"],
+                window=window_fdi,
+            )
+
 
             # ファンディングレート特徴量（データがある場合）
             if funding_rate_data is not None and not funding_rate_data.empty:

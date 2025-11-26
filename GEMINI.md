@@ -80,6 +80,15 @@ trading/
 
    # カバレッジ付き
    conda run -n trading pytest --cov=app backend/tests/
+
+   # 文字化け対策（日本語出力が正しく表示されない場合）
+   # PowerShellの場合、コマンドの前に環境変数を設定
+   $env:PYTHONIOENCODING="utf-8"; conda run -n trading pytest backend/tests/ -v
+
+   # または、セッション全体で設定（最初に一度実行）
+   $env:PYTHONIOENCODING="utf-8"
+   # その後、通常通りテスト実行
+   conda run -n trading pytest backend/tests/
    ```
 
 3. **リンティングとフォーマット**:
