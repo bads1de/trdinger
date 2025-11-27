@@ -83,7 +83,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self._model = None
         self.last_training_results = None
 
-    @safe_ml_operation(default_return={}, context="MLモデル学習でエラーが発生しました")
+    @safe_ml_operation(default_return={"success": False}, context="MLモデル学習でエラーが発生しました")
     def train_model(
         self,
         training_data: pd.DataFrame,
@@ -255,6 +255,60 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """
         pass
 
+    def predict_signal(self, features_df: pd.DataFrame) -> Dict[str, float]:
+        """
+        シグナル予測（クラス確率）を実行
+        前処理から予測、フォーマットまでを一貫して行う
+
+        Args:
+            features_df: 特徴量DataFrame
+
+        Returns:
+            予測確率の辞書 {"up": float, "down": float, "range": float}
+        """
+        if not self.is_trained:
+            logger.warning("学習済みモデルがありません")
+            return self.config.prediction.get_default_predictions()
+
+        try:
+            # 1. 前処理（カラム調整、スケーリング）
+            processed_features = self._preprocess_features_for_prediction(features_df)
+
+            # 2. 予測実行（サブクラスのpredictを呼び出し）
+            # predictは確率配列を返すことを期待
+            predictions = self.predict(processed_features)
+
+            # 3. 最新の予測結果を取得（時系列データの場合は最後の行）
+            if predictions.ndim == 2:
+                latest_pred = predictions[-1]
+            else:
+                latest_pred = predictions
+
+            # 4. 結果の整形
+            if latest_pred.shape[0] == 3:
+                # 3クラス分類 (down, range, up)
+                return {
+                    "down": float(latest_pred[0]),
+                    "range": float(latest_pred[1]),
+                    "up": float(latest_pred[2]),
+                }
+            elif latest_pred.shape[0] == 2:
+                # 2クラス分類 (range, trend) または (class0, class1)
+                # 既存のロジックに合わせて range, trend とする
+                # ただし、(down, up)の可能性もあるので注意が必要だが、
+                # プロジェクトの慣習として (range, trend) が多いと仮定
+                return {
+                    "range": float(latest_pred[0]),
+                    "trend": float(latest_pred[1]),
+                }
+            else:
+                logger.error(f"予期しないクラス数: {latest_pred.shape[0]}")
+                return self.config.prediction.get_default_predictions()
+
+        except Exception as e:
+            logger.error(f"シグナル予測エラー: {e}")
+            return self.config.prediction.get_default_predictions()
+
     @abstractmethod
     def _train_model_impl(
         self,
@@ -284,6 +338,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     ) -> pd.DataFrame:
         """
         予測用の特徴量前処理
+        - 必要なカラムの抽出
+        - 欠損カラムの補完（0埋め）
+        - スケーリング
 
         Args:
             features_df: 特徴量DataFrame
@@ -292,14 +349,39 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             前処理済み特徴量
         """
         try:
-            # 特徴量カラムの選択
+            # 特徴量カラムの選択と補完
             if self.feature_columns is not None:
+                # 1. 存在するカラムのみ抽出
                 available_columns = [
                     col for col in self.feature_columns if col in features_df.columns
                 ]
+                
                 processed_features = features_df[available_columns].copy()
+                
+                # 2. 欠損カラムを特定
+                missing_columns = [
+                    col for col in self.feature_columns if col not in features_df.columns
+                ]
+                
+                if missing_columns:
+                    # logger.debug(f"欠損特徴量を補完します: {missing_columns}")
+                    # 不足特徴量のDataFrameを作成して結合
+                    missing_df = pd.DataFrame(
+                        0.0,
+                        index=processed_features.index,
+                        columns=missing_columns
+                    )
+                    processed_features = pd.concat([processed_features, missing_df], axis=1)
+                
+                # 3. カラムの順序を学習時と合わせる
+                processed_features = processed_features[self.feature_columns]
+                
             else:
+                # 特徴量カラム情報がない場合はそのまま（警告すべきだが）
                 processed_features = features_df.copy()
+
+            # 欠損値の簡易補完（予測時なのでデータリークは気にしなくてよいが、計算エラーを防ぐ）
+            processed_features = processed_features.ffill().fillna(0)
 
             # スケーリング
             if hasattr(self, "scaler") and self.scaler is not None:

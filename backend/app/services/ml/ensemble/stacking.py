@@ -95,7 +95,7 @@ class StackingEnsemble(BaseEnsemble):
             logger.info("StackingClassifierによるスタッキングアンサンブル学習を開始")
 
             # 入力データの検証（共通関数を使用）
-            from ...common.ml_utils import validate_training_inputs
+            from ..common.ml_utils import validate_training_inputs
 
             validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
 

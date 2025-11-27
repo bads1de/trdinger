@@ -37,7 +37,7 @@ class TestClassImbalance:
         assert config.use_smote is False
         assert config.smote_method == "smote"
 
-    @patch("app.services.ml.models.lightgbm.lgb.train")
+    @patch("lightgbm.train")
     def test_lightgbm_receives_class_weight(self, mock_train):
         """LightGBMモデルがclass_weightパラメータを受け取ることを確認"""
         # これは統合テストに近いが、LightGBMModelクラスの改修を確認するために必要

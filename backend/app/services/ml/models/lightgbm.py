@@ -1,10 +1,3 @@
-"""
-LightGBMモデルラッパー
-
-アンサンブル学習で使用するLightGBMモデルのラッパークラスを提供します。
-LightGBMTrainerの機能を簡略化してアンサンブル専用に最適化されています。
-"""
-
 import logging
 from typing import Any, Dict, List, Optional, Union, cast
 
@@ -12,20 +5,19 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
-from ....utils.error_handler import ModelError
+from app.utils.error_handler import ModelError
+from .base_gradient_boosting_model import BaseGradientBoostingModel
 
 logger = logging.getLogger(__name__)
 
 
-class LightGBMModel:
+class LightGBMModel(BaseGradientBoostingModel):
     """
-    アンサンブル内で使用するLightGBMモデルラッパー
+    LightGBMモデルラッパー
 
-    LightGBMTrainerの機能を簡略化してアンサンブル専用に最適化
-    sklearn互換のインターフェースを提供
+    BaseGradientBoostingModelを継承し、LightGBM固有の実装を提供します。
     """
 
-    # アルゴリズム名（AlgorithmRegistryから取得）
     ALGORITHM_NAME = "lightgbm"
 
     def __init__(
@@ -44,227 +36,134 @@ class LightGBMModel:
             learning_rate: 学習率
             **kwargs: その他のパラメータ
         """
-        self.model = None
-        self.is_trained = False
-        self.feature_columns: Optional[List[str]] = None
-        self.scaler = None
-        self.classes_ = None  # sklearn互換性のため
-
-        # sklearn互換性のためのパラメータ
-        self.random_state = random_state
+        super().__init__(random_state=random_state, **kwargs)
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
 
-        # その他のパラメータを設定
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def fit(
+    def _create_dataset(
         self,
         X: Union[pd.DataFrame, np.ndarray],
-        y: Union[pd.Series, np.ndarray],
-        **kwargs,
-    ) -> "LightGBMModel":
+        y: Optional[Union[pd.Series, np.ndarray]] = None,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> lgb.Dataset:
         """
-        sklearn互換のfitメソッド
-
-        Args:
-            X: 学習用特徴量（DataFrame or numpy array）
-            y: 学習用ターゲット（Series or numpy array）
-            **kwargs: その他のパラメータ（class_weightなど）
-
-        Returns:
-            self: 学習済みモデル
+        LightGBM固有のデータセットオブジェクトを作成します。
         """
-        try:
-            # numpy配列をDataFrameに変換
-            if not isinstance(X, pd.DataFrame):
-                if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
-                else:
-                    columns = [f"feature_{i}" for i in range(X.shape[1])]
-                    X = pd.DataFrame(X, columns=cast(Any, columns))
+        return lgb.Dataset(X, label=y, weight=sample_weight, free_raw_data=False)
 
-            if not isinstance(y, pd.Series):
-                y = pd.Series(y)
+    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
+        """
+        LightGBM固有のパラメータディクショナリを生成します。
+        """
+        params = {
+            "objective": "multiclass" if num_classes > 2 else "binary",
+            "num_class": num_classes if num_classes > 2 else None,
+            "metric": "multi_logloss" if num_classes > 2 else "binary_logloss",
+            "boosting_type": "gbdt",
+            "num_leaves": kwargs.get("num_leaves", 31),
+            "learning_rate": kwargs.get("learning_rate", self.learning_rate),
+            "feature_fraction": kwargs.get("feature_fraction", 0.9),
+            "bagging_fraction": kwargs.get("bagging_fraction", 0.8),
+            "bagging_freq": kwargs.get("bagging_freq", 5),
+            "verbose": -1,
+            "random_state": self.random_state,
+        }
+        # 渡された kwargs でデフォルトを上書き
+        params.update(kwargs)
+        return params
 
-            # 時系列データのため、シャッフルせずに分割（最後の20%を検証用）
-            # train_test_splitはランダムシャッフルを行うため、時系列データには不適切
-            split_index = int(len(X) * 0.8)
-
-            X_train = X.iloc[:split_index]
-            X_val = X.iloc[split_index:]
-            y_train = y.iloc[:split_index]
-            y_val = y.iloc[split_index:]
-
-            # 明示的な型キャストを追加
-            X_train = cast(pd.DataFrame, X_train)
-            X_val = cast(pd.DataFrame, X_val)
-            y_train = cast(pd.Series, y_train)
-            y_val = cast(pd.Series, y_val)
-
-            # 内部の学習メソッドを呼び出し
-            self._train_model_impl(X_train, X_val, y_train, y_val, **kwargs)
-
-            # classes_属性を設定（sklearn互換性のため）
-            self.classes_ = np.unique(y)
-
-            return self
-
-        except Exception as e:
-            logger.error(f"sklearn互換fit実行エラー: {e}")
-            raise ModelError(f"LightGBMモデルのfit実行に失敗しました: {e}")
-
-    def _train_model_impl(
+    def _train_internal(
         self,
-        X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
-        y_train: pd.Series,
-        y_test: pd.Series,
+        train_data: lgb.Dataset,
+        valid_data: lgb.Dataset,
+        params: Dict[str, Any],
+        early_stopping_rounds: Optional[int] = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> lgb.Booster:
         """
-        LightGBMモデルを学習
-
-        Args:
-            X_train: 学習用特徴量
-            X_test: テスト用特徴量
-            y_train: 学習用ターゲット
-            y_test: テスト用ターゲット
-
-        Returns:
-            学習結果
+        LightGBM固有の学習プロセスを実行します。
         """
-        try:
-            # 特徴量カラムを保存
-            self.feature_columns = X_train.columns.tolist()
+        callbacks = [lgb.log_evaluation(0)]
+        if early_stopping_rounds:
+            callbacks.append(lgb.early_stopping(early_stopping_rounds))
 
-            # class_weightの処理
-            sample_weight = None
-            class_weight = kwargs.get("class_weight")
-            if class_weight:
-                try:
-                    from sklearn.utils.class_weight import compute_sample_weight
+        model = lgb.train(
+            params,
+            train_data,
+            valid_sets=[train_data, valid_data],
+            valid_names=["train", "valid"],
+            num_boost_round=kwargs.get("num_boost_round", self.n_estimators),
+            callbacks=callbacks,
+        )
+        return model
 
-                    sample_weight = compute_sample_weight(
-                        class_weight=class_weight, y=y_train
-                    )
-                    logger.info(
-                        f"class_weight={class_weight} を適用してsample_weightを計算しました"
-                    )
-                except Exception as e:
-                    logger.warning(f"sample_weightの計算に失敗しました: {e}")
+    def _get_prediction_proba(self, data: lgb.Dataset) -> np.ndarray:
+        """
+        LightGBM固有の予測確率を取得します。
+        """
+        if self.model is None:
+            raise ModelError("学習済みモデルがありません")
+        
+        # lgb.Datasetから特徴量データを取り出す
+        # construct()で内部表現を構築し、get_data()でデータを取得
+        X_data = data.construct().get_data()
 
-            # LightGBMデータセットを作成
-            train_data = lgb.Dataset(X_train, label=y_train, weight=sample_weight)
-            valid_data = lgb.Dataset(X_test, label=y_test, reference=train_data)
+        return cast(
+            np.ndarray,
+            self.model.predict(X_data, num_iteration=self.model.best_iteration),
+        )
 
-            # クラス数を判定
-            num_classes = len(np.unique(y_train))
+    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+        """
+        sklearn互換の予測メソッド（クラス予測）
+        """
+        if not self.is_trained or self.model is None:
+            raise ModelError("学習済みモデルがありません")
 
-            # LightGBMパラメータ
-            params = {
-                "objective": "multiclass" if num_classes > 2 else "binary",
-                "num_class": num_classes if num_classes > 2 else None,
-                "metric": "multi_logloss" if num_classes > 2 else "binary_logloss",
-                "boosting_type": "gbdt",
-                "num_leaves": 31,
-                "learning_rate": 0.1,
-                "feature_fraction": 0.9,
-                "bagging_fraction": 0.8,
-                "bagging_freq": 5,
-                "verbose": -1,
-                "random_state": 42,
-            }
+        # feature_columnsをfit時に保存しているので、それを使用してDataFrameを整形
+        if self.feature_columns and not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
 
-            # モデル学習
-            self.model = lgb.train(
-                params,
-                train_data,
-                valid_sets=[train_data, valid_data],
-                valid_names=["train", "valid"],
-                num_boost_round=100,
-                callbacks=[
-                    lgb.early_stopping(stopping_rounds=50),
-                    lgb.log_evaluation(0),  # ログを抑制
-                ],
-            )
+        predictions_proba = cast(
+            np.ndarray,
+            self.model.predict(X, num_iteration=self.model.best_iteration),
+        )
 
-            # 予測と評価
-            y_pred_proba = cast(
-                np.ndarray,
-                self.model.predict(X_test, num_iteration=self.model.best_iteration),
-            )
+        if predictions_proba.ndim == 1:
+            return (predictions_proba > 0.5).astype(int)
+        else:
+            return np.argmax(predictions_proba, axis=1)
 
-            if num_classes > 2:
-                y_pred_class = np.argmax(y_pred_proba, axis=1)
-            else:
-                y_pred_class = (y_pred_proba > 0.5).astype(int)
+    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+        """
+        予測確率を取得
+        """
+        if not self.is_trained or self.model is None:
+            raise ModelError("学習済みモデルがありません")
 
-            # 共通の評価関数を使用
-            from ..common.evaluation_utils import evaluate_model_predictions
+        # feature_columnsをfit時に保存しているので、それを使用してDataFrameを整形
+        if self.feature_columns and not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
 
-            detailed_metrics = evaluate_model_predictions(
-                y_test, y_pred_class, y_pred_proba
-            )
+        predictions = cast(
+            np.ndarray,
+            self.model.predict(X, num_iteration=self.model.best_iteration),
+        )
 
-            # 特徴量重要度を計算
-            feature_importance = {}
-            if (
-                self.model
-                and hasattr(self.model, "feature_importance")
-                and self.feature_columns
-            ):
-                importance_scores = self.model.feature_importance(
-                    importance_type="gain"
-                )
-                feature_importance = dict(zip(self.feature_columns, importance_scores))
-                logger.info(f"特徴量重要度を計算: {len(feature_importance)}個の特徴量")
-
-            self.is_trained = True
-
-            logger.info(f"LightGBM学習開始: {num_classes}クラス分類")
-            logger.info(f"クラス分布: {dict(y_train.value_counts())}")
-            logger.info(
-                f"LightGBMモデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
-            )
-
-            # 詳細な評価指標を含む結果を返す
-            result = {
-                "algorithm": self.ALGORITHM_NAME,  # アルゴリズム名を追加
-                "num_classes": num_classes,
-                "best_iteration": self.model.best_iteration,
-                "train_samples": len(X_train),
-                "test_samples": len(X_test),
-                "feature_count": (
-                    len(self.feature_columns) if self.feature_columns else 0
-                ),
-                "feature_importance": feature_importance,  # 特徴量重要度を追加
-                **detailed_metrics,  # 詳細な評価指標を追加
-            }
-
-            return result
-
-        except Exception as e:
-            logger.error(f"LightGBMモデル学習エラー: {e}")
-            raise ModelError(f"LightGBMモデル学習に失敗しました: {e}")
+        if predictions.ndim == 1:
+            return np.column_stack([1 - predictions, predictions])
+        else:
+            return predictions
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
         特徴量重要度を取得
-
-        Args:
-            top_n: 上位N個の特徴量
-
-        Returns:
-            特徴量重要度の辞書
         """
-        if not self.is_trained or not self.model:
+        if not self.is_trained or self.model is None:
             logger.warning("学習済みモデルがありません")
             return {}
 
         try:
-            # LightGBMの特徴量重要度を取得
             importance_scores = self.model.feature_importance(importance_type="gain")
 
             if not self.feature_columns or len(importance_scores) != len(
@@ -273,10 +172,7 @@ class LightGBMModel:
                 logger.warning("特徴量カラム情報が不正です")
                 return {}
 
-            # 特徴量名と重要度のペアを作成
             feature_importance = dict(zip(self.feature_columns, importance_scores))
-
-            # 重要度でソートして上位N個を取得
             sorted_importance = sorted(
                 feature_importance.items(), key=lambda x: x[1], reverse=True
             )[:top_n]
@@ -286,88 +182,3 @@ class LightGBMModel:
         except Exception as e:
             logger.error(f"特徴量重要度取得エラー: {e}")
             return {}
-
-    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
-        """
-        sklearn互換の予測メソッド（クラス予測）
-
-        Args:
-            X: 特徴量（DataFrame or numpy array）
-
-        Returns:
-            予測クラス
-        """
-        if not self.is_trained or self.model is None:
-            raise ModelError("学習済みモデルがありません")
-
-        try:
-            # numpy配列をDataFrameに変換
-            if not isinstance(X, pd.DataFrame):
-                if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
-                else:
-                    X = pd.DataFrame(
-                        X,
-                        columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])]),
-                    )
-
-            # 予測確率を取得
-            predictions_proba = cast(
-                np.ndarray,
-                self.model.predict(X, num_iteration=self.model.best_iteration),
-            )
-
-            # クラス数を判定
-            if predictions_proba.ndim == 1:
-                # 二値分類の場合
-                predictions = (predictions_proba > 0.5).astype(int)
-            else:
-                # 多クラス分類の場合
-                predictions = np.argmax(predictions_proba, axis=1)
-
-            return predictions
-
-        except Exception as e:
-            logger.error(f"予測実行エラー: {e}")
-            raise ModelError(f"予測実行に失敗しました: {e}")
-
-    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
-        """
-        予測確率を取得
-
-        Args:
-            X: 特徴量（DataFrame or numpy array）
-
-        Returns:
-            予測確率
-        """
-        if not self.is_trained or self.model is None:
-            raise ModelError("学習済みモデルがありません")
-
-        try:
-            # numpy配列をDataFrameに変換
-            if not isinstance(X, pd.DataFrame):
-                if hasattr(self, "feature_columns") and self.feature_columns:
-                    X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
-                else:
-                    X = pd.DataFrame(
-                        X,
-                        columns=cast(Any, [f"feature_{i}" for i in range(X.shape[1])]),
-                    )
-
-            predictions = cast(
-                np.ndarray,
-                self.model.predict(X, num_iteration=self.model.best_iteration),
-            )
-
-            # 二値分類の場合、確率を[1-p, p]の形式に変換
-            if predictions.ndim == 1:
-                predictions_proba = np.column_stack([1 - predictions, predictions])
-                return cast(np.ndarray, predictions_proba)
-            else:
-                # 多クラス分類の場合はそのまま返す
-                return predictions
-
-        except Exception as e:
-            logger.error(f"予測確率取得エラー: {e}")
-            raise ModelError(f"予測確率取得に失敗しました: {e}")

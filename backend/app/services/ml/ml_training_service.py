@@ -12,7 +12,6 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from ...utils.data_processing import data_processor as data_preprocessor
 from ...utils.error_handler import safe_ml_operation
 from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
 from .base_ml_trainer import BaseMLTrainer
@@ -381,7 +380,7 @@ class MLTrainingService(BaseResourceManager):
 
     def generate_signals(self, features: pd.DataFrame) -> Dict[str, float]:
         """
-        予測信号を生成（MLSignalGeneratorのpredictメソッドから移植）
+        予測信号を生成
 
         Args:
             features: 特徴量DataFrame
@@ -389,133 +388,12 @@ class MLTrainingService(BaseResourceManager):
         Returns:
             予測確率の辞書 {"up": float, "down": float, "range": float}
         """
-        try:
-            if not self.trainer.is_trained or self.trainer.model is None:
-                # モデル未学習時は警告レベルでログ出力
-                logger.warning("モデルが学習されていません。デフォルト値を返します。")
-                default_predictions = self.config.prediction.get_default_predictions()
-                return default_predictions
+        if not self.trainer:
+            logger.warning("トレーナーが初期化されていません")
+            return self.config.prediction.get_default_predictions()
 
-            if self.trainer.feature_columns is None:
-                # 特徴量カラムが設定されていない場合、利用可能な全カラムを使用
-                logger.warning(
-                    "特徴量カラムが設定されていません。利用可能な全カラムを使用します。"
-                )
-                # 統計的手法で欠損値を補完
-                features_selected = data_preprocessor.interpolate_columns(
-                    features, columns=list(features.columns), strategy="median"
-                )
-            else:
-                # 特徴量を選択・整形
-                available_columns = [
-                    col
-                    for col in self.trainer.feature_columns
-                    if col in features.columns
-                ]
-                missing_columns = [
-                    col
-                    for col in self.trainer.feature_columns
-                    if col not in features.columns
-                ]
-
-                if len(missing_columns) > 0:
-                    logger.warning(f"欠損している特徴量カラム: {missing_columns}")
-
-                if not available_columns:
-                    logger.warning(
-                        "指定された特徴量カラムが見つかりません。デフォルト値を返します。"
-                    )
-                    return self.config.prediction.get_default_predictions()
-                else:
-                    # 利用可能な特徴量のみを使用し、統計的手法で欠損値を補完
-                    features_subset = features[available_columns]
-                    features_selected = data_preprocessor.interpolate_columns(
-                        features_subset,
-                        columns=list(features_subset.columns),
-                        strategy="median",
-                    )
-
-                    # 不足している特徴量を一度にまとめて追加（DataFrame断片化を防ぐ）
-                    if missing_columns:
-                        # 不足特徴量のDataFrameを作成
-                        missing_features_df = pd.DataFrame(
-                            0.0,
-                            index=features_selected.index,
-                            columns=pd.Index(missing_columns),
-                        )
-                        # pd.concatで一度に結合（断片化を防ぐ）
-                        features_selected = pd.concat(
-                            [features_selected, missing_features_df], axis=1
-                        )
-
-                    # 学習時と同じ順序で並び替え
-                    features_selected = features_selected[self.trainer.feature_columns]
-
-            # 標準化
-            if self.trainer.scaler is not None:
-                features_scaled = self.trainer.scaler.transform(features_selected)
-            else:
-                logger.warning(
-                    "スケーラーが設定されていません。標準化をスキップします。"
-                )
-                features_scaled = features_selected.values
-
-            # 予測（LightGBMモデルの場合）
-            # best_iteration属性の存在を確認してから使用
-            if hasattr(self.trainer.model, "best_iteration") and hasattr(
-                self.trainer.model, "predict"
-            ):
-                try:
-                    best_iter = getattr(self.trainer.model, "best_iteration", None)
-                    if best_iter is not None:
-                        predictions = np.array(
-                            self.trainer.model.predict(
-                                features_scaled, num_iteration=best_iter
-                            )
-                        )
-                    else:
-                        predictions = np.array(
-                            self.trainer.model.predict(features_scaled)
-                        )
-                except TypeError:
-                    # num_iterationパラメータがサポートされていない場合
-                    predictions = np.array(self.trainer.model.predict(features_scaled))
-            else:
-                predictions = np.array(self.trainer.model.predict(features_scaled))
-
-            # 最新の予測結果を取得
-            if predictions.ndim == 2:
-                latest_pred = predictions[-1]  # 最後の行
-            else:
-                latest_pred = predictions
-
-            # 予測結果をクラス確率に変換
-            if latest_pred.shape[0] == 3:
-                predictions = {
-                    "down": float(latest_pred[0]),
-                    "range": float(latest_pred[1]),
-                    "up": float(latest_pred[2]),
-                }
-                return predictions
-            elif latest_pred.shape[0] == 2:
-                # ボラティリティ予測 (RANGE=0, TREND=1)
-                predictions = {
-                    "range": float(latest_pred[0]),
-                    "trend": float(latest_pred[1]),
-                }
-                return predictions
-            else:
-                # 予期しない形式
-                logger.error(
-                    f"予期しない予測結果の形式: {latest_pred.shape}. 2クラスまたは3クラス分類が期待されます。"
-                )
-                default_predictions = self.config.prediction.get_default_predictions()
-                return default_predictions
-
-        except Exception as e:
-            logger.warning(f"予測エラー: {e}")
-            default_predictions = self.config.prediction.get_default_predictions()
-            return default_predictions
+        # BaseMLTrainer.predict_signal に委譲
+        return self.trainer.predict_signal(features)
 
     def _train_with_optimization(
         self,

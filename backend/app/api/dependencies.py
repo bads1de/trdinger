@@ -181,7 +181,14 @@ def get_data_management_orchestration_service():
         )
 
 
-def get_open_interest_orchestration_service():
+def get_open_interest_orchestration_service(
+    bybit_service=Depends(
+        lambda: __import__(
+            "app.services.data_collection.bybit.open_interest_service",
+            fromlist=["BybitOpenInterestService"],
+        ).BybitOpenInterestService()
+    ),
+):
     """
     OpenInterestOrchestrationService のインスタンスを取得（依存性注入用）
     """
@@ -190,7 +197,7 @@ def get_open_interest_orchestration_service():
             OpenInterestOrchestrationService,
         )
 
-        return OpenInterestOrchestrationService()
+        return OpenInterestOrchestrationService(bybit_service)
     except Exception as e:
         import logging
 
@@ -249,20 +256,22 @@ def get_backtest_orchestration_service(
 
 
 def get_funding_rate_orchestration_service(
-    db: Session = Depends(get_db),
+    bybit_service=Depends(
+        lambda: __import__(
+            "app.services.data_collection.bybit.funding_rate_service",
+            fromlist=["BybitFundingRateService"],
+        ).BybitFundingRateService()
+    ),
 ):
     """
     FundingRateOrchestrationService のインスタンスを取得（依存性注入用）
     """
     try:
-        from app.services.data_collection.bybit.funding_rate_service import (
-            BybitFundingRateService,
-        )
         from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
             FundingRateOrchestrationService,
         )
 
-        return FundingRateOrchestrationService(BybitFundingRateService())
+        return FundingRateOrchestrationService(bybit_service)
     except Exception as e:
         import logging
 

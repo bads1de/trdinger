@@ -9,8 +9,12 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.services.data_collection.orchestration.base_orchestration_service import (
+    BaseDataCollectionOrchestrationService,
+)
 from app.utils.response import api_response, error_response
 from database.repositories.open_interest_repository import OpenInterestRepository
 
@@ -19,7 +23,7 @@ from ..bybit.open_interest_service import BybitOpenInterestService
 logger = logging.getLogger(__name__)
 
 
-class OpenInterestOrchestrationService:
+class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
     """
     オープンインタレストデータ収集統合管理サービス
 
@@ -28,8 +32,17 @@ class OpenInterestOrchestrationService:
     責務を明確化します。
     """
 
-    def __init__(self):
-        """初期化"""
+    def __init__(
+        self,
+        bybit_service: BybitOpenInterestService = Depends(BybitOpenInterestService),
+    ):
+        """
+        初期化
+        
+        Args:
+            bybit_service: Bybitオープンインタレストサービス
+        """
+        self.bybit_service = bybit_service
 
     async def collect_open_interest_data(
         self,
@@ -56,18 +69,14 @@ class OpenInterestOrchestrationService:
             )
 
             # データベースセッションの取得
-            if db_session is None:
-                from database.connection import get_db
+            db_session = self._get_db_session(db_session)
 
-                with next(get_db()) as session:
-                    db_session = session
-
-            # サービスとリポジトリの初期化
-            service = BybitOpenInterestService()
+            # リポジトリの初期化
             repository = OpenInterestRepository(db_session)
 
             # データ収集実行
-            result = await service.fetch_and_save_open_interest_data(
+            # bybit_serviceはDIされたものを使用
+            result = await self.bybit_service.fetch_and_save_open_interest_data(
                 symbol=symbol,
                 limit=limit,
                 repository=repository,
@@ -75,8 +84,7 @@ class OpenInterestOrchestrationService:
             )
 
             if result.get("success", False):
-                return api_response(
-                    success=True,
+                return self._create_success_response(
                     message=f"{result['saved_count']}件のオープンインタレストデータを保存しました",
                     data={
                         "saved_count": result["saved_count"],
@@ -122,24 +130,12 @@ class OpenInterestOrchestrationService:
                 f"オープンインタレストデータ取得開始: symbol={symbol}, limit={limit}"
             )
 
-            if db_session is None:
-                from database.connection import get_db
-
-                db_session = next(get_db())
-
+            db_session = self._get_db_session(db_session)
             repository = OpenInterestRepository(db_session)
-            BybitOpenInterestService()
 
-            start_time = (
-                datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-                if start_date
-                else None
-            )
-            end_time = (
-                datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-                if end_date
-                else None
-            )
+            start_time = self._parse_datetime(start_date)
+            end_time = self._parse_datetime(end_date)
+            
             normalized_symbol = (
                 symbol
                 if ":" in symbol
@@ -170,14 +166,14 @@ class OpenInterestOrchestrationService:
             ]
 
             logger.info(f"オープンインタレストデータ取得成功: {len(data)}件")
-            return api_response(
+            
+            return self._create_success_response(
+                message=f"{len(data)}件のオープンインタレストデータを取得しました",
                 data={
                     "symbol": normalized_symbol,
                     "count": len(data),
                     "open_interest": data,
                 },
-                message=f"{len(data)}件のオープンインタレストデータを取得しました",
-                success=True,
             )
         except Exception as e:
             logger.error(f"オープンインタレストデータ取得エラー: {e}", exc_info=True)
@@ -209,14 +205,7 @@ class OpenInterestOrchestrationService:
         try:
             logger.info(f"オープンインタレスト一括収集開始: {len(symbols)}シンボル")
 
-            # データベースセッションの取得
-            if db_session is None:
-                from database.connection import get_db
-
-                with next(get_db()) as session:
-                    db_session = session
-
-            service = BybitOpenInterestService()
+            db_session = self._get_db_session(db_session)
             repository = OpenInterestRepository(db_session)
 
             results = []
@@ -226,7 +215,8 @@ class OpenInterestOrchestrationService:
 
             for symbol in symbols:
                 try:
-                    result = await service.fetch_and_save_open_interest_data(
+                    # bybit_serviceを使用
+                    result = await self.bybit_service.fetch_and_save_open_interest_data(
                         symbol=symbol,
                         repository=repository,
                         fetch_all=True,
@@ -248,8 +238,7 @@ class OpenInterestOrchestrationService:
                 f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
             )
 
-            return api_response(
-                success=True,
+            return self._create_success_response(
                 message=f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功",
                 data={
                     "total_saved": total_saved,

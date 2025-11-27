@@ -1,256 +1,144 @@
-"""
-XGBoostモデルラッパー
-
-アンサンブル学習で使用するXGBoostモデルのラッパークラスを提供します。
-XGBoostを使用してアンサンブル専用に最適化されたモデルです。
-"""
-
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
 import xgboost as xgb
 
-from ....utils.error_handler import ModelError
+from app.utils.error_handler import ModelError
+from .base_gradient_boosting_model import BaseGradientBoostingModel
 
 logger = logging.getLogger(__name__)
 
 
-class XGBoostModel:
+class XGBoostModel(BaseGradientBoostingModel):
     """
-    アンサンブル内で使用するXGBoostモデルラッパー
+    XGBoostモデルラッパー
 
-    XGBoostを使用してアンサンブル専用に最適化されたモデル
+    BaseGradientBoostingModelを継承し、XGBoost固有の実装を提供します。
     """
 
-    # アルゴリズム名（AlgorithmRegistryから取得）
     ALGORITHM_NAME = "xgboost"
 
-    def __init__(self):
+    def __init__(
+        self,
+        random_state: int = 42,
+        max_depth: int = 6,
+        learning_rate: float = 0.1,
+        n_estimators: int = 100,  # LightGBMと合わせて追加
+        **kwargs,
+    ):
         """
         初期化
         """
-        self.model = None
-        self.is_trained = False
-        self.feature_columns = None
-        self.scaler = None
+        super().__init__(random_state=random_state, **kwargs)
+        self.max_depth = max_depth
+        self.learning_rate = learning_rate
+        self.n_estimators = n_estimators  # LightGBMと合わせて追加
+        self.feature_names: Optional[List[str]] = None
 
-    def _train_model_impl(
+    def _create_dataset(
         self,
-        X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
-        y_train: pd.Series,
-        y_test: pd.Series,
+        X: Union[pd.DataFrame, np.ndarray],
+        y: Optional[Union[pd.Series, np.ndarray]] = None,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> xgb.DMatrix:
+        """
+        XGBoost固有のデータセットオブジェクトを作成します。
+        """
+        if not isinstance(X, pd.DataFrame):
+            # feature_columnsが設定されていない場合は仮の列名を使用
+            columns = (
+                self.feature_columns
+                if self.feature_columns
+                else [f"feature_{i}" for i in range(X.shape[1])]
+            )
+            X = pd.DataFrame(X, columns=cast(Any, columns))
+
+        # 特徴量名を保存 (XGBoostのDMatrixで必要になるため)
+        self.feature_names = X.columns.tolist()
+
+        return xgb.DMatrix(X, label=y, feature_names=self.feature_names, weight=sample_weight)
+
+    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
+        """
+        XGBoost固有のパラメータディクショナリを生成します。
+        """
+        params = {
+            "objective": "multi:softprob" if num_classes > 2 else "binary:logistic",
+            "num_class": num_classes if num_classes > 2 else None,
+            "eval_metric": "mlogloss" if num_classes > 2 else "logloss",
+            "max_depth": kwargs.get("max_depth", self.max_depth),
+            "learning_rate": kwargs.get("learning_rate", self.learning_rate),
+            "subsample": kwargs.get("subsample", 0.8),
+            "colsample_bytree": kwargs.get("colsample_bytree", 0.8),
+            "random_state": self.random_state,
+            "verbosity": 0,
+        }
+        # 渡された kwargs でデフォルトを上書き
+        params.update(kwargs)
+        return params
+
+    def _train_internal(
+        self,
+        train_data: xgb.DMatrix,
+        valid_data: xgb.DMatrix,
+        params: Dict[str, Any],
+        early_stopping_rounds: Optional[int] = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> xgb.Booster:
         """
-        XGBoostモデルを学習
-
-        Args:
-            X_train: 学習用特徴量
-            X_test: テスト用特徴量
-            y_train: 学習用ターゲット
-            y_test: テスト用ターゲット
-
-        Returns:
-            学習結果
+        XGBoost固有の学習プロセスを実行します。
         """
-        try:
-            # 特徴量カラムを保存
-            self.feature_columns = X_train.columns.tolist()
+        model = xgb.train(
+            params,
+            train_data,
+            num_boost_round=kwargs.get("num_boost_round", self.n_estimators),
+            evals=[(train_data, "train"), (valid_data, "eval")],
+            early_stopping_rounds=early_stopping_rounds,
+            verbose_eval=False,
+        )
+        return model
 
-            # クラス数を判定
-            num_classes = len(np.unique(y_train))
+    def _get_prediction_proba(self, data: xgb.DMatrix) -> np.ndarray:
+        """
+        XGBoost固有の予測確率を取得します。
+        """
+        if self.model is None:
+            raise ModelError("学習済みモデルがありません")
+        return self.model.predict(data)
 
-            # XGBoostパラメータ
-            params = {
-                "objective": "multi:softprob" if num_classes > 2 else "binary:logistic",
-                "num_class": num_classes if num_classes > 2 else None,
-                "eval_metric": "mlogloss" if num_classes > 2 else "logloss",
-                "max_depth": 6,
-                "learning_rate": 0.1,
-                "subsample": 0.8,
-                "colsample_bytree": 0.8,
-                "random_state": 42,
-                "verbosity": 0,
-            }
-
-            # class_weightの処理
-            sample_weight = None
-            class_weight = kwargs.get("class_weight")
-            if class_weight:
-                try:
-                    from sklearn.utils.class_weight import compute_sample_weight
-
-                    sample_weight = compute_sample_weight(
-                        class_weight=class_weight, y=y_train
-                    )
-                    logger.info(
-                        f"class_weight={class_weight} を適用してsample_weightを計算しました"
-                    )
-                except Exception as e:
-                    logger.warning(f"sample_weightの計算に失敗しました: {e}")
-
-            # XGBoostデータセットを作成（特徴量名を設定）
-            self.feature_names = self.feature_columns.copy()
-            dtrain = xgb.DMatrix(
-                X_train,
-                label=y_train,
-                feature_names=self.feature_names,
-                weight=sample_weight,
-            )  # type: ignore
-            dtest = xgb.DMatrix(X_test, label=y_test, feature_names=self.feature_names)  # type: ignore
-
-            # モデル学習
-            self.model = xgb.train(  # type: ignore
-                params,
-                dtrain,
-                num_boost_round=100,
-                evals=[(dtrain, "train"), (dtest, "eval")],
-                early_stopping_rounds=50,
-                verbose_eval=False,
-            )
-
-            # 予測と評価
-            y_pred_proba = self.model.predict(dtest)
-
-            if num_classes > 2:
-                y_pred_class = np.argmax(y_pred_proba, axis=1)
-            else:
-                y_pred_class = (y_pred_proba > 0.5).astype(int)
-
-            # 共通の評価関数を使用
-            from ..common.evaluation_utils import evaluate_model_predictions
-
-            detailed_metrics = evaluate_model_predictions(
-                y_test, y_pred_class, y_pred_proba
-            )
-
-            # 学習開始ログ
-            logger.info(f"XGBoost学習開始: {num_classes}クラス分類")
-            logger.info(f"クラス分布: {dict(y_train.value_counts())}")
-
-            # 特徴量重要度を計算（修正版）
-            feature_importance = self._calculate_feature_importance()
-
-            self.is_trained = True
-
-            logger.info(
-                f"XGBoostモデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
-            )
-
-            # 詳細な評価指標を含む結果を返す
-            result = {
-                "algorithm": self.ALGORITHM_NAME,  # アルゴリズム名を追加
-                "num_classes": num_classes,
-                "best_iteration": self.model.best_iteration,
-                "train_samples": len(X_train),
-                "test_samples": len(X_test),
-                "feature_count": len(self.feature_columns),
-                "feature_importance": feature_importance,  # 特徴量重要度を追加
-                **detailed_metrics,  # 詳細な評価指標を追加
-            }
-
-            return result
-
-        except ImportError:
-            logger.error(
-                "XGBoostがインストールされていません。pip install xgboostを実行してください。"
-            )
-            raise ModelError("XGBoostがインストールされていません")
-        except Exception as e:
-            logger.error(f"XGBoostモデル学習エラー: {e}")
-            raise ModelError(f"XGBoostモデル学習に失敗しました: {e}")
-
-    def _calculate_feature_importance(self) -> Dict[str, float]:
-        """特徴量重要度を計算（修正版）"""
-        try:
-            if not self.model or not hasattr(self.model, "get_score"):
-                logger.warning("モデルまたはget_score()メソッドがありません")
-                return {col: 0.0 for col in self.feature_columns}
-
-            # get_score()で重要度を取得
-            importance_scores = self.model.get_score(importance_type="gain")
-
-            logger.info(f"XGBoost get_score() result: {importance_scores}")
-
-            # 特徴量名を正しくマッピング
-            feature_importance = {}
-
-            # feature_namesが存在する場合
-            if hasattr(self, "feature_names") and self.feature_names:
-                for feature_name in self.feature_names:
-                    feature_importance[feature_name] = importance_scores.get(
-                        feature_name, 0.0
-                    )
-            else:
-                # フォールバック: インデックスを使用
-                for i, col in enumerate(self.feature_columns):
-                    feature_key = f"f{i}"
-                    feature_importance[col] = importance_scores.get(feature_key, 0.0)
-
-            logger.info(f"計算された特徴量重要度: {len(feature_importance)}個")
-
-            # デバッグログ: 0でない重要度の個数
-            non_zero_count = sum(
-                1 for score in feature_importance.values() if score > 0
-            )
-            logger.info(
-                f"重要度が0でない特徴量数: {non_zero_count}/{len(feature_importance)}"
-            )
-
-            return feature_importance
-
-        except Exception as e:
-            logger.error(f"特徴量重要度計算エラー: {e}")
-            import traceback
-
-            traceback.print_exc()
-            # フォールバック: すべて0とする
-            return {col: 0.0 for col in self.feature_columns}
-
-    def predict(self, X: pd.DataFrame) -> np.ndarray:
+    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
         予測を実行
-
-        Args:
-            X: 特徴量DataFrame
-
-        Returns:
-            予測クラスラベル
         """
         if not self.is_trained or self.model is None:
             raise ModelError("学習済みモデルがありません")
 
-        dtest = xgb.DMatrix(X)  # type: ignore
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
+
+        dtest = xgb.DMatrix(X, feature_names=self.feature_names)
         predictions = self.model.predict(dtest)
 
-        # クラスラベルに変換
         if predictions.ndim > 1 and predictions.shape[1] > 1:
-            # 多クラス分類
             return np.argmax(predictions, axis=1)
         else:
-            # 二値分類
             return (predictions > 0.5).astype(int)
 
-    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
         予測確率を取得
-
-        Args:
-            X: 特徴量DataFrame
-
-        Returns:
-            予測確率
         """
         if not self.is_trained or self.model is None:
             raise ModelError("学習済みモデルがありません")
 
-        dtest = xgb.DMatrix(X)  # type: ignore
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
+
+        dtest = xgb.DMatrix(X, feature_names=self.feature_names)
         probabilities = self.model.predict(dtest)
 
-        # 二値分類の場合は2次元に変換
         if probabilities.ndim == 1:
             probabilities = np.column_stack([1 - probabilities, probabilities])
 
@@ -258,35 +146,36 @@ class XGBoostModel:
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
-        特徴量重要度を取得（修正版）
-
-        Args:
-            top_n: 上位N個の特徴量
-
-        Returns:
-            特徴量重要度の辞書
+        特徴量重要度を取得
         """
-        if not self.is_trained or not self.model:
+        if not self.is_trained or self.model is None:
             logger.warning("学習済みモデルがありません")
             return {}
 
         try:
-            # 修正された特徴量重要度計算を使用
-            feature_importance = self._calculate_feature_importance()
+            if not hasattr(self.model, "get_score"):
+                logger.warning("モデルまたはget_score()メソッドがありません")
+                return {col: 0.0 for col in self.feature_columns}
 
-            if not feature_importance:
-                logger.warning("特徴量重要度の計算に失敗")
-                return {}
+            importance_scores = self.model.get_score(importance_type="gain")
+            feature_importance = {}
 
-            # 重要度でソートして上位N個を取得
+            if self.feature_names:
+                for feature_name in self.feature_names:
+                    feature_importance[feature_name] = importance_scores.get(
+                        feature_name, 0.0
+                    )
+            else:
+                for i, col in enumerate(self.feature_columns):
+                    feature_key = f"f{i}"
+                    feature_importance[col] = importance_scores.get(feature_key, 0.0)
+
             sorted_importance = sorted(
                 feature_importance.items(), key=lambda x: x[1], reverse=True
             )[:top_n]
 
-            result = dict(sorted_importance)
-            logger.info(f"XGBoost特徴量重要度を取得: {len(result)}個")
-            return result
+            return dict(sorted_importance)
 
         except Exception as e:
-            logger.error(f"XGBoost特徴量重要度取得エラー: {e}")
+            logger.error(f"特徴量重要度取得エラー: {e}")
             return {}

@@ -6,7 +6,6 @@
 """
 
 import logging
-from datetime import datetime
 from typing import List, Optional
 
 from fastapi import Depends
@@ -15,13 +14,16 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.bybit.funding_rate_service import (
     BybitFundingRateService,
 )
+from app.services.data_collection.orchestration.base_orchestration_service import (
+    BaseDataCollectionOrchestrationService,
+)
 from database.models import FundingRateData
 from database.repositories.funding_rate_repository import FundingRateRepository
 
 logger = logging.getLogger(__name__)
 
 
-class FundingRateOrchestrationService:
+class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
     """
     ファンディングレートデータの収集と管理を統括するサービスクラス
     """
@@ -37,25 +39,6 @@ class FundingRateOrchestrationService:
             bybit_service: Bybitファンディングレートサービス
         """
         self.bybit_service = bybit_service
-
-    def _parse_datetime(self, date_str: Optional[str]) -> Optional[datetime]:
-        """
-        文字列の日付をdatetimeオブジェクトに変換する
-
-        Args:
-            date_str: 日付文字列（ISO形式、例: "2023-01-01T00:00:00"）
-
-        Returns:
-            datetimeオブジェクト、またはNone
-        """
-        if not date_str:
-            return None
-        try:
-            # ISO形式の日付文字列をパース（例: "2023-01-01T00:00:00"）
-            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        except ValueError as e:
-            logger.error(f"日付文字列のパースに失敗しました: {date_str}, エラー: {e}")
-            return None
 
     async def get_funding_rate_data(
         self,
@@ -123,18 +106,17 @@ class FundingRateOrchestrationService:
             logger.warning(
                 f"{symbol}のファンディングレートデータが見つかりませんでした"
             )
-            return {"status": "success", "message": "データなし", "count": 0}
+            return self._create_success_response("データなし", data={"count": 0})
 
         funding_rate_repo = FundingRateRepository(db_session)
         inserted_count = funding_rate_repo.insert_funding_rate_data(rates_data)
         logger.info(
             f"{symbol}のファンディングレートデータ{inserted_count}件を保存しました"
         )
-        return {
-            "status": "success",
-            "message": "データ収集完了",
-            "count": inserted_count,
-        }
+        
+        return self._create_success_response(
+            "データ収集完了", data={"count": inserted_count}
+        )
 
     async def collect_bulk_funding_rate_data(
         self, symbols: List[str], db_session: Session
@@ -156,12 +138,13 @@ class FundingRateOrchestrationService:
                 result = await self.collect_funding_rate_data(
                     symbol=symbol, limit=200, fetch_all=True, db_session=db_session
                 )
-                total_count += result.get("count", 0)
+                # resultはAPIレスポンス形式になっているため、data['count']から取得
+                if result.get("success") and result.get("data"):
+                    total_count += result["data"].get("count", 0)
             except Exception as e:
                 logger.error(f"{symbol}のデータ収集中にエラーが発生しました: {e}")
         logger.info(f"一括データ収集完了。合計{total_count}件のデータを保存しました")
-        return {
-            "status": "success",
-            "message": "一括データ収集完了",
-            "total_count": total_count,
-        }
+        
+        return self._create_success_response(
+            "一括データ収集完了", data={"total_count": total_count}
+        )
