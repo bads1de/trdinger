@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from app.utils.label_generation.presets import triple_barrier_method_preset, apply_preset_by_name
+from app.services.ml.label_generation.presets import triple_barrier_method_preset, apply_preset_by_name
 
 def test_triple_barrier_method_preset_basic():
     # Create dummy data

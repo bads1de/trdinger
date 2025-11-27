@@ -11,8 +11,8 @@ from typing import Any, Dict, List, Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.utils.label_generation.enums import ThresholdMethod
-from app.utils.label_generation.presets import get_common_presets
+from app.services.ml.label_generation.enums import ThresholdMethod
+from app.services.ml.label_generation.presets import get_common_presets
 
 
 class AppConfig(BaseSettings):

@@ -148,16 +148,23 @@ class TestHybridFeatureAdapter:
         # モックの設定
         mock_preprocess.return_value = sample_ohlcv_data.copy()
 
+        from app.services.ml.base_ml_trainer import BaseMLTrainer
+        from unittest.mock import MagicMock
+        
+        mock_trainer_instance = MagicMock(spec=BaseMLTrainer)
+        mock_trainer_instance._preprocess_data.return_value = (sample_ohlcv_data.copy(), sample_ohlcv_data.copy())
+
         from app.services.auto_strategy.utils.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
-        HybridFeatureAdapter().gene_to_features(
+        adapter = HybridFeatureAdapter(preprocess_handler=mock_trainer_instance._preprocess_data)
+        adapter.gene_to_features(
             sample_strategy_gene, sample_ohlcv_data, apply_preprocessing=True
         )
 
         # 前処理が呼ばれたことを確認
-        assert mock_preprocess.called
+        assert mock_trainer_instance._preprocess_data.called
 
     def test_gene_to_features_invalid_gene(self, sample_ohlcv_data):
         """

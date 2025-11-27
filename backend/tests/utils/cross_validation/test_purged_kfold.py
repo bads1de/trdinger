@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from backend.app.utils.cross_validation.purged_kfold import PurgedKFold
+from app.services.ml.cross_validation.purged_kfold import PurgedKFold
 
 @pytest.fixture
 def sample_data():

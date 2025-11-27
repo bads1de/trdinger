@@ -59,7 +59,7 @@ def forward_classification_preset(
 
     Example:
         >>> import pandas as pd
-        >>> from app.utils.label_generation import forward_classification_preset
+        >>> from app.services.ml.label_generation import forward_classification_preset
         >>>
         >>> # OHLCVデータを準備
         >>> df = pd.DataFrame({
@@ -142,6 +142,9 @@ def forward_classification_preset(
         # 数値ラベル (0, 1, 2) を文字列ラベル ("DOWN", "RANGE", "UP") に変換
         label_map = {0: "DOWN", 1: "RANGE", 2: "UP"}
         string_labels = numeric_labels.map(label_map)
+
+        # 元のインデックスに合わせてリインデックス（長さ不一致防止）
+        string_labels = string_labels.reindex(df.index)
 
         # ログ出力（分布情報）
         up_pct = threshold_info["up_ratio"] * 100
@@ -318,7 +321,7 @@ def get_common_presets() -> Dict[str, Dict[str, Any]]:
             各値は forward_classification_preset に渡せるパラメータ辞書
 
     Example:
-        >>> from app.utils.label_generation import get_common_presets
+        >>> from app.services.ml.label_generation import get_common_presets
         >>>
         >>> presets = get_common_presets()
         >>> print(list(presets.keys()))
@@ -510,7 +513,7 @@ def apply_preset_by_name(
 
     Example:
         >>> import pandas as pd
-        >>> from app.utils.label_generation import apply_preset_by_name
+        >>> from app.services.ml.label_generation import apply_preset_by_name
         >>>
         >>> # OHLCVデータを準備
         >>> df = pd.DataFrame({

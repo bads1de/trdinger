@@ -10,8 +10,9 @@ from typing import Dict, Tuple
 
 import pandas as pd
 
-from app.utils.label_generation.enums import ThresholdMethod
-from app.utils.label_generation.presets import forward_classification_preset
+from app.services.ml.label_generation.enums import ThresholdMethod
+from app.services.ml.label_generation.presets import forward_classification_preset
+from app.services.ml.label_generation.triple_barrier import TripleBarrier
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +133,7 @@ class LabelCache:
 
         # ラベル生成
         if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
-            from app.utils.label_generation.triple_barrier import TripleBarrier
+            from app.services.ml.label_generation.triple_barrier import TripleBarrier
             
             close_prices = self.ohlcv_df[price_column]
 

@@ -13,7 +13,7 @@ from backend.app.services.auto_strategy.utils.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
 from backend.app.services.backtest.backtest_data_service import BacktestDataService
-from backend.app.utils.label_generation import EventDrivenLabelGenerator
+from app.services.ml.label_generation import EventDrivenLabelGenerator
 
 
 def _build_sample_market_data() -> pd.DataFrame:

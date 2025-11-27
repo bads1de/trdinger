@@ -27,7 +27,7 @@ from app.config.unified_config import unified_config  # type: ignore
 from app.services.ml.feature_engineering.feature_engineering_service import (  # type: ignore  # noqa: E501
     FeatureEngineeringService,
 )
-from app.utils.label_generation.presets import (  # type: ignore
+from app.services.ml.label_generation.presets import (  # type: ignore
     apply_preset_by_name,
     forward_classification_preset,
 )

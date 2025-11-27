@@ -40,7 +40,7 @@ from app.services.ml.stacking_service import StackingService
 from app.services.ml.meta_labeling_service import MetaLabelingService # Added
 from app.services.ml.models.gru_model import GRUModel
 from app.services.ml.models.lstm_model import LSTMModel
-from app.utils.purged_cv import PurgedKFold
+from app.services.ml.cross_validation.purged_kfold import PurgedKFold
 from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
 from scripts.feature_evaluation.common_feature_evaluator import (
@@ -205,7 +205,7 @@ class MLPipeline:
             
             t1_labels = label_cache.get_t1(X_clean.index, horizon_n)
             
-            cv = PurgedKFold(n_splits=n_splits, t1=t1_labels, embargo_pct=embargo_pct)
+            cv = PurgedKFold(n_splits=n_splits, t1=t1_labels, pct_embargo=embargo_pct)
             
             oof_preds = np.zeros(len(X_clean))
             
@@ -394,7 +394,7 @@ class MLPipeline:
         n_splits_oof = 5
         embargo_pct_oof = 0.01
         t1_labels = label_cache.get_t1(X_clean.index, best_params["horizon_n"])
-        cv_oof = PurgedKFold(n_splits=n_splits_oof, t1=t1_labels, embargo_pct=embargo_pct_oof)
+        cv_oof = PurgedKFold(n_splits=n_splits_oof, t1=t1_labels, pct_embargo=embargo_pct_oof)
 
         oof_preds = {model: np.zeros(len(X_clean)) for model in selected_models}
         models_result = {}

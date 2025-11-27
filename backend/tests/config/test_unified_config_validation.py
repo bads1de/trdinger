@@ -25,7 +25,7 @@ from app.config.unified_config import (
     MLTrainingConfig,
     UnifiedConfig,
 )
-from app.utils.label_generation.enums import ThresholdMethod
+from app.services.ml.label_generation.enums import ThresholdMethod
 
 
 class TestGAConfigValidation:

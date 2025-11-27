@@ -14,7 +14,7 @@ import pandas_ta as ta
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
-from app.utils.label_generation.presets import forward_classification_preset
+from app.services.ml.label_generation.presets import forward_classification_preset
 from database.connection import SessionLocal
 from scripts.feature_evaluation.common_feature_evaluator import CommonFeatureEvaluator
 from scripts.ml_optimization.run_ml_pipeline import MLPipeline

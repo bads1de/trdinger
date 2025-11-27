@@ -22,12 +22,12 @@ from ...utils.error_handler import (
     ml_operation_context,
     safe_ml_operation,
 )
-from ...utils.label_generation.presets import (
+from .label_generation.presets import (
     apply_preset_by_name,
     forward_classification_preset,
     get_common_presets,
 )
-from ...utils.cross_validation import PurgedKFold
+from .cross_validation import PurgedKFold
 
 from .data_processing.sampling import ImbalanceSampler
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
@@ -377,7 +377,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         if target_column is not None and target_column in features_df.columns:
             logger.info(f"📌 後方互換性モード: target_column='{target_column}' を使用")
             
-            from ...utils.label_generation import LabelGenerator
+            from .label_generation import LabelGenerator
             label_generator = LabelGenerator()
 
             features_clean, labels_clean, threshold_info = (

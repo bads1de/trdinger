@@ -7,7 +7,7 @@ from pathlib import Path
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
-from app.utils.label_generation.presets import triple_barrier_method_preset
+from app.services.ml.label_generation.presets import triple_barrier_method_preset
 
 class TestTripleBarrierATRPreset:
     def setup_method(self):

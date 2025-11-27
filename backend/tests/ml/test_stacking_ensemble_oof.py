@@ -18,7 +18,8 @@ def test_stacking_ensemble_oof_predictions(sample_data):
         "cv_folds": 3,
         "stack_method": "predict_proba",
         "n_jobs": 1,
-        "passthrough": False
+        "passthrough": False,
+        "cv_strategy": "kfold",
     }
     
     ensemble = StackingEnsemble(config)

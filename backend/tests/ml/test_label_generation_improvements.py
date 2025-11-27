@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from app.utils.label_generation.presets import (
+from app.services.ml.label_generation.presets import (
     get_common_presets,
     forward_classification_preset,
 )

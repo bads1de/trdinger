@@ -16,8 +16,8 @@ import pandas as pd
 import pytest
 
 from app.config.unified_config import LabelGenerationConfig
-from app.utils.label_generation.enums import ThresholdMethod
-from app.utils.label_generation.presets import (
+from app.services.ml.label_generation.enums import ThresholdMethod
+from app.services.ml.label_generation.presets import (
     SUPPORTED_TIMEFRAMES,
     apply_preset_by_name,
     forward_classification_preset,
@@ -132,7 +132,8 @@ class TestForwardClassificationPreset:
         assert set(labels.dropna().unique()).issubset({"UP", "RANGE", "DOWN"}), (
             "ラベルはUP/RANGE/DOWNのいずれかである必要があります"
         )
-        assert len(labels) < len(df), "horizon_n分のラベルが欠損するはずです"
+        assert len(labels) == len(df), "ラベル長は入力と同じであるべきです"
+        assert labels.isna().sum() >= 1, "少なくとも1つ(末尾)はNaNになるはずです"
 
     @pytest.mark.parametrize("timeframe", SUPPORTED_TIMEFRAMES)
     def test_forward_classification_preset_all_timeframes(
@@ -209,11 +210,11 @@ class TestForwardClassificationPreset:
 
         # Assert
         assert isinstance(labels, pd.Series)
-        # horizon_n本先を見るため、元データよりも短くなる
-        # LabelGenerator内部で最後の行が除外されるため、len(df) - 1 よりも短い
-        assert len(labels) < len(df), (
-            f"ラベル長({len(labels)})は元データ長({len(df)})より短い必要があります"
+        # horizon_n本先を見るため、元データと同じ長さだが末尾はNaNになる
+        assert len(labels) == len(df), (
+            f"ラベル長({len(labels)})は元データ長({len(df)})と同じである必要があります"
         )
+        assert labels.isna().sum() >= 1, "少なくとも1つ(末尾)はNaNになるはずです"
         # 有効なラベルが生成されていることを確認
         assert len(labels.dropna()) > 0, "有効なラベルが生成されませんでした"
 
@@ -751,9 +752,24 @@ class TestBaseMLTrainerIntegration:
         BaseMLTrainerのモックを作成するフィクスチャ
         """
         from app.services.ml.base_ml_trainer import BaseMLTrainer
+        import numpy as np
+        import pandas as pd
 
-        # BaseMLTrainerは抽象クラスなので、具象クラスとして使用
-        trainer = BaseMLTrainer(
+        class ConcreteMLTrainer(BaseMLTrainer):
+            def _train_model_impl(self, X_train, y_train, X_val=None, y_val=None):
+                pass
+            
+            def predict(self, X):
+                return np.zeros(len(X))
+            
+            def save_model(self, filepath):
+                pass
+            
+            def load_model(self, filepath):
+                pass
+
+        # 具象クラスを使用
+        trainer = ConcreteMLTrainer(
             trainer_config={"type": "single", "model_type": "lightgbm"}
         )
 
@@ -981,8 +997,19 @@ class TestEndToEndIntegration:
 
         # Step 3: トレーナーでの使用をシミュレート
         from app.services.ml.base_ml_trainer import BaseMLTrainer
+        import numpy as np
 
-        trainer = BaseMLTrainer(
+        class ConcreteMLTrainer(BaseMLTrainer):
+            def _train_model_impl(self, X_train, y_train, X_val=None, y_val=None):
+                pass
+            def predict(self, X):
+                return np.zeros(len(X))
+            def save_model(self, filepath):
+                pass
+            def load_model(self, filepath):
+                pass
+
+        trainer = ConcreteMLTrainer(
             trainer_config={"type": "single", "model_type": "lightgbm"}
         )
 

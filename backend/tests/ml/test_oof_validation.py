@@ -48,7 +48,8 @@ class TestOOFDataLeakValidation:
             "meta_model": "logistic_regression",
             "cv_folds": 5,
             "random_state": 42,
-            "n_jobs": 1,  # テストでは並列処理を無効化
+            "n_jobs": 1,
+            "cv_strategy": "kfold",  # TimeSeriesSplitではcross_val_predictが使えないためKFoldを使用
         }
 
         stacking = StackingEnsemble(config=config)
@@ -97,6 +98,7 @@ class TestOOFDataLeakValidation:
             "cv_folds": 5,
             "random_state": 42,
             "n_jobs": 1,
+            "cv_strategy": "kfold",
         }
 
         stacking = StackingEnsemble(config=config)
@@ -130,7 +132,7 @@ class TestOOFDataLeakValidation:
                 print(f"    ⚠️ 差が小さすぎます（データリークの可能性）")
 
         assert all_valid, "一部のベースモデルでOOF予測が正しく生成されていません"
-        print("✅ 全ベースモデのOOF予測が正しく生成されています")
+        print("✅ 全ベースモデルのOOF予測が正しく生成されています")
 
     def test_oof_predictions_coverage(self, sample_data):
         """
@@ -146,6 +148,7 @@ class TestOOFDataLeakValidation:
             "cv_folds": 3,
             "random_state": 42,
             "n_jobs": 1,
+            "cv_strategy": "kfold",
         }
 
         stacking = StackingEnsemble(config=config)
@@ -179,6 +182,7 @@ class TestOOFDataLeakValidation:
             "cv_folds": 3,
             "random_state": 42,
             "n_jobs": 1,
+            "cv_strategy": "kfold",
         }
 
         stacking = StackingEnsemble(config=config)
@@ -232,8 +236,7 @@ class TestOOFPredictionQuality:
         過学習していない（In-Foldより性能が低い）ことを確認
         """
         from app.services.ml.ensemble.stacking import StackingEnsemble
-        from sklearn.metrics import accuracy_score, roc_auc_score
-        from sklearn.preprocessing import label_binarize
+        from sklearn.metrics import roc_auc_score
 
         X, y = realistic_data
 
@@ -243,6 +246,7 @@ class TestOOFPredictionQuality:
             "cv_folds": 5,
             "random_state": 42,
             "n_jobs": 1,
+            "cv_strategy": "kfold",
         }
 
         stacking = StackingEnsemble(config=config)
@@ -250,11 +254,9 @@ class TestOOFPredictionQuality:
 
         # OOF予測でのスコア
         oof_predictions = stacking.get_oof_predictions()
-        oof_pred_class = (oof_predictions > 0.5).astype(int)
 
         # In-Fold予測でのスコア
         in_fold_proba = stacking.predict_proba(X)
-        in_fold_pred_class = stacking.predict(X)
 
         # 精度を比較
         # ROC-AUCは2クラス分類用なので、まずバイナリ化

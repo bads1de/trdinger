@@ -7,8 +7,8 @@ import logging
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.utils.label_generation.presets import triple_barrier_method_preset, forward_classification_preset
-from app.utils.label_generation.enums import ThresholdMethod
+from app.services.ml.label_generation.presets import triple_barrier_method_preset, forward_classification_preset
+from app.services.ml.label_generation.enums import ThresholdMethod
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(message)s')

@@ -7,7 +7,7 @@ from pathlib import Path
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
-from app.utils.label_generation.triple_barrier import TripleBarrier
+from app.services.ml.label_generation.triple_barrier import TripleBarrier
 
 class TestTripleBarrierMetaLabeling:
     def setup_method(self):

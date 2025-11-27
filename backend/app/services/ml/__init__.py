@@ -5,6 +5,7 @@
 実装の詳細や最適化手法には踏み込まず、利用側からの統一的なアクセスを目的とします。
 """
 
-from .ml_training_service import MLTrainingService
+# 循環参照を防ぐため、ここではインポートを行わない
+# from .ml_training_service import MLTrainingService
 
 __all__ = ["MLTrainingService"]

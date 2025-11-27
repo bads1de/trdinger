@@ -20,7 +20,7 @@ class AdvancedFeatureEngineer:
 
     def __init__(self):
         """初期化"""
-        pass
+        self.scaler = None
 
     # 旧API互換（create_features -> create_advanced_features）
     def create_features(self, ohlcv_data: pd.DataFrame) -> pd.DataFrame:
