@@ -11,6 +11,10 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from ...indicators.technical_indicators.momentum import MomentumIndicators
+from ...indicators.technical_indicators.trend import TrendIndicators
+from ...indicators.technical_indicators.volatility import VolatilityIndicators
+from ...indicators.technical_indicators.volume import VolumeIndicators
 from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -42,7 +46,17 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             価格特徴量が追加されたDataFrame
         """
         lookback_periods = config.get("lookback_periods", {})
-        return self.calculate_price_features(df, lookback_periods)
+
+        # 価格特徴量
+        df = self.calculate_price_features(df, lookback_periods)
+
+        # ボラティリティ特徴量
+        df = self.calculate_volatility_features(df, lookback_periods)
+
+        # 出来高特徴量
+        df = self.calculate_volume_features(df, lookback_periods)
+
+        return df
 
     @safe_ml_operation(
         default_return=None, context="価格特徴量計算でエラーが発生しました"
@@ -71,27 +85,15 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         # 削除された特徴量: High_Low_Position (他の位置指標で代替可能)
         # 理由: technical_features.pyで同等の特徴量を計算しており冗長
 
-        import pandas_ta as ta
+        # 価格変化率（MomentumIndicators使用）
+        roc1 = MomentumIndicators.roc(result_df["close"], period=1)
+        result_df["Price_Change_1"] = roc1.fillna(0.0)
 
-        # 価格変化率（pandas-ta使用）
-        roc1 = ta.roc(result_df["close"], length=1)
-        result_df["Price_Change_1"] = (
-            pd.Series(roc1, index=result_df.index).fillna(0.0)
-            if roc1 is not None
-            else 0.0
-        )
-        roc5 = ta.roc(result_df["close"], length=5)
-        result_df["Price_Change_5"] = (
-            pd.Series(roc5, index=result_df.index).fillna(0.0)
-            if roc5 is not None
-            else 0.0
-        )
-        roc20 = ta.roc(result_df["close"], length=20)
-        result_df["Price_Change_20"] = (
-            pd.Series(roc20, index=result_df.index).fillna(0.0)
-            if roc20 is not None
-            else 0.0
-        )
+        roc5 = MomentumIndicators.roc(result_df["close"], period=5)
+        result_df["Price_Change_5"] = roc5.fillna(0.0)
+
+        roc20 = MomentumIndicators.roc(result_df["close"], period=20)
+        result_df["Price_Change_20"] = roc20.fillna(0.0)
 
         # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
         # 削除された特徴量: Price_Range
@@ -147,8 +149,6 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             volatility_period = lookback_periods.get("volatility", 20)
 
             # リターンを計算（pandas-ta ROCP: fractional rate of change）
-            import pandas_ta as ta
-
             # roc_result = ta.roc(result_df["close"], length=1)
             # result_df["Returns"] = ( # 低重要度のためコメントアウト
             #     pd.Series(roc_result, index=result_df.index).fillna(0.0) / 100.0
@@ -163,18 +163,14 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # Removed: Volatility_Spike（重複特徴量削除: 2025-01-09）
             # 理由: 複数のボラティリティ指標で代替可能
 
-            # ATR（Average True Range）- pandas-ta
-            atr_result = ta.atr(
+            # ATR（Average True Range）- VolatilityIndicators使用
+            atr_result = VolatilityIndicators.atr(
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
                 length=volatility_period,
             )
-            result_df["ATR_20"] = (
-                pd.Series(atr_result, index=result_df.index).fillna(0.0)
-                if atr_result is not None
-                else 0.0
-            )
+            result_df["ATR_20"] = atr_result.fillna(0.0)
 
             # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
             # 削除された特徴量: ATR_Normalized
@@ -218,18 +214,10 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
             volume_period = lookback_periods.get("volume", 20)
 
-            # pandas-ta のローカルインポート（この関数内でのみ使用）
-            import pandas_ta as ta
+            # 出来高移動平均（TrendIndicators使用）
+            volume_ma = TrendIndicators.sma(result_df["volume"], length=volume_period)
+            volume_ma = volume_ma.fillna(result_df["volume"])
 
-            # 出来高移動平均（pandas-ta使用）
-            volume_ma_result = ta.sma(result_df["volume"], length=volume_period)
-            volume_ma = (
-                pd.Series(volume_ma_result, index=result_df.index).fillna(
-                    result_df["volume"]
-                )
-                if volume_ma_result is not None
-                else result_df["volume"]
-            )
             # 異常に大きな値をクリップ（最大値を制限）
             volume_max = (
                 result_df["volume"].quantile(0.99) * 10
@@ -244,28 +232,23 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             #     .fillna(1.0)
             # )
 
-            # 価格・出来高トレンド（pandas-ta使用）
-            price_change_result = ta.roc(result_df["close"], length=1)
-            price_change = (
-                pd.Series(price_change_result, index=result_df.index).fillna(0.0)
-                if price_change_result is not None
-                else 0.0
+            # 価格・出来高トレンド（MomentumIndicators使用）
+            price_change = MomentumIndicators.roc(result_df["close"], period=1).fillna(
+                0.0
             )
-            volume_change_result = ta.roc(result_df["volume"], length=1)
-            volume_change = (
-                pd.Series(volume_change_result, index=result_df.index).fillna(0.0)
-                if volume_change_result is not None
-                else 0.0
-            )
+            volume_change = MomentumIndicators.roc(
+                result_df["volume"], period=1
+            ).fillna(0.0)
+
             result_df["Price_Volume_Trend"] = price_change * volume_change
 
-            # 出来高加重平均価格（VWAP）（pandas-ta使用）
-            result_df["VWAP"] = ta.vwap(
+            # 出来高加重平均価格（VWAP）（VolumeIndicators使用）
+            result_df["VWAP"] = VolumeIndicators.vwap(
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
                 volume=result_df["volume"],
-                length=volume_period,
+                period=volume_period,
             ).fillna(result_df["close"])
 
             # VWAPからの乖離

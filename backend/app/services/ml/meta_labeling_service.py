@@ -2,12 +2,6 @@ import logging
 import pandas as pd
 from typing import Dict, Any, Optional, Tuple, List
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    classification_report,
-    precision_score,
-    recall_score,
-    accuracy_score,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +24,25 @@ class MetaLabelingService:
         self.is_trained = False
         self.oof_preds_df = None
         self.base_model_names = base_model_names  # 追加
+
+    def _add_base_model_statistics(
+        self, X_meta: pd.DataFrame, base_probs_filtered: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        ベースモデルの予測確率から統計量を計算してメタ特徴量に追加
+
+        Args:
+            X_meta: メタ特徴量DataFrame
+            base_probs_filtered: フィルタリングされたベースモデル予測確率
+
+        Returns:
+            統計量が追加されたメタ特徴量DataFrame
+        """
+        X_meta["base_prob_mean"] = base_probs_filtered.mean(axis=1)
+        X_meta["base_prob_std"] = base_probs_filtered.std(axis=1).fillna(0)
+        X_meta["base_prob_min"] = base_probs_filtered.min(axis=1)
+        X_meta["base_prob_max"] = base_probs_filtered.max(axis=1)
+        return X_meta
 
     def create_meta_labels(
         self, primary_preds_proba: pd.Series, y_true: pd.Series, threshold: float = 0.5
@@ -113,15 +126,9 @@ class MetaLabelingService:
         # 各ベースモデルの予測確率を追加
         X_meta = pd.concat([X_meta, base_model_probs_df.loc[trend_mask]], axis=1)
 
-        # モデル間の合意度・不一致度を示す統計量を追加
-        # primary_probaはスタッキング結果なので、base_model_probs_dfから統計量を計算
+        # モデル間の合意度・不一致度を示す統計量を追加（共通メソッド使用）
         base_probs_filtered = base_model_probs_df.loc[trend_mask]
-        X_meta["base_prob_mean"] = base_probs_filtered.mean(axis=1)
-        X_meta["base_prob_std"] = base_probs_filtered.std(axis=1).fillna(
-            0
-        )  # 1モデルしかない場合はNaNになるため
-        X_meta["base_prob_min"] = base_probs_filtered.min(axis=1)
-        X_meta["base_prob_max"] = base_probs_filtered.max(axis=1)
+        X_meta = self._add_base_model_statistics(X_meta, base_probs_filtered)
 
         # モデルの初期化と学習
         if self.model_type == "random_forest":
@@ -183,13 +190,9 @@ class MetaLabelingService:
         # 各ベースモデルの予測確率を追加
         X_meta = pd.concat([X_meta, base_model_probs_df.loc[trend_mask]], axis=1)
 
-        # モデル間の合意度・不一致度を示す統計量を追加
-        # self.base_model_names を使用して統計量を計算
+        # モデル間の合意度・不一致度を示す統計量を追加（共通メソッド使用）
         base_probs_filtered = base_model_probs_df[self.base_model_names].loc[trend_mask]
-        X_meta["base_prob_mean"] = base_probs_filtered.mean(axis=1)
-        X_meta["base_prob_std"] = base_probs_filtered.std(axis=1).fillna(0)
-        X_meta["base_prob_min"] = base_probs_filtered.min(axis=1)
-        X_meta["base_prob_max"] = base_probs_filtered.max(axis=1)
+        X_meta = self._add_base_model_statistics(X_meta, base_probs_filtered)
 
         # メタモデル予測 (1=Execute, 0=Pass)
         meta_pred = self.model.predict(X_meta)
@@ -210,35 +213,54 @@ class MetaLabelingService:
         """
         メタラベリング適用後のパフォーマンスを評価します。
         """
+        from .common.evaluation_utils import evaluate_model_predictions
+
         # メタラベリング適用後の最終予測
         final_pred = self.predict(
             X_test, primary_proba_test, base_model_probs_df, threshold
         )
 
-        # 評価指標の計算
-        # ここでの「正解(1)」は「実際にトレンドが発生した」こと
-        # final_predが1になるのは「一次モデルがTrend予測 AND メタモデルがGOサイン」の場合
-
-        report = classification_report(
-            y_test, final_pred, output_dict=True, zero_division=0
-        )
-        primary_pred_bin = (primary_proba_test >= threshold).astype(int)
-        primary_report = classification_report(
-            y_test, primary_pred_bin, output_dict=True, zero_division=0
-        )
-
-        return {
-            "meta_accuracy": accuracy_score(y_test, final_pred),
-            "meta_precision": precision_score(y_test, final_pred, zero_division=0),
-            "meta_recall": recall_score(y_test, final_pred, zero_division=0),
-            "primary_precision": precision_score(
-                y_test, primary_pred_bin, zero_division=0
+        # 統一された評価システムを使用してメタモデルの評価
+        meta_metrics = evaluate_model_predictions(
+            y_true=y_test,
+            y_pred=(
+                final_pred.values if isinstance(final_pred, pd.Series) else final_pred
             ),
-            "primary_recall": recall_score(y_test, primary_pred_bin, zero_division=0),
-            "improvement_precision": precision_score(
-                y_test, final_pred, zero_division=0
-            )
-            - precision_score(y_test, primary_pred_bin, zero_division=0),
-            "meta_classification_report": report,
-            "primary_classification_report": primary_report,
+            y_pred_proba=None,  # メタモデルは2値予測のみ
+        )
+
+        # 一次モデル（Primary Model）の評価
+        primary_pred_bin = (primary_proba_test >= threshold).astype(int)
+        primary_metrics = evaluate_model_predictions(
+            y_true=y_test,
+            y_pred=(
+                primary_pred_bin.values
+                if isinstance(primary_pred_bin, pd.Series)
+                else primary_pred_bin
+            ),
+            y_pred_proba=None,
+        )
+
+        # 結果を整形して返す
+        return {
+            "meta_accuracy": meta_metrics.get("accuracy", 0.0),
+            "meta_precision": meta_metrics.get("precision", 0.0),
+            "meta_recall": meta_metrics.get("recall", 0.0),
+            "meta_f1": meta_metrics.get("f1", 0.0),
+            "primary_accuracy": primary_metrics.get("accuracy", 0.0),
+            "primary_precision": primary_metrics.get("precision", 0.0),
+            "primary_recall": primary_metrics.get("recall", 0.0),
+            "primary_f1": primary_metrics.get("f1", 0.0),
+            "improvement_precision": meta_metrics.get("precision", 0.0)
+            - primary_metrics.get("precision", 0.0),
+            "improvement_recall": meta_metrics.get("recall", 0.0)
+            - primary_metrics.get("recall", 0.0),
+            "improvement_f1": meta_metrics.get("f1", 0.0)
+            - primary_metrics.get("f1", 0.0),
+            "meta_classification_report": meta_metrics.get("classification_report", {}),
+            "primary_classification_report": primary_metrics.get(
+                "classification_report", {}
+            ),
+            "meta_balanced_accuracy": meta_metrics.get("balanced_accuracy", 0.0),
+            "primary_balanced_accuracy": primary_metrics.get("balanced_accuracy", 0.0),
         }

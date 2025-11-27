@@ -478,3 +478,26 @@ class VolatilityIndicators:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
 
         return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def true_range(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        drift: int = 1,
+    ) -> pd.Series:
+        """True Range"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        result = ta.true_range(high=high, low=low, close=close, drift=drift)
+
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        return result

@@ -19,7 +19,7 @@ class TestTechnicalFeatureCalculatorIssues:
     def sample_price_data(self):
         """サンプル価格データ"""
         np.random.seed(42)
-        dates = pd.date_range(start="2023-01-01", end="2023-01-31", freq="D")
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="D")
 
         return pd.DataFrame(
             {
@@ -43,9 +43,9 @@ class TestTechnicalFeatureCalculatorIssues:
             print("✅ calculate_pattern_featuresメソッドが存在")
         else:
             print("❌ calculate_pattern_featuresメソッドが存在しない - 修正が必要")
-            assert hasattr(calculator, "calculate_pattern_features"), (
-                "TechnicalFeatureCalculatorにcalculate_pattern_featuresメソッドが実装されていません"
-            )
+            assert hasattr(
+                calculator, "calculate_pattern_features"
+            ), "TechnicalFeatureCalculatorにcalculate_pattern_featuresメソッドが実装されていません"
 
     def test_calculate_pattern_features_functionality(self, sample_price_data):
         """calculate_pattern_featuresメソッドの機能テスト"""
@@ -148,9 +148,9 @@ class TestTechnicalFeatureCalculatorIssues:
             print("✅ すべての期待されるメソッドが実装されている")
 
         # calculate_pattern_featuresが必須であることを強調
-        assert "calculate_pattern_features" not in missing_methods, (
-            f"calculate_pattern_featuresメソッドが実装されていません: {missing_methods}"
-        )
+        assert (
+            "calculate_pattern_features" not in missing_methods
+        ), f"calculate_pattern_featuresメソッドが実装されていません: {missing_methods}"
 
 
 class TestCircularImportDetection:

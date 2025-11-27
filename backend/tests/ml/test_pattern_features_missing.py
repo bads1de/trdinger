@@ -25,7 +25,7 @@ class TestCalculatePatternFeaturesMissing:
     def sample_price_data(self):
         """サンプル価格データ"""
         np.random.seed(42)
-        dates = pd.date_range(start="2023-01-01", end="2023-01-31", freq="D")
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="D")
 
         return pd.DataFrame(
             {
@@ -45,9 +45,9 @@ class TestCalculatePatternFeaturesMissing:
         calculator = TechnicalFeatureCalculator()
 
         # メソッドが存在することを確認（修正後の確認）
-        assert hasattr(calculator, "calculate_pattern_features"), (
-            "calculate_pattern_featuresメソッドが実装されていません"
-        )
+        assert hasattr(
+            calculator, "calculate_pattern_features"
+        ), "calculate_pattern_featuresメソッドが実装されていません"
 
         print("[ OK ] calculate_pattern_featuresメソッドが正常に実装されています")
 
@@ -87,9 +87,9 @@ class TestCalculatePatternFeaturesMissing:
         ]
 
         for feature in expected_features:
-            assert feature in result.columns, (
-                f"{feature}が特徴量として追加されていません"
-            )
+            assert (
+                feature in result.columns
+            ), f"{feature}が特徴量として追加されていません"
 
         print("[ OK ] calculate_pattern_featuresメソッドが正常に動作")
 

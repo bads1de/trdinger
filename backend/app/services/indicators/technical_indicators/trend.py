@@ -307,6 +307,12 @@ class TrendIndicators:
 
         for i in range(length - 1, len(data)):
             window = data[i - length + 1 : i + 1]
+
+            # 欠損値が含まれる場合は計算をスキップ
+            if window.isna().any():
+                values.append(np.nan)
+                continue
+
             x = np.arange(length)
             coeffs = np.polyfit(x, window, 1)  # [slope, intercept]
             if intercept:
@@ -339,6 +345,12 @@ class TrendIndicators:
 
         for i in range(length - 1, len(data)):
             window = data[i - length + 1 : i + 1]
+
+            # 欠損値が含まれる場合は計算をスキップ
+            if window.isna().any():
+                slopes.append(np.nan)
+                continue
+
             x = np.arange(length)
             slope = np.polyfit(x, window, 1)[0]  # 1次多項式の係数（スロープ）
             slopes.append(slope * scalar)  # scalarを適用
@@ -514,5 +526,122 @@ class TrendIndicators:
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
             return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def adx(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+        lensig: int = 14,
+        scalar: float = 100.0,
+        mamode: str = "rma",
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """ADX: returns (adx, dmp, dmn)"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.adx(
+            high=high,
+            low=low,
+            close=close,
+            length=length,
+            lensig=lensig,
+            scalar=scalar,
+            mamode=mamode,
+        )
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
+
+        # カラム名の特定 (ADX_14, DMP_14, DMN_14 など)
+        cols = result.columns
+        adx_col = next((c for c in cols if c.startswith("ADX")), None)
+        dmp_col = next((c for c in cols if c.startswith("DMP")), None)
+        dmn_col = next((c for c in cols if c.startswith("DMN")), None)
+
+        if adx_col is None or dmp_col is None or dmn_col is None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
+
+        return result[adx_col], result[dmp_col], result[dmn_col]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def aroon(
+        high: pd.Series,
+        low: pd.Series,
+        length: int = 14,
+        scalar: float = 100.0,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.aroon(high=high, low=low, length=length, scalar=scalar)
+
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
+
+        # カラム名の特定
+        cols = result.columns
+        up_col = next((c for c in cols if c.startswith("AROONU")), None)
+        down_col = next((c for c in cols if c.startswith("AROOND")), None)
+        osc_col = next((c for c in cols if c.startswith("AROONOSC")), None)
+
+        if up_col is None or down_col is None or osc_col is None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
+
+        return result[up_col], result[down_col], result[osc_col]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def chop(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+        atr_length: int = 1,
+        scalar: float = 100.0,
+        drift: int = 1,
+    ) -> pd.Series:
+        """Choppiness Index"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+
+        result = ta.chop(
+            high=high,
+            low=low,
+            close=close,
+            length=length,
+            atr_length=atr_length,
+            scalar=scalar,
+            drift=drift,
+        )
+
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
 
         return result

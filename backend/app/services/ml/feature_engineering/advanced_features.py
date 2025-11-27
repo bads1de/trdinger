@@ -10,7 +10,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+
 
 logger = logging.getLogger(__name__)
 
@@ -122,89 +122,87 @@ class AdvancedFeatureEngineer:
 
         new_features = {}
 
+        from ...indicators.technical_indicators.momentum import MomentumIndicators
+        from ...indicators.technical_indicators.trend import TrendIndicators
+        from ...indicators.technical_indicators.volatility import VolatilityIndicators
+        from ...indicators.technical_indicators.volume import VolumeIndicators
+
         try:
             # モメンタム指標
-            williams_r_result = ta.willr(
+            new_features["williams_r"] = MomentumIndicators.willr(
                 high=data["high"], low=data["low"], close=data["close"]
             )
-            if williams_r_result is not None:
-                new_features["williams_r"] = williams_r_result
 
-            cci_result = ta.cci(high=data["high"], low=data["low"], close=data["close"])
-            if cci_result is not None:
-                new_features["cci"] = cci_result
+            new_features["cci"] = MomentumIndicators.cci(
+                high=data["high"], low=data["low"], close=data["close"]
+            )
 
-            mfi_result = ta.mfi(
+            new_features["mfi"] = VolumeIndicators.mfi(
                 high=data["high"],
                 low=data["low"],
                 close=data["close"],
                 volume=data["volume"],
             )
-            if mfi_result is not None:
-                new_features["mfi"] = mfi_result
 
-            uo_result = ta.uo(high=data["high"], low=data["low"], close=data["close"])
-            if uo_result is not None:
-                new_features["ultimate_oscillator"] = uo_result
+            new_features["ultimate_oscillator"] = MomentumIndicators.uo(
+                high=data["high"], low=data["low"], close=data["close"]
+            )
 
             # === レンジ/トレンド判定強化 ===
             # 1. Choppiness Index (CHOP)
-            chop_result = ta.chop(
+            new_features["CHOP"] = TrendIndicators.chop(
                 high=data["high"], low=data["low"], close=data["close"]
             )
-            if chop_result is not None:
-                new_features["CHOP"] = chop_result
 
             # 2. Vortex Indicator (VI)
-            vortex_result = ta.vortex(
+            vi_plus, vi_minus = TrendIndicators.vortex(
                 high=data["high"], low=data["low"], close=data["close"]
             )
-            if vortex_result is not None and not vortex_result.empty:
-                new_features["VI_Plus"] = vortex_result["VTXP_14"]
-                new_features["VI_Minus"] = vortex_result["VTXM_14"]
+            new_features["VI_Plus"] = vi_plus
+            new_features["VI_Minus"] = vi_minus
 
             # 3. Bollinger Bandwidth (BBW)
-            bbands = ta.bbands(close=data["close"])
-            if bbands is not None and not bbands.empty:
-                if "BBB_5_2.0" in bbands.columns:
-                    new_features["BBW"] = bbands["BBB_5_2.0"]
+            upper, middle, lower = VolatilityIndicators.bbands(data["close"])
+            # BBW = (Upper - Lower) / Middle
+            new_features["BBW"] = (upper - lower) / middle
 
             # トレンド指標
-            adx_result = ta.adx(high=data["high"], low=data["low"], close=data["close"])
-            if adx_result is not None and not adx_result.empty:
-                new_features["ADX"] = adx_result["ADX_14"]
-                new_features["DI_Plus"] = adx_result["DMP_14"]
-                new_features["DI_Minus"] = adx_result["DMN_14"]
+            adx, di_plus, di_minus = TrendIndicators.adx(
+                high=data["high"], low=data["low"], close=data["close"]
+            )
+            new_features["ADX"] = adx
+            new_features["DI_Plus"] = di_plus
+            new_features["DI_Minus"] = di_minus
 
-            aroon_result = ta.aroon(high=data["high"], low=data["low"])
-            if aroon_result is not None and not aroon_result.empty:
-                new_features["Aroon_Up"] = aroon_result["AROONU_14"]
-                new_features["Aroon_Down"] = aroon_result["AROOND_14"]
-
-            aroon_osc_result = ta.aroon(high=data["high"], low=data["low"], scalar=100)
-            if aroon_osc_result is not None and not aroon_osc_result.empty:
-                new_features["AROONOSC"] = aroon_osc_result["AROONOSC_14"]
+            aroon_up, aroon_down, aroon_osc = TrendIndicators.aroon(
+                high=data["high"], low=data["low"]
+            )
+            new_features["Aroon_Up"] = aroon_up
+            new_features["Aroon_Down"] = aroon_down
+            new_features["AROONOSC"] = aroon_osc
 
             # ボラティリティ指標
-            new_features["ATR"] = ta.atr(
+            new_features["ATR"] = VolatilityIndicators.atr(
                 high=data["high"], low=data["low"], close=data["close"]
             )
-            new_features["NATR"] = ta.natr(
+            new_features["NATR"] = VolatilityIndicators.natr(
                 high=data["high"], low=data["low"], close=data["close"]
             )
-            new_features["TRANGE"] = ta.true_range(
+            new_features["TRANGE"] = VolatilityIndicators.true_range(
                 high=data["high"], low=data["low"], close=data["close"]
             )
 
             # 出来高指標
-            new_features["OBV"] = ta.obv(close=data["close"], volume=data["volume"])
-            new_features["AD"] = ta.ad(
+            new_features["OBV"] = VolumeIndicators.obv(
+                close=data["close"], volume=data["volume"]
+            )
+            new_features["AD"] = VolumeIndicators.ad(
                 high=data["high"],
                 low=data["low"],
                 close=data["close"],
                 volume=data["volume"],
             )
-            new_features["ADOSC"] = ta.adosc(
+            new_features["ADOSC"] = VolumeIndicators.adosc(
                 high=data["high"],
                 low=data["low"],
                 close=data["close"],
@@ -257,6 +255,8 @@ class AdvancedFeatureEngineer:
         """時系列特徴量を追加（重要な期間のみ）"""
         logger.info("⏰ 時系列特徴量を追加中...")
 
+        from ...indicators.technical_indicators.trend import TrendIndicators
+
         new_features = {}
 
         # 移動平均からの乖離（20期間のみ）
@@ -264,8 +264,8 @@ class AdvancedFeatureEngineer:
         new_features["Close_deviation_from_ma_20"] = (data["close"] - ma_20) / ma_20
 
         # トレンド強度（20期間のみ）
-        new_features["Trend_strength_20"] = ta.linreg(
-            data["close"], length=20, slope=True
+        new_features["Trend_strength_20"] = TrendIndicators.linregslope(
+            data["close"], length=20
         )
 
         new_df = pd.concat([data, pd.DataFrame(new_features, index=data.index)], axis=1)
@@ -374,6 +374,9 @@ class AdvancedFeatureEngineer:
         """
         logger.info(f"🌍 MTF特徴量を追加中 ({timeframe_hours}h)...")
 
+        from ...indicators.technical_indicators.trend import TrendIndicators
+        from ...indicators.technical_indicators.volatility import VolatilityIndicators
+
         try:
             # リサンプリング (1h -> 4h)
             # 文字列の "first", "last" が内部で NDFrame.first/last を呼び出し、
@@ -405,23 +408,26 @@ class AdvancedFeatureEngineer:
 
             # 上位足のトレンド (RSI, EMA乖離)
 
-            ema_50 = ta.ema(resampled["close"], length=50)
+            ema_50 = TrendIndicators.ema(resampled["close"], length=50)
             if ema_50 is not None:
                 mtf_features[f"MTF_{timeframe_hours}h_EMA50_Diff"] = (
                     resampled["close"] - ema_50
                 ) / ema_50
 
             # 上位足のボラティリティ (BBW)
-            bbands = ta.bbands(resampled["close"], length=20, std=2)
-            if bbands is not None and "BBB_20_2.0" in bbands.columns:
-                mtf_features[f"MTF_{timeframe_hours}h_BBW"] = bbands["BBB_20_2.0"]
+            upper, middle, lower = VolatilityIndicators.bbands(
+                resampled["close"], length=20, std=2.0
+            )
+            if upper is not None and middle is not None and lower is not None:
+                # BBW = (Upper - Lower) / Middle
+                mtf_features[f"MTF_{timeframe_hours}h_BBW"] = (upper - lower) / middle
 
             # 上位足のトレンド方向 (ADX)
-            adx = ta.adx(
+            adx, _, _ = TrendIndicators.adx(
                 resampled["high"], resampled["low"], resampled["close"], length=14
             )
-            if adx is not None and "ADX_14" in adx.columns:
-                mtf_features[f"MTF_{timeframe_hours}h_ADX"] = adx["ADX_14"]
+            if adx is not None:
+                mtf_features[f"MTF_{timeframe_hours}h_ADX"] = adx
 
             # 重要: 未来情報のリークを防ぐため、リサンプリングデータを1つシフトする
             # (例: 10:00の4h足データは10:00-14:00の内容を含むため、14:00以降でのみ使用可能)

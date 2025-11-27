@@ -211,17 +211,42 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
             logger.debug("funding_rateカラムが見つからないため、FR特徴量をスキップ")
             return df
 
-        # timestampカラムの確認
-        if "timestamp" not in df.columns:
-            logger.warning("timestampカラムが見つからないため、FR特徴量をスキップ")
-            return df
+        # timestampカラムの確認と準備
+        df_copy = df.copy()
+        if "timestamp" not in df_copy.columns:
+            if isinstance(df_copy.index, pd.DatetimeIndex):
+                df_copy = df_copy.reset_index()
+                # インデックス名がtimestampでない場合、またはreset_indexでindexという名前になった場合の処理
+                if "timestamp" not in df_copy.columns:
+                    if "index" in df_copy.columns:
+                        df_copy = df_copy.rename(columns={"index": "timestamp"})
+                    elif df_copy.index.name == "timestamp":
+                        pass  # reset_indexでtimestampカラムができているはず
+                    else:
+                        # カラム0をtimestampとみなす（危険だが最後の手段）
+                        df_copy = df_copy.rename(
+                            columns={df_copy.columns[0]: "timestamp"}
+                        )
+            else:
+                logger.warning("timestampカラムが見つからないため、FR特徴量をスキップ")
+                return df
 
         # ファンディングレートデータを抽出
-        funding_df = df[["timestamp", "funding_rate"]].copy()
+        if "funding_rate" not in df_copy.columns:
+            logger.debug("funding_rateカラムが見つからないため、FR特徴量をスキップ")
+            return df
+
+        funding_df = df_copy[["timestamp", "funding_rate"]].copy()
 
         # FundingRateFeatureCalculatorを使用してTier 1特徴量を計算
         fr_calculator = FundingRateFeatureCalculator()
-        result_df = fr_calculator.calculate_features(df, funding_df)
+        # 注意: calculate_featuresは元のdf（インデックス付き）とfunding_df（timestampカラム付き）を期待する可能性がある
+        # ここではdf_copyを渡すことでtimestampカラム付きのデータを渡す
+        result_df = fr_calculator.calculate_features(df_copy, funding_df)
+
+        # 結果のDataFrameのインデックスを元のdfに合わせる
+        if "timestamp" in result_df.columns and isinstance(df.index, pd.DatetimeIndex):
+            result_df = result_df.set_index("timestamp")
 
         # feature_groupsにFR特徴量を追加
         fr_features = [col for col in result_df.columns if col.startswith("fr_")]
@@ -243,18 +268,17 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         # Removed: rsi_14, bb_upper_20, bb_lower_20, bb_position_20
         # (低寄与度特徴量削除: 2025-11-13)
         # これらの特徴量はtechnical_features.pyの標準版を使用
-        import pandas_ta as ta
 
-        # MACD（pandas-ta使用）
-        macd_result = ta.macd(df["close"], fast=12, slow=26, signal=9)
-        if macd_result is not None:
-            new_features["macd"] = macd_result["MACD_12_26_9"].fillna(0.0)
-            new_features["macd_signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
-            new_features["macd_histogram"] = macd_result["MACDh_12_26_9"].fillna(0.0)
-        else:
-            new_features["macd"] = 0.0
-            new_features["macd_signal"] = 0.0
-            new_features["macd_histogram"] = 0.0
+        from ...indicators.technical_indicators.momentum import MomentumIndicators
+
+        # MACD（MomentumIndicators使用）
+        macd, signal, hist = MomentumIndicators.macd(
+            df["close"], fast=12, slow=26, signal=9
+        )
+
+        new_features["macd"] = macd.fillna(0.0)
+        new_features["macd_signal"] = signal.fillna(0.0)
+        new_features["macd_histogram"] = hist.fillna(0.0)
 
         # 一括で結合
         result_df = pd.concat(

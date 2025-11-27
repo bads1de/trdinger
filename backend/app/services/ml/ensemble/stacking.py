@@ -94,18 +94,10 @@ class StackingEnsemble(BaseEnsemble):
         try:
             logger.info("StackingClassifierによるスタッキングアンサンブル学習を開始")
 
-            # 入力データの検証
-            if X_train is None or X_train.empty:
-                raise ValueError("学習用特徴量データが空です")
-            if y_train is None or len(y_train) == 0:
-                raise ValueError("学習用ターゲットデータが空です")
-            if len(X_train) != len(y_train):
-                raise ValueError("特徴量とターゲットの長さが一致しません")
+            # 入力データの検証（共通関数を使用）
+            from ...common.ml_utils import validate_training_inputs
 
-            logger.info(
-                f"学習データサイズ: {len(X_train)}行, {len(X_train.columns)}特徴量"
-            )
-            logger.info(f"ターゲット分布: {y_train.value_counts().to_dict()}")
+            validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
 
             self.feature_columns = X_train.columns.tolist()
 
@@ -133,10 +125,11 @@ class StackingEnsemble(BaseEnsemble):
             from sklearn.model_selection import TimeSeriesSplit, StratifiedKFold
 
             cv_strategy = self.config.get("cv_strategy", "time_series")
-            
+
             if cv_strategy == "kfold":
                 # 通常のKFold (シャッフルなし)
                 from sklearn.model_selection import KFold
+
                 cv = KFold(n_splits=self.cv_folds, shuffle=False)
             elif cv_strategy == "stratified_kfold":
                 # 層化KFold (シャッフルなし)

@@ -10,8 +10,10 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
 
+from ...indicators.technical_indicators.momentum import MomentumIndicators
+from ...indicators.technical_indicators.trend import TrendIndicators
+from ...indicators.technical_indicators.volatility import VolatilityIndicators
 from .base_feature_calculator import BaseFeatureCalculator
 
 logger = logging.getLogger(__name__)
@@ -151,7 +153,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             new_features = {}
 
             # ドージ・ストキャスティクス（過熱・過売判断）
-            stoch_result = ta.stoch(
+            # MomentumIndicatorsを使用
+            stoch_k, stoch_d = MomentumIndicators.stoch(
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
@@ -159,74 +162,55 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 d=3,
                 smooth_k=3,
             )
-            if stoch_result is not None:
-                new_features["Stochastic_K"] = stoch_result["STOCHk_14_3_3"].fillna(
-                    50.0
-                )
-                # Stochastic_D特徴量を追加
-                stoch_d = stoch_result["STOCHd_14_3_3"].fillna(50.0)
-                new_features["Stochastic_D"] = stoch_d
 
-                # ドージ・ストキャスティクス（KとDの乖離）
-                new_features["Stochastic_Divergence"] = (
-                    new_features["Stochastic_K"] - stoch_d
-                ).fillna(0.0)
-            else:
-                new_features["Stochastic_K"] = 50.0
-                new_features["Stochastic_D"] = 50.0
-                new_features["Stochastic_Divergence"] = 0.0
+            new_features["Stochastic_K"] = stoch_k.fillna(50.0)
+            new_features["Stochastic_D"] = stoch_d.fillna(50.0)
+
+            # ドージ・ストキャスティクス（KとDの乖離）
+            new_features["Stochastic_Divergence"] = (
+                new_features["Stochastic_K"] - new_features["Stochastic_D"]
+            ).fillna(0.0)
 
             # ボリンジャーバンド（サポート・レジスタンス）
-            bb_result = ta.bbands(result_df["close"], length=20, std=2)
-            if bb_result is not None:
-                new_features["BB_Upper"] = bb_result["BBU_20_2.0"].fillna(
-                    result_df["close"]
-                )
-                new_features["BB_Middle"] = bb_result["BBM_20_2.0"].fillna(
-                    result_df["close"]
-                )
-                new_features["BB_Lower"] = bb_result["BBL_20_2.0"].fillna(
-                    result_df["close"]
-                )
-                # ボリンジャーバンドからの乖離率
-                new_features["BB_Position"] = self.safe_ratio_calculation(
-                    result_df["close"] - new_features["BB_Lower"],
-                    new_features["BB_Upper"] - new_features["BB_Lower"],
-                    fill_value=0.5,
-                )
-            else:
-                new_features["BB_Upper"] = result_df["close"]
-                new_features["BB_Middle"] = result_df["close"]
-                new_features["BB_Lower"] = result_df["close"]
-                new_features["BB_Position"] = 0.5
+            # VolatilityIndicatorsを使用
+            bb_upper, bb_middle, bb_lower = VolatilityIndicators.bbands(
+                result_df["close"], length=20, std=2.0
+            )
+
+            new_features["BB_Upper"] = bb_upper.fillna(result_df["close"])
+            new_features["BB_Middle"] = bb_middle.fillna(result_df["close"])
+            new_features["BB_Lower"] = bb_lower.fillna(result_df["close"])
+
+            # ボリンジャーバンドからの乖離率
+            new_features["BB_Position"] = self.safe_ratio_calculation(
+                result_df["close"] - new_features["BB_Lower"],
+                new_features["BB_Upper"] - new_features["BB_Lower"],
+                fill_value=0.5,
+            )
 
             # Removed: MA_Short（重複特徴量削除: 2025-01-09）
             # 理由: price_features.pyのma_10と重複
 
             # 移動平均（トレンド判断）- MA_Longのみ保持
+            # TrendIndicatorsを使用
             long_ma = lookback_periods.get("long_ma", 50)
-            ma_long = ta.sma(result_df["close"], length=long_ma)
-
-            if ma_long is not None:
-                new_features["MA_Long"] = ma_long.fillna(result_df["close"])
-                # 削除: MA_Cross - 理由: ほぼゼロの重要度（分析日: 2025-01-07）
-            else:
-                new_features["MA_Long"] = result_df["close"]
+            ma_long = TrendIndicators.sma(result_df["close"], length=long_ma)
+            new_features["MA_Long"] = ma_long.fillna(result_df["close"])
+            # 削除: MA_Cross - 理由: ほぼゼロの重要度（分析日: 2025-01-07）
 
             # ボラティリティパターン（ATRを使用）
-            atr_values = ta.atr(
+            # VolatilityIndicatorsを使用
+            atr_values = VolatilityIndicators.atr(
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
                 length=14,
             )
-            if atr_values is not None:
-                new_features["ATR"] = atr_values.fillna(0.0)
-                # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-                # 削除された特徴量: Normalized_Volatility
-                # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-            else:
-                new_features["ATR"] = 0.0
+            new_features["ATR"] = atr_values.fillna(0.0)
+
+            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+            # 削除された特徴量: Normalized_Volatility
+            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
             # 一括で結合
             result_df = pd.concat(
@@ -315,63 +299,44 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # RSI（pandas-ta使用）
-            rsi_values = ta.rsi(result_df["close"], length=14)
-            if rsi_values is not None:
-                new_features["RSI"] = rsi_values.fillna(50.0)
-            else:
-                new_features["RSI"] = 50.0
+            # RSI（MomentumIndicators使用）
+            new_features["RSI"] = MomentumIndicators.rsi(
+                result_df["close"], period=14
+            ).fillna(50.0)
 
-            # MACD（pandas-ta使用）
-            macd_result = ta.macd(result_df["close"], fast=12, slow=26, signal=9)
-            if macd_result is not None:
-                new_features["MACD"] = macd_result["MACD_12_26_9"].fillna(0.0)
-                new_features["MACD_Signal"] = macd_result["MACDs_12_26_9"].fillna(0.0)
-                new_features["MACD_Histogram"] = macd_result["MACDh_12_26_9"].fillna(
-                    0.0
-                )
-            else:
-                new_features["MACD"] = 0.0
-                new_features["MACD_Signal"] = 0.0
-                new_features["MACD_Histogram"] = 0.0
+            # MACD（MomentumIndicators使用）
+            macd, signal, hist = MomentumIndicators.macd(
+                result_df["close"], fast=12, slow=26, signal=9
+            )
+            new_features["MACD"] = macd.fillna(0.0)
+            new_features["MACD_Signal"] = signal.fillna(0.0)
+            new_features["MACD_Histogram"] = hist.fillna(0.0)
 
-            # ウィリアムズ%R（pandas-ta使用）
-            willr_values = ta.willr(
+            # ウィリアムズ%R（MomentumIndicators使用）
+            new_features["Williams_R"] = MomentumIndicators.willr(
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
                 length=14,
-            )
-            if willr_values is not None:
-                new_features["Williams_R"] = willr_values.fillna(-50.0)
-            else:
-                new_features["Williams_R"] = -50.0
+            ).fillna(-50.0)
 
-            # CCI（Commodity Channel Index）（pandas-ta使用）
-            cci_values = ta.cci(
+            # CCI（MomentumIndicators使用）
+            new_features["CCI"] = MomentumIndicators.cci(
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
                 length=20,
-            )
-            if cci_values is not None:
-                new_features["CCI"] = cci_values.fillna(0.0)
-            else:
-                new_features["CCI"] = 0.0
+            ).fillna(0.0)
 
-            # ROC（Rate of Change）（pandas-ta使用）
-            roc_values = ta.roc(result_df["close"], length=12)
-            if roc_values is not None:
-                new_features["ROC"] = roc_values.fillna(0.0)
-            else:
-                new_features["ROC"] = 0.0
+            # ROC（MomentumIndicators使用）
+            new_features["ROC"] = MomentumIndicators.roc(
+                result_df["close"], period=12
+            ).fillna(0.0)
 
-            # モメンタム（pandas-ta使用）
-            momentum_values = ta.mom(result_df["close"], length=10)
-            if momentum_values is not None:
-                new_features["Momentum"] = momentum_values.fillna(0.0)
-            else:
-                new_features["Momentum"] = 0.0
+            # モメンタム（MomentumIndicators使用）
+            new_features["Momentum"] = MomentumIndicators.mom(
+                result_df["close"], length=10
+            ).fillna(0.0)
 
             # 一括で結合
             result_df = pd.concat(
@@ -413,15 +378,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         # ゼロ除算を防ぐ
         ratio = numerator / denominator.replace(0, np.nan)
         return ratio.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
-
-    def _calculate_rsi(self, df: pd.DataFrame, period: int = 14) -> pd.Series | Any:
-        """RSIを計算（内部使用）- pandas-ta使用"""
-        import pandas_ta as ta
-
-        rsi_values = ta.rsi(df["close"], length=period)
-        if rsi_values is None or not isinstance(rsi_values, pd.Series):
-            return pd.Series([50.0] * len(df))
-        return rsi_values.fillna(50.0)
 
     def get_feature_names(self) -> list:
         """

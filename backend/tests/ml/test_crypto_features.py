@@ -1,151 +1,105 @@
-"""
-crypto_features.pyのテスト
-TDDで開発し、DataFrameのfragmentation問題とAPI互換性をテストします。
-"""
-
-from datetime import datetime
-
-import numpy as np
-import pandas as pd
 import pytest
+import pandas as pd
+import numpy as np
+from unittest.mock import MagicMock, patch
+from backend.app.services.ml.feature_engineering.crypto_features import (
+    CryptoFeatureCalculator,
+)
 
-from app.services.ml.feature_engineering.crypto_features import CryptoFeatures
 
+class TestCryptoFeatureCalculator:
+    @pytest.fixture
+    def calculator(self):
+        return CryptoFeatureCalculator()
 
-@pytest.fixture
-def sample_ohlcv_data():
-    """サンプルOHLCVデータを生成"""
-    dates = pd.date_range(start=datetime(2023, 1, 1), periods=1000, freq="1h")
-
-    np.random.seed(42)
-    base_price = 50000
-
-    data = []
-    for i, date in enumerate(dates):
-        change = np.random.randn() * 100
-        base_price += change
-        high = base_price + abs(np.random.randn()) * 50
-        low = base_price - abs(np.random.randn()) * 50
-        volume = np.random.randint(100, 10000)
-
-        data.append(
+    @pytest.fixture
+    def sample_ohlcv_data(self):
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="1H")
+        df = pd.DataFrame(
             {
-                "timestamp": date,
-                "open": base_price - change / 2,
-                "high": high,
-                "low": low,
-                "close": base_price,
-                "volume": volume,
+                "timestamp": dates,
+                "open": np.random.uniform(100, 200, 100),
+                "high": np.random.uniform(200, 300, 100),
+                "low": np.random.uniform(50, 100, 100),
+                "close": np.random.uniform(100, 200, 100),
+                "volume": np.random.uniform(1000, 5000, 100),
+                "open_interest": np.random.uniform(500, 1000, 100),
+                "funding_rate": np.random.uniform(-0.01, 0.01, 100),
             }
         )
+        df.set_index("timestamp", inplace=True)
+        return df
 
-    df = pd.DataFrame(data)
-    df.set_index("timestamp", inplace=True)
-    return df
+    def test_initialization(self, calculator):
+        assert isinstance(calculator, CryptoFeatureCalculator)
+        assert "price" in calculator.feature_groups
+        assert "volume" in calculator.feature_groups
 
+    def test_create_crypto_features_basic(self, calculator, sample_ohlcv_data):
+        result = calculator.create_crypto_features(sample_ohlcv_data)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(sample_ohlcv_data)
+        # Check if some expected columns are present
+        assert "price_vs_high_24h" in result.columns
+        assert "volume_change_short" in result.columns
 
-@pytest.fixture
-def large_ohlcv_data():
-    """大きなベンチマーク用OHLCVデータを生成"""
-    dates = pd.date_range(start=datetime(2023, 1, 1), periods=20000, freq="1h")
+    def test_create_technical_features(self, calculator, sample_ohlcv_data):
+        periods = {"short": 14, "medium": 24, "long": 72}
+        result = calculator._create_technical_features(sample_ohlcv_data, periods)
 
-    np.random.seed(42)
-    base_price = 50000
+        assert "macd" in result.columns
+        assert "macd_signal" in result.columns
+        assert "macd_histogram" in result.columns
 
-    data = []
-    for i, date in enumerate(dates):
-        change = np.random.randn() * 100
-        base_price += change
-        high = base_price + abs(np.random.randn()) * 50
-        low = base_price - abs(np.random.randn()) * 50
-        volume = np.random.randint(100, 10000)
+        # Check values are not all NaN (skip first few due to calculation window)
+        assert not result["macd"].iloc[50:].isna().all()
 
-        data.append(
-            {
-                "timestamp": date,
-                "open": base_price - change / 2,
-                "high": high,
-                "low": low,
-                "close": base_price,
-                "volume": volume,
-            }
-        )
+    def test_create_price_features(self, calculator, sample_ohlcv_data):
+        periods = {"short": 14}
+        result = calculator._create_price_features(sample_ohlcv_data, periods)
+        assert "price_vs_high_24h" in result.columns
+        assert "price_vs_low_24h" in result.columns
 
-    df = pd.DataFrame(data)
-    df.set_index("timestamp", inplace=True)
-    return df
+    def test_create_volume_features(self, calculator, sample_ohlcv_data):
+        periods = {"short": 14, "medium": 24}
+        result = calculator._create_volume_features(sample_ohlcv_data, periods)
+        assert "volume_change_short" in result.columns
+        assert "price_vs_vwap_24h" in result.columns
 
+    def test_create_open_interest_features(self, calculator, sample_ohlcv_data):
+        periods = {"medium": 24}
+        result = calculator._create_open_interest_features(sample_ohlcv_data, periods)
+        assert "oi_change_medium" in result.columns
+        assert "oi_price_divergence" in result.columns
 
-def test_crypto_features_initialization():
-    """CryptoFeatureCalculatorの初期化をテスト"""
-    calculator = CryptoFeatures()
-    assert calculator is not None
-    assert hasattr(calculator, "create_crypto_features")
-    assert hasattr(calculator, "_create_price_features")
+    def test_create_funding_rate_features(self, calculator, sample_ohlcv_data):
+        periods = {"short": 14}
+        # Patch where the class is defined
+        with patch(
+            "backend.app.services.ml.feature_engineering.funding_rate_features.FundingRateFeatureCalculator"
+        ) as MockFRCalc:
+            mock_instance = MockFRCalc.return_value
+            # Return original df with dummy FR features
+            mock_df = sample_ohlcv_data.copy()
+            mock_df["fr_dummy"] = 1.0
+            mock_instance.calculate_features.return_value = mock_df
 
+            result = calculator._create_funding_rate_features(
+                sample_ohlcv_data, periods
+            )
 
-def test_crypto_features_inherits_base_calculator():
-    """CryptoFeatureCalculatorがBaseFeatureCalculatorを継承ことをテスト"""
-    from app.services.ml.feature_engineering.base_feature_calculator import (
-        BaseFeatureCalculator,
-    )
+            assert "fr_dummy" in result.columns
+            assert "fr_dummy" in calculator.feature_groups["funding_rate"]
 
-    calculator = CryptoFeatures()
+    def test_create_composite_features(self, calculator, sample_ohlcv_data):
+        periods = {}
+        result = calculator._create_composite_features(sample_ohlcv_data, periods)
+        assert "volume_price_efficiency" in result.columns
 
-    assert isinstance(calculator, BaseFeatureCalculator), (
-        "CryptoFeatureCalculator should inherit from BaseFeatureCalculator"
-    )
+    def test_ensure_data_quality(self, calculator, sample_ohlcv_data):
+        # Introduce some NaNs
+        df_with_nans = sample_ohlcv_data.copy()
+        df_with_nans.loc[df_with_nans.index[0], "open_interest"] = np.nan
 
-
-def test_calculate_features_method_exists():
-    """calculate_featuresメソッドの存在をテスト（BaseFeatureCalculator API互換）"""
-    calculator = CryptoFeatures()
-
-    assert hasattr(calculator, "calculate_features"), (
-        "CryptoFeatureCalculator must have calculate_features method"
-    )
-
-
-def test_create_crypto_features_basic(sample_ohlcv_data):
-    """基本的なcreate_crypto_featuresのテスト"""
-    calculator = CryptoFeatures()
-    result = calculator.create_crypto_features(sample_ohlcv_data)
-
-    assert result is not None
-    assert isinstance(result, pd.DataFrame)
-    assert len(result.columns) > len(sample_ohlcv_data.columns)
-    assert len(result) == len(sample_ohlcv_data)
-
-
-def test_calculate_features_api_compatibility(sample_ohlcv_data):
-    """calculate_features API互換性テスト"""
-    calculator = CryptoFeatures()
-    config = {"lookback_periods": {}}
-
-    result = calculator.calculate_features(sample_ohlcv_data, config)
-
-    assert result is not None
-    assert isinstance(result, pd.DataFrame)
-
-
-def test_dataframe_not_fragmented(sample_ohlcv_data):
-    """DataFrameがfragmentation問題を起こしていないことをテスト"""
-    calculator = CryptoFeatures()
-    result = calculator.create_crypto_features(sample_ohlcv_data)
-
-    assert result is not None
-    assert isinstance(result, pd.DataFrame)
-
-    # 基本的な統計情報を取得して、DataFrameが正常にアクセス可能であることを確認
-    summary = result.describe()
-    assert summary is not None
-    assert len(summary) > 0
-
-
-    def test_performance_benchmark_aggressive(large_ohlcv_data):
-        """アグレッシブなベンチマーク（目標: 200,000+ rows/sec）"""
-        pass
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        result = calculator._ensure_data_quality(df_with_nans)
+        assert not result["open_interest"].isna().any()
