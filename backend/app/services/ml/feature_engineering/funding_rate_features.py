@@ -132,11 +132,12 @@ class FundingRateFeatureCalculator:
 
         if missing_mask.sum() > 0:
             # FutureWarning対応: method='linear'は非推奨
-            # limit_direction="both" は未来のデータを参照するため、ffillのみを使用する
             # ファンディングレートは通常8時間ごとに更新されるため、次の更新までは前回の値を維持するのが適切
             df["funding_rate_raw"] = df["funding_rate_raw"].ffill()
-            # 最初のデータより前の欠損はbfillで埋める（やむを得ない場合のみ）
-            df["funding_rate_raw"] = df["funding_rate_raw"].bfill()
+
+            # データリーク防止: bfill()は未来データを使うため使用しない
+            # 最初のデータより前の欠損はベースライン値 (0.01%) で埋める
+            df["funding_rate_raw"] = df["funding_rate_raw"].fillna(self.baseline_rate)
 
         return df
 

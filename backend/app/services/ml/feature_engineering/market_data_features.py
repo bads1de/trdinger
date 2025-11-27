@@ -192,7 +192,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # ボラティリティ調整建玉残高（安全な計算）
             price_change = (
                 result_df["close"]
-                .pct_change()
+                .pct_change(fill_method=None)
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )
@@ -219,7 +219,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 建玉残高と価格の関係
             price_change = (
                 result_df["close"]
-                .pct_change()
+                .pct_change(fill_method=None)
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )
@@ -311,7 +311,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 市場ヒートインデックス（FR * OI変化率）
             oi_change = (
                 merged_df[oi_column]
-                .pct_change()
+                .pct_change(fill_method=None)
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )

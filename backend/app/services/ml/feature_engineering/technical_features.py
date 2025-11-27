@@ -97,7 +97,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # 市場効率性（価格のランダムウォーク度）- 最適化版
             # Vectorized computation of price autocorrelation
-            returns = result_df["close"].pct_change().fillna(0)
+            returns = result_df["close"].pct_change(fill_method=None).fillna(0)
             returns_lag1 = returns.shift(1)
 
             # Rolling correlation計算（pandas native使用、lambda回避）

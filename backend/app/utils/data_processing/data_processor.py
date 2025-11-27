@@ -165,7 +165,7 @@ class DataProcessor:
             # target_columnがパラメータに含まれていると戻り値の形式が変わるため除外
             label_params = training_params.copy()
             label_params.pop("target_column", None)
-            
+
             labels, threshold_info = label_generator.generate_labels(
                 price_data, **label_params
             )
@@ -414,9 +414,10 @@ class DataProcessor:
                 has_null = result_df[col].isnull().values.any()
 
             if has_null:
-                # 前方補完 → 線形補完 → 後方補完
+                # 前方補完 → 線形補完 → ゼロ埋め（未来データを使わない）
+                # bfill() は未来のデータを使うためデータリークの原因となるため削除
                 result_df[col] = (
-                    result_df[col].ffill().interpolate(method="linear").bfill()
+                    result_df[col].ffill().interpolate(method="linear").fillna(0)
                 )
 
         # 特別なOHLCカラムの補間後検証と修正

@@ -712,7 +712,9 @@ class FeatureEngineeringService:
             result_df["OI_Change_Rate_24h"] = pseudo_oi.pct_change(24)
 
             # ボラティリティ調整建玉残高
-            volatility = result_df["close"].pct_change().rolling(24).std()
+            volatility = (
+                result_df["close"].pct_change(fill_method=None).rolling(24).std()
+            )
             result_df["Volatility_Adjusted_OI"] = pseudo_oi / (volatility + 1e-8)
 
             # OI移動平均（中間計算用）

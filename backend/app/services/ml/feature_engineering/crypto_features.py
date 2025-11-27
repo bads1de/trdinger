@@ -163,9 +163,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
             )
 
         # OI vs 価格の関係（最も重要）
-        new_features["oi_price_divergence"] = (
-            df["open_interest"].pct_change() - df["close"].pct_change()
-        )
+        new_features["oi_price_divergence"] = df["open_interest"].pct_change(
+            fill_method=None
+        ) - df["close"].pct_change(fill_method=None)
 
         # OI勢い（24hのみ - 最も有用）
         new_features["oi_momentum_24h"] = (
@@ -279,7 +279,7 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
 
         # 出来高 vs 価格変動の関係（高寄与度: 0.0019）
         result_df["volume_price_efficiency"] = df["volume"] / (
-            abs(df["close"].pct_change()) + 1e-10
+            abs(df["close"].pct_change(fill_method=None)) + 1e-10
         )
 
         # 削除された特徴量（低寄与度）:
