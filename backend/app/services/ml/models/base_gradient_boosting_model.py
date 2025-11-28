@@ -16,7 +16,7 @@ class BaseGradientBoostingModel(ABC):
     """
     勾配ブースティングモデルの抽象基底クラス
 
-    LightGBMModelとXGBoostModelの共通ロジックをカプセル化します。
+    LightGBM、XGBoost、CatBoostの共通ロジックをカプセル化します。
     sklearn互換のfit/predict_probaインターフェースを提供します。
     """
 
@@ -99,7 +99,16 @@ class BaseGradientBoostingModel(ABC):
             # class_weightの処理
             sample_weight = None
             class_weight = kwargs.get("class_weight")
-            if class_weight:
+
+            # CatBoost用のclass_weight処理（サブクラスでオーバーライド可能）
+            catboost_params = self._handle_class_weight_for_catboost(
+                class_weight, kwargs
+            )
+            if catboost_params:
+                # CatBoost固有のパラメータがある場合は、kwargsに追加
+                kwargs.update(catboost_params)
+            elif class_weight:
+                # LightGBM/XGBoost用のsample_weight処理
                 try:
                     sample_weight = compute_sample_weight(
                         class_weight=class_weight, y=y_train
@@ -168,6 +177,22 @@ class BaseGradientBoostingModel(ABC):
         except Exception as e:
             logger.error(f"{self.ALGORITHM_NAME}モデル学習エラー: {e}")
             raise ModelError(f"{self.ALGORITHM_NAME}モデル学習に失敗しました: {e}")
+
+    def _handle_class_weight_for_catboost(
+        self, class_weight: Any, kwargs: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        CatBoost用のclass_weight処理（サブクラスでオーバーライド可能）
+
+        Args:
+            class_weight: class_weightパラメータ
+            kwargs: その他のパラメータ
+
+        Returns:
+            CatBoost固有のパラメータ辞書、またはNone（非CatBoostモデルの場合）
+        """
+        # デフォルトではNoneを返す（LightGBM/XGBoostの場合）
+        return None
 
     @abstractmethod
     def _create_dataset(

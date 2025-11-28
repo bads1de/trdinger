@@ -1,9 +1,10 @@
 import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from backend.app.services.ml.models.lightgbm import LightGBMModel
 from backend.app.services.ml.models.xgboost import XGBoostModel
+from backend.app.services.ml.models.catboost import CatBoostModel
 
 
 class TestGradientBoostingModels:
@@ -95,6 +96,42 @@ class TestGradientBoostingModels:
         assert np.array_equal(probas, mock_probas)
 
         # Test predict
+        preds = model.predict(X)
+        assert preds.shape == (10,)
+        expected_preds = np.argmax(mock_probas, axis=1)
+        assert np.array_equal(preds, expected_preds)
+
+    def test_catboost_predict_logic(self, sample_data):
+        """Test CatBoostModel predict logic (now inherits from BaseGradientBoostingModel)"""
+        X, y = sample_data
+        model = CatBoostModel()
+        model.is_trained = True  # BaseGradientBoostingModelの規約に合わせる
+        model.feature_columns = ["f1", "f2"]
+        model.model = MagicMock()
+
+        # Mock predict_proba output
+        mock_probas = np.array(
+            [
+                [0.7, 0.3],
+                [0.2, 0.8],
+                [0.6, 0.4],
+                [0.3, 0.7],
+                [0.9, 0.1],
+                [0.4, 0.6],
+                [0.8, 0.2],
+                [0.1, 0.9],
+                [0.75, 0.25],
+                [0.35, 0.65],
+            ]
+        )
+        model.model.predict_proba.return_value = mock_probas
+
+        # Test predict_proba
+        probas = model.predict_proba(X)
+        assert probas.shape == (10, 2)
+        assert np.array_equal(probas, mock_probas)
+
+        # Test predict (derived from predict_proba)
         preds = model.predict(X)
         assert preds.shape == (10,)
         expected_preds = np.argmax(mock_probas, axis=1)

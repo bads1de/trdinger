@@ -1,29 +1,31 @@
 """
 CatBoostモデルラッパー
 
-アンサンブル学習で使用するCatBoostモデルのラッパークラスを提供します。
+BaseGradientBoostingModelを継承し、CatBoost固有の実装を提供します。
 時系列データに特化したOrdered Boostingなど、CatBoost特有の機能を活用します。
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import catboost as cb
 import numpy as np
 import pandas as pd
 
-from ....utils.error_handler import ModelError
+from app.utils.error_handler import ModelError
+from .base_gradient_boosting_model import BaseGradientBoostingModel
 
 logger = logging.getLogger(__name__)
 
 
-class CatBoostModel:
+class CatBoostModel(BaseGradientBoostingModel):
     """
-    アンサンブル内で使用するCatBoostモデルラッパー
+    CatBoostモデルラッパー
 
-    CatBoostの強みを活かした時系列データ向けの実装
-    sklearn互換のインターフェースを提供
+    BaseGradientBoostingModelを継承し、CatBoost固有の実装を提供します。
     """
+
+    ALGORITHM_NAME = "catboost"
 
     def __init__(
         self,
@@ -41,253 +43,134 @@ class CatBoostModel:
             learning_rate: 学習率
             **kwargs: その他のパラメータ
         """
-        self.random_state = random_state
+        super().__init__(random_state=random_state, **kwargs)
         self.iterations = iterations
         self.learning_rate = learning_rate
-        self.kwargs = kwargs
 
-        # モデルのデフォルトパラメータ
-        self.default_params = {
-            "iterations": iterations,
-            "learning_rate": learning_rate,
-            "depth": 6,
-            "l2_leaf_reg": 3.0,
-            "random_seed": random_state,
+    def _handle_class_weight_for_catboost(
+        self, class_weight: Any, kwargs: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        CatBoost用のclass_weight処理をオーバーライド
+
+        Args:
+            class_weight: class_weightパラメータ
+            kwargs: その他のパラメータ
+
+        Returns:
+            CatBoost固有のパラメータ辞書
+        """
+        if not class_weight:
+            return None
+
+        catboost_params = {}
+        if class_weight == "balanced" or class_weight == "Balanced":
+            catboost_params["auto_class_weights"] = "Balanced"
+            logger.info("auto_class_weights='Balanced'を適用")
+        elif isinstance(class_weight, dict):
+            # カスタムクラスウェイトの設定
+            catboost_params["class_weights"] = list(class_weight.values())
+            logger.info(f"カスタムクラスウェイト: {class_weight}")
+
+        return catboost_params if catboost_params else None
+
+    def _create_dataset(
+        self,
+        X: Union[pd.DataFrame, np.ndarray],
+        y: Optional[Union[pd.Series, np.ndarray]] = None,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> Any:
+        """
+        CatBoost固有のデータセットオブジェクトを作成します。
+        CatBoostはnumpy配列を直接受け取ります。
+        """
+        # CatBoostはnumpy配列を直接受け取る
+        if isinstance(X, pd.DataFrame):
+            X_data = X.values
+        else:
+            X_data = X
+
+        if y is not None:
+            y_data = y.values if isinstance(y, pd.Series) else y
+            return (X_data, y_data)
+        return X_data
+
+    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
+        """
+        CatBoost固有のパラメータディクショナリを生成します。
+        """
+        params = {
+            "iterations": kwargs.get("iterations", self.iterations),
+            "learning_rate": kwargs.get("learning_rate", self.learning_rate),
+            "depth": kwargs.get("depth", 6),
+            "l2_leaf_reg": kwargs.get("l2_leaf_reg", 3.0),
+            "random_seed": self.random_state,
             "verbose": 0,
             "allow_writing_files": False,  # 一時ファイル作成を無効化
         }
 
-        # kwargsでデフォルトを上書き
-        self.default_params.update(kwargs)
+        # auto_class_weights/class_weightsがkwargsにある場合は追加
+        if "auto_class_weights" in kwargs:
+            params["auto_class_weights"] = kwargs["auto_class_weights"]
+        if "class_weights" in kwargs:
+            params["class_weights"] = kwargs["class_weights"]
 
-        self.model: Optional[cb.CatBoostClassifier] = None
-        self.feature_columns: Optional[List[str]] = None
-        self.is_fitted = False
+        # 渡された kwargs でデフォルトを上書き（class_weight関連は除く）
+        for key, value in kwargs.items():
+            if key not in ["class_weight", "early_stopping_rounds", "num_boost_round"]:
+                if key not in params:
+                    params[key] = value
 
-    def fit(
+        return params
+
+    def _train_internal(
         self,
-        X: Union[pd.DataFrame, np.ndarray],
-        y: Union[pd.Series, np.ndarray],
+        train_data: Any,
+        valid_data: Any,
+        params: Dict[str, Any],
+        early_stopping_rounds: Optional[int] = None,
         **kwargs,
-    ):
+    ) -> cb.CatBoostClassifier:
         """
-        sklearn互換のfitメソッド
-
-        Args:
-            X: 学習用特徴量（DataFrame or numpy array）
-            y: 学習用ターゲット（Series or numpy array）
-            **kwargs: その他のパラメータ（class_weightなど）
-
-        Returns:
-            self: 学習済みモデル
+        CatBoost固有の学習プロセスを実行します。
         """
-        try:
-            logger.info("CatBoostモデルの学習を開始")
+        X_train, y_train = train_data
+        X_val, y_val = valid_data
 
-            # データ型の変換
-            if isinstance(X, pd.DataFrame):
-                self.feature_columns = X.columns.tolist()
-                X_train = X.values
-            else:
-                X_train = X
+        # CatBoostClassifierを作成
+        model = cb.CatBoostClassifier(**params)
 
-            if isinstance(y, pd.Series):
-                y_train = y.values
-            else:
-                y_train = y
+        # 学習
+        model.fit(
+            X_train,
+            y_train,
+            eval_set=(X_val, y_val),
+            verbose=False,
+        )
 
-            # パラメータの準備
-            params = self.default_params.copy()
+        return model
 
-            # class_weight処理
-            if "class_weight" in kwargs:
-                class_weight = kwargs["class_weight"]
-                if class_weight == "balanced" or class_weight == "Balanced":
-                    params["auto_class_weights"] = "Balanced"
-                    logger.info("auto_class_weights='Balanced'を適用")
-                elif isinstance(class_weight, dict):
-                    # カスタムクラスウェイトの設定
-                    params["class_weights"] = list(class_weight.values())
-                    logger.info(f"カスタムクラスウェイト: {class_weight}")
-
-            # モデルの作成と学習
-            self.model = cb.CatBoostClassifier(**params)
-            self.model.fit(X_train, y_train)
-
-            self.is_fitted = True
-            logger.info("CatBoostモデルの学習が完了")
-
-            return self
-
-        except Exception as e:
-            logger.error(f"CatBoostモデルの学習でエラー: {e}")
-            raise ModelError(f"CatBoostモデルの学習に失敗しました: {e}")
-
-    def _train_model_impl(
-        self,
-        X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
-        y_train: pd.Series,
-        y_test: pd.Series,
-        **kwargs,
-    ) -> Dict[str, Any]:
+    def _get_prediction_proba(self, data: Any) -> np.ndarray:
         """
-        CatBoostモデルを学習
-
-        Args:
-            X_train: 学習用特徴量
-            X_test: テスト用特徴量
-            y_train: 学習用ターゲット
-            y_test: テスト用ターゲット
-
-        Returns:
-            学習結果
+        CatBoost固有の予測確率を取得します。
         """
-        try:
-            logger.info("CatBoostモデル学習開始")
+        if self.model is None:
+            raise ModelError("学習済みモデルがありません")
 
-            # 特徴量カラムを保存
-            self.feature_columns = X_train.columns.tolist()
+        # dataはタプル (X, y) の形式
+        X_data = data[0] if isinstance(data, tuple) else data
 
-            # パラメータの準備
-            params = self.default_params.copy()
+        return self.model.predict_proba(X_data)
 
-            # class_weight処理
-            if "class_weight" in kwargs:
-                class_weight = kwargs["class_weight"]
-                if class_weight == "balanced":
-                    params["auto_class_weights"] = "Balanced"
-
-            # モデルの作成
-            self.model = cb.CatBoostClassifier(**params)
-
-            # 学習
-            self.model.fit(
-                X_train.values,
-                y_train.values,
-                eval_set=(X_test.values, y_test.values),
-                verbose=False,
-            )
-
-            self.is_fitted = True
-
-            # 予測
-            y_pred = self.model.predict(X_test.values)
-
-            # 評価結果（統一された評価関数を使用）
-            from ..common.evaluation_utils import evaluate_model_predictions
-
-            eval_metrics = evaluate_model_predictions(y_test, y_pred)
-
-            accuracy = eval_metrics.get("accuracy", 0.0)
-            f1 = eval_metrics.get("f1_score", 0.0)
-
-            result = {
-                "accuracy": float(accuracy),
-                "f1_score": float(f1),
-                "model_type": "CatBoost",
-                "n_features": len(self.feature_columns),
-                **eval_metrics,  # その他の指標も念のため含める
-            }
-
-            logger.info(f"CatBoost学習完了: Accuracy={accuracy:.4f}, F1={f1:.4f}")
-
-            return result
-
-        except Exception as e:
-            logger.error(f"CatBoostモデル学習エラー: {e}")
-            raise ModelError(f"CatBoostモデルの学習に失敗しました: {e}")
-
-    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
         """
-        特徴量重要度を取得
-
-        Args:
-            top_n: 上位N個の特徴量
-
-        Returns:
-            特徴量重要度の辞書
+        予測用の入力データを準備します。
+        CatBoostはnumpy配列を直接受け取ります。
         """
-        if not self.is_fitted or self.model is None:
-            logger.warning("モデルが学習されていません")
-            return {}
+        return X.values
 
-        try:
-            # CatBoostの特徴量重要度を取得
-            importance = self.model.get_feature_importance()
-
-            if self.feature_columns:
-                feature_importance = dict(zip(self.feature_columns, importance))
-            else:
-                feature_importance = {
-                    f"feature_{i}": imp for i, imp in enumerate(importance)
-                }
-
-            # 上位N個を抽出
-            sorted_importance = sorted(
-                feature_importance.items(), key=lambda x: x[1], reverse=True
-            )[:top_n]
-
-            return dict(sorted_importance)
-
-        except Exception as e:
-            logger.error(f"特徴量重要度の取得でエラー: {e}")
-            return {}
-
-    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def _predict_raw(self, data: Any) -> np.ndarray:
         """
-        sklearn互換の予測メソッド（クラス予測）
-
-        Args:
-            X: 特徴量（DataFrame or numpy array）
-
-        Returns:
-            予測クラス
+        モデルから生の予測値（確率）を取得します。
         """
-        if not self.is_fitted or self.model is None:
-            raise ModelError("モデルが学習されていません")
-
-        try:
-            # データ型の変換
-            if isinstance(X, pd.DataFrame):
-                X_pred = X.values
-            else:
-                X_pred = X
-
-            # 予測
-            predictions = self.model.predict(X_pred)
-
-            return predictions
-
-        except Exception as e:
-            logger.error(f"予測でエラー: {e}")
-            raise ModelError(f"予測に失敗しました: {e}")
-
-    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
-        """
-        予測確率を取得
-
-        Args:
-            X: 特徴量（DataFrame or numpy array）
-
-        Returns:
-            予測確率
-        """
-        if not self.is_fitted or self.model is None:
-            raise ModelError("モデルが学習されていません")
-
-        try:
-            # データ型の変換
-            if isinstance(X, pd.DataFrame):
-                X_pred = X.values
-            else:
-                X_pred = X
-
-            # 予測確率
-            predictions_proba = self.model.predict_proba(X_pred)
-
-            return predictions_proba
-
-        except Exception as e:
-            logger.error(f"予測確率の取得でエラー: {e}")
-            raise ModelError(f"予測確率の取得に失敗しました: {e}")
+        return self.model.predict_proba(data)
