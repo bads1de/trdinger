@@ -13,7 +13,7 @@ from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 from app.services.ml.ensemble.stacking import (
     StackingEnsemble,
 )  # StackingEnsembleを明示的にインポート
-from app.services.ml.meta_labeling_service import MetaLabelingService
+from app.services.ml.ensemble.meta_labeling import MetaLabelingService
 
 
 @pytest.fixture

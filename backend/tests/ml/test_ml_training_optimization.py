@@ -2,12 +2,8 @@ import pytest
 from unittest.mock import MagicMock, patch, ANY
 import pandas as pd
 import numpy as np
-from backend.app.services.ml.ml_training_service import (
-    MLTrainingService,
-    OptimizationSettings,
-)
-from backend.app.services.ml.single_model.single_model_trainer import SingleModelTrainer
-from backend.app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
+from backend.app.services.ml.ml_training_service import MLTrainingService
+from backend.app.services.optimization.optimization_service import OptimizationSettings
 
 
 class TestMLTrainingOptimization:
@@ -28,97 +24,75 @@ class TestMLTrainingOptimization:
         )
         return df
 
-    @patch("backend.app.services.ml.ml_training_service.SingleModelTrainer")
-    def test_optimization_single_model(self, mock_single_trainer_cls, sample_data):
-        """Test that optimization uses SingleModelTrainer when configured"""
+    def test_train_model_with_optimization(self, sample_data):
+        """Test that train_model delegates to OptimizationService when optimization is enabled"""
         # Setup
         service = MLTrainingService(
             trainer_type="single", single_model_config={"model_type": "lightgbm"}
         )
         opt_settings = OptimizationSettings(enabled=True, n_calls=1)
 
-        # Configure service.trainer (which is a mock) to pass duck typing checks
-        # Ensure ensemble_config does not exist
-        del service.trainer.ensemble_config
-        # Ensure model_type exists
-        service.trainer.model_type = "lightgbm"
-
-        # Mock the trainer instance created inside objective function
-        mock_temp_trainer = MagicMock()
-        mock_temp_trainer.train_model.return_value = {"f1_score": 0.8}
-        mock_single_trainer_cls.return_value = mock_temp_trainer
-
-        # Create objective function
-        objective_func = service._create_objective_function(
-            training_data=sample_data,
-            optimization_settings=opt_settings,
-            trainer=service.trainer,  # Pass the current trainer
-        )
-
-        # Execute objective function
-        score = objective_func({"learning_rate": 0.05})
-
-        # Verify
-        assert score == 0.8
-        # Verify SingleModelTrainer was instantiated with correct type
-        mock_single_trainer_cls.assert_called_with(model_type="lightgbm")
-        # Verify train_model was called with optimization params
-        mock_temp_trainer.train_model.assert_called()
-        call_kwargs = mock_temp_trainer.train_model.call_args[1]
-        assert call_kwargs["learning_rate"] == 0.05
-        assert call_kwargs["save_model"] is False
-
-    @patch("backend.app.services.ml.ml_training_service.EnsembleTrainer")
-    def test_optimization_ensemble_model(self, mock_ensemble_trainer_cls, sample_data):
-        """Test that optimization uses EnsembleTrainer when configured"""
-        # Setup
-        ensemble_config = {
-            "method": "stacking",
-            "stacking_params": {"base_models": ["lightgbm"], "cv_folds": 5},
+        # Mock OptimizationService
+        service.optimization_service = MagicMock()
+        service.optimization_service.optimize_parameters.return_value = {
+            "best_params": {"learning_rate": 0.05},
+            "best_score": 0.85,
+            "total_evaluations": 1,
+            "optimization_time": 1.0,
         }
-        service = MLTrainingService(
-            trainer_type="ensemble", ensemble_config=ensemble_config
-        )
-        opt_settings = OptimizationSettings(enabled=True, n_calls=1)
 
-        # Configure service.trainer to pass duck typing checks
-        # Ensure ensemble_config exists and is a dict (not a mock)
-        service.trainer.ensemble_config = ensemble_config
+        # Mock trainer
+        service.trainer = MagicMock()
+        service.trainer.train_model.return_value = {"f1_score": 0.9}
 
-        # Mock the trainer instance
-        mock_temp_trainer = MagicMock()
-        mock_temp_trainer.train_model.return_value = {"f1_score": 0.85}
-        mock_ensemble_trainer_cls.return_value = mock_temp_trainer
-
-        # Create objective function
-        objective_func = service._create_objective_function(
+        # Execute
+        result = service.train_model(
             training_data=sample_data,
             optimization_settings=opt_settings,
-            trainer=service.trainer,
+            save_model=False,
         )
 
-        # Execute objective function
-        score = objective_func({"meta_model_learning_rate": 0.05})
+        # Verify OptimizationService called
+        service.optimization_service.optimize_parameters.assert_called_once()
+        call_kwargs = service.optimization_service.optimize_parameters.call_args[1]
+        assert call_kwargs["trainer"] == service.trainer
+        assert call_kwargs["training_data"] is sample_data
+        assert call_kwargs["optimization_settings"] == opt_settings
 
-        # Verify
-        assert score == 0.85
-        # Verify EnsembleTrainer was instantiated
-        # Note: call_count might be > 1 because MLTrainingService init also creates one
+        # Verify final training called with best params
+        service.trainer.train_model.assert_called_once()
+        train_kwargs = service.trainer.train_model.call_args[1]
+        assert train_kwargs["learning_rate"] == 0.05
+        assert train_kwargs["save_model"] is False
 
-        # Check the last call (which should be inside objective function)
-        # We need to find the call that has the modified cv_folds
-        found_call = False
-        for call in mock_ensemble_trainer_cls.call_args_list:
-            _, kwargs = call
-            if "ensemble_config" in kwargs:
-                config = kwargs["ensemble_config"]
-                if config.get("stacking_params", {}).get("cv_folds") == 3:
-                    found_call = True
-                    break
+        # Verify result contains optimization info
+        assert "optimization_result" in result
+        assert result["optimization_result"]["best_params"] == {"learning_rate": 0.05}
 
-        assert (
-            found_call
-        ), "EnsembleTrainer should be initialized with cv_folds=3 during optimization"
+    def test_train_model_without_optimization(self, sample_data):
+        """Test that train_model bypasses OptimizationService when optimization is disabled"""
+        # Setup
+        service = MLTrainingService(
+            trainer_type="single", single_model_config={"model_type": "lightgbm"}
+        )
+        opt_settings = OptimizationSettings(enabled=False)
 
-        # Verify train_model was called
-        mock_temp_trainer.train_model.assert_called()
+        # Mock OptimizationService
+        service.optimization_service = MagicMock()
+
+        # Mock trainer
+        service.trainer = MagicMock()
+        service.trainer.train_model.return_value = {"f1_score": 0.9}
+
+        # Execute
+        service.train_model(
+            training_data=sample_data,
+            optimization_settings=opt_settings,
+            save_model=False,
+        )
+
+        # Verify OptimizationService NOT called
+        service.optimization_service.optimize_parameters.assert_not_called()
+
+        # Verify training called
+        service.trainer.train_model.assert_called_once()

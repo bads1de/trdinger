@@ -121,20 +121,17 @@ class TestMLTrainingService:
             assert result["f1_score"] == 0.85
             mock_trainer.train_model.assert_called_once()
 
-    @patch("backend.app.services.ml.ml_training_service.OptunaOptimizer")
+    @patch("backend.app.services.optimization.optimization_service.OptimizationService.optimize_parameters")
     def test_train_model_with_optimization(
-        self, mock_optimizer_class, sample_training_data, mock_trainer
+        self, mock_optimize_parameters, sample_training_data, mock_trainer
     ):
         """最適化ありでのモデル学習テスト"""
-        mock_optimizer = Mock()
-        mock_optimizer.optimize.return_value = Mock(
-            best_params={"learning_rate": 0.1},
-            best_score=0.9,
-            total_evaluations=10,
-            optimization_time=5.0,
-        )
-        mock_optimizer.cleanup = Mock()
-        mock_optimizer_class.return_value = mock_optimizer
+        mock_optimize_parameters.return_value = {
+            "best_params": {"learning_rate": 0.1},
+            "best_score": 0.9,
+            "total_evaluations": 10,
+            "optimization_time": 5.0,
+        }
 
         with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
             service = MLTrainingService()
@@ -156,8 +153,8 @@ class TestMLTrainingService:
 
             assert "optimization_result" in result
             assert result["optimization_result"]["best_score"] == 0.9
-            mock_optimizer.optimize.assert_called_once()
-            mock_optimizer.cleanup.assert_called()
+            mock_optimize_parameters.assert_called_once()
+            # cleanup は OptimizationService のインスタンスで行われるため、ここでは確認しない
 
     def test_evaluate_model(self, sample_training_data, mock_trainer):
         """モデル評価テスト"""

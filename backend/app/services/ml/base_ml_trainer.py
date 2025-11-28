@@ -7,6 +7,7 @@ ML学習基盤クラス
 """
 
 import logging
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple, cast
 
@@ -16,16 +17,10 @@ from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from ...config.unified_config import unified_config
-from ...utils.data_processing import data_processor as data_preprocessor
 from ...utils.error_handler import (
     DataError,
     ml_operation_context,
     safe_ml_operation,
-)
-from .label_generation.presets import (
-    apply_preset_by_name,
-    forward_classification_preset,
-    get_common_presets,
 )
 from .cross_validation import PurgedKFold
 
@@ -36,6 +31,7 @@ from .exceptions import MLModelError
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .ml_metadata import ModelMetadata
 from .model_manager import model_manager
+from .label_generation.label_generation_service import LabelGenerationService
 
 logger = logging.getLogger(__name__)
 
@@ -68,13 +64,18 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.config = ml_config
 
         self.feature_service = FeatureEngineeringService()
-        logger.debug("特徴量エンジニアリングサービスを初期化しました")
+        self.label_service = LabelGenerationService()
+        logger.debug(
+            "特徴量エンジニアリングサービスとラベル生成サービスを初期化しました"
+        )
 
         self.trainer_config = trainer_config or {}
-        
+
         # プロパティの設定（サブクラスで使用される可能性があるため維持）
         self.trainer_type = trainer_type or self.trainer_config.get("type", "single")
-        self.model_type = model_type or self.trainer_config.get("model_type", "lightgbm")
+        self.model_type = model_type or self.trainer_config.get(
+            "model_type", "lightgbm"
+        )
         self.ensemble_config = self.trainer_config.get("ensemble_config", {})
 
         self.scaler = StandardScaler()
@@ -83,7 +84,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self._model = None
         self.last_training_results = None
 
-    @safe_ml_operation(default_return={"success": False}, context="MLモデル学習でエラーが発生しました")
+    @safe_ml_operation(
+        default_return={"success": False}, context="MLモデル学習でエラーが発生しました"
+    )
     def train_model(
         self,
         training_data: pd.DataFrame,
@@ -186,10 +189,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 )
 
                 model_metadata.log_summary()
-                
+
                 validation_result = model_metadata.validate()
                 if not validation_result["is_valid"]:
-                    logger.warning(f"モデルメタデータの問題: {validation_result['errors']}")
+                    logger.warning(
+                        f"モデルメタデータの問題: {validation_result['errors']}"
+                    )
 
                 model_path = self.save_model(
                     model_name or self.config.model.AUTO_STRATEGY_MODEL_NAME,
@@ -355,27 +360,29 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 available_columns = [
                     col for col in self.feature_columns if col in features_df.columns
                 ]
-                
+
                 processed_features = features_df[available_columns].copy()
-                
+
                 # 2. 欠損カラムを特定
                 missing_columns = [
-                    col for col in self.feature_columns if col not in features_df.columns
+                    col
+                    for col in self.feature_columns
+                    if col not in features_df.columns
                 ]
-                
+
                 if missing_columns:
                     # logger.debug(f"欠損特徴量を補完します: {missing_columns}")
                     # 不足特徴量のDataFrameを作成して結合
                     missing_df = pd.DataFrame(
-                        0.0,
-                        index=processed_features.index,
-                        columns=missing_columns
+                        0.0, index=processed_features.index, columns=missing_columns
                     )
-                    processed_features = pd.concat([processed_features, missing_df], axis=1)
-                
+                    processed_features = pd.concat(
+                        [processed_features, missing_df], axis=1
+                    )
+
                 # 3. カラムの順序を学習時と合わせる
                 processed_features = processed_features[self.feature_columns]
-                
+
             else:
                 # 特徴量カラム情報がない場合はそのまま（警告すべきだが）
                 processed_features = features_df.copy()
@@ -451,83 +458,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, features_df: pd.DataFrame, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """学習用データを準備"""
-        # ラベル生成設定を取得
-        label_config = unified_config.ml.training.label_generation
-
-        # target_columnが明示的に指定されている場合は既存ロジックを使用（後方互換性）
-        target_column = training_params.get("target_column")
-        if target_column is not None and target_column in features_df.columns:
-            logger.info(f"📌 後方互換性モード: target_column='{target_column}' を使用")
-            
-            from .label_generation import LabelGenerator
-            label_generator = LabelGenerator()
-
-            features_clean, labels_clean, threshold_info = (
-                data_preprocessor.prepare_training_data(
-                    features_df, label_generator, **training_params
-                )
-            )
-            
-            self.feature_columns = features_clean.columns.tolist()
-            return features_clean, labels_clean
-
-        # デフォルトのプリセット/カスタム設定ロジック
         try:
-            logger.info("🎯 新しいラベル生成設定を使用")
-            
-            if label_config.use_preset:
-                try:
-                    labels, preset_info = apply_preset_by_name(
-                        features_df, label_config.default_preset
-                    )
-                except ValueError:
-                    logger.warning("⚠️ フォールバック: カスタム設定を使用します")
-                    labels = forward_classification_preset(
-                        df=features_df,
-                        timeframe=label_config.timeframe,
-                        horizon_n=label_config.horizon_n,
-                        threshold=label_config.threshold,
-                        price_column=label_config.price_column,
-                        threshold_method=label_config.get_threshold_method_enum(),
-                    )
-            else:
-                labels = forward_classification_preset(
-                    df=features_df,
-                    timeframe=label_config.timeframe,
-                    horizon_n=label_config.horizon_n,
-                    threshold=label_config.threshold,
-                    price_column=label_config.price_column,
-                    threshold_method=label_config.get_threshold_method_enum(),
-                )
-
-            # NaNを削除してクリーンなデータを作成
-            valid_idx = labels.notna()
-            features_clean = features_df[valid_idx].copy()
-            labels_clean = labels[valid_idx].copy()
-
-            # 文字列ラベルを数値に変換
-            unique_labels = set(labels_clean.unique())
-            if "TREND" in unique_labels:
-                label_mapping = {"RANGE": 0, "TREND": 1}
-            else:
-                label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
-
-            labels_numeric = labels_clean.map(label_mapping)
-
-            if labels_numeric.isna().any():
-                valid_numeric_idx = labels_numeric.notna()
-                features_clean = features_clean[valid_numeric_idx]
-                labels_numeric = labels_numeric[valid_numeric_idx]
+            features_clean, labels_numeric = self.label_service.prepare_labels(
+                features_df, **training_params
+            )
 
             self.feature_columns = features_clean.columns.tolist()
-            logger.info(f"✅ ラベル生成完了: {len(features_clean)}サンプル")
-
             return features_clean, labels_numeric
 
         except Exception as e:
-            logger.error(f"❌ 新しいラベル生成設定でエラー発生: {e}")
-            # フォールバック処理（省略）
-            raise DataError(f"ラベル生成に失敗しました: {e}")
+            logger.error(f"学習データ準備エラー: {e}")
+            raise DataError(f"学習データの準備に失敗しました: {e}")
 
     def _split_data(
         self, X: pd.DataFrame, y: pd.Series, **training_params
@@ -538,14 +479,18 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         use_random_split = training_params.get("use_random_split", False)
         use_time_series_split = training_params.get(
             "use_time_series_split",
-            (self.config.training.USE_TIME_SERIES_SPLIT if not use_random_split else False),
+            (
+                self.config.training.USE_TIME_SERIES_SPLIT
+                if not use_random_split
+                else False
+            ),
         )
 
         if use_time_series_split and not use_random_split:
             logger.info("🕒 時系列分割を使用")
             n_samples = len(X)
             train_size = int(n_samples * (1 - test_size))
-            
+
             X_train = X.iloc[:train_size].copy()
             X_test = X.iloc[train_size:].copy()
             y_train = y.iloc[:train_size].copy()
@@ -554,7 +499,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.info("🔀 ランダム分割を使用")
             stratify_param = y if y.nunique() > 1 else None
             splits = train_test_split(
-                X, y, test_size=test_size, random_state=random_state, stratify=stratify_param
+                X,
+                y,
+                test_size=test_size,
+                random_state=random_state,
+                stratify=stratify_param,
             )
             X_train = cast(pd.DataFrame, splits[0])
             X_test = cast(pd.DataFrame, splits[1])
@@ -567,8 +516,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Dict[str, Any]:
         """時系列クロスバリデーション"""
-        n_splits = training_params.get("cv_splits", self.config.training.CROSS_VALIDATION_FOLDS)
-        max_train_size = training_params.get("max_train_size", self.config.training.MAX_TRAIN_SIZE)
+        n_splits = training_params.get(
+            "cv_splits", self.config.training.CROSS_VALIDATION_FOLDS
+        )
+        max_train_size = training_params.get(
+            "max_train_size", self.config.training.MAX_TRAIN_SIZE
+        )
 
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
@@ -578,7 +531,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 簡易的にデフォルト値を使用（詳細は省略）
             t1_horizon_n = self.config.training.PREDICTION_HORIZON
             t1_timeframe = "1h"
-            
+
             t1 = self._get_t1_series(X.index, t1_horizon_n, t1_timeframe)
             splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=0.01)
         else:
@@ -599,8 +552,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             X_train_scaled, X_test_scaled = self._preprocess_data(X_train_cv, X_test_cv)
 
             fold_result = self._train_fold_with_error_handling(
-                fold, X_train_scaled, X_test_scaled, y_train_cv, y_test_cv,
-                X_train_cv, X_test_cv, training_params
+                fold,
+                X_train_scaled,
+                X_test_scaled,
+                y_train_cv,
+                y_test_cv,
+                X_train_cv,
+                X_test_cv,
+                training_params,
             )
 
             cv_scores.append(fold_result.get("accuracy", 0.0))
@@ -689,7 +648,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # LightGBM/XGBoostモデルの場合の一般的な処理
         if hasattr(self._model, "feature_importance") and self.feature_columns:
             try:
-                importance_scores = self._model.feature_importance(importance_type="gain")
+                importance_scores = self._model.feature_importance(
+                    importance_type="gain"
+                )
                 feature_importance = dict(zip(self.feature_columns, importance_scores))
                 sorted_importance = sorted(
                     feature_importance.items(), key=lambda x: x[1], reverse=True
@@ -697,7 +658,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 return dict(sorted_importance)
             except Exception:
                 pass
-        
+
         # get_feature_importanceメソッドを持つモデルの場合
         if hasattr(self._model, "get_feature_importance"):
             try:

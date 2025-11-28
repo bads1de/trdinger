@@ -13,7 +13,10 @@ import numpy as np
 import pandas as pd
 
 from ...utils.error_handler import safe_ml_operation
-from ..optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
+from ..optimization.optimization_service import (
+    OptimizationService,
+    OptimizationSettings,
+)
 from .base_ml_trainer import BaseMLTrainer
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .config import ml_config
@@ -21,20 +24,6 @@ from .ensemble.ensemble_trainer import EnsembleTrainer
 from .single_model.single_model_trainer import SingleModelTrainer
 
 logger = logging.getLogger(__name__)
-
-
-class OptimizationSettings:
-    """最適化設定クラス（簡素化版）"""
-
-    def __init__(
-        self,
-        enabled: bool = False,
-        n_calls: int = 50,
-        parameter_space: Optional[Dict[str, Dict[str, Any]]] = None,
-    ):
-        self.enabled = enabled
-        self.n_calls = n_calls
-        self.parameter_space = parameter_space or {}
 
 
 class MLTrainingService(BaseResourceManager):
@@ -65,6 +54,7 @@ class MLTrainingService(BaseResourceManager):
         self.config = ml_config
         self.ensemble_config = ensemble_config
         self.single_model_config = single_model_config
+        self.optimization_service = OptimizationService()
 
         # 統合されたトレーナー設定を作成
         trainer_config = self._create_trainer_config(
@@ -208,16 +198,36 @@ class MLTrainingService(BaseResourceManager):
 
         # 最適化が有効な場合は最適化ワークフローを実行
         if optimization_settings and optimization_settings.enabled:
-            return self._train_with_optimization(
+            # 最適化を実行
+            optimization_result = self.optimization_service.optimize_parameters(
+                trainer=trainer,
+                training_data=training_data,
+                optimization_settings=optimization_settings,
+                funding_rate_data=funding_rate_data,
+                open_interest_data=open_interest_data,
+                model_name=model_name,
+                **training_params,
+            )
+
+            # 最適化されたパラメータで最終モデルを学習
+            final_training_params = {
+                **training_params,
+                **optimization_result["best_params"],
+            }
+
+            final_result = trainer.train_model(
                 training_data=training_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
                 save_model=save_model,
                 model_name=model_name,
-                optimization_settings=optimization_settings,
-                trainer=trainer,  # 適切なトレーナーを渡す
-                **training_params,
+                **final_training_params,
             )
+
+            # 最適化情報を結果に追加
+            final_result["optimization_result"] = optimization_result
+            return final_result
+
         else:
             # 通常のトレーニング
             return trainer.train_model(
@@ -395,304 +405,6 @@ class MLTrainingService(BaseResourceManager):
         # BaseMLTrainer.predict_signal に委譲
         return self.trainer.predict_signal(features)
 
-    def _train_with_optimization(
-        self,
-        training_data: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
-        save_model: bool = True,
-        model_name: Optional[str] = None,
-        optimization_settings: Optional[OptimizationSettings] = None,
-        trainer: Optional[Any] = None,  # カスタムトレーナーを受け取る
-        **training_params,
-    ) -> Dict[str, Any]:
-        """
-        最適化を使用してMLモデルを学習
-
-        Args:
-            training_data: 学習用OHLCVデータ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-            save_model: モデルを保存するか
-            model_name: モデル名（オプション）
-            optimization_settings: 最適化設定
-            trainer: 使用するトレーナー（オプション、指定されない場合はself.trainerを使用）
-            **training_params: 追加の学習パラメータ
-
-        Returns:
-            学習結果の辞書（最適化情報を含む）
-        """
-        optimizer = None
-        try:
-            # optimization_settingsがNoneでないことを確認
-            if optimization_settings is None:
-                raise ValueError("optimization_settingsがNoneです")
-
-            # 使用するトレーナーを決定
-            effective_trainer = trainer if trainer is not None else self.trainer
-
-            logger.info("🚀 Optuna最適化を開始")
-            logger.info(f"🎯 目標試行回数: {optimization_settings.n_calls}")
-            logger.info(f"🤖 使用トレーナー: {type(effective_trainer).__name__}")
-
-            # Optunaオプティマイザーを作成
-            optimizer = OptunaOptimizer()
-            logger.info("✅ OptunaOptimizer を作成しました")
-
-            # パラメータ空間を準備
-            if not optimization_settings.parameter_space:
-                # アンサンブルトレーナーの場合は専用のパラメータ空間を使用
-                if hasattr(effective_trainer, "ensemble_config"):
-                    ensemble_method = effective_trainer.ensemble_config.get(
-                        "method", "stacking"
-                    )
-                    enabled_models = effective_trainer.ensemble_config.get(
-                        "models", ["lightgbm", "xgboost"]
-                    )
-                    parameter_space = optimizer.get_ensemble_parameter_space(
-                        ensemble_method, enabled_models
-                    )
-                    logger.info(
-                        f"📊 アンサンブル用パラメータ空間を使用: {ensemble_method}, モデル: {enabled_models}"
-                    )
-                else:
-                    # デフォルトのLightGBMパラメータ空間を使用
-                    parameter_space = optimizer.get_default_parameter_space()
-                    logger.info("📊 デフォルトのLightGBMパラメータ空間を使用")
-            else:
-                parameter_space = self._prepare_parameter_space(
-                    optimization_settings.parameter_space
-                )
-            logger.info(
-                f"📊 パラメータ空間を準備: {len(parameter_space)}個のパラメータ"
-            )
-
-            # 目的関数を作成
-            objective_function = self._create_objective_function(
-                training_data=training_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
-                optimization_settings=optimization_settings,
-                trainer=effective_trainer,  # カスタムトレーナーを渡す
-                **training_params,
-            )
-            logger.info("🎯 目的関数を作成しました")
-
-            # 最適化を実行
-            logger.info("🔄 最適化処理を開始...")
-            optimization_result = optimizer.optimize(
-                objective_function=objective_function,
-                parameter_space=parameter_space,
-                n_calls=optimization_settings.n_calls,
-            )
-
-            logger.info("🎉 最適化が完了しました！")
-            logger.info(f"🏆 ベストスコア: {optimization_result.best_score:.4f}")
-            logger.info(f"⚙️  最適パラメータ: {optimization_result.best_params}")
-            logger.info(f"📈 総評価回数: {optimization_result.total_evaluations}")
-            logger.info(f"⏱️  最適化時間: {optimization_result.optimization_time:.2f}秒")
-
-            # Optunaリソースをクリーンアップ（メモリーリーク防止）
-            try:
-                optimizer.cleanup()
-            except Exception as cleanup_error:
-                logger.warning(f"OptunaOptimizer クリーンアップ警告: {cleanup_error}")
-
-            # 最適化されたパラメータで最終モデルを学習
-            final_training_params = {
-                **training_params,
-                **optimization_result.best_params,
-            }
-            final_result = effective_trainer.train_model(  # カスタムトレーナーを使用
-                training_data=training_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
-                save_model=save_model,
-                model_name=model_name,
-                **final_training_params,
-            )
-
-            # 最適化情報を結果に追加
-            final_result["optimization_result"] = {
-                "method": "optuna",
-                "best_params": optimization_result.best_params,
-                "best_score": optimization_result.best_score,
-                "total_evaluations": optimization_result.total_evaluations,
-                "optimization_time": optimization_result.optimization_time,
-            }
-
-            return final_result
-
-        except Exception as e:
-            logger.error(f"最適化学習中にエラーが発生しました: {e}")
-            raise
-        finally:
-            # 例外が発生した場合でもOptunaリソースをクリーンアップ
-            if optimizer is not None:
-                try:
-                    optimizer.cleanup()
-                except Exception as cleanup_error:
-                    logger.warning(
-                        f"例外処理でのOptunaOptimizer クリーンアップ警告: {cleanup_error}"
-                    )
-
-    def _prepare_parameter_space(
-        self, parameter_space_config: Dict[str, Dict[str, Any]]
-    ) -> Dict[str, ParameterSpace]:
-        """
-        パラメータ空間設定をParameterSpaceオブジェクトに変換
-
-        Args:
-            parameter_space_config: パラメータ空間設定
-
-        Returns:
-            ParameterSpaceオブジェクトの辞書
-        """
-        parameter_space = {}
-
-        for param_name, param_config in parameter_space_config.items():
-            param_type = param_config["type"]
-            low = param_config.get("low")
-            high = param_config.get("high")
-
-            # integer型の場合は、lowとhighを整数に変換
-            if param_type == "integer" and low is not None and high is not None:
-                low = int(low)
-                high = int(high)
-
-            parameter_space[param_name] = ParameterSpace(
-                type=param_type,
-                low=low,
-                high=high,
-                categories=param_config.get("categories"),
-            )
-
-        return parameter_space
-
-    def _create_objective_function(
-        self,
-        training_data: pd.DataFrame,
-        optimization_settings: "OptimizationSettings",
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
-        trainer: Optional[Any] = None,  # カスタムトレーナーを受け取る
-        **base_training_params,
-    ) -> Callable[[Dict[str, Any]], float]:
-        """
-        最適化のための目的関数を作成
-
-        Args:
-            training_data: 学習用OHLCVデータ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-            trainer: カスタムトレーナー（オプション）
-            **base_training_params: ベースとなる学習パラメータ
-
-        Returns:
-            目的関数（パラメータを受け取りスコアを返す関数）
-        """
-        # 試行回数カウンター
-        evaluation_count = 0
-
-        def objective_function(params: Dict[str, Any]) -> float:
-            """
-            目的関数：与えられたハイパーパラメータでミニトレーニングを実行し、評価スコアを返す
-
-            Args:
-                params: 最適化対象のハイパーパラメータ
-
-            Returns:
-                評価スコア（F1スコア）
-            """
-            nonlocal evaluation_count
-            evaluation_count += 1
-
-            try:
-                logger.info(
-                    f"🔍 最適化試行 {evaluation_count}/{optimization_settings.n_calls}"
-                )
-                logger.info(f"📋 試行パラメータ: {params}")
-
-                # ベースパラメータと最適化パラメータをマージ
-                training_params = {**base_training_params, **params}
-
-                # 使用するトレーナーを決定
-                effective_trainer = trainer if trainer is not None else self.trainer
-                temp_trainer = None
-
-                # Duck typingでトレーナータイプを判定（テスト時のモック対応のためisinstanceは避ける）
-                is_ensemble = hasattr(effective_trainer, "ensemble_config")
-                is_single = hasattr(effective_trainer, "model_type") and not is_ensemble
-
-                if is_single:
-                    # SingleModelTrainerの場合
-                    temp_trainer = SingleModelTrainer(
-                        model_type=effective_trainer.model_type
-                    )
-
-                elif is_ensemble:
-                    # EnsembleTrainerの場合
-                    # 元の設定をコピーしてCV分割数などを最適化用に調整
-                    temp_ensemble_config = effective_trainer.ensemble_config.copy()
-
-                    # スタッキングパラメータがある場合は更新
-                    if "stacking_params" in temp_ensemble_config:
-                        stacking_params = temp_ensemble_config["stacking_params"].copy()
-                        stacking_params["cv_folds"] = 3  # 最適化中は高速化のため少なめ
-                        temp_ensemble_config["stacking_params"] = stacking_params
-
-                    temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
-
-                else:
-                    # フォールバック（デフォルトはアンサンブル）
-                    logger.warning(
-                        f"未知のトレーナータイプ: {type(effective_trainer)}。デフォルトのアンサンブル設定を使用します。"
-                    )
-                    temp_ensemble_config = {
-                        "method": "stacking",
-                        "stacking_params": {
-                            "base_models": ["lightgbm", "xgboost"],
-                            "meta_model": "lightgbm",
-                            "cv_folds": 3,
-                            "use_probas": True,
-                            "random_state": 42,
-                        },
-                    }
-                    temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
-
-                # ミニトレーニングを実行（保存はしない）
-                result = temp_trainer.train_model(
-                    training_data=training_data,
-                    funding_rate_data=funding_rate_data,
-                    open_interest_data=open_interest_data,
-                    save_model=False,  # 最適化中は保存しない
-                    model_name=None,
-                    **training_params,
-                )
-
-                # F1スコアを評価指標として使用
-                f1_score = result.get("f1_score", 0.0)
-
-                # マクロ平均F1スコアがある場合はそれを優先
-                if "classification_report" in result:
-                    macro_f1 = (
-                        result["classification_report"]
-                        .get("macro avg", {})
-                        .get("f1-score", f1_score)
-                    )
-                    f1_score = macro_f1
-
-                logger.info(f"📊 試行結果: F1スコア={f1_score:.4f}")
-                logger.info("-" * 50)
-                return f1_score
-
-            except Exception as e:
-                logger.warning(f"目的関数評価中にエラーが発生しました: {e}")
-                # エラーの場合は低いスコアを返す
-                return 0.0
-
-        return objective_function
-
     def _cleanup_temporary_files(self, level: CleanupLevel):
         """一時ファイルのクリーンアップ"""
         # MLTrainingServiceでは特に一時ファイルは作成しないため、パス
@@ -711,6 +423,10 @@ class MLTrainingService(BaseResourceManager):
                 if hasattr(self.trainer, "cleanup_resources"):
                     self.trainer.cleanup_resources(level)
                     logger.debug("トレーナーをクリーンアップしました")
+
+            # 最適化サービスのクリーンアップ
+            if hasattr(self, "optimization_service"):
+                self.optimization_service.cleanup()
 
         except Exception as e:
             logger.warning(f"MLTrainingServiceモデルクリーンアップエラー: {e}")

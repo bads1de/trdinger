@@ -13,7 +13,7 @@ import pandas as pd
 from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
 from .stacking import StackingEnsemble
-from ..meta_labeling_service import MetaLabelingService
+from .meta_labeling import MetaLabelingService
 
 logger = logging.getLogger(__name__)
 

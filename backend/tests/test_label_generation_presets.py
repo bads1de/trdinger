@@ -23,6 +23,7 @@ from app.services.ml.label_generation.presets import (
     forward_classification_preset,
     get_common_presets,
 )
+from app.utils.error_handler import DataError
 
 # ============================================================================
 # フィクスチャ: テストデータ生成
@@ -853,17 +854,14 @@ class TestBaseMLTrainerIntegration:
         features_df["target"] = 1  # ダミーターゲットカラム
 
         # Act
-        with patch(
-            "app.services.ml.base_ml_trainer.data_preprocessor"
-        ) as mock_preprocessor, \
-        patch("app.services.ml.config.ml_config") as mock_ml_config:
+        with patch.object(trainer.label_service, "prepare_labels") as mock_prepare_labels, \
+             patch("app.services.ml.config.ml_config") as mock_ml_config:
             mock_ml_config.training = MagicMock()
             
-            # data_preprocessor.prepare_training_dataの戻り値をモック
-            mock_preprocessor.prepare_training_data.return_value = (
+            # trainer.label_service.prepare_labels の戻り値をモック
+            mock_prepare_labels.return_value = (
                 features_df[["open", "high", "low", "close", "volume"]],
-                pd.Series([0, 1, 2] * 33 + [0]),  # 100個のラベル
-                {"threshold_up": 0.002, "threshold_down": -0.002},
+                pd.Series([0, 1, 2] * 33 + [0], index=features_df.index[:100]),  # 100個のラベル
             )
 
             X, y = trainer._prepare_training_data(features_df, target_column="target")
@@ -871,8 +869,8 @@ class TestBaseMLTrainerIntegration:
             # Assert
             assert isinstance(X, pd.DataFrame)
             assert isinstance(y, pd.Series)
-            # data_preprocessorが呼ばれたことを確認
-            mock_preprocessor.prepare_training_data.assert_called_once()
+            # prepare_labelsが呼ばれたことを確認し、target_columnが渡されたことを検証
+            mock_prepare_labels.assert_called_once_with(features_df, target_column="target")
 
     def test_prepare_training_data_nonexistent_preset(
         self, mock_base_ml_trainer, sample_ohlcv_data
@@ -889,26 +887,18 @@ class TestBaseMLTrainerIntegration:
             mock_ml_config.training = MagicMock()
             
             mock_label_config = LabelGenerationConfig(
-                default_preset="4h_4bars",  # 有効なプリセット
-                timeframe="4h",
-                horizon_n=4,
-                threshold=0.002,
+                default_preset="4h_4bars",  # 有効なプリセットを設定
                 use_preset=True,
             )
             mock_ml_config.training.label_generation = mock_label_config
 
-            # apply_preset_by_nameがValueErrorを投げるようにモック
-            with patch(
-                "app.services.ml.base_ml_trainer.apply_preset_by_name"
-            ) as mock_apply_preset:
-                mock_apply_preset.side_effect = ValueError("プリセットが見つかりません")
+            # prepare_labelsがDataErrorを投げるようにモック
+            with patch.object(trainer.label_service, "prepare_labels") as mock_prepare_labels:
+                mock_prepare_labels.side_effect = DataError("プリセットが見つかりません")
 
-                # Act - フォールバックが機能することを確認
-                X, y = trainer._prepare_training_data(features_df)
-
-                # Assert
-                assert isinstance(X, pd.DataFrame)
-                assert isinstance(y, pd.Series)
+                # Act & Assert
+                with pytest.raises(DataError, match="プリセットが見つかりません"):
+                    trainer._prepare_training_data(features_df)
 
     def test_prepare_training_data_label_generation_failure(
         self, mock_base_ml_trainer, sample_ohlcv_data
@@ -930,28 +920,13 @@ class TestBaseMLTrainerIntegration:
             )
             mock_ml_config.training.label_generation = mock_label_config
 
-            # forward_classification_presetがエラーを投げるようにモック
-            with patch(
-                "app.services.ml.base_ml_trainer.forward_classification_preset"
-            ) as mock_forward:
-                mock_forward.side_effect = Exception("ラベル生成エラー")
+            # prepare_labelsが例外を投げるようにモック
+            with patch.object(trainer.label_service, "prepare_labels") as mock_prepare_labels:
+                mock_prepare_labels.side_effect = ValueError("ラベル生成エラーが発生しました")
 
-                # フォールバックのdata_preprocessorもモック
-                with patch(
-                    "app.services.ml.base_ml_trainer.data_preprocessor"
-                ) as mock_preprocessor:
-                    mock_preprocessor.prepare_training_data.return_value = (
-                        features_df[["open", "high", "low", "close", "volume"]],
-                        pd.Series([0, 1, 2] * 33 + [0]),
-                        {"threshold_up": 0.002, "threshold_down": -0.002},
-                    )
-
-                    # Act - フォールバックが機能することを確認
-                    X, y = trainer._prepare_training_data(features_df)
-
-                    # Assert
-                    assert isinstance(X, pd.DataFrame)
-                    assert isinstance(y, pd.Series)
+                # Act & Assert
+                with pytest.raises(DataError, match="ラベル生成エラーが発生しました"):
+                    trainer._prepare_training_data(features_df)
 
     def test_prepare_training_data_feature_columns_saved(
         self, mock_base_ml_trainer, sample_ohlcv_data

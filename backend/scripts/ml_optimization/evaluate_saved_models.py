@@ -6,20 +6,75 @@ import joblib
 import pandas as pd
 import numpy as np
 from pathlib import Path
+from typing import Dict, Optional
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Windows encoding fix
-if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8")
-    sys.stderr.reconfigure(encoding="utf-8")
-
 from scripts.ml_optimization.run_ml_pipeline import MLPipeline
 from app.services.ml.label_cache import LabelCache
 
+# from app.services.ml.stacking_service import StackingService # Removed
+
+# Backward compatibility for moved modules
+import app.services.ml.ensemble.meta_labeling as meta_labeling_module
+
+sys.modules["app.services.ml.meta_labeling_service"] = meta_labeling_module
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class SimpleStackingService:
+    """
+    Level-2 メタ学習器 (簡易版)
+    Ridge回帰 (NNLS: Non-negative Least Squares) を使用して
+    各ベースモデルの予測値を最適に統合する。
+    """
+
+    def __init__(self, alpha: float = 0.1):
+        """
+        Args:
+            alpha: Ridge回帰の正則化パラメータ
+        """
+        from sklearn.linear_model import Ridge
+
+        self.model = Ridge(
+            alpha=alpha, positive=True, fit_intercept=False, random_state=42
+        )
+        self.weights: Optional[Dict[str, float]] = None
+        self.feature_names: list = []
+
+    def train(self, X_meta: pd.DataFrame, y_true: np.ndarray) -> None:
+        """
+        メタモデルを学習する
+        """
+        self.feature_names = X_meta.columns.tolist()
+
+        # 学習
+        self.model.fit(X_meta, y_true)
+
+        # 重みの保存
+        self.weights = dict(zip(self.feature_names, self.model.coef_))
+
+    def predict(self, X_meta: pd.DataFrame) -> np.ndarray:
+        """
+        予測を行う
+        """
+        if self.model is None:
+            raise RuntimeError("Model has not been trained yet.")
+
+        y_pred = self.model.predict(X_meta)
+
+        # 確率なので [0, 1] にクリップ
+        return np.clip(y_pred, 0.0, 1.0)
+
+    def get_weights(self) -> Dict[str, float]:
+        """学習された重みを取得"""
+        if self.weights is None:
+            return {}
+        return self.weights
 
 
 def evaluate_run(run_dir_name: str):
@@ -56,7 +111,14 @@ def evaluate_run(run_dir_name: str):
         if (results_dir / "model_cat.joblib").exists():
             models["catboost"] = joblib.load(results_dir / "model_cat.joblib")
 
-        stacking_service = joblib.load(results_dir / "stacking_service.joblib")
+        try:
+            stacking_service = joblib.load(results_dir / "stacking_service.joblib")
+        except Exception as e:
+            logger.warning(
+                f"Failed to load stacking_service: {e}. Using uninitialized SimpleStackingService."
+            )
+            stacking_service = SimpleStackingService()
+
         meta_service = joblib.load(results_dir / "meta_labeling_service.joblib")
     except Exception as e:
         logger.error(f"Error loading models: {e}")

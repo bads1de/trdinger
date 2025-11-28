@@ -213,7 +213,7 @@ class MetaLabelingService:
         """
         メタラベリング適用後のパフォーマンスを評価します。
         """
-        from .common.evaluation_utils import evaluate_model_predictions
+        from ..common.evaluation_utils import evaluate_model_predictions
 
         # メタラベリング適用後の最終予測
         final_pred = self.predict(
