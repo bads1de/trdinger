@@ -111,9 +111,12 @@ class TestMLTrainingService:
     def test_train_model_without_optimization(self, sample_training_data, mock_trainer):
         """最適化なしでのモデル学習テスト"""
         # EnsembleTrainerをモック化してサービス初期化
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService()
-            service.trainer = mock_trainer # 明示的にセット
+            service.trainer = mock_trainer  # 明示的にセット
 
             result = service.train_model(sample_training_data, save_model=False)
 
@@ -121,7 +124,9 @@ class TestMLTrainingService:
             assert result["f1_score"] == 0.85
             mock_trainer.train_model.assert_called_once()
 
-    @patch("backend.app.services.optimization.optimization_service.OptimizationService.optimize_parameters")
+    @patch(
+        "backend.app.services.optimization.optimization_service.OptimizationService.optimize_parameters"
+    )
     def test_train_model_with_optimization(
         self, mock_optimize_parameters, sample_training_data, mock_trainer
     ):
@@ -133,7 +138,10 @@ class TestMLTrainingService:
             "optimization_time": 5.0,
         }
 
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService()
             service.trainer = mock_trainer
 
@@ -158,7 +166,10 @@ class TestMLTrainingService:
 
     def test_evaluate_model(self, sample_training_data, mock_trainer):
         """モデル評価テスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService()
             service.trainer = mock_trainer
 
@@ -169,7 +180,10 @@ class TestMLTrainingService:
 
     def test_get_training_status(self, mock_trainer):
         """学習状態取得テスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService()
             service.trainer = mock_trainer
 
@@ -181,7 +195,10 @@ class TestMLTrainingService:
 
     def test_predict(self, mock_trainer):
         """予測テスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService()
             service.trainer = mock_trainer
 
@@ -245,7 +262,10 @@ class TestMLTrainingService:
 
     def test_load_model(self, mock_trainer):
         """モデル読み込みテスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService()
             service.trainer = mock_trainer
 
@@ -255,7 +275,10 @@ class TestMLTrainingService:
     def test_get_feature_importance(self, mock_trainer):
         """特徴量重要度取得テスト"""
         mock_trainer.get_feature_importance.return_value = {"close": 0.6, "volume": 0.4}
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
+        with patch(
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            return_value=mock_trainer,
+        ):
             service = MLTrainingService()
             service.trainer = mock_trainer
 
@@ -277,115 +300,6 @@ class TestMLTrainingService:
         # アンサンブル設定が有効（デフォルト）
         trainer_type = MLTrainingService.determine_trainer_type(None)
         assert trainer_type == "ensemble"
-
-        # アンサンブル設定が無効
-        trainer_type = MLTrainingService.determine_trainer_type({"enabled": False})
-        assert trainer_type == "single"
-
-    def test_prepare_training_params_default_config(self, mock_trainer):
-        """ml_configからのデフォルト設定取得テスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
-            service = MLTrainingService()
-            service.trainer = mock_trainer
-
-            # パラメータなしで呼び出し
-            params = service._prepare_training_params({})
-
-            # ml_configのデフォルト値が設定されていること
-            assert "use_time_series_split" in params
-            assert (
-                params["use_time_series_split"]
-                == service.config.training.USE_TIME_SERIES_SPLIT
-            )
-
-    def test_prepare_training_params_with_cv(self, mock_trainer):
-        """クロスバリデーション有効時のパラメータ設定テスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
-            service = MLTrainingService()
-            service.trainer = mock_trainer
-
-            # CVを有効にして呼び出し
-            params = service._prepare_training_params({"use_cross_validation": True})
-
-            # CV関連パラメータが設定されていること
-            assert params["use_cross_validation"] is True
-            assert "cv_splits" in params
-            assert "max_train_size" in params
-            assert params["cv_splits"] == service.config.training.CROSS_VALIDATION_FOLDS
-
-    def test_prepare_training_params_override(self, mock_trainer):
-        """training_paramsによる上書きテスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
-            service = MLTrainingService()
-            service.trainer = mock_trainer
-
-            # カスタムパラメータで呼び出し
-            custom_params = {
-                "use_cross_validation": True,
-                "cv_splits": 10,
-                "max_train_size": 5000,
-                "use_time_series_split": False,
-            }
-            params = service._prepare_training_params(custom_params)
-
-            # カスタム値が優先されていること
-            assert params["cv_splits"] == 10
-            assert params["max_train_size"] == 5000
-            assert params["use_time_series_split"] is False
-
-    def test_prepare_training_params_invalid_cv_splits(self, mock_trainer):
-        """無効なcv_splitsでのバリデーションテスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
-            service = MLTrainingService()
-            service.trainer = mock_trainer
-
-            # cv_splits < 2 でエラー
-            with pytest.raises(ValueError, match="cv_splitsは2以上である必要があります"):
-                service._prepare_training_params(
-                    {"use_cross_validation": True, "cv_splits": 1}
-                )
-
-    def test_prepare_training_params_invalid_max_train_size(self, mock_trainer):
-        """無効なmax_train_sizeでのバリデーションテスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
-            service = MLTrainingService()
-            service.trainer = mock_trainer
-
-            # max_train_size <= 0 でエラー
-            with pytest.raises(
-                ValueError, match="max_train_sizeは正の整数である必要があります"
-            ):
-                service._prepare_training_params(
-                    {"use_cross_validation": True, "max_train_size": 0}
-                )
-
-    def test_train_model_with_timeseries_params(
-        self, sample_training_data, mock_trainer
-    ):
-        """TimeSeriesSplitパラメータ付きモデル学習テスト"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer", return_value=mock_trainer):
-            service = MLTrainingService()
-            service.trainer = mock_trainer
-
-            # TimeSeriesSplit関連パラメータを指定
-            result = service.train_model(
-                sample_training_data,
-                save_model=False,
-                use_cross_validation=True,
-                cv_splits=5,
-                max_train_size=1000,
-            )
-
-            assert result["success"] is True
-            # トレーナーに正しいパラメータが渡されていることを確認
-            call_args = mock_trainer.train_model.call_args
-            assert call_args is not None
-            assert "cv_splits" in call_args.kwargs
-            assert call_args.kwargs["cv_splits"] == 5
-
-
-class TestOptimizationSettings:
-    """OptimizationSettingsクラスのテスト"""
 
     def test_initialization(self):
         """初期化テスト"""

@@ -10,11 +10,13 @@ from typing import Any, Dict
 
 
 import pandas as pd
+import numpy as np
 
 from ...indicators.technical_indicators.momentum import MomentumIndicators
 from ...indicators.technical_indicators.trend import TrendIndicators
 from ...indicators.technical_indicators.volatility import VolatilityIndicators
 from .base_feature_calculator import BaseFeatureCalculator
+
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +118,62 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             result_df = pd.concat(
                 [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
             )
+
+            # === 追加: Choppiness Index & Fractal Dimension Index ===
+            # FeatureEngineeringServiceから移動・統合
+
+            # Choppiness Index (CHOP)
+            # TrendIndicators (pandas_ta wrapper) を使用
+            chop_window = 14
+            chop = TrendIndicators.chop(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                length=chop_window,
+            )
+            # カラム名はFeatureEngineeringServiceと合わせるか、統一する
+            # ここでは標準的な名前と、互換性のための名前両方を入れるか、
+            # FeatureEngineeringService側でリネームする。
+            # FeatureEngineeringServiceでは "Choppiness_Index_{window}" としていた。
+            result_df[f"Choppiness_Index_{chop_window}"] = chop.fillna(50.0)
+
+            # Fractal Dimension Index (FDI) - Vectorized Implementation
+            fdi_window = 10
+
+            # Path length (L): sum of absolute differences in window
+            # diff().abs() calculates absolute change between bars
+            # rolling(window).sum() sums these changes over the window
+            # Note: rolling sum of diffs includes the diff at the current bar.
+            # The window size for diffs should effectively cover the same span.
+            # If window=10, we want sum of last 10 changes? Or changes over last 10 bars?
+            # Usually FDI uses N periods.
+            diffs = result_df["close"].diff().abs()
+            path_length = diffs.rolling(window=fdi_window).sum()
+
+            # Range (d): max - min in window
+            rolling_max = result_df["close"].rolling(window=fdi_window).max()
+            rolling_min = result_df["close"].rolling(window=fdi_window).min()
+            price_range = rolling_max - rolling_min
+
+            # FDI = 1 + (log(L) - log(d)) / log(window)
+            # Avoid log(0) by replacing 0 with small epsilon or handling NaNs
+            epsilon = 1e-10
+
+            # path_length > 0 and price_range > 0 check
+            valid_idx = (path_length > epsilon) & (price_range > epsilon)
+
+            fdi = pd.Series(np.nan, index=result_df.index)
+
+            if valid_idx.any():
+                log_l = np.log(path_length[valid_idx])
+                log_d = np.log(price_range[valid_idx])
+                log_n = np.log(fdi_window)
+
+                fdi[valid_idx] = 1 + (log_l - log_d) / log_n
+
+            result_df[f"Fractal_Dimension_Index_{fdi_window}"] = fdi.fillna(
+                1.5
+            )  # Default to 1.5 (random walk)
 
             return result_df
 

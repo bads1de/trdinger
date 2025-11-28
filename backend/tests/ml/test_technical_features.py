@@ -109,7 +109,12 @@ def test_market_regime_features(sample_ohlcv_data):
     )
 
     # 期待される特徴量（削減後）
-    expected_features = ["Range_Bound_Ratio", "Market_Efficiency"]
+    expected_features = [
+        "Range_Bound_Ratio",
+        "Market_Efficiency",
+        "Choppiness_Index_14",
+        "Fractal_Dimension_Index_10",
+    ]
 
     for feature in expected_features:
         assert feature in result.columns, f"Missing feature: {feature}"
@@ -175,9 +180,9 @@ def test_feature_values_validity(sample_ohlcv_data):
     for col in result.columns:
         if col not in sample_ohlcv_data.columns:
             # 特徴量列のみチェック
-            assert not result[col].isin([np.inf, -np.inf]).any(), (
-                f"Infinite values found in {col}"
-            )
+            assert (
+                not result[col].isin([np.inf, -np.inf]).any()
+            ), f"Infinite values found in {col}"
 
 
 def test_dataframe_not_fragmented(sample_ohlcv_data):
@@ -211,9 +216,9 @@ def test_performance_benchmark(large_ohlcv_data):
     print(f"[PERF] Throughput: {throughput:.0f} rows/sec")
     print("[PERF] Target: 10,000 rows/sec")
 
-    assert throughput >= 10000, (
-        f"Performance below target: {throughput:.0f} < 10000 rows/sec"
-    )
+    assert (
+        throughput >= 10000
+    ), f"Performance below target: {throughput:.0f} < 10000 rows/sec"
 
 
 def test_feature_count(sample_ohlcv_data):
@@ -227,9 +232,9 @@ def test_feature_count(sample_ohlcv_data):
     feature_count = len(result.columns)
 
     # 最低15個の特徴量が生成されることを確認
-    assert feature_count > original_count + 15, (
-        f"Expected more than {original_count + 15} features, got {feature_count}"
-    )
+    assert (
+        feature_count > original_count + 15
+    ), f"Expected more than {original_count + 15} features, got {feature_count}"
 
 
 def test_get_feature_names():

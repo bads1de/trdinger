@@ -174,17 +174,20 @@ class CatBoostModel:
             # 予測
             y_pred = self.model.predict(X_test.values)
 
-            # 評価結果
-            from sklearn.metrics import accuracy_score, f1_score
+            # 評価結果（統一された評価関数を使用）
+            from ..common.evaluation_utils import evaluate_model_predictions
 
-            accuracy = accuracy_score(y_test, y_pred)
-            f1 = f1_score(y_test, y_pred, average="weighted")
+            eval_metrics = evaluate_model_predictions(y_test, y_pred)
+
+            accuracy = eval_metrics.get("accuracy", 0.0)
+            f1 = eval_metrics.get("f1_score", 0.0)
 
             result = {
                 "accuracy": float(accuracy),
                 "f1_score": float(f1),
                 "model_type": "CatBoost",
                 "n_features": len(self.feature_columns),
+                **eval_metrics,  # その他の指標も念のため含める
             }
 
             logger.info(f"CatBoost学習完了: Accuracy={accuracy:.4f}, F1={f1:.4f}")

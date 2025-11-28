@@ -67,14 +67,9 @@ class InteractionFeatureCalculator:
         # ボラティリティ × モメンタム相互作用
         result_df = self._calculate_volatility_momentum_interactions(result_df)
 
-        # 出来高 × トレンド相互作用
-        result_df = self._calculate_volume_trend_interactions(result_df)
-
-        # FR × RSI相互作用
-        result_df = self._calculate_fr_rsi_interactions(result_df)
-
         # OI × 価格変動相互作用
-        result_df = self._calculate_oi_price_interactions(result_df)
+        # Removed: OI_Price_Divergence (OI_Change_Rate削除のため)
+        # result_df = self._calculate_oi_price_interactions(result_df)
 
         return result_df
 
@@ -89,11 +84,6 @@ class InteractionFeatureCalculator:
 
         # オプション特徴量（存在しなくても処理を続行）
         optional_features = [
-            "Volume_Ratio",
-            "Trend_Strength",
-            "Breakout_Strength",
-            "FR_Normalized",
-            "OI_Change_Rate",
             "OI_Trend",
         ]
 
@@ -165,123 +155,22 @@ class InteractionFeatureCalculator:
         return result_df
 
     def _calculate_volume_trend_interactions(self, df: pd.DataFrame) -> pd.DataFrame:
-        """出来高 × トレンド相互作用を計算"""
-        result_df = df.copy()
-
-        # Volume_Ratio × Trend_Strength
-        if "Volume_Ratio" in df.columns and "Trend_Strength" in df.columns:
-            try:
-                volume_ratio = self._safe_numeric_conversion(
-                    pd.Series(df["Volume_Ratio"])
-                )
-                trend_strength = self._safe_numeric_conversion(
-                    pd.Series(df["Trend_Strength"])
-                )
-
-                if volume_ratio is not None and trend_strength is not None:
-                    interaction = volume_ratio * trend_strength
-                    # 無限大値や極端に大きな値をクリップ
-                    interaction = np.clip(interaction, -1e6, 1e6)
-                    result_df["Volume_Trend_Interaction"] = interaction
-            except Exception as e:
-                logger.warning(f"Volume_Trend_Interaction計算エラー: {e}")
-
-        # Volume_Spike × Breakout_Strength
-        if "Volume_Spike" in df.columns and "Breakout_Strength" in df.columns:
-            try:
-                volume_spike = self._safe_numeric_conversion(
-                    pd.Series(df["Volume_Spike"])
-                )
-                breakout_strength = self._safe_numeric_conversion(
-                    pd.Series(df["Breakout_Strength"])
-                )
-
-                if volume_spike is not None and breakout_strength is not None:
-                    interaction = volume_spike * breakout_strength
-                    # 無限大値や極端に大きな値をクリップ
-                    interaction = np.clip(interaction, -1e6, 1e6)
-                    result_df["Volume_Breakout"] = interaction
-            except Exception as e:
-                logger.warning(f"Volume_Breakout計算エラー: {e}")
-
-        return result_df
+        """出来高 × トレンド相互作用を計算 (削除済み特徴量依存のためスキップ)"""
+        # Volume_Ratio, Trend_Strength, Volume_Spike, Breakout_Strength は削除されました
+        return df
 
     def _calculate_fr_rsi_interactions(self, df: pd.DataFrame) -> pd.DataFrame:
-        """FR × RSI相互作用を計算"""
-        result_df = df.copy()
-
-        # FR_Normalized × (RSI - 50)
-        if "FR_Normalized" in df.columns and "RSI" in df.columns:
-            try:
-                fr_normalized = self._safe_numeric_conversion(
-                    pd.Series(df["FR_Normalized"])
-                )
-                rsi_values = self._safe_numeric_conversion(pd.Series(df["RSI"]))
-
-                if fr_normalized is not None and rsi_values is not None:
-                    rsi_centered = rsi_values - 50
-                    interaction = fr_normalized * rsi_centered
-                    # 無限大値や極端に大きな値をクリップ
-                    interaction = np.clip(interaction, -1e6, 1e6)
-                    result_df["FR_RSI_Extreme"] = interaction
-            except Exception as e:
-                logger.warning(f"FR_RSI_Extreme計算エラー: {e}")
-
-        # FR_Extreme_High × (RSI > 70)（実際の特徴量名に合わせて修正）
-        if "FR_Extreme_High" in df.columns and "RSI" in df.columns:
-            try:
-                fr_extreme_high = self._safe_numeric_conversion(
-                    pd.Series(df["FR_Extreme_High"])
-                )
-                rsi_values = self._safe_numeric_conversion(pd.Series(df["RSI"]))
-
-                if fr_extreme_high is not None and rsi_values is not None:
-                    interaction = fr_extreme_high * (rsi_values > 70).astype(float)
-                    result_df["FR_Overbought"] = interaction
-            except Exception as e:
-                logger.warning(f"FR_Overbought計算エラー: {e}")
-
-        # FR_Extreme_Low × (RSI < 30)（実際の特徴量名に合わせて修正）
-        if "FR_Extreme_Low" in df.columns and "RSI" in df.columns:
-            try:
-                fr_extreme_low = self._safe_numeric_conversion(
-                    pd.Series(df["FR_Extreme_Low"])
-                )
-                rsi_values = self._safe_numeric_conversion(pd.Series(df["RSI"]))
-
-                if fr_extreme_low is not None and rsi_values is not None:
-                    interaction = fr_extreme_low * (rsi_values < 30).astype(float)
-                    result_df["FR_Oversold"] = interaction
-            except Exception as e:
-                logger.warning(f"FR_Oversold計算エラー: {e}")
-
-        return result_df
+        """FR × RSI相互作用を計算 (削除済み特徴量依存のためスキップ)"""
+        # FR_Normalized, FR_Extreme_High, FR_Extreme_Low は削除されました
+        return df
 
     def _calculate_oi_price_interactions(self, df: pd.DataFrame) -> pd.DataFrame:
         """OI × 価格変動相互作用を計算"""
         result_df = df.copy()
 
-        # OI_Change_Rate × Price_Change_5
-        if "OI_Change_Rate" in df.columns and "Price_Change_5" in df.columns:
-            try:
-                oi_change = self._safe_numeric_conversion(
-                    pd.Series(df["OI_Change_Rate"])
-                )
-                price_change = self._safe_numeric_conversion(
-                    pd.Series(df["Price_Change_5"])
-                )
+        # Removed: OI_Change_Rate × Price_Change_5 (OI_Change_Rate削除のため)
 
-                if oi_change is not None and price_change is not None:
-                    interaction = oi_change * price_change
-                    # 無限大値や極端に大きな値をクリップ
-                    interaction = np.clip(interaction, -1e6, 1e6)
-                    result_df["OI_Price_Divergence"] = interaction
-            except Exception as e:
-                logger.warning(f"OI_Price_Divergence計算エラー: {e}")
-
-        # OI_Trend × Momentum（代替特徴量を使用）
-        # Removed: OI_Trend × Price_Momentum_14（重複特徴量削除: 2025-01-09）
-        # 理由: Price_Momentum_14が削除されたため、Momentumを使用
+        # OI_Trend × Momentum
         if "OI_Trend" in df.columns and "Momentum" in df.columns:
             try:
                 oi_trend = self._safe_numeric_conversion(pd.Series(df["OI_Trend"]))
@@ -332,12 +221,5 @@ class InteractionFeatureCalculator:
         """生成される特徴量名のリストを取得"""
         return [
             "Volatility_Momentum_Interaction",
-            # Removed: "Volatility_Spike_Momentum"（重複特徴量削除: 2025-01-09）
-            "Volume_Trend_Interaction",
-            "Volume_Breakout",
-            "FR_RSI_Extreme",
-            "FR_Overbought",
-            "FR_Oversold",
-            "OI_Price_Divergence",
             "OI_Momentum_Alignment",
         ]

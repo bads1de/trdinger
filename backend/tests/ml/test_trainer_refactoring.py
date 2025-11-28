@@ -50,8 +50,8 @@ class TestTrainerRefactoring:
         assert path == "path/to/model"
         args, kwargs = mock_single_model_save.save_model.call_args
         metadata = kwargs["metadata"]
-        # BaseMLTrainer sets model_type to __class__.__name__
-        assert metadata["model_type"] == "SingleModelTrainer"
+        # BaseMLTrainer sets model_type to __class__.__name__, but SingleModelTrainer overrides it
+        assert metadata["model_type"] == "lightgbm"
         assert metadata["is_trained"] is True
         assert "feature_count" in metadata
         # feature_importance might be in metadata if get_feature_importance works
@@ -87,14 +87,14 @@ class TestTrainerRefactoring:
         # Verify save_model was called with correct metadata
         args, kwargs = mock_ensemble_model_save.save_model.call_args
         metadata = kwargs["metadata"]
-        # BaseMLTrainer sets model_type to __class__.__name__
-        assert metadata["model_type"] == "EnsembleTrainer"
+        # BaseMLTrainer sets model_type to __class__.__name__, but EnsembleTrainer overrides it via metadata
+        assert metadata["model_type"] == "lgbm"
         assert metadata["is_trained"] is True
         assert "feature_count" in metadata
         assert "feature_importance" in metadata
 
         # Verify model object passed is the trainer itself (BaseMLTrainer saves 'self')
-        assert kwargs["model"] == trainer
+        assert kwargs["model"] == trainer.ensemble_model
 
     def test_get_feature_importance_duplication(self):
         """Test get_feature_importance duplication"""
@@ -131,6 +131,7 @@ class TestTrainerRefactoring:
             "f1": 0.7,
             "f2": 0.3,
         }
+        trainer_ens.feature_columns = ["f1", "f2"]
 
         fi_ens = trainer_ens.get_feature_importance()
         assert fi_ens == {"f1": 0.7, "f2": 0.3}

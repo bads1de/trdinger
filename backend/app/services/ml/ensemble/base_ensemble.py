@@ -97,31 +97,34 @@ class BaseEnsemble(ABC):
         if model_type.lower() == "lightgbm":
             try:
                 import lightgbm as lgb
+
                 # デフォルトパラメータは後でset_paramsで上書きされるか、fitの引数で渡される
                 return lgb.LGBMClassifier(
-                    n_jobs=1, # 並列処理はStackingClassifier側で制御
-                    random_state=unified_config.ml.training.random_state
+                    n_jobs=1,  # 並列処理はStackingClassifier側で制御
+                    random_state=unified_config.ml.training.random_state,
                 )
             except ImportError:
                 raise MLModelError("LightGBMのインポートに失敗しました")
         elif model_type.lower() == "xgboost":
             try:
                 import xgboost as xgb
+
                 return xgb.XGBClassifier(
                     n_jobs=1,
                     random_state=unified_config.ml.training.random_state,
-                    eval_metric="logloss"
+                    eval_metric="logloss",
                 )
             except ImportError:
                 raise MLModelError("XGBoostのインポートに失敗しました")
         elif model_type.lower() == "catboost":
             try:
                 import catboost as cb
+
                 return cb.CatBoostClassifier(
                     thread_count=1,
                     random_seed=unified_config.ml.training.random_state,
                     verbose=0,
-                    allow_writing_files=False
+                    allow_writing_files=False,
                 )
             except ImportError:
                 raise MLModelError("CatBoostのインポートに失敗しました")
@@ -252,19 +255,23 @@ class BaseEnsemble(ABC):
             保存されたファイルパスのリスト
         """
         from datetime import datetime
-
+        import os
         import joblib
+        from ..model_manager import model_manager
 
         saved_paths = []
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # base_pathからモデル名を抽出
+        model_name = os.path.basename(base_path)
 
         # scikit-learn StackingClassifierの保存
         if (
             hasattr(self, "stacking_classifier")
             and self.stacking_classifier is not None
         ):
-            # StackingClassifier保存
-            model_path = f"{base_path}_stacking_classifier_{timestamp}.pkl"
+            # model_managerを使用して保存
+            # StackingEnsembleの状態を含めた辞書を作成
             model_data = {
                 "ensemble_classifier": self.stacking_classifier,
                 "config": self.config,
@@ -273,9 +280,38 @@ class BaseEnsemble(ABC):
                 "ensemble_type": "StackingEnsemble",
                 "sklearn_implementation": True,
             }
-            joblib.dump(model_data, model_path)
-            saved_paths.append(model_path)
-            logger.info(f"StackingClassifierを保存: {model_path}")
+
+            metadata = {
+                "ensemble_type": "StackingEnsemble",
+                "sklearn_implementation": True,
+                "feature_count": (
+                    len(self.feature_columns) if self.feature_columns else 0
+                ),
+            }
+
+            try:
+                # model_manager.save_modelはパスを返す
+                model_path = model_manager.save_model(
+                    model=model_data,
+                    model_name=model_name,
+                    metadata=metadata,
+                    feature_columns=self.feature_columns,
+                )
+                if model_path:
+                    saved_paths.append(model_path)
+                    logger.info(
+                        f"StackingClassifierをmodel_managerで保存: {model_path}"
+                    )
+            except Exception as e:
+                logger.error(f"model_managerによる保存に失敗: {e}")
+                # フォールバック: 従来のjoblib保存
+                model_path = f"{base_path}_stacking_classifier_{timestamp}.pkl"
+                joblib.dump(model_data, model_path)
+                saved_paths.append(model_path)
+                logger.info(
+                    f"StackingClassifierをjoblibで保存(フォールバック): {model_path}"
+                )
+
         else:
             # 従来の実装（後方互換性のため）
             logger.warning("従来のアンサンブル実装を保存")

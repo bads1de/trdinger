@@ -25,6 +25,7 @@ from .cross_validation import PurgedKFold
 
 
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
+from .common.evaluation_utils import evaluate_model_predictions
 from .common.ml_utils import get_feature_importance_unified, prepare_data_for_prediction
 from .config import ml_config
 from .exceptions import MLModelError
@@ -234,16 +235,61 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             test_data, funding_rate_data, open_interest_data
         )
 
-        # 予測を実行
-        predictions = self.predict(features_df)
+        # 予測を実行（全データ）
+        # predictは確率を返す（SingleModelTrainer, StackingEnsembleともに）
+        predictions_proba = self.predict(features_df)
+
+        # クラス予測（確率最大）
+        if predictions_proba.ndim == 2:
+            predictions_class = np.argmax(predictions_proba, axis=1)
+        else:
+            predictions_class = (predictions_proba > 0.5).astype(int)
 
         # 評価結果を作成
         evaluation_result = {
-            "predictions": predictions,
-            "test_samples": len(test_data),
+            "predictions_proba": predictions_proba,
+            "predictions_class": predictions_class,
+            "test_samples": len(features_df),
             "feature_count": len(self.feature_columns) if self.feature_columns else 0,
             "model_status": "trained" if self.is_trained else "not_trained",
         }
+
+        # ラベル生成とメトリクス計算
+        try:
+            # ラベル生成（NaNは削除される）
+            # configからパラメータを取得してラベルを生成
+            features_clean, labels_numeric = self.label_service.prepare_labels(
+                features_df,
+                prediction_horizon=self.config.training.PREDICTION_HORIZON,
+            )
+
+            if len(labels_numeric) > 0:
+                # インデックスを使用して予測値をアラインメント
+                # features_cleanのインデックスに対応する予測値を抽出
+                valid_indices = features_df.index.get_indexer(features_clean.index)
+
+                # 予測値をフィルタリング
+                y_pred_class_aligned = predictions_class[valid_indices]
+                y_pred_proba_aligned = (
+                    predictions_proba[valid_indices]
+                    if predictions_proba.ndim == 2
+                    else predictions_proba[valid_indices]
+                )
+
+                # メトリクス計算（共通ユーティリティを使用）
+                metrics = evaluate_model_predictions(
+                    labels_numeric, y_pred_class_aligned, y_pred_proba_aligned
+                )
+
+                evaluation_result.update(metrics)
+                logger.info("✅ モデル評価メトリクス計算完了")
+            else:
+                logger.warning(
+                    "評価用ラベルが生成できませんでした（データ不足の可能性）"
+                )
+
+        except Exception as e:
+            logger.warning(f"評価用ラベル生成またはメトリクス計算失敗: {e}")
 
         return evaluation_result
 
@@ -356,9 +402,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         try:
             return prepare_data_for_prediction(
                 features_df,
-                feature_columns=self.feature_columns,
+                expected_columns=self.feature_columns,
                 scaler=self.scaler,
-                handle_missing=True,
             )
         except Exception as e:
             logger.error(f"特徴量前処理エラー: {e}")
@@ -537,6 +582,20 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         )
         return X_train_scaled, X_test_scaled
 
+    def _get_model_to_save(self) -> Any:
+        """
+        保存対象のモデルオブジェクトを取得
+        サブクラスでオーバーライド可能
+        """
+        return self._model
+
+    def _get_model_specific_metadata(self, model_name: str) -> Dict[str, Any]:
+        """
+        モデル固有のメタデータを取得
+        サブクラスでオーバーライド可能
+        """
+        return {}
+
     def save_model(
         self, model_name: str, metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
@@ -552,6 +611,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         if metadata:
             final_metadata.update(metadata)
 
+        # モデル固有のメタデータを追加
+        final_metadata.update(self._get_model_specific_metadata(model_name))
+
         try:
             feature_importance = self.get_feature_importance(top_n=100)
             if feature_importance:
@@ -559,9 +621,16 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         except Exception as e:
             logger.warning(f"特徴量重要度の取得に失敗: {e}")
 
+        # 保存対象のモデルを取得
+        model_to_save = self._get_model_to_save()
+        if model_to_save is None:
+            # フォールバック: selfを保存（ただし推奨されない）
+            logger.warning("保存対象モデルがNoneです。トレーナー自体を保存します。")
+            model_to_save = self
+
         # 統一されたモデル保存を使用
         model_path = model_manager.save_model(
-            model=self,
+            model=model_to_save,
             model_name=model_name,
             metadata=final_metadata,
             scaler=self.scaler,

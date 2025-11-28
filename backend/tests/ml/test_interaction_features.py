@@ -30,7 +30,7 @@ class TestInteractionFeatureCalculator:
                 "close": np.random.randn(n).cumsum() + 100,
                 "volume": np.random.randint(1000, 10000, n),
                 # 基本特徴量
-                "Price_Momentum_14": np.random.randn(n),
+                "Momentum": np.random.randn(n),
                 "Price_Change_5": np.random.randn(n),
                 "RSI": np.random.uniform(0, 100, n),
                 "ATR": np.random.uniform(0.5, 2.0, n),
@@ -64,25 +64,18 @@ class TestInteractionFeatureCalculator:
         # 生成される特徴量の確認
         expected_features = [
             "Volatility_Momentum_Interaction",
-            "Volatility_Spike_Momentum",
-            "Volume_Trend_Interaction",
-            "Volume_Breakout",
-            "FR_RSI_Extreme",
-            "FR_Overbought",
-            "FR_Oversold",
-            "OI_Price_Divergence",
             "OI_Momentum_Alignment",
         ]
 
         for feature in expected_features:
             if feature in result_df.columns:
                 # 特徴量が有限値であることを確認
-                assert not result_df[feature].isna().all(), (
-                    f"特徴量 {feature} がすべてNaNです"
-                )
-                assert np.isfinite(result_df[feature]).any(), (
-                    f"特徴量 {feature} に有限値がありません"
-                )
+                assert (
+                    not result_df[feature].isna().all()
+                ), f"特徴量 {feature} がすべてNaNです"
+                assert np.isfinite(
+                    result_df[feature]
+                ).any(), f"特徴量 {feature} に有限値がありません"
 
     def test_data_preprocessing_no_ambiguous_truth(self, sample_data):
         """Seriesの真理値エラーのないデータ前処理テスト"""
@@ -100,9 +93,9 @@ class TestInteractionFeatureCalculator:
                 or "ambiguous" in str(warning.message).lower()
             ]
 
-            assert len(ambiguous_warnings) == 0, (
-                f"Series真理値警告が発生: {ambiguous_warnings}"
-            )
+            assert (
+                len(ambiguous_warnings) == 0
+            ), f"Series真理値警告が発生: {ambiguous_warnings}"
 
     def test_safe_numeric_conversion(self, sample_data):
         """安全な数値変換のテスト"""
@@ -165,9 +158,9 @@ class TestInteractionFeatureCalculator:
                 # 無限大値をチェック
                 finite_values = result_df[col][np.isfinite(result_df[col])]
                 if len(finite_values) > 0:
-                    assert abs(finite_values.max()) < 1e6, (
-                        f"特徴量 {col} に極端な値があります"
-                    )
+                    assert (
+                        abs(finite_values.max()) < 1e6
+                    ), f"特徴量 {col} に極端な値があります"
 
     def test_atr_column_variants(self):
         """ATRカラムのバリエーションテスト（基本特徴量含む）"""
@@ -177,7 +170,7 @@ class TestInteractionFeatureCalculator:
         # 基本特徴量を含むデータでATR_14テスト
         df1 = pd.DataFrame(
             {
-                "Price_Momentum_14": np.random.randn(n),
+                "Momentum": np.random.randn(n),
                 "Price_Change_5": np.random.randn(n),
                 "RSI": np.random.uniform(0, 100, n),
                 "ATR_14": np.random.uniform(0.5, 2.0, n),
@@ -192,7 +185,7 @@ class TestInteractionFeatureCalculator:
         # ATR_20 がある場合
         df2 = pd.DataFrame(
             {
-                "Price_Momentum_14": np.random.randn(n),
+                "Momentum": np.random.randn(n),
                 "Price_Change_5": np.random.randn(n),
                 "RSI": np.random.uniform(0, 100, n),
                 "ATR_20": np.random.uniform(0.5, 2.0, n),
@@ -205,7 +198,7 @@ class TestInteractionFeatureCalculator:
         # ATR がある場合
         df3 = pd.DataFrame(
             {
-                "Price_Momentum_14": np.random.randn(n),
+                "Momentum": np.random.randn(n),
                 "Price_Change_5": np.random.randn(n),
                 "RSI": np.random.uniform(0, 100, n),
                 "ATR": np.random.uniform(0.5, 2.0, n),
@@ -222,18 +215,16 @@ class TestInteractionFeatureCalculator:
 
         # 各相互作用特徴量の生成を確認
         interactions = {
-            "Volatility_Momentum_Interaction": "ATR × Price_Momentum_14",
-            "Volume_Trend_Interaction": "Volume_Ratio × Trend_Strength",
-            "FR_RSI_Extreme": "FR_Normalized × (RSI - 50)",
-            "OI_Price_Divergence": "OI_Change_Rate × Price_Change_5",
+            "Volatility_Momentum_Interaction": "ATR × Momentum",
+            "OI_Momentum_Alignment": "OI_Trend × Momentum",
         }
 
         for feature, description in interactions.items():
             if feature in result_df.columns:
                 # 特徴量が生成されていることを確認
-                assert feature in result_df.columns, (
-                    f"{description} の特徴量 {feature} が生成されていません"
-                )
+                assert (
+                    feature in result_df.columns
+                ), f"{description} の特徴量 {feature} が生成されていません"
                 # 数値であることを確認
                 assert pd.api.types.is_numeric_dtype(result_df[feature])
 

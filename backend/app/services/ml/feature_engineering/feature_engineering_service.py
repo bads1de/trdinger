@@ -23,10 +23,7 @@ from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
-from app.services.indicators.regime.regime_indicators import (  # 新規追加
-    calculate_choppiness_index,
-    calculate_fractal_dimension_index,
-)
+
 
 logger = logging.getLogger(__name__)
 
@@ -249,22 +246,9 @@ class FeatureEngineeringService:
             )
 
             # レジーム特徴量 (Choppiness Index, Fractal Dimension Index)
+            # TechnicalFeatureCalculator.calculate_market_regime_features で計算されるため
+            # ここでの直接計算は削除
             logger.info("レジーム特徴量を計算中...")
-            window_ci = 14  # Choppiness Index の期間
-            window_fdi = 10  # Fractal Dimension Index の期間
-
-            result_df[f"Choppiness_Index_{window_ci}"] = calculate_choppiness_index(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                window=window_ci,
-            )
-            result_df[f"Fractal_Dimension_Index_{window_fdi}"] = (
-                calculate_fractal_dimension_index(
-                    close=result_df["close"],
-                    window=window_fdi,
-                )
-            )
 
             # ファンディングレート特徴量（データがある場合）
             if funding_rate_data is not None and not funding_rate_data.empty:
@@ -279,13 +263,13 @@ class FeatureEngineeringService:
                 # 注: これらの特徴量はすべて削除されたため、
                 # 中間クリーニングは不要
             else:
-                # ファンディングレートデータが不足している場合、疑似データを生成
+                # ファンディングレートデータが不足している場合、ログを出力してスキップ
                 logger.warning(
-                    "ファンディングレートデータが不足しています。疑似特徴量を生成します。"
+                    "ファンディングレートデータが不足しています。疑似特徴量の生成はスキップされます。"
                 )
-                result_df = self._generate_pseudo_funding_rate_features(
-                    result_df, lookback_periods
-                )
+                # result_df = self._generate_pseudo_funding_rate_features(
+                #     result_df, lookback_periods
+                # )
 
             # 建玉残高特徴量（データがある場合）
             if open_interest_data is not None and not open_interest_data.empty:
@@ -656,34 +640,6 @@ class FeatureEngineeringService:
         """
         self.feature_cache.clear()
         logger.info("特徴量キャッシュをクリアしました")
-
-    def _generate_pseudo_funding_rate_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
-    ) -> pd.DataFrame:
-        """
-        ファンディングレート疑似特徴量を生成
-
-        Args:
-            df: 価格データ
-            lookback_periods: 計算期間設定
-
-        Returns:
-            疑似特徴量が追加されたDataFrame
-        """
-        try:
-            # Removed: FR疑似特徴量生成（低寄与度特徴量削除: 2025-01-05）
-            # 削除された特徴量: fr_extreme_high, fr_extreme_low, fr_ma_24,
-            # fr_ma_168, fr_change, fr_change_rate, price_fr_divergence,
-            # fr_normalized, fr_trend, fr_volatility
-            result_df = df.copy()
-            logger.info(
-                "ファンディングレート疑似特徴量の生成をスキップしました（低寄与度のため削除）"
-            )
-            return result_df
-
-        except Exception as e:
-            logger.error(f"ファンディングレート疑似特徴量生成エラー: {e}")
-            return df
 
     def _generate_pseudo_open_interest_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]

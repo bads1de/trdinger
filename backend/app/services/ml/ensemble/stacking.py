@@ -257,7 +257,7 @@ class StackingEnsemble(BaseEnsemble):
         if not self.is_fitted or self.stacking_classifier is None:
             raise ModelError("モデルが学習されていません")
 
-        return self.stacking_classifier.predict(X)
+        return self.stacking_classifier.predict_proba(X)
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -400,71 +400,12 @@ class StackingEnsemble(BaseEnsemble):
             logger.warning(f"特徴量重要度の取得でエラー: {e}")
             return {}
 
-    def save_models(self, base_path: str) -> List[str]:
-        """
-        スタッキングアンサンブルモデルを保存
-
-        Args:
-            base_path: モデル保存ベースパス
-
-        Returns:
-            保存されたファイルパスのリスト
-        """
-        saved_paths = []
-
-        if not self.is_fitted or self.stacking_classifier is None:
-            logger.warning("学習済みモデルがないため保存をスキップします")
-            return saved_paths
-
-        try:
-            import os
-            from datetime import datetime
-
-            import joblib
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            model_path = f"{base_path}_stacking_classifier_{timestamp}.pkl"
-
-            # ディレクトリを作成
-            os.makedirs(os.path.dirname(model_path), exist_ok=True)
-
-            # StackingClassifierを保存
-            joblib.dump(self.stacking_classifier, model_path)
-            saved_paths.append(model_path)
-
-            # メタデータを保存
-            metadata = {
-                "model_type": "StackingClassifier",
-                "base_models": self.base_models,
-                "meta_model": self.meta_model,
-                "cv_folds": self.cv_folds,
-                "stack_method": self.stack_method,
-                "feature_columns": self.feature_columns,
-                "is_fitted": self.is_fitted,
-            }
-
-            metadata_path = model_path.replace(".pkl", "_metadata.json")
-
-            import json
-
-            with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(metadata, f, ensure_ascii=False, indent=2)
-
-            saved_paths.append(metadata_path)
-
-            logger.info(f"スタッキングアンサンブルモデルを保存しました: {model_path}")
-            return saved_paths
-
-        except Exception as e:
-            logger.error(f"モデル保存エラー: {e}")
-            return saved_paths
-
     def load_models(self, base_path: str) -> bool:
         """
         スタッキングアンサンブルモデルを読み込み
 
         Args:
-            model_path: モデル読み込みパス
+            base_path: モデル読み込みパス
 
         Returns:
             読み込み成功フラグ
@@ -473,7 +414,6 @@ class StackingEnsemble(BaseEnsemble):
             import glob
             import json
             import os
-
             import joblib
 
             # 最新のモデルファイルを探す
