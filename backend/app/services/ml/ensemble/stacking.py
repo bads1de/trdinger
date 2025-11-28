@@ -120,23 +120,28 @@ class StackingEnsemble(BaseEnsemble):
                 )
 
             # クロスバリデーション設定
-            # 時系列データのため、デフォルトではTimeSeriesSplitを使用
-            # テストや特定のケースではKFoldなども選択可能にする
-            from sklearn.model_selection import TimeSeriesSplit, StratifiedKFold
+            # PurgedKFoldを使用
+            from ..cross_validation.purged_kfold import PurgedKFold
+            from ..config import ml_config
+            from ..common.time_series_utils import get_t1_series
+            from sklearn.model_selection import StratifiedKFold, KFold
 
-            cv_strategy = self.config.get("cv_strategy", "time_series")
+            cv_strategy = self.config.get("cv_strategy", "purged_kfold")
 
             if cv_strategy == "kfold":
                 # 通常のKFold (シャッフルなし)
-                from sklearn.model_selection import KFold
-
                 cv = KFold(n_splits=self.cv_folds, shuffle=False)
             elif cv_strategy == "stratified_kfold":
                 # 層化KFold (シャッフルなし)
                 cv = StratifiedKFold(n_splits=self.cv_folds, shuffle=False)
             else:
-                # デフォルト: TimeSeriesSplit (シャッフルなし)
-                cv = TimeSeriesSplit(n_splits=self.cv_folds)
+                # デフォルト: PurgedKFold
+                # t1を計算（共通ユーティリティを使用）
+                t1_horizon_n = ml_config.training.PREDICTION_HORIZON
+                t1 = get_t1_series(X_train.index, t1_horizon_n)
+
+                pct_embargo = getattr(ml_config.training, "PCT_EMBARGO", 0.01)
+                cv = PurgedKFold(n_splits=self.cv_folds, t1=t1, pct_embargo=pct_embargo)
 
             # StackingClassifierを初期化
             self.stacking_classifier = StackingClassifier(
@@ -352,7 +357,19 @@ class StackingEnsemble(BaseEnsemble):
             if hasattr(final_estimator, "feature_importances_"):
                 # Tree-based models
                 importances = final_estimator.feature_importances_  # type: ignore
-                feature_names = [f"meta_feature_{i}" for i in range(len(importances))]
+
+                # ベースモデル名を取得して特徴量名として使用を試みる
+                estimator_names = list(
+                    self.stacking_classifier.named_estimators_.keys()
+                )
+
+                if len(importances) == len(estimator_names):
+                    feature_names = estimator_names
+                else:
+                    feature_names = [
+                        f"meta_feature_{i}" for i in range(len(importances))
+                    ]
+
                 return dict(zip(feature_names, importances))
             elif hasattr(final_estimator, "coef_"):
                 # Linear models
@@ -361,7 +378,17 @@ class StackingEnsemble(BaseEnsemble):
                     coef = np.abs(coef).mean(axis=0)
                 else:
                     coef = np.abs(coef)
-                feature_names = [f"meta_feature_{i}" for i in range(len(coef))]
+
+                # ベースモデル名を取得して特徴量名として使用を試みる
+                estimator_names = list(
+                    self.stacking_classifier.named_estimators_.keys()
+                )
+
+                if len(coef) == len(estimator_names):
+                    feature_names = estimator_names
+                else:
+                    feature_names = [f"meta_feature_{i}" for i in range(len(coef))]
+
                 return dict(zip(feature_names, coef))
             else:
                 logger.warning(

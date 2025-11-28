@@ -699,49 +699,10 @@ class FeatureEngineeringService:
             疑似特徴量が追加されたDataFrame
         """
         try:
-            result_df = df.copy()
-
-            # ボリュームベースの疑似建玉残高
-            pseudo_oi = result_df["volume"].rolling(24).mean() * 10
-            # 明示的にpandas Seriesであることを保証
-            pseudo_oi = pd.Series(pseudo_oi, index=result_df.index)
-
-            # OI特徴量を生成（削除された特徴量を除く）
-            # Removed: OI_Change_Rate, OI_Surge, OI_Price_Correlation
-            # (低寄与度: 2025-01-05)
-            result_df["OI_Change_Rate_24h"] = pseudo_oi.pct_change(24)
-
-            # ボラティリティ調整建玉残高
-            volatility = (
-                result_df["close"].pct_change(fill_method=None).rolling(24).std()
+            # MarketDataFeatureCalculatorに委譲
+            return self.market_data_calculator.calculate_pseudo_open_interest_features(
+                df, lookback_periods
             )
-            result_df["Volatility_Adjusted_OI"] = pseudo_oi / (volatility + 1e-8)
-
-            # OI移動平均（中間計算用）
-            oi_ma_24 = pseudo_oi.rolling(24).mean()
-            oi_ma_168 = pseudo_oi.rolling(168).mean()
-
-            # OIトレンド
-            result_df["OI_Trend"] = (oi_ma_24 / oi_ma_168).fillna(1.0) - 1
-
-            # OI正規化
-            result_df["OI_Normalized"] = (
-                pseudo_oi - pseudo_oi.rolling(168).mean()
-            ) / pseudo_oi.rolling(168).std()
-
-            # NaN値を0で補完
-            remaining_oi_columns = [
-                "OI_Change_Rate_24h",
-                "Volatility_Adjusted_OI",
-                "OI_Trend",
-                "OI_Normalized",
-            ]
-            for col in remaining_oi_columns:
-                if col in result_df.columns:
-                    result_df[col] = result_df[col].fillna(0)
-
-            logger.info("建玉残高疑似特徴量を生成しました")
-            return result_df
 
         except Exception as e:
             logger.error(f"建玉残高疑似特徴量生成エラー: {e}")

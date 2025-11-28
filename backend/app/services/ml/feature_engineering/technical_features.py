@@ -8,7 +8,7 @@
 import logging
 from typing import Any, Dict
 
-import numpy as np
+
 import pandas as pd
 
 from ...indicators.technical_indicators.momentum import MomentumIndicators
@@ -348,36 +348,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         except Exception as e:
             logger.error(f"モメンタム特征量計算エラー: {e}")
             return df
-
-    def safe_ratio_calculation(
-        self,
-        numerator: pd.Series | Any,
-        denominator: pd.Series | Any,
-        fill_value: float = 0.0,
-    ) -> pd.Series:
-        """
-        ゼロ除算を防ぐための安全な比率計算
-
-        Args:
-            numerator: 分子
-            denominator: 分母
-            fill_value: ゼロ除算時の埋め値
-
-        Returns:
-            計算結果のSeries
-        """
-        if (
-            denominator is None
-            or numerator is None
-            or not isinstance(numerator, pd.Series)
-            or not isinstance(denominator, pd.Series)
-        ):
-            length = len(numerator) if isinstance(numerator, pd.Series) else 0
-            return pd.Series([fill_value] * length)
-
-        # ゼロ除算を防ぐ
-        ratio = numerator / denominator.replace(0, np.nan)
-        return ratio.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
 
     def get_feature_names(self) -> list:
         """

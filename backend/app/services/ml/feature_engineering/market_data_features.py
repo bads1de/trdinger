@@ -171,81 +171,124 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 削除: open_interest (生データ) - 理由: 加工済み特徴量で代替（分析日: 2025-01-07）
             # 生の建玉残高データは使用せず、加工済み特徴量（変化率、正規化値等）のみを使用
             # 実際に削除処理を実行
-            if oi_column in merged_df.columns:
+            if oi_column in result_df.columns:
                 result_df = result_df.drop(columns=[oi_column])
                 logger.info(f"Removed raw open_interest column: {oi_column}")
 
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: OI_Change_Rate
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-            result_df["OI_Change_Rate_24h"] = (
-                merged_df[oi_column]
-                .pct_change(periods=24)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
-
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: OI_Surge
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
-            # ボラティリティ調整建玉残高（安全な計算）
-            price_change = (
-                result_df["close"]
-                .pct_change(fill_method=None)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
-            volatility = (
-                price_change.rolling(window=24, min_periods=1).std().fillna(0.0)
-            )
-            result_df["Volatility_Adjusted_OI"] = (
-                merged_df[oi_column] / volatility
-            ).replace([np.inf, -np.inf], np.nan)
-            # NaNになった値を元のOIデータで埋める
-            result_df["Volatility_Adjusted_OI"] = result_df[
-                "Volatility_Adjusted_OI"
-            ].fillna(merged_df[oi_column])
-
-            # 建玉残高移動平均（中間計算用）
-            oi_ma_24 = merged_df[oi_column].rolling(window=24, min_periods=1).mean()
-            oi_ma_168 = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
-
-            # 建玉残高トレンド（安全な計算）
-            result_df["OI_Trend"] = (oi_ma_24 / oi_ma_168).replace(
-                [np.inf, -np.inf], np.nan
-            ).fillna(1.0) - 1
-
-            # 建玉残高と価格の関係
-            price_change = (
-                result_df["close"]
-                .pct_change(fill_method=None)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: OI_Price_Correlation (OI_Change_Rateに依存)
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
-            # 建玉残高の正規化
-            oi_mean = merged_df[oi_column].rolling(window=168, min_periods=1).mean()
-            oi_std = (
-                merged_df[oi_column]
-                .rolling(window=168, min_periods=1)
-                .std()
-                .replace(0, np.nan)
-            )
-            result_df["OI_Normalized"] = (
-                ((merged_df[oi_column] - oi_mean) / oi_std)
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
+            # 共通ロジックを使用してOI特徴量を計算
+            oi_series = merged_df[oi_column]
+            result_df = self._calculate_oi_derived_features(result_df, oi_series)
 
             return result_df
 
         except Exception as e:
             logger.error(f"建玉残高特徴量計算エラー: {e}")
             return df
+
+    def calculate_pseudo_open_interest_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> pd.DataFrame:
+        """
+        建玉残高疑似特徴量を生成
+
+        Args:
+            df: 価格データ
+            lookback_periods: 計算期間設定
+
+        Returns:
+            疑似特徴量が追加されたDataFrame
+        """
+        try:
+            result_df = df.copy()
+
+            # ボリュームベースの疑似建玉残高
+            # volumeは必須カラムと想定
+            if "volume" not in result_df.columns:
+                logger.warning("volumeカラムがないため、疑似OI特徴量を生成できません")
+                return result_df
+
+            pseudo_oi = result_df["volume"].rolling(24).mean() * 10
+            # 明示的にpandas Seriesであることを保証
+            pseudo_oi = pd.Series(pseudo_oi, index=result_df.index)
+
+            # 共通ロジックを使用してOI特徴量を計算
+            result_df = self._calculate_oi_derived_features(result_df, pseudo_oi)
+
+            logger.info("建玉残高疑似特徴量を生成しました")
+            return result_df
+
+        except Exception as e:
+            logger.error(f"建玉残高疑似特徴量生成エラー: {e}")
+            return df
+
+    def _calculate_oi_derived_features(
+        self, df: pd.DataFrame, oi_series: pd.Series
+    ) -> pd.DataFrame:
+        """
+        建玉残高（または疑似建玉残高）から派生特徴量を計算する共通メソッド
+
+        Args:
+            df: 特徴量を追加するDataFrame (価格データを含む)
+            oi_series: 建玉残高のSeries
+
+        Returns:
+            特徴量が追加されたDataFrame
+        """
+        result_df = df.copy()
+
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: OI_Change_Rate
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+        result_df["OI_Change_Rate_24h"] = (
+            oi_series.pct_change(periods=24)
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
+
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: OI_Surge
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+
+        # ボラティリティ調整建玉残高（安全な計算）
+        price_change = (
+            result_df["close"]
+            .pct_change(fill_method=None)
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
+        volatility = price_change.rolling(window=24, min_periods=1).std().fillna(0.0)
+        result_df["Volatility_Adjusted_OI"] = (oi_series / volatility).replace(
+            [np.inf, -np.inf], np.nan
+        )
+        # NaNになった値を元のOIデータで埋める
+        result_df["Volatility_Adjusted_OI"] = result_df[
+            "Volatility_Adjusted_OI"
+        ].fillna(oi_series)
+
+        # 建玉残高移動平均（中間計算用）
+        oi_ma_24 = oi_series.rolling(window=24, min_periods=1).mean()
+        oi_ma_168 = oi_series.rolling(window=168, min_periods=1).mean()
+
+        # 建玉残高トレンド（安全な計算）
+        result_df["OI_Trend"] = (oi_ma_24 / oi_ma_168).replace(
+            [np.inf, -np.inf], np.nan
+        ).fillna(1.0) - 1
+
+        # 建玉残高と価格の関係
+        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
+        # 削除された特徴量: OI_Price_Correlation (OI_Change_Rateに依存)
+        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+
+        # 建玉残高の正規化
+        oi_mean = oi_series.rolling(window=168, min_periods=1).mean()
+        oi_std = oi_series.rolling(window=168, min_periods=1).std().replace(0, np.nan)
+        result_df["OI_Normalized"] = (
+            ((oi_series - oi_mean) / oi_std)
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
+
+        return result_df
 
     def calculate_composite_features(
         self,

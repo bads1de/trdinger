@@ -178,10 +178,8 @@ class MLTrainingService(BaseResourceManager):
             model_name: モデル名（オプション）
             optimization_settings: 最適化設定（オプション）
             **training_params: 追加の学習パラメータ
-                - use_time_series_split: 時系列分割を使用（デフォルト: ml_config.training.USE_TIME_SERIES_SPLIT）
                 - use_cross_validation: クロスバリデーションを使用（デフォルト: False）
                 - cv_splits: CV分割数（デフォルト: ml_config.training.CROSS_VALIDATION_FOLDS）
-                - max_train_size: TimeSeriesSplitの最大学習サイズ（デフォルト: ml_config.training.MAX_TRAIN_SIZE）
 
         Returns:
             学習結果の辞書
@@ -243,23 +241,19 @@ class MLTrainingService(BaseResourceManager):
         self, training_params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        training_paramsにTimeSeriesSplit関連パラメータを設定
+        training_paramsを準備
 
         Args:
             training_params: 元のtraining_params
 
         Returns:
-            TimeSeriesSplit関連パラメータを含むtraining_params
+            準備されたtraining_params
 
         Raises:
             ValueError: 無効なパラメータ組み合わせの場合
         """
         # パラメータのコピーを作成
         params = training_params.copy()
-
-        # TimeSeriesSplit利用フラグ（ml_configから取得、training_paramsで上書き可能）
-        if "use_time_series_split" not in params:
-            params["use_time_series_split"] = self.config.training.USE_TIME_SERIES_SPLIT
 
         # クロスバリデーション利用時のパラメータ
         use_cross_validation = params.get("use_cross_validation", False)
@@ -268,26 +262,12 @@ class MLTrainingService(BaseResourceManager):
             if "cv_splits" not in params:
                 params["cv_splits"] = self.config.training.CROSS_VALIDATION_FOLDS
 
-            # TimeSeriesSplitの最大学習サイズ（ml_configから取得、training_paramsで上書き可能）
-            if "max_train_size" not in params:
-                params["max_train_size"] = self.config.training.MAX_TRAIN_SIZE
-
             # パラメータバリデーション
             cv_splits = params.get("cv_splits")
             if cv_splits is not None and cv_splits < 2:
                 raise ValueError(f"cv_splitsは2以上である必要があります: {cv_splits}")
 
-            max_train_size = params.get("max_train_size")
-            if max_train_size is not None and max_train_size <= 0:
-                raise ValueError(
-                    f"max_train_sizeは正の整数である必要があります: {max_train_size}"
-                )
-
-            logger.info(
-                f"TimeSeriesSplit設定: "
-                f"use_time_series_split={params['use_time_series_split']}, "
-                f"cv_splits={cv_splits}, max_train_size={max_train_size}"
-            )
+            logger.info(f"CV設定: " f"cv_splits={cv_splits}")
 
         return params
 

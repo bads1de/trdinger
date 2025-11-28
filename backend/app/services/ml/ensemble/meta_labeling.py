@@ -18,12 +18,14 @@ class MetaLabelingService:
         self,
         model_type: str = "random_forest",
         base_model_names: Optional[List[str]] = None,
+        model_params: Optional[Dict[str, Any]] = None,
     ):
         self.model_type = model_type
         self.model = None
         self.is_trained = False
         self.oof_preds_df = None
-        self.base_model_names = base_model_names  # 追加
+        self.base_model_names = base_model_names
+        self.model_params = model_params or {}
 
     def _add_base_model_statistics(
         self, X_meta: pd.DataFrame, base_probs_filtered: pd.DataFrame
@@ -132,13 +134,18 @@ class MetaLabelingService:
 
         # モデルの初期化と学習
         if self.model_type == "random_forest":
-            self.model = RandomForestClassifier(
-                n_estimators=100,
-                max_depth=5,
-                class_weight="balanced",
-                random_state=42,
-                n_jobs=-1,
-            )
+            # デフォルトパラメータ
+            rf_params = {
+                "n_estimators": 100,
+                "max_depth": 5,
+                "class_weight": "balanced",
+                "random_state": 42,
+                "n_jobs": -1,
+            }
+            # ユーザー指定パラメータで上書き
+            rf_params.update(self.model_params)
+
+            self.model = RandomForestClassifier(**rf_params)
         else:
             raise ValueError(f"未サポートのモデルタイプ: {self.model_type}")
 

@@ -1,3 +1,0 @@
-Mock called: True
-cv_arg type: <class 'sklearn.model_selection._split.TimeSeriesSplit'>
-cv_arg: TimeSeriesSplit(gap=0, max_train_size=None, n_splits=5, test_size=None)

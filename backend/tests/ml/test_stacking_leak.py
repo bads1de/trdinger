@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
-import logging
 from unittest.mock import MagicMock, patch
-from sklearn.model_selection import StratifiedKFold, TimeSeriesSplit
+from sklearn.model_selection import StratifiedKFold
 
 from app.services.ml.ensemble.stacking import StackingEnsemble
+
+
+from app.services.ml.cross_validation.purged_kfold import PurgedKFold
 
 
 class TestStackingLeak:
@@ -68,5 +70,5 @@ class TestStackingLeak:
                 cv_arg, StratifiedKFold
             ), "StratifiedKFold causes data leakage in time series!"
             assert isinstance(
-                cv_arg, TimeSeriesSplit
-            ), f"TimeSeriesSplit must be used for time series data. Got: {type(cv_arg)}"
+                cv_arg, PurgedKFold
+            ), f"PurgedKFold must be used for time series data. Got: {type(cv_arg)}"

@@ -130,15 +130,7 @@ class TrainingConfig(BaseSettings):
     CROSS_VALIDATION_FOLDS: int = Field(default=5)
 
     # TimeSeriesSplit設定（時系列CV対応）
-    USE_TIME_SERIES_SPLIT: bool = Field(
-        default=True, description="時系列分割をデフォルトで使用"
-    )
-    USE_PURGED_KFOLD: bool = Field(
-        default=True, description="Purged K-Fold Cross Validation を使用するか"
-    )
-    MAX_TRAIN_SIZE: Optional[int] = Field(
-        default=None, description="TimeSeriesSplitの最大学習サイズ（Noneで制限なし）"
-    )
+    # PurgedKFoldに一本化されたため、古い設定は削除
 
     # ターゲット作成
     PREDICTION_HORIZON: int = Field(default=24)
@@ -154,12 +146,16 @@ class TrainingConfig(BaseSettings):
     MIN_THRESHOLD: float = Field(default=0.005, description="最小閾値")
     MAX_THRESHOLD: float = Field(default=0.05, description="最大閾値")
 
+    # PurgedKFold設定
+    PCT_EMBARGO: float = Field(
+        default=0.01, description="エンバーゴ率（データ漏洩防止のための待機期間）"
+    )
+
     # 従来の固定閾値（後方互換性のため保持）
     THRESHOLD_UP: float = Field(default=0.02)
     THRESHOLD_DOWN: float = Field(default=-0.02)
 
     # 学習制御
-    RANDOM_STATE: int = Field(default=42)
     MIN_TRAINING_SAMPLES: int = Field(default=10, description="最小限に緩和")
 
     # 評価設定

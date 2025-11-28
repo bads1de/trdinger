@@ -9,11 +9,10 @@ ML学習基盤クラス
 import logging
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from ...config.unified_config import unified_config
@@ -24,8 +23,9 @@ from ...utils.error_handler import (
 )
 from .cross_validation import PurgedKFold
 
-from .data_processing.sampling import ImbalanceSampler
+
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
+from .common.ml_utils import get_feature_importance_unified, prepare_data_for_prediction
 from .config import ml_config
 from .exceptions import MLModelError
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
@@ -354,55 +354,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             前処理済み特徴量
         """
         try:
-            # 特徴量カラムの選択と補完
-            if self.feature_columns is not None:
-                # 1. 存在するカラムのみ抽出
-                available_columns = [
-                    col for col in self.feature_columns if col in features_df.columns
-                ]
-
-                processed_features = features_df[available_columns].copy()
-
-                # 2. 欠損カラムを特定
-                missing_columns = [
-                    col
-                    for col in self.feature_columns
-                    if col not in features_df.columns
-                ]
-
-                if missing_columns:
-                    # logger.debug(f"欠損特徴量を補完します: {missing_columns}")
-                    # 不足特徴量のDataFrameを作成して結合
-                    missing_df = pd.DataFrame(
-                        0.0, index=processed_features.index, columns=missing_columns
-                    )
-                    processed_features = pd.concat(
-                        [processed_features, missing_df], axis=1
-                    )
-
-                # 3. カラムの順序を学習時と合わせる
-                processed_features = processed_features[self.feature_columns]
-
-            else:
-                # 特徴量カラム情報がない場合はそのまま（警告すべきだが）
-                processed_features = features_df.copy()
-
-            # 欠損値の簡易補完（予測時なのでデータリークは気にしなくてよいが、計算エラーを防ぐ）
-            processed_features = processed_features.ffill().fillna(0)
-
-            # スケーリング
-            if hasattr(self, "scaler") and self.scaler is not None:
-                try:
-                    processed_features = pd.DataFrame(
-                        self.scaler.transform(processed_features),
-                        columns=processed_features.columns,
-                        index=processed_features.index,
-                    )
-                except Exception as e:
-                    logger.warning(f"スケーリングをスキップ: {e}")
-
-            return processed_features
-
+            return prepare_data_for_prediction(
+                features_df,
+                feature_columns=self.feature_columns,
+                scaler=self.scaler,
+                handle_missing=True,
+            )
         except Exception as e:
             logger.error(f"特徴量前処理エラー: {e}")
             return features_df
@@ -473,42 +430,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def _split_data(
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-        """データを分割"""
+        """データを分割（常に時系列分割）"""
         test_size = training_params.get("test_size", 0.2)
-        random_state = training_params.get("random_state", 42)
-        use_random_split = training_params.get("use_random_split", False)
-        use_time_series_split = training_params.get(
-            "use_time_series_split",
-            (
-                self.config.training.USE_TIME_SERIES_SPLIT
-                if not use_random_split
-                else False
-            ),
-        )
 
-        if use_time_series_split and not use_random_split:
-            logger.info("🕒 時系列分割を使用")
-            n_samples = len(X)
-            train_size = int(n_samples * (1 - test_size))
+        logger.info("🕒 時系列分割を使用")
+        n_samples = len(X)
+        train_size = int(n_samples * (1 - test_size))
 
-            X_train = X.iloc[:train_size].copy()
-            X_test = X.iloc[train_size:].copy()
-            y_train = y.iloc[:train_size].copy()
-            y_test = y.iloc[train_size:].copy()
-        else:
-            logger.info("🔀 ランダム分割を使用")
-            stratify_param = y if y.nunique() > 1 else None
-            splits = train_test_split(
-                X,
-                y,
-                test_size=test_size,
-                random_state=random_state,
-                stratify=stratify_param,
-            )
-            X_train = cast(pd.DataFrame, splits[0])
-            X_test = cast(pd.DataFrame, splits[1])
-            y_train = cast(pd.Series, splits[2])
-            y_test = cast(pd.Series, splits[3])
+        X_train = X.iloc[:train_size].copy()
+        X_test = X.iloc[train_size:].copy()
+        y_train = y.iloc[:train_size].copy()
+        y_test = y.iloc[train_size:].copy()
 
         return X_train, X_test, y_train, y_test
 
@@ -519,40 +451,43 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         n_splits = training_params.get(
             "cv_splits", self.config.training.CROSS_VALIDATION_FOLDS
         )
-        max_train_size = training_params.get(
-            "max_train_size", self.config.training.MAX_TRAIN_SIZE
-        )
-
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
-        if self.config.training.USE_PURGED_KFOLD:
-            # ラベル生成設定からパラメータを取得
-            label_config = unified_config.ml.training.label_generation
-            # 簡易的にデフォルト値を使用（詳細は省略）
-            t1_horizon_n = self.config.training.PREDICTION_HORIZON
-            t1_timeframe = "1h"
+        # ラベル生成設定からパラメータを取得
+        t1_horizon_n = self.config.training.PREDICTION_HORIZON
 
-            t1 = self._get_t1_series(X.index, t1_horizon_n, t1_timeframe)
-            splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=0.01)
-        else:
-            splitter = TimeSeriesSplit(n_splits=n_splits, max_train_size=max_train_size)
+        # 共通ユーティリティを使用してt1を計算（時間足は自動推定）
+        from .common.time_series_utils import get_t1_series
+
+        t1 = get_t1_series(X.index, t1_horizon_n)
+
+        pct_embargo = getattr(self.config.training, "PCT_EMBARGO", 0.01)
+        splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=pct_embargo)
 
         cv_scores = []
         fold_results = []
 
-        for fold, (train_idx, test_idx) in enumerate(splitter.split(X), 1):
-            logger.info(f"フォールド {fold}/{n_splits} を実行中...")
-            X_train_cv = X.iloc[train_idx]
-            X_test_cv = X.iloc[test_idx]
-            y_train_cv = y.iloc[train_idx]
-            y_test_cv = y.iloc[test_idx]
+        for fold, (train_idx, test_idx) in enumerate(splitter.split(X, y)):
+            # インデックスを使用してデータを分割
+            X_train_cv, X_test_cv = X.iloc[train_idx], X.iloc[test_idx]
+            y_train_cv, y_test_cv = y.iloc[train_idx], y.iloc[test_idx]
 
-            # SMOTE処理（省略）
+            # スケーリング
+            scaler = StandardScaler()
+            X_train_scaled = pd.DataFrame(
+                scaler.fit_transform(X_train_cv),
+                columns=X_train_cv.columns,
+                index=X_train_cv.index,
+            )
+            X_test_scaled = pd.DataFrame(
+                scaler.transform(X_test_cv),
+                columns=X_test_cv.columns,
+                index=X_test_cv.index,
+            )
 
-            X_train_scaled, X_test_scaled = self._preprocess_data(X_train_cv, X_test_cv)
-
+            # 各フォールドで学習・評価
             fold_result = self._train_fold_with_error_handling(
-                fold,
+                fold + 1,
                 X_train_scaled,
                 X_test_scaled,
                 y_train_cv,
@@ -562,16 +497,28 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 training_params,
             )
 
-            cv_scores.append(fold_result.get("accuracy", 0.0))
             fold_results.append(fold_result)
 
-        cv_result = {
+            # スコアを記録（accuracyを基本とするが、利用可能ならbalanced_accuracyを使用）
+            score = fold_result.get(
+                "balanced_accuracy", fold_result.get("accuracy", 0.0)
+            )
+            cv_scores.append(score)
+
+        # 平均スコアと標準偏差
+        mean_score = np.mean(cv_scores) if cv_scores else 0.0
+        std_score = np.std(cv_scores) if cv_scores else 0.0
+
+        logger.info(
+            f"✅ クロスバリデーション完了: 平均スコア={mean_score:.4f} (+/- {std_score:.4f})"
+        )
+
+        return {
             "cv_scores": cv_scores,
-            "cv_mean": np.mean(cv_scores),
-            "cv_std": np.std(cv_scores),
+            "mean_score": mean_score,
+            "std_score": std_score,
             "fold_results": fold_results,
         }
-        return cv_result
 
     def _preprocess_data(
         self, X_train: pd.DataFrame, X_test: pd.DataFrame
@@ -645,28 +592,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.warning("学習済みモデルがありません")
             return {}
 
-        # LightGBM/XGBoostモデルの場合の一般的な処理
-        if hasattr(self._model, "feature_importance") and self.feature_columns:
-            try:
-                importance_scores = self._model.feature_importance(
-                    importance_type="gain"
-                )
-                feature_importance = dict(zip(self.feature_columns, importance_scores))
-                sorted_importance = sorted(
-                    feature_importance.items(), key=lambda x: x[1], reverse=True
-                )[:top_n]
-                return dict(sorted_importance)
-            except Exception:
-                pass
-
-        # get_feature_importanceメソッドを持つモデルの場合
-        if hasattr(self._model, "get_feature_importance"):
-            try:
-                return self._model.get_feature_importance(top_n)
-            except Exception:
-                pass
-
-        return {}
+        return get_feature_importance_unified(
+            self._model, self.feature_columns, top_n=top_n
+        )
 
     @safe_ml_operation(
         default_return=False, context="モデル読み込みでエラーが発生しました"
@@ -763,22 +691,3 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         training_data = X_combined.copy()
         training_data["target"] = y_combined
         return training_data
-
-    @staticmethod
-    def _get_t1_series(
-        indices: pd.DatetimeIndex, horizon_n: int, timeframe: str
-    ) -> pd.Series:
-        """PurgedKFold用t1計算"""
-        if timeframe == "1h":
-            delta = pd.Timedelta(hours=horizon_n)
-        elif timeframe == "4h":
-            delta = pd.Timedelta(hours=4 * horizon_n)
-        elif timeframe == "1d":
-            delta = pd.Timedelta(days=horizon_n)
-        elif timeframe == "15m":
-            delta = pd.Timedelta(minutes=15 * horizon_n)
-        else:
-            delta = pd.Timedelta(hours=horizon_n)
-
-        t1 = pd.Series(indices + delta, index=indices)
-        return t1
