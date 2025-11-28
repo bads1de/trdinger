@@ -72,7 +72,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.trainer_config = trainer_config or {}
 
-        # プロパティの設定（サブクラスで使用される可能性があるため維持）
+        # 以下のプロパティはサブクラス（SingleModelTrainer, EnsembleTrainer）で使用されるため保持
+        # BaseMLTrainer自体では使用しないが、互換性のため維持
         self.trainer_type = trainer_type or self.trainer_config.get("type", "single")
         self.model_type = model_type or self.trainer_config.get(
             "model_type", "lightgbm"
@@ -322,8 +323,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             return self.config.prediction.get_default_predictions()
 
         try:
-            # 1. 前処理（カラム調整、スケーリング）
-            processed_features = self._preprocess_features_for_prediction(features_df)
+            # 1. 前処理（カラム調整、スケーリング）- 共通ユーティリティを直接使用
+            processed_features = prepare_data_for_prediction(
+                features_df,
+                expected_columns=self.feature_columns,
+                scaler=self.scaler,
+            )
 
             # 2. 予測実行（サブクラスのpredictを呼び出し）
             # predictは確率配列を返すことを期待
@@ -383,31 +388,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             学習結果
         """
         pass
-
-    def _preprocess_features_for_prediction(
-        self, features_df: pd.DataFrame
-    ) -> pd.DataFrame:
-        """
-        予測用の特徴量前処理
-        - 必要なカラムの抽出
-        - 欠損カラムの補完（0埋め）
-        - スケーリング
-
-        Args:
-            features_df: 特徴量DataFrame
-
-        Returns:
-            前処理済み特徴量
-        """
-        try:
-            return prepare_data_for_prediction(
-                features_df,
-                expected_columns=self.feature_columns,
-                scaler=self.scaler,
-            )
-        except Exception as e:
-            logger.error(f"特徴量前処理エラー: {e}")
-            return features_df
 
     def _validate_training_data(self, training_data: pd.DataFrame) -> None:
         """入力データの検証"""
@@ -746,17 +726,3 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             }
         )
         return fold_result
-
-    def _prepare_combined_training_data(
-        self,
-        X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
-        y_train: pd.Series,
-        y_test: pd.Series,
-    ) -> pd.DataFrame:
-        """学習データの統合準備（互換性維持）"""
-        X_combined = pd.concat([X_train, X_test])
-        y_combined = pd.concat([y_train, y_test])
-        training_data = X_combined.copy()
-        training_data["target"] = y_combined
-        return training_data

@@ -122,39 +122,3 @@ class XGBoostModel(BaseGradientBoostingModel):
         モデルから生の予測値（確率）を取得します。
         """
         return self.model.predict(data)
-
-    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
-        """
-        特徴量重要度を取得
-        """
-        if not self.is_trained or self.model is None:
-            logger.warning("学習済みモデルがありません")
-            return {}
-
-        try:
-            if not hasattr(self.model, "get_score"):
-                logger.warning("モデルまたはget_score()メソッドがありません")
-                return {col: 0.0 for col in self.feature_columns}
-
-            importance_scores = self.model.get_score(importance_type="gain")
-            feature_importance = {}
-
-            if self.feature_names:
-                for feature_name in self.feature_names:
-                    feature_importance[feature_name] = importance_scores.get(
-                        feature_name, 0.0
-                    )
-            else:
-                for i, col in enumerate(self.feature_columns):
-                    feature_key = f"f{i}"
-                    feature_importance[col] = importance_scores.get(feature_key, 0.0)
-
-            sorted_importance = sorted(
-                feature_importance.items(), key=lambda x: x[1], reverse=True
-            )[:top_n]
-
-            return dict(sorted_importance)
-
-        except Exception as e:
-            logger.error(f"特徴量重要度取得エラー: {e}")
-            return {}

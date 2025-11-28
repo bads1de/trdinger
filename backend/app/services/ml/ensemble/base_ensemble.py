@@ -170,11 +170,13 @@ class BaseEnsemble(ABC):
 
     def get_feature_importance(self) -> Optional[Dict[str, float]]:
         """
-        特徴量重要度を取得
+        特徴量重要度を取得（ベースモデルから集約）
 
         Returns:
             特徴量重要度の辞書（利用可能な場合）
         """
+        from ..common.ml_utils import get_feature_importance_unified
+
         if not self.is_fitted or not self.feature_columns:
             logger.warning(
                 f"特徴量重要度取得不可: is_fitted={self.is_fitted}, feature_columns={len(self.feature_columns) if self.feature_columns else 0}"
@@ -182,61 +184,34 @@ class BaseEnsemble(ABC):
             return {}
 
         # ベースモデルから特徴量重要度を集約
-        importance_dict = {}
+        all_importances: Dict[str, List[float]] = {}
 
         for i, model in enumerate(self.base_models):
             try:
-                if hasattr(model, "feature_importances_"):
-                    # scikit-learn系モデル
-                    importances = model.feature_importances_
+                # 統一関数を使用して重要度を取得
+                model_importance = get_feature_importance_unified(
+                    model, self.feature_columns, top_n=len(self.feature_columns)
+                )
+
+                if model_importance:
                     logger.info(
-                        f"モデル{i}: scikit-learn系特徴量重要度を取得 ({len(importances)}個)"
+                        f"モデル{i}: 特徴量重要度を取得 ({len(model_importance)}個)"
                     )
-                    for j, feature in enumerate(self.feature_columns):
-                        if j < len(importances):
-                            if feature not in importance_dict:
-                                importance_dict[feature] = []
-                            importance_dict[feature].append(importances[j])
-
-                elif hasattr(model, "model") and hasattr(
-                    model.model, "feature_importance"
-                ):
-                    # LightGBMModel (カスタムラッパー)
-                    importances = model.model.feature_importance(importance_type="gain")
-                    logger.info(
-                        f"モデル{i}: LightGBM特徴量重要度を取得 ({len(importances)}個)"
-                    )
-                    for j, feature in enumerate(self.feature_columns):
-                        if j < len(importances):
-                            if feature not in importance_dict:
-                                importance_dict[feature] = []
-                            importance_dict[feature].append(importances[j])
-
-                elif hasattr(model, "get_feature_importance"):
-                    # カスタムget_feature_importanceメソッドを持つモデル
-                    model_importance = model.get_feature_importance()
-                    if model_importance:
-                        logger.info(
-                            f"モデル{i}: カスタムメソッドで特徴量重要度を取得 ({len(model_importance)}個)"
-                        )
-                        for feature, importance in model_importance.items():
-                            if feature not in importance_dict:
-                                importance_dict[feature] = []
-                            importance_dict[feature].append(importance)
-
+                    for feature, importance in model_importance.items():
+                        if feature not in all_importances:
+                            all_importances[feature] = []
+                        all_importances[feature].append(importance)
                 else:
-                    logger.warning(
-                        f"モデル{i}: 特徴量重要度を取得できません (type: {type(model)})"
-                    )
+                    logger.warning(f"モデル{i}: 特徴量重要度が取得できませんでした")
 
             except Exception as e:
                 logger.error(f"モデル{i}の特徴量重要度取得エラー: {e}")
 
         # 平均を計算
-        if importance_dict:
+        if all_importances:
             avg_importance = {
                 feature: float(np.mean(values))
-                for feature, values in importance_dict.items()
+                for feature, values in all_importances.items()
             }
             logger.info(f"アンサンブル特徴量重要度を計算: {len(avg_importance)}個")
             return avg_importance

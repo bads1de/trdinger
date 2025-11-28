@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Any, Dict, Optional, Union, cast
 
 import lightgbm as lgb
 import numpy as np
@@ -128,31 +128,3 @@ class LightGBMModel(BaseGradientBoostingModel):
             np.ndarray,
             self.model.predict(data, num_iteration=self.model.best_iteration),
         )
-
-    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
-        """
-        特徴量重要度を取得
-        """
-        if not self.is_trained or self.model is None:
-            logger.warning("学習済みモデルがありません")
-            return {}
-
-        try:
-            importance_scores = self.model.feature_importance(importance_type="gain")
-
-            if not self.feature_columns or len(importance_scores) != len(
-                self.feature_columns
-            ):
-                logger.warning("特徴量カラム情報が不正です")
-                return {}
-
-            feature_importance = dict(zip(self.feature_columns, importance_scores))
-            sorted_importance = sorted(
-                feature_importance.items(), key=lambda x: x[1], reverse=True
-            )[:top_n]
-
-            return dict(sorted_importance)
-
-        except Exception as e:
-            logger.error(f"特徴量重要度取得エラー: {e}")
-            return {}

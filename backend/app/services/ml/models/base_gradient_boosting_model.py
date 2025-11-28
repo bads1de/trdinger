@@ -272,9 +272,12 @@ class BaseGradientBoostingModel(ABC):
         """
         pass
 
-    @abstractmethod
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """
-        特徴量重要度を取得。
+        特徴量重要度を取得（共通ユーティリティを使用）
         """
-        pass
+        from ..common.ml_utils import get_feature_importance_unified
+
+        return get_feature_importance_unified(
+            self.model, self.feature_columns or [], top_n=top_n
+        )
