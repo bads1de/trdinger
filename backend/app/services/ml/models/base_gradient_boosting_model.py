@@ -1,4 +1,3 @@
-
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union, cast
@@ -124,7 +123,7 @@ class BaseGradientBoostingModel(ABC):
                 valid_data,
                 params,
                 early_stopping_rounds=kwargs.get("early_stopping_rounds", 50),
-                **kwargs, # ここに **kwargs を追加
+                **kwargs,  # ここに **kwargs を追加
             )
 
             # 予測と評価
@@ -204,25 +203,72 @@ class BaseGradientBoostingModel(ABC):
         """
         pass
 
-
     @abstractmethod
     def _get_prediction_proba(self, data: Any) -> np.ndarray:
         """
         モデル固有の予測確率を取得します。
+        学習時の検証用に使用されます。
         """
         pass
 
-    @abstractmethod
     def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
         sklearn互換の予測メソッド（クラス予測）。
         """
-        pass
+        if not self.is_trained or self.model is None:
+            raise ModelError("学習済みモデルがありません")
 
-    @abstractmethod
+        # feature_columnsを使用してDataFrameを整形
+        if self.feature_columns and not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
+
+        # 予測確率を取得
+        predictions_proba = self.predict_proba(X)
+
+        # クラス予測に変換
+        if predictions_proba.ndim == 1:
+            return (predictions_proba > 0.5).astype(int)
+        elif predictions_proba.shape[1] == 2:
+            # 2クラス分類の場合、確率が高い方のクラスを返す（0.5閾値と同じ）
+            return np.argmax(predictions_proba, axis=1)
+        else:
+            # 多クラス分類
+            return np.argmax(predictions_proba, axis=1)
+
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
         予測確率を取得。
+        """
+        if not self.is_trained or self.model is None:
+            raise ModelError("学習済みモデルがありません")
+
+        # feature_columnsを使用してDataFrameを整形
+        if self.feature_columns and not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
+
+        # モデル固有の入力データ準備
+        data = self._prepare_input_for_prediction(X)
+
+        # モデル固有の予測実行
+        predictions = self._predict_raw(data)
+
+        # 形状の正規化 (1D -> 2D for binary)
+        if predictions.ndim == 1:
+            return np.column_stack([1 - predictions, predictions])
+
+        return predictions
+
+    @abstractmethod
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
+        """
+        予測用の入力データを準備します。
+        """
+        pass
+
+    @abstractmethod
+    def _predict_raw(self, data: Any) -> np.ndarray:
+        """
+        モデルから生の予測値（確率）を取得します。
         """
         pass
 
@@ -232,4 +278,3 @@ class BaseGradientBoostingModel(ABC):
         特徴量重要度を取得。
         """
         pass
-

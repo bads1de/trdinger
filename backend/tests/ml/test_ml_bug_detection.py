@@ -16,7 +16,7 @@ from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
-from app.utils.data_processing.pipelines.ml_pipeline import create_ml_pipeline
+from app.services.ml.preprocessing.pipeline import create_ml_pipeline
 
 
 class TestMLBugDetection:

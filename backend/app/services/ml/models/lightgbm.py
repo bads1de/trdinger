@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import lightgbm as lgb
 import numpy as np
@@ -103,7 +103,7 @@ class LightGBMModel(BaseGradientBoostingModel):
         """
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
-        
+
         # lgb.Datasetから特徴量データを取り出す
         # construct()で内部表現を構築し、get_data()でデータを取得
         X_data = data.construct().get_data()
@@ -113,47 +113,21 @@ class LightGBMModel(BaseGradientBoostingModel):
             self.model.predict(X_data, num_iteration=self.model.best_iteration),
         )
 
-    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
         """
-        sklearn互換の予測メソッド（クラス予測）
+        予測用の入力データを準備します。
+        LightGBMはDataFrameを直接受け取れます。
         """
-        if not self.is_trained or self.model is None:
-            raise ModelError("学習済みモデルがありません")
+        return X
 
-        # feature_columnsをfit時に保存しているので、それを使用してDataFrameを整形
-        if self.feature_columns and not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
-
-        predictions_proba = cast(
+    def _predict_raw(self, data: Any) -> np.ndarray:
+        """
+        モデルから生の予測値（確率）を取得します。
+        """
+        return cast(
             np.ndarray,
-            self.model.predict(X, num_iteration=self.model.best_iteration),
+            self.model.predict(data, num_iteration=self.model.best_iteration),
         )
-
-        if predictions_proba.ndim == 1:
-            return (predictions_proba > 0.5).astype(int)
-        else:
-            return np.argmax(predictions_proba, axis=1)
-
-    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
-        """
-        予測確率を取得
-        """
-        if not self.is_trained or self.model is None:
-            raise ModelError("学習済みモデルがありません")
-
-        # feature_columnsをfit時に保存しているので、それを使用してDataFrameを整形
-        if self.feature_columns and not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
-
-        predictions = cast(
-            np.ndarray,
-            self.model.predict(X, num_iteration=self.model.best_iteration),
-        )
-
-        if predictions.ndim == 1:
-            return np.column_stack([1 - predictions, predictions])
-        else:
-            return predictions
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """

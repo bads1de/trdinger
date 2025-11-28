@@ -6,7 +6,7 @@ LightGBM、XGBoostをサポートします。
 """
 
 import logging
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, cast
 
 import numpy as np
 import pandas as pd
@@ -87,6 +87,9 @@ class SingleModelTrainer(BaseMLTrainer):
             self.is_trained = True
             self.feature_columns = list(X_train.columns)
 
+            # BaseMLTrainer用のモデル参照を設定
+            self._model = self.single_model.model
+
             # 結果を整形
             result = {
                 "model_type": self.model_type,
@@ -96,7 +99,7 @@ class SingleModelTrainer(BaseMLTrainer):
                 **training_result,
             }
 
-            # 学習結果を保存（save_modelで使用）
+            # 学習結果を保存（メタデータ用）
             self.last_training_results = result
 
             logger.info(f"✅ {self.model_type.upper()}モデルの学習が完了しました")
@@ -172,167 +175,10 @@ class SingleModelTrainer(BaseMLTrainer):
                 f"{self.model_type.upper()}モデルの予測に失敗しました: {e}"
             )
 
-    def save_model(
-        self, model_name: str, metadata: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """
-        単一モデルを保存
-
-        Args:
-            model_name: モデル名
-            metadata: メタデータ（オプション）
-
-        Returns:
-            保存されたモデルのパス
-        """
-        if self.single_model is None or not self.single_model.is_trained:
-            raise MLModelError("保存する学習済みモデルがありません")
-
-        try:
-            from ..model_manager import model_manager
-
-            # メタデータに単一モデル情報を追加
-            final_metadata = metadata or {}
-            final_metadata.update(
-                {
-                    "model_type": self.model_type,
-                    "trainer_type": "single_model",
-                    "feature_count": (
-                        len(self.feature_columns) if self.feature_columns else 0
-                    ),
-                }
-            )
-
-            # 学習結果の評価指標をメタデータに追加
-            if self.last_training_results:
-                # 主要な評価指標を抽出
-                performance_metrics = {}
-                for key in [
-                    "accuracy",
-                    "balanced_accuracy",
-                    "f1_score",
-                    "matthews_corrcoef",
-                    "auc_roc",
-                    "auc_pr",
-                    "test_accuracy",
-                    "test_balanced_accuracy",
-                    "test_f1_score",
-                    "test_mcc",
-                    "test_roc_auc",
-                    "test_pr_auc",
-                ]:
-                    if key in self.last_training_results:
-                        performance_metrics[key] = self.last_training_results[key]
-
-                # メタデータに追加
-                final_metadata.update(performance_metrics)
-                final_metadata["training_samples"] = self.last_training_results.get(
-                    "training_samples", 0
-                )
-                final_metadata["test_samples"] = self.last_training_results.get(
-                    "test_samples", 0
-                )
-
-                logger.info(
-                    f"評価指標をメタデータに追加: {len(performance_metrics)}個の指標"
-                )
-
-            # 特徴量重要度をメタデータに追加
-            try:
-                feature_importance = self.get_feature_importance(top_n=100)
-                if feature_importance:
-                    final_metadata["feature_importance"] = feature_importance
-                    logger.info(
-                        f"特徴量重要度をメタデータに追加: {len(feature_importance)}個"
-                    )
-            except Exception as e:
-                logger.warning(f"特徴量重要度の取得に失敗: {e}")
-
-            # 単一モデルを保存
-            model_path = model_manager.save_model(
-                model=self.single_model.model,
-                model_name=model_name,
-                metadata=final_metadata,
-                scaler=getattr(self.single_model, "scaler", None),
-                feature_columns=self.feature_columns,
-            )
-
-            if model_path is None:
-                raise MLModelError("モデルの保存に失敗しました")
-
-            logger.info(f"単一モデル保存完了: {model_path}")
-            return cast(str, model_path)
-
-        except Exception as e:
-            logger.error(f"単一モデル保存エラー: {e}")
-            raise MLModelError(f"単一モデルの保存に失敗しました: {e}")
-
-    def load_model(self, model_path: str) -> bool:
-        """
-        単一モデルを読み込み
-
-        Args:
-            model_path: モデルファイルパス
-
-        Returns:
-            読み込み成功フラグ
-        """
-        try:
-            # モデルインスタンスを作成
-            self.single_model = self._create_model_instance()
-
-            # モデルを読み込み
-            from ..model_manager import model_manager
-
-            model_data = model_manager.load_model(model_path)
-
-            if model_data is not None:
-                # モデルデータをsingle_modelに設定
-                self.single_model.model = model_data.get("model")
-                self.single_model.scaler = model_data.get("scaler")
-                self.feature_columns = model_data.get("feature_columns")
-
-                self.is_trained = True
-                logger.info(f"単一モデル読み込み完了: model_type={self.model_type}")
-                return True
-            else:
-                logger.error("単一モデルの読み込みに失敗")
-                return False
-
-        except Exception as e:
-            logger.error(f"単一モデル読み込みエラー: {e}")
-            return False
-
-    @property
-    def model(self):
-        """学習済みモデルを取得（互換性のため）"""
-        return self.single_model.model if self.single_model else None
-
-    def get_model_info(self) -> Dict[str, Any]:
-        """
-        モデル情報を取得
-
-        Returns:
-            モデル情報の辞書
-        """
-        if self.single_model is None:
-            return {
-                "model_type": self.model_type,
-                "is_trained": False,
-                "trainer_type": "single_model",
-            }
-
-        return {
-            "model_type": self.model_type,
-            "is_trained": self.single_model.is_trained,
-            "trainer_type": "single_model",
-            "feature_count": len(self.feature_columns) if self.feature_columns else 0,
-        }
-
     @staticmethod
     def get_available_models() -> list:
         """
-        利用可能な単一モデルのリストを取得（Essential 4 Modelsのみ）
+        利用可能な単一モデルのリストを取得（Essential Modelsのみ）
 
         Returns:
             利用可能なモデルタイプのリスト
@@ -348,30 +194,66 @@ class SingleModelTrainer(BaseMLTrainer):
 
         return available
 
-    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
-        """
-        特徴量重要度を取得
+    def _get_model_to_save(self) -> Any:
+        """保存対象のモデルオブジェクトを取得"""
+        if self.single_model is None:
+            return None
+        return self.single_model.model
 
-        Args:
-            top_n: 上位N個の特徴量
+    def _get_model_specific_metadata(self, model_name: str) -> Dict[str, Any]:
+        """モデル固有のメタデータを取得"""
+        metadata = {
+            "model_type": self.model_type,
+            "trainer_type": "single_model",
+            "feature_count": (len(self.feature_columns) if self.feature_columns else 0),
+        }
 
-        Returns:
-            特徴量重要度の辞書
-        """
-        if not self.is_trained or self.single_model is None:
-            logger.warning("学習済み単一モデルがありません")
-            return {}
+        # 学習結果の評価指標をメタデータに追加
+        if self.last_training_results:
+            # 主要な評価指標を抽出
+            performance_metrics = {}
+            for key in [
+                "accuracy",
+                "balanced_accuracy",
+                "f1_score",
+                "matthews_corrcoef",
+                "auc_roc",
+                "auc_pr",
+                "test_accuracy",
+                "test_balanced_accuracy",
+                "test_f1_score",
+                "test_mcc",
+                "test_roc_auc",
+                "test_pr_auc",
+            ]:
+                if key in self.last_training_results:
+                    performance_metrics[key] = self.last_training_results[key]
 
+            metadata["performance_metrics"] = performance_metrics
+
+        return metadata
+
+    def load_model(self, model_path: str) -> bool:
+        """モデルを読み込み（オーバーライド）"""
+        # 親クラスのload_modelを呼び出してモデルをロード
+        if not super().load_model(model_path):
+            return False
+
+        # メタデータからモデルタイプを復元
+        if hasattr(self, "metadata"):
+            self.model_type = self.metadata.get("model_type", self.model_type)
+
+        # single_modelを再構築
         try:
-            # 単一モデルから特徴量重要度を取得
-            if hasattr(self.single_model, "get_feature_importance"):
-                return self.single_model.get_feature_importance()
-            else:
-                logger.warning(
-                    f"{self.model_type}モデルは特徴量重要度をサポートしていません"
-                )
-                return {}
+            self.single_model = self._create_model_instance()
+            # ロードしたモデルをセット
+            self.single_model.model = self._model
+            self.single_model.is_trained = True
+            # 特徴量カラムもセット
+            self.single_model.feature_columns = self.feature_columns
+
+            return True
 
         except Exception as e:
-            logger.error(f"単一モデル特徴量重要度取得エラー: {e}")
-            return {}
+            logger.error(f"モデル読み込み後の再構築に失敗: {e}")
+            return False

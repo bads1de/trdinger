@@ -46,3 +46,135 @@ def validate_training_inputs(
 
         if X_test is not None:
             logger.info(f"テストデータサイズ: {len(X_test)}行")
+
+
+def get_feature_importance_unified(
+    model,
+    feature_columns: list[str],
+    top_n: int = 10,
+) -> dict[str, float]:
+    """
+    様々なモデルから特徴量重要度を統一的に取得
+
+    Args:
+        model: 学習済みモデル
+        feature_columns: 特徴量カラムのリスト
+        top_n: 上位N個の特徴量を返す
+
+    Returns:
+        特徴量重要度の辞書（降順）
+    """
+    if model is None or not feature_columns:
+        logger.warning("モデルまたは特徴量カラムが無効です")
+        return {}
+
+    try:
+        # LightGBM/XGBoostスタイルのモデル（feature_importanceメソッド）
+        if hasattr(model, "feature_importance") and callable(model.feature_importance):
+            importance_scores = model.feature_importance(importance_type="gain")
+            if len(importance_scores) != len(feature_columns):
+                logger.warning("特徴量重要度と特徴量カラム数が一致しません")
+                return {}
+
+            feature_importance = dict(zip(feature_columns, importance_scores))
+            sorted_importance = sorted(
+                feature_importance.items(), key=lambda x: x[1], reverse=True
+            )[:top_n]
+            return dict(sorted_importance)
+
+        # get_feature_importanceメソッドを持つモデル
+        elif hasattr(model, "get_feature_importance") and callable(
+            model.get_feature_importance
+        ):
+            try:
+                # top_n引数をサポートしているか試す
+                return model.get_feature_importance(top_n)
+            except TypeError:
+                # top_n引数をサポートしていない場合
+                all_importance = model.get_feature_importance()
+                if isinstance(all_importance, dict):
+                    sorted_importance = sorted(
+                        all_importance.items(), key=lambda x: x[1], reverse=True
+                    )[:top_n]
+                    return dict(sorted_importance)
+                return {}
+
+        # feature_importances_属性を持つモデル（scikit-learn style）
+        elif hasattr(model, "feature_importances_"):
+            importance_scores = model.feature_importances_
+            if len(importance_scores) != len(feature_columns):
+                logger.warning("特徴量重要度と特徴量カラム数が一致しません")
+                return {}
+
+            feature_importance = dict(zip(feature_columns, importance_scores))
+            sorted_importance = sorted(
+                feature_importance.items(), key=lambda x: x[1], reverse=True
+            )[:top_n]
+            return dict(sorted_importance)
+
+        else:
+            logger.debug("モデルは特徴量重要度をサポートしていません")
+            return {}
+
+    except Exception as e:
+        logger.error(f"特徴量重要度取得エラー: {e}")
+        return {}
+
+
+def prepare_data_for_prediction(
+    features_df: pd.DataFrame,
+    expected_columns: list[str],
+    scaler=None,
+) -> pd.DataFrame:
+    """
+    予測用のデータを前処理（カラム調整、スケーリング）
+
+    Args:
+        features_df: 入力特徴量
+        expected_columns: 期待されるカラムリスト
+        scaler: スケーラー（オプション）
+
+    Returns:
+        前処理済みDataFrame
+    """
+    try:
+        # 1. 存在するカラムのみ抽出
+        available_columns = [
+            col for col in expected_columns if col in features_df.columns
+        ]
+        processed_features = features_df[available_columns].copy()
+
+        # 2. 欠損カラムを0で補完
+        missing_columns = [
+            col for col in expected_columns if col not in features_df.columns
+        ]
+
+        if missing_columns:
+            logger.debug(f"欠損特徴量を補完します: {len(missing_columns)}個")
+            missing_df = pd.DataFrame(
+                0.0, index=processed_features.index, columns=missing_columns
+            )
+            processed_features = pd.concat([processed_features, missing_df], axis=1)
+
+        # 3. カラムの順序を学習時と合わせる
+        processed_features = processed_features[expected_columns]
+
+        # 4. 欠損値の簡易補完（予測時）
+        processed_features = processed_features.ffill().fillna(0)
+
+        # 5. スケーリング
+        if scaler is not None:
+            try:
+                processed_features = pd.DataFrame(
+                    scaler.transform(processed_features),
+                    columns=processed_features.columns,
+                    index=processed_features.index,
+                )
+            except Exception as e:
+                logger.warning(f"スケーリングをスキップ: {e}")
+
+        return processed_features
+
+    except Exception as e:
+        logger.error(f"データ前処理エラー: {e}")
+        return features_df

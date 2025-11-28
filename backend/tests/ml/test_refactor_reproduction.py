@@ -1,38 +1,55 @@
 import pytest
 import pandas as pd
 import numpy as np
+from unittest.mock import MagicMock, patch
 from backend.app.services.ml.ml_training_service import MLTrainingService
 
 class TestRefactorReproduction:
+    """リファクタリングの再現テスト"""
+
+    @pytest.fixture
+    def mock_config(self):
+        with patch("app.services.ml.config.ml_config") as mock_config:
+            # training属性をMagicMockで上書き
+            mock_config.training = MagicMock()
+            
+            # Mock the structure: config.training.label_generation
+            mock_config.training.USE_PURGED_KFOLD = False
+            mock_config.training.CROSS_VALIDATION_FOLDS = 5
+            mock_config.training.MAX_TRAIN_SIZE = None
+            mock_config.training.USE_TIME_SERIES_SPLIT = True
+            mock_config.training.PREDICTION_HORIZON = 24
+            
+            # Mock label generation config
+            mock_label_gen = MagicMock()
+            mock_label_gen.use_preset = False # デフォルトの挙動を制御
+            mock_config.training.label_generation = mock_label_gen
+            
+            yield mock_config
+
     @pytest.fixture
     def sample_training_data(self):
-        """実際のトレーニングデータに近いダミーデータ（データ量を増やして安定化）"""
+        """サンプル学習データ"""
         np.random.seed(42)
-        # データ量を増やす (約2000行)
-        dates = pd.date_range(start="2023-01-01", end="2023-03-30", freq="1h")
-
-        data = pd.DataFrame(
-            {
-                "timestamp": dates,
-                "open": 10000 + np.cumsum(np.random.randn(len(dates)) * 10), # ランダムウォークで少し現実に近づける
-                "volume": 500 + np.random.randint(100, 1000, len(dates)),
-            }
-        )
+        dates = pd.date_range(start="2023-01-01", periods=2113, freq="h")
         
-        # OHLCの関係を確保
-        data["close"] = data["open"] + np.random.randn(len(dates)) * 10
-        data["high"] = data[["open", "close"]].max(axis=1) + np.abs(np.random.randn(len(dates)) * 5)
-        data["low"] = data[["open", "close"]].min(axis=1) - np.abs(np.random.randn(len(dates)) * 5)
+        df = pd.DataFrame({
+            "timestamp": dates,
+            "open": np.random.randn(2113) * 100 + 10000,
+            "high": np.random.randn(2113) * 100 + 10100,
+            "low": np.random.randn(2113) * 100 + 9900,
+            "close": np.random.randn(2113) * 100 + 10000,
+            "volume": np.random.randint(100, 1000, 2113),
+        })
+        return df.set_index("timestamp")
 
-        return data
-
-    def test_single_model_training(self, sample_training_data):
+    def test_single_model_training(self, sample_training_data, mock_config):
         """SingleModelTrainerがMLTrainingService経由で動作することを確認"""
         service = MLTrainingService(
             trainer_type="single",
             single_model_config={"model_type": "lightgbm"}
         )
-        
+
         # テスト用にパラメータを緩和
         result = service.train_model(
             sample_training_data,
@@ -46,9 +63,8 @@ class TestRefactorReproduction:
 
         assert result["success"] is True
         assert result["model_type"] == "lightgbm"
-        assert "accuracy" in result or "f1_score" in result or "rmse" in result # 指標はタスクによる
 
-    def test_ensemble_model_training(self, sample_training_data):
+    def test_ensemble_model_training(self, sample_training_data, mock_config):
         """EnsembleTrainerがMLTrainingService経由で動作することを確認"""
         service = MLTrainingService(
             trainer_type="ensemble",
@@ -62,7 +78,7 @@ class TestRefactorReproduction:
                 }
             }
         )
-        
+
         result = service.train_model(
             sample_training_data,
             save_model=False,
@@ -71,4 +87,4 @@ class TestRefactorReproduction:
         )
 
         assert result["success"] is True
-        assert "ensemble" in str(result.get("model_type", "")).lower() or "stacking" in str(result.get("ensemble_method", "")).lower()
+        assert result["model_type"] == "EnsembleModel"

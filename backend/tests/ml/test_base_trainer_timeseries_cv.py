@@ -9,7 +9,7 @@ BaseMLTrainerは抽象クラスのため、ConcreteMLTrainerを使用してテ�
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from backend.app.services.ml.base_ml_trainer import BaseMLTrainer
 
@@ -90,7 +90,28 @@ class TestBaseMLTrainerTimeSeriesCV:
         X_train, _, _, _ = trainer._split_data(X, y, use_random_split=True)
         assert len(X_train) > 0
 
-    def test_cross_validation_with_timeseries(self, sample_timeseries_data):
+    @pytest.fixture
+    def mock_config(self):
+        with patch("app.services.ml.config.ml_config") as mock_config:
+            # training属性をMagicMockで上書き
+            mock_config.training = MagicMock()
+            
+            # Mock the structure: config.training.label_generation.get_config() or attributes
+            # BaseMLTrainer accesses: self.config.training.label_generation
+            # And: self.config.training.USE_PURGED_KFOLD
+            mock_config.training.USE_PURGED_KFOLD = False
+            mock_config.training.CROSS_VALIDATION_FOLDS = 5
+            mock_config.training.MAX_TRAIN_SIZE = None
+            mock_config.training.USE_TIME_SERIES_SPLIT = True
+            mock_config.training.PREDICTION_HORIZON = 24
+            
+            # Mock label generation config if needed
+            mock_label_gen = patch("app.config.unified_config.LabelGenerationConfig").start()
+            mock_config.training.label_generation = mock_label_gen
+            
+            yield mock_config
+
+    def test_cross_validation_with_timeseries(self, sample_timeseries_data, mock_config):
         """use_cross_validation=TrueでCV実行"""
         trainer = ConcreteMLTrainer()
         
@@ -109,7 +130,7 @@ class TestBaseMLTrainerTimeSeriesCV:
         assert "cv_scores" in result
         assert len(result["cv_scores"]) == 3
 
-    def test_cv_splits_parameter(self, sample_timeseries_data):
+    def test_cv_splits_parameter(self, sample_timeseries_data, mock_config):
         """cv_splitsパラメータ動作確認"""
         trainer = ConcreteMLTrainer()
         
@@ -125,7 +146,7 @@ class TestBaseMLTrainerTimeSeriesCV:
             
         assert len(result["cv_scores"]) == 2
 
-    def test_max_train_size_parameter(self, sample_timeseries_data):
+    def test_max_train_size_parameter(self, sample_timeseries_data, mock_config):
         """max_train_sizeパラメータ動作確認"""
         trainer = ConcreteMLTrainer()
         # 内部実装のTimeSerisSplitがmax_train_sizeを受け取るか確認するのは難しいので
@@ -141,7 +162,7 @@ class TestBaseMLTrainerTimeSeriesCV:
             )
         assert result["success"] is True
 
-    def test_config_integration(self, sample_timeseries_data):
+    def test_config_integration(self, sample_timeseries_data, mock_config):
         """ml_config統合テスト"""
         # 省略: configのモックが必要になるため、統合テスト側でカバー済みとするか
         # ここではデフォルト値が使われることを確認

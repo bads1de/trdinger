@@ -6,7 +6,7 @@ BaseMLTrainerとMLTrainingServiceのTimeSeriesSplit統一化に関する
 BaseMLTrainerは抽象クラスであるため、テスト用の具象クラス(ConcreteMLTrainer)を使用して検証を行います。
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 import pandas as pd
 import pytest
@@ -88,6 +88,26 @@ class TestTimeSeriesCVIntegration:
             "X": X,
             "y": y,
         }
+
+    @pytest.fixture(autouse=True)
+    def mock_ml_config(self):
+        """ML設定のモック"""
+        with patch("app.services.ml.config.ml_config") as mock_config:
+            # training属性をMagicMockで上書き
+            mock_config.training = MagicMock()
+            
+            # training.label_generation を設定
+            mock_label_gen = MagicMock()
+            mock_config.training.label_generation = mock_label_gen
+            
+            # その他の必要な設定
+            mock_config.training.CROSS_VALIDATION_FOLDS = 5
+            mock_config.training.MAX_TRAIN_SIZE = None
+            mock_config.training.USE_TIME_SERIES_SPLIT = True
+            mock_config.training.USE_PURGED_KFOLD = False
+            mock_config.training.PREDICTION_HORIZON = 24
+            
+            yield mock_config
 
     def test_end_to_end_ml_training_flow_with_mocks(self, mock_training_components):
         """

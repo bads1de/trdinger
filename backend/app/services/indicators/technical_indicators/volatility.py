@@ -481,6 +481,42 @@ class VolatilityIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def chop(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+        atr_length: int = 1,
+        scalar: float = 100.0,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Choppiness Index"""
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        result = ta.chop(
+            high=high,
+            low=low,
+            close=close,
+            length=length,
+            atr_length=atr_length,
+            scalar=scalar,
+            drift=drift,
+            offset=offset,
+        )
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def true_range(
         high: pd.Series,
         low: pd.Series,

@@ -58,7 +58,9 @@ class XGBoostModel(BaseGradientBoostingModel):
         # 特徴量名を保存 (XGBoostのDMatrixで必要になるため)
         self.feature_names = X.columns.tolist()
 
-        return xgb.DMatrix(X, label=y, feature_names=self.feature_names, weight=sample_weight)
+        return xgb.DMatrix(
+            X, label=y, feature_names=self.feature_names, weight=sample_weight
+        )
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """
@@ -108,41 +110,18 @@ class XGBoostModel(BaseGradientBoostingModel):
             raise ModelError("学習済みモデルがありません")
         return self.model.predict(data)
 
-    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
         """
-        予測を実行
+        予測用の入力データを準備します。
+        XGBoostはDMatrixを使用します。
         """
-        if not self.is_trained or self.model is None:
-            raise ModelError("学習済みモデルがありません")
+        return xgb.DMatrix(X, feature_names=self.feature_names)
 
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
-
-        dtest = xgb.DMatrix(X, feature_names=self.feature_names)
-        predictions = self.model.predict(dtest)
-
-        if predictions.ndim > 1 and predictions.shape[1] > 1:
-            return np.argmax(predictions, axis=1)
-        else:
-            return (predictions > 0.5).astype(int)
-
-    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def _predict_raw(self, data: Any) -> np.ndarray:
         """
-        予測確率を取得
+        モデルから生の予測値（確率）を取得します。
         """
-        if not self.is_trained or self.model is None:
-            raise ModelError("学習済みモデルがありません")
-
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
-
-        dtest = xgb.DMatrix(X, feature_names=self.feature_names)
-        probabilities = self.model.predict(dtest)
-
-        if probabilities.ndim == 1:
-            probabilities = np.column_stack([1 - probabilities, probabilities])
-
-        return probabilities
+        return self.model.predict(data)
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """

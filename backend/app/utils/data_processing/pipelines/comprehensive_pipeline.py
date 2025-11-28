@@ -21,7 +21,6 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
-from .ml_pipeline import create_ml_pipeline
 from .preprocessing_pipeline import create_preprocessing_pipeline
 
 logger = logging.getLogger(__name__)
@@ -126,6 +125,7 @@ def create_comprehensive_pipeline(
     )
 
     # Create ML pipeline
+    from app.services.ml.preprocessing.pipeline import create_ml_pipeline
     ml_pipeline = create_ml_pipeline(**ml_params)
 
     # Combine pipelines
@@ -275,7 +275,7 @@ def get_comprehensive_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     for step_name, step_obj in pipeline.steps:
         if step_name == "ml_pipeline":
             try:
-                from .ml_pipeline import get_ml_pipeline_info
+                from app.services.ml.preprocessing.pipeline import get_ml_pipeline_info
 
                 ml_info = get_ml_pipeline_info(step_obj)
                 info["ml_pipeline_info"] = ml_info

@@ -16,7 +16,7 @@ from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_reg
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
-from .preprocessing_pipeline import create_preprocessing_pipeline
+from backend.app.utils.data_processing.pipelines.preprocessing_pipeline import create_preprocessing_pipeline
 
 logger = logging.getLogger(__name__)
 

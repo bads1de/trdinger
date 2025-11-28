@@ -7,7 +7,7 @@ ML パイプラインにおけるデータリークを検出するための包�
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from app.services.ml.base_ml_trainer import BaseMLTrainer
 from app.utils.data_processing import data_processor
@@ -150,42 +150,81 @@ class TestDataLeakPrevention:
         # 検証2: すべての欠損値が埋められているか
         assert not result.isna().any().any(), "補間後も欠損値が残っています"
 
+    @pytest.fixture(autouse=True)
+    def mock_ml_config(self):
+        """ML設定のモック"""
+        with patch("app.services.ml.config.ml_config") as mock_config:
+            # training属性をMagicMockで上書き
+            mock_config.training = MagicMock()
+
+            # training.label_generation を設定
+            mock_label_gen = MagicMock()
+            mock_config.training.label_generation = mock_label_gen
+
+            # その他の必要な設定
+            mock_config.training.CROSS_VALIDATION_FOLDS = 5
+            mock_config.training.MAX_TRAIN_SIZE = None
+            mock_config.training.USE_TIME_SERIES_SPLIT = True
+            mock_config.training.USE_PURGED_KFOLD = False
+            mock_config.training.PREDICTION_HORIZON = 24
+
+            yield mock_config
+
     def test_cross_validation_fold_independence(self, sample_timeseries_data):
         """クロスバリデーションの各フォールドが独立していることを確認"""
         X, y = sample_timeseries_data
         trainer = ConcreteMLTrainer()
 
-        with (
-            patch.object(trainer, "_calculate_features", return_value=X),
-            patch.object(trainer, "_prepare_training_data", return_value=(X, y)),
-        ):
-            training_data = X.copy()
-            for col in ["open", "high", "low", "close", "volume"]:
-                training_data[col] = 100
+        # Mock _train_model_impl to avoid actual training
+        mock_result = {
+            "accuracy": 0.85,
+            "f1_score": 0.82,
+            "classification_report": {"macro avg": {"f1-score": 0.82}},
+        }
 
+        with (patch.object(trainer, "_train_model_impl", return_value=mock_result),):
             # CVを実行
             cv_result = trainer._time_series_cross_validate(
                 X, y, cv_splits=3, use_cross_validation=True
             )
 
             # 検証: 各フォールドの学習データとテストデータが時系列順序を保っているか
+            assert "fold_results" in cv_result, "CV結果にfold_resultsが含まれていません"
+            assert (
+                len(cv_result["fold_results"]) == 3
+            ), f"フォールド数が不正: {len(cv_result['fold_results'])}"
+
             for i, fold_result in enumerate(cv_result["fold_results"]):
-                train_period = fold_result["train_period"]
-                test_period = fold_result["test_period"]
+                train_period = fold_result.get("train_period", "")
+                test_period = fold_result.get("test_period", "")
+
+                # 期間情報が存在することを確認
+                assert train_period, f"フォールド{i+1}: train_periodが空です"
+                assert test_period, f"フォールド{i+1}: test_periodが空です"
 
                 # 期間の文字列から開始時刻と終了時刻を抽出
                 # フォーマット: "2023-01-01 00:00:00 ～ 2023-01-10 00:00:00"
-                train_start, train_end = [
-                    pd.Timestamp(t.strip()) for t in train_period.split("～")
-                ]
-                test_start, test_end = [
-                    pd.Timestamp(t.strip()) for t in test_period.split("～")
-                ]
+                try:
+                    train_start, train_end = [
+                        pd.Timestamp(t.strip()) for t in train_period.split("～")
+                    ]
+                    test_start, test_end = [
+                        pd.Timestamp(t.strip()) for t in test_period.split("～")
+                    ]
+                except (ValueError, IndexError) as e:
+                    pytest.fail(
+                        f"フォールド{i+1}: 期間のパースに失敗 "
+                        f"(train_period={train_period}, test_period={test_period}): {e}"
+                    )
 
                 # 検証: 学習期間の最後 <= テスト期間の最初
-                assert (
-                    train_end <= test_start
-                ), f"フォールド{i+1}: 学習期間の最後がテスト期間の最初より後にあります"
+                assert train_end <= test_start, (
+                    f"フォールド{i+1}: 学習期間の最後がテスト期間の最初より後にあります\n"
+                    f"  train_period: {train_period}\n"
+                    f"  test_period: {test_period}\n"
+                    f"  train_end: {train_end}\n"
+                    f"  test_start: {test_start}"
+                )
 
     def test_feature_calculation_uses_only_past_data(self):
         """特徴量計算が過去のデータのみを使用していることを確認"""

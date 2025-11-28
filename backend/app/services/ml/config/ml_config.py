@@ -9,8 +9,10 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.config.unified_config import LabelGenerationConfig
 
 
 class DataProcessingConfig(BaseSettings):
@@ -163,6 +165,24 @@ class TrainingConfig(BaseSettings):
     # 評価設定
     PERFORMANCE_THRESHOLD: float = Field(default=0.05)
     VALIDATION_SPLIT: float = Field(default=0.2)
+
+    # ラベル生成設定
+    label_generation: LabelGenerationConfig = Field(
+        default_factory=LabelGenerationConfig,
+        description="ラベル生成の設定",
+    )
+
+    @field_validator("label_generation", mode="before")
+    @classmethod
+    def validate_label_generation(cls, v: Any) -> LabelGenerationConfig:
+        """ラベル生成設定のバリデーション"""
+        if hasattr(v, "__class__") and v.__class__.__name__ == "LabelGenerationConfig":
+            return v
+        if isinstance(v, dict):
+            return LabelGenerationConfig(**v)
+        if v is None:
+            return LabelGenerationConfig()
+        raise ValueError(f"無効なlabel_generation設定: {type(v)}")
 
     model_config = SettingsConfigDict(env_prefix="ML_TRAINING_")
 

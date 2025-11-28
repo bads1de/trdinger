@@ -12,9 +12,9 @@ import pandas as pd
 import pytest
 from sklearn.pipeline import Pipeline
 
-from app.utils.data_processing.pipelines.ml_pipeline import (
-    create_classification_pipeline,
+from app.services.ml.preprocessing.pipeline import (
     create_ml_pipeline,
+    create_classification_pipeline,
     create_regression_pipeline,
     get_ml_pipeline_info,
     optimize_ml_pipeline,

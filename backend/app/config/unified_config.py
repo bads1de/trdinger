@@ -517,7 +517,7 @@ class MLTrainingConfig(BaseSettings):
         Raises:
             ValueError: バリデーションエラーの場合
         """
-        if isinstance(v, LabelGenerationConfig):
+        if hasattr(v, "__class__") and v.__class__.__name__ == "LabelGenerationConfig":
             return v
         if isinstance(v, dict):
             return LabelGenerationConfig(**v)

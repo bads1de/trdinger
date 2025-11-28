@@ -616,19 +616,49 @@ class MLTrainingService(BaseResourceManager):
                 # ベースパラメータと最適化パラメータをマージ
                 training_params = {**base_training_params, **params}
 
-                # 一時的なアンサンブルトレーナーを作成（元のトレーナーに影響しないように）
-                temp_ensemble_config = {
-                    "method": "stacking",
-                    "stacking_params": {
-                        "base_models": ["lightgbm", "xgboost"],
-                        "meta_model": "lightgbm",
-                        "cv_folds": 3,  # 最適化中は高速化のため少なめ
-                        "use_probas": True,
-                        "random_state": 42,
-                    },
-                }
+                # 使用するトレーナーを決定
+                effective_trainer = trainer if trainer is not None else self.trainer
+                temp_trainer = None
 
-                temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
+                # Duck typingでトレーナータイプを判定（テスト時のモック対応のためisinstanceは避ける）
+                is_ensemble = hasattr(effective_trainer, "ensemble_config")
+                is_single = hasattr(effective_trainer, "model_type") and not is_ensemble
+
+                if is_single:
+                    # SingleModelTrainerの場合
+                    temp_trainer = SingleModelTrainer(
+                        model_type=effective_trainer.model_type
+                    )
+
+                elif is_ensemble:
+                    # EnsembleTrainerの場合
+                    # 元の設定をコピーしてCV分割数などを最適化用に調整
+                    temp_ensemble_config = effective_trainer.ensemble_config.copy()
+
+                    # スタッキングパラメータがある場合は更新
+                    if "stacking_params" in temp_ensemble_config:
+                        stacking_params = temp_ensemble_config["stacking_params"].copy()
+                        stacking_params["cv_folds"] = 3  # 最適化中は高速化のため少なめ
+                        temp_ensemble_config["stacking_params"] = stacking_params
+
+                    temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
+
+                else:
+                    # フォールバック（デフォルトはアンサンブル）
+                    logger.warning(
+                        f"未知のトレーナータイプ: {type(effective_trainer)}。デフォルトのアンサンブル設定を使用します。"
+                    )
+                    temp_ensemble_config = {
+                        "method": "stacking",
+                        "stacking_params": {
+                            "base_models": ["lightgbm", "xgboost"],
+                            "meta_model": "lightgbm",
+                            "cv_folds": 3,
+                            "use_probas": True,
+                            "random_state": 42,
+                        },
+                    }
+                    temp_trainer = EnsembleTrainer(ensemble_config=temp_ensemble_config)
 
                 # ミニトレーニングを実行（保存はしない）
                 result = temp_trainer.train_model(

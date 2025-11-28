@@ -254,8 +254,9 @@ class TestCollectFundingRateData:
                 db_session=mock_db_session,
             )
 
-            assert result["status"] == "success"
-            assert result["count"] == 2
+            # レスポンス形式変更に伴う修正
+            assert result["success"] is True
+            assert result["data"]["count"] == 2
 
     @pytest.mark.asyncio
     async def test_collect_funding_rate_data_fetch_all(
@@ -290,8 +291,9 @@ class TestCollectFundingRateData:
                 db_session=mock_db_session,
             )
 
-            assert result["status"] == "success"
-            assert result["count"] == 2
+            # レスポンス形式変更に伴う修正
+            assert result["success"] is True
+            assert result["data"]["count"] == 2
 
     @pytest.mark.asyncio
     async def test_collect_funding_rate_data_no_data(
@@ -317,8 +319,9 @@ class TestCollectFundingRateData:
             db_session=mock_db_session,
         )
 
-        assert result["status"] == "success"
-        assert result["count"] == 0
+        # レスポンス形式変更に伴う修正
+        assert result["success"] is True
+        assert result["data"]["count"] == 0
         assert "データなし" in result["message"]
 
 
@@ -356,8 +359,9 @@ class TestCollectBulkFundingRateData:
                 symbols=symbols, db_session=mock_db_session
             )
 
-            assert result["status"] == "success"
-            assert result["total_count"] == 4  # 2 symbols * 2 data each
+            # レスポンス形式変更に伴う修正
+            assert result["success"] is True
+            assert result["data"]["total_count"] == 4  # 2 symbols * 2 data each
 
     @pytest.mark.asyncio
     async def test_collect_bulk_funding_rate_data_with_errors(
@@ -384,8 +388,9 @@ class TestCollectBulkFundingRateData:
                 symbols=symbols, db_session=mock_db_session
             )
 
-            assert result["status"] == "success"
-            assert result["total_count"] == 0
+            # レスポンス形式変更に伴う修正
+            assert result["success"] is True
+            assert result["data"]["total_count"] == 0
 
 
 class TestErrorHandling:
@@ -467,8 +472,9 @@ class TestEdgeCases:
             symbols=[], db_session=mock_db_session
         )
 
-        assert result["status"] == "success"
-        assert result["total_count"] == 0
+        # レスポンス形式変更に伴う修正
+        assert result["success"] is True
+        assert result["data"]["total_count"] == 0
 
     @pytest.mark.asyncio
     async def test_collect_funding_rate_data_large_limit(
@@ -503,4 +509,6 @@ class TestEdgeCases:
                 db_session=mock_db_session,
             )
 
-            assert result["status"] == "success"
+            # レスポンス形式変更に伴う修正
+            assert result["success"] is True
+            assert result["data"]["count"] == 2

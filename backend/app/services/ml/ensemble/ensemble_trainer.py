@@ -13,7 +13,7 @@ import pandas as pd
 from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
 from .stacking import StackingEnsemble
-from ..meta_labeling_service import MetaLabelingService  # Added
+from ..meta_labeling_service import MetaLabelingService
 
 logger = logging.getLogger(__name__)
 
@@ -305,6 +305,9 @@ class EnsembleTrainer(BaseMLTrainer):
             # 学習完了フラグを設定
             self.is_trained = True
 
+            # BaseMLTrainer用のモデル参照を設定
+            self._model = self.ensemble_model
+
             # 精度を取得
             accuracy = detailed_metrics.get("accuracy", 0.0)
             logger.info(
@@ -363,103 +366,45 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.error(f"アンサンブルモデル学習エラー: {e}")
             raise ModelError(f"アンサンブルモデル学習に失敗しました: {e}")
 
-    def save_model(
-        self, model_name: str, metadata: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """
-        アンサンブルモデルを統一されたモデル管理システムで保存
+    def _get_model_to_save(self) -> Any:
+        """保存対象のモデルオブジェクトを取得"""
+        return self.ensemble_model
 
-        Args:
-            model_name: モデル名
-            metadata: モデルメタデータ（オプション）
-
-        Returns:
-            保存されたモデルのパス
-        """
+    def _get_model_specific_metadata(self, model_name: str) -> Dict[str, Any]:
+        """モデル固有のメタデータを取得"""
         if self.ensemble_model is None:
-            raise ModelError("アンサンブルモデルが初期化されていません")
-        if not self.is_trained:
-            raise ModelError("アンサンブルモデルが学習されていません")
-        if (
-            not hasattr(self.ensemble_model, "is_fitted")
-            or not self.ensemble_model.is_fitted
-        ):
-            raise ModelError("アンサンブルモデルの学習が完了していません")
+            return {}
 
-        try:
-            from ..model_manager import model_manager
+        algorithm_name = getattr(self.ensemble_model, "best_algorithm", "unknown")
 
-            # アンサンブル用メタデータを準備
-            algorithm_name = getattr(self.ensemble_model, "best_algorithm", "unknown")
+        metadata = {
+            "model_type": algorithm_name,
+            "trainer_type": "ensemble",
+            "ensemble_method": self.ensemble_method,
+            "best_algorithm": algorithm_name,
+            "best_model_score": getattr(self.ensemble_model, "best_model_score", None),
+            "selected_model_only": True,
+            "ensemble_config": self.ensemble_config,
+        }
 
-            final_metadata = metadata or {}
-            final_metadata.update(
-                {
-                    "model_type": algorithm_name,  # 最高性能アルゴリズム名を使用
-                    "trainer_type": "ensemble",
-                    "ensemble_method": self.ensemble_method,
-                    "feature_count": (
-                        len(self.feature_columns) if self.feature_columns else 0
-                    ),
-                    "best_algorithm": algorithm_name,
-                    "best_model_score": getattr(
-                        self.ensemble_model, "best_model_score", None
-                    ),
-                    "selected_model_only": True,
-                    "ensemble_config": self.ensemble_config,
-                }
-            )
+        # メタラベリングモデルの保存
+        if self.meta_labeling_service and self.meta_labeling_service.is_trained:
+            try:
+                from ..model_manager import model_manager
 
-            # --- メタラベリングモデルの保存 ---
-            meta_model_path = None
-            if self.meta_labeling_service and self.meta_labeling_service.is_trained:
                 meta_model_path = model_manager.save_model(
                     model=self.meta_labeling_service,
-                    model_name=f"{model_name}_meta",  # メタモデル用の名前
+                    model_name=f"{model_name}_meta",
                     metadata={"primary_model_name": model_name},
-                    scaler=None,  # メタモデルはスケーラーを使わない
-                    feature_columns=self.feature_columns,  # メタモデルも元の特徴量を使う
+                    scaler=None,
+                    feature_columns=self.feature_columns,
                 )
-                final_metadata["meta_model_path"] = meta_model_path
+                metadata["meta_model_path"] = meta_model_path
                 logger.info(f"メタラベリングモデル保存完了: {meta_model_path}")
-            # ----------------------------------
-
-            # 特徴量重要度をメタデータに追加
-            try:
-                feature_importance = self.get_feature_importance(top_n=100)
-                if feature_importance:
-                    final_metadata["feature_importance"] = feature_importance
-                    logger.info(
-                        f"特徴量重要度をメタデータに追加: {len(feature_importance)}個"
-                    )
             except Exception as e:
-                logger.warning(f"特徴量重要度の取得に失敗: {e}")
+                logger.error(f"メタラベリングモデル保存エラー: {e}")
 
-            # アンサンブルモデルの保存
-            # StackingEnsembleクラスのsave_modelsを使う
-            if self.ensemble_model:
-                model_paths = self.ensemble_model.save_models(
-                    base_path=model_manager.model_save_path / model_name
-                )
-                # StackingEnsemble.save_modelsが複数パスを返すので、最初のものを代表パスとする
-                model_path = model_paths[0] if model_paths else None
-            else:
-                model_path = None
-
-            if model_path is None:
-                raise ModelError("モデル保存に失敗しました")
-
-            # 統一されたモデル保存のメタデータ更新
-            model_manager.update_model_metadata(model_path, final_metadata)
-
-            logger.info(
-                f"アンサンブル最高性能モデル保存完了: {model_path} (アルゴリズム: {algorithm_name})"
-            )
-            return model_path
-
-        except Exception as e:
-            logger.error(f"アンサンブルモデル保存エラー: {e}")
-            raise ModelError(f"アンサンブルモデルの保存に失敗しました: {e}")
+        return metadata
 
     def load_model(self, model_path: str) -> bool:
         """
@@ -472,77 +417,42 @@ class EnsembleTrainer(BaseMLTrainer):
             読み込み成功フラグ
         """
         try:
-            # メタデータを読み込み（タイムスタンプ付きファイルに対応）
-            import glob
-            import os
-            import warnings
+            # BaseMLTrainerのload_modelを使用
+            if not super().load_model(model_path):
+                return False
 
-            import joblib
-            from sklearn.exceptions import InconsistentVersionWarning
+            # self._modelにロードされたモデルをensemble_modelに設定
+            self.ensemble_model = self._model
 
-            metadata_patterns = [
-                f"{model_path}_ensemble_metadata_*.pkl",  # 新形式
-                f"{model_path}_ensemble_metadata.pkl",  # 旧形式
-            ]
+            # メタデータから設定を復元
+            if hasattr(self, "metadata"):
+                self.ensemble_config = self.metadata.get("ensemble_config", {})
+                self.ensemble_method = self.metadata.get("ensemble_method", "stacking")
 
-            metadata_path = None
-            for pattern in metadata_patterns:
-                files = glob.glob(pattern)
-                if files:
-                    metadata_path = sorted(files)[-1]  # 最新のファイルを選択
-                    break
-
-            if metadata_path and os.path.exists(metadata_path):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", InconsistentVersionWarning)
-                    metadata = joblib.load(metadata_path)
-                self.ensemble_config = metadata["ensemble_config"]
-                self.model_type = metadata["model_type"]
-                self.ensemble_method = metadata["ensemble_method"]
-                self.feature_columns = metadata["feature_columns"]
-                self.scaler = metadata["scaler"]
-                self.is_trained = metadata["is_trained"]
-
-                # --- メタラベリングモデルのロード ---
-                if "meta_model_path" in metadata and metadata["meta_model_path"]:
+                # メタラベリングモデルのロード
+                meta_model_path = self.metadata.get("meta_model_path")
+                if meta_model_path:
                     try:
                         from ..model_manager import model_manager
 
-                        self.meta_labeling_service = model_manager.load_model(
-                            metadata["meta_model_path"]
-                        )
-                        if self.meta_labeling_service:
+                        # model_manager.load_model returns dict with 'model' key
+                        meta_data = model_manager.load_model(meta_model_path)
+                        if meta_data and meta_data.get("model"):
+                            self.meta_labeling_service = meta_data.get("model")
                             logger.info(
-                                f"メタラベリングモデルをロードしました: {metadata['meta_model_path']}"
+                                f"メタラベリングモデルをロードしました: {meta_model_path}"
                             )
                         else:
                             logger.warning(
-                                f"メタラベリングモデルのロードに失敗しました: {metadata['meta_model_path']}"
+                                f"メタラベリングモデルのロードに失敗しました: {meta_model_path}"
                             )
                     except Exception as e:
                         logger.error(f"メタラベリングモデルのロードエラー: {e}")
-                # ------------------------------------
 
-            # スタッキングアンサンブルモデルを作成
-            if self.ensemble_method.lower() == "stacking":
-                stacking_config = self.ensemble_config.get("stacking_params", {})
-                self.ensemble_model = StackingEnsemble(config=stacking_config)
-            else:
-                raise ModelError(
-                    f"サポートされていないアンサンブル手法: {self.ensemble_method}"
-                )
-
-            # アンサンブルモデルを読み込み
-            success = self.ensemble_model.load_models(model_path)
-
-            if success:
-                logger.info(
-                    f"アンサンブルモデル読み込み完了: method={self.ensemble_method}"
-                )
-            else:
-                logger.error("アンサンブルモデルの読み込みに失敗")
-
-            return success
+            logger.info(
+                f"アンサンブルモデル読み込み完了: method={self.ensemble_method}"
+            )
+            return True
 
         except Exception as e:
             logger.error(f"アンサンブルモデル読み込みエラー: {e}")
@@ -575,40 +485,3 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.warning(f"EnsembleTrainerモデルクリーンアップエラー: {e}")
             # エラーが発生してもクリーンアップは続行
             self.ensemble_model = None
-
-    def get_feature_importance(self, top_n: int = 100) -> Dict[str, float]:
-        """
-        アンサンブルモデルから特徴量重要度を取得
-
-        Args:
-            top_n: 上位N個の特徴量
-
-        Returns:
-            特徴量重要度の辞書
-        """
-        if not self.is_trained or not self.ensemble_model:
-            logger.warning("学習済みアンサンブルモデルがありません")
-            return {}
-
-        try:
-            # アンサンブルモデルから特徴量重要度を取得
-            feature_importance = self.ensemble_model.get_feature_importance()
-            if not feature_importance:
-                logger.warning(
-                    "アンサンブルモデルから特徴量重要度を取得できませんでした"
-                )
-                return {}
-
-            # 上位N個を取得
-            sorted_importance = sorted(
-                feature_importance.items(), key=lambda x: x[1], reverse=True
-            )[:top_n]
-
-            logger.info(
-                f"アンサンブルから特徴量重要度を取得: {len(sorted_importance)}個"
-            )
-            return dict(sorted_importance)
-
-        except Exception as e:
-            logger.error(f"アンサンブル特徴量重要度取得エラー: {e}")
-            return {}

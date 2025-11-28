@@ -13,7 +13,6 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 
 from .pipelines.comprehensive_pipeline import create_comprehensive_pipeline
-from .pipelines.ml_pipeline import create_ml_pipeline
 from .pipelines.preprocessing_pipeline import get_pipeline_info
 from .transformers.dtype_optimizer import DtypeOptimizer
 from .validators.data_validator import (
@@ -348,6 +347,7 @@ class DataProcessor:
         """
         if for_ml:
             # ML用パイプライン
+            from app.services.ml.preprocessing.pipeline import create_ml_pipeline
             pipeline = create_ml_pipeline(
                 include_feature_selection=include_feature_selection,
                 n_features=n_features,

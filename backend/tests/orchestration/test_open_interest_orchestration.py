@@ -27,14 +27,30 @@ def mock_db_session() -> MagicMock:
 
 
 @pytest.fixture
-def orchestration_service() -> OpenInterestOrchestrationService:
+def mock_bybit_service() -> AsyncMock:
+    """
+    BybitOpenInterestServiceのモック
+
+    Returns:
+        AsyncMock: モックされたBybitサービス
+    """
+    return AsyncMock()
+
+
+@pytest.fixture
+def orchestration_service(
+    mock_bybit_service: AsyncMock,
+) -> OpenInterestOrchestrationService:
     """
     OpenInterestOrchestrationServiceのインスタンス
+
+    Args:
+        mock_bybit_service: モックされたBybitサービス
 
     Returns:
         OpenInterestOrchestrationService: テスト対象のサービス
     """
-    return OpenInterestOrchestrationService()
+    return OpenInterestOrchestrationService(bybit_service=mock_bybit_service)
 
 
 @pytest.fixture
@@ -75,6 +91,7 @@ class TestServiceInitialization:
         """
         assert orchestration_service is not None
         assert isinstance(orchestration_service, OpenInterestOrchestrationService)
+        assert orchestration_service.bybit_service is not None
 
 
 class TestCollectOpenInterestData:
@@ -93,20 +110,14 @@ class TestCollectOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ) as mock_service_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ) as mock_repo_class,
-        ):
-            mock_service = AsyncMock()
-            mock_service.fetch_and_save_open_interest_data = AsyncMock(
-                return_value={"success": True, "saved_count": 10}
-            )
-            mock_service_class.return_value = mock_service
+        # モックの設定
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
+            return_value={"success": True, "saved_count": 10}
+        )
 
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo_class.return_value = mock_repo
 
@@ -117,6 +128,7 @@ class TestCollectOpenInterestData:
                 db_session=mock_db_session,
             )
 
+            # レスポンス形式変更に伴う修正
             assert result["success"] is True
             assert result["data"]["saved_count"] == 10
 
@@ -133,26 +145,20 @@ class TestCollectOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ) as mock_service_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ),
-        ):
-            mock_service = AsyncMock()
-            mock_service.fetch_and_save_open_interest_data = AsyncMock(
-                return_value={"success": True, "saved_count": 100}
-            )
-            mock_service_class.return_value = mock_service
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
+            return_value={"success": True, "saved_count": 100}
+        )
 
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ):
             result = await orchestration_service.collect_open_interest_data(
                 symbol="BTC/USDT:USDT",
                 fetch_all=True,
                 db_session=mock_db_session,
             )
 
+            # レスポンス形式変更に伴う修正
             assert result["success"] is True
             assert result["data"]["saved_count"] == 100
 
@@ -169,24 +175,17 @@ class TestCollectOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ) as mock_service_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ),
-        ):
-            mock_service = AsyncMock()
-            mock_service.fetch_and_save_open_interest_data = AsyncMock(
-                return_value={
-                    "success": False,
-                    "error": "API error",
-                    "saved_count": 0,
-                }
-            )
-            mock_service_class.return_value = mock_service
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
+            return_value={
+                "success": False,
+                "error": "API error",
+                "saved_count": 0,
+            }
+        )
 
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ):
             result = await orchestration_service.collect_open_interest_data(
                 symbol="BTC/USDT:USDT",
                 db_session=mock_db_session,
@@ -214,16 +213,20 @@ class TestGetOpenInterestData:
             mock_db_session: DBセッションモック
             sample_open_interest_data: サンプルデータ
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ) as mock_repo_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ),
-        ):
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
-            mock_records = [MagicMock(**data) for data in sample_open_interest_data]
+            # リポジトリが返すオブジェクトのモック作成
+            mock_records = []
+            for data in sample_open_interest_data:
+                record = MagicMock()
+                record.symbol = data["symbol"]
+                record.open_interest_value = data["open_interest_value"]
+                record.data_timestamp = data["data_timestamp"]
+                record.timestamp = data["timestamp"]
+                mock_records.append(record)
+            
             mock_repo.get_open_interest_data.return_value = mock_records
             mock_repo_class.return_value = mock_repo
 
@@ -249,14 +252,9 @@ class TestGetOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ) as mock_repo_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ),
-        ):
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_open_interest_data.return_value = []
             mock_repo_class.return_value = mock_repo
@@ -289,25 +287,19 @@ class TestCollectBulkOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ) as mock_service_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ),
-        ):
-            mock_service = AsyncMock()
-            mock_service.fetch_and_save_open_interest_data = AsyncMock(
-                return_value={"success": True, "saved_count": 10}
-            )
-            mock_service_class.return_value = mock_service
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
+            return_value={"success": True, "saved_count": 10}
+        )
 
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ):
             symbols = ["BTC/USDT:USDT", "ETH/USDT:USDT"]
             result = await orchestration_service.collect_bulk_open_interest_data(
                 symbols=symbols, db_session=mock_db_session
             )
 
+            # レスポンス形式変更に伴う修正
             assert result["success"] is True
             assert result["data"]["total_saved"] == 20  # 2 symbols * 10 each
 
@@ -324,25 +316,19 @@ class TestCollectBulkOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ) as mock_service_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ),
-        ):
-            mock_service = AsyncMock()
-            mock_service.fetch_and_save_open_interest_data = AsyncMock(
-                side_effect=Exception("API error")
-            )
-            mock_service_class.return_value = mock_service
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
+            side_effect=Exception("API error")
+        )
 
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ):
             symbols = ["BTC/USDT:USDT"]
             result = await orchestration_service.collect_bulk_open_interest_data(
                 symbols=symbols, db_session=mock_db_session
             )
 
+            # レスポンス形式変更に伴う修正
             assert result["success"] is True
             assert result["data"]["total_saved"] == 0
             assert len(result["data"]["failed_symbols"]) == 1
@@ -364,18 +350,17 @@ class TestErrorHandling:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with patch(
-            "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-        ) as mock_service_class:
-            mock_service_class.side_effect = Exception("Service initialization error")
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
+            side_effect=Exception("Service error")
+        )
 
-            result = await orchestration_service.collect_open_interest_data(
-                symbol="BTC/USDT:USDT",
-                db_session=mock_db_session,
-            )
+        result = await orchestration_service.collect_open_interest_data(
+            symbol="BTC/USDT:USDT",
+            db_session=mock_db_session,
+        )
 
-            assert result["success"] is False
-            assert "error" in result["details"]
+        assert result["success"] is False
+        assert "error" in result["details"]
 
     @pytest.mark.asyncio
     async def test_get_open_interest_data_with_exception(
@@ -420,20 +405,13 @@ class TestEdgeCases:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ) as mock_service_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ),
-        ):
-            mock_service = AsyncMock()
-            mock_service.fetch_and_save_open_interest_data = AsyncMock(
-                return_value={"success": True, "saved_count": 0}
-            )
-            mock_service_class.return_value = mock_service
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
+            return_value={"success": True, "saved_count": 0}
+        )
 
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ):
             result = await orchestration_service.collect_open_interest_data(
                 symbol="BTC/USDT:USDT",
                 limit=0,
@@ -455,20 +433,13 @@ class TestEdgeCases:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ),
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ),
-        ):
-            result = await orchestration_service.collect_bulk_open_interest_data(
-                symbols=[], db_session=mock_db_session
-            )
+        result = await orchestration_service.collect_bulk_open_interest_data(
+            symbols=[], db_session=mock_db_session
+        )
 
-            assert result["success"] is True
-            assert result["data"]["total_saved"] == 0
+        # レスポンス形式変更に伴う修正
+        assert result["success"] is True
+        assert result["data"]["total_saved"] == 0
 
     @pytest.mark.asyncio
     async def test_get_open_interest_data_empty_result(
@@ -483,14 +454,9 @@ class TestEdgeCases:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ) as mock_repo_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ),
-        ):
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_open_interest_data.return_value = []
             mock_repo_class.return_value = mock_repo
@@ -520,14 +486,9 @@ class TestSymbolNormalization:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with (
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
-            ) as mock_repo_class,
-            patch(
-                "app.services.data_collection.orchestration.open_interest_orchestration_service.BybitOpenInterestService"
-            ),
-        ):
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_open_interest_data.return_value = []
             mock_repo_class.return_value = mock_repo
