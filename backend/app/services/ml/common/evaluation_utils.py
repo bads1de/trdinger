@@ -10,7 +10,8 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from ..evaluation.metrics import MetricsCalculator, MetricsConfig
+# 統一されたMetricsCalculatorのグローバルインスタンスをインポート
+from ..evaluation.metrics import metrics_collector
 
 
 def evaluate_model_predictions(
@@ -29,25 +30,41 @@ def evaluate_model_predictions(
     Returns:
         評価指標の辞書
     """
-    # 統一された評価指標計算器を使用
-    config = MetricsConfig(
-        include_balanced_accuracy=True,
-        include_pr_auc=True,
-        include_roc_auc=True,
-        include_confusion_matrix=True,
-        include_classification_report=True,
-        average_method="weighted",
-        zero_division=0,
-    )
-
-    metrics_calculator = MetricsCalculator(config)
-
     # numpy配列に変換（pandas Seriesの場合）
     y_true_array = y_true.values if hasattr(y_true, "values") else y_true
 
-    # 包括的な評価指標を計算
-    result = metrics_calculator.calculate_comprehensive_metrics(
+    # グローバルなmetrics_collectorを使用して包括的な評価指標を計算
+    # metrics_collectorは既に初期化済みで、設定を持っている
+    result = metrics_collector.calculate_comprehensive_metrics(
         y_true_array, y_pred, y_pred_proba
     )
 
     return result
+
+
+def get_default_metrics() -> Dict[str, float]:
+    """
+    デフォルトの評価メトリクス辞書を返す（全て0.0初期化）
+    """
+    return {
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_score": 0.0,
+        "auc_roc": 0.0,
+        "auc_pr": 0.0,
+        "balanced_accuracy": 0.0,
+        "matthews_corrcoef": 0.0,
+        "cohen_kappa": 0.0,
+        "specificity": 0.0,
+        "sensitivity": 0.0,
+        "npv": 0.0,
+        "ppv": 0.0,
+        "log_loss": 0.0,
+        "brier_score": 0.0,
+        "loss": 0.0,
+        "val_accuracy": 0.0,
+        "val_loss": 0.0,
+        "training_time": 0.0,
+    }

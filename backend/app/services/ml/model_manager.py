@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 import joblib
 
 from ...utils.error_handler import safe_ml_operation
-from .config import ml_config
+from ...config.unified_config import unified_config
 from .exceptions import MLModelError
 
 logger = logging.getLogger(__name__)
@@ -35,12 +35,12 @@ class ModelManager:
         初期化
         """
         # 既存設定の初期化
-        self.config = ml_config.model
+        self.config = unified_config.ml.model
         self._ensure_directories()
 
     def _ensure_directories(self):
         """必要なディレクトリを作成"""
-        os.makedirs(self.config.MODEL_SAVE_PATH, exist_ok=True)
+        os.makedirs(self.config.model_save_path, exist_ok=True)
 
     # ========================================
     # 既存API（互換性維持）
@@ -137,14 +137,14 @@ class ModelManager:
 
             # 同じファイル名が存在する場合は連番を追加
             counter = 1
-            filename = f"{base_filename}{self.config.MODEL_FILE_EXTENSION}"
-            model_path = os.path.join(self.config.MODEL_SAVE_PATH, filename)
+            filename = f"{base_filename}{self.config.model_file_extension}"
+            model_path = os.path.join(self.config.model_save_path, filename)
 
             while os.path.exists(model_path):
                 filename = (
-                    f"{base_filename}_{counter:02d}{self.config.MODEL_FILE_EXTENSION}"
+                    f"{base_filename}_{counter:02d}{self.config.model_file_extension}"
                 )
-                model_path = os.path.join(self.config.MODEL_SAVE_PATH, filename)
+                model_path = os.path.join(self.config.model_save_path, filename)
                 counter += 1
 
             # モデルデータを構築
@@ -256,7 +256,7 @@ class ModelManager:
             # 複数の検索パスから最新モデルを検索
             all_model_files = []
 
-            for search_path in ml_config.get_model_search_paths():
+            for search_path in unified_config.ml.get_model_search_paths():
                 if os.path.exists(search_path):
                     # .pkl と .joblib ファイルを検索
                     pattern_pkl = os.path.join(
@@ -296,7 +296,7 @@ class ModelManager:
             models = []
             seen_files = set()  # 重複を防ぐためのセット
 
-            for search_path in ml_config.get_model_search_paths():
+            for search_path in unified_config.ml.get_model_search_paths():
                 if not os.path.exists(search_path):
                     continue
 
@@ -344,15 +344,15 @@ class ModelManager:
         """期限切れのモデルファイルをクリーンアップ"""
         try:
             cutoff_date = datetime.now() - timedelta(
-                days=self.config.MODEL_RETENTION_DAYS
+                days=self.config.model_retention_days
             )
 
-            for search_path in ml_config.get_model_search_paths():
+            for search_path in unified_config.ml.get_model_search_paths():
                 if not os.path.exists(search_path):
                     continue
 
                 for model_file in glob.glob(
-                    os.path.join(search_path, f"*{self.config.MODEL_FILE_EXTENSION}")
+                    os.path.join(search_path, f"*{self.config.model_file_extension}")
                 ):
                     try:
                         file_time = datetime.fromtimestamp(os.path.getmtime(model_file))
@@ -372,19 +372,19 @@ class ModelManager:
         try:
             # 同じモデル名のファイルを検索
             pattern = os.path.join(
-                self.config.MODEL_SAVE_PATH,
-                f"{model_name}_*{self.config.MODEL_FILE_EXTENSION}",
+                self.config.model_save_path,
+                f"{model_name}_*{self.config.model_file_extension}",
             )
             model_files = glob.glob(pattern)
 
-            if len(model_files) <= self.config.MAX_MODEL_VERSIONS:
+            if len(model_files) <= self.config.max_model_versions:
                 return
 
             # 更新時刻でソート（古い順）
             model_files.sort(key=os.path.getmtime)
 
             # 古いファイルを削除（最新のN個を残す）
-            files_to_delete = model_files[: -self.config.MAX_MODEL_VERSIONS]
+            files_to_delete = model_files[: -self.config.max_model_versions]
 
             for file_path in files_to_delete:
                 try:
@@ -397,6 +397,44 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"モデルクリーンアップエラー: {e}")
+
+
+    def extract_model_performance_metrics(self, model_path: str) -> Dict[str, float]:
+        """
+        モデルから性能メトリクスを抽出（classification_reportからのフォールバック含む）
+        """
+        from .common.evaluation_utils import get_default_metrics
+
+        try:
+            model_data = self.load_model(model_path)
+            if not model_data or "metadata" not in model_data:
+                return get_default_metrics()
+
+            metadata = model_data["metadata"]
+            metrics = get_default_metrics()
+
+            # メタデータからメトリクスを更新
+            for key in metrics:
+                if key in metadata:
+                    metrics[key] = metadata[key]
+
+            # classification_report から macro avg をフォールバック
+            if "classification_report" in metadata:
+                report = metadata["classification_report"]
+                if isinstance(report, dict) and "macro avg" in report:
+                    macro_avg = report["macro avg"]
+                    if metrics["precision"] == 0.0:
+                        metrics["precision"] = macro_avg.get("precision", 0.0)
+                    if metrics["recall"] == 0.0:
+                        metrics["recall"] = macro_avg.get("recall", 0.0)
+                    if metrics["f1_score"] == 0.0:
+                        metrics["f1_score"] = macro_avg.get("f1-score", 0.0)
+
+            return metrics
+
+        except Exception as e:
+            logger.warning(f"メトリクス抽出エラー {model_path}: {e}")
+            return get_default_metrics()
 
 
 # グローバルインスタンス

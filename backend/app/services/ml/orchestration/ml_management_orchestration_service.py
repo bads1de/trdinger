@@ -86,18 +86,18 @@ class MLManagementOrchestrationService:
 
             except Exception as e:
                 logger.warning(f"モデル詳細情報取得エラー {model['name']}: {e}")
+                from ..common.evaluation_utils import get_default_metrics
                 # エラーの場合はデフォルト値を設定
-                model_info.update(
-                    {
-                        "accuracy": 0.0,
-                        "precision": 0.0,
-                        "recall": 0.0,
-                        "f1_score": 0.0,
-                        "feature_count": 0,
-                        "model_type": "Unknown",
-                        "training_samples": 0,
-                    }
-                )
+                default_metrics = get_default_metrics()
+                model_info.update({
+                    "accuracy": default_metrics["accuracy"],
+                    "precision": default_metrics["precision"],
+                    "recall": default_metrics["recall"],
+                    "f1_score": default_metrics["f1_score"],
+                    "feature_count": 0,
+                    "model_type": "Unknown",
+                    "training_samples": 0,
+                })
 
             formatted_models.append(model_info)
 
@@ -203,23 +203,10 @@ class MLManagementOrchestrationService:
                 model_data = model_manager.load_model(latest_model)
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
+                    # ModelManagerユーティリティで性能メトリクスを抽出
+                    performance_metrics = model_manager.extract_model_performance_metrics(latest_model)
                     model_info = {
-                        "accuracy": metadata.get("accuracy", 0.0),
-                        "precision": metadata.get("precision", 0.0),
-                        "recall": metadata.get("recall", 0.0),
-                        "f1_score": metadata.get("f1_score", 0.0),
-                        "auc_score": metadata.get("auc_score", 0.0),
-                        "auc_roc": metadata.get("auc_roc", 0.0),
-                        "auc_pr": metadata.get("auc_pr", 0.0),
-                        "balanced_accuracy": metadata.get("balanced_accuracy", 0.0),
-                        "matthews_corrcoef": metadata.get("matthews_corrcoef", 0.0),
-                        "cohen_kappa": metadata.get("cohen_kappa", 0.0),
-                        "specificity": metadata.get("specificity", 0.0),
-                        "sensitivity": metadata.get("sensitivity", 0.0),
-                        "npv": metadata.get("npv", 0.0),
-                        "ppv": metadata.get("ppv", 0.0),
-                        "log_loss": metadata.get("log_loss", 0.0),
-                        "brier_score": metadata.get("brier_score", 0.0),
+                        **performance_metrics,
                         "model_type": metadata.get("model_type", "LightGBM"),
                         "last_updated": datetime.fromtimestamp(
                             os.path.getmtime(latest_model)
@@ -238,22 +225,11 @@ class MLManagementOrchestrationService:
                         ),
                     }
 
-                    if "classification_report" in metadata:
-                        report = metadata["classification_report"]
-                        if isinstance(report, dict) and "macro avg" in report:
-                            macro_avg = report["macro avg"]
-                            if model_info["precision"] == 0.0:
-                                model_info["precision"] = macro_avg.get(
-                                    "precision", 0.0
-                                )
-                            if model_info["recall"] == 0.0:
-                                model_info["recall"] = macro_avg.get("recall", 0.0)
-                            if model_info["f1_score"] == 0.0:
-                                model_info["f1_score"] = macro_avg.get("f1-score", 0.0)
-
                 else:
+                    from ..common.evaluation_utils import get_default_metrics
+                    default_metrics = get_default_metrics()
                     model_info = {
-                        "accuracy": 0.0,
+                        "accuracy": default_metrics["accuracy"],
                         "model_type": "LightGBM",
                         "last_updated": datetime.fromtimestamp(
                             os.path.getmtime(latest_model)
@@ -279,48 +255,12 @@ class MLManagementOrchestrationService:
                 model_data = model_manager.load_model(latest_model)
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
-                    # 新しい形式の性能指標を抽出（全ての評価指標を含む）
-                    performance_metrics = {
-                        # 基本指標
-                        "accuracy": metadata.get("accuracy", 0.0),
-                        "precision": metadata.get("precision", 0.0),
-                        "recall": metadata.get("recall", 0.0),
-                        "f1_score": metadata.get("f1_score", 0.0),
-                        # AUC指標
-                        "auc_roc": metadata.get("auc_roc", 0.0),
-                        "auc_pr": metadata.get("auc_pr", 0.0),
-                        # 高度な指標
-                        "balanced_accuracy": metadata.get("balanced_accuracy", 0.0),
-                        "matthews_corrcoef": metadata.get("matthews_corrcoef", 0.0),
-                        "cohen_kappa": metadata.get("cohen_kappa", 0.0),
-                        # 専門指標
-                        "specificity": metadata.get("specificity", 0.0),
-                        "sensitivity": metadata.get("sensitivity", 0.0),
-                        "npv": metadata.get("npv", 0.0),
-                        "ppv": metadata.get("ppv", 0.0),
-                        # 確率指標
-                        "log_loss": metadata.get("log_loss", 0.0),
-                        "brier_score": metadata.get("brier_score", 0.0),
-                        # その他
-                        "loss": metadata.get("loss", 0.0),
-                        "val_accuracy": metadata.get("val_accuracy", 0.0),
-                        "val_loss": metadata.get("val_loss", 0.0),
-                        "training_time": metadata.get("training_time", 0.0),
-                    }
-                    status["performance_metrics"] = performance_metrics
+                    # ModelManagerユーティリティで性能メトリクスを抽出
+                    status["performance_metrics"] = model_manager.extract_model_performance_metrics(latest_model)
                 else:
                     # デフォルト値を設定
-                    status["performance_metrics"] = {
-                        "accuracy": 0.0,
-                        "precision": 0.0,
-                        "recall": 0.0,
-                        "f1_score": 0.0,
-                        "auc_roc": 0.0,
-                        "auc_pr": 0.0,
-                        "balanced_accuracy": 0.0,
-                        "matthews_corrcoef": 0.0,
-                        "cohen_kappa": 0.0,
-                    }
+                    from ..common.evaluation_utils import get_default_metrics
+                    status["performance_metrics"] = get_default_metrics()
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
                 status["model_info"] = {
@@ -336,33 +276,15 @@ class MLManagementOrchestrationService:
                 status["is_model_loaded"] = False
                 status["is_loaded"] = False
                 status["is_trained"] = False
-                status["performance_metrics"] = {
-                    "accuracy": 0.0,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "f1_score": 0.0,
-                    "auc_score": 0.0,
-                    "auc_roc": 0.0,
-                    "auc_pr": 0.0,
-                    "balanced_accuracy": 0.0,
-                    "matthews_corrcoef": 0.0,
-                    "cohen_kappa": 0.0,
-                    "specificity": 0.0,
-                    "sensitivity": 0.0,
-                    "npv": 0.0,
-                    "ppv": 0.0,
-                    "log_loss": 0.0,
-                    "brier_score": 0.0,
-                    "loss": 0.0,
-                    "val_accuracy": 0.0,
-                    "val_loss": 0.0,
-                    "training_time": 0.0,
-                }
+                from ..common.evaluation_utils import get_default_metrics
+                status["performance_metrics"] = get_default_metrics()
 
         else:
             # モデルが見つからない場合のデフォルト情報
+            from ..common.evaluation_utils import get_default_metrics
+            default_metrics = get_default_metrics()
             status["model_info"] = {
-                "accuracy": 0.0,
+                "accuracy": default_metrics["accuracy"],
                 "model_type": "No Model",
                 "last_updated": "未学習",
                 "training_samples": 0,
@@ -497,25 +419,28 @@ class MLManagementOrchestrationService:
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
 
+                    performance_metrics = model_manager.extract_model_performance_metrics(latest_model)
                     return {
                         "loaded": True,
                         "model_type": metadata.get("model_type", "Unknown"),
-                        "is_trained": True,  # 保存されているモデルは学習済み
+                        "is_trained": True,
                         "feature_count": metadata.get("feature_count", 0),
                         "training_samples": metadata.get("training_samples", 0),
-                        "accuracy": metadata.get("accuracy", 0.0),
+                        "accuracy": performance_metrics["accuracy"],
                         "last_updated": datetime.fromtimestamp(
                             os.path.getmtime(latest_model)
                         ).isoformat(),
                     }
                 else:
+                    from ..common.evaluation_utils import get_default_metrics
+                    default_metrics = get_default_metrics()
                     return {
                         "loaded": True,
                         "model_type": "Unknown",
                         "is_trained": True,
                         "feature_count": 0,
                         "training_samples": 0,
-                        "accuracy": 0.0,
+                        "accuracy": default_metrics["accuracy"],
                         "last_updated": datetime.fromtimestamp(
                             os.path.getmtime(latest_model)
                         ).isoformat(),
