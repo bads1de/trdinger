@@ -5,7 +5,7 @@ from app.services.optimization.optimization_service import (
     OptimizationService,
     OptimizationSettings,
 )
-from app.services.ml.single_model.single_model_trainer import SingleModelTrainer
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 
 class TestOptimizationService:
@@ -15,9 +15,11 @@ class TestOptimizationService:
 
     @pytest.fixture
     def mock_trainer(self):
-        trainer = MagicMock(spec=SingleModelTrainer)
+        """EnsembleTrainer（単一モデルモード）のモック"""
+        trainer = MagicMock(spec=EnsembleTrainer)
         trainer.train_model.return_value = {"f1_score": 0.8}
-        trainer.model_type = "lightgbm"
+        trainer.is_single_model = True
+        trainer.ensemble_config = {"method": "stacking", "models": ["lightgbm"]}
         return trainer
 
     @pytest.fixture
@@ -74,9 +76,9 @@ class TestOptimizationService:
         )
 
         # Test the objective function
-        # We need to patch SingleModelTrainer because _create_objective_function instantiates it
+        # EnsembleTrainerを使用する（統一後）
         with patch(
-            "app.services.optimization.optimization_service.SingleModelTrainer"
+            "app.services.optimization.optimization_service.EnsembleTrainer"
         ) as MockTrainerClass:
             mock_temp_trainer = MockTrainerClass.return_value
             mock_temp_trainer.train_model.return_value = {"f1_score": 0.75}

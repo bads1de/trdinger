@@ -30,21 +30,52 @@ class EnsembleTrainer(BaseMLTrainer):
         ensemble_config: Dict[str, Any],
     ):
         """
-        初期化
+        初期化（統一トレーナー: 単一モデル・アンサンブル両対応）
 
         Args:
             ensemble_config: アンサンブル設定
+                - models: モデルのリスト (例: ["lightgbm"] or ["lightgbm", "xgboost"])
+                - model_type: 単一モデルタイプ (例: "lightgbm") ※後方互換
+                - method: アンサンブル手法 (デフォルト: "stacking")
         """
         super().__init__()
 
         self.ensemble_config = ensemble_config
-        self.model_type = "EnsembleModel"
         self.ensemble_method = ensemble_config.get("method", "stacking")
         self.ensemble_model = None
-        self.meta_labeling_service = None  # メタラベリングサービスを追加
+        self.meta_labeling_service = None  # メタラベリング サービスを追加
         self.meta_model_threshold = 0.5  # メタモデルの予測閾値
 
-        logger.info(f"EnsembleTrainer初期化: method={self.ensemble_method}")
+        # 単一モデルモードかアンサンブルモードかを判定
+        models = ensemble_config.get("models", [])
+        model_type = ensemble_config.get("model_type")  # 後方互換
+
+        # 判定ロジック
+        if model_type:
+            # model_type 指定があれば単一モデルモード
+            self.is_single_model = True
+            self.model_type = model_type
+            # modelsリストにも反映
+            if not models:
+                self.ensemble_config["models"] = [model_type]
+        elif len(models) == 1:
+            # modelsが1つだけなら単一モデルモード
+            self.is_single_model = True
+            self.model_type = models[0]
+        elif len(models) > 1:
+            # modelsが複数ならアンサンブルモード
+            self.is_single_model = False
+            self.model_type = "EnsembleModel"
+        else:
+            # modelsが空またはNoneならデフォルトでアンサンブル（後方互換）
+            self.is_single_model = False
+            self.model_type = "EnsembleModel"
+
+        mode = "単一モデル" if self.is_single_model else "アンサンブル"
+        logger.info(
+            f"EnsembleTrainer初期化: mode={mode}, "
+            f"method={self.ensemble_method}, model_type={self.model_type}"
+        )
 
     def _extract_optimized_parameters(
         self, training_params: Dict[str, Any]

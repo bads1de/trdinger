@@ -4,7 +4,6 @@ import pandas as pd
 
 from ...utils.error_handler import safe_operation
 from .optuna_optimizer import OptunaOptimizer, ParameterSpace
-from ..ml.single_model.single_model_trainer import SingleModelTrainer
 from ..ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 logger = logging.getLogger(__name__)
@@ -26,9 +25,10 @@ class OptimizationSettings:
 
 class OptimizationService:
     """
-    最適化サービス
+    最適化サービス（統一トレーナー対応）
 
     MLモデルのハイパーパラメータ最適化を管理します。
+    SingleModelTrainerは廃止し、全てEnsembleTrainerで統一。
     """
 
     def __init__(self):
@@ -83,7 +83,7 @@ class OptimizationService:
     ) -> Dict[str, ParameterSpace]:
         """パラメータ空間を準備"""
         if not optimization_settings.parameter_space:
-            # アンサンブルトレーナーの場合は専用のパラメータ空間を使用
+            # EnsembleTrainerの場合（単一モデルも含む）
             if hasattr(trainer, "ensemble_config"):
                 ensemble_method = trainer.ensemble_config.get("method", "stacking")
                 enabled_models = trainer.ensemble_config.get(
@@ -93,7 +93,7 @@ class OptimizationService:
                     ensemble_method, enabled_models
                 )
             else:
-                # デフォルトのLightGBMパラメータ空間を使用
+                # フォールバック: デフォルトのLightGBMパラメータ空間
                 return self.optimizer.get_default_parameter_space()
         else:
             return self._convert_parameter_space_config(
@@ -179,22 +179,21 @@ class OptimizationService:
     def _create_temp_trainer(
         self, original_trainer: Any, params: Dict[str, Any]
     ) -> Any:
-        """一時的なトレーナーを作成"""
-        is_ensemble = hasattr(original_trainer, "ensemble_config")
-        is_single = hasattr(original_trainer, "model_type") and not is_ensemble
-
-        if is_single:
-            return SingleModelTrainer(model_type=original_trainer.model_type)
-        elif is_ensemble:
+        """一時的なトレーナーを作成（全てEnsembleTrainerで統一）"""
+        # オリジナルのトレーナーがEnsembleTrainerであることを前提
+        if hasattr(original_trainer, "ensemble_config"):
             temp_config = original_trainer.ensemble_config.copy()
+
+            # 最適化用にCV foldsを減らす（速度向上）
             if "stacking_params" in temp_config:
                 stacking_params = temp_config["stacking_params"].copy()
-                stacking_params["cv_folds"] = 3  # 最適化用
+                stacking_params["cv_folds"] = 3
                 temp_config["stacking_params"] = stacking_params
+
             return EnsembleTrainer(ensemble_config=temp_config)
         else:
-            # フォールバック
-            return EnsembleTrainer(ensemble_config={})
+            # フォールバック: デフォルト設定でEnsembleTrainer作成
+            return EnsembleTrainer(ensemble_config={"method": "stacking"})
 
     def cleanup(self):
         """リソースクリーンアップ"""

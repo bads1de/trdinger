@@ -9,18 +9,18 @@ from enum import Enum
 from app.services.auto_strategy.utils.gene_utils import BaseGene
 
 
-class TestEnum(Enum):
+class MockEnum(Enum):
     VALUE1 = "value1"
     VALUE2 = "value2"
 
 
-class TestGene(BaseGene):
+class MockGene(BaseGene):
     """テスト用の遺伝子クラス"""
 
     def __init__(
         self,
         normal_field: str = None,
-        enum_field: TestEnum = None,
+        enum_field: MockEnum = None,
         datetime_field: datetime = None,
         optional_field: str = "default",
     ):
@@ -35,13 +35,13 @@ class TestGene(BaseGene):
     # アノテーションを追加（テスト用）
     __annotations__ = {
         "normal_field": str,
-        "enum_field": TestEnum,
+        "enum_field": MockEnum,
         "datetime_field": datetime,
         "optional_field": str,
     }
 
 
-class TestGeneWithoutAnnotations(BaseGene):
+class MockGeneWithoutAnnotations(BaseGene):
     """アノテーションなしのテストクラス"""
 
     def __init__(self, **kwargs):
@@ -52,8 +52,8 @@ class TestGeneWithoutAnnotations(BaseGene):
 
 
 # アノテーションなしにするため、クラス定義後に削除
-if hasattr(TestGeneWithoutAnnotations, "__annotations__"):
-    del TestGeneWithoutAnnotations.__annotations__
+if hasattr(MockGeneWithoutAnnotations, "__annotations__"):
+    del MockGeneWithoutAnnotations.__annotations__
 
 
 class TestGeneUtils:
@@ -68,10 +68,10 @@ class TestGeneUtils:
             "optional_field": "custom_value",
         }
 
-        gene = TestGene.from_dict(data)
+        gene = MockGene.from_dict(data)
 
         assert gene.normal_field == "test_value"
-        assert gene.enum_field == TestEnum.VALUE1
+        assert gene.enum_field == MockEnum.VALUE1
         assert gene.datetime_field == datetime(2023, 1, 1, 0, 0, 0)
         assert gene.optional_field == "custom_value"
 
@@ -83,11 +83,11 @@ class TestGeneUtils:
             "datetime_field": "2023-01-01T00:00:00",
         }
 
-        gene = TestGene.from_dict(data)
+        gene = MockGene.from_dict(data)
 
         assert gene.normal_field == "test_value"
         # 無効なEnum値の場合は最初の値をデフォルトとして設定
-        assert gene.enum_field == TestEnum.VALUE1
+        assert gene.enum_field == MockEnum.VALUE1
         assert gene.datetime_field == datetime(2023, 1, 1, 0, 0, 0)
 
     def test_from_dict_with_invalid_datetime_value(self):
@@ -98,10 +98,10 @@ class TestGeneUtils:
             "datetime_field": "invalid_datetime",
         }
 
-        gene = TestGene.from_dict(data)
+        gene = MockGene.from_dict(data)
 
         assert gene.normal_field == "test_value"
-        assert gene.enum_field == TestEnum.VALUE2
+        assert gene.enum_field == MockEnum.VALUE2
         # 無効なdatetime値の場合は現在時刻が設定される（正確な値はテストしにくいので型チェック）
         assert isinstance(gene.datetime_field, datetime)
 
@@ -109,14 +109,14 @@ class TestGeneUtils:
         """Enumオブジェクトが直接渡された場合のテスト"""
         data = {
             "normal_field": "test_value",
-            "enum_field": TestEnum.VALUE2,
+            "enum_field": MockEnum.VALUE2,
             "datetime_field": "2023-01-01T00:00:00",
         }
 
-        gene = TestGene.from_dict(data)
+        gene = MockGene.from_dict(data)
 
         assert gene.normal_field == "test_value"
-        assert gene.enum_field == TestEnum.VALUE2
+        assert gene.enum_field == MockEnum.VALUE2
         assert gene.datetime_field == datetime(2023, 1, 1, 0, 0, 0)
 
     def test_from_dict_with_datetime_object(self):
@@ -128,17 +128,17 @@ class TestGeneUtils:
             "datetime_field": test_datetime,
         }
 
-        gene = TestGene.from_dict(data)
+        gene = MockGene.from_dict(data)
 
         assert gene.normal_field == "test_value"
-        assert gene.enum_field == TestEnum.VALUE1
+        assert gene.enum_field == MockEnum.VALUE1
         assert gene.datetime_field == test_datetime
 
     def test_from_dict_without_annotations(self):
         """アノテーションなしクラスのテスト"""
         data = {"field1": "value1", "field2": 42, "field3": {"nested": "data"}}
 
-        gene = TestGeneWithoutAnnotations.from_dict(data)
+        gene = MockGeneWithoutAnnotations.from_dict(data)
 
         assert gene.field1 == "value1"
         assert gene.field2 == 42
@@ -152,26 +152,26 @@ class TestGeneUtils:
             # datetime_field が欠けている
         }
 
-        gene = TestGene.from_dict(data)
+        gene = MockGene.from_dict(data)
 
         assert gene.normal_field == "test_value"
-        assert gene.enum_field == TestEnum.VALUE1
+        assert gene.enum_field == MockEnum.VALUE1
         # datetime_field は設定されないのでNoneになる
         assert gene.datetime_field is None
 
     def test_convert_value_enum(self):
         """Enum変換のテスト"""
         # 文字列からの変換
-        result = BaseGene._convert_value("value1", TestEnum)
-        assert result == TestEnum.VALUE1
+        result = BaseGene._convert_value("value1", MockEnum)
+        assert result == MockEnum.VALUE1
 
         # 無効な文字列
-        result = BaseGene._convert_value("invalid", TestEnum)
-        assert result == TestEnum.VALUE1  # デフォルト値
+        result = BaseGene._convert_value("invalid", MockEnum)
+        assert result == MockEnum.VALUE1  # デフォルト値
 
         # すでにEnumオブジェクト
-        result = BaseGene._convert_value(TestEnum.VALUE2, TestEnum)
-        assert result == TestEnum.VALUE2
+        result = BaseGene._convert_value(MockEnum.VALUE2, MockEnum)
+        assert result == MockEnum.VALUE2
 
     def test_convert_value_datetime(self):
         """datetime変換のテスト"""
@@ -204,7 +204,7 @@ class TestGeneUtils:
 
     def test_is_enum_type(self):
         """Enum型チェックのテスト"""
-        assert BaseGene._is_enum_type(TestEnum) is True
+        assert BaseGene._is_enum_type(MockEnum) is True
         assert BaseGene._is_enum_type(str) is False
         assert BaseGene._is_enum_type(datetime) is False
 
@@ -212,4 +212,4 @@ class TestGeneUtils:
         """datetime型チェックのテスト"""
         assert BaseGene._is_datetime_type(datetime) is True
         assert BaseGene._is_datetime_type(str) is False
-        assert BaseGene._is_datetime_type(TestEnum) is False
+        assert BaseGene._is_datetime_type(MockEnum) is False

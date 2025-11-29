@@ -21,17 +21,16 @@ from .base_ml_trainer import BaseMLTrainer
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ...config.unified_config import unified_config
 from .ensemble.ensemble_trainer import EnsembleTrainer
-from .single_model.single_model_trainer import SingleModelTrainer
 
 logger = logging.getLogger(__name__)
 
 
 class MLTrainingService(BaseResourceManager):
     """
-    ML学習サービス
+    ML学習サービス（統一トレーナー対応）
 
-    BaseMLTrainerを使用してMLモデルの学習、評価、保存を専門的に行うサービス。
-    コードの重複を解消し、保守性を向上させます。
+    EnsembleTrainerを使用してMLモデル（単一・アンサンブル両対応）の学習、評価、保存を行うサービス。
+    SingleModelTrainerは廃止し、全てEnsembleTrainerで統一。
     """
 
     def __init__(
@@ -45,47 +44,37 @@ class MLTrainingService(BaseResourceManager):
 
         Args:
             trainer_type: 使用するトレーナーのタイプ（'ensemble' または 'single'）
+                ※後方互換のため残しているが、内部では全てEnsembleTrainerを使用
             ensemble_config: アンサンブル設定（辞書形式）
             single_model_config: 単一モデル設定（辞書形式）
+                ※後方互換のため残しているが、ensemble_configに変換される
         """
         # BaseResourceManagerの初期化
         super().__init__()
 
         self.config = unified_config.ml
-        self.ensemble_config = ensemble_config
-        self.single_model_config = single_model_config
         self.optimization_service = OptimizationService()
 
         # 統合されたトレーナー設定を作成
-        trainer_config = self._create_trainer_config(
+        final_config = self._create_unified_config(
             trainer_type, ensemble_config, single_model_config
         )
 
-        # トレーナーを選択して初期化
-        if trainer_type.lower() == "single":
-            model_type = trainer_config.get("model_type", "lightgbm")
-            # 明示的に SingleModelTrainer を使用
-            self.trainer = SingleModelTrainer(model_type=model_type)
-        elif trainer_type.lower() == "ensemble":
-            # アンサンブル設定を取得
-            ens_config = trainer_config.get("ensemble_config", ensemble_config or {})
-            self.trainer = EnsembleTrainer(ensemble_config=ens_config)
-        else:
-            raise ValueError(f"未対応のトレーナータイプ: {trainer_type}")
+        # 常にEnsembleTrainerを使用（単一モデルもサポート）
+        self.trainer = EnsembleTrainer(ensemble_config=final_config)
+        self.trainer_type = trainer_type  # 後方互換のため保持
 
-        self.trainer_type = trainer_type
+        mode = "単一モデル" if self.trainer.is_single_model else "アンサンブル"
+        logger.info(f"MLTrainingService初期化: mode={mode}, config={final_config}")
 
-        if trainer_type == "single" and single_model_config:
-            logger.info(f"単一モデル設定: {single_model_config}")
-
-    def _create_trainer_config(
+    def _create_unified_config(
         self,
         trainer_type: str,
         ensemble_config: Optional[Dict[str, Any]],
         single_model_config: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """
-        統合されたトレーナー設定を作成
+        統一されたトレーナー設定を作成（EnsembleTrainer用）
 
         Args:
             trainer_type: トレーナータイプ
@@ -93,14 +82,25 @@ class MLTrainingService(BaseResourceManager):
             single_model_config: 単一モデル設定
 
         Returns:
-            トレーナー設定辞書
+            EnsembleTrainer用の設定辞書
         """
-        if trainer_type.lower() == "ensemble":
-            # アンサンブル設定のデフォルト値（スタッキング）
-            default_ensemble_config = {
+        if trainer_type.lower() == "single":
+            # 単一モデルをEnsembleTrainer形式に変換
+            model_type = "lightgbm"
+            if single_model_config and "model_type" in single_model_config:
+                model_type = single_model_config["model_type"]
+
+            return {
                 "method": "stacking",
+                "models": [model_type],  # 単一モデルとして指定
+            }
+
+        elif trainer_type.lower() == "ensemble":
+            # アンサンブル設定のデフォルト値
+            default_config = {
+                "method": "stacking",
+                "models": ["lightgbm", "xgboost"],  # デフォルトはアンサンブル
                 "stacking_params": {
-                    "base_models": ["lightgbm", "xgboost"],
                     "meta_model": "lightgbm",
                     "cv_folds": 5,
                     "use_probas": True,
@@ -109,27 +109,11 @@ class MLTrainingService(BaseResourceManager):
             }
 
             # 設定をマージ
-            final_ensemble_config = default_ensemble_config.copy()
+            final_config = default_config.copy()
             if ensemble_config:
-                final_ensemble_config.update(ensemble_config)
+                final_config.update(ensemble_config)
 
-            return {
-                "type": "ensemble",
-                "model_type": final_ensemble_config.get("method", "stacking"),
-                "ensemble_config": final_ensemble_config,
-            }
-
-        elif trainer_type.lower() == "single":
-            # 単一モデル設定のデフォルト値
-            model_type = "lightgbm"
-            if single_model_config and "model_type" in single_model_config:
-                model_type = single_model_config["model_type"]
-
-            return {
-                "type": "single",
-                "model_type": model_type,
-                "model_params": single_model_config,
-            }
+            return final_config
 
         else:
             raise ValueError(
@@ -140,7 +124,8 @@ class MLTrainingService(BaseResourceManager):
     @staticmethod
     def get_available_single_models() -> List[str]:
         """利用可能な単一モデルのリストを取得"""
-        return SingleModelTrainer.get_available_models()
+        # 利用可能なモデルをハードコード（旧SingleModelTrainer互換）
+        return ["lightgbm", "xgboost", "catboost"]
 
     @staticmethod
     def determine_trainer_type(ensemble_config: Optional[Dict[str, Any]]) -> str:
