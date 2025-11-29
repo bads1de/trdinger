@@ -122,7 +122,7 @@ class StackingEnsemble(BaseEnsemble):
             # クロスバリデーション設定
             # PurgedKFoldを使用
             from ..cross_validation.purged_kfold import PurgedKFold
-            from ..config import ml_config
+            from app.config.unified_config import unified_config
             from ..common.time_series_utils import get_t1_series
             from sklearn.model_selection import StratifiedKFold, KFold
 
@@ -137,10 +137,10 @@ class StackingEnsemble(BaseEnsemble):
             else:
                 # デフォルト: PurgedKFold
                 # t1を計算（共通ユーティリティを使用）
-                t1_horizon_n = ml_config.training.PREDICTION_HORIZON
+                t1_horizon_n = unified_config.ml.training.prediction_horizon
                 t1 = get_t1_series(X_train.index, t1_horizon_n)
 
-                pct_embargo = getattr(ml_config.training, "PCT_EMBARGO", 0.01)
+                pct_embargo = getattr(unified_config.ml.training, "pct_embargo", 0.01)
                 cv = PurgedKFold(n_splits=self.cv_folds, t1=t1, pct_embargo=pct_embargo)
 
             # StackingClassifierを初期化

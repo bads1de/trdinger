@@ -75,7 +75,7 @@ class LightGBMModel(BaseGradientBoostingModel):
     def _train_internal(
         self,
         train_data: lgb.Dataset,
-        valid_data: lgb.Dataset,
+        valid_data: Optional[lgb.Dataset],
         params: Dict[str, Any],
         early_stopping_rounds: Optional[int] = None,
         **kwargs,
@@ -84,14 +84,21 @@ class LightGBMModel(BaseGradientBoostingModel):
         LightGBM固有の学習プロセスを実行します。
         """
         callbacks = [lgb.log_evaluation(0)]
-        if early_stopping_rounds:
-            callbacks.append(lgb.early_stopping(early_stopping_rounds))
+        
+        valid_sets = [train_data]
+        valid_names = ["train"]
+        
+        if valid_data:
+            valid_sets.append(valid_data)
+            valid_names.append("valid")
+            if early_stopping_rounds:
+                callbacks.append(lgb.early_stopping(early_stopping_rounds))
 
         model = lgb.train(
             params,
             train_data,
-            valid_sets=[train_data, valid_data],
-            valid_names=["train", "valid"],
+            valid_sets=valid_sets,
+            valid_names=valid_names,
             num_boost_round=kwargs.get("num_boost_round", self.n_estimators),
             callbacks=callbacks,
         )

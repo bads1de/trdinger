@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from app.services.ml.base_ml_trainer import BaseMLTrainer
 
 
@@ -14,7 +14,17 @@ class ConcreteMLTrainer(BaseMLTrainer):
 
 class TestPurgedCVUnification:
     def setup_method(self):
-        self.trainer = ConcreteMLTrainer()
+        # ML設定のモックを設定
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
+            # label_generation属性を適切に設定
+            label_gen_mock = MagicMock()
+            label_gen_mock.timeframe = "1h"
+            mock_ml_training_config.label_generation = label_gen_mock
+            mock_ml_training_config.prediction_horizon = 4
+            mock_ml_training_config.pct_embargo = 0.01
+            
+            self.trainer = ConcreteMLTrainer()
+        
         # Mock data
         dates = pd.date_range(start="2023-01-01", periods=100, freq="1h")
         self.X = pd.DataFrame(
@@ -28,26 +38,38 @@ class TestPurgedCVUnification:
         # Currently it depends on config. We will modify the code to always use it.
 
         # Mock PurgedKFold to verify it's called
-        with patch("app.services.ml.base_ml_trainer.PurgedKFold") as MockPurgedKFold:
-            MockPurgedKFold.return_value.split.return_value = (
-                []
-            )  # Return empty generator
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
+            label_gen_mock = MagicMock()
+            label_gen_mock.timeframe = "1h"
+            mock_ml_training_config.label_generation = label_gen_mock
+            mock_ml_training_config.prediction_horizon = 4
+            mock_ml_training_config.pct_embargo = 0.01
+            
+            with patch("app.services.ml.base_ml_trainer.PurgedKFold") as MockPurgedKFold:
+                MockPurgedKFold.return_value.split.return_value = (
+                    []
+                )  # Return empty generator
 
-            # Force config to False to see if it still uses it (after my changes)
-            # For now, if I run this before changes, it should fail if I set USE_PURGED_KFOLD=False
+                # But first, let's just run it with default (True) to see it works
+                self.trainer._time_series_cross_validate(self.X, self.y)
 
-            # But first, let's just run it with default (True) to see it works
-            self.trainer._time_series_cross_validate(self.X, self.y)
-
-            MockPurgedKFold.assert_called()
+                MockPurgedKFold.assert_called()
 
     def test_purged_kfold_integration(self):
         """Integration test for PurgedKFold in BaseMLTrainer"""
         # This tests the actual splitting logic
-        cv_result = self.trainer._time_series_cross_validate(
-            self.X, self.y, cv_splits=3
-        )
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
+            label_gen_mock = MagicMock()
+            label_gen_mock.timeframe = "1h"
+            mock_ml_training_config.label_generation = label_gen_mock
+            mock_ml_training_config.prediction_horizon = 4
+            mock_ml_training_config.pct_embargo = 0.01
+            
+            with patch.object(self.trainer, "_train_model_impl", return_value={"accuracy": 0.5}):
+                cv_result = self.trainer._time_series_cross_validate(
+                    self.X, self.y, cv_splits=3
+                )
 
-        assert "cv_scores" in cv_result
-        assert "fold_results" in cv_result
-        assert len(cv_result["fold_results"]) == 3
+                assert "cv_scores" in cv_result
+                assert "fold_results" in cv_result
+                assert len(cv_result["fold_results"]) == 3

@@ -101,7 +101,7 @@ class EnsembleTrainer(BaseMLTrainer):
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率の配列 (2クラス分類)
+            予測確率の配列 (2クラス分類または3クラス分類)
         """
         if self.ensemble_model is None or not self.ensemble_model.is_fitted:
             raise ModelError("学習済みアンサンブルモデルがありません")
@@ -110,14 +110,7 @@ class EnsembleTrainer(BaseMLTrainer):
             features_scaled = features_df
             predictions = self.ensemble_model.predict_proba(features_scaled)
 
-            # StackingEnsembleのpredict_probaは2クラスの確率を返す想定
-            if predictions.ndim == 2 and predictions.shape[1] == 2:
-                return predictions
-            else:
-                raise ModelError(
-                    f"予期しない予測確率の形状: {predictions.shape}. "
-                    f"2クラス分類の確率が期待されます。"
-                )
+            return predictions
 
         except Exception as e:
             logger.error(f"アンサンブル予測確率取得エラー: {e}")
@@ -131,7 +124,9 @@ class EnsembleTrainer(BaseMLTrainer):
             features_df: 特徴量DataFrame
 
         Returns:
-            予測クラスの配列 (0=Range, 1=Trend)
+            予測確率の配列（統一インターフェースのため確率を返す）
+            注意: 以前はクラス予測を返していたが、SingleModelTrainerと統一するために確率を返すように変更。
+            ただし、メタラベリングが有効な場合は、その結果（0/1）を返す。
         """
         if self.ensemble_model is None or not self.ensemble_model.is_fitted:
             raise ModelError("学習済みアンサンブルモデルがありません")
@@ -174,11 +169,8 @@ class EnsembleTrainer(BaseMLTrainer):
                 )
                 return filtered_predictions.values  # Seriesをnp.ndarrayに変換
             else:
-                logger.debug(
-                    "メタラベリングは有効化されていません。StackingEnsembleの直接予測を使用。"
-                )
-                # メタラベリングが有効でない場合は、StackingEnsembleの直接予測を2値に変換
-                return (primary_proba >= self.meta_model_threshold).astype(int)
+                # メタラベリングが有効でない場合は、予測確率をそのまま返す
+                return predictions_proba
 
         except Exception as e:
             logger.error(f"アンサンブル予測エラー: {e}")
@@ -259,14 +251,11 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # 予測と評価
             y_pred_proba = self.ensemble_model.predict_proba(X_test)
-            y_pred = self.ensemble_model.predict(X_test)
-
-            # 予測確率が3クラス分類であることを確認
-            if y_pred_proba.ndim != 2 or y_pred_proba.shape[1] != 3:
-                logger.warning(
-                    f"予測確率の形状が期待と異なります: {y_pred_proba.shape}"
-                )
-                # 3クラス分類でない場合は評価をスキップ
+            # predict_probaの結果からクラスを推定
+            if y_pred_proba.ndim == 2:
+                y_pred = np.argmax(y_pred_proba, axis=1)
+            else:
+                y_pred = (y_pred_proba > 0.5).astype(int)
 
             # 統一された評価システムを使用
             from ..common.evaluation_utils import evaluate_model_predictions

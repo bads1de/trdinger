@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional, TypeVar
 
-from ..config import ml_config
+from app.config.unified_config import unified_config
 
 T = TypeVar("T")
 
@@ -25,7 +25,7 @@ class MLStructuredLogger:
         """ログ設定の初期化"""
         # ログレベルの設定
         log_level = getattr(
-            logging, ml_config.data_processing.LOG_LEVEL.upper(), logging.INFO
+            logging, unified_config.ml.data_processing.log_level.upper(), logging.INFO
         )
         self.logger.setLevel(log_level)
 
@@ -62,7 +62,7 @@ class MLStructuredLogger:
             message += f" ({duration_ms:.2f}ms)"
 
         # デバッグモードでは構造化ログも出力
-        if ml_config.data_processing.DEBUG_MODE:
+        if unified_config.ml.data_processing.debug_mode:
             message += f" | データ: {json.dumps(log_data, ensure_ascii=False)}"
 
         log_level = getattr(self.logger, level.lower())

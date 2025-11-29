@@ -27,7 +27,6 @@ from .cross_validation import PurgedKFold
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .common.evaluation_utils import evaluate_model_predictions
 from .common.ml_utils import get_feature_importance_unified, prepare_data_for_prediction
-from .config import ml_config
 from .exceptions import MLModelError
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
 from .ml_metadata import ModelMetadata
@@ -62,7 +61,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # BaseResourceManagerの初期化
         super().__init__()
 
-        self.config = ml_config
+        # 統一設定を使用
+        self.config = unified_config.ml
 
         self.feature_service = FeatureEngineeringService()
         self.label_service = LabelGenerationService()
@@ -199,7 +199,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     )
 
                 model_path = self.save_model(
-                    model_name or self.config.model.AUTO_STRATEGY_MODEL_NAME,
+                    model_name or self.config.model.auto_strategy_model_name,
                     model_metadata.to_dict(),
                 )
                 training_result["model_path"] = model_path
@@ -261,7 +261,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # configからパラメータを取得してラベルを生成
             features_clean, labels_numeric = self.label_service.prepare_labels(
                 features_df,
-                prediction_horizon=self.config.training.PREDICTION_HORIZON,
+                prediction_horizon=self.config.training.prediction_horizon,
             )
 
             if len(labels_numeric) > 0:
@@ -474,19 +474,19 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     ) -> Dict[str, Any]:
         """時系列クロスバリデーション"""
         n_splits = training_params.get(
-            "cv_splits", self.config.training.CROSS_VALIDATION_FOLDS
+            "cv_splits", self.config.training.cv_folds
         )
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
         # ラベル生成設定からパラメータを取得
-        t1_horizon_n = self.config.training.PREDICTION_HORIZON
+        t1_horizon_n = self.config.training.prediction_horizon
 
         # 共通ユーティリティを使用してt1を計算（時間足は自動推定）
         from .common.time_series_utils import get_t1_series
 
-        t1 = get_t1_series(X.index, t1_horizon_n)
+        t1 = get_t1_series(X.index, t1_horizon_n, timeframe=self.config.training.label_generation.timeframe)
 
-        pct_embargo = getattr(self.config.training, "PCT_EMBARGO", 0.01)
+        pct_embargo = getattr(self.config.training, "pct_embargo", 0.01)
         splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=pct_embargo)
 
         cv_scores = []

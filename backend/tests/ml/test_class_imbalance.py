@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from unittest.mock import MagicMock, patch
-from app.services.ml.data_processing.sampling import ImbalanceSampler
+from app.services.ml.preprocessing.sampling import ImbalanceSampler
 from app.config.unified_config import MLTrainingConfig
 
 

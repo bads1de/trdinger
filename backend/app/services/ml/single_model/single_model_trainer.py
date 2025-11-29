@@ -79,8 +79,8 @@ class SingleModelTrainer(BaseMLTrainer):
             self.single_model = self._create_model_instance()
 
             # モデルを学習
-            training_result = self.single_model._train_model_impl(
-                X_train, X_test, y_train, y_test, **training_params
+            training_result = self.single_model.fit(
+                X_train, y_train, eval_set=[(X_test, y_test)], **training_params
             )
 
             # 学習完了フラグを設定
@@ -91,12 +91,30 @@ class SingleModelTrainer(BaseMLTrainer):
             self._model = self.single_model.model
 
             # 結果を整形
+            # training_resultはモデル内部のfitメソッドからは返されない（selfを返す）
+            # そのため、評価結果を取得する必要がある
+            # evaluate_model_predictionsはBaseGradientBoostingModel.fit内部でログ出力されているが
+            # ここでも取得して返すのが望ましい
+            
+            y_pred_proba = self.predict_proba(X_test)
+            y_pred = self.predict(X_test)
+            
+            from ..common.evaluation_utils import evaluate_model_predictions
+            
+            detailed_metrics = evaluate_model_predictions(
+                y_test, y_pred, y_pred_proba
+            )
+
+            # 特徴量重要度
+            feature_importance = self.single_model.get_feature_importance()
+
             result = {
                 "model_type": self.model_type,
                 "training_samples": len(X_train),
                 "test_samples": len(X_test),
                 "feature_count": len(X_train.columns),
-                **training_result,
+                "feature_importance": feature_importance,
+                **detailed_metrics,
             }
 
             # 学習結果を保存（メタデータ用）
@@ -136,13 +154,13 @@ class SingleModelTrainer(BaseMLTrainer):
 
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
-        単一モデルで予測を実行
+        単一モデルで予測を実行（クラス予測）
 
         Args:
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率の配列 [下落確率, レンジ確率, 上昇確率]
+            予測クラスの配列
         """
         if self.single_model is None or not self.single_model.is_trained:
             raise MLModelError("学習済み単一モデルがありません")
@@ -154,25 +172,40 @@ class SingleModelTrainer(BaseMLTrainer):
                     pd.DataFrame, features_df.loc[:, self.feature_columns]
                 )
 
-            # 単一モデルで予測確率を取得
-            predictions = self.single_model.predict_proba(features_df)
-
-            # 予測確率が3クラスまたは2クラス分類であることを確認
-            if predictions.ndim == 2:
-                if predictions.shape[1] == 3:
-                    return predictions
-                elif predictions.shape[1] == 2:
-                    return predictions
-
-            raise MLModelError(
-                f"予期しない予測確率の形状: {predictions.shape}. "
-                f"3クラス分類 (down, range, up) または 2クラス分類 (range, trend) の確率が期待されます。"
-            )
+            return self.single_model.predict(features_df)
 
         except Exception as e:
             logger.error(f"{self.model_type.upper()}モデルの予測エラー: {e}")
             raise MLModelError(
                 f"{self.model_type.upper()}モデルの予測に失敗しました: {e}"
+            )
+
+    def predict_proba(self, features_df: pd.DataFrame) -> np.ndarray:
+        """
+        単一モデルで予測確率を取得
+
+        Args:
+            features_df: 特徴量DataFrame
+
+        Returns:
+            予測確率の配列
+        """
+        if self.single_model is None or not self.single_model.is_trained:
+            raise MLModelError("学習済み単一モデルがありません")
+
+        try:
+            # 特徴量の順序を学習時と合わせる
+            if self.feature_columns:
+                features_df = cast(
+                    pd.DataFrame, features_df.loc[:, self.feature_columns]
+                )
+
+            return self.single_model.predict_proba(features_df)
+
+        except Exception as e:
+            logger.error(f"{self.model_type.upper()}モデルの予測確率取得エラー: {e}")
+            raise MLModelError(
+                f"{self.model_type.upper()}モデルの予測確率取得に失敗しました: {e}"
             )
 
     @staticmethod

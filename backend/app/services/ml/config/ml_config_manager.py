@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from app.services.ml.config.ml_config import MLConfig
+from app.config.unified_config import MLConfig
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ class MLConfigManager:
             config_file_path: 設定ファイルのパス
         """
         self.config_file_path = Path(config_file_path)
+        # MLConfigはPydanticモデル（BaseSettings）なので、デフォルト値で初期化可能
         self._ml_config = MLConfig()
 
         # ディレクトリの自動作成は行わない（勝手にconfigディレクトリを作成しない方針）
@@ -43,18 +44,10 @@ class MLConfigManager:
     def get_config_dict(self) -> Dict[str, Any]:
         """
         設定を辞書形式で取得（Pydantic自動シリアライゼーション使用）
-
-        手動マッピングを削除し、Pydanticの model_dump() を活用して
-        保守性を向上させました。
         """
-        return {
-            "data_processing": self._ml_config.data_processing.model_dump(),
-            "model": self._ml_config.model.model_dump(),
-            "training": self._ml_config.training.model_dump(),
-            "prediction": self._ml_config.prediction.model_dump(),
-            "ensemble": self._ml_config.ensemble.model_dump(),
-            "retraining": self._ml_config.retraining.model_dump(),
-        }
+        # model_dump() を使用して辞書化
+        # by_alias=True により、エイリアス（大文字）で出力してAPI互換性を維持
+        return self._ml_config.model_dump(by_alias=True)
 
     def save_config(self) -> bool:
         """
@@ -124,18 +117,15 @@ class MLConfigManager:
             更新成功フラグ
         """
         try:
-            # Pydanticの自動バリデーションを活用するため、
-            # 明示的なvalidate_config_updatesは不要
-            # MLConfig.from_dict()内でPydanticがバリデーションを自動実行
-
             # 現在の設定を取得
-            current_config = self._ml_config.to_dict()
+            current_config = self._ml_config.model_dump(by_alias=True)
 
             # 設定を更新
             updated_config = self._merge_config_updates(current_config, config_updates)
 
             # 更新された設定を適用（Pydanticのバリデーションが自動実行される）
-            self._ml_config = MLConfig.from_dict(updated_config)
+            # BaseSettingsのサブクラスなので、キーワード引数で初期化
+            self._ml_config = MLConfig(**updated_config)
 
             # ファイルに保存
             if self.save_config():
@@ -177,8 +167,8 @@ class MLConfigManager:
         merged = current_config.copy()
 
         for section, section_updates in updates.items():
-            if section in merged and isinstance(section_updates, dict):
-                merged[section].update(section_updates)
+            if section in merged and isinstance(section_updates, dict) and isinstance(merged[section], dict):
+                 merged[section].update(section_updates)
             else:
                 merged[section] = section_updates
 
@@ -191,7 +181,8 @@ class MLConfigManager:
         Args:
             config_dict: 適用する設定辞書
         """
-        self._ml_config = MLConfig.from_dict(config_dict)
+        # Pydanticモデルの再構築
+        self._ml_config = MLConfig(**config_dict)
 
 
 # グローバルインスタンス

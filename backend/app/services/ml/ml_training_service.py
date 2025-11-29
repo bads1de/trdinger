@@ -19,7 +19,7 @@ from ..optimization.optimization_service import (
 )
 from .base_ml_trainer import BaseMLTrainer
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
-from .config import ml_config
+from ...config.unified_config import unified_config
 from .ensemble.ensemble_trainer import EnsembleTrainer
 from .single_model.single_model_trainer import SingleModelTrainer
 
@@ -51,7 +51,7 @@ class MLTrainingService(BaseResourceManager):
         # BaseResourceManagerの初期化
         super().__init__()
 
-        self.config = ml_config
+        self.config = unified_config.ml
         self.ensemble_config = ensemble_config
         self.single_model_config = single_model_config
         self.optimization_service = OptimizationService()
@@ -260,7 +260,7 @@ class MLTrainingService(BaseResourceManager):
         if use_cross_validation:
             # CV分割数（ml_configから取得、training_paramsで上書き可能）
             if "cv_splits" not in params:
-                params["cv_splits"] = self.config.training.CROSS_VALIDATION_FOLDS
+                params["cv_splits"] = self.config.training.cv_folds
 
             # パラメータバリデーション
             cv_splits = params.get("cv_splits")

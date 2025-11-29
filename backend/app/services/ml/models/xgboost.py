@@ -84,7 +84,7 @@ class XGBoostModel(BaseGradientBoostingModel):
     def _train_internal(
         self,
         train_data: xgb.DMatrix,
-        valid_data: xgb.DMatrix,
+        valid_data: Optional[xgb.DMatrix],
         params: Dict[str, Any],
         early_stopping_rounds: Optional[int] = None,
         **kwargs,
@@ -92,12 +92,18 @@ class XGBoostModel(BaseGradientBoostingModel):
         """
         XGBoost固有の学習プロセスを実行します。
         """
+        evals = [(train_data, "train")]
+        if valid_data:
+            evals.append((valid_data, "eval"))
+        
+        actual_early_stopping_rounds = early_stopping_rounds if valid_data else None
+
         model = xgb.train(
             params,
             train_data,
             num_boost_round=kwargs.get("num_boost_round", self.n_estimators),
-            evals=[(train_data, "train"), (valid_data, "eval")],
-            early_stopping_rounds=early_stopping_rounds,
+            evals=evals,
+            early_stopping_rounds=actual_early_stopping_rounds,
             verbose_eval=False,
         )
         return model

@@ -57,20 +57,41 @@ class BaseGradientBoostingModel(ABC):
             if not isinstance(y, pd.Series):
                 y = pd.Series(y)
 
-            # 時系列データのため、シャッフルせずに分割（最後の20%を検証用）
-            split_index = int(len(X) * 0.8)
+            # 検証用データの準備
+            # 1. eval_setが指定されている場合 (sklearn非標準だがxgboost等はサポート)
+            eval_set = kwargs.get("eval_set")
+            early_stopping_rounds = kwargs.get("early_stopping_rounds")
 
-            X_train = X.iloc[:split_index]
-            X_val = X.iloc[split_index:]
-            y_train = y.iloc[:split_index]
-            y_val = y.iloc[split_index:]
+            if eval_set:
+                # eval_setが提供されている場合はそれを使用
+                X_train, y_train = X, y
+                # eval_setは [(X_val, y_val)] の形式を想定
+                if isinstance(eval_set, list) and len(eval_set) > 0:
+                    X_val, y_val = eval_set[0]
+                else:
+                    logger.warning("無効なeval_set形式です。検証データなしで学習します。")
+                    X_val, y_val = None, None
+            elif early_stopping_rounds:
+                # Early Stoppingが有効で、eval_setがない場合は分割が必要
+                # 時系列データのため、シャッフルせずに分割（最後の20%を検証用）
+                logger.info(f"Early Stopping有効(rounds={early_stopping_rounds}): データを分割して学習します")
+                split_index = int(len(X) * 0.8)
+                X_train = X.iloc[:split_index]
+                X_val = X.iloc[split_index:]
+                y_train = y.iloc[:split_index]
+                y_val = y.iloc[split_index:]
+            else:
+                # Early Stoppingが無効、かつeval_setもない場合
+                # 全データを学習に使用し、検証データはなし
+                X_train, y_train = X, y
+                X_val, y_val = None, None
 
             # 内部の学習メソッドを呼び出し
             self._train_model_impl(
                 cast(pd.DataFrame, X_train),
-                cast(pd.DataFrame, X_val),
+                cast(Optional[pd.DataFrame], X_val),
                 cast(pd.Series, y_train),
-                cast(pd.Series, y_val),
+                cast(Optional[pd.Series], y_val),
                 **kwargs,
             )
 
@@ -84,9 +105,9 @@ class BaseGradientBoostingModel(ABC):
     def _train_model_impl(
         self,
         X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
+        X_test: Optional[pd.DataFrame],
         y_train: pd.Series,
-        y_test: pd.Series,
+        y_test: Optional[pd.Series],
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -121,7 +142,9 @@ class BaseGradientBoostingModel(ABC):
 
             # モデル固有のデータセット作成
             train_data = self._create_dataset(X_train, y_train, sample_weight)
-            valid_data = self._create_dataset(X_test, y_test)
+            valid_data = None
+            if X_test is not None and y_test is not None:
+                valid_data = self._create_dataset(X_test, y_test)
 
             # モデル固有の学習パラメータ取得
             params = self._get_model_params(num_classes, **kwargs)
@@ -135,32 +158,36 @@ class BaseGradientBoostingModel(ABC):
                 **kwargs,  # ここに **kwargs を追加
             )
 
-            # 予測と評価
-            y_pred_proba = self._get_prediction_proba(valid_data)
-            y_pred_class = (
-                np.argmax(y_pred_proba, axis=1)
-                if num_classes > 2
-                else (y_pred_proba > 0.5).astype(int)
-            )
+            # 予測と評価 (検証データがある場合のみ)
+            detailed_metrics = {}
+            if valid_data is not None and y_test is not None:
+                y_pred_proba = self._get_prediction_proba(valid_data)
+                y_pred_class = (
+                    np.argmax(y_pred_proba, axis=1)
+                    if num_classes > 2
+                    else (y_pred_proba > 0.5).astype(int)
+                )
 
-            detailed_metrics = evaluate_model_predictions(
-                y_test, y_pred_class, y_pred_proba
-            )
+                detailed_metrics = evaluate_model_predictions(
+                    y_test, y_pred_class, y_pred_proba
+                )
+                logger.info(
+                    f"{self.ALGORITHM_NAME}モデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
+                )
+            else:
+                logger.info(f"{self.ALGORITHM_NAME}モデル学習完了 (検証データなし)")
+
 
             # 特徴量重要度
             feature_importance = self.get_feature_importance()
 
             self.is_trained = True
 
-            logger.info(
-                f"{self.ALGORITHM_NAME}モデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
-            )
-
             result = {
                 "algorithm": self.ALGORITHM_NAME,
                 "num_classes": num_classes,
                 "train_samples": len(X_train),
-                "test_samples": len(X_test),
+                "test_samples": len(X_test) if X_test is not None else 0,
                 "feature_count": (
                     len(self.feature_columns) if self.feature_columns else 0
                 ),
@@ -218,7 +245,7 @@ class BaseGradientBoostingModel(ABC):
     def _train_internal(
         self,
         train_data: Any,
-        valid_data: Any,
+        valid_data: Optional[Any],
         params: Dict[str, Any],
         early_stopping_rounds: Optional[int] = None,
         **kwargs,

@@ -3,6 +3,7 @@
 
 従来のテクニカル指標（RSI、MACD、ストキャスティクスなど）と
 テクニカル特徴量を計算します。
+ATRやVWAPなど、他のファイルで重複していた指標もここに集約されました。
 """
 
 import logging
@@ -15,6 +16,8 @@ import numpy as np
 from ...indicators.technical_indicators.momentum import MomentumIndicators
 from ...indicators.technical_indicators.trend import TrendIndicators
 from ...indicators.technical_indicators.volatility import VolatilityIndicators
+from ...indicators.technical_indicators.volume import VolumeIndicators
+from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
 
@@ -48,7 +51,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         lookback_periods = config.get("lookback_periods", {})
 
         # 複数のテクニカル特徴量を順次計算（全パターン生成）
-        result_df = self.calculate_market_regime_features(df, lookback_periods)
+        result_df = self.create_result_dataframe(df) # Ensure result_df starts clean
+        result_df = self.calculate_volatility_features(result_df, lookback_periods) # First, as others may depend on it
+        result_df = self.calculate_volume_features(result_df, lookback_periods) # Also moved up
+        result_df = self.calculate_market_regime_features(result_df, lookback_periods)
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
         result_df = self.calculate_pattern_features(result_df, lookback_periods)
 
@@ -80,10 +86,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: Trend_Strength
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
             # レンジ相場判定（pandas MAX/MIN使用）
             volatility_period = lookback_periods.get("volatility", 20)
             high_vals = result_df["high"]
@@ -95,12 +97,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 result_df["close"] - low_20, high_20 - low_20, fill_value=0.5
             )
 
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: Breakout_Strength
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
             # 市場効率性（価格のランダムウォーク度）- 最適化版
-            # Vectorized computation of price autocorrelation
             returns = result_df["close"].pct_change(fill_method=None).fillna(0)
             returns_lag1 = returns.shift(1)
 
@@ -175,11 +172,116 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 1.5
             )  # Default to 1.5 (random walk)
 
+            self.log_feature_calculation_complete("市場レジーム")
             return result_df
 
         except Exception as e:
-            logger.error(f"市場レジーム特徴量計算エラー: {e}")
-            return df
+            return self.handle_calculation_error(e, "市場レジーム特徴量計算", df)
+
+    @safe_ml_operation(
+        default_return=None, context="ボラティリティ特徴量計算でエラーが発生しました"
+    )
+    def calculate_volatility_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> pd.DataFrame:
+        """
+        ボラティリティ特徴量を計算
+
+        Args:
+            df: OHLCV価格データ
+            lookback_periods: 計算期間設定
+
+        Returns:
+            ボラティリティ特徴量が追加されたDataFrame
+        """
+        try:
+            if not self.validate_input_data(df, ["close", "high", "low"]):
+                return df
+
+            result_df = self.create_result_dataframe(df)
+
+            volatility_period = lookback_periods.get("volatility", 20)
+
+            # ATR（Average True Range）- VolatilityIndicators使用
+            atr_result = VolatilityIndicators.atr(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                length=volatility_period,
+            )
+            result_df["ATR_20"] = atr_result.fillna(0.0)
+
+            self.log_feature_calculation_complete("ボラティリティ")
+            return result_df
+
+        except Exception as e:
+            return self.handle_calculation_error(e, "ボラティリティ特徴量計算", df)
+
+    @safe_ml_operation(
+        default_return=None, context="出来高特徴量計算でエラーが発生しました"
+    )
+    def calculate_volume_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> pd.DataFrame:
+        """
+        出来高特徴量を計算
+
+        Args:
+            df: OHLCV価格データ
+            lookback_periods: 計算期間設定
+
+        Returns:
+            出来高特徴量が追加されたDataFrame
+        """
+        try:
+            if not self.validate_input_data(df, ["volume", "close", "high", "low"]):
+                return df
+
+            result_df = self.create_result_dataframe(df)
+
+            volume_period = lookback_periods.get("volume", 20)
+
+            # 出来高移動平均（TrendIndicators使用）
+            volume_ma = TrendIndicators.sma(result_df["volume"], length=volume_period)
+            volume_ma = volume_ma.fillna(result_df["volume"])
+
+            # 異常に大きな値をクリップ（最大値を制限）
+            volume_max = (
+                result_df["volume"].quantile(0.99) * 10
+            )  # 99%分位点の10倍を上限とする
+            result_df[f"Volume_MA_{volume_period}"] = np.clip(volume_ma, 0, volume_max)
+
+            # 出来高加重平均価格（VWAP）（VolumeIndicators使用）
+            result_df["VWAP"] = VolumeIndicators.vwap(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                volume=result_df["volume"],
+                period=volume_period,
+            ).fillna(result_df["close"])
+
+            # VWAPからの乖離
+            result_df["VWAP_Deviation"] = (
+                ((result_df["close"] - result_df["VWAP"]) / result_df["VWAP"])
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
+
+            # 出来高トレンド
+            volume_trend = (
+                result_df["volume"].rolling(window=5).mean()
+                / result_df["volume"].rolling(window=volume_period).mean()
+            )
+            volume_trend = np.where(np.isinf(volume_trend), np.nan, volume_trend)
+            result_df["Volume_Trend"] = pd.Series(
+                volume_trend, index=result_df.index
+            ).fillna(1.0)
+
+            self.log_feature_calculation_complete("出来高")
+            return result_df
+
+        except Exception as e:
+            return self.handle_calculation_error(e, "出来高特徴量計算", df)
 
     def calculate_pattern_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
@@ -246,15 +348,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 fill_value=0.5,
             )
 
-            # Removed: MA_Short（重複特徴量削除: 2025-01-09）
-            # 理由: price_features.pyのma_10と重複
-
-            # 移動平均（トレンド判断）- MA_Longのみ保持
+            # 移動平均（トレンド判断）
             # TrendIndicatorsを使用
             long_ma = lookback_periods.get("long_ma", 50)
             ma_long = TrendIndicators.sma(result_df["close"], length=long_ma)
             new_features["MA_Long"] = ma_long.fillna(result_df["close"])
-            # 削除: MA_Cross - 理由: ほぼゼロの重要度（分析日: 2025-01-07）
 
             # ボラティリティパターン（ATRを使用）
             # VolatilityIndicatorsを使用
@@ -266,10 +364,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )
             new_features["ATR"] = atr_values.fillna(0.0)
 
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: Normalized_Volatility
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
             # 一括で結合
             result_df = pd.concat(
                 [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
@@ -278,11 +372,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 価格パターン（ダブルボトム、ヘッドアンドショルダー等の簡易検出）
             result_df = self._detect_price_patterns(result_df)
 
+            self.log_feature_calculation_complete("パターン")
             return result_df
 
         except Exception as e:
-            logger.error(f"パターン特徴量計算エラー: {e}")
-            return df
+            return self.handle_calculation_error(e, "パターン特徴量計算", df)
 
     def _detect_price_patterns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -298,11 +392,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # Removed: Local_Min, Local_Max, Resistance_Level
-            # (低寄与度特徴量削除: 2025-11-13)
-            # これらの特徴量はモデルの予測精度向上に寄与しないため削除
-
-            # 簡易的なサポート・レジスタントレベル（計算用に残す）
             window_size = 20
             support_level = df["close"].rolling(window=window_size, min_periods=1).min()
             resistance_level = (
@@ -401,11 +490,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
             )
 
+            self.log_feature_calculation_complete("モメンタム")
             return result_df
 
         except Exception as e:
-            logger.error(f"モメンタム特征量計算エラー: {e}")
-            return df
+            return self.handle_calculation_error(e, "モメンタム特徴量計算", df)
 
     def get_feature_names(self) -> list:
         """
@@ -416,10 +505,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         """
         return [
             # 市場レジーム特徴量
-            # Removed: "Trend_Strength" (低寄与度特徴量削除: 2025-01-05)
             "Range_Bound_Ratio",
-            # Removed: "Breakout_Strength" (低寄与度特徴量削除: 2025-01-05)
             "Market_Efficiency",
+            "Choppiness_Index_14",
+            "Fractal_Dimension_Index_10",
             # モメンタム特徴量
             "RSI",
             "MACD",
@@ -427,11 +516,25 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "MACD_Histogram",
             "Stochastic_K",
             "Stochastic_D",
+            "Stochastic_Divergence",
             "Williams_R",
             "CCI",
             "ROC",
             "Momentum",
+            # パターン特徴量
+            "BB_Upper",
+            "BB_Middle",
+            "BB_Lower",
+            "BB_Position",
+            "MA_Long",
+            "ATR", # Pattern features still used ATR(length=14)
+            "Near_Support",
+            "Near_Resistance",
+            # ボラティリティ特徴量（PriceFeatureCalculatorから移動）
+            "ATR_20",
+            # 出来高特徴量（PriceFeatureCalculatorから移動）
+            "Volume_MA_20",
+            "VWAP",
+            "VWAP_Deviation",
+            "Volume_Trend",
         ]
-
-
-# 互換性のための別名（旧名: TechnicalFeatureEngineer）

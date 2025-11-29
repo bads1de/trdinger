@@ -153,22 +153,22 @@ class TestDataLeakPrevention:
     @pytest.fixture(autouse=True)
     def mock_ml_config(self):
         """ML設定のモック"""
-        with patch("app.services.ml.config.ml_config") as mock_config:
-            # training属性をMagicMockで上書き
-            mock_config.training = MagicMock()
-
-            # training.label_generation を設定
-            mock_label_gen = MagicMock()
-            mock_config.training.label_generation = mock_label_gen
+        # unified_config.ml.training を直接モック
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
+            # label_generation属性を適切に設定
+            label_gen_mock = MagicMock()
+            label_gen_mock.timeframe = "1h"
+            mock_ml_training_config.label_generation = label_gen_mock
 
             # その他の必要な設定
-            mock_config.training.CROSS_VALIDATION_FOLDS = 5
-            mock_config.training.MAX_TRAIN_SIZE = None
-            mock_config.training.USE_TIME_SERIES_SPLIT = True
-            mock_config.training.USE_PURGED_KFOLD = False
-            mock_config.training.PREDICTION_HORIZON = 24
+            mock_ml_training_config.cv_folds = 5
+            mock_ml_training_config.max_train_size = None
+            mock_ml_training_config.use_time_series_split = True
+            mock_ml_training_config.use_purged_kfold = True # PurgedKFoldが有効になるように
+            mock_ml_training_config.prediction_horizon = 24
+            mock_ml_training_config.pct_embargo = 0.01  # embargo設定を追加
 
-            yield mock_config
+            yield mock_ml_training_config
 
     def test_cross_validation_fold_independence(self, sample_timeseries_data):
         """クロスバリデーションの各フォールドが独立していることを確認"""

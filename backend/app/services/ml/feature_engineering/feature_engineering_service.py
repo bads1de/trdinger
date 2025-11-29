@@ -236,12 +236,12 @@ class FeatureEngineeringService:
             )
 
             # ボラティリティ特徴量
-            result_df = self.price_calculator.calculate_volatility_features(
+            result_df = self.technical_calculator.calculate_volatility_features(
                 result_df, lookback_periods
             )
 
             # 出来高特徴量
-            result_df = self.price_calculator.calculate_volume_features(
+            result_df = self.technical_calculator.calculate_volume_features(
                 result_df, lookback_periods
             )
 

@@ -3,6 +3,7 @@
 
 OHLCV価格データから基本的な価格関連特徴量を計算します。
 単一責任原則に従い、価格特徴量の計算のみを担当します。
+テクニカル指標（ATR, VWAPなど）はtechnical_features.pyに移動しました。
 """
 
 import logging
@@ -12,9 +13,6 @@ import numpy as np
 import pandas as pd
 
 from ...indicators.technical_indicators.momentum import MomentumIndicators
-from ...indicators.technical_indicators.trend import TrendIndicators
-from ...indicators.technical_indicators.volatility import VolatilityIndicators
-from ...indicators.technical_indicators.volume import VolumeIndicators
 from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -25,7 +23,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
     """
     価格特徴量計算クラス
 
-    OHLCV価格データから基本的な価格関連特徴量を計算します。
+    OHLCV価格データから基本的な価格関連特徴量（変化率、実体、ヒゲなど）を計算します。
     """
 
     def __init__(self):
@@ -40,21 +38,15 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
         Args:
             df: OHLCV価格データ
-            config: 計算設定（lookback_periodsを含む）
+            config: 計算設定
 
         Returns:
             価格特徴量が追加されたDataFrame
         """
         lookback_periods = config.get("lookback_periods", {})
 
-        # 価格特徴量
+        # 基本的な価格特徴量のみ計算
         df = self.calculate_price_features(df, lookback_periods)
-
-        # ボラティリティ特徴量
-        df = self.calculate_volatility_features(df, lookback_periods)
-
-        # 出来高特徴量
-        df = self.calculate_volume_features(df, lookback_periods)
 
         return df
 
@@ -79,12 +71,6 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
         result_df = self.create_result_dataframe(df)
 
-        # Removed: 重複特徴量削除（特徴量重要度分析: 2025-01-09）
-        # 削除された特徴量: MA_10, MA_50 (technical_features.pyのMA_Short, MA_Longと重複)
-        # 削除された特徴量: Price_Momentum_14 (technical_features.pyのMomentumと重複)
-        # 削除された特徴量: High_Low_Position (他の位置指標で代替可能)
-        # 理由: technical_features.pyで同等の特徴量を計算しており冗長
-
         # 価格変化率（MomentumIndicators使用）
         roc1 = MomentumIndicators.roc(result_df["close"], period=1)
         result_df["Price_Change_1"] = roc1.fillna(0.0)
@@ -95,20 +81,12 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         roc20 = MomentumIndicators.roc(result_df["close"], period=20)
         result_df["Price_Change_20"] = roc20.fillna(0.0)
 
-        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-        # 削除された特徴量: Price_Range
-        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
         # ボディサイズ（実体の大きさ）
         result_df["Body_Size"] = (
             (abs(result_df["close"] - result_df["open"]) / result_df["close"])
             .replace([np.inf, -np.inf], np.nan)
             .fillna(0.0)
         )
-
-        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-        # 削除された特徴量: Upper_Shadow
-        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
 
         # 下ヒゲのみ保持
         lower_shadow = (
@@ -119,169 +97,17 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             lower_shadow, index=result_df.index
         ).fillna(0.0)
 
-        # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-        # 削除された特徴量: Price_Position
-        # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
+        # 価格・出来高トレンド（MomentumIndicators使用）
+        # これは価格と出来高の単純な積であり、特定の指標ではないためここに残す
+        price_change = MomentumIndicators.roc(result_df["close"], period=1).fillna(0.0)
+        volume_change = MomentumIndicators.roc(
+            result_df["volume"], period=1
+        ).fillna(0.0)
 
-        # Removed: Gap特徴量（低寄与度特徴量削除: 2025-01-05）
+        result_df["Price_Volume_Trend"] = price_change * volume_change
 
+        self.log_feature_calculation_complete("基本価格")
         return result_df
-
-    def calculate_volatility_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
-    ) -> pd.DataFrame:
-        """
-        ボラティリティ特徴量を計算
-
-        Args:
-            df: OHLCV価格データ
-            lookback_periods: 計算期間設定
-
-        Returns:
-            ボラティリティ特徴量が追加されたDataFrame
-        """
-        try:
-            if not self.validate_input_data(df, ["close", "high", "low"]):
-                return df
-
-            result_df = self.create_result_dataframe(df)
-
-            volatility_period = lookback_periods.get("volatility", 20)
-
-            # リターンを計算（pandas-ta ROCP: fractional rate of change）
-            # roc_result = ta.roc(result_df["close"], length=1)
-            # result_df["Returns"] = ( # 低重要度のためコメントアウト
-            #     pd.Series(roc_result, index=result_df.index).fillna(0.0) / 100.0
-            #     if roc_result is not None
-            #     else 0.0
-            # )
-
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: Realized_Volatility_20, Volatility_Spike_MA
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
-            # Removed: Volatility_Spike（重複特徴量削除: 2025-01-09）
-            # 理由: 複数のボラティリティ指標で代替可能
-
-            # ATR（Average True Range）- VolatilityIndicators使用
-            atr_result = VolatilityIndicators.atr(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                length=volatility_period,
-            )
-            result_df["ATR_20"] = atr_result.fillna(0.0)
-
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: ATR_Normalized
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
-            # 削除: High_Vol_Regime - 理由: 極低重要度（分析日: 2025-01-07）
-            # ボラティリティレジーム（realized_volを使用）
-            # vol_quantile = realized_vol.rolling(
-            #     window=volatility_period * 2, min_periods=1
-            # ).quantile(0.8)
-            # result_df["High_Vol_Regime"] = (realized_vol > vol_quantile).astype(int)
-
-            # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
-            # 削除された特徴量: Vol_Change
-            # 性能への影響: LightGBM -0.43%, XGBoost -0.43%（許容範囲内）
-
-            self.log_feature_calculation_complete("ボラティリティ")
-            return result_df
-
-        except Exception as e:
-            return self.handle_calculation_error(e, "ボラティリティ特徴量計算", df)
-
-    def calculate_volume_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
-    ) -> pd.DataFrame:
-        """
-        出来高特徴量を計算
-
-        Args:
-            df: OHLCV価格データ
-            lookback_periods: 計算期間設定
-
-        Returns:
-            出来高特徴量が追加されたDataFrame
-        """
-        try:
-            if not self.validate_input_data(df, ["volume", "close", "high", "low"]):
-                return df
-
-            result_df = self.create_result_dataframe(df)
-
-            volume_period = lookback_periods.get("volume", 20)
-
-            # 出来高移動平均（TrendIndicators使用）
-            volume_ma = TrendIndicators.sma(result_df["volume"], length=volume_period)
-            volume_ma = volume_ma.fillna(result_df["volume"])
-
-            # 異常に大きな値をクリップ（最大値を制限）
-            volume_max = (
-                result_df["volume"].quantile(0.99) * 10
-            )  # 99%分位点の10倍を上限とする
-            result_df[f"Volume_MA_{volume_period}"] = np.clip(volume_ma, 0, volume_max)
-
-            # 削除: Volume_Ratio - 理由: 低重要度（分析日: 2025-01-07）
-            # 出来高比率
-            # result_df["Volume_Ratio"] = (
-            #     (result_df["volume"] / result_df[f"Volume_MA_{volume_period}"])
-            #     .replace([np.inf, -np.inf], np.nan)
-            #     .fillna(1.0)
-            # )
-
-            # 価格・出来高トレンド（MomentumIndicators使用）
-            price_change = MomentumIndicators.roc(result_df["close"], period=1).fillna(
-                0.0
-            )
-            volume_change = MomentumIndicators.roc(
-                result_df["volume"], period=1
-            ).fillna(0.0)
-
-            result_df["Price_Volume_Trend"] = price_change * volume_change
-
-            # 出来高加重平均価格（VWAP）（VolumeIndicators使用）
-            result_df["VWAP"] = VolumeIndicators.vwap(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                volume=result_df["volume"],
-                period=volume_period,
-            ).fillna(result_df["close"])
-
-            # VWAPからの乖離
-            result_df["VWAP_Deviation"] = (
-                ((result_df["close"] - result_df["VWAP"]) / result_df["VWAP"])
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
-            )
-
-            # 削除: Volume_Spike - 理由: 低重要度（分析日: 2025-01-07）
-            # 出来高スパイク
-            # vol_threshold = (
-            #     result_df["volume"].rolling(window=volume_period).quantile(0.9)
-            # )
-            # result_df["Volume_Spike"] = (result_df["volume"] > vol_threshold).astype(
-            #     int
-            # )
-
-            # 出来高トレンド
-            volume_trend = (
-                result_df["volume"].rolling(window=5).mean()
-                / result_df["volume"].rolling(window=volume_period).mean()
-            )
-            volume_trend = np.where(np.isinf(volume_trend), np.nan, volume_trend)
-            result_df["Volume_Trend"] = pd.Series(
-                volume_trend, index=result_df.index
-            ).fillna(1.0)
-
-            self.log_feature_calculation_complete("出来高")
-            return result_df
-
-        except Exception as e:
-            return self.handle_calculation_error(e, "出来高特徴量計算", df)
 
     def get_feature_names(self) -> list:
         """
@@ -291,32 +117,10 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             特徴量名のリスト
         """
         return [
-            # 価格特徴量
-            # Removed: "Price_MA_Ratio_Short", "Price_MA_Ratio_Long"
-            # (低寄与度特徴量削除: 2025-01-05)
-            # Removed: "Price_Momentum_14", "High_Low_Position"
-            # (重複特徴量削除: 2025-01-09)
             "Price_Change_1",
             "Price_Change_5",
             "Price_Change_20",
-            # Removed: "Price_Range" (低寄与度特徴量削除: 2025-01-05)
             "Body_Size",
-            # Removed: "Upper_Shadow" (低寄与度特徴量削除: 2025-01-05)
             "Lower_Shadow",
-            # Removed: "Price_Position" (低寄与度特徴量削除: 2025-01-05)
-            # Removed: "Gap" (低寄与度特徴量削除: 2025-01-05)
-            # ボラティリティ特徴量
-            # Removed: "Realized_Volatility_20", "Volatility_Spike_MA"
-            # (低寄与度特徴量削除: 2025-01-05)
-            # Removed: "Volatility_Spike" (重複特徴量削除: 2025-01-09)
-            "ATR_20",
-            # Removed: "ATR_Normalized" (低寄与度特徴量削除: 2025-01-05)
-            # Removed: "High_Vol_Regime" (極低重要度: 2025-01-07)
-            # Removed: "Vol_Change" (低寄与度特徴量削除: 2025-01-05)
-            # 出来高特徴量
-            # Removed: "Volume_Ratio" (低重要度: 2025-01-07)
             "Price_Volume_Trend",
-            "VWAP_Deviation",
-            # Removed: "Volume_Spike" (低重要度: 2025-01-07)
-            "Volume_Trend",
         ]

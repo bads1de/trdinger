@@ -79,6 +79,7 @@ class TestUnifiedConfig:
         assert config.ml.training is not None
 
         # ML設定の具体的な値
+        print(f"DEBUG: config.ml.data_processing.max_ohlcv_rows = {config.ml.data_processing.max_ohlcv_rows}")
         assert config.ml.data_processing.max_ohlcv_rows == 1000000
         assert config.ml.model.model_save_path == "models/"
         assert config.ml.prediction.default_up_prob == 0.33
@@ -300,6 +301,7 @@ class TestMLConfig:
     def test_data_processing_config(self):
         """データ処理設定のテスト"""
         config = MLConfig()
+        print(f"DEBUG: config.data_processing.max_ohlcv_rows = {config.data_processing.max_ohlcv_rows}")
         assert config.data_processing.max_ohlcv_rows == 1000000
         assert config.data_processing.feature_calculation_timeout == 3600
         assert config.data_processing.debug_mode is False

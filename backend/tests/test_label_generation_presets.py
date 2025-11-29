@@ -787,16 +787,14 @@ class TestBaseMLTrainerIntegration:
         features_df = sample_ohlcv_data
 
         # ml_configをモック (正しいパスでパッチ)
-        with patch("app.services.ml.config.ml_config") as mock_ml_config:
-            # training属性をMagicMockで上書きして、任意の属性設定を許可
-            mock_ml_config.training = MagicMock()
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             
             mock_label_config = LabelGenerationConfig(
                 default_preset="4h_4bars",
                 use_preset=True,
             )
             # config.training.label_generation を設定
-            mock_ml_config.training.label_generation = mock_label_config
+            mock_ml_training_config.label_generation = mock_label_config
 
             # Act
             X, y = trainer._prepare_training_data(features_df)
@@ -821,8 +819,7 @@ class TestBaseMLTrainerIntegration:
         features_df = sample_ohlcv_data
 
         # ml_configをモック
-        with patch("app.services.ml.config.ml_config") as mock_ml_config:
-            mock_ml_config.training = MagicMock()
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             
             mock_label_config = LabelGenerationConfig(
                 timeframe="1h",
@@ -831,7 +828,7 @@ class TestBaseMLTrainerIntegration:
                 threshold_method="QUANTILE",
                 use_preset=False,
             )
-            mock_ml_config.training.label_generation = mock_label_config
+            mock_ml_training_config.label_generation = mock_label_config
 
             # Act
             X, y = trainer._prepare_training_data(features_df)
@@ -855,8 +852,8 @@ class TestBaseMLTrainerIntegration:
 
         # Act
         with patch.object(trainer.label_service, "prepare_labels") as mock_prepare_labels, \
-             patch("app.services.ml.config.ml_config") as mock_ml_config:
-            mock_ml_config.training = MagicMock()
+             patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
+            mock_ml_training_config.training = MagicMock()
             
             # trainer.label_service.prepare_labels の戻り値をモック
             mock_prepare_labels.return_value = (
@@ -883,14 +880,13 @@ class TestBaseMLTrainerIntegration:
         features_df = sample_ohlcv_data
 
         # ml_configをモック（存在しないプリセット）
-        with patch("app.services.ml.config.ml_config") as mock_ml_config:
-            mock_ml_config.training = MagicMock()
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             
             mock_label_config = LabelGenerationConfig(
                 default_preset="4h_4bars",  # 有効なプリセットを設定
                 use_preset=True,
             )
-            mock_ml_config.training.label_generation = mock_label_config
+            mock_ml_training_config.label_generation = mock_label_config
 
             # prepare_labelsがDataErrorを投げるようにモック
             with patch.object(trainer.label_service, "prepare_labels") as mock_prepare_labels:
@@ -910,15 +906,13 @@ class TestBaseMLTrainerIntegration:
         trainer = mock_base_ml_trainer
         features_df = sample_ohlcv_data
 
-        # ml_configをモック
-        with patch("app.services.ml.config.ml_config") as mock_ml_config:
-            mock_ml_config.training = MagicMock()
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             
             mock_label_config = LabelGenerationConfig(
                 default_preset="4h_4bars",
                 use_preset=True,
             )
-            mock_ml_config.training.label_generation = mock_label_config
+            mock_ml_training_config.label_generation = mock_label_config
 
             # prepare_labelsが例外を投げるようにモック
             with patch.object(trainer.label_service, "prepare_labels") as mock_prepare_labels:
@@ -939,15 +933,14 @@ class TestBaseMLTrainerIntegration:
         features_df = sample_ohlcv_data
 
         # ml_configをモック
-        with patch("app.services.ml.config.ml_config") as mock_ml_config:
-            mock_ml_config.training = MagicMock()
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             
             mock_label_config = LabelGenerationConfig(
                 default_preset="4h_4bars",
                 use_preset=True,
             )
             # config.training.label_generation を設定
-            mock_ml_config.training.label_generation = mock_label_config
+            mock_ml_training_config.label_generation = mock_label_config
 
             # Act
             X, y = trainer._prepare_training_data(features_df)
@@ -1004,14 +997,13 @@ class TestEndToEndIntegration:
             trainer_config={"type": "single", "model_type": "lightgbm"}
         )
 
-        with patch("app.services.ml.config.ml_config") as mock_ml_config:
-            mock_ml_config.training = MagicMock()
+        with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             
             mock_label_config = LabelGenerationConfig(
                 default_preset="4h_4bars",
                 use_preset=True,
             )
-            mock_ml_config.training.label_generation = mock_label_config
+            mock_ml_training_config.label_generation = mock_label_config
 
             X, y = trainer._prepare_training_data(df)
 
