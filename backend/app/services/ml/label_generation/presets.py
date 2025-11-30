@@ -11,7 +11,7 @@ from typing import Any, Dict, Tuple
 import pandas as pd
 
 from .enums import ThresholdMethod
-from .main import LabelGenerator
+from .label_generator import LabelGenerator
 from .triple_barrier import TripleBarrier
 from ..common.volatility_utils import calculate_volatility_atr, calculate_volatility_std
 

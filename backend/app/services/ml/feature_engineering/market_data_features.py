@@ -138,6 +138,47 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
 
         return result_df
 
+    def _process_market_data(
+        self,
+        df: pd.DataFrame,
+        data: pd.DataFrame,
+        column_candidates: list[str],
+        suffix: str,
+    ) -> tuple[pd.DataFrame, str | None]:
+        """
+        市場データをマージし、カラムを特定して前処理を行う共通メソッド
+
+        Args:
+            df: ベースとなるDataFrame
+            data: マージする市場データ
+            column_candidates: カラム名の候補リスト
+            suffix: マージ時のサフィックス
+
+        Returns:
+            (マージ済みDataFrame, 特定されたカラム名)
+        """
+        result_df = df.copy()
+
+        # データをOHLCVデータにマージ
+        if "timestamp" in data.columns:
+            data = data.set_index("timestamp")
+
+        # インデックスを合わせてマージ
+        merged_df = result_df.join(data, how="left", rsuffix=suffix)
+
+        # カラムを特定
+        target_column = None
+        for col in column_candidates:
+            if col in merged_df.columns:
+                target_column = col
+                break
+
+        if target_column is not None:
+            # 欠損値を前方補完
+            merged_df[target_column] = merged_df[target_column].ffill()
+
+        return merged_df, target_column
+
     def calculate_funding_rate_features(
         self,
         df: pd.DataFrame,
@@ -156,37 +197,22 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             ファンディングレート特徴量が追加されたDataFrame
         """
         try:
-            result_df = df.copy()
-
-            # ファンディングレートデータをOHLCVデータにマージ
-            if "timestamp" in funding_rate_data.columns:
-                funding_rate_data = funding_rate_data.set_index("timestamp")
-
-            # インデックスを合わせてマージ
-            merged_df = result_df.join(funding_rate_data, how="left", rsuffix="_fr")
-
-            # ファンディングレートカラムを特定
-            fr_column = None
-            for col in ["funding_rate", "fundingRate", "rate"]:
-                if col in merged_df.columns:
-                    fr_column = col
-                    break
+            # 共通処理でデータマージとカラム特定
+            merged_df, fr_column = self._process_market_data(
+                df, funding_rate_data, ["funding_rate", "fundingRate", "rate"], "_fr"
+            )
 
             if fr_column is None:
                 logger.warning("ファンディングレートカラムが見つかりません")
-                return result_df
-
-            # 欠損値を前方補完
-            merged_df[fr_column] = merged_df[fr_column].ffill()
+                return df
 
             # 削除: funding_rate (生データ) - 理由: 加工済み特徴量で代替（分析日: 2025-01-07）
             # 生のファンディングレートデータは使用せず、加工済み特徴量（複合特徴量）のみを使用
             # 実際に削除処理を実行
-            if fr_column in merged_df.columns:
-                result_df = merged_df.drop(columns=[fr_column])
+            result_df = merged_df
+            if fr_column in result_df.columns:
+                result_df = result_df.drop(columns=[fr_column])
                 logger.info(f"Removed raw funding_rate column: {fr_column}")
-            else:
-                result_df = merged_df.copy()
 
             # Removed: 低寄与度特徴量削除（LightGBM+XGBoost統合分析: 2025-01-05）
             # 削除された特徴量: FR_MA_24, FR_MA_168, FR_Change, FR_Change_Rate,
@@ -220,38 +246,31 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             建玉残高特徴量が追加されたDataFrame
         """
         try:
-            result_df = df.copy()
-
-            # 建玉残高データをOHLCVデータにマージ
-            if "timestamp" in open_interest_data.columns:
-                open_interest_data = open_interest_data.set_index("timestamp")
-
-            # インデックスを合わせてマージ
-            merged_df = result_df.join(open_interest_data, how="left", rsuffix="_oi")
-
-            # 建玉残高カラムを特定
-            oi_column = None
-            for col in ["open_interest", "openInterest", "oi"]:
-                if col in merged_df.columns:
-                    oi_column = col
-                    break
+            # 共通処理でデータマージとカラム特定
+            merged_df, oi_column = self._process_market_data(
+                df, open_interest_data, ["open_interest", "openInterest", "oi"], "_oi"
+            )
 
             if oi_column is None:
                 logger.warning("建玉残高カラムが見つかりません")
-                return result_df
+                return df
 
-            # 欠損値を前方補完
-            merged_df[oi_column] = merged_df[oi_column].ffill()
+            result_df = merged_df
 
             # 削除: open_interest (生データ) - 理由: 加工済み特徴量で代替（分析日: 2025-01-07）
             # 生の建玉残高データは使用せず、加工済み特徴量（変化率、正規化値等）のみを使用
             # 実際に削除処理を実行
             if oi_column in result_df.columns:
+                # 計算用にSeriesを保持してから削除
+                oi_series = result_df[oi_column]
                 result_df = result_df.drop(columns=[oi_column])
                 logger.info(f"Removed raw open_interest column: {oi_column}")
+            else:
+                # 万が一カラムがない場合（通常ありえないが）
+                logger.warning(f"OI column {oi_column} not found in merged dataframe")
+                return df
 
             # 共通ロジックを使用してOI特徴量を計算
-            oi_series = merged_df[oi_column]
             result_df = self._calculate_oi_derived_features(result_df, oi_series)
 
             return result_df

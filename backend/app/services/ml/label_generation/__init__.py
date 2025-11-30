@@ -7,7 +7,7 @@ scikit-learnのKBinsDiscretizerとPipelineを活用し、シンプルで効率�
 
 from .enums import ThresholdMethod
 from .event_driven import BarrierProfile, EventDrivenLabelGenerator
-from .main import LabelGenerator
+from .label_generator import LabelGenerator
 from .presets import (
     apply_preset_by_name,
     forward_classification_preset,

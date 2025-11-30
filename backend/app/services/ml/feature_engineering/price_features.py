@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from ...indicators.technical_indicators.momentum import MomentumIndicators
+from ...indicators.technical_indicators.trend import TrendIndicators
 from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -144,12 +145,6 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         ).fillna(0.0)
 
         # トレンド強度（20期間のみ）
-        # TrendIndicators.linregslope を使うか、ここで実装するか。
-        # ここでは簡易実装またはTrendIndicatorsをインポートして使う。
-        # PriceFeatureCalculatorはMomentumIndicatorsをインポートしているがTrendIndicatorsはしていない。
-        # インポートを追加する必要がある。
-        from ...indicators.technical_indicators.trend import TrendIndicators
-
         result_df["Trend_strength_20"] = TrendIndicators.linregslope(
             df["close"], length=20
         ).fillna(0.0)

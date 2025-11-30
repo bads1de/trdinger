@@ -23,6 +23,7 @@ from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
+from app.services.ml.common.ml_utils import optimize_dtypes, generate_cache_key
 
 
 logger = logging.getLogger(__name__)
@@ -181,11 +182,11 @@ class FeatureEngineeringService:
                 ohlcv_data = ohlcv_data.tail(50000)
 
             # キャッシュキーを生成
-            cache_key = self._generate_cache_key(
+            cache_key = generate_cache_key(
                 ohlcv_data,
                 funding_rate_data,
                 open_interest_data,
-                lookback_periods,
+                extra_params=lookback_periods,
             )
 
             # キャッシュから結果を取得
@@ -228,7 +229,7 @@ class FeatureEngineeringService:
             result_df = ohlcv_data.copy()
 
             # データ型を最適化
-            result_df = self._optimize_dtypes(result_df)
+            result_df = optimize_dtypes(result_df)
 
             # 価格特徴量（基本、ラグ、統計、時系列、ボラティリティ）
             # PriceFeatureCalculator.calculate_features が全てを統括して呼び出す
@@ -346,62 +347,6 @@ class FeatureEngineeringService:
 
         return feature_names
 
-    def _generate_cache_key(
-        self,
-        ohlcv_data: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame],
-        open_interest_data: Optional[pd.DataFrame],
-        lookback_periods: Optional[Dict[str, int]],
-    ) -> str:
-        """
-        キャッシュキーを生成
-
-        Args:
-            ohlcv_data: OHLCV価格データ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-            lookback_periods: 各特徴量の計算期間設定
-
-        Returns:
-            生成されたキャッシュキー文字列
-        """
-        import hashlib
-
-        # データのハッシュを計算 (より堅牢なハッシュ)
-        try:
-            # pandas.util.hash_pandas_object はインデックスと値をハッシュ化する
-            # index=True でインデックスも含める
-            ohlcv_hash = hashlib.md5(
-                pd.util.hash_pandas_object(ohlcv_data, index=True).values.tobytes()
-            ).hexdigest()[:8]
-        except Exception:
-            # フォールバック: shapeと先頭・末尾のデータを使用
-            data_str = (
-                str(ohlcv_data.shape)
-                + str(ohlcv_data.iloc[0].values)
-                + str(ohlcv_data.iloc[-1].values)
-            )
-            ohlcv_hash = hashlib.md5(data_str.encode()).hexdigest()[:8]
-        fr_hash = hashlib.md5(
-            str(
-                funding_rate_data.shape if funding_rate_data is not None else "None"
-            ).encode()
-        ).hexdigest()[:8]
-        oi_hash = hashlib.md5(
-            str(
-                open_interest_data.shape if open_interest_data is not None else "None"
-            ).encode()
-        ).hexdigest()[:8]
-        periods_hash = hashlib.md5(
-            str(
-                sorted(lookback_periods.items())
-                if lookback_periods is not None
-                else "None"
-            ).encode()
-        ).hexdigest()[:8]
-
-        return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{periods_hash}"
-
     def _get_from_cache(self, cache_key: str) -> Optional[pd.DataFrame]:
         """
         キャッシュから結果を取得
@@ -451,40 +396,6 @@ class FeatureEngineeringService:
 
         except Exception as e:
             logger.warning(f"キャッシュ保存エラー: {e}")
-
-    def _optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        データ型を最適化してメモリ使用量を削減
-
-        Args:
-            df: 最適化するDataFrame
-
-        Returns:
-            最適化されたDataFrame
-        """
-        try:
-            optimized_df = df.copy()
-
-            for col in optimized_df.columns:
-                if col == "timestamp":
-                    continue
-
-                if optimized_df[col].dtype == "float64":
-                    # float64をfloat32に変換（精度は十分）
-                    optimized_df[col] = optimized_df[col].astype("float32")
-                elif optimized_df[col].dtype == "int64":
-                    # int64をint32に変換（範囲が十分な場合）
-                    # Pandas Series比較を安全に行う - スカラー値として評価
-                    col_min = float(optimized_df[col].min())
-                    col_max = float(optimized_df[col].max())
-                    if col_min >= -2147483648 and col_max <= 2147483647:
-                        optimized_df[col] = optimized_df[col].astype("int32")
-
-            return optimized_df
-
-        except Exception as e:
-            logger.warning(f"データ型最適化エラー: {e}")
-            return df
 
     def _apply_feature_profile(
         self, df: pd.DataFrame, profile: Optional[str] = None

@@ -11,6 +11,129 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    データ型を最適化してメモリ使用量を削減
+
+    Args:
+        df: 最適化するDataFrame
+
+    Returns:
+        最適化されたDataFrame
+    """
+    try:
+        optimized_df = df.copy()
+
+        for col in optimized_df.columns:
+            if col == "timestamp":
+                continue
+
+            if optimized_df[col].dtype == "float64":
+                # float64をfloat32に変換（精度は十分）
+                optimized_df[col] = optimized_df[col].astype("float32")
+            elif optimized_df[col].dtype == "int64":
+                # int64をint32に変換（範囲が十分な場合）
+                col_min = float(optimized_df[col].min())
+                col_max = float(optimized_df[col].max())
+                if col_min >= -2147483648 and col_max <= 2147483647:
+                    optimized_df[col] = optimized_df[col].astype("int32")
+
+        return optimized_df
+
+    except Exception as e:
+        logger.warning(f"データ型最適化エラー: {e}")
+        return df
+
+
+def generate_cache_key(
+    ohlcv_data: pd.DataFrame,
+    funding_rate_data: pd.DataFrame | None = None,
+    open_interest_data: pd.DataFrame | None = None,
+    extra_params: dict | None = None,
+) -> str:
+    """
+    データとパラメータからキャッシュキーを生成
+
+    Args:
+        ohlcv_data: OHLCV価格データ
+        funding_rate_data: ファンディングレートデータ（オプション）
+        open_interest_data: 建玉残高データ（オプション）
+        extra_params: その他のパラメータ（辞書）
+
+    Returns:
+        生成されたキャッシュキー文字列
+    """
+    import hashlib
+
+    try:
+        # pandas.util.hash_pandas_object はインデックスと値をハッシュ化する
+        ohlcv_hash = hashlib.md5(
+            pd.util.hash_pandas_object(ohlcv_data, index=True).values.tobytes()
+        ).hexdigest()[:8]
+    except Exception:
+        # フォールバック
+        data_str = (
+            str(ohlcv_data.shape)
+            + str(ohlcv_data.iloc[0].values)
+            + str(ohlcv_data.iloc[-1].values)
+        )
+        ohlcv_hash = hashlib.md5(data_str.encode()).hexdigest()[:8]
+
+    fr_hash = hashlib.md5(
+        str(
+            funding_rate_data.shape if funding_rate_data is not None else "None"
+        ).encode()
+    ).hexdigest()[:8]
+
+    oi_hash = hashlib.md5(
+        str(
+            open_interest_data.shape if open_interest_data is not None else "None"
+        ).encode()
+    ).hexdigest()[:8]
+
+    params_hash = hashlib.md5(
+        str(
+            sorted(extra_params.items()) if extra_params is not None else "None"
+        ).encode()
+    ).hexdigest()[:8]
+
+    return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{params_hash}"
+
+
+def calculate_price_change(
+    series: pd.Series,
+    periods: int = 1,
+    shift: int = 0,
+    fill_na: bool = True,
+) -> pd.Series:
+    """
+    価格変化率を計算
+
+    Args:
+        series: 価格シリーズ
+        periods: 期間（デフォルト1）
+        shift: シフト量（負の値で未来を参照、正の値で過去を参照）
+        fill_na: NaNを0で埋めるか
+
+    Returns:
+        価格変化率シリーズ
+    """
+    try:
+        if shift != 0:
+            pct_change = series.pct_change(periods=periods).shift(shift)
+        else:
+            pct_change = series.pct_change(periods=periods)
+
+        if fill_na:
+            pct_change = pct_change.fillna(0)
+
+        return pct_change
+
+    except Exception as e:
+        logger.error(f"価格変化率計算エラー: {e}")
+        raise
+
+
 def validate_training_inputs(
     X_train: pd.DataFrame,
     y_train: pd.Series,
