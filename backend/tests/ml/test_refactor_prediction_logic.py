@@ -35,6 +35,7 @@ class TestPredictionLogicRefactoring:
             service.trainer = MagicMock(spec=EnsembleTrainer)
             service.trainer.is_trained = True
             service.trainer.is_single_model = True
+            service.trainer.feature_columns = ["feature1", "feature2", "feature3"]
             return service
 
     def test_predict_returns_probabilities(self, ml_service, sample_features):
@@ -78,6 +79,11 @@ class TestPredictionLogicRefactoring:
             service_single.trainer = MagicMock(spec=EnsembleTrainer)
             service_single.trainer.is_trained = True
             service_single.trainer.is_single_model = True
+            service_single.trainer.feature_columns = [
+                "feature1",
+                "feature2",
+                "feature3",
+            ]
             service_single.trainer.predict.return_value = np.random.rand(
                 len(sample_features), 3
             )
@@ -94,6 +100,11 @@ class TestPredictionLogicRefactoring:
             service_ensemble.trainer = MagicMock(spec=EnsembleTrainer)
             service_ensemble.trainer.is_trained = True
             service_ensemble.trainer.is_single_model = False
+            service_ensemble.trainer.feature_columns = [
+                "feature1",
+                "feature2",
+                "feature3",
+            ]
             service_ensemble.trainer.predict.return_value = np.random.rand(
                 len(sample_features), 3
             )
