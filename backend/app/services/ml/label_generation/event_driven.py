@@ -1,6 +1,6 @@
-"""Event Driven Label Generator
+"""イベント駆動型ラベル生成
 
-Implements event driven (triple barrier) label generation.
+イベント駆動型（トリプルバリア）のラベル生成を実装します。
 """
 
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BarrierProfile:
-    """Barrier profile configuration"""
+    """バリアプロファイル設定"""
 
     base_tp: float
     base_sl: float
@@ -23,7 +23,7 @@ class BarrierProfile:
 
 
 class EventDrivenLabelGenerator:
-    """Event driven (triple barrier) label generator"""
+    """イベント駆動型（トリプルバリア）ラベル生成クラス"""
 
     REGIME_FACTORS: Dict[Union[int, str], dict] = {
         0: {"tp": 1.15, "sl": 1.0, "holding": 1.1},

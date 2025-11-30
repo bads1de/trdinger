@@ -184,8 +184,8 @@ def triple_barrier_method_preset(
         df: OHLCV データフレーム
         timeframe: 時間足
         horizon_n: 垂直バリア（時間切れ）までのバー数
-        pt: Profit Taking multiplier (volatility * pt)
-        sl: Stop Loss multiplier (volatility * sl)
+        pt: 利食い（Profit Taking）乗数 (ボラティリティ * pt)
+        sl: 損切り（Stop Loss）乗数 (ボラティリティ * sl)
         min_ret: 最小リターン閾値
         price_column: 価格カラム名
         volatility_window: ボラティリティ計算ウィンドウ（use_atr=Falseの場合）

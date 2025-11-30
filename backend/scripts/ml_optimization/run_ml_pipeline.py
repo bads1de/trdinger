@@ -881,9 +881,9 @@ class MLPipeline:
         for name, probs in models.items():
             logger.info(f"\n--- {name} ---")
             logger.info(
-                f"{ 'Threshold':<10} | {'RangeRec':<10} | {'TrendPrec':<10} | {'TrendRec':<10} | {'Acc':<10}"
+                f"{ 'Threshold':<10} | {'RangeRec':<10} | {'TrendPrec':<10} | {'TrendRec':<10} | {'Acc':<10} | {'Trades':<5} | {'Score':<10}"
             )
-            logger.info("-" * 60)
+            logger.info("-" * 80)
 
             for th in np.arange(0.5, 0.96, 0.05):
                 y_pred = (probs >= th).astype(int)
@@ -894,9 +894,17 @@ class MLPipeline:
                 range_rec = report["0"]["recall"]
                 trend_prec = report["1"]["precision"]
                 trend_rec = report["1"]["recall"]
+                trend_f1 = report["1"]["f1-score"]
                 acc = report["accuracy"]
+                
+                n_trades = y_pred.sum()
 
-                score = trend_prec if range_rec > 0.6 else 0
+                # optimizeと同じスコア基準: 最低限の精度(0.55)と回数(10)が必要
+                if trend_prec < 0.55 or n_trades < 10:
+                    score = 0.0
+                else:
+                    # F1スコア × log(トレード回数)
+                    score = trend_f1 * np.log1p(n_trades)
 
                 if score > best_score:
                     best_score = score
@@ -906,10 +914,13 @@ class MLPipeline:
                         "range_rec": range_rec,
                         "trend_prec": trend_prec,
                         "trend_rec": trend_rec,
+                        "trend_f1": trend_f1,
+                        "n_trades": n_trades,
+                        "score": score
                     }
 
                 logger.info(
-                    f"{th:.2f}{' (Def)' if th==0.5 else '      ':<6} | {range_rec:.4f}     | {trend_prec:.4f}     | {trend_rec:.4f}     | {acc:.4f}"
+                    f"{th:.2f}{' (Def)' if th==0.5 else '      ':<6} | {range_rec:.4f}     | {trend_prec:.4f}     | {trend_rec:.4f}     | {acc:.4f}     | {n_trades:<5} | {score:.4f}"
                 )
 
         logger.info("\n" + "=" * 60)
@@ -917,9 +928,11 @@ class MLPipeline:
             logger.info(
                 f"🏆 Best Config: {best_result['model']} @ Threshold {best_result['threshold']:.2f}"
             )
-            logger.info(f"   RangeRec: {best_result['range_rec']:.1%} (Target: >60%)")
-            logger.info(f"   TrendPrec:   {best_result['trend_prec']:.1%} (Maximized)")
-            logger.info(f"   TrendRec: {best_result['trend_rec']:.1%}")
+            logger.info(f"   Score: {best_result['score']:.4f} (F1 * log(Trades))")
+            logger.info(f"   Trades: {best_result['n_trades']}")
+            logger.info(f"   TrendPrec: {best_result['trend_prec']:.1%}")
+            logger.info(f"   TrendRec:  {best_result['trend_rec']:.1%}")
+            logger.info(f"   TrendF1:   {best_result['trend_f1']:.1%}")
         else:
             logger.warning("No configuration met the criteria.")
 

@@ -155,9 +155,8 @@ class EnsembleTrainer(BaseMLTrainer):
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率の配列（統一インターフェースのため確率を返す）
-            注意: 以前はクラス予測を返していたが、SingleModelTrainerと統一するために確率を返すように変更。
-            ただし、メタラベリングが有効な場合は、その結果（0/1）を返す。
+            予測確率の配列（2次元配列）
+            メタラベリングが有効な場合は、フィルタリングされた結果（0/1の1次元配列）を返す。
         """
         if self.ensemble_model is None or not self.ensemble_model.is_fitted:
             raise ModelError("学習済みアンサンブルモデルがありません")
@@ -338,10 +337,6 @@ class EnsembleTrainer(BaseMLTrainer):
             try:
                 logger.info("メタラベリングモデルの学習を開始...")
                 # アンサンブルモデルのOOF予測値を取得 (これが一次モデルの確信度となる)
-                # StackingServiceにOOF予測の公開メソッドがあればそれを使う
-                # 現状はrun_ml_pipeline.pyで計算しているものを渡す必要あり
-                # ここでは簡易的にX_trainで予測したものをOOFとみなす（厳密にはリークするが、ここでは動作確認）
-                # TODO: StackingServiceからOOF予測値を公開するように修正
                 primary_oof_proba_train = self.ensemble_model.get_oof_predictions()
                 primary_oof_series_train = pd.Series(
                     primary_oof_proba_train, index=X_train.index

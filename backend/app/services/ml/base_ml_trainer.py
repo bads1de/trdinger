@@ -120,8 +120,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             学習結果の辞書
         """
         with ml_operation_context("MLモデル学習"):
-            # 1. 入力データの検証
-            self._validate_training_data(training_data)
+            # 1. 入力データの基本検証
+            if training_data is None or training_data.empty:
+                raise DataError("学習データが空です")
+            if len(training_data) < 100:
+                raise DataError("学習データが不足しています（最低100行必要）")
 
             # 2. 特徴量を計算
             features_df = self._calculate_features(
@@ -396,21 +399,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """
         pass
 
-    def _validate_training_data(self, training_data: pd.DataFrame) -> None:
-        """入力データの検証"""
-        if training_data is None or training_data.empty:
-            raise DataError("学習データが空です")
-
-        required_columns = ["open", "high", "low", "close", "volume"]
-        missing_columns = [
-            col for col in required_columns if col not in training_data.columns
-        ]
-        if missing_columns:
-            raise DataError(f"必要なカラムが不足しています: {missing_columns}")
-
-        if len(training_data) < 100:
-            raise DataError("学習データが不足しています（最低100行必要）")
-
     def _calculate_features(
         self,
         ohlcv_data: pd.DataFrame,
@@ -480,9 +468,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Dict[str, Any]:
         """時系列クロスバリデーション"""
-        n_splits = training_params.get(
-            "cv_splits", self.config.training.cv_folds
-        )
+        n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
         # ラベル生成設定からパラメータを取得
@@ -491,7 +477,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # 共通ユーティリティを使用してt1を計算（時間足は自動推定）
         from .common.time_series_utils import get_t1_series
 
-        t1 = get_t1_series(X.index, t1_horizon_n, timeframe=self.config.training.label_generation.timeframe)
+        t1 = get_t1_series(
+            X.index,
+            t1_horizon_n,
+            timeframe=self.config.training.label_generation.timeframe,
+        )
 
         pct_embargo = getattr(self.config.training, "pct_embargo", 0.01)
         splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=pct_embargo)
