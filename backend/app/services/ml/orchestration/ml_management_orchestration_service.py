@@ -69,39 +69,36 @@ class MLManagementOrchestrationService:
                     )
                 else:
                     # メタデータを取得できなかった場合
-                    default_metrics = get_default_metrics()
-                    model_info.update(
-                        {
-                            "accuracy": default_metrics["accuracy"],
-                            "precision": default_metrics["precision"],
-                            "recall": default_metrics["recall"],
-                            "f1_score": default_metrics["f1_score"],
-                            "feature_count": 0,
-                            "model_type": "Unknown",
-                            "training_samples": 0,
-                        }
-                    )
+                    self._apply_default_model_metrics(model_info)
 
             except Exception as e:
                 logger.warning(f"モデル詳細情報取得エラー {model['name']}: {e}")
-
                 # エラーの場合はデフォルト値を設定
-                default_metrics = get_default_metrics()
-                model_info.update(
-                    {
-                        "accuracy": default_metrics["accuracy"],
-                        "precision": default_metrics["precision"],
-                        "recall": default_metrics["recall"],
-                        "f1_score": default_metrics["f1_score"],
-                        "feature_count": 0,
-                        "model_type": "Unknown",
-                        "training_samples": 0,
-                    }
-                )
+                self._apply_default_model_metrics(model_info)
 
             formatted_models.append(model_info)
 
         return {"models": formatted_models}
+
+    def _apply_default_model_metrics(self, model_info: Dict[str, Any]) -> None:
+        """
+        モデル情報にデフォルトのメトリクスを適用
+
+        Args:
+            model_info: モデル情報辞書（更新される）
+        """
+        default_metrics = get_default_metrics()
+        model_info.update(
+            {
+                "accuracy": default_metrics["accuracy"],
+                "precision": default_metrics["precision"],
+                "recall": default_metrics["recall"],
+                "f1_score": default_metrics["f1_score"],
+                "feature_count": 0,
+                "model_type": "Unknown",
+                "training_samples": 0,
+            }
+        )
 
     async def delete_model(self, model_id: str) -> Dict[str, str]:
         """
@@ -185,7 +182,9 @@ class MLManagementOrchestrationService:
         """
         MLモデルの現在の状態を取得
         """
-        # MLオーケストレーター削除により、デフォルトステータスを返す
+        from .orchestration_utils import get_model_info_with_defaults
+
+        # デフォルトステータスの初期化
         status = {
             "is_model_loaded": False,
             "is_loaded": False,  # 後方互換性のため保持
@@ -200,25 +199,9 @@ class MLManagementOrchestrationService:
 
         if model_info_data:
             try:
-                metadata = model_info_data["metadata"]
+                # get_model_info_with_defaultsを使用して統一されたフォーマットを取得
+                model_info = get_model_info_with_defaults(model_info_data)
                 metrics = model_info_data["metrics"]
-                file_info = model_info_data["file_info"]
-
-                model_info = {
-                    **metrics,
-                    "model_type": metadata.get("model_type", "LightGBM"),
-                    "last_updated": file_info["modified_at"].isoformat(),
-                    "training_samples": metadata.get("training_samples", 0),
-                    "test_samples": metadata.get("test_samples", 0),
-                    "file_size_mb": file_info["size_mb"],
-                    "feature_count": metadata.get("feature_count", 0),
-                    "num_classes": metadata.get("num_classes", 2),
-                    "best_iteration": metadata.get("best_iteration", 0),
-                    "train_test_split": metadata.get("train_test_split", 0.8),
-                    "random_state": metadata.get("random_state", 42),
-                    "feature_importance": metadata.get("feature_importance", {}),
-                    "classification_report": metadata.get("classification_report", {}),
-                }
 
                 status.update(
                     {
@@ -236,43 +219,18 @@ class MLManagementOrchestrationService:
 
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
-                status["model_info"] = {
-                    "accuracy": 0.0,
-                    "model_type": "Unknown",
-                    "last_updated": (
-                        file_info["modified_at"].isoformat()
-                        if model_info_data and "file_info" in model_info_data
-                        else "不明"
-                    ),
-                    "training_samples": 0,
-                    "file_size_mb": (
-                        file_info["size_mb"]
-                        if model_info_data and "file_info" in model_info_data
-                        else 0.0
-                    ),
-                    "feature_count": 0,
-                }
+                # エラー時はデフォルト値を使用
+                default_model_info = get_model_info_with_defaults(None)
+                status["model_info"] = default_model_info
+                status["performance_metrics"] = get_default_metrics()
                 status["is_model_loaded"] = False
                 status["is_loaded"] = False
                 status["is_trained"] = False
 
-                status["performance_metrics"] = get_default_metrics()
-
         else:
-            # モデルが見つからない場合のデフォルト情報
-            default_metrics = get_default_metrics()
-            status["model_info"] = {
-                "accuracy": default_metrics["accuracy"],
-                "model_type": "No Model",
-                "last_updated": "未学習",
-                "training_samples": 0,
-                "file_size_mb": 0.0,
-                "feature_count": 0,
-            }
-            # モデルが存在しない場合でもperformance_metricsを含める
-            status["is_model_loaded"] = False
-            status["is_loaded"] = False
-            status["is_trained"] = False
+            # モデルが見つからない場合はデフォルト値を使用
+            default_model_info = get_model_info_with_defaults(None)
+            status["model_info"] = default_model_info
             status["performance_metrics"] = get_default_metrics()
 
             # ステータスメッセージを追加

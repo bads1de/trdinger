@@ -16,7 +16,6 @@ from app.services.ml.orchestration.background_task_manager import (
 )
 from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response
-from ..common.evaluation_utils import get_default_metrics
 from .orchestration_utils import get_latest_model_with_info
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -171,46 +170,27 @@ class MLTrainingOrchestrationService:
         Returns:
             モデル情報
         """
+        from .orchestration_utils import get_model_info_with_defaults
+
         try:
-            try:
-                model_info_data = get_latest_model_with_info()
-            except Exception as e:
-                logger.warning(f"モデル情報取得エラー: {e}")
-                model_info_data = None
+            # 最新モデルの情報を取得
+            model_info_data = get_latest_model_with_info()
 
+            # デフォルト値を適用して統一されたフォーマットを取得
+            model_status_base = get_model_info_with_defaults(model_info_data)
+
+            # is_loadedとmodel_pathを追加
             if model_info_data:
-                try:
-                    metadata = model_info_data["metadata"]
-                    metrics = model_info_data["metrics"]
-
-                    model_status = {
-                        "is_loaded": True,
-                        "model_path": model_info_data["path"],
-                        "model_type": metadata.get("model_type", "Unknown"),
-                        "feature_count": metadata.get("feature_count", 0),
-                        "training_samples": metadata.get("training_samples", 0),
-                        **metrics,
-                    }
-                except Exception as e:
-                    logger.warning(f"モデル情報取得エラー: {e}")
-                    default_metrics = get_default_metrics()
-                    model_status = {
-                        "is_loaded": False,
-                        "model_path": None,
-                        "model_type": None,
-                        "feature_count": 0,
-                        "training_samples": 0,
-                        "accuracy": default_metrics["accuracy"],
-                    }
+                model_status = {
+                    "is_loaded": True,
+                    "model_path": model_info_data["path"],
+                    **model_status_base,
+                }
             else:
-                default_metrics = get_default_metrics()
                 model_status = {
                     "is_loaded": False,
                     "model_path": None,
-                    "model_type": None,
-                    "feature_count": 0,
-                    "training_samples": 0,
-                    "accuracy": default_metrics["accuracy"],
+                    **model_status_base,
                 }
 
             return api_response(
@@ -350,20 +330,9 @@ class MLTrainingOrchestrationService:
                             "📋 アンサンブル設定が提供されていません。デフォルト（アンサンブル）を使用します"
                         )
                         # デフォルトのアンサンブル設定を作成（スタッキング）
-                        ensemble_config_dict = {
-                            "enabled": True,
-                            "method": "stacking",
-                            "stacking_params": {
-                                "base_models": [
-                                    "lightgbm",
-                                    "xgboost",
-                                ],
-                                "meta_model": "lightgbm",
-                                "cv_folds": 5,
-                                "use_probas": True,
-                                "random_state": 42,
-                            },
-                        }
+                        from ..common.default_configs import get_default_ensemble_config
+
+                        ensemble_config_dict = get_default_ensemble_config()
 
                     # 単一モデル設定の準備
                     if config.single_model_config:
@@ -385,7 +354,11 @@ class MLTrainingOrchestrationService:
                         logger.info("📋 単一モデル設定が提供されていません")
                         if trainer_type == "single":
                             # 単一モデルが選択されているが設定がない場合はデフォルトを使用
-                            single_model_config_dict = {"model_type": "lightgbm"}
+                            from ..common.default_configs import (
+                                get_default_single_model_config,
+                            )
+
+                            single_model_config_dict = get_default_single_model_config()
                             logger.info(
                                 f"📋 デフォルト単一モデル設定を使用: {single_model_config_dict}"
                             )
