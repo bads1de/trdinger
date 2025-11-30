@@ -82,6 +82,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.is_trained = False
         self._model = None
         self.last_training_results = None
+        self.current_model_path = None
+        self.current_model_metadata = None
 
     @property
     def config(self):
@@ -213,6 +215,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     model_metadata.to_dict(),
                 )
                 training_result["model_path"] = model_path
+                self.current_model_path = model_path
+                self.current_model_metadata = model_metadata.to_dict()
 
             # 9. 学習結果を整形
             result = self._format_training_result(training_result, X, y)
@@ -642,6 +646,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self._model, self.feature_columns, top_n=top_n
         )
 
+        self.is_trained = False
+        self.current_model_path = None
+        self.current_model_metadata = None
+        return True
+
     @safe_ml_operation(
         default_return=False, context="モデル読み込みでエラーが発生しました"
     )
@@ -660,6 +669,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             raise MLModelError("モデルデータにモデルが含まれていません")
 
         self.is_trained = True
+        self.current_model_path = model_path
+        self.current_model_metadata = model_data.get("metadata", {})
         return True
 
     def _cleanup_temporary_files(self, level: CleanupLevel):
@@ -678,12 +689,16 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.scaler = None
             self.feature_columns = None
             self.is_trained = False
+            self.current_model_path = None
+            self.current_model_metadata = None
         except Exception as e:
             logger.warning(f"モデルクリーンアップ警告: {e}")
             self._model = None
             self.scaler = None
             self.feature_columns = None
             self.is_trained = False
+            self.current_model_path = None
+            self.current_model_metadata = None
 
     @safe_ml_operation(
         default_return={

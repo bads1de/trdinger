@@ -358,14 +358,15 @@ class EnsembleTrainer(BaseMLTrainer):
                     )
                     return result
 
-                self.meta_labeling_service = MetaLabelingService()
-                meta_result = self.meta_labeling_service.train(
+                meta_service = MetaLabelingService()
+                meta_result = meta_service.train(
                     X_train=X_train_original_for_meta,  # オリジナルのX_trainを使用
                     y_train=y_train_original_for_meta,  # オリジナルのy_trainを使用
                     primary_proba_train=primary_oof_series_train,
                     base_model_probs_df=oof_base_model_probs_df,  # 各ベースモデルのOOF予測確率DataFrameを渡す
                 )
                 if meta_result["status"] == "success":
+                    self.meta_labeling_service = meta_service
                     logger.info("メタラベリングモデルの学習が完了しました。")
                 else:
                     logger.warning(

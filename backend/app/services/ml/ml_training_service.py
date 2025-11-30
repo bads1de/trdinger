@@ -309,6 +309,28 @@ class MLTrainingService(BaseResourceManager):
                 "trainer_type": self.trainer_type,
             }
 
+    def get_current_model_path(self) -> Optional[str]:
+        """
+        現在ロードされているモデルのパスを取得
+
+        Returns:
+            モデルパス（ロードされていない場合はNone）
+        """
+        if hasattr(self.trainer, "current_model_path"):
+            return self.trainer.current_model_path
+        return None
+
+    def get_current_model_info(self) -> Optional[Dict[str, Any]]:
+        """
+        現在ロードされているモデルのメタデータを取得
+
+        Returns:
+            モデルメタデータ（ロードされていない場合はNone）
+        """
+        if hasattr(self.trainer, "current_model_metadata"):
+            return self.trainer.current_model_metadata
+        return None
+
     def predict(self, features_df: pd.DataFrame) -> Dict[str, Any]:
         """
         予測を実行

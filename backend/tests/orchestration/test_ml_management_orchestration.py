@@ -121,12 +121,19 @@ class TestGetFormattedModels:
             patch(
                 "app.services.ml.orchestration.ml_management_orchestration_service.load_model_metadata_safely"
             ) as mock_load_metadata,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+            ) as mock_training_service,
         ):
             mock_manager.list_models.return_value = sample_model_list
             mock_load_metadata.return_value = {"metadata": sample_model_metadata}
             mock_manager.extract_model_performance_metrics.return_value = {
                 "accuracy": 0.85
             }
+            # アクティブモデルの設定
+            mock_training_service.get_current_model_path.return_value = (
+                "/models/model_20240101_120000.pkl"
+            )
 
             result = await orchestration_service.get_formatted_models()
 
@@ -134,6 +141,9 @@ class TestGetFormattedModels:
             assert len(result["models"]) == 2
             assert result["models"][0]["name"] == "model_20240101_120000.pkl"
             assert result["models"][0]["accuracy"] == 0.85
+            # アクティブモデルの検証
+            assert result["models"][0]["is_active"] is True
+            assert result["models"][1]["is_active"] is False
 
     @pytest.mark.asyncio
     async def test_get_formatted_models_empty(
@@ -297,6 +307,34 @@ class TestDeleteModel:
 
             assert exc_info.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_delete_model_race_condition(
+        self,
+        orchestration_service: MLManagementOrchestrationService,
+        sample_model_list: List[Dict[str, Any]],
+    ):
+        """
+        異常系: ファイル削除時にFileNotFoundErrorが発生した場合
+
+        Args:
+            orchestration_service: オーケストレーションサービス
+            sample_model_list: サンプルモデルリスト
+        """
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch("os.remove", side_effect=FileNotFoundError("File not found")),
+        ):
+            mock_manager.list_models.return_value = sample_model_list
+
+            # FileNotFoundErrorがHTTPException 404として処理されることを確認
+            with pytest.raises(HTTPException) as exc_info:
+                await orchestration_service.delete_model("model_20240101_120000.pkl")
+
+            assert exc_info.value.status_code == 404
+            assert "存在しません" in exc_info.value.detail
+
 
 class TestDeleteAllModels:
     """正常系: 全モデル削除のテスト"""
@@ -377,6 +415,48 @@ class TestDeleteAllModels:
             assert result["deleted_count"] == 1
             assert result["failed_count"] == 1
             assert len(result["failed_models"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_delete_all_models_handles_missing_files_gracefully(
+        self, orchestration_service: MLManagementOrchestrationService
+    ):
+        """
+        異常系: 削除処理中にファイルが消えてもエラーにならない（レースコンディション対策）
+        """
+        from datetime import datetime
+
+        sample_models = [
+            {
+                "name": "model1.pkl",
+                "path": "/models/model1.pkl",
+                "size_mb": 10.0,
+                "modified_at": datetime(2024, 1, 1),
+                "directory": "/models",
+            },
+            {
+                "name": "model2.pkl",
+                "path": "/models/model2.pkl",
+                "size_mb": 10.0,
+                "modified_at": datetime(2024, 1, 1),
+                "directory": "/models",
+            },
+        ]
+
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch("os.remove", side_effect=[None, FileNotFoundError("File deleted")]),
+        ):
+            mock_manager.list_models.return_value = sample_models
+
+            result = await orchestration_service.delete_all_models()
+
+            # 1つ成功、1つ失敗
+            assert result["success"] is True
+            assert result["deleted_count"] == 1
+            assert result["failed_count"] == 1
+            assert "model2.pkl" in result["failed_models"]
 
 
 class TestGetMLStatus:
@@ -474,6 +554,86 @@ class TestGetMLStatus:
             assert "model_info" in result
             assert result["model_info"]["accuracy"] == 0.0
 
+    @pytest.mark.asyncio
+    async def test_get_ml_status_with_missing_metrics_key(
+        self,
+        orchestration_service: MLManagementOrchestrationService,
+        sample_model_metadata: Dict[str, Any],
+    ):
+        """
+        異常系: model_info_dataにmetricsキーがない場合でもエラーにならない
+
+        Args:
+            orchestration_service: オーケストレーションサービス
+            sample_model_metadata: サンプルメタデータ
+        """
+        from datetime import datetime
+
+        # metricsキーを含まないmodel_info_data
+        model_info_data_without_metrics = {
+            "path": "/models/latest.pkl",
+            "metadata": sample_model_metadata,
+            # "metrics": {}  <- 意図的にmetricsキーを省略
+            "file_info": {
+                "size_mb": 10.0,
+                "modified_at": datetime(2024, 1, 1, 12, 0, 0),
+            },
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data_without_metrics
+
+            # KeyErrorが発生しないことを確認
+            result = await orchestration_service.get_ml_status()
+
+            assert result["is_model_loaded"] is True
+            assert "performance_metrics" in result
+            # デフォルトメトリクスが使用される
+            assert "accuracy" in result["performance_metrics"]
+
+    @pytest.mark.asyncio
+    async def test_get_ml_status_metrics_consistency(
+        self, orchestration_service: MLManagementOrchestrationService
+    ):
+        """
+        正常系: メトリクスが二重取得されず、一貫性があることを確認
+        """
+        from datetime import datetime
+
+        sample_metadata = {
+            "model_type": "LightGBM",
+            "feature_count": 50,
+            "training_samples": 10000,
+        }
+
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": sample_metadata,
+            "metrics": {
+                "accuracy": 0.85,
+                "precision": 0.82,
+                "recall": 0.88,
+                "f1_score": 0.85,
+            },
+            "file_info": {
+                "size_mb": 10.0,
+                "modified_at": datetime(2024, 1, 1, 12, 0, 0),
+            },
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
+
+            result = await orchestration_service.get_ml_status()
+
+            # performance_metricsとmodel_info内のメトリクスが一致することを確認
+            assert result["performance_metrics"]["accuracy"] == 0.85
+            assert result["model_info"]["accuracy"] == 0.85
+
 
 class TestGetFeatureImportance:
     """正常系: 特徴量重要度取得のテスト"""
@@ -562,7 +722,59 @@ class TestGetFeatureImportance:
             result = await orchestration_service.get_feature_importance()
 
             assert "feature_importance" in result
-            assert result["feature_importance"] == []
+            assert result["feature_importance"] == {}
+
+    @pytest.mark.asyncio
+    async def test_feature_importance_returns_dict_when_no_importance_data(
+        self, orchestration_service: MLManagementOrchestrationService
+    ):
+        """
+        正常系: feature_importanceがメタデータに存在しない場合も辞書を返す
+        """
+        from datetime import datetime
+
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": {},  # feature_importanceなし
+            "metrics": {},
+            "file_info": {"size_mb": 10.0, "modified_at": datetime(2024, 1, 1)},
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
+
+            result = await orchestration_service.get_feature_importance()
+
+            assert isinstance(result["feature_importance"], dict)
+            assert result["feature_importance"] == {}
+
+    @pytest.mark.asyncio
+    async def test_feature_importance_returns_dict_when_load_error(
+        self, orchestration_service: MLManagementOrchestrationService
+    ):
+        """
+        異常系: 読み込みエラー時も辞書を返す
+        """
+        from datetime import datetime
+
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": {"feature_importance": "invalid"},  # 不正なデータ
+            "metrics": {},
+            "file_info": {"size_mb": 10.0, "modified_at": datetime(2024, 1, 1)},
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
+
+            result = await orchestration_service.get_feature_importance()
+
+            assert isinstance(result["feature_importance"], dict)
+            assert result["feature_importance"] == {}
 
 
 class TestCleanupOldModels:
@@ -604,15 +816,59 @@ class TestLoadModel:
             orchestration_service: オーケストレーションサービス
             sample_model_list: サンプルモデルリスト
         """
-        with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+            ) as mock_training_service,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.MLManagementOrchestrationService.get_current_model_info"
+            ) as mock_get_info,
+        ):
             mock_manager.list_models.return_value = sample_model_list
+            mock_training_service.load_model.return_value = True
+            mock_get_info.return_value = {"loaded": True}
 
             result = await orchestration_service.load_model("model_20240101_120000.pkl")
 
             assert result["success"] is True
             assert "読み込み" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_load_model_calls_training_service(
+        self,
+        orchestration_service: MLManagementOrchestrationService,
+        sample_model_list: List[Dict[str, Any]],
+    ):
+        """
+        正常系: モデル読み込み時にMLTrainingService.load_modelが呼び出される
+        """
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+            ) as mock_training_service,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.MLManagementOrchestrationService.get_current_model_info"
+            ) as mock_get_info,
+        ):
+            # Setup mocks
+            mock_manager.list_models.return_value = sample_model_list
+            mock_training_service.load_model.return_value = True
+            mock_get_info.return_value = {"loaded": True}
+
+            # Execute
+            result = await orchestration_service.load_model("model_20240101_120000.pkl")
+
+            # Verify
+            assert result["success"] is True
+            mock_training_service.load_model.assert_called_once_with(
+                "/models/model_20240101_120000.pkl"
+            )
 
     @pytest.mark.asyncio
     async def test_load_model_not_found(
@@ -649,27 +905,28 @@ class TestGetCurrentModelInfo:
     ):
         """
         正常系: 現在のモデル情報が正常に取得される
-
-        Args:
-            orchestration_service: オーケストレーションサービス
-            sample_model_metadata: サンプルメタデータ
         """
         from datetime import datetime
 
-        model_info_data = {
-            "path": "/models/latest.pkl",
-            "metadata": sample_model_metadata,
+        current_metadata = {
+            **sample_model_metadata,
             "metrics": {"accuracy": 0.85},
-            "file_info": {
-                "size_mb": 10.0,
-                "modified_at": datetime(2024, 1, 1, 12, 0, 0),
-            },
         }
 
-        with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
-        ) as mock_get_model:
-            mock_get_model.return_value = model_info_data
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+            ) as mock_training_service,
+            patch("os.path.exists", return_value=True),
+            patch("os.stat") as mock_stat,
+        ):
+
+            mock_training_service.get_current_model_path.return_value = (
+                "/models/latest.pkl"
+            )
+            mock_training_service.get_current_model_info.return_value = current_metadata
+
+            mock_stat.return_value.st_mtime = datetime(2024, 1, 1, 12, 0, 0).timestamp()
 
             result = await orchestration_service.get_current_model_info()
 
@@ -683,19 +940,118 @@ class TestGetCurrentModelInfo:
     ):
         """
         正常系: モデルが存在しない場合
-
-        Args:
-            orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
-        ) as mock_get_model:
-            mock_get_model.return_value = None
+            "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+        ) as mock_training_service:
+            mock_training_service.get_current_model_path.return_value = None
+            mock_training_service.get_current_model_info.return_value = None
 
             result = await orchestration_service.get_current_model_info()
 
             assert result["loaded"] is False
-            assert "見つかりません" in result["message"]
+            assert "ロードされていません" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_get_current_model_info_with_classification_report_only(
+        self, orchestration_service: MLManagementOrchestrationService
+    ):
+        """
+        正常系: classification_reportのみ存在する場合メトリクスを抽出する
+
+        Args:
+            orchestration_service: オーケストレーションサービス
+        """
+        from datetime import datetime
+
+        # metricsキーなし、classification_reportのみ
+        current_metadata = {
+            "model_type": "LightGBM",
+            "feature_count": 50,
+            "training_samples": 10000,
+            "classification_report": {
+                "0": {"precision": 0.80, "recall": 0.85, "f1-score": 0.82},
+                "1": {"precision": 0.85, "recall": 0.90, "f1-score": 0.87},
+                "accuracy": 0.88,
+                "macro avg": {"precision": 0.82, "recall": 0.88, "f1-score": 0.85},
+            },
+        }
+
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+            ) as mock_training_service,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch("os.path.exists", return_value=True),
+            patch("os.stat") as mock_stat,
+        ):
+            mock_training_service.get_current_model_path.return_value = (
+                "/models/latest.pkl"
+            )
+            mock_training_service.get_current_model_info.return_value = current_metadata
+
+            # extract_model_performance_metricsがclassification_reportから抽出
+            mock_manager.extract_model_performance_metrics.return_value = {
+                "accuracy": 0.88,
+                "precision": 0.82,
+                "recall": 0.88,
+                "f1_score": 0.85,
+            }
+
+            mock_stat.return_value.st_mtime = datetime(2024, 1, 1, 12, 0, 0).timestamp()
+
+            result = await orchestration_service.get_current_model_info()
+
+            assert result["loaded"] is True
+            assert result["accuracy"] == 0.88
+            assert result["precision"] == 0.82
+            # extract_model_performance_metricsが呼び出されたことを確認
+            mock_manager.extract_model_performance_metrics.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_current_model_info_with_extract_error(
+        self, orchestration_service: MLManagementOrchestrationService
+    ):
+        """
+        異常系: extract_model_performance_metricsが例外を投げてもデフォルト値を使用
+        """
+        from datetime import datetime
+
+        current_metadata = {
+            "model_type": "LightGBM",
+            "feature_count": 50,
+            "training_samples": 10000,
+        }
+
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+            ) as mock_training_service,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch("os.path.exists", return_value=True),
+            patch("os.stat") as mock_stat,
+        ):
+            mock_training_service.get_current_model_path.return_value = (
+                "/models/latest.pkl"
+            )
+            mock_training_service.get_current_model_info.return_value = current_metadata
+
+            # extract_model_performance_metricsが例外を投げる
+            mock_manager.extract_model_performance_metrics.side_effect = Exception(
+                "Extraction error"
+            )
+
+            mock_stat.return_value.st_mtime = datetime(2024, 1, 1, 12, 0, 0).timestamp()
+
+            result = await orchestration_service.get_current_model_info()
+
+            # エラーが発生してもデフォルト値を返すべき
+            assert result["loaded"] is True
+            assert result["accuracy"] == 0.0  # デフォルト値
 
 
 class TestMLConfigManagement:
@@ -812,16 +1168,14 @@ class TestIsActiveModel:
         sample_model_list: List[Dict[str, Any]],
     ):
         """
-        正常系: 最新モデルがアクティブと判定される
-
-        Args:
-            orchestration_service: オーケストレーションサービス
-            sample_model_list: サンプルモデルリスト
+        正常系: ロードされているモデルとパスが一致する場合
         """
         with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = sample_model_list[0]["path"]
+            "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+        ) as mock_training_service:
+            mock_training_service.get_current_model_path.return_value = (
+                sample_model_list[0]["path"]
+            )
 
             result = orchestration_service._is_active_model(sample_model_list[0])
 
@@ -833,93 +1187,117 @@ class TestIsActiveModel:
         sample_model_list: List[Dict[str, Any]],
     ):
         """
-        正常系: 古いモデルが非アクティブと判定される
-
-        Args:
-            orchestration_service: オーケストレーションサービス
-            sample_model_list: サンプルモデルリスト
+        正常系: ロードされているモデルとパスが一致しない場合
         """
         with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = sample_model_list[0]["path"]
+            "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+        ) as mock_training_service:
+            mock_training_service.get_current_model_path.return_value = (
+                "/models/other_model.pkl"
+            )
 
-            result = orchestration_service._is_active_model(sample_model_list[1])
+            result = orchestration_service._is_active_model(sample_model_list[0])
 
             assert result is False
 
-    def test_is_active_model_single_model(
+    def test_is_active_model_none(
         self,
         orchestration_service: MLManagementOrchestrationService,
         sample_model_list: List[Dict[str, Any]],
     ):
         """
-        正常系: 単一モデルの場合はアクティブと判定される
-
-        Args:
-            orchestration_service: オーケストレーションサービス
-            sample_model_list: サンプルモデルリスト
+        正常系: モデルがロードされていない場合
         """
         with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = None
-            mock_manager.list_models.return_value = [sample_model_list[0]]
+            "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+        ) as mock_training_service:
+            mock_training_service.get_current_model_path.return_value = None
 
             result = orchestration_service._is_active_model(sample_model_list[0])
 
-            assert result is True
+            assert result is False
+
+    def test_is_active_model_handles_exceptions(
+        self, orchestration_service: MLManagementOrchestrationService
+    ):
+        """
+        異常系: 例外発生時はFalseを返す
+        """
+        from datetime import datetime
+
+        sample_model = {
+            "name": "test.pkl",
+            "path": "/models/test.pkl",
+            "size_mb": 10.0,
+            "modified_at": datetime(2024, 1, 1),
+            "directory": "/models",
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.ml_training_service"
+        ) as mock_service:
+            # AttributeError
+            mock_service.get_current_model_path.side_effect = AttributeError(
+                "Method not found"
+            )
+            assert orchestration_service._is_active_model(sample_model) is False
+
+            # TypeError
+            mock_service.get_current_model_path.side_effect = TypeError("Type mismatch")
+            assert orchestration_service._is_active_model(sample_model) is False
 
 
 class TestEdgeCases:
-    """境界値テスト"""
+    """エッジケースのテスト"""
 
     @pytest.mark.asyncio
     async def test_get_feature_importance_with_zero_top_n(
         self, orchestration_service: MLManagementOrchestrationService
     ):
         """
-        境界値: top_n=0の場合
-
-        Args:
-            orchestration_service: オーケストレーションサービス
+        エッジケース: top_n=0の場合
         """
+        from datetime import datetime
+
         feature_importance = {"feature1": 0.5, "feature2": 0.3}
 
-        with (
-            patch(
-                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-            ) as mock_manager,
-            patch("os.path.exists", return_value=True),
-        ):
-            mock_manager.get_latest_model.return_value = "/models/latest.pkl"
-            mock_manager.load_model.return_value = {
-                "metadata": {"feature_importance": feature_importance}
-            }
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": {"feature_importance": feature_importance},
+            "metrics": {},
+            "file_info": {"size_mb": 10.0, "modified_at": datetime(2024, 1, 1)},
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
 
             result = await orchestration_service.get_feature_importance(top_n=0)
 
             assert "feature_importance" in result
-            assert len(result["feature_importance"]) == 0
+            assert result["feature_importance"] == {}
 
     @pytest.mark.asyncio
     async def test_delete_model_with_special_characters(
         self,
         orchestration_service: MLManagementOrchestrationService,
+        sample_model_list: List[Dict[str, Any]],
     ):
         """
-        境界値: 特殊文字を含むモデル名
-
-        Args:
-            orchestration_service: オーケストレーションサービス
+        エッジケース: 特殊文字を含むモデル名の削除
         """
+        from datetime import datetime
+
+        # 特殊文字を含むモデルをリストに追加
         special_model = {
-            "name": "model-test_2024@01#01.pkl",
-            "path": "/models/model-test_2024@01#01.pkl",
+            "name": "model name with spaces.pkl",
+            "path": "/models/model name with spaces.pkl",
             "size_mb": 10.0,
             "modified_at": datetime(2024, 1, 1),
             "directory": "/models",
         }
+        models_list = sample_model_list + [special_model]
 
         with (
             patch(
@@ -928,10 +1306,10 @@ class TestEdgeCases:
             patch("os.path.exists", return_value=True),
             patch("os.remove"),
         ):
-            mock_manager.list_models.return_value = [special_model]
+            mock_manager.list_models.return_value = models_list
 
-            result = await orchestration_service.delete_model(
-                "model-test_2024@01#01.pkl"
-            )
+            # スペースや特殊文字を含む名前
+            special_name = quote("model name with spaces.pkl")
+            result = await orchestration_service.delete_model(special_name)
 
             assert result["success"] is True

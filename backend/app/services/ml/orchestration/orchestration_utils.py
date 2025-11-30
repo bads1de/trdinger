@@ -120,7 +120,8 @@ def get_model_info_with_defaults(
 
     # モデル情報が存在する場合
     metadata = model_info["metadata"]
-    metrics = model_info["metrics"]
+    # metricsキーが存在しない場合でも安全にアクセス
+    metrics = model_info.get("metrics", get_default_metrics())
     file_info = model_info["file_info"]
 
     return {

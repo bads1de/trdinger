@@ -4,12 +4,15 @@ ML管理 オーケストレーションサービス
 
 import logging
 import os
+from datetime import datetime
 from typing import Any, Dict, List
 from urllib.parse import unquote
 
 from fastapi import HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from app.services.ml.common.ml_config_manager import ml_config_manager
+from app.services.ml.ml_training_service import ml_training_service
 from app.services.ml.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response
@@ -31,7 +34,8 @@ class MLManagementOrchestrationService:
         """
         学習済みモデルの一覧を取得し、フロントエンド表示用に整形する
         """
-        models = model_manager.list_models("*")
+        # ブロッキングI/Oをスレッドプールで実行
+        models = await run_in_threadpool(model_manager.list_models, "*")
 
         # モデル情報を整形
         formatted_models = []
@@ -49,13 +53,19 @@ class MLManagementOrchestrationService:
 
             # モデルの詳細情報を取得
             try:
-                model_data = load_model_metadata_safely(model["path"])
+                # ブロッキングI/Oをスレッドプールで実行
+                model_data = await run_in_threadpool(
+                    load_model_metadata_safely, model["path"]
+                )
                 if model_data:
                     metadata = model_data["metadata"]
 
                     # ModelManagerユーティリティで性能メトリクスを抽出
-                    metrics = model_manager.extract_model_performance_metrics(
-                        model["path"], metadata=metadata
+                    # これも重い処理の可能性があるためスレッドプールで実行
+                    metrics = await run_in_threadpool(
+                        model_manager.extract_model_performance_metrics,
+                        model["path"],
+                        metadata=metadata,
                     )
                     model_info.update(metrics)
 
@@ -71,8 +81,15 @@ class MLManagementOrchestrationService:
                     # メタデータを取得できなかった場合
                     self._apply_default_model_metrics(model_info)
 
+            except (KeyError, ValueError, OSError) as e:
+                logger.warning(
+                    f"モデル詳細情報取得エラー {model['name']}: {e}", exc_info=True
+                )
+                # エラーの場合はデフォルト値を設定
+                self._apply_default_model_metrics(model_info)
             except Exception as e:
-                logger.warning(f"モデル詳細情報取得エラー {model['name']}: {e}")
+                # 予期しない例外はエラーレベルで記録
+                logger.error(f"予期しないエラー {model['name']}: {e}", exc_info=True)
                 # エラーの場合はデフォルト値を設定
                 self._apply_default_model_metrics(model_info)
 
@@ -108,7 +125,8 @@ class MLManagementOrchestrationService:
 
         decoded_model_id = unquote(model_id)
 
-        models = model_manager.list_models("*")
+        # ブロッキングI/Oをスレッドプールで実行
+        models = await run_in_threadpool(model_manager.list_models, "*")
         target_model = None
 
         for model in models:
@@ -123,14 +141,14 @@ class MLManagementOrchestrationService:
                 status_code=404, detail=f"モデルが見つかりません: {decoded_model_id}"
             )
 
-        if not os.path.exists(target_model["path"]):
-            logger.warning(f"モデルファイルが存在しません: {target_model['path']}")
-            raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
-
         try:
-            os.remove(target_model["path"])
+            # ブロッキングI/Oをスレッドプールで実行
+            await run_in_threadpool(os.remove, target_model["path"])
             logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
             return api_response(success=True, message="モデルが削除されました")
+        except FileNotFoundError:
+            logger.warning(f"モデルファイルが存在しません: {target_model['path']}")
+            raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
         except Exception as e:
             logger.error(f"モデルファイル削除エラー: {e}")
             raise HTTPException(
@@ -141,7 +159,8 @@ class MLManagementOrchestrationService:
         """
         すべてのモデルを削除
         """
-        models = model_manager.list_models("*")
+        # ブロッキングI/Oをスレッドプールで実行
+        models = await run_in_threadpool(model_manager.list_models, "*")
 
         if not models:
             return {
@@ -155,12 +174,15 @@ class MLManagementOrchestrationService:
 
         for model in models:
             try:
-                if os.path.exists(model["path"]):
-                    os.remove(model["path"])
-                    deleted_count += 1
-                else:
-                    logger.warning(f"モデルファイルが存在しません: {model['path']}")
-                    failed_models.append(model["name"])
+                # Bug #4修正: os.path.exists()チェックを削除してos.removeを直接呼び出し
+                # これによりTOC-TOU脆弱性を回避
+                # ブロッキングI/Oをスレッドプールで実行
+                await run_in_threadpool(os.remove, model["path"])
+                logger.info(f"モデル削除成功: {model['name']}")
+                deleted_count += 1
+            except FileNotFoundError:
+                logger.warning(f"モデルファイルが存在しません: {model['path']}")
+                failed_models.append(model["name"])
             except Exception as e:
                 logger.error(f"モデル削除エラー: {model['name']} -> {e}")
                 failed_models.append(model["name"])
@@ -168,7 +190,7 @@ class MLManagementOrchestrationService:
         if failed_models:
             message = f"{deleted_count}個のモデルを削除しました。{len(failed_models)}個のモデルで削除に失敗しました: {', '.join(failed_models)}"
         else:
-            message = f"すべてのモデル（{deleted_count}個）が削除されました"
+            message = f"すべてのモデル({deleted_count}個)が削除されました"
 
         return {
             "success": True,
@@ -195,13 +217,22 @@ class MLManagementOrchestrationService:
             "training_samples": 0,
         }
 
-        model_info_data = get_latest_model_with_info()
+        # ブロッキングI/Oをスレッドプールで実行
+        model_info_data = await run_in_threadpool(get_latest_model_with_info)
 
         if model_info_data:
             try:
                 # get_model_info_with_defaultsを使用して統一されたフォーマットを取得
+                # Bug #1修正: model_infoに既にメトリクスが含まれているので、そこから取得
                 model_info = get_model_info_with_defaults(model_info_data)
-                metrics = model_info_data["metrics"]
+
+                # model_infoからメトリクスを抽出
+                metrics = {
+                    "accuracy": model_info.get("accuracy", 0.0),
+                    "precision": model_info.get("precision", 0.0),
+                    "recall": model_info.get("recall", 0.0),
+                    "f1_score": model_info.get("f1_score", 0.0),
+                }
 
                 status.update(
                     {
@@ -245,7 +276,8 @@ class MLManagementOrchestrationService:
         """
         特徴量重要度を取得
         """
-        model_info_data = get_latest_model_with_info()
+        # ブロッキングI/Oをスレッドプールで実行
+        model_info_data = await run_in_threadpool(get_latest_model_with_info)
 
         if model_info_data:
             try:
@@ -260,18 +292,21 @@ class MLManagementOrchestrationService:
 
                     return {"feature_importance": dict(sorted_features)}
                 else:
-                    return {"feature_importance": []}
+                    # Bug #2修正: 空リストではなく空辞書を返す
+                    return {"feature_importance": {}}
             except Exception as e:
                 logger.warning(f"特徴量重要度取得エラー: {e}")
-                return {"feature_importance": []}
+                # Bug #2修正: 空リストではなく空辞書を返す
+                return {"feature_importance": {}}
         else:
-            return {"feature_importance": []}
+            # Bug #2修正: 空リストではなく空辞書を返す
+            return {"feature_importance": {}}
 
     async def cleanup_old_models(self) -> Dict[str, str]:
         """
         古いモデルファイルをクリーンアップ
         """
-        model_manager.cleanup_expired_models()
+        await run_in_threadpool(model_manager.cleanup_expired_models)
         return {"message": "古いモデルファイルが削除されました"}
 
     async def load_model(self, model_name: str) -> Dict[str, Any]:
@@ -280,7 +315,8 @@ class MLManagementOrchestrationService:
         """
         try:
             # モデルファイルのパスを特定
-            models = model_manager.list_models()
+            # ブロッキングI/Oをスレッドプールで実行
+            models = await run_in_threadpool(model_manager.list_models)
             target_model = None
 
             for model in models:
@@ -295,8 +331,10 @@ class MLManagementOrchestrationService:
                 }
 
             # MLオーケストレーター削除により、直接モデルマネージャーで読み込み
-            success = (
-                True  # モデルマネージャーは既にモデルを管理しているので成功とみなす
+            # 修正: MLTrainingServiceにロードを依頼する
+            # ブロッキングI/Oをスレッドプールで実行
+            success = await run_in_threadpool(
+                ml_training_service.load_model, target_model["path"]
             )
 
             if success:
@@ -321,28 +359,58 @@ class MLManagementOrchestrationService:
         """
         現在読み込まれているモデル情報を取得
         """
-        model_info_data = get_latest_model_with_info()
+        try:
+            # MLTrainingServiceから現在のモデル情報を取得
+            current_model_path = ml_training_service.get_current_model_path()
+            current_metadata = ml_training_service.get_current_model_info()
 
-        if model_info_data:
-            try:
-                metadata = model_info_data["metadata"]
-                metrics = model_info_data["metrics"]
-                file_info = model_info_data["file_info"]
+            if current_model_path and current_metadata:
+                # Bug #5修正: メトリクス抽出を統一的に処理
+                metrics = get_default_metrics()
+
+                try:
+                    # まずextract_model_performance_metricsを試す
+                    # ブロッキングI/Oをスレッドプールで実行
+                    extracted_metrics = await run_in_threadpool(
+                        model_manager.extract_model_performance_metrics,
+                        current_model_path,
+                        metadata=current_metadata,
+                    )
+                    metrics.update(extracted_metrics)
+                except Exception as e:
+                    logger.warning(f"メトリクス抽出エラー: {e}")
+                    # extract失敗時はメタデータ内のmetricsを直接使用
+                    if "metrics" in current_metadata:
+                        metrics.update(current_metadata["metrics"])
+                    # どちらもない場合はデフォルト値を使用(既に初期化済み)
+
+                # ファイル情報の取得（ファイルが存在する場合）
+                last_updated = datetime.now().isoformat()
+
+                # ブロッキングI/Oをスレッドプールで実行
+                if await run_in_threadpool(os.path.exists, current_model_path):
+                    stat = await run_in_threadpool(os.stat, current_model_path)
+                    last_updated = datetime.fromtimestamp(stat.st_mtime).isoformat()
 
                 return {
                     "loaded": True,
-                    "model_type": metadata.get("model_type", "Unknown"),
+                    "model_type": current_metadata.get("model_type", "Unknown"),
                     "is_trained": True,
-                    "feature_count": metadata.get("feature_count", 0),
-                    "training_samples": metadata.get("training_samples", 0),
-                    "accuracy": metrics["accuracy"],
-                    "last_updated": file_info["modified_at"].isoformat(),
+                    "feature_count": current_metadata.get("feature_count", 0),
+                    "training_samples": current_metadata.get("training_samples", 0),
+                    "accuracy": metrics.get("accuracy", 0.0),
+                    "precision": metrics.get("precision", 0.0),
+                    "recall": metrics.get("recall", 0.0),
+                    "f1_score": metrics.get("f1_score", 0.0),
+                    "last_updated": last_updated,
+                    "path": current_model_path,
                 }
-            except Exception as e:
-                logger.warning(f"現在のモデル情報取得エラー: {e}")
-                return {"loaded": False, "error": str(e)}
-        else:
-            return {"loaded": False, "message": "モデルが見つかりません"}
+            else:
+                return {"loaded": False, "message": "モデルがロードされていません"}
+
+        except Exception as e:
+            logger.warning(f"現在のモデル情報取得エラー: {e}")
+            return {"loaded": False, "error": str(e)}
 
     def get_ml_config_dict(self) -> Dict[str, Any]:
         """
@@ -419,16 +487,18 @@ class MLManagementOrchestrationService:
             アクティブの場合はTrue、そうでない場合はFalse
         """
         try:
-            # 最新のモデルファイルと比較してアクティブか判定
-            latest_model = model_manager.get_latest_model("*")
-            if latest_model:
-                # パスが一致する場合はアクティブと判定
-                return model["path"] == latest_model
+            # 現在ロードされているモデルと比較してアクティブか判定
+            current_model_path = ml_training_service.get_current_model_path()
+            if current_model_path:
+                return model["path"] == current_model_path
 
-            # モデルが1つだけの場合はアクティブと判定
-            all_models = model_manager.list_models("*")
-            return len(all_models) == 1 and all_models[0]["path"] == model["path"]
+            return False
 
+        except (AttributeError, TypeError) as e:
+            # Bug #3修正: 予期される例外を明示的にキャッチ
+            logger.debug(f"アクティブモデル判定スキップ: {e}")
+            return False
         except Exception as e:
-            logger.warning(f"アクティブモデル判定エラー: {e}")
+            # 予期しない例外はログに記録して再スロー
+            logger.error(f"予期しないアクティブモデル判定エラー: {e}", exc_info=True)
             return False

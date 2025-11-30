@@ -9,14 +9,12 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_ml_training_orchestration_service
 from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
-from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +101,9 @@ class MLTrainingConfig(BaseModel):
     validation_split: float = Field(default=0.2, description="検証データ分割比率")
     prediction_horizon: int = Field(default=24, description="予測期間（時間）")
     threshold_up: float = Field(default=0.02, description="上昇判定閾値（方向予測用）")
-    threshold_down: float = Field(default=-0.02, description="下落判定閾値（方向予測用）")
+    threshold_down: float = Field(
+        default=-0.02, description="下落判定閾値（方向予測用）"
+    )
     # ボラティリティ予測用パラメータ
     quantile_threshold: float = Field(
         default=0.33, description="トレンド判定の分位数閾値（上位N%）"
@@ -171,7 +171,6 @@ class MLStatusResponse(BaseModel):
 async def start_ml_training(
     config: MLTrainingConfig,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
     orchestration_service: MLTrainingOrchestrationService = Depends(
         get_ml_training_orchestration_service
     ),
@@ -194,7 +193,7 @@ async def start_ml_training(
 
     async def _start_training():
         return await orchestration_service.start_training(
-            config=config, background_tasks=background_tasks, db=db
+            config=config, background_tasks=background_tasks
         )
 
     return await ErrorHandler.safe_execute_async(_start_training)

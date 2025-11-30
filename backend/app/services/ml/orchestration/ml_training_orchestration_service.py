@@ -202,8 +202,22 @@ class MLTrainingOrchestrationService:
                 },
             )
         except Exception as e:
-            logger.error(f"MLモデル情報取得エラー: {e}")
-            raise
+            logger.error(f"MLモデル情報取得エラー: {e}", exc_info=True)
+            # エラー時もデフォルト値で応答する（is_loaded=False）
+            from .orchestration_utils import get_model_info_with_defaults
+
+            default_model_status = get_model_info_with_defaults(None)
+            default_model_status["is_loaded"] = False
+            default_model_status["model_path"] = None
+
+            return api_response(
+                success=True,
+                message="MLモデル情報を取得しました（デフォルト値）",
+                data={
+                    "model_status": default_model_status,
+                    "last_training": None,
+                },
+            )
 
     async def stop_training(self) -> Dict[str, Any]:
         """
