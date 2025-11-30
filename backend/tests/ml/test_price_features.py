@@ -69,7 +69,63 @@ def test_calculate_price_features(sample_ohlcv_data):
         assert not result[feature].isna().all(), f"Feature {feature} is all NaN"
 
 
-@pytest.mark.skip(reason="ボラティリティ特徴量はPriceFeatureCalculatorに存在しないため")
+def test_calculate_lag_features(sample_ohlcv_data):
+    """ラグ特徴量のテスト（AdvancedFeatureEngineerから移行）"""
+    calculator = PriceFeatureCalculator()
+    lookback_periods = {}
+
+    result = calculator.calculate_lag_features(sample_ohlcv_data, lookback_periods)
+
+    expected_features = [
+        "close_lag_1",
+        "close_lag_24",
+        "returns_lag_24",
+        "cumulative_returns_24",
+    ]
+
+    for feature in expected_features:
+        assert feature in result.columns, f"Missing feature: {feature}"
+
+
+def test_calculate_statistical_features(sample_ohlcv_data):
+    """統計的特徴量のテスト（AdvancedFeatureEngineerから移行）"""
+    calculator = PriceFeatureCalculator()
+    lookback_periods = {}
+
+    result = calculator.calculate_statistical_features(
+        sample_ohlcv_data, lookback_periods
+    )
+
+    expected_features = [
+        "Close_std_20",
+        "Close_range_20",
+        "Historical_Volatility_20",
+        "Price_Skewness_20",
+        "Price_Kurtosis_20",
+    ]
+
+    for feature in expected_features:
+        assert feature in result.columns, f"Missing feature: {feature}"
+
+
+def test_calculate_time_series_features(sample_ohlcv_data):
+    """時系列特徴量のテスト（AdvancedFeatureEngineerから移行）"""
+    calculator = PriceFeatureCalculator()
+    lookback_periods = {}
+
+    result = calculator.calculate_time_series_features(
+        sample_ohlcv_data, lookback_periods
+    )
+
+    expected_features = [
+        "Close_deviation_from_ma_20",
+        "Trend_strength_20",
+    ]
+
+    for feature in expected_features:
+        assert feature in result.columns, f"Missing feature: {feature}"
+
+
 def test_calculate_volatility_features(sample_ohlcv_data):
     """ボラティリティ特徴量のテスト"""
     calculator = PriceFeatureCalculator()
@@ -79,28 +135,7 @@ def test_calculate_volatility_features(sample_ohlcv_data):
         sample_ohlcv_data, lookback_periods
     )
 
-    expected_features = ["ATR_20"]
-
-    for feature in expected_features:
-        assert feature in result.columns, f"Missing feature: {feature}"
-        assert not result[feature].isna().all(), f"Feature {feature} is all NaN"
-
-
-@pytest.mark.skip(reason="出来高特徴量はPriceFeatureCalculatorに存在しないため")
-def test_calculate_volume_features(sample_ohlcv_data):
-    """出来高特徴量のテスト"""
-    calculator = PriceFeatureCalculator()
-    lookback_periods = {"volume": 20}
-
-    result = calculator.calculate_volume_features(sample_ohlcv_data, lookback_periods)
-
-    expected_features = [
-        "Volume_MA_20",
-        "Price_Volume_Trend",
-        "VWAP",
-        "VWAP_Deviation",
-        "Volume_Trend",
-    ]
+    expected_features = ["Realized_Vol_20", "Parkinson_Vol_20"]
 
     for feature in expected_features:
         assert feature in result.columns, f"Missing feature: {feature}"

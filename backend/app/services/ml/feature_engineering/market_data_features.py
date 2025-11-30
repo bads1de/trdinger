@@ -60,6 +60,81 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             result_df = self.calculate_composite_features(
                 result_df, funding_rate_data, open_interest_data, lookback_periods
             )
+            result_df = self.calculate_market_dynamics_features(
+                result_df, funding_rate_data, open_interest_data, lookback_periods
+            )
+
+        return result_df
+
+    def calculate_market_dynamics_features(
+        self,
+        df: pd.DataFrame,
+        funding_rate_data: pd.DataFrame,
+        open_interest_data: pd.DataFrame,
+        lookback_periods: Dict[str, int],
+    ) -> pd.DataFrame:
+        """
+        市場ダイナミクス特徴量を計算 (OI/FR/Priceの高度な相互作用)
+        AdvancedFeatureEngineerから移行
+        """
+        try:
+            result_df = df.copy()
+
+            # 両方のデータをマージ
+            if "timestamp" in funding_rate_data.columns:
+                funding_rate_data = funding_rate_data.set_index("timestamp")
+            if "timestamp" in open_interest_data.columns:
+                open_interest_data = open_interest_data.set_index("timestamp")
+
+            merged_df = result_df.join(funding_rate_data, how="left", rsuffix="_fr")
+            merged_df = merged_df.join(open_interest_data, how="left", rsuffix="_oi")
+
+            # カラムを特定
+            fr_column = None
+            for col in ["funding_rate", "fundingRate", "rate"]:
+                if col in merged_df.columns:
+                    fr_column = col
+                    break
+
+            oi_column = None
+            for col in ["open_interest", "openInterest", "oi"]:
+                if col in merged_df.columns:
+                    oi_column = col
+                    break
+
+            if fr_column is None or oi_column is None:
+                return result_df
+
+            # 欠損値を前方補完
+            merged_df[fr_column] = merged_df[fr_column].ffill()
+            merged_df[oi_column] = merged_df[oi_column].ffill()
+
+            # 1. OI Weighted FR
+            result_df["OI_Weighted_FR"] = merged_df[fr_column] * merged_df[oi_column]
+
+            # 2. Cumulative OI Weighted FR
+            result_df["Cumulative_OI_Weighted_FR_24h"] = (
+                result_df["OI_Weighted_FR"].rolling(24).sum()
+            ).fillna(0.0)
+
+            # 3. OI/Price Divergence
+            price_pct = result_df["close"].pct_change(fill_method=None)
+            oi_pct = merged_df[oi_column].pct_change(fill_method=None)
+            epsilon = 1e-6
+            result_df["OI_Price_Divergence"] = (
+                oi_pct / (price_pct.abs() + epsilon)
+            ).fillna(0.0)
+
+            # 4. FR/Price Divergence
+            result_df["FR_Price_Correlation_24h"] = (
+                merged_df[fr_column].rolling(24).corr(result_df["close"])
+            ).fillna(0.0)
+
+            return result_df
+
+        except Exception as e:
+            logger.error(f"市場ダイナミクス特徴量計算エラー: {e}")
+            return df
 
         return result_df
 
@@ -427,5 +502,11 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             "FR_OI_Ratio",
             "Market_Heat_Index",
             "Market_Stress",
+            "Market_Stress",
             "Market_Balance",
+            # 市場ダイナミクス
+            "OI_Weighted_FR",
+            "Cumulative_OI_Weighted_FR_24h",
+            "OI_Price_Divergence",
+            "FR_Price_Correlation_24h",
         ]

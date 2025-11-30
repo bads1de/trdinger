@@ -13,6 +13,10 @@ import pandas as pd
 from app.services.ml.label_generation.enums import ThresholdMethod
 from app.services.ml.label_generation.presets import forward_classification_preset
 from app.services.ml.label_generation.triple_barrier import TripleBarrier
+from app.services.ml.common.volatility_utils import (
+    calculate_volatility_atr,
+    calculate_volatility_std,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -133,55 +137,53 @@ class LabelCache:
 
         # ラベル生成
         if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
-            from app.services.ml.label_generation.triple_barrier import TripleBarrier
-            
             close_prices = self.ohlcv_df[price_column]
 
             # ボラティリティ計算
             if use_atr:
-                high_prices = self.ohlcv_df["high"]
-                low_prices = self.ohlcv_df["low"]
-                prev_close = close_prices.shift(1)
-                
-                tr1 = high_prices - low_prices
-                tr2 = (high_prices - prev_close).abs()
-                tr3 = (low_prices - prev_close).abs()
-                
-                tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-                volatility = tr.rolling(window=atr_period).mean()
-                volatility = volatility / close_prices # 価格比率に変換
+                volatility = calculate_volatility_atr(
+                    high=self.ohlcv_df["high"],
+                    low=self.ohlcv_df["low"],
+                    close=close_prices,
+                    window=atr_period,
+                    as_percentage=True,
+                )
             else:
                 # 従来の標準偏差
                 returns = close_prices.pct_change(fill_method=None)
-                volatility = returns.rolling(window=24).std() # 24時間ローリングボラティリティ
-            
+                volatility = calculate_volatility_std(returns=returns, window=24)
+
             # 垂直バリア (horizon_n 時間後)
-            t1_vertical_barrier = pd.Series(close_prices.index, index=close_prices.index).shift(-horizon_n)
-            
+            t1_vertical_barrier = pd.Series(
+                close_prices.index, index=close_prices.index
+            ).shift(-horizon_n)
+
             # Triple Barrier 実行
-            tb = TripleBarrier(pt=pt_factor, sl=sl_factor, min_ret=0.0001) # min_retは小さい値で固定
-            
+            tb = TripleBarrier(
+                pt=pt_factor, sl=sl_factor, min_ret=0.0001
+            )  # min_retは小さい値で固定
+
             events = tb.get_events(
                 close=close_prices,
-                t_events=close_prices.index, # 全てのバーをイベント候補とする
+                t_events=close_prices.index,  # 全てのバーをイベント候補とする
                 pt_sl=[pt_factor, sl_factor],
                 target=volatility,
                 min_ret=0.0001,
-                vertical_barrier_times=t1_vertical_barrier
+                vertical_barrier_times=t1_vertical_barrier,
             )
-            
+
             labels_df = tb.get_bins(events, close_prices, binary_label=binary_label)
-            
+
             if binary_label:
-                labels = labels_df['bin']
+                labels = labels_df["bin"]
             else:
                 # ラベルをSeriesに変換 (1, -1, 0) -> ("UP", "DOWN", "RANGE")
                 labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
-                labels = labels_df['bin'].map(labels_map)
-            
+                labels = labels_df["bin"].map(labels_map)
+
             # インデックスを合わせてNaN処理
             labels = labels.reindex(close_prices.index)
-            
+
         else:
             # 既存のロジック
             labels = forward_classification_preset(
@@ -198,7 +200,9 @@ class LabelCache:
 
         return labels
 
-    def get_t1(self, indices: pd.DatetimeIndex, horizon_n: int, timeframe: str = "1h") -> pd.Series:
+    def get_t1(
+        self, indices: pd.DatetimeIndex, horizon_n: int, timeframe: str = "1h"
+    ) -> pd.Series:
         """
         各観測点のラベル終了時刻 (t1) を取得
 
@@ -226,7 +230,7 @@ class LabelCache:
         else:
             # デフォルトは1hとみなす（簡易実装）
             delta = pd.Timedelta(hours=horizon_n)
-            
+
         # t1を計算
         t1 = pd.Series(indices + delta, index=indices)
         return t1

@@ -7,9 +7,8 @@ MLモデルの学習・評価・保存を取り扱うサービス層です。
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 from ...utils.error_handler import safe_ml_operation
@@ -17,7 +16,7 @@ from ..optimization.optimization_service import (
     OptimizationService,
     OptimizationSettings,
 )
-from .base_ml_trainer import BaseMLTrainer
+
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ...config.unified_config import unified_config
 from .ensemble.ensemble_trainer import EnsembleTrainer
@@ -96,14 +95,19 @@ class MLTrainingService(BaseResourceManager):
             }
 
         elif trainer_type.lower() == "ensemble":
-            # アンサンブル設定のデフォルト値
+            # アンサンブル設定のデフォルト値 (unified_configから取得)
+            ensemble_settings = self.config.ensemble
+
             default_config = {
-                "method": "stacking",
-                "models": ["lightgbm", "xgboost"],  # デフォルトはアンサンブル
+                "method": ensemble_settings.default_method,
+                "models": ensemble_settings.algorithms,
                 "stacking_params": {
-                    "meta_model": "lightgbm",
-                    "cv_folds": 5,
-                    "use_probas": True,
+                    "meta_model": ensemble_settings.stacking_meta_model,
+                    "cv_folds": ensemble_settings.stacking_cv_folds,
+                    "stack_method": ensemble_settings.stacking_stack_method,
+                    "n_jobs": ensemble_settings.stacking_n_jobs,
+                    "passthrough": ensemble_settings.stacking_passthrough,
+                    "use_probas": True,  # これはconfigにないが、stacking_stack_method='predict_proba'ならTrueと同義
                     "random_state": 42,
                 },
             }
@@ -124,8 +128,8 @@ class MLTrainingService(BaseResourceManager):
     @staticmethod
     def get_available_single_models() -> List[str]:
         """利用可能な単一モデルのリストを取得"""
-        # 利用可能なモデルをハードコード
-        return ["lightgbm", "xgboost", "catboost"]
+        # unified_configから取得
+        return unified_config.ml.ensemble.algorithms
 
     @staticmethod
     def determine_trainer_type(ensemble_config: Optional[Dict[str, Any]]) -> str:

@@ -31,6 +31,10 @@ class AlgorithmRegistry:
         # Ensemble
         "ensembletrainer": "ensemble",
         "stackingensemble": "stacking",
+        # CatBoost
+        "catboostmodel": "catboost",
+        "catboostclassifier": "catboost",
+        "catboostregressor": "catboost",
     }
 
     # サポートされているアルゴリズム名のセット

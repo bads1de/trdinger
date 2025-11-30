@@ -51,12 +51,45 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         lookback_periods = config.get("lookback_periods", {})
 
         # 複数のテクニカル特徴量を順次計算（全パターン生成）
-        result_df = self.create_result_dataframe(df) # Ensure result_df starts clean
-        result_df = self.calculate_volatility_features(result_df, lookback_periods) # First, as others may depend on it
-        result_df = self.calculate_volume_features(result_df, lookback_periods) # Also moved up
+        result_df = self.create_result_dataframe(df)  # Ensure result_df starts clean
+        result_df = self.calculate_volatility_features(
+            result_df, lookback_periods
+        )  # First, as others may depend on it
+        result_df = self.calculate_volume_features(
+            result_df, lookback_periods
+        )  # Also moved up
         result_df = self.calculate_market_regime_features(result_df, lookback_periods)
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
+        result_df = self.calculate_trend_features(result_df, lookback_periods)
         result_df = self.calculate_pattern_features(result_df, lookback_periods)
+
+        return result_df
+
+    def calculate_advanced_technical_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> pd.DataFrame:
+        """
+        高度な技術指標を計算（互換性とテスト用）
+        実際には各カテゴリのメソッドに分散されていますが、
+        テストがこのメソッドを呼ぶため、ラッパーとして提供します。
+        """
+        # 既にcalculate_featuresで呼ばれているメソッド群を実行すれば網羅されるはずだが、
+        # 個別にテストしたい場合のために実装
+        result_df = df.copy()
+        result_df = self.calculate_trend_features(result_df, lookback_periods)
+
+        # 他のカテゴリの追加分もここで呼ぶか、あるいはテスト側を修正するか。
+        # テストは `calculate_advanced_technical_features` を呼んで `MFI` 等を期待している。
+        # したがって、ここでそれらを計算して返す必要がある。
+
+        # Volume features (MFI, OBV, AD, ADOSC)
+        result_df = self.calculate_volume_features(result_df, lookback_periods)
+
+        # Momentum features (Ultimate Oscillator)
+        result_df = self.calculate_momentum_features(result_df, lookback_periods)
+
+        # Volatility features (BBW, NATR, TRANGE)
+        result_df = self.calculate_volatility_features(result_df, lookback_periods)
 
         return result_df
 
@@ -211,6 +244,31 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )
             result_df["ATR_20"] = atr_result.fillna(0.0)
 
+            # NATR (Normalized Average True Range)
+            natr = VolatilityIndicators.natr(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                length=volatility_period,
+            )
+            result_df["NATR"] = natr.fillna(0.0)
+
+            # TRANGE (True Range)
+            trange = VolatilityIndicators.true_range(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+            )
+            result_df["TRANGE"] = trange.fillna(0.0)
+
+            # BBW (Bollinger Band Width)
+            upper, middle, lower = VolatilityIndicators.bbands(
+                result_df["close"], length=volatility_period, std=2.0
+            )
+            # BBW = (Upper - Lower) / Middle
+            bbw = (upper - lower) / middle
+            result_df["BBW"] = bbw.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
             self.log_feature_calculation_complete("ボラティリティ")
             return result_df
 
@@ -273,9 +331,41 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 / result_df["volume"].rolling(window=volume_period).mean()
             )
             volume_trend = np.where(np.isinf(volume_trend), np.nan, volume_trend)
-            result_df["Volume_Trend"] = pd.Series(
-                volume_trend, index=result_df.index
-            ).fillna(1.0)
+            # MFI (Money Flow Index)
+            mfi = VolumeIndicators.mfi(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                volume=result_df["volume"],
+                length=14,
+            )
+            result_df["MFI"] = mfi.fillna(50.0)
+
+            # OBV (On-Balance Volume)
+            obv = VolumeIndicators.obv(
+                close=result_df["close"], volume=result_df["volume"]
+            )
+            result_df["OBV"] = obv.fillna(0.0)
+
+            # AD (Chaikin A/D Line)
+            ad = VolumeIndicators.ad(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                volume=result_df["volume"],
+            )
+            result_df["AD"] = ad.fillna(0.0)
+
+            # ADOSC (Chaikin A/D Oscillator)
+            adosc = VolumeIndicators.adosc(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                volume=result_df["volume"],
+                fast=3,
+                slow=10,
+            )
+            result_df["ADOSC"] = adosc.fillna(0.0)
 
             self.log_feature_calculation_complete("出来高")
             return result_df
@@ -485,6 +575,13 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 result_df["close"], length=10
             ).fillna(0.0)
 
+            # Ultimate Oscillator
+            new_features["Ultimate_Oscillator"] = MomentumIndicators.uo(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+            ).fillna(50.0)
+
             # 一括で結合
             result_df = pd.concat(
                 [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
@@ -495,6 +592,62 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
         except Exception as e:
             return self.handle_calculation_error(e, "モメンタム特徴量計算", df)
+
+    def calculate_trend_features(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
+    ) -> pd.DataFrame:
+        """
+        トレンド特徴量を計算
+        """
+        if lookback_periods is None:
+            lookback_periods = {"short_ma": 10, "long_ma": 50}
+
+        try:
+            if not self.validate_input_data(df, ["close", "high", "low"]):
+                return df
+
+            result_df = self.create_result_dataframe(df)
+            new_features = {}
+
+            # ADX
+            adx, di_plus, di_minus = TrendIndicators.adx(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                length=14,
+            )
+            new_features["ADX"] = adx.fillna(0.0)
+            new_features["DI_Plus"] = di_plus.fillna(0.0)
+            new_features["DI_Minus"] = di_minus.fillna(0.0)
+
+            # Aroon
+            aroon_up, aroon_down, aroon_osc = TrendIndicators.aroon(
+                high=result_df["high"], low=result_df["low"], length=25
+            )
+            new_features["Aroon_Up"] = aroon_up.fillna(0.0)
+            new_features["Aroon_Down"] = aroon_down.fillna(0.0)
+            new_features["AROONOSC"] = aroon_osc.fillna(0.0)
+
+            # Vortex Indicator
+            vi_plus, vi_minus = TrendIndicators.vortex(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                length=14,
+            )
+            new_features["VI_Plus"] = vi_plus.fillna(0.0)
+            new_features["VI_Minus"] = vi_minus.fillna(0.0)
+
+            # 一括で結合
+            result_df = pd.concat(
+                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+            )
+
+            self.log_feature_calculation_complete("トレンド")
+            return result_df
+
+        except Exception as e:
+            return self.handle_calculation_error(e, "トレンド特徴量計算", df)
 
     def get_feature_names(self) -> list:
         """
@@ -527,7 +680,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "BB_Lower",
             "BB_Position",
             "MA_Long",
-            "ATR", # Pattern features still used ATR(length=14)
+            "ATR",  # Pattern features still used ATR(length=14)
             "Near_Support",
             "Near_Resistance",
             # ボラティリティ特徴量（PriceFeatureCalculatorから移動）
@@ -537,4 +690,23 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "VWAP",
             "VWAP_Deviation",
             "Volume_Trend",
+            "MFI",
+            "OBV",
+            "AD",
+            "ADOSC",
+            # トレンド特徴量
+            "ADX",
+            "DI_Plus",
+            "DI_Minus",
+            "Aroon_Up",
+            "Aroon_Down",
+            "AROONOSC",
+            "VI_Plus",
+            "VI_Minus",
+            # 追加ボラティリティ
+            "NATR",
+            "TRANGE",
+            "BBW",
+            # 追加モメンタム
+            "Ultimate_Oscillator",
         ]

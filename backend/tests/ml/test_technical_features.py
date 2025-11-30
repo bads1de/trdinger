@@ -143,6 +143,36 @@ def test_momentum_features(sample_ohlcv_data):
         assert feature in result.columns, f"Missing feature: {feature}"
 
 
+def test_advanced_technical_indicators(sample_ohlcv_data):
+    """高度な技術指標のテスト（AdvancedFeatureEngineerから移行）"""
+    calculator = TechnicalFeatureCalculator()
+    lookback_periods = {"short_ma": 10, "long_ma": 50}
+
+    result = calculator.calculate_advanced_technical_features(
+        sample_ohlcv_data, lookback_periods
+    )
+
+    expected_features = [
+        "MFI",
+        "ADX",
+        "DI_Plus",
+        "DI_Minus",
+        "Aroon_Up",
+        "Aroon_Down",
+        "AROONOSC",
+        "Ultimate_Oscillator",
+        "VI_Plus",
+        "VI_Minus",
+        "BBW",
+        "OBV",
+        "AD",
+        "ADOSC",
+    ]
+
+    for feature in expected_features:
+        assert feature in result.columns, f"Missing feature: {feature}"
+
+
 def test_pattern_features(sample_ohlcv_data):
     """パターン特徴量のテスト"""
     calculator = TechnicalFeatureCalculator()

@@ -38,19 +38,6 @@ class LabelGenerationService:
         # ラベル生成設定を取得
         label_config = unified_config.ml.training.label_generation
 
-        # target_columnが明示的に指定されている場合は既存ロジックを使用（後方互換性）
-        target_column = training_params.get("target_column")
-        if target_column is not None and target_column in features_df.columns:
-            logger.info(f"📌 後方互換性モード: target_column='{target_column}' を使用")
-
-            label_generator = LabelGenerator()
-
-            features_clean, labels_clean, _ = data_preprocessor.prepare_training_data(
-                features_df, label_generator, **training_params
-            )
-
-            return features_clean, labels_clean
-
         # デフォルトのプリセット/カスタム設定ロジック
         try:
             logger.info("🎯 新しいラベル生成設定を使用")

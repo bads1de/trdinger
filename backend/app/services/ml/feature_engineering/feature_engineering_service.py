@@ -11,12 +11,12 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
+
 import numpy as np
 import pandas as pd
 
 from app.config.unified_config import unified_config
 
-from .advanced_features import AdvancedFeatureEngineer
 from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
 from .interaction_features import InteractionFeatureCalculator
@@ -112,9 +112,9 @@ class FeatureEngineeringService:
         self.crypto_features = CryptoFeatures()
         logger.debug("暗号通貨特化特徴量を有効化しました")
 
-        # 高度な特徴量エンジニアリング（デフォルトで有効）
-        self.advanced_features = AdvancedFeatureEngineer()
-        logger.debug("高度な特徴量エンジニアリングを有効化しました")
+        # 高度な特徴量エンジニアリング（AdvancedFeatureEngineerは廃止され、各Calculatorに統合されました）
+        # self.advanced_features = AdvancedFeatureEngineer()
+        # logger.debug("高度な特徴量エンジニアリングを有効化しました")
 
     def calculate_advanced_features(
         self,
@@ -230,93 +230,27 @@ class FeatureEngineeringService:
             # データ型を最適化
             result_df = self._optimize_dtypes(result_df)
 
-            # 基本的な価格特徴量
-            result_df = self.price_calculator.calculate_price_features(
-                result_df, lookback_periods
+            # 価格特徴量（基本、ラグ、統計、時系列、ボラティリティ）
+            # PriceFeatureCalculator.calculate_features が全てを統括して呼び出す
+            result_df = self.price_calculator.calculate_features(
+                result_df, {"lookback_periods": lookback_periods}
             )
 
-            # ボラティリティ特徴量
-            result_df = self.technical_calculator.calculate_volatility_features(
-                result_df, lookback_periods
+            # テクニカル特徴量（ボラティリティ、出来高、レジーム、モメンタム、トレンド、パターン）
+            # TechnicalFeatureCalculator.calculate_features が全てを統括して呼び出す
+            result_df = self.technical_calculator.calculate_features(
+                result_df, {"lookback_periods": lookback_periods}
             )
 
-            # 出来高特徴量
-            result_df = self.technical_calculator.calculate_volume_features(
-                result_df, lookback_periods
-            )
-
-            # レジーム特徴量 (Choppiness Index, Fractal Dimension Index)
-            # TechnicalFeatureCalculator.calculate_market_regime_features で計算されるため
-            # ここでの直接計算は削除
-            logger.info("レジーム特徴量を計算中...")
-
-            # ファンディングレート特徴量（データがある場合）
-            if funding_rate_data is not None and not funding_rate_data.empty:
-                result_df = self.market_data_calculator.calculate_funding_rate_features(  # noqa: E501
-                    result_df, funding_rate_data, lookback_periods
-                )
-                # Removed: FR疑似特徴量の中間クリーニング
-                # (低寄与度特徴量削除: 2025-01-05)
-                # 削除された特徴量: FR_MA_24, FR_MA_168, FR_Change,
-                # FR_Change_Rate, Price_FR_Divergence, FR_Extreme_High,
-                # FR_Extreme_Low, FR_Normalized, FR_Trend, FR_Volatility
-                # 注: これらの特徴量はすべて削除されたため、
-                # 中間クリーニングは不要
-            else:
-                # ファンディングレートデータが不足している場合、ログを出力してスキップ
-                logger.warning(
-                    "ファンディングレートデータが不足しています。疑似特徴量の生成はスキップされます。"
-                )
-                # result_df = self._generate_pseudo_funding_rate_features(
-                #     result_df, lookback_periods
-                # )
-
-            # 建玉残高特徴量（データがある場合）
-            if open_interest_data is not None and not open_interest_data.empty:
-                result_df = self.market_data_calculator.calculate_open_interest_features(  # noqa: E501
-                    result_df, open_interest_data, lookback_periods
-                )
-                # 中間クリーニング（削除された特徴量を除外）
-                # Removed: "OI_Change_Rate", "OI_Surge",
-                # "OI_Price_Correlation" (低寄与度: 2025-01-05)
-                # データリーク防止のため、ここでの中央値補完は行わない
-                pass
-            else:
-                # 建玉残高データが不足している場合、疑似データを生成
-                logger.warning(
-                    "建玉残高データが不足しています。疑似特徴量を生成します。"
-                )
-                result_df = self._generate_pseudo_open_interest_features(
-                    result_df, lookback_periods
-                )
-
-            # 複合特徴量（FR + OI）
-            if (
-                funding_rate_data is not None
-                and not funding_rate_data.empty
-                and open_interest_data is not None
-                and not open_interest_data.empty
-            ):
-                result_df = self.market_data_calculator.calculate_composite_features(
-                    result_df, funding_rate_data, open_interest_data, lookback_periods
-                )
-                # 中間クリーニング
-                # データリーク防止のため、ここでの中央値補完は行わない
-                pass
-
-            # 市場レジーム特徴量
-            result_df = self.technical_calculator.calculate_market_regime_features(
-                result_df, lookback_periods
-            )
-
-            # モメンタム特徴量
-            result_df = self.technical_calculator.calculate_momentum_features(
-                result_df, lookback_periods
-            )
-
-            # パターン認識特徴量
-            result_df = self.technical_calculator.calculate_pattern_features(
-                result_df, lookback_periods
+            # 市場データ特徴量（FR、OI、複合、ダイナミクス）
+            # MarketDataFeatureCalculator.calculate_features が全てを統括して呼び出す
+            config = {
+                "lookback_periods": lookback_periods,
+                "funding_rate_data": funding_rate_data,
+                "open_interest_data": open_interest_data,
+            }
+            result_df = self.market_data_calculator.calculate_features(
+                result_df, config
             )
 
             # 暗号通貨特化特徴量（デフォルトで追加）
@@ -326,12 +260,9 @@ class FeatureEngineeringService:
                     result_df, funding_rate_data, open_interest_data
                 )
 
-            # 高度な特徴量エンジニアリング（デフォルトで追加）
-            if self.advanced_features is not None:
-                logger.debug("高度な特徴量を計算中...")
-                result_df = self.advanced_features.create_advanced_features(
-                    result_df, funding_rate_data, open_interest_data
-                )
+            # 高度な特徴量エンジニアリング（AdvancedFeatureEngineer）は廃止
+            # 各Calculatorに統合済み
+            pass
 
             # 相互作用特徴量（全ての基本特徴量が計算された後に実行）
             result_df = self.interaction_calculator.calculate_interaction_features(
@@ -436,8 +367,21 @@ class FeatureEngineeringService:
         """
         import hashlib
 
-        # データのハッシュを計算
-        ohlcv_hash = hashlib.md5(str(ohlcv_data.shape).encode()).hexdigest()[:8]
+        # データのハッシュを計算 (より堅牢なハッシュ)
+        try:
+            # pandas.util.hash_pandas_object はインデックスと値をハッシュ化する
+            # index=True でインデックスも含める
+            ohlcv_hash = hashlib.md5(
+                pd.util.hash_pandas_object(ohlcv_data, index=True).values.tobytes()
+            ).hexdigest()[:8]
+        except Exception:
+            # フォールバック: shapeと先頭・末尾のデータを使用
+            data_str = (
+                str(ohlcv_data.shape)
+                + str(ohlcv_data.iloc[0].values)
+                + str(ohlcv_data.iloc[-1].values)
+            )
+            ohlcv_hash = hashlib.md5(data_str.encode()).hexdigest()[:8]
         fr_hash = hashlib.md5(
             str(
                 funding_rate_data.shape if funding_rate_data is not None else "None"

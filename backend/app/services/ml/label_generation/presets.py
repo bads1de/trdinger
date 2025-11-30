@@ -8,12 +8,12 @@
 import logging
 from typing import Any, Dict, Tuple
 
-import numpy as np
 import pandas as pd
 
 from .enums import ThresholdMethod
 from .main import LabelGenerator
 from .triple_barrier import TripleBarrier
+from ..common.volatility_utils import calculate_volatility_atr, calculate_volatility_std
 
 logger = logging.getLogger(__name__)
 
@@ -207,30 +207,25 @@ def triple_barrier_method_preset(
     try:
         # 1. 準備
         close = df[price_column]
-        
+
         # ボラティリティ計算
         if use_atr:
-            # ATR計算
-            high = df["high"]
-            low = df["low"]
-            prev_close = close.shift(1)
-            
-            tr1 = high - low
-            tr2 = (high - prev_close).abs()
-            tr3 = (low - prev_close).abs()
-            
-            tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-            # ATRはTRの移動平均
-            volatility = tr.rolling(window=atr_period).mean()
-            
-            # ATRは価格単位なので、リターン単位に変換（正規化）
-            volatility = volatility / close
-            
+            # ATR計算 (共通ユーティリティを使用)
+            volatility = calculate_volatility_atr(
+                high=df["high"],
+                low=df["low"],
+                close=close,
+                window=atr_period,
+                as_percentage=True,
+            )
+
         else:
-            # 従来: リターンの標準偏差
+            # 従来: リターンの標準偏差 (共通ユーティリティを使用)
             returns = close.pct_change()
-            volatility = returns.rolling(window=volatility_window).std()
-        
+            volatility = calculate_volatility_std(
+                returns=returns, window=volatility_window
+            )
+
         # t_events: 全てのバーをイベント候補とする
         t_events = close.index
 
@@ -239,55 +234,37 @@ def triple_barrier_method_preset(
         # pandas の shift はデータをずらすので、
         # index.shift(N) は時刻をN本分未来に進める（周波数が設定されている場合）
         # しかし DatetimeIndex が freq を持っていない場合もあるため、
-        # ここでは close.index を N 個ずらしてマッピングする
-        
-        # 例: 
-        # t_events[i] の垂直バリアは t_events[i + horizon_n]
-        
-        # 安全な実装:
-        # 1. インデックスのリストを取得
-        idx_list = close.index.tolist()
-        # 2. N個ずらしたマッピングを作成
-        vert_barriers = pd.Series(index=close.index, dtype='datetime64[ns]')
-        
-        # ベクトル化された処理は難しいので、シフトしたSeriesを作る
-        # shift(-N) は未来の値を現在に持ってくる -> t_events[i] に t_events[i+N] の値が入る
-        # これで正しい
-        
         # vertical_barrier_times: horizon_n本後の時刻
-        vertical_barrier_times = pd.Series(close.index, index=close.index).shift(-horizon_n)
+        vertical_barrier_times = pd.Series(close.index, index=close.index).shift(
+            -horizon_n
+        )
 
         # 2. Triple Barrier 実行
-        tb = TripleBarrier(
-            pt=pt,
-            sl=sl,
-            min_ret=min_ret,
-            num_threads=1
-        )
-        
+        tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret, num_threads=1)
+
         events = tb.get_events(
             close=close,
             t_events=t_events,
             pt_sl=[pt, sl],
             target=volatility,
             min_ret=min_ret,
-            vertical_barrier_times=vertical_barrier_times
+            vertical_barrier_times=vertical_barrier_times,
         )
-        
+
         # 3. ラベル生成 (get_bins)
         bins = tb.get_bins(events, close, binary_label=binary_label)
-        
+
         # 4. ラベル変換
         if binary_label:
-            return bins['bin']
+            return bins["bin"]
         else:
             # (-1, 0, 1 -> DOWN, RANGE, UP)
             label_map = {-1.0: "DOWN", 0.0: "RANGE", 1.0: "UP"}
-            string_labels = bins['bin'].map(label_map)
-            
+            string_labels = bins["bin"].map(label_map)
+
             # 元のインデックスに合わせる
             string_labels = string_labels.reindex(df.index)
-            
+
             # 分布ログ
             counts = string_labels.value_counts()
             total = len(string_labels.dropna())
@@ -301,7 +278,7 @@ def triple_barrier_method_preset(
                     f"RANGE={counts.get('RANGE', 0)}({range_pct:.1f}%), "
                     f"DOWN={counts.get('DOWN', 0)}({down_pct:.1f}%)"
                 )
-                
+
             return string_labels
 
     except Exception as e:
@@ -478,7 +455,7 @@ def get_common_presets() -> Dict[str, Dict[str, Any]]:
         },
         "tbm_15m_1.0_1.0": {
             "timeframe": "15m",
-            "horizon_n": 24, # 6時間
+            "horizon_n": 24,  # 6時間
             "pt": 1.0,
             "sl": 1.0,
             "min_ret": 0.0005,
@@ -634,32 +611,34 @@ def volatility_classification_preset(
 
         # ラベル生成ロジック
         labels = pd.Series(index=df.index, dtype="object")
-        
+
         if threshold_method == ThresholdMethod.QUANTILE:
             # 分位数で閾値を決定（動的）
             # abs_returnsの分布を見て、上位 quantile_threshold を TREND とする
             # 例: quantile_threshold=0.33 なら、上位33%がTREND
-            
+
             # NaNを除外して計算
             valid_returns = abs_returns.dropna()
             if len(valid_returns) == 0:
                 raise ValueError("有効なリターンデータがありません")
-                
+
             # 閾値を計算 (1 - quantile_threshold の分位点)
             # 例: 上位33% -> 67%タイル値を閾値にする
             dynamic_threshold = valid_returns.quantile(1.0 - quantile_threshold)
-            
-            logger.info(f"動的閾値 (Quantile {1.0-quantile_threshold:.2f}): {dynamic_threshold:.5f}")
-            
+
+            logger.info(
+                f"動的閾値 (Quantile {1.0-quantile_threshold:.2f}): {dynamic_threshold:.5f}"
+            )
+
             # ラベル付け
             labels[abs_returns >= dynamic_threshold] = "TREND"
             labels[abs_returns < dynamic_threshold] = "RANGE"
-            
+
         elif threshold_method == ThresholdMethod.FIXED:
             # 固定閾値
             labels[abs_returns >= threshold] = "TREND"
             labels[abs_returns < threshold] = "RANGE"
-            
+
         else:
             # その他のメソッドは一旦未対応（必要に応じて追加）
             # 既存のLabelGeneratorを使ってUP/DOWN/RANGEを出し、UP/DOWNをTRENDに統合する

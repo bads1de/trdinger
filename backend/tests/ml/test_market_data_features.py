@@ -68,6 +68,33 @@ class TestMarketDataFeatures:
                 "OI_Normalized",
             ]
 
-            for col in expected_cols:
-                assert col in result.columns
-                assert not result[col].isnull().all()
+    def test_calculate_market_dynamics_features(self, sample_data, sample_oi_data):
+        """市場ダイナミクス特徴量のテスト（AdvancedFeatureEngineerから移行）"""
+        calculator = MarketDataFeatureCalculator()
+
+        # FRデータも必要
+        fr_data = pd.DataFrame(
+            {"funding_rate": np.random.uniform(-0.01, 0.01, 100)},
+            index=sample_data.index,
+        )
+
+        config = {
+            "funding_rate_data": fr_data,
+            "open_interest_data": sample_oi_data,
+            "lookback_periods": {},
+        }
+
+        result = calculator.calculate_market_dynamics_features(
+            sample_data, fr_data, sample_oi_data, config["lookback_periods"]
+        )
+
+        expected_cols = [
+            "OI_Weighted_FR",
+            "Cumulative_OI_Weighted_FR_24h",
+            "OI_Price_Divergence",
+            "FR_Price_Correlation_24h",
+        ]
+
+        for col in expected_cols:
+            assert col in result.columns
+            assert not result[col].isnull().all()

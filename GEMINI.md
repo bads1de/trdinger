@@ -62,21 +62,28 @@ trading/
 
 ### バックエンドの実行
 
-バックエンドは、**Conda 環境 `trading`** で管理されます。すべてのコマンドは `conda run -n trading` を使用して実行してください。
+バックエンドは、**Conda 環境 `trading`** で管理されます。標準的なコマンド実行には `conda run -n trading` を使用しますが、開発作業時には `conda activate trading` を使用して環境をアクティベートすることも推奨されます。
 
-> **重要**: アクティベーションを忘れてグローバル環境を汚染することを防ぐため、`conda run`パターンを標準としています。
+> **重要**: `conda run` パターンは、アクティベーション忘れによるグローバル環境の汚染を防ぐために標準としています。頻繁にコマンドを実行する場合は `conda activate trading` を行ってから、`conda run -n trading` を除いたコマンドを実行してください。
 
 1. **開発サーバーの起動**: アプリケーションは Uvicorn を使用して提供されます。
 
    ```powershell
+   # conda run を使用する場合
    conda run -n trading uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+   # conda activate 済みの場合
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 2. **テストの実行**: テストは `pytest` を使用して実行されます。
 
    ```powershell
-   # すべてのテスト
+   # すべてのテスト (conda run)
    conda run -n trading pytest backend/tests/
+
+   # すべてのテスト (conda activate 済み)
+   pytest backend/tests/
 
    # カバレッジ付き
    conda run -n trading pytest --cov=app backend/tests/
@@ -84,11 +91,11 @@ trading/
    # 文字化け対策（日本語出力が正しく表示されない場合）
    # PowerShellの場合、コマンドの前に環境変数を設定
    $env:PYTHONIOENCODING="utf-8"; conda run -n trading pytest backend/tests/ -v
+   # activate済みの場合は以下のみ
+   $env:PYTHONIOENCODING="utf-8"; pytest backend/tests/ -v
 
    # または、セッション全体で設定（最初に一度実行）
    $env:PYTHONIOENCODING="utf-8"
-   # その後、通常通りテスト実行
-   conda run -n trading pytest backend/tests/
    ```
 
 3. **リンティングとフォーマット**:

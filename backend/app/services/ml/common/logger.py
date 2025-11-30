@@ -9,8 +9,6 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional, TypeVar
 
-from app.config.unified_config import unified_config
-
 T = TypeVar("T")
 
 
@@ -19,15 +17,7 @@ class MLStructuredLogger:
 
     def __init__(self, name: str):
         self.logger = logging.getLogger(name)
-        self._setup_logger()
-
-    def _setup_logger(self):
-        """ログ設定の初期化"""
-        # ログレベルの設定
-        log_level = getattr(
-            logging, unified_config.ml.data_processing.log_level.upper(), logging.INFO
-        )
-        self.logger.setLevel(log_level)
+        # 設定は遅延読み込みするためここでは初期化しない
 
     def log_operation(
         self,
@@ -47,6 +37,15 @@ class MLStructuredLogger:
             success: 成功フラグ
             **kwargs: 追加のコンテキスト情報
         """
+        from app.config.unified_config import unified_config
+
+        # ログレベルの設定（遅延適用）
+        log_level_setting = getattr(
+            logging, unified_config.ml.data_processing.log_level.upper(), logging.INFO
+        )
+        if self.logger.level != log_level_setting:
+            self.logger.setLevel(log_level_setting)
+
         log_data = {
             "timestamp": datetime.now().isoformat(),
             "operation": operation,
