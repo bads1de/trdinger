@@ -291,12 +291,6 @@ class TestMLTrainingService:
         models = MLTrainingService.get_available_single_models()
         assert models == ["lightgbm", "xgboost", "catboost"]
 
-    def test_determine_trainer_type(self):
-        """トレーナータイプ決定テスト"""
-        # アンサンブル設定が有効（デフォルト）
-        trainer_type = MLTrainingService.determine_trainer_type(None)
-        assert trainer_type == "ensemble"
-
     def test_initialization(self):
         """初期化テスト"""
         settings = OptimizationSettings(enabled=True, n_calls=50)

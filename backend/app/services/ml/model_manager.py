@@ -398,19 +398,25 @@ class ModelManager:
         except Exception as e:
             logger.error(f"モデルクリーンアップエラー: {e}")
 
-
-    def extract_model_performance_metrics(self, model_path: str) -> Dict[str, float]:
+    def extract_model_performance_metrics(
+        self, model_path: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, float]:
         """
         モデルから性能メトリクスを抽出（classification_reportからのフォールバック含む）
+
+        Args:
+            model_path: モデルファイルパス
+            metadata: メタデータ（オプション）。指定された場合、モデル読み込みをスキップします。
         """
         from .common.evaluation_utils import get_default_metrics
 
         try:
-            model_data = self.load_model(model_path)
-            if not model_data or "metadata" not in model_data:
-                return get_default_metrics()
+            if metadata is None:
+                model_data = self.load_model(model_path)
+                if not model_data or "metadata" not in model_data:
+                    return get_default_metrics()
+                metadata = model_data["metadata"]
 
-            metadata = model_data["metadata"]
             metrics = get_default_metrics()
 
             # メタデータからメトリクスを更新

@@ -119,6 +119,9 @@ class TestGetFormattedModels:
         ) as mock_manager:
             mock_manager.list_models.return_value = sample_model_list
             mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
+            mock_manager.extract_model_performance_metrics.return_value = {
+                "accuracy": 0.85
+            }
 
             result = await orchestration_service.get_formatted_models()
 
@@ -392,6 +395,12 @@ class TestGetMLStatus:
         ):
             mock_manager.get_latest_model.return_value = "/models/latest.pkl"
             mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
+            mock_manager.extract_model_performance_metrics.return_value = {
+                "accuracy": 0.85,
+                "precision": 0.82,
+                "recall": 0.88,
+                "f1_score": 0.85,
+            }
 
             result = await orchestration_service.get_ml_status()
 

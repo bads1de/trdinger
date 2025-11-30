@@ -18,6 +18,7 @@ from app.services.ml.orchestration.background_task_manager import (
 )
 from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response
+from ..common.evaluation_utils import get_default_metrics
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -178,41 +179,47 @@ class MLTrainingOrchestrationService:
                     model_data = model_manager.load_model(latest_model)
                     if model_data and "metadata" in model_data:
                         metadata = model_data["metadata"]
+                        metrics = model_manager.extract_model_performance_metrics(
+                            latest_model, metadata=metadata
+                        )
                         model_status = {
                             "is_loaded": True,
                             "model_path": latest_model,
                             "model_type": metadata.get("model_type", "Unknown"),
                             "feature_count": metadata.get("feature_count", 0),
                             "training_samples": metadata.get("training_samples", 0),
-                            "accuracy": metadata.get("accuracy", 0.0),
+                            **metrics,
                         }
                     else:
+                        default_metrics = get_default_metrics()
                         model_status = {
                             "is_loaded": True,
                             "model_path": latest_model,
                             "model_type": None,
                             "feature_count": 0,
                             "training_samples": 0,
-                            "accuracy": 0.0,
+                            "accuracy": default_metrics["accuracy"],
                         }
                 except Exception as e:
                     logger.warning(f"モデル情報取得エラー: {e}")
+                    default_metrics = get_default_metrics()
                     model_status = {
                         "is_loaded": False,
                         "model_path": None,
                         "model_type": None,
                         "feature_count": 0,
                         "training_samples": 0,
-                        "accuracy": 0.0,
+                        "accuracy": default_metrics["accuracy"],
                     }
             else:
+                default_metrics = get_default_metrics()
                 model_status = {
                     "is_loaded": False,
                     "model_path": None,
                     "model_type": None,
                     "feature_count": 0,
                     "training_samples": 0,
-                    "accuracy": 0.0,
+                    "accuracy": default_metrics["accuracy"],
                 }
 
             return api_response(

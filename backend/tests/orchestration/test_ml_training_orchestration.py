@@ -359,6 +359,9 @@ class TestGetModelInfo:
                     "accuracy": 0.85,
                 }
             }
+            mock_manager.extract_model_performance_metrics.return_value = {
+                "accuracy": 0.85,
+            }
 
             with patch("os.path.exists", return_value=True):
                 result = await orchestration_service.get_model_info()

@@ -14,6 +14,7 @@ from app.services.ml.common.ml_config_manager import ml_config_manager
 from app.services.ml.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response
+from ..common.evaluation_utils import get_default_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -52,41 +53,23 @@ class MLManagementOrchestrationService:
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
 
-                    # 性能指標を追加
+                    # ModelManagerユーティリティで性能メトリクスを抽出
+                    metrics = model_manager.extract_model_performance_metrics(
+                        model["path"], metadata=metadata
+                    )
+                    model_info.update(metrics)
+
+                    # その他の情報を追加
                     model_info.update(
                         {
-                            "accuracy": metadata.get("accuracy", 0.0),
-                            "precision": metadata.get("precision", 0.0),
-                            "recall": metadata.get("recall", 0.0),
-                            "f1_score": metadata.get("f1_score", 0.0),
                             "feature_count": metadata.get("feature_count", 0),
                             "model_type": metadata.get("model_type", "LightGBM"),
                             "training_samples": metadata.get("training_samples", 0),
                         }
                     )
 
-                    # classification_reportから詳細指標を抽出
-                    if "classification_report" in metadata:
-                        report = metadata["classification_report"]
-                        if isinstance(report, dict) and "macro avg" in report:
-                            macro_avg = report["macro avg"]
-                            model_info.update(
-                                {
-                                    "precision": macro_avg.get(
-                                        "precision", model_info.get("precision", 0.0)
-                                    ),
-                                    "recall": macro_avg.get(
-                                        "recall", model_info.get("recall", 0.0)
-                                    ),
-                                    "f1_score": macro_avg.get(
-                                        "f1-score", model_info.get("f1_score", 0.0)
-                                    ),
-                                }
-                            )
-
             except Exception as e:
                 logger.warning(f"モデル詳細情報取得エラー {model['name']}: {e}")
-                from ..common.evaluation_utils import get_default_metrics
 
                 # エラーの場合はデフォルト値を設定
                 default_metrics = get_default_metrics()
@@ -208,7 +191,9 @@ class MLManagementOrchestrationService:
                     metadata = model_data["metadata"]
                     # ModelManagerユーティリティで性能メトリクスを抽出
                     performance_metrics = (
-                        model_manager.extract_model_performance_metrics(latest_model)
+                        model_manager.extract_model_performance_metrics(
+                            latest_model, metadata=metadata
+                        )
                     )
                     model_info = {
                         **performance_metrics,
@@ -231,8 +216,6 @@ class MLManagementOrchestrationService:
                     }
 
                 else:
-                    from ..common.evaluation_utils import get_default_metrics
-
                     default_metrics = get_default_metrics()
                     model_info = {
                         "accuracy": default_metrics["accuracy"],
@@ -263,12 +246,12 @@ class MLManagementOrchestrationService:
                     metadata = model_data["metadata"]
                     # ModelManagerユーティリティで性能メトリクスを抽出
                     status["performance_metrics"] = (
-                        model_manager.extract_model_performance_metrics(latest_model)
+                        model_manager.extract_model_performance_metrics(
+                            latest_model, metadata=metadata
+                        )
                     )
                 else:
                     # デフォルト値を設定
-                    from ..common.evaluation_utils import get_default_metrics
-
                     status["performance_metrics"] = get_default_metrics()
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
@@ -285,14 +268,11 @@ class MLManagementOrchestrationService:
                 status["is_model_loaded"] = False
                 status["is_loaded"] = False
                 status["is_trained"] = False
-                from ..common.evaluation_utils import get_default_metrics
 
                 status["performance_metrics"] = get_default_metrics()
 
         else:
             # モデルが見つからない場合のデフォルト情報
-            from ..common.evaluation_utils import get_default_metrics
-
             default_metrics = get_default_metrics()
             status["model_info"] = {
                 "accuracy": default_metrics["accuracy"],
@@ -306,28 +286,8 @@ class MLManagementOrchestrationService:
             status["is_model_loaded"] = False
             status["is_loaded"] = False
             status["is_trained"] = False
-            status["performance_metrics"] = {
-                "accuracy": 0.0,
-                "precision": 0.0,
-                "recall": 0.0,
-                "f1_score": 0.0,
-                "auc_score": 0.0,
-                "auc_roc": 0.0,
-                "auc_pr": 0.0,
-                "balanced_accuracy": 0.0,
-                "matthews_corrcoef": 0.0,
-                "cohen_kappa": 0.0,
-                "specificity": 0.0,
-                "sensitivity": 0.0,
-                "npv": 0.0,
-                "ppv": 0.0,
-                "log_loss": 0.0,
-                "brier_score": 0.0,
-                "loss": 0.0,
-                "val_accuracy": 0.0,
-                "val_loss": 0.0,
-                "training_time": 0.0,
-            }
+            status["performance_metrics"] = get_default_metrics()
+
             # ステータスメッセージを追加
             status["status"] = "no_model"
             status["message"] = (
@@ -431,7 +391,9 @@ class MLManagementOrchestrationService:
                     metadata = model_data["metadata"]
 
                     performance_metrics = (
-                        model_manager.extract_model_performance_metrics(latest_model)
+                        model_manager.extract_model_performance_metrics(
+                            latest_model, metadata=metadata
+                        )
                     )
                     return {
                         "loaded": True,
@@ -445,8 +407,6 @@ class MLManagementOrchestrationService:
                         ).isoformat(),
                     }
                 else:
-                    from ..common.evaluation_utils import get_default_metrics
-
                     default_metrics = get_default_metrics()
                     return {
                         "loaded": True,

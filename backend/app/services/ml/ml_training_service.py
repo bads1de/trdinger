@@ -86,13 +86,23 @@ class MLTrainingService(BaseResourceManager):
         if trainer_type.lower() == "single":
             # 単一モデルをEnsembleTrainer形式に変換
             model_type = "lightgbm"
-            if single_model_config and "model_type" in single_model_config:
-                model_type = single_model_config["model_type"]
+            config_copy = {}
 
-            return {
+            if single_model_config:
+                config_copy = single_model_config.copy()
+                if "model_type" in config_copy:
+                    model_type = config_copy.pop("model_type")
+
+            # 単一モデルもStackingEnsemble（モデル数1）として扱う
+            # これにより、統一されたインターフェースで学習・評価が可能
+            unified_conf = {
                 "method": "stacking",
-                "models": [model_type],  # 単一モデルとして指定
+                "models": [model_type],
             }
+            # 残りの設定をマージ（必要に応じて）
+            unified_conf.update(config_copy)
+
+            return unified_conf
 
         elif trainer_type.lower() == "ensemble":
             # アンサンブル設定のデフォルト値 (unified_configから取得)
@@ -107,7 +117,7 @@ class MLTrainingService(BaseResourceManager):
                     "stack_method": ensemble_settings.stacking_stack_method,
                     "n_jobs": ensemble_settings.stacking_n_jobs,
                     "passthrough": ensemble_settings.stacking_passthrough,
-                    "use_probas": True,  # これはconfigにないが、stacking_stack_method='predict_proba'ならTrueと同義
+                    "use_probas": True,
                     "random_state": 42,
                 },
             }
@@ -130,21 +140,6 @@ class MLTrainingService(BaseResourceManager):
         """利用可能な単一モデルのリストを取得"""
         # unified_configから取得
         return unified_config.ml.ensemble.algorithms
-
-    @staticmethod
-    def determine_trainer_type(ensemble_config: Optional[Dict[str, Any]]) -> str:
-        """
-        アンサンブル設定に基づいてトレーナータイプを決定
-
-        Args:
-            ensemble_config: アンサンブル設定
-
-        Returns:
-            トレーナータイプ（'ensemble' または 'single'）
-        """
-        if ensemble_config and ensemble_config.get("enabled", True) is False:
-            return "single"
-        return "ensemble"
 
     def train_model(
         self,
