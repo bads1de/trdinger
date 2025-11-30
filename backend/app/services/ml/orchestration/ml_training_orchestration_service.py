@@ -5,20 +5,19 @@ APIルーター内に散在していたMLトレーニング関連のビジネス
 """
 
 import logging
-import os
 from datetime import datetime
 from typing import Any, Dict
 
 from sqlalchemy.orm import Session
 
 from app.services.ml.ml_training_service import MLTrainingService
-from app.services.ml.model_manager import model_manager
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
 from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response
 from ..common.evaluation_utils import get_default_metrics
+from .orchestration_utils import get_latest_model_with_info
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -173,33 +172,25 @@ class MLTrainingOrchestrationService:
             モデル情報
         """
         try:
-            latest_model = model_manager.get_latest_model("*")
-            if latest_model and os.path.exists(latest_model):
+            try:
+                model_info_data = get_latest_model_with_info()
+            except Exception as e:
+                logger.warning(f"モデル情報取得エラー: {e}")
+                model_info_data = None
+
+            if model_info_data:
                 try:
-                    model_data = model_manager.load_model(latest_model)
-                    if model_data and "metadata" in model_data:
-                        metadata = model_data["metadata"]
-                        metrics = model_manager.extract_model_performance_metrics(
-                            latest_model, metadata=metadata
-                        )
-                        model_status = {
-                            "is_loaded": True,
-                            "model_path": latest_model,
-                            "model_type": metadata.get("model_type", "Unknown"),
-                            "feature_count": metadata.get("feature_count", 0),
-                            "training_samples": metadata.get("training_samples", 0),
-                            **metrics,
-                        }
-                    else:
-                        default_metrics = get_default_metrics()
-                        model_status = {
-                            "is_loaded": True,
-                            "model_path": latest_model,
-                            "model_type": None,
-                            "feature_count": 0,
-                            "training_samples": 0,
-                            "accuracy": default_metrics["accuracy"],
-                        }
+                    metadata = model_info_data["metadata"]
+                    metrics = model_info_data["metrics"]
+
+                    model_status = {
+                        "is_loaded": True,
+                        "model_path": model_info_data["path"],
+                        "model_type": metadata.get("model_type", "Unknown"),
+                        "feature_count": metadata.get("feature_count", 0),
+                        "training_samples": metadata.get("training_samples", 0),
+                        **metrics,
+                    }
                 except Exception as e:
                     logger.warning(f"モデル情報取得エラー: {e}")
                     default_metrics = get_default_metrics()

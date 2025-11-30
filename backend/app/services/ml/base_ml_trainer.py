@@ -61,9 +61,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # BaseResourceManagerの初期化
         super().__init__()
 
-        # 統一設定を使用
-        self.config = unified_config.ml
-
         self.feature_service = FeatureEngineeringService()
         self.label_service = LabelGenerationService()
         logger.debug(
@@ -85,6 +82,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.is_trained = False
         self._model = None
         self.last_training_results = None
+
+    @property
+    def config(self):
+        """現在の統一ML設定を取得"""
+        return unified_config.ml
 
     @property
     def model(self) -> Any:

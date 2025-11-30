@@ -3,6 +3,7 @@ ML設定管理サービス
 
 ML設定の永続化、更新、リセット機能を提供します。
 設定はJSONファイルに保存され、アプリケーション起動時に読み込まれます。
+読み込まれた設定は unified_config.ml に反映され、システム全体で共有されます。
 """
 
 import json
@@ -11,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from app.config.unified_config import MLConfig
+from app.config.unified_config import MLConfig, unified_config
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class MLConfigManager:
     ML設定管理クラス
 
     設定の永続化、更新、リセット、バリデーション機能を提供します。
+    unified_config.ml と同期して動作します。
     """
 
     def __init__(self, config_file_path: str = "config/ml_config.json"):
@@ -31,27 +33,26 @@ class MLConfigManager:
             config_file_path: 設定ファイルのパス
         """
         self.config_file_path = Path(config_file_path)
-        # MLConfigはPydanticモデル（BaseSettings）なので、デフォルト値で初期化可能
-        self._ml_config = MLConfig()
 
         # ディレクトリの自動作成は行わない（勝手にconfigディレクトリを作成しない方針）
         # 必要に応じて呼び出し側でディレクトリを用意すること
 
-        # 設定ファイルが存在する場合は読み込み
+        # 設定ファイルが存在する場合は読み込み、unified_configに反映
         if self.config_file_path.exists():
             self.load_config()
 
     def get_config_dict(self) -> Dict[str, Any]:
         """
         設定を辞書形式で取得（Pydantic自動シリアライゼーション使用）
+        unified_config.ml から最新の状態を取得します。
         """
         # model_dump() を使用して辞書化
         # by_alias=True により、エイリアス（大文字）で出力してAPI互換性を維持
-        return self._ml_config.model_dump(by_alias=True)
+        return unified_config.ml.model_dump(by_alias=True)
 
     def save_config(self) -> bool:
         """
-        現在の設定をファイルに保存
+        現在の設定(unified_config.ml)をファイルに保存
 
         Returns:
             保存成功フラグ
@@ -67,6 +68,14 @@ class MLConfigManager:
                 "description": "ML設定ファイル",
             }
 
+            # ディレクトリが存在しない場合は作成を試みる（保存時のみ）
+            if not self.config_file_path.parent.exists():
+                try:
+                    self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    logger.warning(f"設定ディレクトリの作成に失敗しました: {e}")
+                    # 続行して open でエラーになるかもしれないが、一応試みる
+
             # ファイルに保存
             with open(self.config_file_path, "w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
@@ -80,7 +89,7 @@ class MLConfigManager:
 
     def load_config(self) -> bool:
         """
-        ファイルから設定を読み込み
+        ファイルから設定を読み込み、unified_config.ml に適用
 
         Returns:
             読み込み成功フラグ
@@ -99,7 +108,7 @@ class MLConfigManager:
             # 設定を適用
             self._apply_config_dict(config_dict)
 
-            logger.info(f"ML設定を読み込みました: {self.config_file_path}")
+            logger.info(f"ML設定を読み込み、unified_configに適用しました: {self.config_file_path}")
             return True
 
         except Exception as e:
@@ -118,14 +127,13 @@ class MLConfigManager:
         """
         try:
             # 現在の設定を取得
-            current_config = self._ml_config.model_dump(by_alias=True)
+            current_config = self.get_config_dict()
 
             # 設定を更新
             updated_config = self._merge_config_updates(current_config, config_updates)
 
             # 更新された設定を適用（Pydanticのバリデーションが自動実行される）
-            # BaseSettingsのサブクラスなので、キーワード引数で初期化
-            self._ml_config = MLConfig(**updated_config)
+            self._apply_config_dict(updated_config)
 
             # ファイルに保存
             if self.save_config():
@@ -146,8 +154,8 @@ class MLConfigManager:
             リセット成功フラグ
         """
         try:
-            # デフォルト設定を作成
-            self._ml_config = MLConfig()
+            # デフォルト設定（新しいインスタンス）をunified_configにセット
+            unified_config.ml = MLConfig()
 
             # ファイルに保存
             if self.save_config():
@@ -176,13 +184,13 @@ class MLConfigManager:
 
     def _apply_config_dict(self, config_dict: Dict[str, Any]) -> None:
         """
-        辞書から設定を適用
+        辞書から設定をunified_config.mlに適用
 
         Args:
             config_dict: 適用する設定辞書
         """
-        # Pydanticモデルの再構築
-        self._ml_config = MLConfig(**config_dict)
+        # Pydanticモデルの再構築を行い、シングルトンインスタンスの属性を更新
+        unified_config.ml = MLConfig(**config_dict)
 
 
 # グローバルインスタンス

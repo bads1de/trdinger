@@ -347,28 +347,29 @@ class TestGetModelInfo:
         Args:
             orchestration_service: オーケストレーションサービス
         """
-        with patch(
-            "app.services.ml.orchestration.ml_training_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = "/path/to/model.pkl"
-            mock_manager.load_model.return_value = {
-                "metadata": {
-                    "model_type": "LightGBM",
-                    "feature_count": 50,
-                    "training_samples": 1000,
-                    "accuracy": 0.85,
-                }
-            }
-            mock_manager.extract_model_performance_metrics.return_value = {
+        model_info_data = {
+            "path": "/path/to/model.pkl",
+            "metadata": {
+                "model_type": "LightGBM",
+                "feature_count": 50,
+                "training_samples": 1000,
+            },
+            "metrics": {
                 "accuracy": 0.85,
-            }
+            },
+            "file_info": {"size_mb": 10.0, "modified_at": datetime(2024, 1, 1)},
+        }
 
-            with patch("os.path.exists", return_value=True):
-                result = await orchestration_service.get_model_info()
+        with patch(
+            "app.services.ml.orchestration.ml_training_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
 
-                assert result["success"] is True
-                assert result["data"]["model_status"]["is_loaded"] is True
-                assert result["data"]["model_status"]["model_type"] == "LightGBM"
+            result = await orchestration_service.get_model_info()
+
+            assert result["success"] is True
+            assert result["data"]["model_status"]["is_loaded"] is True
+            assert result["data"]["model_status"]["model_type"] == "LightGBM"
 
     @pytest.mark.asyncio
     async def test_get_model_info_no_model(
@@ -381,9 +382,9 @@ class TestGetModelInfo:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.ml.orchestration.ml_training_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = None
+            "app.services.ml.orchestration.ml_training_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = None
 
             result = await orchestration_service.get_model_info()
 
@@ -652,17 +653,15 @@ class TestEdgeCases:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.ml.orchestration.ml_training_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = "/path/to/model.pkl"
-            mock_manager.load_model.side_effect = Exception("Corrupt metadata")
+            "app.services.ml.orchestration.ml_training_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.side_effect = Exception("Corrupt metadata")
 
-            with patch("os.path.exists", return_value=True):
-                result = await orchestration_service.get_model_info()
+            result = await orchestration_service.get_model_info()
 
-                assert result["success"] is True
-                # メタデータ破損でもエラーハンドリングされる
-                assert result["data"]["model_status"]["is_loaded"] is False
+            assert result["success"] is True
+            # メタデータ破損でもエラーハンドリングされる
+            assert result["data"]["model_status"]["is_loaded"] is False
 
     def test_validate_training_config_minimum_period(
         self,

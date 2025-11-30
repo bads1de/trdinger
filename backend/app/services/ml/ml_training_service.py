@@ -29,7 +29,6 @@ class MLTrainingService(BaseResourceManager):
     ML学習サービス（統一トレーナー対応）
 
     EnsembleTrainerを使用してMLモデル（単一・アンサンブル両対応）の学習、評価、保存を行うサービス。
-    SingleModelTrainerは廃止し、全てEnsembleTrainerで統一。
     """
 
     def __init__(
@@ -51,7 +50,6 @@ class MLTrainingService(BaseResourceManager):
         # BaseResourceManagerの初期化
         super().__init__()
 
-        self.config = unified_config.ml
         self.optimization_service = OptimizationService()
 
         # 統合されたトレーナー設定を作成
@@ -65,6 +63,11 @@ class MLTrainingService(BaseResourceManager):
 
         mode = "単一モデル" if self.trainer.is_single_model else "アンサンブル"
         logger.info(f"MLTrainingService初期化: mode={mode}, config={final_config}")
+
+    @property
+    def config(self):
+        """現在の統一ML設定を取得"""
+        return unified_config.ml
 
     def _create_unified_config(
         self,
@@ -163,7 +166,7 @@ class MLTrainingService(BaseResourceManager):
             optimization_settings: 最適化設定（オプション）
             **training_params: 追加の学習パラメータ
                 - use_cross_validation: クロスバリデーションを使用（デフォルト: False）
-                - cv_splits: CV分割数（デフォルト: ml_config.training.CROSS_VALIDATION_FOLDS）
+                - cv_splits: CV分割数（デフォルト: config.training.cv_folds）
 
         Returns:
             学習結果の辞書
@@ -173,7 +176,7 @@ class MLTrainingService(BaseResourceManager):
             MLModelError: 学習に失敗した場合
             ValueError: 無効なパラメータ組み合わせの場合
         """
-        # TimeSeriesSplit関連パラメータをml_configから設定（未指定の場合）
+        # TimeSeriesSplit関連パラメータを設定（未指定の場合）
         training_params = self._prepare_training_params(training_params)
 
         trainer = self.trainer
@@ -242,7 +245,7 @@ class MLTrainingService(BaseResourceManager):
         # クロスバリデーション利用時のパラメータ
         use_cross_validation = params.get("use_cross_validation", False)
         if use_cross_validation:
-            # CV分割数（ml_configから取得、training_paramsで上書き可能）
+            # CV分割数（configから取得、training_paramsで上書き可能）
             if "cv_splits" not in params:
                 params["cv_splits"] = self.config.training.cv_folds
 

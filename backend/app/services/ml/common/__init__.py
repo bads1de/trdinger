@@ -32,10 +32,6 @@ from ..exceptions import (
     MLModelError,
     MLValidationError,
 )
-from .logger import (
-    MLStructuredLogger,
-    ml_logger,
-)
 
 __all__ = [
     # Unified Error handling
@@ -54,9 +50,6 @@ __all__ = [
     "MLValidationError",
     "MLDataError",
     "MLModelError",
-    # Logging
-    "MLStructuredLogger",
-    "ml_logger",
     # Metrics
     "MetricData",
     "PerformanceMetrics",

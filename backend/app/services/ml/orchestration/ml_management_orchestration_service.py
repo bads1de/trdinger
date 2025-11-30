@@ -4,7 +4,6 @@ ML管理 オーケストレーションサービス
 
 import logging
 import os
-from datetime import datetime
 from typing import Any, Dict, List
 from urllib.parse import unquote
 
@@ -15,6 +14,7 @@ from app.services.ml.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response
 from ..common.evaluation_utils import get_default_metrics
+from .orchestration_utils import get_latest_model_with_info, load_model_metadata_safely
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,8 @@ class MLManagementOrchestrationService:
 
             # モデルの詳細情報を取得
             try:
-                model_data = model_manager.load_model(model["path"])
-                if model_data and "metadata" in model_data:
+                model_data = load_model_metadata_safely(model["path"])
+                if model_data:
                     metadata = model_data["metadata"]
 
                     # ModelManagerユーティリティで性能メトリクスを抽出
@@ -65,6 +65,20 @@ class MLManagementOrchestrationService:
                             "feature_count": metadata.get("feature_count", 0),
                             "model_type": metadata.get("model_type", "LightGBM"),
                             "training_samples": metadata.get("training_samples", 0),
+                        }
+                    )
+                else:
+                    # メタデータを取得できなかった場合
+                    default_metrics = get_default_metrics()
+                    model_info.update(
+                        {
+                            "accuracy": default_metrics["accuracy"],
+                            "precision": default_metrics["precision"],
+                            "recall": default_metrics["recall"],
+                            "f1_score": default_metrics["f1_score"],
+                            "feature_count": 0,
+                            "model_type": "Unknown",
+                            "training_samples": 0,
                         }
                     )
 
@@ -182,87 +196,60 @@ class MLManagementOrchestrationService:
             "training_samples": 0,
         }
 
-        latest_model = model_manager.get_latest_model("*")
+        model_info_data = get_latest_model_with_info()
 
-        if latest_model and os.path.exists(latest_model):
+        if model_info_data:
             try:
-                model_data = model_manager.load_model(latest_model)
-                if model_data and "metadata" in model_data:
-                    metadata = model_data["metadata"]
-                    # ModelManagerユーティリティで性能メトリクスを抽出
-                    performance_metrics = (
-                        model_manager.extract_model_performance_metrics(
-                            latest_model, metadata=metadata
-                        )
-                    )
-                    model_info = {
-                        **performance_metrics,
-                        "model_type": metadata.get("model_type", "LightGBM"),
-                        "last_updated": datetime.fromtimestamp(
-                            os.path.getmtime(latest_model)
-                        ).isoformat(),
-                        "training_samples": metadata.get("training_samples", 0),
-                        "test_samples": metadata.get("test_samples", 0),
-                        "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
-                        "feature_count": metadata.get("feature_count", 0),
-                        "num_classes": metadata.get("num_classes", 2),
-                        "best_iteration": metadata.get("best_iteration", 0),
-                        "train_test_split": metadata.get("train_test_split", 0.8),
-                        "random_state": metadata.get("random_state", 42),
-                        "feature_importance": metadata.get("feature_importance", {}),
-                        "classification_report": metadata.get(
-                            "classification_report", {}
-                        ),
-                    }
+                metadata = model_info_data["metadata"]
+                metrics = model_info_data["metrics"]
+                file_info = model_info_data["file_info"]
 
-                else:
-                    default_metrics = get_default_metrics()
-                    model_info = {
-                        "accuracy": default_metrics["accuracy"],
-                        "model_type": "LightGBM",
-                        "last_updated": datetime.fromtimestamp(
-                            os.path.getmtime(latest_model)
-                        ).isoformat(),
-                        "training_samples": 0,
-                        "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
-                        "feature_count": 0,
-                    }
+                model_info = {
+                    **metrics,
+                    "model_type": metadata.get("model_type", "LightGBM"),
+                    "last_updated": file_info["modified_at"].isoformat(),
+                    "training_samples": metadata.get("training_samples", 0),
+                    "test_samples": metadata.get("test_samples", 0),
+                    "file_size_mb": file_info["size_mb"],
+                    "feature_count": metadata.get("feature_count", 0),
+                    "num_classes": metadata.get("num_classes", 2),
+                    "best_iteration": metadata.get("best_iteration", 0),
+                    "train_test_split": metadata.get("train_test_split", 0.8),
+                    "random_state": metadata.get("random_state", 42),
+                    "feature_importance": metadata.get("feature_importance", {}),
+                    "classification_report": metadata.get("classification_report", {}),
+                }
+
                 status.update(
                     {
                         "is_model_loaded": True,
                         "is_loaded": True,
                         "is_trained": True,
-                        "model_path": latest_model,
+                        "model_path": model_info_data["path"],
                         "model_type": model_info.get("model_type"),
                         "feature_count": model_info.get("feature_count", 0),
                         "training_samples": model_info.get("training_samples", 0),
                     }
                 )
                 status["model_info"] = model_info
+                status["performance_metrics"] = metrics
 
-                # ModelManagerから直接メタデータを取得
-                model_data = model_manager.load_model(latest_model)
-                if model_data and "metadata" in model_data:
-                    metadata = model_data["metadata"]
-                    # ModelManagerユーティリティで性能メトリクスを抽出
-                    status["performance_metrics"] = (
-                        model_manager.extract_model_performance_metrics(
-                            latest_model, metadata=metadata
-                        )
-                    )
-                else:
-                    # デフォルト値を設定
-                    status["performance_metrics"] = get_default_metrics()
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
                 status["model_info"] = {
                     "accuracy": 0.0,
                     "model_type": "Unknown",
-                    "last_updated": datetime.fromtimestamp(
-                        os.path.getmtime(latest_model)
-                    ).isoformat(),
+                    "last_updated": (
+                        file_info["modified_at"].isoformat()
+                        if model_info_data and "file_info" in model_info_data
+                        else "不明"
+                    ),
                     "training_samples": 0,
-                    "file_size_mb": os.path.getsize(latest_model) / (1024 * 1024),
+                    "file_size_mb": (
+                        file_info["size_mb"]
+                        if model_info_data and "file_info" in model_info_data
+                        else 0.0
+                    ),
                     "feature_count": 0,
                 }
                 status["is_model_loaded"] = False
@@ -300,25 +287,20 @@ class MLManagementOrchestrationService:
         """
         特徴量重要度を取得
         """
-        # model_managerから直接最新モデルの特徴量重要度を取得
-        latest_model = model_manager.get_latest_model("*")
+        model_info_data = get_latest_model_with_info()
 
-        if latest_model and os.path.exists(latest_model):
+        if model_info_data:
             try:
-                model_data = model_manager.load_model(latest_model)
-                if model_data and "metadata" in model_data:
-                    metadata = model_data["metadata"]
-                    feature_importance = metadata.get("feature_importance", {})
+                metadata = model_info_data["metadata"]
+                feature_importance = metadata.get("feature_importance", {})
 
-                    if feature_importance:
-                        # 重要度でソートして上位N個を返す
-                        sorted_features = sorted(
-                            feature_importance.items(), key=lambda x: x[1], reverse=True
-                        )[:top_n]
+                if feature_importance:
+                    # 重要度でソートして上位N個を返す
+                    sorted_features = sorted(
+                        feature_importance.items(), key=lambda x: x[1], reverse=True
+                    )[:top_n]
 
-                        return {"feature_importance": dict(sorted_features)}
-                    else:
-                        return {"feature_importance": []}
+                    return {"feature_importance": dict(sorted_features)}
                 else:
                     return {"feature_importance": []}
             except Exception as e:
@@ -381,44 +363,23 @@ class MLManagementOrchestrationService:
         """
         現在読み込まれているモデル情報を取得
         """
-        # model_managerから直接最新モデルの情報を取得
-        latest_model = model_manager.get_latest_model("*")
+        model_info_data = get_latest_model_with_info()
 
-        if latest_model and os.path.exists(latest_model):
+        if model_info_data:
             try:
-                model_data = model_manager.load_model(latest_model)
-                if model_data and "metadata" in model_data:
-                    metadata = model_data["metadata"]
+                metadata = model_info_data["metadata"]
+                metrics = model_info_data["metrics"]
+                file_info = model_info_data["file_info"]
 
-                    performance_metrics = (
-                        model_manager.extract_model_performance_metrics(
-                            latest_model, metadata=metadata
-                        )
-                    )
-                    return {
-                        "loaded": True,
-                        "model_type": metadata.get("model_type", "Unknown"),
-                        "is_trained": True,
-                        "feature_count": metadata.get("feature_count", 0),
-                        "training_samples": metadata.get("training_samples", 0),
-                        "accuracy": performance_metrics["accuracy"],
-                        "last_updated": datetime.fromtimestamp(
-                            os.path.getmtime(latest_model)
-                        ).isoformat(),
-                    }
-                else:
-                    default_metrics = get_default_metrics()
-                    return {
-                        "loaded": True,
-                        "model_type": "Unknown",
-                        "is_trained": True,
-                        "feature_count": 0,
-                        "training_samples": 0,
-                        "accuracy": default_metrics["accuracy"],
-                        "last_updated": datetime.fromtimestamp(
-                            os.path.getmtime(latest_model)
-                        ).isoformat(),
-                    }
+                return {
+                    "loaded": True,
+                    "model_type": metadata.get("model_type", "Unknown"),
+                    "is_trained": True,
+                    "feature_count": metadata.get("feature_count", 0),
+                    "training_samples": metadata.get("training_samples", 0),
+                    "accuracy": metrics["accuracy"],
+                    "last_updated": file_info["modified_at"].isoformat(),
+                }
             except Exception as e:
                 logger.warning(f"現在のモデル情報取得エラー: {e}")
                 return {"loaded": False, "error": str(e)}

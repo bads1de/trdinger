@@ -114,11 +114,16 @@ class TestGetFormattedModels:
             sample_model_list: サンプルモデルリスト
             sample_model_metadata: サンプルメタデータ
         """
-        with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.load_model_metadata_safely"
+            ) as mock_load_metadata,
+        ):
             mock_manager.list_models.return_value = sample_model_list
-            mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
+            mock_load_metadata.return_value = {"metadata": sample_model_metadata}
             mock_manager.extract_model_performance_metrics.return_value = {
                 "accuracy": 0.85
             }
@@ -163,11 +168,16 @@ class TestGetFormattedModels:
             orchestration_service: オーケストレーションサービス
             sample_model_list: サンプルモデルリスト
         """
-        with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
+        with (
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
+            ) as mock_manager,
+            patch(
+                "app.services.ml.orchestration.ml_management_orchestration_service.load_model_metadata_safely"
+            ) as mock_load_metadata,
+        ):
             mock_manager.list_models.return_value = sample_model_list
-            mock_manager.load_model.side_effect = Exception("Load error")
+            mock_load_metadata.side_effect = Exception("Load error")
 
             result = await orchestration_service.get_formatted_models()
 
@@ -385,22 +395,27 @@ class TestGetMLStatus:
             orchestration_service: オーケストレーションサービス
             sample_model_metadata: サンプルメタデータ
         """
-        with (
-            patch(
-                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-            ) as mock_manager,
-            patch("os.path.exists", return_value=True),
-            patch("os.path.getmtime", return_value=1704110400.0),
-            patch("os.path.getsize", return_value=10485760),
-        ):
-            mock_manager.get_latest_model.return_value = "/models/latest.pkl"
-            mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
-            mock_manager.extract_model_performance_metrics.return_value = {
+        from datetime import datetime
+
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": sample_model_metadata,
+            "metrics": {
                 "accuracy": 0.85,
                 "precision": 0.82,
                 "recall": 0.88,
                 "f1_score": 0.85,
-            }
+            },
+            "file_info": {
+                "size_mb": 10.0,
+                "modified_at": datetime(2024, 1, 1, 12, 0, 0),
+            },
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
 
             result = await orchestration_service.get_ml_status()
 
@@ -421,9 +436,9 @@ class TestGetMLStatus:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = None
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = None
 
             result = await orchestration_service.get_ml_status()
 
@@ -473,22 +488,25 @@ class TestGetFeatureImportance:
         Args:
             orchestration_service: オーケストレーションサービス
         """
+        from datetime import datetime
+
         feature_importance = {
             "feature1": 0.5,
             "feature2": 0.3,
             "feature3": 0.2,
         }
 
-        with (
-            patch(
-                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-            ) as mock_manager,
-            patch("os.path.exists", return_value=True),
-        ):
-            mock_manager.get_latest_model.return_value = "/models/latest.pkl"
-            mock_manager.load_model.return_value = {
-                "metadata": {"feature_importance": feature_importance}
-            }
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": {"feature_importance": feature_importance},
+            "metrics": {},
+            "file_info": {"size_mb": 10.0, "modified_at": datetime(2024, 1, 1)},
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
 
             result = await orchestration_service.get_feature_importance(top_n=10)
 
@@ -505,18 +523,21 @@ class TestGetFeatureImportance:
         Args:
             orchestration_service: オーケストレーションサービス
         """
+        from datetime import datetime
+
         feature_importance = {f"feature{i}": 1.0 / (i + 1) for i in range(20)}
 
-        with (
-            patch(
-                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-            ) as mock_manager,
-            patch("os.path.exists", return_value=True),
-        ):
-            mock_manager.get_latest_model.return_value = "/models/latest.pkl"
-            mock_manager.load_model.return_value = {
-                "metadata": {"feature_importance": feature_importance}
-            }
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": {"feature_importance": feature_importance},
+            "metrics": {},
+            "file_info": {"size_mb": 10.0, "modified_at": datetime(2024, 1, 1)},
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
 
             result = await orchestration_service.get_feature_importance(top_n=5)
 
@@ -534,9 +555,9 @@ class TestGetFeatureImportance:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = None
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = None
 
             result = await orchestration_service.get_feature_importance()
 
@@ -633,15 +654,22 @@ class TestGetCurrentModelInfo:
             orchestration_service: オーケストレーションサービス
             sample_model_metadata: サンプルメタデータ
         """
-        with (
-            patch(
-                "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-            ) as mock_manager,
-            patch("os.path.exists", return_value=True),
-            patch("os.path.getmtime", return_value=1704110400.0),
-        ):
-            mock_manager.get_latest_model.return_value = "/models/latest.pkl"
-            mock_manager.load_model.return_value = {"metadata": sample_model_metadata}
+        from datetime import datetime
+
+        model_info_data = {
+            "path": "/models/latest.pkl",
+            "metadata": sample_model_metadata,
+            "metrics": {"accuracy": 0.85},
+            "file_info": {
+                "size_mb": 10.0,
+                "modified_at": datetime(2024, 1, 1, 12, 0, 0),
+            },
+        }
+
+        with patch(
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = model_info_data
 
             result = await orchestration_service.get_current_model_info()
 
@@ -660,9 +688,9 @@ class TestGetCurrentModelInfo:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.ml.orchestration.ml_management_orchestration_service.model_manager"
-        ) as mock_manager:
-            mock_manager.get_latest_model.return_value = None
+            "app.services.ml.orchestration.ml_management_orchestration_service.get_latest_model_with_info"
+        ) as mock_get_model:
+            mock_get_model.return_value = None
 
             result = await orchestration_service.get_current_model_info()
 
