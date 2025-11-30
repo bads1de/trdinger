@@ -31,8 +31,6 @@ class AlgorithmRegistry:
         # Ensemble
         "ensembletrainer": "ensemble",
         "stackingensemble": "stacking",
-        # Single Model
-        "singlemodeltrainer": "single",
     }
 
     # サポートされているアルゴリズム名のセット

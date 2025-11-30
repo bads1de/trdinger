@@ -72,7 +72,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.trainer_config = trainer_config or {}
 
-        # 以下のプロパティはサブクラス（SingleModelTrainer, EnsembleTrainer）で使用されるため保持
+        # 以下のプロパティはサブクラスで使用されるため保持
         # BaseMLTrainer自体では使用しないが、互換性のため維持
         self.trainer_type = trainer_type or self.trainer_config.get("type", "single")
         self.model_type = model_type or self.trainer_config.get(
@@ -85,6 +85,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.is_trained = False
         self._model = None
         self.last_training_results = None
+
+    @property
+    def model(self) -> Any:
+        """学習済みモデルを取得"""
+        return self._model
 
     @safe_ml_operation(
         default_return={"success": False}, context="MLモデル学習でエラーが発生しました"
@@ -237,7 +242,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         )
 
         # 予測を実行（全データ）
-        # predictは確率を返す（SingleModelTrainer, StackingEnsembleともに）
+        # predictは確率を返す
         predictions_proba = self.predict(features_df)
 
         # クラス予測（確率最大）

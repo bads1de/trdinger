@@ -180,7 +180,7 @@ class TestCodeDuplicationRemoval:
         # 実際のコードレビューで確認するのが適切
         # ここでは基本的な統合テストとして実装
 
-        # SingleModelTrainerとEnsembleTrainerが
+        # トレーナーが
         # evaluation_utilsを使用していることを確認したい
         # （実装を確認する必要がある）
         pass

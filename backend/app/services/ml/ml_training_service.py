@@ -124,7 +124,7 @@ class MLTrainingService(BaseResourceManager):
     @staticmethod
     def get_available_single_models() -> List[str]:
         """利用可能な単一モデルのリストを取得"""
-        # 利用可能なモデルをハードコード（旧SingleModelTrainer互換）
+        # 利用可能なモデルをハードコード
         return ["lightgbm", "xgboost", "catboost"]
 
     @staticmethod

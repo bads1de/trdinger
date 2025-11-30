@@ -40,14 +40,18 @@ class TestRealImplementationDataLeaks:
     @pytest.fixture
     def mock_trainer(self):
         """Mockトレーナー"""
-        with (
-            patch("app.services.ml.ensemble.ensemble_trainer.EnsembleTrainer"),
-            patch(
-                "app.services.ml.single_model.single_model_trainer.SingleModelTrainer"
-            ),
-        ):
-            trainer = BaseMLTrainer(
-                trainer_config={"type": "single", "model_type": "lightgbm"}
+        # BaseMLTrainerは抽象クラスなので直接インスタンス化できない
+        # テスト用の具象クラスを定義
+        class MockMLTrainer(BaseMLTrainer):
+            def predict(self, features_df):
+                return np.zeros(len(features_df))
+            
+            def _train_model_impl(self, X_train, X_test, y_train, y_test, **training_params):
+                return {"accuracy": 0.5}
+
+        with patch("app.services.ml.ensemble.ensemble_trainer.EnsembleTrainer"):
+            trainer = MockMLTrainer(
+                trainer_config={"type": "ensemble", "model_type": "lightgbm"}
             )
             yield trainer
 

@@ -12,6 +12,7 @@ import pandas as pd
 from sklearn.preprocessing import KBinsDiscretizer
 
 from .enums import ThresholdMethod
+from ..common.volatility_utils import calculate_volatility_std
 
 logger = logging.getLogger(__name__)
 
@@ -335,8 +336,8 @@ class ThresholdCalculator:
         Returns:
             閾値情報の辞書
         """
-        # ローリングボラティリティを計算
-        volatility = price_change.rolling(window=volatility_window).std()
+        # ローリングボラティリティを計算（統一関数を使用）
+        volatility = calculate_volatility_std(price_change, window=volatility_window)
 
         # 動的閾値を計算
         dynamic_threshold = volatility * threshold_multiplier

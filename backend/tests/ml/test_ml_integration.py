@@ -72,8 +72,9 @@ class TestMLTrainingService:
 
     def test_initialization_with_single_trainer(self, mock_trainer):
         """単一モデルトレーナーでの初期化テスト"""
+        # SingleModelTrainer指定でも内部ではEnsembleTrainerが使われる
         with patch(
-            "backend.app.services.ml.ml_training_service.SingleModelTrainer",
+            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService(trainer_type="single")
@@ -85,28 +86,26 @@ class TestMLTrainingService:
         # EnsembleTrainerのモックが必要（内部でインポートされるため）
         with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer"):
             service = MLTrainingService()
-            config = service._create_trainer_config("ensemble", None, None)
+            config = service._create_unified_config("ensemble", None, None)
 
-            assert config["type"] == "ensemble"
-            assert config["model_type"] == "stacking"
-            assert "ensemble_config" in config
+            assert config["method"] == "stacking"
+            assert "models" in config
 
     def test_create_trainer_config_single(self):
         """単一モデルトレーナー設定作成テスト"""
-        with patch("backend.app.services.ml.ml_training_service.SingleModelTrainer"):
+        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer"):
             service = MLTrainingService()
             single_config = {"model_type": "xgboost"}
-            config = service._create_trainer_config("single", None, single_config)
+            config = service._create_unified_config("single", None, single_config)
 
-            assert config["type"] == "single"
-            assert config["model_type"] == "xgboost"
-            assert config["model_params"] == single_config
+            assert config["method"] == "stacking"
+            assert config["models"] == ["xgboost"]
 
     def test_create_trainer_config_invalid_type(self):
         """無効なトレーナータイプでの設定作成テスト"""
         service = MLTrainingService()
         with pytest.raises(ValueError, match="サポートされていないトレーナータイプ"):
-            service._create_trainer_config("invalid", None, None)
+            service._create_unified_config("invalid", None, None)
 
     def test_train_model_without_optimization(self, sample_training_data, mock_trainer):
         """最適化なしでのモデル学習テスト"""
@@ -288,12 +287,9 @@ class TestMLTrainingService:
 
     def test_get_available_single_models(self):
         """利用可能単一モデル取得テスト"""
-        with patch(
-            "backend.app.services.ml.ml_training_service.SingleModelTrainer.get_available_models",
-            return_value=["lightgbm", "xgboost"],
-        ):
-            models = MLTrainingService.get_available_single_models()
-            assert models == ["lightgbm", "xgboost"]
+        # ハードコードされたリストが返されることを確認
+        models = MLTrainingService.get_available_single_models()
+        assert models == ["lightgbm", "xgboost", "catboost"]
 
     def test_determine_trainer_type(self):
         """トレーナータイプ決定テスト"""
