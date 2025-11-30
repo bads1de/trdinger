@@ -10,7 +10,7 @@ from urllib.parse import unquote
 
 from fastapi import HTTPException
 
-from app.services.ml.config.ml_config_manager import ml_config_manager
+from app.services.ml.common.ml_config_manager import ml_config_manager
 from app.services.ml.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response
@@ -87,17 +87,20 @@ class MLManagementOrchestrationService:
             except Exception as e:
                 logger.warning(f"モデル詳細情報取得エラー {model['name']}: {e}")
                 from ..common.evaluation_utils import get_default_metrics
+
                 # エラーの場合はデフォルト値を設定
                 default_metrics = get_default_metrics()
-                model_info.update({
-                    "accuracy": default_metrics["accuracy"],
-                    "precision": default_metrics["precision"],
-                    "recall": default_metrics["recall"],
-                    "f1_score": default_metrics["f1_score"],
-                    "feature_count": 0,
-                    "model_type": "Unknown",
-                    "training_samples": 0,
-                })
+                model_info.update(
+                    {
+                        "accuracy": default_metrics["accuracy"],
+                        "precision": default_metrics["precision"],
+                        "recall": default_metrics["recall"],
+                        "f1_score": default_metrics["f1_score"],
+                        "feature_count": 0,
+                        "model_type": "Unknown",
+                        "training_samples": 0,
+                    }
+                )
 
             formatted_models.append(model_info)
 
@@ -204,7 +207,9 @@ class MLManagementOrchestrationService:
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
                     # ModelManagerユーティリティで性能メトリクスを抽出
-                    performance_metrics = model_manager.extract_model_performance_metrics(latest_model)
+                    performance_metrics = (
+                        model_manager.extract_model_performance_metrics(latest_model)
+                    )
                     model_info = {
                         **performance_metrics,
                         "model_type": metadata.get("model_type", "LightGBM"),
@@ -227,6 +232,7 @@ class MLManagementOrchestrationService:
 
                 else:
                     from ..common.evaluation_utils import get_default_metrics
+
                     default_metrics = get_default_metrics()
                     model_info = {
                         "accuracy": default_metrics["accuracy"],
@@ -256,10 +262,13 @@ class MLManagementOrchestrationService:
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
                     # ModelManagerユーティリティで性能メトリクスを抽出
-                    status["performance_metrics"] = model_manager.extract_model_performance_metrics(latest_model)
+                    status["performance_metrics"] = (
+                        model_manager.extract_model_performance_metrics(latest_model)
+                    )
                 else:
                     # デフォルト値を設定
                     from ..common.evaluation_utils import get_default_metrics
+
                     status["performance_metrics"] = get_default_metrics()
             except Exception as e:
                 logger.warning(f"モデル情報取得エラー: {e}")
@@ -277,11 +286,13 @@ class MLManagementOrchestrationService:
                 status["is_loaded"] = False
                 status["is_trained"] = False
                 from ..common.evaluation_utils import get_default_metrics
+
                 status["performance_metrics"] = get_default_metrics()
 
         else:
             # モデルが見つからない場合のデフォルト情報
             from ..common.evaluation_utils import get_default_metrics
+
             default_metrics = get_default_metrics()
             status["model_info"] = {
                 "accuracy": default_metrics["accuracy"],
@@ -419,7 +430,9 @@ class MLManagementOrchestrationService:
                 if model_data and "metadata" in model_data:
                     metadata = model_data["metadata"]
 
-                    performance_metrics = model_manager.extract_model_performance_metrics(latest_model)
+                    performance_metrics = (
+                        model_manager.extract_model_performance_metrics(latest_model)
+                    )
                     return {
                         "loaded": True,
                         "model_type": metadata.get("model_type", "Unknown"),
@@ -433,6 +446,7 @@ class MLManagementOrchestrationService:
                     }
                 else:
                     from ..common.evaluation_utils import get_default_metrics
+
                     default_metrics = get_default_metrics()
                     return {
                         "loaded": True,
