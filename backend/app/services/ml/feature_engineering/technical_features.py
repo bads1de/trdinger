@@ -19,6 +19,7 @@ from ...indicators.technical_indicators.volatility import VolatilityIndicators
 from ...indicators.technical_indicators.volume import VolumeIndicators
 from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
+from ..preprocessing.fractional_differentiation import FractionalDifferentiation
 
 
 logger = logging.getLogger(__name__)
@@ -62,8 +63,61 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
         result_df = self.calculate_trend_features(result_df, lookback_periods)
         result_df = self.calculate_pattern_features(result_df, lookback_periods)
+        result_df = self.calculate_fractional_difference_features(result_df, config)
 
         return result_df
+
+    @safe_ml_operation(default_return=None, context="分数次差分特徴量計算でエラーが発生しました")
+    def calculate_fractional_difference_features(
+        self, df: pd.DataFrame, config: Dict[str, Any]
+    ) -> pd.DataFrame:
+        """
+        分数次差分特徴量を計算（メモリ保持と定常性の両立）
+
+        Args:
+            df: OHLCV価格データ
+            config: 計算設定 (fractional_differentiation設定を含む)
+
+        Returns:
+            分数次差分特徴量が追加されたDataFrame
+        """
+        # コンフィグから設定を取得（デフォルト値は適宜調整）
+        # デフォルトでは無効化（計算コストが高いため）
+        frac_diff_config = config.get("fractional_differentiation", {})
+        if not frac_diff_config.get("enabled", False):
+            return df
+
+        try:
+            if not self.validate_input_data(df, ["close"]):
+                return df
+
+            result_df = self.create_result_dataframe(df)
+            new_features = {}
+
+            d_value = frac_diff_config.get("d", 0.4)
+            window_size = frac_diff_config.get("window_size", 20)
+
+            fd = FractionalDifferentiation(d=d_value, window_size=window_size)
+            
+            # close価格に対して適用
+            frac_diff_close = fd.transform(df["close"])
+            new_features[f"FracDiff_Close_{d_value}"] = frac_diff_close.fillna(0.0)
+
+            # 必要に応じて他のカラムにも適用（例: Volume）
+            if "volume" in df.columns and frac_diff_config.get("apply_to_volume", False):
+                frac_diff_volume = fd.transform(df["volume"])
+                new_features[f"FracDiff_Volume_{d_value}"] = frac_diff_volume.fillna(0.0)
+
+            # 一括で結合
+            result_df = pd.concat(
+                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+            )
+
+            self.log_feature_calculation_complete("分数次差分")
+            return result_df
+
+        except Exception as e:
+            return self.handle_calculation_error(e, "分数次差分特徴量計算", df)
 
     def calculate_advanced_technical_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
@@ -90,6 +144,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
         # Volatility features (BBW, NATR, TRANGE)
         result_df = self.calculate_volatility_features(result_df, lookback_periods)
+        
+        # 分数次差分はデフォルトで無効化されているためここには含めない、
+        # もしくはテスト用に明示的に呼び出す必要があるが、互換性メソッドなので一旦含めない。
 
         return result_df
 
@@ -709,4 +766,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "BBW",
             # 追加モメンタム
             "Ultimate_Oscillator",
+            # 分数次差分（設定により動的に変わるが、代表的なものを記載）
+            "FracDiff_Close_0.4",
+            "FracDiff_Volume_0.4",
         ]

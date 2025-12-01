@@ -289,5 +289,57 @@ def test_lookback_periods_optional(sample_ohlcv_data):
     assert isinstance(result, pd.DataFrame)
 
 
+def test_calculate_fractional_difference_features(sample_ohlcv_data):
+    """分数次差分特徴量のテスト"""
+    calculator = TechnicalFeatureCalculator()
+    config = {
+        "fractional_differentiation": {
+            "enabled": True,
+            "d": 0.4,
+            "window_size": 20,
+            "apply_to_volume": True
+        }
+    }
+
+    result = calculator.calculate_fractional_difference_features(
+        sample_ohlcv_data, config
+    )
+
+    expected_features = [
+        "FracDiff_Close_0.4",
+        "FracDiff_Volume_0.4"
+    ]
+
+    for feature in expected_features:
+        assert feature in result.columns, f"Missing feature: {feature}"
+        # Check for NaN handling (should be 0.0 or valid)
+        assert not result[feature].isnull().all()
+
+
+def test_calculate_features_with_frac_diff(sample_ohlcv_data):
+    """統合されたcalculate_featuresでの分数次差分テスト"""
+    calculator = TechnicalFeatureCalculator()
+    config = {
+        "lookback_periods": {"short_ma": 10, "long_ma": 50},
+        "fractional_differentiation": {
+            "enabled": True,
+            "d": 0.4
+        }
+    }
+
+    result = calculator.calculate_features(sample_ohlcv_data, config)
+
+    assert "FracDiff_Close_0.4" in result.columns
+
+
+def test_get_feature_names_includes_frac_diff():
+    """get_feature_namesメソッドのテスト（分数次差分含む）"""
+    calculator = TechnicalFeatureCalculator()
+    feature_names = calculator.get_feature_names()
+
+    assert isinstance(feature_names, list)
+    assert "FracDiff_Close_0.4" in feature_names
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

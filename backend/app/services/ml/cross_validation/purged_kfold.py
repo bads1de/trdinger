@@ -52,118 +52,53 @@ class PurgedKFold(_BaseKFold):
             raise ValueError("X and t1 must have the same index.")
 
         indices = np.arange(X.shape[0])
-        mbrg = int(X.shape[0] * self.pct_embargo) # Embargo period in number of samples
         
         for i in range(self.n_splits):
-            test_start = (X.shape[0] // self.n_splits) * i
-            test_end = (X.shape[0] // self.n_splits) * (i + 1)
+            test_start_idx = (X.shape[0] // self.n_splits) * i
+            test_end_idx = (X.shape[0] // self.n_splits) * (i + 1)
             
             # Adjust test_end for the last fold
             if i == self.n_splits - 1:
-                test_end = X.shape[0]
+                test_end_idx = X.shape[0]
 
-            test_indices = indices[test_start:test_end]
+            test_indices = indices[test_start_idx:test_end_idx]
             
             if len(test_indices) == 0:
                 continue
 
-            test_times = X.index[test_indices]
-            # Use t1 for end of test period
-            test_t1_times = self.t1.loc[test_times]
+            # Test set interval
+            test_start_time = X.index[test_start_idx]
+            # Determine max t1 in the test set for correct overlap checking and embargo
+            test_max_t1 = self.t1.iloc[test_indices].max()
             
-            train_indices = []
-            for j in range(X.shape[0]):
-                if j in test_indices:
-                    continue
-                
-                # Check for overlap with any test sample (purge)
-                # Ensure training sample's end time (t1) is before test sample's start time
-                # Or training sample's start time is after test sample's end time
-                
-                # Condition 1: Training sample j must not end after any test sample starts
-                # This prevents standard data leakage where a training observation overlaps with a test observation
-                train_sample_t1 = self.t1.iloc[j]
-                
-                # This is more robust check. Training observations must not overlap test observations.
-                # Specifically, training observation 'j' (from X.index[j] to self.t1.iloc[j])
-                # must not overlap with any test observation 'k' (from test_times[k] to test_t1_times[k]).
-                
-                # No overlap means:
-                # (train_end < test_start) OR (train_start > test_end)
-                
-                # Here, we are checking for the j-th training sample (X.index[j], self.t1.iloc[j])
-                # against the entire test set (test_times[k], test_t1_times[k]).
-                
-                # Faster check:
-                # Find max end time of all training samples up to j.
-                # Find min start time of all test samples from test_start.
-                
-                # Detailed check for each training sample 'j' against all test samples:
-                is_purged = False
-                for k in range(len(test_indices)):
-                    test_sample_start = test_times[k]
-                    test_sample_end = test_t1_times.iloc[k]
-                    
-                    if pd.isna(train_sample_t1) or pd.isna(test_sample_end):
-                        # Handle NaT values if needed, typically means it extends indefinitely
-                        # For simplicity, if NaT, assume potential overlap and purge
-                        is_purged = True
-                        break
+            # Define the "forbidden" time range for training samples
+            # A training sample (t_start, t_end) overlaps with test set if:
+            # t_start <= test_max_t1 AND t_end >= test_start_time
+            
+            # Identify training samples to keep
+            # 1. Samples completely before the test set
+            #    t_end < test_start_time
+            # 2. Samples completely after the test set (plus embargo)
+            #    t_start > test_max_t1 + embargo
+            
+            # Calculate embargo duration
+            test_duration = test_max_t1 - test_start_time
+            embargo_seconds = self._get_embargo_seconds_from_duration(test_duration, self.pct_embargo)
+            embargo_end_time = test_max_t1 + pd.Timedelta(seconds=embargo_seconds)
 
-                    # Overlap if:
-                    # (train_start < test_end AND train_end > test_start)
-                    # OR (test_start < train_end AND test_end > train_start)
-                    
-                    # Simpler check for purge:
-                    # training sample's start time should be before test sample's start time
-                    # training sample's end time should be before test sample's start time
-                    # Or it should be after test sample's end time + embargo
-                    
-                    # condition to keep training sample j:
-                    # (self.t1.iloc[j] < test_sample_start)  # end before test start
-                    # OR (X.index[j] > test_sample_end + pd.Timedelta(seconds=self._get_embargo_seconds(test_sample_end, test_sample_start))) # start after test end + embargo
-                    
-                    # Lopez de Prado's definition of purging:
-                    # A training observation i is purged if:
-                    # [X.index[i], self.t1.iloc[i]] overlaps with [X.index[test_idx_k], self.t1.iloc[test_idx_k]]
-                    
-                    # This means, for each training sample 'j', its interval [X.index[j], self.t1.iloc[j]]
-                    # must not overlap with *any* of the test intervals [test_times[k], test_t1_times.iloc[k]].
-                    
-                    # A simpler check is to remove all training observations whose
-                    # interval [X.index[j], self.t1.iloc[j]] intersects with the interval
-                    # [test_times.min(), test_t1_times.max()].
-                    # However, this might purge too much.
-                    
-                    # Let's use the strict definition of no overlap:
-                    # train_start_j = X.index[j]
-                    # train_end_j = train_sample_t1
-                    # test_start_k = test_sample_start
-                    # test_end_k = test_sample_end
-                    
-                    # Overlap happens if not ((train_end_j < test_start_k) or (train_start_j > test_end_k))
-                    # So, no overlap if (train_end_j < test_start_k) or (train_start_j > test_end_k)
-                    
-                    # For purging: if (train_start_j <= test_end_k and test_start_k <= train_end_j)
-                    # This is the standard interval overlap check.
-                    
-                    if (X.index[j] <= test_sample_end and test_sample_start <= train_sample_t1):
-                        is_purged = True
-                        break
-                
-                if not is_purged:
-                    # Apply embargo
-                    embargo_end_time = test_t1_times.max() + pd.Timedelta(seconds=self._get_embargo_seconds_from_duration(
-                        test_t1_times.max() - test_times.min(), self.pct_embargo
-                    ))
-                    
-                    # If training sample j starts after the embargo period ends
-                    if X.index[j] > embargo_end_time:
-                        train_indices.append(j)
-                    elif X.index[j] < test_times.min(): # training sample before test set
-                        train_indices.append(j)
+            # Boolean masks for valid training samples
+            # Condition 1: End time of training sample is strictly before start of test set
+            train_indices_before = self.t1 < test_start_time
+            
+            # Condition 2: Start time of training sample is strictly after end of test set (plus embargo)
+            train_indices_after = X.index > embargo_end_time
+            
+            # Combine masks
+            train_mask = train_indices_before | train_indices_after
+            
+            train_indices = indices[train_mask]
 
-            yield np.array(train_indices), test_indices
+            yield train_indices, test_indices
 
     def _get_embargo_seconds_from_duration(self, duration: pd.Timedelta, pct_embargo: float) -> float:
         """Calculates embargo seconds based on test set duration and percentage."""
