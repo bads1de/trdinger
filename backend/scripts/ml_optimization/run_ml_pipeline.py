@@ -202,7 +202,7 @@ class MLPipeline:
         self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, selected_models: List[str]
     ):
         logger.info("=" * 60)
-        logger.info("Starting Hyperparameter Optimization (Purged K-Fold CV)")
+        logger.info("Starting Hyperparameter Optimization (Purged K-Fold CV) [TBM ONLY]")
         logger.info("=" * 60)
 
         label_cache = LabelCache(ohlcv_df)
@@ -210,55 +210,33 @@ class MLPipeline:
         def objective(trial):
             model_type = trial.suggest_categorical("model_type", selected_models)
 
-            horizon_n = trial.suggest_int("horizon_n", 4, 16, step=2)
-            threshold_method = trial.suggest_categorical(
-                "threshold_method",
-                [
-                    "QUANTILE",
-                    "KBINS_DISCRETIZER",
-                    "DYNAMIC_VOLATILITY",
-                    "TRIPLE_BARRIER",
-                ],
-            )
-
-            if threshold_method == "QUANTILE":
-                threshold = trial.suggest_float("quantile_threshold", 0.25, 0.40)
-            elif threshold_method == "KBINS_DISCRETIZER":
-                threshold = trial.suggest_float("kbins_threshold", 0.001, 0.005)
-            elif threshold_method == "DYNAMIC_VOLATILITY":
-                threshold = trial.suggest_float("volatility_threshold", 0.5, 2.0)
-            else:  # TRIPLE_BARRIER
-                pt_factor = trial.suggest_float("pt_factor", 0.5, 3.0)
-                sl_factor = trial.suggest_float("sl_factor", 0.5, 3.0)
-                use_atr = trial.suggest_categorical(
-                    "use_atr", [True]
-                )  # Trueに固定 (マルコスの推奨)
-                atr_period = trial.suggest_int("atr_period", 7, 28, step=7)
-                binary_label = True  # メタラベリングのためTrueに固定
+            # TBM Parameters
+            horizon_n = trial.suggest_int("horizon_n", 4, 24, step=2)
+            pt_factor = trial.suggest_float("pt_factor", 1.0, 4.0)
+            sl_factor = trial.suggest_float("sl_factor", 0.5, 2.0)
+            atr_period = trial.suggest_int("atr_period", 7, 28, step=7)
+            
+            # Fixed Parameters
+            threshold_method = "TRIPLE_BARRIER"
+            use_atr = True
+            binary_label = True
+            threshold = 0.0 
 
             try:
-                # TBMの最適化でbinary_labelをFalseにしたい場合、後で引数にする
                 labels = label_cache.get_labels(
                     horizon_n=horizon_n,
                     threshold_method=threshold_method,
                     threshold=threshold,
                     timeframe=self.timeframe,
                     price_column="close",
-                    pt_factor=(
-                        pt_factor if threshold_method == "TRIPLE_BARRIER" else 1.0
-                    ),
-                    sl_factor=(
-                        sl_factor if threshold_method == "TRIPLE_BARRIER" else 1.0
-                    ),
-                    use_atr=use_atr if threshold_method == "TRIPLE_BARRIER" else False,
-                    atr_period=(
-                        atr_period if threshold_method == "TRIPLE_BARRIER" else 14
-                    ),
-                    binary_label=(
-                        binary_label if threshold_method == "TRIPLE_BARRIER" else False
-                    ),
+                    pt_factor=pt_factor,
+                    sl_factor=sl_factor,
+                    use_atr=use_atr,
+                    atr_period=atr_period,
+                    binary_label=binary_label,
                 )
-            except Exception:
+            except Exception as e:
+                logger.error(f"Label generation failed: {e}", exc_info=True)
                 raise optuna.exceptions.TrialPruned()
 
             common_index = X.index.intersection(labels.index)
@@ -268,13 +246,12 @@ class MLPipeline:
             valid_idx = ~labels_aligned.isna()
             X_clean = X_aligned.loc[valid_idx]
 
-            # ラベルがすでに0/1の場合、mapを適用しない
-            if threshold_method == "TRIPLE_BARRIER" and binary_label:
-                y = labels_aligned.loc[valid_idx].astype(int)
-            else:
-                y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
+            # TBM (binary_label=True) 
+            y = labels_aligned.loc[valid_idx].astype(int)
 
-            if len(y) < 100:
+            # データ数チェック (緩和済み)
+            if len(y) < 50:
+                logger.warning(f"Not enough labels generated: {len(y)}")
                 raise optuna.exceptions.TrialPruned()
 
             n_splits = 3
@@ -461,7 +438,6 @@ class MLPipeline:
                 final_score = 0.0
             else:
                 # F1スコア × log(トレード回数)
-                # 機会数が多いほどスコアが高くなるように調整（対数スケール）
                 final_score = f1 * np.log1p(n_trades)
 
             logger.info(
@@ -477,6 +453,7 @@ class MLPipeline:
         best_params["use_class_weight"] = (
             True  # Optuna trial is not supposed to optimize this parameter.
         )
+        best_params["threshold_method"] = "TRIPLE_BARRIER" # 明示的に保存
 
         results = {
             "best_value": study.best_value,
@@ -498,39 +475,39 @@ class MLPipeline:
         selected_models: List[str],
     ):
         logger.info("=" * 60)
-        logger.info("Training Final Models & Stacking (Purged K-Fold OOF)")
+        logger.info("Training Final Models & Stacking (Purged K-Fold OOF) [TBM ONLY]")
         logger.info("=" * 60)
 
         label_cache = LabelCache(ohlcv_df)
-        threshold_key = [
-            k for k in best_params if "threshold" in k and k != "threshold_method"
-        ][
-            0
-        ]  # threshold_methodは含まない
-
-        # TBMパラメータをbest_paramsから取得またはデフォルト設定
+        
+        # TBM parameters
+        horizon_n = best_params["horizon_n"]
         pt_factor = best_params.get("pt_factor", 1.0)
         sl_factor = best_params.get("sl_factor", 1.0)
-        use_atr = best_params.get("use_atr", False)
         atr_period = best_params.get("atr_period", 14)
-        # train_final_modelsでは常にbinary_label=Trueとする
+        
+        # Fixed parameters
+        threshold_method = "TRIPLE_BARRIER"
+        use_atr = True
         binary_label = True
+        threshold = 0.0
 
-        # threshold_methodをbest_paramsから取得
-        threshold_method = best_params["threshold_method"]
-
-        labels = label_cache.get_labels(
-            horizon_n=best_params["horizon_n"],
-            threshold_method=threshold_method,
-            threshold=best_params[threshold_key],
-            timeframe=self.timeframe,
-            price_column="close",
-            pt_factor=pt_factor,
-            sl_factor=sl_factor,
-            use_atr=use_atr,
-            atr_period=atr_period,
-            binary_label=binary_label,
-        )
+        try:
+            labels = label_cache.get_labels(
+                horizon_n=horizon_n,
+                threshold_method=threshold_method,
+                threshold=threshold,
+                timeframe=self.timeframe,
+                price_column="close",
+                pt_factor=pt_factor,
+                sl_factor=sl_factor,
+                use_atr=use_atr,
+                atr_period=atr_period,
+                binary_label=binary_label,
+            )
+        except Exception as e:
+            logger.error(f"Final model label generation failed: {e}")
+            raise
 
         common_index = X.index.intersection(labels.index)
         X_aligned = X.loc[common_index]
@@ -539,18 +516,15 @@ class MLPipeline:
         valid_idx = ~labels_aligned.isna()
         X_clean = X_aligned.loc[valid_idx]
 
-        # ラベルがすでに0/1の場合、mapを適用しない
-        if threshold_method == "TRIPLE_BARRIER" and binary_label:
-            y = labels_aligned.loc[valid_idx].astype(int)
-        else:
-            y = labels_aligned.loc[valid_idx].map({"DOWN": 1, "RANGE": 0, "UP": 1})
+        # TBM (binary_label=True) 
+        y = labels_aligned.loc[valid_idx].astype(int)
 
-        if len(y) < 100:
-            raise ValueError("Not enough data.")
+        if len(y) < 50:
+            raise ValueError("Not enough data for final training.")
 
         n_splits_oof = 5
         embargo_pct_oof = 0.01
-        t1_labels = label_cache.get_t1(X_clean.index, best_params["horizon_n"])
+        t1_labels = label_cache.get_t1(X_clean.index, horizon_n)
         cv_oof = PurgedKFold(
             n_splits=n_splits_oof, t1=t1_labels, pct_embargo=embargo_pct_oof
         )
@@ -1085,7 +1059,9 @@ def main():
         help="Pipeline type (train_and_evaluate)",
     )
     parser.add_argument(
-        "--enable_meta_labeling", action="store_true", help="Enable meta-labeling"
+        "--disable_meta_labeling",
+        action="store_true",
+        help="Disable meta-labeling (Default: Enabled)",
     )  # Argparseで定義
 
     args = parser.parse_args()
@@ -1097,7 +1073,7 @@ def main():
         start_date=args.start_date,
         end_date=args.end_date,
         pipeline_type=args.pipeline_type,
-        enable_meta_labeling=args.enable_meta_labeling,  # argsから直接渡す
+        enable_meta_labeling=not args.disable_meta_labeling,  # argsから直接渡す
     )
     pipeline.run(skip_optimize=args.skip_optimize, selected_models=args.models)
 

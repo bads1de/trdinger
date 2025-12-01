@@ -130,11 +130,15 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             # 2. 特徴量を計算
             features_df = self._calculate_features(
-                training_data, funding_rate_data, open_interest_data
+                ohlcv_data=training_data,
+                funding_rate_data=funding_rate_data,
+                open_interest_data=open_interest_data
             )
 
             # 3. 学習用データを準備
-            X, y = self._prepare_training_data(features_df, **training_params)
+            X, y = self._prepare_training_data(
+                features_df, training_data, **training_params
+            )
 
             # 学習データが空でないことを確認
             if X is None or X.empty or y is None or y.empty:
@@ -436,12 +440,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             return ohlcv_data.copy()
 
     def _prepare_training_data(
-        self, features_df: pd.DataFrame, **training_params
+        self, features_df: pd.DataFrame, ohlcv_df: pd.DataFrame, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """学習用データを準備"""
         try:
             features_clean, labels_numeric = self.label_service.prepare_labels(
-                features_df, **training_params
+                features_df, ohlcv_df, **training_params
             )
 
             self.feature_columns = features_clean.columns.tolist()

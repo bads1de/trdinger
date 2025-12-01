@@ -68,6 +68,10 @@ class TestMarketDataFeatures:
                 "OI_Normalized",
             ]
 
+            for col in expected_cols:
+                assert col in result.columns
+                assert not result[col].isnull().all()
+
     def test_calculate_market_dynamics_features(self, sample_data, sample_oi_data):
         """市場ダイナミクス特徴量のテスト（AdvancedFeatureEngineerから移行）"""
         calculator = MarketDataFeatureCalculator()

@@ -3,12 +3,8 @@ from typing import Tuple
 import pandas as pd
 
 from app.config.unified_config import unified_config
-from app.utils.data_processing import data_processor as data_preprocessor
 from app.utils.error_handler import DataError
-from .presets import (
-    apply_preset_by_name,
-    forward_classification_preset,
-)
+from app.services.ml.label_cache import LabelCache # LabelCacheを使用
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +17,15 @@ class LabelGenerationService:
     """
 
     def prepare_labels(
-        self, features_df: pd.DataFrame, **training_params
+        self, features_df: pd.DataFrame, ohlcv_df: pd.DataFrame, **training_params
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
         学習用データ（特徴量とラベル）を準備します。
 
         Args:
             features_df: 特徴量DataFrame
-            **training_params: 学習パラメータ (target_columnなど)
+            ohlcv_df: OHLCV DataFrame (LabelCache初期化用)
+            **training_params: 学習パラメータ
 
         Returns:
             Tuple[pd.DataFrame, pd.Series]: (クリーニング済み特徴量, 数値化済みラベル)
@@ -36,67 +33,38 @@ class LabelGenerationService:
         # ラベル生成設定を取得
         label_config = unified_config.ml.training.label_generation
 
-        # 後方互換性: target_columnが指定されている場合は既存のロジックを使用
-        if "target_column" in training_params and training_params["target_column"]:
-            target_col = training_params["target_column"]
-            logger.info(f"Using existing target column: {target_col}")
-            features, labels, _ = data_preprocessor.prepare_training_data(
-                features_df, target_col, **training_params
-            )
-            return features, labels
+        # LabelCache を使用してラベルを生成
+        label_cache = LabelCache(ohlcv_df)
 
-        # デフォルトのプリセット/カスタム設定ロジック
         try:
-            logger.info("🎯 新しいラベル生成設定を使用")
+            logger.info("🎯 トリプルバリア法でラベル生成を開始します。")
 
-            if label_config.use_preset:
-                try:
-                    labels, _ = apply_preset_by_name(
-                        features_df, label_config.default_preset
-                    )
-                except ValueError:
-                    logger.warning("⚠️ フォールバック: カスタム設定を使用します")
-                    labels = forward_classification_preset(
-                        df=features_df,
-                        timeframe=label_config.timeframe,
-                        horizon_n=label_config.horizon_n,
-                        threshold=label_config.threshold,
-                        price_column=label_config.price_column,
-                        threshold_method=label_config.get_threshold_method_enum(),
-                    )
-            else:
-                labels = forward_classification_preset(
-                    df=features_df,
-                    timeframe=label_config.timeframe,
-                    horizon_n=label_config.horizon_n,
-                    threshold=label_config.threshold,
-                    price_column=label_config.price_column,
-                    threshold_method=label_config.get_threshold_method_enum(),
-                )
+            labels = label_cache.get_labels(
+                horizon_n=label_config.horizon_n,
+                threshold_method=label_config.threshold_method, # "TRIPLE_BARRIER" に固定されている
+                threshold=label_config.threshold, # TBMではダミー値
+                timeframe=label_config.timeframe,
+                price_column=label_config.price_column,
+                pt_factor=training_params.get("pt_factor", 1.0), # GAConfig等から取得できる想定
+                sl_factor=training_params.get("sl_factor", 1.0),
+                use_atr=training_params.get("use_atr", True),
+                atr_period=training_params.get("atr_period", 14),
+                binary_label=True, # メタラベリングのためにバイナリラベルに固定
+            )
 
             # NaNを削除してクリーンなデータを作成
-            valid_idx = labels.notna()
-            features_clean = features_df[valid_idx].copy()
-            labels_clean = labels[valid_idx].copy()
+            common_index = features_df.index.intersection(labels.index)
+            features_clean = features_df.loc[common_index].copy()
+            labels_clean = labels.loc[common_index].copy()
 
-            # 文字列ラベルを数値に変換
-            unique_labels = set(labels_clean.unique())
-            if "TREND" in unique_labels:
-                label_mapping = {"RANGE": 0, "TREND": 1}
-            else:
-                label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
-
-            labels_numeric = labels_clean.map(label_mapping)
-
-            if labels_numeric.isna().any():
-                valid_numeric_idx = labels_numeric.notna()
-                features_clean = features_clean[valid_numeric_idx]
-                labels_numeric = labels_numeric[valid_numeric_idx]
+            valid_idx = labels_clean.notna()
+            features_clean = features_clean[valid_idx]
+            labels_clean = labels_clean[valid_idx].astype(int) # TBMの出力はすでに0/1
 
             logger.info(f"✅ ラベル生成完了: {len(features_clean)}サンプル")
 
-            return features_clean, labels_numeric
+            return features_clean, labels_clean
 
         except Exception as e:
-            logger.error(f"❌ 新しいラベル生成設定でエラー発生: {e}")
+            logger.error(f"❌ ラベル生成設定でエラー発生: {e}", exc_info=True)
             raise DataError(f"ラベル生成に失敗しました: {e}")

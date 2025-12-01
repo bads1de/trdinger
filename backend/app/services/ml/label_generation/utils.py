@@ -13,7 +13,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import KBinsDiscretizer
 
 from .enums import ThresholdMethod  # noqa: F401
-from .label_generator import LabelGenerator  # noqa: F401
 from .transformer import PriceChangeTransformer
 
 logger = logging.getLogger(__name__)

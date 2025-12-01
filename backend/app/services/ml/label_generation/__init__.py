@@ -7,10 +7,8 @@ scikit-learnのKBinsDiscretizerとPipelineを活用し、シンプルで効率�
 
 from .enums import ThresholdMethod
 from .event_driven import BarrierProfile, EventDrivenLabelGenerator
-from .label_generator import LabelGenerator
 from .presets import (
     apply_preset_by_name,
-    forward_classification_preset,
     get_common_presets,
 )
 from .transformer import PriceChangeTransformer
@@ -21,14 +19,12 @@ from .utils import (
 
 # 向後互換性のため、__all__を定義
 __all__ = [
-    "LabelGenerator",
     "EventDrivenLabelGenerator",
     "PriceChangeTransformer",
     "ThresholdMethod",
     "create_label_pipeline",
     "optimize_label_generation_with_gridsearch",
     "BarrierProfile",
-    "forward_classification_preset",
     "get_common_presets",
     "apply_preset_by_name",
 ]

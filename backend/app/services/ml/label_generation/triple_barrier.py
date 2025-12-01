@@ -87,8 +87,43 @@ class TripleBarrier:
             t1_vertical = vertical_barrier_times.loc[t0]
             trgt = target.iloc[loc]
 
+            # Ensure timestamps are pd.Timestamp
+            t0 = pd.Timestamp(t0)
+            if pd.notna(t1_vertical):
+                t1_vertical = pd.Timestamp(t1_vertical)
+
+            # Normalize timezones to match close.index
+            if close.index.tz is not None:
+                # close is tz-aware
+                if t0.tz is None:
+                    t0 = t0.tz_localize(close.index.tz)
+                else:
+                    t0 = t0.tz_convert(close.index.tz)
+
+                if pd.notna(t1_vertical):
+                    if t1_vertical.tz is None:
+                        t1_vertical = t1_vertical.tz_localize(close.index.tz)
+                    else:
+                        t1_vertical = t1_vertical.tz_convert(close.index.tz)
+            else:
+                # close is tz-naive
+                if t0.tz is not None:
+                    t0 = t0.tz_localize(None)
+                if pd.notna(t1_vertical) and t1_vertical.tz is not None:
+                    t1_vertical = t1_vertical.tz_localize(None)
+
             # Slice price data from t0 to t1_vertical (or end if NaT)
-            df0 = close[t0:t1_vertical]  # Includes t0
+            if pd.isna(t1_vertical):
+                df0 = close[t0:]
+            else:
+                try:
+                    df0 = close[t0:t1_vertical]  # Includes t0
+                except Exception as e:
+                    print(f"Error slicing close data:")
+                    print(f"t0: {t0} (tz={t0.tz})")
+                    print(f"t1_vertical: {t1_vertical} (tz={t1_vertical.tz if pd.notna(t1_vertical) else 'NaT'})")
+                    print(f"close.index.tz: {close.index.tz}")
+                    raise e
 
             # Calculate returns relative to t0
             # returns = (df0 / close[t0]) - 1

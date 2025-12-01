@@ -29,7 +29,6 @@ from app.services.ml.feature_engineering.feature_engineering_service import (  #
 )
 from app.services.ml.label_generation.presets import (  # type: ignore
     apply_preset_by_name,
-    forward_classification_preset,
 )
 from database.connection import SessionLocal  # type: ignore
 from database.repositories.funding_rate_repository import (  # type: ignore
@@ -261,26 +260,6 @@ class CommonFeatureEvaluator:
             )
 
             logger.info(f"ラベル生成完了: {preset_info['description']}")
-            return labels
-
-        # カスタム設定の場合
-        else:
-            logger.info(
-                f"カスタム設定を使用してラベル生成: "
-                f"timeframe={label_config.timeframe}, "
-                f"horizon_n={label_config.horizon_n}, "
-                f"threshold={label_config.threshold}"
-            )
-
-            labels = forward_classification_preset(
-                df=ohlcv_df,
-                timeframe=label_config.timeframe,
-                horizon_n=label_config.horizon_n,
-                threshold=label_config.threshold,
-                price_column=price_column,
-                threshold_method=label_config.get_threshold_method_enum(),
-            )
-
             return labels
 
     def get_label_config_info(self) -> Dict[str, any]:

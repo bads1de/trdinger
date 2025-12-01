@@ -478,7 +478,7 @@ class LabelGenerationConfig:
     Attributes:
         default_preset: デフォルトのラベル生成プリセット名。
             get_common_presets()で定義されているキーを指定します。
-            例: "4h_4bars", "1h_4bars_dynamic"
+            例: "tbm_4h_1.0_1.0"
         timeframe: 時間足（カスタム設定時に使用）。
             サポートされている値: "15m", "30m", "1h", "4h", "1d"
         horizon_n: N本先を見る（カスタム設定時に使用）。
@@ -489,16 +489,16 @@ class LabelGenerationConfig:
             通常は"close"を使用
         threshold_method: 閾値計算方法（カスタム設定時に使用）。
             ThresholdMethodのenum値文字列を指定します。
-            例: "FIXED", "STD_DEVIATION", "QUANTILE", "KBINS_DISCRETIZER"
+            例: "TRIPLE_BARRIER"
         use_preset: プリセットを使うか（True）、カスタム設定を使うか（False）。
     """
 
-    default_preset: str = "4h_4bars_dynamic"
+    default_preset: str = "tbm_4h_1.0_1.0"
     timeframe: str = "4h"
     horizon_n: int = 4
     threshold: float = 0.002
     price_column: str = "close"
-    threshold_method: str = "FIXED"
+    threshold_method: str = "TRIPLE_BARRIER"
     use_preset: bool = True
 
     def __post_init__(self) -> None:
@@ -600,7 +600,7 @@ class MLTrainingConfig(BaseSettings):
 
     # ラベル生成設定（動的閾値を使用）
     label_method: str = Field(
-        default="dynamic_volatility", description="ラベル生成方法", alias="LABEL_METHOD"
+        default="triple_barrier", description="ラベル生成方法", alias="LABEL_METHOD"
     )
     volatility_window: int = Field(
         default=24,

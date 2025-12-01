@@ -11,7 +11,6 @@ from typing import Dict, Tuple
 import pandas as pd
 
 from app.services.ml.label_generation.enums import ThresholdMethod
-from app.services.ml.label_generation.presets import forward_classification_preset
 from app.services.ml.label_generation.triple_barrier import TripleBarrier
 from app.services.ml.common.volatility_utils import (
     calculate_volatility_atr,
@@ -185,14 +184,9 @@ class LabelCache:
             labels = labels.reindex(close_prices.index)
 
         else:
-            # 既存のロジック
-            labels = forward_classification_preset(
-                df=self.ohlcv_df,
-                timeframe=timeframe,
-                horizon_n=horizon_n,
-                threshold=threshold,
-                price_column=price_column,
-                threshold_method=threshold_method_enum,
+            raise NotImplementedError(
+                f"閾値計算方法 {threshold_method} はサポートされていません。"
+                "現在は TRIPLE_BARRIER のみサポートしています。"
             )
 
         # キャッシュに保存
