@@ -19,7 +19,6 @@ from ...indicators.technical_indicators.volatility import VolatilityIndicators
 from ...indicators.technical_indicators.volume import VolumeIndicators
 from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
-from ..preprocessing.fractional_differentiation import FractionalDifferentiation
 
 
 logger = logging.getLogger(__name__)
@@ -53,71 +52,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
         # 複数のテクニカル特徴量を順次計算（全パターン生成）
         result_df = self.create_result_dataframe(df)  # Ensure result_df starts clean
-        result_df = self.calculate_volatility_features(
-            result_df, lookback_periods
-        )  # First, as others may depend on it
-        result_df = self.calculate_volume_features(
-            result_df, lookback_periods
-        )  # Also moved up
+        result_df = self.calculate_volatility_features(result_df, lookback_periods)
+        result_df = self.calculate_volume_features(result_df, lookback_periods)
         result_df = self.calculate_market_regime_features(result_df, lookback_periods)
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
         result_df = self.calculate_trend_features(result_df, lookback_periods)
-        result_df = self.calculate_pattern_features(result_df, lookback_periods)
-        result_df = self.calculate_fractional_difference_features(result_df, config)
+        # パターン特徴量と分数次差分特徴量は削除
 
         return result_df
 
-    @safe_ml_operation(default_return=None, context="分数次差分特徴量計算でエラーが発生しました")
-    def calculate_fractional_difference_features(
-        self, df: pd.DataFrame, config: Dict[str, Any]
-    ) -> pd.DataFrame:
-        """
-        分数次差分特徴量を計算（メモリ保持と定常性の両立）
-
-        Args:
-            df: OHLCV価格データ
-            config: 計算設定 (fractional_differentiation設定を含む)
-
-        Returns:
-            分数次差分特徴量が追加されたDataFrame
-        """
-        # コンフィグから設定を取得（デフォルト値は適宜調整）
-        # デフォルトでは無効化（計算コストが高いため）
-        frac_diff_config = config.get("fractional_differentiation", {})
-        if not frac_diff_config.get("enabled", False):
-            return df
-
-        try:
-            if not self.validate_input_data(df, ["close"]):
-                return df
-
-            result_df = self.create_result_dataframe(df)
-            new_features = {}
-
-            d_value = frac_diff_config.get("d", 0.4)
-            window_size = frac_diff_config.get("window_size", 20)
-
-            fd = FractionalDifferentiation(d=d_value, window_size=window_size)
-            
-            # close価格に対して適用
-            frac_diff_close = fd.transform(df["close"])
-            new_features[f"FracDiff_Close_{d_value}"] = frac_diff_close.fillna(0.0)
-
-            # 必要に応じて他のカラムにも適用（例: Volume）
-            if "volume" in df.columns and frac_diff_config.get("apply_to_volume", False):
-                frac_diff_volume = fd.transform(df["volume"])
-                new_features[f"FracDiff_Volume_{d_value}"] = frac_diff_volume.fillna(0.0)
-
-            # 一括で結合
-            result_df = pd.concat(
-                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
-            )
-
-            self.log_feature_calculation_complete("分数次差分")
-            return result_df
-
-        except Exception as e:
-            return self.handle_calculation_error(e, "分数次差分特徴量計算", df)
+    # calculate_fractional_difference_features は削除されました
 
     def calculate_advanced_technical_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
@@ -144,7 +88,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
         # Volatility features (BBW, NATR, TRANGE)
         result_df = self.calculate_volatility_features(result_df, lookback_periods)
-        
+
         # 分数次差分はデフォルトで無効化されているためここには含めない、
         # もしくはテスト用に明示的に呼び出す必要があるが、互換性メソッドなので一旦含めない。
 
@@ -176,23 +120,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # レンジ相場判定（pandas MAX/MIN使用）
+            # レンジ相場判定 - 削除
+            # volatility_period = ...
+            # new_features["Range_Bound_Ratio"] = ...
+
+            # 市場効率性（価格のランダムウォーク度）
             volatility_period = lookback_periods.get("volatility", 20)
-            high_vals = result_df["high"]
-            low_vals = result_df["low"]
-            high_20 = high_vals.rolling(window=volatility_period).max()
-            low_20 = low_vals.rolling(window=volatility_period).min()
-
-            new_features["Range_Bound_Ratio"] = self.safe_ratio_calculation(
-                result_df["close"] - low_20, high_20 - low_20, fill_value=0.5
-            )
-
-            # 市場効率性（価格のランダムウォーク度）- 最適化版
             returns = result_df["close"].pct_change(fill_method=None).fillna(0)
             returns_lag1 = returns.shift(1)
 
-            # Rolling correlation計算（pandas native使用、lambda回避）
-            # Note: Series.rolling().corr()は効率的にCython実装
+            # Rolling correlation計算
             new_features["Market_Efficiency"] = (
                 returns.rolling(window=volatility_period, min_periods=3)
                 .corr(
@@ -206,11 +143,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
             )
 
-            # === 追加: Choppiness Index & Fractal Dimension Index ===
-            # FeatureEngineeringServiceから移動・統合
-
             # Choppiness Index (CHOP)
-            # TrendIndicators (pandas_ta wrapper) を使用
             chop_window = 14
             chop = TrendIndicators.chop(
                 high=result_df["high"],
@@ -218,49 +151,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 close=result_df["close"],
                 length=chop_window,
             )
-            # カラム名はFeatureEngineeringServiceと合わせるか、統一する
-            # ここでは標準的な名前と、互換性のための名前両方を入れるか、
-            # FeatureEngineeringService側でリネームする。
-            # FeatureEngineeringServiceでは "Choppiness_Index_{window}" としていた。
             result_df[f"Choppiness_Index_{chop_window}"] = chop.fillna(50.0)
 
-            # Fractal Dimension Index (FDI) - Vectorized Implementation
-            fdi_window = 10
-
-            # Path length (L): sum of absolute differences in window
-            # diff().abs() calculates absolute change between bars
-            # rolling(window).sum() sums these changes over the window
-            # Note: rolling sum of diffs includes the diff at the current bar.
-            # The window size for diffs should effectively cover the same span.
-            # If window=10, we want sum of last 10 changes? Or changes over last 10 bars?
-            # Usually FDI uses N periods.
-            diffs = result_df["close"].diff().abs()
-            path_length = diffs.rolling(window=fdi_window).sum()
-
-            # Range (d): max - min in window
-            rolling_max = result_df["close"].rolling(window=fdi_window).max()
-            rolling_min = result_df["close"].rolling(window=fdi_window).min()
-            price_range = rolling_max - rolling_min
-
-            # FDI = 1 + (log(L) - log(d)) / log(window)
-            # Avoid log(0) by replacing 0 with small epsilon or handling NaNs
-            epsilon = 1e-10
-
-            # path_length > 0 and price_range > 0 check
-            valid_idx = (path_length > epsilon) & (price_range > epsilon)
-
-            fdi = pd.Series(np.nan, index=result_df.index)
-
-            if valid_idx.any():
-                log_l = np.log(path_length[valid_idx])
-                log_d = np.log(price_range[valid_idx])
-                log_n = np.log(fdi_window)
-
-                fdi[valid_idx] = 1 + (log_l - log_d) / log_n
-
-            result_df[f"Fractal_Dimension_Index_{fdi_window}"] = fdi.fillna(
-                1.5
-            )  # Default to 1.5 (random walk)
+            # Fractal Dimension Index (FDI) - 削除
 
             self.log_feature_calculation_complete("市場レジーム")
             return result_df
@@ -292,14 +185,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             volatility_period = lookback_periods.get("volatility", 20)
 
-            # ATR（Average True Range）- VolatilityIndicators使用
-            atr_result = VolatilityIndicators.atr(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                length=volatility_period,
-            )
-            result_df["ATR_20"] = atr_result.fillna(0.0)
+            # ATR - 削除 (NATRを使用)
+            # atr_result = ...
+            # result_df["ATR_20"] = ...
 
             # NATR (Normalized Average True Range)
             natr = VolatilityIndicators.natr(
@@ -310,13 +198,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )
             result_df["NATR"] = natr.fillna(0.0)
 
-            # TRANGE (True Range)
-            trange = VolatilityIndicators.true_range(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-            )
-            result_df["TRANGE"] = trange.fillna(0.0)
+            # TRANGE - 削除
+            # trange = ...
+            # result_df["TRANGE"] = ...
 
             # BBW (Bollinger Band Width)
             upper, middle, lower = VolatilityIndicators.bbands(
@@ -325,6 +209,17 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # BBW = (Upper - Lower) / Middle
             bbw = (upper - lower) / middle
             result_df["BBW"] = bbw.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+            # Yang-Zhang Volatility (Open, High, Low, Close)
+            if "open" in result_df.columns:
+                yz_vol = VolatilityIndicators.yang_zhang(
+                    open_=result_df["open"],
+                    high=result_df["high"],
+                    low=result_df["low"],
+                    close=result_df["close"],
+                    length=volatility_period,
+                )
+                result_df["Yang_Zhang_Vol_20"] = yz_vol.fillna(0.0)
 
             self.log_feature_calculation_complete("ボラティリティ")
             return result_df
@@ -366,28 +261,25 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )  # 99%分位点の10倍を上限とする
             result_df[f"Volume_MA_{volume_period}"] = np.clip(volume_ma, 0, volume_max)
 
-            # 出来高加重平均価格（VWAP）（VolumeIndicators使用）
-            result_df["VWAP"] = VolumeIndicators.vwap(
+            # 出来高加重平均価格（VWAP）- Deviation計算用
+            vwap = VolumeIndicators.vwap(
                 high=result_df["high"],
                 low=result_df["low"],
                 close=result_df["close"],
                 volume=result_df["volume"],
                 period=volume_period,
             ).fillna(result_df["close"])
+            # result_df["VWAP"] = vwap # リストにないので追加しない
 
             # VWAPからの乖離
             result_df["VWAP_Deviation"] = (
-                ((result_df["close"] - result_df["VWAP"]) / result_df["VWAP"])
+                ((result_df["close"] - vwap) / vwap)
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )
 
-            # 出来高トレンド
-            volume_trend = (
-                result_df["volume"].rolling(window=5).mean()
-                / result_df["volume"].rolling(window=volume_period).mean()
-            )
-            volume_trend = np.where(np.isinf(volume_trend), np.nan, volume_trend)
+            # 出来高トレンド - 削除
+            # volume_trend = ...
             # MFI (Money Flow Index)
             mfi = VolumeIndicators.mfi(
                 high=result_df["high"],
@@ -430,100 +322,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         except Exception as e:
             return self.handle_calculation_error(e, "出来高特徴量計算", df)
 
-    def calculate_pattern_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
-    ) -> pd.DataFrame:
-        """
-        パターン特徴量を計算（TDDで追加されたメソッド）
-
-        Args:
-            df: OHLCV価格データ
-            lookback_periods: 計算期間設定（オプション、旧API互換用）
-
-        Returns:
-            パターン特徴量が追加されたDataFrame
-        """
-        # 旧API互換：lookback_periodsがNoneの場合はデフォルト値を設定
-        if lookback_periods is None:
-            lookback_periods = {"short_ma": 10, "long_ma": 50}
-
-        try:
-            if not self.validate_input_data(df, ["close", "high", "low", "open"]):
-                return df
-
-            result_df = self.create_result_dataframe(df)
-
-            # カラム名を小文字に統一（大文字小文字の混在対応）
-            result_df.columns = [col.lower() for col in result_df.columns]
-
-            # 新しい特徴量を辞書で収集（DataFrame断片化対策）
-            new_features = {}
-
-            # ドージ・ストキャスティクス（過熱・過売判断）
-            # MomentumIndicatorsを使用
-            stoch_k, stoch_d = MomentumIndicators.stoch(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                k=14,
-                d=3,
-                smooth_k=3,
-            )
-
-            new_features["Stochastic_K"] = stoch_k.fillna(50.0)
-            new_features["Stochastic_D"] = stoch_d.fillna(50.0)
-
-            # ドージ・ストキャスティクス（KとDの乖離）
-            new_features["Stochastic_Divergence"] = (
-                new_features["Stochastic_K"] - new_features["Stochastic_D"]
-            ).fillna(0.0)
-
-            # ボリンジャーバンド（サポート・レジスタンス）
-            # VolatilityIndicatorsを使用
-            bb_upper, bb_middle, bb_lower = VolatilityIndicators.bbands(
-                result_df["close"], length=20, std=2.0
-            )
-
-            new_features["BB_Upper"] = bb_upper.fillna(result_df["close"])
-            new_features["BB_Middle"] = bb_middle.fillna(result_df["close"])
-            new_features["BB_Lower"] = bb_lower.fillna(result_df["close"])
-
-            # ボリンジャーバンドからの乖離率
-            new_features["BB_Position"] = self.safe_ratio_calculation(
-                result_df["close"] - new_features["BB_Lower"],
-                new_features["BB_Upper"] - new_features["BB_Lower"],
-                fill_value=0.5,
-            )
-
-            # 移動平均（トレンド判断）
-            # TrendIndicatorsを使用
-            long_ma = lookback_periods.get("long_ma", 50)
-            ma_long = TrendIndicators.sma(result_df["close"], length=long_ma)
-            new_features["MA_Long"] = ma_long.fillna(result_df["close"])
-
-            # ボラティリティパターン（ATRを使用）
-            # VolatilityIndicatorsを使用
-            atr_values = VolatilityIndicators.atr(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                length=14,
-            )
-            new_features["ATR"] = atr_values.fillna(0.0)
-
-            # 一括で結合
-            result_df = pd.concat(
-                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
-            )
-
-            # 価格パターン（ダブルボトム、ヘッドアンドショルダー等の簡易検出）
-            result_df = self._detect_price_patterns(result_df)
-
-            self.log_feature_calculation_complete("パターン")
-            return result_df
-
-        except Exception as e:
-            return self.handle_calculation_error(e, "パターン特徴量計算", df)
+    # calculate_pattern_features は削除されました
 
     def _detect_price_patterns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -593,51 +392,31 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # RSI（MomentumIndicators使用）
-            new_features["RSI"] = MomentumIndicators.rsi(
-                result_df["close"], period=14
-            ).fillna(50.0)
+            # RSI - 削除
+            # new_features["RSI"] = ...
 
-            # MACD（MomentumIndicators使用）
+            # MACD（Histogramのみ保持）
             macd, signal, hist = MomentumIndicators.macd(
                 result_df["close"], fast=12, slow=26, signal=9
             )
-            new_features["MACD"] = macd.fillna(0.0)
-            new_features["MACD_Signal"] = signal.fillna(0.0)
+            # new_features["MACD"] = macd.fillna(0.0)
+            # new_features["MACD_Signal"] = signal.fillna(0.0)
             new_features["MACD_Histogram"] = hist.fillna(0.0)
 
-            # ウィリアムズ%R（MomentumIndicators使用）
-            new_features["Williams_R"] = MomentumIndicators.willr(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                length=14,
-            ).fillna(-50.0)
+            # ウィリアムズ%R - 削除
+            # new_features["Williams_R"] = ...
 
-            # CCI（MomentumIndicators使用）
-            new_features["CCI"] = MomentumIndicators.cci(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                length=20,
-            ).fillna(0.0)
+            # CCI - 削除
+            # new_features["CCI"] = ...
 
-            # ROC（MomentumIndicators使用）
-            new_features["ROC"] = MomentumIndicators.roc(
-                result_df["close"], period=12
-            ).fillna(0.0)
+            # ROC - 削除
+            # new_features["ROC"] = ...
 
-            # モメンタム（MomentumIndicators使用）
-            new_features["Momentum"] = MomentumIndicators.mom(
-                result_df["close"], length=10
-            ).fillna(0.0)
+            # モメンタム - 削除
+            # new_features["Momentum"] = ...
 
-            # Ultimate Oscillator
-            new_features["Ultimate_Oscillator"] = MomentumIndicators.uo(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-            ).fillna(50.0)
+            # Ultimate Oscillator - 削除
+            # new_features["Ultimate_Oscillator"] = ...
 
             # 一括で結合
             result_df = pd.concat(
@@ -674,26 +453,30 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 length=14,
             )
             new_features["ADX"] = adx.fillna(0.0)
-            new_features["DI_Plus"] = di_plus.fillna(0.0)
+            # new_features["DI_Plus"] = di_plus.fillna(0.0)
             new_features["DI_Minus"] = di_minus.fillna(0.0)
 
-            # Aroon
+            # Aroon (Oscillatorのみ保持)
             aroon_up, aroon_down, aroon_osc = TrendIndicators.aroon(
                 high=result_df["high"], low=result_df["low"], length=25
             )
-            new_features["Aroon_Up"] = aroon_up.fillna(0.0)
-            new_features["Aroon_Down"] = aroon_down.fillna(0.0)
+            # new_features["Aroon_Up"] = aroon_up.fillna(0.0)
+            # new_features["Aroon_Down"] = aroon_down.fillna(0.0)
             new_features["AROONOSC"] = aroon_osc.fillna(0.0)
 
-            # Vortex Indicator
-            vi_plus, vi_minus = TrendIndicators.vortex(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                length=14,
-            )
-            new_features["VI_Plus"] = vi_plus.fillna(0.0)
-            new_features["VI_Minus"] = vi_minus.fillna(0.0)
+            # Vortex Indicator - 削除
+            # vi_plus, vi_minus = ...
+            # new_features["VI_Plus"] = ...
+            # new_features["VI_Minus"] = ...
+
+            # Kaufman Efficiency Ratio - 削除
+            # er = ...
+            # new_features["Efficiency_Ratio_10"] = ...
+
+            # 移動平均（MA_Long）- Patternから移動
+            long_ma = lookback_periods.get("long_ma", 50)
+            ma_long = TrendIndicators.sma(result_df["close"], length=long_ma)
+            new_features["MA_Long"] = ma_long.fillna(result_df["close"])
 
             # 一括で結合
             result_df = pd.concat(
@@ -715,58 +498,25 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         """
         return [
             # 市場レジーム特徴量
-            "Range_Bound_Ratio",
             "Market_Efficiency",
             "Choppiness_Index_14",
-            "Fractal_Dimension_Index_10",
             # モメンタム特徴量
-            "RSI",
-            "MACD",
-            "MACD_Signal",
             "MACD_Histogram",
-            "Stochastic_K",
-            "Stochastic_D",
-            "Stochastic_Divergence",
-            "Williams_R",
-            "CCI",
-            "ROC",
-            "Momentum",
-            # パターン特徴量
-            "BB_Upper",
-            "BB_Middle",
-            "BB_Lower",
-            "BB_Position",
+            # トレンド特徴量
             "MA_Long",
-            "ATR",  # Pattern features still used ATR(length=14)
-            "Near_Support",
-            "Near_Resistance",
-            # ボラティリティ特徴量（PriceFeatureCalculatorから移動）
-            "ATR_20",
-            # 出来高特徴量（PriceFeatureCalculatorから移動）
+            # ボラティリティ特徴量
+            "NATR",
+            "BBW",
+            "Yang_Zhang_Vol_20",
+            # 出来高特徴量
             "Volume_MA_20",
-            "VWAP",
             "VWAP_Deviation",
-            "Volume_Trend",
             "MFI",
             "OBV",
             "AD",
             "ADOSC",
             # トレンド特徴量
             "ADX",
-            "DI_Plus",
             "DI_Minus",
-            "Aroon_Up",
-            "Aroon_Down",
             "AROONOSC",
-            "VI_Plus",
-            "VI_Minus",
-            # 追加ボラティリティ
-            "NATR",
-            "TRANGE",
-            "BBW",
-            # 追加モメンタム
-            "Ultimate_Oscillator",
-            # 分数次差分（設定により動的に変わるが、代表的なものを記載）
-            "FracDiff_Close_0.4",
-            "FracDiff_Volume_0.4",
         ]

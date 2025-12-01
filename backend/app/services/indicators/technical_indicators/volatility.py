@@ -537,3 +537,60 @@ class VolatilityIndicators:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
 
         return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def yang_zhang(
+        open_: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 20,
+    ) -> pd.Series:
+        """
+        Yang-Zhang Volatility Estimator
+
+        Overnight volatility + Open-to-Close volatility + Rogers-Satchell volatility
+        Minimum drift and opening jump optimized.
+        """
+        if not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        N = length
+        
+        # 1. Overnight Volatility (Close[t-1] to Open[t])
+        # log(O_t / C_{t-1})
+        log_oc = np.log(open_ / close.shift(1))
+        # sum(log_oc - mean(log_oc))^2 / (N - 1)
+        # pandas rolling().var() calculates unbiased variance (/(N-1)) by default
+        vol_overnight = log_oc.rolling(window=N).var()
+
+        # 2. Open-to-Close Volatility (Open[t] to Close[t])
+        # log(C_t / O_t)
+        log_co = np.log(close / open_)
+        vol_open_to_close = log_co.rolling(window=N).var()
+
+        # 3. Rogers-Satchell Volatility
+        # log(H/C) * log(H/O) + log(L/C) * log(L/O)
+        rs_term = (np.log(high / close) * np.log(high / open_)) + \
+                  (np.log(low / close) * np.log(low / open_))
+        
+        vol_rs = rs_term.rolling(window=N).mean()
+
+        # Yang-Zhang Weights
+        k = 0.34 / (1.34 + (N + 1) / (N - 1))
+
+        # Combine
+        # YZ^2 = Vol_Overnight + k * Vol_OpenClose + (1-k) * Vol_RS
+        yz_variance = vol_overnight + k * vol_open_to_close + (1 - k) * vol_rs
+        
+        # Return volatility (std dev), annualized if needed but here just raw
+        # Usually multiplied by sqrt(periods_per_year) for annualized,
+        # but we keep it as raw volatility per bar
+        return np.sqrt(yz_variance).fillna(0.0)

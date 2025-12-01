@@ -29,61 +29,43 @@ from app.services.ml.common.ml_utils import optimize_dtypes, generate_cache_key
 logger = logging.getLogger(__name__)
 
 
-# デフォルト特徴量リスト
-# 研究目的のため、デフォルトでは全特徴量を使用（None）
-# 必要に応じて環境変数 ML_FEATURE_ENGINEERING__FEATURE_ALLOWLIST でカスタムリストを指定可能
-DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = None
-
-# 以下は参考用の特徴量リスト（過学習防止用に絞り込む場合に使用可能）
-"""
-RECOMMENDED_FEATURES = [
-        # === 基本的なテクニカル指標 ===
-        "RSI_14",
-        "MACD",
-        "MACD_signal",
-        "MACD_hist",
-        "MA_Short_7",
-        "MA_Long_25",
-        "BB_Upper",
-        "BB_Middle",
-        "BB_Lower",
-        "BB_Position",
-        "BB_Width",
-        "ATR_14",
-        # === ボリューム関連 ===
-        "Volume_MA_Ratio",
-        "Volume_Trend",
-        # === ボラティリティ関連 ===
-        "Volatility_20",
-        "Volatility_Ratio",
-        # === モメンタム指標 ===
-        "Momentum_14",
-        "ROC_10",
-        # === 価格関連 ===
-        "Price_Change_Pct",
-        "High_Low_Range",
-        "Close_Position_in_Range",
-        # === 市場レジーム ===
-        "Market_Regime",
-        "Trend_Strength",
-        # === 建玉残高関連（OI） ===
-        "OI_Change_Rate_24h",
-        "Volatility_Adjusted_OI",
-        "OI_Trend",
-        "OI_Normalized",
-        # === 複合指標 ===
-        "FR_OI_Ratio",
-        "Market_Heat_Index",
-        "Market_Stress",
-        "Market_Balance",
-        # === 暗号通貨特化特徴量 ===
-        "Price_Volume_Correlation",
-        "Funding_Rate_Impact",
-        # === 高度な特徴量（一部） ===
-        "Price_Momentum_Regime",
-        "Volatility_Regime",
+# デフォルト特徴量リスト（厳選版: 26個）
+# 2025-12-01の学習ログ(run_20251201_123439)の特徴量重要度に基づき選定
+# 出来高・需給指標が極めて高い寄与度を示したため、これらを優先的に採用
+DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
+    # === 出来高・需給 (Volume/Flow) - 最重要 ===
+    "AD",  # Accumulation/Distribution (Importance: 174)
+    "OBV",  # On Balance Volume (Importance: 164)
+    "Volume_MA_20",  # (Importance: 95)
+    "Price_Volume_Trend",  # (Importance: 93)
+    "ADOSC",  # Chaikin A/D Oscillator (Importance: 63)
+    "MFI",  # Money Flow Index (Importance: 40)
+    # === トレンド (Trend) ===
+    "ADX",  # (Importance: 124)
+    "MA_Long",  # (Importance: 118)
+    "MACD_Histogram",  # (Importance: 84)
+    "DI_Minus",  # (Importance: 70)
+    "AROONOSC",  # (Importance: 53)
+    "Trend_strength_20",  # (Importance: 36)
+    # === ボラティリティ (Volatility) ===
+    "NATR",  # Normalized ATR (Importance: 106) - ATR(0)の代わりに採用
+    "Parkinson_Vol_20",  # (Importance: 94)
+    "Close_range_20",  # (Importance: 82)
+    "Historical_Volatility_20",  # (Importance: 56)
+    "Yang_Zhang_Vol_20",  # (Importance: 43)
+    "BBW",  # Bollinger Band Width (Importance: 35)
+    # === 価格構造・その他 (Price Structure) ===
+    "Market_Efficiency",  # (Importance: 70)
+    "price_vs_low_24h",  # (Importance: 50)
+    "Choppiness_Index_14",  # (Importance: 43)
+    "VWAP_Deviation",  # (Importance: 42)
+    "Price_Skewness_20",  # (Importance: 50)
+    # === 市場データ (Market Data) ===
+    # ※今回のログには含まれていなかったが、ドメイン知識として重要ため維持
+    "OI_Change_Rate_24h",
+    "FR_OI_Ratio",
+    "Market_Stress",
 ]
-"""
 
 
 class FeatureEngineeringService:

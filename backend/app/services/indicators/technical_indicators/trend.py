@@ -52,6 +52,26 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def efficiency_ratio(data: pd.Series, length: int = 10) -> pd.Series:
+        """
+        Kaufman Efficiency Ratio (ER)
+
+        ER = Change / Volatility
+           = |Price[t] - Price[t-N]| / Sum(|Price[i] - Price[i-1]| for i in t..t-N)
+        """
+        if not isinstance(data, pd.Series):
+            raise TypeError("data must be pandas Series")
+        if length <= 0:
+            raise ValueError(f"length must be positive: {length}")
+            
+        change = data.diff(length).abs()
+        volatility = data.diff(1).abs().rolling(window=length).sum()
+        
+        er = change / volatility
+        return er.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def sma(data: pd.Series, length: int) -> pd.Series:
         # パラメータ型チェック
         if not isinstance(data, pd.Series):

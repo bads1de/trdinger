@@ -47,8 +47,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         lookback_periods = config.get("lookback_periods", {})
 
         # 基本的な価格特徴量のみ計算
+        # 基本的な価格特徴量のみ計算
         df = self.calculate_price_features(df, lookback_periods)
-        df = self.calculate_lag_features(df, lookback_periods)
+        # ラグ特徴量は削除
         df = self.calculate_statistical_features(df, lookback_periods)
         df = self.calculate_time_series_features(df, lookback_periods)
         df = self.calculate_volatility_features(df, lookback_periods)
@@ -58,30 +59,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
     @safe_ml_operation(
         default_return=None, context="ラグ特徴量計算でエラーが発生しました"
     )
-    def calculate_lag_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
-    ) -> pd.DataFrame:
-        """
-        ラグ特徴量を計算
-        """
-        result_df = self.create_result_dataframe(df)
-
-        # 価格のラグ特徴量（最重要期間のみ: 1h, 24h）
-        lag_periods = [1, 24]
-        for period in lag_periods:
-            result_df[f"close_lag_{period}"] = (
-                df["close"].shift(period).fillna(method="bfill")
-            )
-
-        # 価格変化率のラグ（24hのみ）
-        returns_temp = df["close"].pct_change(fill_method=None)
-        result_df["returns_lag_24"] = returns_temp.shift(24).fillna(0.0)
-
-        # 累積リターン（24hのみ）
-        result_df["cumulative_returns_24"] = returns_temp.rolling(24).sum().fillna(0.0)
-
-        self.log_feature_calculation_complete("ラグ")
-        return result_df
+    # calculate_lag_features は削除されました
 
     @safe_ml_operation(
         default_return=None, context="統計的特徴量計算でエラーが発生しました"
@@ -100,10 +78,8 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         # ここではテストに合わせて20のみ、あるいは両方実装しても良い。
 
         for window in windows:
-            # 移動統計（標準偏差）
-            result_df[f"Close_std_{window}"] = (
-                df["close"].rolling(window).std().fillna(0.0)
-            )
+            # 移動統計（標準偏差） - 削除
+            # result_df[f"Close_std_{window}"] = ...
 
             # 範囲統計
             high_max = df["high"].rolling(window).max()
@@ -116,12 +92,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
                 log_returns.rolling(window).std() * np.sqrt(252)
             ).fillna(0.0)
 
-            # スキューネスと尖度
+            # スキューネスのみ保持（尖度は削除）
             result_df[f"Price_Skewness_{window}"] = (
                 df["close"].rolling(window).skew().fillna(0.0)
-            )
-            result_df[f"Price_Kurtosis_{window}"] = (
-                df["close"].rolling(window).kurt().fillna(0.0)
             )
 
         self.log_feature_calculation_complete("統計的")
@@ -138,11 +111,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         """
         result_df = self.create_result_dataframe(df)
 
-        # 移動平均からの乖離（20期間のみ）
-        ma_20 = df["close"].rolling(20).mean()
-        result_df["Close_deviation_from_ma_20"] = (
-            (df["close"] - ma_20) / ma_20
-        ).fillna(0.0)
+        # 移動平均からの乖離 - 削除
+        # ma_20 = df["close"].rolling(20).mean()
+        # result_df["Close_deviation_from_ma_20"] = ...
 
         # トレンド強度（20期間のみ）
         result_df["Trend_strength_20"] = TrendIndicators.linregslope(
@@ -163,11 +134,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         """
         result_df = self.create_result_dataframe(df)
 
-        # 実現ボラティリティ（20期間のみ）
-        returns_temp = df["close"].pct_change(fill_method=None)
-        result_df["Realized_Vol_20"] = (
-            returns_temp.rolling(20).std() * np.sqrt(24)
-        ).fillna(0.0)
+        # 実現ボラティリティ - 削除
+        # returns_temp = df["close"].pct_change(fill_method=None)
+        # result_df["Realized_Vol_20"] = ...
 
         # Parkinson推定量（20期間のみ）
         hl_ratio = np.log(df["high"] / df["low"])
@@ -199,31 +168,14 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
         result_df = self.create_result_dataframe(df)
 
-        # 価格変化率（MomentumIndicators使用）
-        roc1 = MomentumIndicators.roc(result_df["close"], period=1)
-        result_df["Price_Change_1"] = roc1.fillna(0.0)
+        # 価格変化率 - 削除
+        # roc1 = ...
 
-        roc5 = MomentumIndicators.roc(result_df["close"], period=5)
-        result_df["Price_Change_5"] = roc5.fillna(0.0)
+        # ボディサイズ - 削除
+        # result_df["Body_Size"] = ...
 
-        roc20 = MomentumIndicators.roc(result_df["close"], period=20)
-        result_df["Price_Change_20"] = roc20.fillna(0.0)
-
-        # ボディサイズ（実体の大きさ）
-        result_df["Body_Size"] = (
-            (abs(result_df["close"] - result_df["open"]) / result_df["close"])
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(0.0)
-        )
-
-        # 下ヒゲのみ保持
-        lower_shadow = (
-            np.minimum(result_df["open"], result_df["close"]) - result_df["low"]
-        ) / result_df["close"]
-        lower_shadow = np.where(np.isinf(lower_shadow), np.nan, lower_shadow)
-        result_df["Lower_Shadow"] = pd.Series(
-            lower_shadow, index=result_df.index
-        ).fillna(0.0)
+        # 下ヒゲ - 削除
+        # lower_shadow = ...
 
         # 価格・出来高トレンド（MomentumIndicators使用）
         # これは価格と出来高の単純な積であり、特定の指標ではないためここに残す
@@ -245,27 +197,13 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             特徴量名のリスト
         """
         return [
-            "Price_Change_1",
-            "Price_Change_5",
-            "Price_Change_20",
-            "Body_Size",
-            "Lower_Shadow",
             "Price_Volume_Trend",
-            # ラグ特徴量
-            "close_lag_1",
-            "close_lag_24",
-            "returns_lag_24",
-            "cumulative_returns_24",
             # 統計的特徴量
-            "Close_std_20",
             "Close_range_20",
             "Historical_Volatility_20",
             "Price_Skewness_20",
-            "Price_Kurtosis_20",
             # 時系列特徴量
-            "Close_deviation_from_ma_20",
             "Trend_strength_20",
             # ボラティリティ特徴量
-            "Realized_Vol_20",
             "Parkinson_Vol_20",
         ]
