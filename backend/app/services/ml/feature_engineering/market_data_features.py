@@ -348,7 +348,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         # === 新特徴量4: Price-OI Divergence ===
         # 価格とOIのダイバージェンスを検知
         price_change = result_df["close"].pct_change(periods=1).fillna(0.0)
-        result_df["Price_OI_Divergence"] = price_change * oi_change
+        result_df["Price_OI_Divergence"] = (
+            (price_change * oi_change).rolling(window=8).mean().fillna(0.0)
+        )
 
         return result_df
 
@@ -474,7 +476,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # 例: FR正(+) * OI増(+) = + (強気圧力増加)
             # 例: FR負(-) * OI増(+) = - (弱気圧力増加)
             # 例: FR正(+) * OI減(-) = - (強気圧力減少＝利確/損切り)
-            result_df["FR_OI_Sentiment"] = fr_sign * oi_change_short
+            result_df["FR_OI_Sentiment"] = (
+                (fr_sign * oi_change_short).rolling(window=8).mean().fillna(0.0)
+            )
 
             # === 新特徴量6: Liquidation Risk (Pseudo) ===
             # 清算リスク（疑似）: 価格の急変動とOIの積み上がりの積

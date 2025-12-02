@@ -133,13 +133,13 @@ class CommonFeatureEvaluator:
                 oi_df = pd.DataFrame(
                     [
                         {
-                            "data_timestamp": r.data_timestamp,
+                            "timestamp": r.data_timestamp,
                             "open_interest_value": r.open_interest_value,
                         }
                         for r in oi_records
                     ]
                 )
-                oi_df.set_index("data_timestamp", inplace=True)
+                oi_df.set_index("timestamp", inplace=True)
             else:
                 oi_df = None
         except Exception as e:  # pragma: no cover
