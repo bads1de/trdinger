@@ -427,8 +427,21 @@ class CommonFeatureEvaluator:
         t1: pd.Series,
         n_splits: int = 5,
         embargo_pct: float = 0.01,
+        use_meta_labeling_metrics: bool = False,
     ) -> Dict[str, float]:
-        """PurgedKFoldによるCV評価（パイプライン準拠）"""
+        """PurgedKFoldによるCV評価（パイプライン準拠 + メタラベリング対応）
+
+        Args:
+            X: 特徴量DataFrame
+            y: ターゲットSeries
+            t1: ラベルの終了時刻Series
+            n_splits: CV分割数
+            embargo_pct: エンバーゴ比率
+            use_meta_labeling_metrics: メタラベリング評価指標を使用するか
+
+        Returns:
+            Dict[str, float]: 評価指標の辞書
+        """
         if X.empty:
             raise ValueError("特徴量が空です")
 
@@ -441,6 +454,12 @@ class CommonFeatureEvaluator:
         precisions = []
         recalls = []
         pipeline_scores = []
+
+        # メタラベリング用追加指標
+        if use_meta_labeling_metrics:
+            win_rates = []
+            expected_values = []
+            signal_adoption_rates = []
 
         start_time = time.perf_counter()
 
@@ -486,12 +505,35 @@ class CommonFeatureEvaluator:
                     p_score = 0.0
                 else:
                     p_score = f1 * np.log1p(n_trades)
+
+                # メタラベリング指標の計算
+                if use_meta_labeling_metrics:
+                    # Win Rate = Precision（勝率）
+                    win_rate = prec
+
+                    # Expected Value（期待値）
+                    # 勝ち時+1、負け時-1と仮定
+                    expected_value = (prec * 1.0) + ((1 - prec) * -1.0)
+
+                    # Signal Adoption Rate（シグナル採択率）
+                    signal_adoption_rate = (
+                        n_trades / len(y_val) if len(y_val) > 0 else 0.0
+                    )
+
+                    win_rates.append(win_rate)
+                    expected_values.append(expected_value)
+                    signal_adoption_rates.append(signal_adoption_rate)
             else:
                 # クラス1が存在しない場合など
                 f1 = 0.0
                 prec = 0.0
                 rec = 0.0
                 p_score = 0.0
+
+                if use_meta_labeling_metrics:
+                    win_rates.append(0.0)
+                    expected_values.append(-1.0)
+                    signal_adoption_rates.append(0.0)
 
             f1_scores.append(f1)
             precisions.append(prec)
@@ -500,7 +542,7 @@ class CommonFeatureEvaluator:
 
         elapsed = time.perf_counter() - start_time
 
-        return {
+        result = {
             "cv_f1": float(np.mean(f1_scores)) if f1_scores else 0.0,
             "cv_precision": float(np.mean(precisions)) if precisions else 0.0,
             "cv_recall": float(np.mean(recalls)) if recalls else 0.0,
@@ -509,3 +551,28 @@ class CommonFeatureEvaluator:
             ),
             "train_time_sec": float(elapsed),
         }
+
+        # メタラベリング指標を追加
+        if use_meta_labeling_metrics:
+            result.update(
+                {
+                    "cv_win_rate": float(np.mean(win_rates)) if win_rates else 0.0,
+                    "cv_expected_value": (
+                        float(np.mean(expected_values)) if expected_values else -1.0
+                    ),
+                    "cv_signal_adoption_rate": (
+                        float(np.mean(signal_adoption_rates))
+                        if signal_adoption_rates
+                        else 0.0
+                    ),
+                }
+            )
+
+            logger.info("📊 Meta-Labeling Evaluation Results:")
+            logger.info(f"  Win Rate (Precision): {result['cv_win_rate']:.2%}")
+            logger.info(f"  Expected Value: {result['cv_expected_value']:.4f}")
+            logger.info(
+                f"  Signal Adoption Rate: {result['cv_signal_adoption_rate']:.2%}"
+            )
+
+        return result

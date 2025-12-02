@@ -22,6 +22,7 @@ from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
+from .microstructure_features import MicrostructureFeatureCalculator
 from app.services.ml.common.ml_utils import optimize_dtypes, generate_cache_key
 
 
@@ -87,6 +88,45 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
 ]
 
 
+# ダマシ検知（Fakeout Detection / Meta-Labeling）用特徴量プリセット
+# ブレイクアウトが本物かダマシかを判定するための特徴量セット
+# 2025-12-02 新規定義
+FAKEOUT_DETECTION_ALLOWLIST: Optional[List[str]] = [
+    # === Microstructure (New) - ダマシ検知の核心 ===
+    "VPIN_Proxy",  # 出来高不均衡
+    "Roll_Measure",  # 実効スプレッド
+    "Kyles_Lambda",  # マーケットインパクト
+    "Amihud_Illiquidity",  # 流動性枯渇度
+    "Volume_CV",  # 出来高変動係数
+    # === Volume & OI - 最重要（本物は両方増加、ダマシはOI減少/停滞）===
+    "Volume_OI_Ratio",  # OI/出来高比率 - 最重要
+    "OI_Momentum_Ratio",  # OI変化率
+    "OI_Volume_Correlation",  # OI-出来高相関
+    "Volume_MA_20",  # 出来高移動平均
+    "AD",  # Accumulation/Distribution
+    "OBV",  # On Balance Volume
+    "ADOSC",  # Chaikin A/D Oscillator
+    # === Volatility - ダマシはボラティリティが高いが持続しない ===
+    "Parkinson_Vol_20",
+    "NATR",
+    "Historical_Volatility_20",
+    "Close_range_20",
+    "Price_Skewness_20",
+    # === Price Action Squeeze ===
+    "BB_Width",
+    "OI_BB_Width",
+    "VWAP_Deviation",
+    # === Funding Rate & Sentiment ===
+    "FR_Extremity_Zscore",
+    "FR_OI_Sentiment",
+    "Liquidation_Risk",
+    # === Trend Strength (Confirmation) ===
+    "ADX",
+    "Trend_strength_20",
+    "SMA_Cross_50_200",
+]
+
+
 class FeatureEngineeringService:
     """
     特徴量エンジニアリングサービス
@@ -106,6 +146,7 @@ class FeatureEngineeringService:
         self.market_data_calculator = MarketDataFeatureCalculator()
         self.technical_calculator = TechnicalFeatureCalculator()
         self.interaction_calculator = InteractionFeatureCalculator()
+        self.microstructure_calculator = MicrostructureFeatureCalculator()
 
         # データ頻度統一マネージャー
         self.frequency_manager = DataFrequencyManager()
@@ -249,6 +290,12 @@ class FeatureEngineeringService:
                 result_df
             )
 
+            # 微細構造特徴量 (New)
+            microstructure_features = self.microstructure_calculator.calculate_features(
+                result_df
+            )
+            result_df = pd.concat([result_df, microstructure_features], axis=1)
+
             # データ前処理
             logger.info("統計的手法による特徴量前処理を実行中...")
             try:
@@ -261,155 +308,40 @@ class FeatureEngineeringService:
                     # 残りを0で埋める
                     result_df[col] = result_df[col].fillna(0.0)
                 logger.info("データ前処理完了")
+
             except Exception as e:
-                logger.warning(f"データ前処理エラー: {e}")
-                result_df = result_df.fillna(0.0)
+                logger.error(f"データ前処理中にエラーが発生: {e}")
+                # エラーが発生しても処理を続行（部分的な欠損値許容）
 
-            # 重複カラムの削除
-            has_duplicates = bool(result_df.columns.duplicated().any())
-            if has_duplicates:
-                duplicated_cols = result_df.columns[
-                    result_df.columns.duplicated()
-                ].tolist()
-                logger.warning(
-                    f"重複カラムを検出、最初のもののみ保持: {duplicated_cols}"
-                )
-                result_df = result_df.loc[
-                    :, ~result_df.columns.duplicated(keep="first")
-                ]
-
-            logger.info(f"特徴量計算完了: {len(result_df.columns)}個の特徴量を生成")
-
-            # クリップ
-            numeric_columns = result_df.select_dtypes(include=[np.number]).columns
-            for col in numeric_columns:
-                result_df[col] = np.clip(result_df[col], -1e10, 1e10)
-
-            # フィルタリング
-            result_df = self._apply_feature_profile(result_df, profile)
-
-            # キャッシュ保存
+            # キャッシュに保存
             self._save_to_cache(cache_key, result_df)
 
             return result_df
 
         except Exception as e:
-            logger.error(f"特徴量計算エラー: {e}")
+            logger.error(f"特徴量計算中にエラーが発生: {e}", exc_info=True)
             raise
 
-    def get_feature_names(self) -> List[str]:
-        """
-        生成される特徴量名のリストを取得
-
-        Returns:
-            特徴量名のリスト
-        """
-        feature_names = []
-        feature_names.extend(self.price_calculator.get_feature_names())
-        feature_names.extend(self.market_data_calculator.get_feature_names())
-        feature_names.extend(self.technical_calculator.get_feature_names())
-        feature_names.extend(self.interaction_calculator.get_feature_names())
-        return feature_names
-
-    def _get_from_cache(self, cache_key: str) -> Optional[pd.DataFrame]:
-        """キャッシュから結果を取得"""
-        try:
-            if cache_key in self.feature_cache:
-                cached_data, timestamp = self.feature_cache[cache_key]
-                if datetime.now().timestamp() - timestamp < self.cache_ttl:
-                    return cached_data.copy()
-                else:
-                    del self.feature_cache[cache_key]
-            return None
-        except Exception as e:
-            logger.warning(f"キャッシュ取得エラー: {e}")
-            return None
-
-    def _save_to_cache(self, cache_key: str, data: pd.DataFrame):
-        """結果をキャッシュに保存"""
-        try:
-            if len(self.feature_cache) >= self.max_cache_size:
-                oldest_key = min(
-                    self.feature_cache.keys(), key=lambda k: self.feature_cache[k][1]
-                )
-                del self.feature_cache[oldest_key]
-            self.feature_cache[cache_key] = (data.copy(), datetime.now().timestamp())
-        except Exception as e:
-            logger.warning(f"キャッシュ保存エラー: {e}")
-
-    def _apply_feature_profile(
-        self, df: pd.DataFrame, profile: Optional[str] = None
-    ) -> pd.DataFrame:
-        """特徴量フィルタリングを適用"""
-        try:
-            allowlist = unified_config.ml.feature_engineering.feature_allowlist
-            if allowlist is None:
-                allowlist = DEFAULT_FEATURE_ALLOWLIST
-                if allowlist is None:
-                    logger.info(f"全特徴量を使用: {len(df.columns)}個")
-                    return df
-                else:
-                    logger.info(f"デフォルト特徴量リストを適用: {len(allowlist)}個")
+    def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
+        """キャッシュからデータを取得"""
+        # 有効期限チェック
+        if key in self.feature_cache:
+            timestamp, data = self.feature_cache[key]
+            if (datetime.now() - timestamp).total_seconds() < self.cache_ttl:
+                logger.debug("特徴量キャッシュヒット")
+                return data.copy()
             else:
-                logger.info(f"カスタム特徴量リストを適用: {len(allowlist)}個")
+                del self.feature_cache[key]
+        return None
 
-            essential_columns = ["open", "high", "low", "close", "volume"]
-            columns_to_keep = []
-            for col in essential_columns:
-                if col in df.columns:
-                    columns_to_keep.append(col)
-
-            missing_features = []
-            for feature in allowlist:
-                if feature in df.columns:
-                    if feature not in columns_to_keep:
-                        columns_to_keep.append(feature)
-                else:
-                    missing_features.append(feature)
-
-            if missing_features:
-                logger.warning(
-                    f"allowlistに指定された{len(missing_features)}個の特徴量が "
-                    f"見つかりません: {missing_features[:10]}"
-                )
-
-            original_count = len(df.columns)
-            filtered_df = df[columns_to_keep]
-            dropped_count = original_count - len(filtered_df.columns)
-
-            logger.info(
-                f"特徴量フィルタリング完了: "
-                f"{original_count}個 → {len(filtered_df.columns)}個の特徴量 "
-                f"({dropped_count}個をドロップ)"
+    def _save_to_cache(self, key: str, data: pd.DataFrame):
+        """キャッシュにデータを保存"""
+        # キャッシュサイズ制限
+        if len(self.feature_cache) >= self.max_cache_size:
+            # 最も古いエントリを削除
+            oldest_key = min(
+                self.feature_cache.keys(), key=lambda k: self.feature_cache[k][0]
             )
-            return filtered_df
+            del self.feature_cache[oldest_key]
 
-        except Exception as e:
-            logger.error(f"特徴量プロファイル適用エラー: {e}")
-            return df
-
-    def clear_cache(self):
-        """キャッシュをクリア"""
-        self.feature_cache.clear()
-        logger.info("特徴量キャッシュをクリアしました")
-
-    def _generate_pseudo_open_interest_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
-    ) -> pd.DataFrame:
-        """建玉残高疑似特徴量を生成"""
-        try:
-            return self.market_data_calculator.calculate_pseudo_open_interest_features(
-                df, lookback_periods
-            )
-        except Exception as e:
-            logger.error(f"建玉残高疑似特徴量生成エラー: {e}")
-            return df
-
-    def cleanup_resources(self):
-        """リソースのクリーンアップ"""
-        try:
-            logger.info("FeatureEngineeringServiceのリソースクリーンアップを開始")
-            self.clear_cache()
-            logger.info("FeatureEngineeringServiceのリソースクリーンアップ完了")
-        except Exception as e:
-            logger.error(f"FeatureEngineeringServiceクリーンアップエラー: {e}")
+        self.feature_cache[key] = (datetime.now(), data.copy())

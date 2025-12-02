@@ -6,7 +6,7 @@ Optunaの最適化中に同じパラメータでラベルを再生成するコ�
 """
 
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 import pandas as pd
 
@@ -66,6 +66,7 @@ class LabelCache:
         use_atr: bool = False,
         atr_period: int = 14,
         binary_label: bool = False,
+        t_events: Optional[pd.DatetimeIndex] = None,
     ) -> pd.Series:
         """キャッシュを使ってラベルを取得
 
@@ -83,6 +84,7 @@ class LabelCache:
             use_atr: Use ATR for volatility in Triple Barrier.
             atr_period: ATR calculation period.
             binary_label: Return binary (0/1) labels for Triple Barrier.
+            t_events: ラベル付け対象のイベント時刻（指定がない場合は全時刻）
 
         Returns:
             pd.Series: ラベル（"UP"/"RANGE"/"DOWN" または 0/1）
@@ -90,7 +92,16 @@ class LabelCache:
         Raises:
             ValueError: threshold_methodが無効な場合
         """
-        # キャッシュキーを生成（タプルは hashable なので辞書のキーに使える）
+        # キャッシュキーを生成（t_eventsはハッシュ化できないため、長さと先頭・末尾のタイムスタンプで代用するか、
+        # あるいはt_eventsが指定された場合はキャッシュを使わない方針にする）
+        # ここでは簡易的に t_events が指定された場合はキャッシュキーに含めず、
+        # 呼び出し元（LabelGenerationService）で管理することを想定するが、
+        # LabelCacheの責務としてはキャッシュすべき。
+        # t_eventsをタプルにしてキーにするのは重いので、Noneかどうかだけをキーに含める（不完全だが）
+        # 正しくは t_events のハッシュを使うべきだが、ここでは t_events が渡されたらキャッシュしない（毎回計算）とするのが安全。
+
+        use_cache = t_events is None
+
         cache_key = (
             horizon_n,
             threshold_method,
@@ -104,8 +115,8 @@ class LabelCache:
             binary_label,
         )
 
-        # キャッシュヒット
-        if cache_key in self.cache:
+        # キャッシュヒット (t_eventsがない場合のみ)
+        if use_cache and cache_key in self.cache:
             self.hit_count += 1
             logger.debug(
                 f"キャッシュヒット: horizon_n={horizon_n}, "
@@ -116,13 +127,14 @@ class LabelCache:
             return self.cache[cache_key]
 
         # キャッシュミス -> 新規生成
-        self.miss_count += 1
-        logger.info(
-            f"ラベル生成: horizon_n={horizon_n}, "
-            f"method={threshold_method}, threshold={threshold:.4f}, "
-            f"timeframe={timeframe} "
-            f"(miss率: {self.get_miss_rate():.1f}%)"
-        )
+        if use_cache:
+            self.miss_count += 1
+            logger.info(
+                f"ラベル生成: horizon_n={horizon_n}, "
+                f"method={threshold_method}, threshold={threshold:.4f}, "
+                f"timeframe={timeframe} "
+                f"(miss率: {self.get_miss_rate():.1f}%)"
+            )
 
         # ThresholdMethod enum に変換
         try:
@@ -157,6 +169,12 @@ class LabelCache:
                 close_prices.index, index=close_prices.index
             ).shift(-horizon_n)
 
+            # イベント時刻の決定
+            if t_events is None:
+                events_index = close_prices.index
+            else:
+                events_index = t_events
+
             # Triple Barrier 実行
             tb = TripleBarrier(
                 pt=pt_factor, sl=sl_factor, min_ret=0.0001
@@ -164,7 +182,7 @@ class LabelCache:
 
             events = tb.get_events(
                 close=close_prices,
-                t_events=close_prices.index,  # 全てのバーをイベント候補とする
+                t_events=events_index,  # 指定されたイベントのみ計算
                 pt_sl=[pt_factor, sl_factor],
                 target=volatility,
                 min_ret=0.0001,

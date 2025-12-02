@@ -1,22 +1,18 @@
-# -*- coding: utf-8 -*-
-import argparse
+import sys
+import os
 import glob
 import json
 import logging
-import os
-import sys
-import time
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Tuple, Any, List, Optional
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Any
 
-import joblib
-import lightgbm as lgb
-import matplotlib.pyplot as plt
 import numpy as np
-import optuna
 import pandas as pd
-import seaborn as sns
+import optuna
+import joblib
+import matplotlib.pyplot as plt
+import lightgbm as lgb
 import xgboost as xgb
 import catboost as cb
 from sklearn.metrics import classification_report, f1_score
@@ -34,12 +30,15 @@ if sys.platform == "win32":
 
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
+    FAKEOUT_DETECTION_ALLOWLIST,
 )
 from app.services.ml.label_cache import LabelCache
+from app.services.ml.label_generation import LabelGenerationService
 from app.services.ml.ensemble.meta_labeling import MetaLabelingService
 from app.services.ml.models.gru_model import GRUModel
 from app.services.ml.models.lstm_model import LSTMModel
 from app.services.ml.cross_validation.purged_kfold import PurgedKFold
+from app.config.unified_config import unified_config
 from database.connection import SessionLocal
 from database.repositories.ohlcv_repository import OHLCVRepository
 from scripts.feature_evaluation.common_feature_evaluator import (
@@ -69,7 +68,7 @@ class SimpleStackingService:
         from sklearn.linear_model import Ridge
 
         self.model = Ridge(
-            alpha=alpha, positive=True, fit_intercept=False, random_state=42
+            alpha=alpha, positive=True, fit_intercept=True, random_state=42
         )
         self.weights: Optional[Dict[str, float]] = None
         self.feature_names: list = []
@@ -184,11 +183,26 @@ class MLPipeline:
                 symbol=self.symbol, timeframe=self.timeframe, limit=limit
             )
 
-        features_df = self.feature_service.calculate_advanced_features(
-            ohlcv_data=data.ohlcv,
-            funding_rate_data=data.fr,
-            open_interest_data=data.oi,
-        )
+        # メタラベリング有効時は特徴量リストを上書きしてダマシ検知用特徴量を使用
+        original_allowlist = unified_config.ml.feature_engineering.feature_allowlist
+        if self.enable_meta_labeling:
+            unified_config.ml.feature_engineering.feature_allowlist = (
+                FAKEOUT_DETECTION_ALLOWLIST
+            )
+            logger.info("🚀 Applying FAKEOUT_DETECTION_ALLOWLIST for Meta-Labeling")
+
+        try:
+            features_df = self.feature_service.calculate_advanced_features(
+                ohlcv_data=data.ohlcv,
+                funding_rate_data=data.fr,
+                open_interest_data=data.oi,
+            )
+        finally:
+            # 設定を元に戻す
+            if self.enable_meta_labeling:
+                unified_config.ml.feature_engineering.feature_allowlist = (
+                    original_allowlist
+                )
 
         feature_cols = [
             col
@@ -208,7 +222,8 @@ class MLPipeline:
         )
         logger.info("=" * 60)
 
-        label_cache = LabelCache(ohlcv_df)
+        # LabelGenerationServiceを使用
+        label_service = LabelGenerationService()
 
         def objective(trial):
             model_type = trial.suggest_categorical("model_type", selected_models)
@@ -220,37 +235,29 @@ class MLPipeline:
             atr_period = trial.suggest_int("atr_period", 7, 28, step=7)
 
             # Fixed Parameters
-            threshold_method = "TRIPLE_BARRIER"
             use_atr = True
-            binary_label = True
-            threshold = 0.0
 
             try:
-                labels = label_cache.get_labels(
+                # LabelGenerationService.prepare_labels を使用してラベル生成とフィルタリングを一括で行う
+                # Scientific Meta-Labeling: CUSUM Filter
+                features_clean, labels_clean = label_service.prepare_labels(
+                    features_df=X,
+                    ohlcv_df=ohlcv_df,
+                    use_cusum=self.enable_meta_labeling,  # CUSUMフィルターを使用
+                    cusum_threshold=None,  # 動的ボラティリティ
+                    cusum_vol_multiplier=2.0,  # 閾値を2倍にしてイベントを厳選
                     horizon_n=horizon_n,
-                    threshold_method=threshold_method,
-                    threshold=threshold,
-                    timeframe=self.timeframe,
-                    price_column="close",
                     pt_factor=pt_factor,
                     sl_factor=sl_factor,
                     use_atr=use_atr,
                     atr_period=atr_period,
-                    binary_label=binary_label,
                 )
             except Exception as e:
                 logger.error(f"Label generation failed: {e}", exc_info=True)
                 raise optuna.exceptions.TrialPruned()
 
-            common_index = X.index.intersection(labels.index)
-            X_aligned = X.loc[common_index]
-            labels_aligned = labels.loc[common_index]
-
-            valid_idx = ~labels_aligned.isna()
-            X_clean = X_aligned.loc[valid_idx]
-
-            # TBM (binary_label=True)
-            y = labels_aligned.loc[valid_idx].astype(int)
+            X_clean = features_clean
+            y = labels_clean
 
             # データ数チェック (緩和済み)
             if len(y) < 50:
@@ -260,7 +267,9 @@ class MLPipeline:
             n_splits = 3
             embargo_pct = 0.01
 
-            t1_labels = label_cache.get_t1(X_clean.index, horizon_n)
+            # LabelCacheは内部で再生成されるが、t1取得のために一時的に作成
+            temp_cache = LabelCache(ohlcv_df)
+            t1_labels = temp_cache.get_t1(X_clean.index, horizon_n)
 
             cv = PurgedKFold(n_splits=n_splits, t1=t1_labels, pct_embargo=embargo_pct)
 
@@ -430,18 +439,27 @@ class MLPipeline:
 
             trend_metrics = oof_report["1"]
             precision = trend_metrics["precision"]
-            recall = trend_metrics["recall"]
             f1 = trend_metrics["f1-score"]
 
             # トレード回数（ポジティブ判定数）
             n_trades = y_pred_bin.sum()
 
-            # 最低限の精度(0.55)と回数(10)がないとスコア0
-            if precision < 0.55 or n_trades < 10:
-                final_score = 0.0
+            # 評価スコアの計算
+            if self.enable_meta_labeling:
+                # メタラベリング時は Precision（勝率）を最重要視
+                # Precision * log(1 + trades)
+                # ただし最低限のトレード数は必要
+                if n_trades < 5:
+                    final_score = 0.0
+                else:
+                    final_score = precision * np.log1p(n_trades)
             else:
-                # F1スコア × log(トレード回数)
-                final_score = f1 * np.log1p(n_trades)
+                # 従来: F1スコア × log(トレード回数)
+                # 最低限の精度(0.55)と回数(10)がないとスコア0
+                if precision < 0.55 or n_trades < 10:
+                    final_score = 0.0
+                else:
+                    final_score = f1 * np.log1p(n_trades)
 
             logger.info(
                 f"Trial {trial.number} ({model_type}): Final Score={final_score:.4f}, F1={f1:.4f}, Trades={n_trades}, Prec={precision:.4f}"
@@ -481,7 +499,12 @@ class MLPipeline:
         logger.info("Training Final Models & Stacking (Purged K-Fold OOF) [TBM ONLY]")
         logger.info("=" * 60)
 
-        label_cache = LabelCache(ohlcv_df)
+        # 最適化されたモデルのみを使用する
+        best_model_type = best_params["model_type"]
+        logger.info(f"Using Best Model Only: {best_model_type}")
+        selected_models = [best_model_type]
+
+        label_service = LabelGenerationService()
 
         # TBM parameters
         horizon_n = best_params["horizon_n"]
@@ -490,44 +513,39 @@ class MLPipeline:
         atr_period = best_params.get("atr_period", 14)
 
         # Fixed parameters
-        threshold_method = "TRIPLE_BARRIER"
         use_atr = True
-        binary_label = True
-        threshold = 0.0
 
         try:
-            labels = label_cache.get_labels(
+            # Scientific Meta-Labeling: CUSUM Filter
+            features_clean, labels_clean = label_service.prepare_labels(
+                features_df=X,
+                ohlcv_df=ohlcv_df,
+                use_cusum=self.enable_meta_labeling,
+                cusum_threshold=None,  # 動的ボラティリティ
+                cusum_vol_multiplier=2.0,  # 閾値を2倍にしてイベントを厳選
                 horizon_n=horizon_n,
-                threshold_method=threshold_method,
-                threshold=threshold,
-                timeframe=self.timeframe,
-                price_column="close",
                 pt_factor=pt_factor,
                 sl_factor=sl_factor,
                 use_atr=use_atr,
                 atr_period=atr_period,
-                binary_label=binary_label,
             )
         except Exception as e:
             logger.error(f"Final model label generation failed: {e}")
             raise
 
-        common_index = X.index.intersection(labels.index)
-        X_aligned = X.loc[common_index]
-        labels_aligned = labels.loc[common_index]
-
-        valid_idx = ~labels_aligned.isna()
-        X_clean = X_aligned.loc[valid_idx]
-
-        # TBM (binary_label=True)
-        y = labels_aligned.loc[valid_idx].astype(int)
+        X_clean = features_clean
+        y = labels_clean
 
         if len(y) < 50:
             raise ValueError("Not enough data for final training.")
 
         n_splits_oof = 5
         embargo_pct_oof = 0.01
-        t1_labels = label_cache.get_t1(X_clean.index, horizon_n)
+
+        # t1取得用の一時キャッシュ
+        temp_cache = LabelCache(ohlcv_df)
+        t1_labels = temp_cache.get_t1(X_clean.index, horizon_n)
+
         cv_oof = PurgedKFold(
             n_splits=n_splits_oof, t1=t1_labels, pct_embargo=embargo_pct_oof
         )
@@ -722,29 +740,17 @@ class MLPipeline:
             if "gru" in selected_models:
                 model_gru_final = GRUModel(**dl_params_final)
                 model_gru_final.fit(X_clean_scaled, y)
+                joblib.dump(model_gru_final, self.results_dir / "model_gru.joblib")
                 models_result["gru"] = model_gru_final
 
             if "lstm" in selected_models:
                 model_lstm_final = LSTMModel(**dl_params_final)
                 model_lstm_final.fit(X_clean_scaled, y)
+                joblib.dump(model_lstm_final, self.results_dir / "model_lstm.joblib")
                 models_result["lstm"] = model_lstm_final
 
-        logger.info("Training Meta Model (Ridge NNLS)...")
-
-        oof_preds_mapping = {
-            "lightgbm": "LightGBM",
-            "xgboost": "XGBoost",
-            "catboost": "CatBoost",
-            "gru": "GRU",
-            "lstm": "LSTM",
-        }
-
-        oof_preds_dict = {
-            oof_preds_mapping[k]: v
-            for k, v in oof_preds.items()
-            if k in selected_models
-        }
-        oof_preds_df = pd.DataFrame(oof_preds_dict, index=X_clean.index)
+        # --- Stacking (Level 2) ---
+        oof_preds_df = pd.DataFrame(oof_preds, index=X_clean.index)
 
         stacking_service = SimpleStackingService()
         stacking_service.train(oof_preds_df, y.values)
@@ -758,7 +764,8 @@ class MLPipeline:
             logger.info("Training Meta-Labeling Model...")
 
             # スタッキングモデルのOOF予測値を取得 (これが一次モデルの確信度となる)
-            primary_oof_proba = stacking_service.predict(oof_preds_df)
+            # Ridgeスタッキングは不安定なため、単純平均を使用する
+            primary_oof_proba = oof_preds_df.mean(axis=1).values
             primary_oof_series = pd.Series(primary_oof_proba, index=X_clean.index)
 
             meta_service = MetaLabelingService()
@@ -816,32 +823,32 @@ class MLPipeline:
         prob_sum = np.zeros(len(y))
         model_count = 0
 
-        if "LightGBM" in oof_preds_df.columns:
-            prob_lgb = oof_preds_df["LightGBM"]
+        if "lightgbm" in oof_preds_df.columns:
+            prob_lgb = oof_preds_df["lightgbm"]
             models["LightGBM (OOF)"] = prob_lgb
             prob_sum += prob_lgb
             model_count += 1
 
-        if "XGBoost" in oof_preds_df.columns:
-            prob_xgb = oof_preds_df["XGBoost"]
+        if "xgboost" in oof_preds_df.columns:
+            prob_xgb = oof_preds_df["xgboost"]
             models["XGBoost (OOF)"] = prob_xgb
             prob_sum += prob_xgb
             model_count += 1
 
-        if "CatBoost" in oof_preds_df.columns:
-            prob_cat = oof_preds_df["CatBoost"]
+        if "catboost" in oof_preds_df.columns:
+            prob_cat = oof_preds_df["catboost"]
             models["CatBoost (OOF)"] = prob_cat
             prob_sum += prob_cat
             model_count += 1
 
-        if "GRU" in oof_preds_df.columns:
-            prob_gru = oof_preds_df["GRU"]
+        if "gru" in oof_preds_df.columns:
+            prob_gru = oof_preds_df["gru"]
             models["GRU (OOF)"] = prob_gru
             prob_sum += prob_gru
             model_count += 1
 
-        if "LSTM" in oof_preds_df.columns:
-            prob_lstm = oof_preds_df["LSTM"]
+        if "lstm" in oof_preds_df.columns:
+            prob_lstm = oof_preds_df["lstm"]
             models["LSTM (OOF)"] = prob_lstm
             prob_sum += prob_lstm
             model_count += 1
@@ -921,7 +928,8 @@ class MLPipeline:
             logger.info("=" * 60)
 
             # スタッキングのOOF予測値を使用
-            primary_oof_proba = stacking_service.predict(oof_preds_df)
+            # Ridgeスタッキングは不安定なため、単純平均を使用する
+            primary_oof_proba = oof_preds_df.mean(axis=1).values
             primary_oof_series = pd.Series(primary_oof_proba, index=oof_preds_df.index)
 
             threshold = 0.5
@@ -946,141 +954,52 @@ class MLPipeline:
             )
 
             logger.info(
-                f"Meta Model Accuracy: {meta_eval_results['meta_accuracy']:.1%}"
+                f"Meta-Model Precision: {meta_eval_results['meta_precision']:.1%} (vs Primary {primary_precision:.1%})"
             )
-            logger.info(
-                f"Meta Model Precision: {meta_eval_results['meta_precision']:.1%}"
+            logger.info(f"Meta-Model Recall:    {meta_eval_results['meta_recall']:.1%}")
+            logger.info(f"Meta-Model F1:        {meta_eval_results['meta_f1']:.1%}")
+
+    def run(self):
+        # 1. データ準備
+        X, ohlcv_df = self.prepare_data(limit=50000)
+
+        selected_models = ["lightgbm", "xgboost", "catboost"]
+
+        if self.pipeline_type == "train_and_evaluate":
+            # 2. ハイパーパラメータ最適化
+            best_params = self.optimize(X, ohlcv_df, selected_models)
+
+            # 3. 最終モデル学習
+            models_result = self.train_final_models(
+                X, ohlcv_df, best_params, selected_models
             )
-            logger.info(f"Meta Model Recall: {meta_eval_results['meta_recall']:.1%}")
-            logger.info(
-                f"Precision Improvement: {meta_eval_results['improvement_precision']:.1%}"
+
+            # 4. 評価
+            self.evaluate_and_stacking(
+                models_result.get("lightgbm"),
+                models_result.get("xgboost"),
+                models_result.get("catboost"),
+                models_result.get("gru"),
+                models_result.get("lstm"),
+                models_result["stacking_service"],
+                models_result["oof_preds_df"],
+                models_result["y"],
+                models_result["meta_service"],
+                models_result["X_clean"],
             )
 
-        else:
-            logger.info(
-                "Primary model made no trend predictions or Meta-Labeling disabled."
-            )
-
-    def analyze_feature_importance(self, model_lgb, X_test):
-        logger.info("\n" + "=" * 60)
-        logger.info("Feature Importance (LightGBM)")
-        logger.info("=" * 60)
-
-        importances = model_lgb.feature_importances_
-        feature_names = model_lgb.feature_name_
-
-        feature_imp = pd.DataFrame(
-            {"Feature": feature_names, "Importance": importances}
-        ).sort_values("Importance", ascending=False)
-
-        print(feature_imp.head(20).to_string(index=False))
-
-        feature_imp.to_csv(self.results_dir / "feature_importance.csv", index=False)
-
-        plt.figure(figsize=(10, 8))
-        sns.barplot(x="Importance", y="Feature", data=feature_imp.head(30))
-        plt.title("Feature Importance (LightGBM)")
-        plt.tight_layout()
-        plt.savefig(self.results_dir / "feature_importance.png")
-        logger.info(f"Results saved to: {self.results_dir}")
-
-    def run(self, skip_optimize: bool = False, selected_models: List[str] = None):
-        if selected_models is None:
-            selected_models = ["lightgbm", "xgboost", "catboost"]
-
-        X, ohlcv = self.prepare_data()
-
-        if not skip_optimize:
-            best_params = self.optimize(X, ohlcv, selected_models)
-        else:
-            latest_dir = self.get_latest_results_dir()
-            logger.info(f"Loading previous results: {latest_dir}")
-            with open(latest_dir / "best_params.json", "r", encoding="utf-8") as f:
-                best_params = json.load(f)["best_params"]
-
-        models_result = self.train_final_models(X, ohlcv, best_params, selected_models)
-
-        # Unpack results dynamically
-        model_lgb = models_result.get("lightgbm")
-        model_xgb = models_result.get("xgboost")
-        model_cat = models_result.get("catboost")
-        model_gru = models_result.get("gru")
-        model_lstm = models_result.get("lstm")
-        stacking_service = models_result["stacking_service"]
-        oof_preds_df = models_result["oof_preds_df"]
-        y = models_result["y"]
-        meta_service = models_result.get("meta_service")
-        X_clean = models_result["X_clean"]  # X_cleanを追加
-
-        # best_params.jsonにfeature_namesを追加
-        with open(self.results_dir / "best_params.json", "r", encoding="utf-8") as f:
-            best_params_data = json.load(f)
-        best_params_data["feature_names"] = X_clean.columns.tolist()
-        with open(self.results_dir / "best_params.json", "w", encoding="utf-8") as f:
-            json.dump(best_params_data, f, indent=2, ensure_ascii=False)
-
-        self.evaluate_and_stacking(
-            model_lgb,
-            model_xgb,
-            model_cat,
-            model_gru,
-            model_lstm,
-            stacking_service,
-            oof_preds_df,
-            y,
-            meta_service,
-            X_clean,
-        )
-
-        if model_lgb:
-            self.analyze_feature_importance(model_lgb, X)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--symbol", default="BTC/USDT:USDT")
-    parser.add_argument("--timeframe", default="1h")
-    parser.add_argument("--n-trials", type=int, default=20)
-    parser.add_argument(
-        "--skip-optimize",
-        action="store_true",
-        help="Skip optimization and use previous best params",
-    )
-    parser.add_argument(
-        "--models",
-        nargs="+",
-        default=["lightgbm", "xgboost", "catboost"],
-        help="List of models to use (e.g. lightgbm xgboost)",
-    )
-
-    # 追加引数
-    parser.add_argument("--start_date", type=str, help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end_date", type=str, help="End date (YYYY-MM-DD)")
-    parser.add_argument(
-        "--pipeline_type",
-        type=str,
-        default="train_and_evaluate",
-        help="Pipeline type (train_and_evaluate)",
-    )
-    parser.add_argument(
-        "--disable_meta_labeling",
-        action="store_true",
-        help="Disable meta-labeling (Default: Enabled)",
-    )  # Argparseで定義
-
-    args = parser.parse_args()
-
-    pipeline = MLPipeline(
-        symbol=args.symbol,
-        timeframe=args.timeframe,
-        n_trials=args.n_trials,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        pipeline_type=args.pipeline_type,
-        enable_meta_labeling=not args.disable_meta_labeling,  # argsから直接渡す
-    )
-    pipeline.run(skip_optimize=args.skip_optimize, selected_models=args.models)
+        elif self.pipeline_type == "evaluate_only":
+            logger.info("Evaluation only mode not fully implemented yet.")
+            pass
 
 
 if __name__ == "__main__":
-    main()
+    # パイプライン実行
+    pipeline = MLPipeline(
+        symbol="BTC/USDT:USDT",
+        timeframe="1h",
+        n_trials=20,  # 試行回数
+        pipeline_type="train_and_evaluate",
+        enable_meta_labeling=True,  # Meta-Labeling有効化
+    )
+    pipeline.run()

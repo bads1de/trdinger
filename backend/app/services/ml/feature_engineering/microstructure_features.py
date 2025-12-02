@@ -1,0 +1,136 @@
+import pandas as pd
+import numpy as np
+from typing import Optional
+
+
+class MicrostructureFeatureCalculator:
+    """
+    市場の微細構造（Microstructure）に関する特徴量を計算するクラス。
+    需給の不均衡、流動性、スプレッドなどを推定し、ダマシ検知に役立てる。
+    """
+
+    def calculate_features(
+        self, ohlcv: pd.DataFrame, window_short: int = 20, window_long: int = 50
+    ) -> pd.DataFrame:
+        """
+        全ての特徴量を計算して結合したDataFrameを返す。
+        """
+        df = pd.DataFrame(index=ohlcv.index)
+
+        # 1. Amihud Illiquidity (流動性枯渇度)
+        df["Amihud_Illiquidity"] = self.calculate_amihud_illiquidity(
+            ohlcv, window=window_short
+        )
+
+        # 2. Roll Measure (実効スプレッド推定)
+        df["Roll_Measure"] = self.calculate_roll_measure(ohlcv, window=window_short)
+
+        # 3. VPIN Proxy (出来高不均衡)
+        df["VPIN_Proxy"] = self.calculate_vpin_proxy(ohlcv, window=window_short)
+
+        # 4. Kyle's Lambda (マーケットインパクト)
+        df["Kyles_Lambda"] = self.calculate_kyles_lambda(ohlcv, window=window_short)
+
+        # 5. Volume Variance (出来高の分散 - 情報の不確実性)
+        df["Volume_CV"] = ohlcv["volume"].rolling(window=window_short).std() / (
+            ohlcv["volume"].rolling(window=window_short).mean() + 1e-9
+        )
+
+        return df
+
+    def calculate_amihud_illiquidity(
+        self, df: pd.DataFrame, window: int = 20
+    ) -> pd.Series:
+        """
+        Amihud Illiquidity Ratio: |Return| / (Volume * Price)
+        値が大きいほど流動性が低く、価格が飛びやすい状態を示す。
+        """
+        returns = df["close"].pct_change().abs()
+        # Dollar Volume (出来高 * 価格) を使用するのが一般的
+        dollar_volume = df["volume"] * df["close"]
+
+        illiq = returns / (dollar_volume + 1e-9)  # ゼロ除算防止
+
+        # 移動平均で平滑化
+        return illiq.rolling(window=window).mean()
+
+    def calculate_roll_measure(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
+        """
+        Roll Measure: 実効スプレッドの推定値。
+        Roll = 2 * sqrt(-Cov(Delta P_t, Delta P_{t-1}))
+        負の自己相関が強いほど、スプレッド（ノイズ）が大きいことを示唆する。
+        """
+        delta_p = df["close"].diff()
+
+        # 自己共分散を計算: Cov(x_t, x_{t-1})
+        # rolling().cov() は2つのSeries間の共分散だが、ここでは自己共分散が必要
+        # shiftして計算する
+        cov = delta_p.rolling(window=window).cov(delta_p.shift(1))
+
+        # 共分散が正の場合は0とする（Rollモデルの仮定外）
+        cov = cov.fillna(0)
+        neg_cov = np.where(cov < 0, -cov, 0)
+
+        roll = 2 * np.sqrt(neg_cov)
+        return pd.Series(roll, index=df.index)
+
+    def calculate_vpin_proxy(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
+        """
+        VPIN (Volume-Synchronized Probability of Informed Trading) の簡易プロキシ。
+        Bulk Volume Classification を用いて Buy/Sell Volume を推定し、その不均衡を計算する。
+
+        VPIN ~ |V_buy - V_sell| / (V_buy + V_sell)
+        """
+        # Bulk Volume Classification:
+        # Close > Open -> Buy Volume
+        # Close < Open -> Sell Volume
+        # Close == Open -> 前回の方向を維持（ここでは簡易的に0.5ずつ配分）
+
+        buy_vol = pd.Series(0.0, index=df.index)
+        sell_vol = pd.Series(0.0, index=df.index)
+
+        # 上昇足
+        up_mask = df["close"] > df["open"]
+        buy_vol[up_mask] = df.loc[up_mask, "volume"]
+
+        # 下落足
+        down_mask = df["close"] < df["open"]
+        sell_vol[down_mask] = df.loc[down_mask, "volume"]
+
+        # 同値足（簡易的に折半）
+        flat_mask = df["close"] == df["open"]
+        buy_vol[flat_mask] = df.loc[flat_mask, "volume"] * 0.5
+        sell_vol[flat_mask] = df.loc[flat_mask, "volume"] * 0.5
+
+        # 移動合計
+        buy_sum = buy_vol.rolling(window=window).sum()
+        sell_sum = sell_vol.rolling(window=window).sum()
+        total_sum = buy_sum + sell_sum
+
+        # 不均衡度 (Order Flow Imbalance)
+        # |Buy - Sell| / Total
+        vpin = (buy_sum - sell_sum).abs() / (total_sum + 1e-9)
+
+        return vpin
+
+    def calculate_kyles_lambda(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
+        """
+        Kyle's Lambda: マーケットインパクトの推定値。
+        価格変化とOrder Flow（符号付き出来高）の回帰係数として推定される。
+        Lambda = Cov(Return, SignedVolume) / Var(SignedVolume)
+        """
+        returns = df["close"].pct_change()
+
+        # Signed Volume (近似)
+        # Close > Open なら +Volume, Close < Open なら -Volume
+        sign = np.sign(df["close"] - df["open"])
+        # signが0の場合は前回のsignを使うか、0のままにする。ここでは0のまま。
+        signed_volume = df["volume"] * sign
+
+        # ローリング共分散と分散
+        cov = returns.rolling(window=window).cov(signed_volume)
+        var = signed_volume.rolling(window=window).var()
+
+        lambda_val = cov / (var + 1e-9)
+
+        return lambda_val

@@ -3,6 +3,10 @@
 
 価格変化率から3クラス分類（上昇・下落・レンジ）のラベルを生成するためのユーティリティを提供します。
 scikit-learnのKBinsDiscretizerとPipelineを活用し、シンプルで効率的な実装を実現します。
+
+メタラベリング（Fakeout Detection）向け:
+- SignalGenerator: ブレイクアウトなどのイベントを検出
+- LabelGenerationService: イベントベースのラベリングをサポート
 """
 
 from .enums import ThresholdMethod
@@ -16,6 +20,8 @@ from .utils import (
     create_label_pipeline,
     optimize_label_generation_with_gridsearch,
 )
+from .signal_generator import SignalGenerator
+from .label_generation_service import LabelGenerationService
 
 # 向後互換性のため、__all__を定義
 __all__ = [
@@ -27,4 +33,6 @@ __all__ = [
     "BarrierProfile",
     "get_common_presets",
     "apply_preset_by_name",
+    "SignalGenerator",
+    "LabelGenerationService",
 ]
