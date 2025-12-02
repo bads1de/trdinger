@@ -392,8 +392,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 新しい特徴量を辞書で収集（DataFrame断片化対策）
             new_features = {}
 
-            # RSI - 削除
-            # new_features["RSI"] = ...
+            # RSI
+            rsi = MomentumIndicators.rsi(result_df["close"], period=14)
+            new_features["RSI"] = rsi.fillna(50.0)
 
             # MACD（Histogramのみ保持）
             macd, signal, hist = MomentumIndicators.macd(
@@ -403,11 +404,22 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # new_features["MACD_Signal"] = signal.fillna(0.0)
             new_features["MACD_Histogram"] = hist.fillna(0.0)
 
-            # ウィリアムズ%R - 削除
-            # new_features["Williams_R"] = ...
+            # ウィリアムズ%R
+            willr = MomentumIndicators.willr(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                length=14,
+            )
+            new_features["Williams_R"] = willr.fillna(-50.0)
 
             # CCI - 削除
+            # cci = ...
             # new_features["CCI"] = ...
+
+            # Stochastic RSI - 削除
+            # stoch_rsi_k, stoch_rsi_d = ...
+            # new_features["Stoch_RSI_K"] = ...
 
             # ROC - 削除
             # new_features["ROC"] = ...
@@ -454,29 +466,56 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )
             new_features["ADX"] = adx.fillna(0.0)
             # new_features["DI_Plus"] = di_plus.fillna(0.0)
-            new_features["DI_Minus"] = di_minus.fillna(0.0)
+            # DI_Minus - 削除 (Ichimoku等と入れ替え)
+            # new_features["DI_Minus"] = di_minus.fillna(0.0)
 
             # Aroon (Oscillatorのみ保持)
             aroon_up, aroon_down, aroon_osc = TrendIndicators.aroon(
                 high=result_df["high"], low=result_df["low"], length=25
             )
-            # new_features["Aroon_Up"] = aroon_up.fillna(0.0)
-            # new_features["Aroon_Down"] = aroon_down.fillna(0.0)
             new_features["AROONOSC"] = aroon_osc.fillna(0.0)
 
-            # Vortex Indicator - 削除
-            # vi_plus, vi_minus = ...
-            # new_features["VI_Plus"] = ...
-            # new_features["VI_Minus"] = ...
-
-            # Kaufman Efficiency Ratio - 削除
-            # er = ...
-            # new_features["Efficiency_Ratio_10"] = ...
-
-            # 移動平均（MA_Long）- Patternから移動
+            # 移動平均（MA_Long）
             long_ma = lookback_periods.get("long_ma", 50)
             ma_long = TrendIndicators.sma(result_df["close"], length=long_ma)
             new_features["MA_Long"] = ma_long.fillna(result_df["close"])
+
+            # === Ichimoku Cloud ===
+            # 転換線:9, 基準線:26, 先行スパンB:52
+            ichimoku = MomentumIndicators.ichimoku(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                tenkan_period=9,
+                kijun_period=26,
+                senkou_span_b_period=52,
+            )
+            
+            # Tenkan - Kijun 距離 (正規化)
+            tk_dist = (ichimoku["tenkan_sen"] - ichimoku["kijun_sen"]) / result_df["close"]
+            new_features["Ichimoku_TK_Dist"] = tk_dist.fillna(0.0)
+            
+            # Close - Kijun 距離 (正規化)
+            kijun_dist = (result_df["close"] - ichimoku["kijun_sen"]) / result_df["close"]
+            new_features["Ichimoku_Kijun_Dist"] = kijun_dist.fillna(0.0)
+
+            # === Parabolic SAR ===
+            psar = TrendIndicators.sar(
+                high=result_df["high"],
+                low=result_df["low"],
+                af=0.02,
+                max_af=0.2
+            )
+            # トレンド方向と強度 (正規化)
+            psar_trend = (result_df["close"] - psar) / result_df["close"]
+            new_features["PSAR_Trend"] = psar_trend.fillna(0.0)
+
+            # === SMA Cross (50 vs 200) ===
+            sma_50 = TrendIndicators.sma(result_df["close"], length=50)
+            sma_200 = TrendIndicators.sma(result_df["close"], length=200)
+            # ゴールデンクロス/デッドクロスの距離 (正規化)
+            sma_cross = (sma_50 - sma_200) / result_df["close"]
+            new_features["SMA_Cross_50_200"] = sma_cross.fillna(0.0)
 
             # 一括で結合
             result_df = pd.concat(
@@ -501,9 +540,15 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "Market_Efficiency",
             "Choppiness_Index_14",
             # モメンタム特徴量
+            "RSI",
             "MACD_Histogram",
+            "Williams_R",
             # トレンド特徴量
             "MA_Long",
+            "Ichimoku_TK_Dist",
+            "Ichimoku_Kijun_Dist",
+            "PSAR_Trend",
+            "SMA_Cross_50_200",
             # ボラティリティ特徴量
             "NATR",
             "BBW",
@@ -517,6 +562,5 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "ADOSC",
             # トレンド特徴量
             "ADX",
-            "DI_Minus",
             "AROONOSC",
         ]

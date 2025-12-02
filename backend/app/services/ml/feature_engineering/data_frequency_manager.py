@@ -43,6 +43,15 @@ class DataFrequencyManager:
             "1d": 24 * 60 * 60 * 1000,
         }
 
+    def _normalize_timeframe(self, timeframe: str) -> str:
+        """
+        pandasのresample用にtimeframe文字列を正規化
+        例: '15m' -> '15min'
+        """
+        if timeframe.endswith("m") and not timeframe.endswith("min"):
+            return timeframe.replace("m", "min")
+        return timeframe
+
     def detect_ohlcv_timeframe(self, ohlcv_data: pd.DataFrame) -> str:
         """
         OHLCVデータからtimeframeを自動検出
@@ -121,21 +130,133 @@ class DataFrequencyManager:
             if ohlcv_timeframe is None:
                 ohlcv_timeframe = self.detect_ohlcv_timeframe(ohlcv_data)
 
-            logger.info(f"データ頻度統一を開始: OHLCV timeframe = {ohlcv_timeframe}")
+            # resample用に正規化
+            resample_timeframe = self._normalize_timeframe(ohlcv_timeframe)
 
-            # ファンディングレートデータの再サンプリング
+            logger.info(
+                f"データ頻度統一を開始: OHLCV timeframe = {ohlcv_timeframe} (resample={resample_timeframe})"
+            )
+
+            # OHLCVデータのインデックス確認
+            ohlcv_indexed = ohlcv_data.copy()
+            if "timestamp" in ohlcv_indexed.columns and not isinstance(
+                ohlcv_indexed.index, pd.DatetimeIndex
+            ):
+                logger.info("OHLCVデータのtimestampカラムをインデックスに設定します")
+                ohlcv_indexed = ohlcv_indexed.set_index("timestamp")
+
+            if not isinstance(ohlcv_indexed.index, pd.DatetimeIndex):
+                logger.info(
+                    f"OHLCVデータのインデックスをDatetimeIndexに変換します (現在の型: {type(ohlcv_indexed.index)})"
+                )
+                try:
+                    ohlcv_indexed.index = pd.to_datetime(ohlcv_indexed.index, unit="ms")
+                except Exception:
+                    ohlcv_indexed.index = pd.to_datetime(ohlcv_indexed.index)
+
+            logger.info(
+                f"OHLCVインデックス型: {type(ohlcv_indexed.index)}, dtype: {ohlcv_indexed.index.dtype}"
+            )
+
+            # ファンディングレートデータの再サンプリングと整列
             aligned_fr_data = None
             if funding_rate_data is not None and not funding_rate_data.empty:
-                aligned_fr_data = self._resample_funding_rate(
-                    funding_rate_data, ohlcv_timeframe
+                # まずリサンプリング
+                resampled_fr = self._resample_funding_rate(
+                    funding_rate_data, resample_timeframe
+                )
+                # 次にOHLCVのインデックスに強制的に合わせる
+                if "timestamp" in resampled_fr.columns:
+                    resampled_fr = resampled_fr.set_index("timestamp")
+
+                logger.info(
+                    f"FRインデックス型: {type(resampled_fr.index)}, dtype: {resampled_fr.index.dtype}"
                 )
 
-            # 建玉残高データの再サンプリング
+                # タイムゾーン調整（念のため）
+                try:
+                    if hasattr(ohlcv_indexed.index, "tz") and hasattr(
+                        resampled_fr.index, "tz"
+                    ):
+                        if (
+                            ohlcv_indexed.index.tz is not None
+                            and resampled_fr.index.tz is None
+                        ):
+                            resampled_fr.index = resampled_fr.index.tz_localize(
+                                "UTC"
+                            ).tz_convert(ohlcv_indexed.index.tz)
+                        elif (
+                            ohlcv_indexed.index.tz is None
+                            and resampled_fr.index.tz is not None
+                        ):
+                            resampled_fr.index = resampled_fr.index.tz_localize(None)
+                        elif ohlcv_indexed.index.tz != resampled_fr.index.tz:
+                            resampled_fr.index = resampled_fr.index.tz_convert(
+                                ohlcv_indexed.index.tz
+                            )
+                except Exception as e:
+                    logger.warning(f"タイムゾーン調整エラー: {e}")
+
+                # reindexで完全一致させる
+                aligned_fr_data = resampled_fr.reindex(
+                    ohlcv_indexed.index, method="ffill"
+                ).reset_index()
+
+            # 建玉残高データの再サンプリングと整列
             aligned_oi_data = None
             if open_interest_data is not None and not open_interest_data.empty:
-                aligned_oi_data = self._resample_open_interest(
-                    open_interest_data, ohlcv_timeframe
+                # まずリサンプリング
+                resampled_oi = self._resample_open_interest(
+                    open_interest_data, resample_timeframe
                 )
+                # 次にOHLCVのインデックスに強制的に合わせる
+                if "timestamp" in resampled_oi.columns:
+                    resampled_oi = resampled_oi.set_index("timestamp")
+
+                logger.info(
+                    f"OIインデックス型(変換前): {type(resampled_oi.index)}, dtype: {resampled_oi.index.dtype}"
+                )
+
+                if not isinstance(resampled_oi.index, pd.DatetimeIndex):
+                    try:
+                        resampled_oi.index = pd.to_datetime(
+                            resampled_oi.index, unit="ms"
+                        )
+                    except:
+                        resampled_oi.index = pd.to_datetime(resampled_oi.index)
+
+                logger.info(
+                    f"OIインデックス型(変換後): {type(resampled_oi.index)}, dtype: {resampled_oi.index.dtype}"
+                )
+
+                # タイムゾーン調整
+                try:
+                    if hasattr(ohlcv_indexed.index, "tz") and hasattr(
+                        resampled_oi.index, "tz"
+                    ):
+                        if (
+                            ohlcv_indexed.index.tz is not None
+                            and resampled_oi.index.tz is None
+                        ):
+                            resampled_oi.index = resampled_oi.index.tz_localize(
+                                "UTC"
+                            ).tz_convert(ohlcv_indexed.index.tz)
+                        elif (
+                            ohlcv_indexed.index.tz is None
+                            and resampled_oi.index.tz is not None
+                        ):
+                            resampled_oi.index = resampled_oi.index.tz_localize(None)
+                        elif ohlcv_indexed.index.tz != resampled_oi.index.tz:
+                            resampled_oi.index = resampled_oi.index.tz_convert(
+                                ohlcv_indexed.index.tz
+                            )
+                except Exception as e:
+                    logger.warning(f"タイムゾーン調整エラー(OI): {e}")
+
+                # reindexで完全一致させる
+                aligned_oi_data = resampled_oi.reindex(
+                    ohlcv_indexed.index, method="ffill"
+                ).reset_index()
 
             logger.info("データ頻度統一完了")
             return aligned_fr_data, aligned_oi_data

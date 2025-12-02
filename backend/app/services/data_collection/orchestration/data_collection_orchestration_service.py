@@ -559,3 +559,94 @@ class DataCollectionOrchestrationService:
             # データベースセッションのクリーンアップ
             if hasattr(db, "close"):
                 db.close()
+
+    @safe_operation(context="OI履歴データ収集開始", is_api_call=True)
+    async def start_historical_oi_collection(
+        self,
+        symbol: str,
+        interval: str,
+        background_tasks: BackgroundTasks,
+        db: Session,
+    ) -> Dict[str, Any]:
+        """
+        OI履歴データ収集を開始（既存データを削除して全期間再取得）
+
+        Args:
+            symbol: 取引ペア
+            interval: 時間軸
+            background_tasks: バックグラウンドタスク
+            db: データベースセッション
+
+        Returns:
+            収集開始結果
+        """
+        # シンボルと時間軸のバリデーション
+        normalized_symbol = self.validate_symbol_and_timeframe(symbol, interval)
+
+        # バックグラウンドタスクとして実行
+        background_tasks.add_task(
+            self._collect_historical_oi_background,
+            normalized_symbol,
+            interval,
+            db,
+        )
+
+        return api_response(
+            success=True,
+            message=f"{normalized_symbol} {interval} のOI履歴データ収集を開始しました（既存データ削除・全期間再取得）",
+            status="started",
+        )
+
+    async def _collect_historical_oi_background(
+        self, symbol: str, interval: str, db: Session
+    ):
+        """バックグラウンドでのOI履歴データ収集"""
+        try:
+            logger.info(f"OI履歴データ収集開始: {symbol} {interval}")
+
+            # 既存データを削除
+            from database.models import OpenInterestData
+
+            try:
+                count = db.query(OpenInterestData).count()
+                if count > 0:
+                    db.query(OpenInterestData).delete()
+                    db.commit()
+                    logger.info(f"既存のOIデータ {count}件を削除しました")
+                else:
+                    logger.info("既存のOIデータはありません")
+            except Exception as e:
+                logger.warning(f"OIデータ削除処理中に警告: {e}")
+                db.rollback()
+
+            # データ収集
+            from ..bybit.open_interest_service import BybitOpenInterestService
+
+            oi_service = BybitOpenInterestService()
+            oi_repository = OpenInterestRepository(db)
+
+            logger.info("2020年以降の全OIデータを取得します...")
+
+            result = await oi_service.fetch_and_save_open_interest_data(
+                symbol=symbol,
+                repository=oi_repository,
+                fetch_all=True,
+                interval=interval,
+            )
+
+            if result["success"]:
+                logger.info(
+                    f"OI収集成功: {symbol} {interval} - {result['saved_count']}件保存"
+                )
+            else:
+                logger.error(
+                    f"OI収集失敗: {symbol} {interval} - {result.get('message')}"
+                )
+
+        except Exception as e:
+            logger.error(
+                f"OI履歴データ収集中にエラーが発生しました: {symbol} {interval}", e
+            )
+        finally:
+            if hasattr(db, "close"):
+                db.close()

@@ -213,3 +213,44 @@ async def collect_all_data_bulk(
         )
 
     return await ErrorHandler.safe_execute_async(_execute)
+
+
+@router.post("/historical-oi")
+async def collect_historical_oi_data(
+    background_tasks: BackgroundTasks,
+    symbol: str = "BTC/USDT:USDT",
+    interval: str = "1h",
+    db: Session = Depends(get_db),
+    orchestration_service: DataCollectionOrchestrationService = Depends(
+        get_data_collection_orchestration_service
+    ),
+) -> Dict:
+    """
+    OI（Open Interest）履歴データを収集
+
+    2020年以降の全OIデータを収集します。
+    既存のデータは削除され、再取得されます。
+
+    Args:
+        background_tasks: バックグラウンドタスク
+        symbol: 取引ペア（デフォルト: BTC/USDT:USDT）
+        interval: 時間軸（デフォルト: 1h）
+        db: データベースセッション
+
+    Returns:
+        収集開始レスポンス
+    """
+
+    async def _execute():
+        # データベース初期化確認
+        if not init_db():
+            logger.error("データベースの初期化に失敗しました")
+            raise HTTPException(
+                status_code=500, detail="データベースの初期化に失敗しました"
+            )
+
+        return await orchestration_service.start_historical_oi_collection(
+            symbol, interval, background_tasks, db
+        )
+
+    return await ErrorHandler.safe_execute_async(_execute)

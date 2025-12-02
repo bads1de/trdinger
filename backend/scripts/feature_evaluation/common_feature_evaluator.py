@@ -69,7 +69,7 @@ class CommonFeatureEvaluator:
         self,
         symbol: str = "BTC/USDT:USDT",
         timeframe: str = "1h",
-        limit: int = 2000,
+        limit: int = 200000,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> EvaluationData:
@@ -79,6 +79,7 @@ class CommonFeatureEvaluator:
 
         # 日付文字列をdatetimeオブジェクトに変換
         from datetime import datetime
+
         start_time = datetime.fromisoformat(start_date) if start_date else None
         end_time = datetime.fromisoformat(end_date) if end_date else None
 
@@ -159,12 +160,12 @@ class CommonFeatureEvaluator:
             return pd.DataFrame()
 
         original_crypto = self.feature_service.crypto_features
-        original_advanced = self.feature_service.advanced_features
+        # original_advanced = self.feature_service.advanced_features
 
         try:
             if skip_crypto_and_advanced:
                 self.feature_service.crypto_features = None
-                self.feature_service.advanced_features = None
+                # self.feature_service.advanced_features = None
 
             features_df = self.feature_service.calculate_advanced_features(
                 ohlcv_data=data.ohlcv,
@@ -173,7 +174,7 @@ class CommonFeatureEvaluator:
             )
         finally:
             self.feature_service.crypto_features = original_crypto
-            self.feature_service.advanced_features = original_advanced
+            # self.feature_service.advanced_features = original_advanced
 
         return features_df
 
