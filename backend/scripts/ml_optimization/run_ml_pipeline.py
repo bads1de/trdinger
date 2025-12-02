@@ -114,7 +114,7 @@ class MLPipeline:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         pipeline_type: str = "train_and_evaluate",
-        enable_meta_labeling: bool = False,
+        enable_meta_labeling: bool = True,
     ):
         self.symbol = symbol
         self.timeframe = timeframe
@@ -140,6 +140,7 @@ class MLPipeline:
         logger.info(f"ML Pipeline Init: {symbol} {timeframe}")
         logger.info(f"Period: {start_date} - {end_date}")
         logger.info(f"Results Dir: {self.results_dir}")
+        logger.info(f"Meta-Labeling Enabled: {self.enable_meta_labeling}")
 
     def get_latest_results_dir(self) -> Path:
         base_dir = Path(__file__).parent.parent.parent / "results" / "ml_pipeline"
@@ -202,7 +203,9 @@ class MLPipeline:
         self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, selected_models: List[str]
     ):
         logger.info("=" * 60)
-        logger.info("Starting Hyperparameter Optimization (Purged K-Fold CV) [TBM ONLY]")
+        logger.info(
+            "Starting Hyperparameter Optimization (Purged K-Fold CV) [TBM ONLY]"
+        )
         logger.info("=" * 60)
 
         label_cache = LabelCache(ohlcv_df)
@@ -215,12 +218,12 @@ class MLPipeline:
             pt_factor = trial.suggest_float("pt_factor", 1.0, 4.0)
             sl_factor = trial.suggest_float("sl_factor", 0.5, 2.0)
             atr_period = trial.suggest_int("atr_period", 7, 28, step=7)
-            
+
             # Fixed Parameters
             threshold_method = "TRIPLE_BARRIER"
             use_atr = True
             binary_label = True
-            threshold = 0.0 
+            threshold = 0.0
 
             try:
                 labels = label_cache.get_labels(
@@ -246,7 +249,7 @@ class MLPipeline:
             valid_idx = ~labels_aligned.isna()
             X_clean = X_aligned.loc[valid_idx]
 
-            # TBM (binary_label=True) 
+            # TBM (binary_label=True)
             y = labels_aligned.loc[valid_idx].astype(int)
 
             # データ数チェック (緩和済み)
@@ -453,7 +456,7 @@ class MLPipeline:
         best_params["use_class_weight"] = (
             True  # Optuna trial is not supposed to optimize this parameter.
         )
-        best_params["threshold_method"] = "TRIPLE_BARRIER" # 明示的に保存
+        best_params["threshold_method"] = "TRIPLE_BARRIER"  # 明示的に保存
 
         results = {
             "best_value": study.best_value,
@@ -479,13 +482,13 @@ class MLPipeline:
         logger.info("=" * 60)
 
         label_cache = LabelCache(ohlcv_df)
-        
+
         # TBM parameters
         horizon_n = best_params["horizon_n"]
         pt_factor = best_params.get("pt_factor", 1.0)
         sl_factor = best_params.get("sl_factor", 1.0)
         atr_period = best_params.get("atr_period", 14)
-        
+
         # Fixed parameters
         threshold_method = "TRIPLE_BARRIER"
         use_atr = True
@@ -516,7 +519,7 @@ class MLPipeline:
         valid_idx = ~labels_aligned.isna()
         X_clean = X_aligned.loc[valid_idx]
 
-        # TBM (binary_label=True) 
+        # TBM (binary_label=True)
         y = labels_aligned.loc[valid_idx].astype(int)
 
         if len(y) < 50:
@@ -779,6 +782,7 @@ class MLPipeline:
                 logger.warning(
                     f"Meta-Labeling training skipped: {meta_result.get('reason')}"
                 )
+                logger.warning(f"Meta-Labeling result details: {meta_result}")
                 models_result["meta_service"] = None
         else:
             logger.info("Meta-Labeling disabled.")
@@ -870,7 +874,7 @@ class MLPipeline:
                 trend_rec = report["1"]["recall"]
                 trend_f1 = report["1"]["f1-score"]
                 acc = report["accuracy"]
-                
+
                 n_trades = y_pred.sum()
 
                 # optimizeと同じスコア基準: 最低限の精度(0.55)と回数(10)が必要
@@ -890,7 +894,7 @@ class MLPipeline:
                         "trend_rec": trend_rec,
                         "trend_f1": trend_f1,
                         "n_trades": n_trades,
-                        "score": score
+                        "score": score,
                     }
 
                 logger.info(

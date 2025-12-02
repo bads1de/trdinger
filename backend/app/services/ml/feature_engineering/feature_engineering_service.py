@@ -28,10 +28,10 @@ from app.services.ml.common.ml_utils import optimize_dtypes, generate_cache_key
 logger = logging.getLogger(__name__)
 
 
-# デフォルト特徴量リスト（厳選版: 26個）
-# 2025-12-02の特徴量重要度評価に基づき更新
-# 低重要度特徴量（Williams_R, Ichimoku_Kijun_Dist, VWAP_Deviation）と
-# 効果の薄かった旧OI特徴量を削除し、新OI/FR特徴量を追加
+# デフォルト特徴量リスト（最適化版: 27個）
+# 2025-12-02 OI/FR統合評価に基づき更新
+# 低重要度特徴量6個を削除: Williams_R, OI_RSI, Market_Stress,
+# OI_Weighted_Price_Dev, OI_Trend_Efficiency, OI_Trend_Strength
 DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     # === 出来高・需給 (Volume/Flow) - 最重要 ===
     "AD",  # Accumulation/Distribution
@@ -40,7 +40,7 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "ADOSC",  # Chaikin A/D Oscillator
     # === モメンタム (Momentum) ===
     "RSI",  # Relative Strength Index
-    "Williams_R",  # Williams %R
+    # Williams_R は削除（評価31位/低重要度）
     "MACD_Histogram",  # MACD Histogram
     # === トレンド (Trend) ===
     "ADX",
@@ -56,21 +56,34 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "price_vs_low_24h",
     "VWAP_Deviation",  # VWAP Deviation
     "Price_Skewness_20",
-    # === 市場データ (Market Data) - 強化版 ===
-    # OI（建玉）ベース特徴量
-    "OI_RSI",  # 新規: OIの過熱感（RSIロジック）
-    "Price_OI_Divergence",  # 新規: 価格とOIのダイバージェンス
+    # === 市場データ (Market Data) - OI/FR最適化版 ===
+    # OI（建玉）ベース特徴量 - 高重要度のみ採用
+    # OI_RSI は削除（評価30位/低重要度）
+    "Price_OI_Divergence",  # 評価14位
+    "OI_Volume_Correlation",  # 評価6位
+    "OI_Momentum_Ratio",  # 評価5位
+    "OI_Liquidation_Risk",  # 評価24位
     # FR（資金調達率）ベース特徴量
-    "FR_Extremity_Zscore",  # 既存: 極端なFR検出
-    "FR_Cumulative_Trend",  # 新規: FR累積トレンド（逆張り指標）
-    # 複合特徴量
-    "Market_Stress",  # 既存: FR+OIの市場ストレス
-    "FR_OI_Sentiment",  # 新規: FRとOIの組み合わせによるセンチメント
-    "Liquidation_Risk",  # 新規: 清算リスク（疑似）
-    "OI_Weighted_Price_Dev",  # 新規: OI加重価格乖離
-    "FR_Volatility",  # 新規: FRボラティリティ
-    "OI_Trend_Efficiency",  # 新規: OIトレンド効率性
-    "Volume_OI_Ratio",  # 新規: 出来高/OI比率（投機熱）
+    "FR_Extremity_Zscore",  # 評価9位
+    "FR_Cumulative_Trend",  # 評価22位
+    # 複合特徴量 - 高重要度のみ採用
+    # Market_Stress は削除（評価31位/低重要度）
+    "FR_OI_Sentiment",  # 評価12位
+    "Liquidation_Risk",  # 評価19位
+    # OI_Weighted_Price_Dev は削除（評価33位/低重要度）
+    "FR_Volatility",  # 評価13位
+    # OI_Trend_Efficiency は削除（評価34位/低重要度）
+    "Volume_OI_Ratio",  # 評価4位 - 最重要OI特徴量
+    # === Group B (OI/FR Technicals) ===
+    "OI_MACD",
+    "OI_MACD_Hist",
+    "OI_BB_Position",
+    "OI_BB_Width",
+    "FR_MACD",
+    # === Group C (Market Structure) ===
+    "Amihud_Illiquidity",
+    "Efficiency_Ratio",
+    "Market_Impact",
 ]
 
 

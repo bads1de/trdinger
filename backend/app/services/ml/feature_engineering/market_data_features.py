@@ -196,6 +196,11 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
                 .fillna(0.0)
             )
 
+            # === Group B: 3. FR MACD ===
+            fr_ema_12 = result_df[fr_column].ewm(span=12, adjust=False).mean()
+            fr_ema_26 = result_df[fr_column].ewm(span=26, adjust=False).mean()
+            result_df["FR_MACD"] = fr_ema_12 - fr_ema_26
+
             # 削除: funding_rate (生データ) - 理由: 加工済み特徴量で代替（分析日: 2025-01-07）
             # 生のファンディングレートデータは使用せず、加工済み特徴量（複合特徴量）のみを使用
             # 実際に削除処理を実行
@@ -345,11 +350,91 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         )
         result_df["OI_Change_Rate"] = oi_change
 
-        # === 新特徴量4: Price-OI Divergence ===
+        # === 新特徴量4: Price-OI Divergence (Group A: 1) ===
         # 価格とOIのダイバージェンスを検知
+        # 価格上昇 + OI減少 => トレンド終了示唆 (ダイバージェンス)
+        # 価格下落 + OI減少 => トレンド終了示唆
         price_change = result_df["close"].pct_change(periods=1).fillna(0.0)
-        result_df["Price_OI_Divergence"] = (
-            (price_change * oi_change).rolling(window=8).mean().fillna(0.0)
+
+        # 相関係数によるダイバージェンス検知 (負の相関 = ダイバージェンス)
+        result_df["OI_Price_Divergence"] = (
+            result_df["close"].rolling(window=14).corr(oi_series).fillna(0.0)
+        )
+
+        # 互換性のため古い名前も残す（必要なら）
+        result_df["Price_OI_Divergence"] = result_df["OI_Price_Divergence"]
+
+        # === Group A: 2. OI Trend Strength ===
+        # OIのトレンド強度 (ADX like or simple slope)
+        # ここではOIのSMA乖離率を使用
+        oi_sma_24 = oi_series.rolling(window=24).mean()
+        result_df["OI_Trend_Strength"] = (
+            ((oi_series - oi_sma_24) / oi_sma_24)
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
+
+        # === Group A: 3. OI Volume Correlation ===
+        # OIと出来高の相関
+        if "volume" in result_df.columns:
+            result_df["OI_Volume_Correlation"] = (
+                result_df["volume"].rolling(window=24).corr(oi_series).fillna(0.0)
+            )
+        else:
+            result_df["OI_Volume_Correlation"] = 0.0
+
+        # === Group A: 4. OI Momentum Ratio ===
+        # OI変動率 / 価格変動率
+        # 価格が少ししか動いていないのにOIが大きく動いている => エネルギー充填
+        price_vol = result_df["close"].pct_change().abs().rolling(window=14).mean()
+        oi_vol = oi_series.pct_change().abs().rolling(window=14).mean()
+
+        result_df["OI_Momentum_Ratio"] = (
+            (oi_vol / price_vol).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        )
+
+        # === Group A: 5. OI Liquidation Risk ===
+        # 清算リスク指標: OIが高水準かつ価格変動が大きい
+        # OI Z-Score * Price Volatility
+        oi_mean = oi_series.rolling(window=168, min_periods=1).mean()
+        oi_std = oi_series.rolling(window=168, min_periods=1).std().replace(0, np.nan)
+        oi_zscore = ((oi_series - oi_mean) / oi_std).fillna(0.0)
+
+        result_df["OI_Liquidation_Risk"] = (oi_zscore * price_vol).fillna(0.0)
+
+        # 互換性のため古い名前も残す
+        result_df["Liquidation_Risk"] = result_df["OI_Liquidation_Risk"]
+
+        # === Group B: 1. OI MACD ===
+        # OIのMACD (トレンド転換検知)
+        oi_ema_12 = oi_series.ewm(span=12, adjust=False).mean()
+        oi_ema_26 = oi_series.ewm(span=26, adjust=False).mean()
+        result_df["OI_MACD"] = oi_ema_12 - oi_ema_26
+        result_df["OI_MACD_Signal"] = (
+            result_df["OI_MACD"].ewm(span=9, adjust=False).mean()
+        )
+        result_df["OI_MACD_Hist"] = result_df["OI_MACD"] - result_df["OI_MACD_Signal"]
+
+        # === Group B: 2. OI Bollinger Bands ===
+        # OIのボリンジャーバンド (異常値検知)
+        oi_sma_20 = oi_series.rolling(window=20).mean()
+        oi_std_20 = oi_series.rolling(window=20).std()
+        result_df["OI_BB_Upper"] = oi_sma_20 + (oi_std_20 * 2)
+        result_df["OI_BB_Lower"] = oi_sma_20 - (oi_std_20 * 2)
+        # %B (Band Position)
+        result_df["OI_BB_Position"] = (
+            (
+                (oi_series - result_df["OI_BB_Lower"])
+                / (result_df["OI_BB_Upper"] - result_df["OI_BB_Lower"])
+            )
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.5)
+        )
+        # Bandwidth
+        result_df["OI_BB_Width"] = (
+            ((result_df["OI_BB_Upper"] - result_df["OI_BB_Lower"]) / oi_sma_20)
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
         )
 
         return result_df
@@ -546,20 +631,30 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         """
         return [
             # 建玉残高特徴量
-            "OI_RSI",  # 新特徴量
-            # "Volume_OI_Ratio",  # 新特徴量 (複合特徴量に移動)
-            "OI_Change_Rate",  # 新特徴量
-            "Price_OI_Divergence",  # 新特徴量
+            "OI_RSI",
+            "OI_Change_Rate",
+            "OI_Price_Divergence",  # Group A: 1
+            "Price_OI_Divergence",  # Alias
+            "OI_Trend_Strength",  # Group A: 2
+            "OI_Volume_Correlation",  # Group A: 3
+            "OI_Momentum_Ratio",  # Group A: 4
+            "OI_Liquidation_Risk",  # Group A: 5
+            "Liquidation_Risk",  # Alias
             # 複合特徴量
-            "FR_Cumulative_Trend",  # 新特徴量
+            "FR_Cumulative_Trend",
             "FR_Extremity_Zscore",
             "FR_Momentum",
-            "FR_MA_24",  # 新特徴量
+            "FR_MA_24",
             "Market_Stress",
-            "FR_OI_Sentiment",  # 新特徴量
-            "Liquidation_Risk",  # 新特徴量
-            "OI_Weighted_Price_Dev",  # 新特徴量
-            "FR_Volatility",  # 新特徴量
-            "OI_Trend_Efficiency",  # 新特徴量
-            "Volume_OI_Ratio",  # 新特徴量
+            "FR_OI_Sentiment",
+            "OI_Weighted_Price_Dev",
+            "FR_Volatility",
+            "OI_Trend_Efficiency",
+            "Volume_OI_Ratio",
+            # Group B
+            "OI_MACD",
+            "OI_MACD_Hist",
+            "OI_BB_Position",
+            "OI_BB_Width",
+            "FR_MACD",
         ]

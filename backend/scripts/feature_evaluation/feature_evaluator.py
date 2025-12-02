@@ -81,6 +81,7 @@ class FeatureEvaluationConfig:
     n_trials: int = 50
     output_dir: str = "backend/results/feature_analysis"
     mode: str = "all"
+    use_pipeline_method: bool = True  # パイプライン準拠の評価を行うか
 
 
 class FeatureEvaluator:
@@ -206,29 +207,55 @@ class FeatureEvaluator:
 
         importance_results = {}
 
-        # LightGBM
-        if model_type in ["lightgbm", "all"]:
-            logger.info("LightGBM重要度を計算中...")
-            lgb_importance = self._calculate_lightgbm_importance(X, y)
-            importance_results["lightgbm"] = lgb_importance
+        # Pipeline Mode (Binary)
+        if self.config.use_pipeline_method:
+            logger.info("パイプライン準拠（Binary/Balanced）で重要度を計算します")
 
-        # XGBoost
-        if model_type in ["xgboost", "all"]:
-            logger.info("XGBoost重要度を計算中...")
-            xgb_importance = self._calculate_xgboost_importance(X, y)
-            importance_results["xgboost"] = xgb_importance
+            # LightGBM
+            if model_type in ["lightgbm", "all"]:
+                logger.info("LightGBM重要度を計算中...")
+                lgb_importance = self._calculate_lightgbm_importance(X, y, binary=True)
+                importance_results["lightgbm"] = lgb_importance
 
-        # RandomForest
-        if model_type in ["random_forest", "all"]:
-            logger.info("RandomForest重要度を計算中...")
-            rf_importance = self._calculate_random_forest_importance(X, y)
-            importance_results["random_forest"] = rf_importance
+            # XGBoost
+            if model_type in ["xgboost", "all"]:
+                logger.info("XGBoost重要度を計算中...")
+                xgb_importance = self._calculate_xgboost_importance(X, y, binary=True)
+                importance_results["xgboost"] = xgb_importance
 
-        # Permutation Importance
-        if model_type == "all":
-            logger.info("Permutation Importance を計算中...")
-            perm_importance = self._calculate_permutation_importance(X, y)
-            importance_results["permutation"] = perm_importance
+            # RandomForest (Meta Labelingで使用されるため残す)
+            if model_type in ["random_forest", "all"]:
+                logger.info("RandomForest重要度を計算中...")
+                rf_importance = self._calculate_random_forest_importance(
+                    X, y
+                )  # RFは多クラス/2値兼用
+                importance_results["random_forest"] = rf_importance
+
+        else:
+            # Legacy Mode (Multiclass)
+            # LightGBM
+            if model_type in ["lightgbm", "all"]:
+                logger.info("LightGBM重要度を計算中...")
+                lgb_importance = self._calculate_lightgbm_importance(X, y, binary=False)
+                importance_results["lightgbm"] = lgb_importance
+
+            # XGBoost
+            if model_type in ["xgboost", "all"]:
+                logger.info("XGBoost重要度を計算中...")
+                xgb_importance = self._calculate_xgboost_importance(X, y, binary=False)
+                importance_results["xgboost"] = xgb_importance
+
+            # RandomForest
+            if model_type in ["random_forest", "all"]:
+                logger.info("RandomForest重要度を計算中...")
+                rf_importance = self._calculate_random_forest_importance(X, y)
+                importance_results["random_forest"] = rf_importance
+
+            # Permutation Importance
+            if model_type == "all":
+                logger.info("Permutation Importance を計算中...")
+                perm_importance = self._calculate_permutation_importance(X, y)
+                importance_results["permutation"] = perm_importance
 
         # 統合スコア
         combined_scores = self._combine_importance_scores(importance_results)
@@ -301,12 +328,18 @@ class FeatureEvaluator:
 
         # ベースライン（全特徴量）
         logger.info("ベースライン評価（全特徴量）...")
-        baseline_results = self._evaluate_with_cv(X, y, list(X.columns), model_type)
+        if self.config.use_pipeline_method:
+            baseline_results = self._evaluate_with_purged_cv(X, y, list(X.columns))
+        else:
+            baseline_results = self._evaluate_with_cv(X, y, list(X.columns), model_type)
 
         # 削減後
         kept_features = [col for col in X.columns if col not in features_to_remove]
         logger.info(f"削減後評価（{len(kept_features)}特徴量）...")
-        reduced_results = self._evaluate_with_cv(X, y, kept_features, model_type)
+        if self.config.use_pipeline_method:
+            reduced_results = self._evaluate_with_purged_cv(X, y, kept_features)
+        else:
+            reduced_results = self._evaluate_with_cv(X, y, kept_features, model_type)
 
         # 比較
         comparison = {
@@ -426,23 +459,46 @@ class FeatureEvaluator:
         self,
         X: pd.DataFrame,
         y: pd.Series,
+        binary: bool = False,
     ) -> Dict[str, float]:
         """LightGBM重要度を計算"""
         try:
-            train_data = lgb.Dataset(X, label=y)
-            params = {
-                "objective": "multiclass",
-                "num_class": 3,
-                "metric": "multi_logloss",
-                "verbose": -1,
-                "random_state": unified_config.ml.training.random_state,
-            }
-            model = lgb.train(
-                params,
-                train_data,
-                num_boost_round=100,
-            )
-            importance = model.feature_importance(importance_type="gain")
+            if binary:
+                # パイプライン準拠: LGBMClassifier, class_weight='balanced'
+                model = lgb.LGBMClassifier(
+                    objective="binary",
+                    metric="binary_logloss",
+                    class_weight="balanced",
+                    n_estimators=100,
+                    random_state=unified_config.ml.training.random_state,
+                    verbosity=-1,
+                )
+                model.fit(X, y)
+                importance = model.feature_importances_
+                # gainではなくsplit(default)だが、sklearn APIではfeature_importances_はsplit/gainの指定がinitによる
+                # デフォルトはsplit。gainにするには importance_type='gain'
+                # ここでは一貫性のため gain を取得したいが、LGBMClassifierのfeature_importances_は
+                # importance_typeパラメータに依存する
+                model.set_params(importance_type="gain")
+                # 再学習が必要な場合があるが、LGBMは学習後にbooster_から取得可能
+                importance = model.booster_.feature_importance(importance_type="gain")
+            else:
+                # レガシー: Multiclass
+                train_data = lgb.Dataset(X, label=y)
+                params = {
+                    "objective": "multiclass",
+                    "num_class": 3,
+                    "metric": "multi_logloss",
+                    "verbose": -1,
+                    "random_state": unified_config.ml.training.random_state,
+                }
+                model = lgb.train(
+                    params,
+                    train_data,
+                    num_boost_round=100,
+                )
+                importance = model.feature_importance(importance_type="gain")
+
             if importance.sum() > 0:
                 importance = importance / importance.sum()
             return dict(zip(X.columns, importance))
@@ -454,23 +510,44 @@ class FeatureEvaluator:
         self,
         X: pd.DataFrame,
         y: pd.Series,
+        binary: bool = False,
     ) -> Dict[str, float]:
         """XGBoost重要度を計算"""
         try:
-            dtrain = xgb.DMatrix(X, label=y)
-            params = {
-                "objective": "multi:softprob",
-                "num_class": 3,
-                "eval_metric": "mlogloss",
-                "verbosity": 0,
-                "random_state": unified_config.ml.training.random_state,
-            }
-            model = xgb.train(
-                params,
-                dtrain,
-                num_boost_round=100,
-            )
-            importance_dict = model.get_score(importance_type="gain")
+            if binary:
+                # パイプライン準拠: XGBClassifier, scale_pos_weight
+                neg_count = len(y) - sum(y)
+                pos_count = sum(y)
+                scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
+
+                model = xgb.XGBClassifier(
+                    objective="binary:logistic",
+                    eval_metric="logloss",
+                    scale_pos_weight=scale_pos_weight,
+                    n_estimators=100,
+                    random_state=unified_config.ml.training.random_state,
+                    verbosity=0,
+                    missing=np.inf,
+                )
+                model.fit(X, y)
+                importance_dict = model.get_booster().get_score(importance_type="gain")
+            else:
+                # レガシー: Multiclass
+                dtrain = xgb.DMatrix(X, label=y)
+                params = {
+                    "objective": "multi:softprob",
+                    "num_class": 3,
+                    "eval_metric": "mlogloss",
+                    "verbosity": 0,
+                    "random_state": unified_config.ml.training.random_state,
+                }
+                model = xgb.train(
+                    params,
+                    dtrain,
+                    num_boost_round=100,
+                )
+                importance_dict = model.get_score(importance_type="gain")
+
             result = {col: 0.0 for col in X.columns}
             result.update(importance_dict)
             total = sum(result.values())
@@ -631,6 +708,33 @@ class FeatureEvaluator:
             "train_time": float(np.mean(train_times)),
         }
 
+    def _evaluate_with_purged_cv(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        features: List[str],
+    ) -> Dict[str, float]:
+        """PurgedKFoldでCV評価（パイプライン準拠）"""
+        X_selected = X[features]
+
+        # t1を取得（CommonFeatureEvaluator経由）
+        # 注意: XのインデックスはDatetimeIndexであることを前提
+        t1 = self.evaluator.get_t1_for_purged_kfold(
+            X_selected.index, horizon_n=4
+        )  # デフォルト4
+
+        results = self.evaluator.purged_kfold_cv(X_selected, y, t1, n_splits=5)
+
+        # キー名を合わせる
+        return {
+            "accuracy": 0.0,  # PurgedKFoldでは計算していないので0
+            "precision": results["cv_precision"],
+            "recall": results["cv_recall"],
+            "f1_score": results["cv_f1"],
+            "pipeline_score": results["cv_pipeline_score"],
+            "train_time": results["train_time_sec"],
+        }
+
     def _train_lightgbm(self, X_train: pd.DataFrame, y_train: pd.Series):
         """LightGBMモデルを学習"""
         train_data = lgb.Dataset(X_train, label=y_train)
@@ -662,7 +766,7 @@ class FeatureEvaluator:
     ) -> Dict[str, float]:
         """性能変化を計算"""
         changes = {}
-        for metric in ["accuracy", "precision", "recall", "f1_score"]:
+        for metric in ["accuracy", "precision", "recall", "f1_score", "pipeline_score"]:
             if metric in baseline and metric in reduced:
                 changes[metric] = reduced[metric] - baseline[metric]
         return changes
@@ -849,10 +953,20 @@ def main() -> None:
         try:
             # データ取得
             logger.info("\nデータ取得中...")
+
+            # 最新のデータを使用するため、日付範囲を指定
+            # OIデータは2020-08以降にしか存在しないため、最近のデータを取得する
+            from datetime import datetime, timedelta
+
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=90)  # 直近90日分のデータ
+
             data = common_evaluator.fetch_data(
                 symbol=config.symbol,
                 timeframe=config.timeframe,
-                limit=2000,
+                limit=200000,  # 大きい値を指定して最新データを確実に取得
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
             )
 
             if data.ohlcv.empty:
@@ -868,16 +982,30 @@ def main() -> None:
 
             # ラベル生成
             logger.info("ラベル生成中...")
-            labels = common_evaluator.create_labels_from_config(
-                ohlcv_df=data.ohlcv,
-                preset_name=config.preset,
-            )
 
-            # ラベルを数値に変換（"UP" -> 2, "RANGE" -> 1, "DOWN" -> 0）
-            # LightGBM多クラス分類では0から始まる必要がある
-            label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
-            labels_numeric = labels.map(label_mapping)
-            logger.info(f"ラベルを数値に変換: {label_mapping}")
+            if config.use_pipeline_method:
+                # パイプライン準拠のラベル生成（LabelCache使用）
+                # horizon_n=4, pt=1.0, sl=1.0 はパイプラインの典型的な設定
+                labels = common_evaluator.generate_pipeline_compatible_labels(
+                    ohlcv_df=data.ohlcv,
+                    horizon_n=4,
+                    pt_factor=1.0,
+                    sl_factor=1.0,
+                    use_atr=True,
+                    binary_label=True,  # パイプラインは2値分類
+                )
+                # 2値分類なのでマッピング不要（すでに0/1）
+                labels_numeric = labels
+                logger.info("パイプライン準拠のラベル生成完了 (Binary)")
+            else:
+                labels = common_evaluator.create_labels_from_config(
+                    ohlcv_df=data.ohlcv,
+                    preset_name=config.preset,
+                )
+                # ラベルを数値に変換（"UP" -> 2, "RANGE" -> 1, "DOWN" -> 0）
+                label_mapping = {"DOWN": 0, "RANGE": 1, "UP": 2}
+                labels_numeric = labels.map(label_mapping)
+                logger.info(f"ラベルを数値に変換: {label_mapping}")
 
             # 評価器初期化
             evaluator = FeatureEvaluator(common_evaluator, config)

@@ -38,6 +38,9 @@ from database.repositories.ohlcv_repository import OHLCVRepository  # type: igno
 from database.repositories.open_interest_repository import (  # type: ignore
     OpenInterestRepository,
 )
+from app.services.ml.cross_validation.purged_kfold import PurgedKFold
+from app.services.ml.label_cache import LabelCache
+from sklearn.metrics import classification_report
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,7 @@ class CommonFeatureEvaluator:
         self.oi_repo = OpenInterestRepository(self.db)
         # プロファイルはcalculate_advanced_features()のprofile引数で指定可能
         self.feature_service = FeatureEngineeringService()
+        self.label_cache: Optional[LabelCache] = None
 
     def close(self) -> None:
         self.db.close()
@@ -128,6 +132,7 @@ class CommonFeatureEvaluator:
                 start_time=start_time,
                 end_time=end_time,
             )
+            logger.info(f"OI records retrieved: {len(oi_records) if oi_records else 0}")
             oi_df: Optional[pd.DataFrame]
             if oi_records:
                 oi_df = pd.DataFrame(
@@ -140,10 +145,12 @@ class CommonFeatureEvaluator:
                     ]
                 )
                 oi_df.set_index("timestamp", inplace=True)
+                logger.info(f"OI DataFrame created with shape: {oi_df.shape}")
             else:
+                logger.warning("No OI records found for the specified period")
                 oi_df = None
         except Exception as e:  # pragma: no cover
-            logger.warning(f"OI取得エラー: {e}")
+            logger.error(f"OI取得エラー: {e}", exc_info=True)
             oi_df = None
 
         return EvaluationData(ohlcv=ohlcv_df, fr=fr_df, oi=oi_df)
@@ -159,6 +166,22 @@ class CommonFeatureEvaluator:
         if data.ohlcv.empty:
             return pd.DataFrame()
 
+        # データ存在確認のログ
+        logger.info(f"OHLCV data shape: {data.ohlcv.shape}")
+        if data.fr is not None:
+            logger.info(
+                f"FR data shape: {data.fr.shape}, columns: {data.fr.columns.tolist()}"
+            )
+        else:
+            logger.warning("FR data is None")
+
+        if data.oi is not None:
+            logger.info(
+                f"OI data shape: {data.oi.shape}, columns: {data.oi.columns.tolist()}"
+            )
+        else:
+            logger.warning("OI data is None")
+
         original_crypto = self.feature_service.crypto_features
         # original_advanced = self.feature_service.advanced_features
 
@@ -167,11 +190,17 @@ class CommonFeatureEvaluator:
                 self.feature_service.crypto_features = None
                 # self.feature_service.advanced_features = None
 
+            # キャッシュをクリアして新しい特徴量計算を強制
+            self.feature_service.clear_cache()
+            logger.info("Feature service cache cleared")
+
             features_df = self.feature_service.calculate_advanced_features(
                 ohlcv_data=data.ohlcv,
                 funding_rate_data=data.fr,
                 open_interest_data=data.oi,
             )
+
+            logger.info(f"Generated features columns: {features_df.columns.tolist()}")
         finally:
             self.feature_service.crypto_features = original_crypto
             # self.feature_service.advanced_features = original_advanced
@@ -285,6 +314,61 @@ class CommonFeatureEvaluator:
 
         return info
 
+    def generate_pipeline_compatible_labels(
+        self,
+        ohlcv_df: pd.DataFrame,
+        horizon_n: int = 4,
+        pt_factor: float = 1.0,
+        sl_factor: float = 1.0,
+        use_atr: bool = True,
+        atr_period: int = 14,
+        binary_label: bool = True,
+        timeframe: str = "1h",
+    ) -> pd.Series:
+        """パイプライン互換のラベル生成（LabelCache使用）
+
+        Args:
+            ohlcv_df: OHLCVデータ
+            horizon_n: ホライズン
+            pt_factor: 利確係数
+            sl_factor: 損切係数
+            use_atr: ATR使用フラグ
+            atr_period: ATR期間
+            binary_label: 2値分類フラグ
+            timeframe: 時間足
+
+        Returns:
+            pd.Series: ラベル
+        """
+        if self.label_cache is None:
+            self.label_cache = LabelCache(ohlcv_df)
+        else:
+            # データフレームが更新されている可能性があるため再設定
+            self.label_cache.ohlcv_df = ohlcv_df
+
+        return self.label_cache.get_labels(
+            horizon_n=horizon_n,
+            threshold_method="TRIPLE_BARRIER",
+            threshold=0.0,
+            timeframe=timeframe,
+            price_column="close",
+            pt_factor=pt_factor,
+            sl_factor=sl_factor,
+            use_atr=use_atr,
+            atr_period=atr_period,
+            binary_label=binary_label,
+        )
+
+    def get_t1_for_purged_kfold(
+        self, indices: pd.DatetimeIndex, horizon_n: int, timeframe: str = "1h"
+    ) -> pd.Series:
+        """PurgedKFold用のt1を取得"""
+        if self.label_cache is None:
+            # ダミーのLabelCacheを作成してメソッドを利用
+            self.label_cache = LabelCache(pd.DataFrame())
+
+        return self.label_cache.get_t1(indices, horizon_n, timeframe)
+
     # ---- CV 評価 ----
 
     @staticmethod
@@ -333,5 +417,95 @@ class CommonFeatureEvaluator:
             "cv_mae_std": float(np.std(maes)),
             "cv_r2": float(np.mean(r2s)),
             "cv_r2_std": float(np.std(r2s)),
+            "train_time_sec": float(elapsed),
+        }
+
+    @staticmethod
+    def purged_kfold_cv(
+        X: pd.DataFrame,
+        y: pd.Series,
+        t1: pd.Series,
+        n_splits: int = 5,
+        embargo_pct: float = 0.01,
+    ) -> Dict[str, float]:
+        """PurgedKFoldによるCV評価（パイプライン準拠）"""
+        if X.empty:
+            raise ValueError("特徴量が空です")
+
+        cv = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=embargo_pct)
+
+        # シンプルなモデル（LightGBM）で評価
+        import lightgbm as lgb
+
+        f1_scores = []
+        precisions = []
+        recalls = []
+        pipeline_scores = []
+
+        start_time = time.perf_counter()
+
+        for train_idx, val_idx in cv.split(X, y):
+            if len(train_idx) == 0 or len(val_idx) == 0:
+                continue
+
+            X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+            y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+            # バランス調整
+            if len(y_train.unique()) > 1:
+                class_weight = "balanced"
+            else:
+                class_weight = None
+
+            model = lgb.LGBMClassifier(
+                n_estimators=100,
+                random_state=42,
+                verbosity=-1,
+                class_weight=class_weight,
+            )
+
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_val)
+
+            # 評価指標計算
+            report = classification_report(
+                y_val, y_pred, output_dict=True, zero_division=0
+            )
+
+            # 2値分類の "1" (Positive) のスコアを参照
+            if "1" in report:
+                metrics = report["1"]
+                f1 = metrics["f1-score"]
+                prec = metrics["precision"]
+                rec = metrics["recall"]
+                n_trades = y_pred.sum()
+
+                # パイプラインスコア: F1 * log(1 + trades)
+                # ただし精度要件あり
+                if prec < 0.55 or n_trades < 10:
+                    p_score = 0.0
+                else:
+                    p_score = f1 * np.log1p(n_trades)
+            else:
+                # クラス1が存在しない場合など
+                f1 = 0.0
+                prec = 0.0
+                rec = 0.0
+                p_score = 0.0
+
+            f1_scores.append(f1)
+            precisions.append(prec)
+            recalls.append(rec)
+            pipeline_scores.append(p_score)
+
+        elapsed = time.perf_counter() - start_time
+
+        return {
+            "cv_f1": float(np.mean(f1_scores)) if f1_scores else 0.0,
+            "cv_precision": float(np.mean(precisions)) if precisions else 0.0,
+            "cv_recall": float(np.mean(recalls)) if recalls else 0.0,
+            "cv_pipeline_score": (
+                float(np.mean(pipeline_scores)) if pipeline_scores else 0.0
+            ),
             "train_time_sec": float(elapsed),
         }

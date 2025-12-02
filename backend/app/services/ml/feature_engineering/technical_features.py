@@ -153,7 +153,37 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )
             result_df[f"Choppiness_Index_{chop_window}"] = chop.fillna(50.0)
 
-            # Fractal Dimension Index (FDI) - 削除
+            # === Group C: Market Structure ===
+
+            # 1. Amihud Illiquidity (非流動性指標)
+            # |Return| / (Volume * Close)
+            # 値が大きいほど流動性が低く、価格変動コストが高い
+            illiquidity = returns.abs() / (
+                result_df["volume"] * result_df["close"] + 1e-9
+            )
+            # 対数変換して分布を整える
+            new_features["Amihud_Illiquidity"] = np.log(illiquidity + 1e-9).fillna(0.0)
+
+            # 2. Kaufman Efficiency Ratio (KER / 効率性レシオ)
+            # トレンドのノイズの少なさ (1に近いほど一直線、0に近いほどランダム)
+            ker_period = 10
+            change = result_df["close"].diff(ker_period).abs()
+            volatility_sum = (
+                result_df["close"].diff().abs().rolling(window=ker_period).sum()
+            )
+            new_features["Efficiency_Ratio"] = (
+                change / (volatility_sum + 1e-9)
+            ).fillna(0.0)
+
+            # 3. Market Impact (Kyle's Lambda like)
+            # (High - Low) / Volume
+            # 1単位のボリュームあたりの価格変動幅
+            market_impact = (result_df["high"] - result_df["low"]) / (
+                result_df["volume"] + 1e-9
+            )
+            new_features["Market_Impact"] = np.log(market_impact + 1e-9).fillna(0.0)
+
+            # Fractal Dimension Index (FDI) - 削除 (Choppiness Indexで代用)
 
             self.log_feature_calculation_complete("市場レジーム")
             return result_df
@@ -490,21 +520,22 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 kijun_period=26,
                 senkou_span_b_period=52,
             )
-            
+
             # Tenkan - Kijun 距離 (正規化)
-            tk_dist = (ichimoku["tenkan_sen"] - ichimoku["kijun_sen"]) / result_df["close"]
+            tk_dist = (ichimoku["tenkan_sen"] - ichimoku["kijun_sen"]) / result_df[
+                "close"
+            ]
             new_features["Ichimoku_TK_Dist"] = tk_dist.fillna(0.0)
-            
+
             # Close - Kijun 距離 (正規化)
-            kijun_dist = (result_df["close"] - ichimoku["kijun_sen"]) / result_df["close"]
+            kijun_dist = (result_df["close"] - ichimoku["kijun_sen"]) / result_df[
+                "close"
+            ]
             new_features["Ichimoku_Kijun_Dist"] = kijun_dist.fillna(0.0)
 
             # === Parabolic SAR ===
             psar = TrendIndicators.sar(
-                high=result_df["high"],
-                low=result_df["low"],
-                af=0.02,
-                max_af=0.2
+                high=result_df["high"], low=result_df["low"], af=0.02, max_af=0.2
             )
             # トレンド方向と強度 (正規化)
             psar_trend = (result_df["close"] - psar) / result_df["close"]
@@ -539,6 +570,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # 市場レジーム特徴量
             "Market_Efficiency",
             "Choppiness_Index_14",
+            "Amihud_Illiquidity",
+            "Efficiency_Ratio",
+            "Market_Impact",
             # モメンタム特徴量
             "RSI",
             "MACD_Histogram",
