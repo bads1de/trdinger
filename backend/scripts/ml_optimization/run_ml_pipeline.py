@@ -245,7 +245,7 @@ class MLPipeline:
                     ohlcv_df=ohlcv_df,
                     use_cusum=self.enable_meta_labeling,  # CUSUMフィルターを使用
                     cusum_threshold=None,  # 動的ボラティリティ
-                    cusum_vol_multiplier=2.0,  # 閾値を2倍にしてイベントを厳選
+                    cusum_vol_multiplier=2.5,  # 質と量のバランス（学術特徴量追加後）
                     horizon_n=horizon_n,
                     pt_factor=pt_factor,
                     sl_factor=sl_factor,
@@ -522,7 +522,7 @@ class MLPipeline:
                 ohlcv_df=ohlcv_df,
                 use_cusum=self.enable_meta_labeling,
                 cusum_threshold=None,  # 動的ボラティリティ
-                cusum_vol_multiplier=2.0,  # 閾値を2倍にしてイベントを厳選
+                cusum_vol_multiplier=2.5,  # 質と量のバランス（学術特徴量追加後）
                 horizon_n=horizon_n,
                 pt_factor=pt_factor,
                 sl_factor=sl_factor,
@@ -768,12 +768,30 @@ class MLPipeline:
             primary_oof_proba = oof_preds_df.mean(axis=1).values
             primary_oof_series = pd.Series(primary_oof_proba, index=X_clean.index)
 
+            # メタラベリング専用の特徴量リストを取得
+            from app.services.ml.feature_engineering.feature_engineering_service import (
+                FAKEOUT_DETECTION_ALLOWLIST,
+            )
+
+            # 存在する特徴量のみをフィルタリング
+            available_features = [
+                f for f in FAKEOUT_DETECTION_ALLOWLIST if f in X_clean.columns
+            ]
+            if len(available_features) < len(FAKEOUT_DETECTION_ALLOWLIST):
+                missing = set(FAKEOUT_DETECTION_ALLOWLIST) - set(available_features)
+                logger.warning(
+                    f"Some fakeout detection features are missing: {missing}"
+                )
+
+            X_meta_input = X_clean[available_features].copy()
+            logger.info(f"Using {len(available_features)} features for Meta-Labeling.")
+
             meta_service = MetaLabelingService()
 
             # メタモデルのOOF予測を生成 (評価用)
             logger.info("Generating Meta-Model OOF Predictions...")
             meta_oof_preds = meta_service.cross_validate(
-                X=X_clean,
+                X=X_meta_input,
                 y=y,
                 primary_proba=primary_oof_series,
                 base_model_probs_df=oof_preds_df,
@@ -785,9 +803,9 @@ class MLPipeline:
             models_result["meta_oof_preds"] = meta_oof_preds
 
             # メタモデルの学習 (最終モデル用)
-            # X_cleanはスケーリング前の元の特徴量 (LightGBMなのでスケール不要)
+            # X_meta_inputを使用
             meta_result = meta_service.train(
-                X_train=X_clean,
+                X_train=X_meta_input,
                 y_train=y,
                 primary_proba_train=primary_oof_series,
                 base_model_probs_df=oof_preds_df,  # 個別ベースモデルのOOF予測確率DataFrameを渡す
@@ -813,7 +831,10 @@ class MLPipeline:
         models_result["stacking_service"] = stacking_service
         models_result["oof_preds_df"] = oof_preds_df
         models_result["y"] = y
-        models_result["X_clean"] = X_clean  # X_cleanを追加
+        models_result["X_clean"] = X_clean
+        models_result["X_meta_input"] = (
+            X_meta_input if self.enable_meta_labeling else None
+        )
 
         return models_result
 
@@ -830,6 +851,7 @@ class MLPipeline:
         meta_service,
         X_clean,
         meta_oof_preds=None,
+        X_meta_input=None,
     ):
         logger.info("=" * 60)
         logger.info("Model Evaluation & Stacking (OOF Performance)")
@@ -996,8 +1018,11 @@ class MLPipeline:
                     )
             else:
                 # 従来のIn-Sample評価 (フォールバック)
+                # X_meta_inputがあればそれを使用、なければX_clean
+                X_eval = X_meta_input if X_meta_input is not None else X_clean
+
                 meta_eval_results = meta_service.evaluate(
-                    X_test=X_clean,  # X_cleanを渡す
+                    X_test=X_eval,
                     y_test=y,
                     primary_proba_test=primary_oof_series,
                     base_model_probs_df=oof_preds_df,
@@ -1041,6 +1066,7 @@ class MLPipeline:
                 models_result["meta_service"],
                 models_result["X_clean"],
                 models_result.get("meta_oof_preds"),
+                models_result.get("X_meta_input"),
             )
 
         elif self.pipeline_type == "evaluate_only":
@@ -1053,7 +1079,8 @@ if __name__ == "__main__":
     pipeline = MLPipeline(
         symbol="BTC/USDT:USDT",
         timeframe="1h",
-        n_trials=5,  # 試行回数
+        n_trials=30,  # 試行回数
+        start_date="2023-12-01",  # 直近1年に限定（市場環境の一貫性）
         pipeline_type="train_and_evaluate",
         enable_meta_labeling=True,  # Meta-Labeling有効化
     )

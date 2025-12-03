@@ -156,6 +156,7 @@ class MetaLabelingService:
                 "random_state": 42,
                 "n_jobs": -1,
                 "class_weight": "balanced",
+                "reg_lambda": 1.0,
                 "verbose": -1,
             }
             lgb_params.update(self.model_params)
@@ -313,7 +314,6 @@ class MetaLabelingService:
         Returns:
             OOF予測 (Series)
         """
-        import numpy as np
         from ..cross_validation.purged_kfold import PurgedKFold
         from sklearn.model_selection import KFold
 
@@ -375,6 +375,7 @@ class MetaLabelingService:
                 rf_params.update(self.model_params)
                 model = RandomForestClassifier(**rf_params)
             elif self.model_type == "lightgbm":
+                # LightGBMパラメータ
                 lgb_params = {
                     "n_estimators": 100,
                     "learning_rate": 0.05,
@@ -382,6 +383,7 @@ class MetaLabelingService:
                     "random_state": 42,
                     "n_jobs": -1,
                     "class_weight": "balanced",
+                    "reg_lambda": 1.0,
                     "verbose": -1,
                 }
                 lgb_params.update(self.model_params)

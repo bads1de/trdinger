@@ -232,13 +232,13 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # trange = ...
             # result_df["TRANGE"] = ...
 
-            # BBW (Bollinger Band Width)
+            # BBW (Bollinger Band Width) -> BB_Width
             upper, middle, lower = VolatilityIndicators.bbands(
                 result_df["close"], length=volatility_period, std=2.0
             )
             # BBW = (Upper - Lower) / Middle
             bbw = (upper - lower) / middle
-            result_df["BBW"] = bbw.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            result_df["BB_Width"] = bbw.replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
             # Yang-Zhang Volatility (Open, High, Low, Close)
             if "open" in result_df.columns:
@@ -585,7 +585,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "SMA_Cross_50_200",
             # ボラティリティ特徴量
             "NATR",
-            "BBW",
+            "BB_Width",
             "Yang_Zhang_Vol_20",
             # 出来高特徴量
             "Volume_MA_20",

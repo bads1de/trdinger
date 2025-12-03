@@ -162,6 +162,14 @@ def get_common_presets() -> Dict[str, Dict[str, Any]]:
             "min_ret": 0.001,
             "description": "TBM (4h): PT=1.0σ, SL=1.0σ, Horizon=12bars",
         },
+        "tbm_4h_0.5_1.0": {
+            "timeframe": "4h",
+            "horizon_n": 12,  # 48時間
+            "pt": 0.5,
+            "sl": 1.0,
+            "min_ret": 0.001,
+            "description": "TBM (4h): PT=0.5σ, SL=1.0σ, Horizon=12bars",
+        },
         "tbm_4h_2.0_2.0": {
             "timeframe": "4h",
             "horizon_n": 12,

@@ -36,6 +36,11 @@ class MicrostructureFeatureCalculator:
             ohlcv["volume"].rolling(window=window_short).mean() + 1e-9
         )
 
+        # 6. Corwin-Schultz Spread (High-Lowベースのスプレッド推定)
+        df["Corwin_Schultz_Spread"] = self.calculate_corwin_schultz_spread(
+            ohlcv, window=window_short
+        )
+
         return df
 
     def calculate_amihud_illiquidity(
@@ -134,3 +139,44 @@ class MicrostructureFeatureCalculator:
         lambda_val = cov / (var + 1e-9)
 
         return lambda_val
+
+    def calculate_corwin_schultz_spread(
+        self, df: pd.DataFrame, window: int = 20
+    ) -> pd.Series:
+        """
+        Corwin-Schultz Spread Estimator
+        High-Low価格比を用いてスプレッドを推定する強力な手法。
+        """
+        high = df["high"]
+        low = df["low"]
+
+        # Beta calculation
+        # beta = E[sum(ln(H/L)^2)]
+        hl_ratio = np.log(high / low) ** 2
+        beta = hl_ratio.rolling(window=2).sum()
+
+        # Gamma calculation
+        # gamma = [ln(H2/L2)]^2 where H2, L2 are 2-day high/low
+        h2 = high.rolling(window=2).max()
+        l2 = low.rolling(window=2).min()
+        gamma = np.log(h2 / l2) ** 2
+
+        # Alpha calculation
+        # alpha = (sqrt(2*beta) - sqrt(beta)) / (3 - 2*sqrt(2)) - sqrt(gamma / (3 - 2*sqrt(2)))
+        # Simplified: alpha = (sqrt(2*beta) - sqrt(beta)) / 0.17157 - sqrt(gamma) / 0.4142
+
+        const1 = np.sqrt(2) - 1
+        const2 = 3 - 2 * np.sqrt(2)
+
+        alpha = (np.sqrt(2 * beta) - np.sqrt(beta)) / const1 - np.sqrt(gamma / const2)
+
+        # Spread calculation
+        # S = 2 * (exp(alpha) - 1) / (1 + exp(alpha))
+        spread = 2 * (np.exp(alpha) - 1) / (1 + np.exp(alpha))
+
+        # 負の値や異常値を処理
+        spread = spread.replace([np.inf, -np.inf], np.nan).fillna(0)
+        spread = np.where(spread < 0, 0, spread)
+
+        # 指定ウィンドウで平滑化
+        return pd.Series(spread, index=df.index).rolling(window=window).mean()

@@ -493,7 +493,7 @@ class LabelGenerationConfig:
         use_preset: プリセットを使うか（True）、カスタム設定を使うか（False）。
     """
 
-    default_preset: str = "tbm_4h_1.0_1.0"
+    default_preset: str = "tbm_4h_0.5_1.0"
     timeframe: str = "4h"
     horizon_n: int = 4
     threshold: float = 0.002
@@ -760,6 +760,7 @@ class MLConfig(BaseSettings):
     def get_model_search_paths(self) -> List[str]:
         """モデル検索パスのリストを取得"""
         import os
+
         paths = [
             self.model.model_save_path,
             "backend/models/",

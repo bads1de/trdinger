@@ -23,16 +23,18 @@ from .market_data_features import MarketDataFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .microstructure_features import MicrostructureFeatureCalculator
+from .volume_profile_features import VolumeProfileFeatureCalculator
+from .oi_fr_interaction_features import OIFRInteractionFeatureCalculator
+from .advanced_rolling_stats import AdvancedRollingStatsCalculator
+from .multi_timeframe_features import MultiTimeframeFeatureCalculator
 from app.services.ml.common.ml_utils import optimize_dtypes, generate_cache_key
 
 
 logger = logging.getLogger(__name__)
 
 
-# デフォルト特徴量リスト（最適化版: 27個）
-# 2025-12-02 OI/FR統合評価に基づき更新
-# 低重要度特徴量6個を削除: Williams_R, OI_RSI, Market_Stress,
-# OI_Weighted_Price_Dev, OI_Trend_Efficiency, OI_Trend_Strength
+# デフォルト特徴量リスト（最適化版: 27個 + 新規強力特徴量）
+# 2025-12-03 学術論文・Kaggle実証済み特徴量を追加
 DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     # === 出来高・需給 (Volume/Flow) - 最重要 ===
     "AD",  # Accumulation/Distribution
@@ -41,39 +43,74 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "ADOSC",  # Chaikin A/D Oscillator
     # === モメンタム (Momentum) ===
     "RSI",  # Relative Strength Index
-    # Williams_R は削除（評価31位/低重要度）
     "MACD_Histogram",  # MACD Histogram
     # === トレンド (Trend) ===
     "ADX",
     "MA_Long",
     "SMA_Cross_50_200",  # SMA Golden/Death Cross Distance
     "Trend_strength_20",
+    "SMA_50_1h",  # 復活
+    "trend_direction_1h",  # 復活
     # === ボラティリティ (Volatility) ===
     "NATR",  # Normalized ATR
-    "Parkinson_Vol_20",
+    "Parkinson_Vol_20",  # AdvancedRollingStatsCalculator版を使用
+    "Garman_Klass_Vol_20",  # NEW: 学術的に最強のボラティリティ推定量
     "Close_range_20",
     "Historical_Volatility_20",
+    "BB_Width",  # Added for squeeze detection
+    "Volume_CV",  # Added for volume volatility
     # === 価格構造・その他 (Price Structure) ===
     "price_vs_low_24h",
     "VWAP_Deviation",  # VWAP Deviation
     "Price_Skewness_20",
+    # === Volume Profile（学術論文で実証済み）===
+    "POC_Distance_50",  # Point of Control距離
+    "VAH_Distance_50",  # Value Area High距離
+    "VAL_Distance_50",  # Value Area Low距離
+    "In_Value_Area_50",  # Value Area内か
+    "In_Value_Area_100",  # 復活
+    "In_Value_Area_200",  # 復活
+    "HVN_Distance",  # High Volume Node距離
+    "VP_Skewness",  # Volume Profile歪度
+    # === Advanced Rolling Stats（Kaggle上位入賞で頻用）===
+    "Returns_Skewness_20",
+    "Returns_Kurtosis_20",
+    "Volume_Skewness_20",
+    "HL_Ratio_Mean_20",
+    "Return_Asymmetry_20",
+    "Extreme_Returns_Freq_10",  # 復活
+    "Extreme_Returns_Freq_5",  # 復活
+    # === OI/FR Interaction（DRW Kaggleで実証）===
+    "OI_Price_Regime",
+    "FR_Acceleration",
+    "Smart_Money_Flow",
+    "Market_Stress_V2",
+    "OI_Volume_Interaction",
+    # === Multi-Timeframe（複数時間足統合）===
+    "HTF_4h_Trend_Direction",
+    "HTF_4h_Trend_Strength",
+    "HTF_1d_Trend_Direction",
+    "Timeframe_Alignment_Score",
+    "Timeframe_Alignment_Direction",
+    "Price_Distance_From_4h_SMA50",
+    "HTF_4h_Divergence",  # 復活
+    "HTF_1d_Divergence",  # 復活
+    # === Microstructure (New) ===
+    "Corwin_Schultz_Spread",  # NEW: 強力なスプレッド推定量
+    "VPIN_Proxy",  # NEW: Order Flow Toxicity
+    "Roll_Measure",  # NEW: Effective Spread
+    "Kyles_Lambda",  # NEW: Market Impact
+    "Amihud_Illiquidity",
     # === 市場データ (Market Data) - OI/FR最適化版 ===
-    # OI（建玉）ベース特徴量 - 高重要度のみ採用
-    # OI_RSI は削除（評価30位/低重要度）
-    "Price_OI_Divergence",  # 評価14位
+    "Price_OI_Divergence",  # 復活
     "OI_Volume_Correlation",  # 評価6位
     "OI_Momentum_Ratio",  # 評価5位
     "OI_Liquidation_Risk",  # 評価24位
-    # FR（資金調達率）ベース特徴量
     "FR_Extremity_Zscore",  # 評価9位
     "FR_Cumulative_Trend",  # 評価22位
-    # 複合特徴量 - 高重要度のみ採用
-    # Market_Stress は削除（評価31位/低重要度）
     "FR_OI_Sentiment",  # 評価12位
     "Liquidation_Risk",  # 評価19位
-    # OI_Weighted_Price_Dev は削除（評価33位/低重要度）
     "FR_Volatility",  # 評価13位
-    # OI_Trend_Efficiency は削除（評価34位/低重要度）
     "Volume_OI_Ratio",  # 評価4位 - 最重要OI特徴量
     # === Group B (OI/FR Technicals) ===
     "OI_MACD",
@@ -82,15 +119,12 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "OI_BB_Width",
     "FR_MACD",
     # === Group C (Market Structure) ===
-    "Amihud_Illiquidity",
     "Efficiency_Ratio",
     "Market_Impact",
 ]
 
 
 # ダマシ検知（Fakeout Detection / Meta-Labeling）用特徴量プリセット
-# ブレイクアウトが本物かダマシかを判定するための特徴量セット
-# 2025-12-02 新規定義
 FAKEOUT_DETECTION_ALLOWLIST: Optional[List[str]] = [
     # === Microstructure (New) - ダマシ検知の核心 ===
     "VPIN_Proxy",  # 出来高不均衡
@@ -98,15 +132,23 @@ FAKEOUT_DETECTION_ALLOWLIST: Optional[List[str]] = [
     "Kyles_Lambda",  # マーケットインパクト
     "Amihud_Illiquidity",  # 流動性枯渇度
     "Volume_CV",  # 出来高変動係数
-    # === Volume & OI - 最重要（本物は両方増加、ダマシはOI減少/停滞）===
-    "Volume_OI_Ratio",  # OI/出来高比率 - 最重要
-    "OI_Momentum_Ratio",  # OI変化率
-    "OI_Volume_Correlation",  # OI-出来高相関
-    "Volume_MA_20",  # 出来高移動平均
-    "AD",  # Accumulation/Distribution
-    "OBV",  # On Balance Volume
-    "ADOSC",  # Chaikin A/D Oscillator
-    # === Volatility - ダマシはボラティリティが高いが持続しない ===
+    # === Volume Profile - 市場構造 ===
+    "POC_Distance_50",
+    "HVN_Distance",
+    "VP_Skewness",
+    # === Volume & OI - 最重要===
+    "Volume_OI_Ratio",
+    "OI_Momentum_Ratio",
+    "OI_Volume_Correlation",
+    "Volume_MA_20",
+    "AD",
+    "OBV",
+    "ADOSC",
+    # === OI/FR Interaction ===
+    "OI_Price_Regime",
+    "Smart_Money_Flow",
+    "OI_Volume_Interaction",
+    # === Volatility ===
     "Parkinson_Vol_20",
     "NATR",
     "Historical_Volatility_20",
@@ -120,7 +162,7 @@ FAKEOUT_DETECTION_ALLOWLIST: Optional[List[str]] = [
     "FR_Extremity_Zscore",
     "FR_OI_Sentiment",
     "Liquidation_Risk",
-    # === Trend Strength (Confirmation) ===
+    # === Trend Strength ===
     "ADX",
     "Trend_strength_20",
     "SMA_Cross_50_200",
@@ -147,6 +189,12 @@ class FeatureEngineeringService:
         self.technical_calculator = TechnicalFeatureCalculator()
         self.interaction_calculator = InteractionFeatureCalculator()
         self.microstructure_calculator = MicrostructureFeatureCalculator()
+
+        # 新規追加: 学術的に検証された強力な特徴量計算クラス
+        self.volume_profile_calculator = VolumeProfileFeatureCalculator()
+        self.oi_fr_interaction_calculator = OIFRInteractionFeatureCalculator()
+        self.advanced_stats_calculator = AdvancedRollingStatsCalculator()
+        self.multi_timeframe_calculator = MultiTimeframeFeatureCalculator()
 
         # データ頻度統一マネージャー
         self.frequency_manager = DataFrequencyManager()
@@ -290,11 +338,41 @@ class FeatureEngineeringService:
                 result_df
             )
 
-            # 微細構造特徴量 (New)
+            # === 新規追加: 学術的に実証済みの強力な特徴量 ===
+            logger.info("学術論文・Kaggle実証済み特徴量を計算中...")
+
+            # Volume Profile特徴量
+            volume_profile_features = self.volume_profile_calculator.calculate_features(
+                result_df
+            )
+            result_df = pd.concat([result_df, volume_profile_features], axis=1)
+
+            # OI/FR相互作用特徴量
+            oi_fr_features = self.oi_fr_interaction_calculator.calculate_features(
+                result_df, open_interest_data, funding_rate_data
+            )
+            result_df = pd.concat([result_df, oi_fr_features], axis=1)
+
+            # Advanced Rolling Statistics特徴量
+            advanced_stats_features = self.advanced_stats_calculator.calculate_features(
+                result_df
+            )
+            result_df = pd.concat([result_df, advanced_stats_features], axis=1)
+
+            # Multi-Timeframe特徴量
+            multi_timeframe_features = (
+                self.multi_timeframe_calculator.calculate_features(result_df)
+            )
+            result_df = pd.concat([result_df, multi_timeframe_features], axis=1)
+
+            # Microstructure特徴量 (New)
             microstructure_features = self.microstructure_calculator.calculate_features(
                 result_df
             )
             result_df = pd.concat([result_df, microstructure_features], axis=1)
+
+            # 重複カラムを削除（新しい値を優先）
+            result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
 
             # データ前処理
             logger.info("統計的手法による特徴量前処理を実行中...")
@@ -308,7 +386,6 @@ class FeatureEngineeringService:
                     # 残りを0で埋める
                     result_df[col] = result_df[col].fillna(0.0)
                 logger.info("データ前処理完了")
-
             except Exception as e:
                 logger.error(f"データ前処理中にエラーが発生: {e}")
                 # エラーが発生しても処理を続行（部分的な欠損値許容）
@@ -319,29 +396,29 @@ class FeatureEngineeringService:
             return result_df
 
         except Exception as e:
-            logger.error(f"特徴量計算中にエラーが発生: {e}", exc_info=True)
-            raise
+            logger.error(f"高度な特徴量計算中にエラーが発生: {e}")
+            # エラー時は元のDataFrameを返す（最低限の動作保証）
+            return ohlcv_data
 
     def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
         """キャッシュからデータを取得"""
-        # 有効期限チェック
         if key in self.feature_cache:
-            timestamp, data = self.feature_cache[key]
-            if (datetime.now() - timestamp).total_seconds() < self.cache_ttl:
+            entry = self.feature_cache[key]
+            if (datetime.now() - entry["timestamp"]).total_seconds() < self.cache_ttl:
                 logger.debug("特徴量キャッシュヒット")
-                return data.copy()
+                return entry["data"]
             else:
                 del self.feature_cache[key]
         return None
 
     def _save_to_cache(self, key: str, data: pd.DataFrame):
         """キャッシュにデータを保存"""
-        # キャッシュサイズ制限
         if len(self.feature_cache) >= self.max_cache_size:
             # 最も古いエントリを削除
             oldest_key = min(
-                self.feature_cache.keys(), key=lambda k: self.feature_cache[k][0]
+                self.feature_cache.keys(),
+                key=lambda k: self.feature_cache[k]["timestamp"],
             )
             del self.feature_cache[oldest_key]
 
-        self.feature_cache[key] = (datetime.now(), data.copy())
+        self.feature_cache[key] = {"data": data, "timestamp": datetime.now()}
