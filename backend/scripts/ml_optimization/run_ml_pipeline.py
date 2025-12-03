@@ -769,8 +769,23 @@ class MLPipeline:
             primary_oof_series = pd.Series(primary_oof_proba, index=X_clean.index)
 
             meta_service = MetaLabelingService()
-            # メタモデルの学習
-            # X_cleanはスケーリング前の元の特徴量 (RandomForestなのでスケール不要)
+
+            # メタモデルのOOF予測を生成 (評価用)
+            logger.info("Generating Meta-Model OOF Predictions...")
+            meta_oof_preds = meta_service.cross_validate(
+                X=X_clean,
+                y=y,
+                primary_proba=primary_oof_series,
+                base_model_probs_df=oof_preds_df,
+                threshold=0.5,
+                n_splits=5,
+                t1=t1_labels,  # PurgedKFold用
+                pct_embargo=0.01,
+            )
+            models_result["meta_oof_preds"] = meta_oof_preds
+
+            # メタモデルの学習 (最終モデル用)
+            # X_cleanはスケーリング前の元の特徴量 (LightGBMなのでスケール不要)
             meta_result = meta_service.train(
                 X_train=X_clean,
                 y_train=y,
@@ -814,6 +829,7 @@ class MLPipeline:
         y,
         meta_service,
         X_clean,
+        meta_oof_preds=None,
     ):
         logger.info("=" * 60)
         logger.info("Model Evaluation & Stacking (OOF Performance)")
@@ -945,19 +961,57 @@ class MLPipeline:
                 primary_precision = actual_hits / n_primary_trends
                 logger.info(f"Primary Model Precision: {primary_precision:.1%}")
 
-            # メタモデルの評価
-            meta_eval_results = meta_service.evaluate(
-                X_test=X_clean,  # X_cleanを渡す
-                y_test=y,
-                primary_proba_test=primary_oof_series,
-                base_model_probs_df=oof_preds_df,
-            )
+            # メタモデルの評価 (OOF予測を使用)
+            # meta_oof_preds is passed as argument
 
-            logger.info(
-                f"Meta-Model Precision: {meta_eval_results['meta_precision']:.1%} (vs Primary {primary_precision:.1%})"
-            )
-            logger.info(f"Meta-Model Recall:    {meta_eval_results['meta_recall']:.1%}")
-            logger.info(f"Meta-Model F1:        {meta_eval_results['meta_f1']:.1%}")
+            if meta_oof_preds is not None:
+                # classification_report is already imported at module level
+
+                # メタモデルのOOF予測と正解ラベルで評価
+                # メタモデルは、一次モデルがTrendと予測した箇所について、
+                # それが本当にTrend(1)かRange(0)かを予測している。
+                # したがって、一次モデルがTrendと予測した箇所のみで評価する。
+
+                trend_mask = primary_oof_series >= threshold
+                if trend_mask.sum() > 0:
+                    y_true_meta = y[trend_mask]
+                    y_pred_meta = meta_oof_preds[trend_mask]
+
+                    report = classification_report(
+                        y_true_meta, y_pred_meta, output_dict=True, zero_division=0
+                    )
+
+                    meta_precision = report["1"]["precision"]
+                    meta_recall = report["1"]["recall"]
+                    meta_f1 = report["1"]["f1-score"]
+
+                    logger.info(
+                        f"Meta-Model Precision (OOF): {meta_precision:.1%} (vs Primary {primary_precision:.1%})"
+                    )
+                    logger.info(f"Meta-Model Recall (OOF):    {meta_recall:.1%}")
+                    logger.info(f"Meta-Model F1 (OOF):        {meta_f1:.1%}")
+                else:
+                    logger.warning(
+                        "Primary model made no trend predictions. Cannot evaluate meta-model."
+                    )
+            else:
+                # 従来のIn-Sample評価 (フォールバック)
+                meta_eval_results = meta_service.evaluate(
+                    X_test=X_clean,  # X_cleanを渡す
+                    y_test=y,
+                    primary_proba_test=primary_oof_series,
+                    base_model_probs_df=oof_preds_df,
+                )
+
+                logger.info(
+                    f"Meta-Model Precision (In-Sample): {meta_eval_results['meta_precision']:.1%} (vs Primary {primary_precision:.1%})"
+                )
+                logger.info(
+                    f"Meta-Model Recall (In-Sample):    {meta_eval_results['meta_recall']:.1%}"
+                )
+                logger.info(
+                    f"Meta-Model F1 (In-Sample):        {meta_eval_results['meta_f1']:.1%}"
+                )
 
     def run(self):
         # 1. データ準備
@@ -986,6 +1040,7 @@ class MLPipeline:
                 models_result["y"],
                 models_result["meta_service"],
                 models_result["X_clean"],
+                models_result.get("meta_oof_preds"),
             )
 
         elif self.pipeline_type == "evaluate_only":
@@ -998,7 +1053,7 @@ if __name__ == "__main__":
     pipeline = MLPipeline(
         symbol="BTC/USDT:USDT",
         timeframe="1h",
-        n_trials=20,  # 試行回数
+        n_trials=5,  # 試行回数
         pipeline_type="train_and_evaluate",
         enable_meta_labeling=True,  # Meta-Labeling有効化
     )

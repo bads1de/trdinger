@@ -5,7 +5,7 @@ BaseMLTrainerを継承し、スタッキングアンサンブル学習のオー�
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -358,7 +358,23 @@ class EnsembleTrainer(BaseMLTrainer):
                     )
                     return result
 
-                meta_service = MetaLabelingService()
+                # メタラベリングの設定
+                meta_config = self.ensemble_config.get("meta_labeling_params", {})
+                meta_model_type = meta_config.get("model_type", "lightgbm")
+                meta_params = meta_config.get("model_params", {}).copy()
+
+                # 最適化されたパラメータがあれば適用
+                if (
+                    "stacking" in optimized_params
+                    and "meta_model_params" in optimized_params["stacking"]
+                ):
+                    meta_params.update(
+                        optimized_params["stacking"]["meta_model_params"]
+                    )
+
+                meta_service = MetaLabelingService(
+                    model_type=meta_model_type, model_params=meta_params
+                )
                 meta_result = meta_service.train(
                     X_train=X_train_original_for_meta,  # オリジナルのX_trainを使用
                     y_train=y_train_original_for_meta,  # オリジナルのy_trainを使用
