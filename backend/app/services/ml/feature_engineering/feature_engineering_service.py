@@ -55,6 +55,7 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "NATR",  # Normalized ATR
     "Parkinson_Vol_20",  # AdvancedRollingStatsCalculator版を使用
     "Garman_Klass_Vol_20",  # NEW: 学術的に最強のボラティリティ推定量
+    "Yang_Zhang_Vol_20",  # NEW: ドリフト独立・始値ギャップ対応（PDF推奨No.1）
     "Close_range_20",
     "Historical_Volatility_20",
     "BB_Width",  # Added for squeeze detection
@@ -131,6 +132,7 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "Trend_Quality_20",
     "OI_Weighted_FR",
     "Liquidity_Efficiency",
+    "Leverage_Ratio",
 ]
 
 

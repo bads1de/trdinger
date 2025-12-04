@@ -85,6 +85,12 @@ class AdvancedRollingStatsCalculator:
                 window
             ).mean()
 
+            # Yang-Zhang Volatility (Rolling) - 最強のボラティリティ推定量
+            # ドリフト独立かつ始値ギャップを考慮
+            result[f"Yang_Zhang_Vol_{window}"] = self._yang_zhang_volatility(
+                df, window
+            )
+
             # === 価格位置統計 ===
             # Close位置（High-Low範囲内での位置）
             close_position = (df["close"] - df["low"]) / (df["high"] - df["low"] + 1e-9)
@@ -125,10 +131,55 @@ class AdvancedRollingStatsCalculator:
             )
 
         # 欠損値とinf値を処理
-        result = result.replace([np.inf, -np.inf], np.nan)
-        result = result.fillna(0)
+        return result.fillna(0)
 
-        return result
+    def _yang_zhang_volatility(self, df: pd.DataFrame, window: int) -> pd.Series:
+        """
+        Yang-Zhang Volatility Estimator
+        
+        ドリフト独立かつ始値ギャップ（Overnight Jump）を考慮した最小分散不偏推定量。
+        
+        Formula:
+        sigma^2_YZ = sigma^2_OJ + k * sigma^2_OC + (1-k) * sigma^2_RS
+        """
+        # Log prices
+        log_open = np.log(df["open"])
+        log_high = np.log(df["high"])
+        log_low = np.log(df["low"])
+        log_close = np.log(df["close"])
+        
+        # Prev close for overnight jump
+        log_close_shifted = log_close.shift(1)
+        
+        # 1. Overnight Jump Volatility (sigma^2_OJ)
+        # ln(O_t / C_{t-1})
+        oj_returns = log_open - log_close_shifted
+        # Rolling variance of OJ returns (ddof=1 for unbiased)
+        sigma_oj_sq = oj_returns.rolling(window).var()
+        
+        # 2. Open-to-Close Volatility (sigma^2_OC)
+        # ln(C_t / O_t)
+        oc_returns = log_close - log_open
+        # Rolling variance of OC returns
+        sigma_oc_sq = oc_returns.rolling(window).var()
+        
+        # 3. Rogers-Satchell Volatility (sigma^2_RS)
+        # RS = ln(H/C) * ln(H/O) + ln(L/C) * ln(L/O)
+        rs_term = (log_high - log_close) * (log_high - log_open) + \
+                  (log_low - log_close) * (log_low - log_open)
+        sigma_rs_sq = rs_term.rolling(window).mean()
+        
+        # k factor
+        # k = 0.34 / (1.34 + (n+1)/(n-1))
+        k = 0.34 / (1.34 + (window + 1) / (window - 1))
+        
+        # Yang-Zhang Variance
+        yz_var = sigma_oj_sq + k * sigma_oc_sq + (1 - k) * sigma_rs_sq
+        
+        # Volatility (Std Dev)
+        yz_vol = np.sqrt(yz_var)
+        
+        return yz_vol.fillna(0)
 
     def _volume_weighted_skew(
         self, returns: pd.Series, volume: pd.Series, window: int

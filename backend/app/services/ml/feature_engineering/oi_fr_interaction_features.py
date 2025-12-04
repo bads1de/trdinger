@@ -168,6 +168,26 @@ class OIFRInteractionFeatureCalculator:
            volume=df["volume"]
         ).fillna(0.0)
 
+        # === 16. Leverage Ratio (Estimated) ===
+        # Market Cap = Price * Circulating Supply
+        # Leverage Ratio = Total OI (USD) / Market Cap (USD)
+        #                = Total OI (USD) / (Price * Circulating Supply)
+        #
+        # Note: Since we don't have historical circulating supply, we use a constant approximation.
+        # For BTC, approx 19.7M (as of late 2024). 
+        # If OI data is in USD (Contract Value), this formula holds.
+        # If OI is in Coins, then Leverage Ratio = OI (Coins) / Circulating Supply.
+        # Most exchanges provide OI in USD or contracts converted to USD.
+        #
+        # Assuming OI is USD-denominated (standard in this system):
+        estimated_supply = 19_700_000  # BTC approx supply
+        estimated_market_cap = df["close"] * estimated_supply
+        
+        result["Leverage_Ratio"] = AdvancedFeatures.leverage_ratio(
+            open_interest=oi_series,
+            market_cap=estimated_market_cap
+        ).fillna(0.0)
+
         # 欠損値処理
         result = result.fillna(0)
 
