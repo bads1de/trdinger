@@ -594,3 +594,90 @@ class VolatilityIndicators:
         # Usually multiplied by sqrt(periods_per_year) for annualized,
         # but we keep it as raw volatility per bar
         return np.sqrt(yz_variance).fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def parkinson(
+        high: pd.Series,
+        low: pd.Series,
+        length: int = 20,
+    ) -> pd.Series:
+        """
+        Parkinson Volatility Estimator
+
+        Uses High and Low prices to estimate volatility.
+        More efficient than Close-to-Close estimator.
+        Formula: sigma^2 = (1 / (4 * ln(2))) * (ln(H/L))^2
+        """
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+
+        # Prevent division by zero or log of zero/negative
+        # Assuming High >= Low > 0
+        hl_ratio = high / low
+        
+        # Replace any potential invalid values (though theoretically shouldn't exist in valid OHLC)
+        hl_ratio = hl_ratio.replace([np.inf, -np.inf], np.nan)
+        
+        # (ln(H/L))^2
+        log_hl_sq = np.log(hl_ratio) ** 2
+        
+        # Constant: 1 / (4 * ln(2))
+        const = 1.0 / (4.0 * np.log(2.0))
+        
+        # Instantaneous variance estimate
+        inst_var = const * log_hl_sq
+        
+        # Rolling mean of variance
+        rolling_var = inst_var.rolling(window=length).mean()
+        
+        # Return volatility (std dev)
+        return np.sqrt(rolling_var).fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def garman_klass(
+        open_: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 20,
+    ) -> pd.Series:
+        """
+        Garman-Klass Volatility Estimator
+
+        Extensions of Parkinson that includes Open and Close information.
+        Assumes no opening jumps (opening gaps).
+        Formula: sigma^2 = 0.5 * (ln(H/L))^2 - (2*ln(2) - 1) * (ln(C/O))^2
+        """
+        if not isinstance(open_, pd.Series):
+            raise TypeError("open_ must be pandas Series")
+        if not isinstance(high, pd.Series):
+            raise TypeError("high must be pandas Series")
+        if not isinstance(low, pd.Series):
+            raise TypeError("low must be pandas Series")
+        if not isinstance(close, pd.Series):
+            raise TypeError("close must be pandas Series")
+
+        # 1. (ln(H/L))^2
+        log_hl_sq = np.log(high / low) ** 2
+        
+        # 2. (ln(C/O))^2
+        log_co_sq = np.log(close / open_) ** 2
+        
+        # Constant: 2*ln(2) - 1
+        const = 2.0 * np.log(2.0) - 1.0
+        
+        # Instantaneous variance estimate
+        inst_var = 0.5 * log_hl_sq - const * log_co_sq
+        
+        # Ensure non-negative (theoretical variance should be positive, but numerical issues can occur)
+        inst_var = inst_var.clip(lower=0.0)
+        
+        # Rolling mean of variance
+        rolling_var = inst_var.rolling(window=length).mean()
+        
+        # Return volatility (std dev)
+        return np.sqrt(rolling_var).fillna(0.0)

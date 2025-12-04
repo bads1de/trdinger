@@ -541,6 +541,11 @@ class MLPipeline:
         if len(y) < 50:
             raise ValueError("Not enough data for final training.")
 
+        # Save feature names for later analysis
+        with open(self.results_dir / "feature_names.json", "w", encoding="utf-8") as f:
+            json.dump(X_clean.columns.tolist(), f, indent=2, ensure_ascii=False)
+        logger.info(f"Feature names saved to {self.results_dir / 'feature_names.json'}")
+
         n_splits_oof = 5
         embargo_pct_oof = 0.01
 

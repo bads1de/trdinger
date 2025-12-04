@@ -121,6 +121,16 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     # === Group C (Market Structure) ===
     "Efficiency_Ratio",
     "Market_Impact",
+    # === Advanced Features (New Strategy) ===
+    "FracDiff_04",
+    "VWAP_Z_Score_20",
+    "RVOL_20",
+    "Absorption_Score_20",
+    "Liquidation_Cascade_Score",
+    "Squeeze_Probability",
+    "Trend_Quality_20",
+    "OI_Weighted_FR",
+    "Liquidity_Efficiency",
 ]
 
 

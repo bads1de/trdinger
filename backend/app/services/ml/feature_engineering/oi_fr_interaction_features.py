@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 
+from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
+
 
 class OIFRInteractionFeatureCalculator:
     """
@@ -68,6 +70,13 @@ class OIFRInteractionFeatureCalculator:
             if len(fr_aligned.columns) > 0
             else pd.Series(0, index=df.index)
         )
+        
+        # OI Series (for advanced features)
+        oi_series = (
+            oi_aligned.iloc[:, 0]
+            if len(oi_aligned.columns) > 0
+            else pd.Series(0, index=df.index)
+        )
 
         # === 1. OI-Price Regime（市場レジーム識別）===
         result["OI_Price_Regime"] = (
@@ -124,6 +133,40 @@ class OIFRInteractionFeatureCalculator:
         result["Cumulative_OI_Price_Divergence"] = (
             (1 - oi_price_alignment).rolling(20).sum()
         )
+        
+        # === 11. Liquidation Cascade Score ===
+        result["Liquidation_Cascade_Score"] = AdvancedFeatures.liquidation_cascade_score(
+           close=df["close"],
+           open_interest=oi_series,
+           volume=df["volume"]
+        ).fillna(0.0)
+
+        # === 12. Squeeze Probability ===
+        result["Squeeze_Probability"] = AdvancedFeatures.squeeze_probability(
+           close=df["close"],
+           funding_rate=fr_value,
+           open_interest=oi_series,
+           low=df["low"]
+        ).fillna(0.0)
+
+        # === 13. Trend Quality ===
+        result["Trend_Quality_20"] = AdvancedFeatures.trend_quality(
+           close=df["close"],
+           open_interest=oi_series,
+           window=20
+        ).fillna(0.0)
+
+        # === 14. OI Weighted Funding Rate ===
+        result["OI_Weighted_FR"] = AdvancedFeatures.oi_weighted_funding_rate(
+           funding_rate=fr_value,
+           open_interest=oi_series
+        ).fillna(0.0)
+   
+        # === 15. Liquidity Efficiency ===
+        result["Liquidity_Efficiency"] = AdvancedFeatures.liquidity_efficiency(
+           open_interest=oi_series,
+           volume=df["volume"]
+        ).fillna(0.0)
 
         # 欠損値処理
         result = result.fillna(0)

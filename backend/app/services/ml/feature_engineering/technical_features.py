@@ -17,6 +17,7 @@ from ...indicators.technical_indicators.momentum import MomentumIndicators
 from ...indicators.technical_indicators.trend import TrendIndicators
 from ...indicators.technical_indicators.volatility import VolatilityIndicators
 from ...indicators.technical_indicators.volume import VolumeIndicators
+from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
 from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
@@ -57,7 +58,16 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         result_df = self.calculate_market_regime_features(result_df, lookback_periods)
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
         result_df = self.calculate_trend_features(result_df, lookback_periods)
-        # パターン特徴量と分数次差分特徴量は削除
+        
+        # Fractional Differencing (Trend category but calculated here)
+        # Log-transform usually recommended before FracDiff
+        try:
+            log_close = np.log(df["close"])
+            frac_diff = AdvancedFeatures.frac_diff_ffd(log_close, d=0.4)
+            result_df["FracDiff_04"] = frac_diff.fillna(0.0)
+        except Exception as e:
+            logger.warning(f"FracDiff calculation failed: {e}")
+            result_df["FracDiff_04"] = 0.0
 
         return result_df
 
@@ -251,6 +261,25 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 )
                 result_df["Yang_Zhang_Vol_20"] = yz_vol.fillna(0.0)
 
+            # Parkinson Volatility
+            parkinson = VolatilityIndicators.parkinson(
+                high=result_df["high"],
+                low=result_df["low"],
+                length=volatility_period,
+            )
+            result_df[f"Parkinson_Vol_{volatility_period}"] = parkinson.fillna(0.0)
+
+            # Garman-Klass Volatility
+            if "open" in result_df.columns:
+                gk_vol = VolatilityIndicators.garman_klass(
+                    open_=result_df["open"],
+                    high=result_df["high"],
+                    low=result_df["low"],
+                    close=result_df["close"],
+                    length=volatility_period,
+                )
+                result_df[f"Garman_Klass_Vol_{volatility_period}"] = gk_vol.fillna(0.0)
+
             self.log_feature_calculation_complete("ボラティリティ")
             return result_df
 
@@ -345,6 +374,29 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 slow=10,
             )
             result_df["ADOSC"] = adosc.fillna(0.0)
+
+            # VWAP Z-Score
+            vwap_z = VolumeIndicators.vwap_z_score(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                volume=result_df["volume"],
+                period=volume_period,
+            )
+            result_df[f"VWAP_Z_Score_{volume_period}"] = vwap_z.fillna(0.0)
+
+            # RVOL
+            rvol = VolumeIndicators.rvol(result_df["volume"], window=volume_period)
+            result_df[f"RVOL_{volume_period}"] = rvol.fillna(0.0)
+
+            # Absorption Score
+            absorption = VolumeIndicators.absorption_score(
+                high=result_df["high"],
+                low=result_df["low"],
+                volume=result_df["volume"],
+                window=volume_period,
+            )
+            result_df[f"Absorption_Score_{volume_period}"] = absorption.fillna(0.0)
 
             self.log_feature_calculation_complete("出来高")
             return result_df

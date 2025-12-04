@@ -10,6 +10,7 @@ from pathlib import Path
 import joblib
 import pandas as pd
 import numpy as np
+import json # ADDED
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -26,6 +27,14 @@ def analyze_feature_importance(results_dir: str):
         print("モデルファイルが見つかりません")
         return
 
+    # feature_names.json から特徴量名を読み込むことを優先
+    feature_names_file = results_path / "feature_names.json"
+    loaded_feature_names = None
+    if feature_names_file.exists():
+        with open(feature_names_file, "r", encoding="utf-8") as f:
+            loaded_feature_names = json.load(f)
+        print(f"特徴量名を {feature_names_file.name} から読み込みました。")
+
     # 最初のモデルを読み込み（通常は最良モデル）
     model_file = model_files[0]
     print(f"\n分析対象: {model_file.name}")
@@ -35,11 +44,12 @@ def analyze_feature_importance(results_dir: str):
     # 特徴量重要度を取得
     if hasattr(model, "feature_importances_"):
         importances = model.feature_importances_
-        feature_names = (
-            model.feature_name_
-            if hasattr(model, "feature_name_")
-            else [f"Feature_{i}" for i in range(len(importances))]
-        )
+        if loaded_feature_names: # 読み込んだ特徴量名を優先
+            feature_names = loaded_feature_names
+        elif hasattr(model, "feature_name_") and model.feature_name_: # モデルが保持している場合
+            feature_names = model.feature_name_
+        else: # どちらもなければGeneric名
+            feature_names = [f"Feature_{i}" for i in range(len(importances))]
     else:
         print("このモデルには feature_importances_ がありません")
         return
@@ -88,6 +98,18 @@ def analyze_feature_importance(results_dir: str):
         "Smart_Money_Flow",
         "Market_Stress_V2",
         "OI_Volume_Interaction",
+        # Newly added features keywords
+        "FracDiff",
+        "Parkinson_Vol",
+        "Garman_Klass_Vol",
+        "VWAP_Z_Score",
+        "RVOL",
+        "Absorption_Score",
+        "Liquidation_Cascade_Score",
+        "Squeeze_Probability",
+        "Trend_Quality",
+        "OI_Weighted_FR",
+        "Liquidity_Efficiency",
     ]
 
     new_features = importance_df[

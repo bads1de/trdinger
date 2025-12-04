@@ -501,3 +501,102 @@ class VolumeIndicators:
         if result is None or result.empty:
             return np.full(len(close), np.nan)
         return result.bfill().ffill().to_numpy()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vwap_z_score(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        volume: pd.Series,
+        period: int = 20,
+    ) -> pd.Series:
+        """
+        VWAP Z-Score (VWAP Divergence)
+        
+        Z = (Price - VWAP) / sigma_VWAP
+        where sigma_VWAP is the standard deviation of price relative to VWAP.
+        """
+        # Calculate VWAP first
+        vwap_series = VolumeIndicators.vwap(high, low, close, volume, period=period)
+        
+        # Calculate deviation
+        deviation = close - vwap_series
+        
+        # Calculate standard deviation of the deviation
+        # Note: The PDF implies sigma is based on VWAP. 
+        # Standard interpretation: Standard Deviation of (Price - VWAP) or just Price std dev?
+        # "sigma_VWAP is standard deviation of price based on VWAP"
+        # Usually this means the standard deviation of the price distribution around the weighted average.
+        # Calculating rolling std of (Close - VWAP) is a reasonable approximation for "divergence volatility".
+        sigma = deviation.rolling(window=period).std()
+        
+        # Z-score
+        z_score = deviation / sigma
+        
+        return z_score.fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def rvol(
+        volume: pd.Series,
+        window: int = 20,
+    ) -> pd.Series:
+        """
+        Relative Volume (RVOL)
+        
+        Ratio of current volume to average volume at the same time of day.
+        If index is not DatetimeIndex, falls back to simple Volume / SMA(Volume).
+        """
+        if not isinstance(volume, pd.Series):
+            raise TypeError("volume must be pandas Series")
+
+        # Check for DatetimeIndex
+        if isinstance(volume.index, pd.DatetimeIndex):
+            try:
+                # Group by time of day and calculate rolling mean for each time bucket
+                # Note: This might be slow for very large datasets
+                # Transform applies the function to each group
+                avg_vol = volume.groupby(volume.index.time).transform(
+                    lambda x: x.rolling(window=window, min_periods=1).mean()
+                )
+                
+                # If grouping failed or returned empty (e.g. unique times), fallback
+                if avg_vol.isna().all():
+                     avg_vol = volume.rolling(window=window).mean()
+            except Exception:
+                # Fallback on error
+                avg_vol = volume.rolling(window=window).mean()
+        else:
+            # Fallback
+            avg_vol = volume.rolling(window=window).mean()
+
+        rvol = volume / avg_vol
+        return rvol.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def absorption_score(
+        high: pd.Series,
+        low: pd.Series,
+        volume: pd.Series,
+        window: int = 20,
+    ) -> pd.Series:
+        """
+        Absorption Score = RVOL / Range
+        
+        High score indicates high volume with low price movement (absorption).
+        """
+        # Calculate RVOL
+        rvol_series = VolumeIndicators.rvol(volume, window=window)
+        
+        # Calculate Range
+        price_range = high - low
+        
+        # Avoid division by zero (if range is 0, absorption is theoretically infinite or max)
+        # We replace 0 with a very small number or handle it
+        price_range = price_range.replace(0, 1e-9) # Epsilon
+        
+        score = rvol_series / price_range
+        
+        return score.replace([np.inf, -np.inf], np.nan).fillna(0.0)
