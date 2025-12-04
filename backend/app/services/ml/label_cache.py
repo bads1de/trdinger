@@ -12,6 +12,7 @@ import pandas as pd
 
 from app.services.ml.label_generation.enums import ThresholdMethod
 from app.services.ml.label_generation.triple_barrier import TripleBarrier
+from app.services.ml.label_generation.trend_scanning import TrendScanning
 from app.services.ml.common.volatility_utils import (
     calculate_volatility_atr,
     calculate_volatility_std,
@@ -31,16 +32,6 @@ class LabelCache:
         cache: ラベル生成結果のキャッシュ辞書
         hit_count: キャッシュヒット回数
         miss_count: キャッシュミス回数
-
-    Example:
-        >>> cache = LabelCache(ohlcv_df)
-        >>> labels = cache.get_labels(
-        ...     horizon_n=4,
-        ...     threshold_method="QUANTILE",
-        ...     threshold=0.33,
-        ...     timeframe="1h",
-        ...     price_column="close"
-        ... )
     """
 
     def __init__(self, ohlcv_df: pd.DataFrame):
@@ -67,39 +58,29 @@ class LabelCache:
         atr_period: int = 14,
         binary_label: bool = False,
         t_events: Optional[pd.DatetimeIndex] = None,
+        min_window: int = 5,
+        window_step: int = 1,
     ) -> pd.Series:
         """キャッシュを使ってラベルを取得
 
-        パラメータの組み合わせをキーとしてキャッシュを検索し、
-        見つかればキャッシュから返し、なければ生成してキャッシュに保存します。
-
         Args:
-            horizon_n: N本先を見る
-            threshold_method: 閾値計算方法（enum名の文字列）
-            threshold: 閾値
+            horizon_n: N本先を見る (Trend Scanningの場合はmax_window)
+            threshold_method: 閾値計算方法
+            threshold: 閾値 (Trend Scanningの場合はmin_t_value)
             timeframe: 時間足
             price_column: 価格カラム名
             pt_factor: Profit Taking multiplier for Triple Barrier.
             sl_factor: Stop Loss multiplier for Triple Barrier.
             use_atr: Use ATR for volatility in Triple Barrier.
             atr_period: ATR calculation period.
-            binary_label: Return binary (0/1) labels for Triple Barrier.
-            t_events: ラベル付け対象のイベント時刻（指定がない場合は全時刻）
+            binary_label: Return binary (0/1) labels.
+            t_events: ラベル付け対象のイベント時刻
+            min_window: Trend Scanningの最小ウィンドウサイズ
+            window_step: Trend Scanningのウィンドウステップ
 
         Returns:
-            pd.Series: ラベル（"UP"/"RANGE"/"DOWN" または 0/1）
-
-        Raises:
-            ValueError: threshold_methodが無効な場合
+            pd.Series: ラベル
         """
-        # キャッシュキーを生成（t_eventsはハッシュ化できないため、長さと先頭・末尾のタイムスタンプで代用するか、
-        # あるいはt_eventsが指定された場合はキャッシュを使わない方針にする）
-        # ここでは簡易的に t_events が指定された場合はキャッシュキーに含めず、
-        # 呼び出し元（LabelGenerationService）で管理することを想定するが、
-        # LabelCacheの責務としてはキャッシュすべき。
-        # t_eventsをタプルにしてキーにするのは重いので、Noneかどうかだけをキーに含める（不完全だが）
-        # 正しくは t_events のハッシュを使うべきだが、ここでは t_events が渡されたらキャッシュしない（毎回計算）とするのが安全。
-
         use_cache = t_events is None
 
         cache_key = (
@@ -113,44 +94,28 @@ class LabelCache:
             use_atr,
             atr_period,
             binary_label,
+            min_window,
+            window_step,
         )
 
-        # キャッシュヒット (t_eventsがない場合のみ)
         if use_cache and cache_key in self.cache:
             self.hit_count += 1
-            logger.debug(
-                f"キャッシュヒット: horizon_n={horizon_n}, "
-                f"method={threshold_method}, threshold={threshold:.4f}, "
-                f"timeframe={timeframe} "
-                f"(hit率: {self.get_hit_rate():.1f}%)"
-            )
+            logger.debug(f"キャッシュヒット: {threshold_method}")
             return self.cache[cache_key]
 
-        # キャッシュミス -> 新規生成
         if use_cache:
             self.miss_count += 1
-            logger.info(
-                f"ラベル生成: horizon_n={horizon_n}, "
-                f"method={threshold_method}, threshold={threshold:.4f}, "
-                f"timeframe={timeframe} "
-                f"(miss率: {self.get_miss_rate():.1f}%)"
-            )
+            logger.info(f"ラベル生成: {threshold_method}")
 
-        # ThresholdMethod enum に変換
         try:
             threshold_method_enum = ThresholdMethod[threshold_method]
         except KeyError:
             valid_methods = [m.name for m in ThresholdMethod]
-            raise ValueError(
-                f"無効な閾値計算方法: {threshold_method}. "
-                f"有効な値: {', '.join(valid_methods)}"
-            )
+            raise ValueError(f"無効な閾値計算方法: {threshold_method}")
 
-        # ラベル生成
         if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
             close_prices = self.ohlcv_df[price_column]
 
-            # ボラティリティ計算
             if use_atr:
                 volatility = calculate_volatility_atr(
                     high=self.ohlcv_df["high"],
@@ -160,55 +125,62 @@ class LabelCache:
                     as_percentage=True,
                 )
             else:
-                # 従来の標準偏差
                 returns = close_prices.pct_change(fill_method=None)
                 volatility = calculate_volatility_std(returns=returns, window=24)
 
-            # 垂直バリア (horizon_n 時間後)
             t1_vertical_barrier = pd.Series(
                 close_prices.index, index=close_prices.index
             ).shift(-horizon_n)
 
-            # イベント時刻の決定
             if t_events is None:
                 events_index = close_prices.index
             else:
                 events_index = t_events
 
-            # Triple Barrier 実行
-            tb = TripleBarrier(
-                pt=pt_factor, sl=sl_factor, min_ret=0.0001
-            )  # min_retは小さい値で固定
-
+            tb = TripleBarrier(pt=pt_factor, sl=sl_factor, min_ret=0.0001)
             events = tb.get_events(
                 close=close_prices,
-                t_events=events_index,  # 指定されたイベントのみ計算
+                t_events=events_index,
                 pt_sl=[pt_factor, sl_factor],
                 target=volatility,
                 min_ret=0.0001,
                 vertical_barrier_times=t1_vertical_barrier,
             )
-
             labels_df = tb.get_bins(events, close_prices, binary_label=binary_label)
 
             if binary_label:
                 labels = labels_df["bin"]
             else:
-                # ラベルをSeriesに変換 (1, -1, 0) -> ("UP", "DOWN", "RANGE")
                 labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
                 labels = labels_df["bin"].map(labels_map)
 
-            # インデックスを合わせてNaN処理
+            labels = labels.reindex(close_prices.index)
+
+        elif threshold_method_enum == ThresholdMethod.TREND_SCANNING:
+            close_prices = self.ohlcv_df[price_column]
+
+            ts = TrendScanning(
+                min_window=min_window,
+                max_window=horizon_n,
+                step=window_step,
+                min_t_value=threshold,
+            )
+
+            labels_df = ts.get_labels(close=close_prices, t_events=t_events)
+
+            if binary_label:
+                labels = labels_df["bin"].abs()
+            else:
+                labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
+                labels = labels_df["bin"].map(labels_map)
+
             labels = labels.reindex(close_prices.index)
 
         else:
-            raise NotImplementedError(
-                f"閾値計算方法 {threshold_method} はサポートされていません。"
-                "現在は TRIPLE_BARRIER のみサポートしています。"
-            )
+            raise NotImplementedError(f"Method {threshold_method} not supported")
 
-        # キャッシュに保存
-        self.cache[cache_key] = labels
+        if use_cache:
+            self.cache[cache_key] = labels
 
         return labels
 

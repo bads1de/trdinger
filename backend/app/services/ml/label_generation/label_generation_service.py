@@ -114,9 +114,11 @@ class LabelGenerationService:
 
             # ラベル生成 (t_eventsを指定)
             labels = label_cache.get_labels(
-                horizon_n=label_config.horizon_n,
-                threshold_method=label_config.threshold_method,
-                threshold=label_config.threshold,
+                horizon_n=training_params.get("horizon_n", label_config.horizon_n),
+                threshold_method=training_params.get(
+                    "threshold_method", label_config.threshold_method
+                ),
+                threshold=training_params.get("threshold", label_config.threshold),
                 timeframe=label_config.timeframe,
                 price_column=label_config.price_column,
                 pt_factor=training_params.get("pt_factor", 1.0),
@@ -125,6 +127,8 @@ class LabelGenerationService:
                 atr_period=training_params.get("atr_period", 14),
                 binary_label=True,
                 t_events=t_events,  # イベント時刻を渡す
+                min_window=training_params.get("min_window", 5),
+                window_step=training_params.get("window_step", 1),
             )
 
             # NaNを削除してクリーンなデータを作成

@@ -217,9 +217,7 @@ class MLPipeline:
         self, X: pd.DataFrame, ohlcv_df: pd.DataFrame, selected_models: List[str]
     ):
         logger.info("=" * 60)
-        logger.info(
-            "Starting Hyperparameter Optimization (Purged K-Fold CV) [TBM ONLY]"
-        )
+        logger.info("Starting Hyperparameter Optimization (Purged K-Fold CV) [TBM]")
         logger.info("=" * 60)
 
         # LabelGenerationServiceを使用
@@ -236,6 +234,7 @@ class MLPipeline:
 
             # Fixed Parameters
             use_atr = True
+            threshold_method = "TRIPLE_BARRIER"
 
             try:
                 # LabelGenerationService.prepare_labels を使用してラベル生成とフィルタリングを一括で行う
@@ -251,6 +250,7 @@ class MLPipeline:
                     sl_factor=sl_factor,
                     use_atr=use_atr,
                     atr_period=atr_period,
+                    threshold_method=threshold_method,
                 )
             except Exception as e:
                 logger.error(f"Label generation failed: {e}", exc_info=True)
@@ -496,7 +496,7 @@ class MLPipeline:
         selected_models: List[str],
     ):
         logger.info("=" * 60)
-        logger.info("Training Final Models & Stacking (Purged K-Fold OOF) [TBM ONLY]")
+        logger.info("Training Final Models & Stacking (Purged K-Fold OOF) [TBM]")
         logger.info("=" * 60)
 
         # 最適化されたモデルのみを使用する
@@ -511,6 +511,7 @@ class MLPipeline:
         pt_factor = best_params.get("pt_factor", 1.0)
         sl_factor = best_params.get("sl_factor", 1.0)
         atr_period = best_params.get("atr_period", 14)
+        threshold_method = "TRIPLE_BARRIER"
 
         # Fixed parameters
         use_atr = True
@@ -528,6 +529,7 @@ class MLPipeline:
                 sl_factor=sl_factor,
                 use_atr=use_atr,
                 atr_period=atr_period,
+                threshold_method=threshold_method,
             )
         except Exception as e:
             logger.error(f"Final model label generation failed: {e}")
@@ -1079,7 +1081,7 @@ if __name__ == "__main__":
     pipeline = MLPipeline(
         symbol="BTC/USDT:USDT",
         timeframe="1h",
-        n_trials=30,  # 試行回数
+        n_trials=5,  # 試行回数
         start_date="2023-12-01",  # 直近1年に限定（市場環境の一貫性）
         pipeline_type="train_and_evaluate",
         enable_meta_labeling=True,  # Meta-Labeling有効化
