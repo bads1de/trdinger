@@ -31,17 +31,17 @@ def sample_ohlcv_data():
 def feature_service():
     """FeatureEngineeringServiceインスタンスを作成"""
     service = FeatureEngineeringService()
-    service.clear_cache()
     return service
 
 
 class TestFeatureAllowlist:
     """特徴量allowlist機能のテスト"""
 
-    def test_default_feature_allowlist_is_none(self):
-        """デフォルト特徴量リストがNone（全特徴量使用）であることを確認"""
-        # 研究目的のため、デフォルトは全特徴量を使用
-        assert DEFAULT_FEATURE_ALLOWLIST is None
+    def test_default_feature_allowlist_is_list(self):
+        """デフォルト特徴量リストがリストであることを確認"""
+        # デフォルトで推奨特徴量リストが設定されている
+        assert isinstance(DEFAULT_FEATURE_ALLOWLIST, list)
+        assert len(DEFAULT_FEATURE_ALLOWLIST) > 0
 
     def test_feature_allowlist_can_be_set(self):
         """特徴量allowlistが設定可能であることを確認"""

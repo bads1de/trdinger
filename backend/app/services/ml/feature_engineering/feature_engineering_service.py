@@ -50,7 +50,6 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "SMA_Cross_50_200",  # SMA Golden/Death Cross Distance
     "Trend_strength_20",
     "SMA_50_1h",  # 復活
-    "trend_direction_1h",  # 復活
     # === ボラティリティ (Volatility) ===
     "NATR",  # Normalized ATR
     "Parkinson_Vol_20",  # AdvancedRollingStatsCalculator版を使用
@@ -97,7 +96,6 @@ DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
     "HTF_4h_Divergence",  # 復活
     "HTF_1d_Divergence",  # 復活
     # === Microstructure (New) ===
-    "Corwin_Schultz_Spread",  # NEW: 強力なスプレッド推定量
     "VPIN_Proxy",  # NEW: Order Flow Toxicity
     "Roll_Measure",  # NEW: Effective Spread
     "Kyles_Lambda",  # NEW: Market Impact

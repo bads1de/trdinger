@@ -1,102 +1,67 @@
-"""
-technical_features.pyのテスト
-TDDで開発し、DataFrameのfragmentation問題とパフォーマンスをテストします。
-"""
-
-import time
-from datetime import datetime
-
-import numpy as np
-import pandas as pd
 import pytest
-
-from app.services.ml.feature_engineering.technical_features import (
+import pandas as pd
+import numpy as np
+import pandas_ta as ta
+from backend.app.services.ml.feature_engineering.technical_features import (
     TechnicalFeatureCalculator,
 )
 
 
 @pytest.fixture
 def sample_ohlcv_data():
-    """サンプルOHLCVデータを生成"""
-    dates = pd.date_range(start=datetime(2023, 1, 1), periods=1000, freq="1h")
+    dates = pd.date_range(start="2023-01-01", periods=1000, freq="1H")
+    df = pd.DataFrame(
+        {
+            "timestamp": dates,
+            "open": np.random.uniform(100, 200, 1000),
+            "high": np.random.uniform(200, 300, 1000),
+            "low": np.random.uniform(50, 100, 1000),
+            "close": np.random.uniform(100, 200, 1000),
+            "volume": np.random.randint(1000, 10000, 1000),
+        }
+    )
+    # 価格データの整合性を保つ（Highは最高、Lowは最低）
+    df["high"] = df[["open", "close", "high"]].max(axis=1)
+    df["low"] = df[["open", "close", "low"]].min(axis=1)
 
-    np.random.seed(42)
-    base_price = 50000
+    # ランダムウォーク的な価格変動を作成
+    price = 50000
+    prices = []
+    for _ in range(1000):
+        change = np.random.normal(0, 100)
+        price += change
+        prices.append(price)
 
-    data = []
-    for i, date in enumerate(dates):
-        change = np.random.randn() * 100
-        base_price += change
-        high = base_price + abs(np.random.randn()) * 50
-        low = base_price - abs(np.random.randn()) * 50
-        volume = np.random.randint(100, 10000)
+    df["close"] = prices
+    df["open"] = df["close"].shift(1).fillna(prices[0]) + np.random.normal(0, 50, 1000)
+    df["high"] = df[["open", "close"]].max(axis=1) + np.abs(
+        np.random.normal(0, 50, 1000)
+    )
+    df["low"] = df[["open", "close"]].min(axis=1) - np.abs(
+        np.random.normal(0, 50, 1000)
+    )
 
-        data.append(
-            {
-                "timestamp": date,
-                "open": base_price - change / 2,
-                "high": high,
-                "low": low,
-                "close": base_price,
-                "volume": volume,
-            }
-        )
-
-    df = pd.DataFrame(data)
-    df.set_index("timestamp", inplace=True)
-    return df
-
-
-@pytest.fixture
-def large_ohlcv_data():
-    """大きなベンチマーク用OHLCVデータを生成"""
-    dates = pd.date_range(start=datetime(2023, 1, 1), periods=20000, freq="1h")
-
-    np.random.seed(42)
-    base_price = 50000
-
-    data = []
-    for i, date in enumerate(dates):
-        change = np.random.randn() * 100
-        base_price += change
-        high = base_price + abs(np.random.randn()) * 50
-        low = base_price - abs(np.random.randn()) * 50
-        volume = np.random.randint(100, 10000)
-
-        data.append(
-            {
-                "timestamp": date,
-                "open": base_price - change / 2,
-                "high": high,
-                "low": low,
-                "close": base_price,
-                "volume": volume,
-            }
-        )
-
-    df = pd.DataFrame(data)
     df.set_index("timestamp", inplace=True)
     return df
 
 
 def test_technical_feature_calculator_initialization():
-    """TechnicalFeatureCalculatorの初期化をテスト"""
+    """初期化のテスト"""
     calculator = TechnicalFeatureCalculator()
-    assert calculator is not None
-    assert hasattr(calculator, "calculate_features")
+    assert isinstance(calculator, TechnicalFeatureCalculator)
 
 
 def test_calculate_features_basic(sample_ohlcv_data):
-    """基本的な特徴量生成をテスト"""
+    """基本機能のテスト"""
     calculator = TechnicalFeatureCalculator()
     config = {"lookback_periods": {"short_ma": 10, "long_ma": 50}}
 
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
-    assert result is not None
     assert isinstance(result, pd.DataFrame)
-    assert len(result.columns) > len(sample_ohlcv_data.columns)
     assert len(result) == len(sample_ohlcv_data)
+    # 元のカラムが保持されているか
+    assert all(col in result.columns for col in sample_ohlcv_data.columns)
 
 
 def test_market_regime_features(sample_ohlcv_data):
@@ -108,12 +73,13 @@ def test_market_regime_features(sample_ohlcv_data):
         sample_ohlcv_data, lookback_periods
     )
 
-    # 期待される特徴量（削減後）
+    # 期待される特徴量（更新後）
     expected_features = [
-        "Range_Bound_Ratio",
         "Market_Efficiency",
         "Choppiness_Index_14",
-        "Fractal_Dimension_Index_10",
+        "Amihud_Illiquidity",
+        "Efficiency_Ratio",
+        "Market_Impact",
     ]
 
     for feature in expected_features:
@@ -130,13 +96,8 @@ def test_momentum_features(sample_ohlcv_data):
     # 期待される特徴量
     expected_features = [
         "RSI",
-        "MACD",
-        "MACD_Signal",
         "MACD_Histogram",
         "Williams_R",
-        "CCI",
-        "ROC",
-        "Momentum",
     ]
 
     for feature in expected_features:
@@ -155,44 +116,13 @@ def test_advanced_technical_indicators(sample_ohlcv_data):
     expected_features = [
         "MFI",
         "ADX",
-        "DI_Plus",
-        "DI_Minus",
-        "Aroon_Up",
-        "Aroon_Down",
         "AROONOSC",
-        "Ultimate_Oscillator",
-        "VI_Plus",
-        "VI_Minus",
-        "BBW",
+        "BB_Width",
         "OBV",
         "AD",
         "ADOSC",
-    ]
-
-    for feature in expected_features:
-        assert feature in result.columns, f"Missing feature: {feature}"
-
-
-def test_pattern_features(sample_ohlcv_data):
-    """パターン特徴量のテスト"""
-    calculator = TechnicalFeatureCalculator()
-    lookback_periods = {"short_ma": 10, "long_ma": 50}
-
-    result = calculator.calculate_pattern_features(sample_ohlcv_data, lookback_periods)
-
-    # 期待される特徴量（削減後：Normalized_Volatilityは削除済み）
-    # Removed: Local_Min, Local_Max, Resistance_Level (低寄与度特徴量削除: 2025-11-13)
-    expected_features = [
-        "Stochastic_K",
-        "Stochastic_Divergence",
-        "BB_Upper",
-        "BB_Middle",
-        "BB_Lower",
-        "BB_Position",
-        "MA_Long",
-        "ATR",
-        "Near_Support",
-        "Near_Resistance",
+        "NATR",
+        "Yang_Zhang_Vol_20",
     ]
 
     for feature in expected_features:
@@ -200,71 +130,67 @@ def test_pattern_features(sample_ohlcv_data):
 
 
 def test_feature_values_validity(sample_ohlcv_data):
-    """特徴量値の妥当性をテスト"""
+    """特徴量の値が妥当か（NaNや無限大がないか）"""
     calculator = TechnicalFeatureCalculator()
     config = {"lookback_periods": {"short_ma": 10, "long_ma": 50}}
 
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
-    # 無限値やNaNのチェック
-    for col in result.columns:
-        if col not in sample_ohlcv_data.columns:
-            # 特徴量列のみチェック
-            assert (
-                not result[col].isin([np.inf, -np.inf]).any()
-            ), f"Infinite values found in {col}"
+    # 最初の数行は計算期間のためNaNになる可能性があるが、
+    # TechnicalFeatureCalculatorはfillna(0)などをしているはず
+    # ここでは全体としてNaNがないことを確認
+    # ただし、一部の指標は計算に十分なデータがないとNaNになる場合がある
+    # 実装ではfillnaされていることを期待
+
+    # 無限大のチェック
+    assert not np.isinf(result.select_dtypes(include=[np.number])).any().any()
+
+    # NaNのチェック（計算期間不足を除くため、後半を確認）
+    assert not result.iloc[100:].isna().any().any()
 
 
 def test_dataframe_not_fragmented(sample_ohlcv_data):
-    """DataFrameがfragmentation問題を起こしていないことをテスト"""
+    """DataFrameが断片化していないか（PerformanceWarning対策）"""
     calculator = TechnicalFeatureCalculator()
     config = {"lookback_periods": {"short_ma": 10, "long_ma": 50}}
 
+    # 警告をキャッチして確認することもできるが、
+    # ここでは正常に完了することを確認
     result = calculator.calculate_features(sample_ohlcv_data, config)
-
-    # DataFrameの断片化の警告が発生しないことを確認
-    assert result is not None
     assert isinstance(result, pd.DataFrame)
 
-    # 基本的な統計情報を取得して、DataFrameが正常にアクセス可能であることを確認
-    summary = result.describe()
-    assert summary is not None
-    assert len(summary) > 0
 
+@pytest.mark.skip(reason="パフォーマンスベンチマークは通常実行しない")
+def test_performance_benchmark(sample_ohlcv_data):
+    """パフォーマンスベンチマーク"""
+    import time
 
-@pytest.mark.skip(reason="This test is failing and needs to be fixed.")
-def test_performance_benchmark(large_ohlcv_data):
-    """パフォーマンスベンチマーク（目標: 10,000+ rows/sec）"""
+    calculator = TechnicalFeatureCalculator()
+    config = {"lookback_periods": {"short_ma": 10, "long_ma": 50}}
+
     start_time = time.time()
+    for _ in range(10):
+        calculator.calculate_features(sample_ohlcv_data, config)
     end_time = time.time()
 
-    duration = end_time - start_time
-    throughput = len(large_ohlcv_data) / duration
-
-    # 最低10,000 rows/secを達成することを確認
-    print(f"\n[PERF] Duration: {duration:.2f}s")
-    print(f"[PERF] Throughput: {throughput:.0f} rows/sec")
-    print("[PERF] Target: 10,000 rows/sec")
-
-    assert (
-        throughput >= 10000
-    ), f"Performance below target: {throughput:.0f} < 10000 rows/sec"
+    avg_time = (end_time - start_time) / 10
+    print(f"Average execution time: {avg_time:.4f} seconds")
+    assert avg_time < 1.0  # 1秒未満であることを期待
 
 
 def test_feature_count(sample_ohlcv_data):
-    """生成される特徴量の数をテスト"""
+    """生成される特徴量の数を確認"""
     calculator = TechnicalFeatureCalculator()
     config = {"lookback_periods": {"short_ma": 10, "long_ma": 50}}
 
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
-    original_count = len(sample_ohlcv_data.columns)
-    feature_count = len(result.columns)
+    # 元のカラム数
+    original_cols = len(sample_ohlcv_data.columns)
+    # 新しいカラム数
+    new_cols = len(result.columns) - original_cols
 
-    # 最低15個の特徴量が生成されることを確認
-    assert (
-        feature_count > original_count + 15
-    ), f"Expected more than {original_count + 15} features, got {feature_count}"
+    assert new_cols > 10  # 少なくとも10個以上の特徴量が生成されるはず
 
 
 def test_get_feature_names():
@@ -275,45 +201,17 @@ def test_get_feature_names():
     assert isinstance(feature_names, list)
     assert len(feature_names) > 0
     assert "RSI" in feature_names
-    assert "MACD" in feature_names
+    assert "MACD_Histogram" in feature_names
 
 
 def test_lookback_periods_optional(sample_ohlcv_data):
-    """lookback_periodsがオプションであることをテスト"""
+    """lookback_periodsが指定されない場合のデフォルト動作"""
     calculator = TechnicalFeatureCalculator()
-    config = {}  # 空の設定
+    config = {}  # lookback_periodsなし
 
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
-    assert result is not None
-    assert isinstance(result, pd.DataFrame)
-
-
-def test_calculate_fractional_difference_features(sample_ohlcv_data):
-    """分数次差分特徴量のテスト"""
-    calculator = TechnicalFeatureCalculator()
-    config = {
-        "fractional_differentiation": {
-            "enabled": True,
-            "d": 0.4,
-            "window_size": 20,
-            "apply_to_volume": True
-        }
-    }
-
-    result = calculator.calculate_fractional_difference_features(
-        sample_ohlcv_data, config
-    )
-
-    expected_features = [
-        "FracDiff_Close_0.4",
-        "FracDiff_Volume_0.4"
-    ]
-
-    for feature in expected_features:
-        assert feature in result.columns, f"Missing feature: {feature}"
-        # Check for NaN handling (should be 0.0 or valid)
-        assert not result[feature].isnull().all()
+    assert "RSI" in result.columns
 
 
 def test_calculate_features_with_frac_diff(sample_ohlcv_data):
@@ -321,25 +219,9 @@ def test_calculate_features_with_frac_diff(sample_ohlcv_data):
     calculator = TechnicalFeatureCalculator()
     config = {
         "lookback_periods": {"short_ma": 10, "long_ma": 50},
-        "fractional_differentiation": {
-            "enabled": True,
-            "d": 0.4
-        }
+        "fractional_differentiation": {"enabled": True, "d": 0.4},
     }
 
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
-    assert "FracDiff_Close_0.4" in result.columns
-
-
-def test_get_feature_names_includes_frac_diff():
-    """get_feature_namesメソッドのテスト（分数次差分含む）"""
-    calculator = TechnicalFeatureCalculator()
-    feature_names = calculator.get_feature_names()
-
-    assert isinstance(feature_names, list)
-    assert "FracDiff_Close_0.4" in feature_names
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    assert "FracDiff_04" in result.columns

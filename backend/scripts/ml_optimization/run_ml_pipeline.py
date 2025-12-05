@@ -226,15 +226,21 @@ class MLPipeline:
         def objective(trial):
             model_type = trial.suggest_categorical("model_type", selected_models)
 
-            # TBM Parameters
-            horizon_n = trial.suggest_int("horizon_n", 4, 24, step=2)
-            pt_factor = trial.suggest_float("pt_factor", 1.0, 4.0)
-            sl_factor = trial.suggest_float("sl_factor", 0.5, 2.0)
-            atr_period = trial.suggest_int("atr_period", 7, 28, step=7)
+            # Trend Scanning Parameters
+            horizon_n = trial.suggest_int(
+                "horizon_n", 20, 120, step=10
+            )  # look_forward_window
+            min_window = trial.suggest_int(
+                "min_window", 10, 60, step=5
+            )  # min_sample_length
+            window_step = trial.suggest_int("window_step", 1, 5, step=1)  # step
+            min_t_value = trial.suggest_float(
+                "min_t_value", 1.5, 5.0, step=0.5
+            )  # t-value threshold
 
             # Fixed Parameters
-            use_atr = True
-            threshold_method = "TRIPLE_BARRIER"
+            use_atr = False
+            threshold_method = "TREND_SCANNING"
 
             try:
                 # LabelGenerationService.prepare_labels を使用してラベル生成とフィルタリングを一括で行う
@@ -246,10 +252,9 @@ class MLPipeline:
                     cusum_threshold=None,  # 動的ボラティリティ
                     cusum_vol_multiplier=2.5,  # 質と量のバランス（学術特徴量追加後）
                     horizon_n=horizon_n,
-                    pt_factor=pt_factor,
-                    sl_factor=sl_factor,
-                    use_atr=use_atr,
-                    atr_period=atr_period,
+                    min_window=min_window,
+                    window_step=window_step,
+                    threshold=min_t_value,  # Trend Scanningの閾値
                     threshold_method=threshold_method,
                 )
             except Exception as e:
@@ -286,6 +291,13 @@ class MLPipeline:
                     X_clean.iloc[val_idx],
                 )
                 y_train_fold, y_val_fold = y.iloc[train_idx], y.iloc[val_idx]
+
+                # ラベルが1種類しかない場合はスキップ (CatBoost等のエラー回避)
+                if len(y_train_fold.unique()) < 2:
+                    logger.warning(
+                        f"Fold {fold}: Only one class in training data. Skipping."
+                    )
+                    continue
 
                 model = None
 
@@ -474,7 +486,7 @@ class MLPipeline:
         best_params["use_class_weight"] = (
             True  # Optuna trial is not supposed to optimize this parameter.
         )
-        best_params["threshold_method"] = "TRIPLE_BARRIER"  # 明示的に保存
+        best_params["threshold_method"] = "TREND_SCANNING"  # 明示的に保存
 
         results = {
             "best_value": study.best_value,
@@ -496,7 +508,9 @@ class MLPipeline:
         selected_models: List[str],
     ):
         logger.info("=" * 60)
-        logger.info("Training Final Models & Stacking (Purged K-Fold OOF) [TBM]")
+        logger.info(
+            "Training Final Models & Stacking (Purged K-Fold OOF) [Trend Scanning]"
+        )
         logger.info("=" * 60)
 
         # 最適化されたモデルのみを使用する
@@ -506,15 +520,15 @@ class MLPipeline:
 
         label_service = LabelGenerationService()
 
-        # TBM parameters
+        # Trend Scanning parameters
         horizon_n = best_params["horizon_n"]
-        pt_factor = best_params.get("pt_factor", 1.0)
-        sl_factor = best_params.get("sl_factor", 1.0)
-        atr_period = best_params.get("atr_period", 14)
-        threshold_method = "TRIPLE_BARRIER"
+        min_window = best_params.get("min_window", 10)
+        window_step = best_params.get("window_step", 1)
+        min_t_value = best_params.get("min_t_value", 2.0)
+        threshold_method = "TREND_SCANNING"
 
         # Fixed parameters
-        use_atr = True
+        use_atr = False
 
         try:
             # Scientific Meta-Labeling: CUSUM Filter
@@ -525,10 +539,9 @@ class MLPipeline:
                 cusum_threshold=None,  # 動的ボラティリティ
                 cusum_vol_multiplier=2.5,  # 質と量のバランス（学術特徴量追加後）
                 horizon_n=horizon_n,
-                pt_factor=pt_factor,
-                sl_factor=sl_factor,
-                use_atr=use_atr,
-                atr_period=atr_period,
+                min_window=min_window,
+                window_step=window_step,
+                threshold=min_t_value,
                 threshold_method=threshold_method,
             )
         except Exception as e:

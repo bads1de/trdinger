@@ -58,7 +58,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         result_df = self.calculate_market_regime_features(result_df, lookback_periods)
         result_df = self.calculate_momentum_features(result_df, lookback_periods)
         result_df = self.calculate_trend_features(result_df, lookback_periods)
-        
+
         # Fractional Differencing (Trend category but calculated here)
         # Log-transform usually recommended before FracDiff
         try:
@@ -148,11 +148,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 .fillna(0.0)
             )
 
-            # 一括で結合（DataFrame断片化回避）
-            result_df = pd.concat(
-                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
-            )
-
             # Choppiness Index (CHOP)
             chop_window = 14
             chop = TrendIndicators.chop(
@@ -161,7 +156,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 close=result_df["close"],
                 length=chop_window,
             )
-            result_df[f"Choppiness_Index_{chop_window}"] = chop.fillna(50.0)
+            new_features[f"Choppiness_Index_{chop_window}"] = chop.fillna(50.0)
 
             # === Group C: Market Structure ===
 
@@ -194,6 +189,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             new_features["Market_Impact"] = np.log(market_impact + 1e-9).fillna(0.0)
 
             # Fractal Dimension Index (FDI) - 削除 (Choppiness Indexで代用)
+
+            # 一括で結合（DataFrame断片化回避）
+            result_df = pd.concat(
+                [result_df, pd.DataFrame(new_features, index=result_df.index)], axis=1
+            )
 
             self.log_feature_calculation_complete("市場レジーム")
             return result_df
