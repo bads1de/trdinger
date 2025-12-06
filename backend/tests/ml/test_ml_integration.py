@@ -124,7 +124,7 @@ class TestMLTrainingService:
             mock_trainer.train_model.assert_called_once()
 
     @patch(
-        "backend.app.services.optimization.optimization_service.OptimizationService.optimize_parameters"
+        "app.services.ml.optimization.optimization_service.OptimizationService.optimize_parameters"
     )
     def test_train_model_with_optimization(
         self, mock_optimize_parameters, sample_training_data, mock_trainer

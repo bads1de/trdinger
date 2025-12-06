@@ -20,6 +20,9 @@ def load_model_metadata_safely(model_path: str) -> Optional[Dict[str, Any]]:
     """
     モデルファイルからメタデータを安全に読み込む
 
+    サイドカーJSONが存在する場合は軽量なJSONを読み込み、
+    存在しない場合はjoblibからメタデータを抽出します。
+
     Args:
         model_path: モデルファイルパス
 
@@ -27,10 +30,11 @@ def load_model_metadata_safely(model_path: str) -> Optional[Dict[str, Any]]:
         読み込まれたモデルデータ(metadataキーを含む)、失敗時はNone
     """
     try:
-        model_data = model_manager.load_model(model_path)
-        if not model_data or "metadata" not in model_data:
+        # 新しいload_metadata_onlyを使用（サイドカーJSON優先）
+        metadata_data = model_manager.load_metadata_only(model_path)
+        if not metadata_data or "metadata" not in metadata_data:
             return None
-        return model_data
+        return metadata_data
     except Exception as e:
         logger.warning(f"モデルメタデータ読み込みエラー {model_path}: {e}")
         return None

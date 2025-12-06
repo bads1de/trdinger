@@ -9,7 +9,7 @@ from typing import Any, Dict
 import optuna
 import pytest
 
-from app.services.optimization.ensemble_parameter_space import EnsembleParameterSpace
+from app.services.ml.optimization.ensemble_parameter_space import EnsembleParameterSpace
 
 
 class TestEnsembleParameterSpace:
@@ -353,7 +353,7 @@ class TestIntegrationWithOptuna:
 
     def test_lightgbm_optimization_integration(self):
         """LightGBMパラメータの最適化統合"""
-        from app.services.optimization.optuna_optimizer import OptunaOptimizer
+        from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
         optimizer = OptunaOptimizer()
         space = EnsembleParameterSpace.get_lightgbm_parameter_space()
@@ -386,7 +386,7 @@ class TestIntegrationWithOptuna:
 
     def test_xgboost_optimization_integration(self):
         """XGBoostパラメータの最適化統合"""
-        from app.services.optimization.optuna_optimizer import OptunaOptimizer
+        from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
         optimizer = OptunaOptimizer()
         space = EnsembleParameterSpace.get_xgboost_parameter_space()
@@ -419,7 +419,7 @@ class TestIntegrationWithOptuna:
 
     def test_ensemble_optimization_integration(self):
         """アンサンブル全体の最適化統合"""
-        from app.services.optimization.optuna_optimizer import OptunaOptimizer
+        from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
         optimizer = OptunaOptimizer()
         space = EnsembleParameterSpace.get_ensemble_parameter_space(

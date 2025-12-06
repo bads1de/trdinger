@@ -16,8 +16,11 @@ import pytest
 # パスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.services.optimization.ensemble_parameter_space import EnsembleParameterSpace
-from app.services.optimization.optuna_optimizer import OptunaOptimizer, ParameterSpace
+from app.services.ml.optimization.ensemble_parameter_space import EnsembleParameterSpace
+from app.services.ml.optimization.optuna_optimizer import (
+    OptunaOptimizer,
+    ParameterSpace,
+)
 
 
 @pytest.fixture
@@ -52,12 +55,12 @@ def sample_training_data():
 @pytest.fixture
 def mock_optuna_optimizer():
     """OptunaOptimizerのモック"""
-    with patch("app.services.optimization.optuna_optimizer.OptunaOptimizer") as mock:
+    with patch("app.services.ml.optimization.optuna_optimizer.OptunaOptimizer") as mock:
         optimizer_instance = MagicMock()
         mock.return_value = optimizer_instance
 
         # モック最適化結果
-        from app.services.optimization.optuna_optimizer import OptimizationResult
+        from app.services.ml.optimization.optuna_optimizer import OptimizationResult
 
         mock_result = OptimizationResult(
             best_params={

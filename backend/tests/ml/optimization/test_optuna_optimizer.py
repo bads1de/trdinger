@@ -10,7 +10,7 @@ from typing import Any, Dict
 import numpy as np
 import pytest
 
-from app.services.optimization.optuna_optimizer import (
+from app.services.ml.optimization.optuna_optimizer import (
     OptimizationResult,
     OptunaOptimizer,
     ParameterSpace,

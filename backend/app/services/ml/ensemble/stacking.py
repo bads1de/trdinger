@@ -1,9 +1,8 @@
 """
 スタッキング（Stacking）アンサンブル手法の実装
 
-scikit-learnのStackingClassifierを使用した標準的なスタッキング実装。
-複数の異なるベースモデルの予測をメタモデルで統合することで、
-各モデルの強みを活かした高精度な予測を実現します。
+自前実装によるスタッキング。OOF予測を生成し、メタモデルを直接学習することで
+計算コストを最小化しつつ、各モデルの強みを活かした高精度な予測を実現します。
 """
 
 import logging
@@ -11,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import StackingClassifier
+from sklearn.base import clone
 from sklearn.model_selection import cross_val_predict
 
 from ....utils.error_handler import ModelError
@@ -22,10 +21,15 @@ logger = logging.getLogger(__name__)
 
 class StackingEnsemble(BaseEnsemble):
     """
-    scikit-learnのStackingClassifierを使用したスタッキングアンサンブル実装
+    自前実装によるスタッキングアンサンブル
 
-    複数の異なるベースモデルの予測をメタモデルで統合し、
-    各モデルの強みを活かした予測を行います。
+    sklearnのStackingClassifierを使用せず、以下の3ステップで実装:
+    1. OOF予測生成: 各ベースモデルでcross_val_predictを実行
+    2. メタモデル学習: OOF予測をメタ特徴量としてメタモデルを直接学習
+    3. ベースモデル最終fit: 全データで各ベースモデルをフィット（推論用）
+
+    これにより、sklearn.StackingClassifierを使用した場合と比較して
+    ベースモデルの学習回数が約半分になり、計算コストを削減できます。
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -37,11 +41,11 @@ class StackingEnsemble(BaseEnsemble):
         """
         super().__init__(config)
 
-        # スタッキング固有の設定（Essential 4 Modelsのみ）
-        self.base_models = config.get(
+        # スタッキング固有の設定
+        self._base_model_types: List[str] = config.get(
             "base_models", ["lightgbm", "xgboost", "catboost"]
         )
-        self.meta_model: str = (
+        self._meta_model_type: str = (
             config.get("meta_model", "logistic_regression") or "logistic_regression"
         )
         self.cv_folds = config.get("cv_folds", 5)
@@ -52,8 +56,9 @@ class StackingEnsemble(BaseEnsemble):
             "passthrough", False
         )  # 元特徴量をメタモデルに渡すか
 
-        # scikit-learn StackingClassifier
-        self.stacking_classifier = None
+        # 学習済みモデルを保持
+        self._fitted_base_models: Dict[str, Any] = {}  # {name: fitted_model}
+        self._fitted_meta_model: Optional[Any] = None
         self.oof_predictions: Optional[np.ndarray] = None  # OOF予測値を保持
         self.oof_base_model_predictions: Optional[pd.DataFrame] = (
             None  # 各ベースモデルのOOF予測確率を保持
@@ -63,12 +68,35 @@ class StackingEnsemble(BaseEnsemble):
         )
         self.y_train_original: Optional[pd.Series] = None  # メタラベル生成のため
 
+        # 後方互換性のためのエイリアス
+        self.stacking_classifier = None  # 互換性のために残す（ただし使用しない）
+
         logger.info(
-            f"StackingClassifier初期化: base_models={self.base_models}, "
-            f"meta_model={self.meta_model}, cv_folds={self.cv_folds}, "
+            f"StackingEnsemble初期化（自前実装）: base_models={self._base_model_types}, "
+            f"meta_model={self._meta_model_type}, cv_folds={self.cv_folds}, "
             f"stack_method={self.stack_method}, n_jobs={self.n_jobs}, "
             f"passthrough={self.passthrough}"
         )
+
+    @property
+    def base_models(self) -> List[str]:
+        """後方互換性のためのプロパティ"""
+        return self._base_model_types
+
+    @base_models.setter
+    def base_models(self, value: List[str]) -> None:
+        """後方互換性のためのセッター"""
+        self._base_model_types = value
+
+    @property
+    def meta_model(self) -> str:
+        """後方互換性のためのプロパティ"""
+        return self._meta_model_type
+
+    @meta_model.setter
+    def meta_model(self, value: str) -> None:
+        """後方互換性のためのセッター"""
+        self._meta_model_type = value
 
     def fit(
         self,
@@ -79,7 +107,12 @@ class StackingEnsemble(BaseEnsemble):
         base_model_params: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
-        StackingClassifierを使用してスタッキングアンサンブルモデルを学習
+        自前実装のスタッキングアンサンブルモデルを学習
+
+        処理フロー:
+        1. 各ベースモデルでcross_val_predictを実行してOOF予測を生成
+        2. OOF予測（+オプションで元特徴量）をメタ特徴量としてメタモデルを学習
+        3. 全データで各ベースモデルを最終フィット（推論時に使用）
 
         Args:
             X_train: 学習用特徴量
@@ -92,7 +125,9 @@ class StackingEnsemble(BaseEnsemble):
             学習結果の辞書
         """
         try:
-            logger.info("StackingClassifierによるスタッキングアンサンブル学習を開始")
+            logger.info(
+                "スタッキングアンサンブル学習を開始（自前実装・計算コスト最適化版）"
+            )
 
             # 入力データの検証（共通関数を使用）
             from ..common.ml_utils import validate_training_inputs
@@ -109,59 +144,16 @@ class StackingEnsemble(BaseEnsemble):
                 logger.error(f"ベースモデル作成エラー: {e}")
                 raise ModelError(f"ベースモデルの作成に失敗しました: {e}")
 
-            # メタモデルを作成
-            try:
-                final_estimator = self._create_base_model(self.meta_model)
-                logger.info(f"メタモデル作成完了: {self.meta_model}")
-            except Exception as e:
-                logger.error(f"メタモデル作成エラー: {e}")
-                raise ModelError(
-                    f"メタモデル({self.meta_model})の作成に失敗しました: {e}"
-                )
-
             # クロスバリデーション設定
-            # PurgedKFoldを使用
-            from ..cross_validation.purged_kfold import PurgedKFold
-            from app.config.unified_config import unified_config
-            from ..common.time_series_utils import get_t1_series
-            from sklearn.model_selection import StratifiedKFold, KFold
+            cv = self._create_cv_splitter(X_train)
 
-            cv_strategy = self.config.get("cv_strategy", "purged_kfold")
-
-            if cv_strategy == "kfold":
-                # 通常のKFold (シャッフルなし)
-                cv = KFold(n_splits=self.cv_folds, shuffle=False)
-            elif cv_strategy == "stratified_kfold":
-                # 層化KFold (シャッフルなし)
-                cv = StratifiedKFold(n_splits=self.cv_folds, shuffle=False)
-            else:
-                # デフォルト: PurgedKFold
-                # t1を計算（共通ユーティリティを使用）
-                t1_horizon_n = unified_config.ml.training.prediction_horizon
-                t1 = get_t1_series(X_train.index, t1_horizon_n)
-
-                pct_embargo = getattr(unified_config.ml.training, "pct_embargo", 0.01)
-                cv = PurgedKFold(n_splits=self.cv_folds, t1=t1, pct_embargo=pct_embargo)
-
-            # StackingClassifierを初期化
-            self.stacking_classifier = StackingClassifier(
-                estimators=estimators,
-                final_estimator=final_estimator,
-                cv=cv,
-                stack_method=self.stack_method,
-                n_jobs=self.n_jobs,
-                passthrough=self.passthrough,
-                verbose=0,  # ログ抑制
-            )
-
-            logger.info("StackingClassifier学習開始")
-
+            # ============================================================
+            # ステップ1: 各ベースモデルのOOF予測を計算
+            # ============================================================
             logger.info(
-                f"各ベースモデルのOOF予測を計算中（{self.cv_folds}フォールドCV）..."
+                f"[Step 1/3] 各ベースモデルのOOF予測を計算中（{self.cv_folds}フォールドCV）..."
             )
 
-            # 各ベースモデルのOOF予測値を計算
-            # 重要: 各サンプルは、そのサンプルを学習に使用していないフォールドで予測される
             oof_base_model_preds = pd.DataFrame(index=X_train.index)
 
             for name, estimator in estimators:
@@ -185,38 +177,88 @@ class StackingEnsemble(BaseEnsemble):
                     )
                     continue
 
+            if oof_base_model_preds.empty:
+                raise ModelError("有効なベースモデルのOOF予測が生成できませんでした")
+
             logger.info(
                 f"ベースモデルのOOF予測計算完了: {len(oof_base_model_preds.columns)}モデル"
             )
 
-            # スタッキング全体のOOF予測も計算
-            # StackingClassifierは内部でCVを使用するが、OOF予測を直接取得できないため
-            # cross_val_predictで明示的に計算
-            logger.debug("スタッキングモデル全体のOOF予測を計算中...")
+            # ============================================================
+            # ステップ2: OOF予測を使ってメタモデルを直接学習
+            # ============================================================
+            logger.info("[Step 2/3] メタモデルを学習中...")
+
+            # メタ特徴量を構築
+            if self.passthrough:
+                # 元特徴量も含める
+                meta_features = pd.concat([oof_base_model_preds, X_train], axis=1)
+                logger.info(
+                    f"メタ特徴量: OOF予測({len(oof_base_model_preds.columns)}) + "
+                    f"元特徴量({len(X_train.columns)}) = {len(meta_features.columns)}"
+                )
+            else:
+                meta_features = oof_base_model_preds
+                logger.info(f"メタ特徴量: OOF予測のみ ({len(meta_features.columns)})")
+
+            # メタモデルを作成して学習
+            try:
+                self._fitted_meta_model = self._create_base_model(self._meta_model_type)
+                self._fitted_meta_model.fit(meta_features, y_train)
+                logger.info(f"メタモデル({self._meta_model_type})の学習完了")
+            except Exception as e:
+                logger.error(f"メタモデル学習エラー: {e}")
+                raise ModelError(f"メタモデルの学習に失敗しました: {e}")
+
+            # メタモデルを使ってOOF予測を生成（メタラベリング用）
             meta_oof_pred = cross_val_predict(
-                self.stacking_classifier,
-                X_train,
+                clone(self._create_base_model(self._meta_model_type)),
+                meta_features,
                 y_train,
-                cv=cv,
+                cv=self.cv_folds,  # メタモデルには単純なKFoldでOK
                 method="predict_proba",
                 n_jobs=self.n_jobs,
                 verbose=0,
             )
 
-            # 最終的に全データでStackingClassifierを学習（予測時に使用）
-            logger.debug("全データでStackingClassifierを学習中...")
-            self.stacking_classifier.fit(X_train, y_train)
+            # ============================================================
+            # ステップ3: 全データでベースモデルを最終フィット（推論用）
+            # ============================================================
+            logger.info("[Step 3/3] ベースモデルを全データでフィット中（推論用）...")
+
+            self._fitted_base_models.clear()
+            for name, estimator in estimators:
+                if name not in oof_base_model_preds.columns:
+                    continue  # OOF予測生成でスキップされたモデル
+
+                try:
+                    # cloneして新しいインスタンスで学習
+                    fitted_model = clone(estimator)
+                    fitted_model.fit(X_train, y_train)
+                    self._fitted_base_models[name] = fitted_model
+                    logger.debug(f"  {name}のフィット完了")
+                except Exception as e:
+                    logger.warning(
+                        f"  {name}の最終フィットでエラー: {e}。スキップします。"
+                    )
+                    continue
+
+            logger.info(
+                f"ベースモデル最終フィット完了: {len(self._fitted_base_models)}モデル"
+            )
+
+            # ============================================================
+            # 学習完了・結果保存
+            # ============================================================
             self.is_fitted = True
 
             # OOF予測を保存（メタラベリング用）
             self.oof_predictions = meta_oof_pred[:, 1]  # ポジティブクラスの確率
             self.oof_base_model_predictions = oof_base_model_preds
-            self.X_train_original = X_train.copy()  # コピーして保存
-            self.y_train_original = y_train.copy()  # コピーして保存
+            self.X_train_original = X_train.copy()
+            self.y_train_original = y_train.copy()
 
-            logger.info("OOF予測の計算とモデル学習が完了")
-
-            logger.info("StackingClassifier学習完了")
+            logger.info("スタッキングアンサンブル学習完了（計算コスト最適化版）")
 
             # アンサンブル全体の評価
             ensemble_result = self._evaluate_ensemble(X_test, y_test)
@@ -224,55 +266,104 @@ class StackingEnsemble(BaseEnsemble):
             # 学習結果情報を追加
             ensemble_result.update(
                 {
-                    "model_type": "StackingClassifier",
-                    "base_models": self.base_models,
-                    "meta_model": self.meta_model,
+                    "model_type": "StackingEnsemble",
+                    "base_models": self._base_model_types,
+                    "meta_model": self._meta_model_type,
                     "cv_folds": self.cv_folds,
                     "stack_method": self.stack_method,
                     "n_jobs": self.n_jobs,
                     "passthrough": self.passthrough,
-                    "sklearn_implementation": True,
+                    "sklearn_implementation": False,  # 自前実装
                     "training_samples": len(X_train),
                     "test_samples": len(X_test) if X_test is not None else 0,
+                    "fitted_base_models": list(self._fitted_base_models.keys()),
                 }
             )
 
-            logger.info("スタッキングアンサンブル学習完了")
             return ensemble_result
 
         except Exception as e:
             logger.error(f"スタッキングアンサンブル学習エラー: {e}")
             raise ModelError(f"スタッキングアンサンブル学習に失敗しました: {e}")
 
+    def _create_cv_splitter(self, X_train: pd.DataFrame) -> Any:
+        """
+        クロスバリデーション分割器を作成
+
+        Args:
+            X_train: 学習データ（インデックスから時系列情報を取得）
+
+        Returns:
+            CVスプリッター
+        """
+        from ..cross_validation.purged_kfold import PurgedKFold
+        from app.config.unified_config import unified_config
+        from ..common.time_series_utils import get_t1_series
+        from sklearn.model_selection import StratifiedKFold, KFold
+
+        cv_strategy = self.config.get("cv_strategy", "purged_kfold")
+
+        if cv_strategy == "kfold":
+            return KFold(n_splits=self.cv_folds, shuffle=False)
+        elif cv_strategy == "stratified_kfold":
+            return StratifiedKFold(n_splits=self.cv_folds, shuffle=False)
+        else:
+            # デフォルト: PurgedKFold
+            t1_horizon_n = unified_config.ml.training.prediction_horizon
+            t1 = get_t1_series(X_train.index, t1_horizon_n)
+            pct_embargo = getattr(unified_config.ml.training, "pct_embargo", 0.01)
+            return PurgedKFold(n_splits=self.cv_folds, t1=t1, pct_embargo=pct_embargo)
+
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """
-        StackingClassifierで予測を実行
+        スタッキングアンサンブルで予測を実行
 
         Args:
             X: 特徴量DataFrame
 
         Returns:
-            予測結果
+            予測結果 (predict_probaの結果を返す、後方互換性のため)
         """
-        if not self.is_fitted or self.stacking_classifier is None:
-            raise ModelError("モデルが学習されていません")
-
-        return self.stacking_classifier.predict_proba(X)
+        return self.predict_proba(X)
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """
-        StackingClassifierで予測確率を取得
+        スタッキングアンサンブルで予測確率を取得
+
+        処理フロー:
+        1. 各ベースモデルで予測確率を取得
+        2. 予測確率をメタ特徴量としてメタモデルで最終予測
 
         Args:
             X: 特徴量DataFrame
 
         Returns:
-            予測確率の配列
+            予測確率の配列 (shape: [n_samples, 2])
         """
-        if not self.is_fitted or self.stacking_classifier is None:
+        if not self.is_fitted:
             raise ModelError("モデルが学習されていません")
 
-        return self.stacking_classifier.predict_proba(X)
+        if not self._fitted_base_models or self._fitted_meta_model is None:
+            raise ModelError("ベースモデルまたはメタモデルが学習されていません")
+
+        # ベースモデルの予測確率を取得
+        base_preds = pd.DataFrame(index=X.index)
+        for name, model in self._fitted_base_models.items():
+            try:
+                proba = model.predict_proba(X)
+                base_preds[name] = proba[:, 1]  # ポジティブクラスの確率
+            except Exception as e:
+                logger.warning(f"ベースモデル({name})の予測でエラー: {e}")
+                raise ModelError(f"ベースモデル({name})の予測に失敗しました: {e}")
+
+        # メタ特徴量を構築
+        if self.passthrough:
+            meta_features = pd.concat([base_preds, X], axis=1)
+        else:
+            meta_features = base_preds
+
+        # メタモデルで最終予測
+        return self._fitted_meta_model.predict_proba(meta_features)
 
     def _create_base_estimators(self) -> List[Tuple[str, Any]]:
         """
@@ -303,7 +394,7 @@ class StackingEnsemble(BaseEnsemble):
         y_test: Optional[pd.Series],
     ) -> Dict[str, Any]:
         """
-        StackingClassifierアンサンブル全体の評価を実行
+        スタッキングアンサンブル全体の評価を実行
 
         Args:
             X_test: テスト用特徴量
@@ -313,11 +404,12 @@ class StackingEnsemble(BaseEnsemble):
             アンサンブル評価結果
         """
         result = {
-            "model_type": "StackingClassifier",
-            "base_models": self.base_models,
-            "meta_model": self.meta_model,
+            "model_type": "StackingEnsemble",
+            "base_models": self._base_model_types,
+            "meta_model": self._meta_model_type,
             "cv_folds": self.cv_folds,
             "stack_method": self.stack_method,
+            "fitted_base_models": list(self._fitted_base_models.keys()),
         }
 
         # テストデータがある場合はアンサンブル予測を評価
@@ -347,21 +439,19 @@ class StackingEnsemble(BaseEnsemble):
         Returns:
             特徴量重要度の辞書
         """
-        if not self.is_fitted or self.stacking_classifier is None:
+        if not self.is_fitted or self._fitted_meta_model is None:
             return {}
 
         try:
             # メタモデルの特徴量重要度を取得
-            final_estimator = self.stacking_classifier.final_estimator_
+            meta_model = self._fitted_meta_model
 
-            if hasattr(final_estimator, "feature_importances_"):
+            # ベースモデル名を取得して特徴量名として使用
+            estimator_names = list(self._fitted_base_models.keys())
+
+            if hasattr(meta_model, "feature_importances_"):
                 # Tree-based models
-                importances = final_estimator.feature_importances_  # type: ignore
-
-                # ベースモデル名を取得して特徴量名として使用を試みる
-                estimator_names = list(
-                    self.stacking_classifier.named_estimators_.keys()
-                )
+                importances = meta_model.feature_importances_
 
                 if len(importances) == len(estimator_names):
                     feature_names = estimator_names
@@ -371,18 +461,13 @@ class StackingEnsemble(BaseEnsemble):
                     ]
 
                 return dict(zip(feature_names, importances))
-            elif hasattr(final_estimator, "coef_"):
+            elif hasattr(meta_model, "coef_"):
                 # Linear models
-                coef = final_estimator.coef_  # type: ignore
+                coef = meta_model.coef_
                 if coef.ndim > 1:
                     coef = np.abs(coef).mean(axis=0)
                 else:
                     coef = np.abs(coef)
-
-                # ベースモデル名を取得して特徴量名として使用を試みる
-                estimator_names = list(
-                    self.stacking_classifier.named_estimators_.keys()
-                )
 
                 if len(coef) == len(estimator_names):
                     feature_names = estimator_names
@@ -392,7 +477,7 @@ class StackingEnsemble(BaseEnsemble):
                 return dict(zip(feature_names, coef))
             else:
                 logger.warning(
-                    f"メタモデル({self.meta_model})は特徴量重要度をサポートしていません"
+                    f"メタモデル({self._meta_model_type})は特徴量重要度をサポートしていません"
                 )
                 return {}
 
@@ -416,9 +501,14 @@ class StackingEnsemble(BaseEnsemble):
             import os
             import joblib
 
-            # 最新のモデルファイルを探す
-            pattern = f"{base_path}_stacking_classifier_*.pkl"
+            # 新形式: 自前実装のモデルファイルを探す
+            pattern = f"{base_path}_stacking_ensemble_*.pkl"
             model_files = glob.glob(pattern)
+
+            # 旧形式へのフォールバック
+            if not model_files:
+                pattern = f"{base_path}_stacking_classifier_*.pkl"
+                model_files = glob.glob(pattern)
 
             if not model_files:
                 logger.warning(f"モデルファイルが見つかりません: {pattern}")
@@ -426,20 +516,59 @@ class StackingEnsemble(BaseEnsemble):
 
             model_path = sorted(model_files)[-1]  # 最新のファイルを選択
 
-            # StackingClassifierを読み込み
-            self.stacking_classifier = joblib.load(model_path)
+            # モデルを読み込み
+            model_data = joblib.load(model_path)
 
-            # メタデータを読み込み
+            if isinstance(model_data, dict):
+                # 新形式: 自前実装
+                if "fitted_base_models" in model_data:
+                    self._fitted_base_models = model_data["fitted_base_models"]
+                    self._fitted_meta_model = model_data["fitted_meta_model"]
+                    self._base_model_types = model_data.get(
+                        "base_model_types", list(self._fitted_base_models.keys())
+                    )
+                    self._meta_model_type = model_data.get(
+                        "meta_model_type", "logistic_regression"
+                    )
+                    self.feature_columns = model_data.get("feature_columns", None)
+                    self.config = model_data.get("config", self.config)
+                    self.passthrough = model_data.get("passthrough", False)
+                    logger.info("自前実装のスタッキングモデルを読み込み完了")
+                # 旧形式: StackingClassifier
+                elif "ensemble_classifier" in model_data:
+                    # 旧形式は後方互換性のために読み込むが警告を出す
+                    logger.warning(
+                        "旧形式（StackingClassifier）のモデルを読み込みます。"
+                        "このモデルは新しい自前実装とは互換性がありません。再学習を推奨します。"
+                    )
+                    self.stacking_classifier = model_data["ensemble_classifier"]
+                    self.feature_columns = model_data.get("feature_columns", None)
+                    self._base_model_types = model_data.get(
+                        "base_models", self._base_model_types
+                    )
+                else:
+                    logger.warning("不明なモデル形式です")
+                    return False
+            else:
+                logger.warning("不明なモデル形式です")
+                return False
+
+            # メタデータを読み込み（存在する場合）
             metadata_path = model_path.replace(".pkl", "_metadata.json")
             if os.path.exists(metadata_path):
                 with open(metadata_path, "r", encoding="utf-8") as f:
                     metadata = json.load(f)
 
-                self.base_models = metadata.get("base_models", self.base_models)
-                self.meta_model = metadata.get("meta_model", self.meta_model)
+                self._base_model_types = metadata.get(
+                    "base_models", self._base_model_types
+                )
+                self._meta_model_type = metadata.get(
+                    "meta_model", self._meta_model_type
+                )
                 self.cv_folds = metadata.get("cv_folds", self.cv_folds)
                 self.stack_method = metadata.get("stack_method", self.stack_method)
-                self.feature_columns = metadata.get("feature_columns", None)
+                if "feature_columns" in metadata:
+                    self.feature_columns = metadata["feature_columns"]
 
             self.is_fitted = True
             logger.info(f"スタッキングアンサンブルモデルを読み込みました: {model_path}")
@@ -475,20 +604,46 @@ class StackingEnsemble(BaseEnsemble):
         Returns:
             各ベースモデルの予測確率を含むDataFrame
         """
-        if not self.is_fitted or self.stacking_classifier is None:
+        if not self.is_fitted or not self._fitted_base_models:
             raise ModelError("モデルが学習されていません")
 
         try:
-            base_preds = self.stacking_classifier.transform(X)
+            base_preds = pd.DataFrame(index=X.index)
+            for name, model in self._fitted_base_models.items():
+                proba = model.predict_proba(X)
+                base_preds[name] = proba[:, 1]  # ポジティブクラスの確率
 
-            estimator_names = list(self.stacking_classifier.named_estimators_.keys())
-
-            if base_preds.shape[1] == len(estimator_names):
-                return pd.DataFrame(base_preds, index=X.index, columns=estimator_names)
-            else:
-                cols = [f"base_model_{i}" for i in range(base_preds.shape[1])]
-                return pd.DataFrame(base_preds, index=X.index, columns=cols)
+            return base_preds
 
         except Exception as e:
             logger.error(f"ベースモデル予測確率取得エラー: {e}")
             raise ModelError(f"ベースモデル予測確率の取得に失敗しました: {e}")
+
+    def cleanup(self) -> None:
+        """
+        リソースをクリーンアップ
+
+        大量のメモリを消費するモデルオブジェクトを明示的に解放します。
+        """
+        logger.info("StackingEnsembleのリソースをクリーンアップ中...")
+
+        # ベースモデルのクリーンアップ
+        if self._fitted_base_models:
+            for name in list(self._fitted_base_models.keys()):
+                self._fitted_base_models[name] = None
+            self._fitted_base_models.clear()
+
+        # メタモデルのクリーンアップ
+        self._fitted_meta_model = None
+
+        # OOF予測データのクリーンアップ
+        self.oof_predictions = None
+        self.oof_base_model_predictions = None
+        self.X_train_original = None
+        self.y_train_original = None
+
+        # 後方互換性用
+        self.stacking_classifier = None
+
+        self.is_fitted = False
+        logger.info("StackingEnsembleのリソースクリーンアップ完了")

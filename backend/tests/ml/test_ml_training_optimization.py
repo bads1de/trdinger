@@ -3,7 +3,9 @@ from unittest.mock import MagicMock, patch, ANY
 import pandas as pd
 import numpy as np
 from backend.app.services.ml.ml_training_service import MLTrainingService
-from backend.app.services.optimization.optimization_service import OptimizationSettings
+from backend.app.services.ml.optimization.optimization_service import (
+    OptimizationSettings,
+)
 
 
 class TestMLTrainingOptimization:

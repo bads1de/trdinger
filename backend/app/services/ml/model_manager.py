@@ -176,6 +176,9 @@ class ModelManager:
             model_data["metadata"]["file_size_bytes"] = file_size
             joblib.dump(model_data, model_path)
 
+            # サイドカーJSONファイルにメタデータを保存（軽量読み込み用）
+            self._save_metadata_sidecar(model_path, model_data)
+
             logger.info(
                 f"モデル保存完了: {filename} (アルゴリズム: {algorithm_name}, サイズ: {file_size / 1024 / 1024:.2f}MB)"
             )
@@ -441,6 +444,137 @@ class ModelManager:
         except Exception as e:
             logger.warning(f"メトリクス抽出エラー {model_path}: {e}")
             return get_default_metrics()
+
+    def _get_sidecar_path(self, model_path: str) -> str:
+        """
+        モデルパスからサイドカーJSONパスを取得
+
+        Args:
+            model_path: モデルファイルパス
+
+        Returns:
+            サイドカーJSONファイルパス
+        """
+        # .joblib または .pkl を .meta.json に置換
+        if model_path.endswith(".joblib"):
+            return model_path.replace(".joblib", ".meta.json")
+        elif model_path.endswith(".pkl"):
+            return model_path.replace(".pkl", ".meta.json")
+        else:
+            return model_path + ".meta.json"
+
+    def _save_metadata_sidecar(
+        self, model_path: str, model_data: Dict[str, Any]
+    ) -> bool:
+        """
+        サイドカーJSONファイルにメタデータを保存
+
+        モデル本体をロードせずにメタデータを読み込めるよう、
+        軽量なJSONファイルとして保存します。
+
+        Args:
+            model_path: モデルファイルパス
+            model_data: モデルデータ辞書
+
+        Returns:
+            保存成功フラグ
+        """
+        import json
+
+        try:
+            sidecar_path = self._get_sidecar_path(model_path)
+
+            # サイドカーに保存するデータ（モデル本体は除外）
+            sidecar_data = {
+                "metadata": model_data.get("metadata", {}),
+                "feature_columns": model_data.get("feature_columns"),
+                "timestamp": model_data.get("timestamp"),
+                "model_name": model_data.get("model_name"),
+                "original_model_name": model_data.get("original_model_name"),
+                "model_path": model_path,
+                "sidecar_version": "1.0",  # バージョン情報
+            }
+
+            with open(sidecar_path, "w", encoding="utf-8") as f:
+                json.dump(sidecar_data, f, ensure_ascii=False, indent=2, default=str)
+
+            logger.debug(f"サイドカーJSONを保存: {sidecar_path}")
+            return True
+
+        except Exception as e:
+            logger.warning(f"サイドカーJSON保存エラー {model_path}: {e}")
+            return False
+
+    def load_metadata_only(self, model_path: str) -> Optional[Dict[str, Any]]:
+        """
+        モデル本体をロードせずにメタデータのみを読み込む
+
+        サイドカーJSONファイルが存在する場合はそれを使用し、
+        存在しない場合はjoblibからメタデータのみを抽出します（フォールバック）。
+
+        Args:
+            model_path: モデルファイルパス
+
+        Returns:
+            メタデータを含む辞書（modelキーは含まない）、読み込み失敗時はNone
+        """
+        import json
+
+        try:
+            # サイドカーJSONを優先的に読み込む
+            sidecar_path = self._get_sidecar_path(model_path)
+
+            if os.path.exists(sidecar_path):
+                with open(sidecar_path, "r", encoding="utf-8") as f:
+                    sidecar_data = json.load(f)
+
+                logger.debug(f"サイドカーJSONからメタデータを読み込み: {sidecar_path}")
+                return sidecar_data
+
+            # サイドカーJSONが存在しない場合はフォールバック
+            logger.debug(
+                f"サイドカーJSONが見つからないためjoblibからフォールバック読み込み: {model_path}"
+            )
+            return self._load_metadata_fallback(model_path)
+
+        except Exception as e:
+            logger.warning(f"メタデータ読み込みエラー {model_path}: {e}")
+            return None
+
+    def _load_metadata_fallback(self, model_path: str) -> Optional[Dict[str, Any]]:
+        """
+        joblibからメタデータを読み込む（フォールバック）
+
+        注意: この方法はモデル全体をメモリにロードするため、
+        大きなモデルでは推奨されません。
+
+        Args:
+            model_path: モデルファイルパス
+
+        Returns:
+            メタデータを含む辞書
+        """
+        try:
+            # load_modelを使用してモデル全体を読み込む
+            model_data = self.load_model(model_path)
+
+            if not model_data:
+                return None
+
+            # モデル本体を除外してメタデータのみを返す
+            return {
+                "metadata": model_data.get("metadata", {}),
+                "feature_columns": model_data.get("feature_columns"),
+                "timestamp": model_data.get("timestamp"),
+                "model_name": model_data.get("model_name"),
+                "original_model_name": model_data.get("original_model_name"),
+                "model_path": model_path,
+                "sidecar_version": None,  # フォールバックであることを示す
+            }
+
+        except Exception as e:
+            logger.warning(f"フォールバックメタデータ読み込みエラー {model_path}: {e}")
+            return None
 
 
 # グローバルインスタンス

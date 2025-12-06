@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from ...utils.error_handler import safe_ml_operation
-from ..optimization.optimization_service import (
+from app.services.ml.optimization.optimization_service import (
     OptimizationService,
     OptimizationSettings,
 )

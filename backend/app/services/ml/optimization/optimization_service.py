@@ -1,10 +1,10 @@
 import logging
-from typing import Any, Callable, Dict, Optional, List
+from typing import Any, Callable, Dict, Optional
 import pandas as pd
 
-from ...utils.error_handler import safe_operation
+from app.utils.error_handler import safe_operation
 from .optuna_optimizer import OptunaOptimizer, ParameterSpace
-from ..ml.ensemble.ensemble_trainer import EnsembleTrainer
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 
 logger = logging.getLogger(__name__)
 

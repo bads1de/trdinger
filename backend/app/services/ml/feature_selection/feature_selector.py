@@ -373,9 +373,8 @@ class FeatureSelector:
             lasso.fit(X, y)  # 明示的にfitを実行
 
             selector = SelectFromModel(
-                lasso, threshold=self.config.importance_threshold
+                lasso, threshold=self.config.importance_threshold, prefit=True
             )
-            selector.fit(X, y)
 
             selected_mask = selector.get_support()
             # selected_mask が None の場合の処理を追加
@@ -424,8 +423,9 @@ class FeatureSelector:
             )
             rf.fit(X, y)  # 明示的にfitを実行
 
-            selector = SelectFromModel(rf, threshold=self.config.importance_threshold)
-            selector.fit(X, y)
+            selector = SelectFromModel(
+                rf, threshold=self.config.importance_threshold, prefit=True
+            )
 
             selected_mask = selector.get_support()
             # selected_mask が None の場合の処理を追加

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import pandas as pd
-from app.services.optimization.optimization_service import (
+from app.services.ml.optimization.optimization_service import (
     OptimizationService,
     OptimizationSettings,
 )
@@ -38,7 +38,7 @@ class TestOptimizationService:
         settings = OptimizationSettings(enabled=True, n_calls=2)
 
         with patch(
-            "app.services.optimization.optimization_service.OptunaOptimizer"
+            "app.services.ml.optimization.optimization_service.OptunaOptimizer"
         ) as MockOptimizer:
             # Setup mock BEFORE service init
             mock_opt_instance = MockOptimizer.return_value
@@ -78,7 +78,7 @@ class TestOptimizationService:
         # Test the objective function
         # EnsembleTrainerを使用する（統一後）
         with patch(
-            "app.services.optimization.optimization_service.EnsembleTrainer"
+            "app.services.ml.optimization.optimization_service.EnsembleTrainer"
         ) as MockTrainerClass:
             mock_temp_trainer = MockTrainerClass.return_value
             mock_temp_trainer.train_model.return_value = {"f1_score": 0.75}

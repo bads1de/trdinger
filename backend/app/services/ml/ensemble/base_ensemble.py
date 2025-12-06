@@ -221,7 +221,7 @@ class BaseEnsemble(ABC):
 
     def save_models(self, base_path: str) -> List[str]:
         """
-        アンサンブルモデルを保存（scikit-learn StackingClassifier対応）
+        アンサンブルモデルを保存（自前実装StackingEnsemble対応）
 
         Args:
             base_path: 保存先ベースパス
@@ -240,7 +240,59 @@ class BaseEnsemble(ABC):
         # base_pathからモデル名を抽出
         model_name = os.path.basename(base_path)
 
-        # scikit-learn StackingClassifierの保存
+        # 自前実装のStackingEnsembleの保存（優先）
+        if hasattr(self, "_fitted_base_models") and hasattr(self, "_fitted_meta_model"):
+            if self._fitted_base_models and self._fitted_meta_model is not None:
+                # 自前実装形式で保存
+                model_data = {
+                    "fitted_base_models": self._fitted_base_models,
+                    "fitted_meta_model": self._fitted_meta_model,
+                    "base_model_types": getattr(self, "_base_model_types", []),
+                    "meta_model_type": getattr(
+                        self, "_meta_model_type", "logistic_regression"
+                    ),
+                    "config": self.config,
+                    "feature_columns": self.feature_columns,
+                    "is_fitted": self.is_fitted,
+                    "passthrough": getattr(self, "passthrough", False),
+                    "ensemble_type": "StackingEnsemble",
+                    "sklearn_implementation": False,  # 自前実装
+                }
+
+                metadata = {
+                    "ensemble_type": "StackingEnsemble",
+                    "sklearn_implementation": False,
+                    "feature_count": (
+                        len(self.feature_columns) if self.feature_columns else 0
+                    ),
+                    "fitted_base_models": list(self._fitted_base_models.keys()),
+                }
+
+                try:
+                    model_path = model_manager.save_model(
+                        model=model_data,
+                        model_name=model_name,
+                        metadata=metadata,
+                        feature_columns=self.feature_columns,
+                    )
+                    if model_path:
+                        saved_paths.append(model_path)
+                        logger.info(
+                            f"StackingEnsemble（自前実装）をmodel_managerで保存: {model_path}"
+                        )
+                except Exception as e:
+                    logger.error(f"model_managerによる保存に失敗: {e}")
+                    # フォールバック: 従来のjoblib保存
+                    model_path = f"{base_path}_stacking_ensemble_{timestamp}.pkl"
+                    joblib.dump(model_data, model_path)
+                    saved_paths.append(model_path)
+                    logger.info(
+                        f"StackingEnsembleをjoblibで保存(フォールバック): {model_path}"
+                    )
+
+                return saved_paths
+
+        # 旧形式: scikit-learn StackingClassifierの保存（後方互換性）
         if (
             hasattr(self, "stacking_classifier")
             and self.stacking_classifier is not None
