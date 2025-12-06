@@ -207,7 +207,7 @@ class MLPipeline:
         feature_cols = [
             col
             for col in features_df.columns
-            if col not in ["open", "high", "low", "volume"]
+            if col not in ["open", "high", "low", "close", "volume"]
         ]
         X = features_df[feature_cols].copy().fillna(0)
 
@@ -235,8 +235,8 @@ class MLPipeline:
             )  # min_sample_length
             window_step = trial.suggest_int("window_step", 1, 5, step=1)  # step
             min_t_value = trial.suggest_float(
-                "min_t_value", 1.5, 5.0, step=0.5
-            )  # t-value threshold
+                "min_t_value", 5.0, 20.0, step=1.0
+            )  # t-value threshold (Distributed around 10.0 for 50% split)
 
             # Fixed Parameters
             use_atr = False

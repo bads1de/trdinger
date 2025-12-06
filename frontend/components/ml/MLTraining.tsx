@@ -64,7 +64,7 @@ export default function MLTraining() {
 
   const [ensembleSettings, setEnsembleSettings] =
     useState<EnsembleSettingsConfig>({
-      enabled: false,
+      enabled: true,
       method: "stacking",
       stacking_params: {
         base_models: ["lightgbm", "xgboost"],
@@ -212,6 +212,27 @@ export default function MLTraining() {
                 onChange={(value) =>
                   setConfig((prev) => ({ ...prev, random_state: value }))
                 }
+                disabled={trainingStatus.is_training}
+              />
+            </div>
+
+            <div>
+              <SelectField
+                label="ラベル生成手法"
+                value={config.threshold_method || "TREND_SCANNING"}
+                onChange={(value) =>
+                  setConfig((prev) => ({ ...prev, threshold_method: value }))
+                }
+                options={[
+                  {
+                    value: "TREND_SCANNING",
+                    label: "Trend Scanning (推奨 - 高精度)",
+                  },
+                  {
+                    value: "TRIPLE_BARRIER",
+                    label: "Triple Barrier (従来手法 - バランス)",
+                  },
+                ]}
                 disabled={trainingStatus.is_training}
               />
             </div>

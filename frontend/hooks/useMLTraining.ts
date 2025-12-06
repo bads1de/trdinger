@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { EnsembleSettingsConfig } from "@/components/ml/EnsembleSettings";
-import type {
-  LabelGenerationConfig,
-  FeatureProfile,
-} from "@/types/ml-config";
+import type { LabelGenerationConfig, FeatureProfile } from "@/types/ml-config";
 // 利用可能モデルはフロント定数で管理
 import { ALGORITHMS } from "../constants/algorithms";
 
@@ -78,6 +75,8 @@ export interface TrainingConfig {
   label_generation?: Partial<LabelGenerationConfig>;
   /** 使用する特徴量のリスト（オプション） */
   feature_allowlist?: string[] | null;
+  /** ラベル生成手法（TREND_SCANNING または TRIPLE_BARRIER） */
+  threshold_method?: string;
 }
 
 /**
@@ -200,6 +199,7 @@ export const useMLTraining = () => {
     save_model: true,
     train_test_split: 0.8,
     random_state: 42,
+    threshold_method: "TREND_SCANNING",
   });
 
   const [trainingStatus, setTrainingStatus] = useState<TrainingStatus>({

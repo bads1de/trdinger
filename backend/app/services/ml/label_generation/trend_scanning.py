@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Optional, List, Tuple
+from typing import Optional
 
 
 class TrendScanning:
@@ -146,13 +146,17 @@ class TrendScanning:
                 # sum((x - mean_x)^2) = sum_xx - sum_x^2/n
                 ss_x = sum_xx - (sum_x * sum_x) / n
 
-                if ss_x <= 0 or sigma_eps == 0:
+                if ss_x <= 1e-9 or sigma_eps < 1e-9:
                     # Perfect fit or vertical line?
-                    # If sigma_eps is 0, t-value is inf.
-                    t_val = np.inf if slope > 0 else -np.inf
+                    # If sigma_eps is near 0, t-value blows up.
+                    # We cap it to avoid inf/nan issues.
+                    max_t = 100.0
+                    t_val = max_t if slope > 0 else -max_t
                 else:
                     se_slope = sigma_eps / np.sqrt(ss_x)
                     t_val = slope / se_slope
+                    # Clip t-value to avoid extreme values
+                    t_val = np.clip(t_val, -100.0, 100.0)
 
                 candidates.append((L, t_val, slope))
 

@@ -11,11 +11,9 @@ from typing import Dict, Tuple, Optional
 import pandas as pd
 
 from app.services.ml.label_generation.enums import ThresholdMethod
-from app.services.ml.label_generation.triple_barrier import TripleBarrier
-from app.services.ml.label_generation.trend_scanning import TrendScanning
-from app.services.ml.common.volatility_utils import (
-    calculate_volatility_atr,
-    calculate_volatility_std,
+from app.services.ml.label_generation.presets import (
+    triple_barrier_method_preset,
+    trend_scanning_preset,
 )
 
 logger = logging.getLogger(__name__)
@@ -114,67 +112,36 @@ class LabelCache:
             raise ValueError(f"無効な閾値計算方法: {threshold_method}")
 
         if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
-            close_prices = self.ohlcv_df[price_column]
-
-            if use_atr:
-                volatility = calculate_volatility_atr(
-                    high=self.ohlcv_df["high"],
-                    low=self.ohlcv_df["low"],
-                    close=close_prices,
-                    window=atr_period,
-                    as_percentage=True,
-                )
-            else:
-                returns = close_prices.pct_change(fill_method=None)
-                volatility = calculate_volatility_std(returns=returns, window=24)
-
-            t1_vertical_barrier = pd.Series(
-                close_prices.index, index=close_prices.index
-            ).shift(-horizon_n)
-
-            if t_events is None:
-                events_index = close_prices.index
-            else:
-                events_index = t_events
-
-            tb = TripleBarrier(pt=pt_factor, sl=sl_factor, min_ret=0.0001)
-            events = tb.get_events(
-                close=close_prices,
-                t_events=events_index,
-                pt_sl=[pt_factor, sl_factor],
-                target=volatility,
+            # presets.py の実装を使用
+            # min_ret=0.0001, volatility_window=24 は以前のLabelCache実装に合わせてハードコード
+            labels = triple_barrier_method_preset(
+                df=self.ohlcv_df,
+                timeframe=timeframe,
+                horizon_n=horizon_n,
+                pt=pt_factor,
+                sl=sl_factor,
                 min_ret=0.0001,
-                vertical_barrier_times=t1_vertical_barrier,
+                price_column=price_column,
+                volatility_window=24,
+                use_atr=use_atr,
+                atr_period=atr_period,
+                binary_label=binary_label,
+                t_events=t_events,
             )
-            labels_df = tb.get_bins(events, close_prices, binary_label=binary_label)
-
-            if binary_label:
-                labels = labels_df["bin"]
-            else:
-                labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
-                labels = labels_df["bin"].map(labels_map)
-
-            labels = labels.reindex(close_prices.index)
 
         elif threshold_method_enum == ThresholdMethod.TREND_SCANNING:
-            close_prices = self.ohlcv_df[price_column]
-
-            ts = TrendScanning(
+            # presets.py の実装を使用
+            labels = trend_scanning_preset(
+                df=self.ohlcv_df,
+                timeframe=timeframe,
+                horizon_n=horizon_n,
+                threshold=threshold,
                 min_window=min_window,
-                max_window=horizon_n,
-                step=window_step,
-                min_t_value=threshold,
+                window_step=window_step,
+                price_column=price_column,
+                binary_label=binary_label,
+                t_events=t_events,
             )
-
-            labels_df = ts.get_labels(close=close_prices, t_events=t_events)
-
-            if binary_label:
-                labels = labels_df["bin"].abs()
-            else:
-                labels_map = {1.0: "UP", -1.0: "DOWN", 0.0: "RANGE"}
-                labels = labels_df["bin"].map(labels_map)
-
-            labels = labels.reindex(close_prices.index)
 
         else:
             raise NotImplementedError(f"Method {threshold_method} not supported")

@@ -489,7 +489,7 @@ class LabelGenerationConfig:
             通常は"close"を使用
         threshold_method: 閾値計算方法（カスタム設定時に使用）。
             ThresholdMethodのenum値文字列を指定します。
-            例: "TRIPLE_BARRIER"
+            例: "TREND_SCANNING"
         use_preset: プリセットを使うか（True）、カスタム設定を使うか（False）。
     """
 
@@ -498,7 +498,7 @@ class LabelGenerationConfig:
     horizon_n: int = 4
     threshold: float = 0.002
     price_column: str = "close"
-    threshold_method: str = "TRIPLE_BARRIER"
+    threshold_method: str = "TREND_SCANNING"
     use_preset: bool = True
 
     def __post_init__(self) -> None:

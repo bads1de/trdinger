@@ -6,6 +6,7 @@ MLトレーニングAPI
 
 import logging
 from typing import Any, Dict, List, Optional
+from sqlalchemy.orm import Session
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
@@ -15,6 +16,7 @@ from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
+from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +111,8 @@ class MLTrainingConfig(BaseModel):
         default=0.33, description="トレンド判定の分位数閾値（上位N%）"
     )
     threshold_method: str = Field(
-        default="QUANTILE", description="閾値判定方法 (QUANTILE, FIXED)"
+        default="TREND_SCANNING",
+        description="閾値判定方法 (TREND_SCANNING, TRIPLE_BARRIER)",
     )
     save_model: bool = Field(default=True, description="モデルを保存するか")
     # 新しい設定項目
@@ -174,6 +177,7 @@ async def start_ml_training(
     orchestration_service: MLTrainingOrchestrationService = Depends(
         get_ml_training_orchestration_service
     ),
+    db: Session = Depends(get_db),
 ):
     """
     スタッキングアンサンブル学習またはシングルモデルによるMLモデルのトレーニングを開始
@@ -185,6 +189,7 @@ async def start_ml_training(
     Args:
         config: MLトレーニング設定（アンサンブル設定を含む）
         background_tasks: バックグラウンドタスク管理
+        orchestration_service: MLトレーニング管理サービス
         db: データベースセッション
 
     Returns:
@@ -193,7 +198,7 @@ async def start_ml_training(
 
     async def _start_training():
         return await orchestration_service.start_training(
-            config=config, background_tasks=background_tasks
+            config=config, background_tasks=background_tasks, db=db
         )
 
     return await ErrorHandler.safe_execute_async(_start_training)

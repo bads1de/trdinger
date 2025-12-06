@@ -39,6 +39,12 @@ class MultiTimeframeFeatureCalculator:
         # === 4時間足の情報を合成 ===
         df_4h = self._resample_to_timeframe(df, "4h")
 
+        # 【重要】データリーク防止のためのシフト処理
+        # resampleしたデータ（index=00:00）は00:00-04:00のデータを含むため、
+        # 決定するのは04:00時点。したがって1期間（4時間）シフトして
+        # データが利用可能になる時刻に合わせる必要がある。
+        df_4h = df_4h.shift(1)
+
         # 4時間足のトレンド指標
         df_4h["SMA_50"] = df_4h["close"].rolling(50).mean()
         df_4h["SMA_200"] = df_4h["close"].rolling(200).mean()
@@ -61,6 +67,9 @@ class MultiTimeframeFeatureCalculator:
 
         # === 1日足の情報を合成 ===
         df_1d = self._resample_to_timeframe(df, "1D")
+
+        # 【重要】データリーク防止のためのシフト処理
+        df_1d = df_1d.shift(1)
 
         # 1日足のトレンド指標
         df_1d["SMA_50"] = df_1d["close"].rolling(50).mean()

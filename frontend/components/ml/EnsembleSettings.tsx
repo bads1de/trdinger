@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { InputField } from "@/components/common/InputField";
 import { Badge } from "@/components/ui/badge";
-import { Layers, BarChart3, Info } from "lucide-react";
+import { Layers, BarChart3, Info, AlertCircle } from "lucide-react";
 import InfoModal from "@/components/common/InfoModal";
 import { ML_INFO_MESSAGES } from "@/constants/info";
 import {
@@ -109,7 +109,8 @@ export default function EnsembleSettings({
                 アンサンブル学習を有効化
               </Label>
               <p className="text-xs text-muted-foreground">
-                複数のモデルを組み合わせて予測精度を向上させます
+                <span className="font-bold text-amber-500 mr-1">推奨</span>
+                複数のモデルを組み合わせて予測精度を向上させます（通常はONのままにしてください）
               </p>
             </div>
             <Switch
@@ -121,11 +122,20 @@ export default function EnsembleSettings({
 
           {/* シングルモード設定 */}
           {!settings.enabled && (
-            <SingleModelSettings
-              singleModelSettings={singleModelSettings}
-              onSingleModelChange={onSingleModelChange}
-              availableModels={availableModels}
-            />
+            <div className="space-y-4">
+              <div className="border border-amber-200 bg-amber-50 p-4 rounded-md">
+                <p className="text-sm text-amber-800 flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  警告:
+                  単一モデルでは予測精度が低下する可能性があります。アンサンブル学習の使用を強く推奨します。
+                </p>
+              </div>
+              <SingleModelSettings
+                singleModelSettings={singleModelSettings}
+                onSingleModelChange={onSingleModelChange}
+                availableModels={availableModels}
+              />
+            </div>
           )}
         </div>
 
@@ -191,7 +201,10 @@ export default function EnsembleSettings({
                         </SelectTrigger>
                         <SelectContent>
                           {META_MODELS.map((model, index) => (
-                            <SelectItem key={`meta-model-${model.value}-${index}`} value={model.value}>
+                            <SelectItem
+                              key={`meta-model-${model.value}-${index}`}
+                              value={model.value}
+                            >
                               {model.label}
                             </SelectItem>
                           ))}
@@ -267,9 +280,7 @@ export default function EnsembleSettings({
           onClose={() => setIsInfoModalOpen(false)}
           title={modalContent.title}
         >
-          <div className="text-secondary-300">
-            {modalContent.content}
-          </div>
+          <div className="text-secondary-300">{modalContent.content}</div>
         </InfoModal>
       )}
     </Card>
