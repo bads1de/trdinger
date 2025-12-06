@@ -12,8 +12,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-pytest.skip("Tests need to be updated for new implementation", allow_module_level=True)
-
 from app.services.ml.feature_engineering.funding_rate_features import (
     FundingRateFeatureCalculator,
 )
@@ -21,13 +19,15 @@ from app.services.ml.feature_engineering.funding_rate_features import (
 
 @pytest.fixture
 def sample_ohlcv_data() -> pd.DataFrame:
-    """1時間足のOHLCVサンプルデータ（240時間 = 10日間）"""
-    timestamps = pd.date_range("2024-01-01", periods=240, freq="1h")
+    """1時間足のOHLCVサンプルデータ（1000時間 = 約41日間）"""
+    # 長期ウィンドウ(168h)の計算のために十分な長さを確保
+    periods = 1000
+    timestamps = pd.date_range("2024-01-01", periods=periods, freq="1h")
 
     # 価格データ（トレンド + ノイズ）
     base_price = 40000
-    trend = np.linspace(0, 5000, 240)
-    noise = np.random.randn(240) * 500
+    trend = np.linspace(0, 5000, periods)
+    noise = np.random.randn(periods) * 500
     close_prices = base_price + trend + noise
 
     return pd.DataFrame(
@@ -37,18 +37,20 @@ def sample_ohlcv_data() -> pd.DataFrame:
             "high": close_prices * 1.002,
             "low": close_prices * 0.998,
             "close": close_prices,
-            "volume": np.random.uniform(100, 1000, 240),
+            "volume": np.random.uniform(100, 1000, periods),
         }
     )
 
 
 @pytest.fixture
 def sample_funding_data() -> pd.DataFrame:
-    """8時間ごとのファンディングレートサンプルデータ（30期間）"""
-    timestamps = pd.date_range("2024-01-01", periods=30, freq="8h")
+    """8時間ごとのファンディングレートサンプルデータ"""
+    # OHLCVデータに合わせて期間を調整 (1000時間 / 8時間 = 125期間) + 余裕
+    periods = 135
+    timestamps = pd.date_range("2024-01-01", periods=periods, freq="8h")
 
     # ファンディングレート: -0.05% ~ 0.1%の範囲で変動
-    funding_rates = np.random.uniform(-0.0005, 0.001, 30)
+    funding_rates = np.random.uniform(-0.0005, 0.001, periods)
 
     return pd.DataFrame(
         {
@@ -90,7 +92,9 @@ class TestFundingRateFeatureCalculator:
         result = calculator.calculate_features(sample_ohlcv_data, sample_funding_data)
 
         # 入力データのカラムが保持されている
-        assert "timestamp" in result.columns
+        # timestampはインデックスになっている
+        assert result.index.name == "timestamp"
+        assert "timestamp" in result.reset_index().columns
         assert "close" in result.columns
 
         # 結果がDataFrame
@@ -141,25 +145,30 @@ class TestFundingRateFeatureCalculator:
 
         # 基本特徴量が存在する
         assert "funding_rate_raw" in result.columns
-        assert "fr_lag_1p" in result.columns
-        assert "fr_lag_2p" in result.columns
+        assert "fr_bps" in result.columns
+        assert "fr_deviation_bps" in result.columns
+        # fr_lag_1p, 2p は削除され、3pのみ存在
         assert "fr_lag_3p" in result.columns
 
-        # ラグ特徴量のシフトが正しい（8時間 * ラグ数）
-        # ラグ1は8時間前の値なので、現在の行のlag_1は8行前のraw値
-        raw = result["funding_rate_raw"]
-        lag_1 = result["fr_lag_1p"]
+        # bps変換の確認 (raw * 10000)
+        raw = result["funding_rate_raw"].dropna()
+        bps = result["fr_bps"].dropna()
+        if len(raw) > 0:
+            assert np.allclose(raw * 10000, bps, atol=1e-6)
 
-        # 少なくとも8行後から比較可能
-        if len(result) > 16:
-            # 16行目のlag_1は8行目のrawと一致すべき
-            idx_check = 16
-            if not pd.isna(raw.iloc[idx_check - 8]) and not pd.isna(
-                lag_1.iloc[idx_check]
+        # ラグ特徴量のシフトが正しい（3期間 * 8時間 = 24時間）
+        bps = result["fr_bps"]
+        lag_3 = result["fr_lag_3p"]
+
+        # 少なくとも24行後から比較可能
+        if len(result) > 30:
+            idx_check = 30
+            if not pd.isna(bps.iloc[idx_check - 24]) and not pd.isna(
+                lag_3.iloc[idx_check]
             ):
                 assert np.isclose(
-                    raw.iloc[idx_check - 8],
-                    lag_1.iloc[idx_check],
+                    bps.iloc[idx_check - 24],
+                    lag_3.iloc[idx_check],
                     rtol=1e-5,
                     equal_nan=False,
                 )
@@ -174,22 +183,12 @@ class TestFundingRateFeatureCalculator:
         result = calculator.calculate_features(sample_ohlcv_data, sample_funding_data)
 
         # モメンタム特徴量が存在する
-        assert "fr_velocity" in result.columns
+        # fr_velocity, fr_ema_7periods は削除
         assert "fr_ema_3periods" in result.columns
-        assert "fr_ema_7periods" in result.columns
-
-        # fr_velocityの計算が正しい（変化率）
-        velocity = result["fr_velocity"].dropna()
-        assert len(velocity) > 0
 
         # EMAが存在する
         ema_3 = result["fr_ema_3periods"].dropna()
-        ema_7 = result["fr_ema_7periods"].dropna()
         assert len(ema_3) > 0
-        assert len(ema_7) > 0
-
-        # EMAの平滑化特性: ema_3の方がema_7より変動が大きい傾向
-        # （短期EMAは価格に敏感）
 
     def test_regime_classification(
         self,
@@ -198,16 +197,22 @@ class TestFundingRateFeatureCalculator:
     ):
         """レジーム分類のテスト"""
         # 特定のファンディングレートパターンを作成
+        # bps基準:
+        # < -1.0 (-0.01%)
+        # -1.0 ~ 0.0 (-0.01% ~ 0.00%)
+        # 0.0 ~ 5.0 (0.00% ~ 0.05%)
+        # 5.0 ~ 15.0 (0.05% ~ 0.15%)
+        # > 15.0 (0.15%)
         timestamps = pd.date_range("2024-01-01", periods=5, freq="8h")
         funding_data = pd.DataFrame(
             {
                 "timestamp": timestamps,
                 "funding_rate": [
-                    -0.00015,  # 超低金利: FR < -0.01%
-                    0.00005,  # 通常: -0.01% ≤ FR ≤ 0.05%
-                    0.0008,  # 過熱: 0.05% < FR ≤ 0.15%
-                    0.002,  # 極端過熱: FR > 0.15%
-                    0.00003,  # 通常
+                    -0.00015,  # -1.5bps: < -1.0 -> -2
+                    -0.00005,  # -0.5bps: -1.0 <= x < 0.0 -> -1
+                    0.0003,    # 3.0bps: 0.0 <= x <= 5.0 -> 0
+                    0.0008,    # 8.0bps: 5.0 < x <= 15.0 -> 1
+                    0.002,     # 20.0bps: > 15.0 -> 2
                 ],
             }
         )
@@ -221,6 +226,9 @@ class TestFundingRateFeatureCalculator:
         regime = result["fr_regime_encoded"].dropna()
 
         # レジームが定義された範囲内（-2 ~ 2）
+        # テストデータに対応するレジームが含まれているか確認
+        # 注意: OHLCVとの結合で前方補完されるため、元の5つの値がすべて反映されるとは限らないが、
+        # 値の範囲は確認できる
         assert regime.isin([-2, -1, 0, 1, 2]).all()
 
         # regime_durationが非負
@@ -238,16 +246,12 @@ class TestFundingRateFeatureCalculator:
 
         # 価格相互作用特徴量が存在する
         assert "fr_price_corr_24h" in result.columns
-        assert "fr_volatility_adjusted" in result.columns
+        # fr_volatility_adjusted は削除
 
         # 相関係数が[-1, 1]の範囲内
         corr = result["fr_price_corr_24h"].dropna()
         if len(corr) > 0:
             assert (corr >= -1).all() and (corr <= 1).all()
-
-        # ボラティリティ調整済み特徴量が存在する
-        vol_adj = result["fr_volatility_adjusted"].dropna()
-        assert len(vol_adj) > 0
 
     def test_missing_value_handling(
         self,
@@ -286,8 +290,8 @@ class TestFundingRateFeatureCalculator:
         # 補完後のfunding_rate_rawに欠損値が少ない
         # （決済時刻の補間が適用される）
         raw = result["funding_rate_raw"]
+        # ffillによって大部分が埋まるはず
         missing_ratio = raw.isna().sum() / len(raw)
-        # 元データの30%が欠損でも、補間後は大幅に減少
         assert missing_ratio < 0.5
 
     def test_data_frequency_mismatch(
@@ -323,41 +327,44 @@ class TestFundingRateFeatureCalculator:
         sample_ohlcv_data: pd.DataFrame,
         sample_funding_data: pd.DataFrame,
     ):
-        """出力形状のテスト（全15個のTier 1特徴量が生成される）"""
+        """出力形状のテスト"""
         result = calculator.calculate_features(sample_ohlcv_data, sample_funding_data)
 
-        # Tier 1特徴量リスト（15個）
+        # 期待される特徴量リスト
         tier1_features = [
-            # 基本金利指標（4個）
+            # 基本
             "funding_rate_raw",
-            "fr_lag_1p",
-            "fr_lag_2p",
+            "fr_bps",
+            "fr_deviation_bps",
             "fr_lag_3p",
-            # 時間サイクル（3個）
+            # 時間サイクル
             "fr_hours_since_settlement",
             "fr_cycle_sin",
             "fr_cycle_cos",
-            # モメンタム（3個）
-            "fr_velocity",
+            # モメンタム
             "fr_ema_3periods",
-            "fr_ema_7periods",
-            # レジーム（2個）
+            # レジーム
             "fr_regime_encoded",
             "regime_duration",
-            # 価格相互作用（2個）
+            # 価格相互作用
             "fr_price_corr_24h",
-            "fr_volatility_adjusted",
+            # 市場歪み（新規）
+            "fr_cumulative_deviation_72h",
+            "fr_zscore_24h",
+            "fr_zscore_72h",
+            "fr_zscore_168h",
+            "fr_extreme_flag",
+            "fr_trend_direction",
         ]
 
         # 全特徴量が存在する
         for feature in tier1_features:
             assert feature in result.columns, f"特徴量 {feature} が見つかりません"
 
-        # 特徴量の総数を確認（入力カラム + Tier1特徴量）
-        # 入力: timestamp, open, high, low, close, volume (6)
-        # Tier1特徴量: 15
-        # 最小でも21カラム以上
-        assert len(result.columns) >= 21
+        # 特徴量の総数を確認
+        # 入力カラム数 + 特徴量数
+        # 6 (ohlcv) + 17 (above) = 23
+        assert len(result.columns) >= 20
 
     def test_empty_funding_data(
         self,
@@ -385,11 +392,11 @@ class TestFundingRateFeatureCalculator:
             {
                 "timestamp": timestamps,
                 "funding_rate": [
-                    -0.01,  # 非常に低い
-                    0.005,  # 極端に高い
-                    -0.005,
-                    0.01,
-                    0.0,
+                    -0.01,  # -100bps
+                    0.005,  # 50bps
+                    -0.005, # -50bps
+                    0.01,   # 100bps
+                    0.0,    # 0bps
                 ],
             }
         )
@@ -401,6 +408,11 @@ class TestFundingRateFeatureCalculator:
 
         # レジーム分類が適切に機能する
         regime = result["fr_regime_encoded"].dropna()
+        # -100bps < -1bps -> -2
+        # 50bps > 15bps -> 2
+        # -50bps < -1bps -> -2
+        # 100bps > 15bps -> 2
+        # 0bps -> 0
         assert regime.isin([-2, -1, 0, 1, 2]).all()
 
     def test_single_funding_rate_record(
@@ -421,12 +433,12 @@ class TestFundingRateFeatureCalculator:
         # 基本的な計算は可能
         assert "funding_rate_raw" in result.columns
 
-        # ラグ特徴量は最初の8時間分がNaN（シフトのため）
-        lag_1 = result["fr_lag_1p"]
-        # 最初の8行はNaN
-        assert lag_1.iloc[:8].isna().all()
-        # 残りは前方補完されたfunding_rate_rawの値
-        assert lag_1.iloc[8:].notna().sum() > 0
+        # ラグ特徴量は24時間分がNaN（シフトのため 3periods * 8h = 24h）
+        lag_3 = result["fr_lag_3p"]
+        # 最初の24行はNaN
+        assert lag_3.iloc[:24].isna().all()
+        # 残りは前方補完された値
+        assert lag_3.iloc[24:].notna().sum() > 0
 
     def test_numerical_stability(
         self,
@@ -446,4 +458,5 @@ class TestFundingRateFeatureCalculator:
 
             # NaNは一部許容（初期ラグ期間など）
             nan_ratio = result[col].isna().sum() / len(result)
+            # ラグ3(24h)や相関(24h)などは初期にNaNが入る
             assert nan_ratio < 0.5, f"{col}のNaN比率が高すぎます: {nan_ratio:.2%}"

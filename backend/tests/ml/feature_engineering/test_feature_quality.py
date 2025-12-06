@@ -13,7 +13,7 @@ class TestFeatureQuality:
     def sample_market_data(self):
         """テスト用の市場データ（トレンドを含む）を生成"""
         # 1000本のデータ
-        dates = pd.date_range(start="2024-01-01", periods=1000, freq="1H")
+        dates = pd.date_range(start="2024-01-01", periods=1000, freq="1h")
 
         # ランダムウォーク + トレンド
         np.random.seed(42)

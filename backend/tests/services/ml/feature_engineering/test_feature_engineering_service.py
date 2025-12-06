@@ -18,7 +18,7 @@ class TestFeatureEngineeringServicePerformance:
         """テスト用OHLCVデータ"""
         np.random.seed(42)
         n_samples = 500
-        dates = pd.date_range(start="2023-01-01", periods=n_samples, freq="1H")
+        dates = pd.date_range(start="2023-01-01", periods=n_samples, freq="1h")
 
         close = 10000 + np.cumsum(np.random.randn(n_samples) * 10)
         high = close + np.abs(np.random.randn(n_samples) * 5)

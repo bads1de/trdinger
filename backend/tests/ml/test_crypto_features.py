@@ -14,7 +14,7 @@ class TestCryptoFeatureCalculator:
 
     @pytest.fixture
     def sample_ohlcv_data(self):
-        dates = pd.date_range(start="2023-01-01", periods=100, freq="1H")
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="1h")
         df = pd.DataFrame(
             {
                 "timestamp": dates,

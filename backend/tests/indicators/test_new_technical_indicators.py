@@ -8,7 +8,7 @@ from app.services.indicators import TechnicalIndicatorService
 @pytest.fixture
 def sample_ohlcv() -> pd.DataFrame:
     periods = 200
-    index = pd.date_range("2022-01-01", periods=periods, freq="H")
+    index = pd.date_range("2022-01-01", periods=periods, freq="h")
     base = np.linspace(100, 200, periods)
     noise = np.sin(np.linspace(0, 8 * np.pi, periods))
     close = base + noise

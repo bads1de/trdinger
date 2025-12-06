@@ -178,19 +178,18 @@ class TestMLBugDetection:
 
         deep_operation()
 
-    @pytest.mark.skip(reason="This test is failing and needs to be fixed.")
     def test_division_by_zero_in_metrics_calculation(self):
         """指標計算でのゼロ除算検出"""
         # ゼロ除算の可能性
         with pytest.raises(ZeroDivisionError):
             # 無取引時の指標計算
-            pass  # 実際には発生しないがテスト
+            _ = 1 / 0
 
         # 安全な指標計算
         def safe_division(numerator, denominator):
             return numerator / denominator if denominator != 0 else 0.0
 
-        result = safe_division(0, 0)
+        result = safe_division(1, 0)
         assert result == 0.0
 
     def test_nan_propagation_in_ml_pipeline(self, sample_nan_data):

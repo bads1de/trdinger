@@ -29,7 +29,7 @@ def sample_training_data():
     np.random.seed(42)
     n_samples = 200
 
-    dates = pd.date_range(start="2024-01-01", periods=n_samples, freq="1H")
+    dates = pd.date_range(start="2024-01-01", periods=n_samples, freq="1h")
 
     # 特徴量データ
     X = pd.DataFrame(

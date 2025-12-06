@@ -249,7 +249,7 @@ class FeatureEngineeringService:
                         "timestampカラムが見つからないため、仮のDatetimeIndexを生成します"
                     )
                     ohlcv_data.index = pd.date_range(
-                        start="2024-01-01", periods=len(ohlcv_data), freq="1H"
+                        start="2024-01-01", periods=len(ohlcv_data), freq="1h"
                     )
 
             # インデックスがDatetimeIndexであることを確認

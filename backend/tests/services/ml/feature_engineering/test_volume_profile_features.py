@@ -12,7 +12,7 @@ class TestVolumeProfileFeatures:
     def sample_data(self):
         # Create a larger sample dataset to test performance
         n_samples = 2000  # Enough to trigger loops but fast enough for testing
-        dates = pd.date_range(start="2023-01-01", periods=n_samples, freq="1H")
+        dates = pd.date_range(start="2023-01-01", periods=n_samples, freq="1h")
 
         # Generate random OHLCV data
         np.random.seed(42)
@@ -49,7 +49,7 @@ class TestVolumeProfileFeatures:
         """Test calculation correctness on a small controllable dataset"""
         # Create very simple data: stable price, then jump
         # 10 bars at price 100, volume 100
-        dates = pd.date_range(start="2023-01-01", periods=10, freq="1H")
+        dates = pd.date_range(start="2023-01-01", periods=10, freq="1h")
         df = pd.DataFrame(
             {
                 "open": [100] * 10,

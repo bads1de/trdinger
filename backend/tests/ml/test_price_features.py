@@ -8,7 +8,7 @@ from backend.app.services.ml.feature_engineering.price_features import (
 
 @pytest.fixture
 def sample_ohlcv_data():
-    dates = pd.date_range(start="2023-01-01", periods=1000, freq="1H")
+    dates = pd.date_range(start="2023-01-01", periods=1000, freq="1h")
     df = pd.DataFrame(
         {
             "timestamp": dates,

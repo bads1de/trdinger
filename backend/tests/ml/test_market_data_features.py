@@ -9,7 +9,7 @@ from app.services.ml.feature_engineering.market_data_features import (
 class TestMarketDataFeatures:
     @pytest.fixture
     def sample_data(self):
-        dates = pd.date_range(start="2024-01-01", periods=200, freq="1H")
+        dates = pd.date_range(start="2024-01-01", periods=200, freq="1h")
         df = pd.DataFrame(
             {
                 "open": np.random.rand(200) * 100,

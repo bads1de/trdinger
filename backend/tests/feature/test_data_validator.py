@@ -8,6 +8,7 @@ import sys
 from datetime import datetime, timezone
 
 import pandas as pd
+import pytest
 
 # Add backend directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
@@ -18,10 +19,8 @@ try:
         validate_extended_data,
         validate_ohlcv_data,
     )
-except ImportError as e:
-    print(f"Import error: {e}")
-    print("Please ensure you're running this from the backend directory")
-    sys.exit(1)
+except ImportError:
+    pass
 
 
 def test_validate_ohlcv_data():
@@ -38,13 +37,10 @@ def test_validate_ohlcv_data():
             "volume": [1000, 1200, 1100],
         }
     )
-    try:
-        result = validate_ohlcv_data(valid_data)
-        assert result
-        print("[PASS] Valid OHLCV data test passed")
-    except Exception as e:
-        print(f"[FAIL] Valid OHLCV data test failed: {e}")
-        return False
+    
+    result = validate_ohlcv_data(valid_data)
+    assert result
+    print("[PASS] Valid OHLCV data test passed")
 
     # Test invalid OHLC data
     invalid_ohlc = pd.DataFrame(
@@ -56,12 +52,9 @@ def test_validate_ohlcv_data():
             "volume": [1000, 1200, 1100],
         }
     )
-    try:
+    with pytest.raises(ValueError):
         validate_ohlcv_data(invalid_ohlc)
-        print("[FAIL] Invalid OHLC test failed - should have raised ValueError")
-        return False
-    except ValueError:
-        print("[PASS] Invalid OHLC test passed")
+    print("[PASS] Invalid OHLC test passed")
 
     # Test negative volume
     invalid_volume = pd.DataFrame(
@@ -73,24 +66,15 @@ def test_validate_ohlcv_data():
             "volume": [1000, -1200, 1100],  # negative volume
         }
     )
-    try:
+    with pytest.raises(ValueError):
         validate_ohlcv_data(invalid_volume)
-        print("[FAIL] Negative volume test failed - should have raised ValueError")
-        return False
-    except ValueError:
-        print("[PASS] Negative volume test passed")
+    print("[PASS] Negative volume test passed")
 
     # Test empty DataFrame
     empty_df = pd.DataFrame()
-    try:
-        result = validate_ohlcv_data(empty_df)
-        assert result
-        print("[PASS] Empty DataFrame test passed")
-    except Exception as e:
-        print(f"[FAIL] Empty DataFrame test failed: {e}")
-        return False
-
-    return True
+    result = validate_ohlcv_data(empty_df)
+    assert result
+    print("[PASS] Empty DataFrame test passed")
 
 
 def test_validate_extended_data():
@@ -104,13 +88,10 @@ def test_validate_extended_data():
             "open_interest": [1000, 1200, 1100, 1300],
         }
     )
-    try:
-        result = validate_extended_data(valid_extended)
-        assert result
-        print("[PASS] Valid extended data test passed")
-    except Exception as e:
-        print(f"[FAIL] Valid extended data test failed: {e}")
-        return False
+    
+    result = validate_extended_data(valid_extended)
+    assert result
+    print("[PASS] Valid extended data test passed")
 
     # Test invalid funding rate
     invalid_funding = pd.DataFrame(
@@ -118,24 +99,16 @@ def test_validate_extended_data():
             "funding_rate": [-0.01, 5.0, 0.0001],  # 5.0 > 1
         }
     )
-    try:
+    with pytest.raises(ValueError):
         validate_extended_data(invalid_funding)
-        print("[FAIL] Invalid funding rate test failed - should have raised ValueError")
-        return False
-    except ValueError:
-        print("[PASS] Invalid funding rate test passed")
+    print("[PASS] Invalid funding rate test passed")
 
     # Test no extended columns
     no_extended = pd.DataFrame({"price": [100, 105, 103]})
-    try:
-        result = validate_extended_data(no_extended)
-        assert result
-        print("[PASS] No extended columns test passed")
-    except Exception as e:
-        print(f"[FAIL] No extended columns test failed: {e}")
-        return False
-
-    return True
+    
+    result = validate_extended_data(no_extended)
+    assert result
+    print("[PASS] No extended columns test passed")
 
 
 def test_validate_data_integrity():
@@ -145,17 +118,14 @@ def test_validate_data_integrity():
     # Test valid timestamp data
     valid_integrity = pd.DataFrame(
         {
-            "timestamp": pd.date_range("2023-01-01", periods=3, freq="1H"),
+            "timestamp": pd.date_range("2023-01-01", periods=3, freq="1h"),
             "price": [100, 105, 103],
         }
     )
-    try:
-        result = validate_data_integrity(valid_integrity)
-        assert result
-        print("[PASS] Valid timestamp data test passed")
-    except Exception as e:
-        print(f"[FAIL] Valid timestamp data test failed: {e}")
-        return False
+    
+    result = validate_data_integrity(valid_integrity)
+    assert result
+    print("[PASS] Valid timestamp data test passed")
 
     # Test unsorted timestamps
     unsorted_ts = pd.DataFrame(
@@ -168,52 +138,27 @@ def test_validate_data_integrity():
             "price": [100, 105, 103],
         }
     )
-    try:
+    with pytest.raises(ValueError):
         validate_data_integrity(unsorted_ts)
-        print("[FAIL] Unsorted timestamps test failed - should have raised ValueError")
-        return False
-    except ValueError:
-        print("[PASS] Unsorted timestamps test passed")
+    print("[PASS] Unsorted timestamps test passed")
 
     # Test no timestamp column
     no_timestamp = pd.DataFrame({"price": [100, 105, 103]})
-    try:
-        result = validate_data_integrity(no_timestamp)
-        assert result
-        print("[PASS] No timestamp column test passed")
-    except Exception as e:
-        print(f"[FAIL] No timestamp column test failed: {e}")
-        return False
-
-    return True
-
-
-def main():
-    """Run all tests"""
-    print("Data Validator Tests")
-    print("=" * 50)
-
-    all_passed = True
-
-    # Run all tests
-    tests = [
-        test_validate_ohlcv_data,
-        test_validate_extended_data,
-        test_validate_data_integrity,
-    ]
-
-    for test_func in tests:
-        if not test_func():
-            all_passed = False
-
-    print("\n" + "=" * 50)
-    if all_passed:
-        print("[SUCCESS] All tests passed!")
-        return 0
-    else:
-        print("[ERROR] Some tests failed!")
-        return 1
+    
+    result = validate_data_integrity(no_timestamp)
+    assert result
+    print("[PASS] No timestamp column test passed")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Manual execution
+    try:
+        test_validate_ohlcv_data()
+        test_validate_extended_data()
+        test_validate_data_integrity()
+        print("\n" + "=" * 50)
+        print("[SUCCESS] All tests passed!")
+        sys.exit(0)
+    except Exception as e:
+        print(f"[ERROR] Tests failed: {e}")
+        sys.exit(1)

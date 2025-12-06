@@ -8,7 +8,7 @@ from app.services.indicators.technical_indicators.volume import VolumeIndicators
 @pytest.fixture
 def sample_data():
     # Create synthetic data
-    dates = pd.date_range(start="2023-01-01", periods=100, freq="1H")
+    dates = pd.date_range(start="2023-01-01", periods=100, freq="1h")
     close = pd.Series(np.linspace(100, 110, 100) + np.random.normal(0, 1, 100), index=dates)
     high = close + 1
     low = close - 1

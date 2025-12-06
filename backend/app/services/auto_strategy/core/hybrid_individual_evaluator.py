@@ -267,9 +267,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             end_ts = pd.Timestamp.utcnow().floor("H")
             start_ts = end_ts - pd.Timedelta(days=7)
 
-        index = pd.date_range(start=start_ts, end=end_ts, freq="1H")
+        index = pd.date_range(start=start_ts, end=end_ts, freq="1h")
         if index.empty:
-            index = pd.date_range(end=end_ts, periods=72, freq="1H")
+            index = pd.date_range(end=end_ts, periods=72, freq="1h")
 
         base_price = np.linspace(100.0, 105.0, len(index))
         fallback_df = pd.DataFrame(

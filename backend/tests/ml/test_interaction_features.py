@@ -36,7 +36,7 @@ class TestInteractionFeatureCalculator:
             }
         )
 
-        df.index = pd.date_range("2024-01-01", periods=n, freq="1H")
+        df.index = pd.date_range("2024-01-01", periods=n, freq="1h")
         return df
 
     def test_calculate_interaction_features_basic(self, sample_data):

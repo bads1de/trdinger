@@ -11,7 +11,7 @@ class TestTrendScanning:
         Create synthetic data with clear trends.
         """
         # 100 points
-        dates = pd.date_range(start="2023-01-01", periods=100, freq="H")
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="h")
 
         # 0-30: Uptrend
         # 30-60: Downtrend
@@ -94,7 +94,7 @@ class TestTrendScanning:
         Test that it selects the window with the strongest trend.
         """
         # Create data where short term is noise, long term is strong trend
-        dates = pd.date_range(start="2023-01-01", periods=30, freq="H")
+        dates = pd.date_range(start="2023-01-01", periods=30, freq="h")
         prices = np.array(
             [
                 10,

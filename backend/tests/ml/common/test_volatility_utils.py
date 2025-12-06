@@ -18,7 +18,7 @@ class TestVolatilityUtils:
     def sample_price_data(self):
         """テスト用価格データ"""
         np.random.seed(42)
-        dates = pd.date_range("2024-01-01", periods=100, freq="H")
+        dates = pd.date_range("2024-01-01", periods=100, freq="h")
 
         # 現実的な価格データを生成
         base_price = 50000

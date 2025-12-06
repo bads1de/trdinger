@@ -100,7 +100,7 @@ class OriginalIndicators:
             n2 = (np.max(second_half) - np.min(second_half)) / half
             n3 = (np.max(window) - np.min(window)) / length
 
-            if n1 > 0 and n2 > 0 and n3 > 0:
+            if n1 > 1e-9 and n2 > 1e-9 and n3 > 1e-9:
                 dimen = (np.log(n1 + n2) - np.log(n3)) / log2
             else:
                 dimen = 1.0
@@ -164,11 +164,15 @@ class OriginalIndicators:
         for idx in range(2, len(prices)):
             current = prices[idx]
             previous = prices[idx - 1]
-            result[idx] = (
+            val = (
                 0.5 * c1 * (current + previous)
                 + c2 * result[idx - 1]
                 + c3 * result[idx - 2]
             )
+            if np.isfinite(val):
+                result[idx] = val
+            else:
+                result[idx] = result[idx-1] # Fallback to previous value
 
         return pd.Series(result, index=close.index, name="SUPER_SMOOTHER")
 

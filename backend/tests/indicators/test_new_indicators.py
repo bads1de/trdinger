@@ -16,7 +16,7 @@ from app.services.indicators import TechnicalIndicatorService
 def sample_ohlcv() -> pd.DataFrame:
     """テスト用のOHLCVデータを生成"""
     periods = 200  # VHFとBIASに必要な十分な長さ
-    index = pd.date_range("2022-01-01", periods=periods, freq="H")
+    index = pd.date_range("2022-01-01", periods=periods, freq="h")
 
     # ランダム性とトレンドを含むデータ
     base = np.linspace(10000, 15000, periods)

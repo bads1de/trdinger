@@ -366,10 +366,10 @@ class VolumeIndicators:
             raise TypeError("volume must be pandas Series")
 
         result = ta.mfi(
-            high=high,
-            low=low,
-            close=close,
-            volume=volume,
+            high=high.astype(float),
+            low=low.astype(float),
+            close=close.astype(float),
+            volume=volume.astype(float),
             length=length,
         )
         if result is None:

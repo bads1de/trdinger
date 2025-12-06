@@ -60,7 +60,7 @@ async def get_strategies(
     experiment_id: Optional[int] = Query(None, description="実験IDフィルター"),
     min_fitness: Optional[float] = Query(None, description="最小フィットネススコア"),
     sort_by: str = Query("fitness_score", description="ソート項目"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$", description="ソート順序"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="ソート順序"),
     strategy_service: StrategyIntegrationService = Depends(
         get_strategy_integration_service_with_db
     ),
