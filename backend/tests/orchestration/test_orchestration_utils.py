@@ -24,7 +24,7 @@ class TestLoadModelMetadataSafely:
             "feature_count": 10,
             "accuracy": 0.85,
         }
-        mock_model_manager.load_model.return_value = {
+        mock_model_manager.load_metadata_only.return_value = {
             "model": Mock(),
             "metadata": expected_metadata,
         }
@@ -35,14 +35,14 @@ class TestLoadModelMetadataSafely:
         # Assert
         assert result is not None
         assert result["metadata"] == expected_metadata
-        mock_model_manager.load_model.assert_called_once_with(model_path)
+        mock_model_manager.load_metadata_only.assert_called_once_with(model_path)
 
     @patch("app.services.ml.orchestration.orchestration_utils.model_manager")
     def test_load_model_metadata_no_metadata_key(self, mock_model_manager):
         """メタデータキーが存在しない場合"""
         # Arrange
         model_path = "/path/to/model.pkl"
-        mock_model_manager.load_model.return_value = {
+        mock_model_manager.load_metadata_only.return_value = {
             "model": Mock(),
         }
 
@@ -57,7 +57,7 @@ class TestLoadModelMetadataSafely:
         """load_modelがNoneを返す場合"""
         # Arrange
         model_path = "/path/to/model.pkl"
-        mock_model_manager.load_model.return_value = None
+        mock_model_manager.load_metadata_only.return_value = None
 
         # Act
         result = load_model_metadata_safely(model_path)
@@ -71,7 +71,7 @@ class TestLoadModelMetadataSafely:
         """例外が発生した場合"""
         # Arrange
         model_path = "/path/to/model.pkl"
-        mock_model_manager.load_model.side_effect = Exception("Load error")
+        mock_model_manager.load_metadata_only.side_effect = Exception("Load error")
 
         # Act
         result = load_model_metadata_safely(model_path)
@@ -105,7 +105,7 @@ class TestGetLatestModelWithInfo:
             "training_samples": 1000,
             "accuracy": 0.90,
         }
-        mock_model_manager.load_model.return_value = {
+        mock_model_manager.load_metadata_only.return_value = {
             "model": Mock(),
             "metadata": metadata,
         }
@@ -163,7 +163,7 @@ class TestGetLatestModelWithInfo:
         model_path = "/path/to/model.pkl"
         mock_model_manager.get_latest_model.return_value = model_path
         mock_exists.return_value = True
-        mock_model_manager.load_model.return_value = {"model": Mock()}
+        mock_model_manager.load_metadata_only.return_value = {"model": Mock()}
 
         # Act
         result = get_latest_model_with_info()
@@ -182,7 +182,9 @@ class TestGetLatestModelWithInfo:
         model_path = "/path/to/model.pkl"
         mock_model_manager.get_latest_model.return_value = model_path
         mock_exists.return_value = True
-        mock_model_manager.load_model.side_effect = Exception("Unexpected error")
+        mock_model_manager.load_metadata_only.side_effect = Exception(
+            "Unexpected error"
+        )
 
         # Act
         result = get_latest_model_with_info()
@@ -208,7 +210,7 @@ class TestGetLatestModelWithInfo:
         mock_getsize.return_value = 1024 * 1024 * 3  # 3MB
 
         metadata = {"model_type": "Ensemble"}
-        mock_model_manager.load_model.return_value = {
+        mock_model_manager.load_metadata_only.return_value = {
             "model": Mock(),
             "metadata": metadata,
         }

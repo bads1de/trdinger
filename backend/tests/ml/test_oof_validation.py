@@ -120,7 +120,7 @@ class TestOOFDataLeakValidation:
             oof_pred = oof_base_predictions[model_name].values
 
             # In-Fold予測を取得（学習済みモデルで全データを予測）
-            base_model = stacking.stacking_classifier.named_estimators_[model_name]
+            base_model = stacking._fitted_base_models[model_name]
             in_fold_pred = base_model.predict_proba(X)[:, 1]
 
             diff = np.abs(oof_pred - in_fold_pred).mean()

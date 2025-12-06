@@ -57,6 +57,7 @@ class TestLabelGenerationServiceWithEvents:
         features_clean, labels_clean = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
+            threshold_method="TRIPLE_BARRIER",
             pt_factor=1.0,
             sl_factor=1.0,
             use_atr=False,
@@ -75,6 +76,7 @@ class TestLabelGenerationServiceWithEvents:
         features_clean, labels_clean = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
+            threshold_method="TRIPLE_BARRIER",
             pt_factor=1.0,
             sl_factor=1.0,
             use_atr=False,
@@ -103,6 +105,7 @@ class TestLabelGenerationServiceWithEvents:
         features_clean, labels_clean = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
+            threshold_method="TRIPLE_BARRIER",
             pt_factor=1.0,
             sl_factor=1.0,
             use_atr=False,
@@ -133,6 +136,7 @@ class TestLabelGenerationServiceWithEvents:
         features_all, labels_all = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
+            threshold_method="TRIPLE_BARRIER",
             pt_factor=1.0,
             sl_factor=1.0,
             use_atr=False,
@@ -143,6 +147,7 @@ class TestLabelGenerationServiceWithEvents:
         features_filtered, labels_filtered = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
+            threshold_method="TRIPLE_BARRIER",
             pt_factor=1.0,
             sl_factor=1.0,
             use_atr=False,
@@ -180,6 +185,7 @@ class TestLabelGenerationServiceWithEvents:
         features_clean, labels_clean = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=flat_ohlcv,
+            threshold_method="TRIPLE_BARRIER",
             pt_factor=1.0,
             sl_factor=1.0,
             use_atr=False,
@@ -199,6 +205,7 @@ class TestLabelGenerationServiceWithEvents:
         features_clean, labels_clean = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
+            threshold_method="TRIPLE_BARRIER",
             pt_factor=1.0,
             sl_factor=1.0,
             use_atr=False,
