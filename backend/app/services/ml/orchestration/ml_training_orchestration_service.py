@@ -128,28 +128,34 @@ class MLTrainingOrchestrationService:
             ValueError: 設定が無効な場合
         """
         # 設定の詳細ログ出力
-        logger.info(f"📋 受信したconfig全体: {config}")
-        logger.info(f"📋 アンサンブル設定: {config.ensemble_config}")
-        logger.info(
-            f"📋 アンサンブル設定enabled: {config.ensemble_config.enabled if config.ensemble_config else 'None'}"
-        )
-        logger.info(f"📋 単一モデル設定: {config.single_model_config}")
-        logger.info(
-            f"📋 単一モデルタイプ: {config.single_model_config.model_type if config.single_model_config else 'None'}"
-        )
-        logger.info(f"📋 最適化設定: {config.optimization_settings}")
-
-        # 設定の詳細確認
-        if config.ensemble_config:
-            ensemble_dict = config.ensemble_config.model_dump()
-            logger.info(f"📋 アンサンブル設定辞書: {ensemble_dict}")
-            logger.info(
-                f"📋 enabled値確認: {ensemble_dict.get('enabled')} (型: {type(ensemble_dict.get('enabled'))})"
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"📋 受信したconfig全体: {config}")
+            logger.debug(f"📋 アンサンブル設定: {config.ensemble_config}")
+            logger.debug(
+                f"📋 アンサンブル設定enabled: {config.ensemble_config.enabled if config.ensemble_config else 'None'}"
             )
+            logger.debug(f"📋 単一モデル設定: {config.single_model_config}")
+            logger.debug(
+                f"📋 単一モデルタイプ: {config.single_model_config.model_type if config.single_model_config else 'None'}"
+            )
+            logger.debug(f"📋 最適化設定: {config.optimization_settings}")
 
-        if config.single_model_config:
-            single_dict = config.single_model_config.model_dump()
-            logger.info(f"📋 単一モデル設定辞書: {single_dict}")
+            # 設定の詳細確認
+            if config.ensemble_config:
+                ensemble_dict = config.ensemble_config.model_dump()
+                logger.debug(f"📋 アンサンブル設定辞書: {ensemble_dict}")
+                logger.debug(
+                    f"📋 enabled値確認: {ensemble_dict.get('enabled')} (型: {type(ensemble_dict.get('enabled'))})"
+                )
+
+            if config.single_model_config:
+                single_dict = config.single_model_config.model_dump()
+                logger.debug(f"📋 単一モデル設定辞書: {single_dict}")
+        else:
+            logger.info(
+                f"📋 MLトレーニング設定を受信: {config.symbol} ({config.timeframe})"
+            )
+            logger.info("  ※詳細な設定内容はDEBUGログで確認可能です")
 
         # 既存の検証ロジック
         self.validate_training_config(config)

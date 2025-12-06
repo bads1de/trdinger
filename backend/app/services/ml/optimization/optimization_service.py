@@ -48,35 +48,42 @@ class OptimizationService:
         """
         パラメータ最適化を実行
         """
-        logger.info("🚀 最適化プロセスを開始")
+        try:
+            logger.info("🚀 最適化プロセスを開始")
 
-        # パラメータ空間を準備
-        parameter_space = self._prepare_parameter_space(trainer, optimization_settings)
+            # パラメータ空間を準備
+            parameter_space = self._prepare_parameter_space(
+                trainer, optimization_settings
+            )
 
-        # 目的関数を作成
-        objective_function = self._create_objective_function(
-            trainer=trainer,
-            training_data=training_data,
-            optimization_settings=optimization_settings,
-            funding_rate_data=funding_rate_data,
-            open_interest_data=open_interest_data,
-            **training_params,
-        )
+            # 目的関数を作成
+            objective_function = self._create_objective_function(
+                trainer=trainer,
+                training_data=training_data,
+                optimization_settings=optimization_settings,
+                funding_rate_data=funding_rate_data,
+                open_interest_data=open_interest_data,
+                **training_params,
+            )
 
-        # 最適化を実行
-        result = self.optimizer.optimize(
-            objective_function=objective_function,
-            parameter_space=parameter_space,
-            n_calls=optimization_settings.n_calls,
-        )
+            # 最適化を実行
+            result = self.optimizer.optimize(
+                objective_function=objective_function,
+                parameter_space=parameter_space,
+                n_calls=optimization_settings.n_calls,
+            )
 
-        return {
-            "method": "optuna",
-            "best_params": result.best_params,
-            "best_score": result.best_score,
-            "total_evaluations": result.total_evaluations,
-            "optimization_time": result.optimization_time,
-        }
+            return {
+                "method": "optuna",
+                "best_params": result.best_params,
+                "best_score": result.best_score,
+                "total_evaluations": result.total_evaluations,
+                "optimization_time": result.optimization_time,
+            }
+
+        finally:
+            # 確実にリソースを解放
+            self.optimizer.cleanup()
 
     def _prepare_parameter_space(
         self, trainer: Any, optimization_settings: OptimizationSettings

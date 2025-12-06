@@ -258,12 +258,12 @@ class FeatureEngineeringService:
                     "DataFrameのインデックスはDatetimeIndexである必要があります"
                 )
 
-            # メモリ使用量制限
-            if len(ohlcv_data) > 200000:
-                logger.warning(
-                    f"大量のデータ（{len(ohlcv_data)}行）、最新200,000行に制限"
-                )
-                ohlcv_data = ohlcv_data.tail(200000)
+            # メモリ使用量制限を撤廃（ユーザー要望により全データ使用）
+            # if len(ohlcv_data) > 200000:
+            #     logger.warning(
+            #         f"大量のデータ（{len(ohlcv_data)}行）、最新200,000行に制限"
+            #     )
+            #     ohlcv_data = ohlcv_data.tail(200000)
 
             # キャッシュキーを生成
             cache_key = generate_cache_key(

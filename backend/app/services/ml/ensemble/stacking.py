@@ -619,6 +619,19 @@ class StackingEnsemble(BaseEnsemble):
             logger.error(f"ベースモデル予測確率取得エラー: {e}")
             raise ModelError(f"ベースモデル予測確率の取得に失敗しました: {e}")
 
+    def clear_training_data(self) -> None:
+        """
+        学習用の一時データをクリアしてメモリを解放する
+
+        推論（predict）には不要な、学習時の元データやOOF予測値を削除します。
+        モデルのシリアライズ（保存）前に実行することで、ファイルサイズを削減できます。
+        """
+        self.X_train_original = None
+        self.y_train_original = None
+        self.oof_predictions = None
+        self.oof_base_model_predictions = None
+        logger.debug("StackingEnsembleの学習用一時データをクリアしました")
+
     def cleanup(self) -> None:
         """
         リソースをクリーンアップ

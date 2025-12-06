@@ -404,6 +404,11 @@ class EnsembleTrainer(BaseMLTrainer):
                 logger.error(f"メタラベリングモデル学習エラー: {e}")
                 logger.warning("メタラベリングモデルの学習をスキップしました。")
 
+            # メタラベリング学習完了後、StackingEnsemble内の学習データを解放
+            # これによりメモリリークを防ぎ、保存されるモデルファイルのサイズを削減
+            if hasattr(self.ensemble_model, "clear_training_data"):
+                self.ensemble_model.clear_training_data()
+
             return result
 
         except Exception as e:

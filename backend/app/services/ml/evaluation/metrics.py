@@ -110,7 +110,7 @@ class MetricsCalculator:
         self._model_evaluation_metrics: deque = deque(maxlen=max_history)
         self._error_counts: Dict[str, int] = defaultdict(int)
         self._operation_counts: Dict[str, int] = defaultdict(int)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     @safe_operation(
         context="包括的な評価指標計算", is_api_call=False, default_return={}
@@ -121,6 +121,7 @@ class MetricsCalculator:
         y_pred: np.ndarray,
         y_proba: Optional[np.ndarray] = None,
         class_names: Optional[List[str]] = None,
+        level: str = "full",
     ) -> Dict[str, Any]:
         """
         包括的な評価指標を計算
@@ -130,16 +131,29 @@ class MetricsCalculator:
             y_pred: 予測ラベル
             y_proba: 予測確率（オプション）
             class_names: クラス名のリスト
+            level: 計算レベル ('full' または 'basic')
+                   - 'basic': 基本的な精度指標のみ（高速）
+                   - 'full': 全ての指標（AUC、分布など含む）
 
         Returns:
             評価指標の辞書
         """
-        logger.info("📊 包括的な評価指標を計算中...")
+        if level == "full":
+            logger.info("📊 包括的な評価指標を計算中(Full)...")
 
         metrics = {}
 
-        # 基本的な精度指標
+        # 基本的な精度指標（常に計算）
         metrics.update(self._calculate_basic_metrics(y_true, y_pred))
+
+        # Basicモードの場合はここで終了（ただしバランス精度だけは重要なので追加検討しても良いが、一旦最小限に）
+        if level == "basic":
+            # バランス精度は重要かつ軽量なので計算
+            if self.config.include_balanced_accuracy:
+                metrics.update(self._calculate_balanced_metrics(y_true, y_pred))
+            return metrics
+
+        # 以下はFullモードのみ実行
 
         # 不均衡データ対応指標
         if self.config.include_balanced_accuracy:

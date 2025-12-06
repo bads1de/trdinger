@@ -10,22 +10,21 @@ logger = logging.getLogger(__name__)
 
 class PurgedKFold(_BaseKFold):
     """
-    Purged K-Fold Cross Validation.
+    パージングK分割交差検定。
 
-    This cross-validation scheme ensures that the training and testing sets are
-    separated in time to prevent data leakage from the future into the past.
-    It also purges samples from the training set that overlap with the testing
-    set to prevent label leakage.
+    この交差検定スキームは、訓練セットとテストセットが時間的に分離されることを保証し、
+    未来からのデータリークが過去に影響することを防ぎます。
+    また、ラベルリークを防ぐために、テストセットと重複する訓練セットからのサンプルをパージします。
 
-    Based on Marcos Lopez de Prado's "Advances in Financial Machine Learning".
+    Marcos Lopez de Prado の「金融機械学習の進歩」に基づいています。
 
-    Args:
-        n_splits (int): Number of splits.
-        t1 (pd.Series): Series of label end times for each sample in the dataset.
-                       Index should match the index of the features (X) and labels (y).
-        pct_embargo (float): Percentage of the test set duration to embargo from the training set.
-                             This helps prevent leakage from the training set to the test set
-                             if labels are formed using information within a certain window.
+    引数:
+        n_splits (int): 分割数。
+        t1 (pd.Series): データセット内の各サンプルのラベル終了時刻のSeries。
+                       インデックスは特徴量 (X) およびラベル (y) のインデックスと一致する必要があります。
+        pct_embargo (float): テストセットの期間から訓練セットに対してエンバーゴをかける割合。
+                             これにより、特定のウィンドウ内の情報を使用してラベルが形成されている場合、
+                             訓練セットからテストセットへのリークを防ぐのに役立ちます。
     """
 
     def __init__(
@@ -52,15 +51,15 @@ class PurgedKFold(_BaseKFold):
         groups: Optional[Any] = None,
     ):
         """
-        Generates indices to split data into training and test set.
+        データを訓練セットとテストセットに分割するためのインデックスを生成します。
 
-        Args:
-            X (pd.DataFrame): Training data.
-            y (Optional[pd.Series]): Target variable (ignored, but kept for scikit-learn compatibility).
-            groups (Optional[Any]): Group labels for the samples (ignored).
+        引数:
+            X (pd.DataFrame): 訓練データ。
+            y (Optional[pd.Series]): ターゲット変数（無視されますが、scikit-learnとの互換性のために保持されています）。
+            groups (Optional[Any]): サンプルのグループラベル（無視されます）。
 
-        Yields:
-            Tuple[np.ndarray, np.ndarray]: The training and test set indices for that split.
+        返り値:
+            Tuple[np.ndarray, np.ndarray]: その分割に対する訓練セットとテストセットのインデックス。
         """
         if not isinstance(X, pd.DataFrame):
             raise ValueError("X must be a pandas DataFrame.")
@@ -73,7 +72,7 @@ class PurgedKFold(_BaseKFold):
             test_start_idx = (X.shape[0] // self.n_splits) * i
             test_end_idx = (X.shape[0] // self.n_splits) * (i + 1)
 
-            # Adjust test_end for the last fold
+            # 最終フォールドの test_end を調整
             if i == self.n_splits - 1:
                 test_end_idx = X.shape[0]
 
@@ -82,36 +81,36 @@ class PurgedKFold(_BaseKFold):
             if len(test_indices) == 0:
                 continue
 
-            # Test set interval
+            # テストセットの期間
             test_start_time = X.index[test_start_idx]
-            # Determine max t1 in the test set for correct overlap checking and embargo
+            # 正しい重複チェックとエンバーゴのためにテストセット内の最大 t1 を決定
             test_max_t1 = self.t1.iloc[test_indices].max()
 
-            # Define the "forbidden" time range for training samples
-            # A training sample (t_start, t_end) overlaps with test set if:
-            # t_start <= test_max_t1 AND t_end >= test_start_time
+            # 訓練サンプルに対する「禁止」時間範囲を定義
+            # 訓練サンプル (t_start, t_end) がテストセットと重複するのは、
+            # t_start <= test_max_t1 かつ t_end >= test_start_time の場合
 
-            # Identify training samples to keep
-            # 1. Samples completely before the test set
+            # 保持する訓練サンプルを特定
+            # 1. テストセットより完全に前のサンプル
             #    t_end < test_start_time
-            # 2. Samples completely after the test set (plus embargo)
+            # 2. テストセットより完全に後のサンプル (エンバーゴ期間後)
             #    t_start > test_max_t1 + embargo
 
-            # Calculate embargo duration
+            # エンバーゴ期間を計算
             test_duration = test_max_t1 - test_start_time
             embargo_seconds = self._get_embargo_seconds_from_duration(
                 test_duration, self.pct_embargo
             )
             embargo_end_time = test_max_t1 + pd.Timedelta(seconds=embargo_seconds)
 
-            # Boolean masks for valid training samples
-            # Condition 1: End time of training sample is strictly before start of test set
+            # 有効な訓練サンプルのためのブールマスク
+            # 条件 1: 訓練サンプルの終了時刻がテストセットの開始時刻より厳密に前である
             train_indices_before = self.t1 < test_start_time
 
-            # Condition 2: Start time of training sample is strictly after end of test set (plus embargo)
+            # 条件 2: 訓練サンプルの開始時刻がテストセットの終了時刻 (プラスエンバーゴ) より厳密に後である
             train_indices_after = X.index > embargo_end_time
 
-            # Combine masks
+            # マスクを結合
             train_mask = train_indices_before | train_indices_after
 
             train_indices = indices[train_mask]
@@ -130,31 +129,31 @@ class PurgedKFold(_BaseKFold):
     def _get_embargo_seconds_from_duration(
         self, duration: pd.Timedelta, pct_embargo: float
     ) -> float:
-        """Calculates embargo seconds based on test set duration and percentage."""
+        """テストセットの期間と割合に基づいてエンバーゴ秒数を計算します。"""
         return duration.total_seconds() * pct_embargo
 
 
-# Helper for testing/debugging
+# テスト/デバッグ用のヘルパー
 if __name__ == "__main__":
-    # Sample data
+    # サンプルデータ
     dates = pd.date_range(start="2023-01-01", periods=100, freq="D")
     X_df = pd.DataFrame(
         np.random.rand(100, 5), index=dates, columns=[f"feature_{i}" for i in range(5)]
     )
     y_series = pd.Series(np.random.randint(0, 2, 100), index=dates, name="label")
 
-    # Simulate t1 for each sample (label end time)
-    # For simplicity, let's say a label lasts for 5 days from its start
+    # 各サンプルに対する t1 (ラベル終了時刻) をシミュレート
+    # 簡単のため、ラベルはその開始から5日間続くとする
     t1_series = pd.Series([d + pd.Timedelta(days=5) for d in dates], index=dates)
 
-    # Initialize PurgedKFold
+    # PurgedKFold を初期化
     pkf = PurgedKFold(n_splits=5, t1=t1_series, pct_embargo=0.01)
 
-    # Perform splitting
+    # 分割を実行
     for fold, (train_idx, test_idx) in enumerate(pkf.split(X_df)):
         print(f"Fold {fold+1}:")
         print(
-            f"  Train indices length: {len(train_idx)}, Test indices length: {len(test_idx)}"
+            f"  訓練インデックス長: {len(train_idx)}, テストインデックス長: {len(test_idx)}"
         )
 
         train_start_time = X_df.index[train_idx[0]]
@@ -162,58 +161,59 @@ if __name__ == "__main__":
         test_start_time = X_df.index[test_idx[0]]
         test_end_time = t1_series.iloc[test_idx[-1]]
 
-        print(f"  Train: {train_start_time} - {train_end_time}")
-        print(f"  Test:  {test_start_time} - {test_end_time}")
+        print(f"  訓練: {train_start_time} - {train_end_time}")
+        print(f"  テスト:  {test_start_time} - {test_end_time}")
 
-        # Verify no overlap and embargo
-        # Max t1 of train set should be before min start time of test set
+        # 重複とエンバーゴの検証
+        # 訓練セットの最大 t1 はテストセットの最小開始時刻より前であるべき
         max_train_t1 = t1_series.iloc[train_idx].max()
         min_test_start = X_df.index[test_idx].min()
 
-        # Test start time interval
+        # テスト開始時間間隔
         min_test_period_start = X_df.index[test_idx].min()
         max_test_period_end = t1_series.loc[X_df.index[test_idx]].max()
 
-        # Embargo start time
+        # エンバーゴ開始時間
         embargo_start_time = X_df.index[test_idx].min()
         embargo_duration = (
             max_test_period_end - min_test_period_start
         ).total_seconds() * pkf.pct_embargo
         embargo_end_time = embargo_start_time + pd.Timedelta(seconds=embargo_duration)
 
-        print(f"  Max Train T1: {max_train_t1}")
-        print(f"  Min Test Start: {min_test_start}")
-        print(f"  Embargo End Time: {embargo_end_time}")
+        print(f"  最大訓練 T1: {max_train_t1}")
+        print(f"  最小テスト開始: {min_test_start}")
+        print(f"  エンバーゴ終了時間: {embargo_end_time}")
 
-        # Assert that there's no overlap for training indices with test period
-        # Specifically, for each train_idx, the interval [X.index[i], t1.iloc[i]]
-        # must not overlap with any test interval [X.index[j], t1.iloc[j]]
+        # 訓練インデックスがテスト期間と重複しないことをアサート
+        # 具体的には、各 train_idx について、区間 [X.index[i], t1.iloc[i]] は
+        # いかなるテスト区間 [X.index[j], t1.iloc[j]] とも重複してはならない
 
-        # This is implicitly handled by the loop.
+        # これはループによって暗黙的に処理される。
 
-        # The key is that the training set does not contain observations that leak into the test set
-        # nor observations that are too close to the test set start.
+        # 重要なのは、訓練セットにテストセットにリークする観測値や、
+        # テストセットの開始に近すぎる観測値が含まれていないことである。
 
-        # Simple verification: max end time of any training observation should be before the start of the current test period (minus embargo)
-        # However, it's more subtle. A training observation can occur *before* the test period, but its label may extend *into* the test period.
-        # This is why we need t1 for purging.
+        # 単純な検証: 訓練観測の最大終了時刻は、現在のテスト期間の開始 (エンバーゴを除く) より前であるべき
+        # しかし、これはより微妙である。訓練観測はテスト期間 *前* に発生する可能性があるが、
+        # そのラベルはテスト期間 *内* に及ぶ可能性がある。
+        # これがパージングに t1 が必要な理由である。
 
-        # The loop logic implements:
-        # A training sample is valid if its interval [X.index[j], self.t1.iloc[j]] does not overlap with any test interval
-        # AND (X.index[j] < test_times.min()) OR (X.index[j] > embargo_end_time)
+        # ループロジックは以下を実装している:
+        # 訓練サンプルが有効であるのは、その区間 [X.index[j], self.t1.iloc[j]] がどのテスト区間とも重複せず、
+        # かつ (X.index[j] < test_times.min()) または (X.index[j] > embargo_end_time) の場合。
 
-        # Let's simplify the verification for now
-        # Assert that train_indices are disjoint from test_indices (already handled by construction)
-        # Assert that there are no train samples in the purged region
+        # とりあえず検証を簡素化する
+        # 訓練インデックスがテストインデックスと互いに素であることをアサート (構成によって既に処理済み)
+        # パージされた領域に訓練サンプルがないことをアサート
 
         # purged_region_start = X_df.index[test_start] - (X_df.index[test_end] - X_df.index[test_start]) * pkf.pct_embargo # not correct
         # purged_region_end = X_df.index[test_end] + (X_df.index[test_end] - X_df.index[test_start]) * pkf.pct_embargo # not correct
 
-        # Purging: remove training observations whose evaluation period (t1) overlaps with test_set.
-        # This is handled in the `is_purged` loop.
+        # パージング: 評価期間 (t1) がテストセットと重複する訓練観測を削除する。
+        # これは `is_purged` ループで処理される。
 
-        # Embargo: remove training observations that immediately precede the test set.
-        # This is handled by `X.index[j] > embargo_end_time` or `X.index[j] < test_times.min()`
+        # エンバーゴ: テストセットの直前にある訓練観測を削除する。
+        # これは `X.index[j] > embargo_end_time` または `X.index[j] < test_times.min()` で処理される。
 
-        # More robust manual checks might be needed in a full test suite.
-        # For this basic implementation, the logic aims to follow the principles.
+        # 完全なテストスイートでは、より堅牢な手動チェックが必要になるかもしれない。
+        # この基本的な実装では、ロジックは原則に従うことを目指している。
