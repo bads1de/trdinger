@@ -45,6 +45,9 @@ class EnsembleTrainer(BaseMLTrainer):
         self.ensemble_model = None
         self.meta_labeling_service = None  # メタラベリング サービスを追加
         self.meta_model_threshold = 0.5  # メタモデルの予測閾値
+        self.strict_error_mode = ensemble_config.get(
+            "strict_error_mode", True
+        )  # エラー時に例外を発生させるか
 
         # 単一モデルモードかアンサンブルモードかを判定
         models = ensemble_config.get("models", [])
@@ -74,7 +77,8 @@ class EnsembleTrainer(BaseMLTrainer):
         mode = "単一モデル" if self.is_single_model else "アンサンブル"
         logger.info(
             f"EnsembleTrainer初期化: mode={mode}, "
-            f"method={self.ensemble_method}, model_type={self.model_type}"
+            f"method={self.ensemble_method}, model_type={self.model_type}, "
+            f"strict_error_mode={self.strict_error_mode}"
         )
 
     def _extract_optimized_parameters(
@@ -184,12 +188,20 @@ class EnsembleTrainer(BaseMLTrainer):
                         features_scaled
                     )
                 except Exception as e:
-                    logger.warning(
-                        f"ベースモデル予測確率の取得に失敗したため、空のDataFrameを使用します: {e}"
-                    )
-                    base_model_probs_df = pd.DataFrame(
-                        index=features_scaled.index
-                    )  # indexをfeatures_scaledに合わせる
+                    if self.strict_error_mode:
+                        # 厳格モード: 明示的にエラーを発生させる
+                        logger.error(f"ベースモデル予測確率の取得に失敗しました: {e}")
+                        raise ModelError(
+                            f"ベースモデル予測確率の取得に失敗しました。"
+                            f"メタラベリングには完全な入力データが必要です: {e}"
+                        )
+                    else:
+                        # 寛容モード: 全てNo Trade（0）を返す
+                        logger.warning(
+                            f"ベースモデル予測確率の取得に失敗しました。"
+                            f"strict_error_mode=Falseのため、全てNo Trade（0）を返します: {e}"
+                        )
+                        return np.zeros(len(features_df), dtype=int)
 
                 # メタモデルは0/1を返す
                 filtered_predictions = self.meta_labeling_service.predict(

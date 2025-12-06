@@ -14,7 +14,6 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from app.config.unified_config import unified_config
 
 from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
@@ -351,50 +350,61 @@ class FeatureEngineeringService:
             # === 新規追加: 学術的に実証済みの強力な特徴量 ===
             logger.info("学術論文・Kaggle実証済み特徴量を計算中...")
 
+            # 特徴量DataFrameをリストに収集し、最後に一度だけconcatする（パフォーマンス最適化）
+            additional_features_list = []
+
             # Volume Profile特徴量
             volume_profile_features = self.volume_profile_calculator.calculate_features(
                 result_df
             )
-            result_df = pd.concat([result_df, volume_profile_features], axis=1)
+            additional_features_list.append(volume_profile_features)
 
             # OI/FR相互作用特徴量
             oi_fr_features = self.oi_fr_interaction_calculator.calculate_features(
                 result_df, open_interest_data, funding_rate_data
             )
-            result_df = pd.concat([result_df, oi_fr_features], axis=1)
+            additional_features_list.append(oi_fr_features)
 
             # Advanced Rolling Statistics特徴量
             advanced_stats_features = self.advanced_stats_calculator.calculate_features(
                 result_df
             )
-            result_df = pd.concat([result_df, advanced_stats_features], axis=1)
+            additional_features_list.append(advanced_stats_features)
 
             # Multi-Timeframe特徴量
             multi_timeframe_features = (
                 self.multi_timeframe_calculator.calculate_features(result_df)
             )
-            result_df = pd.concat([result_df, multi_timeframe_features], axis=1)
+            additional_features_list.append(multi_timeframe_features)
 
             # Microstructure特徴量 (New)
             microstructure_features = self.microstructure_calculator.calculate_features(
                 result_df
             )
-            result_df = pd.concat([result_df, microstructure_features], axis=1)
+            additional_features_list.append(microstructure_features)
+
+            # 一度だけconcatを実行（5回 -> 1回に削減）
+            if additional_features_list:
+                result_df = pd.concat([result_df] + additional_features_list, axis=1)
 
             # 重複カラムを削除（新しい値を優先）
             result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
 
-            # データ前処理
+            # データ前処理（ベクトル化された処理でパフォーマンス最適化）
             logger.info("統計的手法による特徴量前処理を実行中...")
             try:
                 numeric_columns = result_df.select_dtypes(include=[np.number]).columns
-                for col in numeric_columns:
-                    # 無限大値をNaNに変換
-                    result_df[col] = result_df[col].replace([np.inf, -np.inf], np.nan)
-                    # NaN値を前方補完
-                    result_df[col] = result_df[col].ffill()
-                    # 残りを0で埋める
-                    result_df[col] = result_df[col].fillna(0.0)
+
+                # ベクトル化された一括処理（列ごとのループを排除）
+                # 1. 無限大値をNaNに変換
+                result_df[numeric_columns] = result_df[numeric_columns].replace(
+                    [np.inf, -np.inf], np.nan
+                )
+                # 2. NaN値を前方補完
+                result_df[numeric_columns] = result_df[numeric_columns].ffill()
+                # 3. 残りを0で埋める
+                result_df[numeric_columns] = result_df[numeric_columns].fillna(0.0)
+
                 logger.info("データ前処理完了")
             except Exception as e:
                 logger.error(f"データ前処理中にエラーが発生: {e}")

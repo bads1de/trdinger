@@ -132,7 +132,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             features_df = self._calculate_features(
                 ohlcv_data=training_data,
                 funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data
+                open_interest_data=open_interest_data,
             )
 
             # 3. 学習用データを準備
@@ -649,11 +649,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         return get_feature_importance_unified(
             self._model, self.feature_columns, top_n=top_n
         )
-
-        self.is_trained = False
-        self.current_model_path = None
-        self.current_model_metadata = None
-        return True
 
     @safe_ml_operation(
         default_return=False, context="モデル読み込みでエラーが発生しました"

@@ -384,72 +384,77 @@ class MarketRegimeDetector:
             return 0.5
 
     def _calculate_features(self, data: pd.DataFrame) -> Optional[np.ndarray]:
-        """レジーム判定用特徴量を計算"""
+        """レジーム判定用特徴量を計算（ベクトル化実装）"""
         try:
             close = data["Close"].iloc[-self.lookback_period :]
             high = data["High"].iloc[-self.lookback_period :]
             low = data["Low"].iloc[-self.lookback_period :]
             volume = data["Volume"].iloc[-self.lookback_period :]
 
-            returns = close.pct_change().dropna()
+            returns = close.pct_change()
 
-            if len(returns) < 20:
+            if len(returns.dropna()) < 20:
                 return None
 
-            features = []
             window = 20
 
-            for i in range(window, len(close)):
-                window_returns = returns.iloc[i - window : i]
-                window_volume = volume.iloc[i - window : i]
-                window_high = high.iloc[i - window : i]
-                window_low = low.iloc[i - window : i]
-                window_close = close.iloc[i - window : i]
+            # pandas.rolling を使用してベクトル化した統計量計算
+            rolling_returns = returns.rolling(window)
 
-                # 基本統計量
-                volatility = window_returns.std()
-                mean_return = window_returns.mean()
-                skewness = window_returns.skew()
-                kurtosis = window_returns.kurtosis()
+            # 基本統計量（ベクトル化）
+            volatility = rolling_returns.std()
+            mean_return = rolling_returns.mean()
+            skewness = rolling_returns.skew()
+            kurtosis = rolling_returns.kurt()
 
-                # トレンド指標
-                trend_strength = abs(mean_return) / volatility if volatility > 0 else 0
+            # トレンド指標（ベクトル化）
+            # ゼロ除算を避けるため、volatility が 0 の場合は 0
+            trend_strength = np.where(
+                volatility > 0, np.abs(mean_return) / volatility, 0.0
+            )
 
-                # ボリューム指標
-                volume_ratio = (
-                    window_volume.iloc[-5:].mean() / window_volume.mean()
-                    if window_volume.mean() > 0
-                    else 1
-                )
+            # ボリューム指標（ベクトル化）
+            # 直近5本の平均 / ウィンドウ全体の平均
+            rolling_volume = volume.rolling(window)
+            volume_mean = rolling_volume.mean()
+            # 直近5本の rolling mean を計算
+            volume_recent_5 = volume.rolling(5).mean()
+            volume_ratio = np.where(volume_mean > 0, volume_recent_5 / volume_mean, 1.0)
 
-                # 価格レンジ指標
-                price_range = (
-                    (window_high.max() - window_low.min()) / window_close.mean()
-                    if window_close.mean() > 0
-                    else 0
-                )
+            # 価格レンジ指標（ベクトル化）
+            rolling_high = high.rolling(window)
+            rolling_low = low.rolling(window)
+            rolling_close = close.rolling(window)
+            price_range_raw = rolling_high.max() - rolling_low.min()
+            close_mean = rolling_close.mean()
+            price_range = np.where(close_mean > 0, price_range_raw / close_mean, 0.0)
 
-                # ボラティリティ変化
-                vol_change = (
-                    volatility / window_returns.iloc[:10].std()
-                    if window_returns.iloc[:10].std() > 0
-                    else 1
-                )
+            # ボラティリティ変化（前半10本の標準偏差との比）
+            # ベクトル化のため、10本前のローリング標準偏差をシフトして使用
+            vol_prev_half = returns.rolling(10).std().shift(10)
+            vol_change = np.where(vol_prev_half > 0, volatility / vol_prev_half, 1.0)
 
-                features.append(
-                    [
-                        volatility,
-                        trend_strength,
-                        volume_ratio,
-                        price_range,
-                        vol_change,
-                        skewness,
-                        kurtosis,
-                        mean_return,
-                    ]
-                )
+            # DataFrameにまとめて、NaNを削除
+            features_df = pd.DataFrame(
+                {
+                    "volatility": volatility,
+                    "trend_strength": trend_strength,
+                    "volume_ratio": volume_ratio,
+                    "price_range": price_range,
+                    "vol_change": vol_change,
+                    "skewness": skewness,
+                    "kurtosis": kurtosis,
+                    "mean_return": mean_return,
+                }
+            )
 
-            features_array = np.array(features)
+            # NaN行を削除（ウィンドウ開始前のデータ）
+            features_df = features_df.dropna()
+
+            if len(features_df) == 0:
+                return None
+
+            features_array = features_df.values
 
             # 特徴量の正規化
             # レジーム判定はそのウィンドウ内での相対的な状態を見るため、

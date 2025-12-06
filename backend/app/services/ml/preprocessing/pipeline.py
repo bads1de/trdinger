@@ -14,11 +14,43 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
+from sklearn.preprocessing import (
+    FunctionTransformer,
+    MinMaxScaler,
+    RobustScaler,
+    StandardScaler,
+)
 
-from app.utils.data_processing.pipelines.preprocessing_pipeline import create_preprocessing_pipeline
+from app.utils.data_processing.pipelines.preprocessing_pipeline import (
+    create_preprocessing_pipeline,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _dataframe_to_array(X):
+    """
+    MLアルゴリズムのためにDataFrameをnumpy配列に変換。
+
+    Args:
+        X: 入力データ（DataFrameまたはarray-like）
+
+    Returns:
+        numpy配列に変換されたデータ
+    """
+    if isinstance(X, pd.DataFrame):
+        # Check for NaN values before conversion
+        if X.isnull().values.any():
+            # Fill NaN values with 0 before conversion
+            X = X.fillna(0.0)
+
+        # Handle empty DataFrames
+        if X.empty:
+            # Return empty 2D array with proper shape
+            return np.array([]).reshape(0, 0)
+
+        return X.values
+    return X
 
 
 def create_ml_pipeline(
@@ -56,25 +88,6 @@ def create_ml_pipeline(
     preprocessing_params = preprocessing_params or {}
     preprocessing_pipeline = create_preprocessing_pipeline(**preprocessing_params)
 
-    # MLステップのためにDataFrameを配列に変換
-    def dataframe_to_array(X):
-        """MLアルゴリズムのためにDataFrameをnumpy配列に変換。"""
-        if isinstance(X, pd.DataFrame):
-            # Check for NaN values before conversion
-            if X.isnull().values.any():
-                # Fill NaN values with 0 before conversion
-                X = X.fillna(0.0)
-
-            # Handle empty DataFrames
-            if X.empty:
-                # Return empty 2D array with proper shape
-                return np.array([]).reshape(0, 0)
-
-            return X.values
-        return X
-
-    from sklearn.preprocessing import FunctionTransformer
-
     # ML特有のステップ
     ml_steps = [("preprocessing", preprocessing_pipeline)]
 
@@ -82,7 +95,7 @@ def create_ml_pipeline(
     if feature_selection and n_features is not None and n_features > 0:
         # 特徴量選択前に配列に変換
         ml_steps.append(
-            ("to_array", FunctionTransformer(func=dataframe_to_array, validate=False))
+            ("to_array", FunctionTransformer(func=_dataframe_to_array, validate=False))
         )
         if selection_method == "f_regression":
             selector = SelectKBest(score_func=f_regression, k=n_features)
@@ -148,25 +161,6 @@ def create_classification_pipeline(
     preprocessing_params = preprocessing_params or {}
     preprocessing_pipeline = create_preprocessing_pipeline(**preprocessing_params)
 
-    # Convert DataFrame to array for ML steps
-    def dataframe_to_array(X):
-        """Convert DataFrame to numpy array for ML algorithms."""
-        if isinstance(X, pd.DataFrame):
-            # Check for NaN values before conversion
-            if X.isnull().values.any():
-                # Fill NaN values with 0 before conversion
-                X = X.fillna(0.0)
-
-            # Handle empty DataFrames
-            if X.empty:
-                # Return empty 2D array with proper shape
-                return np.array([]).reshape(0, 0)
-
-            return X.values
-        return X
-
-    from sklearn.preprocessing import FunctionTransformer
-
     # Classification-specific steps
     steps = [("preprocessing", preprocessing_pipeline)]
 
@@ -174,7 +168,7 @@ def create_classification_pipeline(
     if feature_selection and n_features is not None and n_features > 0:
         # Convert to array before feature selection
         steps.append(
-            ("to_array", FunctionTransformer(func=dataframe_to_array, validate=False))
+            ("to_array", FunctionTransformer(func=_dataframe_to_array, validate=False))
         )
         if selection_method == "f_classif":
             selector = SelectKBest(score_func=f_classif, k=n_features)
