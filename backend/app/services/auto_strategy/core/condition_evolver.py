@@ -4,16 +4,23 @@ ConditionEvolver - 条件進化最適化システム
 32指標に対応した進化的最適化システムを提供します。
 YAML設定ファイルから指標情報を読み込み、DEAPベースのGAエンジンで
 条件の最適化を行います。
+
+パフォーマンス最適化機能:
+- 並列適応度評価（ParallelFitnessEvaluator）
+- 適応度キャッシュ（FitnessCache）
+- 早期打ち切り（EarlyStopping）
 """
 
 import logging
+import os
 import random
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
-from deap import base, creator, tools
 
 from app.services.backtest.backtest_service import BacktestService
 from app.services.indicators.manifest import manifest_to_yaml_dict
@@ -36,6 +43,259 @@ class EvolutionConfig:
     def __post_init__(self):
         if self.objectives is None:
             self.objectives = ["total_return"]
+
+
+class EarlyStopping:
+    """
+    早期打ち切り機能
+
+    適応度が一定世代改善しない場合に進化を打ち切ります。
+    """
+
+    def __init__(self, patience: int = 5, min_delta: float = 0.001):
+        """
+        初期化
+
+        Args:
+            patience: 改善がない場合に待機する世代数
+            min_delta: 改善と見なす最小変化量
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_fitness = float("-inf")
+        self.should_stop = False
+
+    def update(self, fitness: float) -> bool:
+        """
+        適応度を更新し、打ち切り判定を行う
+
+        Args:
+            fitness: 現在の最高適応度
+
+        Returns:
+            打ち切りすべきかどうか
+        """
+        if fitness > self.best_fitness + self.min_delta:
+            self.best_fitness = fitness
+            self.counter = 0
+        else:
+            self.counter += 1
+
+        if self.counter >= self.patience:
+            self.should_stop = True
+
+        return self.should_stop
+
+    def reset(self):
+        """状態をリセット"""
+        self.counter = 0
+        self.best_fitness = float("-inf")
+        self.should_stop = False
+
+
+class FitnessCache:
+    """
+    適応度キャッシュ
+
+    同一条件の重複評価を避けるためのメモ化キャッシュ。
+    LRU(Least Recently Used)方式で古いエントリを削除。
+    """
+
+    def __init__(self, max_size: int = 1000):
+        """
+        初期化
+
+        Args:
+            max_size: キャッシュの最大サイズ
+        """
+        self.max_size = max_size
+        self._cache: OrderedDict[str, float] = OrderedDict()
+        self._hits = 0
+        self._misses = 0
+
+    def _make_key(self, condition: "Condition") -> str:
+        """条件からキャッシュキーを生成"""
+        return f"{condition.indicator_name}|{condition.operator}|{condition.threshold:.6f}|{condition.direction}"
+
+    def get(self, condition: "Condition") -> Optional[float]:
+        """
+        キャッシュから適応度を取得
+
+        Args:
+            condition: 条件
+
+        Returns:
+            キャッシュされた適応度、存在しない場合はNone
+        """
+        key = self._make_key(condition)
+        if key in self._cache:
+            self._hits += 1
+            # LRU: アクセスされたエントリを末尾に移動
+            self._cache.move_to_end(key)
+            return self._cache[key]
+        self._misses += 1
+        return None
+
+    def set(self, condition: "Condition", fitness: float):
+        """
+        適応度をキャッシュに設定
+
+        Args:
+            condition: 条件
+            fitness: 適応度
+        """
+        key = self._make_key(condition)
+
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        else:
+            if len(self._cache) >= self.max_size:
+                # 最も古いエントリを削除
+                self._cache.popitem(last=False)
+
+        self._cache[key] = fitness
+
+    def __len__(self) -> int:
+        return len(self._cache)
+
+    def __bool__(self) -> bool:
+        """キャッシュオブジェクトが存在する限りTrueを返す"""
+        return True
+
+    def get_stats(self) -> Dict[str, Any]:
+        """キャッシュ統計を取得"""
+        total = self._hits + self._misses
+        hit_rate = self._hits / total if total > 0 else 0.0
+        return {
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": hit_rate,
+            "size": len(self._cache),
+        }
+
+
+class ParallelFitnessEvaluator:
+    """
+    並列適応度評価器
+
+    ThreadPoolExecutorを使用して個体群の適応度を並列評価します。
+    """
+
+    def __init__(
+        self,
+        backtest_service: BacktestService,
+        yaml_indicator_utils: "YamlIndicatorUtils",
+        max_workers: Optional[int] = None,
+        cache: Optional[FitnessCache] = None,
+    ):
+        """
+        初期化
+
+        Args:
+            backtest_service: バックテストサービス
+            yaml_indicator_utils: YAML指標ユーティリティ
+            max_workers: 並列ワーカー数（Noneの場合はCPUコア数）
+            cache: 適応度キャッシュ（オプション）
+        """
+        self.backtest_service = backtest_service
+        self.yaml_indicator_utils = yaml_indicator_utils
+        self.max_workers = max_workers or min(os.cpu_count() or 4, 8)
+        self.cache = cache
+
+    def _evaluate_single(
+        self, condition: "Condition", backtest_config: Dict[str, Any]
+    ) -> float:
+        """
+        単一条件の適応度を評価
+
+        Args:
+            condition: 評価する条件
+            backtest_config: バックテスト設定
+
+        Returns:
+            適応度値
+        """
+        # キャッシュチェック
+        if self.cache:
+            cached = self.cache.get(condition)
+            if cached is not None:
+                return cached
+
+        try:
+            # 条件から戦略設定を作成
+            strategy_config = create_simple_strategy(condition)
+
+            # バックテスト設定を構築
+            test_config = backtest_config.copy()
+            test_config.update(strategy_config["parameters"])
+
+            # バックテスト実行
+            result = self.backtest_service.run_backtest(test_config)
+
+            # パフォーマンスメトリクスから適応度を計算
+            metrics = result.get("performance_metrics", {})
+            total_return = metrics.get("total_return", 0.0)
+            sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
+            max_drawdown = metrics.get("max_drawdown", 1.0)
+            total_trades = metrics.get("total_trades", 0)
+
+            # 取引回数が少ない場合はペナルティ
+            if total_trades < 10:
+                fitness = 0.1
+            else:
+                # 多目的適応度を単一値に統合（重み付け）
+                fitness = (
+                    0.4 * max(0, total_return)
+                    + 0.3 * max(0, sharpe_ratio)
+                    + 0.2 * max(0, (1 - max_drawdown))
+                    + 0.1 * min(1, total_trades / 100)
+                )
+
+            fitness = max(0.0, fitness)
+
+            # キャッシュに保存
+            if self.cache:
+                self.cache.set(condition, fitness)
+
+            return fitness
+
+        except Exception as e:
+            logger.error(f"適応度評価エラー: {e}")
+            return 0.0
+
+    def evaluate_population(
+        self, population: List["Condition"], backtest_config: Dict[str, Any]
+    ) -> List[float]:
+        """
+        個体群の適応度を並列評価
+
+        Args:
+            population: 評価する個体群
+            backtest_config: バックテスト設定
+
+        Returns:
+            適応度値のリスト
+        """
+        fitness_values = [0.0] * len(population)
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # 各個体の評価タスクを投入
+            future_to_index = {
+                executor.submit(self._evaluate_single, condition, backtest_config): i
+                for i, condition in enumerate(population)
+            }
+
+            # 結果を収集
+            for future in as_completed(future_to_index):
+                index = future_to_index[future]
+                try:
+                    fitness_values[index] = future.result()
+                except Exception as e:
+                    logger.error(f"並列評価エラー (index={index}): {e}")
+                    fitness_values[index] = 0.0
+
+        return fitness_values
 
 
 class YamlIndicatorUtils:
@@ -228,6 +488,12 @@ class Condition:
             f"{self.indicator_name} {self.operator} {self.threshold} ({self.direction})"
         )
 
+    def __hash__(self) -> int:
+        """ハッシュ値（キャッシュ用）"""
+        return hash(
+            (self.indicator_name, self.operator, self.threshold, self.direction)
+        )
+
 
 def create_simple_strategy(condition: Condition) -> Dict[str, Any]:
     """
@@ -262,12 +528,23 @@ class ConditionEvolver:
 
     DEAPベースのGAエンジンを使用して、32指標全てに対応した
     条件の進化的最適化を行います。
+
+    パフォーマンス最適化機能付き:
+    - 並列評価（enable_parallel）
+    - キャッシュ（enable_cache）
+    - 早期打ち切り（early_stopping_patience）
     """
 
     def __init__(
         self,
         backtest_service: BacktestService,
         yaml_indicator_utils: YamlIndicatorUtils,
+        enable_parallel: bool = False,
+        max_workers: Optional[int] = None,
+        enable_cache: bool = False,
+        cache_size: int = 1000,
+        early_stopping_patience: Optional[int] = None,
+        early_stopping_min_delta: float = 0.001,
     ):
         """
         初期化
@@ -275,36 +552,49 @@ class ConditionEvolver:
         Args:
             backtest_service: バックテストサービス
             yaml_indicator_utils: YAML指標ユーティリティ
+            enable_parallel: 並列評価を有効化
+            max_workers: 並列ワーカー数
+            enable_cache: キャッシュを有効化
+            cache_size: キャッシュサイズ
+            early_stopping_patience: 早期打ち切りの待機世代数（Noneで無効）
+            early_stopping_min_delta: 改善と見なす最小変化量
         """
         self.backtest_service = backtest_service
         self.yaml_indicator_utils = yaml_indicator_utils
 
-        # DEAP設定
-        self._setup_deap()
+        # パフォーマンス最適化設定
+        self.enable_parallel = enable_parallel
+        self.max_workers = max_workers
+        self.enable_cache = enable_cache
+        self.cache_size = cache_size
 
-        logger.info("ConditionEvolver 初期化完了")
+        # キャッシュ初期化
+        self.cache = FitnessCache(max_size=cache_size) if enable_cache else None
 
-    def _setup_deap(self):
-        """DEAP環境のセットアップ"""
-        # フィットネス関数（最大化）
-        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-
-        # 個体クラス
-        creator.create("Individual", list, fitness=creator.FitnessMax)
-
-        # ツールボックス
-        self.toolbox = base.Toolbox()
-
-        # 個体生成関数
-        self.toolbox.register("individual", self._create_individual)
-        self.toolbox.register(
-            "population", tools.initRepeat, list, self.toolbox.individual
+        # 早期打ち切り設定
+        self.early_stopping = (
+            EarlyStopping(
+                patience=early_stopping_patience, min_delta=early_stopping_min_delta
+            )
+            if early_stopping_patience
+            else None
         )
 
-        # 交叉・突然変異関数
-        self.toolbox.register("mate", self.crossover)
-        self.toolbox.register("mutate", self.mutate)
-        self.toolbox.register("select", self.tournament_selection, k=3)
+        # 並列評価器
+        self.parallel_evaluator = (
+            ParallelFitnessEvaluator(
+                backtest_service=backtest_service,
+                yaml_indicator_utils=yaml_indicator_utils,
+                max_workers=max_workers,
+                cache=self.cache,
+            )
+            if enable_parallel
+            else None
+        )
+
+        logger.info(
+            f"ConditionEvolver 初期化完了 (parallel={enable_parallel}, cache={enable_cache})"
+        )
 
     def _create_individual(self) -> Condition:
         """
@@ -393,6 +683,12 @@ class ConditionEvolver:
         Returns:
             適応度値（高いほど良い）
         """
+        # キャッシュチェック
+        if self.cache:
+            cached = self.cache.get(condition)
+            if cached is not None:
+                return cached
+
         try:
             # 条件から戦略設定を作成
             strategy_config = create_simple_strategy(condition)
@@ -413,18 +709,24 @@ class ConditionEvolver:
 
             # 取引回数が少ない場合はペナルティ
             if total_trades < 10:
-                return 0.1
+                fitness = 0.1
+            else:
+                # 多目的適応度を単一値に統合（重み付け）
+                fitness = (
+                    0.4 * max(0, total_return)
+                    + 0.3 * max(0, sharpe_ratio)
+                    + 0.2 * max(0, (1 - max_drawdown))
+                    + 0.1 * min(1, total_trades / 100)  # 取引回数ボーナス
+                )
 
-            # 多目的適応度を単一値に統合（重み付け）
-            fitness = (
-                0.4 * max(0, total_return)
-                + 0.3 * max(0, sharpe_ratio)
-                + 0.2 * max(0, (1 - max_drawdown))
-                + 0.1 * min(1, total_trades / 100)  # 取引回数ボーナス
-            )
+            fitness = max(0.0, fitness)
+
+            # キャッシュに保存
+            if self.cache:
+                self.cache.set(condition, fitness)
 
             logger.debug(f"Condition {condition} fitness: {fitness:.4f}")
-            return max(0.0, fitness)
+            return fitness
 
         except Exception as e:
             logger.error(f"適応度評価エラー: {e}")
@@ -539,7 +841,9 @@ class ConditionEvolver:
         elif mutation_type == "indicator":
             # 指標を突然変異
             available_indicators = self.yaml_indicator_utils.get_available_indicators()
-            available_indicators.remove(mutated_condition.indicator_name)
+            # 現在の指標がリストに含まれている場合のみ削除
+            if mutated_condition.indicator_name in available_indicators:
+                available_indicators.remove(mutated_condition.indicator_name)
             if available_indicators:
                 mutated_condition.indicator_name = random.choice(available_indicators)
 
@@ -561,9 +865,9 @@ class ConditionEvolver:
         進化アルゴリズムを実行
 
         Args:
+            backtest_config: バックテスト設定
             population_size: 個体群サイズ
             generations: 世代数
-            backtest_config: バックテスト設定
 
         Returns:
             進化結果
@@ -571,20 +875,31 @@ class ConditionEvolver:
         try:
             logger.info(f"進化開始: 個体数={population_size}, 世代数={generations}")
 
+            # 早期打ち切りをリセット
+            if self.early_stopping:
+                self.early_stopping.reset()
+
             # 初期個体群生成
             population = self.generate_initial_population(population_size)
 
             # 進化履歴
             evolution_history = []
+            early_stopped = False
+            generations_completed = 0
 
             for generation in range(generations):
                 logger.info(f"世代 {generation + 1}/{generations}")
 
-                # 適応度評価
-                fitness_values = [
-                    self.evaluate_fitness(individual, backtest_config)
-                    for individual in population
-                ]
+                # 適応度評価（並列または直列）
+                if self.enable_parallel and self.parallel_evaluator:
+                    fitness_values = self.parallel_evaluator.evaluate_population(
+                        population, backtest_config
+                    )
+                else:
+                    fitness_values = [
+                        self.evaluate_fitness(individual, backtest_config)
+                        for individual in population
+                    ]
 
                 # 進化履歴を記録
                 best_fitness = max(fitness_values)
@@ -600,6 +915,17 @@ class ConditionEvolver:
                 logger.info(
                     f"世代 {generation + 1}: 最高適応度={best_fitness:.4f}, 平均適応度={avg_fitness:.4f}"
                 )
+
+                generations_completed = generation + 1
+
+                # 早期打ち切りチェック
+                if self.early_stopping:
+                    if self.early_stopping.update(best_fitness):
+                        logger.info(
+                            f"早期打ち切り: {self.early_stopping.patience}世代間改善なし"
+                        )
+                        early_stopped = True
+                        break
 
                 # エリート選択（最良個体を保存）
                 elite = [max(zip(population, fitness_values), key=lambda x: x[1])[0]]
@@ -622,17 +948,19 @@ class ConditionEvolver:
                     for ind in offspring
                 ]
 
-                # エリートを追加
-                offspring.extend(elite)
-
-                # 次世代を現在の個体群とする
-                population = offspring[:population_size]
+                # 次世代を現在の個体群とする（エリートを優先して保存）
+                population = (elite + offspring)[:population_size]
 
             # 最終結果
-            fitness_values = [
-                self.evaluate_fitness(individual, backtest_config)
-                for individual in population
-            ]
+            if self.enable_parallel and self.parallel_evaluator:
+                fitness_values = self.parallel_evaluator.evaluate_population(
+                    population, backtest_config
+                )
+            else:
+                fitness_values = [
+                    self.evaluate_fitness(individual, backtest_config)
+                    for individual in population
+                ]
 
             best_idx = fitness_values.index(max(fitness_values))
             best_condition = population[best_idx]
@@ -643,8 +971,14 @@ class ConditionEvolver:
                 "best_fitness": best_fitness,
                 "final_population": population,
                 "evolution_history": evolution_history,
-                "generations_completed": generations,
+                "generations_completed": generations_completed,
+                "parallel_enabled": self.enable_parallel,
+                "early_stopped": early_stopped,
             }
+
+            # キャッシュ統計を追加
+            if self.cache:
+                result["cache_stats"] = self.cache.get_stats()
 
             logger.info(
                 f"進化完了: 最高適応度={best_fitness:.4f}, 最高条件={best_condition}"

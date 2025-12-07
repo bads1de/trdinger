@@ -60,7 +60,11 @@ class DEAPSetup:
         # 個体クラスの定義
         if hasattr(creator, "Individual"):
             delattr(creator, "Individual")
-        creator.create("Individual", list, fitness=fitness_class)  # type: ignore
+
+        from ..models.strategy_models import StrategyGene
+
+        # StrategyGeneを継承し、fitness属性を持つクラスを作成
+        creator.create("Individual", StrategyGene, fitness=fitness_class)  # type: ignore
         self.Individual = creator.Individual  # type: ignore # 生成したクラスをインスタンス変数に格納
 
         # ツールボックスの初期化

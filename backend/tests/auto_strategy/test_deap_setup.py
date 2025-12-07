@@ -11,6 +11,7 @@ from deap import base
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.deap_setup import DEAPSetup
+from app.services.auto_strategy.models.strategy_models import StrategyGene
 
 pytestmark = pytest.mark.skip(
     reason="DEAP creator mocking is complex - tests need integration test approach instead of unit test mocking"
@@ -86,7 +87,7 @@ class TestDEAPSetup:
 
         # Individualクラスが作成されたことを確認
         mock_creator.create.assert_any_call(
-            "Individual", list, fitness=mock_creator.FitnessMulti
+            "Individual", StrategyGene, fitness=mock_creator.FitnessMulti
         )
 
     def test_setup_deap_registers_toolbox_functions(

@@ -7,6 +7,7 @@ DEAPライブラリを使用したGA実装。
 import logging
 import time
 from typing import Any, Dict, Optional
+from dataclasses import asdict
 
 import numpy as np
 from deap import tools
@@ -368,15 +369,12 @@ class GeneticAlgorithmEngine:
             # RandomGeneGeneratorを使用して遺伝子を生成
             gene = self.gene_generator.generate_random_gene()
 
-            # 遺伝子をエンコード（リファクタリング改善）
-            from ..serializers.gene_serialization import GeneSerializer
-
-            gene_serializer = GeneSerializer()
-            encoded_gene = gene_serializer.to_list(gene)
-
             if not self.individual_class:
                 raise TypeError("個体クラス 'Individual' が初期化されていません。")
-            return self.individual_class(encoded_gene)
+
+            # StrategyGeneのフィールドを使ってIndividualインスタンスを作成
+            # IndividualはStrategyGeneを継承しているため、キーワード引数で初期化可能
+            return self.individual_class(**asdict(gene))
 
         except Exception as e:
             logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")

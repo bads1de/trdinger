@@ -11,6 +11,7 @@ import uuid
 from typing import Union
 
 import numpy as np
+from dataclasses import asdict
 
 from ..models.strategy_models import (
     StrategyGene,
@@ -184,11 +185,12 @@ def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
         return strategy_gene
 
     try:
-        from ..serializers.gene_serialization import GeneSerializer
+        # 既にIndividualクラスのインスタンスならそのまま返す
+        if isinstance(strategy_gene, individual_class):
+            return strategy_gene
 
-        gene_serializer = GeneSerializer()
-        encoded_gene = gene_serializer.encode_strategy_gene_to_list(strategy_gene)
-        return individual_class(encoded_gene)
+        # StrategyGeneのフィールドを展開してIndividualを生成
+        return individual_class(**asdict(strategy_gene))
     except Exception as e:
         logger.error(f"StrategyGene→Individual変換エラー: {e}")
         raise
@@ -496,8 +498,8 @@ def crossover_strategy_genes(
     """
     try:
         # 入力の型を記録（戻り値の型を決定するため）
-        parent1_is_individual = isinstance(parent1, list)
-        parent2_is_individual = isinstance(parent2, list)
+        parent1_is_individual = isinstance(parent1, list) or hasattr(parent1, "fitness")
+        parent2_is_individual = isinstance(parent2, list) or hasattr(parent2, "fitness")
 
         # IndividualオブジェクトをStrategyGeneに変換
         strategy_parent1 = _convert_to_strategy_gene(parent1)
@@ -725,7 +727,7 @@ def mutate_strategy_gene(
     """
     try:
         # 入力の型を記録（戻り値の型を決定するため）
-        gene_is_individual = isinstance(gene, list)
+        gene_is_individual = isinstance(gene, list) or hasattr(gene, "fitness")
 
         # IndividualオブジェクトをStrategyGeneに変換
         strategy_gene = _convert_to_strategy_gene(gene)
