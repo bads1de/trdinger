@@ -90,24 +90,31 @@ def validate_data_length_with_fallback(
     return False, min_required
 
 
+# 各指標の絶対的最小データ長定義
+# この値は、指標が意味のある結果を返すために必要な最低限のデータポイント数
+# パラメータに関係なく必要な固定値
+_ABSOLUTE_MINIMUM_LENGTHS = {
+    "SMA": 2,  # 最低2点で平均を計算可能
+    "EMA": 2,  # 最低2点で指数平滑を計算可能
+    "TEMA": 3,  # 三重指数平滑のため最低3点
+    "MACD": 38,  # slow(26) + signal(9) + buffer(3)
+}
+
+
 def get_absolute_minimum_length(indicator_type: str) -> int:
     """
     各指標の絶対的最小データ長を取得
+
+    この関数は、パラメータに関係なく指標が正常に動作するために
+    必要な最低限のデータポイント数を返します。
 
     Args:
         indicator_type: 指標タイプ
 
     Returns:
-        絶対的最小データ長
+        絶対的最小データ長（デフォルト: 1）
     """
-    absolute_mins = {
-        "SMA": 2,  # SMA needs at least 2 data points
-        "EMA": 2,  # EMA needs at least 2 data points
-        "TEMA": 3,  # TEMA needs at least 3
-        "MACD": 26 + 9 + 3,  # slow + signal + some buffer
-    }
-
-    return absolute_mins.get(indicator_type, 1)
+    return _ABSOLUTE_MINIMUM_LENGTHS.get(indicator_type, 1)
 
 
 def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:

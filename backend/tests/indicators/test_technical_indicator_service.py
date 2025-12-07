@@ -95,10 +95,14 @@ class TestTechnicalIndicatorService:
         assert isinstance(result, tuple)
 
     def test_validate_data_length(self):
-        """データ長検証のテスト"""
+        """データ長検証のテスト - data_validation.pyの関数を直接テスト"""
+        from app.services.indicators.data_validation import (
+            validate_data_length_with_fallback,
+        )
+
         data = pd.DataFrame({"close": list(range(100)), "volume": [1000] * 100})
 
-        is_valid, min_length = self.service.validate_data_length_with_fallback(
+        is_valid, min_length = validate_data_length_with_fallback(
             data, "SMA", {"length": 14}
         )
 
@@ -106,10 +110,14 @@ class TestTechnicalIndicatorService:
         assert isinstance(min_length, int)
 
     def test_validate_data_length_insufficient(self):
-        """データ不足の検証テスト"""
+        """データ不足の検証テスト - data_validation.pyの関数を直接テスト"""
+        from app.services.indicators.data_validation import (
+            validate_data_length_with_fallback,
+        )
+
         data = pd.DataFrame({"close": [100, 101, 102], "volume": [1000, 1100, 1200]})
 
-        is_valid, min_length = self.service.validate_data_length_with_fallback(
+        is_valid, min_length = validate_data_length_with_fallback(
             data, "SMA", {"length": 14}
         )
 

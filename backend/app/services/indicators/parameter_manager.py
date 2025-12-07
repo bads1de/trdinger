@@ -24,7 +24,7 @@ class IndicatorParameterManager:
 
     def __init__(self):
         """初期化"""
-        self.logger = logging.getLogger(__name__)
+        pass  # モジュールレベルの logger を使用
 
     def generate_parameters(
         self, indicator_type: str, config: IndicatorConfig
@@ -68,7 +68,7 @@ class IndicatorParameterManager:
             return generated_params
 
         except Exception as e:
-            self.logger.error(f"{indicator_type} のパラメータ生成に失敗しました: {e}")
+            logger.error(f"{indicator_type} のパラメータ生成に失敗しました: {e}")
             raise Exception(f"{indicator_type} のパラメータ生成に失敗しました: {e}")
 
     def validate_parameters(
@@ -89,7 +89,7 @@ class IndicatorParameterManager:
             # 必須パラメータの存在確認
             for param_name, param_config in config.parameters.items():
                 if param_name not in parameters:
-                    self.logger.warning(
+                    logger.warning(
                         f"{indicator_type} に必要なパラメータ '{param_name}' がありません"
                     )
                     return False
@@ -97,7 +97,7 @@ class IndicatorParameterManager:
                 # 値の範囲チェック
                 value = parameters[param_name]
                 if not param_config.validate_value(value):
-                    self.logger.warning(
+                    logger.warning(
                         f"パラメータ '{param_name}' の値 {value} は {indicator_type} の許容範囲外です"
                     )
                     return False
@@ -105,7 +105,7 @@ class IndicatorParameterManager:
             # 余分なパラメータの確認
             for param_name in parameters:
                 if param_name not in config.parameters:
-                    self.logger.warning(
+                    logger.warning(
                         f"{indicator_type} に予期しないパラメータ '{param_name}' が含まれています"
                     )
                     return False
@@ -113,7 +113,7 @@ class IndicatorParameterManager:
             return True
 
         except Exception as e:
-            self.logger.error(f"{indicator_type} のパラメータ検証に失敗しました: {e}")
+            logger.error(f"{indicator_type} のパラメータ検証に失敗しました: {e}")
             return False
 
     def _generate_standard_parameters(self, config: IndicatorConfig) -> Dict[str, Any]:

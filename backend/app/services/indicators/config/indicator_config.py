@@ -44,20 +44,6 @@ class ParameterConfig:
     max_value: Optional[Union[int, float, str, bool]] = None  # 最大値
     description: Optional[str] = None  # パラメータの説明
 
-    def __init__(
-        self,
-        name: str,
-        default_value: Union[int, float, str, bool],
-        min_value: Optional[Union[int, float, str, bool]] = None,
-        max_value: Optional[Union[int, float, str, bool]] = None,
-        description: Optional[str] = None,
-    ) -> None:
-        self.name = name
-        self.default_value = default_value
-        self.min_value = min_value
-        self.max_value = max_value
-        self.description = description
-
     def validate_value(self, value: Any) -> bool:
         """与えられた値がこのパラメータの制約（範囲など）を満たすか検証する"""
         if not isinstance(value, (int, float)):

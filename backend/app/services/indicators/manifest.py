@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+from functools import partial
 from typing import Any, Callable, Dict, Optional
 
 from app.services.indicators.config.indicator_config import (
@@ -53,6 +54,7 @@ def _resolve_callable(path: Optional[str]) -> Optional[Callable[..., Any]]:
 
 
 def _min_length_stoch(params: Dict[str, Any]) -> int:
+    """Stochasticの最小データ長: k + d + smooth_k"""
     return (
         params.get("k_length", 14)
         + params.get("d_length", 3)
@@ -61,56 +63,61 @@ def _min_length_stoch(params: Dict[str, Any]) -> int:
 
 
 def _min_length_generic_length(params: Dict[str, Any], default: int) -> int:
+    """汎用的な最小データ長: max(2, length)"""
     return max(2, params.get("length", default))
 
 
-def _min_length_sma(params: Dict[str, Any]) -> int:
-    return _min_length_generic_length(params, 20)
-
-
-def _min_length_dpo(params: Dict[str, Any]) -> int:
-    return _min_length_generic_length(params, 20)
-
-
-def _min_length_ema(params: Dict[str, Any]) -> int:
-    return _min_length_generic_length(params, 20)
-
-
-def _min_length_wma(params: Dict[str, Any]) -> int:
-    return _min_length_generic_length(params, 20)
-
-
 def _min_length_rsi(params: Dict[str, Any]) -> int:
+    """RSIの最小データ長: max(2, length)"""
     return max(2, params.get("length", 14))
 
 
 def _min_length_macd(params: Dict[str, Any]) -> int:
+    """MACDの最小データ長: slow + signal + buffer"""
     return params.get("slow", 26) + params.get("signal", 9) + 5
 
 
 def _min_length_bb(params: Dict[str, Any]) -> int:
+    """Bollinger Bandsの最小データ長: length"""
     return params.get("length", 20)
 
 
 def _min_length_supertrend(params: Dict[str, Any]) -> int:
+    """Supertrendの最小データ長: length + buffer"""
     return params.get("length", 10) + 10
 
 
 def _min_length_tema(params: Dict[str, Any]) -> int:
+    """TEMAの最小データ長: max(3, length//2)"""
     return max(3, params.get("length", 14) // 2)
 
 
-_MIN_LENGTH_FUNCTIONS = {
+# 汎用的な length ベースの指標用設定（デフォルト値のみ異なる）
+_GENERIC_LENGTH_DEFAULTS: Dict[str, int] = {
+    "SMA": 20,
+    "DPO": 20,
+    "EMA": 20,
+    "WMA": 20,
+}
+
+# 特殊なロジックを持つ指標の関数マッピング
+_SPECIAL_MIN_LENGTH_FUNCTIONS: Dict[str, Callable[[Dict[str, Any]], int]] = {
     "BB": _min_length_bb,
-    "DPO": _min_length_dpo,
-    "EMA": _min_length_ema,
     "MACD": _min_length_macd,
     "RSI": _min_length_rsi,
-    "SMA": _min_length_sma,
     "STOCH": _min_length_stoch,
     "SUPERTREND": _min_length_supertrend,
     "TEMA": _min_length_tema,
-    "WMA": _min_length_wma,
+}
+
+# 全ての最小データ長関数を統合
+# 汎用的な指標は functools.partial で動的に生成
+_MIN_LENGTH_FUNCTIONS: Dict[str, Callable[[Dict[str, Any]], int]] = {
+    **_SPECIAL_MIN_LENGTH_FUNCTIONS,
+    **{
+        name: partial(_min_length_generic_length, default=default)
+        for name, default in _GENERIC_LENGTH_DEFAULTS.items()
+    },
 }
 
 

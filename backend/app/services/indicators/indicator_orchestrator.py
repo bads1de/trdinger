@@ -22,6 +22,7 @@ pandas-taの利点を最大限に活用しつつ、実装の複雑さを大幅�
 
 """
 
+import inspect
 import logging
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -109,23 +110,6 @@ class TechnicalIndicatorService:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
             raise
 
-    def validate_data_length_with_fallback(
-        self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-    ) -> Tuple[bool, int]:
-        """
-        データ長検証を強化 - data_validation.pyの強化版を使用
-
-        Args:
-            df: OHLCV価格データ
-            indicator_type: 指標タイプ
-            params: パラメータ辞書
-
-        Returns:
-            (データ長が十分かどうか, フォールバック可能な最小データ長)
-        """
-        # data_validation.pyの強化版を使用
-        return validate_data_length_with_fallback(df, indicator_type, params)
-
     def _get_config(self, indicator_type: str) -> Optional[Dict[str, Any]]:
         """設定を取得"""
         config = indicator_registry.get_indicator_config(indicator_type.upper())
@@ -148,10 +132,8 @@ class TechnicalIndicatorService:
         self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]
     ) -> bool:
         """基本検証 - データ長と必須カラムのチェック"""
-        # データ長検証
-        is_valid, min_length = self.validate_data_length_with_fallback(
-            df, config["function"], params
-        )
+        # データ長検証 - data_validation.pyの関数を直接使用
+        is_valid, _ = validate_data_length_with_fallback(df, config["function"], params)
         if not is_valid:
             return False
 
@@ -428,8 +410,6 @@ class TechnicalIndicatorService:
             関数呼び出し結果
         """
         # 関数シグネチャを動的に検査して呼び出し方を決定
-        import inspect
-
         sig = inspect.signature(adapter_function)
         valid_params = set(sig.parameters.keys())
 
@@ -456,9 +436,7 @@ class TechnicalIndicatorService:
         else:
             # 通常のキーワード引数呼び出し
             # パラメータの順序を考慮してpositional argsとkeyword argsを分ける
-            import inspect
-
-            sig = inspect.signature(adapter_function)
+            # sig は既に上部で取得済み
             positional_args = []
             keyword_args = {}
 

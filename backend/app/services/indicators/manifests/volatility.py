@@ -606,53 +606,6 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "type": "volatility",
         },
     },
-    "CHOP": {
-        "config": {
-            "result_type": "single",
-            "scale_type": "oscillator_0_100",
-            "category": "volatility",
-            "adapter_function": "app.services.indicators.technical_indicators.volatility.VolatilityIndicators.chop",
-            "required_data": ["high", "low", "close"],
-            "output_names": None,
-            "default_output": None,
-            "aliases": None,
-            "param_map": {
-                "high": "high",
-                "low": "low",
-                "close": "close",
-                "length": "length",
-            },
-            "parameters": {
-                "length": {
-                    "default_value": 14,
-                    "min_value": 2,
-                    "max_value": 50,
-                    "description": "CHOP期間",
-                }
-            },
-            "pandas_function": "chop",
-            "data_column": None,
-            "data_columns": ["High", "Low", "Close"],
-            "returns": "single",
-            "return_cols": None,
-            "multi_column": False,
-            "default_values": {"length": 14},
-            "min_length_func": None,
-        },
-        "yaml": {
-            "conditions": {
-                "long": "{left_operand} < {threshold}",
-                "short": "{left_operand} > {threshold}",
-            },
-            "scale_type": "oscillator_0_100",
-            "thresholds": {
-                "aggressive": {"long_lt": 40, "short_gt": 60},
-                "conservative": {"long_lt": 20, "short_gt": 80},
-                "normal": {"long_lt": 30, "short_gt": 70},
-            },
-            "type": "volatility",
-        },
-    },
     "GRI": {
         "config": {
             "result_type": "single",

@@ -480,7 +480,6 @@ class VolatilityIndicators:
         return result
 
     @staticmethod
-    @handle_pandas_ta_errors
     def chop(
         high: pd.Series,
         low: pd.Series,
@@ -491,15 +490,16 @@ class VolatilityIndicators:
         drift: int = 1,
         offset: int = 0,
     ) -> pd.Series:
-        """Choppiness Index"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        """
+        Choppiness Index
 
-        result = ta.chop(
+        Note: TrendIndicators.chop へのエイリアス。
+        後方互換性のために維持されています。
+        """
+        # TrendIndicators の実装を使用（重複を避けるため）
+        from .trend import TrendIndicators
+
+        return TrendIndicators.chop(
             high=high,
             low=low,
             close=close,
@@ -507,13 +507,7 @@ class VolatilityIndicators:
             atr_length=atr_length,
             scalar=scalar,
             drift=drift,
-            offset=offset,
         )
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -563,7 +557,7 @@ class VolatilityIndicators:
             raise TypeError("close must be pandas Series")
 
         N = length
-        
+
         # 1. Overnight Volatility (Close[t-1] to Open[t])
         # log(O_t / C_{t-1})
         log_oc = np.log(open_ / close.shift(1))
@@ -578,9 +572,10 @@ class VolatilityIndicators:
 
         # 3. Rogers-Satchell Volatility
         # log(H/C) * log(H/O) + log(L/C) * log(L/O)
-        rs_term = (np.log(high / close) * np.log(high / open_)) + \
-                  (np.log(low / close) * np.log(low / open_))
-        
+        rs_term = (np.log(high / close) * np.log(high / open_)) + (
+            np.log(low / close) * np.log(low / open_)
+        )
+
         vol_rs = rs_term.rolling(window=N).mean()
 
         # Yang-Zhang Weights
@@ -589,7 +584,7 @@ class VolatilityIndicators:
         # Combine
         # YZ^2 = Vol_Overnight + k * Vol_OpenClose + (1-k) * Vol_RS
         yz_variance = vol_overnight + k * vol_open_to_close + (1 - k) * vol_rs
-        
+
         # Return volatility (std dev), annualized if needed but here just raw
         # Usually multiplied by sqrt(periods_per_year) for annualized,
         # but we keep it as raw volatility per bar
@@ -617,22 +612,22 @@ class VolatilityIndicators:
         # Prevent division by zero or log of zero/negative
         # Assuming High >= Low > 0
         hl_ratio = high / low
-        
+
         # Replace any potential invalid values (though theoretically shouldn't exist in valid OHLC)
         hl_ratio = hl_ratio.replace([np.inf, -np.inf], np.nan)
-        
+
         # (ln(H/L))^2
         log_hl_sq = np.log(hl_ratio) ** 2
-        
+
         # Constant: 1 / (4 * ln(2))
         const = 1.0 / (4.0 * np.log(2.0))
-        
+
         # Instantaneous variance estimate
         inst_var = const * log_hl_sq
-        
+
         # Rolling mean of variance
         rolling_var = inst_var.rolling(window=length).mean()
-        
+
         # Return volatility (std dev)
         return np.sqrt(rolling_var).fillna(0.0)
 
@@ -663,21 +658,21 @@ class VolatilityIndicators:
 
         # 1. (ln(H/L))^2
         log_hl_sq = np.log(high / low) ** 2
-        
+
         # 2. (ln(C/O))^2
         log_co_sq = np.log(close / open_) ** 2
-        
+
         # Constant: 2*ln(2) - 1
         const = 2.0 * np.log(2.0) - 1.0
-        
+
         # Instantaneous variance estimate
         inst_var = 0.5 * log_hl_sq - const * log_co_sq
-        
+
         # Ensure non-negative (theoretical variance should be positive, but numerical issues can occur)
         inst_var = inst_var.clip(lower=0.0)
-        
+
         # Rolling mean of variance
         rolling_var = inst_var.rolling(window=length).mean()
-        
+
         # Return volatility (std dev)
         return np.sqrt(rolling_var).fillna(0.0)

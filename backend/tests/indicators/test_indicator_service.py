@@ -121,7 +121,9 @@ class TestTechnicalIndicatorService:
                 with pytest.raises(ValueError, match="実装が見つかりません"):
                     indicator_service.calculate_indicator(sample_df, "UNSUPPORTED", {})
 
-    @patch.object(TechnicalIndicatorService, "validate_data_length_with_fallback")
+    @patch(
+        "backend.app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
+    )
     def test_basic_validation_success(
         self, mock_validate_length, indicator_service, sample_df
     ):
@@ -132,7 +134,9 @@ class TestTechnicalIndicatorService:
         result = indicator_service._basic_validation(sample_df, config, {"length": 10})
         assert result is True
 
-    @patch.object(TechnicalIndicatorService, "validate_data_length_with_fallback")
+    @patch(
+        "backend.app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
+    )
     def test_basic_validation_data_too_short(
         self, mock_validate_length, indicator_service, sample_df
     ):
@@ -245,11 +249,13 @@ class TestTechnicalIndicatorService:
         assert "min" in sma_config["parameters"]["length"]
         assert "max" in sma_config["parameters"]["length"]
 
-    def test_validate_data_length_with_fallback(self, indicator_service, sample_df):
-        """データ長検証テスト"""
-        result = indicator_service.validate_data_length_with_fallback(
-            sample_df, "SMA", {"length": 10}
+    def test_validate_data_length_with_fallback(self, sample_df):
+        """データ長検証テスト - data_validation.pyの関数を直接テスト"""
+        from backend.app.services.indicators.data_validation import (
+            validate_data_length_with_fallback,
         )
+
+        result = validate_data_length_with_fallback(sample_df, "SMA", {"length": 10})
         assert isinstance(result, tuple)
         assert len(result) == 2
         assert isinstance(result[0], bool)
