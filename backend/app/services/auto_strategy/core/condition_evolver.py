@@ -359,9 +359,9 @@ class ConditionEvolver:
             if isinstance(normal_thresholds, dict):
                 # 方向に応じた閾値を取得
                 if "long_gt" in normal_thresholds:
-                    return normal_thresholds["long_gt"]
+                    return float(normal_thresholds["long_gt"])
                 elif "short_lt" in normal_thresholds:
-                    return normal_thresholds["short_lt"]
+                    return float(normal_thresholds["short_lt"])
 
         # 範囲内のランダム値を生成
         min_val, max_val = base_range

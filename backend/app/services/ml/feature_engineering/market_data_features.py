@@ -305,10 +305,6 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             return df
 
         return result_df
-
-    def _calculate_oi_derived_features(
-        self, df: pd.DataFrame, oi_series: pd.Series
-    ) -> pd.DataFrame:
         """
         建玉残高（または疑似建玉残高）から派生特徴量を計算する共通メソッド
 

@@ -31,7 +31,6 @@ from app.services.ml.feature_engineering.feature_engineering_service import (
 )
 from app.services.ml.common.meta_labeling_evaluation import (
     evaluate_meta_labeling,
-    print_meta_labeling_report,
 )
 
 logging.basicConfig(

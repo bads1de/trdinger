@@ -536,13 +536,7 @@ class LabelGenerationConfig:
         """
         return asdict(self)
 
-    def get_threshold_method_enum(self) -> ThresholdMethod:
-        """ThresholdMethod enumを取得。
 
-        Returns:
-            ThresholdMethod: 閾値計算方法のenum値。
-        """
-        return ThresholdMethod[self.threshold_method]
 
 
 class MLTrainingConfig(BaseSettings):
