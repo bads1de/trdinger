@@ -345,7 +345,6 @@ class TestStrategyIntegrationService:
             assert result["total_count"] == 1
             assert len(result["strategies"]) == 1
 
-    @pytest.mark.skip(reason="This test is failing and needs to be fixed.")
     def test_get_strategies_with_filters(
         self, integration_service: StrategyIntegrationService
     ) -> None:
@@ -359,6 +358,10 @@ class TestStrategyIntegrationService:
             "get_filtered_and_sorted_strategies",
         ) as mock_get:
             mock_get.return_value = (0, [])
+
+            integration_service.get_strategies(
+                risk_level="low", experiment_id=100, min_fitness=1.0
+            )
 
             # フィルターパラメータが呼ばれたことを確認
             mock_get.assert_called_once()

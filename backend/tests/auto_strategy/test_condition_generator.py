@@ -211,7 +211,6 @@ class TestGAConditionGenerator:
             assert isinstance(short_conditions, list)
             assert isinstance(exit_conditions, list)
 
-    @pytest.mark.skip(reason="This test is failing and needs to be fixed.")
     def test_generate_hierarchical_ga_conditions_evolution_failure(self):
         """GA進化失敗時のフォールバックをテスト"""
         indicators = [
@@ -227,6 +226,8 @@ class TestGAConditionGenerator:
         ):
             mock_evolver.run_evolution.return_value = None  # 失敗をシミュレート
             mock_fallback.return_value = ([MagicMock()], [MagicMock()], [])
+
+            self.generator.generate_hierarchical_ga_conditions(indicators)
 
             # フォールバックが呼ばれたことを確認
             mock_fallback.assert_called_once_with(indicators)

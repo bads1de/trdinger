@@ -327,7 +327,6 @@ class TestGeneticOperators:
         # Note: Due to random nature, field-level mixing may not occur in all cases
         # The key is that some children are different from parents (diverse_children > 0)
 
-    @pytest.mark.skip(reason="This test is failing and needs to be fixed.")
     def test_population_variance_after_operations(self, sample_strategy_gene):
         """Test population variance after genetic operations"""
         import copy

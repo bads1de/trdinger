@@ -121,13 +121,16 @@ class TestBacktestSystemComprehensive:
         assert backtest_executor is not None
         assert hasattr(backtest_executor, "execute_backtest")
 
-    @pytest.mark.skip(reason="This test is failing and needs to be fixed.")
     def test_data_service_data_retrieval(
         self, backtest_data_service, mock_ohlcv_repo, sample_ohlcv_data
     ):
         """データサービスデータ取得のテスト"""
         # OHLCVデータのモック
         mock_ohlcv_repo.get_ohlcv_data.return_value = sample_ohlcv_data
+
+        backtest_data_service.get_data_for_backtest(
+            "BTC/USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
+        )
 
         # データ取得（メソッド名を修正）
         mock_ohlcv_repo.get_ohlcv_data.assert_called_once()
