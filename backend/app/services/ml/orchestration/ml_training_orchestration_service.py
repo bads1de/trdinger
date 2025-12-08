@@ -62,7 +62,7 @@ class MLTrainingOrchestrationService:
         トレーニング設定の検証
 
         Args:
-            config: MLTrainingConfig
+            config: MLTrainingRequest (app.api.ml_training)
 
         Raises:
             ValueError: 設定が無効な場合
@@ -88,7 +88,7 @@ class MLTrainingOrchestrationService:
         MLトレーニングを開始
 
         Args:
-            config: MLTrainingConfig
+            config: MLTrainingRequest (app.api.ml_training)
             background_tasks: BackgroundTasks
             db: データベースセッション
 
@@ -122,7 +122,7 @@ class MLTrainingOrchestrationService:
         設定のログ出力と検証
 
         Args:
-            config: MLTrainingConfig
+            config: MLTrainingRequest (app.api.ml_training)
 
         Raises:
             ValueError: 設定が無効な場合

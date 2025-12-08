@@ -65,8 +65,13 @@ class StackingParamsConfig(BaseModel):
     )
 
 
-class EnsembleConfig(BaseModel):
-    """アンサンブル学習設定"""
+class EnsembleRequest(BaseModel):
+    """アンサンブル学習設定（APIリクエスト用）
+
+    Note:
+        このクラスは app.config.unified_config.EnsembleConfig（環境変数ベースの設定）
+        とは異なり、APIリクエストボディのスキーマを定義します。
+    """
 
     enabled: bool = Field(default=True, description="アンサンブル学習を有効にするか")
     method: str = Field(default="stacking", description="アンサンブル手法 (stacking)")
@@ -87,13 +92,16 @@ class SingleModelConfig(BaseModel):
 # グローバル状態管理は削除（OrchestrationServiceに移動）
 
 
-class MLTrainingConfig(BaseModel):
-    """
-    MLトレーニング設定
+class MLTrainingRequest(BaseModel):
+    """MLトレーニング設定（APIリクエスト用）
 
     アンサンブル学習をデフォルトとしたML学習の設定を定義します。
     バギングとスタッキングの両方をサポートし、複数のモデルを組み合わせて
     予測精度と頑健性を向上させます。
+
+    Note:
+        このクラスは app.config.unified_config.MLTrainingConfig（環境変数ベースの設定）
+        とは異なり、APIリクエストボディのスキーマを定義します。
     """
 
     symbol: str = Field(..., description="取引ペア（例: BTC/USDT:USDT）")
@@ -137,7 +145,7 @@ class MLTrainingConfig(BaseModel):
     # 特徴量プロファイル設定も削除されました（研究目的専用のためシンプル化）
 
     # アンサンブル学習設定
-    ensemble_config: Optional[EnsembleConfig] = Field(
+    ensemble_config: Optional[EnsembleRequest] = Field(
         default=None,  # デフォルトをNoneに変更してフロントエンドからの設定を優先
         description="アンサンブル学習設定（フロントエンドから明示的に設定）",
     )
@@ -172,7 +180,7 @@ class MLStatusResponse(BaseModel):
 
 @router.post("/train", response_model=MLTrainingResponse)
 async def start_ml_training(
-    config: MLTrainingConfig,
+    config: MLTrainingRequest,
     background_tasks: BackgroundTasks,
     orchestration_service: MLTrainingOrchestrationService = Depends(
         get_ml_training_orchestration_service

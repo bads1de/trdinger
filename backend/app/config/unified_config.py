@@ -11,9 +11,8 @@ from typing import Any, Dict, List, Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.services.ml.label_generation.enums import ThresholdMethod
-
-from app.services.ml.label_generation.presets import get_common_presets
+# 循環依存を回避するため、ThresholdMethod と get_common_presets は
+# LabelGenerationConfig 内で遅延インポートします
 
 
 class EnsembleConfig(BaseSettings):
@@ -503,6 +502,10 @@ class LabelGenerationConfig:
 
     def __post_init__(self) -> None:
         """初期化後のバリデーション。"""
+        # 循環依存を避けるための遅延インポート
+        from app.services.ml.label_generation.enums import ThresholdMethod
+        from app.services.ml.label_generation.presets import get_common_presets
+
         # timeframeの検証
         valid_timeframes = ["15m", "30m", "1h", "4h", "1d"]
         if self.timeframe not in valid_timeframes:
@@ -535,8 +538,6 @@ class LabelGenerationConfig:
             Dict[str, Any]: 設定内容を辞書形式で返します。
         """
         return asdict(self)
-
-
 
 
 class MLTrainingConfig(BaseSettings):

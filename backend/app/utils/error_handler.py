@@ -303,8 +303,6 @@ class ErrorHandler:
         """
         予測値の統一バリデーション
 
-        Note: 実装は MLConfigValidator.validate_predictions を使用
-
         Args:
             predictions: 予測値の辞書
             context: バリデーションコンテキスト
@@ -313,22 +311,35 @@ class ErrorHandler:
             バリデーション結果
         """
         try:
-            from app.config.validators import MLConfigValidator
+            if predictions is None:
+                logger.warning(f"{context}: predictions が None です")
+                return False
 
-            # 基本的なバリデーションを実行
-            is_valid = MLConfigValidator.validate_predictions(predictions)
+            # 必要なキーの存在確認
+            required_keys = ["up", "down", "range"]
+            if not all(key in predictions for key in required_keys):
+                logger.warning(f"{context}: 必須キー {required_keys} が不足しています")
+                return False
 
-            if not is_valid:
-                logger.warning(f"{context}: 予測値のバリデーションに失敗しました")
+            # 値の範囲確認（0-1の範囲）および NaN/Inf チェック
+            for key, value in predictions.items():
+                if not isinstance(value, (int, float)):
+                    logger.warning(f"{context}: {key} が数値ではありません")
+                    return False
+                if not (0.0 <= value <= 1.0):
+                    logger.warning(f"{context}: {key} が範囲外です: {value}")
+                    return False
+                if np.isnan(value) or np.isinf(value):
+                    logger.warning(f"{context}: {key} に無効な値が含まれています")
+                    return False
 
-            # 追加のNaN/Inf チェック
-            if is_valid and predictions is not None:
-                for key, value in predictions.items():
-                    if np.isnan(value) or np.isinf(value):
-                        logger.warning(f"{context}: {key}に無効な値が含まれています")
-                        return False
+            # 合計値の確認（0.8-1.2の範囲）
+            total = sum(predictions.values())
+            if not (0.8 <= total <= 1.2):
+                logger.warning(f"{context}: 合計値が範囲外です: {total}")
+                return False
 
-            return is_valid
+            return True
 
         except Exception as e:
             ErrorHandler.handle_model_error(
