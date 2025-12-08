@@ -14,12 +14,12 @@ from app.services.indicators.config.indicator_config import (
     indicator_registry,
 )
 
-from .manifests.momentum import MANIFEST_MOMENTUM
-from .manifests.original import MANIFEST_ORIGINAL
-from .manifests.price_transform import MANIFEST_PRICE_TRANSFORM
-from .manifests.trend import MANIFEST_TREND
-from .manifests.volatility import MANIFEST_VOLATILITY
-from .manifests.volume import MANIFEST_VOLUME
+from .momentum import MANIFEST_MOMENTUM
+from .original import MANIFEST_ORIGINAL
+from .price_transform import MANIFEST_PRICE_TRANSFORM
+from .trend import MANIFEST_TREND
+from .volatility import MANIFEST_VOLATILITY
+from .volume import MANIFEST_VOLUME
 
 logger = logging.getLogger(__name__)
 

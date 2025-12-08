@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from app.services.backtest.backtest_service import BacktestService
-from app.services.indicators.manifest import manifest_to_yaml_dict
+from app.services.indicators.manifests.registry import manifest_to_yaml_dict
 from app.utils.error_handler import safe_operation
 
 logger = logging.getLogger(__name__)

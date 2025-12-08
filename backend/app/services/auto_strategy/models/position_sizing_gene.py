@@ -40,7 +40,7 @@ class PositionSizingGene(BaseGene):
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
-            from ..constants import POSITION_SIZING_LIMITS
+            from ..config.constants import POSITION_SIZING_LIMITS
 
             lb_min, lb_max = POSITION_SIZING_LIMITS["lookback_period"]
             if not (lb_min <= self.lookback_period <= lb_max):

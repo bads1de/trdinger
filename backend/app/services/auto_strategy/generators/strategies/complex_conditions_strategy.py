@@ -5,7 +5,7 @@
 import logging
 from typing import List
 
-from ...constants import IndicatorType
+from ...config.constants import IndicatorType
 from ...models.strategy_models import IndicatorGene
 from .base_strategy import ConditionStrategy
 

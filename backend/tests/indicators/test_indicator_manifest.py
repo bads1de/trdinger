@@ -2,7 +2,7 @@ from app.services.indicators.config.indicator_config import indicator_registry
 
 
 def test_manifest_registration_creates_rsi_config():
-    from app.services.indicators import manifest
+    from app.services.indicators.manifests import registry as manifest
 
     indicator_registry.reset()
     manifest.register_indicator_manifest()
@@ -14,7 +14,7 @@ def test_manifest_registration_creates_rsi_config():
 
 
 def test_manifest_yaml_export_contains_thresholds():
-    from app.services.indicators import manifest
+    from app.services.indicators.manifests import registry as manifest
 
     yaml_data = manifest.manifest_to_yaml_dict()
 
@@ -24,7 +24,7 @@ def test_manifest_yaml_export_contains_thresholds():
 
 
 def test_manifest_registers_sixty_indicators_with_new_entries():
-    from app.services.indicators import manifest
+    from app.services.indicators.manifests import registry as manifest
 
     indicator_registry.reset()
     manifest.register_indicator_manifest()
@@ -44,7 +44,7 @@ def test_indicator_settings_and_service_support_new_indicators():
     from app.services.indicators import TechnicalIndicatorService
 
     indicator_registry.reset()
-    from app.services.indicators import manifest
+    from app.services.indicators.manifests import registry as manifest
 
     manifest.register_indicator_manifest()
 

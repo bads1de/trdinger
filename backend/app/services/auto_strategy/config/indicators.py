@@ -7,7 +7,7 @@ IndicatorSettingsクラス
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from ..constants import (
+from .constants import (
     DATA_SOURCES,
     OPERATORS,
 )

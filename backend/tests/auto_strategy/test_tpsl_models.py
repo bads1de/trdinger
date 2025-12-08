@@ -176,7 +176,7 @@ class TestTPSLGene:
         gene = TPSLGene()
 
         # TPSL_LIMITSのインポートエラーをシミュレート
-        with patch("app.services.auto_strategy.constants.TPSL_LIMITS", {}):
+        with patch("app.services.auto_strategy.config.constants.TPSL_LIMITS", {}):
             with patch("app.services.auto_strategy.models.tpsl_gene.logger"):
                 is_valid, errors = gene.validate()
                 # 基本検証が適用される

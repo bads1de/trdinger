@@ -13,7 +13,7 @@ from app.services.backtest.backtest_service import BacktestService
 from database.connection import SessionLocal
 
 from ..config import GAConfig
-from ..constants import DEFAULT_SYMBOL
+from ..config.constants import DEFAULT_SYMBOL
 from .experiment_manager import ExperimentManager
 from .experiment_persistence_service import ExperimentPersistenceService
 

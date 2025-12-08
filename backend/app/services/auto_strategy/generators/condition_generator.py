@@ -6,7 +6,10 @@ from app.services.backtest.backtest_service import BacktestService
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
-from ..constants import (
+from ..config.constants import (
+    DATA_SOURCES,
+    OPERATORS,
+    THRESHOLD_RANGES,
     IndicatorType,
 )
 from ..core.condition_evolver import (

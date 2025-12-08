@@ -356,7 +356,7 @@ class TPSLService:
 
         # 定数で定義された妥当範囲に統一
         try:
-            from ..constants import TPSL_LIMITS
+            from ..config.constants import TPSL_LIMITS
 
             if label == "SL":
                 min_v, max_v = TPSL_LIMITS["stop_loss_pct"]

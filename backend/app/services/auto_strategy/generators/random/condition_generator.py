@@ -11,7 +11,7 @@ from typing import List
 from app.services.indicators.config import indicator_registry
 from app.services.indicators.config.indicator_config import IndicatorScaleType
 
-from ...constants import OPERATORS
+from ...config.constants import OPERATORS
 from ...core.operand_grouping import operand_grouping_system
 from ...models.strategy_models import Condition
 

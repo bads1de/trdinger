@@ -10,7 +10,9 @@ from typing import List
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 
-from ..constants import (
+from ..config.constants import (
+    COMPOSITE_INDICATORS,
+    CURATED_TECHNICAL_INDICATORS,
     MA_INDICATORS_NEEDING_PERIOD,
     MOVING_AVERAGE_INDICATORS,
     PREFERRED_MA_INDICATORS,

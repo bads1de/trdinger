@@ -59,7 +59,7 @@ def get_original_indicators() -> List[str]:
 def get_all_indicators() -> List[str]:
     """全指標タイプを取得（テクニカル + 複合指標）"""
     # 遅延インポートで循環依存を回避
-    from ..constants import COMPOSITE_INDICATORS
+    from ..config.constants import COMPOSITE_INDICATORS
 
     technical = (
         get_volume_indicators()
@@ -111,9 +111,7 @@ def get_valid_indicator_types() -> List[str]:
         + get_volatility_indicators()
         + get_original_indicators()
     )
-
-    # 遅延インポートで循環依存を回避
-    from ..constants import COMPOSITE_INDICATORS
+    from ..config.constants import COMPOSITE_INDICATORS
 
     all_indicators = technical + COMPOSITE_INDICATORS
 

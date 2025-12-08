@@ -252,7 +252,7 @@ indicator_registry = IndicatorConfigRegistry()
 
 def initialize_all_indicators():
     """全インジケーターの設定を初期化"""
-    from app.services.indicators.manifest import register_indicator_manifest
+    from app.services.indicators.manifests.registry import register_indicator_manifest
 
     register_indicator_manifest(indicator_registry)
 

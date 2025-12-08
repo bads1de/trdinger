@@ -7,7 +7,7 @@ PositionSizingSettingsクラス
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
-from ..constants import POSITION_SIZING_METHODS
+from .constants import POSITION_SIZING_METHODS
 from .base import BaseConfig
 
 # GA ポジションサイジング関連定数

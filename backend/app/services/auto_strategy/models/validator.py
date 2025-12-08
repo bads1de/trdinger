@@ -10,6 +10,14 @@ from typing import List, Tuple
 from app.utils.error_handler import safe_operation
 
 from ..utils.indicator_utils import get_all_indicators
+from ..config.constants import (
+    CONSTRAINTS,
+    ERROR_CODES,
+    POSITION_SIZING_LIMITS,
+    TPSL_LIMITS,
+    OPERATORS,
+    DATA_SOURCES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +31,6 @@ class GeneValidator:
 
     def __init__(self) -> None:
         """初期化"""
-        from ..constants import (
-            DATA_SOURCES,
-            OPERATORS,
-        )
-
         # 定数ではなくユーティリティの動的取得を使用
         self.valid_indicator_types = get_all_indicators()
         self.valid_operators = OPERATORS

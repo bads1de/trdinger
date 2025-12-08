@@ -432,7 +432,7 @@ class GAConfig(BaseConfig):
 
         # TPSL設定を適用
         if self.tpsl_method_constraints is None:
-            from ..constants import (
+            from .constants import (
                 GA_DEFAULT_TPSL_METHOD_CONSTRAINTS,
                 GA_TPSL_ATR_MULTIPLIER_RANGE,
                 GA_TPSL_RR_RANGE,

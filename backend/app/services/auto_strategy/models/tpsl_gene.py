@@ -82,7 +82,7 @@ class TPSLGene(BaseGene):
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
-            from ..constants import TPSL_LIMITS
+            from ..config.constants import TPSL_LIMITS
 
             sl_min, sl_max = TPSL_LIMITS["stop_loss_pct"]
             if not (sl_min <= self.stop_loss_pct <= sl_max):

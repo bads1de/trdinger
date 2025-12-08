@@ -33,9 +33,14 @@ trading/
 │   │   ├── api/           # APIエンドポイント
 │   │   ├── services/      # コアサービス
 │   │   │   ├── auto_strategy/  # GAコアモジュール
+│   │   │   │   ├── config/     # 戦略設定・定数
+│   │   │   │   ├── core/       # GAエンジン、評価器
+│   │   │   │   └── ...
 │   │   │   ├── backtest/     # バックテストサービス
 │   │   │   ├── data_collection/  # 市場データ収集
 │   │   │   ├── indicators/     # テクニカルインジケーター
+│   │   │   │   ├── manifests/  # インジケーター定義・レジストリ
+│   │   │   │   └── ...
 │   │   │   ├── ml/           # 機械学習サービス
 │   │   │   └── optimization/     # パラメータ最適化サービス
 │   │   ├── config/        # 設定管理

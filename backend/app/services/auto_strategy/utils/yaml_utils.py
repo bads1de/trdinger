@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import yaml
 
-from app.services.indicators.manifest import manifest_to_yaml_dict
+from app.services.indicators.manifests.registry import manifest_to_yaml_dict
 
 
 class YamlIndicatorUtils:
