@@ -222,7 +222,7 @@ class DataFrequencyManager:
                         resampled_oi.index = pd.to_datetime(
                             resampled_oi.index, unit="ms"
                         )
-                    except:
+                    except (ValueError, TypeError):
                         resampled_oi.index = pd.to_datetime(resampled_oi.index)
 
                 logger.info(

@@ -109,7 +109,9 @@ class LabelCache:
             threshold_method_enum = ThresholdMethod[threshold_method]
         except KeyError:
             valid_methods = [m.name for m in ThresholdMethod]
-            raise ValueError(f"無効な閾値計算方法: {threshold_method}")
+            raise ValueError(
+                f"無効な閾値計算方法: {threshold_method}, 有効なメソッド: {valid_methods}"
+            )
 
         if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
             # presets.py の実装を使用

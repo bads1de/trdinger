@@ -7,9 +7,6 @@ from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
 from ..config.constants import (
-    DATA_SOURCES,
-    OPERATORS,
-    THRESHOLD_RANGES,
     IndicatorType,
 )
 from ..core.condition_evolver import (
@@ -87,9 +84,7 @@ class ConditionGenerator:
             self.context["regime_thresholds"] = regime_thresholds
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
-    def generate_balanced_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
+    def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
         List[Union[Condition, ConditionGroup]],
         List[Union[Condition, ConditionGroup]],
         List[Condition],

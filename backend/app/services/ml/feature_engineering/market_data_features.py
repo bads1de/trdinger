@@ -304,7 +304,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             logger.error(f"建玉残高疑似特徴量生成エラー: {e}")
             return df
 
-        return result_df
+    def _calculate_oi_derived_features(
+        self, df: pd.DataFrame, oi_series: pd.Series
+    ) -> pd.DataFrame:
         """
         建玉残高（または疑似建玉残高）から派生特徴量を計算する共通メソッド
 
@@ -350,7 +352,6 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         # 価格とOIのダイバージェンスを検知
         # 価格上昇 + OI減少 => トレンド終了示唆 (ダイバージェンス)
         # 価格下落 + OI減少 => トレンド終了示唆
-        price_change = result_df["close"].pct_change(periods=1).fillna(0.0)
 
         # 相関係数によるダイバージェンス検知 (負の相関 = ダイバージェンス)
         result_df["OI_Price_Divergence"] = (

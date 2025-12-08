@@ -11,10 +11,6 @@ from app.utils.error_handler import safe_operation
 
 from ..utils.indicator_utils import get_all_indicators
 from ..config.constants import (
-    CONSTRAINTS,
-    ERROR_CODES,
-    POSITION_SIZING_LIMITS,
-    TPSL_LIMITS,
     OPERATORS,
     DATA_SOURCES,
 )

@@ -11,9 +11,6 @@ from typing import Any, Dict, List, Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# 循環依存を回避するため、ThresholdMethod と get_common_presets は
-# LabelGenerationConfig 内で遅延インポートします
-
 
 class EnsembleConfig(BaseSettings):
     """アンサンブル学習設定。
@@ -718,12 +715,6 @@ class FeatureEngineeringConfig(BaseSettings):
         default_factory=lambda: [10, 20, 30], alias="VOLUME_PERIODS"
     )
 
-    # プロファイル機能を削除し、allowlistのみで管理
-    # 2025-11-12: 特徴量重要度分析により19個の削除推奨特徴量を削除（79個→60個）
-    # 高相関による削除(5個): macd, Stochastic_K, Near_Resistance, MA_Long, BB_Position
-    # 低重要度による削除(14個): close_lag_24, cumulative_returns_24, Close_mean_20,
-    #   Local_Max, Aroon_Up, BB_Lower, Resistance_Level, BB_Middle,
-    #   stochastic_k, rsi_14, bb_lower_20, bb_upper_20, stochastic_d, Local_Min
     feature_allowlist: Optional[List[str]] = Field(
         default=None,
         description="使用する特徴量のリスト（Noneの場合は全特徴量を使用）",
