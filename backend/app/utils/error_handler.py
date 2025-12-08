@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 
+from .response import error_response
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
@@ -68,9 +70,6 @@ class ErrorHandler:
         Returns:
             統一エラーレスポンス辞書
         """
-        # delegate to shared response util to ensure consistent format
-        from .response import error_response
-
         return error_response(
             message=message, error_code=error_code, details=details, context=context
         )

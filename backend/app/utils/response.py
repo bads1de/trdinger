@@ -6,6 +6,30 @@ def now_iso() -> str:
     return datetime.now().isoformat()
 
 
+def _build_response(
+    success: bool,
+    fields: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    レスポンス辞書を構築する内部ヘルパー関数
+
+    Args:
+        success: 成功フラグ
+        fields: 追加フィールドの辞書（値がNoneや空文字のものは除外される）
+
+    Returns:
+        構築されたレスポンス辞書
+    """
+    response: Dict[str, Any] = {"success": success}
+
+    for key, value in fields.items():
+        if value is not None and value != "":
+            response[key] = value
+
+    response["timestamp"] = now_iso()
+    return response
+
+
 def error_response(
     message: str,
     error_code: Optional[str] = None,
@@ -25,20 +49,14 @@ def error_response(
     Returns:
         生成されたエラーレスポンス
     """
-    response: Dict[str, Any] = {
-        "success": False,
+    fields = {
         "message": message,
-        "timestamp": now_iso(),
+        "error_code": error_code,
+        "details": details,
+        "context": context,
+        "data": data,
     }
-    if error_code:
-        response["error_code"] = error_code
-    if details:
-        response["details"] = details
-    if context:
-        response["context"] = context
-    if data is not None:
-        response["data"] = data
-    return response
+    return _build_response(success=False, fields=fields)
 
 
 def api_response(
@@ -60,22 +78,11 @@ def api_response(
     - error が指定された場合は "error" フィールドを含める
     - status_code が指定された場合は "status_code" フィールドを含める
     """
-    response: Dict[str, Any] = {"success": success}
-
-    if message:
-        response["message"] = message
-
-    if error:
-        response["error"] = error
-
-    if status:
-        response["status"] = status
-
-    if data is not None:
-        response["data"] = data
-
-    if status_code is not None:
-        response["status_code"] = status_code
-
-    response["timestamp"] = now_iso()
-    return response
+    fields = {
+        "message": message,
+        "error": error,
+        "status": status,
+        "data": data,
+        "status_code": status_code,
+    }
+    return _build_response(success=success, fields=fields)
