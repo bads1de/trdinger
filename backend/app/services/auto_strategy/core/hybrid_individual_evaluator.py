@@ -90,11 +90,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             if self.predictor:
                 try:
                     # Gene → 特徴量変換
-                    symbol = backtest_config.get("symbol")
-                    timeframe = backtest_config.get("timeframe")
-                    start_date = backtest_config.get("start_date")
-                    end_date = backtest_config.get("end_date")
-
                     ohlcv_data = self._fetch_ohlcv_data(backtest_config, config)
                     if ohlcv_data is not None and not ohlcv_data.empty:
                         features_df = self.feature_adapter.gene_to_features(

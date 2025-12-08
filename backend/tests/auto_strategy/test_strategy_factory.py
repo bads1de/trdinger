@@ -73,7 +73,9 @@ class TestStrategyFactory:
         with pytest.raises(ValueError):
             self.factory.create_strategy_class(gene)
 
-    @patch("app.services.auto_strategy.generators.strategy_factory.IndicatorCalculator")
+    @patch(
+        "app.services.auto_strategy.strategies.universal_strategy.IndicatorCalculator"
+    )
     def test_indicator_initialization_failure(self, mock_indicator_calculator):
         """指標初期化失敗時のテスト"""
         from app.services.auto_strategy.models.condition import Condition
@@ -108,7 +110,12 @@ class TestStrategyFactory:
         strategy_class = self.factory.create_strategy_class(gene)
 
         # インスタンス作成とinit呼び出しでエラーが発生することを確認
-        strategy_instance = strategy_class()
+        mock_broker = Mock()
+        mock_data = Mock()
+        params = {"strategy_gene": gene}
+        strategy_instance = strategy_class(
+            broker=mock_broker, data=mock_data, params=params
+        )
 
         with pytest.raises(Exception):  # 初期化エラーが発生するはず
             strategy_instance.init()
@@ -140,7 +147,13 @@ class TestStrategyFactory:
         strategy_class = self.factory.create_strategy_class(gene)
 
         # インスタンス作成
-        strategy_instance = strategy_class()
+        mock_broker = Mock()
+        mock_data = Mock()
+        mock_data.Close = [50000.0]
+        params = {"strategy_gene": gene}
+        strategy_instance = strategy_class(
+            broker=mock_broker, data=mock_data, params=params
+        )
 
         # nextメソッドがエラーなく実行できるか確認（データがないので何もしない）
         strategy_instance.next()  # エラーが発生しないことを確認
@@ -170,7 +183,16 @@ class TestStrategyFactory:
 
         # 戦略クラス生成
         strategy_class = self.factory.create_strategy_class(gene)
-        strategy_instance = strategy_class()
+
+        # UniversalStrategyは初期化に引数が必要
+        mock_broker = Mock()
+        mock_data = Mock()
+        mock_data.Close = [50000.0]  # Closeデータをモック
+        params = {"strategy_gene": gene}
+
+        strategy_instance = strategy_class(
+            broker=mock_broker, data=mock_data, params=params
+        )
 
         # ポジションサイズ計算メソッドがデフォルト値を返すことを確認
         size = strategy_instance._calculate_position_size()

@@ -83,8 +83,16 @@ class StrategyClassFactory:
             戦略パラメータ
         """
         if self._is_auto_strategy(strategy_config):
-            # オートストラテジーの場合、パラメータは戦略クラス生成時に設定済み
-            return {}
+            # オートストラテジーの場合、strategy_geneをパラメータとして含める必要がある
+            try:
+                # 戦略遺伝子をロード（AutoStrategyLoaderを使用して復元）
+                strategy_gene = self._auto_strategy_loader.load_strategy_gene(
+                    strategy_config
+                )
+                return {"strategy_gene": strategy_gene}
+            except Exception as e:
+                logger.error(f"戦略パラメータ取得エラー: {e}")
+                return {}
         else:
             # 通常の戦略の場合、parametersを返す
             return strategy_config.get("parameters", {})

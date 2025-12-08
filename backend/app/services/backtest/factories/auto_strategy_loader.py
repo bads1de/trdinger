@@ -24,6 +24,45 @@ class AutoStrategyLoader:
     遅延インポートを用いて循環参照を回避します。
     """
 
+    def load_strategy_gene(self, strategy_config: Dict[str, Any]) -> Any:
+        """
+        戦略設定から戦略遺伝子オブジェクトをロード・復元
+
+        Args:
+            strategy_config: 戦略設定
+
+        Returns:
+            StrategyGeneオブジェクト
+
+        Raises:
+            AutoStrategyLoaderError: ロードに失敗した場合
+        """
+        try:
+            # 遅延インポート
+            from app.services.auto_strategy.models.strategy_models import StrategyGene
+            from app.services.auto_strategy.serializers.gene_serialization import (
+                GeneSerializer,
+            )
+        except ImportError as e:
+            raise AutoStrategyLoaderError(
+                f"オートストラテジーモジュールのインポートに失敗しました: {e}"
+            )
+
+        # 戦略遺伝子データを抽出
+        gene_data = self._extract_strategy_gene(strategy_config)
+        if not gene_data:
+            raise AutoStrategyLoaderError(
+                "オートストラテジーの設定に戦略遺伝子 (strategy_gene) が含まれていません。"
+            )
+
+        try:
+            # 戦略遺伝子を復元
+            serializer = GeneSerializer()
+            gene = serializer.dict_to_strategy_gene(gene_data, StrategyGene)
+            return gene
+        except Exception as e:
+            raise AutoStrategyLoaderError(f"戦略遺伝子の復元に失敗しました: {e}")
+
     def create_auto_strategy_class(
         self, strategy_config: Dict[str, Any]
     ) -> Type[Strategy]:
@@ -34,7 +73,7 @@ class AutoStrategyLoader:
             strategy_config: 戦略設定
 
         Returns:
-            生成された戦略クラス
+            生成された戦略クラス (UniversalStrategy)
 
         Raises:
             AutoStrategyLoaderError: クラス生成に失敗した場合
@@ -44,35 +83,19 @@ class AutoStrategyLoader:
             from app.services.auto_strategy.generators.strategy_factory import (
                 StrategyFactory,
             )
-            from app.services.auto_strategy.models.strategy_models import StrategyGene
-            from app.services.auto_strategy.serializers.gene_serialization import (
-                GeneSerializer,
-            )
         except ImportError as e:
             raise AutoStrategyLoaderError(
                 f"オートストラテジーモジュールのインポートに失敗しました: {e}"
             )
 
-        # 戦略遺伝子を取得
-        gene_data = self._extract_strategy_gene(strategy_config)
-        if not gene_data:
-            raise AutoStrategyLoaderError(
-                "オートストラテジーの実行には、戦略遺伝子 (strategy_gene) が必要です。"
-            )
+        # 遺伝子をロードして検証（整合性チェックのため）
+        gene = self.load_strategy_gene(strategy_config)
 
-        try:
-            # 戦略遺伝子を復元
-            serializer = GeneSerializer()
-            gene = serializer.dict_to_strategy_gene(gene_data, StrategyGene)
+        # 戦略ファクトリーで戦略クラスを取得（UniversalStrategyが返される）
+        strategy_factory = StrategyFactory()
+        strategy_class = strategy_factory.create_strategy_class(gene)
 
-            # 戦略ファクトリーで戦略クラスを生成
-            strategy_factory = StrategyFactory()
-            strategy_class = strategy_factory.create_strategy_class(gene)
-
-            return strategy_class
-
-        except Exception as e:
-            raise AutoStrategyLoaderError(f"戦略遺伝子の復元に失敗しました: {e}")
+        return strategy_class
 
     def _extract_strategy_gene(self, strategy_config: Dict[str, Any]) -> Dict[str, Any]:
         """戦略設定から戦略遺伝子を抽出"""

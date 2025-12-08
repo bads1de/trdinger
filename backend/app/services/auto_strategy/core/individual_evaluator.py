@@ -94,8 +94,6 @@ class IndividualEvaluator:
             # strategy_nameフィールドを追加
             backtest_config["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
 
-            # レジーム適応は削除されました
-
             # MLフィルターが有効な場合、MLモデルをロードし、backtest_configに渡す
             if config.ml_filter_enabled and config.ml_model_path:
                 try:

@@ -4,7 +4,6 @@ IndividualEvaluatorのテスト
 
 from unittest.mock import Mock
 
-import numpy as np
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
 
@@ -392,13 +391,13 @@ class TestIndividualEvaluator:
         # call_args.kwargsからbacktest_configを取り出し、その中のstrategy_configをチェック
         call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
         backtest_config_passed = call_kwargs["backtest_config"]
-        assert backtest_config_passed["strategy_config"]["ml_filter_enabled"] == False
-        assert backtest_config_passed["strategy_config"]["ml_model_path"] == None
+        assert not backtest_config_passed["strategy_config"]["ml_filter_enabled"]
+        assert backtest_config_passed["strategy_config"]["ml_model_path"] is None
         assert (
             backtest_config_passed["strategy_config"]["parameters"]["strategy_gene"]
             is not None
         )
-        assert backtest_config_passed.get("regime_labels") == None
+        assert backtest_config_passed.get("regime_labels") is None
 
         # 評価結果の検証
         # _calculate_fitnessを直接呼び出して期待値を計算 (テスト対象ではないが、比較のために使用)
@@ -414,7 +413,7 @@ class TestIndividualEvaluator:
         # run_backtestがMLフィルターありの引数で呼ばれたことを検証
         call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
         backtest_config_passed = call_kwargs["backtest_config"]
-        assert backtest_config_passed["strategy_config"]["ml_filter_enabled"] == True
+        assert backtest_config_passed["strategy_config"]["ml_filter_enabled"]
         assert (
             backtest_config_passed["strategy_config"]["ml_model_path"]
             == "/path/to/ml_model.pkl"
@@ -423,7 +422,7 @@ class TestIndividualEvaluator:
             backtest_config_passed["strategy_config"]["parameters"]["strategy_gene"]
             is not None
         )
-        assert backtest_config_passed.get("regime_labels") == None
+        assert backtest_config_passed.get("regime_labels") is None
 
         # 評価結果の検証
         expected_fitness_with_ml = self.evaluator._calculate_fitness(

@@ -5,7 +5,7 @@
 
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -13,9 +13,6 @@ from app.services.ml.label_generation import EventDrivenLabelGenerator
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-
-# 循環インポート回避のため、型チェック時のみインポート
-
 
 from .data.data_conversion_service import DataConversionService
 from .data.data_integration_service import DataIntegrationError, DataIntegrationService
