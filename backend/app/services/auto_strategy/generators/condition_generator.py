@@ -14,7 +14,7 @@ from ..core.condition_evolver import (
 )
 from ..core.condition_evolver import YamlIndicatorUtils as CoreYamlIndicatorUtils
 from ..models.strategy_models import Condition, ConditionGroup, IndicatorGene
-from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
+
 from ..utils.yaml_utils import YamlIndicatorUtils
 from .strategies import (
     ComplexConditionsStrategy,
@@ -261,8 +261,8 @@ class ConditionGenerator:
             elif cat == "trend":
                 return IndicatorType.TREND
 
-        if indicator.type in INDICATOR_CHARACTERISTICS:
-            return INDICATOR_CHARACTERISTICS[indicator.type]["type"]
+        if indicator.type in YamlIndicatorUtils.get_characteristics():
+            return YamlIndicatorUtils.get_characteristics()[indicator.type]["type"]
 
         raise ValueError(f"不明な指標タイプ: {indicator.type}")
 
@@ -296,8 +296,8 @@ class ConditionGenerator:
                     categorized[IndicatorType.VOLATILITY].append(ind)
                 else:
                     categorized[IndicatorType.TREND].append(ind)
-            elif name in INDICATOR_CHARACTERISTICS:
-                char = INDICATOR_CHARACTERISTICS[name]
+            elif name in YamlIndicatorUtils.get_characteristics():
+                char = YamlIndicatorUtils.get_characteristics()[name]
                 categorized[char["type"]].append(ind)
             else:
                 raise ValueError(f"分類できない指標タイプ: {name}")

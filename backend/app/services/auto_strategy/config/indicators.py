@@ -11,7 +11,7 @@ from .constants import (
     DATA_SOURCES,
     OPERATORS,
 )
-from ..utils.indicator_characteristics import INDICATOR_CHARACTERISTICS
+from ..utils.yaml_utils import YamlIndicatorUtils
 from ..utils.indicator_utils import get_valid_indicator_types
 from .base import BaseConfig
 
@@ -25,7 +25,7 @@ class IndicatorSettings(BaseConfig):
 
     # 指標特性データベース
     indicator_characteristics: Dict[str, Any] = field(
-        default_factory=lambda: INDICATOR_CHARACTERISTICS.copy()
+        default_factory=lambda: YamlIndicatorUtils.get_characteristics().copy()
     )
 
     # 演算子とデータソース

@@ -16,6 +16,15 @@ from app.services.indicators.manifests.registry import manifest_to_yaml_dict
 class YamlIndicatorUtils:
     """YAMLベースの指標特性ユーティリティ"""
 
+    _cached_characteristics: Optional[Dict[str, Dict]] = None
+
+    @classmethod
+    def get_characteristics(cls) -> Dict[str, Dict]:
+        """キャッシュされた指標特性を取得"""
+        if cls._cached_characteristics is None:
+            cls._cached_characteristics = cls.initialize_yaml_based_characteristics({})
+        return cls._cached_characteristics
+
     @classmethod
     def generate_characteristics_from_yaml(cls, yaml_file_path: str) -> Dict[str, Dict]:
         """

@@ -18,7 +18,7 @@ from .gene_utils import (
     create_default_strategy_gene,
     prepare_crossover_metadata,
 )
-from .indicator_characteristics import INDICATOR_CHARACTERISTICS
+
 
 # Strategy Integration
 from .strategy_integration_service import StrategyIntegrationService
@@ -41,5 +41,4 @@ __all__ = [
     # Strategy Integration
     "StrategyIntegrationService",
     # Indicator Characteristics
-    "INDICATOR_CHARACTERISTICS",
 ]

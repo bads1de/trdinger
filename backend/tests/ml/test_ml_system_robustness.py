@@ -5,7 +5,7 @@ MLシステム包括的テスト - 潜在的問題と堅牢性を検証
 import gc
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from unittest.mock import patch
+
 
 import numpy as np
 import pandas as pd
@@ -64,19 +64,8 @@ class TestMLSystemRobustness:
         """エッジケースを含むハイブリッド統合テスト"""
         print("🔍 エッジケースを含むハイブリッド統合をテスト...")
 
-        # 1. 不正なDRL重みのテスト
-        hybrid_predictor._drl_weight = 1.5  # 範囲外の値
-        features_df = sample_training_data[["Close", "Volume", "rsi"]]
-
-        try:
-            prediction = hybrid_predictor.predict(features_df)
-            assert isinstance(prediction, dict)
-            assert "up" in prediction and "down" in prediction and "range" in prediction
-            print("✅ 範囲外DRL重みの自動調整が成功")
-        except Exception as e:
-            print(f"⚠️ 範囲外DRL重みでエラー: {e}")
-
         # 2. モデル未学習時のフォールバック
+        features_df = sample_training_data[["Close", "Volume", "rsi"]]
         hybrid_predictor.services[0].trainer.is_trained = False
         default_pred = hybrid_predictor.predict(features_df)
         assert default_pred == {"up": 0.33, "down": 0.33, "range": 0.34}
@@ -279,37 +268,6 @@ class TestMLSystemRobustness:
         assert range_std < 0.1, f"レンジ予測のばらつきが大きい: {range_std:.4f}"
 
         print("✅ マルチモデル予測の一貫性が確認")
-
-    def test_drl_integration_edge_cases(self, sample_training_data):
-        """DRL統合のエッジケーステスト"""
-        print("🔍 DRL統合のエッジケースをテスト...")
-
-        # DRL無効時のテスト
-        predictor_no_drl = HybridPredictor(automl_config={"drl": {"enabled": False}})
-
-        features_df = sample_training_data[["Close", "Volume", "rsi"]]
-        pred_no_drl = predictor_no_drl.predict(features_df)
-        assert isinstance(pred_no_drl, dict)
-        print("✅ DRL無効時の予測が成功")
-
-        # DRL重みが0のテスト
-        predictor_zero_weight = HybridPredictor(
-            automl_config={"drl": {"enabled": True, "policy_weight": 0.0}}
-        )
-
-        pred_zero_weight = predictor_zero_weight.predict(features_df)
-        assert isinstance(pred_zero_weight, dict)
-        print("✅ DRL重み0時の予測が成功")
-
-        # DRL予測失敗時のフォールバック
-        with patch.object(
-            predictor_zero_weight.drl_policy_adapter,
-            "predict_signals",
-            side_effect=Exception("DRL予測失敗"),
-        ):
-            pred_fallback = predictor_zero_weight.predict(features_df)
-            assert isinstance(pred_fallback, dict)
-            print("✅ DRL予測失敗時のフォールバックが成功")
 
     def test_real_time_prediction_stability(self, sample_training_data):
         """リアルタイム予測の安定性テスト"""

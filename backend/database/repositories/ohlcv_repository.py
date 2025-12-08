@@ -9,7 +9,9 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from app.utils.data_validation import DataValidator
+from app.utils.data_processing.validators.record_validator import (
+    RecordValidator as DataValidator,
+)
 from database.models import OHLCVData
 
 from .base_repository import BaseRepository

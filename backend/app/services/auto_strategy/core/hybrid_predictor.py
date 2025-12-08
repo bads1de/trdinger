@@ -9,7 +9,6 @@ import pandas as pd
 
 from app.services.ml.exceptions import MLPredictionError
 
-from .drl_policy_adapter import DRLPolicyAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +32,9 @@ class HybridPredictor:
         model_types: Optional[List[str]] = None,
         single_model_config: Optional[Dict[str, Any]] = None,
         ensemble_config: Optional[Dict[str, Any]] = None,
-        drl_config: Optional[Dict[str, Any]] = None,
         use_time_series_cv: bool = False,
         training_service_cls: Optional[Type["MLTrainingService"]] = None,
         model_manager_instance: Optional["ModelManager"] = None,
-        drl_policy_adapter: Optional[DRLPolicyAdapter] = None,
     ):
         """初期化"""
 
@@ -45,17 +42,7 @@ class HybridPredictor:
         self.model_types = model_types
         self.single_model_config = single_model_config or {}
         self.ensemble_config = ensemble_config
-        self.drl_config = drl_config
         self.use_time_series_cv = use_time_series_cv
-        self._drl_enabled = bool(
-            self.drl_config and self.drl_config.get("enabled", False)
-        )
-        self._drl_weight = (
-            float(self.drl_config.get("policy_weight", 0.5)) if self.drl_config else 0.0
-        )
-        if not 0.0 <= self._drl_weight <= 1.0:
-            logger.warning("DRLポリシーの重みが範囲外のため0.5に調整しました")
-            self._drl_weight = 0.5
 
         if model_type:
             self.model_type = model_type
@@ -94,8 +81,6 @@ class HybridPredictor:
             self.services = [service]
             self.service = service
 
-        self.drl_policy_adapter = self._resolve_drl_adapter(drl_policy_adapter)
-
     @staticmethod
     def _default_prediction(mode: str = "direction") -> Dict[str, float]:
         if mode == "volatility":
@@ -121,7 +106,7 @@ class HybridPredictor:
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率辞書 
+            予測確率辞書
             - 方向予測: {"up": float, "down": float, "range": float}
             - ボラティリティ予測: {"trend": float, "range": float}
 
@@ -155,15 +140,25 @@ class HybridPredictor:
                     if "trend" in first_pred:
                         # ボラティリティ予測の平均化
                         ml_prediction = {
-                            "trend": float(np.mean([p.get("trend", 0.0) for p in predictions])),
-                            "range": float(np.mean([p.get("range", 0.0) for p in predictions])),
+                            "trend": float(
+                                np.mean([p.get("trend", 0.0) for p in predictions])
+                            ),
+                            "range": float(
+                                np.mean([p.get("range", 0.0) for p in predictions])
+                            ),
                         }
                     else:
                         # 方向予測の平均化
                         ml_prediction = {
-                            "up": float(np.mean([p.get("up", 0.0) for p in predictions])),
-                            "down": float(np.mean([p.get("down", 0.0) for p in predictions])),
-                            "range": float(np.mean([p.get("range", 0.0) for p in predictions])),
+                            "up": float(
+                                np.mean([p.get("up", 0.0) for p in predictions])
+                            ),
+                            "down": float(
+                                np.mean([p.get("down", 0.0) for p in predictions])
+                            ),
+                            "range": float(
+                                np.mean([p.get("range", 0.0) for p in predictions])
+                            ),
                         }
             else:
                 # 単一モデルの場合
@@ -178,13 +173,7 @@ class HybridPredictor:
                     self._run_time_series_cv(service, features_df)
                     ml_prediction = service.generate_signals(features_df)
 
-            # DRLとのブレンド（ボラティリティ予測の場合はブレンドスキップまたは別途対応が必要）
-            # 現状は方向予測のみDRLブレンドをサポート
-            if "trend" in ml_prediction:
-                return self._normalise_prediction(ml_prediction)
-            
-            blended = self._blend_with_drl(ml_prediction, features_df)
-            return blended
+            return self._normalise_prediction(ml_prediction)
 
         except MLPredictionError:
             raise
@@ -335,73 +324,6 @@ class HybridPredictor:
 
         return True
 
-    def _resolve_drl_adapter(
-        self, override: Optional[DRLPolicyAdapter]
-    ) -> Optional[DRLPolicyAdapter]:
-        if override is not None:
-            return override
-
-        if not self._drl_enabled:
-            return None
-
-        try:
-            policy_type = (
-                self.drl_config.get("policy_type", "ppo") if self.drl_config else "ppo"
-            )
-            return DRLPolicyAdapter(
-                policy_type=policy_type, policy_config=self.drl_config
-            )
-        except Exception as exc:
-            logger.warning("DRLPolicyAdapterの初期化に失敗しました: %s", exc)
-            return None
-
-    def _blend_with_drl(
-        self, ml_prediction: Dict[str, float], features_df: pd.DataFrame
-    ) -> Dict[str, float]:
-        if not self._drl_enabled or self.drl_policy_adapter is None:
-            return self._normalise_prediction(ml_prediction)
-
-        try:
-            drl_prediction = self.drl_policy_adapter.predict_signals(features_df)
-        except Exception as exc:
-            logger.warning(
-                "DRLポリシー予測が失敗したためML予測のみを使用します: %s", exc
-            )
-            return self._normalise_prediction(ml_prediction)
-
-        weight = self._drl_weight
-        weight = min(max(weight, 0.0), 1.0)
-        ml_weight = 1.0 - weight
-
-        # モード判定
-        is_volatility = "trend" in ml_prediction
-
-        if is_volatility:
-            # ボラティリティ予測の場合
-            # DRLの予測 (up, down, range) を (trend, range) に変換
-            drl_trend = float(drl_prediction.get("up", 0.0)) + float(drl_prediction.get("down", 0.0))
-            drl_range = float(drl_prediction.get("range", 0.0))
-            
-            # 正規化
-            total = drl_trend + drl_range
-            if total > 0:
-                drl_trend /= total
-                drl_range /= total
-            
-            blended = {
-                "trend": weight * drl_trend + ml_weight * float(ml_prediction.get("trend", 0.0)),
-                "range": weight * drl_range + ml_weight * float(ml_prediction.get("range", 0.0))
-            }
-        else:
-            # 方向予測の場合
-            blended = {
-                key: weight * float(drl_prediction.get(key, 0.0))
-                + ml_weight * float(ml_prediction.get(key, 0.0))
-                for key in {"up", "down", "range"}
-            }
-
-        return self._normalise_prediction(blended)
-
     @staticmethod
     def _normalise_prediction(prediction: Dict[str, float]) -> Dict[str, float]:
         # ボラティリティ予測の場合
@@ -415,7 +337,7 @@ class HybridPredictor:
                 "trend": trend / total,
                 "range": range_score / total,
             }
-            
+
         # 方向予測の場合
         up = float(prediction.get("up", 0.0))
         down = float(prediction.get("down", 0.0))
