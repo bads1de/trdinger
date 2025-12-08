@@ -8,6 +8,8 @@ from typing import Any, Dict, Type
 
 from backtesting import Strategy
 
+from .auto_strategy_loader import AutoStrategyLoader, AutoStrategyLoaderError
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +23,9 @@ class StrategyClassFactory:
 
     設定から適切な戦略クラスを生成します。
     """
+
+    def __init__(self) -> None:
+        self._auto_strategy_loader = AutoStrategyLoader()
 
     def create_strategy_class(self, strategy_config: Dict[str, Any]) -> Type[Strategy]:
         """
@@ -38,13 +43,22 @@ class StrategyClassFactory:
         try:
             # オートストラテジーの場合
             if self._is_auto_strategy(strategy_config):
-                return self._create_auto_strategy_class(strategy_config)
+                try:
+                    return self._auto_strategy_loader.create_auto_strategy_class(
+                        strategy_config
+                    )
+                except AutoStrategyLoaderError as e:
+                    raise StrategyClassCreationError(
+                        f"オートストラテジーの生成に失敗しました: {e}"
+                    )
             else:
                 # 将来的に他の戦略タイプをサポートする場合はここに追加
                 raise StrategyClassCreationError(
                     f"サポートされていない戦略タイプです: {strategy_config.get('strategy_type')}"
                 )
 
+        except StrategyClassCreationError:
+            raise
         except Exception as e:
             logger.error(f"戦略クラス生成エラー: {e}")
             raise StrategyClassCreationError(f"戦略クラスの生成に失敗しました: {e}")
@@ -55,70 +69,6 @@ class StrategyClassFactory:
             "parameters" in strategy_config
             and "strategy_gene" in strategy_config["parameters"]
         )
-
-    def _create_auto_strategy_class(
-        self, strategy_config: Dict[str, Any]
-    ) -> Type[Strategy]:
-        """
-        オートストラテジーのクラスを生成
-
-        Args:
-            strategy_config: 戦略設定
-
-        Returns:
-            生成された戦略クラス
-
-        Raises:
-            StrategyClassCreationError: 戦略遺伝子が見つからない場合
-        """
-        # 遅延インポートで循環参照を回避
-        try:
-            from app.services.auto_strategy.generators.strategy_factory import (
-                StrategyFactory,
-            )
-            from app.services.auto_strategy.serializers.gene_serialization import (
-                GeneSerializer,
-            )
-        except ImportError as e:
-            raise StrategyClassCreationError(
-                f"オートストラテジーモジュールのインポートに失敗しました: {e}"
-            )
-
-        # 戦略遺伝子を取得
-        gene_data = self._extract_strategy_gene(strategy_config)
-        if not gene_data:
-            raise StrategyClassCreationError(
-                "オートストラテジーの実行には、戦略遺伝子 (strategy_gene) が必要です。"
-            )
-
-        try:
-            # 戦略遺伝子を復元
-            from app.services.auto_strategy.models.strategy_models import StrategyGene
-
-            serializer = GeneSerializer()
-            gene = serializer.dict_to_strategy_gene(gene_data, StrategyGene)
-
-            # 戦略ファクトリーで戦略クラスを生成
-            strategy_factory = StrategyFactory()
-            strategy_class = strategy_factory.create_strategy_class(gene)
-
-            return strategy_class
-
-        except Exception as e:
-            raise StrategyClassCreationError(f"戦略遺伝子の復元に失敗しました: {e}")
-
-    def _extract_strategy_gene(self, strategy_config: Dict[str, Any]) -> Dict[str, Any]:
-        """戦略設定から戦略遺伝子を抽出"""
-        # 直接strategy_geneがある場合
-        if "strategy_gene" in strategy_config:
-            return strategy_config["strategy_gene"]
-
-        # parametersの中にある場合
-        parameters = strategy_config.get("parameters", {})
-        if "strategy_gene" in parameters:
-            return parameters["strategy_gene"]
-
-        return {}
 
     def get_strategy_parameters(
         self, strategy_config: Dict[str, Any]
