@@ -60,6 +60,11 @@ from app.config.unified_config import unified_config
 from scripts.feature_evaluation.common_feature_evaluator import (
     CommonFeatureEvaluator,
 )
+from app.services.ml.optimization.optuna_optimizer import (
+    OptunaOptimizer,
+    ParameterSpace,
+)
+from app.services.ml.optimization.ensemble_parameter_space import EnsembleParameterSpace
 
 # ログ設定
 logging.basicConfig(
@@ -214,13 +219,23 @@ class FeatureEvaluator:
             # LightGBM
             if model_type in ["lightgbm", "all"]:
                 logger.info("LightGBM重要度を計算中...")
-                lgb_importance = self._calculate_lightgbm_importance(X, y, binary=True)
+                best_params = self._optimize_hyperparameters(
+                    X, y, "lightgbm", binary=True
+                )
+                lgb_importance = self._calculate_lightgbm_importance(
+                    X, y, binary=True, params=best_params
+                )
                 importance_results["lightgbm"] = lgb_importance
 
             # XGBoost
             if model_type in ["xgboost", "all"]:
                 logger.info("XGBoost重要度を計算中...")
-                xgb_importance = self._calculate_xgboost_importance(X, y, binary=True)
+                best_params = self._optimize_hyperparameters(
+                    X, y, "xgboost", binary=True
+                )
+                xgb_importance = self._calculate_xgboost_importance(
+                    X, y, binary=True, params=best_params
+                )
                 importance_results["xgboost"] = xgb_importance
 
             # RandomForest (Meta Labelingで使用されるため残す)
@@ -236,13 +251,23 @@ class FeatureEvaluator:
             # LightGBM
             if model_type in ["lightgbm", "all"]:
                 logger.info("LightGBM重要度を計算中...")
-                lgb_importance = self._calculate_lightgbm_importance(X, y, binary=False)
+                best_params = self._optimize_hyperparameters(
+                    X, y, "lightgbm", binary=False
+                )
+                lgb_importance = self._calculate_lightgbm_importance(
+                    X, y, binary=False, params=best_params
+                )
                 importance_results["lightgbm"] = lgb_importance
 
             # XGBoost
             if model_type in ["xgboost", "all"]:
                 logger.info("XGBoost重要度を計算中...")
-                xgb_importance = self._calculate_xgboost_importance(X, y, binary=False)
+                best_params = self._optimize_hyperparameters(
+                    X, y, "xgboost", binary=False
+                )
+                xgb_importance = self._calculate_xgboost_importance(
+                    X, y, binary=False, params=best_params
+                )
                 importance_results["xgboost"] = xgb_importance
 
             # RandomForest
@@ -264,6 +289,81 @@ class FeatureEvaluator:
         logger.info(f"重要度分析完了: {len(importance_results)}種類")
 
         return importance_results
+
+    def _optimize_hyperparameters(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        model_type: str,
+        binary: bool = False,
+    ) -> Dict[str, Any]:
+        """ハイパーパラメータを最適化
+
+        Args:
+            X: 特徴量
+            y: ターゲット
+            model_type: モデルタイプ ('lightgbm' or 'xgboost')
+            binary: 2値分類かどうか
+
+        Returns:
+            最適化されたパラメータ
+        """
+        if not self.config.optimize:
+            return {}
+
+        logger.info(f"{model_type}のハイパーパラメータ最適化を開始...")
+
+        optimizer = OptunaOptimizer()
+
+        # パラメータ空間の取得
+        if model_type == "lightgbm":
+            space = EnsembleParameterSpace.get_lightgbm_parameter_space()
+        elif model_type == "xgboost":
+            space = EnsembleParameterSpace.get_xgboost_parameter_space()
+        else:
+            return {}
+
+        # 目的関数
+        def objective(params: Dict[str, Any]) -> float:
+            try:
+                # パラメータの変換（プレフィックス除去など必要なら）
+                clean_params = {}
+                prefix = "lgb_" if model_type == "lightgbm" else "xgb_"
+                for k, v in params.items():
+                    if k.startswith(prefix):
+                        clean_params[k.replace(prefix, "")] = v
+                    else:
+                        clean_params[k] = v
+
+                # CV評価
+                results = self._evaluate_with_cv(
+                    X, y, list(X.columns), model_type, params=clean_params
+                )
+
+                # スコア（F1スコアを最大化）
+                return results.get("f1_score", 0.0)
+            except Exception as e:
+                logger.warning(f"最適化試行エラー: {e}")
+                return 0.0
+
+        # 最適化実行
+        result = optimizer.optimize(
+            objective_function=objective,
+            parameter_space=space,
+            n_calls=self.config.n_trials,
+        )
+
+        # 最適パラメータの整形
+        best_params = {}
+        prefix = "lgb_" if model_type == "lightgbm" else "xgb_"
+        for k, v in result.best_params.items():
+            if k.startswith(prefix):
+                best_params[k.replace(prefix, "")] = v
+            else:
+                best_params[k] = v
+
+        logger.info(f"最適パラメータ: {best_params}")
+        return best_params
 
     def detect_low_importance(
         self,
@@ -460,19 +560,24 @@ class FeatureEvaluator:
         X: pd.DataFrame,
         y: pd.Series,
         binary: bool = False,
+        params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, float]:
         """LightGBM重要度を計算"""
         try:
             if binary:
                 # パイプライン準拠: LGBMClassifier, class_weight='balanced'
-                model = lgb.LGBMClassifier(
-                    objective="binary",
-                    metric="binary_logloss",
-                    class_weight="balanced",
-                    n_estimators=100,
-                    random_state=unified_config.ml.training.random_state,
-                    verbosity=-1,
-                )
+                model_params = {
+                    "objective": "binary",
+                    "metric": "binary_logloss",
+                    "class_weight": "balanced",
+                    "n_estimators": 100,
+                    "random_state": unified_config.ml.training.random_state,
+                    "verbosity": -1,
+                }
+                if params:
+                    model_params.update(params)
+
+                model = lgb.LGBMClassifier(**model_params)
                 model.fit(X, y)
                 importance = model.feature_importances_
                 # gainではなくsplit(default)だが、sklearn APIではfeature_importances_はsplit/gainの指定がinitによる
@@ -485,15 +590,17 @@ class FeatureEvaluator:
             else:
                 # レガシー: Multiclass
                 train_data = lgb.Dataset(X, label=y)
-                params = {
+                lgb_params = {
                     "objective": "multiclass",
                     "num_class": 3,
                     "metric": "multi_logloss",
                     "verbose": -1,
                     "random_state": unified_config.ml.training.random_state,
                 }
+                if params:
+                    lgb_params.update(params)
                 model = lgb.train(
-                    params,
+                    lgb_params,
                     train_data,
                     num_boost_round=100,
                 )
@@ -511,38 +618,23 @@ class FeatureEvaluator:
         X: pd.DataFrame,
         y: pd.Series,
         binary: bool = False,
+        params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, float]:
         """XGBoost重要度を計算"""
         try:
             if binary:
-                # パイプライン準拠: XGBClassifier, scale_pos_weight
-                neg_count = len(y) - sum(y)
-                pos_count = sum(y)
-                scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
-
-                model = xgb.XGBClassifier(
-                    objective="binary:logistic",
-                    eval_metric="logloss",
-                    scale_pos_weight=scale_pos_weight,
-                    n_estimators=100,
-                    random_state=unified_config.ml.training.random_state,
-                    verbosity=0,
-                    missing=np.inf,
-                )
-                model.fit(X, y)
-                importance_dict = model.get_booster().get_score(importance_type="gain")
-            else:
-                # レガシー: Multiclass
-                dtrain = xgb.DMatrix(X, label=y)
-                params = {
+                xgb_params = {
                     "objective": "multi:softprob",
                     "num_class": 3,
                     "eval_metric": "mlogloss",
                     "verbosity": 0,
                     "random_state": unified_config.ml.training.random_state,
                 }
+                if params:
+                    xgb_params.update(params)
+                dtrain = xgb.DMatrix(X, label=y)
                 model = xgb.train(
-                    params,
+                    xgb_params,
                     dtrain,
                     num_boost_round=100,
                 )
@@ -638,6 +730,7 @@ class FeatureEvaluator:
         y: pd.Series,
         features: List[str],
         model_type: str,
+        params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, float]:
         """TimeSeriesSplitでCV評価"""
         X_selected = X[features]
@@ -668,11 +761,11 @@ class FeatureEvaluator:
 
             # モデル学習
             if model_type == "lightgbm":
-                model = self._train_lightgbm(X_train, y_train)
+                model = self._train_lightgbm(X_train, y_train, params)
                 y_pred_proba = model.predict(X_test)
                 y_pred = np.argmax(y_pred_proba, axis=1)
             elif model_type == "xgboost":
-                model = self._train_xgboost(X_train, y_train)
+                model = self._train_xgboost(X_train, y_train, params)
                 dtest = xgb.DMatrix(X_test)
                 y_pred_proba = model.predict(dtest)
                 y_pred = np.argmax(y_pred_proba, axis=1)
@@ -735,29 +828,43 @@ class FeatureEvaluator:
             "train_time": results["train_time_sec"],
         }
 
-    def _train_lightgbm(self, X_train: pd.DataFrame, y_train: pd.Series):
+    def _train_lightgbm(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        params: Optional[Dict[str, Any]] = None,
+    ):
         """LightGBMモデルを学習"""
         train_data = lgb.Dataset(X_train, label=y_train)
-        params = {
+        lgb_params = {
             "objective": "multiclass",
             "num_class": 3,
             "metric": "multi_logloss",
             "verbose": -1,
             "random_state": unified_config.ml.training.random_state,
         }
-        return lgb.train(params, train_data, num_boost_round=100)
+        if params:
+            lgb_params.update(params)
+        return lgb.train(lgb_params, train_data, num_boost_round=100)
 
-    def _train_xgboost(self, X_train: pd.DataFrame, y_train: pd.Series):
+    def _train_xgboost(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        params: Optional[Dict[str, Any]] = None,
+    ):
         """XGBoostモデルを学習"""
         dtrain = xgb.DMatrix(X_train, label=y_train)
-        params = {
+        xgb_params = {
             "objective": "multi:softprob",
             "num_class": 3,
             "eval_metric": "mlogloss",
             "verbosity": 0,
             "random_state": unified_config.ml.training.random_state,
         }
-        return xgb.train(params, dtrain, num_boost_round=100)
+        if params:
+            xgb_params.update(params)
+        return xgb.train(xgb_params, dtrain, num_boost_round=100)
 
     def _calculate_changes(
         self,

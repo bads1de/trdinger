@@ -138,14 +138,7 @@ class TestHybridIntegration:
         }
         evaluator.set_backtest_config(backtest_config)
 
-        with patch(
-            "backend.app.services.auto_strategy.core.hybrid_individual_evaluator.RegimeDetector"
-        ) as mock_regime_class:
-            mock_regime_detector = Mock()
-            mock_regime_detector.detect_regimes.return_value = np.array([0, 1, 2])
-            mock_regime_class.return_value = mock_regime_detector
-
-            fitness = evaluator.evaluate_individual(individual, hybrid_ga_config)
+        fitness = evaluator.evaluate_individual(individual, hybrid_ga_config)
 
         assert isinstance(fitness, tuple)
         assert len(fitness) == 1  # 単一目的

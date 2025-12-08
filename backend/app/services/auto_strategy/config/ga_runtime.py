@@ -7,13 +7,12 @@ GAConfigクラスとGAProgressクラスを提供します。
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
+from typing import Any, Callable, Dict, List, Optional, cast
 
 from .auto_strategy import AutoStrategyConfig
 from .base import BaseConfig
 
-if TYPE_CHECKING:
-    from ..services.regime_detector import RegimeDetectorConfig
+
 from .ga import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
@@ -115,10 +114,6 @@ class GAConfig(BaseConfig):
     # フォールバック設定
     fallback_start_date: str = "2024-01-01"
     fallback_end_date: str = "2024-04-09"
-
-    # レジーム適応設定
-    regime_adaptation_enabled: bool = False
-    regime_detector_config: Optional["RegimeDetectorConfig"] = None
 
     # MLフィルター設定
     ml_filter_enabled: bool = False
@@ -312,9 +307,6 @@ class GAConfig(BaseConfig):
             "tpsl_tp_range": self.tpsl_tp_range,
             "tpsl_rr_range": self.tpsl_rr_range,
             "tpsl_atr_multiplier_range": self.tpsl_atr_multiplier_range,
-            # レジーム適応設定
-            "regime_adaptation_enabled": self.regime_adaptation_enabled,
-            "regime_detector_config": self.regime_detector_config,
         }
 
     @classmethod
@@ -378,9 +370,6 @@ class GAConfig(BaseConfig):
             "tpsl_atr_multiplier_range": data.get(
                 "tpsl_atr_multiplier_range", GA_TPSL_ATR_MULTIPLIER_RANGE
             ),
-            # レジーム適応設定
-            "regime_adaptation_enabled": data.get("regime_adaptation_enabled", False),
-            "regime_detector_config": data.get("regime_detector_config"),
         }
 
         # デフォルト値をマージ

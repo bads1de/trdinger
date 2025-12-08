@@ -88,14 +88,6 @@ class ExperimentManager:
         auto_strategy_logger = logging.getLogger("app.services.auto_strategy")
         auto_strategy_logger.setLevel(getattr(logging, ga_config.log_level.upper()))
 
-        # レジーム検知器の初期化（有効な場合）
-        regime_detector = None
-        if ga_config.regime_adaptation_enabled:
-            from ..services.regime_detector import RegimeDetector
-
-            regime_detector = RegimeDetector()
-            logger.info("レジーム適応が有効化されました")
-
         gene_generator = RandomGeneGenerator(ga_config)
 
         # ハイブリッドモードの初期化
@@ -136,7 +128,6 @@ class ExperimentManager:
             self.backtest_service,
             self.strategy_factory,
             gene_generator,
-            regime_detector=regime_detector,
             hybrid_mode=ga_config.hybrid_mode,
             hybrid_predictor=hybrid_predictor,
             hybrid_feature_adapter=hybrid_feature_adapter,

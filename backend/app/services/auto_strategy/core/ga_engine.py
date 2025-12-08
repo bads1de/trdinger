@@ -17,7 +17,7 @@ from app.services.backtest.backtest_service import BacktestService
 from ..config.ga_runtime import GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..generators.strategy_factory import StrategyFactory
-from ..services.regime_detector import RegimeDetector
+
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner
 from .fitness_sharing import FitnessSharing
@@ -43,7 +43,6 @@ class GeneticAlgorithmEngine:
         backtest_service: BacktestService,
         strategy_factory: StrategyFactory,
         gene_generator: RandomGeneGenerator,
-        regime_detector: Optional["RegimeDetector"] = None,
         hybrid_mode: bool = False,
         hybrid_predictor: Optional[Any] = None,
         hybrid_feature_adapter: Optional[Any] = None,
@@ -54,7 +53,6 @@ class GeneticAlgorithmEngine:
             backtest_service (BacktestService): バックテストサービス。
             strategy_factory (StrategyFactory): 戦略ファクトリー。
             gene_generator (RandomGeneGenerator): 遺伝子生成器。
-            regime_detector (Optional[RegimeDetector]): レジーム検知器（オプション、レジーム適応時に使用）。
             hybrid_mode (bool): ハイブリッドGA+MLモードを有効化。デフォルトはFalse。
             hybrid_predictor (Optional[Any]): ハイブリッド予測器（hybrid_mode=Trueの場合）。
             hybrid_feature_adapter (Optional[Any]): 特徴量アダプタ（hybrid_mode=Trueの場合）。
@@ -79,13 +77,10 @@ class GeneticAlgorithmEngine:
                 backtest_service=backtest_service,
                 predictor=hybrid_predictor,
                 feature_adapter=hybrid_feature_adapter,
-                regime_detector=regime_detector,
             )
         else:
             logger.info("🧬 標準GAモードで起動")
-            self.individual_evaluator = IndividualEvaluator(
-                backtest_service, regime_detector
-            )
+            self.individual_evaluator = IndividualEvaluator(backtest_service)
 
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing = None  # setup_deap時に初期化

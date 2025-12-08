@@ -407,56 +407,6 @@ class TestEventLabeledData:
             assert info["regime_profiles"] == {}
             assert info["label_distribution"] == {}
 
-    def test_get_event_labeled_training_data_with_regime(
-        self, backtest_data_service, sample_ohlcv_data
-    ):
-        """レジーム検知付きでイベントラベルを生成できること"""
-        regime_labels = pd.Series(
-            ["trending"] * 50 + ["ranging"] * 50,
-            index=sample_ohlcv_data.index,
-        )
-        labels_df = pd.DataFrame(
-            {
-                "label": ["HRHP", "LRLP"] * 50,
-            },
-            index=sample_ohlcv_data.index,
-        )
-        profile_info = {
-            "regime_profiles": {"trending": {"count": 50}, "ranging": {"count": 50}},
-            "label_distribution": {"HRHP": 50, "LRLP": 50},
-        }
-
-        mock_regime_detector = MagicMock()
-        mock_regime_detector.detect_regimes.return_value = regime_labels
-
-        with (
-            patch.object(
-                backtest_data_service._integration_service,
-                "create_ml_training_dataframe",
-                return_value=sample_ohlcv_data,
-            ),
-            patch.object(
-                backtest_data_service,
-                "_ensure_regime_detector",
-                return_value=mock_regime_detector,
-            ),
-            patch.object(
-                backtest_data_service._event_label_generator,
-                "generate_hrhp_lrlp_labels",
-                return_value=(labels_df, profile_info),
-            ),
-        ):
-            labeled_df, info = backtest_data_service.get_event_labeled_training_data(
-                symbol="BTC/USDT",
-                timeframe="1h",
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 1, 5),
-            )
-
-            assert not labeled_df.empty
-            assert "trending" in info["regime_profiles"]
-            assert "ranging" in info["regime_profiles"]
-
 
 class TestDataSummary:
     """データ概要取得テスト"""
@@ -481,47 +431,6 @@ class TestDataSummary:
             assert "start_date" in result
             assert "end_date" in result
             assert "columns" in result
-
-
-class TestRegimeDetector:
-    """レジーム検知器テスト"""
-
-    def test_ensure_regime_detector_initialization(self, backtest_data_service):
-        """レジーム検知器を初期化できること"""
-        with patch(
-            "app.services.auto_strategy.services.regime_detector.RegimeDetector"
-        ) as mock_detector_class:
-            mock_detector = MagicMock()
-            mock_detector_class.return_value = mock_detector
-
-            detector = backtest_data_service._ensure_regime_detector()
-
-            assert detector is not None
-            mock_detector_class.assert_called_once()
-
-    def test_ensure_regime_detector_initialization_error(self, backtest_data_service):
-        """レジーム検知器の初期化エラー時にNoneを返すこと"""
-        with patch(
-            "app.services.auto_strategy.services.regime_detector.RegimeDetector",
-            side_effect=Exception("初期化エラー"),
-        ):
-            detector = backtest_data_service._ensure_regime_detector()
-
-            assert detector is None
-
-    def test_ensure_regime_detector_caching(self, backtest_data_service):
-        """レジーム検知器がキャッシュされること"""
-        with patch(
-            "app.services.auto_strategy.services.regime_detector.RegimeDetector"
-        ) as mock_detector_class:
-            mock_detector = MagicMock()
-            mock_detector_class.return_value = mock_detector
-
-            detector1 = backtest_data_service._ensure_regime_detector()
-            detector2 = backtest_data_service._ensure_regime_detector()
-
-            assert detector1 is detector2
-            mock_detector_class.assert_called_once()
 
 
 class TestDataValidation:

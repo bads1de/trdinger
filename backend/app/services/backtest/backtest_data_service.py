@@ -15,8 +15,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 # 循環インポート回避のため、型チェック時のみインポート
-if TYPE_CHECKING:
-    from app.services.auto_strategy.services.regime_detector import RegimeDetector
+
 
 from .data.data_conversion_service import DataConversionService
 from .data.data_integration_service import DataIntegrationError, DataIntegrationService
@@ -36,7 +35,6 @@ class BacktestDataService:
         ohlcv_repo: Optional[OHLCVRepository] = None,
         oi_repo: Optional[OpenInterestRepository] = None,
         fr_repo: Optional[FundingRateRepository] = None,
-        regime_detector: Optional["RegimeDetector"] = None,
         event_label_generator: Optional[EventDrivenLabelGenerator] = None,
     ):
         """
@@ -46,7 +44,6 @@ class BacktestDataService:
             ohlcv_repo: OHLCVデータリポジトリ
             oi_repo: Open Interestデータリポジトリ
             fr_repo: Funding Rateデータリポジトリ
-            regime_detector: レジーム検知器
             event_label_generator: イベントドリブンラベル生成器
         """
         # 専門サービスを初期化
@@ -60,7 +57,6 @@ class BacktestDataService:
             retrieval_service=self._retrieval_service,
             conversion_service=self._conversion_service,
         )
-        self._regime_detector: Optional["RegimeDetector"] = regime_detector
         self._event_label_generator = (
             event_label_generator or EventDrivenLabelGenerator()
         )
@@ -189,18 +185,9 @@ class BacktestDataService:
             logger.warning("取得データが空のためイベントラベリングをスキップします")
             return market_df, {"regime_profiles": {}, "label_distribution": {}}
 
-        regime_labels = None
-        detector = self._ensure_regime_detector()
-        if detector is not None:
-            try:
-                regime_labels = detector.detect_regimes(market_df)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(f"レジーム検知に失敗したためフォールバックします: {exc}")
-                regime_labels = None
-
         labels_df, profile_info = self._event_label_generator.generate_hrhp_lrlp_labels(
             market_df,
-            regime_labels=regime_labels,
+            regime_labels=None,
         )
 
         aligned_market = market_df.loc[labels_df.index].copy()
@@ -219,17 +206,3 @@ class BacktestDataService:
             データ概要の辞書
         """
         return self._integration_service.get_data_summary(df)
-
-    def _ensure_regime_detector(self) -> Optional["RegimeDetector"]:
-        if self._regime_detector is None:
-            try:
-                # 循環インポート回避のため、ここでインポート
-                from app.services.auto_strategy.services.regime_detector import (
-                    RegimeDetector,
-                )
-
-                self._regime_detector = RegimeDetector()
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(f"RegimeDetector初期化に失敗したため無効化します: {exc}")
-                self._regime_detector = None
-        return self._regime_detector

@@ -5,14 +5,12 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
-
-import numpy as np
+from typing import Any, Dict
 
 from app.services.backtest.backtest_service import BacktestService
 
 from ..config import GAConfig
-from ..services.regime_detector import RegimeDetector
+
 from .risk_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
 from app.services.ml.model_manager import model_manager  # Added
 
@@ -29,16 +27,13 @@ class IndividualEvaluator:
     def __init__(
         self,
         backtest_service: BacktestService,
-        regime_detector: Optional[RegimeDetector] = None,
     ):
         """初期化
 
         Args:
             backtest_service: バックテストサービス
-            regime_detector: レジーム検知器（オプション、レジーム適応時に使用）
         """
         self.backtest_service = backtest_service
-        self.regime_detector = regime_detector
         self._fixed_backtest_config = None
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
@@ -99,40 +94,7 @@ class IndividualEvaluator:
             # strategy_nameフィールドを追加
             backtest_config["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
 
-            # レジーム適応が有効な場合、レジーム検知を行う
-            regime_labels = None
-            if config.regime_adaptation_enabled and self.regime_detector:
-                try:
-                    # OHLCVデータを取得
-                    symbol = backtest_config.get("symbol")
-                    timeframe = backtest_config.get("timeframe")
-                    start_date = backtest_config.get("start_date")
-                    end_date = backtest_config.get("end_date")
-
-                    if symbol and timeframe and start_date and end_date:
-                        # data_serviceからデータを取得（backtest_serviceのdata_serviceを使用）
-                        ohlcv_data = self.backtest_service.data_service.get_ohlcv_data(
-                            symbol, timeframe, start_date, end_date
-                        )
-
-                        # レジーム検知
-                        if not ohlcv_data.empty:
-                            regime_labels = self.regime_detector.detect_regimes(
-                                ohlcv_data
-                            )
-                            logger.info(
-                                f"レジーム検知完了: {len(regime_labels)} サンプル"
-                            )
-                        else:
-                            logger.warning(
-                                "OHLCVデータが空のため、レジーム検知をスキップ"
-                            )
-                    else:
-                        logger.warning("レジーム検知に必要なデータが不足")
-
-                except Exception as e:
-                    logger.error(f"レジーム検知エラー: {e}")
-                    regime_labels = None
+            # レジーム適応は削除されました
 
             # MLフィルターが有効な場合、MLモデルをロードし、backtest_configに渡す
             if config.ml_filter_enabled and config.ml_model_path:
@@ -146,17 +108,15 @@ class IndividualEvaluator:
                     # モデルロード失敗時はMLフィルターを無効にする
                     backtest_config["ml_filter_enabled"] = False
                     backtest_config["ml_filter_model"] = None
-            
+
             result = self.backtest_service.run_backtest(backtest_config=backtest_config)
 
-            # フィットネス計算（単一目的・多目的対応、レジーム考慮）
+            # フィットネス計算（単一目的・多目的対応）
             if config.enable_multi_objective:
-                fitness_values = self._calculate_multi_objective_fitness(
-                    result, config, regime_labels
-                )
+                fitness_values = self._calculate_multi_objective_fitness(result, config)
                 return fitness_values
             else:
-                fitness = self._calculate_fitness(result, config, regime_labels)
+                fitness = self._calculate_fitness(result, config)
                 return (fitness,)
 
         except Exception as e:
@@ -234,7 +194,6 @@ class IndividualEvaluator:
         self,
         backtest_result: Dict[str, Any],
         config: GAConfig,
-        regime_labels: Optional[list] = None,
     ) -> float:
         """
         フィットネス計算（ロング・ショートバランス評価を含む）
@@ -282,48 +241,8 @@ class IndividualEvaluator:
             # ロング・ショートバランス評価を計算
             balance_score = self._calculate_long_short_balance(backtest_result)
 
-            # レジーム別重み付け適用
+            # レジーム別重み付け適用ロジックは削除されました
             fitness_weights = config.fitness_weights.copy()
-            if regime_labels is not None and len(regime_labels) > 0:
-                # レジーム分布を計算
-                unique, counts = np.unique(regime_labels, return_counts=True)
-                regime_distribution = dict(zip(unique, counts))
-                total_samples = len(regime_labels)
-
-                # レジーム別重み調整
-                # トレンド (0) が多く: Sharpe重視
-                # レジーム (1) が多く: ボラ低減重視
-                # 高ボラ (2) が多く: 安定性重視
-                trend_ratio = regime_distribution.get(0, 0) / total_samples
-                range_ratio = regime_distribution.get(1, 0) / total_samples
-                high_vol_ratio = regime_distribution.get(2, 0) / total_samples
-
-                # 重み調整
-                if trend_ratio > 0.5:  # トレンド多め
-                    fitness_weights["sharpe_ratio"] = (
-                        fitness_weights.get("sharpe_ratio", 0.4) + 0.1
-                    )
-                    fitness_weights["total_return"] = (
-                        fitness_weights.get("total_return", 0.3) + 0.1
-                    )
-                elif range_ratio > 0.5:  # レジ勝ちめ
-                    fitness_weights["max_drawdown"] = (
-                        fitness_weights.get("max_drawdown", 0.2) + 0.1
-                    )
-                    fitness_weights["win_rate"] = (
-                        fitness_weights.get("win_rate", 0.1) + 0.1
-                    )
-                elif high_vol_ratio > 0.5:  # 高ボラ多め
-                    fitness_weights["max_drawdown"] = (
-                        fitness_weights.get("max_drawdown", 0.2) + 0.15
-                    )
-
-                # 重みの正規化
-                total_weight = sum(fitness_weights.values())
-                if total_weight > 0:
-                    fitness_weights = {
-                        k: v / total_weight for k, v in fitness_weights.items()
-                    }
 
             # 重み付きフィットネス計算（バランススコアを追加）
             fitness = (
@@ -447,7 +366,6 @@ class IndividualEvaluator:
         self,
         backtest_result: Dict[str, Any],
         config: GAConfig,
-        regime_labels: Optional[list] = None,
     ) -> tuple:
         """
         多目的最適化用フィットネス計算

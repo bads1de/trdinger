@@ -51,9 +51,7 @@ class ConditionGenerator:
         self.context = {
             "timeframe": None,
             "symbol": None,
-            "regime_gating": False,
             "threshold_profile": "normal",
-            "regime_thresholds": None,
         }
 
         # geneに含まれる指標一覧をオプションで保持
@@ -65,23 +63,17 @@ class ConditionGenerator:
         *,
         timeframe: str | None = None,
         symbol: str | None = None,
-        regime_gating: bool | None = None,
         threshold_profile: str | None = None,
-        regime_thresholds: Optional[Dict] = None,
     ):
-        """生成コンテキストを設定（RSI閾値やレジーム切替に利用）"""
+        """生成コンテキストを設定（RSI閾値などに利用）"""
         if timeframe is not None:
             self.context["timeframe"] = timeframe
         if symbol is not None:
             self.context["symbol"] = symbol
-        if regime_gating is not None:
-            self.context["regime_gating"] = bool(regime_gating)
         if threshold_profile is not None:
             if threshold_profile not in ("aggressive", "normal", "conservative"):
                 threshold_profile = "normal"
             self.context["threshold_profile"] = threshold_profile
-        if regime_thresholds is not None:
-            self.context["regime_thresholds"] = regime_thresholds
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
     def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[

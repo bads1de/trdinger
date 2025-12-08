@@ -1,7 +1,7 @@
 """
 Optuna最適化機能統合テスト
 
-evaluate_feature_performance.pyにOptunaハイパーパラメータ最適化を
+feature_evaluator.pyにOptunaハイパーパラメータ最適化を
 統合したテストスイート。
 """
 
@@ -16,10 +16,10 @@ import pytest
 # パスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from app.services.ml.optimization.ensemble_parameter_space import EnsembleParameterSpace
-from app.services.ml.optimization.optuna_optimizer import (
-    OptunaOptimizer,
-    ParameterSpace,
+from app.services.ml.optimization.optuna_optimizer import OptimizationResult
+from scripts.feature_evaluation.feature_evaluator import (
+    FeatureEvaluator,
+    FeatureEvaluationConfig,
 )
 
 
@@ -55,23 +55,21 @@ def sample_training_data():
 @pytest.fixture
 def mock_optuna_optimizer():
     """OptunaOptimizerのモック"""
-    with patch("app.services.ml.optimization.optuna_optimizer.OptunaOptimizer") as mock:
+    with patch("scripts.feature_evaluation.feature_evaluator.OptunaOptimizer") as mock:
         optimizer_instance = MagicMock()
         mock.return_value = optimizer_instance
 
         # モック最適化結果
-        from app.services.ml.optimization.optuna_optimizer import OptimizationResult
+        best_params = {
+            "lgb_num_leaves": 50,
+            "lgb_learning_rate": 0.05,
+            "xgb_max_depth": 8,
+            "xgb_learning_rate": 0.05,
+        }
 
         mock_result = OptimizationResult(
-            best_params={
-                "num_leaves": 50,
-                "learning_rate": 0.05,
-                "feature_fraction": 0.8,
-                "bagging_fraction": 0.7,
-                "min_data_in_leaf": 20,
-                "max_depth": 8,
-            },
-            best_score=0.42,  # Accuracy（3クラス分類なのでランダムは33.3%）
+            best_params=best_params,
+            best_score=0.42,
             total_evaluations=50,
             optimization_time=120.5,
             study=MagicMock(),
@@ -81,232 +79,107 @@ def mock_optuna_optimizer():
         yield mock
 
 
-class TestOptunaEnabledEvaluator:
-    """OptunaEnabledEvaluatorのテストクラス"""
+class TestFeatureEvaluatorOptimization:
+    """FeatureEvaluatorのOptuna最適化テスト"""
 
-    @pytest.mark.skip(
-        reason="実装待ち: scripts.feature_evaluation.evaluate_feature_performance モジュールが存在しません。"
-        "現在は feature_evaluator.py が代替実装として使用されています。"
-    )
-    def test_optuna_enabled_evaluator_initialization(self):
-        """OptunaEnabledEvaluator初期化テスト"""
-        # 実装完了: インポートが成功することを確認
-        from scripts.feature_evaluation.evaluate_feature_performance import (
-            LightGBMEvaluator,
-            OptunaEnabledEvaluator,
-        )
+    def test_initialization_with_optuna(self):
+        """Optuna有効時の初期化テスト"""
+        config = FeatureEvaluationConfig(optimize=True, n_trials=10)
+        evaluator = FeatureEvaluator(MagicMock(), config)
 
-        # OptunaEnabledEvaluatorは抽象クラスなので、LightGBMEvaluatorを使ってテスト
-        evaluator = LightGBMEvaluator(enable_optuna=True, n_trials=10, timeout=60)
+        assert evaluator.config.optimize is True
+        assert evaluator.config.n_trials == 10
 
-        # OptunaEnabledEvaluatorを継承していることを確認
-        assert isinstance(evaluator, OptunaEnabledEvaluator)
-        assert evaluator.enable_optuna is True
-        assert evaluator.n_trials == 10
-        assert evaluator.timeout == 60
-        assert evaluator.best_params is None
-        assert evaluator.optimization_history == []
-
-    def test_optuna_flag_initialization(self):
-        """Optunaフラグ付き初期化テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: OptunaEnabledEvaluatorクラス")
-
-    def test_optimize_hyperparameters(
+    def test_optimize_hyperparameters_lightgbm(
         self, sample_training_data, mock_optuna_optimizer
     ):
-        """ハイパーパラメータ最適化メソッドテスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: optimize_hyperparametersメソッド")
+        """LightGBMハイパーパラメータ最適化テスト"""
+        X, y = sample_training_data
+        config = FeatureEvaluationConfig(optimize=True, n_trials=10)
+        evaluator = FeatureEvaluator(MagicMock(), config)
 
-    def test_evaluate_model_cv_with_optuna(self, sample_training_data):
-        """Optuna最適化+TimeSeriesSplit評価テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: evaluate_model_cv_with_optunaメソッド")
+        # モック: _evaluate_with_cv
+        with patch.object(
+            evaluator, "_evaluate_with_cv", return_value={"f1_score": 0.5}
+        ):
+            best_params = evaluator._optimize_hyperparameters(X, y, "lightgbm")
 
+            # オプティマイザが呼ばれたか
+            mock_optuna_optimizer.return_value.optimize.assert_called_once()
 
-class TestLightGBMEvaluatorWithOptuna:
-    """Optuna対応LightGBMEvaluatorのテストクラス"""
+            # パラメータ空間がLightGBMのものか
+            call_args = mock_optuna_optimizer.return_value.optimize.call_args
+            assert "parameter_space" in call_args.kwargs
+            param_space = call_args.kwargs["parameter_space"]
+            assert any(k.startswith("lgb_") for k in param_space.keys())
 
-    def test_lightgbm_evaluator_with_optuna_enabled(self):
-        """Optuna有効時のLightGBMEvaluator初期化テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: LightGBMEvaluator Optuna対応")
+            # 結果の検証 (prefixが削除されていること)
+            assert "num_leaves" in best_params
+            assert "lgb_num_leaves" not in best_params
+            assert best_params["num_leaves"] == 50
 
-    def test_lightgbm_get_parameter_space(self):
-        """LightGBMパラメータ空間取得テスト"""
-        # EnsembleParameterSpaceが正しく動作することを確認
-        param_space = EnsembleParameterSpace.get_lightgbm_parameter_space()
+    def test_optimize_hyperparameters_xgboost(
+        self, sample_training_data, mock_optuna_optimizer
+    ):
+        """XGBoostハイパーパラメータ最適化テスト"""
+        X, y = sample_training_data
+        config = FeatureEvaluationConfig(optimize=True, n_trials=10)
+        evaluator = FeatureEvaluator(MagicMock(), config)
 
-        # パラメータが含まれていることを確認
-        assert "lgb_num_leaves" in param_space
-        assert "lgb_learning_rate" in param_space
-        assert "lgb_feature_fraction" in param_space
+        # モック: _evaluate_with_cv
+        with patch.object(
+            evaluator, "_evaluate_with_cv", return_value={"f1_score": 0.5}
+        ):
+            best_params = evaluator._optimize_hyperparameters(X, y, "xgboost")
 
-        # ParameterSpaceオブジェクトであることを確認
-        assert isinstance(param_space["lgb_num_leaves"], ParameterSpace)
-        assert param_space["lgb_num_leaves"].type == "integer"
+            # オプティマイザが呼ばれたか
+            mock_optuna_optimizer.return_value.optimize.assert_called_once()
 
-    def test_lightgbm_evaluate_with_optuna(self, sample_training_data):
-        """Optuna最適化後のLightGBM評価テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: LightGBMEvaluator evaluate_model_cv Optuna統合")
+            # パラメータ空間がXGBoostのものか
+            call_args = mock_optuna_optimizer.return_value.optimize.call_args
+            assert "parameter_space" in call_args.kwargs
+            param_space = call_args.kwargs["parameter_space"]
+            assert any(k.startswith("xgb_") for k in param_space.keys())
 
-    def test_lightgbm_fixed_params_fallback(self, sample_training_data):
-        """Optuna無効時の固定パラメータ評価テスト"""
-        # 実装後にパスするテスト
-        # --enable-optunaなしの場合、従来の固定パラメータ評価が動作することを確認
-        pytest.skip("実装待ち: 固定パラメータ評価の維持確認")
+            # 結果の検証
+            assert "max_depth" in best_params
+            assert best_params["max_depth"] == 8
 
+    def test_optimize_disabled(self, sample_training_data, mock_optuna_optimizer):
+        """Optuna無効時の挙動テスト"""
+        X, y = sample_training_data
+        config = FeatureEvaluationConfig(optimize=False)
+        evaluator = FeatureEvaluator(MagicMock(), config)
 
-class TestXGBoostEvaluatorWithOptuna:
-    """Optuna対応XGBoostEvaluatorのテストクラス"""
+        best_params = evaluator._optimize_hyperparameters(X, y, "lightgbm")
 
-    def test_xgboost_evaluator_with_optuna_enabled(self):
-        """Optuna有効時のXGBoostEvaluator初期化テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: XGBoostEvaluator Optuna対応")
+        # オプティマイザが呼ばれていないこと
+        mock_optuna_optimizer.return_value.optimize.assert_not_called()
+        assert best_params == {}
 
-    def test_xgboost_get_parameter_space(self):
-        """XGBoostパラメータ空間取得テスト"""
-        # EnsembleParameterSpaceが正しく動作することを確認
-        param_space = EnsembleParameterSpace.get_xgboost_parameter_space()
-
-        # パラメータが含まれていることを確認
-        assert "xgb_max_depth" in param_space
-        assert "xgb_learning_rate" in param_space
-        assert "xgb_subsample" in param_space
-
-        # ParameterSpaceオブジェクトであることを確認
-        assert isinstance(param_space["xgb_max_depth"], ParameterSpace)
-        assert param_space["xgb_max_depth"].type == "integer"
-
-    def test_xgboost_evaluate_with_optuna(self, sample_training_data):
-        """Optuna最適化後のXGBoost評価テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: XGBoostEvaluator evaluate_model_cv Optuna統合")
-
-
-class TestCLIIntegration:
-    """CLIインターフェース統合テスト"""
-
-    def test_cli_enable_optuna_flag(self):
-        """--enable-optunaフラグテスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: CLI引数 --enable-optuna")
-
-    def test_cli_n_trials_argument(self):
-        """--n-trials引数テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: CLI引数 --n-trials")
-
-    def test_cli_optuna_timeout_argument(self):
-        """--optuna-timeout引数テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: CLI引数 --optuna-timeout")
-
-    @patch("sys.argv", ["script.py", "--enable-optuna", "--n-trials", "10"])
-    def test_cli_arguments_parsing(self):
-        """CLI引数パーステスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: argparse統合")
-
-
-class TestResultsFormat:
-    """結果フォーマット拡張テスト"""
-
-    def test_results_include_optuna_info(self):
-        """結果にOptuna情報が含まれることを確認"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: 結果フォーマット拡張")
-
-    def test_results_best_params_included(self):
-        """結果に最適パラメータが含まれることを確認"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: best_paramsフィールド")
-
-    def test_results_optimization_history_included(self):
-        """結果に最適化履歴が含まれることを確認"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: optimization_historyフィールド")
-
-
-class TestTimeSeriesSplitIntegration:
-    """TimeSeriesSplit統合テスト"""
-
-    def test_optuna_with_time_series_split(self, sample_training_data):
-        """Optuna最適化とTimeSeriesSplitの統合テスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: TimeSeriesSplit統合")
-
-    def test_cross_validation_with_optuna(self, sample_training_data):
-        """Optuna最適化時のクロスバリデーションテスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: CV統合")
-
-
-class TestBackwardCompatibility:
-    """後方互換性テスト"""
-
-    def test_existing_fixed_param_evaluation_works(self, sample_training_data):
-        """既存の固定パラメータ評価が動作することを確認"""
-        # 実装後にパスするテスト
-        # --enable-optunaなしで従来通り動作することを確認
-        pytest.skip("実装待ち: 後方互換性確認")
-
-    def test_existing_tests_still_pass(self):
-        """既存のテストが壊れていないことを確認"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: 既存テスト確認")
-
-
-class TestOptunaOptimizerIntegration:
-    """OptunaOptimizer統合テスト"""
-
-    def test_optuna_optimizer_instantiation(self):
-        """OptunaOptimizerインスタンス化テスト"""
-        optimizer = OptunaOptimizer()
-        assert optimizer is not None
-        assert optimizer.study is None
-
-    def test_parameter_space_preparation(self):
-        """パラメータ空間準備テスト"""
-        # LightGBM用パラメータ空間
-        param_space = EnsembleParameterSpace.get_lightgbm_parameter_space()
-
-        assert len(param_space) > 0
-        assert all(isinstance(v, ParameterSpace) for v in param_space.values())
-
-    def test_ensemble_parameter_space_construction(self):
-        """アンサンブルパラメータ空間構築テスト"""
-        # スタッキング用パラメータ空間
-        param_space = EnsembleParameterSpace.get_ensemble_parameter_space(
-            ensemble_method="stacking", enabled_models=["lightgbm", "xgboost"]
+    def test_analyze_importance_integration(
+        self, sample_training_data, mock_optuna_optimizer
+    ):
+        """analyze_importanceとの統合テスト"""
+        X, y = sample_training_data
+        config = FeatureEvaluationConfig(
+            optimize=True, n_trials=5, use_pipeline_method=True, model="lightgbm"
         )
+        evaluator = FeatureEvaluator(MagicMock(), config)
 
-        # LightGBMとXGBoostのパラメータが含まれることを確認
-        assert any(k.startswith("lgb_") for k in param_space.keys())
-        assert any(k.startswith("xgb_") for k in param_space.keys())
-        assert any(k.startswith("stacking_") for k in param_space.keys())
+        # 依存メソッドをモック
+        evaluator._evaluate_with_cv = MagicMock(return_value={"f1_score": 0.5})
+        evaluator._calculate_lightgbm_importance = MagicMock(return_value={"feat": 0.1})
 
+        evaluator.analyze_importance(X, y, "lightgbm")
 
-class TestErrorHandling:
-    """エラーハンドリングテスト"""
+        # 最適化が実行されたか
+        mock_optuna_optimizer.return_value.optimize.assert_called()
 
-    def test_optuna_optimization_failure_handling(self):
-        """Optuna最適化失敗時のハンドリングテスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: エラーハンドリング")
-
-    def test_invalid_n_trials_handling(self):
-        """無効なn_trials値のハンドリングテスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: バリデーション")
-
-    def test_timeout_handling(self):
-        """タイムアウトハンドリングテスト"""
-        # 実装後にパスするテスト
-        pytest.skip("実装待ち: タイムアウト処理")
+        # 計算メソッドにパラメータが渡されたか
+        call_args = evaluator._calculate_lightgbm_importance.call_args
+        assert "params" in call_args.kwargs
+        assert call_args.kwargs["params"]["num_leaves"] == 50  # mockの戻り値
 
 
 if __name__ == "__main__":

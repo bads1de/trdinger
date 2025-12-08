@@ -2,16 +2,12 @@
 ExperimentManagerのテスト
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import MagicMock, Mock
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
 from app.services.auto_strategy.services.experiment_manager import ExperimentManager
-
-pytestmark = pytest.mark.skip(reason="ExperimentManager implementation changed")
 
 
 class TestExperimentManager:
@@ -62,98 +58,50 @@ class TestExperimentManager:
         mock_ga_engine.run_evolution.return_value = {"winning_individuals": []}
         self.manager.ga_engine = mock_ga_engine
 
-        # 初期化が呼ばれないと仮定するため、設定
-        with patch.object(self.manager, "initialize_ga_engine") as mock_init:
-            # テスト実行
-            self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
+        # スレッド実行ではなく直接実行される部分をテストするのは難しい（@safe_operationデコレータがあるため）
+        # しかし、内部関数 _run_experiment が呼び出されることを確認したい
+        # safe_operation は同期的に実行されるはず（スレッド化はこのクラスの責務外に見える）
 
-            # 検証: initialize_ga_engineは呼ばれない（エンジンがすでに初期化されているため）
-            mock_init.assert_not_called()
-            mock_ga_engine.run_evolution.assert_called_once_with(
-                ga_config, backtest_config
-            )
+        # run_experiment自体がスレッドまたは同期で実行するかは実装次第だが、
+        # ここではモックされたga_engineのrun_evolutionが呼ばれるかを確認する
+
+        # GAエンジンを設定（initialize_ga_engineをバイパス）
+        self.manager.ga_engine = mock_ga_engine
+
+        self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
+
+        # 検証
+        mock_ga_engine.run_evolution.assert_called_once_with(ga_config, backtest_config)
+        self.manager.persistence_service.save_experiment_result.assert_called_once()
+        self.manager.persistence_service.complete_experiment.assert_called_once_with(
+            "test_exp_001"
+        )
 
     def test_run_experiment_exception(self):
         """実験実行中の例外テスト"""
         ga_config = GAConfig()
         backtest_config = {}
 
-        with patch.object(self.manager, "initialize_ga_engine") as mock_init:
-            mock_init.side_effect = Exception("Test exception")
+        # GAエンジンをモックして例外を発生させる
+        mock_ga_engine = MagicMock()
+        mock_ga_engine.run_evolution.side_effect = Exception("Test exception")
+        self.manager.ga_engine = mock_ga_engine
 
-            with pytest.raises(Exception):
-                self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
+        self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
 
-    def test_run_ga_evolution(self):
-        """GA進化実行のテスト"""
-        ga_config = GAConfig()
-        backtest_config = {"symbol": "BTC/USDT:USDT"}
+        # エラーハンドリングの検証
+        self.manager.persistence_service.fail_experiment.assert_called_once_with(
+            "test_exp_001"
+        )
 
-        with patch.object(self.manager.ga_engine, "evolve") as mock_evolve:
-            mock_evolve.return_value = [Mock(), Mock()]
+    def test_stop_experiment(self):
+        """実験停止のテスト"""
+        mock_ga_engine = MagicMock()
+        self.manager.ga_engine = mock_ga_engine
 
-            result = self.manager._run_ga_evolution(ga_config, backtest_config)
+        self.manager.stop_experiment("test_exp_001")
 
-            assert len(result) == 2
-            mock_evolve.assert_called_once()
-
-    def test_save_results(self):
-        """結果保存のテスト"""
-        experiment_id = "test_exp_001"
-        results = [{"fitness": 0.8, "genes": []}]
-        ga_config = GAConfig()
-
-        with patch.object(
-            self.manager.persistence_service, "save_generation_results"
-        ) as mock_save:
-            self.manager._save_results(experiment_id, results, ga_config)
-            mock_save.assert_called_once_with(experiment_id, results, ga_config)
-
-    def test_validate_configuration_valid(self):
-        """有効な設定検証のテスト"""
-        backtest_config = {
-            "symbol": "BTC/USDT:USDT",
-            "timeframe": "1h",
-            "start_date": "2024-01-01",
-            "end_date": "2024-12-19",
-            "initial_capital": 100000,
-        }
-
-        # 例外が投げられないことを確認
-        try:
-            self.manager._validate_configuration(backtest_config)
-        except Exception:
-            pytest.fail("例外が投げられました")
-
-    def test_validate_configuration_invalid(self):
-        """無効な設定検証のテスト"""
-        backtest_config = {}  # 必須フィールドが欠けている
-
-        with pytest.raises(ValueError):
-            self.manager._validate_configuration(backtest_config)
-
-    def test_cleanup_resources(self):
-        """リソースクリーンアップのテスト"""
-        self.manager.ga_engine = Mock()
-
-        with patch.object(self.manager.ga_engine, "cleanup") as mock_cleanup:
-            self.manager._cleanup_resources()
-            mock_cleanup.assert_called_once()
-
-        # GAエンジンがNoneに戻っていることを確認
-        assert self.manager.ga_engine is None
-
-    def test_get_experiment_status(self):
-        """実験ステータス取得のテスト"""
-        experiment_id = "test_exp_001"
-
-        with patch.object(
-            self.manager.persistence_service, "get_experiment_status"
-        ) as mock_status:
-            mock_status.return_value = {"status": "running", "generation": 3}
-
-            result = self.manager.get_experiment_status(experiment_id)
-
-            assert result["status"] == "running"
-            assert result["generation"] == 3
-            mock_status.assert_called_once_with(experiment_id)
+        mock_ga_engine.stop_evolution.assert_called_once()
+        self.manager.persistence_service.stop_experiment.assert_called_once_with(
+            "test_exp_001"
+        )

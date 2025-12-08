@@ -10,7 +10,6 @@ import pandas as pd
 import pytest
 from sqlalchemy.orm import Session
 
-from app.services.auto_strategy.services.regime_detector import RegimeDetector
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
 from app.services.backtest.conversion.backtest_result_converter import (
@@ -49,20 +48,12 @@ class TestBacktestSystemComprehensive:
         return Mock(spec=FundingRateRepository)
 
     @pytest.fixture
-    def mock_regime_detector(self):
-        """モックレジーム検知器"""
-        return Mock(spec=RegimeDetector)
-
-    @pytest.fixture
-    def backtest_data_service(
-        self, mock_ohlcv_repo, mock_oi_repo, mock_fr_repo, mock_regime_detector
-    ):
+    def backtest_data_service(self, mock_ohlcv_repo, mock_oi_repo, mock_fr_repo):
         """バックテストデータサービス"""
         return BacktestDataService(
             ohlcv_repo=mock_ohlcv_repo,
             oi_repo=mock_oi_repo,
             fr_repo=mock_fr_repo,
-            regime_detector=mock_regime_detector,
         )
 
     @pytest.fixture
@@ -277,44 +268,6 @@ class TestBacktestSystemComprehensive:
                 assert True
             except Exception:
                 # 例外が伝播される
-                assert True
-
-    def test_regime_detection_integration(
-        self, backtest_data_service, mock_regime_detector
-    ):
-        """レジーム検出統合のテスト"""
-        # レジーム検出のモック
-        mock_regime_detector.detect_regimes.return_value = pd.Series([0, 1, 2, 0, 1])
-
-        # イベントラベル付きデータ取得でレジーム検出を使用
-        dates = pd.date_range("2023-01-01", periods=100, freq="D")
-        test_df = pd.DataFrame(
-            {
-                "open": np.random.randn(100) + 100,
-                "high": np.random.randn(100) + 101,
-                "low": np.random.randn(100) + 99,
-                "close": np.random.randn(100) + 100,
-                "volume": np.random.randint(1000, 10000, 100),
-            },
-            index=dates,
-        )
-
-        # _integration_serviceをモック
-        with patch.object(
-            backtest_data_service._integration_service, "create_ml_training_dataframe"
-        ) as mock_create:
-            mock_create.return_value = test_df
-
-            try:
-                labeled_data, profile = (
-                    backtest_data_service.get_event_labeled_training_data(
-                        "BTC/USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
-                    )
-                )
-                # データが取得される
-                assert isinstance(labeled_data, pd.DataFrame)
-            except Exception:
-                # エラーでも構造は正しい
                 assert True
 
     def test_data_quality_assurance(self, sample_ohlcv_data):

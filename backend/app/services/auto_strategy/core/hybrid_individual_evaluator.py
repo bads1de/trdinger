@@ -35,7 +35,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         backtest_service: BacktestService,
         predictor: Optional[HybridPredictor] = None,
         feature_adapter: Optional["HybridFeatureAdapter"] = None,
-        regime_detector: Optional[Any] = None,
     ):
         """
         初期化
@@ -44,9 +43,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             backtest_service: バックテストサービス
             predictor: ハイブリッド予測器（オプション）
             feature_adapter: 特徴量アダプタ（オプション）
-            regime_detector: レジーム検知器（オプション）
         """
-        super().__init__(backtest_service, regime_detector)
+        super().__init__(backtest_service)
         self.predictor = predictor
         self.feature_adapter = feature_adapter or self._create_feature_adapter()
 
@@ -82,31 +80,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             gene_identifier = getattr(gene, "id", "GENE")[:8]
             backtest_config["strategy_name"] = f"GA_Individual_{gene_identifier}"
 
-            # レジーム適応が有効な場合、レジーム検知を行う
-            regime_labels = None
-            if config.regime_adaptation_enabled and self.regime_detector:
-                try:
-                    symbol = backtest_config.get("symbol")
-                    timeframe = backtest_config.get("timeframe")
-                    start_date = backtest_config.get("start_date")
-                    end_date = backtest_config.get("end_date")
-
-                    if symbol and timeframe and start_date and end_date:
-                        self.backtest_service._ensure_data_service_initialized()
-                        ohlcv_data = self.backtest_service.data_service.get_ohlcv_data(
-                            symbol, timeframe, start_date, end_date
-                        )
-
-                        if not ohlcv_data.empty:
-                            regime_labels = self.regime_detector.detect_regimes(
-                                ohlcv_data
-                            )
-                            logger.info(
-                                f"レジーム検知完了: {len(regime_labels)} サンプル"
-                            )
-                except Exception as e:
-                    logger.error(f"レジーム検知エラー: {e}")
-                    regime_labels = None
+            # レジーム適応ロジックは削除されました
 
             # バックテスト実行
             result = self.backtest_service.run_backtest(backtest_config)
@@ -143,13 +117,11 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             # フィットネス計算（単一目的・多目的対応、ML予測スコア統合）
             if config.enable_multi_objective:
                 fitness_values = self._calculate_multi_objective_fitness(
-                    result, config, regime_labels, prediction_signals
+                    result, config, prediction_signals
                 )
                 return fitness_values
             else:
-                fitness = self._calculate_fitness(
-                    result, config, regime_labels, prediction_signals
-                )
+                fitness = self._calculate_fitness(result, config, prediction_signals)
                 return (fitness,)
 
         except Exception as e:
@@ -289,7 +261,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         self,
         backtest_result: Dict[str, Any],
         config: GAConfig,
-        regime_labels: Optional[list] = None,
         prediction_signals: Optional[Dict[str, float]] = None,
     ) -> float:
         """
@@ -298,16 +269,13 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Args:
             backtest_result: バックテスト結果
             config: GA設定
-            regime_labels: レジームラベル（オプション）
             prediction_signals: ML予測信号（オプション）
 
         Returns:
             フィットネス値
         """
         # 基底クラスのフィットネス計算を呼び出し
-        base_fitness = super()._calculate_fitness(
-            backtest_result, config, regime_labels
-        )
+        base_fitness = super()._calculate_fitness(backtest_result, config)
 
         # 取引が発生していない場合はMLスコアを統合しない
         try:
@@ -327,7 +295,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 prediction_score = prediction_signals["trend"] - 0.5
             else:
                 # 方向予測の場合: up確率 - down確率
-                prediction_score = prediction_signals.get("up", 0.0) - prediction_signals.get("down", 0.0)
+                prediction_score = prediction_signals.get(
+                    "up", 0.0
+                ) - prediction_signals.get("down", 0.0)
 
             # 予測重みを取得（デフォルト0.1）
             prediction_weight = config.fitness_weights.get("prediction_score", 0.1)
@@ -350,7 +320,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         self,
         backtest_result: Dict[str, Any],
         config: GAConfig,
-        regime_labels: Optional[list] = None,
         prediction_signals: Optional[Dict[str, float]] = None,
     ) -> tuple:
         """
@@ -359,7 +328,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Args:
             backtest_result: バックテスト結果
             config: GA設定
-            regime_labels: レジームラベル（オプション）
             prediction_signals: ML予測信号（オプション）
 
         Returns:
@@ -367,7 +335,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         """
         # 基底クラスの多目的フィットネス計算を呼び出し
         base_fitness_values = super()._calculate_multi_objective_fitness(
-            backtest_result, config, regime_labels
+            backtest_result, config
         )
 
         # 目的にprediction_scoreが含まれている場合
@@ -382,7 +350,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 if "trend" in prediction_signals:
                     prediction_score = prediction_signals["trend"] - 0.5
                 else:
-                    prediction_score = prediction_signals.get("up", 0.0) - prediction_signals.get("down", 0.0)
+                    prediction_score = prediction_signals.get(
+                        "up", 0.0
+                    ) - prediction_signals.get("down", 0.0)
                 fitness_list[pred_score_index] = prediction_score
             else:
                 # 予測がない場合はデフォルト値
