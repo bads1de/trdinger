@@ -13,6 +13,8 @@ import pandas as pd
 
 from app.config.unified_config import unified_config
 
+from ..common.evaluation_utils import evaluate_model_predictions
+from ..common.ml_utils import get_feature_importance_unified
 from ..exceptions import MLModelError
 
 logger = logging.getLogger(__name__)
@@ -160,8 +162,6 @@ class BaseEnsemble(ABC):
         Returns:
             評価指標の辞書
         """
-        from ..common.evaluation_utils import evaluate_model_predictions
-
         result = evaluate_model_predictions(y_true, y_pred, y_pred_proba)
 
         logger.info("✅ アンサンブル評価指標計算完了（共通評価関数使用）")
@@ -175,8 +175,6 @@ class BaseEnsemble(ABC):
         Returns:
             特徴量重要度の辞書（利用可能な場合）
         """
-        from ..common.ml_utils import get_feature_importance_unified
-
         if not self.is_fitted or not self.feature_columns:
             logger.warning(
                 f"特徴量重要度取得不可: is_fitted={self.is_fitted}, feature_columns={len(self.feature_columns) if self.feature_columns else 0}"

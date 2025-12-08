@@ -14,9 +14,16 @@ from app.services.ml.ml_training_service import MLTrainingService
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
+from app.services.ml.common.default_configs import (
+    get_default_ensemble_config,
+    get_default_single_model_config,
+)
 from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response
-from .orchestration_utils import get_latest_model_with_info
+from .orchestration_utils import (
+    get_latest_model_with_info,
+    get_model_info_with_defaults,
+)
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -176,8 +183,6 @@ class MLTrainingOrchestrationService:
         Returns:
             モデル情報
         """
-        from .orchestration_utils import get_model_info_with_defaults
-
         try:
             # 最新モデルの情報を取得
             model_info_data = get_latest_model_with_info()
@@ -210,8 +215,6 @@ class MLTrainingOrchestrationService:
         except Exception as e:
             logger.error(f"MLモデル情報取得エラー: {e}", exc_info=True)
             # エラー時もデフォルト値で応答する（is_loaded=False）
-            from .orchestration_utils import get_model_info_with_defaults
-
             default_model_status = get_model_info_with_defaults(None)
             default_model_status["is_loaded"] = False
             default_model_status["model_path"] = None
@@ -349,9 +352,6 @@ class MLTrainingOrchestrationService:
                         logger.info(
                             "📋 アンサンブル設定が提供されていません。デフォルト（アンサンブル）を使用します"
                         )
-                        # デフォルトのアンサンブル設定を作成（スタッキング）
-                        from ..common.default_configs import get_default_ensemble_config
-
                         ensemble_config_dict = get_default_ensemble_config()
 
                     # 単一モデル設定の準備
@@ -373,11 +373,6 @@ class MLTrainingOrchestrationService:
                     else:
                         logger.info("📋 単一モデル設定が提供されていません")
                         if trainer_type == "single":
-                            # 単一モデルが選択されているが設定がない場合はデフォルトを使用
-                            from ..common.default_configs import (
-                                get_default_single_model_config,
-                            )
-
                             single_model_config_dict = get_default_single_model_config()
                             logger.info(
                                 f"📋 デフォルト単一モデル設定を使用: {single_model_config_dict}"

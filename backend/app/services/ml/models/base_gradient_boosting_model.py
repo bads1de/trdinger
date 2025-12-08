@@ -8,6 +8,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 
 from app.utils.error_handler import ModelError
 from ..common.evaluation_utils import evaluate_model_predictions
+from ..common.ml_utils import get_feature_importance_unified
 
 logger = logging.getLogger(__name__)
 
@@ -69,12 +70,16 @@ class BaseGradientBoostingModel(ABC):
                 if isinstance(eval_set, list) and len(eval_set) > 0:
                     X_val, y_val = eval_set[0]
                 else:
-                    logger.warning("無効なeval_set形式です。検証データなしで学習します。")
+                    logger.warning(
+                        "無効なeval_set形式です。検証データなしで学習します。"
+                    )
                     X_val, y_val = None, None
             elif early_stopping_rounds:
                 # Early Stoppingが有効で、eval_setがない場合は分割が必要
                 # 時系列データのため、シャッフルせずに分割（最後の20%を検証用）
-                logger.info(f"Early Stopping有効(rounds={early_stopping_rounds}): データを分割して学習します")
+                logger.info(
+                    f"Early Stopping有効(rounds={early_stopping_rounds}): データを分割して学習します"
+                )
                 split_index = int(len(X) * 0.8)
                 X_train = X.iloc[:split_index]
                 X_val = X.iloc[split_index:]
@@ -176,7 +181,6 @@ class BaseGradientBoostingModel(ABC):
                 )
             else:
                 logger.info(f"{self.ALGORITHM_NAME}モデル学習完了 (検証データなし)")
-
 
             # 特徴量重要度
             feature_importance = self.get_feature_importance()
@@ -328,8 +332,6 @@ class BaseGradientBoostingModel(ABC):
         """
         特徴量重要度を取得（共通ユーティリティを使用）
         """
-        from ..common.ml_utils import get_feature_importance_unified
-
         return get_feature_importance_unified(
             self.model, self.feature_columns or [], top_n=top_n
         )

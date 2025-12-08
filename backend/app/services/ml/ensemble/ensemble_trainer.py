@@ -12,6 +12,8 @@ import pandas as pd
 
 from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
+from ..common.evaluation_utils import evaluate_model_predictions
+from ..common.ml_utils import validate_training_inputs
 from .stacking import StackingEnsemble
 from .meta_labeling import MetaLabelingService
 
@@ -243,8 +245,6 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.info(f"アンサンブル学習開始: method={self.ensemble_method}")
 
             # 入力データの検証（共通関数を使用）
-            from ..common.ml_utils import validate_training_inputs
-
             validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
 
             # ハイパーパラメータ最適化からのパラメータを分離
@@ -300,8 +300,6 @@ class EnsembleTrainer(BaseMLTrainer):
                 y_pred = (y_pred_proba > 0.5).astype(int)
 
             # 統一された評価システムを使用
-            from ..common.evaluation_utils import evaluate_model_predictions
-
             detailed_metrics = evaluate_model_predictions(
                 y_true=y_test,
                 y_pred=y_pred,

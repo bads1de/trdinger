@@ -11,9 +11,13 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import cross_val_predict, KFold, StratifiedKFold
 
+from app.config.unified_config import unified_config
 from ....utils.error_handler import ModelError
+from ..common.ml_utils import validate_training_inputs
+from ..common.time_series_utils import get_t1_series
+from ..cross_validation.purged_kfold import PurgedKFold
 from .base_ensemble import BaseEnsemble
 
 logger = logging.getLogger(__name__)
@@ -128,9 +132,6 @@ class StackingEnsemble(BaseEnsemble):
             logger.info(
                 "スタッキングアンサンブル学習を開始（自前実装・計算コスト最適化版）"
             )
-
-            # 入力データの検証（共通関数を使用）
-            from ..common.ml_utils import validate_training_inputs
 
             validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
 
@@ -296,11 +297,6 @@ class StackingEnsemble(BaseEnsemble):
         Returns:
             CVスプリッター
         """
-        from ..cross_validation.purged_kfold import PurgedKFold
-        from app.config.unified_config import unified_config
-        from ..common.time_series_utils import get_t1_series
-        from sklearn.model_selection import StratifiedKFold, KFold
-
         cv_strategy = self.config.get("cv_strategy", "purged_kfold")
 
         if cv_strategy == "kfold":
