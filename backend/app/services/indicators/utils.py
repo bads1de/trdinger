@@ -7,6 +7,7 @@
 
 import logging
 from functools import wraps
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -96,3 +97,93 @@ def handle_pandas_ta_errors(func):
             raise PandasTAError(f"{func.__name__} 計算エラー: {e}")
 
     return wrapper
+
+
+def validate_series_params(
+    data: pd.Series, length: int = None, min_data_length: int = 0
+) -> Optional[pd.Series]:
+    """
+    指標計算用のパラメータ検証（共通化用）
+
+    Args:
+        data: 入力データ
+        length: 期間（オプション）
+        min_data_length: 最小必要データ長（オプション）
+
+    Returns:
+        pd.Series: データが空または不足している場合のNaNシリーズ（計算不要）
+        None: 検証OK、計算続行
+
+    Raises:
+        TypeError: データ型が無効な場合
+        ValueError: 期間が無効な場合
+    """
+    if not isinstance(data, pd.Series):
+        raise TypeError("data must be pandas Series")
+
+    if length is not None and length <= 0:
+        raise ValueError(f"length must be positive: {length}")
+
+    if len(data) == 0:
+        return pd.Series(np.full(0, np.nan), index=data.index)
+
+    if min_data_length > 0 and len(data) < min_data_length:
+        return pd.Series(np.full(len(data), np.nan), index=data.index)
+
+    return None
+
+
+def validate_multi_series_params(
+    series_dict: dict,
+    length: int = None,
+    min_data_length: int = 0,
+) -> Optional[pd.Series]:
+    """
+    複数のSeriesパラメータを検証（共通化用）
+
+    Args:
+        series_dict: 検証する名前付きシリーズの辞書。例: {"high": high, "low": low}
+        length: 期間（オプション）
+        min_data_length: 最小必要データ長（オプション）
+
+    Returns:
+        pd.Series: データが空または不足している場合のNaNシリーズ（計算不要）
+        None: 検証OK、計算続行
+
+    Raises:
+        TypeError: データ型が無効な場合
+        ValueError: 期間が無効な場合、またはシリーズ長が不一致な場合
+    """
+    if not series_dict:
+        raise ValueError("series_dict cannot be empty")
+
+    first_series = None
+    first_name = None
+
+    for name, series in series_dict.items():
+        if not isinstance(series, pd.Series):
+            raise TypeError(f"{name} must be pandas Series")
+
+        if first_series is None:
+            first_series = series
+            first_name = name
+        elif len(series) != len(first_series):
+            raise ValueError(
+                f"All series must have the same length. "
+                f"{first_name}={len(first_series)}, {name}={len(series)}"
+            )
+
+    if length is not None and length <= 0:
+        raise ValueError(f"length must be positive: {length}")
+
+    if first_series is not None and len(first_series) == 0:
+        return pd.Series(np.full(0, np.nan), index=first_series.index)
+
+    if (
+        min_data_length > 0
+        and first_series is not None
+        and len(first_series) < min_data_length
+    ):
+        return pd.Series(np.full(len(first_series), np.nan), index=first_series.index)
+
+    return None

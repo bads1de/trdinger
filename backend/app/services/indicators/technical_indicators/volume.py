@@ -22,7 +22,10 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import handle_pandas_ta_errors
+from ..utils import (
+    handle_pandas_ta_errors,
+    validate_multi_series_params,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +47,11 @@ class VolumeIndicators:
         volume: pd.Series,
     ) -> pd.Series:
         """チャイキンA/Dライン"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close, "volume": volume}
+        )
+        if validation is not None:
+            return validation
 
         result = ta.ad(
             high=high,
@@ -72,14 +72,11 @@ class VolumeIndicators:
         slow: int = 10,
     ) -> pd.Series:
         """チャイキンA/Dオシレーター"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close, "volume": volume}
+        )
+        if validation is not None:
+            return validation
 
         result = ta.adosc(
             high=high,
@@ -167,14 +164,11 @@ class VolumeIndicators:
         anchor: str | None = None,
     ) -> pd.Series:
         """Volume Weighted Average Price"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close, "volume": volume}
+        )
+        if validation is not None:
+            return validation
 
         # pandas-taのVWAP関数は時系列インデックスが必要なため、独自実装を使用
         try:
@@ -513,27 +507,27 @@ class VolumeIndicators:
     ) -> pd.Series:
         """
         VWAP Z-Score (VWAP Divergence)
-        
+
         Z = (Price - VWAP) / sigma_VWAP
         where sigma_VWAP is the standard deviation of price relative to VWAP.
         """
         # Calculate VWAP first
         vwap_series = VolumeIndicators.vwap(high, low, close, volume, period=period)
-        
+
         # Calculate deviation
         deviation = close - vwap_series
-        
+
         # Calculate standard deviation of the deviation
-        # Note: The PDF implies sigma is based on VWAP. 
+        # Note: The PDF implies sigma is based on VWAP.
         # Standard interpretation: Standard Deviation of (Price - VWAP) or just Price std dev?
         # "sigma_VWAP is standard deviation of price based on VWAP"
         # Usually this means the standard deviation of the price distribution around the weighted average.
         # Calculating rolling std of (Close - VWAP) is a reasonable approximation for "divergence volatility".
         sigma = deviation.rolling(window=period).std()
-        
+
         # Z-score
         z_score = deviation / sigma
-        
+
         return z_score.fillna(0.0)
 
     @staticmethod
@@ -544,7 +538,7 @@ class VolumeIndicators:
     ) -> pd.Series:
         """
         Relative Volume (RVOL)
-        
+
         Ratio of current volume to average volume at the same time of day.
         If index is not DatetimeIndex, falls back to simple Volume / SMA(Volume).
         """
@@ -560,10 +554,10 @@ class VolumeIndicators:
                 avg_vol = volume.groupby(volume.index.time).transform(
                     lambda x: x.rolling(window=window, min_periods=1).mean()
                 )
-                
+
                 # If grouping failed or returned empty (e.g. unique times), fallback
                 if avg_vol.isna().all():
-                     avg_vol = volume.rolling(window=window).mean()
+                    avg_vol = volume.rolling(window=window).mean()
             except Exception:
                 # Fallback on error
                 avg_vol = volume.rolling(window=window).mean()
@@ -584,19 +578,19 @@ class VolumeIndicators:
     ) -> pd.Series:
         """
         Absorption Score = RVOL / Range
-        
+
         High score indicates high volume with low price movement (absorption).
         """
         # Calculate RVOL
         rvol_series = VolumeIndicators.rvol(volume, window=window)
-        
+
         # Calculate Range
         price_range = high - low
-        
+
         # Avoid division by zero (if range is 0, absorption is theoretically infinite or max)
         # We replace 0 with a very small number or handle it
-        price_range = price_range.replace(0, 1e-9) # Epsilon
-        
+        price_range = price_range.replace(0, 1e-9)  # Epsilon
+
         score = rvol_series / price_range
-        
+
         return score.replace([np.inf, -np.inf], np.nan).fillna(0.0)

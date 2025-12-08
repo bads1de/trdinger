@@ -34,7 +34,10 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import handle_pandas_ta_errors
+from ..utils import (
+    handle_pandas_ta_errors,
+    validate_series_params,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +53,11 @@ class MomentumIndicators:
     @staticmethod
     def rsi(data: pd.Series, period: int = 14) -> pd.Series:
         """相対力指数"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        length = period
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_series_params(data, period)
+        if validation is not None:
+            return validation
 
-        result = ta.rsi(data, window=length)
+        result = ta.rsi(data, window=period)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result
@@ -69,8 +70,10 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """MACD"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return (nan_series, nan_series, nan_series)
 
         result = ta.macd(data, fast=fast, slow=slow, signal=signal)
 
@@ -93,8 +96,10 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Price Oscillator"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series, nan_series
 
         result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
 
@@ -120,14 +125,10 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """TRIX (Triple Exponential Average)"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if signal <= 0:
-            raise ValueError(f"signal must be positive: {signal}")
-        if drift <= 0:
-            raise ValueError(f"drift must be positive: {drift}")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            nan_array = np.full(len(data), np.nan)
+            return nan_array, nan_array, nan_array
 
         result = ta.trix(
             close=data,

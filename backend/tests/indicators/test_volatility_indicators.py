@@ -303,12 +303,9 @@ class TestVolatilityIndicators:
             }
         )
 
-        # RVIは負の長さでもエラーを発生させず、NaNを返す（pandas-taの仕様）
-        result = VolatilityIndicators.rvi(
-            data["close"], data["high"], data["low"], length=0
-        )
-        assert isinstance(result, pd.Series)
-        assert result.isna().all()
+        # RVIは無効な長さでValueErrorを発生させる
+        with pytest.raises(ValueError, match="length must be positive"):
+            VolatilityIndicators.rvi(data["close"], data["high"], data["low"], length=0)
 
     def test_calculate_gri_valid_data(self):
         """有効データでのGRI計算テスト"""
@@ -382,11 +379,11 @@ class TestVolatilityIndicators:
         data1 = pd.DataFrame({"high": [102, 103, 104], "low": [98, 99, 100]})
         data2 = pd.DataFrame({"close": [100, 101]})  # 長さが異なる
 
-        # pandas-taは長さ不一致でもエラーではなくNaNを返す
-        result = VolatilityIndicators.atr(
-            data1["high"], data1["low"], data2["close"], length=3
-        )
-        assert isinstance(result, pd.Series)
+        # 長さ不一致でValueErrorを発生させる
+        with pytest.raises(ValueError, match="All series must have the same length"):
+            VolatilityIndicators.atr(
+                data1["high"], data1["low"], data2["close"], length=3
+            )
 
     def test_handle_negative_length(self):
         """負の長さパラメータのテスト"""
@@ -398,12 +395,11 @@ class TestVolatilityIndicators:
             }
         )
 
-        # pandas-taは負の長さでもエラーではなくNaNを返す
-        result = VolatilityIndicators.atr(
-            data["high"], data["low"], data["close"], length=-1
-        )
-        assert isinstance(result, pd.Series)
-        assert result.isna().all()
+        # 負の長さでValueErrorを発生させる
+        with pytest.raises(ValueError, match="length must be positive"):
+            VolatilityIndicators.atr(
+                data["high"], data["low"], data["close"], length=-1
+            )
 
     def test_edge_case_empty_data(self):
         """空データのテスト"""
@@ -504,12 +500,11 @@ class TestVolatilityIndicators:
         except Exception as e:
             assert "length" in str(e) or "data" in str(e)
 
-        # 無効なパラメータ（pandas-taはエラーではなくNaNを返す）
-        result = VolatilityIndicators.atr(
-            short_data["high"], short_data["low"], short_data["close"], length=-1
-        )
-        assert isinstance(result, pd.Series)
-        assert result.isna().all()
+        # 無効なパラメータでValueErrorを発生させる
+        with pytest.raises(ValueError, match="length must be positive"):
+            VolatilityIndicators.atr(
+                short_data["high"], short_data["low"], short_data["close"], length=-1
+            )
 
     def test_bbands_with_different_std_values(self):
         """異なる標準偏差でのBBandsテスト"""

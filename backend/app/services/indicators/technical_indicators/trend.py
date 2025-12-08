@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import handle_pandas_ta_errors
+from ..utils import handle_pandas_ta_errors, validate_series_params
 
 logger = logging.getLogger(__name__)
 
@@ -63,27 +63,19 @@ class TrendIndicators:
             raise TypeError("data must be pandas Series")
         if length <= 0:
             raise ValueError(f"length must be positive: {length}")
-            
+
         change = data.diff(length).abs()
         volatility = data.diff(1).abs().rolling(window=length).sum()
-        
+
         er = change / volatility
         return er.replace([np.inf, -np.inf], 0.0).fillna(0.0)
 
     @staticmethod
     @handle_pandas_ta_errors
     def sma(data: pd.Series, length: int) -> pd.Series:
-        # パラメータ型チェック
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-
-        # lengthパラメータ妥当性チェック
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-
-        # データ長チェック（オプション）
-        if len(data) == 0:
-            return pd.Series(np.full(0, np.nan), index=data.index)
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         return ta.sma(data, length=length)
 
@@ -91,12 +83,9 @@ class TrendIndicators:
     @handle_pandas_ta_errors
     def ema(data: pd.Series, length: int) -> pd.Series:
         """指数移動平均"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"period must be positive: {length}")
-        if len(data) == 0:
-            return pd.Series(np.full(0, np.nan), index=data.index)
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
         return ta.ema(data, window=length, adjust=False, sma=True)
 
     @staticmethod
@@ -115,6 +104,10 @@ class TrendIndicators:
 
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
+
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
         return ta.wma(data, window=length)
 
     @staticmethod
@@ -123,10 +116,11 @@ class TrendIndicators:
         data: pd.Series, length: int = 10, talib: bool | None = None
     ) -> pd.Series:
         """三角移動平均"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            # validate_series_params returns empty series, but trima might handle generic None return differently if implemented via ta.trima manually?
+            # No, standard is return empty/NaN.
+            return validation
 
         result = ta.trima(data, length=length, talib=talib)
         if result is None:
@@ -142,10 +136,9 @@ class TrendIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Zero Lag移動平均"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.zlma(data, length=length, mamode=mamode, offset=offset)
         if result is None:
@@ -162,10 +155,9 @@ class TrendIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Arnaud Legoux Moving Average"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
         if sigma <= 0:
             raise ValueError(f"sigma must be positive: {sigma}")
         if not 0.0 <= distribution_offset <= 1.0:
@@ -189,21 +181,9 @@ class TrendIndicators:
     def dema(data: pd.Series, length: int) -> pd.Series:
         """二重指数移動平均"""
         # logger.debug(f"DEMA calculation started: data_length={len(data)}, length={length}")
-        if not isinstance(data, pd.Series):
-            logger.error("DEMA: Invalid data type - must be pandas Series")
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            logger.error(f"DEMA: Invalid length parameter: {length}")
-            raise ValueError(f"length must be positive: {length}")
-        if len(data) == 0:
-            # logger.debug("DEMA: Empty data series, returning empty NaN series")
-            return pd.Series(np.full(0, np.nan), index=data.index)
-
-        # DEMAは2つのEMAを使用するため、最低length * 2のデータが必要
-        min_required_length = length * 2
-        if len(data) < min_required_length:
-            # logger.debug(f"DEMA: Data length {len(data)} < minimum required {min_required_length}, returning NaN series")
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        validation = validate_series_params(data, length, min_data_length=length * 2)
+        if validation is not None:
+            return validation
 
         # logger.debug("DEMA: Calling pandas-ta.dema()")
         result = ta.dema(data, window=length)
@@ -214,17 +194,9 @@ class TrendIndicators:
     @handle_pandas_ta_errors
     def tema(data: pd.Series, length: int) -> pd.Series:
         """三重指数移動平均"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if len(data) == 0:
-            return pd.Series(np.full(0, np.nan), index=data.index)
-
-        # TEMA requires sufficient data length (approximately length * 3 for 3-stage EMA)
-        min_data_length = length * 3
-        if len(data) < min_data_length:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        validation = validate_series_params(data, length, min_data_length=length * 3)
+        if validation is not None:
+            return validation
 
         return ta.tema(data, window=length)
 
@@ -232,19 +204,9 @@ class TrendIndicators:
     @handle_pandas_ta_errors
     def t3(data: pd.Series, length: int, a: float = 0.7) -> pd.Series:
         """T3移動平均"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"period must be positive: {length}")
-        if not (0.0 <= a <= 1.0):
-            raise ValueError(f"a must be between 0.0 and 1.0: {a}")
-        if len(data) == 0:
-            return pd.Series(np.full(0, np.nan), index=data.index)
-
-        # T3 requires sufficient data length (approximately length * 6 for 6-stage EMA)
-        min_data_length = length * 6
-        if len(data) < min_data_length:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        validation = validate_series_params(data, length, min_data_length=length * 6)
+        if validation is not None:
+            return validation
 
         # Use pandas-ta directly
         result = ta.t3(data, window=length, a=a)
@@ -256,24 +218,18 @@ class TrendIndicators:
     @handle_pandas_ta_errors
     def kama(data: pd.Series, length: int = 30) -> pd.Series:
         """カウフマン適応移動平均"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if len(data) == 0:
-            return pd.Series(np.full(0, np.nan), index=data.index)
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
         return ta.kama(data, window=length)
 
     @staticmethod
     @handle_pandas_ta_errors
     def hma(data: pd.Series, length: int = 20) -> pd.Series:
         """Hull移動平均"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if len(data) == 0:
-            return pd.Series(np.full(0, np.nan), index=data.index)
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.hma(data, length=length)
         if result is None:
@@ -313,15 +269,9 @@ class TrendIndicators:
         intercept: bool = False,
     ) -> pd.Series:
         """線形回帰 (pandas-ta)"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError("length must be positive")
-        if scalar == 0:
-            raise ValueError("scalar must be non-zero")
-
-        if len(data) < length:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        validation = validate_series_params(data, length, min_data_length=length)
+        if validation is not None:
+            return validation
 
         values = [np.nan] * (length - 1)
 
@@ -351,15 +301,9 @@ class TrendIndicators:
         data: pd.Series, length: int = 14, scalar: float = 1.0
     ) -> pd.Series:
         """線形回帰スロープ"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError("length must be positive")
-        if scalar == 0:
-            raise ValueError("scalar must be non-zero")
-
-        if len(data) < length:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        validation = validate_series_params(data, length, min_data_length=length)
+        if validation is not None:
+            return validation
 
         slopes = [np.nan] * (length - 1)
 
@@ -403,11 +347,12 @@ class TrendIndicators:
         data: pd.Series, fast: int = 3, slow: int = 30, signal: int = 10
     ) -> pd.Series:
         """Archer Moving Averages Trends"""
+        # AMAT特有のデータ検証
+        min_length = max(fast, slow, signal) + 10
+
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
-        # AMAT特有のデータ検証
-        min_length = max(fast, slow, signal) + 10
         if len(data) < min_length:
             raise ValueError(
                 f"Insufficient data for AMAT calculation. Need at least {min_length} points, got {len(data)}"
@@ -425,10 +370,9 @@ class TrendIndicators:
     @handle_pandas_ta_errors
     def rma(data: pd.Series, length: int = 10) -> pd.Series:
         """Wilde's Moving Average"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError("length must be positive")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.rma(data, length=length)
         if result is None or (hasattr(result, "empty") and result.empty):
@@ -444,10 +388,9 @@ class TrendIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Detrended Price Oscillator"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.dpo(
             close=data,
@@ -505,19 +448,11 @@ class TrendIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Bias Indicator - 移動平均からの乖離率"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if ma_type not in ["sma", "ema", "wma", "hma", "zlma"]:
-            raise ValueError(
-                f"ma_type must be one of ['sma', 'ema', 'wma', 'hma', 'zlma']: {ma_type}"
-            )
-
         # BIAS requires sufficient data length
         min_length = length * 2
-        if len(data) < min_length:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        validation = validate_series_params(data, length, min_data_length=min_length)
+        if validation is not None:
+            return validation
 
         # pandas-taのbias関数を直接使用
         try:

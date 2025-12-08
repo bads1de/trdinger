@@ -1,6 +1,6 @@
 """
-Advanced Feature Engineering for Crypto Assets
-Implements "Strong Features" from the strategy document (features_strategy.pdf).
+暗号資産のための高度な特徴量エンジニアリング
+戦略ドキュメント (features_strategy.pdf) からの「強力な特徴量」を実装します。
 """
 
 import logging
@@ -15,21 +15,21 @@ logger = logging.getLogger(__name__)
 
 class AdvancedFeatures:
     """
-    Advanced features including Fractional Differencing, Liquidation Cascade, etc.
+    分数差分、清算カスケードなどを含む高度な特徴量。
     """
 
     @staticmethod
     def get_weights_ffd(d: float, thres: float, lim: int) -> np.ndarray:
         """
-        Calculate weights for Fractional Differentiation (Fixed Window).
+        分数微分（固定ウィンドウ）の重みを計算します。
 
         Args:
-            d (float): Differencing order (e.g. 0.4)
-            thres (float): Threshold for weight cutoff (e.g. 1e-5)
-            lim (int): Maximum length of weights
+            d (float): 差分次数 (例: 0.4)
+            thres (float): 重みのカットオフ閾値 (例: 1e-5)
+            lim (int): 重みの最大長
 
         Returns:
-            np.ndarray: Array of weights (reversed order: w[-1] is w_0)
+            np.ndarray: 重みの配列 (逆順: w[-1] が w_0)
         """
         w, k = [1.0], 1
         while True:
@@ -49,25 +49,25 @@ class AdvancedFeatures:
         window: int = 2000,
     ) -> pd.Series:
         """
-        Fractional Differentiation (Fixed Window).
-        Preserves memory while achieving stationarity.
+        分数微分（固定ウィンドウ）。
+        定常性を達成しながらメモリを保持します。
 
         Args:
-            series (pd.Series): Input price series (usually log-prices)
-            d (float): Order of differencing (0 < d < 1)
-            thres (float): Weight cutoff threshold
-            window (int): Max window size for weights
+            series (pd.Series): 入力価格シリーズ (通常は対数価格)
+            d (float): 差分の次数 (0 < d < 1)
+            thres (float): 重みのカットオフ閾値
+            window (int): 重みの最大ウィンドウサイズ
         """
         if not isinstance(series, pd.Series):
             raise TypeError("series must be pandas Series")
 
-        # 1. Compute weights
+        # 1. 重みの計算
         w = AdvancedFeatures.get_weights_ffd(d, thres, window)
         width = len(w)
         w = w.flatten()
 
-        # 2. Apply weights
-        # Using a loop for safety and clarity, though vectorization is possible via striding
+        # 2. 重みの適用
+        # 安全性と明確さのためにループを使用しますが、ストライドによるベクトル化も可能です
         series_filled = series.ffill()
         series_vals = series_filled.values
 
@@ -75,11 +75,11 @@ class AdvancedFeatures:
 
         if len(series) >= width:
             for i in range(width - 1, len(series)):
-                # Get window of data: X_{t-width+1} ... X_{t}
-                # window_val needs to be matched with weights w which are [w_K, ..., w_0]
-                # where w_0 corresponds to X_t, w_1 to X_{t-1}
-                # get_weights_ffd returns [w_K, ..., w_0]
-                # So simple dot product works if window_val is [X_{t-K}, ..., X_{t}]
+                # データのウィンドウを取得: X_{t-width+1} ... X_{t}
+                # window_valは、[w_K, ..., w_0]である重みwと一致させる必要があります
+                # ここで、w_0はX_tに対応し、w_1はX_{t-1}に対応します
+                # get_weights_ffdは[w_K, ..., w_0]を返します
+                # したがって、window_valが[X_{t-K}, ..., X_{t}]であれば、単純なドット積が機能します
 
                 window_val = series_vals[i - width + 1 : i + 1]
                 result[i] = np.dot(window_val, w)
@@ -94,21 +94,21 @@ class AdvancedFeatures:
         volume: pd.Series,
     ) -> pd.Series:
         """
-        Liquidation Cascade Score
+        清算カスケードスコア
 
-        Detects forced liquidations (longs puking or shorts covering) which often signal reversals.
+        反転のシグナルとなることが多い強制清算（ロングの投げ売りやショートの買い戻し）を検出します。
 
-        Formula: -1 * sign(Delta P) * Delta OI * Volume
+        計算式: -1 * sign(Delta P) * Delta OI * Volume
         """
-        # Calculate changes
+        # 変化量の計算
         delta_p = close.diff()
         delta_oi = open_interest.diff()
 
-        # Sign of price change (+1, 0, -1)
+        # 価格変化の符号 (+1, 0, -1)
         sign_p = np.sign(delta_p)
 
-        # Formula
-        # Note: delta_oi is negative during liquidation
+        # 計算式
+        # 注: delta_oiは清算中に負になります
         score = -1 * sign_p * delta_oi * volume
 
         return score.fillna(0.0)
@@ -123,29 +123,29 @@ class AdvancedFeatures:
         lookback: int = 20,
     ) -> pd.Series:
         """
-        Short Squeeze Probability Index
+        ショートスクイーズ確率指数
 
-        Detects setup for short squeeze:
-        - Negative Funding (Shorts paying Longs)
-        - Increasing OI (Shorts adding)
-        - Price holding above recent lows (Absorption)
+        ショートスクイーズのセットアップを検出します:
+        - 負のファンディングレート（ショートがロングに支払う）
+        - OIの増加（ショートの積み増し）
+        - 最近の安値を上回る価格維持（吸収）
         """
         # 1. I(FR < 0) * |FR|
         neg_fr_factor = np.where(funding_rate < 0, funding_rate.abs(), 0)
 
         # 2. Delta OI
         delta_oi = open_interest.diff()
-        # We focus on INCREASING OI (Shorts adding)
+        # OIの増加（ショートの積み増し）に焦点を当てます
         delta_oi_factor = delta_oi.clip(lower=0)
 
         # 3. Price - Low_n
-        # "Price holding" - if Price is far above Low, pressure is released?
-        # Or is it "Price - Low_n" is small?
+        # 「価格維持」 - 価格が安値よりはるかに高い場合、圧力は解放されますか？
+        # それとも、「Price - Low_n」が小さいということですか？
         # PDF: (Price_t - Low_n)
-        # If Price is AT Low_n, term is 0.
-        # If Price is bouncing, term is positive.
-        # The formula seems to imply: The HIGHER the price is above the low (while shorts are adding), the MORE PAIN for shorts?
-        # Yes, if they shorted at Low and price moved up, they are underwater.
+        # 価格がLow_nにある場合、項は0になります。
+        # 価格が反発している場合、項は正になります。
+        # この式は、価格が安値よりも高いほど（ショートが積み増している間）、ショートにとっての痛みが増すことを意味しているようです
+        # はい、もし彼らが安値でショートし、価格が上昇した場合、彼らは含み損を抱えます。
 
         low_n = low.rolling(window=lookback).min()
         price_location = close - low_n
@@ -166,11 +166,11 @@ class AdvancedFeatures:
         window: int = 20,
     ) -> pd.Series:
         """
-        Trend Quality (VWAP/OI Divergence proxy)
+        トレンド品質（VWAP/OIダイバージェンスの代替）
 
-        Correlation between Price Change and OI Change.
-        Positive correlation = Healthy trend (New money driving price)
-        Negative correlation = Weak trend (Liquidation/Covering driving price)
+        価格変化とOI変化の相関関係。
+        正の相関 = 健全なトレンド（新規資金が価格を押し上げている）
+        負の相関 = 弱いトレンド（清算/買い戻しが価格を動かしている）
         """
         delta_p = close.diff()
         delta_oi = open_interest.diff()
@@ -186,10 +186,10 @@ class AdvancedFeatures:
         open_interest: pd.Series,
     ) -> pd.Series:
         """
-        OI Weighted Funding Rate
+        OI加重ファンディングレート
 
         FR * OI
-        Represents the total dollar value of funding being paid/received.
+        支払われている/受け取っているファンディングの総ドル価値を表します。
         """
         return funding_rate * open_interest
 
@@ -200,10 +200,10 @@ class AdvancedFeatures:
         market_cap: pd.Series,
     ) -> pd.Series:
         """
-        Leverage Ratio = Total OI / Market Cap
+        レバレッジ比率 = 合計OI / 時価総額
 
-        Note: Market Cap data might not be available in OHLCV.
-        If not available, this returns NaN or requires external data injection.
+        注: 時価総額データはOHLCVに含まれていない可能性があります。
+        利用できない場合、これはNaNを返すか、外部データの注入が必要です。
         """
         if market_cap is None or market_cap.empty:
             return pd.Series(
@@ -219,10 +219,10 @@ class AdvancedFeatures:
         volume: pd.Series,
     ) -> pd.Series:
         """
-        Liquidity Efficiency (OI / Volume Ratio)
+        流動性効率（OI / 出来高比率）
 
-        High Ratio = High OI but low Volume (Positions stuck/illiquid).
+        高い比率 = 高いOIだが低い出来高（ポジションが膠着/流動性が低い）。
         """
-        # Avoid division by zero
+        # ゼロ除算の回避
         vol_clean = volume.replace(0, 1e-9)
         return open_interest / vol_clean

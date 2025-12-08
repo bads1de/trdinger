@@ -19,7 +19,11 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..utils import handle_pandas_ta_errors
+from ..utils import (
+    handle_pandas_ta_errors,
+    validate_series_params,
+    validate_multi_series_params,
+)
 
 TA_LIB_AVAILABLE = False
 try:
@@ -50,12 +54,11 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> pd.Series:
         """平均真の値幅"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.atr(
             high=high.values, low=low.values, close=close.values, length=length
@@ -93,8 +96,10 @@ class VolatilityIndicators:
         data: pd.Series, length: int = 20, std: float = 2.0
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """ボリンジャーバンド"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return (nan_series, nan_series, nan_series)
 
         result = ta.bbands(data, length=length, std=std)
 
@@ -129,12 +134,12 @@ class VolatilityIndicators:
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Keltner Channels: returns (upper, middle, lower)"""
 
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, period
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series
 
         # std_dev パラメータは使用しないが、互換性のため受け入れる
         _ = std_dev
@@ -184,10 +189,10 @@ class VolatilityIndicators:
         length: int = 20,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Donchian Channels: returns (upper, middle, lower)"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
+        validation = validate_multi_series_params({"high": high, "low": low}, length)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
 
         df = ta.donchian(high=high, low=low, length=length)
 
@@ -223,12 +228,12 @@ class VolatilityIndicators:
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Supertrend: returns (lower, upper, direction)"""
 
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
 
         # Support 'factor' parameter as alias for 'multiplier'
         if "factor" in kwargs:
@@ -304,12 +309,12 @@ class VolatilityIndicators:
         period: int = 20,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Acceleration Bands: returns (upper, middle, lower)"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series
 
         length = period
 
@@ -341,8 +346,9 @@ class VolatilityIndicators:
     @handle_pandas_ta_errors
     def ui(data: pd.Series, period: int = 14) -> pd.Series:
         """Ulcer Index"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data)
+        if validation is not None:
+            return validation
 
         length = period
         result = ta.ui(data, window=length)
@@ -366,12 +372,11 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """Relative Volatility Index"""
 
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
+        validation = validate_multi_series_params(
+            {"close": close, "high": high, "low": low}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.rvi(
             close=close,
@@ -401,19 +406,11 @@ class VolatilityIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Vertical Horizontal Filter"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if scalar <= 0:
-            raise ValueError(f"scalar must be positive: {scalar}")
-        if drift <= 0:
-            raise ValueError(f"drift must be positive: {drift}")
-
         # VHF requires sufficient data length
         min_length = length * 2
-        if len(data) < min_length:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+        validation = validate_series_params(data, length, min_data_length=min_length)
+        if validation is not None:
+            return validation
 
         result = ta.vhf(
             close=data,
@@ -438,14 +435,11 @@ class VolatilityIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Gopalakrishnan Range Index (GRI) - 市場のレンジ幅を測定するオシレーター"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         # pandas-taのkvo（Know Sure Thing）を使用して代替実装
         # KVOは同様のレンジベースの計算を行う

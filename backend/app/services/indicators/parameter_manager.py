@@ -22,10 +22,6 @@ class IndicatorParameterManager:
     IndicatorConfigを基にパラメータの生成とバリデーションを一元管理する
     """
 
-    def __init__(self):
-        """初期化"""
-        pass  # モジュールレベルの logger を使用
-
     def generate_parameters(
         self, indicator_type: str, config: IndicatorConfig
     ) -> Dict[str, Any]:
