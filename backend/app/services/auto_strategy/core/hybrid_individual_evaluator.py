@@ -4,14 +4,11 @@ import importlib
 import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
-import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer
 from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.exceptions import MLPredictionError, MLTrainingError
 
@@ -48,27 +45,26 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         self.predictor = predictor
         self.feature_adapter = feature_adapter or self._create_feature_adapter()
 
-    def evaluate_individual(self, individual, config: GAConfig):
+    def _perform_single_evaluation(
+        self, gene, backtest_config: Dict[str, Any], config: GAConfig
+    ) -> tuple:
         """
-        個体評価（ML予測統合版）
+        単一期間での評価実行（ML予測統合版）
 
         Args:
-            individual: 評価する個体
+            gene: 評価する遺伝子
+            backtest_config: バックテスト設定
             config: GA設定
 
         Returns:
             フィットネス値のタプル
         """
         try:
-            serializer = GeneSerializer()
-            gene = serializer.from_list(individual, StrategyGene)
+            from ..serializers.gene_serialization import GeneSerializer
 
-            # バックテスト実行用の設定を構築
-            backtest_config = (
-                self._fixed_backtest_config.copy()
-                if self._fixed_backtest_config
-                else {}
-            )
+            serializer = GeneSerializer()
+
+            # バックテスト設定の補完
             backtest_config = self._ensure_backtest_defaults(backtest_config, config)
 
             # 戦略設定を追加
@@ -79,8 +75,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             }
             gene_identifier = getattr(gene, "id", "GENE")[:8]
             backtest_config["strategy_name"] = f"GA_Individual_{gene_identifier}"
-
-            # レジーム適応ロジックは削除されました
 
             # バックテスト実行
             result = self.backtest_service.run_backtest(backtest_config)
@@ -109,22 +103,14 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                     logger.error(f"ML予測エラー（予期しない）: {e}")
                     prediction_signals = None
 
-            # フィットネス計算（単一目的・多目的対応、ML予測スコア統合）
-            if config.enable_multi_objective:
-                fitness_values = self._calculate_multi_objective_fitness(
-                    result, config, prediction_signals
-                )
-                return fitness_values
-            else:
-                fitness = self._calculate_fitness(result, config, prediction_signals)
-                return (fitness,)
+            # フィットネス計算（常に統一ロジックを使用、ML予測スコア統合）
+            return self._calculate_multi_objective_fitness(
+                result, config, prediction_signals
+            )
 
         except Exception as e:
-            logger.error(f"個体評価エラー: {e}")
-            if config.enable_multi_objective:
-                return tuple(0.0 for _ in config.objectives)
-            else:
-                return (0.0,)
+            logger.error(f"個体評価エラー（Hybrid）: {e}")
+            return tuple(0.0 for _ in config.objectives)
 
     def _create_feature_adapter(
         self,
@@ -177,14 +163,14 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""
-        # デフォルトではFalseを返す（必要に応じてGAConfigに設定を追加）
-        return False
+        # GAConfigの設定に従う（デフォルトはTrue）
+        return getattr(ga_config, "preprocess_features", True)
 
     def _fetch_ohlcv_data(
         self,
         backtest_config: Dict[str, Any],
         ga_config: GAConfig,
-    ) -> pd.DataFrame:
+    ) -> Optional[pd.DataFrame]:
         """バックテスト設定に基づきOHLCVデータを取得"""
 
         symbol = backtest_config.get("symbol")
@@ -213,44 +199,11 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             except Exception as exc:
                 logger.warning(f"OHLCVデータ取得エラー: {exc}")
 
-        return self._generate_fallback_ohlcv(ga_config)
-
-    def _generate_fallback_ohlcv(self, ga_config: GAConfig) -> pd.DataFrame:
-        """データ取得に失敗した際のフォールバックOHLCVデータを生成"""
-
-        start = getattr(ga_config, "fallback_start_date", None)
-        end = getattr(ga_config, "fallback_end_date", None)
-
-        try:
-            start_ts = pd.to_datetime(start) if start else None
-        except Exception:
-            start_ts = None
-        try:
-            end_ts = pd.to_datetime(end) if end else None
-        except Exception:
-            end_ts = None
-
-        if start_ts is None or end_ts is None or start_ts >= end_ts:
-            end_ts = pd.Timestamp.utcnow().floor("H")
-            start_ts = end_ts - pd.Timedelta(days=7)
-
-        index = pd.date_range(start=start_ts, end=end_ts, freq="1h")
-        if index.empty:
-            index = pd.date_range(end=end_ts, periods=72, freq="1h")
-
-        base_price = np.linspace(100.0, 105.0, len(index))
-        fallback_df = pd.DataFrame(
-            {
-                "timestamp": index,
-                "open": base_price,
-                "high": base_price + 0.5,
-                "low": base_price - 0.5,
-                "close": base_price + 0.1,
-                "volume": np.linspace(1000.0, 1500.0, len(index)),
-            }
+        # データ取得失敗時はNoneを返す（偽データ生成による学習汚染を防止）
+        logger.warning(
+            "ML予測用のOHLCVデータ取得に失敗しました。予測スコアは適用されません。"
         )
-
-        return fallback_df.reset_index(drop=True)
+        return None
 
     def _calculate_fitness(
         self,
@@ -333,14 +286,33 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             backtest_result, config
         )
 
-        # 目的にprediction_scoreが含まれている場合
-        if "prediction_score" in config.objectives:
-            fitness_list = list(base_fitness_values)
+        fitness_list = list(base_fitness_values)
 
-            # prediction_scoreの位置を見つける
+        # weighted_scoreが目的に含まれている場合、ML予測スコアを統合
+        if "weighted_score" in config.objectives and prediction_signals:
+            ws_index = config.objectives.index("weighted_score")
+            # weighted_scoreはすでに_calculate_fitnessで計算済みだが、
+            # HybridのMLスコア加算ロジックを適用
+            base_ws = fitness_list[ws_index]
+
+            # prediction_score計算
+            if "trend" in prediction_signals:
+                prediction_score = prediction_signals["trend"] - 0.5
+            else:
+                prediction_score = prediction_signals.get(
+                    "up", 0.0
+                ) - prediction_signals.get("down", 0.0)
+
+            # 予測重みを取得（デフォルト0.1）
+            prediction_weight = config.fitness_weights.get("prediction_score", 0.1)
+            fitness_list[ws_index] = max(
+                0.0, base_ws + prediction_weight * prediction_score
+            )
+
+        # prediction_scoreが独立した目的として含まれている場合
+        if "prediction_score" in config.objectives:
             pred_score_index = config.objectives.index("prediction_score")
 
-            # ML予測スコアを計算
             if prediction_signals:
                 if "trend" in prediction_signals:
                     prediction_score = prediction_signals["trend"] - 0.5
@@ -350,10 +322,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                     ) - prediction_signals.get("down", 0.0)
                 fitness_list[pred_score_index] = prediction_score
             else:
-                # 予測がない場合はデフォルト値
                 fitness_list[pred_score_index] = 0.0
 
-            return tuple(fitness_list)
-
-        # prediction_scoreが目的に含まれていない場合はベースのみ
-        return base_fitness_values
+        return tuple(fitness_list)

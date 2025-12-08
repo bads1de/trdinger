@@ -267,6 +267,7 @@ class TestIndividualEvaluator:
         }
 
         ga_config = GAConfig()
+        ga_config.fitness_constraints = {}  # 制約をクリア（デフォルト値の影響を排除）
         ga_config.objectives = [
             "total_return",
             "sharpe_ratio",
@@ -432,3 +433,243 @@ class TestIndividualEvaluator:
 
         # MLフィルターによって結果が改善されたことを検証 (total_returnが改善)
         assert result_with_ml[0] > result_no_ml[0]
+
+    def test_evaluate_individual_with_oos(self):
+        """OOS検証ありの個体評価テスト"""
+        mock_individual = [1, 2, 3, 4, 5]
+
+        # 共通のベース設定
+        base_config = {
+            "symbol": "BTC/USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01 00:00:00",
+            "end_date": "2024-01-11 00:00:00",  # 10日間
+        }
+        self.evaluator.set_backtest_config(base_config)
+
+        # ISとOOSの結果をモック
+        # run_backtestは2回呼ばれる。1回目がIS、2回目がOOSと仮定
+
+        # IS結果: Total Return 0.1
+        mock_result_is = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 1.0,
+                "max_drawdown": 0.1,
+                "win_rate": 0.5,
+                "total_trades": 10,
+            },
+            "equity_curve": [],
+            "trade_history": [{"size": 1, "pnl": 10}],
+            "start_date": "2024-01-01 00:00:00",
+            "end_date": "2024-01-09 00:00:00",
+        }
+        # OOS結果: Total Return 0.05
+        mock_result_oos = {
+            "performance_metrics": {
+                "total_return": 0.05,
+                "sharpe_ratio": 0.5,
+                "max_drawdown": 0.2,
+                "win_rate": 0.4,
+                "total_trades": 5,
+            },
+            "equity_curve": [],
+            "trade_history": [{"size": 1, "pnl": 5}],
+            "start_date": "2024-01-09 00:00:00",
+            "end_date": "2024-01-11 00:00:00",
+        }
+
+        self.mock_backtest_service.run_backtest.side_effect = [
+            mock_result_is,
+            mock_result_oos,
+        ]
+
+        # GA設定: OOS有効化
+        ga_config = GAConfig()
+        ga_config.enable_multi_objective = False
+        ga_config.oos_split_ratio = 0.2  # 10日間のうち、最後の2日がOOS（8日がIS）
+        ga_config.oos_fitness_weight = 0.5  # 単純平均
+
+        # フィットネス重み設定（total_returnのみ）
+        ga_config.fitness_weights = {
+            "total_return": 1.0,
+            "sharpe_ratio": 0.0,
+            "max_drawdown": 0.0,
+            "win_rate": 0.0,
+            "balance_score": 0.0,
+            "ulcer_index_penalty": 0.0,
+            "trade_frequency_penalty": 0.0,
+        }
+        # 制約を無効化
+        ga_config.fitness_constraints = {
+            "min_trades": 0,
+            "max_drawdown_limit": 1.0,
+            "min_sharpe_ratio": 0.0,
+        }
+
+        # 実行
+        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # 検証
+        assert self.mock_backtest_service.run_backtest.call_count == 2
+
+        # 1回目の呼び出し（IS）の引数確認
+        call_args_is = self.mock_backtest_service.run_backtest.call_args_list[0].kwargs[
+            "backtest_config"
+        ]
+        assert call_args_is["start_date"] == "2024-01-01 00:00:00"
+        # 10日 * 0.8 = 8日後 = 1月9日
+        assert call_args_is["end_date"] == "2024-01-09 00:00:00"
+
+        # 2回目の呼び出し（OOS）の引数確認
+        call_args_oos = self.mock_backtest_service.run_backtest.call_args_list[
+            1
+        ].kwargs["backtest_config"]
+        assert call_args_oos["start_date"] == "2024-01-09 00:00:00"
+        assert call_args_oos["end_date"] == "2024-01-11 00:00:00"
+
+        # フィットネス計算の検証
+        # 期待値を計算 (Evaluatorの内部計算が正しければこれになるはず)
+        # total_return だけを見ているので、0.1 * 0.5 + 0.05 * 0.5 = 0.075
+        expected_fitness = 0.1 * 0.5 + 0.05 * 0.5
+        assert abs(result[0] - expected_fitness) < 1e-6
+
+
+class TestUnifiedEvaluationLogic:
+    """統一評価ロジックのテストクラス"""
+
+    def setup_method(self):
+        """テスト前のセットアップ"""
+        self.mock_backtest_service = Mock()
+        self.evaluator = IndividualEvaluator(self.mock_backtest_service)
+
+    def test_weighted_score_objective(self):
+        """weighted_score目的関数のテスト"""
+        mock_individual = [1, 2, 3, 4, 5]
+        mock_result = {
+            "performance_metrics": {
+                "total_return": 0.15,
+                "sharpe_ratio": 1.5,
+                "max_drawdown": 0.1,
+                "win_rate": 0.6,
+                "total_trades": 10,
+            },
+            "equity_curve": [100, 110, 105, 120],
+            "trade_history": [{"size": 1, "pnl": 10}],
+        }
+        self.mock_backtest_service.run_backtest.return_value = mock_result
+
+        ga_config = GAConfig()
+        ga_config.objectives = ["weighted_score"]
+        ga_config.fitness_weights = {
+            "total_return": 0.3,
+            "sharpe_ratio": 0.4,
+            "max_drawdown": 0.2,
+            "win_rate": 0.1,
+        }
+        ga_config.fitness_constraints = {}
+
+        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # 常にタプルで返される
+        assert isinstance(result, tuple)
+        assert len(result) == 1
+        # weighted_scoreは従来の単一目的計算と同じ結果
+        assert result[0] > 0
+
+    def test_single_objective_returns_tuple(self):
+        """単一目的でもタプルを返すテスト"""
+        mock_individual = [1, 2, 3, 4, 5]
+        mock_result = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 1.5,
+                "max_drawdown": 0.1,
+                "win_rate": 0.6,
+                "total_trades": 10,
+            },
+            "equity_curve": [],
+            "trade_history": [{"size": 1, "pnl": 10}],
+        }
+        self.mock_backtest_service.run_backtest.return_value = mock_result
+
+        ga_config = GAConfig()
+        ga_config.objectives = ["sharpe_ratio"]  # 単一目的
+        ga_config.fitness_constraints = {}
+
+        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        assert isinstance(result, tuple)
+        assert len(result) == 1
+        assert result[0] == 1.5  # sharpe_ratioの値
+
+    def test_enable_multi_objective_flag_deprecated(self):
+        """enable_multi_objectiveフラグが無視されるテスト（後方互換性）"""
+        mock_individual = [1, 2, 3, 4, 5]
+        mock_result = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 1.5,
+                "max_drawdown": 0.1,
+                "total_trades": 10,
+            },
+            "equity_curve": [],
+            "trade_history": [{"size": 1, "pnl": 10}],
+        }
+        self.mock_backtest_service.run_backtest.return_value = mock_result
+
+        ga_config = GAConfig()
+        ga_config.enable_multi_objective = False  # 旧フラグ（無視される）
+        ga_config.objectives = ["total_return", "sharpe_ratio"]
+        ga_config.fitness_constraints = {}
+
+        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # enable_multi_objective=Falseでも、objectivesの数に応じたタプルが返される
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+    def test_default_objectives_is_weighted_score(self):
+        """デフォルトのobjectivesがweighted_scoreであるテスト"""
+        ga_config = GAConfig()
+        assert "weighted_score" in ga_config.objectives
+
+    def test_calculate_weighted_score_value(self):
+        """weighted_scoreの計算値が正しいことのテスト"""
+        mock_individual = [1, 2, 3, 4, 5]
+        mock_result = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 1.0,
+                "max_drawdown": 0.2,
+                "win_rate": 0.5,
+                "total_trades": 10,
+            },
+            "equity_curve": [],
+            "trade_history": [{"size": 1, "pnl": 10}],
+        }
+        self.mock_backtest_service.run_backtest.return_value = mock_result
+
+        ga_config = GAConfig()
+        ga_config.objectives = ["weighted_score"]
+        ga_config.fitness_weights = {
+            "total_return": 0.3,
+            "sharpe_ratio": 0.4,
+            "max_drawdown": 0.2,
+            "win_rate": 0.1,
+            "balance_score": 0.0,
+            "ulcer_index_penalty": 0.0,
+            "trade_frequency_penalty": 0.0,
+        }
+        ga_config.fitness_constraints = {}
+
+        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # 手動計算:
+        # total_return: 0.1 * 0.3 = 0.03
+        # sharpe_ratio: 1.0 * 0.4 = 0.4
+        # (1 - max_drawdown): 0.8 * 0.2 = 0.16
+        # win_rate: 0.5 * 0.1 = 0.05
+        # balance_score (trade_history から計算) は別途
+        # 合計 ≈ 0.03 + 0.4 + 0.16 + 0.05 = 0.64 前後（balance_scoreの影響あり）
+        assert result[0] > 0.5

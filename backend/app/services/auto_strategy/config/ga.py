@@ -41,14 +41,11 @@ DEFAULT_FITNESS_CONSTRAINTS = {
     "min_sharpe_ratio": 1.0,
 }
 
-# GA目的設定
+# GA目的設定（デフォルトはweighted_score: 従来の重み付け単一目的）
 DEFAULT_GA_OBJECTIVES = [
-    "total_return",
-    "max_drawdown",
-    "ulcer_index",
-    "trade_frequency_penalty",
+    "weighted_score",
 ]
-DEFAULT_GA_OBJECTIVE_WEIGHTS = [1.0, -1.0, -1.0, -1.0]
+DEFAULT_GA_OBJECTIVE_WEIGHTS = [1.0]
 
 # GAフィットネス共有設定
 GA_DEFAULT_FITNESS_SHARING = {

@@ -5,14 +5,15 @@
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
+
+import pandas as pd
 
 from app.services.backtest.backtest_service import BacktestService
+from app.services.ml.model_manager import model_manager
 
 from ..config import GAConfig
-
 from .risk_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
-from app.services.ml.model_manager import model_manager  # Added
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class IndividualEvaluator:
 
     def evaluate_individual(self, individual, config: GAConfig):
         """
-        個体評価
+        個体評価（OOS検証対応版）
 
         Args:
             individual: 評価する個体
@@ -52,37 +53,103 @@ class IndividualEvaluator:
             フィットネス値のタプル
         """
         try:
-            # 遺伝子デコード（リファクタリング改善）
+            # 遺伝子デコード
             from ..models.strategy_models import StrategyGene
             from ..serializers.gene_serialization import GeneSerializer
 
             gene_serializer = GeneSerializer()
             gene = gene_serializer.from_list(individual, StrategyGene)
 
-            # バックテスト実行用の設定を構築
-            backtest_config = (
+            # バックテスト設定のベースを取得
+            base_backtest_config = (
                 self._fixed_backtest_config.copy()
                 if self._fixed_backtest_config
                 else {}
             )
 
-            # デバッグ: バックテスト設定の内容を確認
-            logger.info(f"GA Individual Evaluator - Backtest config: {backtest_config}")
-            if "start_date" not in backtest_config or "end_date" not in backtest_config:
-                logger.warning("start_date or end_date missing in backtest config")
-            else:
-                logger.info(
-                    "Symbol: %s, Timeframe: %s",
-                    backtest_config.get("symbol"),
-                    backtest_config.get("timeframe"),
+            # OOS検証の有無を確認
+            oos_ratio = getattr(config, "oos_split_ratio", 0.0)
+            oos_weight = getattr(config, "oos_fitness_weight", 0.5)
+
+            if oos_ratio > 0.0:
+                # 期間分割とOOS評価
+                return self._evaluate_with_oos(
+                    gene, base_backtest_config, config, oos_ratio, oos_weight
                 )
-                logger.info(
-                    "Date range: %s to %s",
-                    backtest_config.get("start_date"),
-                    backtest_config.get("end_date"),
+            else:
+                # 通常評価（全期間）
+                return self._perform_single_evaluation(
+                    gene, base_backtest_config, config
                 )
 
-            # 戦略設定を追加（test_strategy_generationと同じ形式）
+        except Exception as e:
+            logger.error(f"個体評価エラー: {e}")
+            return tuple(0.0 for _ in config.objectives)
+
+    def _evaluate_with_oos(
+        self,
+        gene,
+        base_backtest_config: Dict[str, Any],
+        config: GAConfig,
+        oos_ratio: float,
+        oos_weight: float,
+    ):
+        """OOS検証付き評価"""
+        try:
+            start_date = pd.to_datetime(base_backtest_config.get("start_date"))
+            end_date = pd.to_datetime(base_backtest_config.get("end_date"))
+
+            if start_date is None or end_date is None:
+                # 期間が不明な場合は通常評価
+                return self._perform_single_evaluation(
+                    gene, base_backtest_config, config
+                )
+
+            total_duration = end_date - start_date
+            train_duration = total_duration * (1.0 - oos_ratio)
+
+            split_date = start_date + train_duration
+
+            # 日付文字列に変換
+            start_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
+            split_str = split_date.strftime("%Y-%m-%d %H:%M:%S")
+            end_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
+
+            # In-Sample評価
+            is_config = base_backtest_config.copy()
+            is_config["start_date"] = start_str
+            is_config["end_date"] = split_str
+            is_fitness = self._perform_single_evaluation(gene, is_config, config)
+
+            # Out-of-Sample評価
+            oos_config = base_backtest_config.copy()
+            oos_config["start_date"] = split_str
+            oos_config["end_date"] = end_str
+            oos_fitness = self._perform_single_evaluation(gene, oos_config, config)
+
+            # フィットネス結合
+            combined_fitness = []
+            for f_is, f_oos in zip(is_fitness, oos_fitness):
+                combined = f_is * (1.0 - oos_weight) + f_oos * oos_weight
+                combined_fitness.append(max(0.0, combined))
+
+            logger.info(
+                f"OOS評価完了: IS={is_fitness}, OOS={oos_fitness}, Combined={combined_fitness}"
+            )
+            return tuple(combined_fitness)
+
+        except Exception as e:
+            logger.error(f"OOS評価中エラー: {e}")
+            return self._perform_single_evaluation(gene, base_backtest_config, config)
+
+    def _perform_single_evaluation(
+        self, gene, backtest_config: Dict[str, Any], config: GAConfig
+    ) -> Tuple[float, ...]:
+        """単一期間での評価実行"""
+        try:
+            # 遺伝子から戦略設定を生成
+            from ..serializers.gene_serialization import GeneSerializer
+
             serializer = GeneSerializer()
             backtest_config["strategy_config"] = {
                 "strategy_type": "GENERATED_GA",
@@ -90,40 +157,26 @@ class IndividualEvaluator:
                 "ml_filter_enabled": config.ml_filter_enabled,
                 "ml_model_path": config.ml_model_path,
             }
-
-            # strategy_nameフィールドを追加
             backtest_config["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
 
-            # MLフィルターが有効な場合、MLモデルをロードし、backtest_configに渡す
+            # MLフィルター設定
             if config.ml_filter_enabled and config.ml_model_path:
                 try:
-                    logger.info(f"MLフィルターモデルをロード中: {config.ml_model_path}")
                     ml_model = model_manager.load_model(config.ml_model_path)
                     backtest_config["ml_filter_model"] = ml_model
-                    logger.info("MLフィルターモデルのロードに成功しました")
-                except Exception as e:
-                    logger.error(f"MLフィルターモデルのロードに失敗しました: {e}")
-                    # モデルロード失敗時はMLフィルターを無効にする
+                except Exception:
                     backtest_config["ml_filter_enabled"] = False
                     backtest_config["ml_filter_model"] = None
 
+            # バックテスト実行
             result = self.backtest_service.run_backtest(backtest_config=backtest_config)
 
-            # フィットネス計算（単一目的・多目的対応）
-            if config.enable_multi_objective:
-                fitness_values = self._calculate_multi_objective_fitness(result, config)
-                return fitness_values
-            else:
-                fitness = self._calculate_fitness(result, config)
-                return (fitness,)
+            # フィットネス計算（常に統一ロジックを使用）
+            return self._calculate_multi_objective_fitness(result, config)
 
         except Exception as e:
-            logger.error(f"個体評価エラー: {e}")
-            if config.enable_multi_objective:
-                # 多目的最適化の場合、目的数に応じたデフォルト値を返す
-                return tuple(0.0 for _ in config.objectives)
-            else:
-                return (0.0,)
+            logger.error(f"単一評価実行エラー: {e}")
+            return tuple(0.0 for _ in config.objectives)
 
     def _extract_performance_metrics(
         self, backtest_result: Dict[str, Any]
@@ -239,7 +292,6 @@ class IndividualEvaluator:
             # ロング・ショートバランス評価を計算
             balance_score = self._calculate_long_short_balance(backtest_result)
 
-            # レジーム別重み付け適用ロジックは削除されました
             fitness_weights = config.fitness_weights.copy()
 
             # 重み付きフィットネス計算（バランススコアを追加）
@@ -378,17 +430,36 @@ class IndividualEvaluator:
         try:
             # パフォーマンスメトリクスを抽出
             metrics = self._extract_performance_metrics(backtest_result)
+            total_trades = metrics["total_trades"]
+
+            # 取引回数制約チェック
+            min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
+            if total_trades < min_trades_req:
+                penalty_values = []
+                for obj in config.objectives:
+                    # 最小化したい指標（悪いほど値が大きい）には最大ペナルティを設定
+                    if obj in [
+                        "max_drawdown",
+                        "ulcer_index",
+                        "trade_frequency_penalty",
+                    ]:
+                        penalty_values.append(1.0)
+                    else:
+                        penalty_values.append(0.0)
+                return tuple(penalty_values)
 
             fitness_values = []
 
             for objective in config.objectives:
-                if objective == "total_return":
+                if objective == "weighted_score":
+                    # 従来の重み付けスコア計算を利用
+                    value = self._calculate_fitness(backtest_result, config)
+                elif objective == "total_return":
                     value = metrics["total_return"]
                 elif objective == "sharpe_ratio":
                     value = metrics["sharpe_ratio"]
                 elif objective == "max_drawdown":
-                    # ドローダウンは最小化したいので、符号を反転させる
-                    # DEAP側で-1.0の重みが設定されているため、ここでは正の値のまま
+                    # ドローダウンは最小化したいので、DEAP側で-1.0の重みが設定される
                     value = metrics["max_drawdown"]
                 elif objective == "win_rate":
                     value = metrics["win_rate"]
@@ -411,12 +482,6 @@ class IndividualEvaluator:
                 dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
                 scale = dynamic_scalars.get(objective, 1.0)
                 fitness_values.append(float(value) * scale)
-
-            # 取引回数が0の場合は低い評価値を設定
-            total_trades = metrics["total_trades"]
-            if total_trades == 0:
-                logger.warning("取引回数が0のため、低い評価値を設定")
-                fitness_values = [0.1 for _ in fitness_values]
 
             return tuple(fitness_values)
 

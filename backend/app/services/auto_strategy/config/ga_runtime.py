@@ -118,6 +118,7 @@ class GAConfig(BaseConfig):
     # MLフィルター設定
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None
+    preprocess_features: bool = True  # 特徴量前処理を適用するかどうか
 
     # 遺伝子生成設定拡張
     price_data_weight: int = 3
@@ -133,6 +134,10 @@ class GAConfig(BaseConfig):
     tpsl_tp_range: Optional[List[float]] = None
     tpsl_rr_range: Optional[List[float]] = None
     tpsl_atr_multiplier_range: Optional[List[float]] = None
+
+    # OOS検証設定
+    oos_split_ratio: float = 0.0
+    oos_fitness_weight: float = 0.5
 
     def get_ga_settings(self):
         """関連するGASettingsを取得"""
@@ -216,6 +221,10 @@ class GAConfig(BaseConfig):
         except (TypeError, ValueError):
             errors.append("elite_size と population_size は数値である必要があります")
 
+        # OOS設定の検証
+        if not 0.0 <= self.oos_split_ratio < 1.0:
+            errors.append("OOS分割比率は0.0以上1.0未満である必要があります")
+
         # 評価設定の検証
         if abs(sum(self.fitness_weights.values()) - 1.0) > 0.01:
             errors.append("フィットネス重みの合計は1.0である必要があります")
@@ -294,6 +303,10 @@ class GAConfig(BaseConfig):
             "random_state": self.random_state,
             "log_level": self.log_level,
             "save_intermediate_results": self.save_intermediate_results,
+            # MLフィルター設定
+            "ml_filter_enabled": self.ml_filter_enabled,
+            "ml_model_path": self.ml_model_path,
+            "preprocess_features": self.preprocess_features,
             # フォールバック設定
             "fallback_start_date": self.fallback_start_date,
             "fallback_end_date": self.fallback_end_date,
@@ -307,6 +320,9 @@ class GAConfig(BaseConfig):
             "tpsl_tp_range": self.tpsl_tp_range,
             "tpsl_rr_range": self.tpsl_rr_range,
             "tpsl_atr_multiplier_range": self.tpsl_atr_multiplier_range,
+            # OOS設定
+            "oos_split_ratio": self.oos_split_ratio,
+            "oos_fitness_weight": self.oos_fitness_weight,
         }
 
     @classmethod
@@ -360,6 +376,10 @@ class GAConfig(BaseConfig):
             # フォールバック設定
             "fallback_start_date": data.get("fallback_start_date", "2024-01-01"),
             "fallback_end_date": data.get("fallback_end_date", "2024-04-09"),
+            # MLフィルター設定
+            "ml_filter_enabled": data.get("ml_filter_enabled", False),
+            "ml_model_path": data.get("ml_model_path", None),
+            "preprocess_features": data.get("preprocess_features", True),
             # TPSL設定デフォルト
             "tpsl_method_constraints": data.get(
                 "tpsl_method_constraints", GA_DEFAULT_TPSL_METHOD_CONSTRAINTS
@@ -370,6 +390,9 @@ class GAConfig(BaseConfig):
             "tpsl_atr_multiplier_range": data.get(
                 "tpsl_atr_multiplier_range", GA_TPSL_ATR_MULTIPLIER_RANGE
             ),
+            # OOS設定
+            "oos_split_ratio": data.get("oos_split_ratio", 0.0),
+            "oos_fitness_weight": data.get("oos_fitness_weight", 0.5),
         }
 
         # デフォルト値をマージ
