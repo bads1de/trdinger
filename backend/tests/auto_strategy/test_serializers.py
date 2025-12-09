@@ -173,6 +173,56 @@ def test_tpsl_gene_round_trip_via_dict(serializer: GeneSerializer) -> None:
     assert restored.risk_reward_ratio == pytest.approx(gene.risk_reward_ratio)
 
 
+def test_tpsl_split_round_trip_via_dict(serializer: GeneSerializer) -> None:
+    """ロング・ショート別TP/SL設定のラウンドトリップ."""
+    long_tpsl = TPSLGene(
+        enabled=True,
+        method=TPSLMethod.FIXED_PERCENTAGE,
+        stop_loss_pct=0.01,
+        take_profit_pct=0.03,
+    )
+    short_tpsl = TPSLGene(
+        enabled=True,
+        method=TPSLMethod.FIXED_PERCENTAGE,
+        stop_loss_pct=0.02,
+        take_profit_pct=0.06,
+    )
+
+    strategy_gene = StrategyGene(
+        id="split-tpsl-test",
+        indicators=[],
+        entry_conditions=[],
+        exit_conditions=[],
+        risk_management={},
+        tpsl_gene=None,  # 共通設定はNone
+        long_tpsl_gene=long_tpsl,
+        short_tpsl_gene=short_tpsl,
+        metadata={},
+    )
+
+    data = serializer.strategy_gene_to_dict(strategy_gene)
+    
+    # 辞書にフィールドが含まれているか確認
+    assert "long_tpsl_gene" in data
+    assert "short_tpsl_gene" in data
+    assert data["long_tpsl_gene"]["stop_loss_pct"] == 0.01
+    assert data["short_tpsl_gene"]["stop_loss_pct"] == 0.02
+
+    restored = serializer.dict_to_strategy_gene(data, StrategyGene)
+
+    assert isinstance(restored, StrategyGene)
+    
+    # オブジェクトとして正しく復元されているか確認
+    assert isinstance(restored.long_tpsl_gene, TPSLGene)
+    assert isinstance(restored.short_tpsl_gene, TPSLGene)
+    
+    assert restored.long_tpsl_gene.stop_loss_pct == pytest.approx(0.01)
+    assert restored.long_tpsl_gene.take_profit_pct == pytest.approx(0.03)
+    
+    assert restored.short_tpsl_gene.stop_loss_pct == pytest.approx(0.02)
+    assert restored.short_tpsl_gene.take_profit_pct == pytest.approx(0.06)
+
+
 def test_position_sizing_gene_round_trip_via_dict(serializer: GeneSerializer) -> None:
     """PositionSizingGene.to_dict / from_dict を DictConverter 経由で固定."""
     gene = PositionSizingGene(

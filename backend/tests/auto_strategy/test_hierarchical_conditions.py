@@ -124,7 +124,9 @@ def test_hierarchical_mutation_safety():
 
     for _ in range(30):
         # mutation_rate 1.0 ensures mutation attempt if logic allows
-        mutated = mutate_strategy_gene_pure(strategy, mutation_rate=1.0)
+        from app.services.auto_strategy.config.ga import GASettings
+        config = GASettings() # 設定オブジェクトを作成
+        mutated = mutate_strategy_gene_pure(strategy, config, mutation_rate=1.0)
 
         # Check if entry_conditions[0] is still a ConditionGroup and operator is valid
         # Mutated strategy creates a deep copy, so we check the mutated object.

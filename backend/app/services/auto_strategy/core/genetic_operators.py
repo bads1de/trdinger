@@ -98,7 +98,7 @@ def _crossover_position_sizing_genes(parent1_ps, parent2_ps):
         return None, None
 
 
-def _mutate_indicators(mutated, gene, mutation_rate):
+def _mutate_indicators(mutated, gene, mutation_rate, config):
     """
     指標の突然変異を処理
 
@@ -106,7 +106,9 @@ def _mutate_indicators(mutated, gene, mutation_rate):
         mutated: 突然変異対象のStrategyGene
         gene: 元のStrategyGene
         mutation_rate: 突然変異率
+        config: GAConfigオブジェクト
     """
+    min_multiplier, max_multiplier = config.indicator_param_mutation_range
     # 指標パラメータの突然変異
     for i, indicator in enumerate(mutated.indicators):
         if random.random() < mutation_rate:
@@ -117,34 +119,33 @@ def _mutate_indicators(mutated, gene, mutation_rate):
                 ):
                     if param_name == "period":
                         mutated.indicators[i].parameters[param_name] = max(
-                            1, min(200, int(param_value * random.uniform(0.8, 1.2)))
+                            1, min(200, int(param_value * random.uniform(min_multiplier, max_multiplier)))
                         )
                     else:
                         mutated.indicators[i].parameters[param_name] = (
-                            param_value * random.uniform(0.8, 1.2)
+                            param_value * random.uniform(min_multiplier, max_multiplier)
                         )
 
     # 指標の追加・削除
-    if random.random() < mutation_rate * 0.3:
-        from ..config import GAConfig
+    if random.random() < mutation_rate * config.indicator_add_delete_probability:
+        max_indicators = config.max_indicators
 
-        max_indicators = GAConfig().max_indicators
-
-        if len(mutated.indicators) < max_indicators and random.random() < 0.5:
+        # 指標追加の確率
+        if len(mutated.indicators) < max_indicators and random.random() < config.indicator_add_vs_delete_probability:
             # 新しい指標を追加
             from ..generators.random_gene_generator import RandomGeneGenerator
 
-            generator = RandomGeneGenerator(GAConfig())
+            generator = RandomGeneGenerator(config) # configを渡す
             new_indicators = generator.indicator_generator.generate_random_indicators()
             if new_indicators:
                 mutated.indicators.append(random.choice(new_indicators))
-
-        elif len(mutated.indicators) > 1 and random.random() < 0.5:
+        # 指標削除の確率
+        elif len(mutated.indicators) > config.min_indicators and random.random() < (1 - config.indicator_add_vs_delete_probability):
             # 指標を削除
             mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
 
-def _mutate_condition_item(condition, mutation_rate):
+def _mutate_condition_item(condition, mutation_rate, config):
     """
     個々の条件（ConditionまたはConditionGroup）を変異させる再帰関数
     """
@@ -153,41 +154,41 @@ def _mutate_condition_item(condition, mutation_rate):
 
     if isinstance(condition, ConditionGroup):
         # ConditionGroupの場合
-        if random.random() < 0.5:
+        if random.random() < config.condition_operator_switch_probability:
             # グループ自体のオペレータを変異 (AND <-> OR)
             condition.operator = "AND" if condition.operator == "OR" else "OR"
         else:
             # 内部の条件を再帰的に変異
             if condition.conditions:
                 idx = random.randint(0, len(condition.conditions) - 1)
-                _mutate_condition_item(condition.conditions[idx], mutation_rate)
+                _mutate_condition_item(condition.conditions[idx], mutation_rate, config)
     else:
         # 通常のConditionの場合
-        operators = [">", "<", ">=", "<=", "=="]
-        condition.operator = random.choice(operators)
+        condition.operator = random.choice(config.valid_condition_operators)
 
 
-def _mutate_conditions(mutated, mutation_rate):
+def _mutate_conditions(mutated, mutation_rate, config):
     """
     条件の突然変異を処理
 
     Args:
         mutated: 突然変異対象のStrategyGene
         mutation_rate: 突然変異率
+        config: GAConfigオブジェクト
     """
-    if random.random() < mutation_rate * 0.5:
+    if random.random() < mutation_rate * config.condition_change_probability_multiplier:
         # エントリー条件の変更
-        if mutated.entry_conditions and random.random() < 0.5:
+        if mutated.entry_conditions and random.random() < config.condition_selection_probability:
             condition_idx = random.randint(0, len(mutated.entry_conditions) - 1)
             condition = mutated.entry_conditions[condition_idx]
-            _mutate_condition_item(condition, mutation_rate)
+            _mutate_condition_item(condition, mutation_rate, config)
 
-    if random.random() < mutation_rate * 0.5:
+    if random.random() < mutation_rate * config.condition_change_probability_multiplier:
         # エグジット条件の変更
-        if mutated.exit_conditions and random.random() < 0.5:
+        if mutated.exit_conditions and random.random() < config.condition_selection_probability:
             condition_idx = random.randint(0, len(mutated.exit_conditions) - 1)
             condition = mutated.exit_conditions[condition_idx]
-            _mutate_condition_item(condition, mutation_rate)
+            _mutate_condition_item(condition, mutation_rate, config)
 
 
 def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
@@ -217,7 +218,7 @@ def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
 
 
 def crossover_strategy_genes_pure(
-    parent1: StrategyGene, parent2: StrategyGene, crossover_type: str = "uniform"
+    parent1: StrategyGene, parent2: StrategyGene, config, crossover_type: str = "uniform"
 ) -> tuple[StrategyGene, StrategyGene]:
     """
     戦略遺伝子の交叉（純粋版）
@@ -228,6 +229,7 @@ def crossover_strategy_genes_pure(
     Args:
         parent1: 親1の戦略遺伝子（StrategyGeneオブジェクト）
         parent2: 親2の戦略遺伝子（StrategyGeneオブジェクト）
+        config: GAConfigオブジェクト
         crossover_type: 交叉タイプ ("single_point" または "uniform")
 
     Returns:
@@ -235,7 +237,7 @@ def crossover_strategy_genes_pure(
     """
     try:
         if crossover_type == "uniform":
-            return uniform_crossover(parent1, parent2)
+            return uniform_crossover(parent1, parent2, config)
         else:
             # single_point crossover (existing logic)
             # 指標遺伝子の交叉（単純な一点交叉）
@@ -256,9 +258,7 @@ def crossover_strategy_genes_pure(
             )
 
             # 最大指標数制限
-            from ..config import GAConfig
-
-            max_indicators = GAConfig().max_indicators
+            max_indicators = config.max_indicators
 
             child1_indicators = child1_indicators[:max_indicators]
             child2_indicators = child2_indicators[:max_indicators]
@@ -300,6 +300,12 @@ def crossover_strategy_genes_pure(
             child1_tpsl, child2_tpsl = _crossover_tpsl_genes(
                 parent1.tpsl_gene, parent2.tpsl_gene
             )
+            child1_long_tpsl, child2_long_tpsl = _crossover_tpsl_genes(
+                parent1.long_tpsl_gene, parent2.long_tpsl_gene
+            )
+            child1_short_tpsl, child2_short_tpsl = _crossover_tpsl_genes(
+                parent1.short_tpsl_gene, parent2.short_tpsl_gene
+            )
 
             # ポジションサイジング遺伝子の交叉
             ps_gene1 = getattr(parent1, "position_sizing_gene", None)
@@ -340,6 +346,8 @@ def crossover_strategy_genes_pure(
                 short_entry_conditions=child1_short_entry,
                 risk_management=child1_risk,
                 tpsl_gene=child1_tpsl,
+                long_tpsl_gene=child1_long_tpsl,
+                short_tpsl_gene=child1_short_tpsl,
                 position_sizing_gene=child1_position_sizing,
                 metadata=child1_metadata,
             )
@@ -353,6 +361,8 @@ def crossover_strategy_genes_pure(
                 short_entry_conditions=child2_short_entry,
                 risk_management=child2_risk,
                 tpsl_gene=child2_tpsl,
+                long_tpsl_gene=child2_long_tpsl,
+                short_tpsl_gene=child2_short_tpsl,
                 position_sizing_gene=child2_position_sizing,
                 metadata=child2_metadata,
             )
@@ -366,7 +376,7 @@ def crossover_strategy_genes_pure(
 
 
 def uniform_crossover(
-    parent1: StrategyGene, parent2: StrategyGene
+    parent1: StrategyGene, parent2: StrategyGene, config
 ) -> tuple[StrategyGene, StrategyGene]:
     """
     ユニフォーム交叉
@@ -377,89 +387,110 @@ def uniform_crossover(
     Args:
         parent1: 親1の戦略遺伝子（StrategyGeneオブジェクト）
         parent2: 親2の戦略遺伝子（StrategyGeneオブジェクト）
+        config: GAConfigオブジェクト
 
     Returns:
         交叉後の子1、子2の戦略遺伝子のタプル
     """
     try:
+        selection_prob = config.crossover_field_selection_probability
+
         # 各フィールドに対してランダム選択
         child1_indicators = (
-            parent1.indicators if random.random() < 0.5 else parent2.indicators
+            parent1.indicators if random.random() < selection_prob else parent2.indicators
         )
         child2_indicators = (
-            parent2.indicators if random.random() < 0.5 else parent1.indicators
+            parent2.indicators if random.random() < selection_prob else parent1.indicators
         )
 
         child1_entry_conditions = (
             parent1.entry_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent2.entry_conditions
         )
         child2_entry_conditions = (
             parent2.entry_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent1.entry_conditions
         )
 
         child1_exit_conditions = (
             parent1.exit_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent2.exit_conditions
         )
         child2_exit_conditions = (
             parent2.exit_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent1.exit_conditions
         )
 
         child1_long_entry_conditions = (
             parent1.long_entry_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent2.long_entry_conditions
         )
         child2_long_entry_conditions = (
             parent2.long_entry_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent1.long_entry_conditions
         )
 
         child1_short_entry_conditions = (
             parent1.short_entry_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent2.short_entry_conditions
         )
         child2_short_entry_conditions = (
             parent2.short_entry_conditions
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent1.short_entry_conditions
         )
 
         child1_risk_management = (
             parent1.risk_management
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent2.risk_management
         )
         child2_risk_management = (
             parent2.risk_management
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent1.risk_management
         )
 
         child1_tpsl_gene = (
-            parent1.tpsl_gene if random.random() < 0.5 else parent2.tpsl_gene
+            parent1.tpsl_gene if random.random() < selection_prob else parent2.tpsl_gene
         )
         child2_tpsl_gene = (
-            parent2.tpsl_gene if random.random() < 0.5 else parent1.tpsl_gene
+            parent2.tpsl_gene if random.random() < selection_prob else parent1.tpsl_gene
+        )
+
+        child1_long_tpsl_gene = (
+            parent1.long_tpsl_gene if random.random() < selection_prob else parent2.long_tpsl_gene
+        )
+        child2_long_tpsl_gene = (
+            parent2.long_tpsl_gene if random.random() < selection_prob else parent1.long_tpsl_gene
+        )
+
+        child1_short_tpsl_gene = (
+            parent1.short_tpsl_gene
+            if random.random() < selection_prob
+            else parent2.short_tpsl_gene
+        )
+        child2_short_tpsl_gene = (
+            parent2.short_tpsl_gene
+            if random.random() < selection_prob
+            else parent1.short_tpsl_gene
         )
 
         child1_position_sizing_gene = (
             parent1.position_sizing_gene
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent2.position_sizing_gene
         )
         child2_position_sizing_gene = (
             parent2.position_sizing_gene
-            if random.random() < 0.5
+            if random.random() < selection_prob
             else parent1.position_sizing_gene
         )
 
@@ -478,6 +509,8 @@ def uniform_crossover(
             short_entry_conditions=child1_short_entry_conditions,
             risk_management=child1_risk_management,
             tpsl_gene=child1_tpsl_gene,
+            long_tpsl_gene=child1_long_tpsl_gene,
+            short_tpsl_gene=child1_short_tpsl_gene,
             position_sizing_gene=child1_position_sizing_gene,
             metadata=child1_metadata,
         )
@@ -491,6 +524,8 @@ def uniform_crossover(
             short_entry_conditions=child2_short_entry_conditions,
             risk_management=child2_risk_management,
             tpsl_gene=child2_tpsl_gene,
+            long_tpsl_gene=child2_long_tpsl_gene,
+            short_tpsl_gene=child2_short_tpsl_gene,
             position_sizing_gene=child2_position_sizing_gene,
             metadata=child2_metadata,
         )
@@ -504,7 +539,7 @@ def uniform_crossover(
 
 
 def crossover_strategy_genes(
-    parent1: Union[StrategyGene, list], parent2: Union[StrategyGene, list]
+    parent1: Union[StrategyGene, list], parent2: Union[StrategyGene, list], config
 ) -> tuple[Union[StrategyGene, list], Union[StrategyGene, list]]:
     """
     戦略遺伝子の交叉
@@ -515,7 +550,8 @@ def crossover_strategy_genes(
     Args:
         parent1: 親1の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
         parent2: 親2の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
-
+        config: GAConfigオブジェクト
+        
     Returns:
         交叉後の子1、子2の戦略遺伝子のタプル
     """
@@ -530,7 +566,7 @@ def crossover_strategy_genes(
 
         # 純粋関数で交叉を実行
         result_child1, result_child2 = crossover_strategy_genes_pure(
-            strategy_parent1, strategy_parent2
+            strategy_parent1, strategy_parent2, config
         )
 
         # 元の型に応じて適切な形式で返す
@@ -553,7 +589,7 @@ def crossover_strategy_genes(
 
 
 def mutate_strategy_gene_pure(
-    gene: StrategyGene, mutation_rate: float = 0.1
+    gene: StrategyGene, config, mutation_rate: float = 0.1
 ) -> StrategyGene:
     """
     戦略遺伝子の突然変異（純粋版）
@@ -563,6 +599,7 @@ def mutate_strategy_gene_pure(
 
     Args:
         gene: 突然変異対象の戦略遺伝子（StrategyGeneオブジェクト）
+        config: GAConfigオブジェクト
         mutation_rate: 突然変異率
 
     Returns:
@@ -573,22 +610,23 @@ def mutate_strategy_gene_pure(
         mutated = copy.deepcopy(gene)
 
         # 指標遺伝子の突然変異
-        _mutate_indicators(mutated, gene, mutation_rate)
+        _mutate_indicators(mutated, gene, mutation_rate, config)
 
         # 条件の突然変異
-        _mutate_conditions(mutated, mutation_rate)
+        _mutate_conditions(mutated, mutation_rate, config)
 
         # リスク管理設定の突然変異
+        min_risk_multiplier, max_risk_multiplier = config.risk_param_mutation_range
         for key, value in mutated.risk_management.items():
             if isinstance(value, (int, float)) and random.random() < mutation_rate:
                 if key == "position_size":
                     # ポジションサイズの場合
                     mutated.risk_management[key] = max(
-                        0.01, min(1.0, value * random.uniform(0.8, 1.2))
+                        0.01, min(1.0, value * random.uniform(min_risk_multiplier, max_risk_multiplier))
                     )
                 else:
                     # その他の数値設定
-                    mutated.risk_management[key] = value * random.uniform(0.8, 1.2)
+                    mutated.risk_management[key] = value * random.uniform(min_risk_multiplier, max_risk_multiplier)
 
         # TP/SL遺伝子の突然変異
         tpsl_gene = mutated.tpsl_gene
@@ -597,8 +635,28 @@ def mutate_strategy_gene_pure(
                 mutated.tpsl_gene = mutate_tpsl_gene(tpsl_gene, mutation_rate)
         else:
             # TP/SL遺伝子が存在しない場合、低確率で新規作成
-            if random.random() < mutation_rate * 0.2:
+            if random.random() < mutation_rate * config.tpsl_gene_creation_probability_multiplier:
                 mutated.tpsl_gene = create_random_tpsl_gene()
+
+        # Long TP/SL遺伝子の突然変異
+        if mutated.long_tpsl_gene:
+            if random.random() < mutation_rate:
+                mutated.long_tpsl_gene = mutate_tpsl_gene(
+                    mutated.long_tpsl_gene, mutation_rate
+                )
+        else:
+            if random.random() < mutation_rate * config.tpsl_gene_creation_probability_multiplier:
+                mutated.long_tpsl_gene = create_random_tpsl_gene()
+
+        # Short TP/SL遺伝子の突然変異
+        if mutated.short_tpsl_gene:
+            if random.random() < mutation_rate:
+                mutated.short_tpsl_gene = mutate_tpsl_gene(
+                    mutated.short_tpsl_gene, mutation_rate
+                )
+        else:
+            if random.random() < mutation_rate * config.tpsl_gene_creation_probability_multiplier:
+                mutated.short_tpsl_gene = create_random_tpsl_gene()
 
         # ポジションサイジング遺伝子の突然変異
         ps_gene = getattr(mutated, "position_sizing_gene", None)
@@ -609,7 +667,7 @@ def mutate_strategy_gene_pure(
                 )
         else:
             # ポジションサイジング遺伝子が存在しない場合、低確率で新規作成
-            if random.random() < mutation_rate * 0.2:
+            if random.random() < mutation_rate * config.position_sizing_gene_creation_probability_multiplier:
                 from ..models.strategy_models import (
                     create_random_position_sizing_gene,
                 )
@@ -631,16 +689,19 @@ def mutate_strategy_gene_pure(
         return gene
 
 
-def create_deap_crossover_wrapper(individual_class=None):
+def create_deap_crossover_wrapper(individual_class=None, config=None):
     """
     DEAPクロスオーバーラッパーを作成
 
     Args:
         individual_class: DEAPのIndividualクラス。Noneの場合はcreatorから取得
+        config: GAConfigオブジェクト (必須)
 
     Returns:
         DEAPツールボックスに登録可能なクロスオーバー関数
     """
+    if config is None:
+        raise ValueError("configオブジェクトは必須です")
 
     def crossover_wrapper(parent1, parent2):
         """
@@ -653,7 +714,7 @@ def create_deap_crossover_wrapper(individual_class=None):
 
             # 純粋クロスオーバー関数で交叉を実行
             child1_strategy, child2_strategy = crossover_strategy_genes_pure(
-                strategy_parent1, strategy_parent2
+                strategy_parent1, strategy_parent2, config
             )
 
             # StrategyGeneをIndividualオブジェクトに変換
@@ -681,17 +742,20 @@ def create_deap_crossover_wrapper(individual_class=None):
     return crossover_wrapper
 
 
-def create_deap_mutate_wrapper(individual_class=None, population=None):
+def create_deap_mutate_wrapper(individual_class=None, population=None, config=None):
     """
     DEAP突然変異ラッパーを作成
 
     Args:
         individual_class: DEAPのIndividualクラス。Noneの場合はcreatorから取得
         population: 個体集団（適応的突然変異用）
+        config: GAConfigオブジェクト (必須)
 
     Returns:
         DEAPツールボックスに登録可能な突然変異関数
     """
+    if config is None:
+        raise ValueError("configオブジェクトは必須です")
 
     def mutate_wrapper(individual):
         """
@@ -704,11 +768,11 @@ def create_deap_mutate_wrapper(individual_class=None, population=None):
             # 適応的突然変異を使用
             if population is not None:
                 mutated_strategy = adaptive_mutate_strategy_gene_pure(
-                    population, strategy_gene
+                    population, strategy_gene, config
                 )
             else:
                 # populationがない場合は通常のmutate
-                mutated_strategy = mutate_strategy_gene_pure(strategy_gene)
+                mutated_strategy = mutate_strategy_gene_pure(strategy_gene, config)
 
             # StrategyGeneをIndividualオブジェクトに変換
             if individual_class is not None:
@@ -733,7 +797,7 @@ def create_deap_mutate_wrapper(individual_class=None, population=None):
 
 
 def mutate_strategy_gene(
-    gene: Union[StrategyGene, list], mutation_rate: float = 0.1
+    gene: Union[StrategyGene, list], config, mutation_rate: float = 0.1
 ) -> Union[StrategyGene, list]:
     """
     戦略遺伝子の突然変異
@@ -743,6 +807,7 @@ def mutate_strategy_gene(
 
     Args:
         gene: 突然変異対象の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
+        config: GAConfigオブジェクト
         mutation_rate: 突然変異率
 
     Returns:
@@ -756,7 +821,7 @@ def mutate_strategy_gene(
         strategy_gene = _convert_to_strategy_gene(gene)
 
         # 純粋関数で突然変異を実行
-        result_mutated = mutate_strategy_gene_pure(strategy_gene, mutation_rate)
+        result_mutated = mutate_strategy_gene_pure(strategy_gene, config, mutation_rate)
 
         # 元の型に応じて適切な形式で返す
         if gene_is_individual:
@@ -776,7 +841,7 @@ def mutate_strategy_gene(
 
 
 def adaptive_mutate_strategy_gene_pure(
-    population: list, gene: StrategyGene, base_mutation_rate: float = 0.1
+    population: list, gene: StrategyGene, config, base_mutation_rate: float = 0.1
 ) -> StrategyGene:
     """
     適応的戦略遺伝子突然変異（純粋版）
@@ -787,6 +852,7 @@ def adaptive_mutate_strategy_gene_pure(
     Args:
         population: 個体集団（fitnessを持つIndividualオブジェクトのリスト）
         gene: 突然変異対象の戦略遺伝子（StrategyGeneオブジェクト）
+        config: GAConfigオブジェクト
         base_mutation_rate: 基準突然変異率
 
     Returns:
@@ -809,20 +875,20 @@ def adaptive_mutate_strategy_gene_pure(
             # 分散に基づいてrateを調整
             # 分散が高い（多様性が高い）場合：rateを低く
             # 分散が低い（収束している）場合：rateを高く
-            variance_threshold = 0.1  # 適当な閾値
+            variance_threshold = config.adaptive_mutation_variance_threshold
 
             if variance > variance_threshold:
-                # 多様性が高い：rateを半分に
-                adaptive_rate = base_mutation_rate * 0.5
+                # 多様性が高い：rateを減少
+                adaptive_rate = base_mutation_rate * config.adaptive_mutation_rate_decrease_multiplier
             else:
-                # 収束している：rateを2倍に
-                adaptive_rate = base_mutation_rate * 2.0
+                # 収束している：rateを増加
+                adaptive_rate = base_mutation_rate * config.adaptive_mutation_rate_increase_multiplier
 
             # 0.01-1.0の範囲にクリップ
             adaptive_rate = max(0.01, min(1.0, adaptive_rate))
 
         # mutate_strategy_gene_pureを実行
-        mutated = mutate_strategy_gene_pure(gene, mutation_rate=adaptive_rate)
+        mutated = mutate_strategy_gene_pure(gene, config, mutation_rate=adaptive_rate)
 
         # metadataに適応的rateを追加
         mutated.metadata["adaptive_mutation_rate"] = adaptive_rate
@@ -832,4 +898,4 @@ def adaptive_mutate_strategy_gene_pure(
     except Exception as e:
         logger.error(f"適応的戦略遺伝子突然変異エラー: {e}")
         # エラー時は元のrateでmutate
-        return mutate_strategy_gene_pure(gene, base_mutation_rate)
+        return mutate_strategy_gene_pure(gene, config, base_mutation_rate)

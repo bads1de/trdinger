@@ -75,7 +75,7 @@ class IndicatorGenerator:
         from ...config.constants import SUPPORTED_TIMEFRAMES
 
         # 設定から利用可能タイムフレームを取得
-        available = getattr(config, "available_timeframes", None)
+        available = config.available_timeframes
         if available:
             return list(available)
 
@@ -90,13 +90,11 @@ class IndicatorGenerator:
             タイムフレーム文字列、またはMTF無効/確率で選択されない場合はNone
         """
         # MTFが有効か確認
-        enable_mtf = getattr(self.config, "enable_multi_timeframe", False)
-        if not enable_mtf:
+        if not self.config.enable_multi_timeframe:
             return None
 
         # MTF指標が生成される確率をチェック
-        mtf_probability = getattr(self.config, "mtf_indicator_probability", 0.3)
-        if random.random() > mtf_probability:
+        if random.random() > self.config.mtf_indicator_probability:
             return None  # デフォルトタイムフレームを使用
 
         # 利用可能なタイムフレームからランダムに選択

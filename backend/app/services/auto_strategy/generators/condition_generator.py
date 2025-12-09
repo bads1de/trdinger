@@ -246,6 +246,8 @@ class ConditionGenerator:
                 return IndicatorType.VOLATILITY
 
         cfg = indicator_registry.get_indicator_config(indicator.type)
+        logger.debug(f"[_get_indicator_type] Checking indicator.type: {indicator.type}")
+        logger.debug(f"[_get_indicator_type] indicator_registry._configs keys: {list(indicator_registry._configs.keys())}")
         if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
             cat = getattr(cfg, "category")
             if cat == "momentum":

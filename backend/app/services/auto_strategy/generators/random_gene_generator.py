@@ -189,6 +189,15 @@ class RandomGeneGenerator:
         if tpsl_gene:
             tpsl_gene.enabled = True
 
+        # Long/Short TP/SL遺伝子も個別に生成
+        long_tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
+        if long_tpsl_gene:
+            long_tpsl_gene.enabled = True
+
+        short_tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
+        if short_tpsl_gene:
+            short_tpsl_gene.enabled = True
+
         # TP/SL遺伝子が有効な場合はイグジット条件を最小化
         if tpsl_gene and tpsl_gene.enabled:
             exit_conditions = []
@@ -233,6 +242,8 @@ class RandomGeneGenerator:
             short_entry_conditions=short_entry_conditions,  # 新機能
             risk_management=risk_management,
             tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
+            long_tpsl_gene=long_tpsl_gene,  # Long TP/SL
+            short_tpsl_gene=short_tpsl_gene,  # Short TP/SL
             position_sizing_gene=position_sizing_gene,  # 新しいポジションサイジング遺伝子
             metadata={"generated_by": "RandomGeneGenerator"},
         )

@@ -31,6 +31,11 @@ class TestGeneticOperators:
     """遺伝的演算子のテスト"""
 
     @pytest.fixture
+    def ga_config(self):
+        from app.services.auto_strategy.config.ga import GASettings
+        return GASettings()
+
+    @pytest.fixture
     def sample_strategy_gene(self):
         """サンプルStrategyGeneを作成"""
         return StrategyGene(
@@ -57,14 +62,14 @@ class TestGeneticOperators:
             metadata={"test": True},
         )
 
-    def test_crossover_strategy_genes_pure_basic(self, sample_strategy_gene):
+    def test_crossover_strategy_genes_pure_basic(self, sample_strategy_gene, ga_config):
         """基本的な交叉テスト"""
         import copy
 
         parent1 = copy.deepcopy(sample_strategy_gene)
         parent2 = copy.deepcopy(sample_strategy_gene)
 
-        child1, child2 = crossover_strategy_genes_pure(parent1, parent2)
+        child1, child2 = crossover_strategy_genes_pure(parent1, parent2, ga_config)
 
         assert isinstance(child1, StrategyGene)
         assert isinstance(child2, StrategyGene)
@@ -132,20 +137,20 @@ class TestGeneticOperators:
         assert child1_ps is None
         assert child2_ps is None
 
-    def test_mutate_strategy_gene_pure_basic(self, sample_strategy_gene):
+    def test_mutate_strategy_gene_pure_basic(self, sample_strategy_gene, ga_config):
         """基本的な突然変異テスト"""
-        mutated = mutate_strategy_gene_pure(sample_strategy_gene, mutation_rate=0.0)
+        mutated = mutate_strategy_gene_pure(sample_strategy_gene, ga_config, mutation_rate=0.0)
 
         assert isinstance(mutated, StrategyGene)
         assert mutated.id != sample_strategy_gene.id
 
     @patch("random.random", return_value=0.1)  # 確実に条件を満たす
     def test_mutate_indicators_parameter_mutation(
-        self, mock_random, sample_strategy_gene
+        self, mock_random, sample_strategy_gene, ga_config
     ):
         """指標パラメータの突然変異テスト"""
         _mutate_indicators(
-            sample_strategy_gene, sample_strategy_gene, mutation_rate=0.5
+            sample_strategy_gene, sample_strategy_gene, mutation_rate=0.5, config=ga_config
         )
 
         # パラメータが変更されている可能性がある
@@ -153,35 +158,35 @@ class TestGeneticOperators:
 
     @patch("random.random", return_value=0.1)
     def test_mutate_conditions_entry_conditions(
-        self, mock_random, sample_strategy_gene
+        self, mock_random, sample_strategy_gene, ga_config
     ):
         """エントリー条件の突然変異テスト"""
-        _mutate_conditions(sample_strategy_gene, mutation_rate=0.5)
+        _mutate_conditions(sample_strategy_gene, mutation_rate=0.5, config=ga_config)
 
         # テストはモックなので変更を確認しにくいが、エラーが発生しないことを確認
         assert len(sample_strategy_gene.entry_conditions) >= 0
 
     @patch("random.random", return_value=0.1)
-    def test_mutate_conditions_exit_conditions(self, mock_random, sample_strategy_gene):
+    def test_mutate_conditions_exit_conditions(self, mock_random, sample_strategy_gene, ga_config):
         """エグジット条件の突然変異テスト"""
-        _mutate_conditions(sample_strategy_gene, mutation_rate=0.5)
+        _mutate_conditions(sample_strategy_gene, mutation_rate=0.5, config=ga_config)
 
         assert len(sample_strategy_gene.exit_conditions) >= 0
 
     def test_mutate_strategy_gene_pure_with_high_mutation_rate(
-        self, sample_strategy_gene
+        self, sample_strategy_gene, ga_config
     ):
         """高い突然変異率でのテスト"""
         import copy
 
         gene_to_mutate = copy.deepcopy(sample_strategy_gene)
-        mutated = mutate_strategy_gene_pure(gene_to_mutate, mutation_rate=1.0)
+        mutated = mutate_strategy_gene_pure(gene_to_mutate, ga_config, mutation_rate=1.0)
 
         assert isinstance(mutated, StrategyGene)
         assert mutated.metadata.get("mutated") is True
         assert mutated.metadata.get("mutation_rate") == 1.0
 
-    def test_adaptive_mutation_rate_adjustment(self, sample_strategy_gene):
+    def test_adaptive_mutation_rate_adjustment(self, sample_strategy_gene, ga_config):
         """適応的突然変異率調整のテスト"""
         import copy
 
@@ -210,13 +215,13 @@ class TestGeneticOperators:
 
         # 高分散の場合、低いmutation_rateになるはず
         mutated_high = adaptive_mutate_strategy_gene_pure(
-            high_variance_pop, gene_to_mutate, base_mutation_rate=0.1
+            high_variance_pop, gene_to_mutate, ga_config, base_mutation_rate=0.1
         )
         assert isinstance(mutated_high, StrategyGene)
 
         # 低分散の場合、高いmutation_rateになるはず
         mutated_low = adaptive_mutate_strategy_gene_pure(
-            low_variance_pop, gene_to_mutate, base_mutation_rate=0.1
+            low_variance_pop, gene_to_mutate, ga_config, base_mutation_rate=0.1
         )
         assert isinstance(mutated_low, StrategyGene)
 
@@ -230,7 +235,7 @@ class TestGeneticOperators:
             < mutated_low.metadata["adaptive_mutation_rate"]
         )
 
-    def test_uniform_crossover_diversity(self):
+    def test_uniform_crossover_diversity(self, ga_config):
         """Test diversity of uniform crossover"""
         import copy
 
@@ -295,7 +300,7 @@ class TestGeneticOperators:
         children = []
         for _ in range(50):
             child1, child2 = uniform_crossover(
-                copy.deepcopy(parent1), copy.deepcopy(parent2)
+                copy.deepcopy(parent1), copy.deepcopy(parent2), ga_config
             )
             children.extend([child1, child2])
 
@@ -327,7 +332,7 @@ class TestGeneticOperators:
         # Note: Due to random nature, field-level mixing may not occur in all cases
         # The key is that some children are different from parents (diverse_children > 0)
 
-    def test_population_variance_after_operations(self, sample_strategy_gene):
+    def test_population_variance_after_operations(self, sample_strategy_gene, ga_config):
         """Test population variance after genetic operations"""
         import copy
 
@@ -454,7 +459,7 @@ class TestGeneticOperators:
         mutated_population = []
         for ind in population:
             mutated_gene = adaptive_mutate_strategy_gene_pure(
-                population, ind[0], base_mutation_rate=0.1
+                population, ind[0], ga_config, base_mutation_rate=0.1
             )
             mutated_ind = MockIndividual(mutated_gene, ind.fitness.values)
             mutated_population.append(mutated_ind)
@@ -471,7 +476,7 @@ class TestGeneticOperators:
             parent1 = population[i][0]
             parent2 = population[i + 1][0]
             child1, child2 = uniform_crossover(
-                copy.deepcopy(parent1), copy.deepcopy(parent2)
+                copy.deepcopy(parent1), copy.deepcopy(parent2), ga_config
             )
             crossover_population.extend(
                 [MockIndividual(child1, (0.5,)), MockIndividual(child2, (0.5,))]

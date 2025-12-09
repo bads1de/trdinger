@@ -36,6 +36,8 @@ class StrategyGene:
     stateful_conditions: List[StatefulCondition] = field(default_factory=list)
     risk_management: Dict[str, Any] = field(default_factory=dict)
     tpsl_gene: Optional[TPSLGene] = None
+    long_tpsl_gene: Optional[TPSLGene] = None
+    short_tpsl_gene: Optional[TPSLGene] = None
     position_sizing_gene: Optional[PositionSizingGene] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 

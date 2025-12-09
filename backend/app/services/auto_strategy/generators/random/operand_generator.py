@@ -79,7 +79,7 @@ class OperandGenerator:
         グループ化システムを使用して、互換性の高いオペランドを優先的に選択します。
         """
         # 設定された確率で数値を使用（スケール不一致問題を回避）
-        if random.random() < getattr(self.config, "numeric_threshold_probability", 0.3):
+        if random.random() < self.config.numeric_threshold_probability:
             return self.generate_threshold_value(left_operand, condition_type)
 
         # 20%の確率で別の指標またはデータソースを使用
@@ -91,9 +91,7 @@ class OperandGenerator:
             compatibility = operand_grouping_system.get_compatibility_score(
                 left_operand, compatible_operand
             )
-            if compatibility < getattr(
-                self.config, "min_compatibility_score", 0.5
-            ):  # 設定された互換性チェック
+            if compatibility < self.config.min_compatibility_score:  # 設定された互換性チェック
                 return self.generate_threshold_value(left_operand, condition_type)
 
         return compatible_operand
@@ -127,7 +125,7 @@ class OperandGenerator:
         strict_compatible = operand_grouping_system.get_compatible_operands(
             left_operand,
             available_operands,
-            min_compatibility=getattr(self.config, "strict_compatibility_score", 0.7),
+            min_compatibility=self.config.strict_compatibility_score,
         )
 
         if strict_compatible:
@@ -137,7 +135,7 @@ class OperandGenerator:
         high_compatible = operand_grouping_system.get_compatible_operands(
             left_operand,
             available_operands,
-            min_compatibility=getattr(self.config, "min_compatibility_score", 0.5),
+            min_compatibility=self.config.min_compatibility_score,
         )
 
         if high_compatible:

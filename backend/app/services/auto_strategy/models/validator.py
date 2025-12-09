@@ -335,8 +335,35 @@ class GeneValidator:
 
         # イグジット条件またはTP/SL遺伝子の存在チェック
         if not strategy_gene.exit_conditions:
-            if not (strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled):
+            has_tpsl = (
+                (strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled)
+                or (
+                    strategy_gene.long_tpsl_gene
+                    and strategy_gene.long_tpsl_gene.enabled
+                )
+                or (
+                    strategy_gene.short_tpsl_gene
+                    and strategy_gene.short_tpsl_gene.enabled
+                )
+            )
+            if not has_tpsl:
                 errors.append("イグジット条件が設定されていません")
+
+        # TP/SL遺伝子のバリデーション
+        if strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled:
+            is_valid, tpsl_errors = strategy_gene.tpsl_gene.validate()
+            if not is_valid:
+                errors.extend([f"共通TP/SL: {e}" for e in tpsl_errors])
+
+        if strategy_gene.long_tpsl_gene and strategy_gene.long_tpsl_gene.enabled:
+            is_valid, tpsl_errors = strategy_gene.long_tpsl_gene.validate()
+            if not is_valid:
+                errors.extend([f"ロングTP/SL: {e}" for e in tpsl_errors])
+
+        if strategy_gene.short_tpsl_gene and strategy_gene.short_tpsl_gene.enabled:
+            is_valid, tpsl_errors = strategy_gene.short_tpsl_gene.validate()
+            if not is_valid:
+                errors.extend([f"ショートTP/SL: {e}" for e in tpsl_errors])
 
         # 有効な指標の存在チェック
         enabled_indicators = [ind for ind in strategy_gene.indicators if ind.enabled]

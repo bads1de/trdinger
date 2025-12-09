@@ -106,6 +106,38 @@ class UniversalStrategy(Strategy):
             if ind.enabled
         )
 
+    def _get_effective_tpsl_gene(self, direction: float) -> Union[None, object]:
+        """
+        方向に応じた有効なTPSL遺伝子を取得
+
+        Args:
+            direction: 1.0 (Long) or -1.0 (Short)
+
+        Returns:
+            有効なTPSLGeneまたはNone
+        """
+        if not self.gene:
+            return None
+
+        # 方向別設定を優先確認
+        target_gene = None
+        if direction > 0:  # Long
+            if hasattr(self.gene, "long_tpsl_gene") and self.gene.long_tpsl_gene:
+                target_gene = self.gene.long_tpsl_gene
+        elif direction < 0:  # Short
+            if hasattr(self.gene, "short_tpsl_gene") and self.gene.short_tpsl_gene:
+                target_gene = self.gene.short_tpsl_gene
+
+        # 有効な個別設定があれば返す
+        if target_gene and target_gene.enabled:
+            return target_gene
+
+        # フォールバック: 共通設定
+        if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
+            return self.gene.tpsl_gene
+
+        return None
+
     def init(self):
         """指標の初期化"""
         try:
@@ -255,43 +287,52 @@ class UniversalStrategy(Strategy):
                     position_size = self._calculate_position_size()
                     current_price = self.data.Close[-1]
 
+                    # エントリー方向を決定
+                    direction = 0.0
+                    if long_signal:
+                        direction = 1.0
+                    elif short_signal:
+                        direction = -1.0
+                    # Note: stateful_signalのみの場合は、方向が不明確なためスキップされる
+                    # (将来的にStatefulConditionに方向性を持たせる修正が必要)
+
                     # TP/SL価格を計算
                     sl_price = None
                     tp_price = None
 
-                    if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                        # 市場データの準備（必要な場合のみ）
-                        market_data = {}
-                        tpsl_method = self.gene.tpsl_gene.method
+                    if direction != 0.0:
+                        active_tpsl_gene = self._get_effective_tpsl_gene(direction)
 
-                        # ボラティリティベースまたは適応型の場合、OHLCデータを作成
-                        if (
-                            tpsl_method
-                            in (TPSLMethod.VOLATILITY_BASED, TPSLMethod.ADAPTIVE)
-                            and len(self.data) > 30
-                        ):
-                            # 過去30本のデータを取得（ATR計算用）
-                            # Note: パフォーマンス最適化のため、必要な期間のみスライス
-                            highs = self.data.High[-30:]
-                            lows = self.data.Low[-30:]
-                            closes = self.data.Close[-30:]
+                        if active_tpsl_gene:
+                            # 市場データの準備（必要な場合のみ）
+                            market_data = {}
+                            tpsl_method = active_tpsl_gene.method
 
-                            # VolatilityCalculatorが期待する形式（list of dicts）に変換
-                            market_data["ohlc_data"] = [
-                                {"high": h, "low": low_val, "close": c}
-                                for h, low_val, c in zip(highs, lows, closes)
-                            ]
+                            # ボラティリティベースまたは適応型の場合、OHLCデータを作成
+                            if (
+                                tpsl_method
+                                in (TPSLMethod.VOLATILITY_BASED, TPSLMethod.ADAPTIVE)
+                                and len(self.data) > 30
+                            ):
+                                # 過去30本のデータを取得（ATR計算用）
+                                # Note: パフォーマンス最適化のため、必要な期間のみスライス
+                                highs = self.data.High[-30:]
+                                lows = self.data.Low[-30:]
+                                closes = self.data.Close[-30:]
 
-                        # エントリー方向
-                        direction = 1.0 if long_signal else -1.0
+                                # VolatilityCalculatorが期待する形式（list of dicts）に変換
+                                market_data["ohlc_data"] = [
+                                    {"high": h, "low": low_val, "close": c}
+                                    for h, low_val, c in zip(highs, lows, closes)
+                                ]
 
-                        # TPSLServiceを使用して価格を計算
-                        sl_price, tp_price = self.tpsl_service.calculate_tpsl_prices(
-                            current_price=current_price,
-                            tpsl_gene=self.gene.tpsl_gene,
-                            position_direction=direction,
-                            market_data=market_data,
-                        )
+                            # TPSLServiceを使用して価格を計算
+                            sl_price, tp_price = self.tpsl_service.calculate_tpsl_prices(
+                                current_price=current_price,
+                                tpsl_gene=active_tpsl_gene,
+                                position_direction=direction,
+                                market_data=market_data,
+                            )
 
                     # 取引実行
                     if long_signal:

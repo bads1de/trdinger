@@ -96,6 +96,16 @@ class DictConverter:
                     if strategy_gene.tpsl_gene
                     else None
                 ),
+                "long_tpsl_gene": (
+                    self.tpsl_gene_to_dict(strategy_gene.long_tpsl_gene)
+                    if getattr(strategy_gene, "long_tpsl_gene", None)
+                    else None
+                ),
+                "short_tpsl_gene": (
+                    self.tpsl_gene_to_dict(strategy_gene.short_tpsl_gene)
+                    if getattr(strategy_gene, "short_tpsl_gene", None)
+                    else None
+                ),
                 "position_sizing_gene": (
                     self.position_sizing_gene_to_dict(
                         strategy_gene.position_sizing_gene
@@ -412,6 +422,15 @@ class DictConverter:
             if "tpsl_gene" in data and data["tpsl_gene"]:
                 tpsl_gene = self.dict_to_tpsl_gene(data["tpsl_gene"])
 
+            # Long/Short TP/SL遺伝子の復元
+            long_tpsl_gene = None
+            if "long_tpsl_gene" in data and data["long_tpsl_gene"]:
+                long_tpsl_gene = self.dict_to_tpsl_gene(data["long_tpsl_gene"])
+
+            short_tpsl_gene = None
+            if "short_tpsl_gene" in data and data["short_tpsl_gene"]:
+                short_tpsl_gene = self.dict_to_tpsl_gene(data["short_tpsl_gene"])
+
             # ポジションサイジング遺伝子の復元
             position_sizing_gene = None
             if "position_sizing_gene" in data and data["position_sizing_gene"]:
@@ -457,6 +476,8 @@ class DictConverter:
                 stateful_conditions=stateful_conditions,
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,
+                long_tpsl_gene=long_tpsl_gene,
+                short_tpsl_gene=short_tpsl_gene,
                 position_sizing_gene=position_sizing_gene,
                 metadata=metadata,
             )

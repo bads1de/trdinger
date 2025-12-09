@@ -222,6 +222,10 @@ class StrategyIntegrationService:
             "risk_management": gene_data.get("risk_management", {}),
             "entry_conditions": gene_data.get("entry_conditions", {}),
             "exit_conditions": gene_data.get("exit_conditions", {}),
+            "tpsl_gene": gene_data.get("tpsl_gene", None),
+            "long_tpsl_gene": gene_data.get("long_tpsl_gene", None),
+            "short_tpsl_gene": gene_data.get("short_tpsl_gene", None),
+            "position_sizing_gene": gene_data.get("position_sizing_gene", None),
         }
 
     def _extract_performance_metrics(
