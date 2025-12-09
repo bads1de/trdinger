@@ -222,23 +222,27 @@ class UniversalStrategy(Strategy):
         return self.condition_evaluator.evaluate_conditions(exit_conditions, self)
 
     def _calculate_position_size(self) -> float:
-        """ポジションサイズを計算（キャッシュ付き高速版）"""
+        """
+        ポジションサイズを計算
+
+        Note: キャッシュを使用しない。エントリー時に毎回計算することで、
+        口座残高の変動（複利効果）に対応する。
+        """
         try:
             # PositionSizingGeneが有効な場合
             if (
                 self.gene.position_sizing_gene
                 and self.gene.position_sizing_gene.enabled
             ):
-                # キャッシュチェック：同一遺伝子設定では再計算しない
-                if hasattr(self, "_cached_position_size"):
-                    return self._cached_position_size
-
                 # 現在の市場データ（該当するものがなければデフォルト値を使用）
                 current_price = (
                     self.data.Close[-1]
                     if hasattr(self, "data") and len(self.data.Close) > 0
                     else 50000.0
                 )
+
+                # 現在の口座残高を取得（backtesting.py の equity 属性）
+                # これにより複利効果が機能する
                 account_balance = getattr(
                     self, "equity", 100000.0
                 )  # デフォルト口座残高
@@ -252,9 +256,8 @@ class UniversalStrategy(Strategy):
                     )
                 )
 
-                # 結果を安全範囲に制限してキャッシュ
-                self._cached_position_size = max(0.001, min(0.2, float(position_size)))
-                return self._cached_position_size
+                # 結果を安全範囲に制限
+                return max(0.001, min(0.2, float(position_size)))
             else:
                 # デフォルトサイズを使用
                 return 0.01
@@ -278,23 +281,24 @@ class UniversalStrategy(Strategy):
                 long_signal = self._check_long_entry_conditions()
                 short_signal = self._check_short_entry_conditions()
 
-                # ステートフル条件も評価
-                stateful_signal = self._check_stateful_conditions()
+                # ステートフル条件も評価（方向情報付き）
+                stateful_direction = self._get_stateful_entry_direction()
 
                 # 通常条件またはステートフル条件いずれかでエントリー
-                if long_signal or short_signal or stateful_signal:
+                if long_signal or short_signal or stateful_direction is not None:
                     # ポジションサイズを決定
                     position_size = self._calculate_position_size()
                     current_price = self.data.Close[-1]
 
                     # エントリー方向を決定
+                    # 優先順位: long_signal > short_signal > stateful_direction
                     direction = 0.0
                     if long_signal:
                         direction = 1.0
                     elif short_signal:
                         direction = -1.0
-                    # Note: stateful_signalのみの場合は、方向が不明確なためスキップされる
-                    # (将来的にStatefulConditionに方向性を持たせる修正が必要)
+                    elif stateful_direction is not None:
+                        direction = stateful_direction
 
                     # TP/SL価格を計算
                     sl_price = None
@@ -340,14 +344,14 @@ class UniversalStrategy(Strategy):
                                 )
                             )
 
-                    # 取引実行
-                    if long_signal:
+                    # 取引実行（direction に基づいて実行）
+                    if direction > 0:  # Long
                         if sl_price and tp_price:
                             self.buy(size=position_size, sl=sl_price, tp=tp_price)
                         else:
                             self.buy(size=position_size)
 
-                    elif short_signal:
+                    elif direction < 0:  # Short
                         if sl_price and tp_price:
                             self.sell(size=position_size, sl=sl_price, tp=tp_price)
                         else:
@@ -403,3 +407,31 @@ class UniversalStrategy(Strategy):
                     return True
 
         return False
+
+    def _get_stateful_entry_direction(self) -> "float | None":
+        """
+        成立したステートフル条件からエントリー方向を取得
+
+        いずれかのステートフル条件が成立していれば、その条件に設定された
+        direction を元にエントリー方向を返します。
+
+        Returns:
+            1.0 (Long), -1.0 (Short), または None（条件不成立時）
+        """
+        if not self.gene or not hasattr(self.gene, "stateful_conditions"):
+            return None
+
+        for stateful_cond in self.gene.stateful_conditions:
+            if stateful_cond.enabled:
+                result = self.condition_evaluator.evaluate_stateful_condition(
+                    stateful_cond,
+                    self,
+                    self.state_tracker,
+                    self._current_bar_index,
+                )
+                if result:
+                    # direction フィールドに基づいてエントリー方向を返す
+                    direction = getattr(stateful_cond, "direction", "long")
+                    return 1.0 if direction == "long" else -1.0
+
+        return None

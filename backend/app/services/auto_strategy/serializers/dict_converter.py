@@ -535,6 +535,7 @@ class DictConverter:
                 ),
                 "lookback_bars": stateful_condition.lookback_bars,
                 "cooldown_bars": stateful_condition.cooldown_bars,
+                "direction": getattr(stateful_condition, "direction", "long"),
                 "enabled": stateful_condition.enabled,
             }
 
@@ -566,6 +567,7 @@ class DictConverter:
                 follow_condition=follow_condition,
                 lookback_bars=data.get("lookback_bars", 5),
                 cooldown_bars=data.get("cooldown_bars", 0),
+                direction=data.get("direction", "long"),
                 enabled=data.get("enabled", True),
             )
 

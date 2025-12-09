@@ -10,11 +10,14 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 from .condition import Condition
 
 logger = logging.getLogger(__name__)
+
+# ステートフル条件のエントリー方向
+EntryDirection = Literal["long", "short"]
 
 
 class StateTracker:
@@ -99,6 +102,7 @@ class StatefulCondition:
         follow_condition: トリガー発生後に評価する条件
         lookback_bars: トリガー発生後、何バー以内にfollow_conditionが成立すれば有効か
         cooldown_bars: 条件成立後、次のトリガー記録までの待機バー数（オプション）
+        direction: エントリー方向 ("long" または "short")。条件成立時の売買方向を指定。
         enabled: この条件が有効かどうか
     """
 
@@ -106,6 +110,7 @@ class StatefulCondition:
     follow_condition: Condition
     lookback_bars: int = 5
     cooldown_bars: int = 0
+    direction: EntryDirection = "long"  # デフォルトはロング
     enabled: bool = True
 
     def validate(self) -> Tuple[bool, List[str]]:

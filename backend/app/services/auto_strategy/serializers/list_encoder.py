@@ -12,6 +12,21 @@ from ..utils.gene_utils import GeneUtils
 logger = logging.getLogger(__name__)
 
 
+class NormalizationConstants:
+    """正規化定数"""
+
+    INDICATOR_ID_DIVISOR = 100.0
+    ATR_PERIOD_DIVISOR = 100.0
+    LOOKBACK_PERIOD_DIVISOR = 1000.0
+    PS_LOOKBACK_DIVISOR = 100.0
+
+    # Encoding Lengths
+    INDICATOR_BLOCK_SIZE = 2
+    CONDITION_BLOCK_SIZE = 3
+    TPSL_BLOCK_SIZE = 8
+    POSITION_SIZING_BLOCK_SIZE = 8
+
+
 class ListEncoder:
     """
     リストエンコードクラス
@@ -57,7 +72,7 @@ class ListEncoder:
 
                 # 指標IDを0-1の範囲に正規化してエンコード
                 normalized_id = (
-                    indicator_id / 100.0
+                    indicator_id / NormalizationConstants.INDICATOR_ID_DIVISOR
                     if indicator_id > 0
                     else 0.0  # 指標IDの範囲を想定
                 )
@@ -68,14 +83,18 @@ class ListEncoder:
                 entry_cond = strategy_gene.entry_conditions[0]
                 entry_encoded = self._encode_condition(entry_cond)
             else:
-                entry_encoded = [0, 0, 0]  # デフォルト
+                entry_encoded = [
+                    0.0
+                ] * NormalizationConstants.CONDITION_BLOCK_SIZE  # デフォルト
 
             # イグジット条件（簡略化: 最初の条件のみ）
             if strategy_gene.exit_conditions:
                 exit_cond = strategy_gene.exit_conditions[0]
                 exit_encoded = self._encode_condition(exit_cond)
             else:
-                exit_encoded = [0, 0, 0]  # デフォルト
+                exit_encoded = [
+                    0.0
+                ] * NormalizationConstants.CONDITION_BLOCK_SIZE  # デフォルト
 
             encoded.extend(entry_encoded)
             encoded.extend(exit_encoded)
@@ -96,7 +115,13 @@ class ListEncoder:
             logger.error(f"戦略遺伝子エンコードエラー: {e}")
             # エラー時はデフォルトエンコードを返す
             # 長さ = 指標数*2 + エントリー*3 + イグジット*3 + TPSL*8 + ポジション*8
-            expected_len = max_indicators * 2 + 3 + 3 + 8 + 8
+            expected_len = (
+                max_indicators * NormalizationConstants.INDICATOR_BLOCK_SIZE
+                + NormalizationConstants.CONDITION_BLOCK_SIZE
+                + NormalizationConstants.CONDITION_BLOCK_SIZE
+                + NormalizationConstants.TPSL_BLOCK_SIZE
+                + NormalizationConstants.POSITION_SIZING_BLOCK_SIZE
+            )
             return [0.0] * expected_len
 
     def _get_indicator_id(self, indicator_type: str) -> int:
@@ -138,13 +163,13 @@ class ListEncoder:
             return [0.5, 0.5, 0.0]
         except Exception as e:
             logger.error(f"条件エンコードエラー: {e}")
-            return [0.0, 0.0, 0.0]
+            return [0.0] * NormalizationConstants.CONDITION_BLOCK_SIZE
 
     def _encode_tpsl_gene(self, tpsl_gene) -> List[float]:
         """TP/SL遺伝子をエンコード"""
         try:
             if not tpsl_gene or not tpsl_gene.enabled:
-                return [0.0] * 8
+                return [0.0] * NormalizationConstants.TPSL_BLOCK_SIZE
 
             # 基本的なエンコード
             encoded = [
@@ -154,19 +179,21 @@ class ListEncoder:
                 tpsl_gene.risk_reward_ratio or 2.0,
                 tpsl_gene.atr_multiplier_sl or 2.0,
                 tpsl_gene.atr_multiplier_tp or 3.0,
-                (tpsl_gene.atr_period or 14) / 100.0,
-                (tpsl_gene.lookback_period or 100) / 1000.0,
+                (tpsl_gene.atr_period or 14)
+                / NormalizationConstants.ATR_PERIOD_DIVISOR,
+                (tpsl_gene.lookback_period or 100)
+                / NormalizationConstants.LOOKBACK_PERIOD_DIVISOR,
             ]
-            return encoded[:8]
+            return encoded[: NormalizationConstants.TPSL_BLOCK_SIZE]
         except Exception as e:
             logger.error(f"TP/SL遺伝子エンコードエラー: {e}")
-            return [0.0] * 8
+            return [0.0] * NormalizationConstants.TPSL_BLOCK_SIZE
 
     def _encode_position_sizing_gene(self, ps_gene) -> List[float]:
         """ポジションサイジング遺伝子をエンコード"""
         try:
             if not ps_gene or not ps_gene.enabled:
-                return [0.0] * 8
+                return [0.0] * NormalizationConstants.POSITION_SIZING_BLOCK_SIZE
 
             # 基本的なエンコード
             encoded = [
@@ -176,10 +203,11 @@ class ListEncoder:
                 ps_gene.fixed_quantity or 0.01,
                 ps_gene.atr_multiplier or 2.0,
                 ps_gene.optimal_f_multiplier or 0.5,
-                (ps_gene.lookback_period or 30) / 100.0,
+                (ps_gene.lookback_period or 30)
+                / NormalizationConstants.PS_LOOKBACK_DIVISOR,
                 ps_gene.min_position_size or 0.001,
             ]
-            return encoded[:8]
+            return encoded[: NormalizationConstants.POSITION_SIZING_BLOCK_SIZE]
         except Exception as e:
             logger.error(f"ポジションサイジング遺伝子エンコードエラー: {e}")
-            return [0.0] * 8
+            return [0.0] * NormalizationConstants.POSITION_SIZING_BLOCK_SIZE
