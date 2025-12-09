@@ -225,6 +225,23 @@ class GASettings(BaseConfig):
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None
 
+    # リスク制限設定
+    risk_limits: Dict[str, List[float]] = field(
+        default_factory=lambda: {
+            "position_size": [0.01, 1.0],  # min, max (ratio)
+        }
+    )
+
+    # 階層的GA設定（サブGA）
+    hierarchical_ga_config: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "population_size": 20,
+            "generations": 10,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.2,
+        }
+    )
+
     def get_default_values(self) -> Dict[str, Any]:
         """デフォルト値を取得（自動生成を利用）"""
         # フィールドから自動生成したデフォルト値を取得
@@ -283,3 +300,10 @@ class GASettings(BaseConfig):
             self.crossover_rate = float(self.crossover_rate)
         if isinstance(self.mutation_rate, int):
             self.mutation_rate = float(self.mutation_rate)
+
+        # Validate risk limits
+        if hasattr(self, "risk_limits") and self.risk_limits:
+            if "position_size" in self.risk_limits:
+                ps_limits = self.risk_limits["position_size"]
+                if len(ps_limits) != 2 or ps_limits[0] > ps_limits[1]:
+                    raise ValueError("invalid position_size limits in risk_limits")

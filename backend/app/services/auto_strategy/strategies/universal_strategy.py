@@ -308,10 +308,14 @@ class UniversalStrategy(Strategy):
                             market_data = {}
                             tpsl_method = active_tpsl_gene.method
 
-                            # ボラティリティベースまたは適応型の場合、OHLCデータを作成
+                            # ボラティリティベース、適応型、または統計的手法の場合、OHLCデータを作成
                             if (
                                 tpsl_method
-                                in (TPSLMethod.VOLATILITY_BASED, TPSLMethod.ADAPTIVE)
+                                in (
+                                    TPSLMethod.VOLATILITY_BASED,
+                                    TPSLMethod.ADAPTIVE,
+                                    TPSLMethod.STATISTICAL,
+                                )
                                 and len(self.data) > 30
                             ):
                                 # 過去30本のデータを取得（ATR計算用）
@@ -327,11 +331,13 @@ class UniversalStrategy(Strategy):
                                 ]
 
                             # TPSLServiceを使用して価格を計算
-                            sl_price, tp_price = self.tpsl_service.calculate_tpsl_prices(
-                                current_price=current_price,
-                                tpsl_gene=active_tpsl_gene,
-                                position_direction=direction,
-                                market_data=market_data,
+                            sl_price, tp_price = (
+                                self.tpsl_service.calculate_tpsl_prices(
+                                    current_price=current_price,
+                                    tpsl_gene=active_tpsl_gene,
+                                    position_direction=direction,
+                                    market_data=market_data,
+                                )
                             )
 
                     # 取引実行

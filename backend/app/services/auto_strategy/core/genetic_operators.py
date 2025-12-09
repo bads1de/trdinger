@@ -117,9 +117,22 @@ def _mutate_indicators(mutated, gene, mutation_rate, config):
                     isinstance(param_value, (int, float))
                     and random.random() < mutation_rate
                 ):
-                    if param_name == "period":
+                    if (
+                        param_name == "period"
+                        and hasattr(config, "parameter_ranges")
+                        and "period" in config.parameter_ranges
+                    ):
+                        # 期間パラメータの上限下限をConfigから取得
+                        min_p, max_p = config.parameter_ranges["period"]
                         mutated.indicators[i].parameters[param_name] = max(
-                            1, min(200, int(param_value * random.uniform(min_multiplier, max_multiplier)))
+                            min_p,
+                            min(
+                                max_p,
+                                int(
+                                    param_value
+                                    * random.uniform(min_multiplier, max_multiplier)
+                                ),
+                            ),
                         )
                     else:
                         mutated.indicators[i].parameters[param_name] = (
@@ -131,16 +144,21 @@ def _mutate_indicators(mutated, gene, mutation_rate, config):
         max_indicators = config.max_indicators
 
         # 指標追加の確率
-        if len(mutated.indicators) < max_indicators and random.random() < config.indicator_add_vs_delete_probability:
+        if (
+            len(mutated.indicators) < max_indicators
+            and random.random() < config.indicator_add_vs_delete_probability
+        ):
             # 新しい指標を追加
             from ..generators.random_gene_generator import RandomGeneGenerator
 
-            generator = RandomGeneGenerator(config) # configを渡す
+            generator = RandomGeneGenerator(config)  # configを渡す
             new_indicators = generator.indicator_generator.generate_random_indicators()
             if new_indicators:
                 mutated.indicators.append(random.choice(new_indicators))
         # 指標削除の確率
-        elif len(mutated.indicators) > config.min_indicators and random.random() < (1 - config.indicator_add_vs_delete_probability):
+        elif len(mutated.indicators) > config.min_indicators and random.random() < (
+            1 - config.indicator_add_vs_delete_probability
+        ):
             # 指標を削除
             mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
@@ -178,14 +196,20 @@ def _mutate_conditions(mutated, mutation_rate, config):
     """
     if random.random() < mutation_rate * config.condition_change_probability_multiplier:
         # エントリー条件の変更
-        if mutated.entry_conditions and random.random() < config.condition_selection_probability:
+        if (
+            mutated.entry_conditions
+            and random.random() < config.condition_selection_probability
+        ):
             condition_idx = random.randint(0, len(mutated.entry_conditions) - 1)
             condition = mutated.entry_conditions[condition_idx]
             _mutate_condition_item(condition, mutation_rate, config)
 
     if random.random() < mutation_rate * config.condition_change_probability_multiplier:
         # エグジット条件の変更
-        if mutated.exit_conditions and random.random() < config.condition_selection_probability:
+        if (
+            mutated.exit_conditions
+            and random.random() < config.condition_selection_probability
+        ):
             condition_idx = random.randint(0, len(mutated.exit_conditions) - 1)
             condition = mutated.exit_conditions[condition_idx]
             _mutate_condition_item(condition, mutation_rate, config)
@@ -218,7 +242,10 @@ def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):
 
 
 def crossover_strategy_genes_pure(
-    parent1: StrategyGene, parent2: StrategyGene, config, crossover_type: str = "uniform"
+    parent1: StrategyGene,
+    parent2: StrategyGene,
+    config,
+    crossover_type: str = "uniform",
 ) -> tuple[StrategyGene, StrategyGene]:
     """
     戦略遺伝子の交叉（純粋版）
@@ -397,10 +424,14 @@ def uniform_crossover(
 
         # 各フィールドに対してランダム選択
         child1_indicators = (
-            parent1.indicators if random.random() < selection_prob else parent2.indicators
+            parent1.indicators
+            if random.random() < selection_prob
+            else parent2.indicators
         )
         child2_indicators = (
-            parent2.indicators if random.random() < selection_prob else parent1.indicators
+            parent2.indicators
+            if random.random() < selection_prob
+            else parent1.indicators
         )
 
         child1_entry_conditions = (
@@ -466,10 +497,14 @@ def uniform_crossover(
         )
 
         child1_long_tpsl_gene = (
-            parent1.long_tpsl_gene if random.random() < selection_prob else parent2.long_tpsl_gene
+            parent1.long_tpsl_gene
+            if random.random() < selection_prob
+            else parent2.long_tpsl_gene
         )
         child2_long_tpsl_gene = (
-            parent2.long_tpsl_gene if random.random() < selection_prob else parent1.long_tpsl_gene
+            parent2.long_tpsl_gene
+            if random.random() < selection_prob
+            else parent1.long_tpsl_gene
         )
 
         child1_short_tpsl_gene = (
@@ -551,7 +586,7 @@ def crossover_strategy_genes(
         parent1: 親1の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
         parent2: 親2の戦略遺伝子（StrategyGeneまたはIndividualオブジェクト）
         config: GAConfigオブジェクト
-        
+
     Returns:
         交叉後の子1、子2の戦略遺伝子のタプル
     """
@@ -622,11 +657,18 @@ def mutate_strategy_gene_pure(
                 if key == "position_size":
                     # ポジションサイズの場合
                     mutated.risk_management[key] = max(
-                        0.01, min(1.0, value * random.uniform(min_risk_multiplier, max_risk_multiplier))
+                        0.01,
+                        min(
+                            1.0,
+                            value
+                            * random.uniform(min_risk_multiplier, max_risk_multiplier),
+                        ),
                     )
                 else:
                     # その他の数値設定
-                    mutated.risk_management[key] = value * random.uniform(min_risk_multiplier, max_risk_multiplier)
+                    mutated.risk_management[key] = value * random.uniform(
+                        min_risk_multiplier, max_risk_multiplier
+                    )
 
         # TP/SL遺伝子の突然変異
         tpsl_gene = mutated.tpsl_gene
@@ -635,7 +677,10 @@ def mutate_strategy_gene_pure(
                 mutated.tpsl_gene = mutate_tpsl_gene(tpsl_gene, mutation_rate)
         else:
             # TP/SL遺伝子が存在しない場合、低確率で新規作成
-            if random.random() < mutation_rate * config.tpsl_gene_creation_probability_multiplier:
+            if (
+                random.random()
+                < mutation_rate * config.tpsl_gene_creation_probability_multiplier
+            ):
                 mutated.tpsl_gene = create_random_tpsl_gene()
 
         # Long TP/SL遺伝子の突然変異
@@ -645,7 +690,10 @@ def mutate_strategy_gene_pure(
                     mutated.long_tpsl_gene, mutation_rate
                 )
         else:
-            if random.random() < mutation_rate * config.tpsl_gene_creation_probability_multiplier:
+            if (
+                random.random()
+                < mutation_rate * config.tpsl_gene_creation_probability_multiplier
+            ):
                 mutated.long_tpsl_gene = create_random_tpsl_gene()
 
         # Short TP/SL遺伝子の突然変異
@@ -655,7 +703,10 @@ def mutate_strategy_gene_pure(
                     mutated.short_tpsl_gene, mutation_rate
                 )
         else:
-            if random.random() < mutation_rate * config.tpsl_gene_creation_probability_multiplier:
+            if (
+                random.random()
+                < mutation_rate * config.tpsl_gene_creation_probability_multiplier
+            ):
                 mutated.short_tpsl_gene = create_random_tpsl_gene()
 
         # ポジションサイジング遺伝子の突然変異
@@ -667,7 +718,11 @@ def mutate_strategy_gene_pure(
                 )
         else:
             # ポジションサイジング遺伝子が存在しない場合、低確率で新規作成
-            if random.random() < mutation_rate * config.position_sizing_gene_creation_probability_multiplier:
+            if (
+                random.random()
+                < mutation_rate
+                * config.position_sizing_gene_creation_probability_multiplier
+            ):
                 from ..models.strategy_models import (
                     create_random_position_sizing_gene,
                 )
@@ -879,10 +934,16 @@ def adaptive_mutate_strategy_gene_pure(
 
             if variance > variance_threshold:
                 # 多様性が高い：rateを減少
-                adaptive_rate = base_mutation_rate * config.adaptive_mutation_rate_decrease_multiplier
+                adaptive_rate = (
+                    base_mutation_rate
+                    * config.adaptive_mutation_rate_decrease_multiplier
+                )
             else:
                 # 収束している：rateを増加
-                adaptive_rate = base_mutation_rate * config.adaptive_mutation_rate_increase_multiplier
+                adaptive_rate = (
+                    base_mutation_rate
+                    * config.adaptive_mutation_rate_increase_multiplier
+                )
 
             # 0.01-1.0の範囲にクリップ
             adaptive_rate = max(0.01, min(1.0, adaptive_rate))

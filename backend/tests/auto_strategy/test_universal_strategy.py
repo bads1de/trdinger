@@ -265,4 +265,61 @@ class TestUniversalStrategy:
 
             # ステートフル条件でエントリーが発生したはず
             # （buyが呼ばれたか、またはステートフル条件評価メソッドが呼ばれたか）
+            # ステートフル条件でエントリーが発生したはず
+            # （buyが呼ばれたか、またはステートフル条件評価メソッドが呼ばれたか）
             assert strategy._current_bar_index == 1  # バーインデックスがインクリメント
+
+    def test_tpsl_statistical_method(self, mock_broker, mock_data, valid_gene):
+        """統計的TPSL方式のデータ受け渡しテスト"""
+        tpsl_gene = TPSLGene(
+            enabled=True,
+            method=TPSLMethod.STATISTICAL,
+            atr_period=20,
+            confidence_threshold=0.95,
+        )
+        valid_gene.tpsl_gene = tpsl_gene
+        params = {"strategy_gene": valid_gene}
+
+        with patch(
+            "app.services.auto_strategy.strategies.universal_strategy.ConditionEvaluator"
+        ) as MockEval:
+            mock_evaluator = MockEval.return_value
+
+            # TPSLServiceをモック
+            with patch(
+                "app.services.auto_strategy.strategies.universal_strategy.TPSLService"
+            ) as MockTPSL:
+                mock_tpsl_service = MockTPSL.return_value
+                mock_tpsl_service.calculate_tpsl_prices.return_value = (90.0, 110.0)
+
+                strategy = UniversalStrategy(mock_broker, mock_data, params)
+                strategy.buy = MagicMock()
+
+                with patch.object(
+                    UniversalStrategy, "position", new_callable=PropertyMock
+                ) as mock_position:
+                    mock_position.return_value = None
+                    # ロング成立
+                    mock_evaluator.evaluate_conditions.return_value = True
+
+                    # データを十分に用意する（30件以上）
+                    # mock_dataはlen()=3なので、ここで少しハックするか、Strategyのdata.Close等のlenを欺く必要があるが
+                    # verify_backtesting_behavior.pyで見たようにbacktesting.pyの挙動に依存するため
+                    # ここでは戦略内の len(self.data) が 30を超えるように、data.__len__ を調整
+                    mock_data.__len__.return_value = 50
+                    # Closeなども長くする
+                    mock_data.Close = [100.0] * 50
+                    mock_data.High = [105.0] * 50
+                    mock_data.Low = [95.0] * 50
+
+                    strategy.next()
+
+                    # calculate_tpsl_prices が呼ばれた際の market_data を確認
+                    # 現状の実装では STATISTICAL は market_data 生成スキップされるため、ここで失敗するはず
+                    args, kwargs = mock_tpsl_service.calculate_tpsl_prices.call_args
+                    market_data = kwargs.get("market_data")
+
+                    # market_data が渡され、かつ ohlc_data が含まれていることを期待
+                    assert market_data is not None
+                    assert "ohlc_data" in market_data
+                    assert len(market_data["ohlc_data"]) == 30

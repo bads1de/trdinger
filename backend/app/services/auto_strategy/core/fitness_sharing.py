@@ -13,8 +13,10 @@ from scipy.spatial import cKDTree
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
-from ..models.strategy_models import StrategyGene
+from ..config.constants import OPERATORS
+from ..models.strategy_models import StrategyGene, ConditionGroup
 from ..serializers.gene_serialization import GeneSerializer
+from ..utils.indicator_utils import get_valid_indicator_types
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,31 @@ class FitnessSharing:
             sampling_ratio if sampling_ratio is not None else self.SAMPLING_RATIO
         )
 
+        # 指標タイプマップの初期化（ベクトル化用）
+        try:
+            self.indicator_types = get_valid_indicator_types()
+            # 安定した順序を保証するためにソート
+            self.indicator_types.sort()
+            self.indicator_map = {
+                name: i for i, name in enumerate(self.indicator_types)
+            }
+        except Exception as e:
+            logger.warning(f"指標タイプ取得失敗: {e}")
+            self.indicator_types = []
+            self.indicator_map = {}
+
+        # オペレータマップの初期化
+        try:
+            # 比較演算子に加えて論理演算子も評価対象にする
+            self.operator_types = OPERATORS.copy()
+            self.operator_types.extend(["AND", "OR"])
+            self.operator_types.sort()
+            self.operator_map = {op: i for i, op in enumerate(self.operator_types)}
+        except Exception as e:
+            logger.warning(f"オペレータタイプ取得失敗: {e}")
+            self.operator_types = []
+            self.operator_map = {}
+
     def apply_fitness_sharing(self, population: List[Any]) -> List[Any]:
         """
         個体群にフィットネス共有を適用（最適化版）
@@ -98,6 +125,17 @@ class FitnessSharing:
                 return population
 
             vectors = np.array(vectors)
+
+            # ベクトル次元数チェックとパディング（次元不一致対策）
+            max_dim = max(v.shape[0] for v in vectors if isinstance(v, np.ndarray))
+            vectors_padded = []
+            for v in vectors:
+                if v.shape[0] < max_dim:
+                    padding = np.zeros(max_dim - v.shape[0])
+                    vectors_padded.append(np.concatenate([v, padding]))
+                else:
+                    vectors_padded.append(v)
+            vectors = np.array(vectors_padded)
 
             # 最適化されたニッチカウント計算
             niche_counts_vectorized = self.compute_niche_counts_vectorized(vectors)
@@ -577,7 +615,145 @@ class FitnessSharing:
         else:
             features.append(0.01)
 
+        # 2. 指標タイプベクトル（Bag of Words）
+        # 利用可能な指標タイプの使用回数をカウント
+        if self.indicator_types:
+            indicator_vector = np.zeros(len(self.indicator_types))
+            for ind in gene.indicators:
+                if ind.type in self.indicator_map:
+                    idx = self.indicator_map[ind.type]
+                    indicator_vector[idx] += 1.0
+
+            features.extend(indicator_vector.tolist())
+
+        # 3. オペレータタイプベクトル（Bag of Words）
+        if self.operator_types:
+            operator_vector = np.zeros(len(self.operator_types))
+
+            # 条件を収集（すべての条件リストから）
+            all_conditions = []
+            if gene.entry_conditions:
+                all_conditions.extend(gene.entry_conditions)
+            if gene.exit_conditions:
+                all_conditions.extend(gene.exit_conditions)
+            if gene.long_entry_conditions:
+                all_conditions.extend(gene.long_entry_conditions)
+            if gene.short_entry_conditions:
+                all_conditions.extend(gene.short_entry_conditions)
+
+            # 再帰的にカウント
+            self._count_operators(all_conditions, operator_vector)
+
+            features.extend(operator_vector.tolist())
+
+        # 4. 時間軸特性（指標パラメータから推定）
+        # period等のパラメータ値の平均と最大を取得し、戦略の時間的性質（短期/長期）を捉える
+        period_values = []
+        period_keys = [
+            "period",
+            "fast_period",
+            "slow_period",
+            "signal_period",
+            "timeperiod",
+            "k_period",
+            "d_period",
+        ]
+
+        for ind in gene.indicators:
+            for key in period_keys:
+                if key in ind.parameters and isinstance(
+                    ind.parameters[key], (int, float)
+                ):
+                    period_values.append(float(ind.parameters[key]))
+
+        if period_values:
+            features.append(float(np.mean(period_values)))
+            features.append(float(np.max(period_values)))
+        else:
+            features.append(0.0)
+            features.append(0.0)
+
+        # 5. オペランド特性（定数比較 vs 動的比較）
+        # 右辺が数値（定数）か、指標/価格（動的値）かの比率
+        numeric_operands = 0.0
+        dynamic_operands = 0.0
+
+        all_conditions = []
+        if gene.entry_conditions:
+            all_conditions.extend(gene.entry_conditions)
+        if gene.exit_conditions:
+            all_conditions.extend(gene.exit_conditions)
+        if gene.long_entry_conditions:
+            all_conditions.extend(gene.long_entry_conditions)
+        if gene.short_entry_conditions:
+            all_conditions.extend(gene.short_entry_conditions)
+
+        numeric_operands, dynamic_operands = self._count_operand_types(all_conditions)
+
+        features.append(numeric_operands)
+        features.append(dynamic_operands)
+
         return np.array(features)
+
+    def _count_operators(self, conditions: List[Any], vector: np.ndarray):
+        """条件リスト内のオペレータを再帰的にカウント"""
+        for cond in conditions:
+            if isinstance(cond, ConditionGroup):
+                # ConditionGroupのoperator (AND/OR) もカウント
+                if cond.operator and cond.operator in self.operator_map:
+                    idx = self.operator_map[cond.operator]
+                    vector[idx] += 1.0
+
+                # ここでは内部のconditionsを再帰的に処理
+                if cond.conditions:
+                    self._count_operators(cond.conditions, vector)
+            elif hasattr(cond, "operator"):
+                # 通常のCondition
+                op = cond.operator
+                if op in self.operator_map:
+                    idx = self.operator_map[op]
+                    vector[idx] += 1.0
+
+    def _count_operand_types(self, conditions: List[Any]) -> tuple[float, float]:
+        """
+        オペランドのタイプ（数値/動的）をカウント
+
+        Args:
+            conditions: 条件リスト
+
+        Returns:
+            (numeric_count, dynamic_count)
+        """
+        numeric = 0.0
+        dynamic = 0.0
+
+        for cond in conditions:
+            if isinstance(cond, ConditionGroup):
+                if cond.conditions:
+                    n, d = self._count_operand_types(cond.conditions)
+                    numeric += n
+                    dynamic += d
+            elif hasattr(cond, "right_operand"):
+                # right_operand をチェック
+                op_val = cond.right_operand
+
+                # 数値型判定
+                is_numeric = False
+                if isinstance(op_val, (int, float)):
+                    is_numeric = True
+                elif isinstance(op_val, str):
+                    try:
+                        float(op_val)
+                        is_numeric = True
+                    except ValueError:
+                        is_numeric = False
+
+                if is_numeric:
+                    numeric += 1.0
+                else:
+                    dynamic += 1.0
+
+        return numeric, dynamic
 
     def _sharing_function(self, similarity: float) -> float:
         """

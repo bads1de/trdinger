@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from app.services.backtest.backtest_service import BacktestService
 from app.services.indicators.config import indicator_registry
@@ -35,15 +35,19 @@ class ConditionGenerator:
     """
 
     @safe_operation(context="ConditionGenerator初期化", is_api_call=False)
-    def __init__(self, enable_smart_generation: bool = True):
+    def __init__(
+        self, enable_smart_generation: bool = True, ga_config: Optional[Any] = None
+    ):
         """
         初期化（統合後）
 
         Args:
             enable_smart_generation: 新しいスマート生成を有効にするか
+            ga_config: GAConfigオブジェクト (オプション)
         """
         self.enable_smart_generation = enable_smart_generation
         self.logger = logger
+        self.ga_config_obj = ga_config  # GAConfigオブジェクトを保持
 
         # YAML設定を読み込み
         self.yaml_config = YamlIndicatorUtils.load_yaml_config_for_indicators()
@@ -100,11 +104,16 @@ class ConditionGenerator:
         strategy = ComplexConditionsStrategy(self)
         longs, shorts, exits = strategy.generate_conditions(indicators)
 
-        # 条件数を3個以内に制限
-        if len(longs) > 3:
-            longs = random.sample(longs, 3) if len(longs) >= 3 else longs
-        if len(shorts) > 3:
-            shorts = random.sample(shorts, 3) if len(shorts) >= 3 else shorts
+        # 条件数制限を取得（configからまたはデフォルト）
+        max_conditions = 3
+        if self.ga_config_obj and hasattr(self.ga_config_obj, "max_conditions"):
+            max_conditions = self.ga_config_obj.max_conditions
+
+        # 条件数を制限
+        if len(longs) > max_conditions:
+            longs = random.sample(longs, max_conditions)
+        if len(shorts) > max_conditions:
+            shorts = random.sample(shorts, max_conditions)
 
         # 条件が生成できなかった場合は例外を投げる
         if not longs:
@@ -247,7 +256,9 @@ class ConditionGenerator:
 
         cfg = indicator_registry.get_indicator_config(indicator.type)
         logger.debug(f"[_get_indicator_type] Checking indicator.type: {indicator.type}")
-        logger.debug(f"[_get_indicator_type] indicator_registry._configs keys: {list(indicator_registry._configs.keys())}")
+        logger.debug(
+            f"[_get_indicator_type] indicator_registry._configs keys: {list(indicator_registry._configs.keys())}"
+        )
         if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
             cat = getattr(cfg, "category")
             if cat == "momentum":
@@ -317,6 +328,7 @@ class GAConditionGenerator(ConditionGenerator):
         enable_smart_generation: bool = True,
         use_hierarchical_ga: bool = True,
         backtest_service: Optional["BacktestService"] = None,  # 型アノテーションのみ
+        ga_config: Optional[Any] = None,
     ):
         """
         拡張条件生成器の初期化
@@ -325,9 +337,10 @@ class GAConditionGenerator(ConditionGenerator):
             enable_smart_generation: スマート生成を有効にするか
             use_hierarchical_ga: 階層的GAを有効にするか（デフォルト: True）
             backtest_service: バックテストサービス（ConditionEvolver用）
+            ga_config: GAConfigオブジェクト
         """
         # 親クラスの初期化
-        super().__init__(enable_smart_generation)
+        super().__init__(enable_smart_generation, ga_config)
 
         # 階層的GA設定
         self.use_hierarchical_ga = use_hierarchical_ga
@@ -341,6 +354,10 @@ class GAConditionGenerator(ConditionGenerator):
             "crossover_rate": 0.8,
             "mutation_rate": 0.2,
         }
+
+        if self.ga_config_obj and hasattr(self.ga_config_obj, "hierarchical_ga_config"):
+            # Configのサブ設定で上書き
+            self.ga_config.update(self.ga_config_obj.hierarchical_ga_config)
 
         # 初期化状態
         self._ga_initialized = False
@@ -505,10 +522,14 @@ class GAConditionGenerator(ConditionGenerator):
                 exit_conditions = fallback_exits
 
             # 条件数を制限
-            if len(long_conditions) > 3:
-                long_conditions = random.sample(long_conditions, 3)
-            if len(short_conditions) > 3:
-                short_conditions = random.sample(short_conditions, 3)
+            max_conditions = 3
+            if self.ga_config_obj and hasattr(self.ga_config_obj, "max_conditions"):
+                max_conditions = self.ga_config_obj.max_conditions
+
+            if len(long_conditions) > max_conditions:
+                long_conditions = random.sample(long_conditions, max_conditions)
+            if len(short_conditions) > max_conditions:
+                short_conditions = random.sample(short_conditions, max_conditions)
 
             self.logger.info(
                 f"階層的GA条件生成完了: "
