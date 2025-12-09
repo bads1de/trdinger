@@ -395,3 +395,45 @@ class PositionSizingService:
             return result.position_size
 
         return _calculate_position_size_simple()
+
+    def calculate_position_size_fast(
+        self,
+        gene,
+        account_balance: float,
+        current_price: float,
+    ) -> float:
+        """
+        高速ポジションサイズ計算（バックテスト用）
+
+        詳細なリスクメトリクス計算（VaR、Expected Shortfall等）をスキップし、
+        純粋なポジションサイズのみを高速に計算します。
+        バックテストループ内での使用に最適化されています。
+
+        Args:
+            gene: ポジションサイジング遺伝子
+            account_balance: 口座残高
+            current_price: 現在価格
+
+        Returns:
+            ポジションサイズ（数量）
+        """
+        try:
+            # 入力値の簡易検証（フルバリデーションをスキップ）
+            if not gene or account_balance <= 0 or current_price <= 0:
+                return 0.01  # デフォルトサイズ
+
+            # 計算機の選択と実行（市場データなしで高速実行）
+            calculator = self._calculator_factory.create_calculator(gene.method.value)
+            result = calculator.calculate(
+                gene,
+                account_balance,
+                current_price,
+                market_data={},  # 軽量化のため空
+                trade_history=None,
+            )
+
+            return result["position_size"]
+
+        except Exception as e:
+            self.logger.warning(f"高速ポジションサイズ計算エラー: {e}")
+            return 0.01  # デフォルトサイズ

@@ -103,6 +103,10 @@ class DictConverter:
                     if getattr(strategy_gene, "position_sizing_gene", None)
                     else None
                 ),
+                "stateful_conditions": [
+                    self.stateful_condition_to_dict(sc)
+                    for sc in getattr(strategy_gene, "stateful_conditions", [])
+                ],
                 "metadata": strategy_gene.metadata,
             }
 
@@ -436,6 +440,13 @@ class DictConverter:
             if not short_entry_conditions and entry_conditions:
                 short_entry_conditions = entry_conditions
 
+            # ステートフル条件の復元
+            stateful_conditions = [
+                self.dict_to_stateful_condition(sc_data)
+                for sc_data in data.get("stateful_conditions", [])
+                if sc_data is not None
+            ]
+
             return strategy_gene_class(
                 id=data.get("id", str(uuid.uuid4())),
                 indicators=indicators,
@@ -443,6 +454,7 @@ class DictConverter:
                 long_entry_conditions=long_entry_conditions,
                 short_entry_conditions=short_entry_conditions,
                 exit_conditions=exit_conditions,
+                stateful_conditions=stateful_conditions,
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,
                 position_sizing_gene=position_sizing_gene,
@@ -476,3 +488,66 @@ class DictConverter:
         except Exception as e:
             logger.error(f"条件辞書復元エラー: {e}")
             raise ValueError(f"条件の復元に失敗: {e}")
+
+    def stateful_condition_to_dict(
+        self, stateful_condition
+    ) -> Optional[Dict[str, Any]]:
+        """
+        StatefulCondition を辞書形式に変換
+
+        Args:
+            stateful_condition: StatefulCondition オブジェクト
+
+        Returns:
+            辞書形式のデータ
+        """
+        try:
+            if stateful_condition is None:
+                return None
+
+            return {
+                "trigger_condition": self.condition_to_dict(
+                    stateful_condition.trigger_condition
+                ),
+                "follow_condition": self.condition_to_dict(
+                    stateful_condition.follow_condition
+                ),
+                "lookback_bars": stateful_condition.lookback_bars,
+                "cooldown_bars": stateful_condition.cooldown_bars,
+                "enabled": stateful_condition.enabled,
+            }
+
+        except Exception as e:
+            logger.error(f"StatefulCondition辞書変換エラー: {e}")
+            raise ValueError(f"StatefulConditionの辞書変換に失敗: {e}")
+
+    def dict_to_stateful_condition(self, data: Dict[str, Any]):
+        """
+        辞書形式から StatefulCondition を復元
+
+        Args:
+            data: 辞書形式のデータ
+
+        Returns:
+            StatefulCondition オブジェクト
+        """
+        try:
+            if data is None:
+                return None
+
+            from ..models.stateful_condition import StatefulCondition
+
+            trigger_condition = self.dict_to_condition(data["trigger_condition"])
+            follow_condition = self.dict_to_condition(data["follow_condition"])
+
+            return StatefulCondition(
+                trigger_condition=trigger_condition,
+                follow_condition=follow_condition,
+                lookback_bars=data.get("lookback_bars", 5),
+                cooldown_bars=data.get("cooldown_bars", 0),
+                enabled=data.get("enabled", True),
+            )
+
+        except Exception as e:
+            logger.error(f"StatefulCondition復元エラー: {e}")
+            raise ValueError(f"StatefulConditionの復元に失敗: {e}")

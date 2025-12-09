@@ -11,6 +11,7 @@ from .condition import Condition, ConditionGroup
 from .enums import PositionSizingMethod
 from .indicator_gene import IndicatorGene
 from .position_sizing_gene import PositionSizingGene
+from .stateful_condition import StatefulCondition
 from .tpsl_gene import TPSLGene
 
 
@@ -34,6 +35,7 @@ class StrategyGene:
     short_entry_conditions: List[Union[Condition, ConditionGroup]] = field(
         default_factory=list
     )
+    stateful_conditions: List[StatefulCondition] = field(default_factory=list)
     risk_management: Dict[str, Any] = field(default_factory=dict)
     tpsl_gene: Optional[TPSLGene] = None
     position_sizing_gene: Optional[PositionSizingGene] = None

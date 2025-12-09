@@ -328,3 +328,96 @@ class ConditionEvaluator:
         except Exception as e:
             logger.warning(f"[OHLCVアクセス] データアクセスエラー: {e}")
             return None
+
+    # ========================================
+    # StatefulCondition 評価メソッド
+    # ========================================
+
+    def evaluate_stateful_condition(
+        self,
+        stateful_condition,
+        strategy_instance,
+        state_tracker,
+        current_bar: int,
+    ) -> bool:
+        """
+        StatefulCondition を評価
+
+        トリガー条件が過去lookback_bars以内に発生しており、
+        かつフォロー条件が現在成立していればTrueを返します。
+
+        Args:
+            stateful_condition: StatefulCondition インスタンス
+            strategy_instance: 戦略インスタンス
+            state_tracker: StateTracker インスタンス
+            current_bar: 現在のバーインデックス
+
+        Returns:
+            条件成立ならTrue
+        """
+        from ..models.stateful_condition import StatefulCondition
+
+        if not isinstance(stateful_condition, StatefulCondition):
+            logger.warning(f"不正な型: {type(stateful_condition)}")
+            return False
+
+        if not stateful_condition.enabled:
+            return False
+
+        # トリガーが過去lookback_bars以内に発生したか確認
+        event_name = stateful_condition.get_trigger_event_name()
+        trigger_in_range = state_tracker.was_triggered_within(
+            event_name,
+            lookback_bars=stateful_condition.lookback_bars,
+            current_bar=current_bar,
+        )
+
+        if not trigger_in_range:
+            return False
+
+        # フォロー条件を評価
+        follow_result = self.evaluate_single_condition(
+            stateful_condition.follow_condition, strategy_instance
+        )
+
+        return follow_result
+
+    def check_and_record_trigger(
+        self,
+        stateful_condition,
+        strategy_instance,
+        state_tracker,
+        current_bar: int,
+    ) -> bool:
+        """
+        トリガー条件を評価し、成立していればStateTrackerに記録
+
+        Args:
+            stateful_condition: StatefulCondition インスタンス
+            strategy_instance: 戦略インスタンス
+            state_tracker: StateTracker インスタンス
+            current_bar: 現在のバーインデックス
+
+        Returns:
+            トリガー条件が成立したか
+        """
+        from ..models.stateful_condition import StatefulCondition
+
+        if not isinstance(stateful_condition, StatefulCondition):
+            return False
+
+        if not stateful_condition.enabled:
+            return False
+
+        # トリガー条件を評価
+        trigger_result = self.evaluate_single_condition(
+            stateful_condition.trigger_condition, strategy_instance
+        )
+
+        if trigger_result:
+            # StateTrackerにイベントを記録
+            event_name = stateful_condition.get_trigger_event_name()
+            state_tracker.record_event(event_name, bar_index=current_bar)
+            logger.debug(f"トリガー記録: {event_name} at bar {current_bar}")
+
+        return trigger_result

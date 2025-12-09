@@ -237,3 +237,76 @@ class TestDynamicPositionSizing:
         assert risk_controls.get("return_sample_size") == 3
         assert math.isclose(risk_controls.get("var_ratio"), expected_var, rel_tol=1e-12)
         assert risk_controls.get("var_lookback") == gene.var_lookback
+
+    def test_calculate_position_size_fast_returns_valid_size(self):
+        """高速計算メソッドが有効なポジションサイズを返すこと"""
+
+        service = PositionSizingService()
+        gene = self._create_gene()
+
+        result = service.calculate_position_size_fast(
+            gene=gene,
+            account_balance=10000.0,
+            current_price=100.0,
+        )
+
+        # 戻り値がfloatで、min/maxの範囲内であること
+        assert isinstance(result, float)
+        assert gene.min_position_size <= result <= gene.max_position_size
+
+    def test_calculate_position_size_fast_handles_invalid_inputs(self):
+        """高速計算メソッドが無効な入力時にデフォルト値を返すこと"""
+
+        service = PositionSizingService()
+        gene = self._create_gene()
+
+        # 無効な残高
+        result1 = service.calculate_position_size_fast(
+            gene=gene, account_balance=-100.0, current_price=100.0
+        )
+        assert result1 == 0.01
+
+        # 無効な価格
+        result2 = service.calculate_position_size_fast(
+            gene=gene, account_balance=10000.0, current_price=0.0
+        )
+        assert result2 == 0.01
+
+        # 遺伝子がNone
+        result3 = service.calculate_position_size_fast(
+            gene=None, account_balance=10000.0, current_price=100.0
+        )
+        assert result3 == 0.01
+
+    def test_calculate_position_size_fast_is_faster_than_full(self):
+        """高速計算がフル計算より高速であること"""
+        import time
+
+        service = PositionSizingService()
+        gene = self._create_gene()
+        iterations = 100
+
+        # 高速版の計測
+        start_fast = time.perf_counter()
+        for _ in range(iterations):
+            service.calculate_position_size_fast(
+                gene=gene, account_balance=10000.0, current_price=100.0
+            )
+        time_fast = time.perf_counter() - start_fast
+
+        # フル版の計測
+        start_full = time.perf_counter()
+        for _ in range(iterations):
+            service.calculate_position_size(
+                gene=gene,
+                account_balance=10000.0,
+                current_price=100.0,
+                use_cache=False,  # キャッシュを無効化
+            )
+        time_full = time.perf_counter() - start_full
+
+        # 高速版がフル版より速いか同等であること
+        # （少なくとも大幅に遅くないこと）
+        assert (
+            time_fast <= time_full * 1.5
+        ), f"高速版 ({time_fast:.4f}s) がフル版 ({time_full:.4f}s) より顕著に遅い"

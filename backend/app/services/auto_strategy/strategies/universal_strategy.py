@@ -12,10 +12,12 @@ from typing import List, Union, cast
 from backtesting import Strategy
 
 from ..core.condition_evaluator import ConditionEvaluator
+from ..models.stateful_condition import StateTracker
 from ..models.strategy_models import (
     Condition,
     ConditionGroup,
     IndicatorGene,
+    TPSLMethod,
 )
 from ..positions.position_sizing_service import PositionSizingService
 from ..services.indicator_service import IndicatorCalculator
@@ -51,6 +53,8 @@ class UniversalStrategy(Strategy):
         self.condition_evaluator = ConditionEvaluator()
         self.tpsl_service = TPSLService()
         self.position_sizing_service = PositionSizingService()
+        self.state_tracker = StateTracker()  # ステートフル条件用
+        self._current_bar_index = 0  # バーインデックストラッカー
 
         # パラメータの検証と設定
         if params is None:
@@ -186,13 +190,17 @@ class UniversalStrategy(Strategy):
         return self.condition_evaluator.evaluate_conditions(exit_conditions, self)
 
     def _calculate_position_size(self) -> float:
-        """ポジションサイズを計算"""
+        """ポジションサイズを計算（キャッシュ付き高速版）"""
         try:
             # PositionSizingGeneが有効な場合
             if (
                 self.gene.position_sizing_gene
                 and self.gene.position_sizing_gene.enabled
             ):
+                # キャッシュチェック：同一遺伝子設定では再計算しない
+                if hasattr(self, "_cached_position_size"):
+                    return self._cached_position_size
+
                 # 現在の市場データ（該当するものがなければデフォルト値を使用）
                 current_price = (
                     self.data.Close[-1]
@@ -203,16 +211,18 @@ class UniversalStrategy(Strategy):
                     self, "equity", 100000.0
                 )  # デフォルト口座残高
 
-                # PositionSizingServiceを使用して計算
-                result = self.position_sizing_service.calculate_position_size(
-                    gene=self.gene.position_sizing_gene,
-                    account_balance=account_balance,
-                    current_price=current_price,
+                # 高速計算メソッドを使用（VaR等の重い計算をスキップ）
+                position_size = (
+                    self.position_sizing_service.calculate_position_size_fast(
+                        gene=self.gene.position_sizing_gene,
+                        account_balance=account_balance,
+                        current_price=current_price,
+                    )
                 )
 
-                # 結果を返却（安全範囲に制限）
-                position_size = result.position_size
-                return max(0.001, min(0.2, float(position_size)))
+                # 結果を安全範囲に制限してキャッシュ
+                self._cached_position_size = max(0.001, min(0.2, float(position_size)))
+                return self._cached_position_size
             else:
                 # デフォルトサイズを使用
                 return 0.01
@@ -225,12 +235,22 @@ class UniversalStrategy(Strategy):
     def next(self):
         """各バーでの戦略実行"""
         try:
+            # バーインデックスを更新
+            self._current_bar_index += 1
+
+            # ステートフル条件のトリガーをチェック・記録
+            self._process_stateful_triggers()
+
             # ポジションがない場合のエントリー判定
             if not self.position:
                 long_signal = self._check_long_entry_conditions()
                 short_signal = self._check_short_entry_conditions()
 
-                if long_signal or short_signal:
+                # ステートフル条件も評価
+                stateful_signal = self._check_stateful_conditions()
+
+                # 通常条件またはステートフル条件いずれかでエントリー
+                if long_signal or short_signal or stateful_signal:
                     # ポジションサイズを決定
                     position_size = self._calculate_position_size()
                     current_price = self.data.Close[-1]
@@ -240,20 +260,38 @@ class UniversalStrategy(Strategy):
                     tp_price = None
 
                     if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                        if long_signal:
-                            sl_price = current_price * (
-                                1 - self.gene.tpsl_gene.stop_loss_pct
-                            )
-                            tp_price = current_price * (
-                                1 + self.gene.tpsl_gene.take_profit_pct
-                            )
-                        elif short_signal:
-                            sl_price = current_price * (
-                                1 + self.gene.tpsl_gene.stop_loss_pct
-                            )
-                            tp_price = current_price * (
-                                1 - self.gene.tpsl_gene.take_profit_pct
-                            )
+                        # 市場データの準備（必要な場合のみ）
+                        market_data = {}
+                        tpsl_method = self.gene.tpsl_gene.method
+
+                        # ボラティリティベースまたは適応型の場合、OHLCデータを作成
+                        if (
+                            tpsl_method
+                            in (TPSLMethod.VOLATILITY_BASED, TPSLMethod.ADAPTIVE)
+                            and len(self.data) > 30
+                        ):
+                            # 過去30本のデータを取得（ATR計算用）
+                            # Note: パフォーマンス最適化のため、必要な期間のみスライス
+                            highs = self.data.High[-30:]
+                            lows = self.data.Low[-30:]
+                            closes = self.data.Close[-30:]
+
+                            # VolatilityCalculatorが期待する形式（list of dicts）に変換
+                            market_data["ohlc_data"] = [
+                                {"high": h, "low": low_val, "close": c}
+                                for h, low_val, c in zip(highs, lows, closes)
+                            ]
+
+                        # エントリー方向
+                        direction = 1.0 if long_signal else -1.0
+
+                        # TPSLServiceを使用して価格を計算
+                        sl_price, tp_price = self.tpsl_service.calculate_tpsl_prices(
+                            current_price=current_price,
+                            tpsl_gene=self.gene.tpsl_gene,
+                            position_direction=direction,
+                            market_data=market_data,
+                        )
 
                     # 取引実行
                     if long_signal:
@@ -274,3 +312,47 @@ class UniversalStrategy(Strategy):
 
         except Exception as e:
             logger.error(f"戦略実行エラー: {e}")
+
+    def _process_stateful_triggers(self) -> None:
+        """
+        ステートフル条件のトリガーをチェックし、StateTrackerに記録
+
+        各バーで呼ばれ、すべてのStatefulConditionのトリガー条件を評価します。
+        成立していれば、StateTrackerにイベントとして記録します。
+        """
+        if not self.gene or not hasattr(self.gene, "stateful_conditions"):
+            return
+
+        for stateful_cond in self.gene.stateful_conditions:
+            if stateful_cond.enabled:
+                self.condition_evaluator.check_and_record_trigger(
+                    stateful_cond,
+                    self,
+                    self.state_tracker,
+                    self._current_bar_index,
+                )
+
+    def _check_stateful_conditions(self) -> bool:
+        """
+        ステートフル条件を評価
+
+        いずれかのステートフル条件が成立していればTrueを返します。
+
+        Returns:
+            ステートフル条件成立ならTrue
+        """
+        if not self.gene or not hasattr(self.gene, "stateful_conditions"):
+            return False
+
+        for stateful_cond in self.gene.stateful_conditions:
+            if stateful_cond.enabled:
+                result = self.condition_evaluator.evaluate_stateful_condition(
+                    stateful_cond,
+                    self,
+                    self.state_tracker,
+                    self._current_bar_index,
+                )
+                if result:
+                    return True
+
+        return False

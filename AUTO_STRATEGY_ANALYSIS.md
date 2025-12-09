@@ -33,17 +33,32 @@
 
 - ~~**マルチタイムフレーム（MTF）戦略が不可能**~~: 現在は対応済み
 
-### 1.2 ステートレス・ロジック (Stateless Logic)
+### 1.2 ステートレス・ロジック (Stateless Logic) ✅ **実装済み**
 
-**現状:**
+> **実装完了日: 2025-12-09**
+>
+> - `StatefulCondition` モデルを新設（トリガー条件 + フォロー条件 + lookback_bars + cooldown_bars）
+> - `StateTracker` クラスを新設（イベント記録・判定機能）
+> - `ConditionEvaluator` に `evaluate_stateful_condition` / `check_and_record_trigger` メソッドを追加
+> - `StrategyGene` に `stateful_conditions: List[StatefulCondition]` フィールドを追加
+> - `UniversalStrategy` に `StateTracker` を統合し、`next()` で自動的にトリガー記録・評価
+> - `DictConverter` でシリアライズ/デシリアライズに対応
+> - TDD によるテストセットを追加完了
 
-- 条件判定ロジック（`Condition`）は、現在のバーにおける指標値と閾値の単純比較（`A > B`）のみを表現します。
-- 過去の状態やイベントの順序を記憶・参照する仕組みがありません。
+**旧現状:**
 
-**影響:**
+- ~~条件判定ロジック（`Condition`）は、現在のバーにおける指標値と閾値の単純比較（`A > B`）のみを表現します。~~
+- ~~過去の状態やイベントの順序を記憶・参照する仕組みがありません。~~
 
-- **シーケンス制御の欠如**: 「条件 A が発生した後、5 バー以内に条件 B が発生したらエントリー」といった順序性のあるロジックを表現できません。
-- **状態管理の欠如**: 「直近 1 時間以内に取引していなければエントリー」といった状態依存のフィルタリングが不可能です。
+**現在:**
+
+- `StatefulCondition` により「条件 A が発生してから N バー以内に条件 B」といったシーケンス制御が可能
+- `StateTracker` がバックテスト中のイベント履歴を追跡
+
+**~~影響~~:**
+
+- ~~**シーケンス制御の欠如**: 現在は `StatefulCondition` で対応済み~~
+- ~~**状態管理の欠如**: 現在は `StateTracker` で対応済み~~
 
 ### 1.3 階層構造の欠如 (Flat Structure) ✅ **実装済み**
 
@@ -200,13 +215,16 @@
 
 ### Phase 1: クリティカルな修正 (Immediate)
 
-1. **UniversalStrategy の修正**: `next()` メソッド内で `TPSLService` を正しく呼び出し、遺伝子で指定された計算ロジック（ATR 倍率など）が反映されるように変更する。
-2. **UniversalStrategy の PositionSizing 修正**: 重厚な計算を毎ティック行うのではなく、エントリー時のみ、あるいはキャッシングを利用して計算負荷を下げる。
+1. ✅ **UniversalStrategy の修正**: `next()` メソッド内で `TPSLService` を正しく呼び出し、遺伝子で指定された計算ロジック（ATR 倍率など）が反映されるように変更する。 **(実装完了: 2025-12-09)**
+2. ✅ **UniversalStrategy の PositionSizing 修正**: 重厚な計算を毎ティック行うのではなく、エントリー時のみ、あるいはキャッシングを利用して計算負荷を下げる。 **(実装完了: 2025-12-09)**
+   > - `PositionSizingService.calculate_position_size_fast()` メソッドを新設（VaR/ES 計算をスキップ）
+   > - `UniversalStrategy._calculate_position_size()` でキャッシュを導入（同一遺伝子で再計算しない）
+   > - バックテストループ内での高速計算パスを使用
 
 ### Phase 2: 機能拡張 (High Impact)
 
 3. ✅ **マルチタイムフレーム対応**: `IndicatorGene` に `timeframe` を追加し、バックテストエンジンを拡張。 **（実装完了: 2024-12-09）**
-4. **ステートフル・ロジック**: `StateGene` クラスを新設し、過去の状態を参照可能にする。
+4. ✅ **ステートフル・ロジック**: `StatefulCondition` / `StateTracker` を新設し、過去の状態を参照可能にする。 **(実装完了: 2025-12-09)**
 
 ### Phase 3: アーキテクチャ改善 (Medium Impact)
 
