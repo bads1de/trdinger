@@ -43,27 +43,48 @@ class ConditionEvaluator:
             return False
 
         for cond in conditions:
-            if isinstance(cond, ConditionGroup):
-                if not self._evaluate_condition_group(cond, strategy_instance):
-                    return False
-            else:
-                if not self.evaluate_single_condition(cond, strategy_instance):
-                    return False
+            if not self._evaluate_recursive_item(cond, strategy_instance):
+                return False
         return True
 
-    @safe_operation(
-        context="条件グループ評価（OR）", is_api_call=False, default_return=False
-    )
+    def _evaluate_recursive_item(
+        self, item: Union[Condition, ConditionGroup], strategy_instance
+    ) -> bool:
+        """再帰的に条件アイテムを評価"""
+        if isinstance(item, ConditionGroup):
+            return self._evaluate_condition_group(item, strategy_instance)
+        elif isinstance(item, Condition):
+            return self.evaluate_single_condition(item, strategy_instance)
+
+        logger.warning(f"不明な条件タイプ: {type(item)}")
+        return False
+
+    @safe_operation(context="条件グループ評価", is_api_call=False, default_return=False)
     def _evaluate_condition_group(
         self, group: ConditionGroup, strategy_instance
     ) -> bool:
-        """ORグループ: 内部のいずれかがTrueならTrue"""
+        """
+        条件グループ評価
+
+        operator="AND" -> 全てTrueならTrue
+        operator="OR"  -> いずれかがTrueならTrue
+        """
         if not group or group.is_empty():
             return False
+
+        is_and = getattr(group, "operator", "OR") == "AND"
+
         for c in group.conditions:
-            if self.evaluate_single_condition(c, strategy_instance):
-                return True
-        return False
+            result = self._evaluate_recursive_item(c, strategy_instance)
+
+            if is_and:
+                if not result:
+                    return False
+            else:  # OR
+                if result:
+                    return True
+
+        return True if is_and else False
 
     @safe_operation(context="単一条件評価", is_api_call=False, default_return=False)
     def evaluate_single_condition(

@@ -188,8 +188,11 @@ class DictConverter:
 
             if isinstance(obj, ConditionGroup):
                 return {
-                    "type": "OR_GROUP",
-                    "conditions": [self.condition_to_dict(c) for c in obj.conditions],
+                    "type": "GROUP",
+                    "operator": obj.operator,
+                    "conditions": [
+                        self.condition_or_group_to_dict(c) for c in obj.conditions
+                    ],
                 }
             elif isinstance(obj, Condition) or hasattr(obj, "left_operand"):
                 return self.condition_to_dict(obj)
@@ -355,14 +358,27 @@ class DictConverter:
             from ..models.strategy_models import ConditionGroup
 
             def parse_condition_or_group(cond_data):
-                if isinstance(cond_data, dict) and cond_data.get("type") == "OR_GROUP":
-                    conditions = [
-                        parse_condition_or_group(c)
-                        for c in cond_data.get("conditions", [])
-                    ]
-                    return ConditionGroup(conditions=conditions)
+                if isinstance(cond_data, dict):
+                    # 新しいグループ形式
+                    if cond_data.get("type") == "GROUP":
+                        conditions = [
+                            parse_condition_or_group(c)
+                            for c in cond_data.get("conditions", [])
+                        ]
+                        operator = cond_data.get("operator", "OR")
+                        return ConditionGroup(operator=operator, conditions=conditions)
+                    # 古いグループ形式（互換性用）
+                    elif cond_data.get("type") == "OR_GROUP":
+                        conditions = [
+                            parse_condition_or_group(c)
+                            for c in cond_data.get("conditions", [])
+                        ]
+                        return ConditionGroup(operator="OR", conditions=conditions)
+                    else:
+                        return self.dict_to_condition(cond_data)
                 else:
-                    return self.dict_to_condition(cond_data)
+                    logger.warning(f"不正な条件データ形式: {str(cond_data)[:50]}")
+                    return None
 
             entry_conditions = [
                 parse_condition_or_group(cond_data)

@@ -3,10 +3,11 @@
 """
 
 import logging
-from typing import List
+import random
+from typing import List, Union
 
 from ...config.constants import IndicatorType
-from ...models.strategy_models import IndicatorGene
+from ...models.strategy_models import Condition, ConditionGroup, IndicatorGene
 from .base_strategy import ConditionStrategy
 
 logger = logging.getLogger(__name__)
@@ -101,8 +102,39 @@ class ComplexConditionsStrategy(ConditionStrategy):
                     raise RuntimeError("条件生成に失敗しました")
 
         # 適切な戻り値タイプに変換
-        long_result = list(long_conditions)
-        short_result = list(short_conditions)
+        # 階層構造化（ランダムに条件をグループ化）
+        long_result = self._structure_conditions(long_conditions)
+        short_result = self._structure_conditions(short_conditions)
         exit_result = []
 
         return long_result, short_result, exit_result
+
+    def _structure_conditions(
+        self, conditions: List[Condition]
+    ) -> List[Union[Condition, ConditionGroup]]:
+        """
+        条件リストを確率的に階層化（グループ化）します。
+
+        単純なフラットリスト [A, B, C] (A AND B AND C) から
+        [ConditionGroup([A, B], OR), C] ((A OR B) AND C) のような
+        構造的バリエーションを生成します。
+        """
+        if len(conditions) < 2:
+            return conditions
+
+        structured = []
+        i = 0
+        while i < len(conditions):
+            # 残りが2つ以上あり、50%の確率でグループ化
+            if i + 1 < len(conditions) and random.random() < 0.5:
+                # 2つの条件をORグループ化
+                group = ConditionGroup(
+                    operator="OR", conditions=[conditions[i], conditions[i + 1]]
+                )
+                structured.append(group)
+                i += 2
+            else:
+                structured.append(conditions[i])
+                i += 1
+
+        return structured

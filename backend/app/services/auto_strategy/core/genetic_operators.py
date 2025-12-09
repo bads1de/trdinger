@@ -143,6 +143,29 @@ def _mutate_indicators(mutated, gene, mutation_rate):
             mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
 
+def _mutate_condition_item(condition, mutation_rate):
+    """
+    個々の条件（ConditionまたはConditionGroup）を変異させる再帰関数
+    """
+    from ..models.strategy_models import ConditionGroup
+    import random
+
+    if isinstance(condition, ConditionGroup):
+        # ConditionGroupの場合
+        if random.random() < 0.5:
+            # グループ自体のオペレータを変異 (AND <-> OR)
+            condition.operator = "AND" if condition.operator == "OR" else "OR"
+        else:
+            # 内部の条件を再帰的に変異
+            if condition.conditions:
+                idx = random.randint(0, len(condition.conditions) - 1)
+                _mutate_condition_item(condition.conditions[idx], mutation_rate)
+    else:
+        # 通常のConditionの場合
+        operators = [">", "<", ">=", "<=", "=="]
+        condition.operator = random.choice(operators)
+
+
 def _mutate_conditions(mutated, mutation_rate):
     """
     条件の突然変異を処理
@@ -156,18 +179,14 @@ def _mutate_conditions(mutated, mutation_rate):
         if mutated.entry_conditions and random.random() < 0.5:
             condition_idx = random.randint(0, len(mutated.entry_conditions) - 1)
             condition = mutated.entry_conditions[condition_idx]
-
-            operators = [">", "<", ">=", "<=", "=="]
-            condition.operator = random.choice(operators)
+            _mutate_condition_item(condition, mutation_rate)
 
     if random.random() < mutation_rate * 0.5:
         # エグジット条件の変更
         if mutated.exit_conditions and random.random() < 0.5:
             condition_idx = random.randint(0, len(mutated.exit_conditions) - 1)
             condition = mutated.exit_conditions[condition_idx]
-
-            operators = [">", "<", ">=", "<=", "=="]
-            condition.operator = random.choice(operators)
+            _mutate_condition_item(condition, mutation_rate)
 
 
 def _convert_to_individual(strategy_gene: StrategyGene, individual_class=None):

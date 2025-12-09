@@ -294,20 +294,18 @@ class GeneValidator:
 
         # 条件の妥当性チェック
         def _validate_mixed_conditions(cond_list, label_prefix: str):
-            for i, condition in enumerate(cond_list):
+            def _validate_recursive(condition, current_label: str):
                 if isinstance(condition, ConditionGroup):
                     for j, c in enumerate(condition.conditions):
-                        self.clean_condition(c)
-                        is_valid, error_detail = self.validate_condition(c)
-                        if not is_valid:
-                            errors.append(
-                                f"{label_prefix}OR子条件{j}が無効です: {error_detail}"
-                            )
+                        _validate_recursive(c, f"{current_label} -> グループ条件{j}")
                 else:
                     self.clean_condition(condition)
                     is_valid, error_detail = self.validate_condition(condition)
                     if not is_valid:
-                        errors.append(f"{label_prefix}{i}が無効です: {error_detail}")
+                        errors.append(f"{current_label}が無効です: {error_detail}")
+
+            for i, condition in enumerate(cond_list):
+                _validate_recursive(condition, f"{label_prefix}{i}")
 
         _validate_mixed_conditions(strategy_gene.entry_conditions, "エントリー条件")
         _validate_mixed_conditions(

@@ -43,14 +43,14 @@ class Condition:
 @dataclass
 class ConditionGroup:
     """
-    OR条件グループ
+    条件グループ
 
-    conditions のいずれかが True なら True。
-    ANDで使う側の配列にこのグループを1要素として混在させることで、
-    A AND (B OR C) を表現できる。
+    conditions の論理結合（operator）を表現します。
+    再帰的な構造を持つことができます。
     """
 
-    conditions: List[Condition] = field(default_factory=list)
+    operator: str = "OR"
+    conditions: List[Union[Condition, "ConditionGroup"]] = field(default_factory=list)
 
     def is_empty(self) -> bool:
         return len(self.conditions) == 0
@@ -59,8 +59,19 @@ class ConditionGroup:
         from .validator import GeneValidator
 
         validator = GeneValidator()
+
+        # operator check
+        if self.operator not in ["AND", "OR"]:
+            return False
+
         for c in self.conditions:
-            ok, _ = validator.validate_condition(c)
-            if not ok:
+            if isinstance(c, Condition):
+                ok, _ = validator.validate_condition(c)
+                if not ok:
+                    return False
+            elif isinstance(c, ConditionGroup):
+                if not c.validate():
+                    return False
+            else:
                 return False
         return True
