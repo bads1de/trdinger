@@ -74,7 +74,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
     const defaultExperimentName =
       initialConfig.experiment_name ??
-      `GA_${new Date().toISOString().slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`;
+      `GA_${new Date()
+        .toISOString()
+        .slice(0, 10)}_${effectiveBaseConfig.symbol.replace("/", "_")}`;
 
     return {
       experiment_name: defaultExperimentName,
@@ -96,6 +98,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         hybrid_mode: initialGAConfig.hybrid_mode ?? false,
         hybrid_model_type: initialGAConfig.hybrid_model_type ?? "lightgbm",
         hybrid_model_types: initialGAConfig.hybrid_model_types,
+        // 並列評価設定
+        enable_parallel_evaluation:
+          initialGAConfig.enable_parallel_evaluation ?? true,
+        max_evaluation_workers: initialGAConfig.max_evaluation_workers ?? null,
+        evaluation_timeout: initialGAConfig.evaluation_timeout ?? 300,
       },
     };
   });
@@ -128,7 +135,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   const handleSubmit = () => {
     onSubmit(config);
   };
-
 
   return (
     <div className="flex flex-col lg:flex-row min-h-0">
@@ -392,7 +398,64 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 description="ML予測スコアの重み（0-1）"
               />
               <p className="text-xs text-indigo-300">
-                💡 事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
+                💡
+                事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* 並列評価設定 */}
+        <div className="p-4 bg-cyan-900/30 border border-cyan-500/30 rounded-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-cyan-200">
+              ⚡ 並列評価
+            </label>
+            <input
+              type="checkbox"
+              checked={config.ga_config.enable_parallel_evaluation ?? true}
+              onChange={(e) =>
+                handleGAConfigChange({
+                  enable_parallel_evaluation: e.target.checked,
+                })
+              }
+              className="w-5 h-5 rounded border-cyan-500 text-cyan-600 focus:ring-cyan-500"
+              aria-label="並列評価を有効化"
+            />
+          </div>
+
+          {config.ga_config.enable_parallel_evaluation && (
+            <>
+              <InputField
+                label="最大ワーカー数"
+                type="number"
+                value={config.ga_config.max_evaluation_workers ?? ""}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    max_evaluation_workers: value || null,
+                  })
+                }
+                min={1}
+                max={32}
+                step={1}
+                description={GA_INFO_MESSAGES.max_evaluation_workers}
+                placeholder="自動（CPUコア数×2）"
+              />
+              <InputField
+                label="評価タイムアウト（秒）"
+                type="number"
+                value={config.ga_config.evaluation_timeout ?? 300}
+                onChange={(value) =>
+                  handleGAConfigChange({ evaluation_timeout: value })
+                }
+                min={30}
+                max={1800}
+                step={30}
+                description={GA_INFO_MESSAGES.evaluation_timeout}
+              />
+              <p className="text-xs text-cyan-300">
+                💡
+                並列評価は大規模な個体群（50以上）で効果的です。ワーカー数を増やすとメモリ使用量も増加します。
               </p>
             </>
           )}

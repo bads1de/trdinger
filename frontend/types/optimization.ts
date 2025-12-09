@@ -84,6 +84,14 @@ export interface GAConfig {
     hybrid_model_type?: string;
     /** 複数モデル平均の場合のモデルリスト */
     hybrid_model_types?: string[];
+
+    // 並列評価設定
+    /** 並列評価を有効化するか */
+    enable_parallel_evaluation?: boolean;
+    /** 最大ワーカー数（Noneの場合はCPUコア数×2） */
+    max_evaluation_workers?: number | null;
+    /** 個体あたりの評価タイムアウト秒数 */
+    evaluation_timeout?: number;
   };
 }
 

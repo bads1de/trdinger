@@ -13,6 +13,7 @@ import numpy as np
 from deap import tools
 
 from .fitness_sharing import FitnessSharing
+from .parallel_evaluator import ParallelEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class EvolutionRunner:
 
     単一目的と多目的最適化のロジックをカプセル化した独立クラス。
     GAエンジンから分離することで再利用性とテスト容易性を向上。
+    並列評価をサポート。
     """
 
     def __init__(
@@ -31,6 +33,7 @@ class EvolutionRunner:
         stats,
         fitness_sharing: Optional[FitnessSharing] = None,
         population: Optional[List[Any]] = None,
+        parallel_evaluator: Optional[ParallelEvaluator] = None,
     ):
         """
         初期化
@@ -40,11 +43,13 @@ class EvolutionRunner:
             stats: 統計情報収集オブジェクト
             fitness_sharing: 適応度共有オブジェクト（オプション）
             population: 個体集団（適応的突然変異用）
+            parallel_evaluator: 並列評価器（オプション）
         """
         self.toolbox = toolbox
         self.stats = stats
         self.fitness_sharing = fitness_sharing
         self.population = population  # 適応的突然変異用
+        self.parallel_evaluator = parallel_evaluator
 
     def run_single_objective_evolution(
         self, population: List[Any], config: Any, halloffame: Optional[List[Any]] = None
@@ -93,11 +98,9 @@ class EvolutionRunner:
                     self.toolbox.mutate(mutant)
                     del mutant.fitness.values
 
-            # 評価
+            # 評価（並列評価対応）
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
+            self._evaluate_invalid_individuals(invalid_ind)
 
             # 次世代の選択 (mu+lambda)
             population[:] = self.toolbox.select(offspring + population, len(population))
@@ -170,11 +173,9 @@ class EvolutionRunner:
                     self.toolbox.mutate(mutant)
                     del mutant.fitness.values
 
-            # 評価
+            # 評価（並列評価対応）
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
+            self._evaluate_invalid_individuals(invalid_ind)
 
             # 次世代の選択 (mu+lambda, NSGA-II)
             population[:] = self.toolbox.select(offspring + population, len(population))
@@ -201,7 +202,7 @@ class EvolutionRunner:
 
     def _evaluate_population(self, population: List[Any]) -> List[Any]:
         """
-        個体群の適応度評価
+        個体群の適応度評価（並列評価対応）
 
         Args:
             population: 評価対象の個体群
@@ -209,12 +210,39 @@ class EvolutionRunner:
         Returns:
             評価された個体群
         """
-        # 初期個体群の評価
-        fitnesses = list(self.toolbox.map(self.toolbox.evaluate, population))
-        for ind, fit in zip(population, fitnesses):
-            ind.fitness.values = fit
+        if self.parallel_evaluator:
+            # 並列評価
+            fitnesses = self.parallel_evaluator.evaluate_population(population)
+            for ind, fit in zip(population, fitnesses):
+                ind.fitness.values = fit
+        else:
+            # シーケンシャル評価（フォールバック）
+            fitnesses = list(self.toolbox.map(self.toolbox.evaluate, population))
+            for ind, fit in zip(population, fitnesses):
+                ind.fitness.values = fit
 
         return population
+
+    def _evaluate_invalid_individuals(self, invalid_ind: List[Any]) -> None:
+        """
+        適応度が無効な個体のみを評価（並列評価対応）
+
+        Args:
+            invalid_ind: 評価対象の無効な個体リスト
+        """
+        if not invalid_ind:
+            return
+
+        if self.parallel_evaluator:
+            # 並列評価
+            fitnesses = self.parallel_evaluator.evaluate_population(invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+        else:
+            # シーケンシャル評価（フォールバック）
+            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
 
     def _update_dynamic_objective_scalars(
         self, population: List[Any], config: Any

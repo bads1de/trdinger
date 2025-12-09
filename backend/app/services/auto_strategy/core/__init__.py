@@ -10,6 +10,7 @@ from .operand_grouping import (
     OperandGroupingSystem,
     operand_grouping_system,
 )
+from .parallel_evaluator import ParallelEvaluator
 
 __all__ = [
     "crossover_strategy_genes",
@@ -17,4 +18,5 @@ __all__ = [
     "OperandGroup",
     "OperandGroupingSystem",
     "operand_grouping_system",
+    "ParallelEvaluator",
 ]

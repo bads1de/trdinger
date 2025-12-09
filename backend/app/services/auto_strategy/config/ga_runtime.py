@@ -103,6 +103,11 @@ class GAConfig(BaseConfig):
     parallel_processes: Optional[int] = None
     random_state: Optional[int] = None
 
+    # 並列評価設定
+    enable_parallel_evaluation: bool = True
+    max_evaluation_workers: Optional[int] = None  # Noneの場合はCPUコア数×2
+    evaluation_timeout: float = 300.0  # 個体あたりのタイムアウト秒数
+
     # ハイブリッドGA+ML設定
     hybrid_mode: bool = False
     hybrid_model_type: str = "lightgbm"  # lightgbm, xgboost, randomforest
@@ -301,6 +306,10 @@ class GAConfig(BaseConfig):
             "max_conditions": self.max_conditions,
             "parallel_processes": self.parallel_processes,
             "random_state": self.random_state,
+            # 並列評価設定
+            "enable_parallel_evaluation": self.enable_parallel_evaluation,
+            "max_evaluation_workers": self.max_evaluation_workers,
+            "evaluation_timeout": self.evaluation_timeout,
             "log_level": self.log_level,
             "save_intermediate_results": self.save_intermediate_results,
             # MLフィルター設定
@@ -373,6 +382,10 @@ class GAConfig(BaseConfig):
             # 実行設定
             "parallel_processes": None,
             "random_state": None,
+            # 並列評価設定
+            "enable_parallel_evaluation": True,
+            "max_evaluation_workers": None,
+            "evaluation_timeout": 300.0,
             # フォールバック設定
             "fallback_start_date": data.get("fallback_start_date", "2024-01-01"),
             "fallback_end_date": data.get("fallback_end_date", "2024-04-09"),

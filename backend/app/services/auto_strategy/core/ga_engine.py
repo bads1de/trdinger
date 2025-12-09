@@ -27,6 +27,7 @@ from .genetic_operators import (
     mutate_strategy_gene,
 )
 from .individual_evaluator import IndividualEvaluator
+from .parallel_evaluator import ParallelEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -164,16 +165,19 @@ class GeneticAlgorithmEngine:
 
             stats = self._create_statistics()
 
-            # 初期個体群の生成と評価
-            population = self._create_initial_population(toolbox, config)
+            # 初期個体群の生成（評価なし）
+            population = toolbox.population(n=config.population_size)
 
             # 適応的突然変異用mutate_wrapperの設定
             individual_class = self.deap_setup.get_individual_class()
             mutate_wrapper = create_deap_mutate_wrapper(individual_class, population)
             toolbox.register("mutate", mutate_wrapper)
 
-            # 独立したEvolutionRunnerの作成
-            runner = self._create_evolution_runner(toolbox, stats, population)
+            # 独立したEvolutionRunnerの作成（並列評価対応）
+            runner = self._create_evolution_runner(toolbox, stats, population, config)
+
+            # 初期個体群の評価（並列評価対応）
+            runner._evaluate_population(population)
 
             # 最適化アルゴリズムの実行
             population, logbook = self._run_optimization(runner, population, config)
@@ -219,13 +223,14 @@ class GeneticAlgorithmEngine:
         stats.register("max", np.max)
         return stats
 
-    def _create_evolution_runner(self, toolbox, stats, population=None):
+    def _create_evolution_runner(self, toolbox, stats, population=None, config=None):
         """独立したEvolutionRunnerインスタンスを作成します。
 
         Args:
             toolbox: DEAPツールボックス。
             stats: 統計情報オブジェクト。
             population: 初期個体群（オプション）。
+            config: GA設定（並列評価用）。
 
         Returns:
             EvolutionRunner: EvolutionRunnerインスタンス。
@@ -235,24 +240,22 @@ class GeneticAlgorithmEngine:
             if hasattr(self, "fitness_sharing") and self.fitness_sharing
             else None
         )
-        return EvolutionRunner(toolbox, stats, fitness_sharing, population)
 
-    def _create_initial_population(self, toolbox, config: GAConfig):
-        """初期個体群を生成します。
+        # 並列評価器の作成（設定で有効な場合）
+        parallel_evaluator = None
+        if config and getattr(config, "enable_parallel_evaluation", False):
+            parallel_evaluator = ParallelEvaluator(
+                evaluate_func=self.individual_evaluator.evaluate_individual,
+                max_workers=getattr(config, "max_evaluation_workers", None),
+                timeout_per_individual=getattr(config, "evaluation_timeout", 300.0),
+            )
+            logger.info(
+                f"⚡ 並列評価有効: max_workers={parallel_evaluator.max_workers}"
+            )
 
-        Args:
-            toolbox: DEAPツールボックス。
-            config (GAConfig): GA設定。
-
-        Returns:
-            list: 生成された個体群。
-        """
-        population = toolbox.population(n=config.population_size)
-        # 初期評価
-        fitnesses = toolbox.map(toolbox.evaluate, population)
-        for ind, fit in zip(population, fitnesses):
-            ind.fitness.values = fit
-        return population
+        return EvolutionRunner(
+            toolbox, stats, fitness_sharing, population, parallel_evaluator
+        )
 
     def _run_optimization(self, runner: EvolutionRunner, population, config: GAConfig):
         """独立したEvolutionRunnerを使用して最適化アルゴリズムを実行します。
