@@ -69,7 +69,7 @@ class IndividualEvaluator:
 
     def evaluate_individual(self, individual, config: GAConfig):
         """
-        個体評価（OOS検証対応版）
+        個体評価（OOS検証/WFA対応版）
 
         Args:
             individual: 評価する個体
@@ -92,6 +92,12 @@ class IndividualEvaluator:
                 if self._fixed_backtest_config
                 else {}
             )
+
+            # Walk-Forward Analysis が有効な場合
+            if getattr(config, "enable_walk_forward", False):
+                return self._evaluate_with_walk_forward(
+                    gene, base_backtest_config, config
+                )
 
             # OOS検証の有無を確認
             oos_ratio = getattr(config, "oos_split_ratio", 0.0)
@@ -166,6 +172,132 @@ class IndividualEvaluator:
 
         except Exception as e:
             logger.error(f"OOS評価中エラー: {e}")
+            return self._perform_single_evaluation(gene, base_backtest_config, config)
+
+    def _evaluate_with_walk_forward(
+        self,
+        gene,
+        base_backtest_config: Dict[str, Any],
+        config: GAConfig,
+    ):
+        """
+        Walk-Forward Analysis による評価
+
+        時系列をスライディングさせながら検証し、過学習を検出するための堅牢な評価手法。
+
+        Args:
+            gene: 評価する戦略遺伝子
+            base_backtest_config: ベースとなるバックテスト設定
+            config: GA設定
+
+        Returns:
+            フィットネス値のタプル（OOSスコアの平均）
+        """
+        try:
+            start_date = pd.to_datetime(base_backtest_config.get("start_date"))
+            end_date = pd.to_datetime(base_backtest_config.get("end_date"))
+
+            if start_date is None or end_date is None:
+                logger.warning("WFA: 期間が不明なため通常評価にフォールバック")
+                return self._perform_single_evaluation(
+                    gene, base_backtest_config, config
+                )
+
+            # WFA パラメータ取得
+            n_folds = getattr(config, "wfa_n_folds", 5)
+            train_ratio = getattr(config, "wfa_train_ratio", 0.7)
+            anchored = getattr(config, "wfa_anchored", False)
+
+            total_duration = end_date - start_date
+            fold_duration = total_duration / n_folds
+
+            oos_fitness_values = []  # 各フォールドのOOSスコアを保存
+
+            for fold_idx in range(n_folds):
+                # フォールド期間の計算
+                if anchored:
+                    # Anchored WFA: トレーニング開始は常に最初から
+                    fold_train_start = start_date
+                else:
+                    # Rolling WFA: トレーニングウィンドウがスライド
+                    fold_train_start = start_date + (fold_duration * fold_idx)
+
+                fold_end = start_date + (fold_duration * (fold_idx + 1))
+
+                # フォールド内をトレーニングとテストに分割
+                fold_period = fold_end - fold_train_start
+                train_duration = fold_period * train_ratio
+
+                train_end = fold_train_start + train_duration
+                test_start = train_end
+                test_end = fold_end
+
+                # トレーニング期間が短すぎる場合はスキップ
+                if (train_end - fold_train_start).days < 7:
+                    logger.debug(
+                        f"WFA Fold {fold_idx}: トレーニング期間が短すぎるためスキップ"
+                    )
+                    continue
+
+                # テスト期間が短すぎる場合はスキップ
+                if (test_end - test_start).days < 1:
+                    logger.debug(
+                        f"WFA Fold {fold_idx}: テスト期間が短すぎるためスキップ"
+                    )
+                    continue
+
+                # 日付文字列に変換
+                train_start_str = fold_train_start.strftime("%Y-%m-%d %H:%M:%S")
+                train_end_str = train_end.strftime("%Y-%m-%d %H:%M:%S")
+                test_start_str = test_start.strftime("%Y-%m-%d %H:%M:%S")
+                test_end_str = test_end.strftime("%Y-%m-%d %H:%M:%S")
+
+                logger.debug(
+                    f"WFA Fold {fold_idx}: "
+                    f"Train={train_start_str} to {train_end_str}, "
+                    f"Test={test_start_str} to {test_end_str}"
+                )
+
+                # テスト期間で評価（WFAではOOSスコアのみを使用）
+                test_config = base_backtest_config.copy()
+                test_config["start_date"] = test_start_str
+                test_config["end_date"] = test_end_str
+
+                try:
+                    oos_fitness = self._perform_single_evaluation(
+                        gene, test_config, config
+                    )
+                    oos_fitness_values.append(oos_fitness)
+                except Exception as fold_error:
+                    logger.warning(f"WFA Fold {fold_idx} 評価エラー: {fold_error}")
+                    continue
+
+            if not oos_fitness_values:
+                logger.warning(
+                    "WFA: 有効なフォールドがないため通常評価にフォールバック"
+                )
+                return self._perform_single_evaluation(
+                    gene, base_backtest_config, config
+                )
+
+            # 全フォールドのOOSスコアの平均を計算
+            num_objectives = len(oos_fitness_values[0])
+            averaged_fitness = []
+
+            for obj_idx in range(num_objectives):
+                obj_values = [f[obj_idx] for f in oos_fitness_values]
+                avg_value = sum(obj_values) / len(obj_values)
+                averaged_fitness.append(max(0.0, avg_value))
+
+            logger.info(
+                f"WFA評価完了: {len(oos_fitness_values)}フォールド, "
+                f"平均OOS={tuple(round(v, 4) for v in averaged_fitness)}"
+            )
+
+            return tuple(averaged_fitness)
+
+        except Exception as e:
+            logger.error(f"WFA評価中エラー: {e}")
             return self._perform_single_evaluation(gene, base_backtest_config, config)
 
     def _get_cached_data(self, backtest_config: Dict[str, Any]) -> Any:

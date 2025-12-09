@@ -146,6 +146,12 @@ class GAConfig(BaseConfig):
     oos_split_ratio: float = 0.0
     oos_fitness_weight: float = 0.5
 
+    # Walk-Forward Analysis (WFA) 設定
+    enable_walk_forward: bool = False  # WFA を有効にするか
+    wfa_n_folds: int = 5  # フォールド数（ローリングウィンドウの回数）
+    wfa_train_ratio: float = 0.7  # 各フォールド内での学習期間の比率（0.0-1.0）
+    wfa_anchored: bool = False  # True: 学習開始点を固定（拡張WFA）、False: ローリング
+
     # マルチタイムフレーム（MTF）設定
     enable_multi_timeframe: bool = False
     available_timeframes: Optional[List[str]] = (
@@ -343,6 +349,11 @@ class GAConfig(BaseConfig):
             # OOS設定
             "oos_split_ratio": self.oos_split_ratio,
             "oos_fitness_weight": self.oos_fitness_weight,
+            # Walk-Forward Analysis 設定
+            "enable_walk_forward": self.enable_walk_forward,
+            "wfa_n_folds": self.wfa_n_folds,
+            "wfa_train_ratio": self.wfa_train_ratio,
+            "wfa_anchored": self.wfa_anchored,
             # マルチタイムフレーム設定
             "enable_multi_timeframe": self.enable_multi_timeframe,
             "available_timeframes": self.available_timeframes,
@@ -423,6 +434,11 @@ class GAConfig(BaseConfig):
             # OOS設定
             "oos_split_ratio": data.get("oos_split_ratio", 0.0),
             "oos_fitness_weight": data.get("oos_fitness_weight", 0.5),
+            # Walk-Forward Analysis 設定
+            "enable_walk_forward": data.get("enable_walk_forward", False),
+            "wfa_n_folds": data.get("wfa_n_folds", 5),
+            "wfa_train_ratio": data.get("wfa_train_ratio", 0.7),
+            "wfa_anchored": data.get("wfa_anchored", False),
             # マルチタイムフレーム設定
             "enable_multi_timeframe": data.get("enable_multi_timeframe", False),
             "available_timeframes": data.get("available_timeframes", None),

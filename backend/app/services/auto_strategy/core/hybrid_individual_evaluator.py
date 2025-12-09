@@ -171,39 +171,70 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         backtest_config: Dict[str, Any],
         ga_config: GAConfig,
     ) -> Optional[pd.DataFrame]:
-        """バックテスト設定に基づきOHLCVデータを取得"""
+        """
+        バックテスト設定に基づきOHLCVデータを取得（キャッシュ対応）
 
+        親クラスの _data_cache（LRUCache）を活用して DB アクセスを最小化します。
+        データ取得に失敗した場合は None を返し、ML 予測をスキップします。
+        これにより偽データによる学習汚染を防止します。
+        """
         symbol = backtest_config.get("symbol")
         timeframe = backtest_config.get("timeframe")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")
 
+        # 必須パラメータのチェック
+        if not all([symbol, timeframe, start_date, end_date]):
+            logger.warning(
+                "ML予測用OHLCVデータ取得: 必須パラメータが不足しています "
+                f"(symbol={symbol}, timeframe={timeframe}, "
+                f"start_date={start_date}, end_date={end_date})"
+            )
+            return None
+
+        # キャッシュキーを作成
+        cache_key = (symbol, timeframe, str(start_date), str(end_date))
+
+        # 親クラスのキャッシュを確認（LRUCache）
+        with self._lock:
+            if cache_key in self._data_cache:
+                cached_data = self._data_cache[cache_key]
+                if isinstance(cached_data, pd.DataFrame) and not cached_data.empty:
+                    logger.debug(f"OHLCVデータ: キャッシュヒット (key={cache_key})")
+                    return cached_data
+
+        # キャッシュミス: DB からデータを取得
         data_service = getattr(self.backtest_service, "data_service", None)
+        if data_service is None:
+            logger.warning("data_service が利用できません。ML予測をスキップします。")
+            return None
 
-        if (
-            symbol
-            and timeframe
-            and start_date
-            and end_date
-            and data_service is not None
-        ):
-            try:
-                if hasattr(self.backtest_service, "_ensure_data_service_initialized"):
-                    self.backtest_service._ensure_data_service_initialized()
+        try:
+            if hasattr(self.backtest_service, "ensure_data_service_initialized"):
+                self.backtest_service.ensure_data_service_initialized()
 
-                ohlcv_data = data_service.get_ohlcv_data(
-                    symbol, timeframe, start_date, end_date
+            ohlcv_data = data_service.get_ohlcv_data(
+                symbol, timeframe, start_date, end_date
+            )
+
+            if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
+                # キャッシュに保存
+                with self._lock:
+                    self._data_cache[cache_key] = ohlcv_data
+                logger.debug(
+                    f"OHLCVデータ: DB から取得・キャッシュ保存 (key={cache_key})"
                 )
-                if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
-                    return ohlcv_data
-            except Exception as exc:
-                logger.warning(f"OHLCVデータ取得エラー: {exc}")
+                return ohlcv_data
+            else:
+                logger.warning(
+                    f"OHLCVデータが空または無効です: symbol={symbol}, "
+                    f"timeframe={timeframe}"
+                )
+                return None
 
-        # データ取得失敗時はNoneを返す（偽データ生成による学習汚染を防止）
-        logger.warning(
-            "ML予測用のOHLCVデータ取得に失敗しました。予測スコアは適用されません。"
-        )
-        return None
+        except Exception as exc:
+            logger.warning(f"OHLCVデータ取得エラー: {exc}")
+            return None
 
     def _calculate_fitness(
         self,

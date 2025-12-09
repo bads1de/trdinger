@@ -76,6 +76,19 @@ class ParallelEvaluator:
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
 
+        # エラー種別の詳細統計
+        self._error_categories: dict = {
+            "timeout": 0,
+            "memory": 0,
+            "data_error": 0,
+            "logic_error": 0,
+            "other": 0,
+        }
+
+        # 最近のエラー履歴（デバッグ用、最大20件）
+        self._recent_errors: list = []
+        self._max_error_history = 20
+
         # 世代ごとの統計リセットフラグ
         self._auto_reset_per_generation = True
 
@@ -164,8 +177,13 @@ class ParallelEvaluator:
                         logger.warning(f"個体評価タイムアウト: index={index}")
                         results[index] = default_fitness
                         self._timeout_evaluations += 1
+                        self._error_categories["timeout"] += 1
                     except Exception as e:
-                        logger.warning(f"個体評価エラー: index={index}, error={e}")
+                        category = self._categorize_error(e, index)
+                        logger.warning(
+                            f"個体評価エラー: index={index}, "
+                            f"category={category}, error={e}"
+                        )
                         results[index] = default_fitness
                         self._failed_evaluations += 1
             except FuturesTimeoutError:
@@ -175,6 +193,7 @@ class ParallelEvaluator:
                     if not future.done():
                         future.cancel()
                         self._timeout_evaluations += 1
+                        self._error_categories["timeout"] += 1
 
         return results
 
@@ -211,14 +230,21 @@ class ParallelEvaluator:
                         logger.warning(f"個体評価タイムアウト: index={index}")
                         results[index] = default_fitness
                         self._timeout_evaluations += 1
+                        self._error_categories["timeout"] += 1
                     except Exception as e:
-                        logger.warning(f"個体評価エラー: index={index}, error={e}")
+                        category = self._categorize_error(e, index)
+                        logger.warning(
+                            f"個体評価エラー: index={index}, "
+                            f"category={category}, error={e}"
+                        )
                         results[index] = default_fitness
                         self._failed_evaluations += 1
             except FuturesTimeoutError:
                 logger.warning("全体タイムアウト: プロセスプールをシャットダウン")
                 # ProcessPoolExecutorはコンテキスト終了時に子プロセスを終了
-                self._timeout_evaluations += sum(1 for r in results if r is None)
+                timeout_count = sum(1 for r in results if r is None)
+                self._timeout_evaluations += timeout_count
+                self._error_categories["timeout"] += timeout_count
 
         return results
 
@@ -233,6 +259,51 @@ class ParallelEvaluator:
             フィットネス値のタプル
         """
         return self.evaluate_func(individual)
+
+    def _categorize_error(self, error: Exception, index: int) -> str:
+        """
+        エラーを種別に分類
+
+        Args:
+            error: 発生した例外
+            index: 個体のインデックス
+
+        Returns:
+            エラーカテゴリ名
+        """
+        error_type = type(error).__name__
+        error_message = str(error).lower()
+
+        # エラー種別の判定
+        if isinstance(error, MemoryError) or "memory" in error_message:
+            category = "memory"
+        elif isinstance(error, (KeyError, IndexError, ValueError)):
+            # データアクセスや変換に関連するエラー
+            category = "data_error"
+        elif isinstance(error, (TypeError, AttributeError)):
+            # ロジックエラー（型不一致、属性不在など）
+            category = "logic_error"
+        elif isinstance(error, FuturesTimeoutError):
+            category = "timeout"
+        else:
+            category = "other"
+
+        # 統計更新
+        self._error_categories[category] += 1
+
+        # エラー履歴に追加
+        error_info = {
+            "index": index,
+            "category": category,
+            "error_type": error_type,
+            "message": str(error)[:200],  # メッセージは200文字に制限
+        }
+
+        if len(self._recent_errors) >= self._max_error_history:
+            self._recent_errors.pop(0)
+        self._recent_errors.append(error_info)
+
+        return category
 
     def evaluate_invalid_individuals(
         self,
@@ -279,6 +350,10 @@ class ParallelEvaluator:
                 if self._total_evaluations > 0
                 else 0.0
             ),
+            # エラー種別の詳細
+            "error_categories": self._error_categories.copy(),
+            # 最近のエラー履歴
+            "recent_errors": self._recent_errors.copy(),
         }
 
     def reset_statistics(self) -> None:
@@ -287,6 +362,10 @@ class ParallelEvaluator:
         self._successful_evaluations = 0
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
+        # エラー種別もリセット
+        for key in self._error_categories:
+            self._error_categories[key] = 0
+        self._recent_errors.clear()
 
     def _reset_generation_stats(self) -> None:
         """世代ごとの統計をリセット（成功/失敗/タイムアウトのみ）"""
