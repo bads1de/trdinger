@@ -52,6 +52,8 @@ class IndicatorGenerator:
         self._coverage_idx = 0  # 追加: カバレッジインデックスを初期化
         self._coverage_pick = None  # 追加: カバレッジピックを初期化
         self.available_indicators = self._setup_indicators_by_mode(config)
+        # マルチタイムフレーム（MTF）設定
+        self._available_timeframes = self._setup_available_timeframes(config)
 
     def _initialize_valid_indicators(self) -> set:
         """有効な指標名を初期化"""
@@ -59,6 +61,49 @@ class IndicatorGenerator:
             return set(get_all_indicators())
         except Exception:
             return set()
+
+    def _setup_available_timeframes(self, config: Any) -> List[str]:
+        """
+        利用可能なタイムフレームを設定
+
+        Args:
+            config: GA設定
+
+        Returns:
+            利用可能なタイムフレームのリスト
+        """
+        from ...config.constants import SUPPORTED_TIMEFRAMES
+
+        # 設定から利用可能タイムフレームを取得
+        available = getattr(config, "available_timeframes", None)
+        if available:
+            return list(available)
+
+        # デフォルトはサポートされる全タイムフレーム
+        return SUPPORTED_TIMEFRAMES.copy()
+
+    def _get_random_timeframe(self) -> str | None:
+        """
+        MTFが有効な場合にランダムなタイムフレームを取得
+
+        Returns:
+            タイムフレーム文字列、またはMTF無効/確率で選択されない場合はNone
+        """
+        # MTFが有効か確認
+        enable_mtf = getattr(self.config, "enable_multi_timeframe", False)
+        if not enable_mtf:
+            return None
+
+        # MTF指標が生成される確率をチェック
+        mtf_probability = getattr(self.config, "mtf_indicator_probability", 0.3)
+        if random.random() > mtf_probability:
+            return None  # デフォルトタイムフレームを使用
+
+        # 利用可能なタイムフレームからランダムに選択
+        if self._available_timeframes:
+            return random.choice(self._available_timeframes)
+
+        return None
 
     @safe_operation(
         default_return=IndicatorGene(
@@ -113,7 +158,11 @@ class IndicatorGenerator:
 
     @safe_operation(default_return=[], context="ランダム指標生成")
     def generate_random_indicators(self) -> List[IndicatorGene]:
-        """ランダムな指標リストを生成"""
+        """
+        ランダムな指標リストを生成
+
+        MTFが有効な場合、一部の指標には異なるタイムフレームが割り当てられます。
+        """
         # coverage_pick は上位で準備済み
         coverage_pick = getattr(self, "_coverage_pick", None)
 
@@ -122,7 +171,7 @@ class IndicatorGenerator:
         )
         indicators = []
 
-        # 1つ目は coverage_pick を優先
+        # 1つ目は coverage_pick を優先（デフォルトタイムフレームを使用）
         if coverage_pick and coverage_pick in self.available_indicators:
             first_type = coverage_pick
         else:
@@ -132,18 +181,20 @@ class IndicatorGenerator:
                 else "SMA"
             )
 
-        # 1本目の指標生成
+        # 1本目の指標生成（デフォルトタイムフレーム）
         indicator_gene = self._create_indicator_gene(first_type)
         indicators.append(indicator_gene)
 
-        # 残りの指標生成
-        for i in range(1, num_indicators):
+        # 残りの指標生成（MTF有効時は確率的にタイムフレームを割り当て）
+        for _ in range(1, num_indicators):
             if not self.available_indicators:
                 indicator_type = "SMA"
             else:
                 indicator_type = random.choice(self.available_indicators)
 
-            indicator_gene = self._create_indicator_gene(indicator_type)
+            # MTFモードの場合、確率的にタイムフレームを割り当て
+            timeframe = self._get_random_timeframe()
+            indicator_gene = self._create_indicator_gene(indicator_type, timeframe)
             indicators.append(indicator_gene)
 
         # 指標構成サービスで成立性を底上げ
@@ -157,11 +208,26 @@ class IndicatorGenerator:
         ),
         context="指標遺伝子作成",
     )
-    def _create_indicator_gene(self, indicator_type: str) -> IndicatorGene:
-        """指標遺伝子を作成"""
+    def _create_indicator_gene(
+        self, indicator_type: str, timeframe: str | None = None
+    ) -> IndicatorGene:
+        """
+        指標遺伝子を作成
+
+        Args:
+            indicator_type: 指標タイプ（例: "SMA", "RSI"）
+            timeframe: この指標が計算されるタイムフレーム。
+                None の場合は戦略のデフォルトタイムフレームを使用。
+
+        Returns:
+            指標遺伝子オブジェクト
+        """
         parameters = self._safe_generate_parameters(indicator_type)
         indicator_gene = IndicatorGene(
-            type=indicator_type, parameters=parameters, enabled=True
+            type=indicator_type,
+            parameters=parameters,
+            enabled=True,
+            timeframe=timeframe,
         )
         self._safe_generate_json_config(indicator_gene)
         return indicator_gene

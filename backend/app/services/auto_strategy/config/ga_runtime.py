@@ -144,6 +144,13 @@ class GAConfig(BaseConfig):
     oos_split_ratio: float = 0.0
     oos_fitness_weight: float = 0.5
 
+    # マルチタイムフレーム（MTF）設定
+    enable_multi_timeframe: bool = False
+    available_timeframes: Optional[List[str]] = (
+        None  # 利用可能なタイムフレーム（Noneの場合はデフォルト）
+    )
+    mtf_indicator_probability: float = 0.3  # MTF指標が生成される確率（0.0-1.0）
+
     def get_ga_settings(self):
         """関連するGASettingsを取得"""
         if self.auto_strategy_config:
@@ -332,6 +339,10 @@ class GAConfig(BaseConfig):
             # OOS設定
             "oos_split_ratio": self.oos_split_ratio,
             "oos_fitness_weight": self.oos_fitness_weight,
+            # マルチタイムフレーム設定
+            "enable_multi_timeframe": self.enable_multi_timeframe,
+            "available_timeframes": self.available_timeframes,
+            "mtf_indicator_probability": self.mtf_indicator_probability,
         }
 
     @classmethod
@@ -406,6 +417,10 @@ class GAConfig(BaseConfig):
             # OOS設定
             "oos_split_ratio": data.get("oos_split_ratio", 0.0),
             "oos_fitness_weight": data.get("oos_fitness_weight", 0.5),
+            # マルチタイムフレーム設定
+            "enable_multi_timeframe": data.get("enable_multi_timeframe", False),
+            "available_timeframes": data.get("available_timeframes", None),
+            "mtf_indicator_probability": data.get("mtf_indicator_probability", 0.3),
         }
 
         # デフォルト値をマージ

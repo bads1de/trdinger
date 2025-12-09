@@ -61,6 +61,18 @@ class GeneValidator:
                 logger.warning(f"無効な期間パラメータ: {period}")
                 return False
 
+        # タイムフレームのバリデーション（設定されている場合のみ）
+        timeframe = getattr(indicator_gene, "timeframe", None)
+        if timeframe is not None:
+            from ..config.constants import SUPPORTED_TIMEFRAMES
+
+            if timeframe not in SUPPORTED_TIMEFRAMES:
+                logger.warning(
+                    f"無効なタイムフレーム: {timeframe}, "
+                    f"サポートされるタイムフレーム: {SUPPORTED_TIMEFRAMES}"
+                )
+                return False
+
         logger.debug(f"指標タイプ {indicator_gene.type} は有効です")
         return True
 

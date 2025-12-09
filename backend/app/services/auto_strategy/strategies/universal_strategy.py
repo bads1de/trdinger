@@ -49,7 +49,6 @@ class UniversalStrategy(Strategy):
         # サービスの初期化（クラスレベルで持つべきだが、状態を持たないのでインスタンスごとでも可）
         # 注意: multiprocessing時はここで初期化することが重要
         self.condition_evaluator = ConditionEvaluator()
-        self.indicator_calculator = IndicatorCalculator()
         self.tpsl_service = TPSLService()
         self.position_sizing_service = PositionSizingService()
 
@@ -70,7 +69,38 @@ class UniversalStrategy(Strategy):
             # 安全のためデフォルトの空遺伝子またはエラー
             raise ValueError("UniversalStrategy requires 'strategy_gene' in params")
 
+        # ベースタイムフレーム（パラメータから取得、デフォルトは1h）
+        self.base_timeframe = params.get("timeframe", "1h")
+
+        # MTFデータプロバイダーの初期化（MTF指標が存在する場合のみ）
+        self.mtf_data_provider = None
+        if self._has_mtf_indicators():
+            from ..services.mtf_data_provider import MultiTimeframeDataProvider
+
+            self.mtf_data_provider = MultiTimeframeDataProvider(
+                base_data=data,
+                base_timeframe=self.base_timeframe,
+            )
+            logger.debug(
+                f"MTFデータプロバイダー初期化: base_timeframe={self.base_timeframe}"
+            )
+
+        # IndicatorCalculatorの初期化（MTFデータプロバイダー付き）
+        self.indicator_calculator = IndicatorCalculator(
+            mtf_data_provider=self.mtf_data_provider
+        )
+
         self.indicators = {}
+
+    def _has_mtf_indicators(self) -> bool:
+        """MTF指標が存在するかチェック"""
+        if not self.gene or not self.gene.indicators:
+            return False
+        return any(
+            getattr(ind, "timeframe", None) is not None
+            for ind in self.gene.indicators
+            if ind.enabled
+        )
 
     def init(self):
         """指標の初期化"""

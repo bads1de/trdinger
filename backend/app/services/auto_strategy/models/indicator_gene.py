@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -14,11 +14,21 @@ class IndicatorGene:
     指標遺伝子
 
     単一のテクニカル指標の設定を表現します。
+
+    Attributes:
+        type: 指標タイプ（例: "SMA", "RSI"）
+        parameters: 指標パラメータ（例: {"period": 20}）
+        enabled: 指標が有効かどうか
+        timeframe: この指標が計算されるタイムフレーム。
+            None の場合は戦略のデフォルトタイムフレームを使用。
+            例: "1h", "4h", "1d" など
+        json_config: JSON形式の設定キャッシュ
     """
 
     type: str
     parameters: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
+    timeframe: Optional[str] = None
     json_config: Dict[str, Any] = field(default_factory=dict)
 
     def validate(self) -> bool:

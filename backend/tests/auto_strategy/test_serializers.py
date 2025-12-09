@@ -365,3 +365,87 @@ def test_condition_round_trip(serializer: GeneSerializer) -> None:
     assert restored.left_operand == cond.left_operand
     assert restored.operator == cond.operator
     assert restored.right_operand == cond.right_operand
+
+
+# e. マルチタイムフレーム（MTF）サポート
+
+
+def test_indicator_gene_with_timeframe_round_trip(serializer: GeneSerializer) -> None:
+    """タイムフレーム付き指標遺伝子のラウンドトリップ."""
+    indicator = IndicatorGene(
+        type="SMA", parameters={"period": 50}, enabled=True, timeframe="4h"
+    )
+    data = serializer.indicator_gene_to_dict(indicator)
+
+    # timeframe がシリアライズされていることを確認
+    assert "timeframe" in data
+    assert data["timeframe"] == "4h"
+
+    restored = serializer.dict_to_indicator_gene(data)
+
+    assert isinstance(restored, IndicatorGene)
+    assert restored.type == "SMA"
+    assert restored.parameters == {"period": 50}
+    assert restored.enabled is True
+    assert restored.timeframe == "4h"
+
+
+def test_indicator_gene_without_timeframe_round_trip(
+    serializer: GeneSerializer,
+) -> None:
+    """タイムフレームなし（None）の指標遺伝子のラウンドトリップ."""
+    indicator = IndicatorGene(
+        type="RSI", parameters={"period": 14}, enabled=True, timeframe=None
+    )
+    data = serializer.indicator_gene_to_dict(indicator)
+
+    # timeframe が None の場合はシリアライズに含まれない（後方互換性）
+    assert "timeframe" not in data
+
+    restored = serializer.dict_to_indicator_gene(data)
+
+    assert isinstance(restored, IndicatorGene)
+    assert restored.type == "RSI"
+    assert restored.timeframe is None
+
+
+def test_strategy_gene_with_mtf_indicators_round_trip(
+    serializer: GeneSerializer,
+) -> None:
+    """マルチタイムフレーム指標を含む戦略遺伝子のラウンドトリップ."""
+    indicators = [
+        IndicatorGene(
+            type="EMA", parameters={"period": 20}, enabled=True, timeframe=None
+        ),  # デフォルトTF
+        IndicatorGene(
+            type="SMA", parameters={"period": 200}, enabled=True, timeframe="1d"
+        ),  # 日足トレンド
+        IndicatorGene(
+            type="RSI", parameters={"period": 14}, enabled=True, timeframe="4h"
+        ),  # 4時間足
+    ]
+    entry_conditions = [
+        Condition(left_operand="close", operator=">", right_operand="EMA_20"),
+    ]
+    strategy_gene = StrategyGene(
+        id="mtf-strategy-test",
+        indicators=indicators,
+        entry_conditions=entry_conditions,
+        long_entry_conditions=entry_conditions,
+        short_entry_conditions=[],
+        exit_conditions=[],
+        risk_management={},
+        tpsl_gene=TPSLGene(enabled=True, method=TPSLMethod.FIXED_PERCENTAGE),
+        metadata={"mtf_enabled": True},
+    )
+
+    data = serializer.strategy_gene_to_dict(strategy_gene)
+    restored = serializer.dict_to_strategy_gene(data, StrategyGene)
+
+    assert isinstance(restored, StrategyGene)
+    assert len(restored.indicators) == 3
+
+    # 各指標のタイムフレームが正しく復元されていることを確認
+    assert restored.indicators[0].timeframe is None  # デフォルト
+    assert restored.indicators[1].timeframe == "1d"  # 日足
+    assert restored.indicators[2].timeframe == "4h"  # 4時間足

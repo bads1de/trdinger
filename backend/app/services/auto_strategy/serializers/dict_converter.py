@@ -121,11 +121,15 @@ class DictConverter:
             辞書形式のデータ
         """
         try:
-            return {
+            result = {
                 "type": indicator_gene.type,
                 "parameters": indicator_gene.parameters,
                 "enabled": indicator_gene.enabled,
             }
+            # timeframe が設定されている場合のみ含める（後方互換性）
+            if indicator_gene.timeframe is not None:
+                result["timeframe"] = indicator_gene.timeframe
+            return result
 
         except Exception as e:
             logger.error(f"指標遺伝子辞書変換エラー: {e}")
@@ -149,6 +153,7 @@ class DictConverter:
                 type=data["type"],
                 parameters=data["parameters"],
                 enabled=data.get("enabled", True),
+                timeframe=data.get("timeframe"),  # None の場合はデフォルトTFを使用
             )
 
         except Exception as e:
