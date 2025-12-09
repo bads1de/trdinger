@@ -6,9 +6,10 @@
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
+from scipy.spatial import cKDTree
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
@@ -26,21 +27,39 @@ class FitnessSharing:
     多様な戦略の共存を促進します。
     """
 
-    def __init__(self, sharing_radius: float = 0.1, alpha: float = 1.0):
+    # 大規模集団でサンプリングを使用する閾値（デフォルト: 200個体以上）
+    DEFAULT_SAMPLING_THRESHOLD = 200
+    # サンプリング時に使用するサンプル数の割合
+    SAMPLING_RATIO = 0.3
+
+    def __init__(
+        self,
+        sharing_radius: float = 0.1,
+        alpha: float = 1.0,
+        sampling_threshold: Optional[int] = None,
+    ):
         """
         初期化
 
         Args:
             sharing_radius: 共有半径（類似度の閾値）
             alpha: 共有関数の形状パラメータ
+            sampling_threshold: サンプリングを使用する集団サイズの閾値
         """
         self.sharing_radius = sharing_radius
         self.alpha = alpha
         self.gene_serializer = GeneSerializer()
+        self.sampling_threshold = (
+            sampling_threshold
+            if sampling_threshold is not None
+            else self.DEFAULT_SAMPLING_THRESHOLD
+        )
 
     def apply_fitness_sharing(self, population: List[Any]) -> List[Any]:
         """
-        個体群にフィットネス共有を適用
+        個体群にフィットネス共有を適用（最適化版）
+
+        ベクトル化とKD-Treeを使用してO(N²)からO(N log N)に計算量を削減。
 
         Args:
             population: 個体群
@@ -52,36 +71,36 @@ class FitnessSharing:
             if len(population) <= 1:
                 return population
 
-            # 各個体の戦略遺伝子を取得
+            # 各個体の戦略遺伝子を取得してベクトル化
             genes = []
-            for individual in population:
+            vectors = []
+            valid_indices = []
+
+            for i, individual in enumerate(population):
                 try:
                     gene = self.gene_serializer.from_list(individual, StrategyGene)
-                    genes.append(gene)
+                    if gene is not None:
+                        genes.append(gene)
+                        vectors.append(self._vectorize_gene(gene))
+                        valid_indices.append(i)
+                    else:
+                        genes.append(None)
                 except Exception as e:
                     logger.warning(f"個体のデコードに失敗: {e}")
                     genes.append(None)
 
-            # 各個体のニッチカウントを計算
-            niche_counts = []
-            for i, gene_i in enumerate(genes):
-                if gene_i is None:
-                    niche_counts.append(1.0)
-                    continue
+            if len(vectors) < 2:
+                return population
 
-                niche_count = 0.0
-                for j, gene_j in enumerate(genes):
-                    if gene_j is None:
-                        continue
+            vectors = np.array(vectors)
 
-                    # 類似度を計算
-                    similarity = self._calculate_similarity(gene_i, gene_j)
+            # 最適化されたニッチカウント計算
+            niche_counts_vectorized = self.compute_niche_counts_vectorized(vectors)
 
-                    # 共有関数を適用
-                    sharing_value = self._sharing_function(similarity)
-                    niche_count += sharing_value
-
-                niche_counts.append(max(1.0, niche_count))
+            # 全個体用のニッチカウント配列を作成（デフォルト1.0）
+            niche_counts = [1.0] * len(population)
+            for idx, valid_idx in enumerate(valid_indices):
+                niche_counts[valid_idx] = niche_counts_vectorized[idx]
 
             # フィットネス値を調整（多目的最適化対応）
             for i, individual in enumerate(population):
@@ -100,6 +119,144 @@ class FitnessSharing:
         except Exception as e:
             logger.error(f"フィットネス共有適用エラー: {e}")
             return population
+
+    def compute_niche_counts_vectorized(self, vectors: np.ndarray) -> np.ndarray:
+        """
+        ベクトル化されたニッチカウント計算（O(N log N)）
+
+        KD-Treeを使用して近傍探索を効率化し、大規模集団では
+        サンプリングベースの近似を行う。
+
+        Args:
+            vectors: 個体の特徴ベクトル配列 (N x D)
+
+        Returns:
+            各個体のニッチカウント配列 (N,)
+        """
+        n_individuals = len(vectors)
+
+        if n_individuals < 2:
+            return np.ones(n_individuals)
+
+        # ベクトルを正規化（距離計算の安定性向上）
+        vectors_normalized = self._normalize_vectors(vectors)
+
+        # 共有半径を距離空間に変換
+        # 類似度 > (1 - sharing_radius) を共有範囲とする
+        # 距離 < sharing_radius * max_distance として近似
+        distance_threshold = self.sharing_radius * np.sqrt(vectors_normalized.shape[1])
+
+        # 大規模集団の場合はサンプリングを使用
+        if n_individuals > self.sampling_threshold:
+            return self._compute_niche_counts_sampling(
+                vectors_normalized, distance_threshold
+            )
+
+        # KD-Treeによる近傍探索
+        neighbors_list = self.find_neighbors_kdtree(
+            vectors_normalized, radius=distance_threshold
+        )
+
+        # ニッチカウントを計算
+        niche_counts = np.array(
+            [max(1.0, float(len(neighbors))) for neighbors in neighbors_list]
+        )
+
+        return niche_counts
+
+    def find_neighbors_kdtree(
+        self, vectors: np.ndarray, radius: float
+    ) -> List[np.ndarray]:
+        """
+        KD-Treeを使用して各点の近傍を探索（O(N log N)）
+
+        Args:
+            vectors: 特徴ベクトル配列 (N x D)
+            radius: 探索半径
+
+        Returns:
+            各点の近傍インデックスのリスト
+        """
+        if len(vectors) < 1:
+            return []
+
+        # KD-Treeを構築
+        tree = cKDTree(vectors)
+
+        # 各点の近傍を検索
+        neighbors_list = tree.query_ball_point(vectors, r=radius)
+
+        return neighbors_list
+
+    def _normalize_vectors(self, vectors: np.ndarray) -> np.ndarray:
+        """
+        特徴ベクトルを正規化（0-1スケーリング）
+
+        Args:
+            vectors: 特徴ベクトル配列 (N x D)
+
+        Returns:
+            正規化されたベクトル配列
+        """
+        if len(vectors) == 0:
+            return vectors
+
+        # 各次元の最小・最大値を計算
+        min_vals = vectors.min(axis=0)
+        max_vals = vectors.max(axis=0)
+
+        # ゼロ除算を防ぐ
+        range_vals = max_vals - min_vals
+        range_vals[range_vals == 0] = 1.0
+
+        # 正規化
+        normalized = (vectors - min_vals) / range_vals
+
+        return normalized
+
+    def _compute_niche_counts_sampling(
+        self, vectors: np.ndarray, distance_threshold: float
+    ) -> np.ndarray:
+        """
+        サンプリングベースのニッチカウント近似（大規模集団用）
+
+        全ペア計算の代わりに、ランダムサンプルとの距離を計算して
+        ニッチカウントを推定する。
+
+        Args:
+            vectors: 正規化された特徴ベクトル配列 (N x D)
+            distance_threshold: 距離閾値
+
+        Returns:
+            推定されたニッチカウント配列 (N,)
+        """
+        n_individuals = len(vectors)
+        sample_size = max(10, int(n_individuals * self.SAMPLING_RATIO))
+
+        # ランダムサンプルを選択
+        np.random.seed(42)  # 再現性のため
+        sample_indices = np.random.choice(
+            n_individuals, size=min(sample_size, n_individuals), replace=False
+        )
+        sample_vectors = vectors[sample_indices]
+
+        # サンプルでKD-Treeを構築
+        sample_tree = cKDTree(sample_vectors)
+
+        # 各個体からサンプルへの距離を計算
+        distances, _ = sample_tree.query(vectors, k=min(10, len(sample_indices)))
+
+        # 閾値内のサンプル数をカウントし、全体にスケール
+        if distances.ndim == 1:
+            distances = distances.reshape(-1, 1)
+
+        neighbors_in_sample = np.sum(distances < distance_threshold, axis=1)
+
+        # サンプル比率でスケールアップして推定
+        scale_factor = n_individuals / len(sample_indices)
+        niche_counts = np.maximum(1.0, neighbors_in_sample * scale_factor)
+
+        return niche_counts
 
     def _calculate_similarity(self, gene1: StrategyGene, gene2: StrategyGene) -> float:
         """
