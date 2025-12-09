@@ -6,7 +6,7 @@
 import logging
 import warnings
 from datetime import datetime
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Type
 
 import pandas as pd
 from backtesting import Backtest, Strategy
@@ -47,6 +47,7 @@ class BacktestExecutor:
         end_date: datetime,
         initial_capital: float,
         commission_rate: float,
+        preloaded_data: Optional[pd.DataFrame] = None,
     ) -> Any:
         """
         バックテストを実行
@@ -59,7 +60,8 @@ class BacktestExecutor:
             start_date: 開始日時
             end_date: 終了日時
             initial_capital: 初期資金
-            commission_rate: 手数料率
+            commission_rate: float
+            preloaded_data: 事前にロードされたデータ（オプション）
 
         Returns:
             バックテスト統計結果
@@ -69,7 +71,10 @@ class BacktestExecutor:
         """
         try:
             # データ取得
-            data = self._get_backtest_data(symbol, timeframe, start_date, end_date)
+            if preloaded_data is not None:
+                data = preloaded_data
+            else:
+                data = self._get_backtest_data(symbol, timeframe, start_date, end_date)
 
             # バックテスト設定
             bt = self._create_backtest_instance(

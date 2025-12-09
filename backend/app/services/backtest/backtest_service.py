@@ -7,6 +7,8 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+import pandas as pd
+
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
@@ -52,7 +54,9 @@ class BacktestService:
         self._result_converter = BacktestResultConverter()
         self._executor = None  # 遅延初期化
 
-    def run_backtest(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def run_backtest(
+        self, config: Dict[str, Any], preloaded_data: Optional[pd.DataFrame] = None
+    ) -> Dict[str, Any]:
         """
         バックテストを実行
 
@@ -83,7 +87,7 @@ class BacktestService:
             self._validator.validate_config(config)
 
             # 2. データサービスの初期化
-            self._ensure_data_service_initialized()
+            self.ensure_data_service_initialized()
 
             # 3. 実行エンジンの初期化
             self._ensure_executor_initialized()
@@ -118,6 +122,7 @@ class BacktestService:
                 end_date=end_date,
                 initial_capital=config["initial_capital"],
                 commission_rate=config["commission_rate"],
+                preloaded_data=preloaded_data,
             )
 
             # 7. 結果をデータベース形式に変換
@@ -152,7 +157,7 @@ class BacktestService:
             logger.error(f"予期しないエラーが発生しました: {e}", exc_info=True)
             raise
 
-    def _ensure_data_service_initialized(self) -> None:
+    def ensure_data_service_initialized(self) -> None:
         """データサービスの初期化を確保"""
         if self.data_service is None:
             # 新しいDBセッションを作成し、保持する

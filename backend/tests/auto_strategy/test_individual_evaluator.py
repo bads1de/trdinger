@@ -565,6 +565,163 @@ class TestIndividualEvaluator:
         expected_fitness = 0.1 * 0.5 + 0.05 * 0.5
         assert abs(result[0] - expected_fitness) < 1e-6
 
+    def test_evaluate_individual_caching(self):
+        """データのキャッシング動作テスト"""
+        mock_individual = [1, 2, 3, 4, 5]
+
+        # モックデータ
+        mock_data = Mock(name="MockDataFrame")
+        # data_serviceプロパティをモック化
+        message_mock = Mock()
+        message_mock.get_data_for_backtest.return_value = mock_data
+        self.mock_backtest_service.data_service = message_mock
+
+        # バックテスト結果モック
+        mock_result = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 1.0,
+                "max_drawdown": 0.1,
+                "win_rate": 0.5,
+                "total_trades": 1,
+            },
+            "equity_curve": [],
+            "trade_history": [],
+        }
+        self.mock_backtest_service.run_backtest.return_value = mock_result
+
+        config = {
+            "symbol": "BTC/USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-02",
+        }
+        self.evaluator.set_backtest_config(config)
+
+        ga_config = GAConfig()
+        ga_config.fitness_constraints = {}
+        ga_config.fitness_weights = {
+            "total_return": 1.0,
+            "sharpe_ratio": 0.0,
+            "max_drawdown": 0.0,
+            "win_rate": 0.0,
+            "balance_score": 0.0,
+            "ulcer_index_penalty": 0.0,
+            "trade_frequency_penalty": 0.0,
+        }
+
+        # 1回目の評価（データ取得発生）
+        self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # 検証1: データ取得が呼ばれたか
+        self.mock_backtest_service.ensure_data_service_initialized.assert_called()
+        self.mock_backtest_service.data_service.get_data_for_backtest.assert_called_once()
+
+        # 検証2: run_backtestにpreloaded_dataが渡されたか
+        args, kwargs = self.mock_backtest_service.run_backtest.call_args
+        # preloaded_dataはkwargsで渡される実装にした
+        assert kwargs.get("preloaded_data") == mock_data
+
+        # 2回目の評価（キャッシュ利用）
+        self.mock_backtest_service.data_service.get_data_for_backtest.reset_mock()
+        self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # 検証3: データ取得が呼ばれないこと
+        self.mock_backtest_service.data_service.get_data_for_backtest.assert_not_called()
+
+        # 検証4: run_backtestには依然としてcached dataが渡されること
+        args, kwargs = self.mock_backtest_service.run_backtest.call_args
+        assert kwargs.get("preloaded_data") == mock_data
+
+    def test_evaluate_individual_caching_with_oos(self):
+        """OOS検証時のキャッシング動作テスト"""
+        mock_individual = [1, 2, 3, 4, 5]
+
+        # モックデータ1 (In-Sample用)
+        mock_data_is = Mock(name="MockDataFrameIS")
+        # モックデータ2 (Out-of-Sample用)
+        mock_data_oos = Mock(name="MockDataFrameOOS")
+
+        # data_serviceプロパティをモック化
+        message_mock = Mock()
+
+        # 呼ばれる日付範囲によって異なるデータを返すモック関数
+        def get_data_side_effect(**kwargs):
+            if "2024-01-09" in str(kwargs.get("end_date")):
+                # IS期間: 1/1 - 1/9
+                return mock_data_is
+            else:
+                # OOS期間: 1/9 - 1/11
+                return mock_data_oos
+
+        message_mock.get_data_for_backtest.side_effect = get_data_side_effect
+        self.mock_backtest_service.data_service = message_mock
+
+        # バックテスト結果モック (パフォーマンスメトリクスが必要)
+        mock_metrics = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 1.0,
+                "max_drawdown": 0.1,
+                "win_rate": 0.5,
+                "total_trades": 1,
+            },
+            "equity_curve": [],
+            "trade_history": [],
+        }
+        self.mock_backtest_service.run_backtest.return_value = mock_metrics
+
+        # ベース設定
+        config = {
+            "symbol": "BTC/USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01 00:00:00",
+            "end_date": "2024-01-11 00:00:00",
+        }
+        self.evaluator.set_backtest_config(config)
+
+        ga_config = GAConfig()
+        ga_config.enable_multi_objective = False
+        ga_config.oos_split_ratio = 0.2
+        ga_config.oos_fitness_weight = 0.5
+        # 重み設定必須
+        ga_config.fitness_weights = {"total_return": 1.0}
+        ga_config.fitness_constraints = {}
+
+        # 1. 初回実行（キャッシュなし）
+        self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # 検証1: データ取得が2回（IS用とOOS用）行われたか
+        # 厳密には回数を確認
+        assert (
+            self.mock_backtest_service.data_service.get_data_for_backtest.call_count
+            == 2
+        )
+
+        # 検証2: run_backtestがIS用とOOS用のデータで呼ばれたか確認
+        # call_args_listの各呼び出しで、preloaded_dataが適切に渡されているか
+        calls = self.mock_backtest_service.run_backtest.call_args_list
+        # call_args_list[0]はIS, call_args_list[1]はOOS (実装順序に依存してチェック)
+        kwargs_is = calls[0].kwargs
+        kwargs_oos = calls[1].kwargs
+        assert kwargs_is.get("preloaded_data") == mock_data_is
+        assert kwargs_oos.get("preloaded_data") == mock_data_oos
+
+        # 2. 2回目実行（キャッシュあり）
+        self.mock_backtest_service.data_service.get_data_for_backtest.reset_mock()
+        self.evaluator.evaluate_individual(mock_individual, ga_config)
+
+        # 検証3: データ取得が呼ばれないこと
+        self.mock_backtest_service.data_service.get_data_for_backtest.assert_not_called()
+
+        # 検証4: それでもrun_backtestにはキャッシュデータが渡されていること
+        calls_2nd = self.mock_backtest_service.run_backtest.call_args_list
+        # call countが増えているので、直近2回分（3回目と4回目）をチェック
+        kwargs_is_2nd = calls_2nd[2].kwargs
+        kwargs_oos_2nd = calls_2nd[3].kwargs
+        assert kwargs_is_2nd.get("preloaded_data") == mock_data_is
+        assert kwargs_oos_2nd.get("preloaded_data") == mock_data_oos
+
 
 class TestUnifiedEvaluationLogic:
     """統一評価ロジックのテストクラス"""

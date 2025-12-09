@@ -5,6 +5,7 @@
 """
 
 import logging
+import threading
 from typing import Any, Dict, Tuple
 
 import pandas as pd
@@ -36,6 +37,8 @@ class IndividualEvaluator:
         """
         self.backtest_service = backtest_service
         self._fixed_backtest_config = None
+        self._data_cache = {}
+        self._lock = threading.Lock()
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
         """バックテスト設定を設定"""
@@ -142,6 +145,33 @@ class IndividualEvaluator:
             logger.error(f"OOS評価中エラー: {e}")
             return self._perform_single_evaluation(gene, base_backtest_config, config)
 
+    def _get_cached_data(self, backtest_config: Dict[str, Any]) -> Any:
+        """キャッシュされたバックテストデータを取得"""
+        symbol = backtest_config.get("symbol")
+        timeframe = backtest_config.get("timeframe")
+        start_date = backtest_config.get("start_date")
+        end_date = backtest_config.get("end_date")
+
+        # キーの作成（文字列化して一意性を確保）
+        key = (symbol, timeframe, str(start_date), str(end_date))
+
+        with self._lock:
+            if key not in self._data_cache:
+                # データサービスが初期化されていることを確認
+                self.backtest_service.ensure_data_service_initialized()
+
+                # データを取得
+                data = self.backtest_service.data_service.get_data_for_backtest(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    start_date=pd.to_datetime(start_date),
+                    end_date=pd.to_datetime(end_date),
+                )
+                self._data_cache[key] = data
+                logger.debug(f"バックテストデータをキャッシュしました: {key}")
+
+            return self._data_cache[key]
+
     def _perform_single_evaluation(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Tuple[float, ...]:
@@ -168,8 +198,13 @@ class IndividualEvaluator:
                     backtest_config["ml_filter_enabled"] = False
                     backtest_config["ml_filter_model"] = None
 
+            # データをキャッシュから取得または新規取得
+            data = self._get_cached_data(backtest_config)
+
             # バックテスト実行
-            result = self.backtest_service.run_backtest(backtest_config=backtest_config)
+            result = self.backtest_service.run_backtest(
+                backtest_config=backtest_config, preloaded_data=data
+            )
 
             # フィットネス計算（常に統一ロジックを使用）
             return self._calculate_multi_objective_fitness(result, config)

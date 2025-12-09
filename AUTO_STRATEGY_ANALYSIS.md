@@ -229,19 +229,7 @@
 
 ### Phase 2: 機能拡張 (High Impact)
 
-3. ✅ **マルチタイムフレーム対応**: `IndicatorGene` に `timeframe` を追加し、バックテストエンジンを拡張。 **（実装完了: 2024-12-09）**
-4. ✅ **ステートフル・ロジック**: `StatefulCondition` / `StateTracker` を新設し、過去の状態を参照可能にする。 **(実装完了: 2025-12-09)**
-
-### Phase 3: アーキテクチャ改善 (Medium Impact)
-
-5. **データキャッシュ戦略**: 個体評価ループ外でのデータロードと共有参照（Read-Only）化。
-6. **エラー情報の構造化**: `EvaluationResult` オブジェクトの導入。
-7. ✅ **計算量削減**: フィットネス共有のアルゴリズム改善。 **(実装完了: 2025-12-09)**
-   > - `FitnessSharing.apply_fitness_sharing` を $O(N^2)$ から $O(N \log N)$ に最適化
-   > - `compute_niche_counts_vectorized`: 遺伝子をベクトル化し、KD-Tree (`scipy.spatial.cKDTree`) による半径検索を使用
-   > - `find_neighbors_kdtree`: 空間分割による効率的な近傍探索
-   > - `_compute_niche_counts_sampling`: 大規模集団（`sampling_threshold` 超過時）向けのサンプリングベース近似
-   > - `sampling_threshold` / `SAMPLING_RATIO` をクラス属性として設定可能に
+> - `sampling_threshold` / `SAMPLING_RATIO` をクラス属性として設定可能に
 
 ### Phase 4: コード品質と保守性 (Maintenance)
 
