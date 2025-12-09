@@ -54,6 +54,8 @@ GA_DEFAULT_FITNESS_SHARING = {
     "enable_fitness_sharing": True,
     "sharing_radius": 0.1,
     "sharing_alpha": 1.0,
+    "sampling_threshold": 200,
+    "sampling_ratio": 0.3,
 }
 
 # GAパラメータ範囲定義
@@ -85,13 +87,16 @@ GA_THRESHOLD_RANGES = {
 
 
 GA_MUTATION_SETTINGS = {
-    "indicator_param_mutation_range": (0.8, 1.2),  # 指標パラメータの変動幅 (min_multiplier, max_multiplier)
+    "indicator_param_mutation_range": (
+        0.8,
+        1.2,
+    ),  # 指標パラメータの変動幅 (min_multiplier, max_multiplier)
     "indicator_add_delete_probability": 0.3,  # 指標の追加・削除確率 (x mutation_rate)
-    "indicator_add_vs_delete_probability": 0.5, # 指標追加 vs 削除の確率 (閾値)
-    "crossover_field_selection_probability": 0.5, # ユニフォーム交叉で親1のフィールドを選択する確率
+    "indicator_add_vs_delete_probability": 0.5,  # 指標追加 vs 削除の確率 (閾値)
+    "crossover_field_selection_probability": 0.5,  # ユニフォーム交叉で親1のフィールドを選択する確率
     "condition_operator_switch_probability": 0.5,  # 条件グループのAND/OR切り替え確率
     "condition_change_probability_multiplier": 0.5,  # 個別条件の変更確率 (x mutation_rate)
-    "condition_selection_probability": 0.5, # エントリー/エグジット条件選択確率
+    "condition_selection_probability": 0.5,  # エントリー/エグジット条件選択確率
     "risk_param_mutation_range": (0.8, 1.2),  # リスク管理パラメータの変動幅
     "tpsl_gene_creation_probability_multiplier": 0.2,  # 欠損TP/SL遺伝子の新規作成確率 (x mutation_rate)
     "position_sizing_gene_creation_probability_multiplier": 0.2,  # 欠損PS遺伝子の新規作成確率 (x mutation_rate)
@@ -99,10 +104,11 @@ GA_MUTATION_SETTINGS = {
     "adaptive_mutation_rate_decrease_multiplier": 0.5,  # 適応的突然変異のレート減少倍率
     "adaptive_mutation_rate_increase_multiplier": 2.0,  # 適応的突然変異のレート増加倍率
     "valid_condition_operators": [">", "<", ">=", "<=", "=="],  # 有効な条件演算子
-    "numeric_threshold_probability": 0.3, # 数値閾値を生成する確率
-    "min_compatibility_score": 0.5,       # オペランド互換性の最低スコア
-    "strict_compatibility_score": 0.7,    # オペランド互換性の厳密スコア
+    "numeric_threshold_probability": 0.3,  # 数値閾値を生成する確率
+    "min_compatibility_score": 0.5,  # オペランド互換性の最低スコア
+    "strict_compatibility_score": 0.7,  # オペランド互換性の厳密スコア
 }
+
 
 @dataclass
 class GASettings(BaseConfig):
@@ -130,25 +136,55 @@ class GASettings(BaseConfig):
     ]
 
     # 突然変異設定
-    indicator_param_mutation_range: Tuple[float, float] = GA_MUTATION_SETTINGS["indicator_param_mutation_range"]
-    indicator_add_delete_probability: float = GA_MUTATION_SETTINGS["indicator_add_delete_probability"]
-    indicator_add_vs_delete_probability: float = GA_MUTATION_SETTINGS["indicator_add_vs_delete_probability"]
-    crossover_field_selection_probability: float = GA_MUTATION_SETTINGS["crossover_field_selection_probability"]
-    condition_operator_switch_probability: float = GA_MUTATION_SETTINGS["condition_operator_switch_probability"]
-    condition_change_probability_multiplier: float = GA_MUTATION_SETTINGS["condition_change_probability_multiplier"]
-    condition_selection_probability: float = GA_MUTATION_SETTINGS["condition_selection_probability"]
-    risk_param_mutation_range: Tuple[float, float] = GA_MUTATION_SETTINGS["risk_param_mutation_range"]
-    tpsl_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS["tpsl_gene_creation_probability_multiplier"]
-    position_sizing_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS["position_sizing_gene_creation_probability_multiplier"]
-    adaptive_mutation_variance_threshold: float = GA_MUTATION_SETTINGS["adaptive_mutation_variance_threshold"]
-    adaptive_mutation_rate_decrease_multiplier: float = GA_MUTATION_SETTINGS["adaptive_mutation_rate_decrease_multiplier"]
-    adaptive_mutation_rate_increase_multiplier: float = GA_MUTATION_SETTINGS["adaptive_mutation_rate_increase_multiplier"]
+    indicator_param_mutation_range: Tuple[float, float] = GA_MUTATION_SETTINGS[
+        "indicator_param_mutation_range"
+    ]
+    indicator_add_delete_probability: float = GA_MUTATION_SETTINGS[
+        "indicator_add_delete_probability"
+    ]
+    indicator_add_vs_delete_probability: float = GA_MUTATION_SETTINGS[
+        "indicator_add_vs_delete_probability"
+    ]
+    crossover_field_selection_probability: float = GA_MUTATION_SETTINGS[
+        "crossover_field_selection_probability"
+    ]
+    condition_operator_switch_probability: float = GA_MUTATION_SETTINGS[
+        "condition_operator_switch_probability"
+    ]
+    condition_change_probability_multiplier: float = GA_MUTATION_SETTINGS[
+        "condition_change_probability_multiplier"
+    ]
+    condition_selection_probability: float = GA_MUTATION_SETTINGS[
+        "condition_selection_probability"
+    ]
+    risk_param_mutation_range: Tuple[float, float] = GA_MUTATION_SETTINGS[
+        "risk_param_mutation_range"
+    ]
+    tpsl_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS[
+        "tpsl_gene_creation_probability_multiplier"
+    ]
+    position_sizing_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS[
+        "position_sizing_gene_creation_probability_multiplier"
+    ]
+    adaptive_mutation_variance_threshold: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_variance_threshold"
+    ]
+    adaptive_mutation_rate_decrease_multiplier: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_rate_decrease_multiplier"
+    ]
+    adaptive_mutation_rate_increase_multiplier: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_rate_increase_multiplier"
+    ]
     valid_condition_operators: List[str] = field(
         default_factory=lambda: GA_MUTATION_SETTINGS["valid_condition_operators"].copy()
     )
-    numeric_threshold_probability: float = GA_MUTATION_SETTINGS["numeric_threshold_probability"]
+    numeric_threshold_probability: float = GA_MUTATION_SETTINGS[
+        "numeric_threshold_probability"
+    ]
     min_compatibility_score: float = GA_MUTATION_SETTINGS["min_compatibility_score"]
-    strict_compatibility_score: float = GA_MUTATION_SETTINGS["strict_compatibility_score"]
+    strict_compatibility_score: float = GA_MUTATION_SETTINGS[
+        "strict_compatibility_score"
+    ]
 
     # マルチタイムフレーム設定
     enable_multi_timeframe: bool = False

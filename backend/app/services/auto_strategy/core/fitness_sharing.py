@@ -37,6 +37,7 @@ class FitnessSharing:
         sharing_radius: float = 0.1,
         alpha: float = 1.0,
         sampling_threshold: Optional[int] = None,
+        sampling_ratio: Optional[float] = None,
     ):
         """
         初期化
@@ -45,6 +46,7 @@ class FitnessSharing:
             sharing_radius: 共有半径（類似度の閾値）
             alpha: 共有関数の形状パラメータ
             sampling_threshold: サンプリングを使用する集団サイズの閾値
+            sampling_ratio: サンプリング時に使用するサンプル数の割合
         """
         self.sharing_radius = sharing_radius
         self.alpha = alpha
@@ -53,6 +55,9 @@ class FitnessSharing:
             sampling_threshold
             if sampling_threshold is not None
             else self.DEFAULT_SAMPLING_THRESHOLD
+        )
+        self.sampling_ratio = (
+            sampling_ratio if sampling_ratio is not None else self.SAMPLING_RATIO
         )
 
     def apply_fitness_sharing(self, population: List[Any]) -> List[Any]:
@@ -231,7 +236,7 @@ class FitnessSharing:
             推定されたニッチカウント配列 (N,)
         """
         n_individuals = len(vectors)
-        sample_size = max(10, int(n_individuals * self.SAMPLING_RATIO))
+        sample_size = max(10, int(n_individuals * self.sampling_ratio))
 
         # ランダムサンプルを選択
         np.random.seed(42)  # 再現性のため

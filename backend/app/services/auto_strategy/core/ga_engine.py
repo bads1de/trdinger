@@ -107,7 +107,10 @@ class GeneticAlgorithmEngine:
         # フィットネス共有の初期化
         if config.enable_fitness_sharing:
             self.fitness_sharing = FitnessSharing(
-                sharing_radius=config.sharing_radius, alpha=config.sharing_alpha
+                sharing_radius=config.sharing_radius,
+                alpha=config.sharing_alpha,
+                sampling_threshold=config.sampling_threshold,
+                sampling_ratio=config.sampling_ratio,
             )
         else:
             self.fitness_sharing = None

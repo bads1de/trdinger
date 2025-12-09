@@ -170,3 +170,15 @@ class TestFitnessSharing:
             pass
         else:
             pytest.skip("silhouette_based_sharing method not implemented yet")
+
+    def test_initialization_with_sampling_params(self):
+        """サンプリングパラメータ指定付き初期化のテスト"""
+        # デフォルト
+        fs_default = FitnessSharing()
+        assert fs_default.sampling_threshold == 200
+        assert fs_default.sampling_ratio == 0.3
+
+        # パラメータ指定
+        fs_custom = FitnessSharing(sampling_threshold=500, sampling_ratio=0.5)
+        assert fs_custom.sampling_threshold == 500
+        assert fs_custom.sampling_ratio == 0.5

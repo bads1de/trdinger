@@ -279,7 +279,7 @@
 
 ### Phase 2: 機能拡張 (High Impact)
 
-> - `sampling_threshold` / `SAMPLING_RATIO` をクラス属性として設定可能に
+> - ✅ **サンプリング設定の外部化**: `sampling_threshold` / `SAMPLING_RATIO` を `GAConfig` および `FitnessSharing` のインスタンス属性として設定可能に改修。 **(実装完了: 2025-12-09)**
 
 ### Phase 4: コード品質と保守性 (Maintenance)
 

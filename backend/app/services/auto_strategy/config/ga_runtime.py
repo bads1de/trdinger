@@ -86,6 +86,8 @@ class GAConfig(BaseConfig):
     enable_fitness_sharing: bool = GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
     sharing_radius: float = GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
     sharing_alpha: float = GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
+    sampling_threshold: int = GA_DEFAULT_FITNESS_SHARING["sampling_threshold"]
+    sampling_ratio: float = GA_DEFAULT_FITNESS_SHARING["sampling_ratio"]
 
     # 多目的最適化設定
     enable_multi_objective: bool = False
@@ -330,6 +332,8 @@ class GAConfig(BaseConfig):
             "enable_fitness_sharing": self.enable_fitness_sharing,
             "sharing_radius": self.sharing_radius,
             "sharing_alpha": self.sharing_alpha,
+            "sampling_threshold": self.sampling_threshold,
+            "sampling_ratio": self.sampling_ratio,
             # TPSL設定
             "tpsl_method_constraints": self.tpsl_method_constraints,
             "tpsl_sl_range": self.tpsl_sl_range,
@@ -384,6 +388,8 @@ class GAConfig(BaseConfig):
             ],
             "sharing_radius": GA_DEFAULT_FITNESS_SHARING["sharing_radius"],
             "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
+            "sampling_threshold": GA_DEFAULT_FITNESS_SHARING["sampling_threshold"],
+            "sampling_ratio": GA_DEFAULT_FITNESS_SHARING["sampling_ratio"],
             # 多目的最適化設定
             "enable_multi_objective": False,
             "objectives": DEFAULT_GA_OBJECTIVES,
@@ -465,6 +471,12 @@ class GAConfig(BaseConfig):
         ]
         self.sharing_radius = ga_config.fitness_sharing["sharing_radius"]
         self.sharing_alpha = ga_config.fitness_sharing["sharing_alpha"]
+        self.sampling_threshold = ga_config.fitness_sharing.get(
+            "sampling_threshold", GA_DEFAULT_FITNESS_SHARING["sampling_threshold"]
+        )
+        self.sampling_ratio = ga_config.fitness_sharing.get(
+            "sampling_ratio", GA_DEFAULT_FITNESS_SHARING["sampling_ratio"]
+        )
 
         # パラメータ範囲
         self.parameter_ranges = ga_config.parameter_ranges.copy()
