@@ -180,10 +180,14 @@ class GeneticAlgorithmEngine:
             runner._evaluate_population(population)
 
             # 最適化アルゴリズムの実行
-            population, logbook = self._run_optimization(runner, population, config)
+            population, logbook, halloffame = self._run_optimization(
+                runner, population, config
+            )
 
             # 最良個体の処理と結果生成
-            result = self._process_results(population, config, logbook, start_time)
+            result = self._process_results(
+                population, config, logbook, start_time, halloffame
+            )
 
             logger.info(f"進化完了 - 実行時間: {result['execution_time']:.2f}秒")
             return result
@@ -266,15 +270,26 @@ class GeneticAlgorithmEngine:
             config (GAConfig): GA設定。
 
         Returns:
-            tuple: 最適化後の個体群とログブック。
+            tuple: 最適化後の個体群、ログブック、殿堂入りオブジェクト。
         """
+        # 目的数に応じて適切なHallOfFameオブジェクトを作成
         if config.enable_multi_objective:
-            return runner.run_multi_objective_evolution(population, config)
+            halloffame = tools.ParetoFront()
         else:
-            return runner.run_single_objective_evolution(population, config)
+            halloffame = tools.HallOfFame(maxsize=1)
+
+        # 統一された進化メソッドを実行
+        population, logbook = runner.run_evolution(population, config, halloffame)
+
+        return population, logbook, halloffame
 
     def _process_results(
-        self, population, config: GAConfig, logbook, start_time: float
+        self,
+        population,
+        config: GAConfig,
+        logbook,
+        start_time: float,
+        halloffame=None,
     ):
         """最適化結果を処理します。
 
@@ -289,7 +304,7 @@ class GeneticAlgorithmEngine:
         """
         # 最良個体の取得とデコード
         best_individual, best_gene, best_strategies = self._extract_best_individuals(
-            population, config
+            population, config, halloffame
         )
 
         execution_time = time.time() - start_time
@@ -315,12 +330,13 @@ class GeneticAlgorithmEngine:
 
         return result
 
-    def _extract_best_individuals(self, population, config: GAConfig):
+    def _extract_best_individuals(self, population, config: GAConfig, halloffame=None):
         """最良個体を抽出し、デコードします。
 
         Args:
             population: 最終個体群。
             config (GAConfig): GA設定。
+            halloffame: 殿堂入りオブジェクト（HallOfFame または ParetoFront）。
 
         Returns:
             tuple: 最良個体、最良遺伝子、および最良戦略のタプル。
@@ -330,12 +346,24 @@ class GeneticAlgorithmEngine:
 
         gene_serializer = GeneSerializer()
 
+        best_strategies = None
+        best_individual = None
+
         if config.enable_multi_objective:
             # 多目的最適化の場合、パレート最適解を取得
-            pareto_front = tools.ParetoFront()
-            pareto_front.update(population)
-            best_individuals = list(pareto_front)
-            best_individual = best_individuals[0] if best_individuals else population[0]
+            # halloffameがParetoFrontでない場合（fallback）はpopulationから再構築
+            if halloffame is None or not isinstance(halloffame, tools.ParetoFront):
+                pareto_front = tools.ParetoFront()
+                pareto_front.update(population)
+                best_individuals = list(pareto_front)
+            else:
+                best_individuals = list(halloffame)
+
+            # 空の場合のガード
+            if not best_individuals:
+                best_individuals = [tools.selBest(population, 1)[0]]
+
+            best_individual = best_individuals[0]
 
             best_strategies = []
             for ind in best_individuals[:10]:  # 上位10個のパレート最適解
@@ -343,13 +371,14 @@ class GeneticAlgorithmEngine:
                 best_strategies.append(
                     {"strategy": gene, "fitness_values": list(ind.fitness.values)}
                 )
-
-            best_gene = gene_serializer.from_list(best_individual, StrategyGene)
         else:
             # 単一目的最適化の場合
-            best_individual = tools.selBest(population, 1)[0]
-            best_gene = gene_serializer.from_list(best_individual, StrategyGene)
-            best_strategies = None
+            if halloffame is not None and len(halloffame) > 0:
+                best_individual = halloffame[0]
+            else:
+                best_individual = tools.selBest(population, 1)[0]
+
+        best_gene = gene_serializer.from_list(best_individual, StrategyGene)
 
         return best_individual, best_gene, best_strategies
 

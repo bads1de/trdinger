@@ -2,23 +2,50 @@
 並列評価モジュール
 
 個体群の適応度評価を並列化して実行時間を短縮します。
-ThreadPoolExecutorを使用し、I/Oバウンドなバックテスト処理を効率化。
+ProcessPoolExecutor を使用してタイムアウト時のゾンビプロセス問題を回避し、
+CPU バウンドな計算を効率化します。
 """
 
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import (
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    TimeoutError as FuturesTimeoutError,
+    as_completed,
+)
 from typing import Any, Callable, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+# プロセスプール用のトップレベル評価関数（pickle可能にするため）
+_global_evaluate_func: Optional[Callable] = None
+
+
+def _init_worker(evaluate_func: Callable) -> None:
+    """ワーカープロセス初期化関数"""
+    global _global_evaluate_func
+    _global_evaluate_func = evaluate_func
+
+
+def _evaluate_in_worker(individual: Any) -> Tuple[float, ...]:
+    """ワーカープロセス内で評価を実行"""
+    global _global_evaluate_func
+    if _global_evaluate_func is None:
+        raise RuntimeError("評価関数が初期化されていません")
+    return _global_evaluate_func(individual)
 
 
 class ParallelEvaluator:
     """
     並列評価クラス
 
-    ThreadPoolExecutorを使用して個体群の適応度評価を並列化します。
-    バックテストはI/Oバウンドな処理が多いため、ThreadPoolExecutorが適切です。
+    ProcessPoolExecutor または ThreadPoolExecutor を使用して
+    個体群の適応度評価を並列化します。
+
+    ProcessPoolExecutor を使用することで、タイムアウト時に
+    ワーカープロセスを強制終了でき、ゾンビタスク問題を回避できます。
     """
 
     def __init__(
@@ -26,25 +53,31 @@ class ParallelEvaluator:
         evaluate_func: Callable[[Any], Tuple[float, ...]],
         max_workers: Optional[int] = None,
         timeout_per_individual: float = 300.0,
+        use_process_pool: bool = False,
     ):
         """
         初期化
 
         Args:
             evaluate_func: 個体を評価する関数（toolbox.evaluate相当）
-            max_workers: 最大ワーカー数（Noneの場合はCPUコア数の2倍）
+            max_workers: 最大ワーカー数（Noneの場合はCPUコア数）
             timeout_per_individual: 個体あたりのタイムアウト秒数
+            use_process_pool: ProcessPoolExecutorを使用するか
+                              （Trueでプロセスベース、Falseでスレッドベース）
         """
         self.evaluate_func = evaluate_func
         self.max_workers = max_workers or min(32, (os.cpu_count() or 1) * 2)
         self.timeout_per_individual = timeout_per_individual
-        self._executor: Optional[ThreadPoolExecutor] = None
+        self.use_process_pool = use_process_pool
 
         # 評価統計
         self._total_evaluations = 0
         self._successful_evaluations = 0
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
+
+        # 世代ごとの統計リセットフラグ
+        self._auto_reset_per_generation = True
 
     def evaluate_population(
         self,
@@ -72,34 +105,24 @@ class ParallelEvaluator:
         results: List[Optional[Tuple[float, ...]]] = [None] * population_size
         index_map = {id(ind): i for i, ind in enumerate(population)}
 
-        logger.info(f"並列評価開始: {population_size}個体, {self.max_workers}ワーカー")
+        executor_type = "Process" if self.use_process_pool else "Thread"
+        logger.info(
+            f"並列評価開始: {population_size}個体, {self.max_workers}ワーカー ({executor_type}Pool)"
+        )
 
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # すべての個体を並列に評価
-            future_to_individual = {
-                executor.submit(self._evaluate_single, ind): ind for ind in population
-            }
+        # 世代開始時に統計をリセット
+        if self._auto_reset_per_generation:
+            self._reset_generation_stats()
 
-            for future in as_completed(
-                future_to_individual,
-                timeout=self.timeout_per_individual * population_size,
-            ):
-                individual = future_to_individual[future]
-                index = index_map[id(individual)]
-                self._total_evaluations += 1
-
-                try:
-                    fitness = future.result(timeout=self.timeout_per_individual)
-                    results[index] = fitness
-                    self._successful_evaluations += 1
-                except TimeoutError:
-                    logger.warning(f"個体評価タイムアウト: index={index}")
-                    results[index] = default_fitness
-                    self._timeout_evaluations += 1
-                except Exception as e:
-                    logger.warning(f"個体評価エラー: index={index}, error={e}")
-                    results[index] = default_fitness
-                    self._failed_evaluations += 1
+        # Executor選択
+        if self.use_process_pool:
+            results = self._evaluate_with_process_pool(
+                population, results, index_map, default_fitness
+            )
+        else:
+            results = self._evaluate_with_thread_pool(
+                population, results, index_map, default_fitness
+            )
 
         # Noneが残っている場合はデフォルト値で埋める
         final_results = [r if r is not None else default_fitness for r in results]
@@ -110,6 +133,94 @@ class ParallelEvaluator:
         )
 
         return final_results
+
+    def _evaluate_with_thread_pool(
+        self,
+        population: List[Any],
+        results: List[Optional[Tuple[float, ...]]],
+        index_map: dict,
+        default_fitness: Tuple[float, ...],
+    ) -> List[Optional[Tuple[float, ...]]]:
+        """ThreadPoolExecutorを使用した評価"""
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_individual = {
+                executor.submit(self._evaluate_single, ind): ind for ind in population
+            }
+
+            # 全体のタイムアウトを設定
+            total_timeout = self.timeout_per_individual * len(population)
+
+            try:
+                for future in as_completed(future_to_individual, timeout=total_timeout):
+                    individual = future_to_individual[future]
+                    index = index_map[id(individual)]
+                    self._total_evaluations += 1
+
+                    try:
+                        fitness = future.result(timeout=self.timeout_per_individual)
+                        results[index] = fitness
+                        self._successful_evaluations += 1
+                    except FuturesTimeoutError:
+                        logger.warning(f"個体評価タイムアウト: index={index}")
+                        results[index] = default_fitness
+                        self._timeout_evaluations += 1
+                    except Exception as e:
+                        logger.warning(f"個体評価エラー: index={index}, error={e}")
+                        results[index] = default_fitness
+                        self._failed_evaluations += 1
+            except FuturesTimeoutError:
+                logger.warning("全体タイムアウト: 一部の個体が評価されませんでした")
+                # 未完了のfutureをキャンセル
+                for future in future_to_individual:
+                    if not future.done():
+                        future.cancel()
+                        self._timeout_evaluations += 1
+
+        return results
+
+    def _evaluate_with_process_pool(
+        self,
+        population: List[Any],
+        results: List[Optional[Tuple[float, ...]]],
+        index_map: dict,
+        default_fitness: Tuple[float, ...],
+    ) -> List[Optional[Tuple[float, ...]]]:
+        """ProcessPoolExecutorを使用した評価（ゾンビ対策済み）"""
+        # ProcessPoolExecutorは子プロセスを強制終了できるため、
+        # タイムアウト時にゾンビプロセスが発生しない
+        with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_index = {}
+
+            for i, ind in enumerate(population):
+                # 個体データをシリアライズして渡す
+                future = executor.submit(self.evaluate_func, ind)
+                future_to_index[future] = i
+
+            total_timeout = self.timeout_per_individual * len(population)
+
+            try:
+                for future in as_completed(future_to_index, timeout=total_timeout):
+                    index = future_to_index[future]
+                    self._total_evaluations += 1
+
+                    try:
+                        fitness = future.result(timeout=self.timeout_per_individual)
+                        results[index] = fitness
+                        self._successful_evaluations += 1
+                    except FuturesTimeoutError:
+                        logger.warning(f"個体評価タイムアウト: index={index}")
+                        results[index] = default_fitness
+                        self._timeout_evaluations += 1
+                    except Exception as e:
+                        logger.warning(f"個体評価エラー: index={index}, error={e}")
+                        results[index] = default_fitness
+                        self._failed_evaluations += 1
+            except FuturesTimeoutError:
+                logger.warning("全体タイムアウト: プロセスプールをシャットダウン")
+                # ProcessPoolExecutorはコンテキスト終了時に子プロセスを終了
+                self._timeout_evaluations += sum(1 for r in results if r is None)
+
+        return results
 
     def _evaluate_single(self, individual: Any) -> Tuple[float, ...]:
         """
@@ -177,10 +288,17 @@ class ParallelEvaluator:
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
 
+    def _reset_generation_stats(self) -> None:
+        """世代ごとの統計をリセット（成功/失敗/タイムアウトのみ）"""
+        self._successful_evaluations = 0
+        self._failed_evaluations = 0
+        self._timeout_evaluations = 0
+
 
 def create_parallel_map(
     evaluate_func: Callable[[Any], Tuple[float, ...]],
     max_workers: Optional[int] = None,
+    use_process_pool: bool = False,
 ) -> Callable[[Callable, List[Any]], List[Tuple[float, ...]]]:
     """
     DEAPツールボックス用の並列mapファンクションを作成
@@ -188,6 +306,7 @@ def create_parallel_map(
     Args:
         evaluate_func: 評価関数
         max_workers: 最大ワーカー数
+        use_process_pool: ProcessPoolExecutorを使用するか
 
     Returns:
         toolbox.mapに登録可能な関数
@@ -195,6 +314,7 @@ def create_parallel_map(
     evaluator = ParallelEvaluator(
         evaluate_func=evaluate_func,
         max_workers=max_workers,
+        use_process_pool=use_process_pool,
     )
 
     def parallel_map(func: Callable, individuals: List[Any]) -> List[Tuple[float, ...]]:

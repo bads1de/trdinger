@@ -6,9 +6,10 @@
 
 import logging
 import threading
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
+from cachetools import LRUCache
 
 from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.model_manager import model_manager
@@ -26,23 +27,45 @@ class IndividualEvaluator:
     遺伝的アルゴリズムの個体評価を担当します。
     """
 
+    # デフォルトのキャッシュサイズ上限
+    DEFAULT_MAX_CACHE_SIZE = 100
+
     def __init__(
         self,
         backtest_service: BacktestService,
+        max_cache_size: Optional[int] = None,
     ):
         """初期化
 
         Args:
             backtest_service: バックテストサービス
+            max_cache_size: データキャッシュの最大サイズ（LRU方式で古いエントリを削除）
         """
         self.backtest_service = backtest_service
         self._fixed_backtest_config = None
-        self._data_cache = {}
+        self._max_cache_size = max_cache_size or self.DEFAULT_MAX_CACHE_SIZE
+        self._data_cache: LRUCache = LRUCache(maxsize=self._max_cache_size)
         self._lock = threading.Lock()
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
         """バックテスト設定を設定"""
         self._fixed_backtest_config = self._select_timeframe_config(backtest_config)
+
+    def clear_cache(self) -> None:
+        """データキャッシュをクリア"""
+        with self._lock:
+            self._data_cache.clear()
+            logger.info("データキャッシュをクリアしました")
+
+    def get_cache_info(self) -> Dict[str, Any]:
+        """キャッシュの状態情報を取得"""
+        with self._lock:
+            return {
+                "current_size": len(self._data_cache),
+                "max_size": self._max_cache_size,
+                "cache_hits": getattr(self, "_cache_hits", 0),
+                "cache_misses": getattr(self, "_cache_misses", 0),
+            }
 
     def evaluate_individual(self, individual, config: GAConfig):
         """

@@ -110,32 +110,26 @@ class TestEvolutionRunnerMultiObjective:
         """多目的最適化の基本実行テスト"""
         runner = EvolutionRunner(mock_toolbox, mock_stats)
 
-        # モックの設定 - return_value not side_effect, and return the actual list
+        # モックの設定
         def mock_select(pop, k):
             return pop[:k]
 
         mock_toolbox.select = mock_select
+        mock_halloffame = Mock()
 
         with patch(
-            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
-            side_effect=lambda pop, k: pop[:k],  # NSGA2選択のモック
-        ):
-            with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
-            ) as mock_pareto_front:
-                with patch(
-                    "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
-                ) as mock_logbook_class:
-                    mock_logbook = Mock()
-                    mock_logbook.record = Mock()
-                    mock_logbook_class.return_value = mock_logbook
+            "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
+        ) as mock_logbook_class:
+            mock_logbook = Mock()
+            mock_logbook.record = Mock()
+            mock_logbook_class.return_value = mock_logbook
 
-                    result_pop, logbook = runner.run_multi_objective_evolution(
-                        mock_population, mock_config
-                    )
+            result_pop, logbook = runner.run_evolution(
+                mock_population, mock_config, halloffame=mock_halloffame
+            )
 
-        # ParetoFrontが作成されたことを確認
-        mock_pareto_front.assert_called_once()
+        # Hall of Fameが更新されたことを確認
+        mock_halloffame.update.assert_called()
 
         # 結果が返されることを確認
         assert isinstance(result_pop, list)
@@ -158,19 +152,11 @@ class TestEvolutionRunnerMultiObjective:
 
         mock_toolbox.select = mock_select
 
-        with patch(
-            "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
-            side_effect=lambda pop, k: pop[:k],
-        ):
-            with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
-            ):
-                with patch(
-                    "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
-                ):
-                    runner.run_multi_objective_evolution(mock_population, mock_config)
+        with patch("app.services.auto_strategy.core.evolution_runner.tools.Logbook"):
+            runner.run_evolution(mock_population, mock_config)
 
         # 適応度共有が適用されたことを確認
+        # apply_fitness_sharingは世代ごとに呼ばれる
         assert mock_fitness_sharing.apply_fitness_sharing.called
 
     def test_run_multi_objective_evolution_with_halloffame(
@@ -180,15 +166,10 @@ class TestEvolutionRunnerMultiObjective:
         mock_halloffame = Mock()
         runner = EvolutionRunner(mock_toolbox, mock_stats)
 
-        mock_toolbox.select.side_effect = [mock_population, mock_population]
+        # select呼び出しに対する戻り値を設定
+        mock_toolbox.select.side_effect = lambda pop, k: pop[:k]
 
-        with patch("app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"):
-            with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
-            ):
-                runner.run_multi_objective_evolution(
-                    mock_population, mock_config, halloffame=mock_halloffame
-                )
+        runner.run_evolution(mock_population, mock_config, halloffame=mock_halloffame)
 
         # Hall of Fameが更新されたことを確認
         mock_halloffame.update.assert_called()
@@ -245,41 +226,20 @@ class TestEvolutionRunnerMultiObjective:
         """多目的最適化のログ出力テスト"""
         runner = EvolutionRunner(mock_toolbox, mock_stats)
 
-        mock_toolbox.select.side_effect = [mock_population, mock_population]
+        mock_toolbox.select.side_effect = lambda pop, k: pop[:k]
 
         with patch(
             "app.services.auto_strategy.core.evolution_runner.logger"
         ) as mock_logger:
-            with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"
-            ):
-                with patch(
-                    "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
-                ):
-                    runner.run_multi_objective_evolution(mock_population, mock_config)
+            runner.run_evolution(mock_population, mock_config)
 
         # ログが正しく出力されたことを確認
-        mock_logger.info.assert_any_call("多目的最適化アルゴリズム（NSGA-II）を開始")
-        mock_logger.info.assert_any_call("多目的最適化アルゴリズム（NSGA-II）完了")
-
-    def test_run_multi_objective_evolution_select_function_restoration(
-        self, mock_toolbox, mock_stats, mock_config, mock_population
-    ):
-        """選択関数復元テスト"""
-        original_select = Mock()
-        mock_toolbox.select = original_select
-        runner = EvolutionRunner(mock_toolbox, mock_stats)
-
-        mock_toolbox.select.side_effect = [mock_population, mock_population]
-
-        with patch("app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"):
-            with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
-            ):
-                runner.run_multi_objective_evolution(mock_population, mock_config)
-
-        # 選択関数が元に戻されたことを確認
-        assert mock_toolbox.select == original_select
+        # メッセージが変更されたので、部分一致でも確認できるようにする
+        assert any(
+            "進化アルゴリズムを開始" in str(call)
+            for call in mock_logger.info.call_args_list
+        )
+        mock_logger.info.assert_any_call("進化アルゴリズム完了")
 
     def test_run_multi_objective_evolution_generations_zero(
         self, mock_toolbox, mock_stats, mock_config, mock_population
@@ -288,15 +248,13 @@ class TestEvolutionRunnerMultiObjective:
         mock_config.generations = 0
         runner = EvolutionRunner(mock_toolbox, mock_stats)
 
-        mock_toolbox.select.side_effect = [mock_population]
+        mock_toolbox.select.side_effect = lambda pop, k: pop[:k]
 
-        with patch("app.services.auto_strategy.core.evolution_runner.tools.selNSGA2"):
-            with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
-            ):
-                result_pop, logbook = runner.run_multi_objective_evolution(
-                    mock_population, mock_config
-                )
+        mock_halloffame = Mock()
+
+        result_pop, logbook = runner.run_evolution(
+            mock_population, mock_config, halloffame=mock_halloffame
+        )
 
         # 初期評価のみが行われることを確認
         assert len(mock_toolbox.evaluate.call_args_list) == len(mock_population)
@@ -318,18 +276,9 @@ class TestEvolutionRunnerMultiObjective:
             side_effect=[0.1] * 20,  # 十分な数の値を提供（交叉+突然変異のチェック用）
         ):  # 確率以下
             with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.selNSGA2",
-                side_effect=lambda pop, k: pop[:k],
+                "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
             ):
-                with patch(
-                    "app.services.auto_strategy.core.evolution_runner.tools.ParetoFront"
-                ):
-                    with patch(
-                        "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
-                    ):
-                        runner.run_multi_objective_evolution(
-                            mock_population, mock_config
-                        )
+                runner.run_evolution(mock_population, mock_config)
 
         # 交叉と突然変異が呼ばれたことを確認
         assert mock_toolbox.mate.called

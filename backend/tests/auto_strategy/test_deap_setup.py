@@ -4,7 +4,8 @@ DEAP環境初期化のテストモジュール
 DEAPSetupクラスの機能をテストする。
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
+from types import SimpleNamespace
 
 import pytest
 from deap import base
@@ -13,9 +14,18 @@ from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.deap_setup import DEAPSetup
 from app.services.auto_strategy.models.strategy_models import StrategyGene
 
-pytestmark = pytest.mark.skip(
-    reason="DEAP creator mocking is complex - tests need integration test approach instead of unit test mocking"
-)
+
+class MockCreator(SimpleNamespace):
+    """delattrをサポートするCreatorモック"""
+
+    def __init__(self):
+        super().__init__()
+        # createメソッド自体はMock
+        self.create = Mock(side_effect=self._create_side_effect)
+
+    def _create_side_effect(self, name, *args, **kwargs):
+        # createが呼ばれたら属性を追加
+        setattr(self, name, Mock())
 
 
 class TestDEAPSetup:
@@ -50,15 +60,13 @@ class TestDEAPSetup:
         assert deap_setup.toolbox is None
         assert deap_setup.Individual is None
 
-    @patch("app.services.auto_strategy.core.deap_setup.creator")
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
     def test_setup_deap_creates_fitness_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
     ):
         """フィットネスクラスの作成テスト"""
-        # creatorのモック
-        mock_fitness_class = Mock()
-        mock_creator.FitnessMulti = mock_fitness_class
-
         deap_setup.setup_deap(
             mock_config,
             mock_functions["create_individual"],
@@ -68,11 +76,13 @@ class TestDEAPSetup:
         )
 
         # FitnessMultiが作成されたことを確認
-        mock_creator.create.assert_called_with(
+        mock_creator.create.assert_any_call(
             "FitnessMulti", base.Fitness, weights=(1.0, -1.0)
         )
 
-    @patch("app.services.auto_strategy.core.deap_setup.creator")
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
     def test_setup_deap_creates_individual_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
     ):
@@ -85,111 +95,188 @@ class TestDEAPSetup:
             mock_functions["mutate"],
         )
 
-        # Individualクラスが作成されたことを確認
-        mock_creator.create.assert_any_call(
-            "Individual", StrategyGene, fitness=mock_creator.FitnessMulti
-        )
+        # create呼び出しの検証（Individual）
+        calls = mock_creator.create.call_args_list
+        # 引数リストの中から第1引数が"Individual"であるものを探す
+        individual_call = None
+        for c in calls:
+            if c[0][0] == "Individual":
+                individual_call = c
+                break
 
+        assert individual_call is not None
+        assert individual_call[0][1] == StrategyGene
+        assert "fitness" in individual_call[1]
+
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
     def test_setup_deap_registers_toolbox_functions(
-        self, deap_setup, mock_config, mock_functions
+        self, mock_creator, deap_setup, mock_config, mock_functions
     ):
         """ツールボックス関数の登録テスト"""
-        with patch("app.services.auto_strategy.core.deap_setup.creator"):
-            deap_setup.setup_deap(
-                mock_config,
-                mock_functions["create_individual"],
-                mock_functions["evaluate"],
-                mock_functions["crossover"],
-                mock_functions["mutate"],
-            )
+        # Toolbox自体は本物のdeap.base.Toolboxを使用し、登録結果を検証する
+        deap_setup.setup_deap(
+            mock_config,
+            mock_functions["create_individual"],
+            mock_functions["evaluate"],
+            mock_functions["crossover"],
+            mock_functions["mutate"],
+        )
 
         toolbox = deap_setup.get_toolbox()
         assert toolbox is not None
-
-        # 個体生成関数が登録されていることを確認
         assert hasattr(toolbox, "individual")
-
-        # 集団生成関数が登録されていることを確認
         assert hasattr(toolbox, "population")
-
-        # 評価関数が登録されていることを確認
         assert hasattr(toolbox, "evaluate")
-
-        # 交叉関数が登録されていることを確認
         assert hasattr(toolbox, "mate")
-
-        # 突然変異関数が登録されていることを確認
         assert hasattr(toolbox, "mutate")
-
-        # 選択関数がNSGA-IIであることを確認
         assert hasattr(toolbox, "select")
 
-    def test_setup_deap_mutate_wrapper(self, deap_setup, mock_config, mock_functions):
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_setup_deap_registers_nsga2_for_multi_objective(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
+        """多目的最適化時の選択関数(NSGA-II)登録テスト"""
+        mock_config.enable_multi_objective = True
+
+        # base.Toolboxをモック化してregister呼び出しを検証可能にする
+        with patch(
+            "app.services.auto_strategy.core.deap_setup.base.Toolbox"
+        ) as MockToolbox:
+            mock_toolbox_instance = MockToolbox.return_value
+
+            with patch(
+                "app.services.auto_strategy.core.deap_setup.tools"
+            ) as mock_tools:
+                deap_setup.setup_deap(
+                    mock_config,
+                    mock_functions["create_individual"],
+                    mock_functions["evaluate"],
+                    mock_functions["crossover"],
+                    mock_functions["mutate"],
+                )
+
+                # register呼び出しを検証
+                args = mock_toolbox_instance.register.call_args_list
+                select_call = [call for call in args if call[0][0] == "select"][0]
+                assert select_call[0][1] == mock_tools.selNSGA2
+
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_setup_deap_registers_tournament_for_single_objective(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
+        """単一目的最適化時の選択関数(Tournament)登録テスト"""
+        mock_config.enable_multi_objective = False
+        mock_config.tournament_size = 5
+
+        with patch(
+            "app.services.auto_strategy.core.deap_setup.base.Toolbox"
+        ) as MockToolbox:
+            mock_toolbox_instance = MockToolbox.return_value
+
+            with patch(
+                "app.services.auto_strategy.core.deap_setup.tools"
+            ) as mock_tools:
+                deap_setup.setup_deap(
+                    mock_config,
+                    mock_functions["create_individual"],
+                    mock_functions["evaluate"],
+                    mock_functions["crossover"],
+                    mock_functions["mutate"],
+                )
+
+                # register呼び出しを検証
+                args = mock_toolbox_instance.register.call_args_list
+                select_call = [call for call in args if call[0][0] == "select"][0]
+                assert select_call[0][1] == mock_tools.selTournament
+                assert select_call[1]["tournsize"] == 5
+
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_setup_deap_mutate_wrapper(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
         """突然変異ラッパーのテスト"""
-        with patch("app.services.auto_strategy.core.deap_setup.creator"):
-            deap_setup.setup_deap(
-                mock_config,
-                mock_functions["create_individual"],
-                mock_functions["evaluate"],
-                mock_functions["crossover"],
-                mock_functions["mutate"],
-            )
+        deap_setup.setup_deap(
+            mock_config,
+            mock_functions["create_individual"],
+            mock_functions["evaluate"],
+            mock_functions["crossover"],
+            mock_functions["mutate"],
+        )
 
         toolbox = deap_setup.get_toolbox()
         individual = [0.1, 0.2, 0.3]
-
-        # mutate関数を呼び出し
         result = toolbox.mutate(individual)
 
-        # ラッパーがタプルを返すことを確認
         assert isinstance(result, tuple)
         assert len(result) == 1
         assert result[0] == individual
-
-        # 元のmutate関数が呼ばれたことを確認
         mock_functions["mutate"].assert_called_once_with(individual, mutation_rate=0.2)
 
-    def test_get_toolbox(self, deap_setup, mock_config, mock_functions):
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_get_toolbox(self, mock_creator, deap_setup, mock_config, mock_functions):
         """ツールボックスの取得テスト"""
-        with patch("app.services.auto_strategy.core.deap_setup.creator"):
-            deap_setup.setup_deap(
-                mock_config,
-                mock_functions["create_individual"],
-                mock_functions["evaluate"],
-                mock_functions["crossover"],
-                mock_functions["mutate"],
-            )
-
+        deap_setup.setup_deap(
+            mock_config,
+            mock_functions["create_individual"],
+            mock_functions["evaluate"],
+            mock_functions["crossover"],
+            mock_functions["mutate"],
+        )
         toolbox = deap_setup.get_toolbox()
-        assert isinstance(toolbox, base.Toolbox)
+        # Mock化していない場合はbase.Toolboxインスタンス
+        assert toolbox is not None
 
-    def test_get_individual_class(self, deap_setup, mock_config, mock_functions):
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_get_individual_class(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
         """個体クラスの取得テスト"""
-        with patch(
-            "app.services.auto_strategy.core.deap_setup.creator"
-        ) as mock_creator:
-            mock_individual_class = Mock()
-            mock_creator.Individual = mock_individual_class
+        deap_setup.setup_deap(
+            mock_config,
+            mock_functions["create_individual"],
+            mock_functions["evaluate"],
+            mock_functions["crossover"],
+            mock_functions["mutate"],
+        )
 
-            deap_setup.setup_deap(
-                mock_config,
-                mock_functions["create_individual"],
-                mock_functions["evaluate"],
-                mock_functions["crossover"],
-                mock_functions["mutate"],
-            )
+        individual_class = deap_setup.get_individual_class()
+        assert individual_class is not None
+        assert individual_class == mock_creator.Individual
 
-            individual_class = deap_setup.get_individual_class()
-            assert individual_class == mock_individual_class
-
-    @patch("app.services.auto_strategy.core.deap_setup.creator")
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
     def test_setup_deap_deletes_existing_classes(
         self, mock_creator, deap_setup, mock_config, mock_functions
     ):
         """既存クラスの削除テスト"""
-        # 既存のクラスがある場合
-        mock_creator.FitnessMulti = Mock()
-        mock_creator.Individual = Mock()
+        # 既存のクラスをセット
+        setattr(mock_creator, "FitnessMulti", Mock())
+        setattr(mock_creator, "Individual", Mock())
+
+        # 削除されたことを確認するためのside_effect再定義
+        original_side_effect = mock_creator.create.side_effect
+
+        def verifying_side_effect(name, *args, **kwargs):
+            if name in ["FitnessMulti", "Individual"] and hasattr(mock_creator, name):
+                pytest.fail(
+                    f"Attribute '{name}' should have been deleted before create() was called."
+                )
+            original_side_effect(name, *args, **kwargs)
+
+        mock_creator.create.side_effect = verifying_side_effect
 
         deap_setup.setup_deap(
             mock_config,
@@ -199,24 +286,28 @@ class TestDEAPSetup:
             mock_functions["mutate"],
         )
 
-        # delattrが呼ばれたことを確認
-        assert mock_creator.__delattr__.called
+        # 最終的に存在することを確認
+        assert hasattr(mock_creator, "FitnessMulti")
+        assert hasattr(mock_creator, "Individual")
 
-    def test_setup_deap_error_handling(self, deap_setup, mock_config, mock_functions):
+    @patch(
+        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_setup_deap_error_handling(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
         """エラー処理テスト"""
-        # creator.createが失敗する場合
-        with patch(
-            "app.services.auto_strategy.core.deap_setup.creator.create",
-            side_effect=Exception("DEAP error"),
-        ):
-            with pytest.raises(Exception):
-                deap_setup.setup_deap(
-                    mock_config,
-                    mock_functions["create_individual"],
-                    mock_functions["evaluate"],
-                    mock_functions["crossover"],
-                    mock_functions["mutate"],
-                )
+        # createが失敗する場合
+        mock_creator.create.side_effect = Exception("DEAP error")
+
+        with pytest.raises(Exception):
+            deap_setup.setup_deap(
+                mock_config,
+                mock_functions["create_individual"],
+                mock_functions["evaluate"],
+                mock_functions["crossover"],
+                mock_functions["mutate"],
+            )
 
     def test_get_toolbox_before_setup(self, deap_setup):
         """セットアップ前のツールボックス取得テスト"""

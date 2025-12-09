@@ -51,29 +51,39 @@ class EvolutionRunner:
         self.population = population  # 適応的突然変異用
         self.parallel_evaluator = parallel_evaluator
 
-    def run_single_objective_evolution(
-        self, population: List[Any], config: Any, halloffame: Optional[List[Any]] = None
+    def run_evolution(
+        self, population: List[Any], config: Any, halloffame: Optional[Any] = None
     ) -> tuple[List[Any], Any]:
         """
-        単一目的最適化アルゴリズムの実行
+        進化アルゴリズムの実行（単一・多目的 統一版）
+
+        単一目的・多目的を問わず、toolboxに登録された演算子と
+        渡されたhalloffameオブジェクト（HallOfFame または ParetoFront）を使用して
+        進化計算を実行します。
 
         Args:
             population: 初期個体群
             config: GA設定
-            halloffame: 殿堂入り個体リスト
+            halloffame: 殿堂入り個体リスト（HallOfFame または ParetoFront）
 
         Returns:
             (最終個体群, 進化ログ)
         """
-        logger.info("単一目的最適化アルゴリズムを開始")
+        logger.info(
+            f"進化アルゴリズムを開始（世代数: {config.generations}, 目的数: {len(config.objectives)}）"
+        )
 
         # 初期適応度評価
         population = self._evaluate_population(population)
         self._update_dynamic_objective_scalars(population, config)
 
+        # Hall of Fame / Pareto Front 初回更新
+        if halloffame is not None:
+            halloffame.update(population)
+
         logbook = tools.Logbook()
 
-        # カスタム世代ループ（fitness_sharingを世代毎に適用）
+        # 世代ループ
         for gen in range(config.generations):
             logger.debug(f"世代 {gen + 1}/{config.generations} を開始")
 
@@ -84,8 +94,11 @@ class EvolutionRunner:
             ):
                 population = self.fitness_sharing.apply_fitness_sharing(population)
 
-            # 選択
+            # 選択（親個体の選択）
+            # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
             offspring = list(self.toolbox.map(self.toolbox.clone, population))
+
+            # 交叉
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
                 if random.random() < config.crossover_rate:
                     self.toolbox.mate(child1, child2)
@@ -98,11 +111,12 @@ class EvolutionRunner:
                     self.toolbox.mutate(mutant)
                     del mutant.fitness.values
 
-            # 評価（並列評価対応）
+            # 未評価個体の評価（並列評価対応）
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
             self._evaluate_invalid_individuals(invalid_ind)
 
             # 次世代の選択 (mu+lambda)
+            # toolbox.select は DEAPSetup で NSGA-II などが登録されている
             population[:] = self.toolbox.select(offspring + population, len(population))
 
             self._update_dynamic_objective_scalars(population, config)
@@ -111,93 +125,11 @@ class EvolutionRunner:
             record = self.stats.compile(population) if self.stats else {}
             logbook.record(gen=gen, **record)
 
-            # Hall of Fameの更新
+            # Hall of Fame / Pareto Front の更新
             if halloffame is not None:
                 halloffame.update(population)
 
-        logger.info("単一目的最適化アルゴリズム完了")
-        return population, logbook
-
-    def run_multi_objective_evolution(
-        self, population: List[Any], config: Any, halloffame: Optional[List[Any]] = None
-    ) -> tuple[List[Any], Any]:
-        """
-        多目的最適化アルゴリズムの実行
-
-        Args:
-            population: 初期個体群
-            config: GA設定
-            halloffame: 殿堂入り個体リスト
-
-        Returns:
-            (最終個体群, 進化ログ)
-        """
-        logger.info("多目的最適化アルゴリズム（NSGA-II）を開始")
-
-        # 初期適応度評価
-        population = self._evaluate_population(population)
-        self._update_dynamic_objective_scalars(population, config)
-
-        # 多目的最適化用の選択関数に切り替え
-        original_select = self.toolbox.select
-        self.toolbox.select = tools.selNSGA2
-
-        # パレートフロント更新
-        pareto_front = tools.ParetoFront()
-        population = self.toolbox.select(population, len(population))
-
-        logbook = tools.Logbook()
-
-        # カスタム世代ループ（fitness_sharingを世代毎に適用）
-        for gen in range(config.generations):
-            logger.debug(f"多目的世代 {gen + 1}/{config.generations} を開始")
-
-            # 適応度共有の適用（有効な場合、世代毎）
-            if (
-                getattr(config, "enable_fitness_sharing", False)
-                and self.fitness_sharing
-            ):
-                population = self.fitness_sharing.apply_fitness_sharing(population)
-
-            # 選択
-            offspring = list(self.toolbox.map(self.toolbox.clone, population))
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                if random.random() < config.crossover_rate:
-                    self.toolbox.mate(child1, child2)
-                    del child1.fitness.values
-                    del child2.fitness.values
-
-            # 突然変異
-            for mutant in offspring:
-                if random.random() < config.mutation_rate:
-                    self.toolbox.mutate(mutant)
-                    del mutant.fitness.values
-
-            # 評価（並列評価対応）
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            self._evaluate_invalid_individuals(invalid_ind)
-
-            # 次世代の選択 (mu+lambda, NSGA-II)
-            population[:] = self.toolbox.select(offspring + population, len(population))
-
-            self._update_dynamic_objective_scalars(population, config)
-
-            # 統計の記録
-            record = self.stats.compile(population) if self.stats else {}
-            logbook.record(gen=gen, **record)
-
-            # Hall of Fameの更新
-            if halloffame is not None:
-                halloffame.update(population)
-
-        # パレートフロントを更新
-        for ind in population:
-            pareto_front.update(population)
-
-        # 選択関数を元に戻す
-        self.toolbox.select = original_select
-
-        logger.info("多目的最適化アルゴリズム（NSGA-II）完了")
+        logger.info("進化アルゴリズム完了")
         return population, logbook
 
     def _evaluate_population(self, population: List[Any]) -> List[Any]:
