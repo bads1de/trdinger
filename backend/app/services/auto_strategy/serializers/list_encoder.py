@@ -34,8 +34,10 @@ class ListEncoder:
             エンコードされた数値リスト
         """
         try:
+            from ..config import GAConfig
+
             encoded = []
-            max_indicators = getattr(strategy_gene, "MAX_INDICATORS", 5)
+            max_indicators = GAConfig().max_indicators
 
             # 指標部分（指標数 × 2値 = 10要素）
             for i in range(max_indicators):
@@ -93,7 +95,9 @@ class ListEncoder:
         except Exception as e:
             logger.error(f"戦略遺伝子エンコードエラー: {e}")
             # エラー時はデフォルトエンコードを返す
-            return [0.0] * 32  # 5指標×2 + 条件×6 + TP/SL×8 + ポジションサイジング×8
+            # 長さ = 指標数*2 + エントリー*3 + イグジット*3 + TPSL*8 + ポジション*8
+            expected_len = max_indicators * 2 + 3 + 3 + 8 + 8
+            return [0.0] * expected_len
 
     def _get_indicator_id(self, indicator_type: str) -> int:
         """

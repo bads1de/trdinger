@@ -17,6 +17,8 @@ GA_DEFAULT_CONFIG = {
     "mutation_rate": 0.1,
     "elite_size": 10,
     "max_indicators": 3,
+    "zero_trades_penalty": 0.1,  # 取引回数0回のペナルティスコア
+    "constraint_violation_penalty": 0.0,  # 制約違反時のスコア
 }
 
 # フィットネス重み設定
@@ -101,6 +103,12 @@ class GASettings(BaseConfig):
     min_conditions: int = 1
     max_conditions: int = 3
 
+    # ペナルティ設定
+    zero_trades_penalty: float = GA_DEFAULT_CONFIG["zero_trades_penalty"]
+    constraint_violation_penalty: float = GA_DEFAULT_CONFIG[
+        "constraint_violation_penalty"
+    ]
+
     # パラメータ範囲
     parameter_ranges: Dict[str, List] = field(
         default_factory=lambda: GA_PARAMETER_RANGES.copy()
@@ -160,6 +168,9 @@ class GASettings(BaseConfig):
 
         if self.min_indicators > self.max_indicators:
             errors.append("最小指標数は最大指標数以下である必要があります")
+
+        if self.min_conditions > self.max_conditions:
+            errors.append("最小条件数は最大条件数以下である必要があります")
 
         return errors
 

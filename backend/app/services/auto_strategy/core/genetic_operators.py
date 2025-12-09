@@ -126,11 +126,12 @@ def _mutate_indicators(mutated, gene, mutation_rate):
 
     # 指標の追加・削除
     if random.random() < mutation_rate * 0.3:
-        max_indicators = getattr(gene, "MAX_INDICATORS", 5)
+        from ..config import GAConfig
+
+        max_indicators = GAConfig().max_indicators
 
         if len(mutated.indicators) < max_indicators and random.random() < 0.5:
             # 新しい指標を追加
-            from ..config import GAConfig
             from ..generators.random_gene_generator import RandomGeneGenerator
 
             generator = RandomGeneGenerator(GAConfig())
@@ -255,7 +256,10 @@ def crossover_strategy_genes_pure(
             )
 
             # 最大指標数制限
-            max_indicators = getattr(parent1, "MAX_INDICATORS", 5)
+            from ..config import GAConfig
+
+            max_indicators = GAConfig().max_indicators
+
             child1_indicators = child1_indicators[:max_indicators]
             child2_indicators = child2_indicators[:max_indicators]
 

@@ -186,9 +186,40 @@ class TestIndividualEvaluator:
             "max_drawdown": 0.2,
             "win_rate": 0.1,
         }
+        # カスタムペナルティを設定
+        ga_config.zero_trades_penalty = 0.05
 
         fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
-        assert fitness == 0.1  # 取引回数0の特別処理
+        assert fitness == 0.05  # 設定したペナルティ値が返ることを確認
+
+    def test_calculate_fitness_custom_penalties(self):
+        """カスタムペナルティ設定のテスト"""
+        # 取引回数制約違反のケース
+        backtest_result = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 0.2,
+                "max_drawdown": 0.1,
+                "win_rate": 0.6,
+                "total_trades": 5,
+            },
+            "equity_curve": [],
+            "trade_history": [],
+        }
+
+        ga_config = GAConfig()
+        ga_config.fitness_constraints = {
+            "min_sharpe_ratio": 0.5,  # 0.2 < 0.5 で違反
+        }
+
+        # デフォルト（0.0）
+        fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
+        assert fitness == 0.0
+
+        # カスタムペナルティ設定
+        ga_config.constraint_violation_penalty = -1.0
+        fitness_custom = self.evaluator._calculate_fitness(backtest_result, ga_config)
+        assert fitness_custom == -1.0
 
     def test_calculate_fitness_constraints(self):
         """フィットネス制約のテスト"""

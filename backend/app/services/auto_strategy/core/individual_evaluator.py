@@ -271,23 +271,23 @@ class IndividualEvaluator:
             # 取引回数が0の場合は低いフィットネス値を返す
             if total_trades == 0:
                 logger.warning("取引回数が0のため、低いフィットネス値を設定")
-                return 0.1  # 完全に0ではなく、わずかな値を返す
+                return getattr(config, "zero_trades_penalty", 0.1)
 
             # 追加の制約チェック
             min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
             if total_trades < min_trades_req:
-                return 0.0
+                return getattr(config, "constraint_violation_penalty", 0.0)
 
             max_dd_limit = config.fitness_constraints.get("max_drawdown_limit", None)
             if isinstance(max_dd_limit, (float, int)) and max_drawdown > float(
                 max_dd_limit
             ):
-                return 0.0
+                return getattr(config, "constraint_violation_penalty", 0.0)
 
             if total_return < 0 or sharpe_ratio < config.fitness_constraints.get(
                 "min_sharpe_ratio", 0
             ):
-                return 0.0
+                return getattr(config, "constraint_violation_penalty", 0.0)
 
             # ロング・ショートバランス評価を計算
             balance_score = self._calculate_long_short_balance(backtest_result)
@@ -325,7 +325,7 @@ class IndividualEvaluator:
 
         except Exception as e:
             logger.error(f"フィットネス計算エラー: {e}")
-            return 0.0
+            return getattr(config, "constraint_violation_penalty", 0.0)
 
     def _calculate_long_short_balance(self, backtest_result: Dict[str, Any]) -> float:
         """
@@ -445,7 +445,9 @@ class IndividualEvaluator:
                     ]:
                         penalty_values.append(1.0)
                     else:
-                        penalty_values.append(0.0)
+                        penalty_values.append(
+                            getattr(config, "constraint_violation_penalty", 0.0)
+                        )
                 return tuple(penalty_values)
 
             fitness_values = []

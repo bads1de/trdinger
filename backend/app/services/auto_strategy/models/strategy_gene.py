@@ -23,8 +23,6 @@ class StrategyGene:
     完全な取引戦略を表現する遺伝子です。
     """
 
-    MAX_INDICATORS = 5
-
     id: str = ""
     indicators: List[IndicatorGene] = field(default_factory=list)
     entry_conditions: List[Condition] = field(default_factory=list)

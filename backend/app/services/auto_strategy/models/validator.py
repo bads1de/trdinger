@@ -281,7 +281,10 @@ class GeneValidator:
         errors: List[str] = []
 
         # 指標数の制約チェック
-        max_indicators = getattr(strategy_gene, "MAX_INDICATORS", 5)
+        from ..config import GAConfig
+
+        max_indicators = GAConfig().max_indicators
+
         if len(strategy_gene.indicators) > max_indicators:
             errors.append(
                 f"指標数が上限({max_indicators})を超えています: {len(strategy_gene.indicators)}"
