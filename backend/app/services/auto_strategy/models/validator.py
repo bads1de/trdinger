@@ -386,7 +386,14 @@ class GeneValidator:
         context="条件のトリビアル判定", is_api_call=False, default_return=False
     )
     def _is_trivial_condition(self, condition) -> bool:
-        """条件がシンプルすぎる（トリビアル）かどうかを判定"""
+        """条件がシンプルすぎる（トリビアル）かどうかを判定
+
+        緩和ルール:
+        - 異なる価格データ同士の比較（close > open, close > high[1] など）は
+          プライスアクションとして有効なため許容する
+        - 同一価格データの比較（close > close）は数学的に無意味なので排除
+        - 意味のない閾値比較（close > 1.0 など）は排除
+        """
         if not hasattr(condition, "left_operand") or not hasattr(
             condition, "right_operand"
         ):
@@ -399,15 +406,8 @@ class GeneValidator:
         # 基本的な価格データ
         price_fields = {"close", "open", "high", "low"}
 
-        # closeとopenの直接比較はトリビアル
-        if (
-            left in price_fields
-            and right in price_fields
-            and operator in [">", "<", ">=", "<="]
-        ):
-            return True
-
         # 同じ価格データの比較（例: close > close）は常にトリビアル
+        # 注意: 異なる価格データの比較（close > open など）はプライスアクションとして有効なので許容
         if left == right and left in price_fields:
             return True
 

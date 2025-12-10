@@ -114,26 +114,28 @@ class TestGeneValidator:
         assert result is False
         assert "無効な演算子" in error
 
-    def test_validate_condition_trivial_price_comparison(self, validator):
-        """シンプルな価格比較が拒否されることをテスト"""
-        trivial_condition = Mock()
-        trivial_condition.operator = ">"
-        trivial_condition.left_operand = "close"
-        trivial_condition.right_operand = "open"
+    def test_validate_condition_price_action_allowed(self, validator):
+        """異なる価格データ同士の比較（プライスアクション）が許容されることをテスト"""
+        # close > open（陽線判定）はプライスアクションとして有効
+        price_action_condition = Mock()
+        price_action_condition.operator = ">"
+        price_action_condition.left_operand = "close"
+        price_action_condition.right_operand = "open"
 
-        result, error = validator.validate_condition(trivial_condition)
-        assert result is False
-        assert "シンプルな価格比較" in error
+        result, error = validator.validate_condition(price_action_condition)
+        assert result is True
+        assert error == ""
 
-    def test_is_trivial_condition_true_for_price_price(self, validator):
-        """価格同士の比較がトリビアルと判定されることをテスト"""
+    def test_is_trivial_condition_false_for_price_action(self, validator):
+        """異なる価格データ同士の比較（プライスアクション）がトリビアルでないことをテスト"""
+        # close > open（陽線）はプライスアクションとして有効
         condition = Mock()
         condition.left_operand = "close"
         condition.right_operand = "open"
         condition.operator = ">"
 
         result = validator._is_trivial_condition(condition)
-        assert result is True
+        assert result is False
 
     def test_is_trivial_condition_false_for_indicator_price(self, validator):
         """指標と価格の比較がトリビアルでないことをテスト"""

@@ -84,6 +84,28 @@ class TestHybridIndividualEvaluator:
                 {"size": 1.0, "pnl": 75.0},
             ],
         }
+        # _get_cached_data が使用する data_service のモック
+        mock_data_service = Mock()
+        mock_data_service.get_data_for_backtest.return_value = pd.DataFrame(
+            {
+                "Open": [100, 101, 102],
+                "High": [105, 106, 107],
+                "Low": [98, 99, 100],
+                "Close": [103, 104, 105],
+                "Volume": [1000, 1100, 1200],
+            }
+        )
+        mock_data_service.get_ohlcv_data.return_value = pd.DataFrame(
+            {
+                "Open": [100, 101, 102],
+                "High": [105, 106, 107],
+                "Low": [98, 99, 100],
+                "Close": [103, 104, 105],
+                "Volume": [1000, 1100, 1200],
+            }
+        )
+        service.data_service = mock_data_service
+        service.ensure_data_service_initialized = Mock()
         return service
 
     @pytest.fixture

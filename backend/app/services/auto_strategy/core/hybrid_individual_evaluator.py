@@ -76,8 +76,13 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             gene_identifier = getattr(gene, "id", "GENE")[:8]
             backtest_config["strategy_name"] = f"GA_Individual_{gene_identifier}"
 
-            # バックテスト実行
-            result = self.backtest_service.run_backtest(backtest_config)
+            # キャッシュからバックテスト用データを取得（基底クラスと同じキャッシュを使用）
+            preloaded_data = self._get_cached_data(backtest_config)
+
+            # バックテスト実行（キャッシュされたデータを渡す）
+            result = self.backtest_service.run_backtest(
+                backtest_config, preloaded_data=preloaded_data
+            )
 
             # ML予測スコアを取得（predictorが設定されている場合）
             prediction_signals = None
@@ -192,8 +197,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             )
             return None
 
-        # キャッシュキーを作成
-        cache_key = (symbol, timeframe, str(start_date), str(end_date))
+        # キャッシュキーを作成（"ohlcv:" プレフィックスで基底クラスのキーと区別）
+        cache_key = ("ohlcv", symbol, timeframe, str(start_date), str(end_date))
 
         # 親クラスのキャッシュを確認（LRUCache）
         with self._lock:
