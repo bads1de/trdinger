@@ -17,7 +17,7 @@ from ..common.volatility_utils import calculate_volatility_atr, calculate_volati
 logger = logging.getLogger(__name__)
 
 # サポートする時間足の定義
-SUPPORTED_TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]
+SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 
 
 def triple_barrier_method_preset(

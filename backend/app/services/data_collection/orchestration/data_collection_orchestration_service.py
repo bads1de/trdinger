@@ -182,8 +182,8 @@ class DataCollectionOrchestrationService:
             収集開始レスポンス
         """
         try:
-            # 全時間軸でビットコインデータを収集（要求された5つの時間足のみ）
-            timeframes = ["15m", "30m", "1h", "4h", "1d"]
+            # 全時間軸でビットコインデータを収集
+            timeframes = unified_config.market.supported_timeframes
 
             for timeframe in timeframes:
                 background_tasks.add_task(
@@ -228,7 +228,7 @@ class DataCollectionOrchestrationService:
             symbols = [
                 "BTC/USDT:USDT",
             ]
-            timeframes = ["15m", "30m", "1h", "4h", "1d"]
+            timeframes = unified_config.market.supported_timeframes
 
             # データ存在チェックと収集タスクの追加
             repository = OHLCVRepository(db)
@@ -408,7 +408,7 @@ class DataCollectionOrchestrationService:
             symbols = [
                 "BTC/USDT:USDT",
             ]
-            timeframes = ["15m", "30m", "1h", "4h", "1d"]
+            timeframes = unified_config.market.supported_timeframes
 
             # データ存在チェックと収集タスクの追加
             ohlcv_repository = OHLCVRepository(db)

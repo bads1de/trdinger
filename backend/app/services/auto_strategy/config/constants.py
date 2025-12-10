@@ -46,6 +46,8 @@ DEFAULT_SYMBOL = "BTC/USDT:USDT"
 
 # === 時間軸定数 ===
 SUPPORTED_TIMEFRAMES = [
+    "1m",
+    "5m",
     "15m",
     "30m",
     "1h",

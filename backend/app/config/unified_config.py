@@ -171,7 +171,9 @@ class MarketConfig(BaseSettings):
     supported_symbols: List[str] = Field(default=["BTC/USDT:USDT"])
 
     # サポートされている時間軸
-    supported_timeframes: List[str] = Field(default=["15m", "30m", "1h", "4h", "1d"])
+    supported_timeframes: List[str] = Field(
+        default=["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+    )
 
     # デフォルト設定
     default_exchange: str = Field(default="bybit")
@@ -504,7 +506,7 @@ class LabelGenerationConfig:
         from app.services.ml.label_generation.presets import get_common_presets
 
         # timeframeの検証
-        valid_timeframes = ["15m", "30m", "1h", "4h", "1d"]
+        valid_timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
         if self.timeframe not in valid_timeframes:
             raise ValueError(
                 f"無効な時間足です: {self.timeframe}. "

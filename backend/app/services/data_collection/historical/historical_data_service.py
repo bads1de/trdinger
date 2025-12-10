@@ -261,8 +261,10 @@ class HistoricalDataService:
 
         logger.info(f"一括差分データ収集開始: {symbol} {timeframe}")
 
+        from app.config.unified_config import unified_config
+
         # 全ての時間足を定義
-        timeframes = ["15m", "30m", "1h", "4h", "1d"]
+        timeframes = unified_config.market.supported_timeframes
         logger.info(f"処理対象時間足: {timeframes}")
 
         results = {

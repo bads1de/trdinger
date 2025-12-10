@@ -387,7 +387,9 @@ class DataManagementOrchestrationService:
                 oi_count = session.query(OpenInterestData).count()
 
                 # OHLCV詳細情報（時間足別）
-                timeframes = ["15m", "30m", "1h", "4h", "1d"]
+                from app.config.unified_config import unified_config
+
+                timeframes = unified_config.market.supported_timeframes
                 symbol = "BTC/USDT:USDT"
 
                 ohlcv_details = {}

@@ -407,8 +407,10 @@ class TestStartBitcoinFullDataCollection:
         assert result["success"] is True
         assert result["status"] == "started"
         assert "ビットコインの全時間軸データ収集を開始" in result["message"]
-        assert result["data"]["timeframes"] == ["15m", "30m", "1h", "4h", "1d"]
-        assert mock_background_tasks.add_task.call_count == 5
+        # タイムフレームはunified_configから取得
+        expected_timeframes = unified_config.market.supported_timeframes
+        assert result["data"]["timeframes"] == expected_timeframes
+        assert mock_background_tasks.add_task.call_count == len(expected_timeframes)
 
 
 class TestGetCollectionStatus:
@@ -651,7 +653,9 @@ class TestStartAllDataBulkCollection:
             assert result["success"] is True
             assert result["status"] == "started"
             assert "全データ一括収集を開始" in result["message"]
-            assert result["data"]["collection_tasks"] == 5
+            # タイムフレーム数はunified_configから取得
+            expected_count = len(unified_config.market.supported_timeframes)
+            assert result["data"]["collection_tasks"] == expected_count
 
 
 class TestErrorHandling:
