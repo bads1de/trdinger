@@ -10,16 +10,17 @@ import asyncio
 import logging
 import os
 import sys
-from pathlib import Path
 
-# プロジェクトルートをパスに追加
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
 
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
 from database.connection import SessionLocal
+
+# プロジェクトルートをパスに追加
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -75,10 +76,9 @@ def main():
         description="OI（Open Interest）・FR（Funding Rate）データ収集スクリプト",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-使用例:
-  python collect_oi_fr_data.py
-  python collect_oi_fr_data.py --symbol BTC/USDT:USDT
-  python collect_oi_fr_data.py -s ETH/USDT:USDT
+        使用例:
+        python collect_oi_fr_data.py
+        python collect_oi_fr_data.py --symbol BTC/USDT:USDT
         """,
     )
 

@@ -41,6 +41,8 @@ class FundingRateRepository(BaseRepository):
 
             funding_ts = record.get("funding_timestamp")
             if funding_ts is None:
+                funding_ts = record.get("data_timestamp")
+            if funding_ts is None:
                 funding_ts = record.get("fundingTimestamp")
             if funding_ts is None:
                 funding_ts = info.get("fundingRateTimestamp")
@@ -69,20 +71,30 @@ class FundingRateRepository(BaseRepository):
                 }
 
                 # タイムスタンプをdatetimeオブジェクトに変換
-                new_record["funding_timestamp"] = datetime.fromtimestamp(
-                    float(funding_ts) / 1000, tz=timezone.utc
-                )
-                new_record["timestamp"] = datetime.fromtimestamp(
-                    float(ts) / 1000, tz=timezone.utc
-                )
+                if isinstance(funding_ts, datetime):
+                    new_record["funding_timestamp"] = funding_ts
+                else:
+                    new_record["funding_timestamp"] = datetime.fromtimestamp(
+                        float(funding_ts) / 1000, tz=timezone.utc
+                    )
+
+                if isinstance(ts, datetime):
+                    new_record["timestamp"] = ts
+                else:
+                    new_record["timestamp"] = datetime.fromtimestamp(
+                        float(ts) / 1000, tz=timezone.utc
+                    )
 
                 next_ts = record.get("next_funding_timestamp") or info.get(
                     "nextFundingTime"
                 )
                 if next_ts is not None:
-                    new_record["next_funding_timestamp"] = datetime.fromtimestamp(
-                        float(next_ts) / 1000, tz=timezone.utc
-                    )
+                    if isinstance(next_ts, datetime):
+                        new_record["next_funding_timestamp"] = next_ts
+                    else:
+                        new_record["next_funding_timestamp"] = datetime.fromtimestamp(
+                            float(next_ts) / 1000, tz=timezone.utc
+                        )
 
                 processed_records.append(new_record)
 
