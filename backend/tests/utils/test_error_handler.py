@@ -112,7 +112,7 @@ class TestTimeoutDecorator:
             pass
 
         assert documented_function.__name__ == "documented_function"
-        assert documented_function.__doc__ == "This is a docstring."
+        assert documented_function.__doc__ == "これはドキュメンテーション文字列です。"
 
 
 class TestSafeOperation:
@@ -183,7 +183,7 @@ class TestSafeOperation:
             pass
 
         assert documented_function.__name__ == "documented_function"
-        assert documented_function.__doc__ == "This is a docstring."
+        assert documented_function.__doc__ == "これはドキュメンテーション文字列です。"
 
 
 class TestOperationContext:

@@ -138,7 +138,8 @@ class MLTrainingService(BaseResourceManager):
                 f"サポートされているタイプ: 'ensemble', 'single'"
             )
 
-    def get_available_single_models(self) -> List[str]:
+    @staticmethod
+    def get_available_single_models() -> List[str]:
         """利用可能な単一モデルのリストを取得します。"""
         # unified_configから取得
         return unified_config.ml.ensemble.algorithms

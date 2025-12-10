@@ -22,7 +22,7 @@ from app.services.data_collection.bybit.open_interest_service import (
 def mock_exchange():
     """モックCCXT取引所"""
     exchange = MagicMock()
-    exchange.fetch_open_interest_history = MagicMock()
+    exchange.fetch_open_interest_history = AsyncMock()
     return exchange
 
 
@@ -48,7 +48,9 @@ def mock_config():
 @pytest.fixture
 def service(mock_exchange, mock_config):
     """サービスインスタンス"""
-    with patch("ccxt.bybit") as mock_ccxt:
+    with patch(
+        "app.services.data_collection.bybit.bybit_service.ccxt.bybit"
+    ) as mock_ccxt:
         mock_ccxt.return_value = mock_exchange
         with patch(
             "app.services.data_collection.bybit.open_interest_service.get_open_interest_config"
@@ -72,7 +74,9 @@ class TestServiceInitialization:
 
     async def test_service_initialization(self, mock_exchange, mock_config):
         """サービスが正しく初期化されることを確認"""
-        with patch("ccxt.bybit") as mock_ccxt:
+        with patch(
+            "app.services.data_collection.bybit.bybit_service.ccxt.bybit"
+        ) as mock_ccxt:
             mock_ccxt.return_value = mock_exchange
             with patch(
                 "app.services.data_collection.bybit.open_interest_service.get_open_interest_config"
@@ -111,6 +115,8 @@ class TestFetchOpenInterestHistory:
             mock_executor = AsyncMock(return_value=expected_data)
             mock_loop.return_value.run_in_executor = mock_executor
 
+            mock_exchange.fetch_open_interest_history.return_value = expected_data
+
             result = await service.fetch_open_interest_history(
                 "BTC/USDT", limit=100, interval="1h"
             )
@@ -129,6 +135,8 @@ class TestFetchOpenInterestHistory:
         with patch("asyncio.get_event_loop") as mock_loop:
             mock_executor = AsyncMock(return_value=expected_data)
             mock_loop.return_value.run_in_executor = mock_executor
+
+            mock_exchange.fetch_open_interest_history.return_value = expected_data
 
             result = await service.fetch_open_interest_history(
                 "BTC/USDT", limit=100, since=since_timestamp, interval="1h"
@@ -152,6 +160,8 @@ class TestFetchOpenInterestHistory:
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=expected_data)
                 mock_loop.return_value.run_in_executor = mock_executor
+
+                mock_exchange.fetch_open_interest_history.return_value = expected_data
 
                 result = await service.fetch_open_interest_history(
                     "BTC/USDT", limit=100, interval=interval
@@ -186,6 +196,7 @@ class TestFetchIncrementalData:
             {"timestamp": 1609459200000, "openInterest": 100000.0},
             {"timestamp": 1609462800000, "openInterest": 105000.0},
         ]
+        service.exchange.fetch_open_interest_history.return_value = mock_data
 
         mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
             return_value=[{"id": 1}, {"id": 2}]
@@ -220,6 +231,7 @@ class TestFetchIncrementalData:
         """既存データありでの差分更新を確認"""
         latest_timestamp = 1609459200000
         mock_data = [{"timestamp": 1609462800000, "openInterest": 105000.0}]
+        service.exchange.fetch_open_interest_history.return_value = mock_data
 
         mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
             return_value=[{"id": 1}]
@@ -256,6 +268,7 @@ class TestFetchIncrementalData:
     ):
         """カスタムインターバルでの差分更新を確認"""
         mock_data = [{"timestamp": 1609459200000, "openInterest": 100000.0}]
+        service.exchange.fetch_open_interest_history.return_value = mock_data
 
         mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
             return_value=[{"id": 1}]
@@ -300,6 +313,8 @@ class TestFetchIncrementalData:
                 mock_executor = AsyncMock(return_value=mock_data)
                 mock_loop.return_value.run_in_executor = mock_executor
 
+                service.exchange.fetch_open_interest_history.return_value = mock_data
+
                 result = await service.fetch_incremental_open_interest_data(
                     "BTC/USDT", mock_repository
                 )
@@ -320,6 +335,7 @@ class TestFetchAndSaveData:
             {"timestamp": 1609459200000, "openInterest": 100000.0},
             {"timestamp": 1609462800000, "openInterest": 105000.0},
         ]
+        service.exchange.fetch_open_interest_history.return_value = mock_data
 
         mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
             return_value=[{"id": 1}, {"id": 2}]
@@ -353,6 +369,7 @@ class TestFetchAndSaveData:
     ):
         """カスタムリポジトリでのデータ保存を確認"""
         mock_data = [{"timestamp": 1609459200000, "openInterest": 100000.0}]
+        service.exchange.fetch_open_interest_history.return_value = mock_data
 
         mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
             return_value=[{"id": 1}]
@@ -406,6 +423,7 @@ class TestFetchAndSaveData:
     ):
         """カスタムインターバルでのデータ保存を確認"""
         mock_data = [{"timestamp": 1609459200000, "openInterest": 100000.0}]
+        service.exchange.fetch_open_interest_history.return_value = mock_data
 
         mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
             return_value=[{"id": 1}]
@@ -450,6 +468,8 @@ class TestIntervalHandling:
             mock_executor = AsyncMock(return_value=expected_data)
             mock_loop.return_value.run_in_executor = mock_executor
 
+            mock_exchange.fetch_open_interest_history.return_value = expected_data
+
             result = await service.fetch_open_interest_history("BTC/USDT", limit=100)
 
             assert result == expected_data
@@ -468,6 +488,8 @@ class TestIntervalHandling:
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=expected_data)
                 mock_loop.return_value.run_in_executor = mock_executor
+
+                mock_exchange.fetch_open_interest_history.return_value = expected_data
 
                 result = await service.fetch_open_interest_history(
                     "BTC/USDT", limit=100, interval=interval
@@ -492,6 +514,8 @@ class TestEdgeCases:
             mock_executor = AsyncMock(return_value=expected_data)
             mock_loop.return_value.run_in_executor = mock_executor
 
+            mock_exchange.fetch_open_interest_history.return_value = expected_data
+
             result = await service.fetch_open_interest_history(
                 "BTC/USDT", limit=1000, interval="1h"
             )
@@ -510,6 +534,8 @@ class TestEdgeCases:
             mock_executor = AsyncMock(return_value=expected_data)
             mock_loop.return_value.run_in_executor = mock_executor
 
+            mock_exchange.fetch_open_interest_history.return_value = expected_data
+
             result = await service.fetch_open_interest_history(
                 "BTC/USDT", limit=100, interval="1h"
             )
@@ -527,6 +553,8 @@ class TestEdgeCases:
         with patch("asyncio.get_event_loop") as mock_loop:
             mock_executor = AsyncMock(return_value=expected_data)
             mock_loop.return_value.run_in_executor = mock_executor
+
+            mock_exchange.fetch_open_interest_history.return_value = expected_data
 
             result = await service.fetch_open_interest_history(
                 "BTC/USDT", limit=100, interval="1h"

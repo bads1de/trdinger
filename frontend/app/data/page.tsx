@@ -15,6 +15,8 @@ import DataTableContainer from "@/components/data/DataTableContainer";
 import { useOhlcvData } from "@/hooks/useOhlcvData";
 import { useFundingRateData } from "@/hooks/useFundingRateData";
 import { useOpenInterestData } from "@/hooks/useOpenInterestData";
+import { useLongShortRatio } from "@/hooks/useLongShortRatio";
+import { LongShortRatioChart } from "@/components/data/LongShortRatioChart";
 import { TimeFrame } from "@/types/market-data";
 import { SUPPORTED_TRADING_PAIRS } from "@/constants";
 
@@ -73,6 +75,14 @@ const DataPage: React.FC = () => {
     refetch: fetchOpenInterestData,
   } = useOpenInterestData(selectedSymbol);
 
+  const {
+    data: longShortRatioData,
+    loading: longShortRatioLoading,
+    collecting: longShortRatioCollecting,
+    error: longShortRatioError,
+    refetch: fetchLongShortRatioData,
+    collectData: collectLongShortRatioData,
+  } = useLongShortRatio(selectedSymbol, selectedTimeFrame); // periodとしてselectedTimeFrameを使用
 
   // リフレッシュ
   const handleRefresh = useCallback(() => {
@@ -82,8 +92,10 @@ const DataPage: React.FC = () => {
       fetchFundingRateData();
     } else if (activeTab === "openinterest") {
       fetchOpenInterestData();
+    } else if (activeTab === "longshort") {
+      fetchLongShortRatioData();
     }
-  }, [activeTab, fetchOHLCVData, fetchFundingRateData, fetchOpenInterestData]);
+  }, [activeTab, fetchOHLCVData, fetchFundingRateData, fetchOpenInterestData, fetchLongShortRatioData]);
 
   // 一括差分更新
   const {
@@ -117,12 +129,14 @@ const DataPage: React.FC = () => {
           ohlcvLoading ||
           fundingLoading ||
           openInterestLoading ||
+          longShortRatioLoading ||
           dataStatusLoading
         }
         error={
           ohlcvError ||
           fundingError ||
           openInterestError ||
+          longShortRatioError ||
           bulkIncrementalUpdateError ||
           ""
         }
@@ -142,6 +156,7 @@ const DataPage: React.FC = () => {
             ohlcvError,
             fundingError,
             openInterestError,
+            longShortRatioError,
             bulkIncrementalUpdateError,
           ].filter(Boolean);
 
@@ -182,7 +197,7 @@ const DataPage: React.FC = () => {
           selectedSymbol={selectedSymbol}
           handleSymbolChange={setSelectedSymbol}
           symbolsLoading={false}
-          loading={ohlcvLoading || fundingLoading || openInterestLoading}
+          loading={ohlcvLoading || fundingLoading || openInterestLoading || longShortRatioLoading}
           selectedTimeFrame={selectedTimeFrame}
           handleTimeFrameChange={setSelectedTimeFrame}
           updating={bulkIncrementalUpdateLoading}
@@ -196,6 +211,21 @@ const DataPage: React.FC = () => {
           allDataCollectionMessage={""}
           incrementalUpdateMessage={""}
         />
+
+        {/* Long/Short Ratio Chart (Tabがlongshortの時だけ表示) */}
+        {activeTab === "longshort" && (
+            <div className="animate-slide-up">
+                <LongShortRatioChart 
+                    data={longShortRatioData}
+                    loading={longShortRatioLoading}
+                    collecting={longShortRatioCollecting}
+                    onRefresh={fetchLongShortRatioData}
+                    onCollect={collectLongShortRatioData}
+                    period={selectedTimeFrame}
+                    symbol={selectedSymbol}
+                />
+            </div>
+        )}
 
         <DataTableContainer
           selectedSymbol={selectedSymbol}
@@ -211,6 +241,9 @@ const DataPage: React.FC = () => {
           openInterestData={openInterestData}
           openInterestLoading={openInterestLoading}
           openInterestError={openInterestError || ""}
+          longShortRatioData={longShortRatioData}
+          longShortRatioLoading={longShortRatioLoading}
+          longShortRatioError={longShortRatioError || ""}
         />
       </div>
     </div>

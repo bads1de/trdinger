@@ -19,6 +19,7 @@ from app.api.market_data import router as market_data_router
 from app.api.ml_management import router as ml_management_router
 from app.api.ml_training import router as ml_training_router
 from app.api.open_interest import router as open_interest_router
+from app.api.long_short_ratio import router as long_short_ratio_router
 from app.api.strategies import router as strategies_router
 from app.config.unified_config import unified_config
 from app.utils.duplicate_filter_handler import DuplicateFilter
@@ -96,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(data_collection_router)
     app.include_router(funding_rates_router)
     app.include_router(open_interest_router)
+    app.include_router(long_short_ratio_router)
     app.include_router(data_reset_router)
     app.include_router(backtest_router)
     app.include_router(auto_strategy_router)

@@ -22,14 +22,14 @@ from app.services.data_collection.bybit.market_data_service import (
 def mock_exchange():
     """モックCCXT取引所"""
     exchange = MagicMock()
-    exchange.fetch_ohlcv = MagicMock()
+    exchange.fetch_ohlcv = AsyncMock()
     return exchange
 
 
 @pytest.fixture
 def service(mock_exchange):
     """サービスインスタンス"""
-    with patch("ccxt.bybit") as mock:
+    with patch("app.services.data_collection.bybit.bybit_service.ccxt.bybit") as mock:
         mock.return_value = mock_exchange
 
         return BybitMarketDataService()
@@ -49,7 +49,9 @@ class TestServiceInitialization:
 
     async def test_service_initialization(self, mock_exchange):
         """サービスが正しく初期化されることを確認"""
-        with patch("ccxt.bybit") as mock:
+        with patch(
+            "app.services.data_collection.bybit.bybit_service.ccxt.bybit"
+        ) as mock:
             mock.return_value = mock_exchange
 
             service = BybitMarketDataService()
@@ -83,15 +85,13 @@ class TestFetchOHLCVData:
             [1609462800000, 29200.0, 29800.0, 29000.0, 29500.0, 120.3],
         ]
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_ohlcv.return_value = expected_data
 
-            result = await service.fetch_ohlcv_data(
-                symbol="BTC/USD:BTC", timeframe="1h", limit=100
-            )
+        result = await service.fetch_ohlcv_data(
+            symbol="BTC/USD:BTC", timeframe="1h", limit=100
+        )
 
-            assert result == expected_data
+        assert result == expected_data
 
     @patch(
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
@@ -106,18 +106,16 @@ class TestFetchOHLCVData:
         since_timestamp = 1609459200000
         expected_data = [[1609462800000, 29200.0, 29800.0, 29000.0, 29500.0, 120.3]]
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_ohlcv.return_value = expected_data
 
-            result = await service.fetch_ohlcv_data(
-                symbol="BTC/USD:BTC",
-                timeframe="1h",
-                limit=100,
-                since=since_timestamp,
-            )
+        result = await service.fetch_ohlcv_data(
+            symbol="BTC/USD:BTC",
+            timeframe="1h",
+            limit=100,
+            since=since_timestamp,
+        )
 
-            assert result == expected_data
+        assert result == expected_data
 
     @patch(
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
@@ -132,15 +130,13 @@ class TestFetchOHLCVData:
         expected_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]]
         params = {"type": "linear"}
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_ohlcv.return_value = expected_data
 
-            result = await service.fetch_ohlcv_data(
-                symbol="BTC/USD:BTC", timeframe="1h", limit=100, params=params
-            )
+        result = await service.fetch_ohlcv_data(
+            symbol="BTC/USD:BTC", timeframe="1h", limit=100, params=params
+        )
 
-            assert result == expected_data
+        assert result == expected_data
 
     @patch(
         "app.services.data_collection.bybit.market_data_service.unified_config.market.supported_timeframes",
@@ -358,15 +354,13 @@ class TestEdgeCases:
         """最大limitでのOHLCVデータ取得を確認"""
         expected_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]]
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_ohlcv.return_value = expected_data
 
-            result = await service.fetch_ohlcv_data(
-                symbol="BTC/USD:BTC", timeframe="1h", limit=1000
-            )
+        result = await service.fetch_ohlcv_data(
+            symbol="BTC/USD:BTC", timeframe="1h", limit=1000
+        )
 
-            assert result == expected_data
+        assert result == expected_data
 
     @patch(
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
@@ -380,16 +374,14 @@ class TestEdgeCases:
         """ゼロ出来高のOHLCVデータが取得できることを確認"""
         expected_data = [[1609459200000, 29000.0, 29500.0, 28500.0, 29200.0, 0.0]]
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_ohlcv.return_value = expected_data
 
-            result = await service.fetch_ohlcv_data(
-                symbol="BTC/USD:BTC", timeframe="1h", limit=100
-            )
+        result = await service.fetch_ohlcv_data(
+            symbol="BTC/USD:BTC", timeframe="1h", limit=100
+        )
 
-            assert result == expected_data
-            service._validate_ohlcv_data(result)
+        assert result == expected_data
+        service._validate_ohlcv_data(result)
 
     async def test_validate_ohlcv_data_high_equals_low(self, service):
         """高値=安値のデータが検証を通過することを確認"""

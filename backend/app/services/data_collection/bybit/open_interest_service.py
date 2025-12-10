@@ -34,7 +34,15 @@ class BybitOpenInterestService(BybitService):
         オープンインタレスト履歴を取得
         """
         self._validate_parameters(symbol, limit)
-        normalized_symbol = symbol
+        normalized_symbol = (
+            symbol
+            if ":" in symbol
+            else (
+                f"{symbol}:USDT"
+                if symbol.endswith("/USDT")
+                else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+            )
+        )
         return await self._handle_ccxt_errors(
             f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
             self.exchange.fetch_open_interest_history,

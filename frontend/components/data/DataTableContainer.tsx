@@ -4,11 +4,13 @@ import {
   ohlcvColumns,
   fundingRateColumns,
   openInterestColumns,
+  longShortRatioColumns,
 } from "@/components/common";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";
 import { OpenInterestData } from "@/types/open-interest";
+import { LongShortRatioData } from "@/types/long-short-ratio";
 
 interface DataTableContainerProps {
   selectedSymbol: string;
@@ -24,6 +26,9 @@ interface DataTableContainerProps {
   openInterestData: OpenInterestData[];
   openInterestLoading: boolean;
   openInterestError: string;
+  longShortRatioData: LongShortRatioData[];
+  longShortRatioLoading: boolean;
+  longShortRatioError: string;
 }
 
 const DataTableContainer: React.FC<DataTableContainerProps> = ({
@@ -40,6 +45,9 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
   openInterestData,
   openInterestLoading,
   openInterestError,
+  longShortRatioData,
+  longShortRatioLoading,
+  longShortRatioError,
 }) => {
   // テーブル設定オブジェクト
   const tableConfigs = {
@@ -67,6 +75,14 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
       enableSearch: true,
       searchKeys: ["symbol"] as (keyof OpenInterestData)[],
     },
+    longshort: {
+      columns: longShortRatioColumns,
+      title: "⚖️ Long/Short Ratio",
+      pageSize: 50,
+      enableExport: true,
+      enableSearch: true,
+      searchKeys: ["symbol"] as (keyof LongShortRatioData)[],
+    }
   };
 
   return (
@@ -89,6 +105,7 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                 <TabsTrigger value="ohlcv">OHLCV</TabsTrigger>
                 <TabsTrigger value="funding">FR</TabsTrigger>
                 <TabsTrigger value="openinterest">OI</TabsTrigger>
+                <TabsTrigger value="longshort">L/S Ratio</TabsTrigger>
               </TabsList>
             </div>
 
@@ -130,6 +147,18 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                         notation: "compact",
                         maximumFractionDigits: 1,
                       }).format(openInterestData[0]?.open_interest_value || 0)}
+                    </span>
+                  </>
+                )}
+               {activeTab === "longshort" &&
+                longShortRatioData.length > 0 &&
+                !longShortRatioLoading && (
+                  <>
+                    <span className="badge-primary">
+                      {longShortRatioData.length}件
+                    </span>
+                    <span className="badge-success">
+                      最新L/S: {longShortRatioData[0]?.ls_ratio?.toFixed(4)}
                     </span>
                   </>
                 )}
@@ -176,10 +205,24 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
               searchKeys={tableConfigs.openinterest.searchKeys}
             />
           </TabsContent>
+          <TabsContent value="longshort">
+            <DataTable
+              data={longShortRatioData}
+              columns={tableConfigs.longshort.columns}
+              title={tableConfigs.longshort.title}
+              loading={longShortRatioLoading}
+              error={longShortRatioError}
+              pageSize={tableConfigs.longshort.pageSize}
+              enableExport={tableConfigs.longshort.enableExport}
+              enableSearch={tableConfigs.longshort.enableSearch}
+              searchKeys={tableConfigs.longshort.searchKeys}
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
   );
 };
+
 
 export default DataTableContainer;

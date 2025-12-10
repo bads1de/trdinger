@@ -183,6 +183,64 @@ class OpenInterestData(Base):
     # uses ToDictMixin.to_dict
 
 
+class LongShortRatioData(Base):
+    """
+    ロング/ショート比率データテーブル
+
+    市場のロング/ショートポジション比率履歴を保存します。
+    """
+
+    __tablename__ = "long_short_ratio_data"
+
+    # 主キー
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 取引ペア（例: BTC/USDT）
+    symbol = Column(String(50), nullable=False, index=True)
+
+    # 期間（例: 5min, 1h, 1d）
+    period = Column(String(10), nullable=False, index=True)
+
+    # ロング比率
+    buy_ratio = Column(Float, nullable=False)
+
+    # ショート比率
+    sell_ratio = Column(Float, nullable=False)
+
+    # データ時刻（UTC）
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # インデックス定義
+    __table_args__ = (
+        # 複合インデックス（クエリ最適化）
+        Index("idx_ls_symbol_period_timestamp", "symbol", "period", "timestamp"),
+        Index("idx_ls_timestamp_symbol", "timestamp", "symbol"),
+        # ユニーク制約（重複データ防止）
+        Index(
+            "uq_symbol_period_timestamp",
+            "symbol",
+            "period",
+            "timestamp",
+            unique=True,
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<LongShortRatioData(symbol='{self.symbol}', "
+            f"period='{self.period}', "
+            f"timestamp='{self.timestamp}', "
+            f"buy_ratio={self.buy_ratio:.4f}, "
+            f"sell_ratio={self.sell_ratio:.4f})>"
+        )
+
+
 class BacktestResult(Base):
     """バックテスト結果テーブル。
 

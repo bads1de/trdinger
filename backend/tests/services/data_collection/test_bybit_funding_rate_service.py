@@ -23,8 +23,8 @@ from app.services.data_collection.bybit.funding_rate_service import (
 def mock_exchange():
     """モックCCXT取引所"""
     exchange = MagicMock()
-    exchange.fetch_funding_rate = MagicMock()
-    exchange.fetch_funding_rate_history = MagicMock()
+    exchange.fetch_funding_rate = AsyncMock()
+    exchange.fetch_funding_rate_history = AsyncMock()
     return exchange
 
 
@@ -50,7 +50,9 @@ def mock_config():
 @pytest.fixture
 def service(mock_exchange, mock_config):
     """サービスインスタンス"""
-    with patch("ccxt.bybit") as mock_ccxt:
+    with patch(
+        "app.services.data_collection.bybit.bybit_service.ccxt.bybit"
+    ) as mock_ccxt:
         mock_ccxt.return_value = mock_exchange
         with patch(
             "app.services.data_collection.bybit.funding_rate_service.get_funding_rate_config"
@@ -74,7 +76,9 @@ class TestServiceInitialization:
 
     async def test_service_initialization(self, mock_exchange, mock_config):
         """サービスが正しく初期化されることを確認"""
-        with patch("ccxt.bybit") as mock_ccxt:
+        with patch(
+            "app.services.data_collection.bybit.bybit_service.ccxt.bybit"
+        ) as mock_ccxt:
             mock_ccxt.return_value = mock_exchange
             with patch(
                 "app.services.data_collection.bybit.funding_rate_service.get_funding_rate_config"
@@ -136,13 +140,11 @@ class TestFetchCurrentFundingRate:
             "timestamp": 1609459200000,
         }
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_funding_rate.return_value = expected_data
 
-            result = await service.fetch_current_funding_rate("BTC/USDT")
+        result = await service.fetch_current_funding_rate("BTC/USDT")
 
-            assert result == expected_data
+        assert result == expected_data
 
     async def test_fetch_current_funding_rate_with_normalized_symbol(
         self, service, mock_exchange
@@ -154,13 +156,11 @@ class TestFetchCurrentFundingRate:
             "timestamp": 1609459200000,
         }
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_funding_rate.return_value = expected_data
 
-            result = await service.fetch_current_funding_rate("BTC/USDT:USDT")
+        result = await service.fetch_current_funding_rate("BTC/USDT:USDT")
 
-            assert result == expected_data
+        assert result == expected_data
 
 
 @pytest.mark.asyncio
@@ -178,13 +178,11 @@ class TestFetchFundingRateHistory:
             {"timestamp": 1609459300000, "fundingRate": 0.0002},
         ]
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_funding_rate_history.return_value = expected_data
 
-            result = await service.fetch_funding_rate_history("BTC/USDT", limit=100)
+        result = await service.fetch_funding_rate_history("BTC/USDT", limit=100)
 
-            assert result == expected_data
+        assert result == expected_data
 
     @patch(
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
@@ -195,15 +193,13 @@ class TestFetchFundingRateHistory:
         since_timestamp = 1609459200000
         expected_data = [{"timestamp": 1609459300000, "fundingRate": 0.0002}]
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=expected_data)
-            mock_loop.return_value.run_in_executor = mock_executor
+        mock_exchange.fetch_funding_rate_history.return_value = expected_data
 
-            result = await service.fetch_funding_rate_history(
-                "BTC/USDT", limit=100, since=since_timestamp
-            )
+        result = await service.fetch_funding_rate_history(
+            "BTC/USDT", limit=100, since=since_timestamp
+        )
 
-            assert result == expected_data
+        assert result == expected_data
 
     @patch(
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
@@ -294,6 +290,8 @@ class TestFetchIncrementalData:
                     )
                     mock_config.repository_class.return_value = mock_repository_instance
 
+                    service.exchange.fetch_funding_rate_history.return_value = mock_data
+
                     result = await service.fetch_incremental_funding_rate_data(
                         "BTC/USDT"
                     )
@@ -330,6 +328,8 @@ class TestFetchIncrementalData:
                     )
                     mock_config.repository_class.return_value = mock_repository_instance
 
+                    service.exchange.fetch_funding_rate_history.return_value = mock_data
+
                     result = await service.fetch_incremental_funding_rate_data(
                         "BTC/USDT"
                     )
@@ -353,6 +353,8 @@ class TestFetchIncrementalData:
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value=mock_data)
                 mock_loop.return_value.run_in_executor = mock_executor
+
+                service.exchange.fetch_funding_rate_history.return_value = mock_data
 
                 result = await service.fetch_incremental_funding_rate_data(
                     "BTC/USDT", mock_repository
@@ -394,6 +396,8 @@ class TestFetchAndSaveData:
                 )
                 mock_config.repository_class.return_value = mock_repository_instance
 
+                service.exchange.fetch_funding_rate_history.return_value = mock_data
+
                 result = await service.fetch_and_save_funding_rate_data(
                     "BTC/USDT", limit=100
                 )
@@ -416,6 +420,8 @@ class TestFetchAndSaveData:
         with patch("asyncio.get_event_loop") as mock_loop:
             mock_executor = AsyncMock(return_value=mock_data)
             mock_loop.return_value.run_in_executor = mock_executor
+
+            service.exchange.fetch_funding_rate_history.return_value = mock_data
 
             result = await service.fetch_and_save_funding_rate_data(
                 "BTC/USDT", limit=100, repository=mock_repository

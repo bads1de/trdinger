@@ -9,6 +9,7 @@ export {
   ohlcvColumns,
   fundingRateColumns,
   openInterestColumns,
+  longShortRatioColumns,
 } from "./TableColumns";
 export { default as TimeFrameSelector } from "./TimeFrameSelector";
 export { default as LoadingSpinner } from "./LoadingSpinner";

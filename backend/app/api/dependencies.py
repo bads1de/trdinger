@@ -21,6 +21,8 @@ from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.long_short_ratio_repository import LongShortRatioRepository
+from app.services.data_collection.bybit.long_short_ratio_service import BybitLongShortRatioService
 
 
 def get_backtest_service(db: Session = Depends(get_db)) -> BacktestService:
@@ -304,3 +306,19 @@ def get_ml_management_orchestration_service():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="MLManagementOrchestrationServiceが利用できません。サーバーログを確認してください。",
         )
+
+
+def get_long_short_ratio_repository(
+    db: Session = Depends(get_db),
+) -> LongShortRatioRepository:
+    """
+    LongShortRatioRepository のインスタンスを取得（依存性注入用）
+    """
+    return LongShortRatioRepository(db)
+
+
+def get_long_short_ratio_service() -> BybitLongShortRatioService:
+    """
+    BybitLongShortRatioService のインスタンスを取得（依存性注入用）
+    """
+    return BybitLongShortRatioService()

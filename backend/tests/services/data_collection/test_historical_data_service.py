@@ -189,8 +189,8 @@ class TestCollectBulkIncrementalData:
 
             assert "ohlcv" in result["data"]
             assert "timeframe_results" in result["data"]["ohlcv"]
-            # 5つの時間足（15m, 30m, 1h, 4h, 1d）をテスト
-            assert len(result["data"]["ohlcv"]["timeframe_results"]) == 5
+            # 7つの時間足（1m, 5m, 15m, 30m, 1h, 4h, 1d）をテスト
+            assert len(result["data"]["ohlcv"]["timeframe_results"]) == 7
 
     async def test_collect_bulk_incremental_data_with_funding_rate(
         self, service, mock_market_service, mock_repository

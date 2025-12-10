@@ -19,6 +19,10 @@ class TestIndicatorGenerator:
         config = Mock()
         config.min_indicators = 2
         config.max_indicators = 5
+        config.available_timeframes = None
+        config.enable_multi_timeframe = False
+        config.mtf_indicator_probability = 0.0
+        config.parameter_range_preset = None
         return config
 
     @pytest.fixture

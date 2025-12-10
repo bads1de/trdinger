@@ -182,17 +182,14 @@ class TestCCXTErrorHandling:
 
     async def test_handle_ccxt_errors_success(self, service, mock_exchange):
         """正常なCCXT操作が成功することを確認"""
-        test_func = MagicMock(return_value=["data"])
+        test_func = AsyncMock(return_value=["data"])
 
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_executor = AsyncMock(return_value=["data"])
-            mock_loop.return_value.run_in_executor = mock_executor
+        result = await service._handle_ccxt_errors_impl(
+            "テスト操作", test_func, "arg1", "arg2"
+        )
 
-            result = await service._handle_ccxt_errors_impl(
-                "テスト操作", test_func, "arg1", "arg2"
-            )
-
-            assert result == ["data"]
+        assert result == ["data"]
+        test_func.assert_called_once_with("arg1", "arg2")
 
     async def test_handle_ccxt_errors_bad_symbol(self, service, mock_exchange):
         """BadSymbolエラーがDataErrorに変換されることを確認"""

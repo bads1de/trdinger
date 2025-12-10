@@ -23,6 +23,7 @@ class TestGeneValidator:
         gene = Mock()
         gene.type = "SMA"
         gene.parameters = {"period": 20}
+        gene.timeframe = None
         return gene
 
     @pytest.fixture
@@ -31,6 +32,7 @@ class TestGeneValidator:
         gene = Mock()
         gene.type = None
         gene.parameters = {}
+        gene.timeframe = None
         return gene
 
     @pytest.fixture
@@ -90,6 +92,7 @@ class TestGeneValidator:
         gene = Mock()
         gene.type = "UI"
         gene.parameters = {"period": 20}
+        gene.timeframe = None
 
         result = validator.validate_indicator_gene(gene)
         assert result is True  # UIは有効な複合指標なのでTrueになるべき
@@ -272,6 +275,7 @@ class TestGeneValidator:
         indicator_mock.type = "SMA"
         indicator_mock.parameters = {"period": 20}
         indicator_mock.enabled = True
+        indicator_mock.timeframe = None
         indicators = [indicator_mock]
         strategy.indicators = indicators
         # エントリー条件が必要
@@ -289,6 +293,8 @@ class TestGeneValidator:
         exit_condition_mock.right_operand = "SMA_50"
         strategy.exit_conditions = [exit_condition_mock]
         strategy.tpsl_gene = None
+        strategy.long_tpsl_gene = None
+        strategy.short_tpsl_gene = None
         strategy.MAX_INDICATORS = 5
 
         result, errors = validator.validate_strategy_gene(strategy)
@@ -304,6 +310,7 @@ class TestGeneValidator:
             ind.type = "SMA"
             ind.parameters = {"period": 20}
             ind.enabled = True
+            ind.timeframe = None
             indicators.append(ind)
         strategy.indicators = indicators
         strategy.entry_conditions = []
@@ -311,6 +318,8 @@ class TestGeneValidator:
         strategy.short_entry_conditions = []
         strategy.exit_conditions = []
         strategy.tpsl_gene = None
+        strategy.long_tpsl_gene = None
+        strategy.short_tpsl_gene = None
         strategy.MAX_INDICATORS = 5
 
         result, errors = validator.validate_strategy_gene(strategy)
@@ -325,6 +334,7 @@ class TestGeneValidator:
         indicator_mock.type = "SMA"
         indicator_mock.parameters = {"period": 20}
         indicator_mock.enabled = False
+        indicator_mock.timeframe = None
         indicators = [indicator_mock]
         strategy.indicators = indicators
         entry_condition_mock = Mock()
@@ -340,6 +350,8 @@ class TestGeneValidator:
         exit_condition_mock.right_operand = "SMA_50"
         strategy.exit_conditions = [exit_condition_mock]
         strategy.tpsl_gene = None
+        strategy.long_tpsl_gene = None
+        strategy.short_tpsl_gene = None
         strategy.MAX_INDICATORS = 5
 
         result, errors = validator.validate_strategy_gene(strategy)

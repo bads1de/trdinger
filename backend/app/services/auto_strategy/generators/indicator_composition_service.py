@@ -65,22 +65,30 @@ class IndicatorCompositionService:
             ma_count = sum(
                 1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS
             )
+            print(f"DEBUG: ma_count={ma_count}")
 
             # 確率的にMAクロスを導入（強制的ではない）
-            if ma_count < 2 and random.random() < 0.25:  # 25%の確率で導入
+            rnd_val = random.random()
+            print(f"DEBUG: random.random()={rnd_val}")
+
+            if ma_count < 2 and rnd_val < 0.25:  # 25%の確率で導入
                 # MA指標プールを準備
                 ma_pool = [
                     name
                     for name in available_indicators
                     if name in MOVING_AVERAGE_INDICATORS
                 ]
+                print(f"DEBUG: ma_pool={ma_pool}")
 
                 if ma_pool:
                     # 既存のMA指標のパラメータと重複しないように選択
                     existing_periods = self._get_existing_periods(indicators)
+                    print(f"DEBUG: existing_periods={existing_periods}")
+
                     chosen_ma = self._choose_ma_with_unique_period(
                         ma_pool, existing_periods
                     )
+                    print(f"DEBUG: chosen_ma={chosen_ma}")
 
                     if chosen_ma:
                         indicators.append(
@@ -99,6 +107,7 @@ class IndicatorCompositionService:
 
         except Exception as e:
             logger.error(f"MAクロス戦略追加エラー: {e}")
+            print(f"DEBUG: EXCEPTION={e}")
 
         return indicators
 

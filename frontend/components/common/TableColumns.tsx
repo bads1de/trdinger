@@ -11,6 +11,7 @@ import { TableColumn } from "@/types/common";
 import { FundingRateData } from "@/types/funding-rate";
 import { PriceData } from "@/types/market-data";
 import { OpenInterestData } from "@/types/open-interest";
+import { LongShortRatioData } from "@/types/long-short-ratio";
 import { formatDateTime } from "@/utils/formatters";
 import {
   formatPrice,
@@ -304,3 +305,56 @@ export const openInterestColumns: TableColumn<OpenInterestData>[] = [
     },
   },
 ];
+
+/**
+ * Long/Short Ratioデータテーブルのカラム定義
+ */
+export const longShortRatioColumns: TableColumn<LongShortRatioData>[] = [
+  {
+    key: "timestamp",
+    header: "日時",
+    width: "180px",
+    sortable: true,
+    formatter: (value: string) => {
+      const { date, time } = formatDateTime(value);
+      return <span className="font-mono text-sm">{date} {time}</span>;
+    }
+  },
+  {
+    key: "buy_ratio",
+    header: "ロング比率",
+    width: "120px",
+    sortable: true,
+    formatter: (value: number) => (
+      <span className="font-mono text-sm text-green-500 font-bold">
+        {(value * 100).toFixed(2)}%
+      </span>
+    ),
+    cellClassName: "text-right",
+  },
+  {
+    key: "sell_ratio",
+    header: "ショート比率",
+    width: "120px",
+    sortable: true,
+    formatter: (value: number) => (
+      <span className="font-mono text-sm text-red-500 font-bold">
+        {(value * 100).toFixed(2)}%
+      </span>
+    ),
+    cellClassName: "text-right",
+  },
+  {
+    key: "ls_ratio",
+    header: "L/S倍率",
+    width: "120px",
+    sortable: true,
+    formatter: (value: number | undefined) => (
+      <span className="font-mono text-sm text-yellow-500">
+        {value ? value.toFixed(4) : '-'}
+      </span>
+    ),
+    cellClassName: "text-right",
+  }
+];
+

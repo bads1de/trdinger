@@ -68,6 +68,7 @@ class ConditionGenerator:
         timeframe: str | None = None,
         symbol: str | None = None,
         threshold_profile: str | None = None,
+        regime_thresholds: dict | None = None,
     ):
         """生成コンテキストを設定（RSI閾値などに利用）"""
         if timeframe is not None:
@@ -78,6 +79,8 @@ class ConditionGenerator:
             if threshold_profile not in ("aggressive", "normal", "conservative"):
                 threshold_profile = "normal"
             self.context["threshold_profile"] = threshold_profile
+        if regime_thresholds is not None:
+            self.context["regime_thresholds"] = regime_thresholds
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
     def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[

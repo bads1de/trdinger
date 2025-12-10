@@ -9,7 +9,7 @@ from abc import ABC
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
-import ccxt
+import ccxt.async_support as ccxt
 
 from app.config.unified_config import unified_config
 from app.utils.error_handler import (
@@ -24,17 +24,25 @@ logger = logging.getLogger(__name__)
 class BybitService(ABC):
     """Bybitサービスの基底クラス"""
 
-    def __init__(self):
-        """サービスを初期化"""
-        self.exchange = ccxt.bybit(
-            {
-                "sandbox": False,  # 本番環境を使用（読み取り専用）
-                "enableRateLimit": True,
-                "options": {
-                    "defaultType": "linear",  # 無期限契約市場を使用
-                },
-            }
-        )
+    def __init__(self, exchange: Optional[ccxt.Exchange] = None):
+        """
+        サービスを初期化
+
+        Args:
+            exchange: オプションのCCXT取引所インスタンス（テスト用）
+        """
+        if exchange:
+            self.exchange = exchange
+        else:
+            self.exchange = ccxt.bybit(
+                {
+                    "sandbox": False,  # 本番環境を使用（読み取り専用）
+                    "enableRateLimit": True,
+                    "options": {
+                        "defaultType": "linear",  # 無期限契約市場を使用
+                    },
+                }
+            )
 
     def _validate_symbol(self, symbol: str) -> None:
         """
@@ -116,17 +124,9 @@ class BybitService(ABC):
         """CCXT操作の実装"""
         logger.info(f"{operation_name}を実行中...")
 
-        # 非同期で実行
-        # run_in_executorはキーワード引数を直接渡せないため、lambdaを使用
+        # 非同期関数を直接awaitで実行
         try:
-            if kwargs:
-                result = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: func(*args, **kwargs)
-                )
-            else:
-                result = await asyncio.get_event_loop().run_in_executor(
-                    None, func, *args
-                )
+            result = await func(*args, **kwargs)
 
             logger.info(f"{operation_name}実行成功")
             return result
