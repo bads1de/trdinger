@@ -108,7 +108,7 @@ class TestTimeoutDecorator:
 
         @timeout_decorator(timeout_seconds=2)
         def documented_function() -> None:
-            """This is a docstring."""
+            """これはドキュメンテーション文字列です。"""
             pass
 
         assert documented_function.__name__ == "documented_function"
@@ -179,7 +179,7 @@ class TestSafeOperation:
 
         @safe_operation()
         def documented_function() -> None:
-            """This is a docstring."""
+            """これはドキュメンテーション文字列です。"""
             pass
 
         assert documented_function.__name__ == "documented_function"

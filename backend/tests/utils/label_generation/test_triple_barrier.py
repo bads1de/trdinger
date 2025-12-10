@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 from app.services.ml.label_generation.triple_barrier import TripleBarrier
 
 class TestTripleBarrier:
+    """トリプルバリアラベル生成のテストクラス"""
+
     def setup_method(self):
         # 1時間ごとのデータ
         dates = pd.date_range(start="2023-01-01", periods=100, freq="1h")
@@ -36,7 +38,6 @@ class TestTripleBarrier:
         # 垂直バリアは10時間後
         vertical_barriers = pd.Series(self.close.index + pd.Timedelta(hours=10), index=self.close.index)
         
-        # t1: イベント終了時刻
         # pt=2.0 => 2.0 * vol(1%) = 2% 上昇で利確
         events = tb.get_events(
             close=self.close,

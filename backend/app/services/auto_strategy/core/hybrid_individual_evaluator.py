@@ -1,4 +1,4 @@
-"""Hybrid GA individual evaluator with ML integration."""
+"""ML統合を伴うハイブリッドGA個体評価器"""
 
 import importlib
 import logging

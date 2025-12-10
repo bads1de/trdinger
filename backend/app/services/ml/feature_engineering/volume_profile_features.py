@@ -28,44 +28,44 @@ def _numba_rolling_volume_profile(
     vah_arr = np.full(n, np.nan)
     val_arr = np.full(n, np.nan)
 
-    # Pre-allocate bin array to reuse memory if possible?
-    # In Numba parallel=False, we just allocate inside.
-    # We can't easily reuse across iterations without passing it, but allocation is cheapish.
+    # 可能であればメモリを再利用するためにビン配列を事前割り当てするか？
+    # Numba parallel=Falseの場合、内部で割り当てるだけです。
+    # 渡さずに反復間で簡単に再利用することはできませんが、割り当ては比較的安価です。
 
     for i in range(window, n):
-        # Window slice indices
+        # ウィンドウのスライスインデックス
         start_idx = i - window
         end_idx = i
 
-        # Extract slices
+        # スライスの抽出
         w_high = high_arr[start_idx:end_idx]
         w_low = low_arr[start_idx:end_idx]
         w_close = close_arr[start_idx:end_idx]
         w_vol = volume_arr[start_idx:end_idx]
 
-        # Price range
+        # 価格範囲
         price_min = w_low.min()
         price_max = w_high.max()
 
         if price_min == price_max:
-            # No movement
+            # 値動きなし
             last_close = w_close[-1]
             poc_arr[i] = last_close
             vah_arr[i] = last_close
             val_arr[i] = last_close
             continue
 
-        # Bin setup
+        # ビンの設定
         # bins = np.linspace(price_min, price_max, num_bins + 1)
         # bin_width = (price_max - price_min) / num_bins
 
         bin_volume = np.zeros(num_bins)
 
-        # Fill bins
-        # This is where we optimized: manually iterate to distribute volume
+        # ビンの充填
+        # ここで最適化を行いました：出来高を分配するために手動で反復処理します
         bin_step = (price_max - price_min) / num_bins
 
-        # Avoid division by zero
+        # ゼロ除算の回避
         if bin_step == 0:
             last_close = w_close[-1]
             poc_arr[i] = last_close
@@ -73,16 +73,16 @@ def _numba_rolling_volume_profile(
             val_arr[i] = last_close
             continue
 
-        for j in range(window):  # Length of slice
+        for j in range(window):  # スライスの長さ
             bar_h = w_high[j]
             bar_l = w_low[j]
             bar_v = w_vol[j]
 
-            # Find affected bins indices
+            # 影響を受けるビンのインデックスを検索
             # bin_start_idx = int((bar_l - price_min) / bin_step)
             # bin_end_idx = int((bar_h - price_min) / bin_step)
 
-            # Clip indices to be safe
+            # 安全のためにインデックスをクリップ
             start_bin = int((bar_l - price_min) / bin_step)
             end_bin = int((bar_h - price_min) / bin_step)
 
@@ -91,13 +91,13 @@ def _numba_rolling_volume_profile(
             if start_bin >= num_bins:
                 start_bin = num_bins - 1
 
-            # bar_h exactly on price_max gives end_bin = num_bins.
+            # bar_hがprice_maxと正確に一致する場合、end_bin = num_binsとなります。
             if end_bin < 0:
                 end_bin = 0
             if end_bin >= num_bins:
                 end_bin = num_bins - 1
 
-            # Number of bins affected
+            # 影響を受けるビンの数
             num_affected = end_bin - start_bin + 1
 
             vol_per_bin = bar_v / num_affected
@@ -105,13 +105,13 @@ def _numba_rolling_volume_profile(
             for b in range(start_bin, end_bin + 1):
                 bin_volume[b] += vol_per_bin
 
-        # Find POC
+        # POC（Point of Control）の検索
         poc_bin = np.argmax(bin_volume)
-        # POC price = midpoint of bin
+        # POC価格 = ビンの中点
         poc_price = price_min + (poc_bin + 0.5) * bin_step
         poc_arr[i] = poc_price
 
-        # Find VAH/VAL (Value Area 70%)
+        # VAH/VALの検索 (Value Area 70%)
         total_volume = bin_volume.sum()
         target_volume = total_volume * 0.70
 
@@ -133,7 +133,7 @@ def _numba_rolling_volume_profile(
                 val_bin -= 1
                 accumulated_volume += vol_below
 
-        # VAH = top of vah_bin, VAL = bottom of val_bin
+        # VAH = vah_binの上部, VAL = val_binの下部
         vah_price = price_min + (vah_bin + 1) * bin_step
         val_price = price_min + val_bin * bin_step
 
@@ -199,10 +199,10 @@ def _numba_detect_volume_nodes(
             for b in range(start_bin, end_bin + 1):
                 bin_volume[b] += vol_per_bin
 
-        # Calculate thresholds manually (percentile)
-        # Sort volume to find percentiles
+        # しきい値を手動で計算 (パーセンタイル)
+        # 出来高をソートしてパーセンタイルを見つける
         sorted_vol = np.sort(bin_volume)
-        # 25th percentile index = 0.25 * (num_bins - 1)
+        # 25パーセンタイルインデックス = 0.25 * (num_bins - 1)
         idx_25 = int(0.25 * (num_bins - 1))
         idx_75 = int(0.75 * (num_bins - 1))
 
@@ -211,12 +211,12 @@ def _numba_detect_volume_nodes(
 
         current_price = close_arr[i]
 
-        # HVN Distance
-        min_hvn_dist = 1e9  # Infinity
+        # HVN（高出来高ノード）距離
+        min_hvn_dist = 1e9  # 無限大
         found_hvn = False
         for b in range(num_bins):
             if bin_volume[b] >= hvn_threshold:
-                # Bin center price
+                # ビンの中心価格
                 bin_price = price_min + (b + 0.5) * bin_step
                 dist = abs(current_price - bin_price)
                 if dist < min_hvn_dist:
@@ -226,7 +226,7 @@ def _numba_detect_volume_nodes(
         if found_hvn and current_price != 0:
             hvn_dist_arr[i] = min_hvn_dist / current_price
 
-        # LVN Distance
+        # LVN（低出来高ノード）距離
         min_lvn_dist = 1e9
         found_lvn = False
         for b in range(num_bins):
@@ -240,15 +240,15 @@ def _numba_detect_volume_nodes(
         if found_lvn and current_price != 0:
             lvn_dist_arr[i] = (
                 min_lvn_dist / current_price
-            )  # original code was (current - lvn) / current
-            # wait, original code was signed distance?
-            # original: (current - nearest_lvn) / current.
-            # Yes it was signed. But usually distance implies absolute.
-            # Let's keep it signed matching original logic.
-            # Re-read original:
+            )  # 元のコードは (current - lvn) / current でした
+            # 待てよ、元のコードは符号付き距離だったか？
+            # 元: (current - nearest_lvn) / current.
+            # はい、符号付きでした。しかし、通常「距離」は絶対値を意味します。
+            # 元のロジックに合わせて符号付きのままにしましょう。
+            # 元のコードを再確認:
             # nearest_hvn = hvn_prices[np.argmin(np.abs(hvn_prices - current))]
             # hvn_distance.iloc[i] = (current - nearest_hvn) / current
-            # Values can be positive or negative.
+            # 値は正または負になります。
             pass
 
     return hvn_dist_arr, lvn_dist_arr
@@ -269,7 +269,7 @@ def _numba_vp_skewness_kurtosis(
         w_close = close_arr[start_idx:end_idx]
         w_vol = volume_arr[start_idx:end_idx]
 
-        # Weighted mean
+        # 加重平均
         sum_vol = 0.0
         sum_price_vol = 0.0
         prices = w_close
@@ -285,24 +285,24 @@ def _numba_vp_skewness_kurtosis(
 
         weighted_mean = sum_price_vol / sum_vol
 
-        # Median (approximate or O(N log N) sort)
-        # Numba supports np.median? Yes.
-        median_price = np.median(prices)  # This might be relatively slow due to sort
+        # 中央値（近似またはO(N log N)ソート）
+        # Numbaはnp.medianをサポートしていますか？ はい。
+        median_price = np.median(prices)  # ソートのため比較的遅くなる可能性があります
 
-        # Std dev of close prices (unweighted in original code?)
-        # Original: skew = (weighted_mean - median_price) / window_data["close"].std()
-        # std() is usually unweighted pandas std.
+        # 終値の標準偏差（元のコードでは非加重？）
+        # 元: skew = (weighted_mean - median_price) / window_data["close"].std()
+        # std()は通常、非加重のpandas stdです。
 
         price_std = np.std(
             prices
-        )  # numpy std is population (ddof=0) by default, pandas is sample (ddof=1)
-        # Let's stick to numpy std, good enough approximation
+        )  # numpyのstdはデフォルトで母集団(ddof=0)、pandasは標本(ddof=1)
+        # numpyのstdで十分な近似とします
 
         if price_std > 0:
             skew_arr[i] = (weighted_mean - median_price) / price_std
 
-        # Kurtosis
-        # Original: weighted variance
+        # 尖度
+        # 元: 加重分散
         sum_sq_diff_vol = 0.0
         for j in range(window):
             p = prices[j]
@@ -355,7 +355,7 @@ class VolumeProfileFeatureCalculator:
         Returns:
             Volume Profile特徴量を含むDataFrame
         """
-        # Ensure float64 numpy arrays
+        # float64 numpy配列であることを確認
         high_arr = df["high"].values.astype(np.float64)
         low_arr = df["low"].values.astype(np.float64)
         close_arr = df["close"].values.astype(np.float64)
@@ -367,18 +367,18 @@ class VolumeProfileFeatureCalculator:
             lookback_periods = [self.lookback_period, 100, 200]
 
         for period in lookback_periods:
-            # Volume Profile計算 (Numba Optimized)
+            # Volume Profile計算 (Numba最適化)
             poc_arr, vah_arr, val_arr = _numba_rolling_volume_profile(
                 high_arr, low_arr, close_arr, volume_arr, period, self.num_bins
             )
 
-            # Convert back to Series for alignment (though strict ndarray assignment is faster if indices match)
-            # Assuming index matches
+            # 整列のためにSeriesに戻す（インデックスが一致していれば厳密なndarray代入の方が高速ですが）
+            # インデックスが一致していると仮定
 
             current_price = close_arr
 
-            # Avoid division by zero by replacing 0 with NaN or small number?
-            # Standard: if poc is 0 (should not happen for price), result is inf.
+            # 0をNaNまたは小さな数に置き換えてゼロ除算を回避するか？
+            # 標準: pocが0の場合（価格では発生しないはず）、結果はinfになります。
 
             poc_dist = (current_price - poc_arr) / poc_arr
             vah_dist = (current_price - vah_arr) / vah_arr
@@ -398,12 +398,12 @@ class VolumeProfileFeatureCalculator:
             va_width = (vah_arr - val_arr) / poc_arr
             result[f"Value_Area_Width_{period}"] = va_width
 
-            # Fill NaNs (first 'period' rows)
-            # We can do this at the end or use ffill logic if required.
-            # Original code did ffill.
-            # Here we let NaNs stay or fill them?
-            # Original: poc_series.fillna(method="ffill")
-            # We will fill result columns
+            # NaNを埋める（最初の 'period' 行）
+            # これは最後に行うか、必要に応じてffillロジックを使用できます。
+            # 元のコードはffillを行っていました。
+            # ここではNaNをそのままにするか、埋めるか？
+            # 元: poc_series.fillna(method="ffill")
+            # 結果列を埋めます
             cols = [
                 f"POC_Distance_{period}",
                 f"VAH_Distance_{period}",
@@ -413,22 +413,22 @@ class VolumeProfileFeatureCalculator:
             ]
             result[cols] = result[cols].ffill().fillna(0.0)
 
-        # HVN/LVN（高/低出来高ノード）検出 (Numba Optimized)
-        # Using default lookback_period
-        # Note: Original code used separate looping for HVN/LVN and Skewness
-        # We also optimized those.
+        # HVN/LVN（高/低出来高ノード）検出 (Numba最適化)
+        # デフォルトのlookback_periodを使用
+        # 注: 元のコードはHVN/LVNと歪度（Skewness）に別々のループを使用していました
+        # それらも最適化しました。
 
-        # Need to fix _numba_detect_volume_nodes to return SIGNED distance properly
-        # I skipped rewriting it fully in my thought process, let's fix it in the code block below (comment was left in code)
+        # 符号付き距離を正しく返すように _numba_detect_volume_nodes を修正する必要があります
+        # 思考プロセスでは完全な書き換えをスキップしました、下のコードブロックで修正しましょう（コメントがコードに残っていました）
 
-        # Actually I simplified _numba_detect_volume_nodes above to return positive distance.
-        # But wait, original code:
+        # 実は上で _numba_detect_volume_nodes を正の距離を返すように簡略化しました。
+        # しかし待てよ、元のコード:
         # nearest_hvn = hvn_prices[np.argmin(np.abs(hvn_prices - current))]
         # hvn_distance.iloc[i] = (current - nearest_hvn) / current
-        # This is signed. Positive if current > HVN (price is above volume node).
+        # これは符号付きです。現在価格 > HVN（価格が出来高ノードより上）の場合、正になります。
 
-        # I need to adjust _numba_detect_volume_nodes to match this sign.
-        # I will update the function below.
+        # この符号に合わせて _numba_detect_volume_nodes を調整する必要があります。
+        # 以下の関数を更新します。
 
         hvn_arr, lvn_arr = _numba_detect_volume_nodes_signed(
             high_arr,
@@ -442,7 +442,7 @@ class VolumeProfileFeatureCalculator:
         result["HVN_Distance"] = hvn_arr
         result["LVN_Distance"] = lvn_arr
 
-        # Volume Profile形状特徴 (Numba Optimized)
+        # Volume Profile形状特徴 (Numba最適化)
         skew_arr, kurt_arr = _numba_vp_skewness_kurtosis(
             close_arr, volume_arr, self.lookback_period
         )
@@ -451,9 +451,9 @@ class VolumeProfileFeatureCalculator:
 
         return result
 
-    # Deprecated / Internal methods kept for reference or remove?
-    # Since we replaced logic, we can remove them or keep them as fallback?
-    # Better to remove cleanly.
+    # 非推奨 / 内部メソッドは参照用に残すか、削除するか？
+    # ロジックを置き換えたので、削除するかフォールバックとして残すか？
+    # 完全に削除する方が良いでしょう。
 
     def _compute_volume_profile(self, *args, **kwargs):
         raise NotImplementedError("Use optimized calculate_features instead")

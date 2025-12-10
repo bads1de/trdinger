@@ -9,9 +9,11 @@ from backend.app.services.ml.optimization.optimization_service import (
 
 
 class TestMLTrainingOptimization:
+    """ML学習最適化のテストクラス"""
 
     @pytest.fixture
     def sample_data(self):
+        """サンプルデータを生成"""
         dates = pd.date_range(start="2023-01-01", periods=10, freq="D")
         df = pd.DataFrame(
             {
@@ -27,14 +29,14 @@ class TestMLTrainingOptimization:
         return df
 
     def test_train_model_with_optimization(self, sample_data):
-        """Test that train_model delegates to OptimizationService when optimization is enabled"""
-        # Setup
+        """最適化が有効な場合、train_modelがOptimizationServiceに処理を委譲することを確認"""
+        # セットアップ
         service = MLTrainingService(
             trainer_type="single", single_model_config={"model_type": "lightgbm"}
         )
         opt_settings = OptimizationSettings(enabled=True, n_calls=1)
 
-        # Mock OptimizationService
+        # OptimizationServiceをモック化
         service.optimization_service = MagicMock()
         service.optimization_service.optimize_parameters.return_value = {
             "best_params": {"learning_rate": 0.05},
@@ -43,58 +45,58 @@ class TestMLTrainingOptimization:
             "optimization_time": 1.0,
         }
 
-        # Mock trainer
+        # トレーナーをモック化
         service.trainer = MagicMock()
         service.trainer.train_model.return_value = {"f1_score": 0.9}
 
-        # Execute
+        # 実行
         result = service.train_model(
             training_data=sample_data,
             optimization_settings=opt_settings,
             save_model=False,
         )
 
-        # Verify OptimizationService called
+        # OptimizationServiceが呼び出されたことを確認
         service.optimization_service.optimize_parameters.assert_called_once()
         call_kwargs = service.optimization_service.optimize_parameters.call_args[1]
         assert call_kwargs["trainer"] == service.trainer
         assert call_kwargs["training_data"] is sample_data
         assert call_kwargs["optimization_settings"] == opt_settings
 
-        # Verify final training called with best params
+        # 最適なパラメータで最終学習が呼び出されたことを確認
         service.trainer.train_model.assert_called_once()
         train_kwargs = service.trainer.train_model.call_args[1]
         assert train_kwargs["learning_rate"] == 0.05
         assert train_kwargs["save_model"] is False
 
-        # Verify result contains optimization info
+        # 結果に最適化情報が含まれていることを確認
         assert "optimization_result" in result
         assert result["optimization_result"]["best_params"] == {"learning_rate": 0.05}
 
     def test_train_model_without_optimization(self, sample_data):
-        """Test that train_model bypasses OptimizationService when optimization is disabled"""
-        # Setup
+        """最適化が無効な場合、train_modelがOptimizationServiceをバイパスすることを確認"""
+        # セットアップ
         service = MLTrainingService(
             trainer_type="single", single_model_config={"model_type": "lightgbm"}
         )
         opt_settings = OptimizationSettings(enabled=False)
 
-        # Mock OptimizationService
+        # OptimizationServiceをモック化
         service.optimization_service = MagicMock()
 
-        # Mock trainer
+        # トレーナーをモック化
         service.trainer = MagicMock()
         service.trainer.train_model.return_value = {"f1_score": 0.9}
 
-        # Execute
+        # 実行
         service.train_model(
             training_data=sample_data,
             optimization_settings=opt_settings,
             save_model=False,
         )
 
-        # Verify OptimizationService NOT called
+        # OptimizationServiceが呼び出されていないことを確認
         service.optimization_service.optimize_parameters.assert_not_called()
 
-        # Verify training called
+        # トレーニングが呼び出されたことを確認
         service.trainer.train_model.assert_called_once()

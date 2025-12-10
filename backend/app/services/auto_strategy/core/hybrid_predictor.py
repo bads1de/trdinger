@@ -1,4 +1,4 @@
-"""Hybrid GA+ML predictor implementation."""
+"""ハイブリッドGA+ML予測器の実装。"""
 
 import importlib
 import logging

@@ -86,8 +86,8 @@ class MicrostructureFeatureCalculator:
         VPIN ~ |V_buy - V_sell| / (V_buy + V_sell)
         """
         # Bulk Volume Classification:
-        # Close > Open -> Buy Volume
-        # Close < Open -> Sell Volume
+        # Close > Open -> Buy Volume (買い出来高)
+        # Close < Open -> Sell Volume (売り出来高)
         # Close == Open -> 前回の方向を維持（ここでは簡易的に0.5ずつ配分）
 
         buy_vol = pd.Series(0.0, index=df.index)
@@ -125,7 +125,7 @@ class MicrostructureFeatureCalculator:
         """
         returns = df["close"].pct_change()
 
-        # Signed Volume (近似)
+        # Signed Volume (近似符号付き出来高)
         # Close > Open なら +Volume, Close < Open なら -Volume
         sign = np.sign(df["close"] - df["open"])
         # signが0の場合は前回のsignを使うか、0のままにする。ここでは0のまま。
@@ -149,27 +149,27 @@ class MicrostructureFeatureCalculator:
         high = df["high"]
         low = df["low"]
 
-        # Beta calculation
+        # ベータの計算
         # beta = E[sum(ln(H/L)^2)]
         hl_ratio = np.log(high / low) ** 2
         beta = hl_ratio.rolling(window=2).sum()
 
-        # Gamma calculation
-        # gamma = [ln(H2/L2)]^2 where H2, L2 are 2-day high/low
+        # ガンマの計算
+        # gamma = [ln(H2/L2)]^2 ここで H2, L2 は2日間の高値/安値
         h2 = high.rolling(window=2).max()
         l2 = low.rolling(window=2).min()
         gamma = np.log(h2 / l2) ** 2
 
-        # Alpha calculation
+        # アルファの計算
         # alpha = (sqrt(2*beta) - sqrt(beta)) / (3 - 2*sqrt(2)) - sqrt(gamma / (3 - 2*sqrt(2)))
-        # Simplified: alpha = (sqrt(2*beta) - sqrt(beta)) / 0.17157 - sqrt(gamma) / 0.4142
+        # 簡略化式: alpha = (sqrt(2*beta) - sqrt(beta)) / 0.17157 - sqrt(gamma) / 0.4142
 
         const1 = np.sqrt(2) - 1
         const2 = 3 - 2 * np.sqrt(2)
 
         alpha = (np.sqrt(2 * beta) - np.sqrt(beta)) / const1 - np.sqrt(gamma / const2)
 
-        # Spread calculation
+        # スプレッドの計算
         # S = 2 * (exp(alpha) - 1) / (1 + exp(alpha))
         spread = 2 * (np.exp(alpha) - 1) / (1 + np.exp(alpha))
 

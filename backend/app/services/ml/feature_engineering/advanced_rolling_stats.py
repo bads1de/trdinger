@@ -137,45 +137,47 @@ class AdvancedRollingStatsCalculator:
 
         ドリフト独立かつ始値ギャップ（Overnight Jump）を考慮した最小分散不偏推定量。
 
-        Formula:
+        数式:
         sigma^2_YZ = sigma^2_OJ + k * sigma^2_OC + (1-k) * sigma^2_RS
         """
-        # Log prices
+        # 対数価格
         log_open = np.log(df["open"])
         log_high = np.log(df["high"])
         log_low = np.log(df["low"])
         log_close = np.log(df["close"])
 
-        # Prev close for overnight jump
+        # 前日終値（Overnight Jump計算用）
         log_close_shifted = log_close.shift(1)
 
         # 1. Overnight Jump Volatility (sigma^2_OJ)
-        # ln(O_t / C_{t-1})
+        # 始値ギャップ：ln(O_t / C_{t-1})
         oj_returns = log_open - log_close_shifted
-        # Rolling variance of OJ returns (ddof=1 for unbiased)
+        # OJリターンのローリング分散 (不偏推定量のために ddof=1)
         sigma_oj_sq = oj_returns.rolling(window).var()
 
         # 2. Open-to-Close Volatility (sigma^2_OC)
-        # ln(C_t / O_t)
+        # 日中リターン：ln(C_t / O_t)
         oc_returns = log_close - log_open
-        # Rolling variance of OC returns
+        # OCリターンのローリング分散
         sigma_oc_sq = oc_returns.rolling(window).var()
 
         # 3. Rogers-Satchell Volatility (sigma^2_RS)
+        # トレンドの影響を受けにくいボラティリティ
         # RS = ln(H/C) * ln(H/O) + ln(L/C) * ln(L/O)
         rs_term = (log_high - log_close) * (log_high - log_open) + (
             log_low - log_close
         ) * (log_low - log_open)
         sigma_rs_sq = rs_term.rolling(window).mean()
 
-        # k factor
+        # k factor (重み係数)
+        # 最小分散を達成するための最適な重み
         # k = 0.34 / (1.34 + (n+1)/(n-1))
         k = 0.34 / (1.34 + (window + 1) / (window - 1))
 
-        # Yang-Zhang Variance
+        # Yang-Zhang 分散
         yz_var = sigma_oj_sq + k * sigma_oc_sq + (1 - k) * sigma_rs_sq
 
-        # Volatility (Std Dev)
+        # ボラティリティ (標準偏差)
         yz_vol = np.sqrt(yz_var)
 
         return yz_vol.fillna(0)

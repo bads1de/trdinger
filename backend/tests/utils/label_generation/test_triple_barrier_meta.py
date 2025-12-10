@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 from app.services.ml.label_generation.triple_barrier import TripleBarrier
 
 class TestTripleBarrierMetaLabeling:
+    """メタラベリングのためのトリプルバリアテスト"""
     def setup_method(self):
         # 1時間ごとのデータ
         dates = pd.date_range(start="2023-01-01", periods=100, freq="1h")
@@ -43,9 +44,9 @@ class TestTripleBarrierMetaLabeling:
         self.close.iloc[30] = 100.5
         
         # 垂直バリア (5時間後)
-        # index[0] -> limit index[5] (exactly hit)
+        # index[0] -> limit index[5] (ちょうどヒット)
         # index[10] -> limit index[15]
-        # index[20] -> limit index[25] (price at 25 is 100.0)
+        # index[20] -> limit index[25] (25番目の価格は100.0)
         vertical_barriers = pd.Series(self.close.index + pd.Timedelta(hours=6), index=self.close.index)
         
         # ターゲットイベント
@@ -69,7 +70,7 @@ class TestTripleBarrierMetaLabeling:
         try:
             labels = tb.get_bins(events, self.close, binary_label=True)
         except TypeError:
-            pytest.fail("get_bins method does not support 'binary_label' parameter yet")
+            pytest.fail("get_bins メソッドはまだ 'binary_label' パラメータをサポートしていません")
             
         # 検証
         # ケース1: 利確 -> 1

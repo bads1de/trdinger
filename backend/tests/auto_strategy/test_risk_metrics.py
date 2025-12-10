@@ -1,4 +1,4 @@
-"""Risk metric utilities tests."""
+"""リスク指標ユーティリティのテスト"""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from app.services.auto_strategy.core.risk_metrics import (
 
 
 def test_calculate_ulcer_index_returns_root_mean_square() -> None:
-    """Ulcer index should be the RMS of drawdown percentages."""
+    """Ulcer indexはドローダウン率の二乗平均平方根（RMS）であるべき"""
 
     base_time = datetime(2024, 1, 1, 0, 0, 0)
     equity_curve = [
@@ -37,7 +37,7 @@ def test_calculate_ulcer_index_returns_root_mean_square() -> None:
 
 
 def test_calculate_trade_frequency_penalty_uses_trades_per_day() -> None:
-    """Penalty should increase with higher daily trade frequency."""
+    """ペナルティは1日あたりの取引回数が増えるにつれて増加すべき"""
 
     start = datetime(2024, 2, 1)
     end = datetime(2024, 2, 11)
@@ -49,5 +49,6 @@ def test_calculate_trade_frequency_penalty_uses_trades_per_day() -> None:
         trade_history=[{"entry_time": start + timedelta(days=i)} for i in range(40)],
     )
 
-    # 40 trades across 10 days => 4 trades/day, tanh(4/8) ~= 0.4621
+    # 40回の取引 / 10日間 => 4回/日, tanh(4/8) ~= 0.4621
+    # 基準となる取引回数(REFERENCE_TRADES_PER_DAY)は8.0と仮定
     assert penalty == pytest.approx(0.4621, rel=1e-4)

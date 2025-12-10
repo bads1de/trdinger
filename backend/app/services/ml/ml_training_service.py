@@ -41,8 +41,8 @@ class MLTrainingService(BaseResourceManager):
         初期化
 
         Args:
-            trainer_type: 使用するトレーナーのタイプ（'ensemble' または 'single'）
-                ※後方互換のため残しているが、内部では全てEnsembleTrainerを使用
+            trainer_type: 使用するトレーナーのタイプ（'ensemble' または 'single'）。
+                この引数は後方互換のために残されていますが、内部では常にEnsembleTrainerが使用されます。
             ensemble_config: アンサンブル設定（辞書形式）
             single_model_config: 単一モデル設定（辞書形式）
                 ※後方互換のため残しているが、ensemble_configに変換される
@@ -138,9 +138,8 @@ class MLTrainingService(BaseResourceManager):
                 f"サポートされているタイプ: 'ensemble', 'single'"
             )
 
-    @staticmethod
-    def get_available_single_models() -> List[str]:
-        """利用可能な単一モデルのリストを取得"""
+    def get_available_single_models(self) -> List[str]:
+        """利用可能な単一モデルのリストを取得します。"""
         # unified_configから取得
         return unified_config.ml.ensemble.algorithms
 
@@ -379,7 +378,7 @@ class MLTrainingService(BaseResourceManager):
 
     def generate_signals(self, features: pd.DataFrame) -> Dict[str, float]:
         """
-        予測信号を生成
+        予測信号を生成します。
 
         Args:
             features: 特徴量DataFrame

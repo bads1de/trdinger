@@ -266,7 +266,7 @@ def crossover_strategy_genes_pure(
         if crossover_type == "uniform":
             return uniform_crossover(parent1, parent2, config)
         else:
-            # single_point crossover (existing logic)
+            # 一点交叉（既存ロジック）
             # 指標遺伝子の交叉（単純な一点交叉）
             min_indicators = min(len(parent1.indicators), len(parent2.indicators))
             if min_indicators <= 1:

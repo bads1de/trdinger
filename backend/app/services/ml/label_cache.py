@@ -67,11 +67,11 @@ class LabelCache:
             threshold: 閾値 (Trend Scanningの場合はmin_t_value)
             timeframe: 時間足
             price_column: 価格カラム名
-            pt_factor: Profit Taking multiplier for Triple Barrier.
-            sl_factor: Stop Loss multiplier for Triple Barrier.
-            use_atr: Use ATR for volatility in Triple Barrier.
-            atr_period: ATR calculation period.
-            binary_label: Return binary (0/1) labels.
+            pt_factor: トリプルバリア法のプロフィットテイキング乗数。
+            sl_factor: トリプルバリア法のストップロス乗数。
+            use_atr: トリプルバリア法でボラティリティにATRを使用するかどうか。
+            atr_period: ATR計算期間。
+            binary_label: バイナリ（0/1）ラベルを返すかどうか。
             t_events: ラベル付け対象のイベント時刻
             min_window: Trend Scanningの最小ウィンドウサイズ
             window_step: Trend Scanningのウィンドウステップ

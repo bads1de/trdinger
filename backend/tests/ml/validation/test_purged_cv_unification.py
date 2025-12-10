@@ -13,6 +13,8 @@ class ConcreteMLTrainer(BaseMLTrainer):
 
 
 class TestPurgedCVUnification:
+    """PurgedKFold統合のテストクラス"""
+
     def setup_method(self):
         # ML設定のモックを設定
         with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
@@ -25,7 +27,7 @@ class TestPurgedCVUnification:
             
             self.trainer = ConcreteMLTrainer()
         
-        # Mock data
+        # モックデータ
         dates = pd.date_range(start="2023-01-01", periods=100, freq="1h")
         self.X = pd.DataFrame(
             np.random.rand(100, 5), index=dates, columns=[f"feat_{i}" for i in range(5)]
@@ -33,11 +35,11 @@ class TestPurgedCVUnification:
         self.y = pd.Series(np.random.randint(0, 2, 100), index=dates)
 
     def test_time_series_cross_validate_uses_purged_kfold(self):
-        """Test that _time_series_cross_validate uses PurgedKFold regardless of config flag if unified"""
-        # We want to verify that PurgedKFold is used.
-        # Currently it depends on config. We will modify the code to always use it.
+        """統合されている場合、設定フラグに関わらず_time_series_cross_validateがPurgedKFoldを使用することをテスト"""
+        # PurgedKFoldが使用されていることを検証したい。
+        # 現在は設定に依存している。常に使用するようにコードを変更する予定。
 
-        # Mock PurgedKFold to verify it's called
+        # PurgedKFoldをモック化して呼び出しを確認
         with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             label_gen_mock = MagicMock()
             label_gen_mock.timeframe = "1h"
@@ -48,16 +50,16 @@ class TestPurgedCVUnification:
             with patch("app.services.ml.base_ml_trainer.PurgedKFold") as MockPurgedKFold:
                 MockPurgedKFold.return_value.split.return_value = (
                     []
-                )  # Return empty generator
+                )  # 空のジェネレータを返す
 
-                # But first, let's just run it with default (True) to see it works
+                # まずはデフォルト(True)で実行して動作確認
                 self.trainer._time_series_cross_validate(self.X, self.y)
 
                 MockPurgedKFold.assert_called()
 
     def test_purged_kfold_integration(self):
-        """Integration test for PurgedKFold in BaseMLTrainer"""
-        # This tests the actual splitting logic
+        """BaseMLTrainerにおけるPurgedKFoldの統合テスト"""
+        # 実際の分割ロジックをテスト
         with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             label_gen_mock = MagicMock()
             label_gen_mock.timeframe = "1h"

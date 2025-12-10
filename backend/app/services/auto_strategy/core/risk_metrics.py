@@ -1,4 +1,6 @@
-"""Risk-focused fitness metric helpers."""
+"""
+リスク評価のためのフィットネス指標ヘルパー関数群。
+"""
 
 from __future__ import annotations
 
@@ -6,17 +8,20 @@ import math
 from datetime import datetime
 from typing import Any, Iterable, Mapping, MutableSequence, Optional, Sequence
 
+# 基準となる1日あたりの取引回数（これを超えると過剰取引とみなすペナルティが増加）
 REFERENCE_TRADES_PER_DAY = 8.0
 
 
 def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
-    """Compute the ulcer index (RMS drawdown).
+    """
+    Ulcer Index（ドローダウンの二乗平均平方根）を計算します。
+    標準偏差よりも下落リスクを重視するリスク指標です。
 
     Args:
-        equity_curve: Iterable of equity points produced by the backtest converter.
+        equity_curve: バックテスト結果の資産曲線のポイント列。
 
     Returns:
-        Root mean square of drawdown percentages expressed as decimals.
+        ドローダウン率の二乗平均平方根（小数値）。
     """
 
     if not equity_curve:
@@ -38,6 +43,7 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
             continue
 
         drawdown = abs(drawdown)
+        # ドローダウンがパーセンテージ（>1.0）の場合、小数（0.0-1.0）に変換
         if drawdown > 1.0:
             drawdown /= 100.0
 
@@ -57,10 +63,20 @@ def calculate_trade_frequency_penalty(
     end_date: Optional[object],
     trade_history: Optional[Iterable[Mapping[str, Any]]] = None,
 ) -> float:
-    """Return a normalized penalty for excessive trade frequency.
+    """
+    過剰取引（高頻度取引）に対する正規化されたペナルティを返します。
 
-    The penalty increases with the average number of trades per day and is bounded
-    in ``[0, 1)`` via a hyperbolic tangent.
+    1日あたりの平均取引回数が増えるにつれてペナルティは増加し、
+    双曲線正接（tanh）により ``[0, 1)`` の範囲に収まります。
+
+    Args:
+        total_trades: 総取引回数。
+        start_date: 開始日時。
+        end_date: 終了日時。
+        trade_history: 取引履歴（total_tradesが0の場合にカウントに使用）。
+
+    Returns:
+        ペナルティ値（0.0〜1.0未満）。
     """
 
     trades = int(total_trades or 0)
@@ -74,9 +90,10 @@ def calculate_trade_frequency_penalty(
     parsed_end = _ensure_datetime(end_date)
 
     if parsed_start is None or parsed_end is None or parsed_end <= parsed_start:
-        # フォールバックで1日とみなす
+        # 期間が不明または無効な場合は1日として扱う
         duration_days = 1.0
     else:
+        # 最低1時間（1/24日）として計算
         duration_days = max(
             (parsed_end - parsed_start).total_seconds() / 86_400.0,
             1.0 / 24.0,
@@ -88,6 +105,7 @@ def calculate_trade_frequency_penalty(
 
 
 def _ensure_datetime(value: Optional[object]) -> Optional[datetime]:
+    """値をdatetimeオブジェクトに変換します。"""
     if isinstance(value, datetime):
         return value
     if isinstance(value, str):

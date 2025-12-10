@@ -158,7 +158,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )
             new_features[f"Choppiness_Index_{chop_window}"] = chop.fillna(50.0)
 
-            # === Group C: Market Structure ===
+            # === Group C: 市場構造 (Market Structure) ===
 
             # 1. Amihud Illiquidity (非流動性指標)
             # |Return| / (Volume * Close)
@@ -180,7 +180,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 change / (volatility_sum + 1e-9)
             ).fillna(0.0)
 
-            # 3. Market Impact (Kyle's Lambda like)
+            # 3. Market Impact (Kyle's Lambda like / マーケットインパクト)
             # (High - Low) / Volume
             # 1単位のボリュームあたりの価格変動幅
             market_impact = (result_df["high"] - result_df["low"]) / (

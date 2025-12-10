@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 from app.services.ml.label_generation.presets import triple_barrier_method_preset
 
 class TestTripleBarrierATRPreset:
+    """ATRベースのトリプルバリアプリセットテスト"""
+
     def setup_method(self):
         # 1時間ごとのデータ (100時間分)
         dates = pd.date_range(start="2023-01-01", periods=100, freq="1h")
@@ -60,20 +62,20 @@ class TestTripleBarrierATRPreset:
         
         # テスト用の特定の動きを注入
         
-        # ケース1: ボラティリティが低い期間 (i=10, ATR approx 1.0)
+        # ケース1: ボラティリティが低い期間 (i=10, ATR約1.0)
         # 4時間後(i=14)に +3.0 上昇させる
         # 1ATR(1.0) < 3.0 なので、PT=1.0なら UP になるはず
         current_price_low_vol = self.df['close'].iloc[10]
         self.df.loc[self.df.index[14], 'close'] = current_price_low_vol + 3.0
         
-        # ケース2: ボラティリティが高い期間 (i=60, ATR approx 5.0)
+        # ケース2: ボラティリティが高い期間 (i=60, ATR約5.0)
         # 4時間後(i=64)に +3.0 上昇させる
         # 1ATR(5.0) > 3.0 なので、PT=1.0なら 届かず RANGE になるはず
         current_price_high_vol = self.df['close'].iloc[60]
         self.df.loc[self.df.index[64], 'close'] = current_price_high_vol + 3.0
         
         # 実行
-        # use_atr=True を指定 (これから実装)
+        # use_atr=True を指定
         labels = triple_barrier_method_preset(
             self.df,
             timeframe="1h",
@@ -85,11 +87,6 @@ class TestTripleBarrierATRPreset:
         )
         
         # 検証
-        
-        # ケース1: 低ボラでの+3.0変動 -> UP
-        # 注: ATR計算のため最初の14期間はNaNになる可能性があるが、i=10はギリギリか？
-        # TA-Lib等のATRは始動に時間がかかるが、pandas rollingならmin_periodsでいけるかも。
-        # ここではi=20あたりで検証したほうが無難
         
         # 場所を変更: i=20 (低ボラ)
         current_price_low = self.df['close'].iloc[20]
@@ -112,9 +109,8 @@ class TestTripleBarrierATRPreset:
         
         # ケース1 (i=20): UP
         # ATRは約1.0。変動+3.0は 3.0倍 > 1.0倍(PT)。よってUP。
-        assert labels.iloc[20] == "UP", f"Low Volatility (ATR~1.0), Move=+3.0 should be UP. Got {labels.iloc[20]}"
+        assert labels.iloc[20] == "UP", f"低ボラティリティ時(ATR約1.0)、+3.0変動はUPであるべき。結果: {labels.iloc[20]}"
         
         # ケース2 (i=70): RANGE
         # ATRは約5.0。変動+3.0は 0.6倍 < 1.0倍(PT)。よってRANGE。
-        assert labels.iloc[70] == "RANGE", f"High Volatility (ATR~5.0), Move=+3.0 should be RANGE. Got {labels.iloc[70]}"
-
+        assert labels.iloc[70] == "RANGE", f"高ボラティリティ時(ATR約5.0)、+3.0変動はRANGEであるべき。結果: {labels.iloc[70]}"
