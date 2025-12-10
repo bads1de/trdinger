@@ -43,6 +43,8 @@ class ParameterConfig:
     min_value: Optional[Union[int, float, str, bool]] = None  # 最小値
     max_value: Optional[Union[int, float, str, bool]] = None  # 最大値
     description: Optional[str] = None  # パラメータの説明
+    # 探索プリセット: 用途に応じた探索範囲（例: short_term, mid_term, long_term）
+    presets: Optional[Dict[str, tuple]] = None
 
     def validate_value(self, value: Any) -> bool:
         """与えられた値がこのパラメータの制約（範囲など）を満たすか検証する"""
@@ -56,6 +58,23 @@ class ParameterConfig:
             return False
 
         return True
+
+    def get_range_for_preset(self, preset_name: str) -> tuple:
+        """
+        指定されたプリセット名に対応する探索範囲を取得
+
+        Args:
+            preset_name: プリセット名（例: "short_term", "mid_term", "long_term"）
+
+        Returns:
+            (min_value, max_value) のタプル
+        """
+        # プリセットが定義されていて、該当するプリセット名がある場合
+        if self.presets and preset_name in self.presets:
+            return self.presets[preset_name]
+
+        # フォールバック：デフォルトの min/max 範囲を使用
+        return (self.min_value, self.max_value)
 
 
 @dataclass
@@ -225,11 +244,19 @@ class IndicatorConfigRegistry:
         """
         return dict(self._configs)
 
-    def generate_parameters_for_indicator(self, indicator_type: str) -> Dict[str, Any]:
+    def generate_parameters_for_indicator(
+        self, indicator_type: str, preset: str | None = None
+    ) -> Dict[str, Any]:
         """
         指標タイプに応じたパラメータを生成
 
-        IndicatorParameterManagerシステムを使用した統一されたパラメータ生成。
+        Args:
+            indicator_type: 指標タイプ（例：RSI, MACD）
+            preset: 探索プリセット名（例：short_term, mid_term, long_term）
+                None の場合はデフォルト範囲を使用
+
+        Returns:
+            生成されたパラメータ辞書
         """
         from app.services.indicators.parameter_manager import IndicatorParameterManager
 
@@ -237,7 +264,9 @@ class IndicatorConfigRegistry:
             config = self.get_indicator_config(indicator_type)
             if config:
                 manager = IndicatorParameterManager()
-                return manager.generate_parameters(indicator_type, config)
+                return manager.generate_parameters(
+                    indicator_type, config, preset=preset
+                )
             else:
                 logger.warning(f"指標 {indicator_type} の設定が見つかりません")
                 return {}

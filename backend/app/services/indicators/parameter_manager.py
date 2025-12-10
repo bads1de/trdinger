@@ -23,7 +23,10 @@ class IndicatorParameterManager:
     """
 
     def generate_parameters(
-        self, indicator_type: str, config: IndicatorConfig
+        self,
+        indicator_type: str,
+        config: IndicatorConfig,
+        preset: str | None = None,
     ) -> Dict[str, Any]:
         """
         指標タイプと設定に基づいてパラメータを生成
@@ -31,6 +34,8 @@ class IndicatorParameterManager:
         Args:
             indicator_type: 指標タイプ（例：RSI, MACD）
             config: 指標設定
+            preset: 探索プリセット名（例：short_term, mid_term, long_term）
+                None の場合はデフォルト範囲を使用
 
         Returns:
             生成されたパラメータ辞書
@@ -52,8 +57,8 @@ class IndicatorParameterManager:
                 # パラメータが定義されていない場合は空辞書を返す
                 return {}
 
-            # 標準的なパラメータ生成
-            generated_params = self._generate_standard_parameters(config)
+            # 標準的なパラメータ生成（プリセット対応）
+            generated_params = self._generate_standard_parameters(config, preset)
 
             # 生成されたパラメータをバリデーション
             if not self.validate_parameters(indicator_type, generated_params, config):
@@ -112,24 +117,35 @@ class IndicatorParameterManager:
             logger.error(f"{indicator_type} のパラメータ検証に失敗しました: {e}")
             return False
 
-    def _generate_standard_parameters(self, config: IndicatorConfig) -> Dict[str, Any]:
-        """標準的なパラメータ生成"""
+    def _generate_standard_parameters(
+        self, config: IndicatorConfig, preset: str | None = None
+    ) -> Dict[str, Any]:
+        """
+        標準的なパラメータ生成
+
+        Args:
+            config: 指標設定
+            preset: 探索プリセット名（None の場合はデフォルト範囲を使用）
+
+        Returns:
+            生成されたパラメータ辞書
+        """
         params = {}
         for param_name, param_config in config.parameters.items():
-            if (
-                param_config.min_value is not None
-                and param_config.max_value is not None
-            ):
+            # プリセットが指定されている場合はプリセット範囲を使用
+            if preset:
+                min_val, max_val = param_config.get_range_for_preset(preset)
+            else:
+                min_val = param_config.min_value
+                max_val = param_config.max_value
+
+            if min_val is not None and max_val is not None:
                 if isinstance(param_config.default_value, int):
                     # 整数パラメータ
-                    params[param_name] = random.randint(
-                        int(param_config.min_value), int(param_config.max_value)
-                    )
+                    params[param_name] = random.randint(int(min_val), int(max_val))
                 else:
                     # 浮動小数点パラメータ
-                    params[param_name] = random.uniform(
-                        float(param_config.min_value), float(param_config.max_value)
-                    )
+                    params[param_name] = random.uniform(float(min_val), float(max_val))
             else:
                 # 範囲が定義されていない場合はデフォルト値を使用
                 params[param_name] = param_config.default_value

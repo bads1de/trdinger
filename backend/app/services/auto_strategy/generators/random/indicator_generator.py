@@ -116,7 +116,11 @@ class IndicatorGenerator:
     @safe_operation(default_return={}, context="指標パラメータ生成")
     def _safe_generate_parameters(self, indicator_type: str) -> dict:
         """安全に指標パラメータを生成"""
-        return indicator_registry.generate_parameters_for_indicator(indicator_type)
+        # GAConfig からプリセット設定を取得
+        preset = getattr(self.config, "parameter_range_preset", None)
+        return indicator_registry.generate_parameters_for_indicator(
+            indicator_type, preset=preset
+        )
 
     @safe_operation(default_return=None, context="JSON設定生成")
     def _safe_generate_json_config(self, indicator_gene: IndicatorGene):

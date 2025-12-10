@@ -31,6 +31,7 @@ from .position_sizing_gene import PositionSizingGene
 from .strategy_gene import StrategyGene
 from .tpsl_gene import TPSLGene
 from .tpsl_result import TPSLResult
+from .stateful_condition import StatefulCondition
 
 # Validator
 from .validator import GeneValidator
@@ -44,6 +45,7 @@ __all__ = [
     "TPSLGene",
     "PositionSizingGene",
     "TPSLResult",
+    "StatefulCondition",
     # Enums
     "PositionSizingMethod",
     "TPSLMethod",

@@ -313,26 +313,27 @@ class UniversalStrategy(Strategy):
                             tpsl_method = active_tpsl_gene.method
 
                             # ボラティリティベース、適応型、または統計的手法の場合、OHLCデータを作成
-                            if (
-                                tpsl_method
-                                in (
-                                    TPSLMethod.VOLATILITY_BASED,
-                                    TPSLMethod.ADAPTIVE,
-                                    TPSLMethod.STATISTICAL,
-                                )
-                                and len(self.data) > 30
+                            if tpsl_method in (
+                                TPSLMethod.VOLATILITY_BASED,
+                                TPSLMethod.ADAPTIVE,
+                                TPSLMethod.STATISTICAL,
                             ):
-                                # 過去30本のデータを取得（ATR計算用）
-                                # Note: パフォーマンス最適化のため、必要な期間のみスライス
-                                highs = self.data.High[-30:]
-                                lows = self.data.Low[-30:]
-                                closes = self.data.Close[-30:]
+                                # atr_period に基づいて必要なスライスサイズを決定
+                                # True Range 計算には (atr_period + 1) 本のデータが必要
+                                atr_period = getattr(active_tpsl_gene, "atr_period", 14)
+                                required_slice_size = atr_period + 1
 
-                                # VolatilityCalculatorが期待する形式（list of dicts）に変換
-                                market_data["ohlc_data"] = [
-                                    {"high": h, "low": low_val, "close": c}
-                                    for h, low_val, c in zip(highs, lows, closes)
-                                ]
+                                if len(self.data) > required_slice_size:
+                                    # 必要な期間のみスライス（動的に決定）
+                                    highs = self.data.High[-required_slice_size:]
+                                    lows = self.data.Low[-required_slice_size:]
+                                    closes = self.data.Close[-required_slice_size:]
+
+                                    # VolatilityCalculatorが期待する形式（list of dicts）に変換
+                                    market_data["ohlc_data"] = [
+                                        {"high": h, "low": low_val, "close": c}
+                                        for h, low_val, c in zip(highs, lows, closes)
+                                    ]
 
                             # TPSLServiceを使用して価格を計算
                             sl_price, tp_price = (

@@ -302,10 +302,8 @@ class TestUniversalStrategy:
                     # ロング成立
                     mock_evaluator.evaluate_conditions.return_value = True
 
-                    # データを十分に用意する（30件以上）
-                    # mock_dataはlen()=3なので、ここで少しハックするか、Strategyのdata.Close等のlenを欺く必要があるが
-                    # verify_backtesting_behavior.pyで見たようにbacktesting.pyの挙動に依存するため
-                    # ここでは戦略内の len(self.data) が 30を超えるように、data.__len__ を調整
+                    # データを十分に用意する（atr_period + 1 以上）
+                    # スライスサイズは atr_period + 1 で動的に決定される
                     mock_data.__len__.return_value = 50
                     # Closeなども長くする
                     mock_data.Close = [100.0] * 50
@@ -315,11 +313,12 @@ class TestUniversalStrategy:
                     strategy.next()
 
                     # calculate_tpsl_prices が呼ばれた際の market_data を確認
-                    # 現状の実装では STATISTICAL は market_data 生成スキップされるため、ここで失敗するはず
                     args, kwargs = mock_tpsl_service.calculate_tpsl_prices.call_args
                     market_data = kwargs.get("market_data")
 
                     # market_data が渡され、かつ ohlc_data が含まれていることを期待
                     assert market_data is not None
                     assert "ohlc_data" in market_data
-                    assert len(market_data["ohlc_data"]) == 30
+                    # スライスサイズは atr_period + 1 (True Range 計算用のバッファ)
+                    expected_slice_size = tpsl_gene.atr_period + 1
+                    assert len(market_data["ohlc_data"]) == expected_slice_size

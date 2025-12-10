@@ -54,6 +54,8 @@ class ParallelEvaluator:
         max_workers: Optional[int] = None,
         timeout_per_individual: float = 300.0,
         use_process_pool: bool = False,
+        worker_initializer: Optional[Callable] = None,
+        worker_initargs: Tuple = (),
     ):
         """
         初期化
@@ -63,12 +65,15 @@ class ParallelEvaluator:
             max_workers: 最大ワーカー数（Noneの場合はCPUコア数）
             timeout_per_individual: 個体あたりのタイムアウト秒数
             use_process_pool: ProcessPoolExecutorを使用するか
-                              （Trueでプロセスベース、Falseでスレッドベース）
+            worker_initializer: ワーカープロセス初期化関数（ProcessPool用）
+            worker_initargs: 初期化関数の引数
         """
         self.evaluate_func = evaluate_func
         self.max_workers = max_workers or min(32, (os.cpu_count() or 1) * 2)
         self.timeout_per_individual = timeout_per_individual
         self.use_process_pool = use_process_pool
+        self.worker_initializer = worker_initializer
+        self.worker_initargs = worker_initargs
 
         # 評価統計
         self._total_evaluations = 0
@@ -207,7 +212,24 @@ class ParallelEvaluator:
         """ProcessPoolExecutorを使用した評価（ゾンビ対策済み）"""
         # ProcessPoolExecutorは子プロセスを強制終了できるため、
         # タイムアウト時にゾンビプロセスが発生しない
-        with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
+
+        # 内部初期化関数とユーザー指定初期化関数を組み合わせる
+        def _combined_initializer(init_func, init_args, eval_func):
+            # まず評価関数をセット
+            _init_worker(eval_func)
+            # 次にユーザー指定の初期化を実行
+            if init_func:
+                init_func(*init_args)
+
+        with ProcessPoolExecutor(
+            max_workers=self.max_workers,
+            initializer=_combined_initializer,
+            initargs=(
+                self.worker_initializer,
+                self.worker_initargs,
+                self.evaluate_func,
+            ),
+        ) as executor:
             future_to_index = {}
 
             for i, ind in enumerate(population):

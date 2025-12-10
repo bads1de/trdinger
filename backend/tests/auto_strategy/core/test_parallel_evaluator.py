@@ -183,6 +183,69 @@ class TestParallelEvaluator:
         assert result[0][0] == (1.0,)  # フィットネス値
         assert result[0][1] == individuals[1]  # 無効だった個体
 
+    def test_evaluate_with_process_pool_initializer(self):
+        """プロセスプールでカスタム初期化子が実行されること"""
+        # Note: This test mocks ProcessPoolExecutor to verify initialization logic
+        # because actual multiprocessing is hard to test reliably in unit tests environment.
+
+        mock_executor_instance = MagicMock()
+        mock_executor_instance.__enter__.return_value = mock_executor_instance
+
+        # モックのsubmitはFutureを返す必要がある
+        mock_future = MagicMock()
+        # as_completedで返されるようにする
+
+        mock_executor_instance.submit.return_value = mock_future
+
+        with patch(
+            "app.services.auto_strategy.core.parallel_evaluator.ProcessPoolExecutor",
+            return_value=mock_executor_instance,
+        ) as mock_executor_cls:
+            with patch(
+                "app.services.auto_strategy.core.parallel_evaluator.as_completed",
+                return_value=[mock_future],
+            ):
+                with patch(
+                    "app.services.auto_strategy.core.parallel_evaluator._init_worker"
+                ) as mock_init_worker:
+
+                    initializer_mock = MagicMock()
+                    init_args = ("arg1", 123)
+
+                    evaluator = ParallelEvaluator(
+                        evaluate_func=lambda x: (1.0,),
+                        use_process_pool=True,
+                        worker_initializer=initializer_mock,
+                        worker_initargs=init_args,
+                    )
+
+                    individuals = [MagicMock()]
+                    evaluator.evaluate_population(individuals)
+
+                    # ProcessPoolExecutorが正しい引数で初期化されたか確認
+                    mock_executor_cls.assert_called_once()
+                    call_kwargs = mock_executor_cls.call_args[1]
+                    assert "initializer" in call_kwargs
+                    assert "initargs" in call_kwargs
+
+                    # 内部ラッパー関数を取得
+                    wrapper_initializer = call_kwargs["initializer"]
+                    wrapper_initargs = call_kwargs["initargs"]
+
+                    # wrapper_initargs = (self.worker_initializer, self.worker_initargs, self.evaluate_func)
+                    assert wrapper_initargs[0] == initializer_mock
+                    assert wrapper_initargs[1] == init_args
+
+                    # ラッパー関数を実行して動作確認
+                    mock_eval_func = MagicMock()
+                    wrapper_initializer(initializer_mock, init_args, mock_eval_func)
+
+                    # _init_workerが呼ばれたか
+                    mock_init_worker.assert_called_once_with(mock_eval_func)
+
+                    # ユーザー指定のinitializerが呼ばれたか
+                    initializer_mock.assert_called_once_with("arg1", 123)
+
 
 class TestCreateParallelMap:
     """create_parallel_map関数のテスト"""

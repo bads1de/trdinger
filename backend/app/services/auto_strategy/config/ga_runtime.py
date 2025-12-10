@@ -159,6 +159,11 @@ class GAConfig(BaseConfig):
     )
     mtf_indicator_probability: float = 0.3  # MTF指標が生成される確率（0.0-1.0）
 
+    # パラメータ範囲プリセット設定
+    # 探索範囲のプリセット名（例: "short_term", "mid_term", "long_term"）
+    # None の場合はデフォルト範囲を使用
+    parameter_range_preset: Optional[str] = None
+
     def get_ga_settings(self):
         """関連するGASettingsを取得"""
         if self.auto_strategy_config:
@@ -358,6 +363,8 @@ class GAConfig(BaseConfig):
             "enable_multi_timeframe": self.enable_multi_timeframe,
             "available_timeframes": self.available_timeframes,
             "mtf_indicator_probability": self.mtf_indicator_probability,
+            # パラメータ範囲プリセット
+            "parameter_range_preset": self.parameter_range_preset,
         }
 
     @classmethod
@@ -443,6 +450,8 @@ class GAConfig(BaseConfig):
             "enable_multi_timeframe": data.get("enable_multi_timeframe", False),
             "available_timeframes": data.get("available_timeframes", None),
             "mtf_indicator_probability": data.get("mtf_indicator_probability", 0.3),
+            # パラメータ範囲プリセット
+            "parameter_range_preset": data.get("parameter_range_preset", None),
         }
 
         # デフォルト値をマージ
