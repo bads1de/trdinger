@@ -283,6 +283,10 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 12, "slow": 26, "signal": 9},
             "min_length_func": "MACD",
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {
@@ -338,6 +342,10 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 12, "slow": 26, "signal": 9},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {
@@ -836,6 +844,11 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"fast": 7, "medium": 14, "slow": 28},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast < medium < slow
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "medium"},
+                {"type": "less_than", "param1": "medium", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {
@@ -895,6 +908,10 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 12, "slow": 26, "ma_mode": "ema"},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {"long": "{left_operand} > 0", "short": "{left_operand} < 0"},
@@ -1003,6 +1020,10 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 23, "slow": 50, "cycle": 10, "d1": 3, "d2": 3},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {
@@ -1260,6 +1281,10 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 9, "slow": 25},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {
@@ -1379,6 +1404,10 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 5, "slow": 34},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {

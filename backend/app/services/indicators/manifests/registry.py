@@ -217,6 +217,8 @@ def register_indicator_manifest(
                 if isinstance(config_meta.get("min_length_func"), str)
                 else None
             ),
+            # パラメータ依存関係制約
+            parameter_constraints=config_meta.get("parameter_constraints"),
         )
 
         target_registry.register(indicator_config)

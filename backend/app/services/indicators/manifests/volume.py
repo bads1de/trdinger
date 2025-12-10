@@ -67,6 +67,10 @@ MANIFEST_VOLUME: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 3, "slow": 10},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {
@@ -377,6 +381,10 @@ MANIFEST_VOLUME: Dict[str, Dict[str, Any]] = {
                 "drift": 1,
             },
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {
@@ -438,6 +446,10 @@ MANIFEST_VOLUME: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"fast": 12, "slow": 26, "signal": 9, "scalar": 100.0},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {

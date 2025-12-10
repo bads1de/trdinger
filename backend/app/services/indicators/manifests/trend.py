@@ -959,6 +959,10 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 3, "slow": 30, "signal": 10},
             "min_length_func": None,
+            # パラメータ依存関係制約: fast期間 < slow期間
+            "parameter_constraints": [
+                {"type": "less_than", "param1": "fast", "param2": "slow"},
+            ],
         },
         "yaml": {
             "conditions": {

@@ -107,10 +107,77 @@ class IndicatorConfig:
     default_values: Dict[str, Any] = field(default_factory=dict)
     min_length_func: Optional[Callable[[Dict[str, Any]], int]] = None
 
+    # パラメータ依存関係制約
+    # 例: [{"type": "less_than", "param1": "fast", "param2": "slow"}]
+    # type: "less_than" (param1 < param2), "greater_than" (param1 > param2),
+    #       "min_difference" (param1 - param2 >= min_diff)
+    parameter_constraints: Optional[List[Dict[str, Any]]] = None
+
     def __post_init__(self):
         """後処理でパラメータを構築"""
         if not self.parameters:
             self.parameters = self._build_parameters_from_defaults()
+
+    def validate_constraints(self, params: Dict[str, Any]) -> tuple[bool, List[str]]:
+        """
+        パラメータ依存関係制約を検証
+
+        Args:
+            params: 検証するパラメータ辞書
+
+        Returns:
+            (is_valid, error_messages) のタプル
+        """
+        if not self.parameter_constraints:
+            return True, []
+
+        errors = []
+
+        for constraint in self.parameter_constraints:
+            constraint_type = constraint.get("type")
+            param1_name = constraint.get("param1")
+            param2_name = constraint.get("param2")
+
+            # 必要なパラメータが存在しない場合はスキップ
+            if param1_name not in params or param2_name not in params:
+                continue
+
+            param1_value = params[param1_name]
+            param2_value = params[param2_name]
+
+            # 数値でない場合はスキップ
+            if not isinstance(param1_value, (int, float)) or not isinstance(
+                param2_value, (int, float)
+            ):
+                continue
+
+            if constraint_type == "less_than":
+                # param1 < param2 でなければならない
+                if param1_value >= param2_value:
+                    errors.append(
+                        f"{param1_name}({param1_value}) は "
+                        f"{param2_name}({param2_value}) より小さくなければなりません"
+                    )
+
+            elif constraint_type == "greater_than":
+                # param1 > param2 でなければならない
+                if param1_value <= param2_value:
+                    errors.append(
+                        f"{param1_name}({param1_value}) は "
+                        f"{param2_name}({param2_value}) より大きくなければなりません"
+                    )
+
+            elif constraint_type == "min_difference":
+                # param1 - param2 >= min_diff でなければならない
+                min_diff = constraint.get("min_diff", 0)
+                actual_diff = param1_value - param2_value
+                if actual_diff < min_diff:
+                    errors.append(
+                        f"{param1_name}({param1_value}) と {param2_name}({param2_value}) の差は "
+                        f"最低 {min_diff} 必要ですが、{actual_diff} です"
+                    )
+
+        return len(errors) == 0, errors
 
     def _build_parameters_from_defaults(self) -> Dict[str, Any]:
         """デフォルト値からパラメータを構築"""

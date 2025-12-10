@@ -73,6 +73,16 @@ class GeneValidator:
                 )
                 return False
 
+        # パラメータ依存関係制約のバリデーション
+        from app.services.indicators.config import indicator_registry
+
+        config = indicator_registry.get_indicator_config(indicator_gene.type)
+        if config and config.parameter_constraints:
+            is_valid, errors = config.validate_constraints(indicator_gene.parameters)
+            if not is_valid:
+                logger.warning(f"パラメータ制約違反 ({indicator_gene.type}): {errors}")
+                return False
+
         logger.debug(f"指標タイプ {indicator_gene.type} は有効です")
         return True
 
