@@ -230,8 +230,6 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, numeric_pipeline, categorical_pipeline):
         self.numeric_pipeline = numeric_pipeline
         self.categorical_pipeline = categorical_pipeline
-        self.numeric_columns_: Optional[List[str]] = None
-        self.categorical_columns_: Optional[List[str]] = None
 
     def fit(self, X, y=None):
         if isinstance(X, pd.DataFrame):
