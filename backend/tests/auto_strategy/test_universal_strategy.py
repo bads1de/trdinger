@@ -192,14 +192,16 @@ class TestUniversalStrategy:
 
                 strategy.next()
 
-            # buyがsl/tp付きで呼ばれたか確認
+            # buyがsl/tp引数なしで呼ばれたか確認
+            # (悲観的ロジック導入により、sl/tpは内部状態で管理される)
             args, kwargs = strategy.buy.call_args
-            assert "sl" in kwargs
-            assert "tp" in kwargs
+            assert "sl" not in kwargs
+            assert "tp" not in kwargs
 
+            # 内部状態にSL/TPが保存されていることを確認
             # 102 * 0.95 = 96.9, 102 * 1.1 = 112.2
-            assert kwargs["sl"] == pytest.approx(102 * 0.95)
-            assert kwargs["tp"] == pytest.approx(102 * 1.1)
+            assert strategy._sl_price == pytest.approx(102 * 0.95)
+            assert strategy._tp_price == pytest.approx(102 * 1.1)
 
     def test_stateful_conditions_integration(self, mock_broker, mock_data):
         """ステートフル条件がUniversalStrategyで正しく処理されることをテスト"""

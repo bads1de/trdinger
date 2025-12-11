@@ -79,6 +79,11 @@ class TPSLGene(BaseGene):
     enabled: bool = True
     priority: float = 1.0
 
+    # トレーリングストップ関連パラメータ
+    trailing_stop: bool = False  # トレーリングストップ有効化フラグ
+    trailing_step_pct: float = 0.01  # トレーリング更新幅（1% = 0.01）
+    trailing_take_profit: bool = False  # トレーリングTP有効化（TP到達後も利益を伸ばす）
+
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:
