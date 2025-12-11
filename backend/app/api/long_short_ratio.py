@@ -3,19 +3,25 @@
 """
 
 import logging
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
-from app.api.dependencies import get_long_short_ratio_repository, get_long_short_ratio_service
+from app.api.dependencies import (
+    get_long_short_ratio_repository,
+    get_long_short_ratio_service,
+)
+from app.services.data_collection.bybit.long_short_ratio_service import (
+    BybitLongShortRatioService,
+)
+
 from database.repositories.long_short_ratio_repository import LongShortRatioRepository
-from app.services.data_collection.bybit.long_short_ratio_service import BybitLongShortRatioService
-from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/long-short-ratio", tags=["long-short-ratio"])
+
 
 @router.get("/")
 async def get_long_short_ratio_data(
@@ -32,16 +38,16 @@ async def get_long_short_ratio_data(
     try:
         start_dt = datetime.fromisoformat(start_date) if start_date else None
         end_dt = datetime.fromisoformat(end_date) if end_date else None
-        
+
         # データベースから取得
         records = repository.get_long_short_ratio_data(
             symbol=symbol,
             period=period,
             limit=limit,
             start_time=start_dt,
-            end_time=end_dt
+            end_time=end_dt,
         )
-        
+
         # 辞書形式に変換して返却
         return [repository.to_dict(record) for record in records]
 
@@ -49,18 +55,22 @@ async def get_long_short_ratio_data(
         logger.error(f"データ取得エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/collect")
 async def collect_long_short_ratio_data(
     background_tasks: BackgroundTasks,
     symbol: str = Query(..., description="取引ペア（例: BTC/USDT）"),
     period: str = Query(..., description="期間（例: 5min, 1h, 1d）"),
-    mode: str = Query("incremental", enum=["incremental", "historical"], description="収集モード"),
+    mode: str = Query(
+        "incremental", enum=["incremental", "historical"], description="収集モード"
+    ),
     service: BybitLongShortRatioService = Depends(get_long_short_ratio_service),
     repository: LongShortRatioRepository = Depends(get_long_short_ratio_repository),
 ):
     """
     ロング/ショート比率データの収集を実行（バックグラウンド）
     """
+
     async def _collect_task():
         try:
             if mode == "incremental":
@@ -80,5 +90,8 @@ async def collect_long_short_ratio_data(
 
     # バックグラウンドタスクとして登録
     background_tasks.add_task(_collect_task)
-    
-    return {"message": f"データ収集タスクを開始しました (mode: {mode})", "symbol": symbol}
+
+    return {
+        "message": f"データ収集タスクを開始しました (mode: {mode})",
+        "symbol": symbol,
+    }

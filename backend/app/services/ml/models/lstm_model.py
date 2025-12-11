@@ -1,6 +1,8 @@
 import logging
+
 import torch
 import torch.nn as nn
+
 from .base_rnn_model import BaseRNNModel
 
 logger = logging.getLogger(__name__)

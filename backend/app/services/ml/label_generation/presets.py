@@ -6,13 +6,13 @@
 """
 
 import logging
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
-from .triple_barrier import TripleBarrier
-from .trend_scanning import TrendScanning
 from ..common.volatility_utils import calculate_volatility_atr, calculate_volatility_std
+from .trend_scanning import TrendScanning
+from .triple_barrier import TripleBarrier
 
 logger = logging.getLogger(__name__)
 

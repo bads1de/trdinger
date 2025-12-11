@@ -35,7 +35,6 @@ class ConditionStrategy(ABC):
         Returns:
             (long_entry_conditions, short_entry_conditions, exit_conditions)
         """
-        pass
 
     # サブクラスで使用できるヘルパーメソッド
     def _classify_indicators_by_type(self, indicators: List[IndicatorGene]) -> dict:

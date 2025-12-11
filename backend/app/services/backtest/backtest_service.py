@@ -8,7 +8,6 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 import pandas as pd
-
 from sqlalchemy.orm import Session
 
 from database.connection import get_db

@@ -127,21 +127,17 @@ class BaseResourceManager(ABC):
     @abstractmethod
     def _cleanup_temporary_files(self, level: CleanupLevel):
         """一時ファイルのクリーンアップ（サブクラスで実装）"""
-        pass
 
     @abstractmethod
     def _cleanup_cache(self, level: CleanupLevel):
         """キャッシュのクリーンアップ（サブクラスで実装）"""
-        pass
 
     @abstractmethod
     def _cleanup_models(self, level: CleanupLevel):
         """モデルオブジェクトのクリーンアップ（サブクラスで実装）"""
-        pass
 
     def _cleanup_other_resources(self, level: CleanupLevel):
         """その他のリソースクリーンアップ（オプション、サブクラスでオーバーライド可能）"""
-        pass
 
     def _force_garbage_collection(self) -> int:
         """強制ガベージコレクション"""

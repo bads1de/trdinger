@@ -28,10 +28,10 @@ from .gene_random import (
 )
 from .indicator_gene import IndicatorGene
 from .position_sizing_gene import PositionSizingGene
+from .stateful_condition import StatefulCondition
 from .strategy_gene import StrategyGene
 from .tpsl_gene import TPSLGene
 from .tpsl_result import TPSLResult
-from .stateful_condition import StatefulCondition
 
 # Validator
 from .validator import GeneValidator

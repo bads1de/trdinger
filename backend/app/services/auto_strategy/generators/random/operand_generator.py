@@ -91,7 +91,9 @@ class OperandGenerator:
             compatibility = operand_grouping_system.get_compatibility_score(
                 left_operand, compatible_operand
             )
-            if compatibility < self.config.min_compatibility_score:  # 設定された互換性チェック
+            if (
+                compatibility < self.config.min_compatibility_score
+            ):  # 設定された互換性チェック
                 return self.generate_threshold_value(left_operand, condition_type)
 
         return compatible_operand

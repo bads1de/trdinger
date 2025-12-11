@@ -133,7 +133,6 @@ class BaseGene(ABC):
     @abstractmethod
     def _validate_parameters(self, errors: List[str]) -> None:
         """サブクラスで固有のパラメータ検証を実装"""
-        pass
 
     def _validate_range(
         self,

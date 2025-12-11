@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.utils.class_weight import compute_sample_weight
 
 from app.utils.error_handler import ModelError
+
 from ..common.evaluation_utils import evaluate_model_predictions
 from ..common.ml_utils import get_feature_importance_unified
 
@@ -236,14 +237,12 @@ class BaseGradientBoostingModel(ABC):
         モデル固有のデータセットオブジェクトを作成します。
         例: lgb.Dataset, xgb.DMatrix
         """
-        pass
 
     @abstractmethod
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """
         モデル固有のパラメータディクショナリを生成します。
         """
-        pass
 
     @abstractmethod
     def _train_internal(
@@ -257,7 +256,6 @@ class BaseGradientBoostingModel(ABC):
         """
         モデル固有の学習プロセスを実行します。
         """
-        pass
 
     @abstractmethod
     def _get_prediction_proba(self, data: Any) -> np.ndarray:
@@ -265,7 +263,6 @@ class BaseGradientBoostingModel(ABC):
         モデル固有の予測確率を取得します。
         学習時の検証用に使用されます。
         """
-        pass
 
     def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
@@ -319,14 +316,12 @@ class BaseGradientBoostingModel(ABC):
         """
         予測用の入力データを準備します。
         """
-        pass
 
     @abstractmethod
     def _predict_raw(self, data: Any) -> np.ndarray:
         """
         モデルから生の予測値（確率）を取得します。
         """
-        pass
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
         """

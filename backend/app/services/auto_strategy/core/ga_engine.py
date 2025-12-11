@@ -6,8 +6,8 @@ DEAPライブラリを使用したGA実装。
 
 import logging
 import time
+from dataclasses import fields
 from typing import Any, Dict, Optional
-from dataclasses import asdict, fields
 
 import numpy as np
 from deap import tools
@@ -17,7 +17,6 @@ from app.services.backtest.backtest_service import BacktestService
 from ..config.ga_runtime import GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..generators.strategy_factory import StrategyFactory
-
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner
 from .fitness_sharing import FitnessSharing
@@ -376,7 +375,7 @@ class GeneticAlgorithmEngine:
                     gene = ind
                 else:
                     gene = gene_serializer.from_list(ind, StrategyGene)
-                
+
                 best_strategies.append(
                     {"strategy": gene, "fitness_values": list(ind.fitness.values)}
                 )

@@ -47,7 +47,7 @@ class BaseDataCollectionOrchestrationService:
         """
         if db_session:
             return db_session
-        
+
         # セッションがない場合は新しく作成（ジェネレータから取得）
         return next(get_db())
 

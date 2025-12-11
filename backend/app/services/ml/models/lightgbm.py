@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from app.utils.error_handler import ModelError
+
 from .base_gradient_boosting_model import BaseGradientBoostingModel
 
 logger = logging.getLogger(__name__)
@@ -84,10 +85,10 @@ class LightGBMModel(BaseGradientBoostingModel):
         LightGBM固有の学習プロセスを実行します。
         """
         callbacks = [lgb.log_evaluation(0)]
-        
+
         valid_sets = [train_data]
         valid_names = ["train"]
-        
+
         if valid_data:
             valid_sets.append(valid_data)
             valid_names.append("valid")

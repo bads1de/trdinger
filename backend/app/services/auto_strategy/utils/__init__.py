@@ -12,13 +12,12 @@ from ..core.operand_grouping import (
 )
 from .gene_utils import (
     BaseGene,
-    GeneUtils,
     GeneticUtils,
+    GeneUtils,
     create_child_metadata,
     create_default_strategy_gene,
     prepare_crossover_metadata,
 )
-
 
 # Strategy Integration
 from .strategy_integration_service import StrategyIntegrationService

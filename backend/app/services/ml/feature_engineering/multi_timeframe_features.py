@@ -5,9 +5,10 @@ Multi-Timeframe Features
 上位時間足のトレンドとの一致が強力な予測因子となることが実証されています。
 """
 
-import pandas as pd
+from typing import Dict, Optional
+
 import numpy as np
-from typing import Optional, Dict
+import pandas as pd
 
 
 class MultiTimeframeFeatureCalculator:

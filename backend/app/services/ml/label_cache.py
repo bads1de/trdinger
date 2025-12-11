@@ -6,14 +6,14 @@ Optunaの最適化中に同じパラメータでラベルを再生成するコ�
 """
 
 import logging
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
 from app.services.ml.label_generation.enums import ThresholdMethod
 from app.services.ml.label_generation.presets import (
-    triple_barrier_method_preset,
     trend_scanning_preset,
+    triple_barrier_method_preset,
 )
 
 logger = logging.getLogger(__name__)

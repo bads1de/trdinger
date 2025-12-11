@@ -108,7 +108,9 @@ class MLConfigManager:
             # 設定を適用
             self._apply_config_dict(config_dict)
 
-            logger.info(f"ML設定を読み込み、unified_configに適用しました: {self.config_file_path}")
+            logger.info(
+                f"ML設定を読み込み、unified_configに適用しました: {self.config_file_path}"
+            )
             return True
 
         except Exception as e:
@@ -175,8 +177,12 @@ class MLConfigManager:
         merged = current_config.copy()
 
         for section, section_updates in updates.items():
-            if section in merged and isinstance(section_updates, dict) and isinstance(merged[section], dict):
-                 merged[section].update(section_updates)
+            if (
+                section in merged
+                and isinstance(section_updates, dict)
+                and isinstance(merged[section], dict)
+            ):
+                merged[section].update(section_updates)
             else:
                 merged[section] = section_updates
 

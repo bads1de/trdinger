@@ -11,9 +11,10 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.model_selection import cross_val_predict, KFold, StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedKFold, cross_val_predict
 
 from app.config.unified_config import unified_config
+
 from ....utils.error_handler import ModelError
 from ..common.ml_utils import validate_training_inputs
 from ..common.time_series_utils import get_t1_series
@@ -495,6 +496,7 @@ class StackingEnsemble(BaseEnsemble):
             import glob
             import json
             import os
+
             import joblib
 
             # 新形式: 自前実装のモデルファイルを探す

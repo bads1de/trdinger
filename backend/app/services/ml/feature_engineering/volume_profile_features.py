@@ -5,11 +5,12 @@ Volume Profile Feature Calculator
 学術的に検証された強力な特徴量（Kaggle/論文で実証済み）。
 """
 
-import pandas as pd
-import numpy as np
-from typing import Tuple, Optional
-from numba import jit
 import logging
+from typing import Optional, Tuple
+
+import numpy as np
+import pandas as pd
+from numba import jit
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +250,6 @@ def _numba_detect_volume_nodes(
             # nearest_hvn = hvn_prices[np.argmin(np.abs(hvn_prices - current))]
             # hvn_distance.iloc[i] = (current - nearest_hvn) / current
             # 値は正または負になります。
-            pass
 
     return hvn_dist_arr, lvn_dist_arr
 

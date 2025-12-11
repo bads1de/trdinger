@@ -14,15 +14,17 @@ from app.services.auto_strategy.utils.strategy_integration_service import (
 )
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
+from app.services.data_collection.bybit.long_short_ratio_service import (
+    BybitLongShortRatioService,
+)
 from app.services.data_collection.orchestration.market_data_orchestration_service import (
     MarketDataOrchestrationService,
 )
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from database.repositories.long_short_ratio_repository import LongShortRatioRepository
-from app.services.data_collection.bybit.long_short_ratio_service import BybitLongShortRatioService
 
 
 def get_backtest_service(db: Session = Depends(get_db)) -> BacktestService:

@@ -30,7 +30,6 @@ class BaseFeatureCalculator(ABC):
         """
         初期化
         """
-        pass
 
     def validate_input_data(
         self, df: pd.DataFrame, required_columns: Optional[list] = None
@@ -129,7 +128,6 @@ class BaseFeatureCalculator(ABC):
         Returns:
             特徴量が追加されたDataFrame
         """
-        pass
 
     def log_feature_calculation_complete(self, feature_type: str) -> None:
         """

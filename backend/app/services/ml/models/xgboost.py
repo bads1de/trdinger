@@ -6,6 +6,7 @@ import pandas as pd
 import xgboost as xgb
 
 from app.utils.error_handler import ModelError
+
 from .base_gradient_boosting_model import BaseGradientBoostingModel
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         evals = [(train_data, "train")]
         if valid_data:
             evals.append((valid_data, "eval"))
-        
+
         actual_early_stopping_rounds = early_stopping_rounds if valid_data else None
 
         model = xgb.train(

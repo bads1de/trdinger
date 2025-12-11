@@ -14,7 +14,6 @@ from ..core.condition_evolver import (
 )
 from ..core.condition_evolver import YamlIndicatorUtils as CoreYamlIndicatorUtils
 from ..models.strategy_models import Condition, ConditionGroup, IndicatorGene
-
 from ..utils.yaml_utils import YamlIndicatorUtils
 from .strategies import (
     ComplexConditionsStrategy,

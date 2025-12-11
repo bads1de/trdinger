@@ -22,7 +22,6 @@ class BaseCalculator(ABC):
         self, gene, account_balance: float, current_price: float, **kwargs
     ) -> Dict[str, Any]:
         """計算実行（サブクラスで実装）"""
-        pass
 
     def _apply_size_limits_and_finalize(
         self, position_size: float, details: Dict[str, Any], warnings: List[str], gene

@@ -8,10 +8,10 @@ import copy
 import logging
 import random
 import uuid
+from dataclasses import asdict
 from typing import Union
 
 import numpy as np
-from dataclasses import asdict
 
 from ..models.strategy_models import (
     StrategyGene,
@@ -167,8 +167,9 @@ def _mutate_condition_item(condition, mutation_rate, config):
     """
     個々の条件（ConditionまたはConditionGroup）を変異させる再帰関数
     """
-    from ..models.strategy_models import ConditionGroup
     import random
+
+    from ..models.strategy_models import ConditionGroup
 
     if isinstance(condition, ConditionGroup):
         # ConditionGroupの場合

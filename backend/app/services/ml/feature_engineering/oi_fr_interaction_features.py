@@ -5,9 +5,10 @@ Open InterestとFunding Rateの高度な相互作用パターンを捉える特�
 DRW Kaggle Competition と学術論文で有効性が実証された手法。
 """
 
-import pandas as pd
-import numpy as np
 from typing import Optional
+
+import numpy as np
+import pandas as pd
 
 from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
 
@@ -70,7 +71,7 @@ class OIFRInteractionFeatureCalculator:
             if len(fr_aligned.columns) > 0
             else pd.Series(0, index=df.index)
         )
-        
+
         # OI Series (for advanced features)
         oi_series = (
             oi_aligned.iloc[:, 0]
@@ -133,39 +134,35 @@ class OIFRInteractionFeatureCalculator:
         result["Cumulative_OI_Price_Divergence"] = (
             (1 - oi_price_alignment).rolling(20).sum()
         )
-        
+
         # === 11. Liquidation Cascade Score ===
-        result["Liquidation_Cascade_Score"] = AdvancedFeatures.liquidation_cascade_score(
-           close=df["close"],
-           open_interest=oi_series,
-           volume=df["volume"]
-        ).fillna(0.0)
+        result["Liquidation_Cascade_Score"] = (
+            AdvancedFeatures.liquidation_cascade_score(
+                close=df["close"], open_interest=oi_series, volume=df["volume"]
+            ).fillna(0.0)
+        )
 
         # === 12. Squeeze Probability ===
         result["Squeeze_Probability"] = AdvancedFeatures.squeeze_probability(
-           close=df["close"],
-           funding_rate=fr_value,
-           open_interest=oi_series,
-           low=df["low"]
+            close=df["close"],
+            funding_rate=fr_value,
+            open_interest=oi_series,
+            low=df["low"],
         ).fillna(0.0)
 
         # === 13. Trend Quality ===
         result["Trend_Quality_20"] = AdvancedFeatures.trend_quality(
-           close=df["close"],
-           open_interest=oi_series,
-           window=20
+            close=df["close"], open_interest=oi_series, window=20
         ).fillna(0.0)
 
         # === 14. OI Weighted Funding Rate ===
         result["OI_Weighted_FR"] = AdvancedFeatures.oi_weighted_funding_rate(
-           funding_rate=fr_value,
-           open_interest=oi_series
+            funding_rate=fr_value, open_interest=oi_series
         ).fillna(0.0)
-   
+
         # === 15. Liquidity Efficiency ===
         result["Liquidity_Efficiency"] = AdvancedFeatures.liquidity_efficiency(
-           open_interest=oi_series,
-           volume=df["volume"]
+            open_interest=oi_series, volume=df["volume"]
         ).fillna(0.0)
 
         # === 16. Leverage Ratio (Estimated) ===
@@ -174,7 +171,7 @@ class OIFRInteractionFeatureCalculator:
         #                = Total OI (USD) / (Price * Circulating Supply)
         #
         # Note: Since we don't have historical circulating supply, we use a constant approximation.
-        # For BTC, approx 19.7M (as of late 2024). 
+        # For BTC, approx 19.7M (as of late 2024).
         # If OI data is in USD (Contract Value), this formula holds.
         # If OI is in Coins, then Leverage Ratio = OI (Coins) / Circulating Supply.
         # Most exchanges provide OI in USD or contracts converted to USD.
@@ -182,10 +179,9 @@ class OIFRInteractionFeatureCalculator:
         # Assuming OI is USD-denominated (standard in this system):
         estimated_supply = 19_700_000  # BTC approx supply
         estimated_market_cap = df["close"] * estimated_supply
-        
+
         result["Leverage_Ratio"] = AdvancedFeatures.leverage_ratio(
-            open_interest=oi_series,
-            market_cap=estimated_market_cap
+            open_interest=oi_series, market_cap=estimated_market_cap
         ).fillna(0.0)
 
         # 欠損値処理

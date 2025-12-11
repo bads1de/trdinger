@@ -14,8 +14,8 @@ from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
 from ..common.evaluation_utils import evaluate_model_predictions
 from ..common.ml_utils import validate_training_inputs
-from .stacking import StackingEnsemble
 from .meta_labeling import MetaLabelingService
+from .stacking import StackingEnsemble
 
 logger = logging.getLogger(__name__)
 

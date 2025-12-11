@@ -47,7 +47,6 @@ class BaseTPSLCalculator(ABC):
         Returns:
             TPSLResult: 計算結果
         """
-        pass
 
     def _make_prices(
         self,

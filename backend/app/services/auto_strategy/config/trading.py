@@ -7,6 +7,7 @@ TradingSettingsクラス
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from .base import BaseConfig
 from .constants import (
     CONSTRAINTS,
     DEFAULT_SYMBOL,
@@ -14,7 +15,6 @@ from .constants import (
     SUPPORTED_SYMBOLS,
     SUPPORTED_TIMEFRAMES,
 )
-from .base import BaseConfig
 
 
 @dataclass

@@ -11,14 +11,14 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from ...utils.error_handler import safe_ml_operation
 from app.services.ml.optimization.optimization_service import (
     OptimizationService,
     OptimizationSettings,
 )
 
-from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ...config.unified_config import unified_config
+from ...utils.error_handler import safe_ml_operation
+from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .ensemble.ensemble_trainer import EnsembleTrainer
 
 logger = logging.getLogger(__name__)
@@ -397,12 +397,10 @@ class MLTrainingService(BaseResourceManager):
     def _cleanup_temporary_files(self, level: CleanupLevel):
         """一時ファイルのクリーンアップ"""
         # MLTrainingServiceでは特に一時ファイルは作成しないため、パス
-        pass
 
     def _cleanup_cache(self, level: CleanupLevel):
         """キャッシュのクリーンアップ"""
         # MLTrainingServiceでは特にキャッシュは管理しないため、パス
-        pass
 
     def _cleanup_models(self, level: CleanupLevel):
         """モデルオブジェクトのクリーンアップ"""

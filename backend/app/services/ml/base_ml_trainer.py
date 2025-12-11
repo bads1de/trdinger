@@ -7,7 +7,6 @@ ML学習基盤クラス
 """
 
 import logging
-
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple
 
@@ -21,17 +20,15 @@ from ...utils.error_handler import (
     ml_operation_context,
     safe_ml_operation,
 )
-from .cross_validation import PurgedKFold
-
-
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .common.evaluation_utils import evaluate_model_predictions
 from .common.ml_utils import get_feature_importance_unified, prepare_data_for_prediction
+from .cross_validation import PurgedKFold
 from .exceptions import MLModelError
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
+from .label_generation.label_generation_service import LabelGenerationService
 from .ml_metadata import ModelMetadata
 from .model_manager import model_manager
-from .label_generation.label_generation_service import LabelGenerationService
 
 logger = logging.getLogger(__name__)
 
@@ -323,7 +320,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         Returns:
             予測結果
         """
-        pass
 
     def predict_signal(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """
@@ -405,7 +401,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         Returns:
             学習結果
         """
-        pass
 
     def _calculate_features(
         self,

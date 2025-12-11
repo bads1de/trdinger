@@ -126,6 +126,7 @@ def create_comprehensive_pipeline(
 
     # Create ML pipeline
     from app.services.ml.preprocessing.pipeline import create_ml_pipeline
+
     ml_pipeline = create_ml_pipeline(**ml_params)
 
     # Combine pipelines

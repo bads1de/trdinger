@@ -6,6 +6,7 @@ ML モデル（Secondary Model）が判定するための「候補イベント�
 """
 
 import logging
+
 import pandas as pd
 
 logger = logging.getLogger(__name__)

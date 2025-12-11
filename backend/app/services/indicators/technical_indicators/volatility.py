@@ -21,8 +21,8 @@ import pandas_ta as ta
 
 from ..utils import (
     handle_pandas_ta_errors,
-    validate_series_params,
     validate_multi_series_params,
+    validate_series_params,
 )
 
 TA_LIB_AVAILABLE = False

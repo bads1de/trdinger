@@ -227,9 +227,11 @@ class BaseEnsemble(ABC):
         Returns:
             保存されたファイルパスのリスト
         """
-        from datetime import datetime
         import os
+        from datetime import datetime
+
         import joblib
+
         from ..model_manager import model_manager
 
         saved_paths = []

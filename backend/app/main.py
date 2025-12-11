@@ -15,11 +15,11 @@ from app.api.backtest import router as backtest_router
 from app.api.data_collection import router as data_collection_router
 from app.api.data_reset import router as data_reset_router
 from app.api.funding_rates import router as funding_rates_router
+from app.api.long_short_ratio import router as long_short_ratio_router
 from app.api.market_data import router as market_data_router
 from app.api.ml_management import router as ml_management_router
 from app.api.ml_training import router as ml_training_router
 from app.api.open_interest import router as open_interest_router
-from app.api.long_short_ratio import router as long_short_ratio_router
 from app.api.strategies import router as strategies_router
 from app.config.unified_config import unified_config
 from app.utils.duplicate_filter_handler import DuplicateFilter

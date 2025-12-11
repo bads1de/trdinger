@@ -1,7 +1,8 @@
 from typing import Tuple, Union
-import pandas as pd
+
 import numpy as np
-from imblearn.over_sampling import SMOTE, ADASYN
+import pandas as pd
+from imblearn.over_sampling import ADASYN, SMOTE
 
 
 class ImbalanceSampler:

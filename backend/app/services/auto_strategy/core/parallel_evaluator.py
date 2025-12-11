@@ -11,30 +11,14 @@ import os
 from concurrent.futures import (
     ProcessPoolExecutor,
     ThreadPoolExecutor,
-    TimeoutError as FuturesTimeoutError,
+)
+from concurrent.futures import TimeoutError as FuturesTimeoutError
+from concurrent.futures import (
     as_completed,
 )
 from typing import Any, Callable, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
-
-
-# プロセスプール用のトップレベル評価関数（pickle可能にするため）
-_global_evaluate_func: Optional[Callable] = None
-
-
-def _init_worker(evaluate_func: Callable) -> None:
-    """ワーカープロセス初期化関数"""
-    global _global_evaluate_func
-    _global_evaluate_func = evaluate_func
-
-
-def _evaluate_in_worker(individual: Any) -> Tuple[float, ...]:
-    """ワーカープロセス内で評価を実行"""
-    global _global_evaluate_func
-    if _global_evaluate_func is None:
-        raise RuntimeError("評価関数が初期化されていません")
-    return _global_evaluate_func(individual)
 
 
 class ParallelEvaluator:
@@ -214,9 +198,7 @@ class ParallelEvaluator:
         # タイムアウト時にゾンビプロセスが発生しない
 
         # 内部初期化関数とユーザー指定初期化関数を組み合わせる
-        def _combined_initializer(init_func, init_args, eval_func):
-            # まず評価関数をセット
-            _init_worker(eval_func)
+        def _combined_initializer(init_func, init_args):
             # 次にユーザー指定の初期化を実行
             if init_func:
                 init_func(*init_args)
@@ -227,7 +209,6 @@ class ParallelEvaluator:
             initargs=(
                 self.worker_initializer,
                 self.worker_initargs,
-                self.evaluate_func,
             ),
         ) as executor:
             future_to_index = {}

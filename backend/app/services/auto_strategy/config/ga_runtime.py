@@ -11,8 +11,6 @@ from typing import Any, Callable, Dict, List, Optional, cast
 
 from .auto_strategy import AutoStrategyConfig
 from .base import BaseConfig
-
-
 from .ga import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
@@ -68,17 +66,30 @@ class GAConfig(BaseConfig):
     constraint_violation_penalty: float = GA_DEFAULT_CONFIG[
         "constraint_violation_penalty"
     ]
-    
+
     # 交叉・突然変異拡張設定
     crossover_field_selection_probability: float = 0.5
-    indicator_param_mutation_range: List[float] = field(default_factory=lambda: [0.8, 1.2])
+    indicator_param_mutation_range: List[float] = field(
+        default_factory=lambda: [0.8, 1.2]
+    )
     risk_param_mutation_range: List[float] = field(default_factory=lambda: [0.9, 1.1])
     indicator_add_delete_probability: float = 0.3
     indicator_add_vs_delete_probability: float = 0.5
     condition_change_probability_multiplier: float = 1.0
     condition_selection_probability: float = 0.5
     condition_operator_switch_probability: float = 0.2
-    valid_condition_operators: List[str] = field(default_factory=lambda: [">", "<", ">=", "<=", "==", "!=", "CROSS_UP", "CROSS_DOWN"])
+    valid_condition_operators: List[str] = field(
+        default_factory=lambda: [
+            ">",
+            "<",
+            ">=",
+            "<=",
+            "==",
+            "!=",
+            "CROSS_UP",
+            "CROSS_DOWN",
+        ]
+    )
     tpsl_gene_creation_probability_multiplier: float = 0.2
     position_sizing_gene_creation_probability_multiplier: float = 0.2
     adaptive_mutation_variance_threshold: float = 0.001
@@ -450,13 +461,21 @@ class GAConfig(BaseConfig):
             "condition_change_probability_multiplier": 1.0,
             "condition_selection_probability": 0.5,
             "condition_operator_switch_probability": 0.2,
-            "valid_condition_operators": [">", "<", ">=", "<=", "==", "!=", "CROSS_UP", "CROSS_DOWN"],
+            "valid_condition_operators": [
+                ">",
+                "<",
+                ">=",
+                "<=",
+                "==",
+                "!=",
+                "CROSS_UP",
+                "CROSS_DOWN",
+            ],
             "tpsl_gene_creation_probability_multiplier": 0.2,
             "position_sizing_gene_creation_probability_multiplier": 0.2,
             "adaptive_mutation_variance_threshold": 0.001,
             "adaptive_mutation_rate_decrease_multiplier": 0.8,
             "adaptive_mutation_rate_increase_multiplier": 1.2,
-            
             "log_level": "ERROR",
             "save_intermediate_results": True,
             # フィットネス共有設定

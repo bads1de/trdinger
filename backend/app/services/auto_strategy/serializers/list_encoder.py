@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, List, Union, Tuple
+from typing import Any, List, Tuple, Union
 
 from ..models.condition import Condition, ConditionGroup
 from ..utils.gene_utils import GeneUtils

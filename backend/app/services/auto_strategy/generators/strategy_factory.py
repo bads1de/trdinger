@@ -23,7 +23,6 @@ class StrategyFactory:
 
     def __init__(self):
         """初期化"""
-        pass
 
     def create_strategy_class(self, gene: StrategyGene) -> Type[Strategy]:
         """

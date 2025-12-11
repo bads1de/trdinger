@@ -7,13 +7,13 @@ IndicatorSettingsクラス
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from ..utils.indicator_utils import get_valid_indicator_types
+from ..utils.yaml_utils import YamlIndicatorUtils
+from .base import BaseConfig
 from .constants import (
     DATA_SOURCES,
     OPERATORS,
 )
-from ..utils.yaml_utils import YamlIndicatorUtils
-from ..utils.indicator_utils import get_valid_indicator_types
-from .base import BaseConfig
 
 
 @dataclass

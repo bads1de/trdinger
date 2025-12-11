@@ -7,8 +7,8 @@ TP/SL設定を管理します。
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
-from .constants import TPSL_METHODS
 from .base import BaseConfig
+from .constants import TPSL_METHODS
 
 # GA TPSL関連定数
 GA_DEFAULT_TPSL_METHOD_CONSTRAINTS = [

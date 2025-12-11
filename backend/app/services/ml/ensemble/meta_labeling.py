@@ -1,8 +1,9 @@
 import logging
-import pandas as pd
-from typing import Dict, Any, Optional, Tuple, List
-from sklearn.ensemble import RandomForestClassifier
+from typing import Any, Dict, List, Optional, Tuple
+
 import lightgbm as lgb
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 
 logger = logging.getLogger(__name__)
 
@@ -314,8 +315,9 @@ class MetaLabelingService:
         Returns:
             OOF予測 (Series)
         """
-        from ..cross_validation.purged_kfold import PurgedKFold
         from sklearn.model_selection import KFold
+
+        from ..cross_validation.purged_kfold import PurgedKFold
 
         # 一次モデルがトレンドと予測した箇所のみが対象
         trend_mask = primary_proba >= threshold

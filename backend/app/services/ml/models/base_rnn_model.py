@@ -1,12 +1,13 @@
 import logging
+from abc import ABC, abstractmethod
+from typing import Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-from typing import Optional, Tuple, Union
-from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,6 @@ class BaseRNNModel(ABC):
     @abstractmethod
     def _create_model(self) -> nn.Module:
         """モデルを作成する抽象メソッド"""
-        pass
 
     def _create_sequences(
         self, data: np.ndarray, targets: Optional[np.ndarray] = None

@@ -1,10 +1,11 @@
 import logging
-from typing import Tuple, Optional, Dict, Any
+from typing import Any, Dict, Optional, Tuple
+
 import pandas as pd
 
-from app.utils.error_handler import DataError
 from app.services.ml.label_cache import LabelCache
 from app.services.ml.label_generation.signal_generator import SignalGenerator
+from app.utils.error_handler import DataError
 
 logger = logging.getLogger(__name__)
 

@@ -172,7 +172,7 @@ class OriginalIndicators:
             if np.isfinite(val):
                 result[idx] = val
             else:
-                result[idx] = result[idx-1] # Fallback to previous value
+                result[idx] = result[idx - 1]  # Fallback to previous value
 
         return pd.Series(result, index=close.index, name="SUPER_SMOOTHER")
 

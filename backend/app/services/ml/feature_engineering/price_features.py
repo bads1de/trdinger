@@ -12,9 +12,9 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from ....utils.error_handler import safe_ml_operation
 from ...indicators.technical_indicators.momentum import MomentumIndicators
 from ...indicators.technical_indicators.trend import TrendIndicators
-from ....utils.error_handler import safe_ml_operation
 from .base_feature_calculator import BaseFeatureCalculator
 
 logger = logging.getLogger(__name__)
@@ -55,11 +55,6 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         df = self.calculate_volatility_features(df, lookback_periods)
 
         return df
-
-    @safe_ml_operation(
-        default_return=None, context="ラグ特徴量計算でエラーが発生しました"
-    )
-    # calculate_lag_features は削除されました
 
     @safe_ml_operation(
         default_return=None, context="統計的特徴量計算でエラーが発生しました"

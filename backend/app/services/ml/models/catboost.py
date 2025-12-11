@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from app.utils.error_handler import ModelError
+
 from .base_gradient_boosting_model import BaseGradientBoostingModel
 
 logger = logging.getLogger(__name__)

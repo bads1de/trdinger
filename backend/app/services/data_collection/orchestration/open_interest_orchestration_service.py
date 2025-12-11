@@ -6,7 +6,6 @@ APIルーター内に散在していたオープンインタレスト関連の�
 
 import asyncio
 import logging
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends
@@ -15,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.base_orchestration_service import (
     BaseDataCollectionOrchestrationService,
 )
-from app.utils.response import api_response, error_response
+from app.utils.response import error_response
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..bybit.open_interest_service import BybitOpenInterestService
@@ -38,7 +37,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
     ):
         """
         初期化
-        
+
         Args:
             bybit_service: Bybitオープンインタレストサービス
         """
@@ -135,7 +134,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
 
             start_time = self._parse_datetime(start_date)
             end_time = self._parse_datetime(end_date)
-            
+
             normalized_symbol = (
                 symbol
                 if ":" in symbol
@@ -166,7 +165,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
             ]
 
             logger.info(f"オープンインタレストデータ取得成功: {len(data)}件")
-            
+
             return self._create_success_response(
                 message=f"{len(data)}件のオープンインタレストデータを取得しました",
                 data={

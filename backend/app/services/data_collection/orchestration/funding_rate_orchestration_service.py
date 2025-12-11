@@ -113,7 +113,7 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
         logger.info(
             f"{symbol}のファンディングレートデータ{inserted_count}件を保存しました"
         )
-        
+
         return self._create_success_response(
             "データ収集完了", data={"count": inserted_count}
         )
@@ -144,7 +144,7 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
             except Exception as e:
                 logger.error(f"{symbol}のデータ収集中にエラーが発生しました: {e}")
         logger.info(f"一括データ収集完了。合計{total_count}件のデータを保存しました")
-        
+
         return self._create_success_response(
             "一括データ収集完了", data={"total_count": total_count}
         )

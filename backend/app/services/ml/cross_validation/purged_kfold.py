@@ -1,9 +1,9 @@
 import logging
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection._split import _BaseKFold
-from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 

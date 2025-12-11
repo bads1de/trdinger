@@ -144,7 +144,7 @@ class AdvancedFeatures:
         # 3. 価格位置要因: Price - Low_n
         # 価格が安値圏で停滞せず、ショートの積み増しにも関わらず上昇または維持している場合、
         # ショート勢にとっての「痛み（含み損）」が増していることを示唆します。
-        
+
         low_n = low.rolling(window=lookback).min()
         price_location = close - low_n
 

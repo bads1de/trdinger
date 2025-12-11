@@ -9,11 +9,11 @@ from typing import List, Tuple
 
 from app.utils.error_handler import safe_operation
 
-from ..utils.indicator_utils import get_all_indicators
 from ..config.constants import (
-    OPERATORS,
     DATA_SOURCES,
+    OPERATORS,
 )
+from ..utils.indicator_utils import get_all_indicators
 
 logger = logging.getLogger(__name__)
 

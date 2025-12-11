@@ -9,7 +9,6 @@ import pandas as pd
 
 from app.services.ml.exceptions import MLPredictionError
 
-
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用

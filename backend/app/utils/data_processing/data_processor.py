@@ -348,6 +348,7 @@ class DataProcessor:
         if for_ml:
             # ML用パイプライン
             from app.services.ml.preprocessing.pipeline import create_ml_pipeline
+
             pipeline = create_ml_pipeline(
                 include_feature_selection=include_feature_selection,
                 n_features=n_features,
