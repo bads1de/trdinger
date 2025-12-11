@@ -15,7 +15,6 @@ import pandas as pd
 from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
-    FunctionTransformer,
     MinMaxScaler,
     RobustScaler,
     StandardScaler,
@@ -93,12 +92,10 @@ def create_ml_pipeline(
 
     # 特徴量選択（オプション）
     if feature_selection and n_features is not None and n_features > 0:
-        # 特徴量選択前に配列に変換
-        ml_steps.append(
-            ("to_array", FunctionTransformer(func=_dataframe_to_array, validate=False))
-        )
+        # 特徴量選択
         if selection_method == "f_regression":
             selector = SelectKBest(score_func=f_regression, k=n_features)
+
         elif selection_method == "mutual_info":
             selector = SelectKBest(score_func=mutual_info_regression, k=n_features)
         else:
@@ -166,12 +163,9 @@ def create_classification_pipeline(
 
     # Feature selection for classification
     if feature_selection and n_features is not None and n_features > 0:
-        # Convert to array before feature selection
-        steps.append(
-            ("to_array", FunctionTransformer(func=_dataframe_to_array, validate=False))
-        )
         if selection_method == "f_classif":
             selector = SelectKBest(score_func=f_classif, k=n_features)
+
         elif selection_method == "mutual_info":
             selector = SelectKBest(score_func=mutual_info_classif, k=n_features)
         else:

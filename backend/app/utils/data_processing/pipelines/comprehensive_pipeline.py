@@ -16,7 +16,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-import numpy as np
+
 import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
@@ -132,31 +132,6 @@ def create_comprehensive_pipeline(
     # Combine pipelines
     steps = [("ml_pipeline", ml_pipeline)]
 
-    # 必要に応じてDataFrameに戻す
-    def array_to_dataframe(X):
-        """必要に応じてnumpy配列をDataFrameに戻す。"""
-        if isinstance(X, np.ndarray):
-            # パイプラインから特徴名を取得しようとする
-            try:
-                feature_names = ml_pipeline.get_feature_names_out()
-                return pd.DataFrame(X, columns=feature_names)
-            except Exception:
-                # 一般的な列名にフォールバック
-                columns = [f"feature_{i}" for i in range(X.shape[1])]
-                return pd.DataFrame(X, columns=columns)
-        return X
-
-    from sklearn.preprocessing import FunctionTransformer
-
-    # スケーリングが有効な場合のみDataFrameコンバータを追加（numpy配列を返す）
-    if scaling:
-        steps.append(
-            (
-                "to_dataframe",
-                FunctionTransformer(func=array_to_dataframe, validate=False),
-            )
-        )
-
     # リクエストされた場合多項式特徴量を追加
     if polynomial_features:
         poly_features = PolynomialFeatures(
@@ -168,6 +143,14 @@ def create_comprehensive_pipeline(
         logger.info(f"多項式特徴量を追加 (degree={polynomial_degree})")
 
     pipeline = Pipeline(steps)
+
+    # Configure pipeline to output pandas DataFrames
+    # This replaces the manual array_to_dataframe conversion and ensures
+    # feature names are preserved throughout the pipeline
+    try:
+        pipeline.set_output(transform="pandas")
+    except Exception as e:
+        logger.warning(f"Could not set pandas output for pipeline: {e}")
 
     logger.info("包括的パイプラインが正常に作成されました")
     return pipeline

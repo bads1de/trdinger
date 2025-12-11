@@ -66,7 +66,6 @@ class TestMLPipelinesComprehensive:
 
         step_names = [step[0] for step in pipeline.steps]
         assert "preprocessing" in step_names
-        assert "to_array" in step_names
         assert "feature_selection" in step_names
 
     def test_create_ml_pipeline_with_scaling(self):
@@ -359,13 +358,12 @@ class TestMLPipelinesComprehensive:
 
         step_names = [step[0] for step in pipeline.steps]
 
-        # 正しい順序: preprocessing -> to_array -> feature_selection -> scaler
+        # 正しい順序: preprocessing -> feature_selection -> scaler
         preprocessing_idx = step_names.index("preprocessing")
-        to_array_idx = step_names.index("to_array")
         feature_selection_idx = step_names.index("feature_selection")
         scaler_idx = step_names.index("scaler")
 
-        assert preprocessing_idx < to_array_idx < feature_selection_idx < scaler_idx
+        assert preprocessing_idx < feature_selection_idx < scaler_idx
 
     def test_empty_preprocessing_params(self):
         """空の前処理パラメータのテスト"""
