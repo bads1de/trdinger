@@ -98,12 +98,12 @@ class YamlIndicatorUtils:
         processed = {}
 
         for key, value in thresholds.items():
-            if key.endswith("_lt"):
-                processed[f"{key.rstrip('_lt')}_oversold"] = value
-            elif key.endswith("_gt"):
-                processed[f"{key.rstrip('_gt')}_overbought"] = value
-            elif key in ["long_gt", "short_lt"]:
+            if key in ["long_gt", "short_lt"]:
                 processed[key.replace("_", "_signal_")] = value
+            elif key.endswith("_lt"):
+                processed[f"{key.removesuffix('_lt')}_oversold"] = value
+            elif key.endswith("_gt"):
+                processed[f"{key.removesuffix('_gt')}_overbought"] = value
             else:
                 processed[key] = value
 
