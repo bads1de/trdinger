@@ -16,9 +16,6 @@ from app.services.ml.feature_engineering.feature_engineering_service import (
 )
 
 
-@pytest.mark.skip(
-    reason="統合テストは複雑なモック設定が必要なため一旦スキップ。基本的なデータリークテストはtest_data_leak_simple.pyで実施済み。"
-)
 class TestRealImplementationDataLeaks:
     """実装コードを使ったデータリーク検証"""
 

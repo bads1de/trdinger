@@ -83,7 +83,7 @@ class DEAPSetup:
         self.toolbox.register("evaluate", evaluate_func, config=config)
 
         # 進化演算子の登録（戦略遺伝子レベル）
-        self.toolbox.register("mate", crossover_func)
+        self.toolbox.register("mate", crossover_func, config=config)
 
         # 突然変異の登録（DEAP互換の返り値 (ind,) を保証するラッパー）
         def _mutate_wrapper(individual):

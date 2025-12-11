@@ -83,8 +83,11 @@ class IndividualEvaluator:
             from ..models.strategy_models import StrategyGene
             from ..serializers.gene_serialization import GeneSerializer
 
-            gene_serializer = GeneSerializer()
-            gene = gene_serializer.from_list(individual, StrategyGene)
+            if isinstance(individual, StrategyGene):
+                gene = individual
+            else:
+                gene_serializer = GeneSerializer()
+                gene = gene_serializer.from_list(individual, StrategyGene)
 
             # バックテスト設定のベースを取得
             base_backtest_config = (

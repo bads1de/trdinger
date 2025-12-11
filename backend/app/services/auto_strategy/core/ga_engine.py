@@ -7,7 +7,7 @@ DEAPライブラリを使用したGA実装。
 import logging
 import time
 from typing import Any, Dict, Optional
-from dataclasses import asdict
+from dataclasses import asdict, fields
 
 import numpy as np
 from deap import tools
@@ -173,7 +173,9 @@ class GeneticAlgorithmEngine:
 
             # 適応的突然変異用mutate_wrapperの設定
             individual_class = self.deap_setup.get_individual_class()
-            mutate_wrapper = create_deap_mutate_wrapper(individual_class, population)
+            mutate_wrapper = create_deap_mutate_wrapper(
+                individual_class, population, config
+            )
             toolbox.register("mutate", mutate_wrapper)
 
             # 独立したEvolutionRunnerの作成（並列評価対応）
@@ -370,7 +372,11 @@ class GeneticAlgorithmEngine:
 
             best_strategies = []
             for ind in best_individuals[:10]:  # 上位10個のパレート最適解
-                gene = gene_serializer.from_list(ind, StrategyGene)
+                if isinstance(ind, StrategyGene):
+                    gene = ind
+                else:
+                    gene = gene_serializer.from_list(ind, StrategyGene)
+                
                 best_strategies.append(
                     {"strategy": gene, "fitness_values": list(ind.fitness.values)}
                 )
@@ -381,7 +387,10 @@ class GeneticAlgorithmEngine:
             else:
                 best_individual = tools.selBest(population, 1)[0]
 
-        best_gene = gene_serializer.from_list(best_individual, StrategyGene)
+        if isinstance(best_individual, StrategyGene):
+            best_gene = best_individual
+        else:
+            best_gene = gene_serializer.from_list(best_individual, StrategyGene)
 
         return best_individual, best_gene, best_strategies
 
@@ -404,7 +413,9 @@ class GeneticAlgorithmEngine:
 
             # StrategyGeneのフィールドを使ってIndividualインスタンスを作成
             # IndividualはStrategyGeneを継承しているため、キーワード引数で初期化可能
-            return self.individual_class(**asdict(gene))
+            # asdictは再帰的に辞書化してしまうため使用しない
+            gene_dict = {f.name: getattr(gene, f.name) for f in fields(gene)}
+            return self.individual_class(**gene_dict)
 
         except Exception as e:
             logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")

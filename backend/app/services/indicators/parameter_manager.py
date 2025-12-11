@@ -140,6 +140,12 @@ class IndicatorParameterManager:
                 max_val = param_config.max_value
 
             if min_val is not None and max_val is not None:
+                # リストの場合は最初の要素を使用（バグ修正）
+                if isinstance(min_val, list):
+                    min_val = min_val[0]
+                if isinstance(max_val, list):
+                    max_val = max_val[0]
+
                 if isinstance(param_config.default_value, int):
                     # 整数パラメータ
                     params[param_name] = random.randint(int(min_val), int(max_val))

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from backend.app.services.ml.ml_training_service import (
+from app.services.ml.ml_training_service import (
     MLTrainingService,
     OptimizationSettings,
 )
@@ -63,7 +63,7 @@ class TestMLTrainingService:
         """アンサンブルトレーナーでの初期化テスト"""
         # EnsembleTrainerをモック化
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService(trainer_type="ensemble")
@@ -74,7 +74,7 @@ class TestMLTrainingService:
         """単一モデルトレーナーでの初期化テスト"""
         # SingleModelTrainer指定でも内部ではEnsembleTrainerが使われる
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService(trainer_type="single")
@@ -111,7 +111,7 @@ class TestMLTrainingService:
         """最適化なしでのモデル学習テスト"""
         # EnsembleTrainerをモック化してサービス初期化
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService()
@@ -138,7 +138,7 @@ class TestMLTrainingService:
         }
 
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService()
@@ -166,7 +166,7 @@ class TestMLTrainingService:
     def test_evaluate_model(self, sample_training_data, mock_trainer):
         """モデル評価テスト"""
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService()
@@ -180,7 +180,7 @@ class TestMLTrainingService:
     def test_get_training_status(self, mock_trainer):
         """学習状態取得テスト"""
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService()
@@ -195,7 +195,7 @@ class TestMLTrainingService:
     def test_predict(self, mock_trainer):
         """予測テスト"""
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService()
@@ -246,7 +246,7 @@ class TestMLTrainingService:
     @pytest.mark.skip(
         reason="generate_signalsの実装が複雑すぎてモックが困難。実装側の問題として別途対応が必要"
     )
-    @patch("backend.app.services.ml.ml_training_service.logger")
+    @patch("app.services.ml.ml_training_service.logger")
     def test_generate_signals_missing_features(self, mock_logger, mock_trainer):
         """特徴量不足時のシグナル生成テスト"""
         service = MLTrainingService()
@@ -262,7 +262,7 @@ class TestMLTrainingService:
     def test_load_model(self, mock_trainer):
         """モデル読み込みテスト"""
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService()
@@ -275,7 +275,7 @@ class TestMLTrainingService:
         """特徴量重要度取得テスト"""
         mock_trainer.get_feature_importance.return_value = {"close": 0.6, "volume": 0.4}
         with patch(
-            "backend.app.services.ml.ml_training_service.EnsembleTrainer",
+            "app.services.ml.ml_training_service.EnsembleTrainer",
             return_value=mock_trainer,
         ):
             service = MLTrainingService()

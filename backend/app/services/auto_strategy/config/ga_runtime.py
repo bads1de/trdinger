@@ -68,6 +68,22 @@ class GAConfig(BaseConfig):
     constraint_violation_penalty: float = GA_DEFAULT_CONFIG[
         "constraint_violation_penalty"
     ]
+    
+    # 交叉・突然変異拡張設定
+    crossover_field_selection_probability: float = 0.5
+    indicator_param_mutation_range: List[float] = field(default_factory=lambda: [0.8, 1.2])
+    risk_param_mutation_range: List[float] = field(default_factory=lambda: [0.9, 1.1])
+    indicator_add_delete_probability: float = 0.3
+    indicator_add_vs_delete_probability: float = 0.5
+    condition_change_probability_multiplier: float = 1.0
+    condition_selection_probability: float = 0.5
+    condition_operator_switch_probability: float = 0.2
+    valid_condition_operators: List[str] = field(default_factory=lambda: [">", "<", ">=", "<=", "==", "!=", "CROSS_UP", "CROSS_DOWN"])
+    tpsl_gene_creation_probability_multiplier: float = 0.2
+    position_sizing_gene_creation_probability_multiplier: float = 0.2
+    adaptive_mutation_variance_threshold: float = 0.001
+    adaptive_mutation_rate_decrease_multiplier: float = 0.8
+    adaptive_mutation_rate_increase_multiplier: float = 1.2
 
     # パラメータ範囲
     parameter_ranges: Dict[str, List] = field(
@@ -332,6 +348,21 @@ class GAConfig(BaseConfig):
             "max_conditions": self.max_conditions,
             "zero_trades_penalty": self.zero_trades_penalty,
             "constraint_violation_penalty": self.constraint_violation_penalty,
+            # 交叉・突然変異拡張設定
+            "crossover_field_selection_probability": self.crossover_field_selection_probability,
+            "indicator_param_mutation_range": self.indicator_param_mutation_range,
+            "risk_param_mutation_range": self.risk_param_mutation_range,
+            "indicator_add_delete_probability": self.indicator_add_delete_probability,
+            "indicator_add_vs_delete_probability": self.indicator_add_vs_delete_probability,
+            "condition_change_probability_multiplier": self.condition_change_probability_multiplier,
+            "condition_selection_probability": self.condition_selection_probability,
+            "condition_operator_switch_probability": self.condition_operator_switch_probability,
+            "valid_condition_operators": self.valid_condition_operators,
+            "tpsl_gene_creation_probability_multiplier": self.tpsl_gene_creation_probability_multiplier,
+            "position_sizing_gene_creation_probability_multiplier": self.position_sizing_gene_creation_probability_multiplier,
+            "adaptive_mutation_variance_threshold": self.adaptive_mutation_variance_threshold,
+            "adaptive_mutation_rate_decrease_multiplier": self.adaptive_mutation_rate_decrease_multiplier,
+            "adaptive_mutation_rate_increase_multiplier": self.adaptive_mutation_rate_increase_multiplier,
             "parallel_processes": self.parallel_processes,
             "random_state": self.random_state,
             # 並列評価設定
@@ -410,6 +441,22 @@ class GAConfig(BaseConfig):
             "constraint_violation_penalty": GA_DEFAULT_CONFIG[
                 "constraint_violation_penalty"
             ],
+            # 交叉・突然変異拡張設定
+            "crossover_field_selection_probability": 0.5,
+            "indicator_param_mutation_range": [0.8, 1.2],
+            "risk_param_mutation_range": [0.9, 1.1],
+            "indicator_add_delete_probability": 0.3,
+            "indicator_add_vs_delete_probability": 0.5,
+            "condition_change_probability_multiplier": 1.0,
+            "condition_selection_probability": 0.5,
+            "condition_operator_switch_probability": 0.2,
+            "valid_condition_operators": [">", "<", ">=", "<=", "==", "!=", "CROSS_UP", "CROSS_DOWN"],
+            "tpsl_gene_creation_probability_multiplier": 0.2,
+            "position_sizing_gene_creation_probability_multiplier": 0.2,
+            "adaptive_mutation_variance_threshold": 0.001,
+            "adaptive_mutation_rate_decrease_multiplier": 0.8,
+            "adaptive_mutation_rate_increase_multiplier": 1.2,
+            
             "log_level": "ERROR",
             "save_intermediate_results": True,
             # フィットネス共有設定

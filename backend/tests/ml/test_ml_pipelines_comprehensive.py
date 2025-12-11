@@ -430,21 +430,6 @@ class TestMLPipelinesComprehensive:
         info = get_ml_pipeline_info(pipeline)
         assert info["has_preprocessing"]
 
-    @pytest.mark.skip(
-        reason="パイプラインのエラーハンドリング実装が不完全。実装完了後に有効化"
-    )
-    def test_pipeline_error_handling(self):
-        """パイプラインエラーハンドリングのテスト"""
-        pipeline = create_ml_pipeline()
-
-        # 無効なデータでエラーが適切に処理される
-        with pytest.raises(Exception):
-            # 極端なデータ
-            extreme_data = pd.DataFrame({"feature": [1e100, -1e100] * 10})
-            extreme_target = pd.Series([1, 0] * 10)
-
-            pipeline.fit(extreme_data, extreme_target)
-
     def test_pipeline_info_completeness(self, sample_data):
         """パイプライン情報完全性のテスト"""
         X = sample_data[["feature1", "feature2"]]

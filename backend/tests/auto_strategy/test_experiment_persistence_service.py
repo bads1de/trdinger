@@ -3,7 +3,7 @@ ExperimentPersistenceServiceのテスト
 """
 
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -13,360 +13,204 @@ from app.services.auto_strategy.services.experiment_persistence_service import (
     ExperimentPersistenceService,
 )
 
-pytestmark = pytest.mark.skip(
-    reason="ExperimentPersistenceService implementation changed - methods need update"
-)
-
-
 
 class TestExperimentPersistenceService:
     """ExperimentPersistenceServiceのテストクラス"""
 
     def setup_method(self):
         """テスト前のセットアップ"""
-        self.mock_db_session_factory = Mock()
+        self.mock_db_session = MagicMock()
+        self.mock_db_session_factory = MagicMock(return_value=self.mock_db_session)
+        # コンテキストマネージャとして動作するように設定
+        self.mock_db_session_factory.return_value.__enter__.return_value = (
+            self.mock_db_session
+        )
         self.mock_backtest_service = Mock()
         self.persistence_service = ExperimentPersistenceService(
             self.mock_db_session_factory, self.mock_backtest_service
         )
 
-    def test_init(self):
-        """初期化のテスト"""
-        assert (
-            self.persistence_service.db_session_factory == self.mock_db_session_factory
-        )
-        assert self.persistence_service.backtest_service == self.mock_backtest_service
-
     def test_create_experiment(self):
         """実験作成のテスト"""
-        experiment_id = "test_exp_001"
+        experiment_id = "test_uuid_001"
         experiment_name = "Test Experiment"
-        ga_config = GAConfig()
-        backtest_config = {
-            "symbol": "BTC/USDT:USDT",
-            "timeframe": "1h",
-            "start_date": "2024-01-01",
-            "end_date": "2024-12-19",
-        }
+        ga_config = GAConfig(generations=10)
+        backtest_config = {"symbol": "BTC/USDT:USDT"}
 
-        with patch.object(
-            self.persistence_service, "_save_experiment_to_db"
-        ) as mock_save:
-            self.persistence_service.create_experiment(
+        with patch(
+            "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
+        ) as mock_repo_cls:
+            mock_repo = mock_repo_cls.return_value
+            mock_db_experiment = Mock()
+            mock_db_experiment.id = 123
+            mock_repo.create_experiment.return_value = mock_db_experiment
+
+            result_id = self.persistence_service.create_experiment(
                 experiment_id, experiment_name, ga_config, backtest_config
             )
 
-            mock_save.assert_called_once_with(
-                experiment_id, experiment_name, ga_config, backtest_config, "running"
-            )
-
-    def test_save_generation_results(self):
-        """世代結果保存のテスト"""
-        experiment_id = "test_exp_001"
-        results = [{"fitness": 0.85, "genes": [1, 2, 3, 4, 5], "generation": 1}]
-        ga_config = GAConfig()
-
-        with patch.object(
-            self.persistence_service, "_save_generation_results_to_db"
-        ) as mock_save:
-            with patch.object(
-                self.persistence_service, "_calculate_generation_summary"
-            ) as mock_calc:
-                mock_calc.return_value = {
-                    "avg_fitness": 0.75,
-                    "best_fitness": 0.85,
-                    "worst_fitness": 0.65,
-                }
-
-                self.persistence_service.save_generation_results(
-                    experiment_id, results, ga_config
-                )
-
-                mock_calc.assert_called_once_with(results)
-                mock_save.assert_called_once_with(
-                    experiment_id, results, mock_calc.return_value, ga_config
-                )
-
-    def test_save_generation_results_empty(self):
-        """空の結果保存のテスト"""
-        experiment_id = "test_exp_001"
-        results = []
-        ga_config = GAConfig()
-
-        with patch.object(
-            self.persistence_service, "_save_generation_results_to_db"
-        ) as mock_save:
-            with patch.object(
-                self.persistence_service, "_calculate_generation_summary"
-            ) as mock_calc:
-                mock_calc.return_value = {
-                    "avg_fitness": 0.0,
-                    "best_fitness": 0.0,
-                    "worst_fitness": 0.0,
-                }
-
-                self.persistence_service.save_generation_results(
-                    experiment_id, results, ga_config
-                )
-
-                # 空の結果でも保存が呼ばれることを確認
-                mock_save.assert_called_once()
+            assert result_id == experiment_id
+            mock_repo.create_experiment.assert_called_once()
+            call_kwargs = mock_repo.create_experiment.call_args[1]
+            assert call_kwargs["name"] == experiment_name
+            assert call_kwargs["config"]["experiment_id"] == experiment_id
+            assert call_kwargs["total_generations"] == 10
+            assert call_kwargs["status"] == "running"
 
     def test_list_experiments(self):
         """実験一覧取得のテスト"""
-        mock_experiments = [
-            {
-                "id": "exp1",
-                "name": "Experiment 1",
-                "status": "completed",
-                "created_at": datetime.now(),
-                "updated_at": datetime.now(),
-            }
-        ]
-
-        with patch.object(
-            self.persistence_service, "_get_experiments_from_db"
-        ) as mock_get:
-            mock_get.return_value = mock_experiments
+        with patch(
+            "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
+        ) as mock_repo_cls:
+            mock_repo = mock_repo_cls.return_value
+            mock_exp = Mock()
+            mock_exp.id = 1
+            mock_exp.name = "Exp 1"
+            mock_exp.status = "completed"
+            mock_exp.created_at = datetime(2024, 1, 1)
+            mock_exp.completed_at = datetime(2024, 1, 2)
+            mock_repo.get_recent_experiments.return_value = [mock_exp]
 
             experiments = self.persistence_service.list_experiments()
 
             assert len(experiments) == 1
-            assert experiments[0]["id"] == "exp1"
+            assert experiments[0]["id"] == 1
+            assert experiments[0]["experiment_name"] == "Exp 1"
+            assert experiments[0]["status"] == "completed"
+            assert experiments[0]["created_at"] == "2024-01-01T00:00:00"
 
-    def test_get_experiment_status(self):
-        """実験ステータス取得のテスト"""
-        experiment_id = "test_exp_001"
-        expected_status = {
-            "id": experiment_id,
-            "status": "running",
-            "current_generation": 5,
-            "best_fitness": 0.85,
-        }
-
-        with patch.object(
-            self.persistence_service, "_get_experiment_status_from_db"
-        ) as mock_get:
-            mock_get.return_value = expected_status
-
-            status = self.persistence_service.get_experiment_status(experiment_id)
-
-            assert status == expected_status
-            mock_get.assert_called_once_with(experiment_id)
-
-    def test_get_experiment_status_not_found(self):
-        """実験ステータス取得失敗のテスト"""
-        experiment_id = "nonexistent_exp"
-
-        with patch.object(
-            self.persistence_service, "_get_experiment_status_from_db"
-        ) as mock_get:
-            mock_get.return_value = None
-
-            status = self.persistence_service.get_experiment_status(experiment_id)
-
-            assert status is None
-
-    def test_update_experiment_status(self):
-        """実験ステータス更新のテスト"""
-        experiment_id = "test_exp_001"
-        new_status = "completed"
-
-        with patch.object(
-            self.persistence_service, "_update_experiment_status_in_db"
-        ) as mock_update:
-            self.persistence_service.update_experiment_status(experiment_id, new_status)
-
-            mock_update.assert_called_once_with(experiment_id, new_status)
-
-    def test_save_best_strategy(self):
-        """最良戦略保存のテスト"""
-        experiment_id = "test_exp_001"
-        best_individual = {
-            "fitness": 0.95,
-            "genes": [1, 2, 3, 4, 5, 6],
-            "generation": 10,
-        }
-        ga_config = GAConfig()
-
-        with patch.object(
-            self.persistence_service, "_save_best_strategy_to_db"
-        ) as mock_save:
-            self.persistence_service.save_best_strategy(
-                experiment_id, best_individual, ga_config
-            )
-
-            mock_save.assert_called_once_with(experiment_id, best_individual, ga_config)
-
-    def test_calculate_generation_summary(self):
-        """世代サマリー計算のテスト"""
-        results = [
-            {"fitness": 0.85, "genes": [], "generation": 1},
-            {"fitness": 0.75, "genes": [], "generation": 1},
-            {"fitness": 0.95, "genes": [], "generation": 1},
-            {"fitness": 0.65, "genes": [], "generation": 1},
-        ]
-
-        summary = self.persistence_service._calculate_generation_summary(results)
-
-        assert summary["avg_fitness"] == 0.8
-        assert summary["best_fitness"] == 0.95
-        assert summary["worst_fitness"] == 0.65
-
-    def test_calculate_generation_summary_empty(self):
-        """空の世代サマリー計算のテスト"""
-        summary = self.persistence_service._calculate_generation_summary([])
-
-        assert summary["avg_fitness"] == 0.0
-        assert summary["best_fitness"] == 0.0
-        assert summary["worst_fitness"] == 0.0
-
-    def test_calculate_generation_summary_single_result(self):
-        """単一結果の世代サマリー計算のテスト"""
-        results = [{"fitness": 0.85, "genes": [], "generation": 1}]
-
-        summary = self.persistence_service._calculate_generation_summary(results)
-
-        assert summary["avg_fitness"] == 0.85
-        assert summary["best_fitness"] == 0.85
-        assert summary["worst_fitness"] == 0.85
-
-    def test_validate_experiment_data_valid(self):
-        """有効な実験データ検証のテスト"""
-        experiment_id = "test_exp_001"
-        experiment_name = "Test Experiment"
-        ga_config = GAConfig()
-        backtest_config = {"symbol": "BTC/USDT:USDT"}
-
-        # 例外が投げられないことを確認
-        try:
-            self.persistence_service._validate_experiment_data(
-                experiment_id, experiment_name, ga_config, backtest_config
-            )
-        except Exception:
-            pytest.fail("例外が投げられました")
-
-    def test_validate_experiment_data_invalid_id(self):
-        """無効な実験ID検証のテスト"""
-        with pytest.raises(ValueError, match="実験IDが必要です"):
-            self.persistence_service._validate_experiment_data(
-                None, "Test", GAConfig(), {}
-            )
-
-    def test_validate_experiment_data_invalid_name(self):
-        """無効な実験名検証のテスト"""
-        with pytest.raises(ValueError, match="実験名が必要です"):
-            self.persistence_service._validate_experiment_data(
-                "test_exp", None, GAConfig(), {}
-            )
-
-    def test_validate_experiment_data_invalid_config(self):
-        """無効な設定検証のテスト"""
-        with pytest.raises(ValueError, match="GA設定が必要です"):
-            self.persistence_service._validate_experiment_data(
-                "test_exp", "Test", None, {}
-            )
-
-    def test_serialize_strategy_gene(self):
-        """戦略遺伝子シリアライズのテスト"""
-        # StrategyGeneのモックを作成
-        mock_gene = Mock(spec=StrategyGene)
-        mock_gene.id = "gene_001"
-
-        serialized = self.persistence_service._serialize_strategy_gene(mock_gene)
-
-        assert isinstance(serialized, dict)
-        assert "id" in serialized
-
-    def test_deserialize_strategy_gene(self):
-        """戦略遺伝子デシリアライズのテスト"""
-        gene_data = {"id": "gene_001", "parameters": {"indicator": "SMA", "period": 14}}
+    def test_get_experiment_info_by_uuid(self):
+        """UUIDによる実験情報取得のテスト"""
+        target_uuid = "target-uuid-123"
 
         with patch(
-            "app.services.auto_strategy.services.experiment_persistence_service.StrategyGene"
-        ) as mock_gene_class:
-            mock_gene = Mock()
-            mock_gene_class.return_value = mock_gene
+            "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
+        ) as mock_repo_cls:
+            mock_repo = mock_repo_cls.return_value
+            mock_exp1 = Mock()
+            mock_exp1.config = {"experiment_id": "other-uuid"}
+            mock_exp2 = Mock()
+            mock_exp2.id = 2
+            mock_exp2.name = "Target Exp"
+            mock_exp2.status = "running"
+            mock_exp2.config = {"experiment_id": target_uuid}
+            mock_exp2.created_at = datetime.now()
+            mock_exp2.completed_at = None
+            
+            mock_repo.get_recent_experiments.return_value = [mock_exp1, mock_exp2]
 
-            gene = self.persistence_service._deserialize_strategy_gene(gene_data)
+            info = self.persistence_service.get_experiment_info(target_uuid)
 
-            assert gene == mock_gene
-            mock_gene_class.assert_called_once_with(**gene_data)
+            assert info is not None
+            assert info["db_id"] == 2
+            assert info["name"] == "Target Exp"
 
-    def test_format_generation_data(self):
-        """世代データフォーマットのテスト"""
-        results = [{"fitness": 0.85, "genes": [1, 2, 3, 4, 5], "generation": 1}]
-        summary = {"avg_fitness": 0.85, "best_fitness": 0.85, "worst_fitness": 0.85}
+    def test_complete_experiment(self):
+        """実験完了処理のテスト"""
+        experiment_id = "exp_001"
+        
+        # get_experiment_infoをモック
+        with patch.object(self.persistence_service, "get_experiment_info") as mock_get_info:
+            mock_get_info.return_value = {"db_id": 123}
+            
+            with patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
+            ) as mock_repo_cls:
+                mock_repo = mock_repo_cls.return_value
+                
+                self.persistence_service.complete_experiment(experiment_id)
+                
+                mock_repo.update_experiment_status.assert_called_once_with(123, "completed")
+
+    def test_fail_experiment(self):
+        """実験失敗処理のテスト"""
+        experiment_id = "exp_001"
+        
+        with patch.object(self.persistence_service, "get_experiment_info") as mock_get_info:
+            mock_get_info.return_value = {"db_id": 123}
+            
+            with patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
+            ) as mock_repo_cls:
+                mock_repo = mock_repo_cls.return_value
+                
+                self.persistence_service.fail_experiment(experiment_id)
+                
+                mock_repo.update_experiment_status.assert_called_once_with(123, "failed")
+
+    def test_stop_experiment(self):
+        """実験停止処理のテスト"""
+        experiment_id = "exp_001"
+        
+        with patch.object(self.persistence_service, "get_experiment_info") as mock_get_info:
+            mock_get_info.return_value = {"db_id": 123}
+            
+            with patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
+            ) as mock_repo_cls:
+                mock_repo = mock_repo_cls.return_value
+                
+                self.persistence_service.stop_experiment(experiment_id)
+                
+                mock_repo.update_experiment_status.assert_called_once_with(123, "stopped")
+
+    def test_save_experiment_result(self):
+        """実験結果保存のテスト"""
+        experiment_id = "exp_001"
         ga_config = GAConfig()
+        backtest_config = {
+            "symbol": "BTC/USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-02-01",
+            "initial_capital": 10000
+        }
+        
+        mock_strategy = Mock(spec=StrategyGene)
+        mock_strategy.id = "strat_123"
+        
+        result = {
+            "best_strategy": mock_strategy,
+            "best_fitness": 1.5,
+            "all_strategies": [mock_strategy],
+            "fitness_scores": [1.5]
+        }
+        
+        experiment_info = {
+            "db_id": 100,
+            "name": "AUTO_STRATEGY_GA_TEST",
+            "config": {"experiment_id": experiment_id}
+        }
 
-        formatted = self.persistence_service._format_generation_data(
-            results, summary, ga_config
-        )
-
-        assert isinstance(formatted, dict)
-        assert "results" in formatted
-        assert "summary" in formatted
-        assert "config" in formatted
-
-    def test_handle_database_error(self):
-        """データベースエラー処理のテスト"""
-        test_func = Mock()
-        test_func.side_effect = Exception("Database error")
-
-        with patch(
-            "app.services.auto_strategy.services.experiment_persistence_service.logger"
-        ) as mock_logger:
-            result = self.persistence_service._handle_database_error(
-                test_func, "test operation"
-            )
-
-            assert result is None
-            mock_logger.error.assert_called_once_with(
-                "test operationでデータベースエラーが発生しました: Database error"
-            )
-
-    def test_cleanup_experiment_resources(self):
-        """実験リソースクリーンアップのテスト"""
-        experiment_id = "test_exp_001"
-
-        with patch.object(
-            self.persistence_service, "_cleanup_experiment_resources_in_db"
-        ) as mock_cleanup:
-            self.persistence_service.cleanup_experiment_resources(experiment_id)
-
-            mock_cleanup.assert_called_once_with(experiment_id)
-
-    def test_get_experiment_history(self):
-        """実験履歴取得のテスト"""
-        experiment_id = "test_exp_001"
-        expected_history = [
-            {
-                "generation": 1,
-                "avg_fitness": 0.75,
-                "best_fitness": 0.85,
-                "timestamp": datetime.now(),
-            }
-        ]
-
-        with patch.object(
-            self.persistence_service, "_get_experiment_history_from_db"
-        ) as mock_get:
-            mock_get.return_value = expected_history
-
-            history = self.persistence_service.get_experiment_history(experiment_id)
-
-            assert history == expected_history
-            mock_get.assert_called_once_with(experiment_id)
-
-    def test_get_experiment_history_empty(self):
-        """空の実験履歴取得のテスト"""
-        experiment_id = "test_exp_001"
-
-        with patch.object(
-            self.persistence_service, "_get_experiment_history_from_db"
-        ) as mock_get:
-            mock_get.return_value = []
-
-            history = self.persistence_service.get_experiment_history(experiment_id)
-
-            assert history == []
+        with patch.object(self.persistence_service, "get_experiment_info") as mock_get_info:
+            mock_get_info.return_value = experiment_info
+            
+            with patch("app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository") as mock_strat_repo_cls, \
+                 patch("app.services.auto_strategy.services.experiment_persistence_service.BacktestResultRepository") as mock_bt_repo_cls, \
+                 patch("app.services.auto_strategy.services.experiment_persistence_service.GeneSerializer") as mock_serializer_cls:
+                
+                mock_strat_repo = mock_strat_repo_cls.return_value
+                mock_strat_repo.save_strategy.return_value = Mock(id=555)
+                
+                mock_bt_repo = mock_bt_repo_cls.return_value
+                mock_bt_repo.save_backtest_result.return_value = {"id": 999}
+                
+                self.mock_backtest_service.run_backtest.return_value = {
+                    "performance_metrics": {},
+                    "equity_curve": [],
+                    "trade_history": [],
+                    "execution_time": 1.0
+                }
+                
+                self.persistence_service.save_experiment_result(
+                    experiment_id, result, ga_config, backtest_config
+                )
+                
+                # 最良戦略が保存されたか確認
+                mock_strat_repo.save_strategy.assert_called()
+                
+                # 詳細バックテストが実行されたか確認
+                self.mock_backtest_service.run_backtest.assert_called_once()
+                
+                # バックテスト結果が保存されたか確認
+                mock_bt_repo.save_backtest_result.assert_called_once()
