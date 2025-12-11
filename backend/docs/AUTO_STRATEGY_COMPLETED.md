@@ -91,6 +91,17 @@ ML モデルがタイムフレームの違い、複雑な条件構造、およ�
 **解決された問題:**
 GA が大きな `atr_period`（例: 50）を選択した場合に、ATR 計算に必要なデータが不足し、不正確な TPSL 値（NaN や 0）が算出される問題を修正しました。これにより、「長期間のボラティリティを参照する安定した戦略」の生成が可能になりました。
 
+### 2.4 GAConfig のフィールド欠損 (Implicit Configuration)
+
+> **解決日: 2025-12-11**
+>
+> - `GAConfig` クラス（`ga_runtime.py`）に `zero_trades_penalty` と `constraint_violation_penalty` フィールドを追加
+> - `IndividualEvaluator` での暗黙的参照（`getattr`）を廃止し、明示的なプロパティ参照に変更
+> - 設定の継承とデフォルト値の扱いを統一
+
+**解決された問題:**
+コード内でハードコードされたデフォルト値が優先され、`GASettings` や設定ファイルからのペナルティ値変更が反映されない問題を修正しました。これにより、意図した通りの進化圧力（ペナルティ）を個体に適用できるようになりました。
+
 ## 3. 設定と拡張性の改善 (Scalability & Configuration Improvements)
 
 ### 3.1 パラメータ範囲プリセット (Parameter Range Presets)

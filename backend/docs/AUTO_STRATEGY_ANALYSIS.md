@@ -42,16 +42,7 @@
 
 ## 5. 新たに発見された実装レベルの課題 (Additional Codebase Issues)
 
-### 5.1 GAConfig のフィールド欠損 (Implicit Configuration)
-
-**現状:**
-
-- `GAConfig` クラス（`backend/app/services/auto_strategy/config/ga_runtime.py`）に `zero_trades_penalty` と `constraint_violation_penalty` フィールドが定義されていません。
-- これらは `GASettings` や `GA_DEFAULT_CONFIG` には存在しますが、実行時に `IndividualEvaluator` が参照する `GAConfig` オブジェクトにはコピーされず、コード内で `getattr(config, "zero_trades_penalty", 0.1)` のように暗黙のデフォルト値が使用されています。
-
-**影響:**
-
-- **設定不整合**: ユーザーが設定ファイルや UI でペナルティ値を変更しても反映されません。常にデフォルト値（0.1 / 0.0）が使用され、意図した進化圧力がかからない可能性があります。
+現在、特定されている新たな課題はありません。
 
 ## 推奨される改善アクション（優先度順）
 
@@ -68,5 +59,4 @@
 
 ### Phase 4: コード品質と保守性 (Maintenance)
 
-1. **GAConfig の修正**: 欠損しているペナルティ設定フィールドを追加し、設定の継承ロジックを修正する。
-2. **パラメータ範囲の局所化**: 指標ごとに異なるパラメータ範囲を設定できる仕組み（`IndicatorManifest` の拡張など）を検討する。
+1. **パラメータ範囲の局所化**: 指標ごとに異なるパラメータ範囲を設定できる仕組み（`IndicatorManifest` の拡張など）を検討する。

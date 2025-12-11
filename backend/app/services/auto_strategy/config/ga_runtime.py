@@ -63,6 +63,12 @@ class GAConfig(BaseConfig):
     min_conditions: int = 1
     max_conditions: int = 3
 
+    # ペナルティ設定
+    zero_trades_penalty: float = GA_DEFAULT_CONFIG["zero_trades_penalty"]
+    constraint_violation_penalty: float = GA_DEFAULT_CONFIG[
+        "constraint_violation_penalty"
+    ]
+
     # パラメータ範囲
     parameter_ranges: Dict[str, List] = field(
         default_factory=lambda: GA_PARAMETER_RANGES.copy()
@@ -324,6 +330,8 @@ class GAConfig(BaseConfig):
             "min_indicators": self.min_indicators,
             "min_conditions": self.min_conditions,
             "max_conditions": self.max_conditions,
+            "zero_trades_penalty": self.zero_trades_penalty,
+            "constraint_violation_penalty": self.constraint_violation_penalty,
             "parallel_processes": self.parallel_processes,
             "random_state": self.random_state,
             # 並列評価設定
@@ -398,6 +406,10 @@ class GAConfig(BaseConfig):
             "min_indicators": 1,
             "min_conditions": 1,
             "max_conditions": 3,
+            "zero_trades_penalty": GA_DEFAULT_CONFIG["zero_trades_penalty"],
+            "constraint_violation_penalty": GA_DEFAULT_CONFIG[
+                "constraint_violation_penalty"
+            ],
             "log_level": "ERROR",
             "save_intermediate_results": True,
             # フィットネス共有設定
@@ -482,6 +494,14 @@ class GAConfig(BaseConfig):
         self.min_indicators = ga_config.min_indicators
         self.min_conditions = ga_config.min_conditions
         self.max_conditions = ga_config.max_conditions
+        self.zero_trades_penalty = getattr(
+            ga_config, "zero_trades_penalty", GA_DEFAULT_CONFIG["zero_trades_penalty"]
+        )
+        self.constraint_violation_penalty = getattr(
+            ga_config,
+            "constraint_violation_penalty",
+            GA_DEFAULT_CONFIG["constraint_violation_penalty"],
+        )
 
         # 評価関連設定
         self.fitness_weights = ga_config.fitness_weights.copy()
