@@ -14,7 +14,6 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
 
     def __init__(self):
         """DtypeOptimizerを初期化。"""
-        self.dtypes_ = {}
 
     def fit(self, X, y=None):
         """

@@ -23,7 +23,6 @@ class OutlierRemover(BaseEstimator, TransformerMixin):
             上限 = Q3 + factor * IQR
         """
         self.factor = factor
-        self.bounds_ = {}
 
     def fit(self, X, y=None):
         """

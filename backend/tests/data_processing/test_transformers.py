@@ -66,8 +66,8 @@ class TestOutlierRemovalTransformer:
         transformer = OutlierRemovalTransformer(method="isolation_forest")
         transformer.fit(normal_data)
 
-        assert transformer.detector is not None
-        assert isinstance(transformer.detector, IsolationForest)
+        assert transformer.detector_ is not None
+        assert isinstance(transformer.detector_, IsolationForest)
 
     def test_transform_method(self, data_with_outliers: pd.DataFrame):
         """正常系: transformメソッド."""
@@ -310,8 +310,8 @@ class TestCategoricalPipelineTransformer:
         transformer = CategoricalPipelineTransformer()
         transformer.fit(categorical_data)
 
-        assert transformer.imputer is not None
-        assert transformer.encoder is not None
+        assert transformer.imputer_ is not None
+        assert transformer.encoder_ is not None
 
     def test_transform_method(self, categorical_data: pd.DataFrame):
         """正常系: transformメソッド."""

@@ -13,7 +13,6 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
 
     def __init__(self):
         """CategoricalEncoderを初期化。"""
-        self.encoders_ = {}
 
     def fit(self, X, y=None):
         """

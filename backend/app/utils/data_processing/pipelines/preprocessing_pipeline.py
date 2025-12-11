@@ -27,21 +27,21 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, method="isolation_forest", contamination=0.1, **kwargs):
         self.method = method
         self.contamination = contamination
-        self.detector = None
+        self.detector_ = None
         # Ignore extra kwargs to maintain compatibility
 
     def fit(self, X, y=None):
         if self.method == "isolation_forest":
-            self.detector = IsolationForest(
+            self.detector_ = IsolationForest(
                 contamination=self.contamination, random_state=42
             )
-            self.detector.fit(X)
+            self.detector_.fit(X)
         return self
 
     def transform(self, X):
-        if self.detector is None:
+        if self.detector_ is None:
             return X
-        predictions = self.detector.predict(X)
+        predictions = self.detector_.predict(X)
         outlier_mask = predictions == -1  # -1 indicates outliers
         if isinstance(X, pd.DataFrame):
             X_transformed = X.copy()
@@ -165,23 +165,23 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
         self.fill_value = fill_value
         self.encoding = encoding
         self.categorical_encoding = categorical_encoding
-        self.imputer = None
-        self.encoder = None
+        self.imputer_ = None
+        self.encoder_ = None
 
     def fit(self, X, y=None):
         if isinstance(X, pd.DataFrame):
             # Fit imputer
-            self.imputer = SimpleImputer(
+            self.imputer_ = SimpleImputer(
                 strategy=self.strategy, fill_value=self.fill_value
             )
-            self.imputer.fit(X)
+            self.imputer_.fit(X)
 
             # Fit encoder if enabled
             if self.encoding:
-                self.encoder = CategoricalEncoderTransformer(
+                self.encoder_ = CategoricalEncoderTransformer(
                     encoding_type=self.categorical_encoding
                 )
-                self.encoder.fit(X)
+                self.encoder_.fit(X)
 
         return self
 
@@ -190,7 +190,7 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
             result = X.copy()
 
             # Apply imputation
-            if self.imputer is not None:
+            if self.imputer_ is not None:
                 # Impute column by column to maintain DataFrame
                 for col in result.columns:
                     # Pandas Series比較を安全に行う - boolに変換してから評価
@@ -209,12 +209,12 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
                         else:
                             # Normal imputation for columns with some valid values
                             col_data = result[col].values.reshape(-1, 1)
-                            imputed = self.imputer.fit_transform(col_data)
+                            imputed = self.imputer_.fit_transform(col_data)
                             result[col] = imputed.flatten()
 
             # Apply encoding
-            if self.encoder is not None:
-                result = self.encoder.transform(result)
+            if self.encoder_ is not None:
+                result = self.encoder_.transform(result)
 
             return result
         return X

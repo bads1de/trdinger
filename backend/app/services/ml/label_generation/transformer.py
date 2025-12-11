@@ -30,6 +30,7 @@ class PriceChangeTransformer(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         """フィット（何もしない）"""
+        self.fitted_ = True
         return self
 
     def transform(self, X: Union[pd.Series, pd.DataFrame]) -> np.ndarray:

@@ -25,7 +25,6 @@ class DataImputer(BaseEstimator, TransformerMixin):
             - 'constant': 欠損値を定数値で置き換え（fill_valueを提供する必要あり）
         """
         self.strategy = strategy
-        self.imputers_ = {}
 
     def fit(self, X, y=None):
         """
