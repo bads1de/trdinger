@@ -2,15 +2,15 @@
 特徴量重要度分析スクリプト
 
 最新のMLパイプライン実行結果から特徴量重要度を抽出し、
-上位/下位特徴量をレポートします。
+統計情報、上位/下位特徴量、および削除推奨候補をレポートします。
 """
 
 import sys
+import json
 from pathlib import Path
 import joblib
 import pandas as pd
 import numpy as np
-import json # ADDED
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -46,7 +46,9 @@ def analyze_feature_importance(results_dir: str):
         importances = model.feature_importances_
         if loaded_feature_names: # 読み込んだ特徴量名を優先
             feature_names = loaded_feature_names
-        elif hasattr(model, "feature_name_") and model.feature_name_: # モデルが保持している場合
+        elif hasattr(model, "feature_names_"): # CatBoostなど
+            feature_names = model.feature_names_
+        elif hasattr(model, "feature_name_") and model.feature_name_: # LightGBMなど
             feature_names = model.feature_name_
         else: # どちらもなければGeneric名
             feature_names = [f"Feature_{i}" for i in range(len(importances))]
@@ -64,19 +66,27 @@ def analyze_feature_importance(results_dir: str):
     print(f"総特徴量数: {len(importance_df)}")
     print(f"平均重要度: {importance_df['importance'].mean():.6f}")
     print(f"中央値重要度: {importance_df['importance'].median():.6f}")
+    print(f"標準偏差: {importance_df['importance'].std():.6f}")
     print(f"重要度ゼロの特徴量数: {(importance_df['importance'] == 0).sum()}")
 
-    # 上位20特徴量
-    print(f"\n=== 上位20特徴量（最も重要） ===")
-    top_20 = importance_df.head(20)
-    for idx, row in top_20.iterrows():
-        print(f"{row['feature']:40s} | {row['importance']:.6f}")
+    # パーセンタイル
+    percentiles = [10, 25, 50, 75, 90]
+    print(f"\nパーセンタイル:")
+    for p in percentiles:
+        val = np.percentile(importance_df["importance"], p)
+        print(f"  {p}%ile: {val:.6f}")
 
-    # 下位20特徴量
-    print(f"\n=== 下位20特徴量（削除候補） ===")
-    bottom_20 = importance_df.tail(20)
-    for idx, row in bottom_20.iterrows():
-        print(f"{row['feature']:40s} | {row['importance']:.6f}")
+    # 上位30特徴量
+    print(f"\n=== 上位30特徴量（最も重要） ===")
+    top_30 = importance_df.head(30)
+    for idx, row in top_30.iterrows():
+        print(f"{row['feature']:45s} | {row['importance']:.6f}")
+
+    # 下位30特徴量
+    print(f"\n=== 下位30特徴量（削除候補） ===")
+    bottom_30 = importance_df.tail(30)
+    for idx, row in bottom_30.iterrows():
+        print(f"{row['feature']:45s} | {row['importance']:.6f}")
 
     # 新規追加した特徴量の分析
     print(f"\n=== 新規追加特徴量の重要度 ===")
@@ -122,24 +132,56 @@ def analyze_feature_importance(results_dir: str):
         print(f"検出された新規特徴量: {len(new_features)}")
         for idx, row in new_features.iterrows():
             rank = importance_df.index.get_loc(idx) + 1
-            print(f"[Rank {rank:3d}] {row['feature']:40s} | {row['importance']:.6f}")
+            print(f"[Rank {rank:3d}] {row['feature']:45s} | {row['importance']:.6f}")
     else:
         print("新規特徴量が検出されませんでした")
 
-    # 削除推奨特徴量（重要度が非常に低い）
-    print(f"\n=== 削除推奨（重要度 < 平均の10%） ===")
-    threshold = importance_df["importance"].mean() * 0.1
-    low_importance = importance_df[importance_df["importance"] < threshold]
+    # 削除推奨特徴量（複数の基準で判定）
+    print(f"\n=== 削除推奨分析 ===")
+    
+    # 基準1: 平均の10%未満
+    threshold_10 = importance_df["importance"].mean() * 0.1
+    low_importance_10 = importance_df[importance_df["importance"] < threshold_10]
+    print(f"基準1 (平均の10%未満 < {threshold_10:.6f}): {len(low_importance_10)}件")
 
-    print(f"該当特徴量数: {len(low_importance)}")
-    print("削除候補:")
-    for idx, row in low_importance.iterrows():
-        print(f"  - {row['feature']}")
+    # 基準2: 平均の20%未満
+    threshold_20 = importance_df["importance"].mean() * 0.2
+    low_importance_20 = importance_df[importance_df["importance"] < threshold_20]
+    print(f"基準2 (平均の20%未満 < {threshold_20:.6f}): {len(low_importance_20)}件")
+
+    # 基準3: 中央値の50%未満
+    threshold_median_50 = importance_df["importance"].median() * 0.5
+    low_importance_median = importance_df[importance_df["importance"] < threshold_median_50]
+    print(f"基準3 (中央値の50%未満 < {threshold_median_50:.6f}): {len(low_importance_median)}件")
+
+    print("\n削除候補詳細 (基準2: 平均の20%未満):")
+    for idx, row in low_importance_20.iterrows():
+        print(f"  - {row['feature']:45s} | {row['importance']:.6f}")
 
     # CSVに保存
     output_file = results_path / "feature_importance.csv"
     importance_df.to_csv(output_file, index=False, encoding="utf-8-sig")
-    print(f"\n特徴量重要度を保存しました: {output_file}")
+    print(f"\n特徴量重要度(CSV)を保存しました: {output_file}")
+
+    # JSONに保存（詳細情報付き）
+    output_json = results_path / "feature_importance_detailed.json"
+    importance_dict = {
+        "statistics": {
+            "total_features": len(importance_df),
+            "mean": float(importance_df["importance"].mean()),
+            "median": float(importance_df["importance"].median()),
+            "std": float(importance_df["importance"].std()),
+            "threshold_10pct_mean": float(threshold_10),
+            "threshold_20pct_mean": float(threshold_20),
+            "threshold_50pct_median": float(threshold_median_50),
+        },
+        "features": importance_df.to_dict(orient="records"),
+        "low_importance_candidates_mean_20pct": low_importance_20["feature"].tolist(),
+    }
+
+    with open(output_json, "w", encoding="utf-8") as f:
+        json.dump(importance_dict, f, indent=2, ensure_ascii=False)
+    print(f"特徴量重要度詳細(JSON)を保存しました: {output_json}")
 
     return importance_df
 
@@ -147,7 +189,19 @@ def analyze_feature_importance(results_dir: str):
 if __name__ == "__main__":
     # 最新の結果ディレクトリを自動検出
     results_base = Path(__file__).parent.parent.parent / "results" / "ml_pipeline"
-    latest_dir = max(results_base.glob("run_*"), key=lambda x: x.stat().st_mtime)
+    
+    # ディレクトリが存在するか確認
+    if not results_base.exists():
+        print(f"ディレクトリが見つかりません: {results_base}")
+        # テスト用のダミー実行を避けるため、ここで終了
+        sys.exit(0)
+        
+    runs = list(results_base.glob("run_*"))
+    if not runs:
+        print(f"実行結果が見つかりません: {results_base}")
+        sys.exit(0)
+
+    latest_dir = max(runs, key=lambda x: x.stat().st_mtime)
 
     print(f"最新の実行結果: {latest_dir}")
     analyze_feature_importance(str(latest_dir))
