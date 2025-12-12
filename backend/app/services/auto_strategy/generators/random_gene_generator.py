@@ -24,6 +24,7 @@ from ..models.strategy_models import (
 from ..serializers.gene_serialization import GeneSerializer
 from .condition_generator import ConditionGenerator
 from .random.condition_generator import ConditionGenerator as RandomConditionGenerator
+from .random.entry_generator import EntryGenerator
 from .random.indicator_generator import IndicatorGenerator
 from .random.operand_generator import OperandGenerator
 from .random.position_sizing_generator import PositionSizingGenerator
@@ -85,12 +86,12 @@ class RandomGeneGenerator:
         self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
 
-        # 分割されたジェネレーターのインスタンスを作成
         self.indicator_generator = IndicatorGenerator(config)
         self.condition_generator = RandomConditionGenerator(config)
         self.tpsl_generator = TPSLGenerator(config)
         self.position_sizing_generator = PositionSizingGenerator(config)
         self.operand_generator = OperandGenerator(config)
+        self.entry_generator = EntryGenerator(config)
 
     def _ensure_or_with_fallback(
         self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
@@ -237,6 +238,11 @@ class RandomGeneGenerator:
             self.position_sizing_generator.generate_position_sizing_gene()
         )
 
+        # エントリー遺伝子を生成（GA最適化対象）
+        entry_gene = self.entry_generator.generate_entry_gene()
+        long_entry_gene = self.entry_generator.generate_entry_gene()
+        short_entry_gene = self.entry_generator.generate_entry_gene()
+
         gene = StrategyGene(
             indicators=indicators,
             entry_conditions=entry_conditions,  # 後方互換性
@@ -244,10 +250,13 @@ class RandomGeneGenerator:
             long_entry_conditions=long_entry_conditions,  # 新機能
             short_entry_conditions=short_entry_conditions,  # 新機能
             risk_management=risk_management,
-            tpsl_gene=tpsl_gene,  # 新しいTP/SL遺伝子
+            tpsl_gene=tpsl_gene,  # TP/SL遺伝子
             long_tpsl_gene=long_tpsl_gene,  # Long TP/SL
             short_tpsl_gene=short_tpsl_gene,  # Short TP/SL
-            position_sizing_gene=position_sizing_gene,  # 新しいポジションサイジング遺伝子
+            position_sizing_gene=position_sizing_gene,  # ポジションサイジング遺伝子
+            entry_gene=entry_gene,  # エントリー遺伝子
+            long_entry_gene=long_entry_gene,  # Longエントリー遺伝子
+            short_entry_gene=short_entry_gene,  # Shortエントリー遺伝子
             metadata={"generated_by": "RandomGeneGenerator"},
         )
 

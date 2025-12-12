@@ -569,8 +569,9 @@ class TestIndividualEvaluator:
         """データのキャッシング動作テスト"""
         mock_individual = [1, 2, 3, 4, 5]
 
-        # モックデータ
+        # モックデータ（DataFrameをシミュレート）
         mock_data = Mock(name="MockDataFrame")
+        mock_data.empty = False  # DataFrameの empty 属性をシミュレート
         # data_serviceプロパティをモック化
         message_mock = Mock()
         message_mock.get_data_for_backtest.return_value = mock_data
@@ -613,9 +614,13 @@ class TestIndividualEvaluator:
         # 1回目の評価（データ取得発生）
         self.evaluator.evaluate_individual(mock_individual, ga_config)
 
-        # 検証1: データ取得が呼ばれたか
+        # 検証1: データ取得が呼ばれたか（メインTF + 1分足の最大2回）
         self.mock_backtest_service.ensure_data_service_initialized.assert_called()
-        self.mock_backtest_service.data_service.get_data_for_backtest.assert_called_once()
+        # メインTFデータは必ず取得される、さらに1分足データも取得される可能性がある
+        initial_call_count = (
+            self.mock_backtest_service.data_service.get_data_for_backtest.call_count
+        )
+        assert initial_call_count >= 1  # 最低1回（メインTF用）
 
         # 検証2: run_backtestにpreloaded_dataが渡されたか
         args, kwargs = self.mock_backtest_service.run_backtest.call_args
@@ -623,11 +628,17 @@ class TestIndividualEvaluator:
         assert kwargs.get("preloaded_data") == mock_data
 
         # 2回目の評価（キャッシュ利用）
-        self.mock_backtest_service.data_service.get_data_for_backtest.reset_mock()
+        # リセット前の呼び出し回数を記録
+        call_count_before_2nd = (
+            self.mock_backtest_service.data_service.get_data_for_backtest.call_count
+        )
         self.evaluator.evaluate_individual(mock_individual, ga_config)
+        call_count_after_2nd = (
+            self.mock_backtest_service.data_service.get_data_for_backtest.call_count
+        )
 
-        # 検証3: データ取得が呼ばれないこと
-        self.mock_backtest_service.data_service.get_data_for_backtest.assert_not_called()
+        # 検証3: 2回目の評価ではキャッシュが効いている（新規取得なし）
+        assert call_count_after_2nd == call_count_before_2nd
 
         # 検証4: run_backtestには依然としてcached dataが渡されること
         args, kwargs = self.mock_backtest_service.run_backtest.call_args
@@ -639,8 +650,10 @@ class TestIndividualEvaluator:
 
         # モックデータ1 (In-Sample用)
         mock_data_is = Mock(name="MockDataFrameIS")
+        mock_data_is.empty = False  # DataFrameの empty 属性をシミュレート
         # モックデータ2 (Out-of-Sample用)
         mock_data_oos = Mock(name="MockDataFrameOOS")
+        mock_data_oos.empty = False  # DataFrameの empty 属性をシミュレート
 
         # data_serviceプロパティをモック化
         message_mock = Mock()
@@ -691,12 +704,12 @@ class TestIndividualEvaluator:
         # 1. 初回実行（キャッシュなし）
         self.evaluator.evaluate_individual(mock_individual, ga_config)
 
-        # 検証1: データ取得が2回（IS用とOOS用）行われたか
-        # 厳密には回数を確認
-        assert (
+        # 検証1: データ取得が行われた（IS用+OOS用。1分足も必要に応じて）
+        # ISとOOSの2回 + 1分足データ取得の可能性
+        initial_call_count = (
             self.mock_backtest_service.data_service.get_data_for_backtest.call_count
-            == 2
         )
+        assert initial_call_count >= 2  # 最低2回（ISとOOS用）
 
         # 検証2: run_backtestがIS用とOOS用のデータで呼ばれたか確認
         # call_args_listの各呼び出しで、preloaded_dataが適切に渡されているか
@@ -708,11 +721,16 @@ class TestIndividualEvaluator:
         assert kwargs_oos.get("preloaded_data") == mock_data_oos
 
         # 2. 2回目実行（キャッシュあり）
-        self.mock_backtest_service.data_service.get_data_for_backtest.reset_mock()
+        call_count_before_2nd = (
+            self.mock_backtest_service.data_service.get_data_for_backtest.call_count
+        )
         self.evaluator.evaluate_individual(mock_individual, ga_config)
+        call_count_after_2nd = (
+            self.mock_backtest_service.data_service.get_data_for_backtest.call_count
+        )
 
-        # 検証3: データ取得が呼ばれないこと
-        self.mock_backtest_service.data_service.get_data_for_backtest.assert_not_called()
+        # 検証3: 2回目ではキャッシュからデータ取得（新規取得なし）
+        assert call_count_after_2nd == call_count_before_2nd
 
         # 検証4: それでもrun_backtestにはキャッシュデータが渡されていること
         calls_2nd = self.mock_backtest_service.run_backtest.call_args_list

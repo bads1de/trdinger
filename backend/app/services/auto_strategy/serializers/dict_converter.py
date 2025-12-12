@@ -8,6 +8,7 @@ import logging
 import uuid
 from typing import Any, Dict, Optional
 
+from ..models.entry_gene import EntryGene
 from ..models.strategy_models import (
     Condition,
     IndicatorGene,
@@ -111,6 +112,21 @@ class DictConverter:
                         strategy_gene.position_sizing_gene
                     )
                     if getattr(strategy_gene, "position_sizing_gene", None)
+                    else None
+                ),
+                "entry_gene": (
+                    self.entry_gene_to_dict(strategy_gene.entry_gene)
+                    if getattr(strategy_gene, "entry_gene", None)
+                    else None
+                ),
+                "long_entry_gene": (
+                    self.entry_gene_to_dict(strategy_gene.long_entry_gene)
+                    if getattr(strategy_gene, "long_entry_gene", None)
+                    else None
+                ),
+                "short_entry_gene": (
+                    self.entry_gene_to_dict(strategy_gene.short_entry_gene)
+                    if getattr(strategy_gene, "short_entry_gene", None)
                     else None
                 ),
                 "stateful_conditions": [
@@ -305,6 +321,46 @@ class DictConverter:
             logger.error(f"ポジションサイジング遺伝子復元エラー: {e}")
             raise ValueError(f"ポジションサイジング遺伝子の復元に失敗: {e}")
 
+    def entry_gene_to_dict(self, entry_gene) -> Optional[Dict[str, Any]]:
+        """
+        エントリー遺伝子を辞書形式に変換
+
+        Args:
+            entry_gene: エントリー遺伝子オブジェクト
+
+        Returns:
+            辞書形式のデータ
+        """
+        try:
+            if entry_gene is None:
+                return None
+
+            return entry_gene.to_dict()
+
+        except Exception as e:
+            logger.error(f"エントリー遺伝子辞書変換エラー: {e}")
+            raise ValueError(f"エントリー遺伝子の辞書変換に失敗: {e}")
+
+    def dict_to_entry_gene(self, data: Dict[str, Any]) -> Optional["EntryGene"]:
+        """
+        辞書形式からエントリー遺伝子を復元
+
+        Args:
+            data: 辞書形式のデータ
+
+        Returns:
+            エントリー遺伝子オブジェクト
+        """
+        try:
+            if data is None:
+                return None
+
+            return EntryGene.from_dict(data)
+
+        except Exception as e:
+            logger.error(f"エントリー遺伝子復元エラー: {e}")
+            raise ValueError(f"エントリー遺伝子の復元に失敗: {e}")
+
     def _clean_risk_management(self, risk_management: Dict[str, Any]) -> Dict[str, Any]:
         """
         risk_managementからTP/SL関連の設定を除外
@@ -438,6 +494,19 @@ class DictConverter:
                     data["position_sizing_gene"]
                 )
 
+            # エントリー遺伝子の復元
+            entry_gene = None
+            if "entry_gene" in data and data["entry_gene"]:
+                entry_gene = self.dict_to_entry_gene(data["entry_gene"])
+
+            long_entry_gene = None
+            if "long_entry_gene" in data and data["long_entry_gene"]:
+                long_entry_gene = self.dict_to_entry_gene(data["long_entry_gene"])
+
+            short_entry_gene = None
+            if "short_entry_gene" in data and data["short_entry_gene"]:
+                short_entry_gene = self.dict_to_entry_gene(data["short_entry_gene"])
+
             # メタデータ
             metadata = data.get("metadata", {})
 
@@ -479,6 +548,9 @@ class DictConverter:
                 long_tpsl_gene=long_tpsl_gene,
                 short_tpsl_gene=short_tpsl_gene,
                 position_sizing_gene=position_sizing_gene,
+                entry_gene=entry_gene,
+                long_entry_gene=long_entry_gene,
+                short_entry_gene=short_entry_gene,
                 metadata=metadata,
             )
 

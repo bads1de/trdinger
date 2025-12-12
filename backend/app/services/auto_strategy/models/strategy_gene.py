@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .condition import Condition, ConditionGroup
+from .entry_gene import EntryGene
 from .enums import PositionSizingMethod
 from .indicator_gene import IndicatorGene
 from .position_sizing_gene import PositionSizingGene
@@ -39,6 +40,9 @@ class StrategyGene:
     long_tpsl_gene: Optional[TPSLGene] = None
     short_tpsl_gene: Optional[TPSLGene] = None
     position_sizing_gene: Optional[PositionSizingGene] = None
+    entry_gene: Optional[EntryGene] = None
+    long_entry_gene: Optional[EntryGene] = None
+    short_entry_gene: Optional[EntryGene] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def get_effective_long_conditions(self) -> List[Union[Condition, ConditionGroup]]:

@@ -177,6 +177,21 @@ TPSL 設定が戦略全体で単一のオブジェクトに制限されていた
 **解決された問題:**
 ティックデータがない環境（1 分足のみ）でのバックテスト信頼性を向上させました。また、従来の固定的な SL/TP では実現できなかった「利益を伸ばして損失を限定する」動的なポジション管理が可能になりました。
 
+### 3.7 エントリータイプの多様化 (Entry Type Diversification)
+
+> **解決日: 2025-12-11**
+>
+> - `EntryType` Enum を追加（MARKET/LIMIT/STOP/STOP_LIMIT の 4 種類）
+> - `EntryGene` データクラスを新設（注文タイプ、オフセット比率、有効期限を定義）
+> - `StrategyGene` に `entry_gene` / `long_entry_gene` / `short_entry_gene` フィールドを追加
+> - `EntryExecutor` サービスを新設（backtesting.py への limit/stop パラメータ計算）
+> - `UniversalStrategy.next()` に `EntryExecutor` を統合
+> - `RandomGeneGenerator` / `EntryGenerator` で自動生成対応
+> - `DictConverter` でシリアライズ/デシリアライズ対応
+
+**解決された問題:**
+成行注文のみだった戦略実行に指値・逆指値注文を追加しました。GA が自動的に「有利な価格での約定を狙う指値戦略」や「ブレイクアウトを狙う逆指値戦略」を探索できるようになり、エントリー手法の多様性が向上しました。
+
 ## 4. システムアーキテクチャ・運用上の改善
 
 ### 4.1 エラーハンドリングとデバッグ情報の損失

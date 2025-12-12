@@ -26,3 +26,12 @@ class TPSLMethod(Enum):
     VOLATILITY_BASED = "volatility_based"
     STATISTICAL = "statistical"
     ADAPTIVE = "adaptive"
+
+
+class EntryType(Enum):
+    """エントリー注文タイプ"""
+
+    MARKET = "market"  # 成行注文（現行デフォルト）
+    LIMIT = "limit"  # 指値注文（有利な価格での約定を狙う）
+    STOP = "stop"  # 逆指値注文（ブレイクアウト戦略向け）
+    STOP_LIMIT = "stop_limit"  # 逆指値指値注文（より精密な制御）

@@ -5,7 +5,8 @@
 """
 
 from .condition import Condition, ConditionGroup
-from .enums import PositionSizingMethod, TPSLMethod
+from .entry_gene import EntryGene
+from .enums import EntryType, PositionSizingMethod, TPSLMethod
 from .gene_crossover import (
     crossover_position_sizing_genes,
     crossover_tpsl_genes,
@@ -34,9 +35,11 @@ __all__ = [
     "TPSLGene",
     "PositionSizingGene",
     "TPSLResult",
+    "EntryGene",
     # Enums
     "PositionSizingMethod",
     "TPSLMethod",
+    "EntryType",
     # Validator
     "GeneValidator",
     # Utilities

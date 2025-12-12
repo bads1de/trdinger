@@ -330,6 +330,50 @@ class IndividualEvaluator:
 
             return self._data_cache[key]
 
+    def _get_cached_minute_data(self, backtest_config: Dict[str, Any]) -> Any:
+        """
+        1分足データをキャッシュから取得
+
+        1分足シミュレーション用に使用します。
+
+        Args:
+            backtest_config: バックテスト設定
+
+        Returns:
+            1分足のDataFrame、またはデータが存在しない場合はNone
+        """
+        symbol = backtest_config.get("symbol")
+        start_date = backtest_config.get("start_date")
+        end_date = backtest_config.get("end_date")
+
+        # キーの作成（"minute_"プレフィックスで通常データと区別）
+        key = ("minute", symbol, "1m", str(start_date), str(end_date))
+
+        with self._lock:
+            if key not in self._data_cache:
+                try:
+                    # データサービスが初期化されていることを確認
+                    self.backtest_service.ensure_data_service_initialized()
+
+                    # 1分足データを取得
+                    data = self.backtest_service.data_service.get_data_for_backtest(
+                        symbol=symbol,
+                        timeframe="1m",
+                        start_date=pd.to_datetime(start_date),
+                        end_date=pd.to_datetime(end_date),
+                    )
+                    if not data.empty:
+                        self._data_cache[key] = data
+                        logger.debug(f"1分足データをキャッシュしました: {key}")
+                    else:
+                        logger.debug(f"1分足データが空です: {key}")
+                        return None
+                except Exception as e:
+                    logger.warning(f"1分足データ取得エラー: {e}")
+                    return None
+
+            return self._data_cache.get(key)
+
     def _perform_single_evaluation(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Tuple[float, ...]:
@@ -358,6 +402,13 @@ class IndividualEvaluator:
 
             # データをキャッシュから取得または新規取得
             data = self._get_cached_data(backtest_config)
+
+            # 1分足データを取得（1分足シミュレーション用）
+            minute_data = self._get_cached_minute_data(backtest_config)
+            if minute_data is not None:
+                backtest_config["strategy_config"]["parameters"][
+                    "minute_data"
+                ] = minute_data
 
             # バックテスト実行
             result = self.backtest_service.run_backtest(

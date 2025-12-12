@@ -26,7 +26,7 @@
 
 ### Phase 2: 機能拡張 (High Impact)
 
-1. **エントリータイプの多様化検討**: 下位足シミュレーションの導入や、バー確定後の擬似指値ロジックなど、データ精度を担保できる範囲での指値・逆指値導入を検討する。
+（すべての項目が完了しました。詳細は [AUTO_STRATEGY_COMPLETED.md](./AUTO_STRATEGY_COMPLETED.md) を参照してください。）
 
 ### Phase 3: データ基盤と分析 (Data & Analysis)
 
