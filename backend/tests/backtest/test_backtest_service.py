@@ -169,14 +169,18 @@ def test_run_backtest_success(
         backtest_service.run_backtest.assert_called_once_with(sample_config)
 
 
-def test_run_backtest_validation_error(backtest_service, sample_config, mock_validator):
+def test_run_backtest_validation_error(backtest_service, sample_config):
     """設定検証エラー時のテスト"""
     # モックの設定
-    mock_validator.validate_config.side_effect = ValueError("Invalid config")
+    mock_orchestrator = MagicMock()
+    mock_orchestrator.run.side_effect = ValueError("Invalid config")
+    backtest_service._orchestrator = mock_orchestrator
 
-    # 実行とアサーション
-    with pytest.raises(ValueError, match="Invalid config"):
-        backtest_service.run_backtest(sample_config)
+    # オーケストレーター初期化をスキップ
+    with patch.object(backtest_service, "_ensure_orchestrator_initialized"):
+        # 実行とアサーション
+        with pytest.raises(ValueError, match="Invalid config"):
+            backtest_service.run_backtest(sample_config)
 
 
 def test_run_backtest_data_retrieval_error(backtest_service, sample_config):

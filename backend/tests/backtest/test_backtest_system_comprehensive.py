@@ -105,7 +105,9 @@ class TestBacktestSystemComprehensive:
         """バックテストサービス初期化のテスト"""
         assert backtest_service is not None
         assert hasattr(backtest_service, "run_backtest")
-        assert hasattr(backtest_service, "_validator")  # validatorは内部属性
+        # _validatorはOrchestratorに移動したため削除
+        # _db_sessionは初期状態ではNone
+        assert backtest_service._db_session is None
 
     def test_backtest_executor_initialization(self, backtest_executor):
         """バックテストエグゼキュータ初期化のテスト"""
