@@ -6,13 +6,12 @@ DB操作や永続化の責務を持たず、純粋なバックテストの実行
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 import pandas as pd
 from pydantic import ValidationError
 
-from app.schemas.backtest_config import BacktestConfig
+from app.services.backtest.backtest_config import BacktestConfig
 from ..backtest_data_service import BacktestDataService
 from ..conversion.backtest_result_converter import (
     BacktestResultConversionError,
@@ -24,7 +23,6 @@ from ..factories.strategy_class_factory import (
 )
 from ..validation.backtest_config_validator import (
     BacktestConfigValidationError,
-    BacktestConfigValidator,
 )
 from .backtest_executor import BacktestExecutionError, BacktestExecutor
 
@@ -75,7 +73,7 @@ class BacktestOrchestrator:
             # StrategyClassFactoryはまだ辞書を期待しているため、一部辞書に戻す
             # strategy_configオブジェクトを辞書に変換
             strategy_config_dict = backtest_config.strategy_config.model_dump()
-            
+
             # strategy_class が config に直接含まれている場合の対応（GAエンジンからの直接渡しなど）
             # Pydanticモデルには含まれていないため、元のconfig辞書を確認
             if "strategy_class" in config:

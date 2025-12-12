@@ -16,9 +16,6 @@ from app.services.backtest.execution.backtest_orchestrator import BacktestOrches
 from app.services.backtest.factories.strategy_class_factory import (
     StrategyClassFactory,
 )
-from app.services.backtest.validation.backtest_config_validator import (
-    BacktestConfigValidator,
-)
 
 
 @pytest.fixture
@@ -30,8 +27,6 @@ def mock_data_service():
 def orchestrator(mock_data_service):
     # コンストラクタ内でのインスタンス化をモック
     with patch(
-        "app.services.backtest.execution.backtest_orchestrator.BacktestConfigValidator"
-    ), patch(
         "app.services.backtest.execution.backtest_orchestrator.StrategyClassFactory"
     ), patch(
         "app.services.backtest.execution.backtest_orchestrator.BacktestResultConverter"

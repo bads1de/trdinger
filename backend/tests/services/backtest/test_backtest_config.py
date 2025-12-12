@@ -11,7 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 # 実装予定のモジュール（まだ存在しない）
-from app.schemas.backtest_config import (
+from app.services.backtest.backtest_config import (
     BacktestConfig,
     StrategyConfig,
     GeneratedGAParameters,
@@ -83,7 +83,7 @@ def test_missing_required_fields():
     }
     with pytest.raises(ValidationError) as excinfo:
         BacktestConfig(**invalid_data)
-    
+
     assert "strategy_name" in str(excinfo.value)
 
 
@@ -91,7 +91,7 @@ def test_invalid_data_types(valid_backtest_config_dict):
     """不正なデータ型のエラーテスト"""
     invalid_data = valid_backtest_config_dict.copy()
     invalid_data["initial_capital"] = "invalid_number"  # 数値であるべき場所へ文字列
-    
+
     with pytest.raises(ValidationError):
         BacktestConfig(**invalid_data)
 
@@ -100,7 +100,7 @@ def test_serialization(valid_backtest_config_dict):
     """辞書へのシリアライズテスト"""
     config = BacktestConfig(**valid_backtest_config_dict)
     data = config.model_dump()
-    
+
     assert data["strategy_name"] == "Test Strategy"
     assert data["strategy_config"]["strategy_type"] == "GENERATED_GA"
     # 日付はdatetimeオブジェクトのまま（json化する際は別途対応が必要だがdumpでは維持）
