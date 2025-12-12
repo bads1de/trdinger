@@ -9,9 +9,12 @@ from typing import Any, Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.config.unified_config import unified_config
+
 
 class GeneratedGAParameters(BaseModel):
     """GA生成戦略のパラメータ"""
+
     strategy_gene: Dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None
@@ -20,6 +23,7 @@ class GeneratedGAParameters(BaseModel):
 
 class StrategyConfig(BaseModel):
     """戦略設定"""
+
     strategy_type: Literal["GENERATED_GA", "MANUAL"]
     parameters: Union[GeneratedGAParameters, Dict[str, Any]]
 
@@ -35,16 +39,19 @@ class StrategyConfig(BaseModel):
 class BacktestConfig(BaseModel):
     """
     バックテスト実行設定
-    
+
     これまで辞書で受け渡されていた設定を型安全に定義します。
     """
+
     strategy_name: str = Field(..., min_length=1)
     symbol: str
     timeframe: str
     start_date: datetime
     end_date: datetime
     initial_capital: float = Field(..., gt=0)
-    commission_rate: float = Field(..., ge=0)
+    commission_rate: float = Field(
+        default=unified_config.backtest.default_commission_rate, ge=0, le=1
+    )
     slippage: float = Field(0.0, ge=0)
     strategy_config: StrategyConfig
 
@@ -59,5 +66,6 @@ class BacktestConfig(BaseModel):
             except ValueError:
                 # pandasのto_datetimeのような柔軟なパースが必要な場合
                 import pandas as pd
+
                 return pd.to_datetime(v).to_pydatetime()
         return v

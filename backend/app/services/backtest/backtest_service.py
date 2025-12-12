@@ -107,8 +107,12 @@ class BacktestService:
                 self._orchestrator = BacktestOrchestrator(self.data_service)
                 logger.info("バックテストオーケストレーターを初期化しました")
             except Exception as e:
-                logger.error(f"バックテストオーケストレーターの初期化に失敗しました: {e}")
-                raise BacktestExecutionError(f"オーケストレーターの初期化に失敗しました: {e}")
+                logger.error(
+                    f"バックテストオーケストレーターの初期化に失敗しました: {e}"
+                )
+                raise BacktestExecutionError(
+                    f"オーケストレーターの初期化に失敗しました: {e}"
+                )
 
     def _normalize_date(self, date_value: Any) -> datetime:
         """日付値をdatetimeオブジェクトに正規化"""
@@ -144,7 +148,7 @@ class BacktestService:
         バックテストを実行し、結果をデータベースに保存
 
         Args:
-            request: BacktestRequestオブジェクトまたは辞書
+            request: BacktestConfigオブジェクトまたは辞書
             db_session: データベースセッション
 
         Returns:

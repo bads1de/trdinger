@@ -5,11 +5,10 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 責務の分離により、ビジネスロジックはOrchestrationServiceに委譲されています。
 """
 
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_backtest_orchestration_service
@@ -21,34 +20,6 @@ from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
-
-
-# Pydanticモデル定義
-class StrategyConfig(BaseModel):
-    """戦略設定"""
-
-    strategy_type: str = Field(..., description="戦略タイプ")
-    parameters: Dict[str, Any] = Field(
-        default_factory=dict, description="戦略パラメータ"
-    )
-
-
-class BacktestRequest(BaseModel):
-    """バックテストリクエスト"""
-
-    strategy_name: str = Field(..., description="戦略名")
-    symbol: str = Field(..., description="取引ペア")
-    timeframe: str = Field(..., description="時間軸")
-    start_date: datetime = Field(..., description="開始日時")
-    end_date: datetime = Field(..., description="終了日時")
-    initial_capital: float = Field(..., gt=0, description="初期資金")
-    commission_rate: float = Field(
-        default=unified_config.backtest.default_commission_rate,
-        ge=0,
-        le=1,
-        description="手数料率",
-    )
-    strategy_config: StrategyConfig = Field(..., description="戦略設定")
 
 
 class BacktestResponse(BaseModel):

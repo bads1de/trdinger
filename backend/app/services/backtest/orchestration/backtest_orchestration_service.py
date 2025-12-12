@@ -233,7 +233,7 @@ class BacktestOrchestrationService:
         バックテストを実行し、結果をデータベースに保存
 
         Args:
-            request: BacktestRequestオブジェクト
+            request: BacktestConfigオブジェクト
             db: データベースセッション
 
         Returns:
