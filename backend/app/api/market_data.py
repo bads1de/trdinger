@@ -48,7 +48,7 @@ async def get_ohlcv_data(
     データベースに保存されたOHLCV（Open, High, Low, Close, Volume）データを取得します。
 
     Args:
-        symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
         timeframe: 時間軸（例: '1h', '1d'）
         limit: 取得するデータ数（1-1000）
         start_date: 開始日時（ISO形式）

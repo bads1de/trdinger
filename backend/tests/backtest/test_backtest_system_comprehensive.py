@@ -86,7 +86,7 @@ class TestBacktestSystemComprehensive:
         """サンプルバックテスト設定"""
         return {
             "strategy_name": "sample_test_strategy",
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1d",
             "start_date": "2023-01-01",
             "end_date": "2023-12-31",
@@ -122,7 +122,7 @@ class TestBacktestSystemComprehensive:
         mock_ohlcv_repo.get_ohlcv_data.return_value = sample_ohlcv_data
 
         backtest_data_service.get_data_for_backtest(
-            "BTC/USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
+            "BTC/USDT:USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
         )
 
         # データ取得（メソッド名を修正）
@@ -185,7 +185,7 @@ class TestBacktestSystemComprehensive:
             "strategy_name": "invalid_date_test",
             "start_date": "2023-12-31",
             "end_date": "2023-01-01",  # 開始 > 終了
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1d",
             "initial_capital": 10000,
             "commission_rate": 0.001,
@@ -247,7 +247,7 @@ class TestBacktestSystemComprehensive:
         converted = converter.convert_backtest_results(
             stats=stats,
             strategy_name="test",
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1d",
             initial_capital=10000,
             start_date="2023-01-01",
@@ -264,7 +264,7 @@ class TestBacktestSystemComprehensive:
 
             try:
                 backtest_data_service.get_data_for_backtest(
-                    "BTC/USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
+                    "BTC/USDT:USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)
                 )
                 # エラーが適切に処理される
                 assert True
@@ -405,7 +405,7 @@ class TestBacktestSystemComprehensive:
 
         valid_strategy_config = {
             "strategy_name": "strategy_config_test",
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1d",
             "start_date": "2023-01-01",
             "end_date": "2023-12-31",
@@ -429,7 +429,7 @@ class TestBacktestSystemComprehensive:
         """バックテスト結果一貫性のテスト"""
         # 同じ条件で同じ結果
         config = {
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1d",
             "start_date": "2023-01-01",
             "end_date": "2023-01-31",
@@ -441,7 +441,7 @@ class TestBacktestSystemComprehensive:
     def test_data_synchronization_across_markets(self, backtest_data_service):
         """市場間データ同期のテスト"""
         # 複数市場データ
-        markets = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+        markets = ["BTC/USDT:USDT", "ETH/USDT", "SOL/USDT"]
 
         for market in markets:
             try:

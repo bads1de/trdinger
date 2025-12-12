@@ -31,6 +31,17 @@ from .parallel_evaluator import ParallelEvaluator
 logger = logging.getLogger(__name__)
 
 
+class EvaluatorWrapper:
+    """評価関数のラッパー（Pickle化対応）"""
+
+    def __init__(self, evaluator, config):
+        self.evaluator = evaluator
+        self.config = config
+
+    def __call__(self, individual):
+        return self.evaluator.evaluate_individual(individual, self.config)
+
+
 class GeneticAlgorithmEngine:
     """遺伝的アルゴリズムエンジン。
 
@@ -253,7 +264,7 @@ class GeneticAlgorithmEngine:
         parallel_evaluator = None
         if config and getattr(config, "enable_parallel_evaluation", False):
             parallel_evaluator = ParallelEvaluator(
-                evaluate_func=self.individual_evaluator.evaluate_individual,
+                evaluate_func=EvaluatorWrapper(self.individual_evaluator, config),
                 max_workers=getattr(config, "max_evaluation_workers", None),
                 timeout_per_individual=getattr(config, "evaluation_timeout", 300.0),
             )

@@ -122,7 +122,7 @@ class TestResultConversion:
         result = converter.convert_backtest_results(
             stats=mock_backtest_stats,
             strategy_name="TestStrategy",
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             initial_capital=10000.0,
             start_date=datetime(2024, 1, 1),
@@ -131,7 +131,7 @@ class TestResultConversion:
         )
 
         assert result["strategy_name"] == "TestStrategy"
-        assert result["symbol"] == "BTC/USDT"
+        assert result["symbol"] == "BTC/USDT:USDT"
         assert result["timeframe"] == "1h"
         assert result["initial_capital"] == 10000.0
         assert result["commission_rate"] == 0.001
@@ -145,7 +145,7 @@ class TestResultConversion:
         result = converter.convert_backtest_results(
             stats=mock_backtest_stats,
             strategy_name="TestStrategy",
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             initial_capital=10000.0,
             start_date=datetime(2024, 1, 1),
@@ -168,7 +168,7 @@ class TestResultConversion:
         result = converter.convert_backtest_results(
             stats=mock_backtest_stats,
             strategy_name="TestStrategy",
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             initial_capital=10000.0,
             start_date=datetime(2024, 1, 1),
@@ -186,7 +186,7 @@ class TestResultConversion:
         result = converter.convert_backtest_results(
             stats=mock_backtest_stats,
             strategy_name="TestStrategy",
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             initial_capital=10000.0,
             start_date=datetime(2024, 1, 1),
@@ -509,7 +509,7 @@ class TestEdgeCases:
         result = converter.convert_backtest_results(
             stats=stats,
             strategy_name="Test",
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             initial_capital=10000.0,
             start_date=datetime(2024, 1, 1),
@@ -538,7 +538,7 @@ class TestEdgeCases:
         result = converter.convert_backtest_results(
             stats=stats,
             strategy_name="ExtremeStrategy",
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             initial_capital=10000.0,
             start_date=datetime(2024, 1, 1),
@@ -560,7 +560,7 @@ class TestEdgeCases:
             converter.convert_backtest_results(
                 stats=pd.Series({"Return [%]": 10.0}),
                 strategy_name="Test",
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 initial_capital=10000.0,
                 start_date=12345,  # 無効な日付型

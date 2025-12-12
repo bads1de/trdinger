@@ -82,7 +82,7 @@ class TestCollectHistoricalData:
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await service.collect_historical_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
             )
@@ -104,7 +104,7 @@ class TestCollectHistoricalData:
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await service.collect_historical_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
             )
@@ -127,7 +127,7 @@ class TestCollectHistoricalData:
 
         with pytest.raises(ccxt.NetworkError):
             await service.collect_historical_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
             )
@@ -143,7 +143,7 @@ class TestCollectHistoricalData:
 
         with pytest.raises(ccxt.ExchangeError):
             await service.collect_historical_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
             )
@@ -241,7 +241,7 @@ class TestCollectHistoricalDataWithStartDate:
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await service.collect_historical_data_with_start_date(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
                 since_timestamp=1609459200000,
@@ -262,7 +262,7 @@ class TestCollectHistoricalDataWithStartDate:
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await service.collect_historical_data_with_start_date(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
             )
@@ -298,7 +298,7 @@ class TestErrorHandling:
         mock_repository.get_latest_timestamp.return_value = None
 
         result = await service.collect_historical_data(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             repository=mock_repository,
         )
@@ -323,7 +323,7 @@ class TestEdgeCases:
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await service.collect_historical_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
             )
@@ -339,7 +339,7 @@ class TestEdgeCases:
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             result = await service.collect_historical_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
             )

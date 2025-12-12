@@ -215,7 +215,7 @@ class TestTimestampMethods:
         expected_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
 
-        result = repository.get_latest_timestamp("timestamp", {"symbol": "BTC/USDT"})
+        result = repository.get_latest_timestamp("timestamp", {"symbol": "BTC/USDT:USDT"})
 
         assert result == expected_time
 
@@ -232,7 +232,7 @@ class TestTimestampMethods:
         expected_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
 
-        result = repository.get_oldest_timestamp("timestamp", {"symbol": "BTC/USDT"})
+        result = repository.get_oldest_timestamp("timestamp", {"symbol": "BTC/USDT:USDT"})
 
         assert result == expected_time
 
@@ -255,7 +255,7 @@ class TestRecordCountMethods:
         """レコード数が取得できる"""
         repository.db.scalar.return_value = 100
 
-        count = repository.get_record_count({"symbol": "BTC/USDT"})
+        count = repository.get_record_count({"symbol": "BTC/USDT:USDT"})
 
         assert count == 100
 
@@ -298,7 +298,7 @@ class TestDeleteOperations:
         mock_result.rowcount = 5
         repository.db.execute.return_value = mock_result
 
-        count = repository._delete_records_by_filter("symbol", "BTC/USDT")
+        count = repository._delete_records_by_filter("symbol", "BTC/USDT:USDT")
 
         assert count == 5
         repository.db.commit.assert_called_once()
@@ -460,13 +460,13 @@ class TestAvailableSymbols:
     def test_get_available_symbols_success(self, repository: BaseRepository) -> None:
         """利用可能なシンボルが取得できる"""
         mock_scalars = MagicMock()
-        mock_scalars.all.return_value = ["BTC/USDT", "ETH/USDT"]
+        mock_scalars.all.return_value = ["BTC/USDT:USDT", "ETH/USDT"]
         repository.db.scalars.return_value = mock_scalars
 
         symbols = repository.get_available_symbols()
 
         assert len(symbols) == 2
-        assert "BTC/USDT" in symbols
+        assert "BTC/USDT:USDT" in symbols
 
 
 class TestValidationMethods:
@@ -484,7 +484,7 @@ class TestValidationMethods:
 
     def test_validate_records_missing_field(self, repository: BaseRepository) -> None:
         """必須フィールドがない場合Falseが返される"""
-        records = [{"symbol": "BTC/USDT"}]
+        records = [{"symbol": "BTC/USDT:USDT"}]
         required_fields = ["symbol", "timestamp"]
 
         is_valid = repository.validate_records(records, required_fields)

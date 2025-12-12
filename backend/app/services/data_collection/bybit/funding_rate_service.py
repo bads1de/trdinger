@@ -41,7 +41,7 @@ class BybitFundingRateService(BybitService):
         現在のファンディングレートを取得
 
         Args:
-            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
 
         Returns:
             現在のファンディングレートデータ
@@ -60,7 +60,7 @@ class BybitFundingRateService(BybitService):
         ファンディングレート履歴を取得
 
         Args:
-            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
             limit: 取得するデータ数（1-1000）
             since: 開始タイムスタンプ（ミリ秒）
 
@@ -82,7 +82,7 @@ class BybitFundingRateService(BybitService):
         全期間のファンディングレート履歴を取得
 
         Args:
-            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
 
         Returns:
             全期間のファンディングレート履歴データのリスト
@@ -113,7 +113,7 @@ class BybitFundingRateService(BybitService):
         最新のタイムスタンプ以降のデータのみを取得します。
 
         Args:
-            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
             repository: FundingRateRepository（テスト用）
 
         Returns:

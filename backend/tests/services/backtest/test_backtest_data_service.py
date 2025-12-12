@@ -130,7 +130,7 @@ class TestDataRetrieval:
             return_value=sample_ohlcv_data,
         ):
             result = backtest_data_service.get_data_for_backtest(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -155,7 +155,7 @@ class TestDataRetrieval:
             return_value=integrated_data,
         ):
             result = backtest_data_service.get_data_for_backtest(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -174,7 +174,7 @@ class TestDataRetrieval:
             return_value=pd.DataFrame(),
         ):
             result = backtest_data_service.get_data_for_backtest(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -193,7 +193,7 @@ class TestDataRetrieval:
                 ValueError, match="バックテスト用データの作成に失敗しました"
             ):
                 backtest_data_service.get_data_for_backtest(
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                     timeframe="1h",
                     start_date=datetime(2024, 1, 1),
                     end_date=datetime(2024, 1, 5),
@@ -218,7 +218,7 @@ class TestOHLCVDataRetrieval:
             ),
         ):
             result = backtest_data_service.get_ohlcv_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -248,7 +248,7 @@ class TestOHLCVDataRetrieval:
             ),
         ):
             result = backtest_data_service.get_ohlcv_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -275,7 +275,7 @@ class TestOHLCVDataRetrieval:
             ),
         ):
             result = backtest_data_service.get_ohlcv_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -297,7 +297,7 @@ class TestMLTrainingData:
             return_value=sample_ohlcv_data,
         ):
             result = backtest_data_service.get_ml_training_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -320,7 +320,7 @@ class TestMLTrainingData:
             return_value=integrated_data,
         ):
             result = backtest_data_service.get_ml_training_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -340,7 +340,7 @@ class TestMLTrainingData:
                 ValueError, match="MLトレーニング用データの作成に失敗しました"
             ):
                 backtest_data_service.get_ml_training_data(
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                     timeframe="1h",
                     start_date=datetime(2024, 1, 1),
                     end_date=datetime(2024, 1, 5),
@@ -378,7 +378,7 @@ class TestEventLabeledData:
             ),
         ):
             labeled_df, info = backtest_data_service.get_event_labeled_training_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -397,7 +397,7 @@ class TestEventLabeledData:
             return_value=pd.DataFrame(),
         ):
             labeled_df, info = backtest_data_service.get_event_labeled_training_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -453,7 +453,7 @@ class TestDataValidation:
             ),
         ):
             result = backtest_data_service.get_ohlcv_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -477,7 +477,7 @@ class TestDataValidation:
             return_value=integrated_data,
         ):
             result = backtest_data_service.get_data_for_backtest(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -521,7 +521,7 @@ class TestErrorHandling:
         ):
             with pytest.raises(Exception):
                 backtest_data_service.get_ohlcv_data(
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                     timeframe="1h",
                     start_date=datetime(2024, 1, 1),
                     end_date=datetime(2024, 1, 5),
@@ -538,7 +538,7 @@ class TestErrorHandling:
                 ValueError, match="バックテスト用データの作成に失敗しました"
             ):
                 backtest_data_service.get_data_for_backtest(
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                     timeframe="1h",
                     start_date=datetime(2024, 1, 5),
                     end_date=datetime(2024, 1, 1),

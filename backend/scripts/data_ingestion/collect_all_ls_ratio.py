@@ -37,9 +37,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def get_linear_symbols():
-    """Bybitから有効なUSDT無期限契約のシンボルリストを取得（BTC/USDTのみ）"""
-    logger.info("対象シンボルをフィルタリング中 (BTC/USDTのみ)...")
-    return ["BTC/USDT"]
+    """Bybitから有効なUSDT無期限契約のシンボルリストを取得（BTC/USDT:USDTのみ）"""
+    logger.info("対象シンボルをフィルタリング中 (BTC/USDT:USDTのみ)...")
+    return ["BTC/USDT:USDT"]
 
 async def collect_symbol_data(service, repository, symbol, period):
     """1つのシンボルのデータを収集"""

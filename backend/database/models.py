@@ -195,7 +195,7 @@ class LongShortRatioData(Base):
     # 主キー
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # 取引ペア（例: BTC/USDT）
+    # 取引ペア（例: BTC/USDT:USDT）
     symbol = Column(String(50), nullable=False, index=True)
 
     # 期間（例: 5min, 1h, 1d）
@@ -255,7 +255,7 @@ class BacktestResult(Base):
     # 戦略名
     strategy_name = Column(String(100), nullable=False)
 
-    # 取引ペア（例: BTC/USDT）
+    # 取引ペア（例: BTC/USDT:USDT）
     symbol = Column(String(50), nullable=False, index=True)
 
     # 時間軸（例: 1h, 4h, 1d）

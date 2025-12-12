@@ -86,7 +86,7 @@ class TestParameterValidation:
 
     async def test_validate_symbol_valid(self, service):
         """有効なシンボルが検証を通過することを確認"""
-        service._validate_symbol("BTC/USDT")
+        service._validate_symbol("BTC/USDT:USDT")
         service._validate_symbol("BTC/USDT:USDT")
 
     async def test_validate_symbol_invalid_empty(self, service):
@@ -155,7 +155,7 @@ class TestParameterValidation:
     async def test_validate_parameters_valid(self, mock_unified_config, service):
         """有効なパラメータが検証を通過することを確認"""
         mock_unified_config.data_collection.max_limit = 1000
-        service._validate_parameters("BTC/USDT", 100)
+        service._validate_parameters("BTC/USDT:USDT", 100)
 
     @patch("app.services.data_collection.bybit.bybit_service.unified_config")
     async def test_validate_parameters_invalid_symbol(
@@ -173,7 +173,7 @@ class TestParameterValidation:
         """無効なlimitがValueErrorを発生させることを確認"""
         mock_unified_config.data_collection.max_limit = 1000
         with pytest.raises(ValueError):
-            service._validate_parameters("BTC/USDT", 0)
+            service._validate_parameters("BTC/USDT:USDT", 0)
 
 
 @pytest.mark.asyncio
@@ -269,7 +269,7 @@ class TestHelperMethods:
 
     async def test_convert_to_api_symbol_no_colon(self, service):
         """コロンなしシンボルの変換を確認"""
-        result = service._convert_to_api_symbol("BTC/USDT")
+        result = service._convert_to_api_symbol("BTC/USDT:USDT")
         assert result == "BTCUSDT"
 
     async def test_convert_to_api_symbol_already_converted(self, service):
@@ -411,7 +411,7 @@ class TestDatabaseSessionManagement:
             mock_get_db.return_value = iter([mock_db])
 
             result = await service._get_latest_timestamp_from_db(
-                mock_repo_class, "get_latest_timestamp", "BTC/USDT"
+                mock_repo_class, "get_latest_timestamp", "BTC/USDT:USDT"
             )
 
             expected_timestamp = int(test_datetime.timestamp() * 1000)
@@ -431,7 +431,7 @@ class TestDatabaseSessionManagement:
             mock_get_db.return_value = iter([mock_db])
 
             result = await service._get_latest_timestamp_from_db(
-                mock_repo_class, "get_latest_timestamp", "BTC/USDT"
+                mock_repo_class, "get_latest_timestamp", "BTC/USDT:USDT"
             )
 
             assert result is None
@@ -446,7 +446,7 @@ class TestDatabaseSessionManagement:
             mock_get_db.side_effect = Exception("Database error")
 
             result = await service._get_latest_timestamp_from_db(
-                mock_repo_class, "get_latest_timestamp", "BTC/USDT"
+                mock_repo_class, "get_latest_timestamp", "BTC/USDT:USDT"
             )
 
             assert result is None

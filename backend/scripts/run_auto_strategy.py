@@ -226,7 +226,7 @@ def create_backtest_config(args: argparse.Namespace) -> Dict[str, Any]:
         "start_date": args.start_date,
         "end_date": args.end_date,
         "initial_capital": args.initial_capital,
-        "commission": 0.0004,  # 0.04%手数料
+        "commission_rate": 0.0004,  # 0.04%手数料
         "slippage": 0.0001,  # 0.01%スリッページ
     }
 

@@ -45,13 +45,16 @@ def orchestrator(mock_data_service):
 def sample_config():
     return {
         "strategy_name": "test_strategy",
-        "symbol": "BTC/USDT",
+        "symbol": "BTC/USDT:USDT",
         "timeframe": "1h",
         "start_date": "2023-01-01",
         "end_date": "2023-01-31",
         "initial_capital": 10000,
         "commission_rate": 0.001,
-        "strategy_config": {},
+        "strategy_config": {
+            "strategy_type": "GENERATED_GA",
+            "parameters": {"strategy_gene": {}},
+        },
     }
 
 
@@ -69,7 +72,7 @@ def test_run_orchestration_flow(orchestrator, sample_config):
     正しい順序と引数で呼び出されることを確認
     """
     # 依存コンポーネントのモック設定
-    orchestrator._validator.validate_config = MagicMock()
+    # _validatorはPydanticに置き換わったため削除
     orchestrator._strategy_factory.create_strategy_class = MagicMock(
         return_value="StrategyClass"
     )
@@ -85,8 +88,7 @@ def test_run_orchestration_flow(orchestrator, sample_config):
     result = orchestrator.run(sample_config)
 
     # 検証
-    # 1. バリデーション
-    orchestrator._validator.validate_config.assert_called_once_with(sample_config)
+    # 1. バリデーション (Pydantic内で暗黙的に実行されるため、明示的な呼び出し確認は不要)
 
     # 2. 戦略クラス生成
     orchestrator._strategy_factory.create_strategy_class.assert_called_once()
@@ -97,7 +99,7 @@ def test_run_orchestration_flow(orchestrator, sample_config):
     call_args = orchestrator._executor.execute_backtest.call_args[1]
     assert call_args["strategy_class"] == "StrategyClass"
     assert call_args["strategy_parameters"] == {"param": 1}
-    assert call_args["symbol"] == "BTC/USDT"
+    assert call_args["symbol"] == "BTC/USDT:USDT"
 
     # 4. 結果変換
     orchestrator._result_converter.convert_backtest_results.assert_called_once()

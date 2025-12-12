@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/open-interest", tags=["open-interest"])
 
 @router.get("/")
 async def get_open_interest_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
+    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
     limit: Optional[int] = Query(1000, description="取得件数制限（最大1000）"),
@@ -54,7 +54,7 @@ async def get_open_interest_data(
 
 @router.post("/collect")
 async def collect_open_interest_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT'）"),
+    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
     limit: Optional[int] = Query(
         100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"
     ),
@@ -70,7 +70,7 @@ async def collect_open_interest_data(
     Bybit取引所からオープンインタレストデータを取得し、データベースに保存します。
 
     Args:
-        symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
         limit: 取得するデータ数（1-1000、fetch_all=trueの場合は無視）
         fetch_all: 全期間のデータを取得するかどうか
         db: データベースセッション

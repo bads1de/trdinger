@@ -265,7 +265,7 @@ class TestGAConfig:
     def test_initialization_with_defaults(self):
         """デフォルト値での初期化テスト"""
         config = GAConfig()
-        assert config.fallback_symbol == "BTC/USDT"
+        assert config.fallback_symbol == "BTC/USDT:USDT"
         assert config.fallback_timeframe == "1d"
         assert config.population_size == 50
         assert config.generations == 20

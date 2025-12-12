@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/long-short-ratio", tags=["long-short-ratio"])
 
 @router.get("/")
 async def get_long_short_ratio_data(
-    symbol: str = Query(..., description="取引ペア（例: BTC/USDT）"),
+    symbol: str = Query(..., description="取引ペア（例: BTC/USDT:USDT）"),
     period: str = Query(..., description="期間（例: 5min, 1h, 1d）"),
     limit: int = Query(100, ge=1, le=1000, description="取得件数"),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
@@ -59,7 +59,7 @@ async def get_long_short_ratio_data(
 @router.post("/collect")
 async def collect_long_short_ratio_data(
     background_tasks: BackgroundTasks,
-    symbol: str = Query(..., description="取引ペア（例: BTC/USDT）"),
+    symbol: str = Query(..., description="取引ペア（例: BTC/USDT:USDT）"),
     period: str = Query(..., description="期間（例: 5min, 1h, 1d）"),
     mode: str = Query(
         "incremental", enum=["incremental", "historical"], description="収集モード"

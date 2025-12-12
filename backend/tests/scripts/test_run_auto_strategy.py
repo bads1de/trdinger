@@ -152,7 +152,7 @@ class TestCreateBacktestConfig:
         assert config["start_date"] == "2024-01-01"
         assert config["end_date"] == "2024-06-30"
         assert config["initial_capital"] == 100000.0
-        assert "commission" in config
+        assert "commission_rate" in config
         assert "slippage" in config
 
     def test_invalid_initial_capital_raises_error(self):

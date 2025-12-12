@@ -65,7 +65,7 @@ def sample_config():
     """サンプルバックテスト設定"""
     return {
         "strategy_name": "sma_crossover",
-        "symbol": "BTC/USDT",
+        "symbol": "BTC/USDT:USDT",
         "timeframe": "1h",
         "start_date": "2023-01-01",
         "end_date": "2023-01-31",
@@ -142,7 +142,7 @@ def sample_converted_result():
     """サンプル変換済みバックテスト結果"""
     return {
         "strategy_name": "sma_crossover",
-        "symbol": "BTC/USDT",
+        "symbol": "BTC/USDT:USDT",
         "timeframe": "1h",
         "start_date": "2023-01-01T00:00:00",
         "end_date": "2023-01-31T00:00:00",

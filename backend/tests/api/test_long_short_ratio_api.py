@@ -43,7 +43,7 @@ def mock_repository() -> Mock:
     mock.to_dict = Mock(
         side_effect=lambda record: {
             "id": getattr(record, "id", 1),
-            "symbol": getattr(record, "symbol", "BTC/USDT"),
+            "symbol": getattr(record, "symbol", "BTC/USDT:USDT"),
             "period": getattr(record, "period", "1h"),
             "buy_ratio": getattr(record, "buy_ratio", 0.6),
             "sell_ratio": getattr(record, "sell_ratio", 0.4),
@@ -104,7 +104,7 @@ def sample_ls_ratio_record() -> LongShortRatioData:
     """
     record = MagicMock(spec=LongShortRatioData)
     record.id = 1
-    record.symbol = "BTC/USDT"
+    record.symbol = "BTC/USDT:USDT"
     record.period = "1h"
     record.buy_ratio = 0.6
     record.sell_ratio = 0.4
@@ -125,7 +125,7 @@ def sample_ls_ratio_list(sample_ls_ratio_record) -> List[LongShortRatioData]:
     """
     record2 = MagicMock(spec=LongShortRatioData)
     record2.id = 2
-    record2.symbol = "BTC/USDT"
+    record2.symbol = "BTC/USDT:USDT"
     record2.period = "1h"
     record2.buy_ratio = 0.55
     record2.sell_ratio = 0.45
@@ -152,14 +152,14 @@ class TestGetLongShortRatioData:
         # APIリクエスト
         response = test_client.get(
             "/api/long-short-ratio/",
-            params={"symbol": "BTC/USDT", "period": "1h"},
+            params={"symbol": "BTC/USDT:USDT", "period": "1h"},
         )
 
         # アサーション
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
-        assert data[0]["symbol"] == "BTC/USDT"
+        assert data[0]["symbol"] == "BTC/USDT:USDT"
         assert data[0]["period"] == "1h"
 
     def test_get_long_short_ratio_with_date_range(
@@ -180,7 +180,7 @@ class TestGetLongShortRatioData:
         response = test_client.get(
             "/api/long-short-ratio/",
             params={
-                "symbol": "BTC/USDT",
+                "symbol": "BTC/USDT:USDT",
                 "period": "1h",
                 "start_date": "2024-01-01T00:00:00",
                 "end_date": "2024-01-31T23:59:59",
@@ -207,7 +207,7 @@ class TestGetLongShortRatioData:
         # APIリクエスト
         response = test_client.get(
             "/api/long-short-ratio/",
-            params={"symbol": "BTC/USDT", "period": "1h"},
+            params={"symbol": "BTC/USDT:USDT", "period": "1h"},
         )
 
         # アサーション
@@ -237,7 +237,7 @@ class TestGetLongShortRatioData:
         """
         response = test_client.get(
             "/api/long-short-ratio/",
-            params={"symbol": "BTC/USDT"},
+            params={"symbol": "BTC/USDT:USDT"},
         )
         assert response.status_code == 422
 
@@ -264,7 +264,7 @@ class TestGetLongShortRatioData:
 
         response = test_client.get(
             "/api/long-short-ratio/",
-            params={"symbol": "BTC/USDT", "period": "1h", "limit": limit},
+            params={"symbol": "BTC/USDT:USDT", "period": "1h", "limit": limit},
         )
         assert response.status_code == expected_status
 
@@ -283,7 +283,7 @@ class TestCollectLongShortRatioData:
         """
         # モックの設定
         mock_service.fetch_incremental_long_short_ratio_data.return_value = {
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "saved_count": 10,
             "success": True,
         }
@@ -291,7 +291,7 @@ class TestCollectLongShortRatioData:
         # APIリクエスト
         response = test_client.post(
             "/api/long-short-ratio/collect",
-            params={"symbol": "BTC/USDT", "period": "1h", "mode": "incremental"},
+            params={"symbol": "BTC/USDT:USDT", "period": "1h", "mode": "incremental"},
         )
 
         # アサーション
@@ -299,7 +299,7 @@ class TestCollectLongShortRatioData:
         data = response.json()
         assert "message" in data
         assert "開始" in data["message"]
-        assert data["symbol"] == "BTC/USDT"
+        assert data["symbol"] == "BTC/USDT:USDT"
 
     def test_collect_historical_success(
         self,
@@ -316,7 +316,7 @@ class TestCollectLongShortRatioData:
         # APIリクエスト
         response = test_client.post(
             "/api/long-short-ratio/collect",
-            params={"symbol": "BTC/USDT", "period": "1d", "mode": "historical"},
+            params={"symbol": "BTC/USDT:USDT", "period": "1d", "mode": "historical"},
         )
 
         # アサーション
@@ -346,7 +346,7 @@ class TestCollectLongShortRatioData:
         """
         response = test_client.post(
             "/api/long-short-ratio/collect",
-            params={"symbol": "BTC/USDT"},
+            params={"symbol": "BTC/USDT:USDT"},
         )
         assert response.status_code == 422
 
@@ -370,7 +370,7 @@ class TestErrorHandling:
         # APIリクエスト
         response = test_client.get(
             "/api/long-short-ratio/",
-            params={"symbol": "BTC/USDT", "period": "1h"},
+            params={"symbol": "BTC/USDT:USDT", "period": "1h"},
         )
 
         # アサーション（HTTPExceptionでハンドリングされる）
@@ -399,6 +399,6 @@ class TestPeriodsValidation:
 
         response = test_client.get(
             "/api/long-short-ratio/",
-            params={"symbol": "BTC/USDT", "period": period},
+            params={"symbol": "BTC/USDT:USDT", "period": period},
         )
         assert response.status_code == 200

@@ -37,7 +37,7 @@ class BybitLongShortRatioService(BybitService):
         Bybitからロング/ショート比率データを取得
 
         Args:
-            symbol: 取引ペア（例: BTC/USDT）
+            symbol: 取引ペア（例: BTC/USDT:USDT）
             period: 期間（例: 5min, 1h, 1d）
             limit: 取得件数制限 (max 500)
             start_time: 開始タイムスタンプ（ミリ秒）
@@ -48,7 +48,7 @@ class BybitLongShortRatioService(BybitService):
         """
         try:
             # Bybitのシンボル形式に変換
-            market_symbol = symbol.replace("/", "")
+            market_symbol = self._convert_to_api_symbol(symbol)
 
             params = {
                 "category": "linear",  # 基本的にUSDT無期限を想定
@@ -85,7 +85,7 @@ class BybitLongShortRatioService(BybitService):
             # 呼び出し元で扱いやすいように、ここでperiod情報を付与しておく
             for item in data_list:
                 item["period"] = period
-                # アプリケーション内での統一のため、シンボルはリクエスト時のCCXT形式（例: BTC/USDT）で上書きする
+                # アプリケーション内での統一のため、シンボルはリクエスト時のCCXT形式（例: BTC/USDT:USDT）で上書きする
                 item["symbol"] = symbol
 
             return data_list

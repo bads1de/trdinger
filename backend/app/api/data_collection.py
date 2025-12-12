@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/data-collection", tags=["data-collection"])
 @router.post("/historical")
 async def collect_historical_data(
     background_tasks: BackgroundTasks,
-    symbol: str = "BTC/USDT",
+    symbol: str = "BTC/USDT:USDT",
     timeframe: str = "1h",
     force_update: bool = False,
     start_date: Optional[str] = None,
@@ -39,7 +39,7 @@ async def collect_historical_data(
     履歴データを包括的に収集
 
     Args:
-        symbol: 取引ペア（デフォルト: BTC/USDT）
+        symbol: 取引ペア（デフォルト: BTC/USDT:USDT）
         timeframe: 時間軸（デフォルト: 1h）
         force_update: 強制更新（データが存在しても上書き）
         start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）

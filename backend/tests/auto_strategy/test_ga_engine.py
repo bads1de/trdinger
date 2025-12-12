@@ -192,7 +192,7 @@ class TestGeneticAlgorithmEngine:
         mock_config.fallback_start_date = "2024-01-01"
         mock_config.fallback_end_date = "2024-01-31"
 
-        backtest_config = {"symbol": "BTC/USDT", "timeframe": "1h"}
+        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         # 実行
         result = engine.run_evolution(mock_config, backtest_config)

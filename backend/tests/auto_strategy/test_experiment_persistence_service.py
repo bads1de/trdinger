@@ -159,7 +159,7 @@ class TestExperimentPersistenceService:
         experiment_id = "exp_001"
         ga_config = GAConfig()
         backtest_config = {
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": "2024-01-01",
             "end_date": "2024-02-01",

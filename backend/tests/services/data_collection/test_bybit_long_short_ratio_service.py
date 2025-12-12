@@ -53,10 +53,10 @@ class TestFetchLongShortRatioData:
             }
         }
 
-        result = await service.fetch_long_short_ratio_data("BTC/USDT", "1h")
+        result = await service.fetch_long_short_ratio_data("BTC/USDT:USDT", "1h")
 
         assert len(result) == 1
-        assert result[0]["symbol"] == "BTC/USDT"  # 補完されていること
+        assert result[0]["symbol"] == "BTC/USDT:USDT"  # 補完されていること
         assert result[0]["period"] == "1h"  # 補完されていること
 
         # パラメータ変換の確認 (kwargs.get("params") でパラメータ取得)
@@ -110,7 +110,7 @@ class TestFetchLongShortRatioData:
             "result": {"list": []}
         }
 
-        result = await service.fetch_long_short_ratio_data("BTC/USDT", "1h")
+        result = await service.fetch_long_short_ratio_data("BTC/USDT:USDT", "1h")
 
         assert result == []
 
@@ -119,7 +119,7 @@ class TestFetchLongShortRatioData:
         """result キーがない場合"""
         mock_exchange.publicGetV5MarketAccountRatio.return_value = {}
 
-        result = await service.fetch_long_short_ratio_data("BTC/USDT", "1h")
+        result = await service.fetch_long_short_ratio_data("BTC/USDT:USDT", "1h")
 
         assert result == []
 
@@ -128,7 +128,7 @@ class TestFetchLongShortRatioData:
         """list キーがない場合"""
         mock_exchange.publicGetV5MarketAccountRatio.return_value = {"result": {}}
 
-        result = await service.fetch_long_short_ratio_data("BTC/USDT", "1h")
+        result = await service.fetch_long_short_ratio_data("BTC/USDT:USDT", "1h")
 
         assert result == []
 
@@ -137,7 +137,7 @@ class TestFetchLongShortRatioData:
         """APIがNoneを返す場合（ネットワークエラー等でハンドリングされた後）"""
         mock_exchange.publicGetV5MarketAccountRatio.return_value = None
 
-        result = await service.fetch_long_short_ratio_data("BTC/USDT", "1h")
+        result = await service.fetch_long_short_ratio_data("BTC/USDT:USDT", "1h")
 
         assert result == []
 
@@ -148,7 +148,7 @@ class TestFetchLongShortRatioData:
             "Network Error"
         )
 
-        result = await service.fetch_long_short_ratio_data("BTC/USDT", "1h")
+        result = await service.fetch_long_short_ratio_data("BTC/USDT:USDT", "1h")
 
         # 例外がハンドリングされて空リストが返る
         assert result == []
@@ -181,12 +181,12 @@ class TestFetchIncrementalLongShortRatioData:
         }
 
         result = await service.fetch_incremental_long_short_ratio_data(
-            "BTC/USDT", "1h", mock_repository
+            "BTC/USDT:USDT", "1h", mock_repository
         )
 
         assert result["success"] is True
         assert result["saved_count"] == 5
-        assert result["symbol"] == "BTC/USDT"
+        assert result["symbol"] == "BTC/USDT:USDT"
 
         # リポジトリのget_latest_ratioが呼ばれたか（開始時刻決定のため）
         mock_repository.get_latest_ratio.assert_called()
@@ -216,7 +216,7 @@ class TestFetchIncrementalLongShortRatioData:
         }
 
         result = await service.fetch_incremental_long_short_ratio_data(
-            "BTC/USDT", "1h", mock_repository
+            "BTC/USDT:USDT", "1h", mock_repository
         )
 
         assert result["success"] is True
@@ -239,7 +239,7 @@ class TestFetchIncrementalLongShortRatioData:
         }
 
         result = await service.fetch_incremental_long_short_ratio_data(
-            "BTC/USDT", "1h", mock_repository
+            "BTC/USDT:USDT", "1h", mock_repository
         )
 
         assert result["success"] is True
@@ -254,7 +254,7 @@ class TestFetchIncrementalLongShortRatioData:
         mock_repository.get_latest_ratio.side_effect = Exception("DB Error")
 
         result = await service.fetch_incremental_long_short_ratio_data(
-            "BTC/USDT", "1h", mock_repository
+            "BTC/USDT:USDT", "1h", mock_repository
         )
 
         assert result["success"] is False
@@ -289,7 +289,7 @@ class TestCollectHistoricalLongShortRatioData:
         start_date = datetime.fromtimestamp(start_ts / 1000, tz=timezone.utc)
 
         count = await service.collect_historical_long_short_ratio_data(
-            "BTC/USDT", "1h", mock_repository, start_date=start_date
+            "BTC/USDT:USDT", "1h", mock_repository, start_date=start_date
         )
 
         # 少なくとも1回は呼ばれているはず
@@ -306,7 +306,7 @@ class TestCollectHistoricalLongShortRatioData:
 
         # start_date指定なしで呼び出し
         count = await service.collect_historical_long_short_ratio_data(
-            "BTC/USDT", "1d", mock_repository
+            "BTC/USDT:USDT", "1d", mock_repository
         )
 
         # return される値は保存されたトータル件数（この場合0）
@@ -339,7 +339,7 @@ class TestCollectHistoricalLongShortRatioData:
         start_date = datetime.fromtimestamp(start_ts / 1000, tz=timezone.utc)
 
         count = await service.collect_historical_long_short_ratio_data(
-            "BTC/USDT", "5min", mock_repository, start_date=start_date
+            "BTC/USDT:USDT", "5min", mock_repository, start_date=start_date
         )
 
         # 正常に完了すること
@@ -357,7 +357,7 @@ class TestCollectHistoricalLongShortRatioData:
 
         # 例外が発生しても0が返され、クラッシュしないこと
         count = await service.collect_historical_long_short_ratio_data(
-            "BTC/USDT", "1h", mock_repository, start_date=start_date
+            "BTC/USDT:USDT", "1h", mock_repository, start_date=start_date
         )
 
         assert count == 0

@@ -127,7 +127,7 @@ class TestBacktestExecution:
             result = backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters={"param1": "value1"},
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -166,7 +166,7 @@ class TestBacktestExecution:
             result = backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters=strategy_params,
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -192,7 +192,7 @@ class TestBacktestExecution:
             backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters={},
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -215,7 +215,7 @@ class TestBacktestExecution:
             backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters={},
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -234,7 +234,7 @@ class TestDataPreparation:
         mock_data_service.get_data_for_backtest.return_value = sample_backtest_data
 
         result = backtest_executor._get_backtest_data(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
@@ -243,7 +243,7 @@ class TestDataPreparation:
         assert not result.empty
         assert len(result) == 100
         mock_data_service.get_data_for_backtest.assert_called_once_with(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
@@ -257,7 +257,7 @@ class TestDataPreparation:
             BacktestExecutionError, match="のデータが見つかりませんでした"
         ):
             backtest_executor._get_backtest_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -273,7 +273,7 @@ class TestDataPreparation:
 
         with pytest.raises(BacktestExecutionError, match="データ取得に失敗しました"):
             backtest_executor._get_backtest_data(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -298,7 +298,7 @@ class TestBacktestInstanceCreation:
                 strategy_class=sample_strategy_class,
                 initial_capital=10000.0,
                 commission_rate=0.001,
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
             )
 
             assert result == mock_bt
@@ -332,7 +332,7 @@ class TestBacktestInstanceCreation:
                 strategy_class=sample_strategy_class,
                 initial_capital=10000.0,
                 commission_rate=0.001,
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
             )
 
             # FractionalBacktestに渡されたデータのカラムが大文字であることを確認
@@ -388,7 +388,7 @@ class TestBacktestInstanceCreation:
                     strategy_class=sample_strategy_class,
                     initial_capital=10000.0,
                     commission_rate=0.001,
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                 )
 
 
@@ -531,7 +531,7 @@ class TestPerformanceAndEdgeCases:
             result = backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters={},
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 12, 31),
@@ -562,7 +562,7 @@ class TestPerformanceAndEdgeCases:
             result = backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters={},
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -593,7 +593,7 @@ class TestPerformanceAndEdgeCases:
             result = backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters={},
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -635,7 +635,7 @@ class TestPerformanceAndEdgeCases:
             result = backtest_executor.execute_backtest(
                 strategy_class=sample_strategy_class,
                 strategy_parameters={},
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 2),
@@ -671,7 +671,7 @@ class TestErrorHandling:
                 backtest_executor.execute_backtest(
                     strategy_class=InvalidStrategy,
                     strategy_parameters={},
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                     timeframe="1h",
                     start_date=datetime(2024, 1, 1),
                     end_date=datetime(2024, 1, 5),
@@ -708,7 +708,7 @@ class TestErrorHandling:
                 backtest_executor.execute_backtest(
                     strategy_class=sample_strategy_class,
                     strategy_parameters={},
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                     timeframe="1h",
                     start_date=datetime(2024, 1, 1),
                     end_date=datetime(2024, 1, 5),
@@ -737,7 +737,7 @@ class TestErrorHandling:
                 backtest_executor.execute_backtest(
                     strategy_class=sample_strategy_class,
                     strategy_parameters={},
-                    symbol="BTC/USDT",
+                    symbol="BTC/USDT:USDT",
                     timeframe="1h",
                     start_date=datetime(2024, 1, 1),
                     end_date=datetime(2024, 1, 5),

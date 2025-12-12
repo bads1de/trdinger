@@ -10,7 +10,9 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 from cachetools import LRUCache
+from pydantic import ValidationError
 
+from app.schemas.backtest_config import BacktestConfig
 from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.model_manager import model_manager
 
@@ -49,6 +51,25 @@ class IndividualEvaluator:
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
         """バックテスト設定を設定"""
+        # バリデーションのためPydanticモデルを通す
+        # strategy_configは個体ごとに生成されるため、ここではダミーを入れておく
+        temp_config = backtest_config.copy()
+        if "strategy_config" not in temp_config:
+             temp_config["strategy_config"] = {
+                 "strategy_type": "GENERATED_GA",
+                 "parameters": {"strategy_gene": {}} # ダミー
+             }
+        if "strategy_name" not in temp_config:
+            temp_config["strategy_name"] = "Dummy"
+
+        try:
+            # モデル変換を試行してバリデーション（型変換などもここで行われる）
+            # ここでの目的は必須フィールドの欠落を早期検知すること
+            BacktestConfig(**temp_config)
+        except ValidationError as e:
+            logger.warning(f"バックテスト設定の初期バリデーション警告: {e}")
+            # ここでは警告に留める
+
         self._fixed_backtest_config = self._select_timeframe_config(backtest_config)
 
     def clear_cache(self) -> None:
@@ -67,6 +88,18 @@ class IndividualEvaluator:
                 "cache_misses": getattr(self, "_cache_misses", 0),
             }
 
+    def __getstate__(self):
+        """Pickle化時の状態取得（ロックを除外）"""
+        state = self.__dict__.copy()
+        if "_lock" in state:
+            del state["_lock"]
+        return state
+
+    def __setstate__(self, state):
+        """Pickle復元時の状態設定（ロックを再生成）"""
+        self.__dict__.update(state)
+        self._lock = threading.Lock()
+        
     def evaluate_individual(self, individual, config: GAConfig):
         """
         個体評価（OOS検証/WFA対応版）
@@ -383,36 +416,62 @@ class IndividualEvaluator:
             from ..serializers.gene_serialization import GeneSerializer
 
             serializer = GeneSerializer()
-            backtest_config["strategy_config"] = {
-                "strategy_type": "GENERATED_GA",
-                "parameters": {"strategy_gene": serializer.strategy_gene_to_dict(gene)},
+            
+            # Pydanticモデルを使用して設定を構築
+            # 1. 辞書をコピーしてベースにする
+            config_dict = backtest_config.copy()
+            
+            # 2. StrategyConfig部分を構築
+            strategy_parameters = {
+                "strategy_gene": serializer.strategy_gene_to_dict(gene),
                 "ml_filter_enabled": config.ml_filter_enabled,
                 "ml_model_path": config.ml_model_path,
             }
-            backtest_config["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
+            
+            config_dict["strategy_config"] = {
+                "strategy_type": "GENERATED_GA",
+                "parameters": strategy_parameters
+            }
+            config_dict["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
+            
+            # 3. モデル化（バリデーション）
+            try:
+                backtest_config_model = BacktestConfig(**config_dict)
+            except ValidationError as e:
+                logger.error(f"バックテスト設定モデル生成エラー: {e}")
+                return tuple(0.0 for _ in config.objectives)
 
-            # MLフィルター設定
+            # MLフィルター設定（モデル外のオブジェクト）
+            ml_filter_model = None
             if config.ml_filter_enabled and config.ml_model_path:
                 try:
-                    ml_model = model_manager.load_model(config.ml_model_path)
-                    backtest_config["ml_filter_model"] = ml_model
+                    ml_filter_model = model_manager.load_model(config.ml_model_path)
                 except Exception:
-                    backtest_config["ml_filter_enabled"] = False
-                    backtest_config["ml_filter_model"] = None
+                    # エラー時は設定を無効化
+                    pass
 
             # データをキャッシュから取得または新規取得
-            data = self._get_cached_data(backtest_config)
+            # キャッシュキー作成には辞書を使用（モデルでも良いが既存踏襲）
+            data = self._get_cached_data(config_dict)
 
             # 1分足データを取得（1分足シミュレーション用）
-            minute_data = self._get_cached_minute_data(backtest_config)
+            minute_data = self._get_cached_minute_data(config_dict)
+            
+            # 実行用辞書の作成
+            run_config = backtest_config_model.model_dump()
+            
+            # モデル外のオブジェクトを注入
             if minute_data is not None:
-                backtest_config["strategy_config"]["parameters"][
-                    "minute_data"
-                ] = minute_data
+                run_config["strategy_config"]["parameters"]["minute_data"] = minute_data
+            
+            if ml_filter_model:
+                run_config["ml_filter_model"] = ml_filter_model
+            elif config.ml_filter_enabled: # ロード失敗時
+                 run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
 
             # バックテスト実行
             result = self.backtest_service.run_backtest(
-                backtest_config=backtest_config, preloaded_data=data
+                config=run_config, preloaded_data=data
             )
 
             # フィットネス計算（常に統一ロジックを使用）

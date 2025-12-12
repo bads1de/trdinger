@@ -72,7 +72,7 @@ class BacktestDataService:
         リファクタリング後の実装では、専門サービスに処理を委譲します。
 
         Args:
-            symbol: 取引ペア（例: BTC/USDT）
+            symbol: 取引ペア（例: BTC/USDT:USDT）
             timeframe: 時間軸（例: 1h, 4h, 1d）
             start_date: 開始日時
             end_date: 終了日時
@@ -136,7 +136,7 @@ class BacktestDataService:
         リファクタリング後の実装では、専門サービスに処理を委譲します。
 
         Args:
-            symbol: 取引ペア（例: BTC/USDT）
+            symbol: 取引ペア（例: BTC/USDT:USDT）
             timeframe: 時間軸（例: 1h, 4h, 1d）
             start_date: 開始日時
             end_date: 終了日時

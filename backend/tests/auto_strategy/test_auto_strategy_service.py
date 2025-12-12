@@ -88,7 +88,7 @@ def test_start_strategy_generation_success(
         "mutation_rate": 0.1,
         "elite_size": 2,
     }
-    backtest_config_dict = {"symbol": "BTC/USDT", "timeframe": "1h"}
+    backtest_config_dict = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
     background_tasks = BackgroundTasks()
 
     # 実行

@@ -63,7 +63,7 @@ def sample_backtest_model() -> BacktestResult:
     return BacktestResult(
         id=1,
         strategy_name="test_strategy",
-        symbol="BTC/USDT",
+        symbol="BTC/USDT:USDT",
         timeframe="1h",
         start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
         end_date=datetime(2024, 1, 31, tzinfo=timezone.utc),
@@ -97,7 +97,7 @@ def sample_backtest_data() -> Dict[str, Any]:
     """
     return {
         "strategy_name": "test_strategy",
-        "symbol": "BTC/USDT",
+        "symbol": "BTC/USDT:USDT",
         "timeframe": "1h",
         "start_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
         "end_date": datetime(2024, 1, 31, tzinfo=timezone.utc),
@@ -141,7 +141,7 @@ class TestToDictMethod:
         assert isinstance(result, dict)
         assert result["id"] == 1
         assert result["strategy_name"] == "test_strategy"
-        assert result["symbol"] == "BTC/USDT"
+        assert result["symbol"] == "BTC/USDT:USDT"
 
     def test_to_dict_includes_performance_metrics(
         self,
@@ -227,10 +227,10 @@ class TestGetBacktestResults:
         mock_scalars.all.return_value = [sample_backtest_model]
         repository.db.scalars.return_value = mock_scalars
 
-        results = repository.get_backtest_results(symbol="BTC/USDT", limit=10)
+        results = repository.get_backtest_results(symbol="BTC/USDT:USDT", limit=10)
 
         assert len(results) == 1
-        assert results[0]["symbol"] == "BTC/USDT"
+        assert results[0]["symbol"] == "BTC/USDT:USDT"
 
     def test_get_backtest_results_with_strategy_filter(
         self,
@@ -366,7 +366,7 @@ class TestCountBacktestResults:
         mock_query.filter.return_value.count.return_value = 3
         repository.db.query.return_value = mock_query
 
-        count = repository.count_backtest_results(symbol="BTC/USDT")
+        count = repository.count_backtest_results(symbol="BTC/USDT:USDT")
 
         assert count == 3
 
@@ -435,7 +435,7 @@ class TestDataNormalization:
         """レガシー形式のデータが正規化される"""
         legacy_data = {
             "strategy_name": "legacy_strategy",
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": "2024-01-01T00:00:00+00:00",
             "end_date": "2024-01-31T00:00:00+00:00",
@@ -464,7 +464,7 @@ class TestErrorHandling:
             repository.save_backtest_result(
                 {
                     "strategy_name": "test",
-                    "symbol": "BTC/USDT",
+                    "symbol": "BTC/USDT:USDT",
                     "timeframe": "1h",
                     "start_date": datetime.now(timezone.utc),
                     "end_date": datetime.now(timezone.utc),

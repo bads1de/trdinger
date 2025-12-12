@@ -28,7 +28,7 @@ class TestE2EFlow:
             "elite_size": 2,
         }
         backtest_config_dict = {
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
         }
         background_tasks = BackgroundTasks()
 
@@ -91,11 +91,13 @@ class TestE2EFlow:
             enable_parallel_evaluation=False
         )
         backtest_config = {
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": "2024-01-01",
             "end_date": "2024-01-02",
-            "initial_capital": 10000
+            "initial_capital": 10000,
+            "commission_rate": 0.001,
+            "slippage": 0.001,
         }
 
         # モックの準備

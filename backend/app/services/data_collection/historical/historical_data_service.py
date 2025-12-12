@@ -34,7 +34,7 @@ class HistoricalDataService:
 
     async def collect_historical_data(
         self,
-        symbol: str = "BTC/USDT",
+        symbol: str = "BTC/USDT:USDT",
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
     ) -> int:
@@ -130,7 +130,7 @@ class HistoricalDataService:
 
     async def collect_historical_data_with_start_date(
         self,
-        symbol: str = "BTC/USDT",
+        symbol: str = "BTC/USDT:USDT",
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
         since_timestamp: Optional[int] = None,

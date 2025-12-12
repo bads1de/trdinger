@@ -118,7 +118,7 @@ class TestFetchOpenInterestHistory:
             mock_exchange.fetch_open_interest_history.return_value = expected_data
 
             result = await service.fetch_open_interest_history(
-                "BTC/USDT", limit=100, interval="1h"
+                "BTC/USDT:USDT", limit=100, interval="1h"
             )
 
             assert result == expected_data
@@ -139,7 +139,7 @@ class TestFetchOpenInterestHistory:
             mock_exchange.fetch_open_interest_history.return_value = expected_data
 
             result = await service.fetch_open_interest_history(
-                "BTC/USDT", limit=100, since=since_timestamp, interval="1h"
+                "BTC/USDT:USDT", limit=100, since=since_timestamp, interval="1h"
             )
 
             assert result == expected_data
@@ -164,7 +164,7 @@ class TestFetchOpenInterestHistory:
                 mock_exchange.fetch_open_interest_history.return_value = expected_data
 
                 result = await service.fetch_open_interest_history(
-                    "BTC/USDT", limit=100, interval=interval
+                    "BTC/USDT:USDT", limit=100, interval=interval
                 )
 
                 assert result == expected_data
@@ -176,7 +176,7 @@ class TestFetchOpenInterestHistory:
     async def test_fetch_open_interest_history_invalid_limit(self, service):
         """無効なlimitでValueErrorが発生することを確認"""
         with pytest.raises(ValueError):
-            await service.fetch_open_interest_history("BTC/USDT", limit=0)
+            await service.fetch_open_interest_history("BTC/USDT:USDT", limit=0)
 
     async def test_fetch_open_interest_history_invalid_symbol(self, service):
         """無効なシンボルでValueErrorが発生することを確認"""
@@ -219,7 +219,7 @@ class TestFetchIncrementalData:
                     mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_open_interest_data(
-                        "BTC/USDT"
+                        "BTC/USDT:USDT"
                     )
 
                     assert result["success"] is True
@@ -256,7 +256,7 @@ class TestFetchIncrementalData:
                     mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_open_interest_data(
-                        "BTC/USDT"
+                        "BTC/USDT:USDT"
                     )
 
                     assert result["success"] is True
@@ -291,7 +291,7 @@ class TestFetchIncrementalData:
                     mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_incremental_open_interest_data(
-                        "BTC/USDT", interval="4h"
+                        "BTC/USDT:USDT", interval="4h"
                     )
 
                     assert result["success"] is True
@@ -316,7 +316,7 @@ class TestFetchIncrementalData:
                 service.exchange.fetch_open_interest_history.return_value = mock_data
 
                 result = await service.fetch_incremental_open_interest_data(
-                    "BTC/USDT", mock_repository
+                    "BTC/USDT:USDT", mock_repository
                 )
 
                 assert result["success"] is True
@@ -357,7 +357,7 @@ class TestFetchAndSaveData:
                 mock_config.repository_class.return_value = mock_repository_instance
 
                 result = await service.fetch_and_save_open_interest_data(
-                    "BTC/USDT", limit=100
+                    "BTC/USDT:USDT", limit=100
                 )
 
                 assert result["success"] is True
@@ -381,7 +381,7 @@ class TestFetchAndSaveData:
             mock_loop.return_value.run_in_executor = mock_executor
 
             result = await service.fetch_and_save_open_interest_data(
-                "BTC/USDT", limit=100, repository=mock_repository
+                "BTC/USDT:USDT", limit=100, repository=mock_repository
             )
 
             assert result["success"] is True
@@ -412,7 +412,7 @@ class TestFetchAndSaveData:
                     mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_and_save_open_interest_data(
-                        "BTC/USDT", fetch_all=True
+                        "BTC/USDT:USDT", fetch_all=True
                     )
 
                     assert result["success"] is True
@@ -445,7 +445,7 @@ class TestFetchAndSaveData:
                 mock_config.repository_class.return_value = mock_repository_instance
 
                 result = await service.fetch_and_save_open_interest_data(
-                    "BTC/USDT", limit=100, interval="4h"
+                    "BTC/USDT:USDT", limit=100, interval="4h"
                 )
 
                 assert result["success"] is True
@@ -470,7 +470,7 @@ class TestIntervalHandling:
 
             mock_exchange.fetch_open_interest_history.return_value = expected_data
 
-            result = await service.fetch_open_interest_history("BTC/USDT", limit=100)
+            result = await service.fetch_open_interest_history("BTC/USDT:USDT", limit=100)
 
             assert result == expected_data
 
@@ -492,7 +492,7 @@ class TestIntervalHandling:
                 mock_exchange.fetch_open_interest_history.return_value = expected_data
 
                 result = await service.fetch_open_interest_history(
-                    "BTC/USDT", limit=100, interval=interval
+                    "BTC/USDT:USDT", limit=100, interval=interval
                 )
 
                 assert result == expected_data
@@ -517,7 +517,7 @@ class TestEdgeCases:
             mock_exchange.fetch_open_interest_history.return_value = expected_data
 
             result = await service.fetch_open_interest_history(
-                "BTC/USDT", limit=1000, interval="1h"
+                "BTC/USDT:USDT", limit=1000, interval="1h"
             )
 
             assert result == expected_data
@@ -537,7 +537,7 @@ class TestEdgeCases:
             mock_exchange.fetch_open_interest_history.return_value = expected_data
 
             result = await service.fetch_open_interest_history(
-                "BTC/USDT", limit=100, interval="1h"
+                "BTC/USDT:USDT", limit=100, interval="1h"
             )
 
             assert result == expected_data
@@ -557,7 +557,7 @@ class TestEdgeCases:
             mock_exchange.fetch_open_interest_history.return_value = expected_data
 
             result = await service.fetch_open_interest_history(
-                "BTC/USDT", limit=100, interval="1h"
+                "BTC/USDT:USDT", limit=100, interval="1h"
             )
 
             assert result == expected_data

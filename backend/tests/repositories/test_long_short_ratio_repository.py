@@ -15,14 +15,14 @@ from database.repositories.long_short_ratio_repository import LongShortRatioRepo
 # テスト用データ
 SAMPLE_RECORDS = [
     {
-        "symbol": "BTC/USDT",
+        "symbol": "BTC/USDT:USDT",
         "period": "1h",
         "buyRatio": "0.6",
         "sellRatio": "0.4",
         "timestamp": "1609459200000",  # 2021-01-01 00:00:00 UTC
     },
     {
-        "symbol": "BTC/USDT",
+        "symbol": "BTC/USDT:USDT",
         "period": "1h",
         "buyRatio": "0.55",
         "sellRatio": "0.45",
@@ -73,14 +73,14 @@ def test_get_long_short_ratio_data(repository, mock_session):
     # モックデータの準備
     mock_data = [
         LongShortRatioData(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             period="1h",
             buy_ratio=0.6,
             sell_ratio=0.4,
             timestamp=datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         ),
         LongShortRatioData(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             period="1h",
             buy_ratio=0.55,
             sell_ratio=0.45,
@@ -94,11 +94,11 @@ def test_get_long_short_ratio_data(repository, mock_session):
 
     # 全件取得
     results = repository.get_long_short_ratio_data(
-        symbol="BTC/USDT",
+        symbol="BTC/USDT:USDT",
         period="1h"
     )
     assert len(results) == 2
-    assert results[0].symbol == "BTC/USDT"
+    assert results[0].symbol == "BTC/USDT:USDT"
     
     # クエリが発行されたか確認
     mock_session.scalars.assert_called()
@@ -106,7 +106,7 @@ def test_get_long_short_ratio_data(repository, mock_session):
 def test_get_latest_ratio(repository, mock_session):
     """最新データの取得テスト"""
     mock_record = LongShortRatioData(
-        symbol="BTC/USDT",
+        symbol="BTC/USDT:USDT",
         period="1h",
         buy_ratio=0.55,
         sell_ratio=0.45,
@@ -117,7 +117,7 @@ def test_get_latest_ratio(repository, mock_session):
     mock_scalars.all.return_value = [mock_record]
     mock_session.scalars.return_value = mock_scalars
     
-    latest = repository.get_latest_ratio("BTC/USDT", "1h")
+    latest = repository.get_latest_ratio("BTC/USDT:USDT", "1h")
     assert latest is not None
     assert latest.timestamp == datetime(2021, 1, 1, 1, 0, 0, tzinfo=timezone.utc)
 
@@ -125,7 +125,7 @@ def test_get_ratio_dataframe(repository, mock_session):
     """DataFrame取得テスト"""
     mock_data = [
         LongShortRatioData(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             period="1h",
             buy_ratio=0.6,
             sell_ratio=0.4,
@@ -137,7 +137,7 @@ def test_get_ratio_dataframe(repository, mock_session):
     mock_scalars.all.return_value = mock_data
     mock_session.scalars.return_value = mock_scalars
     
-    df = repository.get_ratio_dataframe("BTC/USDT", "1h")
+    df = repository.get_ratio_dataframe("BTC/USDT:USDT", "1h")
     assert not df.empty
     assert "ls_ratio" in df.columns
     assert df.iloc[0]["ls_ratio"] == pytest.approx(1.5)

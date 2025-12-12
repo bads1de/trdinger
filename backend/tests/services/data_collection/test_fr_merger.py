@@ -97,12 +97,12 @@ class TestMergeFRData:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(sample_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(sample_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         assert len(result) == len(sample_df)
         mock_fr_repository.get_funding_rate_data.assert_called_once_with(
-            symbol="BTC/USDT", start_time=start_date, end_time=end_date
+            symbol="BTC/USDT:USDT", start_time=start_date, end_time=end_date
         )
 
     def test_merge_fr_data_no_data(self, merger, mock_fr_repository, sample_df):
@@ -112,7 +112,7 @@ class TestMergeFRData:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(sample_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(sample_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         assert all(result["funding_rate"] == 0.0)
@@ -126,7 +126,7 @@ class TestMergeFRData:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(sample_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(sample_df, "BTC/USDT:USDT", start_date, end_date)
 
         # 8時間以内のデータのみマージされる
         assert "funding_rate" in result.columns
@@ -140,9 +140,9 @@ class TestMergeFRData:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        # BTC/USDT
+        # BTC/USDT:USDT
         result_btc = merger.merge_fr_data(
-            sample_df.copy(), "BTC/USDT", start_date, end_date
+            sample_df.copy(), "BTC/USDT:USDT", start_date, end_date
         )
 
         # ETH/USDT
@@ -205,7 +205,7 @@ class TestErrorHandling:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(sample_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(sample_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         assert all(result["funding_rate"] == 0.0)
@@ -219,7 +219,7 @@ class TestErrorHandling:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(sample_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(sample_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         assert all(result["funding_rate"] == 0.0)
@@ -238,7 +238,7 @@ class TestEdgeCases:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(empty_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(empty_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert isinstance(result, pd.DataFrame)
 
@@ -254,7 +254,7 @@ class TestEdgeCases:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(single_row_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(single_row_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         assert len(result) == 1
@@ -276,7 +276,7 @@ class TestEdgeCases:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(sample_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(sample_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
 
@@ -301,7 +301,7 @@ class TestEdgeCases:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 12, 31, 0, 0)
 
-        result = merger.merge_fr_data(large_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(large_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         assert len(result) == 1000
@@ -322,7 +322,7 @@ class TestEdgeCases:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(sample_df, "BTC/USDT", start_date, end_date)
+        result = merger.merge_fr_data(sample_df, "BTC/USDT:USDT", start_date, end_date)
 
         assert "funding_rate" in result.columns
         # merge_asof with backward direction should handle this

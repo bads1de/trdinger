@@ -494,7 +494,7 @@ class TestSymbolNormalization:
             mock_repo_class.return_value = mock_repo
 
             # シンボル形式の違いをテスト
-            symbols = ["BTC/USDT", "ETH/USD", "SOL/USDT:USDT"]
+            symbols = ["BTC/USDT:USDT", "ETH/USD", "SOL/USDT:USDT"]
             for symbol in symbols:
                 result = await orchestration_service.get_open_interest_data(
                     symbol=symbol,

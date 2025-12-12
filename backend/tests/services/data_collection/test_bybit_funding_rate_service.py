@@ -107,7 +107,7 @@ class TestParameterValidation:
     )
     async def test_validate_parameters_valid(self, service):
         """有効なパラメータが検証を通過することを確認"""
-        service._validate_parameters("BTC/USDT", 100)
+        service._validate_parameters("BTC/USDT:USDT", 100)
 
     @patch(
         "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
@@ -125,7 +125,7 @@ class TestParameterValidation:
     async def test_validate_parameters_invalid_limit(self, service):
         """無効なlimitがValueErrorを発生させることを確認"""
         with pytest.raises(ValueError):
-            service._validate_parameters("BTC/USDT", 0)
+            service._validate_parameters("BTC/USDT:USDT", 0)
 
 
 @pytest.mark.asyncio
@@ -142,7 +142,7 @@ class TestFetchCurrentFundingRate:
 
         mock_exchange.fetch_funding_rate.return_value = expected_data
 
-        result = await service.fetch_current_funding_rate("BTC/USDT")
+        result = await service.fetch_current_funding_rate("BTC/USDT:USDT")
 
         assert result == expected_data
 
@@ -180,7 +180,7 @@ class TestFetchFundingRateHistory:
 
         mock_exchange.fetch_funding_rate_history.return_value = expected_data
 
-        result = await service.fetch_funding_rate_history("BTC/USDT", limit=100)
+        result = await service.fetch_funding_rate_history("BTC/USDT:USDT", limit=100)
 
         assert result == expected_data
 
@@ -196,7 +196,7 @@ class TestFetchFundingRateHistory:
         mock_exchange.fetch_funding_rate_history.return_value = expected_data
 
         result = await service.fetch_funding_rate_history(
-            "BTC/USDT", limit=100, since=since_timestamp
+            "BTC/USDT:USDT", limit=100, since=since_timestamp
         )
 
         assert result == expected_data
@@ -208,7 +208,7 @@ class TestFetchFundingRateHistory:
     async def test_fetch_funding_rate_history_invalid_limit(self, service):
         """無効なlimitでValueErrorが発生することを確認"""
         with pytest.raises(ValueError):
-            await service.fetch_funding_rate_history("BTC/USDT", limit=0)
+            await service.fetch_funding_rate_history("BTC/USDT:USDT", limit=0)
 
     async def test_fetch_funding_rate_history_invalid_symbol(self, service):
         """無効なシンボルでValueErrorが発生することを確認"""
@@ -233,7 +233,7 @@ class TestFetchAllFundingRateHistory:
             with patch.object(
                 service, "_fetch_paginated_data", return_value=mock_data
             ) as mock_fetch:
-                result = await service.fetch_all_funding_rate_history("BTC/USDT")
+                result = await service.fetch_all_funding_rate_history("BTC/USDT:USDT")
 
                 assert result == mock_data
                 mock_fetch.assert_called_once()
@@ -251,7 +251,7 @@ class TestFetchAllFundingRateHistory:
             with patch.object(
                 service, "_fetch_paginated_data", return_value=mock_data
             ) as mock_fetch:
-                result = await service.fetch_all_funding_rate_history("BTC/USDT")
+                result = await service.fetch_all_funding_rate_history("BTC/USDT:USDT")
 
                 assert result == mock_data
                 mock_fetch.assert_called_once()
@@ -293,7 +293,7 @@ class TestFetchIncrementalData:
                     service.exchange.fetch_funding_rate_history.return_value = mock_data
 
                     result = await service.fetch_incremental_funding_rate_data(
-                        "BTC/USDT"
+                        "BTC/USDT:USDT"
                     )
 
                     assert result["success"] is True
@@ -331,7 +331,7 @@ class TestFetchIncrementalData:
                     service.exchange.fetch_funding_rate_history.return_value = mock_data
 
                     result = await service.fetch_incremental_funding_rate_data(
-                        "BTC/USDT"
+                        "BTC/USDT:USDT"
                     )
 
                     assert result["success"] is True
@@ -357,7 +357,7 @@ class TestFetchIncrementalData:
                 service.exchange.fetch_funding_rate_history.return_value = mock_data
 
                 result = await service.fetch_incremental_funding_rate_data(
-                    "BTC/USDT", mock_repository
+                    "BTC/USDT:USDT", mock_repository
                 )
 
                 assert result["success"] is True
@@ -399,7 +399,7 @@ class TestFetchAndSaveData:
                 service.exchange.fetch_funding_rate_history.return_value = mock_data
 
                 result = await service.fetch_and_save_funding_rate_data(
-                    "BTC/USDT", limit=100
+                    "BTC/USDT:USDT", limit=100
                 )
 
                 assert result["success"] is True
@@ -424,7 +424,7 @@ class TestFetchAndSaveData:
             service.exchange.fetch_funding_rate_history.return_value = mock_data
 
             result = await service.fetch_and_save_funding_rate_data(
-                "BTC/USDT", limit=100, repository=mock_repository
+                "BTC/USDT:USDT", limit=100, repository=mock_repository
             )
 
             assert result["success"] is True
@@ -455,7 +455,7 @@ class TestFetchAndSaveData:
                     mock_config.repository_class.return_value = mock_repository_instance
 
                     result = await service.fetch_and_save_funding_rate_data(
-                        "BTC/USDT", fetch_all=True
+                        "BTC/USDT:USDT", fetch_all=True
                     )
 
                     assert result["success"] is True
@@ -481,11 +481,11 @@ class TestDatabaseSave:
         mock_repository.insert_funding_rate_data = MagicMock(return_value=2)
 
         result = await service._save_funding_rate_to_database(
-            funding_history, "BTC/USDT", mock_repository
+            funding_history, "BTC/USDT:USDT", mock_repository
         )
 
         assert result == 2
         mock_config.data_converter_class.ccxt_to_db_format.assert_called_once_with(
-            funding_history, "BTC/USDT"
+            funding_history, "BTC/USDT:USDT"
         )
         mock_repository.insert_funding_rate_data.assert_called_once()

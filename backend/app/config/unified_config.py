@@ -317,7 +317,7 @@ class GAConfig(BaseSettings):
     """
 
     # 基本設定
-    fallback_symbol: str = Field(default="BTC/USDT", alias="GA_FALLBACK_SYMBOL")
+    fallback_symbol: str = Field(default="BTC/USDT:USDT", alias="GA_FALLBACK_SYMBOL")
     fallback_timeframe: str = Field(default="1d", alias="GA_FALLBACK_TIMEFRAME")
     fallback_start_date: str = Field(
         default="2024-01-01", alias="GA_FALLBACK_START_DATE"

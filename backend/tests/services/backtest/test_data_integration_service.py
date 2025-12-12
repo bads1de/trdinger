@@ -161,7 +161,7 @@ class TestBacktestDataframeCreation:
             mock_processor.clean_and_validate_data.return_value = sample_ohlcv_data
 
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -206,7 +206,7 @@ class TestBacktestDataframeCreation:
             mock_processor.clean_and_validate_data.return_value = integrated_data
 
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -244,7 +244,7 @@ class TestBacktestDataframeCreation:
             mock_processor.clean_and_validate_data.return_value = result_data
 
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -283,7 +283,7 @@ class TestBacktestDataframeCreation:
             mock_processor.clean_and_validate_data.return_value = result_data
 
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -317,7 +317,7 @@ class TestMLTrainingDataframeCreation:
             return_value=sample_ohlcv_data,
         ):
             result = integration_service.create_ml_training_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -332,7 +332,7 @@ class TestMLTrainingDataframeCreation:
             integration_service, "create_backtest_dataframe"
         ) as mock_create:
             integration_service.create_ml_training_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -340,7 +340,7 @@ class TestMLTrainingDataframeCreation:
 
             # OIとFRの両方がTrueで呼ばれることを確認
             mock_create.assert_called_once_with(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),
@@ -366,7 +366,7 @@ class TestOHLCVDataRetrieval:
         )
 
         result = integration_service._get_base_ohlcv_dataframe(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
@@ -393,7 +393,7 @@ class TestOpenInterestIntegration:
 
         result = integration_service._integrate_open_interest_data(
             df=sample_ohlcv_data,
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
         )
@@ -409,7 +409,7 @@ class TestOpenInterestIntegration:
 
         result = integration_service._integrate_open_interest_data(
             df=sample_ohlcv_data,
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
         )
@@ -434,7 +434,7 @@ class TestFundingRateIntegration:
 
         result = integration_service._integrate_funding_rate_data(
             df=sample_ohlcv_data,
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
         )
@@ -450,7 +450,7 @@ class TestFundingRateIntegration:
 
         result = integration_service._integrate_funding_rate_data(
             df=sample_ohlcv_data,
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
         )
@@ -469,7 +469,7 @@ class TestFundingRateIntegration:
 
         result = integration_service._integrate_funding_rate_data(
             df=sample_ohlcv_data,
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
         )
@@ -594,7 +594,7 @@ class TestErrorHandling:
 
         # safe_operationデコレーターにより空のDataFrameが返される
         result = integration_service.create_backtest_dataframe(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
@@ -612,7 +612,7 @@ class TestErrorHandling:
         )
 
         result = integration_service.create_backtest_dataframe(
-            symbol="BTC/USDT",
+            symbol="BTC/USDT:USDT",
             timeframe="1h",
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 1, 5),
@@ -664,7 +664,7 @@ class TestEdgeCases:
             mock_processor.clean_and_validate_data.return_value = minimal_data
 
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 1, 1),
@@ -712,7 +712,7 @@ class TestEdgeCases:
             mock_processor.clean_and_validate_data.return_value = large_data
 
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2025, 2, 1),
@@ -765,7 +765,7 @@ class TestEdgeCases:
             mock_processor.clean_and_validate_data.return_value = complete_data
 
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 2),
@@ -797,7 +797,7 @@ class TestIntegrationWithRealServices:
             side_effect=Exception("Error"),
         ):
             result = integration_service.create_backtest_dataframe(
-                symbol="BTC/USDT",
+                symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 5),

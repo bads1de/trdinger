@@ -28,7 +28,7 @@ def valid_config():
     """有効なバックテスト設定"""
     return {
         "strategy_name": "TestStrategy",
-        "symbol": "BTC/USDT",
+        "symbol": "BTC/USDT:USDT",
         "timeframe": "1h",
         "start_date": datetime(2024, 1, 1),
         "end_date": datetime(2024, 1, 31),
@@ -101,7 +101,7 @@ class TestConfigValidation:
         """必須フィールドのみの設定を検証できること"""
         config = {
             "strategy_name": "MinimalStrategy",
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": datetime(2024, 1, 1),
             "end_date": datetime(2024, 1, 2),

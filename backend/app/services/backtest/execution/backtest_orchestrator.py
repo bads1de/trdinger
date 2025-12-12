@@ -10,7 +10,9 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 import pandas as pd
+from pydantic import ValidationError
 
+from app.schemas.backtest_config import BacktestConfig
 from ..backtest_data_service import BacktestDataService
 from ..conversion.backtest_result_converter import (
     BacktestResultConversionError,
@@ -45,7 +47,6 @@ class BacktestOrchestrator:
             raise ValueError("BacktestDataService is required")
 
         self.data_service = data_service
-        self._validator = BacktestConfigValidator()
         self._strategy_factory = StrategyClassFactory()
         self._result_converter = BacktestResultConverter()
         self._executor = BacktestExecutor(data_service)
@@ -64,54 +65,57 @@ class BacktestOrchestrator:
             バックテスト結果の辞書
         """
         try:
-            # 1. 設定の検証
-            self._validator.validate_config(config)
+            # 1. 設定の検証とモデル変換 (Pydantic)
+            try:
+                backtest_config = BacktestConfig(**config)
+            except ValidationError as e:
+                raise BacktestConfigValidationError(f"設定が無効です: {e}")
 
-            # 2. 日付の正規化
-            start_date = self._normalize_date(config["start_date"])
-            end_date = self._normalize_date(config["end_date"])
-
-            # 3. 戦略クラス取得または生成
+            # 2. 戦略クラス取得または生成
+            # StrategyClassFactoryはまだ辞書を期待しているため、一部辞書に戻す
+            # strategy_configオブジェクトを辞書に変換
+            strategy_config_dict = backtest_config.strategy_config.model_dump()
+            
+            # strategy_class が config に直接含まれている場合の対応（GAエンジンからの直接渡しなど）
+            # Pydanticモデルには含まれていないため、元のconfig辞書を確認
             if "strategy_class" in config:
-                # GAエンジンから直接戦略クラスが渡された場合
                 strategy_class = config["strategy_class"]
                 strategy_parameters = {}
             else:
-                # 通常のstrategy_configから戦略クラスを生成する場合
                 strategy_class = self._strategy_factory.create_strategy_class(
-                    config["strategy_config"]
+                    strategy_config_dict
                 )
                 strategy_parameters = self._strategy_factory.get_strategy_parameters(
-                    config["strategy_config"]
+                    strategy_config_dict
                 )
 
-            # 4. バックテスト実行
+            # 3. バックテスト実行
             stats = self._executor.execute_backtest(
                 strategy_class=strategy_class,
                 strategy_parameters=strategy_parameters,
-                symbol=config["symbol"],
-                timeframe=config["timeframe"],
-                start_date=start_date,
-                end_date=end_date,
-                initial_capital=config["initial_capital"],
-                commission_rate=config["commission_rate"],
+                symbol=backtest_config.symbol,
+                timeframe=backtest_config.timeframe,
+                start_date=backtest_config.start_date,
+                end_date=backtest_config.end_date,
+                initial_capital=backtest_config.initial_capital,
+                commission_rate=backtest_config.commission_rate,
                 preloaded_data=preloaded_data,
             )
 
-            # 5. 結果をデータベース形式に変換
+            # 4. 結果をデータベース形式に変換
             config_json = {
-                "strategy_config": config.get("strategy_config", {}),
-                "commission_rate": config.get("commission_rate", 0.001),
+                "strategy_config": strategy_config_dict,
+                "commission_rate": backtest_config.commission_rate,
             }
 
             result = self._result_converter.convert_backtest_results(
                 stats=stats,
-                strategy_name=config["strategy_name"],
-                symbol=config["symbol"],
-                timeframe=config["timeframe"],
-                initial_capital=config["initial_capital"],
-                start_date=config["start_date"],
-                end_date=config["end_date"],
+                strategy_name=backtest_config.strategy_name,
+                symbol=backtest_config.symbol,
+                timeframe=backtest_config.timeframe,
+                initial_capital=backtest_config.initial_capital,
+                start_date=backtest_config.start_date,
+                end_date=backtest_config.end_date,
                 config_json=config_json,
             )
 
@@ -128,15 +132,6 @@ class BacktestOrchestrator:
         except Exception as e:
             logger.error(f"予期しないエラーが発生しました: {e}", exc_info=True)
             raise
-
-    def _normalize_date(self, date_value: Any) -> datetime:
-        """日付値をdatetimeオブジェクトに正規化"""
-        if isinstance(date_value, datetime):
-            return date_value
-        elif isinstance(date_value, str):
-            return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
-        else:
-            raise ValueError(f"サポートされていない日付形式: {type(date_value)}")
 
     def get_supported_strategies(self) -> Dict[str, Any]:
         """サポートされている戦略一覧を取得"""

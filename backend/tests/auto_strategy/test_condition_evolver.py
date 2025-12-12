@@ -150,7 +150,7 @@ class TestConditionEvolver:
         """適応度評価テスト"""
         condition = Condition("RSI", ">", 30.0, "long")
         backtest_config = {
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "initial_capital": 10000,
         }
@@ -210,7 +210,7 @@ class TestConditionEvolver:
     def test_run_evolution(self, condition_evolver):
         """進化プロセス実行テスト"""
         backtest_config = {
-            "symbol": "BTC/USDT",
+            "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "initial_capital": 10000,
         }
@@ -313,7 +313,7 @@ class TestParallelFitnessEvaluator:
             Condition("RSI", "<", 70.0, "short"),
             Condition("MACD", ">", 0.5, "long"),
         ]
-        backtest_config = {"symbol": "BTC/USDT", "timeframe": "1h"}
+        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         fitness_values = evaluator.evaluate_population(population, backtest_config)
 
@@ -349,7 +349,7 @@ class TestParallelFitnessEvaluator:
         )
 
         population = [Condition("RSI", ">", 30.0, "long") for _ in range(8)]
-        backtest_config = {"symbol": "BTC/USDT", "timeframe": "1h"}
+        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         start_time = time.time()
         evaluator.evaluate_population(population, backtest_config)
@@ -535,7 +535,7 @@ class TestConditionEvolverWithParallelization:
             max_workers=2,
         )
 
-        backtest_config = {"symbol": "BTC/USDT", "timeframe": "1h"}
+        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         result = evolver.run_evolution(
             backtest_config,
@@ -560,7 +560,7 @@ class TestConditionEvolverWithParallelization:
         # 常に同じフィットネスを返すようにして早期打ち切りを発動
         evolver.evaluate_fitness = Mock(return_value=0.5)
 
-        backtest_config = {"symbol": "BTC/USDT", "timeframe": "1h"}
+        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         result = evolver.run_evolution(
             backtest_config,
@@ -581,7 +581,7 @@ class TestConditionEvolverWithParallelization:
             cache_size=100,
         )
 
-        backtest_config = {"symbol": "BTC/USDT", "timeframe": "1h"}
+        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         result = evolver.run_evolution(
             backtest_config,

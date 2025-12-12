@@ -65,7 +65,7 @@ class BybitOpenInterestService(BybitService):
         最新のタイムスタンプ以降のデータのみを取得します。
 
         Args:
-            symbol: 取引ペアシンボル（例: 'BTC/USDT'）
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
             repository: OpenInterestRepository（テスト用）
             interval: データ間隔（デフォルト: '1h'）
 
