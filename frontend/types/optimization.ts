@@ -7,12 +7,6 @@ import { BacktestConfig } from "./backtest";
 /**
  * GA戦略生成の設定
  */
-export interface DRLConfig {
-  enabled: boolean;
-  policy_type?: "ppo" | "a2c" | "dqn";
-  policy_weight?: number;
-  [key: string]: unknown;
-}
 
 export interface WaveletConfig {
   enabled: boolean;
@@ -59,11 +53,30 @@ export interface GAConfig {
       min_sharpe_ratio: number;
     };
 
-    // 高度な設定
+    /** 最低使用指標数 */
+    min_indicators?: number;
+    /** 最低条件数 */
+    min_conditions?: number;
+    /** 最大条件数 */
+    max_conditions?: number;
+
+    // ペナルティ設定
+    /** ゼロトレードペナルティ */
+    zero_trades_penalty?: number;
+    /** 制約違反ペナルティ */
+    constraint_violation_penalty?: number;
+
+    // 高度な設定（Fitness Sharing）
     /** フィットネスシェアリング有効化（多様性維持） */
     enable_fitness_sharing?: boolean;
     /** 近傍半径（シェアリングの距離閾値） */
     sharing_radius?: number;
+    /** シェアリングのアルファ値 */
+    sharing_alpha?: number;
+    /** サンプリング閾値 */
+    sampling_threshold?: number;
+    /** サンプリング比率 */
+    sampling_ratio?: number;
 
     // 多目的最適化設定
     /** 多目的最適化を有効化するか */
@@ -72,10 +85,77 @@ export interface GAConfig {
     objectives?: string[];
     /** 目的関数ごとの重み（objectives と同じ順序） */
     objective_weights?: number[];
+    /** 動的重み付け（レジーム適応） */
+    dynamic_objective_reweighting?: boolean;
 
-    // レジーム適応設定
-    /** レジーム適応を有効化するかどうか */
-    regime_adaptation_enabled?: boolean;
+    // OOS検証設定
+    /** OOS分割比率 */
+    oos_split_ratio?: number;
+    /** OOSフィットネス重み */
+    oos_fitness_weight?: number;
+
+    // TPSL設定
+    /** TPSL手法の制約リスト */
+    tpsl_method_constraints?: string[];
+    /** SL範囲 [min, max] */
+    tpsl_sl_range?: number[];
+    /** TP範囲 [min, max] */
+    tpsl_tp_range?: number[];
+    /** リスクリワード比範囲 [min, max] */
+    tpsl_rr_range?: number[];
+    /** ATR倍率範囲 [min, max] */
+    tpsl_atr_multiplier_range?: number[];
+
+    // Walk-Forward Analysis
+    /** WFAを有効化するか */
+    enable_walk_forward?: boolean;
+    /** フォールド数 */
+    wfa_n_folds?: number;
+    /** 学習期間の比率 */
+    wfa_train_ratio?: number;
+    /** 学習開始点を固定するか */
+    wfa_anchored?: boolean;
+
+    // マルチタイムフレーム
+    /** MTFを有効化するか */
+    enable_multi_timeframe?: boolean;
+    /** 利用可能なタイムフレーム */
+    available_timeframes?: string[];
+    /** MTF指標の生成確率 */
+    mtf_indicator_probability?: number;
+
+    // MLフィルター
+    /** MLフィルター有効化 */
+    ml_filter_enabled?: boolean;
+    /** MLモデルパス */
+    ml_model_path?: string;
+    /** 特徴量前処理の有効化 */
+    preprocess_features?: boolean;
+
+    // 遺伝子生成重み
+    /** 価格データの重み */
+    price_data_weight?: number;
+    /** 出来高データの重み */
+    volume_data_weight?: number;
+    /** OI/FRデータの重み */
+    oi_fr_data_weight?: number;
+
+    // 高度な遺伝的演算子設定
+    crossover_field_selection_probability?: number;
+    indicator_param_mutation_range?: number[];
+    risk_param_mutation_range?: number[];
+    indicator_add_delete_probability?: number;
+    indicator_add_vs_delete_probability?: number;
+    condition_change_probability_multiplier?: number;
+    condition_selection_probability?: number;
+    condition_operator_switch_probability?: number;
+    tpsl_gene_creation_probability_multiplier?: number;
+    position_sizing_gene_creation_probability_multiplier?: number;
+    numeric_threshold_probability?: number;
+
+    // パラメータ範囲プリセット
+    /** パラメータ範囲プリセット名 */
+    parameter_range_preset?: string;
 
     // ハイブリッドGA+ML設定
     /** ハイブリッドモード有効化（GA+ML予測統合） */
@@ -97,12 +177,11 @@ export interface GAConfig {
 
 // TP/SL戦略の種類
 export type TPSLStrategy =
-  | "legacy"
-  | "random"
-  | "risk_reward"
-  | "volatility_adaptive"
+  | "fixed_percentage"
+  | "risk_reward_ratio"
+  | "volatility_based"
   | "statistical"
-  | "auto_optimal";
+  | "adaptive";
 
 // ボラティリティ感度
 export type VolatilitySensitivity = "low" | "medium" | "high";

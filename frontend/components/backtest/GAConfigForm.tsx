@@ -93,8 +93,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         enable_multi_objective: initialGAConfig.enable_multi_objective ?? true,
         objectives: initialGAConfig.objectives ?? ["win_rate", "max_drawdown"],
         objective_weights: initialGAConfig.objective_weights ?? [1.0, -1.0],
-        regime_adaptation_enabled:
-          initialGAConfig.regime_adaptation_enabled ?? false,
+        dynamic_objective_reweighting:
+          initialGAConfig.dynamic_objective_reweighting ?? false,
         hybrid_mode: initialGAConfig.hybrid_mode ?? false,
         hybrid_model_type: initialGAConfig.hybrid_model_type ?? "lightgbm",
         hybrid_model_types: initialGAConfig.hybrid_model_types,
@@ -103,6 +103,82 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           initialGAConfig.enable_parallel_evaluation ?? true,
         max_evaluation_workers: initialGAConfig.max_evaluation_workers ?? null,
         evaluation_timeout: initialGAConfig.evaluation_timeout ?? 300,
+
+        // 制限設定
+        min_indicators: initialGAConfig.min_indicators,
+        min_conditions: initialGAConfig.min_conditions,
+        max_conditions: initialGAConfig.max_conditions,
+
+        // ペナルティ設定
+        zero_trades_penalty: initialGAConfig.zero_trades_penalty,
+        constraint_violation_penalty:
+          initialGAConfig.constraint_violation_penalty,
+
+        // 高度な設定 (Fitness Sharing)
+        enable_fitness_sharing: initialGAConfig.enable_fitness_sharing ?? true,
+        sharing_radius: initialGAConfig.sharing_radius,
+        sharing_alpha: initialGAConfig.sharing_alpha,
+        sampling_threshold: initialGAConfig.sampling_threshold,
+        sampling_ratio: initialGAConfig.sampling_ratio,
+
+        // OOS
+        oos_split_ratio: initialGAConfig.oos_split_ratio,
+        oos_fitness_weight: initialGAConfig.oos_fitness_weight,
+
+        // TPSL設定
+        tpsl_method_constraints: initialGAConfig.tpsl_method_constraints,
+        tpsl_sl_range: initialGAConfig.tpsl_sl_range,
+        tpsl_tp_range: initialGAConfig.tpsl_tp_range,
+        tpsl_rr_range: initialGAConfig.tpsl_rr_range,
+        tpsl_atr_multiplier_range: initialGAConfig.tpsl_atr_multiplier_range,
+
+        // WFA
+        enable_walk_forward: initialGAConfig.enable_walk_forward ?? false,
+        wfa_n_folds: initialGAConfig.wfa_n_folds ?? 5,
+        wfa_train_ratio: initialGAConfig.wfa_train_ratio ?? 0.7,
+        wfa_anchored: initialGAConfig.wfa_anchored ?? false,
+
+        // MTF
+        enable_multi_timeframe: initialGAConfig.enable_multi_timeframe ?? false,
+        available_timeframes: initialGAConfig.available_timeframes,
+        mtf_indicator_probability:
+          initialGAConfig.mtf_indicator_probability ?? 0.3,
+
+        // ML Filter
+        ml_filter_enabled: initialGAConfig.ml_filter_enabled ?? false,
+        ml_model_path: initialGAConfig.ml_model_path,
+        preprocess_features: initialGAConfig.preprocess_features ?? true,
+
+        // Data Weights
+        price_data_weight: initialGAConfig.price_data_weight,
+        volume_data_weight: initialGAConfig.volume_data_weight,
+        oi_fr_data_weight: initialGAConfig.oi_fr_data_weight,
+
+        // Advanced Genetic Operators
+        crossover_field_selection_probability:
+          initialGAConfig.crossover_field_selection_probability,
+        indicator_param_mutation_range:
+          initialGAConfig.indicator_param_mutation_range,
+        risk_param_mutation_range: initialGAConfig.risk_param_mutation_range,
+        indicator_add_delete_probability:
+          initialGAConfig.indicator_add_delete_probability,
+        indicator_add_vs_delete_probability:
+          initialGAConfig.indicator_add_vs_delete_probability,
+        condition_change_probability_multiplier:
+          initialGAConfig.condition_change_probability_multiplier,
+        condition_selection_probability:
+          initialGAConfig.condition_selection_probability,
+        condition_operator_switch_probability:
+          initialGAConfig.condition_operator_switch_probability,
+        tpsl_gene_creation_probability_multiplier:
+          initialGAConfig.tpsl_gene_creation_probability_multiplier,
+        position_sizing_gene_creation_probability_multiplier:
+          initialGAConfig.position_sizing_gene_creation_probability_multiplier,
+        numeric_threshold_probability:
+          initialGAConfig.numeric_threshold_probability,
+
+        // パラメータ範囲プリセット
+        parameter_range_preset: initialGAConfig.parameter_range_preset,
       },
     };
   });
@@ -328,16 +404,18 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={config.ga_config.regime_adaptation_enabled ?? false}
+                  checked={
+                    config.ga_config.dynamic_objective_reweighting ?? false
+                  }
                   onChange={(e) =>
                     handleGAConfigChange({
-                      regime_adaptation_enabled: e.target.checked,
+                      dynamic_objective_reweighting: e.target.checked,
                     })
                   }
                   className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm text-indigo-200">
-                  レジーム適応を有効化
+                  動的重み付け (レジーム適応)
                 </span>
               </label>
             </div>
