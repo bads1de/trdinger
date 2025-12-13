@@ -197,6 +197,17 @@ class GAConfig(BaseConfig):
     # None の場合はデフォルト範囲を使用
     parameter_range_preset: Optional[str] = None
 
+    # パラメータチューニング設定（GA×Optunaハイブリッド）
+    enable_parameter_tuning: bool = (
+        True  # エリート個体のパラメータチューニング有効化（デフォルト有効）
+    )
+    tuning_n_trials: int = 30  # Optunaの試行回数
+    tuning_elite_count: int = 3  # チューニング対象エリート数
+    tuning_use_wfa: bool = True  # WFA評価を使用（過学習防止）
+    tuning_include_indicators: bool = True  # インジケーターパラメータを最適化
+    tuning_include_tpsl: bool = True  # TPSLパラメータを最適化
+    tuning_include_thresholds: bool = False  # 条件閾値を最適化
+
     def get_ga_settings(self):
         """関連するGASettingsを取得"""
         if self.auto_strategy_config:
@@ -415,6 +426,14 @@ class GAConfig(BaseConfig):
             "mtf_indicator_probability": self.mtf_indicator_probability,
             # パラメータ範囲プリセット
             "parameter_range_preset": self.parameter_range_preset,
+            # パラメータチューニング設定
+            "enable_parameter_tuning": self.enable_parameter_tuning,
+            "tuning_n_trials": self.tuning_n_trials,
+            "tuning_elite_count": self.tuning_elite_count,
+            "tuning_use_wfa": self.tuning_use_wfa,
+            "tuning_include_indicators": self.tuning_include_indicators,
+            "tuning_include_tpsl": self.tuning_include_tpsl,
+            "tuning_include_thresholds": self.tuning_include_thresholds,
         }
 
     @classmethod
@@ -530,6 +549,14 @@ class GAConfig(BaseConfig):
             "mtf_indicator_probability": data.get("mtf_indicator_probability", 0.3),
             # パラメータ範囲プリセット
             "parameter_range_preset": data.get("parameter_range_preset", None),
+            # パラメータチューニング設定
+            "enable_parameter_tuning": data.get("enable_parameter_tuning", True),
+            "tuning_n_trials": data.get("tuning_n_trials", 30),
+            "tuning_elite_count": data.get("tuning_elite_count", 3),
+            "tuning_use_wfa": data.get("tuning_use_wfa", True),
+            "tuning_include_indicators": data.get("tuning_include_indicators", True),
+            "tuning_include_tpsl": data.get("tuning_include_tpsl", True),
+            "tuning_include_thresholds": data.get("tuning_include_thresholds", False),
         }
 
         # デフォルト値をマージ

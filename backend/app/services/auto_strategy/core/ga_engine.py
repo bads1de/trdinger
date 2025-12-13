@@ -322,6 +322,10 @@ class GeneticAlgorithmEngine:
             population, config, halloffame
         )
 
+        # パラメータチューニング（有効な場合）
+        if config.enable_parameter_tuning:
+            best_gene = self._tune_elite_parameters(best_gene, config)
+
         execution_time = time.time() - start_time
 
         result = {
@@ -431,3 +435,38 @@ class GeneticAlgorithmEngine:
             logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")
             # 遺伝子生成はGAの根幹部分であり、失敗した場合は例外をスローして処理を停止するのが安全
             raise
+
+    def _tune_elite_parameters(self, best_gene, config: GAConfig):
+        """エリート個体のパラメータをOptunaでチューニングします。
+
+        Args:
+            best_gene: 最良戦略遺伝子
+            config (GAConfig): GA設定
+
+        Returns:
+            チューニングされた戦略遺伝子
+        """
+        try:
+            from ..optimization import StrategyParameterTuner
+
+            logger.info("🔧 エリート個体のパラメータチューニングを開始")
+
+            tuner = StrategyParameterTuner(
+                evaluator=self.individual_evaluator,
+                config=config,
+                n_trials=config.tuning_n_trials,
+                use_wfa=config.tuning_use_wfa,
+                include_indicators=config.tuning_include_indicators,
+                include_tpsl=config.tuning_include_tpsl,
+                include_thresholds=config.tuning_include_thresholds,
+            )
+
+            tuned_gene = tuner.tune(best_gene)
+
+            logger.info("✅ パラメータチューニング完了")
+            return tuned_gene
+
+        except Exception as e:
+            logger.warning(f"パラメータチューニング中にエラーが発生: {e}")
+            # エラー時は元の遺伝子を返す
+            return best_gene

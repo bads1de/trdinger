@@ -149,24 +149,34 @@ def _ml_allows_entry(self, direction: float) -> bool:
 - 役割分担が明確化（GA=テクニカル構造、ML=相場環境判断）
 - 「ML が危険と判断した場面でのエントリー」を防止
 
-### 3.2 🟡 課題 2: Optuna は ML モデル最適化用に限定されている
+### 3.2 ✅ 課題 2: Optuna は ML モデル最適化用に限定されている【修正済み】
 
-**現状:**
-Optuna は`ml/optimization/optuna_optimizer.py`で実装されていますが、**ML モデルのハイパーパラメータ最適化専用**です。
+**修正日:** 2024-12-13
+
+**対応内容:**
+`StrategyParameterTuner` と `StrategyParameterSpace` を実装し、GA で発見された戦略構造のパラメータを Optuna で最適化できるようにしました。
+
+**実装:**
+
+1. `StrategyParameterSpace`: StrategyGene から Optuna パラメータ空間を動的に構築
+2. `StrategyParameterTuner`: Optuna を使用した戦略パラメータ最適化
+3. `GAConfig` にチューニング設定を追加（`enable_parameter_tuning` など）
+4. `GeneticAlgorithmEngine._tune_elite_parameters()` メソッドを追加
 
 ```python
-# OptimizationService.optimize_parameters より
-# 目的関数: MLモデルのF1スコアを最大化
-def objective_function(params: Dict[str, Any]) -> float:
-    result = temp_trainer.train_model(...)
-    f1_score = result.get("f1_score", 0.0)
-    return f1_score
+# GAConfig でチューニングを有効化
+config = GAConfig(
+    enable_parameter_tuning=True,  # チューニング有効化
+    tuning_n_trials=30,            # Optuna試行回数
+    tuning_use_wfa=True,           # WFA評価を使用
+)
 ```
 
-**問題点:**
+**効果:**
 
-- GA で発見された**戦略構造のパラメータ（インジケータ期間、閾値など）を最適化する手段がない**
-- GA が構造とパラメータを同時に探索しており、非効率
+- GA は「大まかに良さそうな構造」の発見に集中
+- Optuna は「構造内の最適パラメータ」を高精度に特定
+- WFA 評価との連携で過学習を抑制
 
 ### 3.3 🟡 課題 3: 過学習対策機能は実装済みだが、デフォルト無効
 
@@ -308,7 +318,9 @@ def _ml_allows_entry(self, direction: float) -> bool:
 - GA は「ML が OK を出した相場でのみ勝てる戦略」を探す
 - 役割分担が明確化（GA=テクニカル構造、ML=相場環境判断）
 
-### 5.2 提案 2: GA×Optuna ハイブリッド化（優先度: 中）
+### 5.2 ✅ 提案 2: GA×Optuna ハイブリッド化（優先度: 中）【実装完了】
+
+**実装完了日:** 2024-12-13
 
 **目的:** GA で発見した戦略構造に対し、Optuna でパラメータチューニングを行う。
 
@@ -408,7 +420,7 @@ wfa_n_folds: int = 3  # 3フォールド（計算コストと精度のバラン�
 | ---------- | ------------------------------- | ------------------------------------------------- | ---------- | --------- |
 | ~~**高**~~ | ML フィルターの真のフィルター化 | 無駄なエントリーの排除、GA と ML の役割分担明確化 | 中         | ✅ 完了   |
 | **中**     | WFA/OOS のデフォルト有効化      | 過学習防止、初期設定の改善                        | 低         | 📋 未着手 |
-| **中**     | GA×Optuna ハイブリッド化        | パラメータ探索効率向上、WFA 連携                  | 高         | 📋 未着手 |
+| **中**     | GA×Optuna ハイブリッド化        | パラメータ探索効率向上、WFA 連携                  | 高         | ✅ 完了   |
 | **低**     | 市場レジーム連携                | 相場適応型戦略ポートフォリオ                      | 高         | 📋 未着手 |
 
 ---
