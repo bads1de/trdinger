@@ -242,6 +242,24 @@ class TestGetStrategiesWithBacktestResults:
         assert len(results) == 1
 
 
+class TestUnlinkBacktestResult:
+    """unlink_backtest_resultメソッドのテスト"""
+
+    def test_unlink_backtest_result_success(
+        self, repository: GeneratedStrategyRepository
+    ) -> None:
+        """バックテスト結果IDのリンクが解除される"""
+        mock_query = MagicMock()
+        mock_query.filter.return_value.update.return_value = 5  # 5件更新されたとする
+        repository.db.query.return_value = mock_query
+
+        count = repository.unlink_backtest_result(50)
+
+        assert count == 5
+        repository.db.commit.assert_called_once()
+        repository.db.query.assert_called_with(GeneratedStrategy)
+
+
 class TestDeleteAllStrategies:
     """delete_all_strategiesメソッドのテスト"""
 

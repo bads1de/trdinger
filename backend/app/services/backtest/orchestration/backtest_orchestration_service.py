@@ -143,6 +143,10 @@ class BacktestOrchestrationService:
             ),
         )
         def _delete_backtest_result():
+            # 関連する戦略のリンクを解除
+            strategy_repo = GeneratedStrategyRepository(db)
+            strategy_repo.unlink_backtest_result(result_id)
+
             backtest_repo = BacktestResultRepository(db)
             success = backtest_repo.delete_backtest_result(result_id)
 
@@ -223,8 +227,11 @@ class BacktestOrchestrationService:
         )
         def _get_supported_strategies():
             backtest_service = BacktestService()
-            strategies = backtest_service.get_supported_strategies()
-            return api_response(success=True, data={"strategies": strategies})
+            try:
+                strategies = backtest_service.get_supported_strategies()
+                return api_response(success=True, data={"strategies": strategies})
+            finally:
+                backtest_service.cleanup()
 
         return _get_supported_strategies()
 
@@ -252,7 +259,10 @@ class BacktestOrchestrationService:
         )
         def _execute_backtest():
             backtest_service = BacktestService()
-            result = backtest_service.execute_and_save_backtest(request, db)
-            return result
+            try:
+                result = backtest_service.execute_and_save_backtest(request, db)
+                return result
+            finally:
+                backtest_service.cleanup()
 
         return _execute_backtest()

@@ -349,3 +349,27 @@ class GeneratedStrategyRepository(BaseRepository):
             validated_data["metadata"] = {}
 
         return validated_data
+
+    def unlink_backtest_result(self, backtest_result_id: int) -> int:
+        """
+        指定されたバックテスト結果に関連する戦略のbacktest_result_idをNoneに更新
+
+        Args:
+            backtest_result_id: バックテスト結果ID
+
+        Returns:
+            更新された戦略の数
+        """
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="戦略バックテストリンク解除", is_api_call=False)
+        def _unlink_backtest_result():
+            count = (
+                self.db.query(GeneratedStrategy)
+                .filter(GeneratedStrategy.backtest_result_id == backtest_result_id)
+                .update({GeneratedStrategy.backtest_result_id: None})
+            )
+            self.db.commit()
+            return count
+
+        return _unlink_backtest_result()

@@ -1,4 +1,5 @@
 import logging
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Optional
 
@@ -35,21 +36,30 @@ class BaseDataCollectionOrchestrationService:
             logger.error(f"日付文字列のパースに失敗しました: {date_str}, エラー: {e}")
             return None
 
-    def _get_db_session(self, db_session: Optional[Session] = None) -> Session:
+    @contextmanager
+    def _get_db_session(self, db_session: Optional[Session] = None):
         """
-        データベースセッションを取得または作成する
+        データベースセッションを取得するコンテキストマネージャ
+
+        既存のセッションが渡された場合はそのまま使用し、
+        Noneの場合は新規セッションを作成して終了時にクローズします。
 
         Args:
-            db_session: 既存のセッション（オプション）
+            db_session: 既存のセッション（Noneの場合は新規作成）
 
-        Returns:
-            データベースセッション
+        Yields:
+            Session: データベースセッション
         """
-        if db_session:
-            return db_session
-
-        # セッションがない場合は新しく作成（ジェネレータから取得）
-        return next(get_db())
+        if db_session is not None:
+            # 既存セッションはそのまま使用（呼び出し元が管理）
+            yield db_session
+        else:
+            # 新規セッションを作成し、終了時にクローズ
+            session = next(get_db())
+            try:
+                yield session
+            finally:
+                session.close()
 
     def _create_success_response(
         self, message: str, data: Optional[dict] = None

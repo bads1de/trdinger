@@ -281,12 +281,20 @@ class TestDeleteBacktestResult:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with patch(
-            "app.services.backtest.orchestration.backtest_orchestration_service.BacktestResultRepository"
-        ) as mock_repo_class:
+        with (
+            patch(
+                "app.services.backtest.orchestration.backtest_orchestration_service.BacktestResultRepository"
+            ) as mock_repo_class,
+            patch(
+                "app.services.backtest.orchestration.backtest_orchestration_service.GeneratedStrategyRepository"
+            ) as mock_strategy_repo_class,
+        ):
             mock_repo = MagicMock()
             mock_repo.delete_backtest_result.return_value = True
             mock_repo_class.return_value = mock_repo
+
+            mock_strategy_repo = MagicMock()
+            mock_strategy_repo_class.return_value = mock_strategy_repo
 
             result = await orchestration_service.delete_backtest_result(
                 db=mock_db_session, result_id=1
@@ -294,6 +302,7 @@ class TestDeleteBacktestResult:
 
             assert result["success"] is True
             assert "削除" in result["message"]
+            mock_strategy_repo.unlink_backtest_result.assert_called_once_with(1)
 
     @pytest.mark.asyncio
     async def test_delete_backtest_result_not_found(
@@ -308,12 +317,20 @@ class TestDeleteBacktestResult:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        with patch(
-            "app.services.backtest.orchestration.backtest_orchestration_service.BacktestResultRepository"
-        ) as mock_repo_class:
+        with (
+            patch(
+                "app.services.backtest.orchestration.backtest_orchestration_service.BacktestResultRepository"
+            ) as mock_repo_class,
+            patch(
+                "app.services.backtest.orchestration.backtest_orchestration_service.GeneratedStrategyRepository"
+            ) as mock_strategy_repo_class,
+        ):
             mock_repo = MagicMock()
             mock_repo.delete_backtest_result.return_value = False
             mock_repo_class.return_value = mock_repo
+
+            mock_strategy_repo = MagicMock()
+            mock_strategy_repo_class.return_value = mock_strategy_repo
 
             result = await orchestration_service.delete_backtest_result(
                 db=mock_db_session, result_id=9999
@@ -396,6 +413,7 @@ class TestGetSupportedStrategies:
             assert result["success"] is True
             assert len(result["data"]["strategies"]) == 2
             assert "sma_crossover" in result["data"]["strategies"]
+            mock_service.cleanup.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_supported_strategies_empty(
@@ -455,6 +473,7 @@ class TestExecuteBacktest:
             )
 
             assert result["success"] is True
+            mock_service.cleanup.assert_called_once()
 
 
 class TestErrorHandling:

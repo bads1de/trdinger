@@ -5,7 +5,7 @@ GA実験リポジトリ
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, cast
 
 from sqlalchemy.orm import Session
@@ -100,7 +100,7 @@ class GAExperimentRepository(BaseRepository):
             if completed_at:
                 experiment.completed_at = cast(datetime, completed_at)  # type: ignore
             elif status in ["completed", "error", "cancelled"]:
-                experiment.completed_at = cast(datetime, datetime.utcnow())  # type: ignore
+                experiment.completed_at = cast(datetime, datetime.now(timezone.utc))  # type: ignore
 
             self.db.commit()
             logger.info(f"実験ステータスを更新: {experiment_id} -> {status}")
@@ -191,7 +191,7 @@ class GAExperimentRepository(BaseRepository):
             experiment.best_fitness = best_fitness  # type: ignore
             experiment.current_generation = final_generation  # type: ignore
             experiment.progress = 1.0  # type: ignore
-            experiment.completed_at = cast(datetime, datetime.utcnow())  # type: ignore
+            experiment.completed_at = cast(datetime, datetime.now(timezone.utc))  # type: ignore
 
             self.db.commit()
             logger.info(

@@ -67,20 +67,19 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 f"オープンインタレストデータ収集開始: symbol={symbol}, fetch_all={fetch_all}"
             )
 
-            # データベースセッションの取得
-            db_session = self._get_db_session(db_session)
+            # データベースセッションの取得（コンテキストマネージャーで管理）
+            with self._get_db_session(db_session) as session:
+                # リポジトリの初期化
+                repository = OpenInterestRepository(session)
 
-            # リポジトリの初期化
-            repository = OpenInterestRepository(db_session)
-
-            # データ収集実行
-            # bybit_serviceはDIされたものを使用
-            result = await self.bybit_service.fetch_and_save_open_interest_data(
-                symbol=symbol,
-                limit=limit,
-                repository=repository,
-                fetch_all=fetch_all,
-            )
+                # データ収集実行
+                # bybit_serviceはDIされたものを使用
+                result = await self.bybit_service.fetch_and_save_open_interest_data(
+                    symbol=symbol,
+                    limit=limit,
+                    repository=repository,
+                    fetch_all=fetch_all,
+                )
 
             if result.get("success", False):
                 return self._create_success_response(
@@ -129,51 +128,53 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 f"オープンインタレストデータ取得開始: symbol={symbol}, limit={limit}"
             )
 
-            db_session = self._get_db_session(db_session)
-            repository = OpenInterestRepository(db_session)
+            with self._get_db_session(db_session) as session:
+                repository = OpenInterestRepository(session)
 
-            start_time = self._parse_datetime(start_date)
-            end_time = self._parse_datetime(end_date)
+                start_time = self._parse_datetime(start_date)
+                end_time = self._parse_datetime(end_date)
 
-            normalized_symbol = (
-                symbol
-                if ":" in symbol
-                else (
-                    f"{symbol}:USDT"
-                    if symbol.endswith("/USDT")
+                normalized_symbol = (
+                    symbol
+                    if ":" in symbol
                     else (
-                        f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
+                        f"{symbol}:USDT"
+                        if symbol.endswith("/USDT")
+                        else (
+                            f"{symbol}:USD"
+                            if symbol.endswith("/USD")
+                            else f"{symbol}:USDT"
+                        )
                     )
                 )
-            )
 
-            records = repository.get_open_interest_data(
-                symbol=normalized_symbol,
-                start_time=start_time,
-                end_time=end_time,
-                limit=limit,
-            )
+                records = repository.get_open_interest_data(
+                    symbol=normalized_symbol,
+                    start_time=start_time,
+                    end_time=end_time,
+                    limit=limit,
+                )
 
-            data = [
-                {
-                    "symbol": r.symbol,
-                    "open_interest_value": r.open_interest_value,
-                    "data_timestamp": r.data_timestamp.isoformat(),
-                    "timestamp": r.timestamp.isoformat(),
-                }
-                for r in records
-            ]
+                data = [
+                    {
+                        "symbol": r.symbol,
+                        "open_interest_value": r.open_interest_value,
+                        "data_timestamp": r.data_timestamp.isoformat(),
+                        "timestamp": r.timestamp.isoformat(),
+                    }
+                    for r in records
+                ]
 
-            logger.info(f"オープンインタレストデータ取得成功: {len(data)}件")
+                logger.info(f"オープンインタレストデータ取得成功: {len(data)}件")
 
-            return self._create_success_response(
-                message=f"{len(data)}件のオープンインタレストデータを取得しました",
-                data={
-                    "symbol": normalized_symbol,
-                    "count": len(data),
-                    "open_interest": data,
-                },
-            )
+                return self._create_success_response(
+                    message=f"{len(data)}件のオープンインタレストデータを取得しました",
+                    data={
+                        "symbol": normalized_symbol,
+                        "count": len(data),
+                        "open_interest": data,
+                    },
+                )
         except Exception as e:
             logger.error(f"オープンインタレストデータ取得エラー: {e}", exc_info=True)
             return error_response(
@@ -204,49 +205,51 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
         try:
             logger.info(f"オープンインタレスト一括収集開始: {len(symbols)}シンボル")
 
-            db_session = self._get_db_session(db_session)
-            repository = OpenInterestRepository(db_session)
+            with self._get_db_session(db_session) as session:
+                repository = OpenInterestRepository(session)
 
-            results = []
-            total_saved = 0
-            successful_symbols = 0
-            failed_symbols = []
+                results = []
+                total_saved = 0
+                successful_symbols = 0
+                failed_symbols = []
 
-            for symbol in symbols:
-                try:
-                    # bybit_serviceを使用
-                    result = await self.bybit_service.fetch_and_save_open_interest_data(
-                        symbol=symbol,
-                        repository=repository,
-                        fetch_all=True,
-                    )
-                    results.append(result)
-                    total_saved += result["saved_count"]
-                    successful_symbols += 1
+                for symbol in symbols:
+                    try:
+                        # bybit_serviceを使用
+                        result = (
+                            await self.bybit_service.fetch_and_save_open_interest_data(
+                                symbol=symbol,
+                                repository=repository,
+                                fetch_all=True,
+                            )
+                        )
+                        results.append(result)
+                        total_saved += result["saved_count"]
+                        successful_symbols += 1
 
-                    logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
+                        logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
 
-                    # レート制限対策
-                    await asyncio.sleep(0.1)
+                        # レート制限対策
+                        await asyncio.sleep(0.1)
 
-                except Exception as e:
-                    logger.error(f"❌ {symbol} 収集エラー: {e}")
-                    failed_symbols.append({"symbol": symbol, "error": str(e)})
+                    except Exception as e:
+                        logger.error(f"❌ {symbol} 収集エラー: {e}")
+                        failed_symbols.append({"symbol": symbol, "error": str(e)})
 
-            logger.info(
-                f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
-            )
+                logger.info(
+                    f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
+                )
 
-            return self._create_success_response(
-                message=f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功",
-                data={
-                    "total_saved": total_saved,
-                    "successful_symbols": successful_symbols,
-                    "failed_symbols": failed_symbols,
-                    "results": results,
-                    "symbols": symbols,
-                },
-            )
+                return self._create_success_response(
+                    message=f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功",
+                    data={
+                        "total_saved": total_saved,
+                        "successful_symbols": successful_symbols,
+                        "failed_symbols": failed_symbols,
+                        "results": results,
+                        "symbols": symbols,
+                    },
+                )
 
         except Exception as e:
             logger.error(f"オープンインタレスト一括収集エラー: {e}", exc_info=True)
