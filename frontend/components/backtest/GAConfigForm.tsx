@@ -376,11 +376,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         </Collapsible>
 
         {/* 高度なGA設定 */}
-        <div className="p-3 bg-indigo-900/30 border border-indigo-500/30 rounded-md">
-          <h4 className="font-medium text-indigo-300 mb-3">⚙️ 高度なGA設定</h4>
+        <div className="p-3 bg-indigo-900/30 border border-indigo-500/30 rounded-md space-y-4">
+          <h4 className="font-medium text-indigo-300">⚙️ 高度なGA設定</h4>
 
-          {/* フィットネス共有 */}
-          <div className="mb-2">
+          {/* 多様性維持・動的制御 */}
+          <div className="space-y-2">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -400,7 +400,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 フィットネス共有 (戦略の多様性向上)
               </span>
             </label>
-            <div className="pt-1">
+            <div>
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -418,6 +418,60 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                   動的重み付け (レジーム適応)
                 </span>
               </label>
+            </div>
+          </div>
+
+          <div className="border-t border-indigo-500/30 pt-3">
+            <h5 className="text-sm font-medium text-indigo-200 mb-2">
+              🛡️ 過学習対策
+            </h5>
+
+            {/* OOS設定 */}
+            <InputField
+              label="Out-of-Sample 分割比率"
+              type="number"
+              value={config.ga_config.oos_split_ratio ?? 0.0}
+              onChange={(val) => handleGAConfigChange({ oos_split_ratio: val })}
+              min={0}
+              max={0.5}
+              step={0.05}
+              description="検証用データの割合 (0.0-0.5)"
+            />
+
+            {/* WFA設定 */}
+            <div className="mt-3 space-y-2">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={config.ga_config.enable_walk_forward ?? false}
+                  onChange={(e) =>
+                    handleGAConfigChange({
+                      enable_walk_forward: e.target.checked,
+                    })
+                  }
+                  className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-indigo-200">
+                  Walk-Forward Analysis (WFA)
+                </span>
+              </label>
+
+              {config.ga_config.enable_walk_forward && (
+                <div className="pl-6">
+                  <InputField
+                    label="WFAフォールド数"
+                    type="number"
+                    value={config.ga_config.wfa_n_folds ?? 5}
+                    onChange={(val) =>
+                      handleGAConfigChange({ wfa_n_folds: val })
+                    }
+                    min={2}
+                    max={10}
+                    step={1}
+                    description="期間分割数"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
