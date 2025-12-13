@@ -4,41 +4,47 @@
 遺伝的アルゴリズムを使用して取引戦略を自動生成し、
 結果をJSON形式で出力します。
 
+デフォルトでは backend/results/auto_strategy ディレクトリに
+日付時刻付きのファイル名（例: strategy_2024-12-12_231030.json）で保存されます。
+
 使用方法:
     python -m scripts.run_auto_strategy [オプション]
 
 例:
-    # デフォルト設定で実行
+    # デフォルト設定で実行（自動的にresults/auto_strategyに保存）
     python -m scripts.run_auto_strategy
 
     # 設定をカスタマイズして実行
     python -m scripts.run_auto_strategy --generations 20 --population 30
 
-    # 結果をファイルに保存
-    python -m scripts.run_auto_strategy --output results/strategy.json
+    # 結果を指定したファイルに保存
+    python -m scripts.run_auto_strategy --output results/my_strategy.json
+
+    # ファイル保存をスキップ（標準出力のみ）
+    python -m scripts.run_auto_strategy --no-save
 """
 
+import sys
+from pathlib import Path
 import argparse
 import json
 import logging
-import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.services.auto_strategy.config.ga_runtime import GAConfig
-from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.generators.random_gene_generator import (
+from app.services.auto_strategy.config.ga_runtime import GAConfig  # noqa: E402
+from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine  # noqa: E402
+from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402
     RandomGeneGenerator,
 )
-from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer
-from app.services.backtest.backtest_service import BacktestService
+from app.services.auto_strategy.generators.strategy_factory import StrategyFactory  # noqa: E402
+from app.services.auto_strategy.models.strategy_gene import StrategyGene  # noqa: E402
+from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer  # noqa: E402
+from app.services.backtest.backtest_service import BacktestService  # noqa: E402
 
 # ロギング設定
 logging.basicConfig(
@@ -56,7 +62,7 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 例:
-  # 基本的な実行
+  # 基本的な実行（自動的にresults/auto_strategy/に日付付きで保存）
   python -m scripts.run_auto_strategy
 
   # 高速テスト（少ない世代数・個体数）
@@ -65,8 +71,11 @@ def parse_args() -> argparse.Namespace:
   # 本格的な探索
   python -m scripts.run_auto_strategy --generations 50 --population 100
 
-  # 結果をファイルに保存
+  # 結果を指定したファイルに保存
   python -m scripts.run_auto_strategy --output results/my_strategy.json
+
+  # ファイル保存をスキップ（標準出力のみ）
+  python -m scripts.run_auto_strategy --no-save
         """,
     )
 
@@ -157,6 +166,11 @@ def parse_args() -> argparse.Namespace:
         "--no-parallel",
         action="store_true",
         help="並列評価を無効化",
+    )
+    parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="ファイル保存をスキップし、標準出力のみに出力",
     )
 
     return parser.parse_args()
@@ -486,6 +500,25 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
             backtest_service.cleanup()
 
 
+def generate_output_filename() -> str:
+    """日付時刻付きの出力ファイル名を生成します。
+
+    Returns:
+        str: 生成されたファイル名（例: strategy_2024-12-12_231030.json）
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    return f"strategy_{timestamp}.json"
+
+
+def get_default_output_dir() -> Path:
+    """デフォルトの出力ディレクトリを取得します。
+
+    Returns:
+        Path: backend/results/auto_strategy ディレクトリへのパス
+    """
+    return project_root / "results" / "auto_strategy"
+
+
 def main():
     """メインエントリーポイント"""
     args = parse_args()
@@ -501,19 +534,35 @@ def main():
     # JSON出力
     json_output = json.dumps(result, indent=2, ensure_ascii=False, default=str)
 
-    if args.output:
-        # ファイルに保存
+    # 出力先の決定
+    if args.no_save:
+        # 保存をスキップ、標準出力のみ
+        output_path = None
+    elif args.output:
+        # 指定されたパスに保存
         output_path = Path(args.output)
+    else:
+        # デフォルトディレクトリに日付付きファイル名で保存
+        output_dir = get_default_output_dir()
+        output_path = output_dir / generate_output_filename()
+
+    if output_path:
+        # ファイルに保存
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(json_output)
         logger.info(f"結果を保存しました: {output_path}")
-    else:
-        # 標準出力
-        print("\n" + "=" * 60)
-        print("生成された戦略 (JSON)")
-        print("=" * 60)
-        print(json_output)
+
+    # 標準出力にも表示
+    print("\n" + "=" * 60)
+    print("生成された戦略 (JSON)")
+    print("=" * 60)
+    print(json_output)
+
+    if output_path:
+        print("\n" + "-" * 60)
+        print(f"📁 保存先: {output_path}")
+        print("-" * 60)
 
     return 0 if result.get("success") else 1
 

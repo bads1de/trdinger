@@ -10,15 +10,15 @@ from app.services.ml.feature_engineering.feature_engineering_service import (
     FAKEOUT_DETECTION_ALLOWLIST,
 )
 
-print(f"\n=== 特徴量総数 ===")
+print("\n=== 特徴量総数 ===")
 print(f"DEFAULT_FEATURE_ALLOWLIST: {len(DEFAULT_FEATURE_ALLOWLIST)}個")
 print(f"FAKEOUT_DETECTION_ALLOWLIST: {len(FAKEOUT_DETECTION_ALLOWLIST)}個")
 
-print(f"\n=== DEFAULT_FEATURE_ALLOWLIST 特徴量一覧 ===")
+print("\n=== DEFAULT_FEATURE_ALLOWLIST 特徴量一覧 ===")
 for i, feature in enumerate(DEFAULT_FEATURE_ALLOWLIST, 1):
     print(f"{i:3d}. {feature}")
 
-print(f"\n=== カテゴリ別内訳 ===")
+print("\n=== カテゴリ別内訳 ===")
 categories = {
     "Volume/Flow": ["AD", "OBV", "Volume_MA_20", "ADOSC"],
     "Momentum": ["RSI", "MACD_Histogram"],

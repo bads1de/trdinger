@@ -1,22 +1,18 @@
-import sys
 from pathlib import Path
 import pandas as pd
 import numpy as np
 import joblib
 import json
 import logging
-import matplotlib.pyplot as plt
-import glob
 import pandas_ta as ta
 
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
-from database.connection import SessionLocal
 from scripts.feature_evaluation.common_feature_evaluator import CommonFeatureEvaluator
 from scripts.ml_optimization.run_ml_pipeline import MLPipeline
 
-# バックテストライブラリ (backtesting.pyを使用と仮定)
+
 from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
 
@@ -182,7 +178,7 @@ def run_backtest():
     logger.info("Preparing data for backtest...")
 
     # MLPipelineインスタンスを作成 (パス解決用)
-    pipeline_instance = MLPipeline(enable_meta_labeling=False)
+    _ = MLPipeline(enable_meta_labeling=False)
 
     evaluator = CommonFeatureEvaluator()
     feature_service = FeatureEngineeringService()

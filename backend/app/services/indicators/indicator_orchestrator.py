@@ -87,7 +87,7 @@ class TechnicalIndicatorService:
                 # 4. pandas-ta直接呼び出し
                 result = self._call_pandas_ta(df, config, normalized_params)
                 if result is not None:
-                    return self._post_process(result, config)
+                    return self._post_process(result, config, df)
 
             # 5. アダプター方式にフォールバック（pandas-taにない場合または失敗した場合）
             try:
@@ -114,6 +114,19 @@ class TechnicalIndicatorService:
         """設定を取得"""
         config = indicator_registry.get_indicator_config(indicator_type.upper())
         if config and config.pandas_function:
+            # param_map から params 構造を構築
+            # params = { "target_param_name": ["alias1", "alias2", ...] }
+            params_mapping = {}
+            if config.param_map:
+                for alias, target in config.param_map.items():
+                    # data mapping (e.g. close->data) excludes from params unless data is also a param?
+                    # target None means ignore.
+                    if target and target != "data":
+                        if target not in params_mapping:
+                            params_mapping[target] = []
+                        if alias not in params_mapping[target]:
+                            params_mapping[target].append(alias)
+
             # IndicatorConfigからPANDAS_TA_CONFIG形式に変換
             return {
                 "function": config.pandas_function,
@@ -122,7 +135,7 @@ class TechnicalIndicatorService:
                 "returns": config.returns,
                 "return_cols": config.return_cols,
                 "multi_column": config.multi_column,
-                "params": {},  # param_mapから構築
+                "params": params_mapping,
                 "default_values": config.default_values,
                 "min_length": config.min_length_func,
             }
@@ -252,11 +265,27 @@ class TechnicalIndicatorService:
             return None
 
     def _post_process(
-        self, result: Any, config: Dict[str, Any]
+        self, result: Any, config: Dict[str, Any], df: Optional[pd.DataFrame] = None
     ) -> Union[np.ndarray, tuple]:
         """後処理 - 戻り値の統一"""
+        # pandas-taの一部関数(ichimokuなど)はDataFrameのタプルを返すため、最初の要素を使用
+        if (
+            isinstance(result, tuple)
+            and len(result) > 0
+            and isinstance(result[0], (pd.DataFrame, pd.Series))
+        ):
+            result = result[0]
+
         # NaN処理
         if isinstance(result, (pd.Series, pd.DataFrame)):
+            # 入力DataFrameと結果の長さが異なる場合（一部の指標で行が削除される場合など）、indexに合わせて再編成
+            if df is not None and len(result) != len(df):
+                try:
+                    result = result.reindex(df.index)
+                except Exception:
+                    # インデックスの互換性がない場合はそのまま
+                    pass
+
             result = result.bfill().fillna(0)
 
         # 戻り値変換
@@ -421,9 +450,18 @@ class TechnicalIndicatorService:
 
             # required_dataの順序で位置引数を構築
             for data_key in config.required_data:
-                if data_key in all_args:
-                    positional_args.append(all_args[data_key])
-                    del all_args[data_key]
+                # param_map がある場合はマッピングされたキーを使用
+                search_key = data_key
+                if (
+                    hasattr(config, "param_map")
+                    and config.param_map
+                    and data_key in config.param_map
+                ):
+                    search_key = config.param_map[data_key]
+
+                if search_key in all_args:
+                    positional_args.append(all_args[search_key])
+                    del all_args[search_key]
 
             # 残りのパラメータをキーワード引数として渡す
             for k, v in all_args.items():

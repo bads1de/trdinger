@@ -1,39 +1,429 @@
-# Auto Strategy 機能分析レポート：課題と改善計画
+# オートストラテジーシステム分析と改善提案
 
-## 概要
+このドキュメントは、`auto_strategy` モジュールの現状を分析し、システムアップグレードのための課題と改善案を提示します。
 
-現在のオートストラテジー機能（`auto_strategy` モジュール）のコードベース分析により特定された、**未解決の課題**と**今後の改善計画**をまとめたドキュメントです。
-完了済みの項目については [AUTO_STRATEGY_COMPLETED.md](./AUTO_STRATEGY_COMPLETED.md) を参照してください。
+---
 
-## 3. 設定と拡張性の課題 (Scalability & Configuration)
+## 1. システム概要
 
-（課題 3.3 は解決済み：悲観的約定モデルと TPSL 拡張の実装により、バックテストの信頼性向上と戦略多様化を実現しました。）
+### 1.1 アーキテクチャ全体像
 
-## 4. データ分析・運用の課題
+```
+┌───────────────────────────────────────────────────────────────────────┐
+│                         GeneticAlgorithmEngine                        │
+│                       (app/services/auto_strategy/core/ga_engine.py)  │
+├───────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  ┌─────────────────┐     ┌──────────────────────┐    ┌─────────────┐ │
+│  │ RandomGene      │     │  IndividualEvaluator │    │ Genetic     │ │
+│  │ Generator       │────▶│   または              │────│ Operators   │ │
+│  │                 │     │ HybridIndividual     │    │ (crossover, │ │
+│  │                 │     │ Evaluator            │    │  mutation)  │ │
+│  └─────────────────┘     └──────────────────────┘    └─────────────┘ │
+│          │                         │                                  │
+│          ▼                         ▼                                  │
+│  ┌─────────────────┐     ┌──────────────────────┐                    │
+│  │ StrategyGene    │     │  BacktestService     │                    │
+│  │ (遺伝子オブジェ  │     │  (バックテスト実行)   │                    │
+│  │ クト)            │     └──────────────────────┘                    │
+│  └─────────────────┘               │                                  │
+│                                    ▼                                  │
+│                          ┌──────────────────────┐                    │
+│                          │ UniversalStrategy    │                    │
+│                          │ (backtesting.py互換)  │                    │
+│                          └──────────────────────┘                    │
+└───────────────────────────────────────────────────────────────────────┘
+```
 
-### 4.1 データベース分析の困難性 (Wait-for-Analysis Bottleneck)
+### 1.2 主要コンポーネント
+
+| コンポーネント                | ファイルパス                          | 責務                                           |
+| ----------------------------- | ------------------------------------- | ---------------------------------------------- |
+| **GeneticAlgorithmEngine**    | `core/ga_engine.py`                   | DEAP 使用した GA 実行の統括                    |
+| **RandomGeneGenerator**       | `generators/random_gene_generator.py` | ランダム遺伝子生成                             |
+| **IndividualEvaluator**       | `core/individual_evaluator.py`        | 個体評価（バックテスト実行＋フィットネス計算） |
+| **HybridIndividualEvaluator** | `core/hybrid_individual_evaluator.py` | ML 予測スコア統合版評価器                      |
+| **UniversalStrategy**         | `strategies/universal_strategy.py`    | backtesting.py 互換の戦略クラス                |
+| **HybridPredictor**           | `core/hybrid_predictor.py`            | ML 予測器（アンサンブル対応）                  |
+| **HybridFeatureAdapter**      | `utils/hybrid_feature_adapter.py`     | StrategyGene→ML 特徴量変換                     |
+
+---
+
+## 2. 現在の GA 設定パラメータ
+
+### 2.1 探索規模パラメータ（`config/ga.py`）
+
+```python
+GA_DEFAULT_CONFIG = {
+    "population_size": 100,    # 1世代の個体数
+    "generations": 50,         # 進化世代数
+    "crossover_rate": 0.8,     # 交叉確率
+    "mutation_rate": 0.1,      # 突然変異確率
+    "elite_size": 10,          # エリート保存数
+    "max_indicators": 3,       # 使用可能インジケータ最大数
+}
+```
+
+### 2.2 フィットネス評価パラメータ
+
+```python
+FITNESS_WEIGHT_PROFILES = {
+    "balanced": {
+        "total_return": 0.2,           # リターン重視
+        "sharpe_ratio": 0.25,          # リスク調整済みリターン
+        "max_drawdown": 0.15,          # 最大ドローダウンペナルティ
+        "win_rate": 0.1,               # 勝率
+        "balance_score": 0.1,          # ロング/ショートバランス
+        "ulcer_index_penalty": 0.15,   # ストレス指標ペナルティ
+        "trade_frequency_penalty": 0.05, # 取引頻度ペナルティ
+    },
+}
+```
+
+### 2.3 高度な設定（`config/ga_runtime.py`の`GAConfig`）
+
+| 設定項目                 | デフォルト値 | 説明                           |
+| ------------------------ | ------------ | ------------------------------ |
+| `enable_walk_forward`    | `False`      | Walk-Forward Analysis 有効化   |
+| `wfa_n_folds`            | `5`          | WFA のフォールド数             |
+| `wfa_train_ratio`        | `0.7`        | 各フォールドの学習期間比率     |
+| `oos_split_ratio`        | `0.0`        | Out-of-Sample 分割比率         |
+| `enable_multi_timeframe` | `False`      | マルチタイムフレーム有効化     |
+| `hybrid_mode`            | `False`      | GA+ML ハイブリッドモード       |
+| `enable_fitness_sharing` | `True`       | フィットネス共有（多様性維持） |
+
+---
+
+## 3. 課題分析
+
+### 3.1 🔴 課題 1: ML フィルターが「フィルター」として機能していない
 
 **現状:**
+`HybridIndividualEvaluator`における ML 予測スコアは、バックテスト実行「後」に統合されています。
 
-- 戦略の構造データ（どの指標を使ったか、どのパラメータだったか）が `GeneratedStrategy` テーブルの `gene_data` カラム（JSON 型）にシリアライズされて格納されています。
-- 「RSI を使用した戦略の平均勝率は？」といったメタ分析を行いたい場合、SQL レベルでの集計が困難で、アプリケーション側で全レコードをフェッチ・パースする必要があります。
+```python
+# HybridIndividualEvaluator._perform_single_evaluation より
+# バックテスト実行
+result = self.backtest_service.run_backtest(...)
 
-**影響:**
+# ML予測スコアを取得（バックテスト"後"に計算）
+if self.predictor:
+    prediction_signals = self.predictor.predict(features_df)
 
-- **科学的アプローチの阻害**: 数千、数万の仮想通貨戦略をバックテストした結果から「勝てるパターンの傾向」を導き出すためのデータマイニングが非常に非効率です。
+# フィットネス計算（ML予測スコアを"加点"として統合）
+return self._calculate_multi_objective_fitness(result, config, prediction_signals)
+```
 
-## 推奨される改善アクション（優先度順）
+**問題点:**
 
-### Phase 2: 機能拡張 (High Impact)
+- ML 予測はバックテストの「評価値へのボーナス」になっているだけ
+- **戦略自体のエントリー/イグジット判断に ML が介入していない**
+- 「ML が危険と判断した場面でもエントリーし、損失が発生」している可能性
 
-（すべての項目が完了しました。詳細は [AUTO_STRATEGY_COMPLETED.md](./AUTO_STRATEGY_COMPLETED.md) を参照してください。）
+**理想:**
+ML は`UniversalStrategy.next()`内でリアルタイムにエントリー可否を判断すべき。
 
-### Phase 3: データ基盤と分析 (Data & Analysis)
+### 3.2 🟡 課題 2: Optuna は ML モデル最適化用に限定されている
 
-1. **戦略メタデータの正規化**: 分析用に、主要な戦略特性（使用指標、タイムフレーム、リスク許容度など）を別のカラムまたはテーブルに抽出して保存する仕組みを検討する。
-2. **リスク指標の高度化**: 非正規分布に対応したリスク指標（Sortino Ratio, Omega Ratio, VaR, CVaR）の導入。
-3. **パラメータ整合性チェックの強化**: `IndicatorManifest` にパラメータ間の依存関係ルール（`fast < slow` など）を定義し、生成・変異時に強制する。
+**現状:**
+Optuna は`ml/optimization/optuna_optimizer.py`で実装されていますが、**ML モデルのハイパーパラメータ最適化専用**です。
 
-### Phase 4: コード品質と保守性 (Maintenance)
+```python
+# OptimizationService.optimize_parameters より
+# 目的関数: MLモデルのF1スコアを最大化
+def objective_function(params: Dict[str, Any]) -> float:
+    result = temp_trainer.train_model(...)
+    f1_score = result.get("f1_score", 0.0)
+    return f1_score
+```
 
-1. **パラメータ範囲の局所化**: 指標ごとに異なるパラメータ範囲を設定できる仕組み（`IndicatorManifest` の拡張など）を検討する。
+**問題点:**
+
+- GA で発見された**戦略構造のパラメータ（インジケータ期間、閾値など）を最適化する手段がない**
+- GA が構造とパラメータを同時に探索しており、非効率
+
+### 3.3 🟡 課題 3: 過学習対策機能は実装済みだが、デフォルト無効
+
+**現状:**
+以下の過学習対策機能が`IndividualEvaluator`に実装されていますが、**デフォルトでは無効**です。
+
+| 機能                  | 設定項目                 | デフォルト      |
+| --------------------- | ------------------------ | --------------- |
+| Out-of-Sample 検証    | `oos_split_ratio`        | `0.0`（無効）   |
+| Walk-Forward Analysis | `enable_walk_forward`    | `False`（無効） |
+| フィットネス共有      | `enable_fitness_sharing` | `True`（有効）  |
+
+**問題点:**
+
+- デフォルト設定では、過去データ全体へのカーブフィッティングが発生しやすい
+- WFA を有効化しても、「WFA スコアを最大化する Optuna」との連携がない
+
+---
+
+## 4. ML 統合の現状詳細
+
+### 4.1 HybridPredictor の役割
+
+`HybridPredictor`は`MLTrainingService`をラップし、GA 評価時に ML 予測を提供します。
+
+```python
+# HybridPredictor.predict より
+def predict(self, features_df: pd.DataFrame) -> Dict[str, float]:
+    # 複数モデルの場合は平均化
+    if len(self.services) > 1:
+        predictions = [service.generate_signals(features_df) for service in self.services]
+        ml_prediction = {
+            "up": np.mean([p.get("up", 0.0) for p in predictions]),
+            "down": np.mean([p.get("down", 0.0) for p in predictions]),
+            "range": np.mean([p.get("range", 0.0) for p in predictions]),
+        }
+    else:
+        ml_prediction = self.services[0].generate_signals(features_df)
+
+    return self._normalise_prediction(ml_prediction)
+```
+
+**出力形式:**
+
+- **方向予測:** `{"up": 0.4, "down": 0.3, "range": 0.3}`
+- **ボラティリティ予測:** `{"trend": 0.6, "range": 0.4}`
+
+### 4.2 HybridFeatureAdapter の役割
+
+`StrategyGene` → `ML特徴量DataFrame` への変換を担当。
+
+**抽出される特徴量:**
+
+```python
+# 戦略構造特徴
+"indicator_count": 3
+"condition_count": 5
+"has_tpsl": 1
+"take_profit_ratio": 0.02
+"stop_loss_ratio": 0.01
+
+# OHLCVからの派生特徴
+"close_return_1", "close_return_5"
+"close_rolling_mean_5", "close_rolling_std_5"
+"oi_pct_change", "funding_rate_change"
+
+# ウェーブレット特徴（オプション）
+"wavelet_close_scale_2", "wavelet_close_scale_4"
+```
+
+### 4.3 現在の ML フィルター処理フロー（問題あり）
+
+```
+1. GAが戦略遺伝子（StrategyGene）を生成
+         │
+         ▼
+2. HybridIndividualEvaluator.evaluate_individual()
+         │
+         ├─▶ バックテスト実行（UniversalStrategy.next()でエントリー判断）
+         │       └─ この時点ではML予測は使われていない！
+         │
+         ▼
+3. ML予測スコアを取得（HybridPredictor.predict()）
+         │
+         ▼
+4. フィットネス計算（バックテスト結果 + ML予測スコア）
+         │
+         ▼
+5. フィットネスをGAに返却
+```
+
+**問題:**
+
+- ステップ 2 で ML が介入していない
+- ステップ 4 で「加点」しても、すでに損失が発生している
+
+---
+
+## 5. 改善提案
+
+### 5.1 提案 1: ML フィルターの「真のフィルター化」（優先度: 高）
+
+**目的:** ML が「危険」と判断した相場でエントリーを拒否できるようにする。
+
+**実装:**
+
+1. `UniversalStrategy`の`__init__`で`HybridPredictor`をオプション受け取り
+2. `next()`メソッド内で条件成立時に ML 予測を取得
+3. ML 予測スコアが閾値以下ならエントリーをスキップ
+
+```python
+# UniversalStrategy.next() 改善案
+def next(self):
+    # ... 既存のエントリー条件チェック ...
+
+    if long_signal or short_signal:
+        # MLフィルターによる拒否判定
+        if self.ml_predictor and not self._ml_allows_entry(direction):
+            logger.debug(f"ML Filter: エントリー拒否 (direction={direction})")
+            return  # エントリーしない
+
+        # 通常のエントリー処理
+        self.buy(size=position_size) if direction > 0 else self.sell(size=position_size)
+
+def _ml_allows_entry(self, direction: float) -> bool:
+    """MLがエントリーを許可するかチェック"""
+    features = self._prepare_current_features()
+    prediction = self.ml_predictor.predict(features)
+
+    # 方向予測の場合
+    if direction > 0:  # Long
+        return prediction.get("up", 0) > prediction.get("down", 0) + 0.1
+    else:  # Short
+        return prediction.get("down", 0) > prediction.get("up", 0) + 0.1
+```
+
+**効果:**
+
+- GA は「ML が OK を出した相場でのみ勝てる戦略」を探す
+- 役割分担が明確化（GA=テクニカル構造、ML=相場環境判断）
+
+### 5.2 提案 2: GA×Optuna ハイブリッド化（優先度: 中）
+
+**目的:** GA で発見した戦略構造に対し、Optuna でパラメータチューニングを行う。
+
+**実装:**
+
+1. GA のフィットネス評価時に、上位 N 個体に対して Optuna 最適化を実施
+2. 最適化の評価関数を WFA スコアに設定（過学習防止）
+
+```python
+# 疑似コード: Optunaによる戦略パラメータ最適化
+def optimize_strategy_parameters(gene: StrategyGene, wfa_config: GAConfig) -> StrategyGene:
+    def objective(trial: optuna.Trial) -> float:
+        # インジケータパラメータを提案
+        for indicator in gene.indicators:
+            if indicator.type == "RSI":
+                indicator.parameters["period"] = trial.suggest_int("rsi_period", 5, 50)
+
+        # WFAスコアで評価
+        wfa_fitness = individual_evaluator._evaluate_with_walk_forward(
+            gene, backtest_config, wfa_config
+        )
+        return wfa_fitness[0]  # weighted_score
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=30)
+
+    # 最適パラメータを適用
+    apply_params(gene, study.best_params)
+    return gene
+```
+
+**効果:**
+
+- GA は「大まかに良さそうな構造」を発見することに集中
+- Optuna は「構造内の最適パラメータ」を高精度に特定
+- WFA 評価により過学習を抑制
+
+### 5.3 提案 3: デフォルト設定で WFA/OOS を有効化（優先度: 中）
+
+**目的:** 過学習を防ぐため、デフォルトで OOS 検証を有効にする。
+
+**実装:**
+`config/ga_runtime.py`のデフォルト値を変更：
+
+```python
+# 変更前
+oos_split_ratio: float = 0.0
+enable_walk_forward: bool = False
+
+# 変更後
+oos_split_ratio: float = 0.2  # 20%をOOSに
+enable_walk_forward: bool = True
+wfa_n_folds: int = 3  # 3フォールド（計算コストと精度のバランス）
+```
+
+**効果:**
+
+- 新規ユーザーでも過学習しにくい設定で開始できる
+- 「全期間でたまたまフィットした戦略」の淘汰
+
+---
+
+## 6. 追加アイデア: 市場レジーム検出との連携
+
+### 6.1 コンセプト
+
+「全ての相場で勝てる単一戦略」を目指すのではなく、**相場環境（レジーム）ごとに最適な戦略を使い分ける**アプローチ。
+
+### 6.2 実装案
+
+1. **レジーム分類器の作成:**
+
+   - 既存の ML 機能を活用（`label_generation/`配下のモジュール）
+   - `trend_scanning.py`や`event_driven.py`でレジームラベルを生成
+
+2. **レジーム別 GA の実行:**
+
+   ```python
+   regimes = ["TREND_UP", "TREND_DOWN", "RANGE"]
+   strategies = {}
+
+   for regime in regimes:
+       filtered_data = filter_by_regime(ohlcv_data, regime)
+       ga_result = ga_engine.run_evolution(config, {"data": filtered_data})
+       strategies[regime] = ga_result["best_strategy"]
+   ```
+
+3. **メタ戦略（戦略の戦略）:**
+   - リアルタイムでレジームを判定
+   - 適切な戦略を動的に切り替え
+
+---
+
+## 7. まとめと推奨アクション
+
+| 優先度 | アクション                      | 期待効果                                          | 実装コスト |
+| ------ | ------------------------------- | ------------------------------------------------- | ---------- |
+| **高** | ML フィルターの真のフィルター化 | 無駄なエントリーの排除、GA と ML の役割分担明確化 | 中         |
+| **中** | WFA/OOS のデフォルト有効化      | 過学習防止、初期設定の改善                        | 低         |
+| **中** | GA×Optuna ハイブリッド化        | パラメータ探索効率向上、WFA 連携                  | 高         |
+| **低** | 市場レジーム連携                | 相場適応型戦略ポートフォリオ                      | 高         |
+
+---
+
+## 8. 関連ファイル一覧
+
+```
+backend/app/services/auto_strategy/
+├── config/
+│   ├── ga.py                    # GA基本設定・定数
+│   ├── ga_runtime.py            # GAConfig（実行時設定）
+│   └── tpsl.py                  # TPSL設定
+├── core/
+│   ├── ga_engine.py             # GAエンジン本体
+│   ├── individual_evaluator.py  # 個体評価器（OOS/WFA対応）
+│   ├── hybrid_individual_evaluator.py  # ハイブリッド評価器
+│   ├── hybrid_predictor.py      # ML予測器
+│   ├── genetic_operators.py     # 交叉・突然変異
+│   └── evolution_runner.py      # 進化実行
+├── generators/
+│   ├── random_gene_generator.py # ランダム遺伝子生成
+│   ├── condition_generator.py   # 条件生成
+│   └── strategy_factory.py      # 戦略ファクトリー
+├── strategies/
+│   └── universal_strategy.py    # backtesting.py互換戦略
+├── utils/
+│   └── hybrid_feature_adapter.py # Gene→特徴量変換
+└── serializers/
+    └── gene_serialization.py    # 遺伝子シリアライゼーション
+
+backend/app/services/ml/
+├── optimization/
+│   ├── optuna_optimizer.py      # Optuna最適化エンジン
+│   └── optimization_service.py  # 最適化サービス
+├── label_generation/
+│   ├── trend_scanning.py        # トレンドスキャン
+│   └── event_driven.py          # イベント駆動ラベル
+└── ml_training_service.py       # ML学習サービス
+```
+
+---
+
+_ドキュメント作成日: 2024-12-12_
+_作成者: Antigravity AI Assistant_
