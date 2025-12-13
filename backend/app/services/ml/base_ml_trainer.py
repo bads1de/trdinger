@@ -330,7 +330,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率の辞書 {"up": float, "down": float, "range": float}
+            予測確率の辞書:
+            - 2クラス分類（ダマシ予測）: {"is_valid": float}
+              - is_valid: エントリーが有効である確率 (class 1)
+            - 3クラス分類（方向予測）: {"up": float, "down": float, "range": float}
         """
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
@@ -363,13 +366,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     "up": float(latest_pred[2]),
                 }
             elif latest_pred.shape[0] == 2:
-                # 2クラス分類 (range, trend) または (class0, class1)
-                # 既存のロジックに合わせて range, trend とする
-                # ただし、(down, up)の可能性もあるので注意が必要だが、
-                # プロジェクトの慣習として (range, trend) が多いと仮定
+                # 2クラス分類（ダマシ予測 / メタラベリング）
+                # class 0 = ダマシ（False Signal / 無効）
+                # class 1 = 有効（Valid Signal）
+                # is_valid: エントリーが有効である確率
                 return {
-                    "range": float(latest_pred[0]),
-                    "trend": float(latest_pred[1]),
+                    "is_valid": float(latest_pred[1]),
                 }
             else:
                 logger.error(f"予期しないクラス数: {latest_pred.shape[0]}")

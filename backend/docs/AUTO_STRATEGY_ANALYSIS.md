@@ -98,15 +98,18 @@ FITNESS_WEIGHT_PROFILES = {
 
 ### 3.1 ✅ 課題 1: ML フィルターが「フィルター」として機能していない【修正済み】
 
-**修正日:** 2024-12-13
+**修正日:** 2024-12-13（ダマシ予測モデル対応: 2025-12-13）
 
 **対応内容:**
 `UniversalStrategy` に ML フィルター機能を実装し、エントリー条件成立時にリアルタイムで ML 予測を確認し、危険な相場でのエントリーを拒否できるようにしました。
 
+**設計変更（2025-12-13）:**
+当初の 3 値分類（up/down/range）から、**ダマシ予測モデル（is_valid）**に変更。ML モデルは「このエントリーシグナルが有効かどうか」を 0-1 の確率で出力し、閾値以上であればエントリーを許可するシンプルな設計に変更しました。
+
 **実装:**
 
 1. `UniversalStrategy.__init__()` に `ml_predictor` と `ml_filter_threshold` パラメータを追加
-2. `_ml_allows_entry(direction)` メソッドを追加: ML 予測がエントリー方向と一致するかを判定
+2. `_ml_allows_entry(direction)` メソッドを追加: `is_valid` が閾値以上かを判定
 3. `_prepare_current_features()` メソッドを追加: 現在のバーから ML 用特徴量を準備
 4. `next()` メソッドで ML フィルター判定を追加: エントリー条件成立後、ML で許可/拒否を判定
 
@@ -127,20 +130,17 @@ def next(self):
         self.buy(size=position_size) if direction > 0 else self.sell(size=position_size)
 
 def _ml_allows_entry(self, direction: float) -> bool:
-    """MLがエントリーを許可するかチェック"""
+    """MLがエントリーを許可するかチェック（ダマシ予測モデル）"""
     if self.ml_predictor is None:
         return True
 
     features = self._prepare_current_features()
     prediction = self.ml_predictor.predict(features)
 
-    up_score = prediction.get("up", 0.33)
-    down_score = prediction.get("down", 0.33)
-
-    if direction > 0:  # Long
-        return up_score > down_score + self.ml_filter_threshold
-    else:  # Short
-        return down_score > up_score + self.ml_filter_threshold
+    # is_valid: エントリーが有効である確率 (0.0-1.0)
+    # 閾値以上であればエントリーを許可
+    is_valid = prediction.get("is_valid", 0.5)
+    return is_valid >= self.ml_filter_threshold
 ```
 
 **効果:**
@@ -183,7 +183,7 @@ config = GAConfig(
 **修正日:** 2025-12-13
 
 **対応内容:**
-フロントエンドのGA設定画面 (`GAConfigForm`) に過学習対策設定（OOS分割比率、WFA設定）を追加し、ユーザーが容易に制御できるようにしました。
+フロントエンドの GA 設定画面 (`GAConfigForm`) に過学習対策設定（OOS 分割比率、WFA 設定）を追加し、ユーザーが容易に制御できるようにしました。
 
 **現状:**
 以下の過学習対策機能が`IndividualEvaluator`に実装されていますが、**デフォルトでは無効**です。
@@ -282,15 +282,24 @@ def predict(self, features_df: pd.DataFrame) -> Dict[str, float]:
 
 ## 5. 改善提案
 
-### 5.1 提案 1: ML フィルターの「真のフィルター化」（優先度: 高）
+### 5.1 ✅ 提案 1: ML フィルターの「真のフィルター化」（優先度: 高）【実装完了】
 
-**目的:** ML が「危険」と判断した相場でエントリーを拒否できるようにする。
+**実装完了日:** 2025-12-13
+
+**目的:** ML（ダマシ予測モデル）が「このエントリーはダマシ」と判断した場合にエントリーを拒否できるようにする。
+
+**設計:**
+
+- ML モデルは 2 クラス分類（ダマシ予測 / メタラベリング）
+- `is_valid`: エントリーが有効である確率（0.0-1.0）
+- 閾値以上であればエントリーを許可、未満であれば拒否
 
 **実装:**
 
-1. `UniversalStrategy`の`__init__`で`HybridPredictor`をオプション受け取り
-2. `next()`メソッド内で条件成立時に ML 予測を取得
-3. ML 予測スコアが閾値以下ならエントリーをスキップ
+1.  `UniversalStrategy`の`__init__`で`HybridPredictor`をオプション受け取り
+2.  `next()`メソッド内で条件成立時に ML 予測を取得
+3.  `is_valid` が閾値未満ならエントリーをスキップ
+4.  `IndividualEvaluator` で ML モデルをロードし、戦略パラメータとして渡すように修正
 
 ```python
 # UniversalStrategy.next() 改善案
@@ -300,28 +309,23 @@ def next(self):
     if long_signal or short_signal:
         # MLフィルターによる拒否判定
         if self.ml_predictor and not self._ml_allows_entry(direction):
-            logger.debug(f"ML Filter: エントリー拒否 (direction={direction})")
+            logger.debug(f"ML Filter: エントリー拒否 (is_valid < threshold)")
             return  # エントリーしない
 
         # 通常のエントリー処理
         self.buy(size=position_size) if direction > 0 else self.sell(size=position_size)
 
 def _ml_allows_entry(self, direction: float) -> bool:
-    """MLがエントリーを許可するかチェック"""
-    features = self._prepare_current_features()
+    """MLがエントリーを許可するかチェック（ダマシ予測モデル）"""
     prediction = self.ml_predictor.predict(features)
-
-    # 方向予測の場合
-    if direction > 0:  # Long
-        return prediction.get("up", 0) > prediction.get("down", 0) + 0.1
-    else:  # Short
-        return prediction.get("down", 0) > prediction.get("up", 0) + 0.1
+    is_valid = prediction.get("is_valid", 0.5)
+    return is_valid >= self.ml_filter_threshold
 ```
 
 **効果:**
 
-- GA は「ML が OK を出した相場でのみ勝てる戦略」を探す
-- 役割分担が明確化（GA=テクニカル構造、ML=相場環境判断）
+- GA は「ダマシを回避できる戦略」を探す
+- 役割分担が明確化（GA=テクニカル構造発見、ML=ダマシシグナル排除）
 
 ### 5.2 ✅ 提案 2: GA×Optuna ハイブリッド化（優先度: 中）【実装完了】
 

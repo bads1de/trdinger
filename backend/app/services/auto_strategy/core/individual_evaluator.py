@@ -465,7 +465,12 @@ class IndividualEvaluator:
                 run_config["strategy_config"]["parameters"]["minute_data"] = minute_data
 
             if ml_filter_model:
-                run_config["ml_filter_model"] = ml_filter_model
+                run_config["strategy_config"]["parameters"][
+                    "ml_predictor"
+                ] = ml_filter_model
+                # ダマシ予測モデル用の閾値: 0.5 = 50%以上の確率で有効ならエントリー許可
+                # 将来的にGAConfigに追加することを検討
+                run_config["strategy_config"]["parameters"]["ml_filter_threshold"] = 0.5
             elif config.ml_filter_enabled:  # ロード失敗時
                 run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
 

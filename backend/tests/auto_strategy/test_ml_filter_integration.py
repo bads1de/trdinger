@@ -74,10 +74,11 @@ class TestMLFilterIntegration:
 
     @pytest.fixture
     def mock_ml_predictor(self):
-        """ML予測器のモック"""
+        """ML予測器のモック（ダマシ予測モデル）"""
         predictor = MagicMock()
         predictor.is_trained.return_value = True
-        predictor.predict.return_value = {"up": 0.5, "down": 0.3, "range": 0.2}
+        # is_valid: エントリーが有効である確率（0.0-1.0）
+        predictor.predict.return_value = {"is_valid": 0.5}
         return predictor
 
     def test_ml_predictor_parameter_accepted(
@@ -100,12 +101,12 @@ class TestMLFilterIntegration:
             assert hasattr(strategy, "ml_predictor")
             assert strategy.ml_predictor is None
 
-    def test_ml_allows_entry_long_signal_positive(
+    def test_ml_allows_entry_high_validity(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):
-        """MLがロングエントリーを許可する場合のテスト"""
-        # up > down + 0.1 の場合、Longエントリーを許可
-        mock_ml_predictor.predict.return_value = {"up": 0.6, "down": 0.2, "range": 0.2}
+        """MLがエントリーを許可する場合のテスト（is_valid >= threshold）"""
+        # is_valid = 0.7 >= threshold(0.5) の場合、エントリーを許可
+        mock_ml_predictor.predict.return_value = {"is_valid": 0.7}
 
         with patch.object(UniversalStrategy, "init"):
             params = {"strategy_gene": valid_gene, "ml_predictor": mock_ml_predictor}
@@ -116,50 +117,59 @@ class TestMLFilterIntegration:
             result = strategy._ml_allows_entry(direction=1.0)
             assert result is True
 
-    def test_ml_allows_entry_long_signal_rejected(
+    def test_ml_allows_entry_low_validity_rejected(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):
-        """MLがロングエントリーを拒否する場合のテスト"""
-        # up < down + 0.1 の場合、Longエントリーを拒否
-        mock_ml_predictor.predict.return_value = {"up": 0.3, "down": 0.4, "range": 0.3}
+        """MLがエントリーを拒否する場合のテスト（is_valid < threshold）"""
+        # is_valid = 0.05 < threshold(0.5) の場合、エントリーを拒否
+        mock_ml_predictor.predict.return_value = {"is_valid": 0.05}
 
         with patch.object(UniversalStrategy, "init"):
-            params = {"strategy_gene": valid_gene, "ml_predictor": mock_ml_predictor}
+            params = {
+                "strategy_gene": valid_gene,
+                "ml_predictor": mock_ml_predictor,
+                "ml_filter_threshold": 0.5,
+            }
             strategy = UniversalStrategy(mock_broker, mock_data, params)
             strategy._data = mock_data
 
             result = strategy._ml_allows_entry(direction=1.0)
             assert result is False
 
-    def test_ml_allows_entry_short_signal_positive(
+    def test_ml_allows_entry_direction_independent(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):
-        """MLがショートエントリーを許可する場合のテスト"""
-        # down > up + 0.1 の場合、Shortエントリーを許可
-        mock_ml_predictor.predict.return_value = {"up": 0.2, "down": 0.6, "range": 0.2}
+        """ダマシ予測は方向に関係なく判定されることをテスト"""
+        # is_valid = 0.8 >= threshold(0.1) の場合、ショートでも許可
+        mock_ml_predictor.predict.return_value = {"is_valid": 0.8}
 
         with patch.object(UniversalStrategy, "init"):
             params = {"strategy_gene": valid_gene, "ml_predictor": mock_ml_predictor}
             strategy = UniversalStrategy(mock_broker, mock_data, params)
             strategy._data = mock_data
 
+            # ショート方向でも同じロジックで判定される
             result = strategy._ml_allows_entry(direction=-1.0)
             assert result is True
 
-    def test_ml_allows_entry_short_signal_rejected(
+    def test_ml_allows_entry_boundary_value(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):
-        """MLがショートエントリーを拒否する場合のテスト"""
-        # down < up + 0.1 の場合、Shortエントリーを拒否
-        mock_ml_predictor.predict.return_value = {"up": 0.4, "down": 0.3, "range": 0.3}
+        """境界値テスト: is_valid == threshold の場合は許可される"""
+        # is_valid = 0.5 == threshold(0.5) の場合、>=なので許可
+        mock_ml_predictor.predict.return_value = {"is_valid": 0.5}
 
         with patch.object(UniversalStrategy, "init"):
-            params = {"strategy_gene": valid_gene, "ml_predictor": mock_ml_predictor}
+            params = {
+                "strategy_gene": valid_gene,
+                "ml_predictor": mock_ml_predictor,
+                "ml_filter_threshold": 0.5,
+            }
             strategy = UniversalStrategy(mock_broker, mock_data, params)
             strategy._data = mock_data
 
-            result = strategy._ml_allows_entry(direction=-1.0)
-            assert result is False
+            result = strategy._ml_allows_entry(direction=1.0)
+            assert result is True  # >= なので許可
 
     def test_ml_filter_blocks_entry_in_next(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
@@ -334,24 +344,21 @@ class TestMLFilterIntegration:
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):
         """MLフィルター閾値がカスタマイズ可能であることをテスト"""
-        # 閾値を0.05に設定（up: 0.45, down: 0.35 の場合、0.45 > 0.35 + 0.05 = 0.40 → True）
-        mock_ml_predictor.predict.return_value = {
-            "up": 0.45,
-            "down": 0.35,
-            "range": 0.2,
-        }
+        # is_valid = 0.6, 閾値を0.7に設定 → 0.6 < 0.7 なので拒否
+        mock_ml_predictor.predict.return_value = {"is_valid": 0.6}
 
         with patch.object(UniversalStrategy, "init"):
             params = {
                 "strategy_gene": valid_gene,
                 "ml_predictor": mock_ml_predictor,
-                "ml_filter_threshold": 0.05,
+                "ml_filter_threshold": 0.7,
             }
             strategy = UniversalStrategy(mock_broker, mock_data, params)
             strategy._data = mock_data
 
             result = strategy._ml_allows_entry(direction=1.0)
-            assert result is True
+            # 0.6 < 0.7 なので拒否される
+            assert result is False
 
     def test_prepare_current_features_returns_dataframe(
         self, mock_broker, mock_data, valid_gene

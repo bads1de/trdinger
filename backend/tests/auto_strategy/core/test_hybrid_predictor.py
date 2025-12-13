@@ -157,12 +157,9 @@ class TestHybridPredictor:
         df = pd.DataFrame({"close": [100]})
         result = predictor.predict(df)
 
-        # Default prediction for "direction" (default mode in _default_prediction)
-        # {"up": 0.33, "down": 0.33, "range": 0.34} normalized to sum to 1?
-        # 0.33+0.33+0.34 = 1.0. Correct.
-        assert result["up"] == 0.33
-        assert result["down"] == 0.33
-        assert result["range"] == 0.34
+        # Default prediction for "fakeout" mode (default in _default_prediction)
+        # {"is_valid": 0.5} - 判断不能を意味する
+        assert result["is_valid"] == 0.5
 
     def test_predict_batch(self, predictor):
         """バッチ予測"""

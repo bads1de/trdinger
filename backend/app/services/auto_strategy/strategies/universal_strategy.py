@@ -49,7 +49,9 @@ class UniversalStrategy(Strategy):
     minute_data = None
     timeframe = "1h"
     ml_predictor = None  # MLフィルター用予測器
-    ml_filter_threshold = 0.1  # MLフィルター閾値（エントリー許可の差分）
+    ml_filter_threshold = (
+        0.5  # MLフィルター閾値（is_valid >= threshold でエントリー許可）
+    )
 
     def __init__(self, broker, data, params):
         """
@@ -127,7 +129,7 @@ class UniversalStrategy(Strategy):
         # HybridPredictor インスタンス（オプション）
         self.ml_predictor = params.get("ml_predictor")
         # ML フィルター閾値（エントリー許可のための方向スコア差分）
-        self.ml_filter_threshold = params.get("ml_filter_threshold", 0.1)
+        self.ml_filter_threshold = params.get("ml_filter_threshold", 0.5)
 
     def _has_mtf_indicators(self) -> bool:
         """MTF指標が存在するかチェック"""
@@ -726,11 +728,14 @@ class UniversalStrategy(Strategy):
         """
         MLがエントリーを許可するかチェック
 
-        MLフィルターが設定されている場合、予測結果に基づいて
-        エントリーの可否を判断します。
+        MLフィルター（ダマシ予測モデル）が設定されている場合、
+        予測結果に基づいてエントリーの可否を判断します。
+
+        ダマシ予測モデルは「このエントリーシグナルが有効かどうか」を
+        0-1の確率で出力します。is_valid が閾値以上であればエントリーを許可。
 
         Args:
-            direction: 取引方向 (1.0=Long, -1.0=Short)
+            direction: 取引方向 (1.0=Long, -1.0=Short) ※現在は方向に関係なく判定
 
         Returns:
             True: エントリー許可, False: エントリー拒否
@@ -756,22 +761,16 @@ class UniversalStrategy(Strategy):
             # ML予測を実行
             prediction = self.ml_predictor.predict(features)
 
-            # 方向に基づいてエントリー判定
-            # Long: up > down + threshold
-            # Short: down > up + threshold
-            up_score = prediction.get("up", 0.33)
-            down_score = prediction.get("down", 0.33)
-
-            if direction > 0:  # Long
-                allowed = up_score > down_score + self.ml_filter_threshold
-            else:  # Short
-                allowed = down_score > up_score + self.ml_filter_threshold
+            # ダマシ予測モデルの判定
+            # is_valid: エントリーが有効である確率 (0.0-1.0)
+            # 閾値以上であればエントリーを許可
+            is_valid = prediction.get("is_valid", 0.5)
+            allowed = is_valid >= self.ml_filter_threshold
 
             if not allowed:
                 logger.debug(
                     f"MLフィルター拒否: direction={direction}, "
-                    f"up={up_score:.3f}, down={down_score:.3f}, "
-                    f"threshold={self.ml_filter_threshold}"
+                    f"is_valid={is_valid:.3f}, threshold={self.ml_filter_threshold}"
                 )
 
             return allowed

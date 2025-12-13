@@ -18,6 +18,8 @@ class GeneratedGAParameters(BaseModel):
     strategy_gene: Dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None
+    ml_predictor: Optional[Any] = None  # MLモデルインスタンス
+    ml_filter_threshold: float = 0.1
     minute_data: Optional[Any] = None  # DataFrameなどはPydanticで検証しにくいためAny
 
 
