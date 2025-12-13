@@ -219,6 +219,7 @@ def register_indicator_manifest(
             ),
             # パラメータ依存関係制約
             parameter_constraints=config_meta.get("parameter_constraints"),
+            absolute_min_length=config_meta.get("absolute_min_length", 1),
         )
 
         target_registry.register(indicator_config)

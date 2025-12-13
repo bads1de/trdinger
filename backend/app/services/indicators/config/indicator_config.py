@@ -113,6 +113,9 @@ class IndicatorConfig:
     #       "min_difference" (param1 - param2 >= min_diff)
     parameter_constraints: Optional[List[Dict[str, Any]]] = None
 
+    # 絶対的最小データ長（パラメータに関係なく必要な最低限のデータポイント数）
+    absolute_min_length: int = 1
+
     def __post_init__(self):
         """後処理でパラメータを構築"""
         if not self.parameters:

@@ -194,6 +194,7 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -248,7 +249,8 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "return_cols": None,
             "multi_column": False,
             "default_values": {"length": 20, "centered": True, "offset": 0},
-            "min_length_func": "DPO",
+            "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {
@@ -368,7 +370,8 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "return_cols": None,
             "multi_column": False,
             "default_values": {"length": 20},
-            "min_length_func": "EMA",
+            "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {
@@ -407,6 +410,7 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 20},
             "min_length_func": None,
+            "absolute_min_length": 4,
         },
         "yaml": {
             "conditions": {
@@ -488,7 +492,8 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "return_cols": None,
             "multi_column": False,
             "default_values": {"length": 20},
-            "min_length_func": "SMA",
+            "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {
@@ -599,6 +604,7 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 14, "scalar": 1.0, "intercept": False},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -716,6 +722,7 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 14},
             "min_length_func": "TEMA",
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -809,6 +816,7 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 10, "mamode": "ema", "offset": 0},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -904,6 +912,7 @@ MANIFEST_TREND: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 20},
             "min_length_func": "WMA",
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {

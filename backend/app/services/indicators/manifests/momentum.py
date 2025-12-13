@@ -30,6 +30,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"period": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -72,6 +73,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -283,6 +285,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"fast": 12, "slow": 26, "signal": 9},
             "min_length_func": "MACD",
+            "absolute_min_length": 38,
             # パラメータ依存関係制約: fast期間 < slow期間
             "parameter_constraints": [
                 {"type": "less_than", "param1": "fast", "param2": "slow"},
@@ -384,6 +387,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"period": 10},
             "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {
@@ -474,6 +478,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 10},
             "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {
@@ -562,6 +567,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 14},
             "min_length_func": "RSI",
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -717,6 +723,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"k_length": 14, "smooth_k": 3, "d_length": 3},
             "min_length_func": "STOCH",
+            "absolute_min_length": 5,
         },
         "yaml": {
             "conditions": {
@@ -947,6 +954,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"period": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -1186,6 +1194,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
                 "drift": 1,
             },
             "min_length_func": None,
+            "absolute_min_length": 5,
         },
         "yaml": {
             "conditions": {
@@ -1709,6 +1718,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"length": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {

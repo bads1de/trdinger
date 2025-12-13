@@ -65,68 +65,34 @@ def validate_data_length_with_fallback(
         (データ長が十分かどうか, フォールバック可能な最小データ長)
     """
     standard_length = get_minimum_data_length(indicator_type, params)
+    absolute_minimum = get_absolute_minimum_length(indicator_type.upper())
+    
+    # パラメータに基づく長さと絶対的な最小長さの大きい方を採用
+    required_length = max(standard_length, absolute_minimum)
+    
     data_length = len(df)
 
-    if data_length >= standard_length:
-        return True, standard_length
+    if data_length >= required_length:
+        return True, required_length
 
-    # 各指標ごとの最小データ長を計算
-    absolute_minimum = get_absolute_minimum_length(indicator_type.upper())
+    # フォールバック処理のための緩和された最小長を計算
+    # absolute_minimum は絶対に下回れない
     min_required = max(absolute_minimum, standard_length // 3)
 
     if data_length >= min_required:
         logger.info(
             "データ長不足時は、この関数でフォールバック加工を実行。"
-            f"{indicator_type}: 標準データ長 {standard_length} が {data_length} 不足のため、"
+            f"{indicator_type}: 必要データ長 {required_length} が {data_length} 不足のため、"
             f"最小データ長 {min_required} にフォールしNaNフィルタを適用"
         )
         return True, data_length
 
     logger.warning(
         "この関数で運用データでの警告出力を強化。"
-        f"{indicator_type}: 必要なデータ長 {standard_length} 以上、"
+        f"{indicator_type}: 必要なデータ長 {required_length} 以上、"
         f"最低データ長 {min_required} が {data_length} 不足のためNaNフィルタを適用"
     )
     return False, min_required
-
-
-# 各指標の絶対的最小データ長定義
-# この値は、指標が意味のある結果を返すために必要な最低限のデータポイント数
-# パラメータに関係なく必要な固定値
-_ABSOLUTE_MINIMUM_LENGTHS = {
-    # トレンド系
-    "SMA": 2,  # 最低2点で平均を計算可能
-    "EMA": 2,  # 最低2点で指数平滑を計算可能
-    "DEMA": 3,  # 2重指数平滑のため最低3点
-    "TEMA": 3,  # 三重指数平滑のため最低3点
-    "WMA": 2,  # 加重移動平均
-    "HMA": 4,  # Hull移動平均（内部でWMAを使用）
-    "KAMA": 3,  # Kaufman適応移動平均
-    "ZLMA": 3,  # ゼロラグ移動平均
-    "LINREG": 3,  # 線形回帰（最低3点で傾き計算可能）
-    # モメンタム系
-    "RSI": 3,  # 最低3点で上昇/下降を判定可能
-    "MACD": 38,  # slow(26) + signal(9) + buffer(3)
-    "STOCH": 5,  # ストキャスティクス
-    "CCI": 3,  # 商品チャネル指数
-    "ROC": 2,  # 変化率
-    "MOM": 2,  # モメンタム
-    "WILLR": 3,  # Williams %R
-    "TSI": 5,  # True Strength Index
-    "CMO": 3,  # チャンデモメンタム
-    # ボラティリティ系
-    "ATR": 3,  # 平均真の値幅
-    "NATR": 3,  # 正規化ATR
-    "BBANDS": 3,  # ボリンジャーバンド
-    "KELTNER": 5,  # ケルトナーチャネル
-    "DONCHIAN": 2,  # ドンチャンチャネル
-    "SUPERTREND": 5,  # スーパートレンド
-    # 出来高系
-    "OBV": 2,  # オンバランスボリューム
-    "AD": 2,  # A/Dライン
-    "MFI": 3,  # マネーフローインデックス
-    "VWAP": 2,  # 出来高加重平均価格
-}
 
 
 def get_absolute_minimum_length(indicator_type: str) -> int:
@@ -142,7 +108,10 @@ def get_absolute_minimum_length(indicator_type: str) -> int:
     Returns:
         絶対的最小データ長（デフォルト: 1）
     """
-    return _ABSOLUTE_MINIMUM_LENGTHS.get(indicator_type, 1)
+    config = indicator_registry.get_indicator_config(indicator_type.upper())
+    if config:
+        return config.absolute_min_length
+    return 1
 
 
 def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:

@@ -23,6 +23,7 @@ MANIFEST_VOLUME: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {},
             "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {
@@ -263,6 +264,7 @@ MANIFEST_VOLUME: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -298,6 +300,7 @@ MANIFEST_VOLUME: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {},
             "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {"long": "{left_operand} > 0", "short": "{left_operand} < 0"},
@@ -543,6 +546,7 @@ MANIFEST_VOLUME: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {},
             "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {

@@ -70,6 +70,7 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"length": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
@@ -118,6 +119,7 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "multi_column": False,
             "default_values": {"length": 20, "std": 2.0},
             "min_length_func": "BB",
+            "absolute_min_length": 3,
         },
         "yaml": {
             "components": ["upper", "middle", "lower"],
@@ -223,6 +225,7 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"length": 20},
             "min_length_func": None,
+            "absolute_min_length": 2,
         },
         "yaml": {
             "conditions": {
@@ -283,6 +286,7 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"length": 20, "multiplier": 2.0},
             "min_length_func": None,
+            "absolute_min_length": 5,
         },
         "yaml": {
             "conditions": {
@@ -444,6 +448,7 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"length": 10, "multiplier": 3.0},
             "min_length_func": "SUPERTREND",
+            "absolute_min_length": 5,
         },
         "yaml": {
             "components": ["lower", "upper", "direction"],
@@ -492,6 +497,7 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "multi_column": True,
             "default_values": {"length": 14},
             "min_length_func": None,
+            "absolute_min_length": 3,
         },
         "yaml": {
             "conditions": {
