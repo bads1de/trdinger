@@ -89,11 +89,9 @@ class BacktestDataService:
                 timeframe=timeframe,
                 start_date=start_date,
                 end_date=end_date,
-                include_oi=True,
-                include_fr=True,
+                include_oi=False,
+                include_fr=False,
             )
-            if "funding_rate" in result.columns:
-                result["funding_rate"].describe()
             return result
         except DataIntegrationError as e:
             logger.error(f"バックテスト用データ作成エラー: {e}")
