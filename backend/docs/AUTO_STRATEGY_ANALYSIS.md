@@ -96,32 +96,58 @@ FITNESS_WEIGHT_PROFILES = {
 
 ## 3. 課題分析
 
-### 3.1 🔴 課題 1: ML フィルターが「フィルター」として機能していない
+### 3.1 ✅ 課題 1: ML フィルターが「フィルター」として機能していない【修正済み】
 
-**現状:**
-`HybridIndividualEvaluator`における ML 予測スコアは、バックテスト実行「後」に統合されています。
+**修正日:** 2024-12-13
+
+**対応内容:**
+`UniversalStrategy` に ML フィルター機能を実装し、エントリー条件成立時にリアルタイムで ML 予測を確認し、危険な相場でのエントリーを拒否できるようにしました。
+
+**実装:**
+
+1. `UniversalStrategy.__init__()` に `ml_predictor` と `ml_filter_threshold` パラメータを追加
+2. `_ml_allows_entry(direction)` メソッドを追加: ML 予測がエントリー方向と一致するかを判定
+3. `_prepare_current_features()` メソッドを追加: 現在のバーから ML 用特徴量を準備
+4. `next()` メソッドで ML フィルター判定を追加: エントリー条件成立後、ML で許可/拒否を判定
 
 ```python
-# HybridIndividualEvaluator._perform_single_evaluation より
-# バックテスト実行
-result = self.backtest_service.run_backtest(...)
+# UniversalStrategy.next() 改善後
+def next(self):
+    # ... 既存のエントリー条件チェック ...
 
-# ML予測スコアを取得（バックテスト"後"に計算）
-if self.predictor:
-    prediction_signals = self.predictor.predict(features_df)
+    if long_signal or short_signal or stateful_direction is not None:
+        direction = 1.0 if long_signal else (-1.0 if short_signal else stateful_direction)
 
-# フィットネス計算（ML予測スコアを"加点"として統合）
-return self._calculate_multi_objective_fitness(result, config, prediction_signals)
+        # === ML フィルター判定 ===
+        if direction != 0.0 and self.ml_predictor is not None:
+            if not self._ml_allows_entry(direction):
+                return  # MLがエントリーを拒否
+
+        # 通常のエントリー処理
+        self.buy(size=position_size) if direction > 0 else self.sell(size=position_size)
+
+def _ml_allows_entry(self, direction: float) -> bool:
+    """MLがエントリーを許可するかチェック"""
+    if self.ml_predictor is None:
+        return True
+
+    features = self._prepare_current_features()
+    prediction = self.ml_predictor.predict(features)
+
+    up_score = prediction.get("up", 0.33)
+    down_score = prediction.get("down", 0.33)
+
+    if direction > 0:  # Long
+        return up_score > down_score + self.ml_filter_threshold
+    else:  # Short
+        return down_score > up_score + self.ml_filter_threshold
 ```
 
-**問題点:**
+**効果:**
 
-- ML 予測はバックテストの「評価値へのボーナス」になっているだけ
-- **戦略自体のエントリー/イグジット判断に ML が介入していない**
-- 「ML が危険と判断した場面でもエントリーし、損失が発生」している可能性
-
-**理想:**
-ML は`UniversalStrategy.next()`内でリアルタイムにエントリー可否を判断すべき。
+- GA は「ML が OK を出した相場でのみ勝てる戦略」を探す
+- 役割分担が明確化（GA=テクニカル構造、ML=相場環境判断）
+- 「ML が危険と判断した場面でのエントリー」を防止
 
 ### 3.2 🟡 課題 2: Optuna は ML モデル最適化用に限定されている
 
@@ -378,12 +404,12 @@ wfa_n_folds: int = 3  # 3フォールド（計算コストと精度のバラン�
 
 ## 7. まとめと推奨アクション
 
-| 優先度 | アクション                      | 期待効果                                          | 実装コスト |
-| ------ | ------------------------------- | ------------------------------------------------- | ---------- |
-| **高** | ML フィルターの真のフィルター化 | 無駄なエントリーの排除、GA と ML の役割分担明確化 | 中         |
-| **中** | WFA/OOS のデフォルト有効化      | 過学習防止、初期設定の改善                        | 低         |
-| **中** | GA×Optuna ハイブリッド化        | パラメータ探索効率向上、WFA 連携                  | 高         |
-| **低** | 市場レジーム連携                | 相場適応型戦略ポートフォリオ                      | 高         |
+| 優先度     | アクション                      | 期待効果                                          | 実装コスト | 状態      |
+| ---------- | ------------------------------- | ------------------------------------------------- | ---------- | --------- |
+| ~~**高**~~ | ML フィルターの真のフィルター化 | 無駄なエントリーの排除、GA と ML の役割分担明確化 | 中         | ✅ 完了   |
+| **中**     | WFA/OOS のデフォルト有効化      | 過学習防止、初期設定の改善                        | 低         | 📋 未着手 |
+| **中**     | GA×Optuna ハイブリッド化        | パラメータ探索効率向上、WFA 連携                  | 高         | 📋 未着手 |
+| **低**     | 市場レジーム連携                | 相場適応型戦略ポートフォリオ                      | 高         | 📋 未着手 |
 
 ---
 

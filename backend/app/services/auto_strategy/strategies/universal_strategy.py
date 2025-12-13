@@ -7,7 +7,9 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import List, Union, cast
+from typing import Any, Dict, List, Union, cast
+
+import numpy as np
 
 import pandas as pd
 from backtesting import Strategy
@@ -46,6 +48,8 @@ class UniversalStrategy(Strategy):
     strategy_gene = None
     minute_data = None
     timeframe = "1h"
+    ml_predictor = None  # MLフィルター用予測器
+    ml_filter_threshold = 0.1  # MLフィルター閾値（エントリー許可の差分）
 
     def __init__(self, broker, data, params):
         """
@@ -118,6 +122,12 @@ class UniversalStrategy(Strategy):
         )
 
         self.indicators = {}
+
+        # === ML フィルター設定 ===
+        # HybridPredictor インスタンス（オプション）
+        self.ml_predictor = params.get("ml_predictor")
+        # ML フィルター閾値（エントリー許可のための方向スコア差分）
+        self.ml_filter_threshold = params.get("ml_filter_threshold", 0.1)
 
     def _has_mtf_indicators(self) -> bool:
         """MTF指標が存在するかチェック"""
@@ -369,6 +379,13 @@ class UniversalStrategy(Strategy):
                         direction = -1.0
                     elif stateful_direction is not None:
                         direction = stateful_direction
+
+                    # === ML フィルター判定 ===
+                    # エントリー方向が決まった後、MLが許可するかチェック
+                    if direction != 0.0 and self.ml_predictor is not None:
+                        if not self._ml_allows_entry(direction):
+                            # MLがエントリーを拒否した場合、スキップ
+                            return
 
                     # TP/SL価格を計算
                     sl_price = None
@@ -702,6 +719,160 @@ class UniversalStrategy(Strategy):
                     return 1.0 if direction == "long" else -1.0
 
         return None
+
+    # ===== ML フィルターメソッド =====
+
+    def _ml_allows_entry(self, direction: float) -> bool:
+        """
+        MLがエントリーを許可するかチェック
+
+        MLフィルターが設定されている場合、予測結果に基づいて
+        エントリーの可否を判断します。
+
+        Args:
+            direction: 取引方向 (1.0=Long, -1.0=Short)
+
+        Returns:
+            True: エントリー許可, False: エントリー拒否
+        """
+        # ML予測器が設定されていない場合はエントリーを許可
+        if self.ml_predictor is None:
+            return True
+
+        # ML予測器が学習済みでない場合はエントリーを許可
+        try:
+            if hasattr(self.ml_predictor, "is_trained"):
+                if not self.ml_predictor.is_trained():
+                    logger.debug("ML予測器未学習: エントリー許可")
+                    return True
+        except Exception as e:
+            logger.warning(f"ML学習状態チェックエラー: {e}")
+            return True
+
+        try:
+            # 現在の特徴量を準備
+            features = self._prepare_current_features()
+
+            # ML予測を実行
+            prediction = self.ml_predictor.predict(features)
+
+            # 方向に基づいてエントリー判定
+            # Long: up > down + threshold
+            # Short: down > up + threshold
+            up_score = prediction.get("up", 0.33)
+            down_score = prediction.get("down", 0.33)
+
+            if direction > 0:  # Long
+                allowed = up_score > down_score + self.ml_filter_threshold
+            else:  # Short
+                allowed = down_score > up_score + self.ml_filter_threshold
+
+            if not allowed:
+                logger.debug(
+                    f"MLフィルター拒否: direction={direction}, "
+                    f"up={up_score:.3f}, down={down_score:.3f}, "
+                    f"threshold={self.ml_filter_threshold}"
+                )
+
+            return allowed
+
+        except Exception as e:
+            # 予測エラー時はエントリーを許可（フェイルセーフ）
+            logger.warning(f"ML予測エラー（フェイルセーフ適用）: {e}")
+            return True
+
+    def _prepare_current_features(self) -> pd.DataFrame:
+        """
+        現在のバーからML用特徴量を準備
+
+        OHLCVデータを使用して、HybridPredictorが期待する形式の
+        特徴量DataFrameを生成します。
+
+        Returns:
+            特徴量DataFrame
+        """
+        try:
+            # 過去N本分のデータを取得（特徴量計算に必要な期間）
+            lookback = 20  # デフォルトルックバック期間
+
+            # データが十分にあるか確認
+            data_length = len(self.data) if hasattr(self.data, "__len__") else 0
+            actual_lookback = min(lookback, max(data_length - 1, 1))
+
+            # OHLCVデータを抽出
+            closes = list(self.data.Close[-actual_lookback:])
+            highs = list(self.data.High[-actual_lookback:])
+            lows = list(self.data.Low[-actual_lookback:])
+
+            # 基本特徴量を計算
+            features: Dict[str, Any] = {}
+
+            # 価格関連
+            current_close = closes[-1] if closes else 0.0
+            features["close"] = current_close
+            features["high"] = highs[-1] if highs else current_close
+            features["low"] = lows[-1] if lows else current_close
+
+            # リターン系特徴量
+            if len(closes) >= 2:
+                features["close_return_1"] = (
+                    (closes[-1] - closes[-2]) / closes[-2] if closes[-2] != 0 else 0
+                )
+            else:
+                features["close_return_1"] = 0
+
+            if len(closes) >= 6:
+                features["close_return_5"] = (
+                    (closes[-1] - closes[-6]) / closes[-6] if closes[-6] != 0 else 0
+                )
+            else:
+                features["close_return_5"] = 0
+
+            # ローリング統計量
+            if len(closes) >= 5:
+                arr = np.array(closes[-5:])
+                features["close_rolling_mean_5"] = float(np.mean(arr))
+                features["close_rolling_std_5"] = float(np.std(arr))
+            else:
+                features["close_rolling_mean_5"] = current_close
+                features["close_rolling_std_5"] = 0
+
+            # 戦略構造特徴量（StrategyGeneから抽出）
+            if self.gene:
+                features["indicator_count"] = len(
+                    [ind for ind in self.gene.indicators if ind.enabled]
+                )
+                features["condition_count"] = len(self.gene.entry_conditions or [])
+                features["has_tpsl"] = (
+                    1 if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled else 0
+                )
+
+                if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
+                    features["take_profit_ratio"] = getattr(
+                        self.gene.tpsl_gene, "take_profit_pct", 0.02
+                    )
+                    features["stop_loss_ratio"] = getattr(
+                        self.gene.tpsl_gene, "stop_loss_pct", 0.01
+                    )
+                else:
+                    features["take_profit_ratio"] = 0.02
+                    features["stop_loss_ratio"] = 0.01
+
+            return pd.DataFrame([features])
+
+        except Exception as e:
+            logger.error(f"特徴量準備エラー: {e}")
+            # エラー時はデフォルト特徴量を返す
+            return pd.DataFrame(
+                [
+                    {
+                        "close": 0,
+                        "close_return_1": 0,
+                        "close_return_5": 0,
+                        "indicator_count": 1,
+                    }
+                ]
+            )
 
     # ===== 保留注文管理メソッド =====
 
