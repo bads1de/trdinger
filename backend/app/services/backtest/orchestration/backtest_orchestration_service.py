@@ -234,35 +234,3 @@ class BacktestOrchestrationService:
                 backtest_service.cleanup()
 
         return _get_supported_strategies()
-
-    async def execute_backtest(self, request, db: Session) -> Dict[str, Any]:
-        """
-        バックテストを実行し、結果をデータベースに保存
-
-        Args:
-            request: BacktestConfigオブジェクト
-            db: データベースセッション
-
-        Returns:
-            実行結果
-        """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="バックテスト実行",
-            is_api_call=True,
-            default_return=api_response(
-                success=False,
-                error="バックテスト実行でエラーが発生しました",
-                status_code=500,
-            ),
-        )
-        def _execute_backtest():
-            backtest_service = BacktestService()
-            try:
-                result = backtest_service.execute_and_save_backtest(request, db)
-                return result
-            finally:
-                backtest_service.cleanup()
-
-        return _execute_backtest()

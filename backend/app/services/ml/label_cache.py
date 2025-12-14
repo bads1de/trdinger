@@ -199,14 +199,6 @@ class LabelCache:
             return 0.0
         return (self.hit_count / total) * 100
 
-    def get_miss_rate(self) -> float:
-        """キャッシュミス率を取得
-
-        Returns:
-            float: ミス率（0-100%）
-        """
-        return 100.0 - self.get_hit_rate()
-
     def clear(self) -> None:
         """キャッシュをクリア"""
         self.cache.clear()

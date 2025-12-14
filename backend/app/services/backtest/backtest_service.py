@@ -114,15 +114,6 @@ class BacktestService:
                     f"オーケストレーターの初期化に失敗しました: {e}"
                 )
 
-    def _normalize_date(self, date_value: Any) -> datetime:
-        """日付値をdatetimeオブジェクトに正規化"""
-        if isinstance(date_value, datetime):
-            return date_value
-        elif isinstance(date_value, str):
-            return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
-        else:
-            raise ValueError(f"サポートされていない日付形式: {type(date_value)}")
-
     def get_supported_strategies(self) -> Dict[str, Any]:
         """
         サポートされている戦略一覧を取得

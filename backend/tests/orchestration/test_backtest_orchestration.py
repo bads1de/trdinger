@@ -438,44 +438,6 @@ class TestGetSupportedStrategies:
             assert len(result["data"]["strategies"]) == 0
 
 
-class TestExecuteBacktest:
-    """正常系: バックテスト実行のテスト"""
-
-    @pytest.mark.asyncio
-    async def test_execute_backtest_success(
-        self,
-        orchestration_service: BacktestOrchestrationService,
-        mock_db_session: MagicMock,
-    ):
-        """
-        正常系: バックテストが正常に実行できる
-
-        Args:
-            orchestration_service: オーケストレーションサービス
-            mock_db_session: DBセッションモック
-        """
-        mock_request = MagicMock()
-        mock_request.symbol = "BTC/USDT:USDT"
-        mock_request.timeframe = "1h"
-
-        with patch(
-            "app.services.backtest.orchestration.backtest_orchestration_service.BacktestService"
-        ) as mock_service_class:
-            mock_service = MagicMock()
-            mock_service.execute_and_save_backtest.return_value = {
-                "success": True,
-                "result": {"id": 1},
-            }
-            mock_service_class.return_value = mock_service
-
-            result = await orchestration_service.execute_backtest(
-                request=mock_request, db=mock_db_session
-            )
-
-            assert result["success"] is True
-            mock_service.cleanup.assert_called_once()
-
-
 class TestErrorHandling:
     """異常系: エラーハンドリングのテスト"""
 
