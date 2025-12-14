@@ -8,7 +8,6 @@ import random
 from typing import List
 
 from app.services.indicators import TechnicalIndicatorService
-from app.services.indicators.config import indicator_registry
 
 from ..config.constants import (
     MA_INDICATORS_NEEDING_PERIOD,
@@ -30,22 +29,7 @@ class IndicatorCompositionService:
         self.config = config
         self.indicator_service = TechnicalIndicatorService()
 
-    def enhance_with_trend_indicators(
-        self, indicators: List[IndicatorGene], available_indicators: List[str]
-    ) -> List[IndicatorGene]:
-        """
-        指標リストにトレンド指標を強制的に追加。
 
-        Args:
-            indicators: 現在の指標リスト
-            available_indicators: 利用可能な指標リスト
-
-        Returns:
-            トレンド指標が追加された指標リスト
-        """
-        # トレンド強制追加を完全に削除して多様性を確保
-        # トレンド指標が必要な場合はGAの評価関数で自然に選ばれるようにする
-        return indicators
 
     def enhance_with_ma_cross_strategy(
         self, indicators: List[IndicatorGene], available_indicators: List[str]
@@ -111,28 +95,6 @@ class IndicatorCompositionService:
 
         return indicators
 
-    def _is_trend_indicator(self, name: str) -> bool:
-        """指標がトレンド系かどうかを判定"""
-        try:
-            cfg = indicator_registry.get_indicator_config(name)
-            return bool(cfg and getattr(cfg, "category", None) == "trend")
-        except Exception:
-            return False
-
-    def _choose_preferred_trend_indicator(self, trend_pool: List[str]) -> str:
-        """優先順位に従ってトレンド指標を選択"""
-        # TREND_PREFを使用
-        trend_pref = ("SMA", "EMA")
-
-        # 優先指標からランダム選択
-        preferred = [name for name in trend_pool if name in trend_pref]
-        if preferred:
-            return random.choice(preferred)
-        elif trend_pool:
-            return random.choice(trend_pool)
-        else:
-            return "SMA"  # フォールバック
-
     def _get_default_params_for_indicator(self, indicator_type: str) -> dict:
         """指標のデフォルトパラメータを取得"""
         try:
@@ -142,15 +104,6 @@ class IndicatorCompositionService:
                 return {}
         except Exception:
             return {"period": 20}  # SMA用フォールバック
-
-    def _remove_non_trend_indicator(self, indicators: List[IndicatorGene]) -> str:
-        """非トレンド指標を1つ削除"""
-        for i, ind in enumerate(indicators):
-            if not self._is_trend_indicator(ind.type):
-                removed_type = ind.type
-                indicators.pop(i)
-                return removed_type
-        return ""
 
     def _get_existing_periods(self, indicators: List[IndicatorGene]) -> set:
         """既存の指標のパラメータを取得"""

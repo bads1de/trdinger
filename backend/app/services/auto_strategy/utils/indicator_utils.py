@@ -96,11 +96,6 @@ def get_all_indicator_ids() -> Dict[str, int]:
         return {"": 0}
 
 
-def get_id_to_indicator_mapping(indicator_ids: Dict[str, int]) -> Dict[int, str]:
-    """ID→指標の逆引きマッピングを取得"""
-    return {v: k for k, v in indicator_ids.items()}
-
-
 def get_valid_indicator_types() -> List[str]:
     """有効な指標タイプを取得（VALID_INDICATOR_TYPESの実装）"""
     # 重複除去して順序維持

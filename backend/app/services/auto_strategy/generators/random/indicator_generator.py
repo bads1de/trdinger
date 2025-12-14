@@ -239,11 +239,6 @@ class IndicatorGenerator:
         self, indicators: List[IndicatorGene]
     ) -> List[IndicatorGene]:
         """指標構成サービスを適用して成立性を底上げ"""
-        # トレンド指標の強制追加
-        indicators = self.composition_service.enhance_with_trend_indicators(
-            indicators, self.available_indicators
-        )
-
         # MAクロス戦略を可能にするための追加
         indicators = self.composition_service.enhance_with_ma_cross_strategy(
             indicators, self.available_indicators

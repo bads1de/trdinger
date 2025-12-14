@@ -16,10 +16,7 @@ from ..models.strategy_models import (
     TPSLGene,
 )
 from ..utils.gene_utils import GeneUtils
-from ..utils.indicator_utils import (
-    get_all_indicator_ids,
-    get_id_to_indicator_mapping,
-)
+from ..utils.indicator_utils import get_all_indicator_ids
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +36,7 @@ class DictConverter:
             enable_smart_generation: ConditionGeneratorを使用するか
         """
         self.indicator_ids = get_all_indicator_ids()
-        self.id_to_indicator = get_id_to_indicator_mapping(self.indicator_ids)
+        self.id_to_indicator = {v: k for k, v in self.indicator_ids.items()}
 
         # ConditionGeneratorの遅延インポート（循環インポート回避）
         self.enable_smart_generation = enable_smart_generation

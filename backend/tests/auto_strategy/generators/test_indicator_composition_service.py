@@ -37,16 +37,7 @@ class TestIndicatorCompositionService:
 
         return _create
 
-    def test_enhance_with_trend_indicators(self, service, mock_indicator_gene):
-        """トレンド指標の強制追加（現在は無効化されていることを確認）"""
-        indicators = []
-        available = ["SMA", "RSI"]
 
-        result = service.enhance_with_trend_indicators(indicators, available)
-
-        # Currently the implementation just returns the list as is
-        assert result == indicators
-        assert len(result) == 0
 
     @patch(
         "backend.app.services.auto_strategy.generators.indicator_composition_service.random.random"
@@ -131,22 +122,7 @@ class TestIndicatorCompositionService:
 
         assert len(indicators) == 1
 
-    @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.indicator_registry"
-    )
-    def test_is_trend_indicator(self, mock_registry, service):
-        """トレンド指標判定"""
-        mock_config = Mock()
-        mock_config.category = "trend"
-        mock_registry.get_indicator_config.return_value = mock_config
 
-        assert service._is_trend_indicator("SMA") is True
-
-        mock_config.category = "momentum"
-        assert service._is_trend_indicator("RSI") is False
-
-        mock_registry.get_indicator_config.return_value = None
-        assert service._is_trend_indicator("UNKNOWN") is False
 
     @patch(
         "backend.app.services.auto_strategy.generators.indicator_composition_service.MA_INDICATORS_NEEDING_PERIOD",
@@ -216,47 +192,4 @@ class TestIndicatorCompositionService:
             )
             assert result is not None
 
-    def test_remove_non_trend_indicator(self, service, mock_indicator_gene):
-        """非トレンド指標の削除"""
-        with patch.object(service, "_is_trend_indicator") as mock_is_trend:
-            # Setup: SMA is trend, RSI is not
-            mock_is_trend.side_effect = lambda name: name == "SMA"
 
-            indicators = [
-                mock_indicator_gene("SMA"),
-                mock_indicator_gene("RSI"),
-                mock_indicator_gene("SMA"),
-            ]
-
-            removed = service._remove_non_trend_indicator(indicators)
-
-            assert removed == "RSI"
-            assert len(indicators) == 2
-            assert all(ind.type == "SMA" for ind in indicators)
-
-            # Case: All are trend
-            indicators = [mock_indicator_gene("SMA")]
-            removed = service._remove_non_trend_indicator(indicators)
-            assert removed == ""
-            assert len(indicators) == 1
-
-    def test_choose_preferred_trend_indicator(self, service):
-        """トレンド指標の選択"""
-        trend_pool = ["SMA", "EMA", "Unknown"]
-
-        with patch(
-            "backend.app.services.auto_strategy.generators.indicator_composition_service.random.choice"
-        ) as mock_choice:
-            mock_choice.side_effect = lambda seq: seq[0]  # Always pick first
-
-            # Preferred exist
-            result = service._choose_preferred_trend_indicator(trend_pool)
-            assert result in ["SMA", "EMA"]
-
-            # No preferred
-            result = service._choose_preferred_trend_indicator(["Unknown"])
-            assert result == "Unknown"
-
-            # Empty
-            result = service._choose_preferred_trend_indicator([])
-            assert result == "SMA"  # Fallback
