@@ -222,20 +222,6 @@ class MultiTimeframeDataProvider:
         }
         return mapping.get(timeframe, "1h")
 
-    def get_indicator_data(
-        self, indicator_timeframe: Optional[str] = None
-    ) -> pd.DataFrame:
-        """
-        指標計算用のデータを取得
-
-        Args:
-            indicator_timeframe: 指標のタイムフレーム
-
-        Returns:
-            指標計算用のOHLCVデータ
-        """
-        return self.get_data(indicator_timeframe)
-
     def clear_cache(self) -> None:
         """キャッシュをクリア"""
         self._cache.clear()
