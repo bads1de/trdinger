@@ -22,6 +22,7 @@ class IndicatorGene:
         timeframe: この指標が計算されるタイムフレーム。
             None の場合は戦略のデフォルトタイムフレームを使用。
             例: "1h", "4h", "1d" など
+        id: 指標の一意識別子（オプション）。複数の同じ種類の指標を区別するために使用。
         json_config: JSON形式の設定キャッシュ
     """
 
@@ -29,6 +30,7 @@ class IndicatorGene:
     parameters: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
     timeframe: Optional[str] = None
+    id: Optional[str] = None
     json_config: Dict[str, Any] = field(default_factory=dict)
 
     def validate(self) -> bool:

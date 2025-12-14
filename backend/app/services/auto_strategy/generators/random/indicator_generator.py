@@ -7,6 +7,7 @@
 
 import logging
 import random
+import uuid
 from typing import Any, List
 
 from app.services.indicators import TechnicalIndicatorService
@@ -230,6 +231,7 @@ class IndicatorGenerator:
             parameters=parameters,
             enabled=True,
             timeframe=timeframe,
+            id=str(uuid.uuid4()),
         )
         self._safe_generate_json_config(indicator_gene)
         return indicator_gene

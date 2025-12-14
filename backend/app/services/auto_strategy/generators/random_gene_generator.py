@@ -66,7 +66,9 @@ class RandomGeneGenerator:
         self.serializer = GeneSerializer(
             enable_smart_generation
         )  # GeneSerializerのインスタンスを作成
-        self.smart_condition_generator = ConditionGenerator(enable_smart_generation)
+        self.smart_condition_generator = ConditionGenerator(
+            enable_smart_generation, ga_config=config
+        )
         # コンテキストがあれば適用
         try:
             smart_context = smart_context or {}
