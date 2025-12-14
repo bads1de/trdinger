@@ -18,9 +18,6 @@ from .gene_utils import (
     create_default_strategy_gene,
     prepare_crossover_metadata,
 )
-
-# Strategy Integration
-from .strategy_integration_service import StrategyIntegrationService
 from .yaml_utils import YamlIndicatorUtils, YamlLoadUtils
 
 __all__ = [
@@ -37,7 +34,4 @@ __all__ = [
     "create_default_strategy_gene",
     "create_child_metadata",
     "prepare_crossover_metadata",
-    # Strategy Integration
-    "StrategyIntegrationService",
-    # Indicator Characteristics
 ]

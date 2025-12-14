@@ -8,7 +8,7 @@ import json
 import logging
 from abc import ABC
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -47,53 +47,6 @@ class BaseConfig(ABC):
                     logger.warning(f"デフォルト値生成失敗: {field_info.name}, {e}")
                     defaults[field_info.name] = None
         return defaults
-
-    def validate(self) -> Tuple[bool, List[str]]:
-        """共通検証ロジック"""
-        errors = []
-
-        try:
-            # 必須フィールドチェック
-            required_fields = self.validation_rules.get("required_fields", [])
-            for field_name in required_fields:
-                if not hasattr(self, field_name) or not getattr(self, field_name):
-                    errors.append(f"必須フィールド '{field_name}' が設定されていません")
-
-            # 範囲チェック
-            range_rules = self.validation_rules.get("ranges", {})
-            for field_name, (min_val, max_val) in range_rules.items():
-                if hasattr(self, field_name):
-                    value = getattr(self, field_name)
-                    if isinstance(value, (int, float)) and not (
-                        min_val <= value <= max_val
-                    ):
-                        errors.append(
-                            f"'{field_name}' は {min_val} から {max_val} の範囲で設定してください"
-                        )
-
-            # 型チェック
-            type_rules = self.validation_rules.get("types", {})
-            for field_name, expected_type in type_rules.items():
-                if hasattr(self, field_name):
-                    value = getattr(self, field_name)
-                    if value is not None and not isinstance(value, expected_type):
-                        errors.append(
-                            f"'{field_name}' は {expected_type.__name__} 型である必要があります"
-                        )
-
-            # カスタム検証
-            custom_errors = self._custom_validation()
-            errors.extend(custom_errors)
-
-        except Exception as e:
-            logger.error(f"設定検証中にエラーが発生: {e}", exc_info=True)
-            errors.append(f"検証処理エラー: {e}")
-
-        return len(errors) == 0, errors
-
-    def _custom_validation(self) -> List[str]:
-        """サブクラスでオーバーライド可能なカスタム検証"""
-        return []
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "BaseConfig":

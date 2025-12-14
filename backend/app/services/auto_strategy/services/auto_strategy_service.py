@@ -147,7 +147,9 @@ class AutoStrategyService:
         @safe_operation(context="GA設定構築と検証", is_api_call=True)
         def _validate_ga_config():
             ga_config = GAConfig.from_dict(ga_config_dict)
-            is_valid, errors = ga_config.validate()
+            from ..config.validators import ConfigValidator
+
+            is_valid, errors = ConfigValidator.validate(ga_config)
             if not is_valid:
                 raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
             return ga_config

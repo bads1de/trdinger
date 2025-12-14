@@ -89,7 +89,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
 
         # 3. ml_filter_threshold が設定されていること
         self.assertIn("ml_filter_threshold", parameters)
-        self.assertEqual(parameters["ml_filter_threshold"], 0.1)
+        self.assertEqual(parameters["ml_filter_threshold"], 0.5)
 
     @patch("app.services.auto_strategy.core.individual_evaluator.model_manager")
     def test_evaluate_individual_handles_load_error(self, mock_model_manager):

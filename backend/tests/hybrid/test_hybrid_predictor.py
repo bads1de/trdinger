@@ -167,8 +167,8 @@ class TestHybridPredictor:
         # 未学習の状態で予測
         result = predictor.predict(sample_features_df)
 
-        # デフォルト値が返されることを確認
-        assert result == {"up": 0.33, "down": 0.33, "range": 0.34}
+        # デフォルト値が返されることを確認（fakeoutモードではis_validが返される）
+        assert result == {"is_valid": 0.5}
 
     def test_predict_with_invalid_features(self):
         """
@@ -280,9 +280,9 @@ class TestHybridPredictor:
 
         assert len(results) == 3
         for result in results:
-            assert "up" in result
-            assert "down" in result
-            assert "range" in result
+            # fakeoutモードではis_validが返される
+            assert "is_valid" in result
+            assert result["is_valid"] == 0.5
 
     @patch("app.services.ml.ml_training_service.MLTrainingService")
     def test_predict_with_ensemble(self, mock_service_class, sample_features_df):

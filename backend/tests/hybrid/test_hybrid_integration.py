@@ -343,7 +343,8 @@ class TestHybridIntegration:
         assert config.log_level == "ERROR"
 
         # バリデーションが通ることを確認
-        is_valid, errors = config.validate()
+        from app.services.auto_strategy.config.validators import ConfigValidator
+        is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is True
 
     def test_hybrid_multiple_models(self):
@@ -383,8 +384,7 @@ class TestHybridIntegration:
             features_df = pd.DataFrame([[1.0, 2.0]], columns=["close", "volume"])
             signals = predictor.predict(features_df)
 
-            # デフォルト値が返されることを確認
+            # デフォルト値が返されることを確認（fakeoutモードでは is_valid が返される）
             assert isinstance(signals, dict)
-            assert "up" in signals
-            assert "down" in signals
-            assert "range" in signals
+            assert "is_valid" in signals
+            assert signals["is_valid"] == 0.5

@@ -111,7 +111,7 @@ def test_start_strategy_generation_invalid_ga_config(auto_strategy_service):
     """異常系: 無効なGA設定でHTTPExceptionが発生すること"""
     # 準備
     with patch(
-        "app.services.auto_strategy.config.GAConfig.validate",
+        "app.services.auto_strategy.config.validators.ConfigValidator.validate",
         return_value=(False, ["error"]),
     ):
         with pytest.raises(HTTPException):

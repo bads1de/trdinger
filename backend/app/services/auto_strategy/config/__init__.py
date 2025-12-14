@@ -16,7 +16,6 @@ from .ga import GASettings
 # GA実行時設定クラス
 from .ga_runtime import (
     GAConfig,
-    GAProgress,
 )
 from .indicators import IndicatorSettings
 from .position_sizing import PositionSizingSettings
@@ -39,5 +38,4 @@ __all__ = [
     "AutoStrategyConfig",
     # GA実行時設定クラス
     "GAConfig",
-    "GAProgress",
 ]
