@@ -5,7 +5,7 @@ LRUキャッシュのエビクションポリシーと
 ProcessPoolExecutorのタイムアウト処理を検証します。
 """
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import pytest
 from cachetools import LRUCache
 
@@ -89,8 +89,97 @@ class TestLRUCacheEviction:
 
         info = evaluator.get_cache_info()
 
-        assert info["current_size"] == 1
-        assert info["max_size"] == 50
+        assert info["data_cache_size"] == 1
+        assert info["data_cache_max"] == 50
+        assert info["result_cache_size"] == 0
+        assert info["result_cache_max"] == 5000  # max_cache_size * 100
+
+    def test_result_cache_hit(self, mock_backtest_service):
+        """評価結果キャッシュが機能すること"""
+        evaluator = IndividualEvaluator(mock_backtest_service)
+        
+        # モック設定
+        mock_individual = [1, 2, 3]  # リストを渡す
+        mock_config = Mock()
+        mock_config.objectives = ["total_return"]
+        
+        # GeneSerializerをパッチ
+        with patch("app.services.auto_strategy.serializers.gene_serialization.GeneSerializer") as MockSerializer:
+            mock_gene = Mock()
+            mock_gene.id = "gene_1"
+            MockSerializer.return_value.from_list.return_value = mock_gene
+            
+            # _execute_evaluation_logic をモック化
+            evaluator._execute_evaluation_logic = Mock(return_value=(0.1,))
+            
+            # 1回目の評価（キャッシュミス -> 計算実行）
+            result1 = evaluator.evaluate_individual(mock_individual, mock_config)
+            assert result1 == (0.1,)
+            assert evaluator._execute_evaluation_logic.call_count == 1
+            assert evaluator._cache_misses == 1
+            assert evaluator._cache_hits == 0
+            
+            # 2回目の評価（キャッシュヒット -> 計算スキップ）
+            result2 = evaluator.evaluate_individual(mock_individual, mock_config)
+            assert result2 == (0.1,)
+            assert evaluator._execute_evaluation_logic.call_count == 1  # 呼び出し回数は増えない
+            assert evaluator._cache_misses == 1
+            assert evaluator._cache_hits == 1
+
+    def test_result_cache_clear_on_config_change(self, mock_backtest_service):
+        """設定変更時に結果キャッシュがクリアされること"""
+        evaluator = IndividualEvaluator(mock_backtest_service)
+        
+        # モック設定
+        mock_individual = [1, 2, 3]
+        mock_config = Mock()
+        mock_config.objectives = ["total_return"]
+        
+        with patch("app.services.auto_strategy.serializers.gene_serialization.GeneSerializer") as MockSerializer:
+            mock_gene = Mock()
+            mock_gene.id = "gene_1"
+            MockSerializer.return_value.from_list.return_value = mock_gene
+            
+            evaluator._execute_evaluation_logic = Mock(return_value=(0.1,))
+            
+            # 1回目の評価とキャッシュ
+            evaluator.evaluate_individual(mock_individual, mock_config)
+            assert len(evaluator._result_cache) == 1
+            
+            # 設定変更
+            evaluator.set_backtest_config({"symbol": "ETH/USDT"})
+            
+            # キャッシュがクリアされていることを確認
+            assert len(evaluator._result_cache) == 0
+            
+            # 再評価（計算が走るはず）
+            evaluator.evaluate_individual(mock_individual, mock_config)
+            assert evaluator._execute_evaluation_logic.call_count == 2
+
+    def test_pickle_state_excludes_caches(self, mock_backtest_service):
+        """Pickle化時にキャッシュが除外されること"""
+        evaluator = IndividualEvaluator(mock_backtest_service)
+        
+        # キャッシュにデータを入れる
+        evaluator._data_cache["key"] = "value"
+        evaluator._result_cache["key"] = "value"
+        
+        # 状態取得
+        state = evaluator.__getstate__()
+        
+        # キャッシュが含まれていないことを確認
+        assert "_data_cache" not in state
+        assert "_result_cache" not in state
+        assert "_lock" not in state
+        
+        # 復元
+        evaluator_restored = IndividualEvaluator(mock_backtest_service)
+        evaluator_restored.__setstate__(state)
+        
+        # キャッシュが再生成され、空であることを確認
+        assert hasattr(evaluator_restored, "_data_cache")
+        assert isinstance(evaluator_restored._data_cache, LRUCache)
+        assert len(evaluator_restored._data_cache) == 0
 
 
 class TestParallelEvaluatorImprovements:

@@ -86,7 +86,6 @@ class ConditionEvaluator:
 
         return True if is_and else False
 
-    @safe_operation(context="単一条件評価", is_api_call=False, default_return=False)
     def evaluate_single_condition(
         self, condition: Condition, strategy_instance
     ) -> bool:
@@ -184,9 +183,6 @@ class ConditionEvaluator:
 
         return result
 
-    @safe_operation(
-        context="最終値取得（pandas-ta対応）", is_api_call=False, default_return=0.0
-    )
     def _get_final_value(self, value) -> float:
         """配列/シーケンスから末尾の有限値を取得（pandas-ta対応）"""
         # pandas Series の場合
@@ -201,9 +197,6 @@ class ConditionEvaluator:
             val = float(value)
             return val if pd.notna(val) else 0.0
 
-    @safe_operation(
-        context="条件オペランド値取得", is_api_call=False, default_return=0.0
-    )
     def get_condition_value(
         self, operand: Union[Dict[str, Any], str, int, float], strategy_instance
     ) -> float:
@@ -272,20 +265,15 @@ class ConditionEvaluator:
         Returns:
             OHLCVの値、取得できない場合はNone
         """
-        logger.debug(
-            f"[OHLCVアクセス] '{operand}' オペランド検出 - strategy_instance type: {type(strategy_instance)}"
-        )
+        # 高頻度で呼ばれるためデバッグログは削除
+        # logger.debug(
+        #     f"[OHLCVアクセス] '{operand}' オペランド検出 - strategy_instance type: {type(strategy_instance)}"
+        # )
 
         if not hasattr(strategy_instance, "data"):
-            logger.warning(
-                f"[OHLCVアクセス] strategy_instanceにdata属性がありません。利用可能な属性: "
-                f"{[attr for attr in dir(strategy_instance) if not attr.startswith('_')]}"
-            )
+            # 頻繁に出る可能性があるのでdebugに下げてコメントアウト、またはonceにする
+            # logger.warning(...)
             return None
-
-        logger.debug(
-            f"[OHLCVアクセス] strategy_instance.data 存在: {type(strategy_instance.data)}"
-        )
 
         try:
             # backtesting.pyではカラム名が大文字（Open, High, Low, Close, Volume）
@@ -295,38 +283,20 @@ class ConditionEvaluator:
             if hasattr(strategy_instance.data, "columns") and hasattr(
                 strategy_instance.data, "__getitem__"
             ):
-                logger.debug("[OHLCVアクセス] pandas DataFrame検出")
                 if capitalized_operand in strategy_instance.data.columns:
-                    logger.debug(
-                        f"[OHLCVアクセス] '{capitalized_operand}' カラムが見つかりました"
-                    )
                     data_value = strategy_instance.data[capitalized_operand]
-                    logger.debug(
-                        f"[OHLCVアクセス] '{capitalized_operand}' から取得成功: {data_value}"
-                    )
                     return self._get_final_value(data_value)
                 else:
-                    logger.warning(
-                        f"[OHLCVアクセス] '{capitalized_operand}' カラムが見つかりません。"
-                        f"利用可能なカラム: {list(strategy_instance.data.columns)}"
-                    )
                     return None
 
             # backtesting.pyの特殊なデータアクセス方法
             try:
                 data_value = getattr(strategy_instance.data, capitalized_operand)
-                logger.debug(
-                    f"[OHLCVアクセス] backtesting.pyデータアクセス成功: {data_value}"
-                )
                 return self._get_final_value(data_value)
             except AttributeError:
-                logger.warning(
-                    f"[OHLCVアクセス] backtesting.pyデータアクセス失敗: {capitalized_operand}属性なし"
-                )
                 return None
 
-        except Exception as e:
-            logger.warning(f"[OHLCVアクセス] データアクセスエラー: {e}")
+        except Exception:
             return None
 
     # ========================================

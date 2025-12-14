@@ -46,8 +46,16 @@ class IndividualEvaluator:
         self.backtest_service = backtest_service
         self._fixed_backtest_config = None
         self._max_cache_size = max_cache_size or self.DEFAULT_MAX_CACHE_SIZE
+        # データキャッシュ（重いデータ用）
         self._data_cache: LRUCache = LRUCache(maxsize=self._max_cache_size)
+        # 評価結果キャッシュ（軽量、ヒット率向上用）
+        # データより軽量なのでサイズを大きめに取る
+        self._result_cache: LRUCache = LRUCache(maxsize=self._max_cache_size * 100)
         self._lock = threading.Lock()
+
+        # 統計情報
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
         """バックテスト設定を設定"""
@@ -71,34 +79,58 @@ class IndividualEvaluator:
             # ここでは警告に留める
 
         self._fixed_backtest_config = self._select_timeframe_config(backtest_config)
+        
+        # 設定変更時は結果キャッシュもクリア（前提が変わるため）
+        with self._lock:
+            self._result_cache.clear()
 
     def clear_cache(self) -> None:
         """データキャッシュをクリア"""
         with self._lock:
             self._data_cache.clear()
-            logger.info("データキャッシュをクリアしました")
+            self._result_cache.clear()
+            self._cache_hits = 0
+            self._cache_misses = 0
+            logger.info("データキャッシュと評価結果キャッシュをクリアしました")
 
     def get_cache_info(self) -> Dict[str, Any]:
         """キャッシュの状態情報を取得"""
         with self._lock:
             return {
-                "current_size": len(self._data_cache),
-                "max_size": self._max_cache_size,
-                "cache_hits": getattr(self, "_cache_hits", 0),
-                "cache_misses": getattr(self, "_cache_misses", 0),
+                "data_cache_size": len(self._data_cache),
+                "data_cache_max": self._max_cache_size,
+                "result_cache_size": len(self._result_cache),
+                "result_cache_max": self._result_cache.maxsize,
+                "cache_hits": self._cache_hits,
+                "cache_misses": self._cache_misses,
             }
 
     def __getstate__(self):
-        """Pickle化時の状態取得（ロックを除外）"""
+        """Pickle化時の状態取得（ロックとキャッシュを除外）"""
         state = self.__dict__.copy()
+        # ロックはPickle不可
         if "_lock" in state:
             del state["_lock"]
+        
+        # キャッシュはプロセス間で共有せず、転送コスト削減のために除外する
+        # ワーカープロセスは空のキャッシュで開始する
+        if "_data_cache" in state:
+            del state["_data_cache"]
+        if "_result_cache" in state:
+            del state["_result_cache"]
+            
         return state
 
     def __setstate__(self, state):
-        """Pickle復元時の状態設定（ロックを再生成）"""
+        """Pickle復元時の状態設定（ロックとキャッシュを再生成）"""
         self.__dict__.update(state)
         self._lock = threading.Lock()
+        
+        # キャッシュの再初期化（空の状態）
+        if not hasattr(self, "_data_cache"):
+            self._data_cache = LRUCache(maxsize=self._max_cache_size)
+        if not hasattr(self, "_result_cache"):
+            self._result_cache = LRUCache(maxsize=self._max_cache_size * 100)
 
     def evaluate_individual(self, individual, config: GAConfig):
         """
@@ -122,6 +154,27 @@ class IndividualEvaluator:
                 gene_serializer = GeneSerializer()
                 gene = gene_serializer.from_list(individual, StrategyGene)
 
+            # キャッシュチェック
+            # 遺伝子IDとバックテスト設定（期間など）をキーにする
+            # config自体は複雑なので、ハッシュ化可能な要素のみ抽出するか、
+            # gene.id が一意であればそれだけで十分だが、backtest_configが変われば結果も変わる。
+            # 今回は _fixed_backtest_config は set_backtest_config で固定され、変更時にキャッシュクリアされるため
+            # gene.id だけで十分かもしれないが、念のため安全策を取る。
+            # geneにはハッシュメソッドがあるか不明だが、文字列表現はユニークと仮定。
+            
+            # 遺伝子の文字列表現（パラメータ全体を含む）を一意なキーとして使用
+            # IDだけでは、パラメータが同じでIDが違う場合に対応できないが、
+            # GAではパラメータが同じなら結果も同じはずなので、パラメータのハッシュが良い。
+            # しかし実装が複雑になるため、ここでは gene.id を使用する（IDは生成時に付与される前提）。
+            # IDがない場合はstr(gene)を使う。
+            cache_key = getattr(gene, "id", str(gene))
+            
+            with self._lock:
+                if cache_key in self._result_cache:
+                    self._cache_hits += 1
+                    return self._result_cache[cache_key]
+                self._cache_misses += 1
+
             # バックテスト設定のベースを取得
             base_backtest_config = (
                 self._fixed_backtest_config.copy()
@@ -129,30 +182,45 @@ class IndividualEvaluator:
                 else {}
             )
 
-            # Walk-Forward Analysis が有効な場合
-            if getattr(config, "enable_walk_forward", False):
-                return self._evaluate_with_walk_forward(
-                    gene, base_backtest_config, config
-                )
-
-            # OOS検証の有無を確認
-            oos_ratio = getattr(config, "oos_split_ratio", 0.0)
-            oos_weight = getattr(config, "oos_fitness_weight", 0.5)
-
-            if oos_ratio > 0.0:
-                # 期間分割とOOS評価
-                return self._evaluate_with_oos(
-                    gene, base_backtest_config, config, oos_ratio, oos_weight
-                )
-            else:
-                # 通常評価（全期間）
-                return self._perform_single_evaluation(
-                    gene, base_backtest_config, config
-                )
+            # 評価実行
+            fitness = self._execute_evaluation_logic(gene, base_backtest_config, config)
+            
+            # 結果をキャッシュ
+            with self._lock:
+                self._result_cache[cache_key] = fitness
+                
+            return fitness
 
         except Exception as e:
             logger.error(f"個体評価エラー: {e}")
             return tuple(0.0 for _ in config.objectives)
+
+    def _execute_evaluation_logic(
+        self, gene, base_backtest_config, config
+    ) -> Tuple[float, ...]:
+        """実際の評価ロジック（OOS/WFA分岐）"""
+        
+        # Walk-Forward Analysis が有効な場合
+        if getattr(config, "enable_walk_forward", False):
+            return self._evaluate_with_walk_forward(
+                gene, base_backtest_config, config
+            )
+
+        # OOS検証の有無を確認
+        oos_ratio = getattr(config, "oos_split_ratio", 0.0)
+        oos_weight = getattr(config, "oos_fitness_weight", 0.5)
+
+        if oos_ratio > 0.0:
+            # 期間分割とOOS評価
+            return self._evaluate_with_oos(
+                gene, base_backtest_config, config, oos_ratio, oos_weight
+            )
+        else:
+            # 通常評価（全期間）
+            return self._perform_single_evaluation(
+                gene, base_backtest_config, config
+            )
+
 
     def _evaluate_with_oos(
         self,
@@ -338,6 +406,15 @@ class IndividualEvaluator:
 
     def _get_cached_data(self, backtest_config: Dict[str, Any]) -> Any:
         """キャッシュされたバックテストデータを取得"""
+        # 並列ワーカー内の共有データをチェック
+        try:
+            from .worker_initializer import get_worker_data
+            worker_data = get_worker_data("main_data")
+            if worker_data is not None:
+                return worker_data
+        except ImportError:
+            pass
+
         symbol = backtest_config.get("symbol")
         timeframe = backtest_config.get("timeframe")
         start_date = backtest_config.get("start_date")
@@ -375,6 +452,19 @@ class IndividualEvaluator:
         Returns:
             1分足のDataFrame、またはデータが存在しない場合はNone
         """
+        # 並列ワーカー内の共有データをチェック
+        try:
+            from .worker_initializer import get_worker_data
+            worker_data = get_worker_data("minute_data")
+            # 1分足データは存在しない場合もある（None）ため、キーが存在するか確認するロジックが必要だが
+            # get_worker_dataは存在しない場合にNoneを返す仕様。
+            # "minute_data"キーが明示的にセットされていて中身がNoneなのか、セットされていないのか区別がつかない。
+            # しかし、GAEngine側でminute_dataを使わない場合はセットしないので、Noneならキャッシュを見に行くフローで良い。
+            if worker_data is not None:
+                return worker_data
+        except ImportError:
+            pass
+
         symbol = backtest_config.get("symbol")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")

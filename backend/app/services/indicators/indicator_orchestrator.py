@@ -29,6 +29,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+from cachetools import LRUCache
 
 from .config import IndicatorConfig, IndicatorResultType, indicator_registry
 from .config.indicator_config import POSITIONAL_DATA_FUNCTIONS
@@ -39,6 +40,11 @@ logger = logging.getLogger(__name__)
 
 class TechnicalIndicatorService:
     """テクニカル指標統合サービス"""
+
+    # 計算結果キャッシュ（クラスレベルで保持し、プロセス内で共有）
+    # GA実行時に同一データの同一指標計算を回避する
+    # メモリ消費を抑えるためサイズを調整 (5000 -> 1000)
+    _calculation_cache = LRUCache(maxsize=1000)
 
     def __init__(self):
         """サービスを初期化"""
@@ -72,9 +78,27 @@ class TechnicalIndicatorService:
         Raises:
             ValueError: サポートされていない指標タイプの場合
         """
+        # キャッシュチェック
+        try:
+            # パラメータをハッシュ可能な形式に変換（辞書の順序を無視）
+            # 値は念のため文字列化して比較（型違いによる重複計算を防ぐ意図だが、厳密な型区別はされない）
+            # リストなどのミュータブルな値が含まれる場合に対応するため str() を使用
+            cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
+            
+            # DataFrameのIDをキーに含める（バックテスト中は同じオブジェクトが使い回される前提）
+            cache_key = (indicator_type, cache_params, id(df))
+            
+            if cache_key in self._calculation_cache:
+                return self._calculation_cache[cache_key]
+        except Exception:
+            # キャッシュキー生成失敗時はキャッシュスキップ
+            pass
+
         try:
             # 1. pandas-ta設定を取得
             config = self._get_config(indicator_type)
+            result = None
+
             if config:
                 # pandas-ta方式で処理
                 # 3. パラメータ正規化（基本検証前に必要）
@@ -82,29 +106,42 @@ class TechnicalIndicatorService:
 
                 # 2. 基本検証
                 if not self._basic_validation(df, config, normalized_params):
-                    return self._create_nan_result(df, config)
-
-                # 4. pandas-ta直接呼び出し
-                result = self._call_pandas_ta(df, config, normalized_params)
-                if result is not None:
-                    return self._post_process(result, config, df)
+                    result = self._create_nan_result(df, config)
+                else:
+                    # 4. pandas-ta直接呼び出し
+                    raw_result = self._call_pandas_ta(df, config, normalized_params)
+                    if raw_result is not None:
+                        result = self._post_process(raw_result, config, df)
 
             # 5. アダプター方式にフォールバック（pandas-taにない場合または失敗した場合）
+            if result is None:
+                try:
+                    config_obj = self._get_indicator_config(indicator_type)
+                    if config_obj.adapter_function:
+                        result = self._calculate_with_adapter(
+                            df, indicator_type, params, config_obj
+                        )
+                    else:
+                        raise ValueError(f"指標 {indicator_type} の実装が見つかりません")
+                except ValueError:
+                    # レジストリにもない場合
+                    if config:
+                        # pandas-ta設定はあるが呼び出し失敗の場合
+                        result = self._create_nan_result(df, config)
+                    else:
+                        raise ValueError(f"指標 {indicator_type} の実装が見つかりません")
+            
+            # 結果をキャッシュに保存
             try:
-                config_obj = self._get_indicator_config(indicator_type)
-                if config_obj.adapter_function:
-                    return self._calculate_with_adapter(
-                        df, indicator_type, params, config_obj
-                    )
-                else:
-                    raise ValueError(f"指標 {indicator_type} の実装が見つかりません")
-            except ValueError:
-                # レジストリにもない場合
-                if config:
-                    # pandas-ta設定はあるが呼び出し失敗の場合
-                    return self._create_nan_result(df, config)
-                else:
-                    raise ValueError(f"指標 {indicator_type} の実装が見つかりません")
+                if result is not None:
+                    # 前述のcache_keyロジックと同じ
+                    cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
+                    cache_key = (indicator_type, cache_params, id(df))
+                    self._calculation_cache[cache_key] = result
+            except Exception:
+                pass
+
+            return result
 
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}")

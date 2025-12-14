@@ -159,9 +159,11 @@ class TestE2EFlow:
         # 検証
         
         # 1. バックテストが実行されたか
-        # 個体数 * 世代数 + 初期個体数 程度
+        # キャッシュ導入により、同一遺伝子の場合はバックテストがスキップされるため
+        # 呼び出し回数が個体数より少なくなる可能性がある。
+        # 少なくとも1回は実行されていることを確認する。
         assert mock_backtest_service.run_backtest.called
-        assert mock_backtest_service.run_backtest.call_count >= ga_config.population_size
+        assert mock_backtest_service.run_backtest.call_count >= 1
         
         # 2. 結果保存
         # 世代ごとの保存は現在の実装では保証されないためスキップ
