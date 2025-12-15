@@ -61,7 +61,7 @@ class DEAPSetup:
         if hasattr(creator, "Individual"):
             delattr(creator, "Individual")
 
-        from ..models import StrategyGene
+        from ..genes import StrategyGene
 
         # StrategyGeneを継承し、fitness属性を持つクラスを作成
         creator.create("Individual", StrategyGene, fitness=fitness_class)  # type: ignore
@@ -115,5 +115,8 @@ class DEAPSetup:
     def get_individual_class(self):
         """個体クラスを取得"""
         return self.Individual
+
+
+
 
 

@@ -91,3 +91,5 @@ class TestBaseRNNModel:
         assert np.array_equal(preds, np.array([0, 1, 0, 1]))
 
 
+
+

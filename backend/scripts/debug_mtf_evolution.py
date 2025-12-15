@@ -11,7 +11,7 @@ from backend.app.services.auto_strategy.generators.condition_generator import (
     ConditionGenerator,
 )
 from backend.app.services.auto_strategy.core.condition_evolver import ConditionEvolver
-from backend.app.services.auto_strategy.models.indicator_gene import IndicatorGene
+from backend.app.services.auto_strategy.genes.indicator_gene import IndicatorGene
 from backend.app.services.auto_strategy.models import Condition, ConditionGroup
 
 # ロギング設定
@@ -164,5 +164,6 @@ def debug_mtf_flow():
 
 if __name__ == "__main__":
     debug_mtf_flow()
+
 
 

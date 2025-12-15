@@ -525,3 +525,5 @@ class TestErrorHandling:
         repository.db.rollback.assert_called()
 
 
+
+

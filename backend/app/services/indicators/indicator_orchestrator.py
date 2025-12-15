@@ -616,3 +616,4 @@ class TechnicalIndicatorService:
         return infos
 
 
+

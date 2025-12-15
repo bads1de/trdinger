@@ -9,7 +9,7 @@ from typing import Tuple, Type
 
 from backtesting import Strategy
 
-from ..models import StrategyGene
+from ..genes import StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -74,5 +74,8 @@ class StrategyFactory:
         except Exception as e:
             logger.error(f"遺伝子検証エラー: {e}")
             return False, [f"検証エラー: {str(e)}"]
+
+
+
 
 

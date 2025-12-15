@@ -13,7 +13,7 @@ import pandas as pd
 
 from app.services.indicators import TechnicalIndicatorService
 
-from ..models import IndicatorGene
+from ..genes import IndicatorGene
 from .mtf_data_provider import MultiTimeframeDataProvider
 
 logger = logging.getLogger(__name__)
@@ -330,5 +330,8 @@ class IndicatorCalculator:
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")
 
         _init_indicator()
+
+
+
 
 

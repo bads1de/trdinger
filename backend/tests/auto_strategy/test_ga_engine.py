@@ -45,7 +45,7 @@ class TestGeneticAlgorithmEngine:
     def mock_gene_generator(self):
         """Mock RandomGeneGenerator"""
         generator = Mock(spec=RandomGeneGenerator)
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             IndicatorGene,
             PositionSizingGene,
             PositionSizingMethod,
@@ -262,5 +262,7 @@ class TestGeneticAlgorithmEngine:
         runner_call_args = mock_runner_cls.call_args[0]
         # 5番目の引数がparallel_evaluator
         assert runner_call_args[4] == mock_parallel_evaluator_cls.return_value
+
+
 
 

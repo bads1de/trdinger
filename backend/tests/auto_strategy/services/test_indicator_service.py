@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
-from app.services.auto_strategy.models import IndicatorGene
+from app.services.auto_strategy.genes import IndicatorGene
 
 
 class TestIndicatorCalculator:
@@ -144,5 +144,7 @@ class TestIndicatorCalculator:
         gene = IndicatorGene(type="SMA", parameters={}, enabled=True)
         with pytest.raises(ValueError, match="戦略インスタンスがNone"):
             calculator.init_indicator(gene, None)
+
+
 
 

@@ -141,3 +141,5 @@ class TestTrendScanning:
         assert pd.notna(labels.iloc[0]["t1"])
 
 
+
+

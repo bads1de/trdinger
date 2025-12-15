@@ -6,7 +6,7 @@ LowerTimeframeSimulator のテスト
 
 import pandas as pd
 import pytest
-from app.services.auto_strategy.models.pending_order import PendingOrder
+from app.services.auto_strategy.positions.pending_order import PendingOrder
 from app.services.auto_strategy.config.enums import EntryType
 from app.services.auto_strategy.positions.lower_tf_simulator import (
     LowerTimeframeSimulator,
@@ -229,5 +229,7 @@ class TestGetMinuteDataForBar:
             minute_data_up_trend, bar_start, bar_end
         )
         assert len(result) == 0
+
+
 
 

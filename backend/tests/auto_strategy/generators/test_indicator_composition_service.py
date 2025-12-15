@@ -8,7 +8,7 @@ from unittest.mock import Mock, MagicMock, patch
 from app.services.auto_strategy.generators.indicator_composition_service import (
     IndicatorCompositionService,
 )
-from app.services.auto_strategy.models import IndicatorGene
+from app.services.auto_strategy.genes import IndicatorGene
 
 # Mock constants if necessary, or assume they are available from imports within the service
 # The service imports them from ..config.constants.
@@ -187,5 +187,7 @@ class TestIndicatorCompositionService:
                 ["SMA", "EMA"], existing_periods
             )
             assert result is not None
+
+
 
 

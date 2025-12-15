@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
-from app.services.auto_strategy.models import StrategyGene
+from app.services.auto_strategy.genes import StrategyGene
 from app.services.backtest.backtest_service import BacktestService
 
 
@@ -118,5 +118,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         self.assertFalse(parameters["ml_filter_enabled"])
         # ml_predictor が設定されていないこと（またはNone）
         self.assertIsNone(parameters.get("ml_predictor"))
+
+
 
 

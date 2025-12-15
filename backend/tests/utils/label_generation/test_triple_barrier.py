@@ -102,3 +102,5 @@ class TestTripleBarrier:
         # バリアに触れずに時間切れ -> 0
         assert labels.loc[self.close.index[0], 'bin'] == 0.0
 
+
+

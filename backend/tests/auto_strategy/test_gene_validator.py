@@ -4,8 +4,8 @@ GeneValidator テスト
 指標遺伝子のタイムフレームバリデーションを含むテスト
 """
 
-from app.services.auto_strategy.models import IndicatorGene
-from app.services.auto_strategy.models.validator import GeneValidator
+from app.services.auto_strategy.genes import IndicatorGene
+from app.services.auto_strategy.genes.validator import GeneValidator
 
 
 class TestGeneValidatorTimeframe:
@@ -62,7 +62,7 @@ class TestGeneValidatorTPSLSplit:
     """ロング/ショート別TPSL遺伝子のバリデーションテスト"""
 
     def _create_base_strategy(self, long_tpsl=None, short_tpsl=None):
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             StrategyGene,
             IndicatorGene,
             Condition,
@@ -81,7 +81,7 @@ class TestGeneValidatorTPSLSplit:
 
     def test_valid_split_tpsl(self):
         """有効なロング/ショートTPSL設定が通過すること"""
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             TPSLGene,
             TPSLMethod,
         )
@@ -103,7 +103,7 @@ class TestGeneValidatorTPSLSplit:
 
     def test_invalid_long_tpsl(self):
         """無効なロングTPSL設定（負のSL）が拒否されること"""
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             TPSLGene,
             TPSLMethod,
         )
@@ -128,7 +128,7 @@ class TestGeneValidatorTPSLSplit:
 
     def test_invalid_short_tpsl(self):
         """無効なショートTPSL設定（負のTP）が拒否されること"""
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             TPSLGene,
             TPSLMethod,
         )
@@ -198,5 +198,7 @@ class TestGeneValidatorBasic:
         indicator = IndicatorGene(type="SMA", parameters={"period": 0}, enabled=True)
 
         assert validator.validate_indicator_gene(indicator) is False
+
+
 
 

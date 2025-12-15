@@ -2,12 +2,12 @@ from app.services.auto_strategy.config.ga import GASettings
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.services.auto_strategy.models.validator import GeneValidator
+from app.services.auto_strategy.genes.validator import GeneValidator
 from app.services.auto_strategy.core.genetic_operators import (
     crossover_strategy_genes_pure,
     mutate_strategy_gene_pure,
 )
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene
 
 
 class TestAutoStrategyFlow:
@@ -63,5 +63,7 @@ class TestAutoStrategyFlow:
 
         # 基本的な構造が維持されていることを確認
         assert len(mutated_child1.indicators) > 0
+
+
 
 

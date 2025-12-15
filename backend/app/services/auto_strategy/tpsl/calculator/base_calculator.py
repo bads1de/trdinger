@@ -8,8 +8,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple
 
-from ...models import TPSLGene
-from ...models.tpsl_gene import TPSLResult
+from ...genes import TPSLGene
+from ...genes.tpsl_gene import TPSLResult
 
 logger = logging.getLogger(__name__)
 
@@ -96,5 +96,8 @@ class BaseTPSLCalculator(ABC):
             expected_performance=expected_performance or {},
             metadata=metadata or {},
         )
+
+
+
 
 

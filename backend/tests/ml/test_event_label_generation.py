@@ -8,7 +8,7 @@ from backend.app.services.auto_strategy.config.ga import GASettings
 from backend.app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from backend.app.services.auto_strategy.models.strategy_gene import StrategyGene
+from backend.app.services.auto_strategy.genes.strategy_gene import StrategyGene
 from backend.app.services.auto_strategy.utils.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
@@ -125,5 +125,7 @@ def test_hybrid_feature_adapter_label_features():
     assert "funding_rate_change" in features_df.columns
     assert "sentiment_smoothed" in features_df.columns
     assert not features_df["sentiment_smoothed"].isna().any()
+
+
 
 

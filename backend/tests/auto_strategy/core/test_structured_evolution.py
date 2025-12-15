@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
 from app.services.auto_strategy.core.condition_evolver import ConditionEvolver
-from app.services.auto_strategy.models import Condition, ConditionGroup
+from app.services.auto_strategy.genes import Condition, ConditionGroup
 from app.services.auto_strategy.core.condition_evolver import YamlIndicatorUtils
 
 
@@ -69,5 +69,7 @@ class TestStructuredEvolution:
         # 簡単な実装では、型が違う場合は交叉しない
         assert isinstance(child1, Condition)
         assert isinstance(child2, ConditionGroup)
+
+
 
 

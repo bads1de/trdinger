@@ -113,3 +113,6 @@ class GeneSerializer:
         return self.to_list(strategy_gene)
 
 
+
+
+

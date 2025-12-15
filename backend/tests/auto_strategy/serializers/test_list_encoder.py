@@ -3,7 +3,7 @@ from app.services.auto_strategy.serializers.list_encoder import (
     ListEncoder,
     NormalizationConstants,
 )
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     StrategyGene,
     IndicatorGene,
     Condition,
@@ -164,5 +164,7 @@ class TestListEncoder:
 
         assert len(enc1) == len(enc2)
         assert enc1 == enc2
+
+
 
 

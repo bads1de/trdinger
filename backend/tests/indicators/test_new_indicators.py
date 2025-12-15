@@ -236,3 +236,5 @@ class TestNewIndicatorsIntegration:
         assert bias_time < 1.0, f"BIASが遅すぎ: {bias_time:.3f}秒"
 
 
+
+

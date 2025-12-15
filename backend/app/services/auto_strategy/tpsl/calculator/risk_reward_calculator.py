@@ -7,8 +7,8 @@ Risk Reward Calculator
 import logging
 from typing import Any, Dict, Optional
 
-from ...models import TPSLGene
-from ...models.tpsl_gene import TPSLResult
+from ...genes import TPSLGene
+from ...genes.tpsl_gene import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 
 logger = logging.getLogger(__name__)
@@ -89,5 +89,8 @@ class RiskRewardCalculator(BaseTPSLCalculator):
                 "risk_reward_ratio": 2.0,
             },
         )
+
+
+
 
 

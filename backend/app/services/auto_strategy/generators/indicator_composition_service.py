@@ -14,7 +14,7 @@ from ..config.constants import (
     MOVING_AVERAGE_INDICATORS,
     PREFERRED_MA_INDICATORS,
 )
-from ..models import IndicatorGene
+from ..genes import IndicatorGene
 
 logger = logging.getLogger(__name__)
 
@@ -141,5 +141,8 @@ class IndicatorCompositionService:
             if ind.type not in MOVING_AVERAGE_INDICATORS:
                 indicators.pop(i)
                 break
+
+
+
 
 

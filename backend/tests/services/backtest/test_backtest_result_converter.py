@@ -665,3 +665,5 @@ class TestErrorHandling:
         assert len(equity_curve) == 0
 
 
+
+

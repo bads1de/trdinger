@@ -462,3 +462,5 @@ class TestFundingRateFeatureCalculator:
             assert nan_ratio < 0.5, f"{col}のNaN比率が高すぎます: {nan_ratio:.2%}"
 
 
+
+

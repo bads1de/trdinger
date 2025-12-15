@@ -3,7 +3,7 @@ from unittest.mock import Mock, MagicMock
 from app.services.auto_strategy.generators.strategies.complex_conditions_strategy import (
     ComplexConditionsStrategy,
 )
-from app.services.auto_strategy.models import IndicatorGene, Condition, ConditionGroup
+from app.services.auto_strategy.genes import IndicatorGene, Condition, ConditionGroup
 from app.services.auto_strategy.config.constants import IndicatorType
 
 
@@ -138,5 +138,7 @@ class TestComplexConditionsStrategy(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
 
 

@@ -5,7 +5,7 @@
 """
 
 from .config import GAConfig
-from .models import StrategyGene
+from .genes import StrategyGene
 from .positions import PositionSizingService
 from .services.auto_strategy_service import AutoStrategyService
 from .tpsl import TPSLService
@@ -17,5 +17,4 @@ __all__ = [
     "TPSLService",
     "PositionSizingService",
 ]
-
 

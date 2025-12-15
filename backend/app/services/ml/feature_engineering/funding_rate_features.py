@@ -328,3 +328,4 @@ def validate_funding_rate_data(df: pd.DataFrame) -> bool:
     return True
 
 
+

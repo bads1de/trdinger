@@ -13,7 +13,7 @@ from typing import Union
 
 import numpy as np
 
-from ..models import (
+from ..genes import (
     StrategyGene,
     create_random_tpsl_gene,
     crossover_position_sizing_genes,
@@ -169,7 +169,7 @@ def _mutate_condition_item(condition, mutation_rate, config):
     """
     import random
 
-    from ..models import ConditionGroup
+    from ..genes import ConditionGroup
 
     if isinstance(condition, ConditionGroup):
         # ConditionGroupの場合
@@ -752,7 +752,7 @@ def mutate_strategy_gene_pure(
                 < mutation_rate
                 * config.position_sizing_gene_creation_probability_multiplier
             ):
-                from ..models import (
+                from ..genes import (
                     create_random_position_sizing_gene,
                 )
 
@@ -1005,5 +1005,8 @@ def adaptive_mutate_strategy_gene_pure(
         logger.error(f"適応的戦略遺伝子突然変異エラー: {e}")
         # エラー時は元のrateでmutate
         return mutate_strategy_gene_pure(gene, config, base_mutation_rate)
+
+
+
 
 

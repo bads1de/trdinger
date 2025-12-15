@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.services.auto_strategy.models.validator import GeneValidator
+from app.services.auto_strategy.genes.validator import GeneValidator
 
 
 class TestGeneValidator:
@@ -358,5 +358,7 @@ class TestGeneValidator:
         assert result is False
         assert len(errors) > 0
         assert "有効な指標" in errors[0]
+
+
 
 

@@ -393,7 +393,7 @@ class GeneUtils:
         try:
             # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
             # ここでは基本的な構造のみを提供
-            from ..models import (
+            from ..genes import (
                 Condition,
                 IndicatorGene,
                 PositionSizingGene,
@@ -465,5 +465,8 @@ normalize_parameter = GeneUtils.normalize_parameter
 # GeneticUtilsの便利関数
 create_child_metadata = GeneticUtils.create_child_metadata
 prepare_crossover_metadata = GeneticUtils.prepare_crossover_metadata
+
+
+
 
 

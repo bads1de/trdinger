@@ -672,3 +672,4 @@ class VolatilityIndicators:
         return np.sqrt(rolling_var).fillna(0.0)
 
 
+

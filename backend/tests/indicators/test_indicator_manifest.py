@@ -83,3 +83,5 @@ def test_indicator_settings_and_service_support_new_indicators():
     assert len(signal_line) >= rows - 50
 
 
+
+

@@ -14,10 +14,10 @@ from app.services.indicators.config.indicator_config import (
 )
 from app.services.ml.optimization.optuna_optimizer import ParameterSpace
 
-from ..models.conditions import Condition, ConditionGroup
-from ..models.indicator_gene import IndicatorGene
-from ..models.strategy_gene import StrategyGene
-from ..models.tpsl_gene import TPSLGene
+from ..genes.conditions import Condition, ConditionGroup
+from ..genes.indicator_gene import IndicatorGene
+from ..genes.strategy_gene import StrategyGene
+from ..genes.tpsl_gene import TPSLGene
 
 logger = logging.getLogger(__name__)
 
@@ -341,5 +341,8 @@ class StrategyParameterSpace:
                         else:
                             condition.right_operand = float(params[param_key])
                     threshold_idx += 1
+
+
+
 
 

@@ -16,7 +16,7 @@ from app.services.auto_strategy.tools import (
     WeekendFilter,
     weekend_filter,
 )
-from app.services.auto_strategy.models.tool_gene import ToolGene
+from app.services.auto_strategy.genes.tool_gene import ToolGene
 
 
 class TestWeekendFilter:
@@ -154,8 +154,8 @@ class TestUniversalStrategyToolsIntegration:
         from app.services.auto_strategy.strategies.universal_strategy import (
             UniversalStrategy,
         )
-        from app.services.auto_strategy.models.strategy_gene import StrategyGene
-        from app.services.auto_strategy.models.tool_gene import ToolGene
+        from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+        from app.services.auto_strategy.genes.tool_gene import ToolGene
 
         # 土曜日のタイムスタンプを持つモックデータ
         saturday_timestamp = pd.Timestamp("2025-12-13 12:00:00")  # 土曜日
@@ -193,8 +193,8 @@ class TestUniversalStrategyToolsIntegration:
         from app.services.auto_strategy.strategies.universal_strategy import (
             UniversalStrategy,
         )
-        from app.services.auto_strategy.models.strategy_gene import StrategyGene
-        from app.services.auto_strategy.models.tool_gene import ToolGene
+        from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+        from app.services.auto_strategy.genes.tool_gene import ToolGene
 
         # 水曜日のタイムスタンプを持つモックデータ
         wednesday_timestamp = pd.Timestamp("2025-12-10 12:00:00")  # 水曜日
@@ -228,8 +228,8 @@ class TestUniversalStrategyToolsIntegration:
         from app.services.auto_strategy.strategies.universal_strategy import (
             UniversalStrategy,
         )
-        from app.services.auto_strategy.models.strategy_gene import StrategyGene
-        from app.services.auto_strategy.models.tool_gene import ToolGene
+        from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+        from app.services.auto_strategy.genes.tool_gene import ToolGene
 
         saturday_timestamp = pd.Timestamp("2025-12-13 12:00:00")
 
@@ -263,7 +263,7 @@ class TestUniversalStrategyToolsIntegration:
         from app.services.auto_strategy.strategies.universal_strategy import (
             UniversalStrategy,
         )
-        from app.services.auto_strategy.models.strategy_gene import StrategyGene
+        from app.services.auto_strategy.genes.strategy_gene import StrategyGene
 
         saturday_timestamp = pd.Timestamp("2025-12-13 12:00:00")
 
@@ -286,5 +286,7 @@ class TestUniversalStrategyToolsIntegration:
 
         # ツール遺伝子がないのでエントリー許可
         assert strategy._tools_block_entry() is False
+
+
 
 

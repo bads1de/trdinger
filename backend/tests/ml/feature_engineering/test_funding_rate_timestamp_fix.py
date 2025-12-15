@@ -66,3 +66,5 @@ class TestFundingRateFeatureCalculator:
         assert "fr_lag_3p" in result_df.columns
 
 
+
+

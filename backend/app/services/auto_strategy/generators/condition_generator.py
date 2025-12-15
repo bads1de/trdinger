@@ -13,7 +13,7 @@ from ..core.condition_evolver import (
     ConditionEvolver,
 )
 from ..core.condition_evolver import YamlIndicatorUtils as CoreYamlIndicatorUtils
-from ..models import Condition, ConditionGroup, IndicatorGene
+from ..genes import Condition, ConditionGroup, IndicatorGene
 from ..utils.yaml_utils import YamlIndicatorUtils
 from .strategies import (
     ComplexConditionsStrategy,
@@ -632,5 +632,8 @@ class GAConditionGenerator(ConditionGenerator):
                 f"単一条件最適化エラー ({indicator.type}, {direction}): {e}"
             )
             return None
+
+
+
 
 

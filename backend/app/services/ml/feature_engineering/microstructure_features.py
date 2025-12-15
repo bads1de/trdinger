@@ -181,3 +181,4 @@ class MicrostructureFeatureCalculator:
         return pd.Series(spread, index=df.index).rolling(window=window).mean()
 
 
+

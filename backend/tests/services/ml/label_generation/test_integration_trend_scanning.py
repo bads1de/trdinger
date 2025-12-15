@@ -63,3 +63,5 @@ class TestTrendScanningIntegration:
             assert labels.isin([0, 1]).all()
 
 
+
+

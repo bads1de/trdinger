@@ -88,3 +88,4 @@ class AlgorithmRegistry:
 algorithm_registry = AlgorithmRegistry()
 
 
+

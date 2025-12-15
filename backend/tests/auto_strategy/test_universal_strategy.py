@@ -5,13 +5,13 @@ UniversalStrategy のテスト
 from unittest.mock import MagicMock, patch, PropertyMock
 import pytest
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     StrategyGene,
     IndicatorGene,
     TPSLGene,
     TPSLMethod,
 )
-from app.services.auto_strategy.models.conditions import Condition
+from app.services.auto_strategy.genes.conditions import Condition
 
 
 class TestUniversalStrategy:
@@ -205,7 +205,7 @@ class TestUniversalStrategy:
 
     def test_stateful_conditions_integration(self, mock_broker, mock_data):
         """ステートフル条件がUniversalStrategyで正しく処理されることをテスト"""
-        from app.services.auto_strategy.models.conditions import (
+        from app.services.auto_strategy.genes.conditions import (
             StatefulCondition,
         )
 
@@ -324,5 +324,7 @@ class TestUniversalStrategy:
                     # スライスサイズは atr_period + 1 (True Range 計算用のバッファ)
                     expected_slice_size = tpsl_gene.atr_period + 1
                     assert len(market_data["ohlc_data"]) == expected_slice_size
+
+
 
 

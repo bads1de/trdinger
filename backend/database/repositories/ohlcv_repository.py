@@ -340,3 +340,4 @@ class OHLCVRepository(BaseRepository):
         return super().get_available_symbols(symbol_column)
 
 
+

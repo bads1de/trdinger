@@ -10,13 +10,13 @@ from unittest.mock import MagicMock, patch, PropertyMock
 import numpy as np
 
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     StrategyGene,
     IndicatorGene,
     TPSLGene,
     TPSLMethod,
 )
-from app.services.auto_strategy.models.conditions import Condition
+from app.services.auto_strategy.genes.conditions import Condition
 
 
 class TestTPSLDataSlicing:
@@ -280,5 +280,7 @@ class TestTPSLDataSliceCalculation:
         """
         # True Range 計算には最低でも (atr_period + 1) 本のデータが必要
         assert atr_period + 1 == expected_min_slice
+
+
 
 

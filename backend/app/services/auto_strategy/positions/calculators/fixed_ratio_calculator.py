@@ -39,3 +39,6 @@ class FixedRatioCalculator(BaseCalculator):
         return self._apply_size_limits_and_finalize(position_size, details, [], gene)
 
 
+
+
+

@@ -12,7 +12,7 @@ from deap import base
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.deap_setup import DEAPSetup
-from app.services.auto_strategy.models import StrategyGene
+from app.services.auto_strategy.genes import StrategyGene
 
 
 class MockCreator(SimpleNamespace):
@@ -318,5 +318,7 @@ class TestDEAPSetup:
         """セットアップ前の個体クラス取得テスト"""
         individual_class = deap_setup.get_individual_class()
         assert individual_class is None
+
+
 
 

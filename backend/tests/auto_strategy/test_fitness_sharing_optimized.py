@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     Condition,
     IndicatorGene,
     PositionSizingGene,
@@ -312,5 +312,7 @@ class TestSamplingOptimization:
 
         assert len(niche_counts) == len(vectors)
         assert all(nc >= 1.0 for nc in niche_counts)
+
+
 
 

@@ -395,7 +395,7 @@ class GeneticAlgorithmEngine:
         Returns:
             tuple: 最良個体、最良遺伝子、および最良戦略のタプル。
         """
-        from ..models import StrategyGene
+        from ..genes import StrategyGene
         from ..serializers.gene_serialization import GeneSerializer
 
         gene_serializer = GeneSerializer()
@@ -505,5 +505,8 @@ class GeneticAlgorithmEngine:
             logger.warning(f"パラメータチューニング中にエラーが発生: {e}")
             # エラー時は元の遺伝子を返す
             return best_gene
+
+
+
 
 

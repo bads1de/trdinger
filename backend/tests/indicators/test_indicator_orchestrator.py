@@ -270,3 +270,5 @@ class TestTechnicalIndicatorService:
                 indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
 
 
+
+

@@ -7,7 +7,7 @@ import pytest
 from app.services.auto_strategy.generators.random.indicator_generator import (
     IndicatorGenerator,
 )
-from app.services.auto_strategy.models import IndicatorGene
+from app.services.auto_strategy.genes import IndicatorGene
 
 
 class TestIndicatorGenerator:
@@ -111,5 +111,7 @@ class TestIndicatorGenerator:
             assert hasattr(indicator, "type")
             assert isinstance(indicator.type, str)
             assert len(indicator.type) > 0
+
+
 
 

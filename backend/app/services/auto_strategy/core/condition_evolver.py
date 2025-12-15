@@ -26,7 +26,7 @@ import yaml
 from app.services.backtest.backtest_service import BacktestService
 from app.services.indicators.manifests.registry import manifest_to_yaml_dict
 from app.utils.error_handler import safe_operation
-from ..models import Condition, ConditionGroup
+from ..genes import Condition, ConditionGroup
 
 logger = logging.getLogger(__name__)
 
@@ -602,5 +602,8 @@ class ConditionEvolver:
         except Exception as e:
             logger.error(f"進化実行エラー: {e}")
             raise
+
+
+
 
 

@@ -341,3 +341,5 @@ class TestGetModelInfoWithDefaults:
         assert result["best_iteration"] == 0  # デフォルト値
 
 
+
+

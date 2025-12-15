@@ -23,7 +23,7 @@ class TestRandomGeneGenerator:
 
     def test_ensure_or_with_fallback_basic(self):
         """_ensure_or_with_fallbackの基本テスト"""
-        from app.services.auto_strategy.models import Condition
+        from app.services.auto_strategy.genes import Condition
 
         # シンプルな条件のみのリスト
         simple_conditions = [
@@ -58,5 +58,7 @@ class TestRandomGeneGenerator:
 
         # IDが異なる（別オブジェクトである）ことを確認
         assert gene.long_tpsl_gene is not gene.short_tpsl_gene
+
+
 
 

@@ -250,3 +250,4 @@ class TrendScanning:
         return out
 
 
+

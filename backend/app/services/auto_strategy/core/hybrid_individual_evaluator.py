@@ -363,3 +363,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         return tuple(fitness_list)
 
 
+
+
+

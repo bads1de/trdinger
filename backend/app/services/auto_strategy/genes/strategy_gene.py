@@ -92,3 +92,6 @@ class StrategyGene:
         return is_valid, errors
 
 
+
+
+

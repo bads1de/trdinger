@@ -92,3 +92,5 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
     )
 
 
+
+

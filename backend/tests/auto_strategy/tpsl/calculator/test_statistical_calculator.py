@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 from app.services.auto_strategy.tpsl.calculator.statistical_calculator import (
     StatisticalCalculator,
 )
-from app.services.auto_strategy.models.tpsl_gene import TPSLGene
-from app.services.auto_strategy.models import TPSLResult
+from app.services.auto_strategy.genes.tpsl_gene import TPSLGene
+from app.services.auto_strategy.genes import TPSLResult
 
 
 class TestStatisticalCalculator:
@@ -103,5 +103,7 @@ class TestStatisticalCalculator:
 
         assert result.stop_loss_pct == 0.01
         assert result.take_profit_pct == 0.02
+
+
 
 

@@ -106,3 +106,5 @@ class TestFractionalDifferentiation:
         # 実装がwindow_sizeまたは指定された閾値を尊重すると仮定します。
         pass
 
+
+

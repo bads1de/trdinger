@@ -178,3 +178,4 @@ class BacktestConfigValidator:
             raise ValueError(f"サポートされていない日付形式: {type(date_value)}")
 
 
+

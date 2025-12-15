@@ -14,3 +14,4 @@ class ThresholdMethod(Enum):
     TREND_SCANNING = "trend_scanning"  # Trend Scanning Method (t値によるトレンド判定)
 
 
+

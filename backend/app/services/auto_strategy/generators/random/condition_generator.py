@@ -9,7 +9,7 @@ import random
 from typing import List
 
 from ...config.constants import OPERATORS
-from ...models import Condition
+from ...genes import Condition
 from .operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)
@@ -80,5 +80,8 @@ class ConditionGenerator:
             return Condition(left_operand="close", operator=">", right_operand="SMA")
         else:
             return Condition(left_operand="close", operator="<", right_operand="SMA")
+
+
+
 
 

@@ -7,7 +7,7 @@
 import logging
 import random
 
-from ...models.entry_gene import EntryGene
+from ...genes.entry_gene import EntryGene
 from ...config.enums import EntryType
 
 logger = logging.getLogger(__name__)
@@ -93,5 +93,8 @@ class EntryGenerator:
         type_weights = list(weights.values())
 
         return random.choices(types, weights=type_weights, k=1)[0]
+
+
+
 
 

@@ -178,3 +178,4 @@ class DataRetrievalService:
         return _get_funding_rate_data()
 
 
+

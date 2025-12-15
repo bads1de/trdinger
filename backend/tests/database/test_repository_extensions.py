@@ -351,3 +351,5 @@ class TestFundingRateRepositoryGetAllBySymbol:
                 assert result[i].funding_rate > 0
 
 
+
+

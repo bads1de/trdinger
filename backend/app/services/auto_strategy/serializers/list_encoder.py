@@ -7,7 +7,7 @@
 import logging
 from typing import Any, List, Tuple, Union
 
-from ..models.conditions import Condition, ConditionGroup
+from ..genes.conditions import Condition, ConditionGroup
 from ..utils.gene_utils import GeneUtils
 
 logger = logging.getLogger(__name__)
@@ -422,5 +422,8 @@ class ListEncoder:
             + NormalizationConstants.POSITION_SIZING_BLOCK_SIZE
         )
         return [0.0] * expected_len
+
+
+
 
 

@@ -177,3 +177,4 @@ class CatBoostModel(BaseGradientBoostingModel):
         return self.model.predict_proba(data)
 
 
+

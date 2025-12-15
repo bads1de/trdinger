@@ -230,3 +230,5 @@ def test_start_background_task_added(auto_strategy_service, mock_experiment_mana
     assert task.args == (experiment_id, ga_config, backtest_config)
 
 
+
+

@@ -261,3 +261,5 @@ class TestCreateParallelMap:
             assert fitness == (float(i + 1),)
 
 
+
+

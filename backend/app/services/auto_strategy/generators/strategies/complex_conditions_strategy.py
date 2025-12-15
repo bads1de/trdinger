@@ -17,7 +17,7 @@ from app.services.indicators.config import (
     IndicatorConfig,
 )
 from ...config.constants import IndicatorType
-from ...models import Condition, ConditionGroup, IndicatorGene
+from ...genes import Condition, ConditionGroup, IndicatorGene
 from .base_strategy import ConditionStrategy
 
 logger = logging.getLogger(__name__)
@@ -375,5 +375,8 @@ class ComplexConditionsStrategy(ConditionStrategy):
                 i += 1
 
         return structured
+
+
+
 
 

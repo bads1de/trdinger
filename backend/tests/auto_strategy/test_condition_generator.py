@@ -6,7 +6,7 @@ from app.services.auto_strategy.generators.condition_generator import (
     ConditionGenerator,
     GAConditionGenerator,
 )
-from app.services.auto_strategy.models import IndicatorGene
+from app.services.auto_strategy.genes import IndicatorGene
 
 
 class TestConditionGenerator:
@@ -324,5 +324,7 @@ class TestGAConditionGenerator:
             )
 
             assert result is None  # エラー時はNoneを返す
+
+
 
 

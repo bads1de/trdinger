@@ -243,3 +243,5 @@ class TestHybridIndividualEvaluator:
         pd.testing.assert_frame_equal(fetched_data, mock_ohlcv)
 
 
+
+

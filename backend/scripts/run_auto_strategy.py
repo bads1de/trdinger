@@ -42,7 +42,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (  # noq
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.generators.strategy_factory import StrategyFactory  # noqa: E402
-from app.services.auto_strategy.models.strategy_gene import StrategyGene  # noqa: E402
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene  # noqa: E402
 from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer  # noqa: E402
 from app.services.backtest.backtest_service import BacktestService  # noqa: E402
 
@@ -569,5 +569,6 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
 
 

@@ -9,7 +9,7 @@ import logging
 import math
 from typing import Any, Dict, Optional, Tuple
 
-from ..models import TPSLGene, TPSLMethod
+from ..genes import TPSLGene, TPSLMethod
 from .calculator import (
     AdaptiveCalculator,
     FixedPercentageCalculator,
@@ -375,5 +375,8 @@ class TPSLService:
                 return 0 <= percentage <= 10.0
             else:
                 return 0 <= percentage <= 1.0
+
+
+
 
 

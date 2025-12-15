@@ -11,7 +11,7 @@ from app.services.auto_strategy.utils.hybrid_feature_adapter import (
     HybridFeatureAdapter,
     MLFeatureError,
 )
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene
 
 
 class TestHybridFeatureAdapter:
@@ -128,5 +128,7 @@ class TestHybridFeatureAdapter:
         # Verify adapter instantiates BaseMLTrainer lazily
         assert adapter._preprocess_trainer is not None
         assert isinstance(processed, pd.DataFrame)
+
+
 
 

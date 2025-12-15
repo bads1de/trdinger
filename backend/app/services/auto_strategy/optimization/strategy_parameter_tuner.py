@@ -11,7 +11,7 @@ from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
 from ..config.ga_runtime import GAConfig
 from ..core.individual_evaluator import IndividualEvaluator
-from ..models.strategy_gene import StrategyGene
+from ..genes.strategy_gene import StrategyGene
 from .strategy_parameter_space import StrategyParameterSpace
 
 logger = logging.getLogger(__name__)
@@ -195,5 +195,8 @@ class StrategyParameterTuner:
             tuned_genes.append(tuned_gene)
 
         return tuned_genes
+
+
+
 
 

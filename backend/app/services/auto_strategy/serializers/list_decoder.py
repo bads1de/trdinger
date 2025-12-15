@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict, List
 
-from ..models import (
+from ..genes import (
     PositionSizingGene,
     PositionSizingMethod,
     TPSLGene,
@@ -83,7 +83,7 @@ class ListDecoder:
                         parameters = self._generate_indicator_parameters(
                             indicator_type, param_val
                         )
-                        from ..models import IndicatorGene
+                        from ..genes import IndicatorGene
 
                         indicators.append(
                             IndicatorGene(
@@ -103,7 +103,7 @@ class ListDecoder:
                     )
                 else:
                     # ConditionGeneratorが無効な場合のフォールバック
-                    from ..models import Condition
+                    from ..genes import Condition
 
                     long_entry_conditions = [
                         Condition(
@@ -124,7 +124,7 @@ class ListDecoder:
                 entry_conditions = long_entry_conditions
             else:
                 # フォールバック条件
-                from ..models import Condition
+                from ..genes import Condition
 
                 long_entry_conditions = [
                     Condition(left_operand="close", operator=">", right_operand="open")
@@ -278,5 +278,8 @@ class ListDecoder:
         except Exception as e:
             logger.error(f"ポジションサイジング遺伝子デコードエラー: {e}")
             return None
+
+
+
 
 

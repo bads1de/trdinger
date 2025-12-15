@@ -145,7 +145,7 @@ class IndividualEvaluator:
         """
         try:
             # 遺伝子デコード
-            from ..models import StrategyGene
+            from ..genes import StrategyGene
             from ..serializers.gene_serialization import GeneSerializer
 
             if isinstance(individual, StrategyGene):
@@ -884,5 +884,8 @@ class IndividualEvaluator:
             logger.error(f"多目的フィットネス計算エラー: {e}")
             # エラー時は目的数に応じたデフォルト値を返す
             return tuple(0.0 for _ in config.objectives)
+
+
+
 
 

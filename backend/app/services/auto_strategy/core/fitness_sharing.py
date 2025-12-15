@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
 from ..config.constants import OPERATORS
-from ..models import ConditionGroup, StrategyGene
+from ..genes import ConditionGroup, StrategyGene
 from ..serializers.gene_serialization import GeneSerializer
 from ..utils.indicator_utils import get_valid_indicator_types
 
@@ -769,5 +769,8 @@ class FitnessSharing:
             return 1.0  # 半径内では完全共有
         else:
             return 0.0  # 半径外では共有なし
+
+
+
 
 

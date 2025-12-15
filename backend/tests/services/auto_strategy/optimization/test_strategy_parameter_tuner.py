@@ -6,9 +6,9 @@ import pytest
 from unittest.mock import Mock, patch
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
-from app.services.auto_strategy.models.indicator_gene import IndicatorGene
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.services.auto_strategy.models.tpsl_gene import TPSLGene
+from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.tpsl_gene import TPSLGene
 from app.services.auto_strategy.optimization.strategy_parameter_tuner import (
     StrategyParameterTuner,
 )
@@ -259,5 +259,7 @@ class TestStrategyParameterTuner:
 
             # 全て（3 個）チューニングされる
             assert len(results) == 3
+
+
 
 

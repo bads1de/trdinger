@@ -118,3 +118,5 @@ class TestCusumSignalGenerator:
         assert pd.isna(vol.iloc[0])
 
 
+
+

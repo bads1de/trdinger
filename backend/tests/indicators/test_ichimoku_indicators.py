@@ -249,3 +249,5 @@ class TestIchimokuIndicators:
             assert len(result[component]) == len(sample_data)
 
 
+
+

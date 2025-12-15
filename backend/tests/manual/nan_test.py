@@ -142,3 +142,5 @@ if __name__ == "__main__":
     print("\nNaN値テスト完了！")
 
 
+
+

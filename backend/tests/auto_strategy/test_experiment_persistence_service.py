@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.models import StrategyGene
+from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.services.experiment_persistence_service import (
     ExperimentPersistenceService,
 )
@@ -236,5 +236,7 @@ class TestExperimentPersistenceService:
 
                 # バックテスト結果が保存されたか確認
                 mock_bt_repo.save_backtest_result.assert_called_once()
+
+
 
 

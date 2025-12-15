@@ -8,13 +8,13 @@
 from unittest.mock import MagicMock, patch, PropertyMock
 import pytest
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     StrategyGene,
     IndicatorGene,
     TPSLGene,
     TPSLMethod,
 )
-from app.services.auto_strategy.models.conditions import Condition
+from app.services.auto_strategy.genes.conditions import Condition
 
 
 class TestPessimisticExit:
@@ -586,5 +586,7 @@ class TestTrailingTakeProfit:
             # 利益確保ラインが更新されていること
             # 120 * 0.98 = 117.6
             assert strategy._trailing_tp_sl == pytest.approx(120.0 * 0.98)
+
+
 
 

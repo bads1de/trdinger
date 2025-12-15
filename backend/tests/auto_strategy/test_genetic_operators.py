@@ -18,7 +18,7 @@ from app.services.auto_strategy.core.genetic_operators import (
     mutate_strategy_gene_pure,
     uniform_crossover,
 )
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     Condition,
     IndicatorGene,
     PositionSizingGene,
@@ -515,5 +515,7 @@ class TestGeneticOperators:
         assert (
             shared_variance >= original_variance * 0.6
         ), "Silhouette-based sharing should maintain diversity"
+
+
 
 

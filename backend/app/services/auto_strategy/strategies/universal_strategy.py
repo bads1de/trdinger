@@ -15,11 +15,11 @@ import pandas as pd
 from backtesting import Strategy
 
 from ..core.condition_evaluator import ConditionEvaluator
-from ..models.entry_gene import EntryGene
+from ..genes.entry_gene import EntryGene
 from ..config.enums import EntryType
-from ..models.pending_order import PendingOrder
-from ..models.conditions import StateTracker
-from ..models import (
+from ..positions.pending_order import PendingOrder
+from ..genes.conditions import StateTracker
+from ..genes import (
     Condition,
     ConditionGroup,
     IndicatorGene,
@@ -1076,5 +1076,8 @@ class UniversalStrategy(Strategy):
             "1d": pd.Timedelta(days=1),
         }
         return timeframe_map.get(self.base_timeframe)
+
+
+
 
 

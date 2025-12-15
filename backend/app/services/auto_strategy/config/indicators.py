@@ -48,3 +48,6 @@ class IndicatorSettings(BaseConfig):
         return self.indicator_characteristics.get(indicator)
 
 
+
+
+

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.services.auto_strategy.models.tpsl_gene import TPSLGene
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.tpsl_gene import TPSLGene
 from app.services.auto_strategy.config.enums import TPSLMethod
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 
@@ -91,4 +91,6 @@ class TestTPSLSplit:
         # オブジェクトIDが異なること（ディープコピーされていること）
         assert mutated.long_tpsl_gene is not gene.long_tpsl_gene
         assert mutated.short_tpsl_gene is not gene.short_tpsl_gene
+
+
 

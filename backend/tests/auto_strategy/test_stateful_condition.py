@@ -8,7 +8,7 @@ StatefulCondition のテスト
 import pytest
 from unittest.mock import MagicMock
 
-from app.services.auto_strategy.models.conditions import (
+from app.services.auto_strategy.genes.conditions import (
     Condition,
     StatefulCondition,
     StateTracker,
@@ -572,7 +572,7 @@ class TestStatefulConditionIntegration:
         StrategyGene に stateful_conditions を設定して
         シリアライズ/デシリアライズできることを確認
         """
-        from app.services.auto_strategy.models.strategy_gene import StrategyGene
+        from app.services.auto_strategy.genes.strategy_gene import StrategyGene
         from app.services.auto_strategy.serializers.dict_converter import DictConverter
 
         # StrategyGene を作成
@@ -605,5 +605,7 @@ class TestStatefulConditionIntegration:
         assert sc.trigger_condition.left_operand == "RSI"
         assert sc.follow_condition.right_operand == "SMA_20"
         assert sc.lookback_bars == 5
+
+
 
 

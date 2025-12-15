@@ -592,3 +592,5 @@ class TestPipelineIntegration:
         assert not np.isnan(result).any()
 
 
+
+

@@ -4,10 +4,10 @@ StrategyParameterSpace のテスト
 
 import pytest
 
-from app.services.auto_strategy.models.conditions import Condition, ConditionGroup
-from app.services.auto_strategy.models.indicator_gene import IndicatorGene
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.services.auto_strategy.models.tpsl_gene import TPSLGene
+from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
+from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.tpsl_gene import TPSLGene
 from app.services.auto_strategy.optimization.strategy_parameter_space import (
     StrategyParameterSpace,
 )
@@ -231,5 +231,7 @@ class TestStrategyParameterSpace:
         # ロングとショート別々のパラメータが含まれる
         assert "long_tpsl_stop_loss_pct" in result
         assert "short_tpsl_stop_loss_pct" in result
+
+
 
 

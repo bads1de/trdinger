@@ -150,3 +150,4 @@ class LabelGenerationService:
             raise DataError(f"ラベル生成に失敗しました: {e}")
 
 
+

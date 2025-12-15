@@ -58,3 +58,6 @@ class IndicatorGene:
             return {"indicator": self.type, "parameters": self.parameters}
 
 
+
+
+

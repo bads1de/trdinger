@@ -64,3 +64,6 @@ class JsonConverter:
             raise ValueError(f"戦略遺伝子のJSON復元に失敗: {e}")
 
 
+
+
+

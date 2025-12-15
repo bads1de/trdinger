@@ -7,8 +7,8 @@ Statistical Calculator
 import logging
 from typing import Any, Dict, Optional, Tuple
 
-from ...models import TPSLGene
-from ...models.tpsl_gene import TPSLResult
+from ...genes import TPSLGene
+from ...genes.tpsl_gene import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 
 logger = logging.getLogger(__name__)
@@ -147,5 +147,8 @@ class StatisticalCalculator(BaseTPSLCalculator):
                 "lookback_period": 150,
             },
         )
+
+
+
 
 

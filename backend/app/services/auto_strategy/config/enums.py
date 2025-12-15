@@ -37,3 +37,6 @@ class EntryType(Enum):
     STOP_LIMIT = "stop_limit"  # 逆指値指値注文（より精密な制御）
 
 
+
+
+

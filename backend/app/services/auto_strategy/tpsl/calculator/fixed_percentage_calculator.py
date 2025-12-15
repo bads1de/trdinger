@@ -7,8 +7,8 @@ Fixed Percentage Calculator
 import logging
 from typing import Any, Dict, Optional
 
-from ...models import TPSLGene
-from ...models.tpsl_gene import TPSLResult
+from ...genes import TPSLGene
+from ...genes.tpsl_gene import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 
 logger = logging.getLogger(__name__)
@@ -85,5 +85,8 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
             confidence_score=0.5,
             expected_performance={"type": "fixed_percentage_fallback"},
         )
+
+
+
 
 

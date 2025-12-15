@@ -13,7 +13,7 @@ import pandas as pd
 
 from app.utils.error_handler import safe_operation
 
-from ..models import Condition, ConditionGroup
+from ..genes import Condition, ConditionGroup
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +325,7 @@ class ConditionEvaluator:
         Returns:
             条件成立ならTrue
         """
-        from ..models.conditions import StatefulCondition
+        from ..genes.conditions import StatefulCondition
 
         if not isinstance(stateful_condition, StatefulCondition):
             logger.warning(f"不正な型: {type(stateful_condition)}")
@@ -371,7 +371,7 @@ class ConditionEvaluator:
         Returns:
             トリガー条件が成立したか
         """
-        from ..models.conditions import StatefulCondition
+        from ..genes.conditions import StatefulCondition
 
         if not isinstance(stateful_condition, StatefulCondition):
             return False
@@ -391,5 +391,8 @@ class ConditionEvaluator:
             logger.debug(f"トリガー記録: {event_name} at bar {current_bar}")
 
         return trigger_result
+
+
+
 
 

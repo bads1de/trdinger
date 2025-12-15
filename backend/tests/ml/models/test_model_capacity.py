@@ -141,3 +141,5 @@ class TestModelCapacity:
         ), "Balanced設定でも明確なパターンならPrecisionは維持されるべきです"
 
 
+
+

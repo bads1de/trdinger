@@ -13,7 +13,7 @@ from unittest.mock import Mock
 import pandas as pd
 
 from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
-from app.services.auto_strategy.models import Condition
+from app.services.auto_strategy.genes import Condition
 
 
 class TestConditionEvaluatorClose:
@@ -168,7 +168,7 @@ class TestConditionEvaluatorClose:
     def test_error_handling_with_invalid_strategy_instance(self):
         """無効な戦略インスタンスでのエラーハンドリングテスト"""
         # 条件付きでNoneを渡すとエラーが発生するはず
-        from app.services.auto_strategy.models import Condition
+        from app.services.auto_strategy.genes import Condition
 
         condition = Condition(left_operand="close", operator=">", right_operand=100)
 
@@ -180,7 +180,7 @@ class TestConditionEvaluatorClose:
 
     def test_error_handling_in_condition_group(self):
         """条件グループでのエラーハンドリングテスト"""
-        from app.services.auto_strategy.models import ConditionGroup
+        from app.services.auto_strategy.genes import ConditionGroup
 
         # 空の条件グループを渡す
         group = ConditionGroup(conditions=[])
@@ -190,5 +190,7 @@ class TestConditionEvaluatorClose:
 
         # 空のグループなのでFalseが返される
         assert not result
+
+
 
 

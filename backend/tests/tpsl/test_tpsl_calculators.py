@@ -3,8 +3,7 @@ from typing import Any, Dict, Optional
 import pytest
 
 from backend.app.services.auto_strategy.config.enums import TPSLMethod
-from backend.app.services.auto_strategy.models.tpsl_gene import TPSLGene
-from backend.app.services.auto_strategy.models.tpsl_result import TPSLResult
+from backend.app.services.auto_strategy.genes.tpsl_gene import TPSLGene, TPSLResult
 from backend.app.services.auto_strategy.tpsl.calculator.adaptive_calculator import (
     AdaptiveCalculator,
 )
@@ -621,5 +620,3 @@ class TestTPSLService:
         )
         assert sl_none is None
         assert tp2 == pytest.approx(tp_price)
-
-

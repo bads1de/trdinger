@@ -101,3 +101,5 @@ class TestMLTrainingOptimization:
         # トレーニングが呼び出されたことを確認
         service.trainer.train_model.assert_called_once()
 
+
+

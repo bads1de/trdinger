@@ -56,3 +56,5 @@ class TestCryptoFeatureCalculator:
         assert not result["open_interest"].isna().any()
 
 
+
+

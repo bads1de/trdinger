@@ -139,3 +139,4 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
         return nan_result
 
 
+

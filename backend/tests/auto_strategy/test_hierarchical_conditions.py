@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import pandas as pd
-from app.services.auto_strategy.models.conditions import Condition, ConditionGroup
+from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
 from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
-from app.services.auto_strategy.models.validator import GeneValidator
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
-from app.services.auto_strategy.models.indicator_gene import IndicatorGene
+from app.services.auto_strategy.genes.validator import GeneValidator
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
 
 
 class MockStrategy:
@@ -70,7 +70,7 @@ def test_hierarchical_validation():
     """ネストされたConditionGroupのバリデーションテスト"""
     # Mock get_all_indicators to include our test operands "A", "B", "C"
     with patch(
-        "app.services.auto_strategy.models.validator.get_all_indicators",
+        "app.services.auto_strategy.genes.validator.get_all_indicators",
         return_value=["A", "B", "C"],
     ):
         validator = GeneValidator()
@@ -137,5 +137,7 @@ def test_hierarchical_mutation_safety():
                     "AND",
                     "OR",
                 ], f"Operator was corrupted to: {mutated_group.operator}"
+
+
 
 

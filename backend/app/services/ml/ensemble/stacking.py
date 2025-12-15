@@ -660,3 +660,4 @@ class StackingEnsemble(BaseEnsemble):
         logger.info("StackingEnsembleのリソースクリーンアップ完了")
 
 
+

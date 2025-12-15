@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from app.services.auto_strategy.models.indicator_gene import IndicatorGene
-from app.services.auto_strategy.models import Condition, ConditionGroup
+from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
+from app.services.auto_strategy.genes import Condition, ConditionGroup
 from app.services.auto_strategy.generators.strategies.mtf_strategy import (
     MTFStrategy,
 )
@@ -103,5 +103,7 @@ class TestMTFStrategy:
 
         rsi = next(i for i in mtf_indicators if i.type == "RSI")
         assert rsi.timeframe == higher_tf
+
+
 
 

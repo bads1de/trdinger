@@ -245,7 +245,7 @@ class TestHybridIntegration:
         mock_feature_adapter,
     ):
         """ハイブリッドGA完全統合テスト"""
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             StrategyGene,
             IndicatorGene,
             TPSLGene,
@@ -399,5 +399,7 @@ class TestHybridIntegration:
             assert isinstance(signals, dict)
             assert "is_valid" in signals
             assert signals["is_valid"] == 0.5
+
+
 
 

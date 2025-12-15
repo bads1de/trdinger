@@ -12,7 +12,7 @@ from typing import Any, List, Union, cast
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
-from ..models import (
+from ..genes import (
     Condition,
     ConditionGroup,
     IndicatorGene,
@@ -21,7 +21,7 @@ from ..models import (
     StrategyGene,
     TPSLGene,
 )
-from ..models.tool_gene import ToolGene
+from ..genes.tool_gene import ToolGene
 from ..serializers.gene_serialization import GeneSerializer
 from ..tools import tool_registry
 from .condition_generator import ConditionGenerator
@@ -301,5 +301,8 @@ class RandomGeneGenerator:
             )
 
         return tool_genes
+
+
+
 
 

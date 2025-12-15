@@ -127,7 +127,7 @@ class TestGeneValidatorWithConstraints:
 
     def test_validator_checks_parameter_constraints(self):
         """GeneValidator が IndicatorConfig の制約を使用してパラメータを検証"""
-        from app.services.auto_strategy.models.validator import GeneValidator
+        from app.services.auto_strategy.genes.validator import GeneValidator
 
         validator = GeneValidator()
 
@@ -159,7 +159,7 @@ class TestGeneValidatorWithConstraints:
 
     def test_validator_passes_valid_constraints(self):
         """GeneValidator が有効なパラメータ制約をパスさせる"""
-        from app.services.auto_strategy.models.validator import GeneValidator
+        from app.services.auto_strategy.genes.validator import GeneValidator
 
         validator = GeneValidator()
 
@@ -189,7 +189,7 @@ class TestGeneValidatorWithConstraints:
 
     def test_validator_passes_without_constraints(self):
         """制約なしの指標は従来通り検証される"""
-        from app.services.auto_strategy.models.validator import GeneValidator
+        from app.services.auto_strategy.genes.validator import GeneValidator
 
         validator = GeneValidator()
 
@@ -268,5 +268,7 @@ class TestMinDifferenceConstraint:
         invalid_params = {"fast": 10, "slow": 12}  # diff = 2
         is_valid, errors = config.validate_constraints(invalid_params)
         assert is_valid is False
+
+
 
 

@@ -337,3 +337,6 @@ class GAConfig(BaseConfig):
             raise ValueError(f"JSON からの復元に失敗しました: {e}")
 
 
+
+
+

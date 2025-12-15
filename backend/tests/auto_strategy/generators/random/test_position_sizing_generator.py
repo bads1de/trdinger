@@ -38,7 +38,7 @@ class TestGeneratePositionSizingGene:
 
     def test_returns_random_gene_on_success(self, generator):
         """成功時にランダム遺伝子を返す"""
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             PositionSizingGene,
             PositionSizingMethod,
         )
@@ -63,7 +63,7 @@ class TestGeneratePositionSizingGene:
 
     def test_returns_fallback_gene_on_error(self, generator):
         """エラー時にフォールバック遺伝子を返す"""
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             PositionSizingMethod,
         )
 
@@ -95,7 +95,7 @@ class TestGeneratePositionSizingGene:
 
     def test_passes_config_to_create_function(self, generator):
         """設定が生成関数に渡される"""
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             PositionSizingGene,
             PositionSizingMethod,
         )
@@ -124,7 +124,7 @@ class TestPositionSizingGeneIntegration:
         from app.services.auto_strategy.generators.random.position_sizing_generator import (
             PositionSizingGenerator,
         )
-        from app.services.auto_strategy.models import (
+        from app.services.auto_strategy.genes import (
             PositionSizingGene,
             PositionSizingMethod,
         )
@@ -150,5 +150,7 @@ class TestPositionSizingGeneIntegration:
         assert isinstance(result.fixed_ratio, float)
         assert isinstance(result.max_position_size, float)
         assert isinstance(result.enabled, bool)
+
+
 
 

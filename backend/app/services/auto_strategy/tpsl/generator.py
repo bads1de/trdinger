@@ -6,7 +6,7 @@
 import logging
 from typing import Any, Dict
 
-from ..models import TPSLMethod, TPSLResult
+from ..genes import TPSLMethod, TPSLResult
 
 logger = logging.getLogger(__name__)
 
@@ -198,5 +198,8 @@ class UnifiedTPSLGenerator:
             method = "fixed_percentage"
 
         return self.generate_tpsl(method, **kwargs)
+
+
+
 
 

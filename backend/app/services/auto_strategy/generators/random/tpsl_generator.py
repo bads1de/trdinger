@@ -7,7 +7,7 @@ TP/SL生成器
 import logging
 import random
 
-from ...models import TPSLGene, TPSLMethod, create_random_tpsl_gene
+from ...genes import TPSLGene, TPSLMethod, create_random_tpsl_gene
 
 logger = logging.getLogger(__name__)
 
@@ -94,5 +94,8 @@ class TPSLGenerator:
                 base_stop_loss=0.03,
                 enabled=True,
             )
+
+
+
 
 

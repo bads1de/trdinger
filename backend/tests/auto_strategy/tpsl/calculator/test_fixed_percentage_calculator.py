@@ -8,7 +8,7 @@ from unittest.mock import Mock
 from app.services.auto_strategy.tpsl.calculator.fixed_percentage_calculator import (
     FixedPercentageCalculator,
 )
-from app.services.auto_strategy.models import TPSLGene
+from app.services.auto_strategy.genes import TPSLGene
 
 
 class TestFixedPercentageCalculator:
@@ -62,5 +62,7 @@ class TestFixedPercentageCalculator:
         # Default in code: sl=0.03, tp=0.06
         assert result.stop_loss_pct == 0.03
         assert result.take_profit_pct == 0.06
+
+
 
 

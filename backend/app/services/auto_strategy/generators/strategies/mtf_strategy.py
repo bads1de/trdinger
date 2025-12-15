@@ -10,7 +10,7 @@ import random
 import copy
 from typing import List, Union, Tuple, Dict
 
-from ...models import Condition, ConditionGroup, IndicatorGene
+from ...genes import Condition, ConditionGroup, IndicatorGene
 from ...config.constants import IndicatorType
 from .base_strategy import ConditionStrategy
 
@@ -171,5 +171,8 @@ class MTFStrategy(ConditionStrategy):
                 new_ind.id = f"{new_ind.id}_{timeframe}"
             mtf_list.append(new_ind)
         return mtf_list
+
+
+
 
 

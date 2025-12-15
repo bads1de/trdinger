@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from app.services.auto_strategy.models.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.strategy_gene import StrategyGene
 from app.services.ml.exceptions import MLFeatureError
 
 logger = logging.getLogger(__name__)
@@ -460,5 +460,8 @@ class WaveletFeatureTransformer:
         detail = series - coarse
         detail = detail.replace([np.inf, -np.inf], 0.0).fillna(0.0)
         return detail
+
+
+
 
 

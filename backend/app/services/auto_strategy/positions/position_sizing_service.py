@@ -309,7 +309,7 @@ class PositionSizingService:
 
     def _create_default_gene(self, **kwargs):
         """デフォルト遺伝子を作成"""
-        from ..models import (
+        from ..genes import (
             PositionSizingGene,
             PositionSizingMethod,
         )
@@ -437,5 +437,8 @@ class PositionSizingService:
         except Exception as e:
             self.logger.warning(f"高速ポジションサイズ計算エラー: {e}")
             return 0.01  # デフォルトサイズ
+
+
+
 
 

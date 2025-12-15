@@ -6,7 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Tuple, TypeAlias
 
-from ...models import Condition, IndicatorGene
+from ...genes import Condition, IndicatorGene
 
 ConditionList: TypeAlias = List[Condition]
 
@@ -60,5 +60,8 @@ class ConditionStrategy(ABC):
     ) -> List[Condition]:
         """指標の汎用ショート条件を作成。"""
         return self.condition_generator._generic_short_conditions(indicator)
+
+
+
 
 

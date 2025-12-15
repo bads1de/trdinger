@@ -7,7 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     Condition,
     ConditionGroup,
     IndicatorGene,
@@ -378,5 +378,7 @@ class TestFitnessSharing:
             # Operands: 1 Numeric ('30'), 1 Dynamic ('sma')
             assert vec[-2] == 1.0
             assert vec[-1] == 1.0
+
+
 
 

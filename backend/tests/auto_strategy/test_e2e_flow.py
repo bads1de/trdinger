@@ -147,7 +147,7 @@ class TestE2EFlow:
 
         # インジケーター生成をモック化（パラメータ生成エラー回避のため）
         if manager.ga_engine and manager.ga_engine.gene_generator:
-            from app.services.auto_strategy.models import IndicatorGene
+            from app.services.auto_strategy.genes import IndicatorGene
 
             sma_gene = IndicatorGene(
                 type="SMA", parameters={"period": 14}, enabled=True
@@ -182,5 +182,7 @@ class TestE2EFlow:
 
         # 完了ステータス更新
         mock_persistence_service.complete_experiment.assert_called_with(experiment_id)
+
+
 
 

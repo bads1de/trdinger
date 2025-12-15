@@ -602,3 +602,4 @@ class TrendIndicators:
         return result
 
 
+

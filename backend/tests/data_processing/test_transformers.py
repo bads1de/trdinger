@@ -654,3 +654,5 @@ class TestTransformerPerformance:
         assert duration < 5, f"処理時間が長すぎます: {duration}秒"
 
 
+
+

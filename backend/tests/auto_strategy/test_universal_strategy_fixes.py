@@ -9,13 +9,13 @@ import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
-from app.services.auto_strategy.models import (
+from app.services.auto_strategy.genes import (
     StrategyGene,
     IndicatorGene,
     PositionSizingGene,
 )
-from app.services.auto_strategy.models.conditions import Condition
-from app.services.auto_strategy.models.conditions import StatefulCondition
+from app.services.auto_strategy.genes.conditions import Condition
+from app.services.auto_strategy.genes.conditions import StatefulCondition
 from app.services.auto_strategy.config.enums import PositionSizingMethod
 
 
@@ -314,5 +314,7 @@ class TestStatefulConditionSerialization:
 
         # デフォルト値 "long" が使用される
         assert result.direction == "long"
+
+
 
 

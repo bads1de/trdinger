@@ -2,8 +2,8 @@ from unittest.mock import MagicMock
 from app.services.auto_strategy.generators.strategies.complex_conditions_strategy import (
     ComplexConditionsStrategy,
 )
-from app.services.auto_strategy.models.conditions import Condition, ConditionGroup
-from app.services.auto_strategy.models.indicator_gene import IndicatorGene
+from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
+from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
 
 
 class MockConditionGenerator:
@@ -65,5 +65,7 @@ def test_generate_hierarchical_structure():
     assert (
         found_group_or_multiple
     ), "ComplexConditionsStrategy should generate ConditionGroups or multiple conditions"
+
+
 
 

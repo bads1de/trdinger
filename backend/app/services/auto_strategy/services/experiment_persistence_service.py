@@ -18,7 +18,7 @@ from database.repositories.generated_strategy_repository import (
 )
 
 from ..config import GAConfig
-from ..models import StrategyGene
+from ..genes import StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -483,5 +483,8 @@ class ExperimentPersistenceService:
                 return None
 
         return _get_experiment_info()
+
+
+
 
 
