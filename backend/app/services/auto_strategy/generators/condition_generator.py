@@ -17,6 +17,7 @@ from ..models.strategy_models import Condition, ConditionGroup, IndicatorGene
 from ..utils.yaml_utils import YamlIndicatorUtils
 from .strategies import (
     ComplexConditionsStrategy,
+    MTFStrategy,
 )
 
 logger = logging.getLogger(__name__)
@@ -105,6 +106,16 @@ class ConditionGenerator:
         # 統合された戦略を使用（ComplexConditionsStrategy）
         strategy = ComplexConditionsStrategy(self)
         longs, shorts, exits = strategy.generate_conditions(indicators)
+
+        # MTF戦略を追加（プロフェッショナルなトレンドフォローロジック）
+        try:
+            mtf_strategy = MTFStrategy(self)
+            mtf_longs, mtf_shorts, _ = mtf_strategy.generate_conditions(indicators)
+            longs.extend(mtf_longs)
+            shorts.extend(mtf_shorts)
+            self.logger.debug(f"MTF条件追加: Long={len(mtf_longs)}, Short={len(mtf_shorts)}")
+        except Exception as e:
+            self.logger.warning(f"MTF戦略生成失敗（スキップします）: {e}")
 
         # 条件数制限を取得（configからまたはデフォルト）
         max_conditions = 3

@@ -14,17 +14,19 @@ YAML設定ファイルから指標情報を読み込み、DEAPベースのGAエ�
 import logging
 import os
 import random
+import copy
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import yaml
 
 from app.services.backtest.backtest_service import BacktestService
 from app.services.indicators.manifests.registry import manifest_to_yaml_dict
 from app.utils.error_handler import safe_operation
+from ..models.strategy_models import Condition, ConditionGroup
 
 logger = logging.getLogger(__name__)
 
@@ -46,20 +48,8 @@ class EvolutionConfig:
 
 
 class EarlyStopping:
-    """
-    早期打ち切り機能
-
-    適応度が一定世代改善しない場合に進化を打ち切ります。
-    """
-
+    """早期打ち切り機能"""
     def __init__(self, patience: int = 5, min_delta: float = 0.001):
-        """
-        初期化
-
-        Args:
-            patience: 改善がない場合に待機する世代数
-            min_delta: 改善と見なす最小変化量
-        """
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
@@ -67,104 +57,60 @@ class EarlyStopping:
         self.should_stop = False
 
     def update(self, fitness: float) -> bool:
-        """
-        適応度を更新し、打ち切り判定を行う
-
-        Args:
-            fitness: 現在の最高適応度
-
-        Returns:
-            打ち切りすべきかどうか
-        """
         if fitness > self.best_fitness + self.min_delta:
             self.best_fitness = fitness
             self.counter = 0
         else:
             self.counter += 1
-
         if self.counter >= self.patience:
             self.should_stop = True
-
         return self.should_stop
 
     def reset(self):
-        """状態をリセット"""
         self.counter = 0
         self.best_fitness = float("-inf")
         self.should_stop = False
 
 
 class FitnessCache:
-    """
-    適応度キャッシュ
-
-    同一条件の重複評価を避けるためのメモ化キャッシュ。
-    LRU(Least Recently Used)方式で古いエントリを削除。
-    """
-
+    """適応度キャッシュ"""
     def __init__(self, max_size: int = 1000):
-        """
-        初期化
-
-        Args:
-            max_size: キャッシュの最大サイズ
-        """
         self.max_size = max_size
         self._cache: OrderedDict[str, float] = OrderedDict()
         self._hits = 0
         self._misses = 0
 
-    def _make_key(self, condition: "Condition") -> str:
+    def _make_key(self, condition: Union[Condition, ConditionGroup]) -> str:
         """条件からキャッシュキーを生成"""
-        return f"{condition.indicator_name}|{condition.operator}|{condition.threshold:.6f}|{condition.direction}"
+        if isinstance(condition, ConditionGroup):
+            # 再帰的にキーを生成
+            sub_keys = [self._make_key(c) for c in condition.conditions]
+            return f"GROUP|{condition.operator}|{'&'.join(sub_keys)}"
+        else:
+            # Conditionの場合
+            # direction属性がある場合はそれも含める（動的属性）
+            direction = getattr(condition, "direction", "unknown")
+            return f"{condition.left_operand}|{condition.operator}|{condition.right_operand}|{direction}"
 
-    def get(self, condition: "Condition") -> Optional[float]:
-        """
-        キャッシュから適応度を取得
-
-        Args:
-            condition: 条件
-
-        Returns:
-            キャッシュされた適応度、存在しない場合はNone
-        """
+    def get(self, condition: Union[Condition, ConditionGroup]) -> Optional[float]:
         key = self._make_key(condition)
         if key in self._cache:
             self._hits += 1
-            # LRU: アクセスされたエントリを末尾に移動
             self._cache.move_to_end(key)
             return self._cache[key]
         self._misses += 1
         return None
 
-    def set(self, condition: "Condition", fitness: float):
-        """
-        適応度をキャッシュに設定
-
-        Args:
-            condition: 条件
-            fitness: 適応度
-        """
+    def set(self, condition: Union[Condition, ConditionGroup], fitness: float):
         key = self._make_key(condition)
-
         if key in self._cache:
             self._cache.move_to_end(key)
         else:
             if len(self._cache) >= self.max_size:
-                # 最も古いエントリを削除
                 self._cache.popitem(last=False)
-
         self._cache[key] = fitness
 
-    def __len__(self) -> int:
-        return len(self._cache)
-
-    def __bool__(self) -> bool:
-        """キャッシュオブジェクトが存在する限りTrueを返す"""
-        return True
-
     def get_stats(self) -> Dict[str, Any]:
-        """キャッシュ統計を取得"""
         total = self._hits + self._misses
         hit_rate = self._hits / total if total > 0 else 0.0
         return {
@@ -176,12 +122,7 @@ class FitnessCache:
 
 
 class ParallelFitnessEvaluator:
-    """
-    並列適応度評価器
-
-    ThreadPoolExecutorを使用して個体群の適応度を並列評価します。
-    """
-
+    """並列適応度評価器"""
     def __init__(
         self,
         backtest_service: BacktestService,
@@ -189,104 +130,58 @@ class ParallelFitnessEvaluator:
         max_workers: Optional[int] = None,
         cache: Optional[FitnessCache] = None,
     ):
-        """
-        初期化
-
-        Args:
-            backtest_service: バックテストサービス
-            yaml_indicator_utils: YAML指標ユーティリティ
-            max_workers: 並列ワーカー数（Noneの場合はCPUコア数）
-            cache: 適応度キャッシュ（オプション）
-        """
         self.backtest_service = backtest_service
         self.yaml_indicator_utils = yaml_indicator_utils
         self.max_workers = max_workers or min(os.cpu_count() or 4, 8)
         self.cache = cache
 
     def _evaluate_single(
-        self, condition: "Condition", backtest_config: Dict[str, Any]
+        self, condition: Union[Condition, ConditionGroup], backtest_config: Dict[str, Any]
     ) -> float:
-        """
-        単一条件の適応度を評価
-
-        Args:
-            condition: 評価する条件
-            backtest_config: バックテスト設定
-
-        Returns:
-            適応度値
-        """
-        # キャッシュチェック
         if self.cache:
             cached = self.cache.get(condition)
             if cached is not None:
                 return cached
 
         try:
-            # 条件から戦略設定を作成
             strategy_config = create_simple_strategy(condition)
-
-            # バックテスト設定を構築
             test_config = backtest_config.copy()
             test_config.update(strategy_config["parameters"])
-
-            # バックテスト実行
             result = self.backtest_service.run_backtest(test_config)
-
-            # パフォーマンスメトリクスから適応度を計算
+            
             metrics = result.get("performance_metrics", {})
             total_return = metrics.get("total_return", 0.0)
             sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
             max_drawdown = metrics.get("max_drawdown", 1.0)
             total_trades = metrics.get("total_trades", 0)
 
-            # 取引回数が少ない場合はペナルティ
             if total_trades < 10:
                 fitness = 0.1
             else:
-                # 多目的適応度を単一値に統合（重み付け）
                 fitness = (
                     0.4 * max(0, total_return)
                     + 0.3 * max(0, sharpe_ratio)
                     + 0.2 * max(0, (1 - max_drawdown))
                     + 0.1 * min(1, total_trades / 100)
                 )
-
             fitness = max(0.0, fitness)
 
-            # キャッシュに保存
             if self.cache:
                 self.cache.set(condition, fitness)
-
             return fitness
-
         except Exception as e:
             logger.error(f"適応度評価エラー: {e}")
             return 0.0
 
     def evaluate_population(
-        self, population: List["Condition"], backtest_config: Dict[str, Any]
+        self, population: List[Union[Condition, ConditionGroup]], backtest_config: Dict[str, Any]
     ) -> List[float]:
-        """
-        個体群の適応度を並列評価
-
-        Args:
-            population: 評価する個体群
-            backtest_config: バックテスト設定
-
-        Returns:
-            適応度値のリスト
-        """
         fitness_values = [0.0] * len(population)
-
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # 各個体の評価タスクを投入
             future_to_index = {
                 executor.submit(self._evaluate_single, condition, backtest_config): i
                 for i, condition in enumerate(population)
             }
-
-            # 結果を収集
             for future in as_completed(future_to_index):
                 index = future_to_index[future]
                 try:
@@ -294,246 +189,80 @@ class ParallelFitnessEvaluator:
                 except Exception as e:
                     logger.error(f"並列評価エラー (index={index}): {e}")
                     fitness_values[index] = 0.0
-
         return fitness_values
 
 
 class YamlIndicatorUtils:
-    """
-    YAML設定ファイルから指標情報を管理するユーティリティクラス
-
-    32指標の設定を読み込み、指標タイプ別の分類や閾値範囲の取得を行います。
-    """
-
+    """YAML設定ファイルから指標情報を管理するユーティリティクラス"""
     def __init__(self, config_path: Optional[str] = None):
-        """
-        初期化
-
-        Args:
-            config_path: YAML設定ファイルのパス
-        """
         self.config_path = Path(config_path) if config_path else None
         self.config = self._load_yaml_config()
         self._validate_config()
 
     def _load_yaml_config(self) -> Dict[str, Any]:
-        """YAML設定ファイルを読み込み"""
         if self.config_path and self.config_path.exists():
             try:
                 with open(self.config_path, "r", encoding="utf-8") as file:
                     return yaml.safe_load(file)
             except Exception as exc:
-                logger.warning(
-                    "YAML設定ファイルの読み込みに失敗したためメタデータ定義を使用します: %s",
-                    exc,
-                )
-
+                logger.warning("YAMLロード失敗: %s", exc)
         return manifest_to_yaml_dict()
 
     def _validate_config(self):
-        """設定ファイルの検証"""
-        if not self.config:
-            raise ValueError("設定ファイルが空です")
-
-        if "indicators" not in self.config:
-            raise ValueError("indicatorsセクションが見つかりません")
-
-        required_keys = ["conditions", "scale_type", "type"]
-        for indicator_name, indicator_config in self.config["indicators"].items():
-            for key in required_keys:
-                if key not in indicator_config:
-                    logger.warning(
-                        f"指標 '{indicator_name}' に '{key}' キーが見つかりません"
-                    )
+        if not self.config or "indicators" not in self.config:
+            # 必須ではないが警告
+            pass
 
     def get_available_indicators(self) -> List[str]:
-        """利用可能な指標リストを取得"""
-        return list(self.config["indicators"].keys())
+        return list(self.config.get("indicators", {}).keys())
 
     def get_indicator_info(self, indicator_name: str) -> Dict[str, Any]:
-        """
-        指定された指標の詳細情報を取得
+        return self.config["indicators"].get(indicator_name, {}).copy()
 
-        Args:
-            indicator_name: 指標名
 
-        Returns:
-            指標の設定情報
-
-        Raises:
-            ValueError: 指定された指標が存在しない場合
-        """
-        if indicator_name not in self.config["indicators"]:
-            available = self.get_available_indicators()
-            raise ValueError(
-                f"指標 '{indicator_name}' が見つかりません。利用可能な指標: {available}"
-            )
-
-        return self.config["indicators"][indicator_name].copy()
-
-    def get_indicator_types(self) -> Dict[str, List[str]]:
-        """
-        指標タイプ別の分類を取得
-
-        Returns:
-            指標タイプ（momentum, volatility, volume, trend）別の指標リスト
-        """
-        type_mapping = {
-            "momentum": [],
-            "volatility": [],
-            "volume": [],
-            "trend": [],
-            "price_transform": [],
-        }
-
-        for indicator_name, config in self.config["indicators"].items():
-            indicator_type = config.get("type", "unknown")
-            if indicator_type in type_mapping:
-                type_mapping[indicator_type].append(indicator_name)
-
-        return type_mapping
-
-    def get_threshold_ranges(self) -> Dict[str, Dict[str, Any]]:
-        """
-        閾値範囲を取得
-
-        Returns:
-            スケールタイプ別の閾値範囲設定
-        """
-        scale_types = self.config.get("scale_types", {})
-        default_thresholds = self.config.get("default_thresholds", {})
-
-        # デフォルト値で補完
-        result = {}
-        for scale_type, config in scale_types.items():
-            result[scale_type] = {
-                "range": config.get("range"),
-                "defaults": default_thresholds.get(scale_type, {}),
+def create_simple_strategy(condition: Union[Condition, ConditionGroup]) -> Dict[str, Any]:
+    """条件からシンプルな戦略設定を作成"""
+    # ネストされた構造を辞書形式に変換するヘルパー
+    def _cond_to_dict(cond):
+        if isinstance(cond, ConditionGroup):
+            return {
+                "type": "group",
+                "operator": cond.operator,
+                "conditions": [_cond_to_dict(c) for c in cond.conditions]
             }
-
-        return result
-
-    def get_condition_format(self, indicator_name: str) -> Dict[str, str]:
-        """
-        指定された指標の条件形式を取得
-
-        Args:
-            indicator_name: 指標名
-
-        Returns:
-            long/short条件のフォーマット文字列
-        """
-        indicator_info = self.get_indicator_info(indicator_name)
-        return indicator_info.get("conditions", {})
-
-    def get_threshold_configs(self, indicator_name: str) -> Dict[str, Any]:
-        """
-        指定された指標の閾値設定を取得
-
-        Args:
-            indicator_name: 指標名
-
-        Returns:
-            閾値設定（aggressive, normal, conservative）
-        """
-        indicator_info = self.get_indicator_info(indicator_name)
-        return indicator_info.get("thresholds", {})
-
-
-@dataclass
-class Condition:
-    """
-    最適化対象の条件を表現するデータクラス
-
-    Attributes:
-        indicator_name: 指標名
-        operator: 演算子（>, <, >=, <=, ==, !=）
-        threshold: 閾値
-        direction: 方向（long, short）
-    """
-
-    indicator_name: str
-    operator: str
-    threshold: float
-    direction: str
-
-    def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換"""
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Condition":
-        """辞書形式からConditionを作成"""
-        return cls(
-            indicator_name=data["indicator_name"],
-            operator=data["operator"],
-            threshold=data["threshold"],
-            direction=data["direction"],
-        )
-
-    def __eq__(self, other) -> bool:
-        """等価性の判定"""
-        if not isinstance(other, Condition):
-            return False
-        return (
-            self.indicator_name == other.indicator_name
-            and self.operator == other.operator
-            and self.threshold == other.threshold
-            and self.direction == other.direction
-        )
-
-    def __str__(self) -> str:
-        """文字列表現"""
-        return (
-            f"{self.indicator_name} {self.operator} {self.threshold} ({self.direction})"
-        )
-
-    def __hash__(self) -> int:
-        """ハッシュ値（キャッシュ用）"""
-        return hash(
-            (self.indicator_name, self.operator, self.threshold, self.direction)
-        )
-
-
-def create_simple_strategy(condition: Condition) -> Dict[str, Any]:
-    """
-    単一の条件からシンプルな戦略設定を作成
-
-    Args:
-        condition: 条件オブジェクト
-
-    Returns:
-        戦略設定辞書
-    """
-    return {
-        "name": f"Simple_{condition.indicator_name}_{condition.direction}",
-        "conditions": {
-            "entry": {
+        else:
+            # Condition
+            direction = getattr(cond, "direction", "long")
+            return {
                 "type": "single",
                 "condition": {
-                    "indicator": condition.indicator_name,
-                    "operator": condition.operator,
-                    "threshold": condition.threshold,
-                    "direction": condition.direction,
+                    "indicator": cond.left_operand,
+                    "operator": cond.operator,
+                    "threshold": cond.right_operand,
+                    "direction": direction,
                 },
             }
+
+    cond_dict = _cond_to_dict(condition)
+    
+    # ルートが単一Conditionの場合のラッパー
+    if cond_dict["type"] == "single":
+         # 古いcreate_simple_strategyとの互換性
+         entry_config = cond_dict
+    else:
+         entry_config = cond_dict
+
+    return {
+        "name": f"Strategy_{id(condition)}",
+        "conditions": {
+            "entry": entry_config
         },
         "parameters": {"symbol": "BTC/USDT:USDT", "timeframe": "1h"},
     }
 
 
 class ConditionEvolver:
-    """
-    条件進化最適化のメインクラス
-
-    DEAPベースのGAエンジンを使用して、32指標全てに対応した
-    条件の進化的最適化を行います。
-
-    パフォーマンス最適化機能付き:
-    - 並列評価（enable_parallel）
-    - キャッシュ（enable_cache）
-    - 早期打ち切り（early_stopping_patience）
-    """
+    """条件進化最適化のメインクラス"""
 
     def __init__(
         self,
@@ -546,94 +275,50 @@ class ConditionEvolver:
         early_stopping_patience: Optional[int] = None,
         early_stopping_min_delta: float = 0.001,
     ):
-        """
-        初期化
-
-        Args:
-            backtest_service: バックテストサービス
-            yaml_indicator_utils: YAML指標ユーティリティ
-            enable_parallel: 並列評価を有効化
-            max_workers: 並列ワーカー数
-            enable_cache: キャッシュを有効化
-            cache_size: キャッシュサイズ
-            early_stopping_patience: 早期打ち切りの待機世代数（Noneで無効）
-            early_stopping_min_delta: 改善と見なす最小変化量
-        """
         self.backtest_service = backtest_service
         self.yaml_indicator_utils = yaml_indicator_utils
-
-        # パフォーマンス最適化設定
         self.enable_parallel = enable_parallel
         self.max_workers = max_workers
-        self.enable_cache = enable_cache
-        self.cache_size = cache_size
-
-        # キャッシュ初期化
+        
         self.cache = FitnessCache(max_size=cache_size) if enable_cache else None
-
-        # 早期打ち切り設定
         self.early_stopping = (
-            EarlyStopping(
-                patience=early_stopping_patience, min_delta=early_stopping_min_delta
-            )
-            if early_stopping_patience
-            else None
+            EarlyStopping(patience=early_stopping_patience, min_delta=early_stopping_min_delta)
+            if early_stopping_patience else None
         )
-
-        # 並列評価器
         self.parallel_evaluator = (
             ParallelFitnessEvaluator(
-                backtest_service=backtest_service,
-                yaml_indicator_utils=yaml_indicator_utils,
-                max_workers=max_workers,
-                cache=self.cache,
-            )
-            if enable_parallel
-            else None
+                backtest_service, yaml_indicator_utils, max_workers, self.cache
+            ) if enable_parallel else None
         )
-
-        logger.info(
-            f"ConditionEvolver 初期化完了 (parallel={enable_parallel}, cache={enable_cache})"
-        )
+        logger.info(f"ConditionEvolver 初期化完了")
 
     def _create_individual(self) -> Condition:
-        """
-        個体（Condition）を生成
-
-        Returns:
-            ランダムに生成されたCondition
-        """
+        """単一のCondition個体を生成（動的direction属性付き）"""
         available_indicators = self.yaml_indicator_utils.get_available_indicators()
         if not available_indicators:
             raise ValueError("利用可能な指標がありません")
 
-        # ランダムな指標を選択
         indicator_name = random.choice(available_indicators)
         indicator_info = self.yaml_indicator_utils.get_indicator_info(indicator_name)
 
-        # 方向を決定
         direction = random.choice(["long", "short"])
-
-        # 演算子を決定
         operators = [">", "<", ">=", "<=", "==", "!="]
         operator = random.choice(operators)
-
-        # 閾値を決定
         threshold = self._generate_threshold(indicator_info)
 
-        return Condition(
-            indicator_name=indicator_name,
+        cond = Condition(
+            left_operand=indicator_name,
             operator=operator,
-            threshold=threshold,
-            direction=direction,
+            right_operand=threshold
         )
+        # 動的にdirection属性を追加（進化コンテキスト用）
+        cond.direction = direction
+        return cond
 
     def _generate_threshold(self, indicator_info: Dict[str, Any]) -> float:
-        """指標情報に基づいて閾値を生成"""
         scale_type = indicator_info.get("scale_type", "oscillator_0_100")
         thresholds = indicator_info.get("thresholds", {})
 
-        # デフォルトの範囲設定
         if scale_type == "oscillator_0_100":
             base_range = (0, 100)
         elif scale_type == "oscillator_plus_minus_100":
@@ -641,219 +326,146 @@ class ConditionEvolver:
         elif scale_type == "momentum_zero_centered":
             base_range = (-1, 1)
         else:
-            base_range = (0, 100)  # デフォルト
+            base_range = (0, 100)
 
-        # 閾値設定がある場合はそれを使用
         if thresholds and "normal" in thresholds:
             normal_thresholds = thresholds["normal"]
             if isinstance(normal_thresholds, dict):
-                # 方向に応じた閾値を取得
+                # 簡易的にどちらかを使用
                 if "long_gt" in normal_thresholds:
                     return float(normal_thresholds["long_gt"])
-                elif "short_lt" in normal_thresholds:
-                    return float(normal_thresholds["short_lt"])
 
-        # 範囲内のランダム値を生成
         min_val, max_val = base_range
         return random.uniform(min_val, max_val)
 
     def generate_initial_population(self, population_size: int = 20) -> List[Condition]:
-        """
-        初期個体群を生成
-
-        Args:
-            population_size: 個体群サイズ
-
-        Returns:
-            Conditionのリスト
-        """
         return [self._create_individual() for _ in range(population_size)]
 
     @safe_operation(context="ConditionEvolver.evaluate_fitness", default_return=0.0)
     def evaluate_fitness(
-        self, condition: Condition, backtest_config: Dict[str, Any]
+        self, condition: Union[Condition, ConditionGroup], backtest_config: Dict[str, Any]
     ) -> float:
-        """
-        個体の適応度を評価
-
-        Args:
-            condition: 評価する条件
-            backtest_config: バックテスト設定
-
-        Returns:
-            適応度値（高いほど良い）
-        """
-        # キャッシュチェック
         if self.cache:
             cached = self.cache.get(condition)
             if cached is not None:
                 return cached
 
         try:
-            # 条件から戦略設定を作成
-            strategy_config = create_simple_strategy(condition)
-
-            # バックテスト設定を構築
-            test_config = backtest_config.copy()
-            test_config.update(strategy_config["parameters"])
-
-            # バックテスト実行
-            result = self.backtest_service.run_backtest(test_config)
-
-            # パフォーマンスメトリクスから適応度を計算
-            metrics = result.get("performance_metrics", {})
-            total_return = metrics.get("total_return", 0.0)
-            sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
-            max_drawdown = metrics.get("max_drawdown", 1.0)
-            total_trades = metrics.get("total_trades", 0)
-
-            # 取引回数が少ない場合はペナルティ
-            if total_trades < 10:
-                fitness = 0.1
-            else:
-                # 多目的適応度を単一値に統合（重み付け）
-                fitness = (
-                    0.4 * max(0, total_return)
-                    + 0.3 * max(0, sharpe_ratio)
-                    + 0.2 * max(0, (1 - max_drawdown))
-                    + 0.1 * min(1, total_trades / 100)  # 取引回数ボーナス
-                )
-
-            fitness = max(0.0, fitness)
-
-            # キャッシュに保存
-            if self.cache:
-                self.cache.set(condition, fitness)
-
-            logger.debug(f"Condition {condition} fitness: {fitness:.4f}")
-            return fitness
+            # 並列評価器と同じロジックを使用（再利用）
+            evaluator = ParallelFitnessEvaluator(self.backtest_service, self.yaml_indicator_utils, cache=self.cache)
+            return evaluator._evaluate_single(condition, backtest_config)
 
         except Exception as e:
             logger.error(f"適応度評価エラー: {e}")
             return 0.0
 
     def tournament_selection(
-        self, population: List[Condition], fitness_values: List[float], k: int = 3
-    ) -> List[Condition]:
-        """
-        トーナメント選択
-
-        Args:
-            population: 個体群
-            fitness_values: 適応度値リスト
-            k: トーナメントサイズ
-
-        Returns:
-            選択された個体群
-        """
+        self, population: List[Union[Condition, ConditionGroup]], fitness_values: List[float], k: int = 3
+    ) -> List[Union[Condition, ConditionGroup]]:
         selected = []
         for _ in range(len(population)):
-            # トーナメント参加者を選択
             tournament = random.sample(list(zip(population, fitness_values)), k)
-            # 最も適応度の高い個体を選択
             winner = max(tournament, key=lambda x: x[1])[0]
             selected.append(winner)
         return selected
 
     def crossover(
-        self, parent1: Condition, parent2: Condition
-    ) -> Tuple[Condition, Condition]:
-        """
-        一点交叉
+        self, parent1: Union[Condition, ConditionGroup], parent2: Union[Condition, ConditionGroup]
+    ) -> Tuple[Union[Condition, ConditionGroup], Union[Condition, ConditionGroup]]:
+        """多態性対応の交叉"""
+        
+        # 1. 両方がConditionGroupの場合
+        if isinstance(parent1, ConditionGroup) and isinstance(parent2, ConditionGroup):
+            # 構造が同じ（要素数が同じ）なら、子要素同士を交叉
+            if len(parent1.conditions) == len(parent2.conditions):
+                new_conds1 = []
+                new_conds2 = []
+                for c1, c2 in zip(parent1.conditions, parent2.conditions):
+                    nc1, nc2 = self.crossover(c1, c2)
+                    new_conds1.append(nc1)
+                    new_conds2.append(nc2)
+                
+                child1 = ConditionGroup(operator=parent1.operator, conditions=new_conds1)
+                child2 = ConditionGroup(operator=parent2.operator, conditions=new_conds2)
+                return child1, child2
+            else:
+                # 構造が違う場合は交叉しない（コピーを返す）
+                # またはサブツリー交換などが考えられるが、ここではシンプルに
+                return copy.deepcopy(parent1), copy.deepcopy(parent2)
 
-        Args:
-            parent1: 親個体1
-            parent2: 親個体2
+        # 2. 両方がConditionの場合
+        elif isinstance(parent1, Condition) and isinstance(parent2, Condition):
+            crossover_point = random.choice(["operator", "threshold"])
+            
+            # direction属性の維持（あれば）
+            d1 = getattr(parent1, "direction", "long")
+            d2 = getattr(parent2, "direction", "long")
+            
+            if crossover_point == "operator":
+                child1 = Condition(parent1.left_operand, parent2.operator, parent1.right_operand)
+                child2 = Condition(parent2.left_operand, parent1.operator, parent2.right_operand)
+            else:
+                # 閾値平均
+                try:
+                    avg = (float(parent1.right_operand) + float(parent2.right_operand)) / 2
+                except:
+                    avg = parent1.right_operand # 数値でない場合はそのまま
+                    
+                child1 = Condition(parent1.left_operand, parent1.operator, avg)
+                child2 = Condition(parent2.left_operand, parent2.operator, avg)
+            
+            child1.direction = d1
+            child2.direction = d2
+            return child1, child2
 
-        Returns:
-            子個体2つ
-        """
-        # ランダムな交叉点を決定
-        crossover_point = random.choice(["operator", "threshold"])
-
-        if crossover_point == "operator":
-            # 演算子を交叉
-            child1 = Condition(
-                indicator_name=parent1.indicator_name,
-                operator=parent2.operator,
-                threshold=parent1.threshold,
-                direction=parent1.direction,
-            )
-            child2 = Condition(
-                indicator_name=parent2.indicator_name,
-                operator=parent1.operator,
-                threshold=parent2.threshold,
-                direction=parent2.direction,
-            )
+        # 3. 型が異なる場合
         else:
-            # 閾値を交叉（平均値を使用）
-            new_threshold = (parent1.threshold + parent2.threshold) / 2
-            child1 = Condition(
-                indicator_name=parent1.indicator_name,
-                operator=parent1.operator,
-                threshold=new_threshold,
-                direction=parent1.direction,
-            )
-            child2 = Condition(
-                indicator_name=parent2.indicator_name,
-                operator=parent2.operator,
-                threshold=new_threshold,
-                direction=parent2.direction,
-            )
+            return copy.deepcopy(parent1), copy.deepcopy(parent2)
 
-        return child1, child2
+    def mutate(self, condition: Union[Condition, ConditionGroup]) -> Union[Condition, ConditionGroup]:
+        """多態性対応の突然変異"""
+        
+        if isinstance(condition, ConditionGroup):
+            # グループの場合: 子要素のどれかを変異させる
+            mutated_group = copy.deepcopy(condition)
+            if mutated_group.conditions:
+                idx = random.randrange(len(mutated_group.conditions))
+                mutated_group.conditions[idx] = self.mutate(mutated_group.conditions[idx])
+            return mutated_group
 
-    def mutate(self, condition: Condition) -> Condition:
-        """
-        突然変異
-
-        Args:
-            condition: 変異対象の条件
-
-        Returns:
-            変異後の条件
-        """
-        mutated_condition = Condition(
-            indicator_name=condition.indicator_name,
-            operator=condition.operator,
-            threshold=condition.threshold,
-            direction=condition.direction,
-        )
-
-        # 突然変異の種類を決定
-        mutation_type = random.choice(["operator", "threshold", "indicator"])
-
-        if mutation_type == "operator":
-            # 演算子を突然変異
-            operators = [">", "<", ">=", "<=", "==", "!="]
-            current_op = mutated_condition.operator
-            operators.remove(current_op)  # 現在の演算子を除外
-            mutated_condition.operator = random.choice(operators)
-
-        elif mutation_type == "threshold":
-            # 閾値を突然変異（10%程度の変動）
-            variation = random.uniform(-0.1, 0.1)
-            mutated_condition.threshold *= 1 + variation
-            mutated_condition.threshold = max(
-                0, mutated_condition.threshold
-            )  # 負値防止
-
-        elif mutation_type == "indicator":
-            # 指標を突然変異
-            available_indicators = self.yaml_indicator_utils.get_available_indicators()
-            # 現在の指標がリストに含まれている場合のみ削除
-            if mutated_condition.indicator_name in available_indicators:
-                available_indicators.remove(mutated_condition.indicator_name)
-            if available_indicators:
-                mutated_condition.indicator_name = random.choice(available_indicators)
-
-                # 新しい指標の閾値設定を取得
-                indicator_info = self.yaml_indicator_utils.get_indicator_info(
-                    mutated_condition.indicator_name
-                )
-                mutated_condition.threshold = self._generate_threshold(indicator_info)
-
-        return mutated_condition
+        elif isinstance(condition, Condition):
+            # Conditionの場合: 既存ロジック
+            mutated = copy.deepcopy(condition)
+            mutation_type = random.choice(["operator", "threshold", "indicator"])
+            
+            if mutation_type == "operator":
+                operators = [">", "<", ">=", "<=", "==", "!="]
+                if mutated.operator in operators:
+                    operators.remove(mutated.operator)
+                mutated.operator = random.choice(operators)
+            
+            elif mutation_type == "threshold":
+                try:
+                    val = float(mutated.right_operand)
+                    variation = random.uniform(-0.1, 0.1)
+                    mutated.right_operand = max(0, val * (1 + variation))
+                except:
+                    pass
+            
+            elif mutation_type == "indicator":
+                # 指標変更
+                available = self.yaml_indicator_utils.get_available_indicators()
+                if mutated.left_operand in available:
+                    available.remove(mutated.left_operand)
+                if available:
+                    new_ind = random.choice(available)
+                    mutated.left_operand = new_ind
+                    info = self.yaml_indicator_utils.get_indicator_info(new_ind)
+                    mutated.right_operand = self._generate_threshold(info)
+            
+            return mutated
+        
+        return condition
 
     def run_evolution(
         self,
@@ -861,106 +473,57 @@ class ConditionEvolver:
         population_size: int = 20,
         generations: int = 10,
     ) -> Dict[str, Any]:
-        """
-        進化アルゴリズムを実行
-
-        Args:
-            backtest_config: バックテスト設定
-            population_size: 個体群サイズ
-            generations: 世代数
-
-        Returns:
-            進化結果
-        """
+        """進化アルゴリズムを実行"""
         try:
             logger.info(f"進化開始: 個体数={population_size}, 世代数={generations}")
 
-            # 早期打ち切りをリセット
             if self.early_stopping:
                 self.early_stopping.reset()
 
-            # 初期個体群生成
             population = self.generate_initial_population(population_size)
-
-            # 進化履歴
             evolution_history = []
             early_stopped = False
             generations_completed = 0
 
             for generation in range(generations):
-                logger.info(f"世代 {generation + 1}/{generations}")
-
-                # 適応度評価（並列または直列）
                 if self.enable_parallel and self.parallel_evaluator:
-                    fitness_values = self.parallel_evaluator.evaluate_population(
-                        population, backtest_config
-                    )
+                    fitness_values = self.parallel_evaluator.evaluate_population(population, backtest_config)
                 else:
-                    fitness_values = [
-                        self.evaluate_fitness(individual, backtest_config)
-                        for individual in population
-                    ]
+                    fitness_values = [self.evaluate_fitness(ind, backtest_config) for ind in population]
 
-                # 進化履歴を記録
                 best_fitness = max(fitness_values)
                 avg_fitness = sum(fitness_values) / len(fitness_values)
-                evolution_history.append(
-                    {
-                        "generation": generation + 1,
-                        "best_fitness": best_fitness,
-                        "avg_fitness": avg_fitness,
-                    }
-                )
-
-                logger.info(
-                    f"世代 {generation + 1}: 最高適応度={best_fitness:.4f}, 平均適応度={avg_fitness:.4f}"
-                )
+                evolution_history.append({
+                    "generation": generation + 1,
+                    "best_fitness": best_fitness,
+                    "avg_fitness": avg_fitness,
+                })
 
                 generations_completed = generation + 1
 
-                # 早期打ち切りチェック
                 if self.early_stopping:
                     if self.early_stopping.update(best_fitness):
-                        logger.info(
-                            f"早期打ち切り: {self.early_stopping.patience}世代間改善なし"
-                        )
                         early_stopped = True
                         break
 
-                # エリート選択（最良個体を保存）
                 elite = [max(zip(population, fitness_values), key=lambda x: x[1])[0]]
-
-                # 選択
                 selected = self.tournament_selection(population, fitness_values, k=3)
 
-                # 交叉・突然変異による次世代生成
                 offspring = []
                 for i in range(0, len(selected) - 1, 2):
-                    if random.random() < 0.8:  # 交叉確率80%
+                    if random.random() < 0.8:
                         child1, child2 = self.crossover(selected[i], selected[i + 1])
                         offspring.extend([child1, child2])
                     else:
                         offspring.extend([selected[i], selected[i + 1]])
 
-                # 突然変異
-                offspring = [
-                    self.mutate(ind) if random.random() < 0.2 else ind
-                    for ind in offspring
-                ]
-
-                # 次世代を現在の個体群とする（エリートを優先して保存）
+                offspring = [self.mutate(ind) if random.random() < 0.2 else ind for ind in offspring]
                 population = (elite + offspring)[:population_size]
 
-            # 最終結果
             if self.enable_parallel and self.parallel_evaluator:
-                fitness_values = self.parallel_evaluator.evaluate_population(
-                    population, backtest_config
-                )
+                fitness_values = self.parallel_evaluator.evaluate_population(population, backtest_config)
             else:
-                fitness_values = [
-                    self.evaluate_fitness(individual, backtest_config)
-                    for individual in population
-                ]
+                fitness_values = [self.evaluate_fitness(ind, backtest_config) for ind in population]
 
             best_idx = fitness_values.index(max(fitness_values))
             best_condition = population[best_idx]
@@ -976,27 +539,11 @@ class ConditionEvolver:
                 "early_stopped": early_stopped,
             }
 
-            # キャッシュ統計を追加
             if self.cache:
                 result["cache_stats"] = self.cache.get_stats()
 
-            logger.info(
-                f"進化完了: 最高適応度={best_fitness:.4f}, 最高条件={best_condition}"
-            )
             return result
 
         except Exception as e:
             logger.error(f"進化実行エラー: {e}")
             raise
-
-    def create_strategy_from_condition(self, condition: Condition) -> Dict[str, Any]:
-        """
-        条件から戦略設定を作成
-
-        Args:
-            condition: 条件オブジェクト
-
-        Returns:
-            戦略設定辞書
-        """
-        return create_simple_strategy(condition)
