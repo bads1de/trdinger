@@ -110,6 +110,10 @@ class FitnessCache:
                 self._cache.popitem(last=False)
         self._cache[key] = fitness
 
+    def __len__(self) -> int:
+        """キャッシュのサイズを返す"""
+        return len(self._cache)
+
     def get_stats(self) -> Dict[str, Any]:
         total = self._hits + self._misses
         hit_rate = self._hits / total if total > 0 else 0.0
@@ -217,7 +221,9 @@ class YamlIndicatorUtils:
         return list(self.config.get("indicators", {}).keys())
 
     def get_indicator_info(self, indicator_name: str) -> Dict[str, Any]:
-        return self.config["indicators"].get(indicator_name, {}).copy()
+        if indicator_name not in self.config.get("indicators", {}):
+            raise ValueError(f"Unknown indicator: {indicator_name}")
+        return self.config["indicators"][indicator_name].copy()
 
 
 def create_simple_strategy(condition: Union[Condition, ConditionGroup]) -> Dict[str, Any]:

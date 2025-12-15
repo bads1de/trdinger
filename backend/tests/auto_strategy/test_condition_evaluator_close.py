@@ -100,6 +100,8 @@ class TestConditionEvaluatorClose:
     def test_unknown_operand_returns_zero(self):
         """未知のオペランドは0を返すことをテスト"""
         mock_strategy = Mock()
+        # Mock が属性アクセス時に Mock を返さないように spec を設定
+        mock_strategy = Mock(spec=[])
 
         result = self.evaluator.get_condition_value("unknown_indicator", mock_strategy)
 

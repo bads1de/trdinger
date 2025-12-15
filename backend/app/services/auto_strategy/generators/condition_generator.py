@@ -619,7 +619,8 @@ class GAConditionGenerator(ConditionGenerator):
                 best_condition = evolution_result["best_condition"]
 
                 # 指定された方向に一致するか確認
-                if best_condition.direction == direction:
+                cond_direction = getattr(best_condition, "direction", None)
+                if cond_direction == direction:
                     return best_condition
 
             return None
