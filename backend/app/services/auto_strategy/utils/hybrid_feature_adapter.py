@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.ml.exceptions import MLFeatureError
 
 logger = logging.getLogger(__name__)

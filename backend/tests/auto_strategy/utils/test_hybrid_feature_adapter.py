@@ -11,7 +11,7 @@ from app.services.auto_strategy.utils.hybrid_feature_adapter import (
     HybridFeatureAdapter,
     MLFeatureError,
 )
-from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
 
 
 class TestHybridFeatureAdapter:

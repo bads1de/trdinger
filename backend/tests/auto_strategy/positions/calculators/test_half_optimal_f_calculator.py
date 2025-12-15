@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from app.services.auto_strategy.positions.calculators.half_optimal_f_calculator import (
     HalfOptimalFCalculator,
 )
-from app.services.auto_strategy.genes.position_sizing_gene import PositionSizingGene
+from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.config.enums import PositionSizingMethod
 
 

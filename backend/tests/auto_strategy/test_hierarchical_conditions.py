@@ -4,8 +4,8 @@ import pandas as pd
 from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
 from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.genes.validator import GeneValidator
-from app.services.auto_strategy.genes.strategy_gene import StrategyGene
-from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.auto_strategy.genes.indicator import IndicatorGene
 
 
 class MockStrategy:

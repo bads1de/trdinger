@@ -8,12 +8,12 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .conditions import Condition, ConditionGroup, StatefulCondition
-from .entry_gene import EntryGene
+from .entry import EntryGene
 from ..config.enums import PositionSizingMethod
-from .indicator_gene import IndicatorGene
-from .position_sizing_gene import PositionSizingGene
-from .tool_gene import ToolGene
-from .tpsl_gene import TPSLGene
+from .indicator import IndicatorGene
+from .position_sizing import PositionSizingGene
+from .tool import ToolGene
+from .tpsl import TPSLGene
 
 
 @dataclass

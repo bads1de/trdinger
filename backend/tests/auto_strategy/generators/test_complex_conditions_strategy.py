@@ -3,7 +3,7 @@ from app.services.auto_strategy.generators.strategies.complex_conditions_strateg
     ComplexConditionsStrategy,
 )
 from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
-from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
+from app.services.auto_strategy.genes.indicator import IndicatorGene
 
 
 class MockConditionGenerator:

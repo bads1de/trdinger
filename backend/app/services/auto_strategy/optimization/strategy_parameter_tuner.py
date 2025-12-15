@@ -11,7 +11,7 @@ from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
 from ..config.ga_runtime import GAConfig
 from ..core.individual_evaluator import IndividualEvaluator
-from ..genes.strategy_gene import StrategyGene
+from ..genes.strategy import StrategyGene
 from .strategy_parameter_space import StrategyParameterSpace
 
 logger = logging.getLogger(__name__)

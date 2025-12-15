@@ -15,9 +15,9 @@ import pytest
 
 from app.config.unified_config import GAConfig
 from app.services.auto_strategy.genes.conditions import Condition
-from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
-from app.services.auto_strategy.genes.strategy_gene import StrategyGene
-from app.services.auto_strategy.genes.tpsl_gene import TPSLGene
+from app.services.auto_strategy.genes.indicator import IndicatorGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.auto_strategy.genes.tpsl import TPSLGene
 
 
 class TestAutoStrategyE2E:

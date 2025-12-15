@@ -15,9 +15,9 @@ from app.services.indicators.config.indicator_config import (
 from app.services.ml.optimization.optuna_optimizer import ParameterSpace
 
 from ..genes.conditions import Condition, ConditionGroup
-from ..genes.indicator_gene import IndicatorGene
-from ..genes.strategy_gene import StrategyGene
-from ..genes.tpsl_gene import TPSLGene
+from ..genes.indicator import IndicatorGene
+from ..genes.strategy import StrategyGene
+from ..genes.tpsl import TPSLGene
 
 logger = logging.getLogger(__name__)
 

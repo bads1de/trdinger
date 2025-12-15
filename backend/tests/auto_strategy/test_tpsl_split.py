@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from app.services.auto_strategy.genes.strategy_gene import StrategyGene
-from app.services.auto_strategy.genes.tpsl_gene import TPSLGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.auto_strategy.genes.tpsl import TPSLGene
 from app.services.auto_strategy.config.enums import TPSLMethod
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 

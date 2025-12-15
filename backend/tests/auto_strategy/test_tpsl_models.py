@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from app.services.auto_strategy.config.enums import TPSLMethod
-from app.services.auto_strategy.genes.tpsl_gene import TPSLGene
+from app.services.auto_strategy.genes.tpsl import TPSLGene
 from app.services.auto_strategy.genes import TPSLResult
 
 
@@ -85,7 +85,7 @@ class TestTPSLGene:
         # 無効なmethodは無視される可能性がある
         assert gene.stop_loss_pct == 0.03
 
-    @patch("app.services.auto_strategy.genes.tpsl_gene.logger")
+    @patch("app.services.auto_strategy.genes.tpsl.logger")
     def test_from_dict_enum_conversion_warning(self, mock_logger):
         """Enum変換時の警告テスト"""
         # 警告が出ることを確認（メッセージの詳細は実装依存）
@@ -177,7 +177,7 @@ class TestTPSLGene:
 
         # TPSL_LIMITSのインポートエラーをシミュレート
         with patch("app.services.auto_strategy.config.constants.TPSL_LIMITS", {}):
-            with patch("app.services.auto_strategy.genes.tpsl_gene.logger"):
+            with patch("app.services.auto_strategy.genes.tpsl.logger"):
                 is_valid, errors = gene.validate()
                 # 基本検証が適用される
                 assert isinstance(is_valid, bool)

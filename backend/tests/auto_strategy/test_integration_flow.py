@@ -7,7 +7,7 @@ from app.services.auto_strategy.core.genetic_operators import (
     crossover_strategy_genes_pure,
     mutate_strategy_gene_pure,
 )
-from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
 
 
 class TestAutoStrategyFlow:

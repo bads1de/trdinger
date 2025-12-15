@@ -11,18 +11,18 @@ from .conditions import (
     StateTracker,
     StatefulCondition,
 )
-from .entry_gene import EntryGene
+from .entry import EntryGene
 from ..config.enums import EntryType, PositionSizingMethod, TPSLMethod
-from .indicator_gene import IndicatorGene
-from .position_sizing_gene import (
+from .indicator import IndicatorGene
+from .position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,
     crossover_position_sizing_genes,
     mutate_position_sizing_gene,
 )
-from .strategy_gene import StrategyGene
-from .tool_gene import ToolGene
-from .tpsl_gene import (
+from .strategy import StrategyGene
+from .tool import ToolGene
+from .tpsl import (
     TPSLGene,
     TPSLResult,
     create_random_tpsl_gene,

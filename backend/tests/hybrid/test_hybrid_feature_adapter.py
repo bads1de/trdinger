@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.genes.conditions import Condition
-from app.services.auto_strategy.genes.indicator_gene import IndicatorGene
-from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from app.services.auto_strategy.genes.indicator import IndicatorGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.ml.exceptions import MLFeatureError
 
 

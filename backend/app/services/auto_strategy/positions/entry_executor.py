@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-from ..genes.entry_gene import EntryGene
+from ..genes.entry import EntryGene
 from ..config.enums import EntryType
 
 logger = logging.getLogger(__name__)

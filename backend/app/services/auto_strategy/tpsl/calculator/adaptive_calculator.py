@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from ...genes import TPSLGene
-from ...genes.tpsl_gene import TPSLResult
+from ...genes.tpsl import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator

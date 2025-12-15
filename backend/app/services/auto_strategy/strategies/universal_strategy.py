@@ -15,7 +15,7 @@ import pandas as pd
 from backtesting import Strategy
 
 from ..core.condition_evaluator import ConditionEvaluator
-from ..genes.entry_gene import EntryGene
+from ..genes.entry import EntryGene
 from ..config.enums import EntryType
 from ..positions.pending_order import PendingOrder
 from ..genes.conditions import StateTracker

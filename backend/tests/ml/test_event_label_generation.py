@@ -8,7 +8,7 @@ from backend.app.services.auto_strategy.config.ga import GASettings
 from backend.app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from backend.app.services.auto_strategy.genes.strategy_gene import StrategyGene
+from backend.app.services.auto_strategy.genes.strategy import StrategyGene
 from backend.app.services.auto_strategy.utils.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )

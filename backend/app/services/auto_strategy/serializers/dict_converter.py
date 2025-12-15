@@ -8,7 +8,7 @@ import logging
 import uuid
 from typing import Any, Dict, Optional
 
-from ..genes.entry_gene import EntryGene
+from ..genes.entry import EntryGene
 from ..genes import (
     Condition,
     IndicatorGene,
@@ -536,7 +536,7 @@ class DictConverter:
             ]
 
             # ツール遺伝子の復元
-            from ..genes.tool_gene import ToolGene
+            from ..genes.tool import ToolGene
 
             tool_genes = [
                 ToolGene.from_dict(tg_data)

@@ -572,7 +572,7 @@ class TestStatefulConditionIntegration:
         StrategyGene に stateful_conditions を設定して
         シリアライズ/デシリアライズできることを確認
         """
-        from app.services.auto_strategy.genes.strategy_gene import StrategyGene
+        from app.services.auto_strategy.genes.strategy import StrategyGene
         from app.services.auto_strategy.serializers.dict_converter import DictConverter
 
         # StrategyGene を作成
