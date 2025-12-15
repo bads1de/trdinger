@@ -232,3 +232,5 @@ class TestTPSLResult:
         # 基本的なパーセンテージ値を検証
         assert basic_tpsl_result.stop_loss_pct == 0.03
         assert basic_tpsl_result.take_profit_pct == 0.06
+
+

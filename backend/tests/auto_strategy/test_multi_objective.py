@@ -283,3 +283,5 @@ class TestEvolutionRunnerMultiObjective:
         # 交叉と突然変異が呼ばれたことを確認
         assert mock_toolbox.mate.called
         assert mock_toolbox.mutate.called
+
+

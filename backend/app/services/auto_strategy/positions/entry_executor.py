@@ -121,3 +121,5 @@ class EntryExecutor:
             return base_price * (1.0 + offset_pct)
         else:  # Short: 現在価格より低い価格でブレイクアウト
             return base_price * (1.0 - offset_pct)
+
+

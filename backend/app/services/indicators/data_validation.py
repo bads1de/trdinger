@@ -137,3 +137,5 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
         return_cols = config.return_cols or ["Result"]
         nan_result = np.full((data_length, len(return_cols)), np.nan)
         return nan_result
+
+

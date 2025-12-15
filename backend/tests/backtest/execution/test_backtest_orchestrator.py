@@ -120,3 +120,5 @@ def test_run_date_normalization(orchestrator, sample_config):
     # _normalize_dateはdatetime.fromisoformatを使用するため、標準のdatetimeオブジェクトを返す
     assert isinstance(call_args["start_date"], datetime)
     assert isinstance(call_args["end_date"], datetime)
+
+

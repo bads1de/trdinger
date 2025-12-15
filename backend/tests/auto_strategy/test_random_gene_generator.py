@@ -58,3 +58,5 @@ class TestRandomGeneGenerator:
 
         # IDが異なる（別オブジェクトである）ことを確認
         assert gene.long_tpsl_gene is not gene.short_tpsl_gene
+
+

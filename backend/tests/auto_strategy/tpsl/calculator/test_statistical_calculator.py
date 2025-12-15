@@ -103,3 +103,5 @@ class TestStatisticalCalculator:
 
         assert result.stop_loss_pct == 0.01
         assert result.take_profit_pct == 0.02
+
+

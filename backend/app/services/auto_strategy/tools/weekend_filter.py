@@ -95,3 +95,5 @@ class WeekendFilter(BaseTool):
 # グローバルインスタンスを作成してレジストリに登録
 weekend_filter = WeekendFilter()
 register_tool(weekend_filter)
+
+

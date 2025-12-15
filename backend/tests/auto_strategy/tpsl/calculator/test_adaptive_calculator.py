@@ -100,3 +100,5 @@ class TestAdaptiveCalculator:
             # フォールバック処理が走る
             assert result.stop_loss_pct == 0.03
             assert result.take_profit_pct == 0.06
+
+

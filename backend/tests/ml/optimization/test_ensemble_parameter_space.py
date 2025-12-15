@@ -511,3 +511,5 @@ class TestEdgeCases:
         # 小文字のみマッチ
         assert "lgb_num_leaves" in space_lower
         assert "lgb_num_leaves" not in space_upper
+
+

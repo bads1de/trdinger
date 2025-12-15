@@ -349,3 +349,5 @@ class TestFundingRateRepositoryGetAllBySymbol:
             # 他の値も正しいことを確認
             for i in range(1, len(result)):
                 assert result[i].funding_rate > 0
+
+

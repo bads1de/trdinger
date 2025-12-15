@@ -278,3 +278,5 @@ class ListDecoder:
         except Exception as e:
             logger.error(f"ポジションサイジング遺伝子デコードエラー: {e}")
             return None
+
+

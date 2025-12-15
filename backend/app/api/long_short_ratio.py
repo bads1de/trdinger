@@ -95,3 +95,5 @@ async def collect_long_short_ratio_data(
         "message": f"データ収集タスクを開始しました (mode: {mode})",
         "symbol": symbol,
     }
+
+

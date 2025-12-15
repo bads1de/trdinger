@@ -109,3 +109,5 @@ class AutoStrategyLoader:
             return parameters["strategy_gene"]
 
         return {}
+
+

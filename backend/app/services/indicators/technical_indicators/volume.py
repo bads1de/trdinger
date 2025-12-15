@@ -594,3 +594,5 @@ class VolumeIndicators:
         score = rvol_series / price_range
 
         return score.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+

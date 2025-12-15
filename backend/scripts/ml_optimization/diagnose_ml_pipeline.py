@@ -268,3 +268,5 @@ class MLPipelineDiagnostics:
 if __name__ == "__main__":
     diagnostics = MLPipelineDiagnostics()
     diagnostics.diagnose_all()
+
+

@@ -114,3 +114,5 @@ class TestPredictionLogicRefactoring:
 
         # 両方とも同じインターフェース
         assert result_single.keys() == result_ensemble.keys()
+
+

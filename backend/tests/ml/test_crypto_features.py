@@ -54,3 +54,5 @@ class TestCryptoFeatureCalculator:
 
         result = calculator._ensure_data_quality(df_with_nans)
         assert not result["open_interest"].isna().any()
+
+

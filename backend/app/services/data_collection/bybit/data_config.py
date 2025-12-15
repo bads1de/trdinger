@@ -79,3 +79,5 @@ def get_open_interest_config():
         insert_method_name="insert_open_interest_data",
         log_prefix="OI",
     )
+
+

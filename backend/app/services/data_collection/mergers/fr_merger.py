@@ -89,3 +89,5 @@ class FRMerger:
         df = pd.DataFrame(data)
         df.index = pd.DatetimeIndex([r.funding_timestamp for r in fr_data])
         return df
+
+

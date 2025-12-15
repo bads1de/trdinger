@@ -134,3 +134,5 @@ class BacktestOrchestrator:
     def get_supported_strategies(self) -> Dict[str, Any]:
         """サポートされている戦略一覧を取得"""
         return self._executor.get_supported_strategies()
+
+

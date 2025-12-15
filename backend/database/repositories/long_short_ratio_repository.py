@@ -227,3 +227,5 @@ class LongShortRatioRepository(BaseRepository):
         )
         logger.info(f"ロング/ショート比率データを削除しました ({symbol}, {period}): {deleted_count}件")
         return deleted_count
+
+

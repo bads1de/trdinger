@@ -684,3 +684,5 @@ class TestBackgroundTaskExecution:
         for response in responses:
             assert response.status_code == 202
             assert response.json()["success"] is True
+
+

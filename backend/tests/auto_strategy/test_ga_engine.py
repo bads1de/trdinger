@@ -262,3 +262,5 @@ class TestGeneticAlgorithmEngine:
         runner_call_args = mock_runner_cls.call_args[0]
         # 5番目の引数がparallel_evaluator
         assert runner_call_args[4] == mock_parallel_evaluator_cls.return_value
+
+

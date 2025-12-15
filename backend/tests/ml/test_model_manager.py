@@ -136,3 +136,5 @@ class TestModelManagerSave:
         loaded = manager.load_model(model_path)
         assert loaded is not None
         assert loaded["model"] == dummy_model
+
+

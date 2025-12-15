@@ -231,3 +231,5 @@ class AdvancedFeatures:
         # ゼロ除算の回避
         vol_clean = volume.replace(0, 1e-9)
         return open_interest / vol_clean
+
+

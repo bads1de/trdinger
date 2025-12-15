@@ -198,3 +198,5 @@ class UnifiedTPSLGenerator:
             method = "fixed_percentage"
 
         return self.generate_tpsl(method, **kwargs)
+
+

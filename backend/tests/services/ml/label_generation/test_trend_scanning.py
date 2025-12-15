@@ -139,3 +139,5 @@ class TestTrendScanning:
         # Should pick a window that captures the trend
         assert labels.iloc[0]["bin"] == 1
         assert pd.notna(labels.iloc[0]["t1"])
+
+

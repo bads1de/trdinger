@@ -324,3 +324,5 @@ def get_long_short_ratio_service() -> BybitLongShortRatioService:
     BybitLongShortRatioService のインスタンスを取得（依存性注入用）
     """
     return BybitLongShortRatioService()
+
+

@@ -338,3 +338,5 @@ class OHLCVRepository(BaseRepository):
             利用可能なシンボルのリスト
         """
         return super().get_available_symbols(symbol_column)
+
+

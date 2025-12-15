@@ -184,3 +184,5 @@ class BacktestService:
         except Exception as e:
             logger.error(f"バックテスト実行・保存エラー: {e}", exc_info=True)
             return {"success": False, "error": str(e), "status_code": 500}
+
+

@@ -326,3 +326,5 @@ def validate_funding_rate_data(df: pd.DataFrame) -> bool:
             raise ValueError("タイムスタンプがソートされていません")
 
     return True
+
+

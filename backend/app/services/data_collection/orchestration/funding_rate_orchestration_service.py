@@ -148,3 +148,5 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
         return self._create_success_response(
             "一括データ収集完了", data={"total_count": total_count}
         )
+
+

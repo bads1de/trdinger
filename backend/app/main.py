@@ -150,3 +150,5 @@ def create_app() -> FastAPI:
 
 # アプリケーションインスタンス
 app = create_app()
+
+

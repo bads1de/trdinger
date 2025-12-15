@@ -87,3 +87,4 @@ class TestTripleBarrierShort:
 
         assert labels.loc[self.close.index[0], "bin"] == -1.0
         assert events.loc[self.close.index[0], "side"] == "sl"
+

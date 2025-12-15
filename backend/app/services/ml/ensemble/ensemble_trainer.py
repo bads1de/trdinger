@@ -532,3 +532,5 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.warning(f"EnsembleTrainerモデルクリーンアップエラー: {e}")
             # エラーが発生してもクリーンアップは続行
             self.ensemble_model = None
+
+

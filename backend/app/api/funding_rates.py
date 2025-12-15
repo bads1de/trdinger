@@ -163,3 +163,5 @@ async def bulk_collect_funding_rates(
     return await ErrorHandler.safe_execute_async(
         _bulk_collect, message="ファンディングレート一括収集エラー"
     )
+
+

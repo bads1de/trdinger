@@ -93,3 +93,5 @@ class EntryGenerator:
         type_weights = list(weights.values())
 
         return random.choices(types, weights=type_weights, k=1)[0]
+
+

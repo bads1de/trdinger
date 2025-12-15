@@ -24,3 +24,5 @@ class FixedQuantityCalculator(BaseCalculator):
 
         # 統一された最終処理（重複コード除去）
         return self._apply_size_limits_and_finalize(position_size, details, [], gene)
+
+

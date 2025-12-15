@@ -320,3 +320,5 @@ class TestCustomExceptions:
         error = ModelError("モデルエラー")
         assert str(error) == "モデルエラー"
         assert isinstance(error, Exception)
+
+

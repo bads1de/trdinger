@@ -182,3 +182,5 @@ def verify_indicators():
 
 if __name__ == "__main__":
     verify_indicators()
+
+

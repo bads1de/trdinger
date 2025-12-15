@@ -207,3 +207,5 @@ class OptimizationService:
     def cleanup(self):
         """リソースクリーンアップ"""
         self.optimizer.cleanup()
+
+

@@ -489,3 +489,5 @@ class TestDatabaseSave:
             funding_history, "BTC/USDT:USDT"
         )
         mock_repository.insert_funding_rate_data.assert_called_once()
+
+

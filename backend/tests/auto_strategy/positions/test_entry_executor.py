@@ -205,3 +205,5 @@ class TestEntryGene:
         assert restored.limit_offset_pct == original.limit_offset_pct
         assert restored.stop_offset_pct == original.stop_offset_pct
         assert restored.order_validity_bars == original.order_validity_bars
+
+

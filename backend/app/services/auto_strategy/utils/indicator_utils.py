@@ -118,3 +118,5 @@ def get_valid_indicator_types() -> List[str]:
             valid_types.append(name)
 
     return valid_types
+
+

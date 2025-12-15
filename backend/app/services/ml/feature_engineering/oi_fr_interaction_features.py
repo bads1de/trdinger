@@ -191,3 +191,5 @@ class OIFRInteractionFeatureCalculator:
         result = result.replace([np.inf, -np.inf], 0)
 
         return result
+
+

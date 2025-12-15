@@ -321,3 +321,5 @@ class TestErrorHandling:
                 gene_data={"id": "test"},
                 generation=10,
             )
+
+

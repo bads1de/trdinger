@@ -690,3 +690,5 @@ class TestErrorHandling:
                     background_tasks=mock_background_tasks,
                     db=mock_db_session,
                 )
+
+

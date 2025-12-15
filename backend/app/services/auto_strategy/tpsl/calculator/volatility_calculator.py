@@ -145,3 +145,5 @@ class VolatilityCalculator(BaseTPSLCalculator):
                 "atr_period": 21,
             },
         )
+
+

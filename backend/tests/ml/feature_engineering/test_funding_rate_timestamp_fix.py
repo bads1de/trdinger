@@ -64,3 +64,5 @@ class TestFundingRateFeatureCalculator:
         assert isinstance(result_df.index, pd.DatetimeIndex)
         # 実装が変更されてfr_lag_3pのみが生成されるようになった
         assert "fr_lag_3p" in result_df.columns
+
+

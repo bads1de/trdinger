@@ -310,3 +310,5 @@ class TestDynamicPositionSizing:
         assert (
             time_fast <= time_full * 1.5
         ), f"高速版 ({time_fast:.4f}s) がフル版 ({time_full:.4f}s) より顕著に遅い"
+
+

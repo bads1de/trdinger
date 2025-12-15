@@ -214,3 +214,5 @@ class EvolutionRunner:
                 scalars[objective] = 1.0
 
         config.objective_dynamic_scalars = scalars
+
+

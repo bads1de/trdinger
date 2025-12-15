@@ -241,3 +241,5 @@ class TestEvolutionRunner:
 
         # HOF update called at start + each generation
         assert mock_hof.update.call_count == config.generations + 1
+
+

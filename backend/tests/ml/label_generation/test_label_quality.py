@@ -129,3 +129,5 @@ class TestLabelQuality:
         assert (
             positive_ratio > 0.3
         ), "上昇トレンド区間で正解ラベルが十分に生成されていません"
+
+

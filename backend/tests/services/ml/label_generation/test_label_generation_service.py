@@ -215,3 +215,5 @@ class TestLabelGenerationServiceWithEvents:
         # デフォルト設定でも正常に動作
         assert len(features_clean) > 0
         assert len(labels_clean) == len(features_clean)
+
+

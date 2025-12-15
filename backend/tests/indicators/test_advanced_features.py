@@ -108,3 +108,5 @@ def test_absorption_score(sample_data):
         sample_data["volume"]
     )
     assert isinstance(score, pd.Series)
+
+

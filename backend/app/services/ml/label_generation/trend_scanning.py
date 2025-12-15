@@ -248,3 +248,5 @@ class TrendScanning:
         out = out[mask]
 
         return out
+
+

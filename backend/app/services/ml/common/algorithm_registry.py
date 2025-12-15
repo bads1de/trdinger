@@ -86,3 +86,5 @@ class AlgorithmRegistry:
 
 # グローバルインスタンスを作成
 algorithm_registry = AlgorithmRegistry()
+
+

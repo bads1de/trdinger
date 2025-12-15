@@ -361,3 +361,5 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 fitness_list[pred_score_index] = 0.0
 
         return tuple(fitness_list)
+
+

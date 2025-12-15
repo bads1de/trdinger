@@ -89,3 +89,5 @@ class RiskRewardCalculator(BaseTPSLCalculator):
                 "risk_reward_ratio": 2.0,
             },
         )
+
+

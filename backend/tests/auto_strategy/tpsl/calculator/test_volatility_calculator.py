@@ -107,3 +107,5 @@ class TestVolatilityCalculator:
 
         assert result.expected_performance["type"] == "volatility_fallback"
         assert result.confidence_score == 0.5
+
+

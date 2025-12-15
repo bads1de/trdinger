@@ -318,3 +318,5 @@ class TestDEAPSetup:
         """セットアップ前の個体クラス取得テスト"""
         individual_class = deap_setup.get_individual_class()
         assert individual_class is None
+
+

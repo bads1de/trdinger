@@ -154,3 +154,5 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
 
 # 後方互換性のためのクラス別名
 CryptoFeatures = CryptoFeatureCalculator
+
+

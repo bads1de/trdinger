@@ -268,3 +268,5 @@ class TestMinDifferenceConstraint:
         invalid_params = {"fast": 10, "slow": 12}  # diff = 2
         is_valid, errors = config.validate_constraints(invalid_params)
         assert is_valid is False
+
+

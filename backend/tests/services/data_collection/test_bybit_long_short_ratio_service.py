@@ -391,3 +391,5 @@ class TestSymbolConversion:
         call_kwargs = mock_exchange.publicGetV5MarketAccountRatio.call_args.kwargs
         params = call_kwargs.get("params")
         assert params["symbol"] == "BTCUSDT"
+
+

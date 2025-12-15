@@ -614,3 +614,5 @@ class TechnicalIndicatorService:
                 "scale_type": config.scale_type.value if config.scale_type else None,
             }
         return infos
+
+

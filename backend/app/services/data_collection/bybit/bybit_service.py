@@ -761,3 +761,5 @@ class BybitService(ABC):
         except Exception as e:
             logger.error(f"{config.log_prefix}データのDB保存エラー: {e}")
             raise
+
+

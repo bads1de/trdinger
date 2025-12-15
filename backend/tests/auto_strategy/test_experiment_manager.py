@@ -105,3 +105,5 @@ class TestExperimentManager:
         self.manager.persistence_service.stop_experiment.assert_called_once_with(
             "test_exp_001"
         )
+
+

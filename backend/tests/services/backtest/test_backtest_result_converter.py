@@ -663,3 +663,5 @@ class TestErrorHandling:
 
         equity_curve = converter._convert_equity_curve(stats)
         assert len(equity_curve) == 0
+
+

@@ -201,3 +201,5 @@ class MLConfigManager:
 
 # グローバルインスタンス
 ml_config_manager = MLConfigManager()
+
+

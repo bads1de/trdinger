@@ -34,3 +34,5 @@ class InteractionFeatureCalculator:
     def get_feature_names(self) -> List[str]:
         """生成される特徴量名のリストを取得"""
         return []
+
+

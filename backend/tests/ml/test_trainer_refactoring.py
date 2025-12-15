@@ -137,3 +137,4 @@ class TestTrainerRefactoring:
 
         fi_ens = trainer_ens.get_feature_importance()
         assert fi_ens == {"f1": 0.7, "f2": 0.3}
+

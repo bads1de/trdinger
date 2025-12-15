@@ -648,3 +648,5 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "ADX",
             "AROONOSC",
         ]
+
+

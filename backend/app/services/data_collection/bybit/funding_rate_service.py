@@ -158,3 +158,5 @@ class BybitFundingRateService(BybitService):
         return await self._save_data_to_database(
             funding_history, symbol, repository, self.config
         )
+
+

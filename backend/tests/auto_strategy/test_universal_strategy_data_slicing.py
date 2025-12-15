@@ -16,7 +16,7 @@ from app.services.auto_strategy.models import (
     TPSLGene,
     TPSLMethod,
 )
-from app.services.auto_strategy.models.condition import Condition
+from app.services.auto_strategy.models.conditions import Condition
 
 
 class TestTPSLDataSlicing:
@@ -280,3 +280,5 @@ class TestTPSLDataSliceCalculation:
         """
         # True Range 計算には最低でも (atr_period + 1) 本のデータが必要
         assert atr_period + 1 == expected_min_slice
+
+

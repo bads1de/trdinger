@@ -346,3 +346,5 @@ class BacktestResultRepository(BaseRepository):
             return [self.to_dict(result) for result in results]
 
         return _get_recent_results()
+
+

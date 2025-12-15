@@ -154,3 +154,5 @@ class TestTPSLService:
 
         assert service._validate_percentage(0.1, "SL") is True
         assert service._validate_percentage(-0.1, "SL") is False
+
+

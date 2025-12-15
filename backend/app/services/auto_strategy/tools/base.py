@@ -109,3 +109,5 @@ class BaseTool(ABC):
         """
         # デフォルトは変異なし
         return params.copy()
+
+

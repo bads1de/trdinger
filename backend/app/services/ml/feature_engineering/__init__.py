@@ -8,3 +8,5 @@ OHLCV、ファンディングレート、建玉残高データを活用した
 from .feature_engineering_service import FeatureEngineeringService
 
 __all__ = ["FeatureEngineeringService"]
+
+

@@ -234,3 +234,5 @@ class TestNewIndicatorsIntegration:
         # 合理的なパフォーマンスであるか確認（10回実行で1秒以内）
         assert vhf_time < 1.0, f"VHFが遅すぎ: {vhf_time:.3f}秒"
         assert bias_time < 1.0, f"BIASが遅すぎ: {bias_time:.3f}秒"
+
+

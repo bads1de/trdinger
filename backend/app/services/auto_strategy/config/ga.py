@@ -241,3 +241,5 @@ class GASettings(BaseConfig):
         defaults = self.get_default_values_from_fields()
         # 必要に応じてカスタマイズ（外部定数など）
         return defaults
+
+

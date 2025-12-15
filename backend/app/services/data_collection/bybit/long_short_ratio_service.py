@@ -252,3 +252,5 @@ class BybitLongShortRatioService(BybitService):
         except Exception as e:
             logger.error(f"LS比率履歴データ収集エラー: {e}")
             return total_saved
+
+

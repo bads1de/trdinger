@@ -179,3 +179,5 @@ class MicrostructureFeatureCalculator:
 
         # 指定ウィンドウで平滑化
         return pd.Series(spread, index=df.index).rolling(window=window).mean()
+
+

@@ -75,3 +75,5 @@ class BaseDataCollectionOrchestrationService:
             APIレスポンス辞書
         """
         return api_response(success=True, message=message, data=data)
+
+

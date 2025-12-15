@@ -114,3 +114,4 @@ class TestTripleBarrierATRPreset:
         # ケース2 (i=70): RANGE
         # ATRは約5.0。変動+3.0は 0.6倍 < 1.0倍(PT)。よってRANGE。
         assert labels.iloc[70] == "RANGE", f"高ボラティリティ時(ATR約5.0)、+3.0変動はRANGEであるべき。結果: {labels.iloc[70]}"
+

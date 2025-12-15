@@ -2080,3 +2080,5 @@ class TestOriginalIndicators:
 if __name__ == "__main__":
     # コマンドラインからの実行用
     pytest.main([__file__, "-v"])
+
+

@@ -501,3 +501,4 @@ class TestSymbolNormalization:
                     db_session=mock_db_session,
                 )
                 assert result["success"] is True
+

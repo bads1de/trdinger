@@ -234,3 +234,5 @@ class BacktestOrchestrationService:
                 backtest_service.cleanup()
 
         return _get_supported_strategies()
+
+

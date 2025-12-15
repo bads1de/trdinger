@@ -93,3 +93,5 @@ class TestIndicatorUtils:
         assert "SMA" in valid
         assert "RSI" in valid
         assert "OBV" in valid
+
+

@@ -84,3 +84,5 @@ class TestDelegation:
         serializer.json_converter.json_to_strategy_gene.assert_called_once_with(
             json_str, cls
         )
+
+

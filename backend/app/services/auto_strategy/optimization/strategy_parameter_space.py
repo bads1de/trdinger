@@ -14,7 +14,7 @@ from app.services.indicators.config.indicator_config import (
 )
 from app.services.ml.optimization.optuna_optimizer import ParameterSpace
 
-from ..models.condition import Condition, ConditionGroup
+from ..models.conditions import Condition, ConditionGroup
 from ..models.indicator_gene import IndicatorGene
 from ..models.strategy_gene import StrategyGene
 from ..models.tpsl_gene import TPSLGene
@@ -341,3 +341,5 @@ class StrategyParameterSpace:
                         else:
                             condition.right_operand = float(params[param_key])
                     threshold_idx += 1
+
+

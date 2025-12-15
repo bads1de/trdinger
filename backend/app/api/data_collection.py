@@ -254,3 +254,5 @@ async def collect_historical_oi_data(
         )
 
     return await ErrorHandler.safe_execute_async(_execute)
+
+

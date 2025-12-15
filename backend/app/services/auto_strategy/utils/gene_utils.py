@@ -465,3 +465,5 @@ normalize_parameter = GeneUtils.normalize_parameter
 # GeneticUtilsの便利関数
 create_child_metadata = GeneticUtils.create_child_metadata
 prepare_crossover_metadata = GeneticUtils.prepare_crossover_metadata
+
+

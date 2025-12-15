@@ -769,3 +769,5 @@ class FitnessSharing:
             return 1.0  # 半径内では完全共有
         else:
             return 0.0  # 半径外では共有なし
+
+

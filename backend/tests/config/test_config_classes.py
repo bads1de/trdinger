@@ -659,3 +659,5 @@ class TestGAConfigRuntime:
         assert any("個体数は数値である必要があります" in e for e in errors)
 
 
+
+

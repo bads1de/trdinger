@@ -481,3 +481,5 @@ def get_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
         info["feature_names_out"] = None
 
     return info
+
+

@@ -512,3 +512,5 @@ class TestJsonSafeConversion:
 
         assert isinstance(result, list)
         assert isinstance(result[0], str)
+
+

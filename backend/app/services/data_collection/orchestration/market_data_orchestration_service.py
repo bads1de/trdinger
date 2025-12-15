@@ -60,3 +60,5 @@ class MarketDataOrchestrationService:
             data={"ohlcv_data": ohlcv_data, "symbol": symbol, "timeframe": timeframe},
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
         )
+
+

@@ -44,3 +44,5 @@ class CalculatorFactory:
             "fixed_ratio": "固定比率",
             "fixed_quantity": "固定枚数",
         }
+
+

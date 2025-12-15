@@ -114,3 +114,5 @@ def test_calculate_features_integration(sample_ohlcv_data):
 
     for feature in expected_features:
         assert feature in result.columns, f"Missing feature: {feature}"
+
+

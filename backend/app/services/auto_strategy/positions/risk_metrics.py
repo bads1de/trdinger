@@ -51,3 +51,5 @@ def calculate_expected_shortfall(returns: Iterable[float], confidence: float) ->
 
     clipped = np.minimum(tail_losses, 0.0)
     return float(abs(clipped.mean()))
+
+

@@ -330,3 +330,5 @@ class BaseGradientBoostingModel(ABC):
         return get_feature_importance_unified(
             self.model, self.feature_columns or [], top_n=top_n
         )
+
+

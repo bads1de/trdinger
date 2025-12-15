@@ -319,3 +319,5 @@ class TestCombinedSignals:
 
         # BB + Volume の方が多いか同じイベント数を持つ
         assert len(bb_volume) >= len(bb_only)
+
+

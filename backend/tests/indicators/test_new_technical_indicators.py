@@ -385,3 +385,5 @@ def test_vortex_returns_plus_and_minus(
         assert isinstance(series, np.ndarray)
         assert series.shape[0] == len(sample_ohlcv)
         assert np.all(np.isfinite(series[-5:]))
+
+

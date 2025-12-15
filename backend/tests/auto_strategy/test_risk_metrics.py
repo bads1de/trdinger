@@ -52,3 +52,4 @@ def test_calculate_trade_frequency_penalty_uses_trades_per_day() -> None:
     # 40回の取引 / 10日間 => 4回/日, tanh(4/8) ~= 0.4621
     # 基準となる取引回数(REFERENCE_TRADES_PER_DAY)は8.0と仮定
     assert penalty == pytest.approx(0.4621, rel=1e-4)
+

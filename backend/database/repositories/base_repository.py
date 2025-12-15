@@ -727,3 +727,5 @@ class BaseRepository(Generic[T]):
         except Exception as e:
             logger.error(f"レコード検証エラー ({self.model_class.__name__}): {e}")
             return False
+
+

@@ -223,3 +223,5 @@ class DataProcessor:
 
 # グローバルインスタンス（後方互換性維持）
 data_processor = DataProcessor()
+
+

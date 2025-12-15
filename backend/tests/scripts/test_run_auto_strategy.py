@@ -364,3 +364,5 @@ class TestParseArgs:
             args = run_auto_strategy.parse_args()
 
         assert args.no_parallel is True
+
+

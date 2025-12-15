@@ -103,3 +103,5 @@ class TestMTFStrategy:
 
         rsi = next(i for i in mtf_indicators if i.type == "RSI")
         assert rsi.timeframe == higher_tf
+
+

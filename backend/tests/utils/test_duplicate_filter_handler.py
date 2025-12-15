@@ -515,3 +515,5 @@ class TestDuplicateFilterEdgeCases:
         # 負のインターバルでも動作（全て通過）
         assert filter_instance.filter(record) is True
         assert filter_instance.filter(record) is True
+
+

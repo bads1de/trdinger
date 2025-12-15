@@ -96,3 +96,5 @@ class BaseTPSLCalculator(ABC):
             expected_performance=expected_performance or {},
             metadata=metadata or {},
         )
+
+

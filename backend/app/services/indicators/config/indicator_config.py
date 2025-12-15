@@ -378,3 +378,5 @@ initialize_all_indicators()
 
 # 動的設定初期化（レジストリから生成）
 POSITIONAL_DATA_FUNCTIONS = generate_positional_functions()
+
+

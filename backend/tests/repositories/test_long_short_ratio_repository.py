@@ -141,3 +141,5 @@ def test_get_ratio_dataframe(repository, mock_session):
     assert not df.empty
     assert "ls_ratio" in df.columns
     assert df.iloc[0]["ls_ratio"] == pytest.approx(1.5)
+
+

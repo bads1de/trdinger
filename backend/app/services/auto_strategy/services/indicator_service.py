@@ -330,3 +330,5 @@ class IndicatorCalculator:
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")
 
         _init_indicator()
+
+

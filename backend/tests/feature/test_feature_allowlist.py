@@ -65,3 +65,5 @@ class TestFeatureAllowlist:
 
         # 何らかの特徴量が生成されることを確認
         assert len(result.columns) >= len(sample_ohlcv_data.columns)
+
+

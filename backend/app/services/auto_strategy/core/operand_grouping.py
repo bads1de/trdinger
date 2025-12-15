@@ -386,3 +386,5 @@ def validate_condition(left_operand: str, right_operand) -> Tuple[bool, str]:
         (妥当性, 理由)のタプル
     """
     return operand_grouping_system.validate_condition(left_operand, right_operand)
+
+

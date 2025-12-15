@@ -160,3 +160,5 @@ async def get_data_status(
     return await ErrorHandler.safe_execute_async(
         _get_status, message="データステータスの取得中にエラーが発生しました"
     )
+
+

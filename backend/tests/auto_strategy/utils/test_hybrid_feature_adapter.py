@@ -128,3 +128,5 @@ class TestHybridFeatureAdapter:
         # Verify adapter instantiates BaseMLTrainer lazily
         assert adapter._preprocess_trainer is not None
         assert isinstance(processed, pd.DataFrame)
+
+

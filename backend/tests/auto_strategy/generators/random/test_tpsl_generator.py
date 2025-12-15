@@ -328,3 +328,5 @@ class TestTPSLGeneMethodConstraintsEdgeCases:
         # 属性がなくてもエラーにならないことを確認
         result = generator.generate_tpsl_gene()
         assert result is not None
+
+

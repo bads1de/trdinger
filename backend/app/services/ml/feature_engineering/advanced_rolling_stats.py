@@ -218,3 +218,5 @@ class AdvancedRollingStatsCalculator:
                     result.iloc[i] = weighted_skew
 
         return result.fillna(0)
+
+

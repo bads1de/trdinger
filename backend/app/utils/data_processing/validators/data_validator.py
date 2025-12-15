@@ -148,3 +148,5 @@ def validate_data_integrity(df: pd.DataFrame) -> bool:
         pass  # 補間処理されるため無視
 
     return True
+
+

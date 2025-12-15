@@ -152,3 +152,5 @@ def check_db_initialized():
     except Exception as e:
         logger.error(f"データベース初期化チェックエラー: {e}")
         return False
+
+

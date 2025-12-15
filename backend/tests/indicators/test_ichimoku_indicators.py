@@ -247,3 +247,5 @@ class TestIchimokuIndicators:
             assert isinstance(result[component], pd.Series)
             # NaNが適切に処理されていることを確認
             assert len(result[component]) == len(sample_data)
+
+

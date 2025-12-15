@@ -229,3 +229,5 @@ class OpenInterestDataConverter:
             db_records.append(db_record)
 
         return db_records
+
+

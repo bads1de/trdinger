@@ -61,3 +61,5 @@ class LSTMModel(BaseRNNModel):
         return LSTMClassifier(
             self.input_dim, self.hidden_dim, self.num_layers, self.dropout
         )
+
+

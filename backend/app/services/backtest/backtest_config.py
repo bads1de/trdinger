@@ -71,3 +71,5 @@ class BacktestConfig(BaseModel):
 
                 return pd.to_datetime(v).to_pydatetime()
         return v
+
+

@@ -621,3 +621,5 @@ class TestTPSLService:
         )
         assert sl_none is None
         assert tp2 == pytest.approx(tp_price)
+
+

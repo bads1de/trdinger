@@ -422,3 +422,5 @@ class GeneratedStrategy(Base):
             f"generation={self.generation}, "
             f"fitness={fitness_str})>"
         )
+
+

@@ -83,3 +83,5 @@ def test_evaluate(sample_data):
     assert "improvement_precision" in metrics
     assert metrics["meta_precision"] >= 0.0
     assert metrics["meta_precision"] <= 1.0
+
+

@@ -282,3 +282,5 @@ class TestGAConfigPresetSetting:
         # from_dict でデシリアライズ
         restored_config = GAConfig.from_dict(config_dict)
         assert restored_config.parameter_range_preset == "short_term"
+
+

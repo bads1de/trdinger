@@ -115,3 +115,5 @@ class TestGRUModel:
         # 最初のシーケンスの中身確認
         # X.values[0:5] と一致するはず
         np.testing.assert_array_equal(sequences[0], X.values[0:seq_len])
+
+

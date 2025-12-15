@@ -166,3 +166,5 @@ class TestYamlIndicatorUtils:
             yaml_config, config, "long", context_missing
         )
         assert val_missing is None
+
+

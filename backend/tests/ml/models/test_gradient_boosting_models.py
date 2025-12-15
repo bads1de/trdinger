@@ -138,3 +138,4 @@ class TestGradientBoostingModels:
         assert preds.shape == (10,)
         expected_preds = np.argmax(mock_probas, axis=1)
         assert np.array_equal(preds, expected_preds)
+

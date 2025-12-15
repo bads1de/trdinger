@@ -144,3 +144,5 @@ class TestIndicatorCalculator:
         gene = IndicatorGene(type="SMA", parameters={}, enabled=True)
         with pytest.raises(ValueError, match="戦略インスタンスがNone"):
             calculator.init_indicator(gene, None)
+
+

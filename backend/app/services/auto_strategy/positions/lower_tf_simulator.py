@@ -185,3 +185,5 @@ class LowerTimeframeSimulator:
             return minute_data.loc[mask]
 
         return minute_data
+
+

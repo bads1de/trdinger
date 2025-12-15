@@ -437,3 +437,5 @@ class PositionSizingService:
         except Exception as e:
             self.logger.warning(f"高速ポジションサイズ計算エラー: {e}")
             return 0.01  # デフォルトサイズ
+
+

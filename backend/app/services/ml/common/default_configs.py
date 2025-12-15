@@ -73,3 +73,5 @@ def get_default_single_model_config() -> Dict[str, Any]:
         'lightgbm'
     """
     return DefaultTrainingConfigs.get_default_single_model_config()
+
+

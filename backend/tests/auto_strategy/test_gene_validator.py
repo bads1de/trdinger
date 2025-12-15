@@ -198,3 +198,5 @@ class TestGeneValidatorBasic:
         indicator = IndicatorGene(type="SMA", parameters={"period": 0}, enabled=True)
 
         assert validator.validate_indicator_gene(indicator) is False
+
+

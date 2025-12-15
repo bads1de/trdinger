@@ -12,3 +12,5 @@ class ThresholdMethod(Enum):
 
     TRIPLE_BARRIER = "triple_barrier"  # Triple Barrier Method (利確/損切り/時間切れ)
     TREND_SCANNING = "trend_scanning"  # Trend Scanning Method (t値によるトレンド判定)
+
+

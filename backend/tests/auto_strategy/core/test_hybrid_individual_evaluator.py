@@ -678,3 +678,5 @@ class TestShouldApplyPreprocessing:
         config = Mock(spec=[])  # preprocess_features属性なし
 
         assert evaluator._should_apply_preprocessing(config) is True
+
+

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import pandas as pd
-from app.services.auto_strategy.models.condition import Condition, ConditionGroup
+from app.services.auto_strategy.models.conditions import Condition, ConditionGroup
 from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.models.validator import GeneValidator
 from app.services.auto_strategy.models.strategy_gene import StrategyGene
@@ -137,3 +137,5 @@ def test_hierarchical_mutation_safety():
                     "AND",
                     "OR",
                 ], f"Operator was corrupted to: {mutated_group.operator}"
+
+

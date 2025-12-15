@@ -56,3 +56,5 @@ def downgrade() -> None:
     op.drop_index('idx_ls_symbol_period_timestamp', table_name='long_short_ratio_data')
     op.drop_table('long_short_ratio_data')
     # ### end Alembic commands ###
+
+

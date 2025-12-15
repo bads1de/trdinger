@@ -274,3 +274,4 @@ class TestParallelEvaluatorImprovements:
 
         # タイムアウトまたは成功のいずれかの結果が返る
         assert len(results) == 1
+

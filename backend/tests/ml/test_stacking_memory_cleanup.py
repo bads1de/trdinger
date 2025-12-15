@@ -142,3 +142,5 @@ class TestStackingMemoryCleanup:
 
                 # clear_training_dataが呼ばれたことを確認
                 mock_instance.clear_training_data.assert_called_once()
+
+

@@ -228,3 +228,5 @@ def test_start_background_task_added(auto_strategy_service, mock_experiment_mana
     task = background_tasks.tasks[0]
     assert task.func == mock_experiment_manager.run_experiment
     assert task.args == (experiment_id, ga_config, backtest_config)
+
+

@@ -402,3 +402,5 @@ class TestPeriodsValidation:
             params={"symbol": "BTC/USDT:USDT", "period": period},
         )
         assert response.status_code == 200
+
+

@@ -115,3 +115,5 @@ class DEAPSetup:
     def get_individual_class(self):
         """個体クラスを取得"""
         return self.Individual
+
+

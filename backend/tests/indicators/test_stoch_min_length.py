@@ -41,3 +41,5 @@ class TestStochMinLength:
         min_length = stoch_config.min_length_func({})
         expected = 14 + 3 + 3  # デフォルト値の合計
         assert min_length == expected, f"Expected {expected}, got {min_length}"
+
+

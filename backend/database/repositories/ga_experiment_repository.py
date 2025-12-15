@@ -217,3 +217,5 @@ class GAExperimentRepository(BaseRepository):
             return deleted_count
 
         return _delete_all_experiments()
+
+

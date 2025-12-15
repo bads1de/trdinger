@@ -154,3 +154,5 @@ def calculate_realized_volatility(
     vol = vol * np.sqrt(periods_per_day)
 
     return vol
+
+

@@ -405,3 +405,5 @@ class TestNewOriginalIndicators:
         assert "CHAOS_FRACTAL_DIM" in result.columns
         assert "CTFD_SIGNAL" in result.columns
         assert len(result) == len(data)
+
+

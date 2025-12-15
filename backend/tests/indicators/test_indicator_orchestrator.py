@@ -268,3 +268,5 @@ class TestTechnicalIndicatorService:
         ):
             with pytest.raises(Exception):
                 indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
+
+

@@ -649,3 +649,5 @@ class TestGetSafeThreshold:
             result = generator._get_safe_threshold("invalid_key", [0, 100])
 
         assert result == 50.0
+
+

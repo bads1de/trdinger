@@ -629,3 +629,5 @@ class TestValidationErrorDetails:
         assert hasattr(error, "errors")
         assert isinstance(error.errors, list)
         assert len(error.errors) > 0
+
+

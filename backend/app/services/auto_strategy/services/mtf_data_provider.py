@@ -233,3 +233,5 @@ class MultiTimeframeDataProvider:
     def cached_timeframes(self) -> List[str]:
         """キャッシュされているタイムフレームのリスト"""
         return list(self._cache.keys())
+
+

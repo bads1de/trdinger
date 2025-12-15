@@ -552,3 +552,5 @@ class BacktestResultConverter:
                 return pd.to_datetime(value).to_pydatetime()
         except Exception:
             return None
+
+

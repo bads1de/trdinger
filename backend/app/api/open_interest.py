@@ -138,3 +138,5 @@ async def bulk_collect_open_interest(
     return await ErrorHandler.safe_execute_async(
         _bulk_collect, message="オープンインタレスト一括収集エラー"
     )
+
+

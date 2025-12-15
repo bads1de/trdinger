@@ -182,3 +182,5 @@ class TestE2EFlow:
 
         # 完了ステータス更新
         mock_persistence_service.complete_experiment.assert_called_with(experiment_id)
+
+

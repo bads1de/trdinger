@@ -247,3 +247,5 @@ class IndicatorGenerator:
         )
 
         return indicators
+
+

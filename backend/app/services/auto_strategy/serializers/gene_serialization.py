@@ -111,3 +111,5 @@ class GeneSerializer:
     def encode_strategy_gene_to_list(self, strategy_gene):
         """戦略遺伝子を数値リストにエンコード（旧GeneEncoder.encode_strategy_gene_to_list）"""
         return self.to_list(strategy_gene)
+
+

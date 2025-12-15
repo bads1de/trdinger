@@ -637,3 +637,5 @@ class TestMLBugDetection:
 
         # 検出されたバグの重要度
         assert len(bugs_detected) > 0
+
+

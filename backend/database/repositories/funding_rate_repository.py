@@ -298,3 +298,5 @@ class FundingRateRepository(BaseRepository):
             column_mapping=column_mapping,
             index_column="funding_timestamp",
         )
+
+

@@ -139,3 +139,5 @@ class TestModelCapacity:
         assert (
             prec > 0.8
         ), "Balanced設定でも明確なパターンならPrecisionは維持されるべきです"
+
+

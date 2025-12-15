@@ -627,3 +627,5 @@ class TestConditionEvolverWithParallelization:
         # 結果の基本的な構造を確認
         assert "best_condition" in result
         assert "best_fitness" in result
+
+

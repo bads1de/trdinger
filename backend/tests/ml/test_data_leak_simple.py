@@ -187,3 +187,5 @@ if __name__ == "__main__":
         print(f"❌ テスト失敗: {e}")
         print("=" * 60)
         raise
+
+

@@ -214,3 +214,5 @@ class OperandGenerator:
                 return random.uniform(range_[0], range_[1])
         # フォールバック
         return random.uniform(default_range[0], default_range[1])
+
+

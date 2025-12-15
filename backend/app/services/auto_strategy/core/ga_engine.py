@@ -505,3 +505,5 @@ class GeneticAlgorithmEngine:
             logger.warning(f"パラメータチューニング中にエラーが発生: {e}")
             # エラー時は元の遺伝子を返す
             return best_gene
+
+

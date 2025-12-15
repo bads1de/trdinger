@@ -89,3 +89,5 @@ for category, features in categories.items():
 
 total = sum(len(f) for f in categories.values())
 print(f"\n合計（カテゴリ別集計）: {total}個")
+
+

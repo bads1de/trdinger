@@ -175,3 +175,5 @@ class CatBoostModel(BaseGradientBoostingModel):
         モデルから生の予測値（確率）を取得します。
         """
         return self.model.predict_proba(data)
+
+

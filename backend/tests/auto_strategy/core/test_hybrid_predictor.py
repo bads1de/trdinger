@@ -240,3 +240,5 @@ class TestHybridPredictor:
         assert len(info["models"]) == 2
         assert info["models"][0]["acc"] == 0.8
         assert info["models"][1]["acc"] == 0.85
+
+

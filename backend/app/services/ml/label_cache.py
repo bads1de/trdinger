@@ -218,3 +218,5 @@ class LabelCache:
             "cache_size": len(self.cache),
             "hit_rate_pct": self.get_hit_rate(),
         }
+
+

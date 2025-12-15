@@ -375,3 +375,5 @@ class ComplexConditionsStrategy(ConditionStrategy):
                 i += 1
 
         return structured
+
+

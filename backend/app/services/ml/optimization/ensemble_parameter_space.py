@@ -141,3 +141,5 @@ class EnsembleParameterSpace:
             ),
             "stacking_cv_folds": trial.suggest_int("stacking_cv_folds", 3, 10),
         }
+
+

@@ -123,3 +123,5 @@ class TestPendingOrder:
         assert order.is_short() is True
         assert order.is_limit_order() is True
         assert order.is_stop_order() is True
+
+

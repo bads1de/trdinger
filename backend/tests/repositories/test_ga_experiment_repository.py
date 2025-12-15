@@ -242,3 +242,5 @@ class TestErrorHandling:
 
         with pytest.raises(Exception):
             repository.create_experiment("test", {}, 100)
+
+

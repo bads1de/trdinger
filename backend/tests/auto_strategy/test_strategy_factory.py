@@ -23,7 +23,7 @@ class TestStrategyFactory:
 
     def test_create_strategy_class_success(self):
         """正常な戦略クラスの生成テスト"""
-        from app.services.auto_strategy.models.condition import Condition
+        from app.services.auto_strategy.models.conditions import Condition
 
         # 有効な戦略遺伝子を作成（最低限のエントリー条件とイグジット条件を設定）
         gene = StrategyGene(
@@ -78,7 +78,7 @@ class TestStrategyFactory:
     )
     def test_indicator_initialization_failure(self, mock_indicator_calculator):
         """指標初期化失敗時のテスト"""
-        from app.services.auto_strategy.models.condition import Condition
+        from app.services.auto_strategy.models.conditions import Condition
 
         # IndicatorCalculatorのモックを設定
         mock_instance = Mock()
@@ -122,7 +122,7 @@ class TestStrategyFactory:
 
     def test_strategy_execution_with_valid_conditions(self):
         """有効な条件での戦略実行テスト"""
-        from app.services.auto_strategy.models.condition import Condition
+        from app.services.auto_strategy.models.conditions import Condition
 
         # 有効な戦略遺伝子を作成
         gene = StrategyGene(
@@ -160,7 +160,7 @@ class TestStrategyFactory:
 
     def test_position_size_calculation_fallback(self):
         """ポジションサイズ計算のフォールバックテスト"""
-        from app.services.auto_strategy.models.condition import Condition
+        from app.services.auto_strategy.models.conditions import Condition
 
         # PositionSizingGeneなしの戦略遺伝子
         gene = StrategyGene(
@@ -200,7 +200,7 @@ class TestStrategyFactory:
 
     def test_validate_gene_method(self):
         """validate_geneメソッドのテスト"""
-        from app.services.auto_strategy.models.condition import Condition
+        from app.services.auto_strategy.models.conditions import Condition
 
         # 有効な遺伝子
         valid_gene = StrategyGene(
@@ -240,3 +240,5 @@ class TestStrategyFactory:
         is_valid, errors = self.factory.validate_gene(invalid_gene)
         assert not is_valid  # 無効な遺伝子なのでfalseになるはず
         assert len(errors) > 0
+
+

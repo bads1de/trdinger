@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.models.condition import Condition
+from app.services.auto_strategy.models.conditions import Condition
 from app.services.auto_strategy.models.indicator_gene import IndicatorGene
 from app.services.auto_strategy.models.strategy_gene import StrategyGene
 from app.services.ml.exceptions import MLFeatureError
@@ -298,3 +298,5 @@ class TestHybridFeatureAdapter:
 
         features_df = adapter.gene_to_features(restored_gene, ohlcv_data)
         assert isinstance(features_df, pd.DataFrame)
+
+

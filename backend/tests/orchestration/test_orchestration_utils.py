@@ -339,3 +339,5 @@ class TestGetModelInfoWithDefaults:
         assert result["file_size_mb"] == 3.0
         assert result["num_classes"] == 2  # デフォルト値
         assert result["best_iteration"] == 0  # デフォルト値
+
+

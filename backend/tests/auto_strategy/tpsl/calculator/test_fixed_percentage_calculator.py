@@ -62,3 +62,5 @@ class TestFixedPercentageCalculator:
         # Default in code: sl=0.03, tp=0.06
         assert result.stop_loss_pct == 0.03
         assert result.take_profit_pct == 0.06
+
+

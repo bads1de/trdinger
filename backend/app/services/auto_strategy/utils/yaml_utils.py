@@ -440,3 +440,5 @@ class YamlLoadUtils:
         """
         indicators = yaml_config.get("indicators", {})
         return list(indicators.keys())
+
+

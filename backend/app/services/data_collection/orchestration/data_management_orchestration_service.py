@@ -465,3 +465,5 @@ class DataManagementOrchestrationService:
                 message=f"データステータス取得中にエラーが発生しました: {str(e)}",
                 details={"error": str(e)},
             )
+
+

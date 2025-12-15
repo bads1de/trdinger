@@ -104,3 +104,5 @@ class TestVolumeProfileFeatures:
         # Assert is strict now. 2000 rows should take milliseconds with Numba.
         # Allowing 1.0s to be safe on CI envs.
         assert duration < 1.0
+
+

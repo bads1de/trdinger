@@ -142,3 +142,5 @@ class TestUnifiedTPSLGenerator:
         # Based on _create_adaptive_strategy returning FixedPercentageStrategy
         assert res.method_used == "fixed_percentage"
         assert res.stop_loss_pct == 0.04
+
+

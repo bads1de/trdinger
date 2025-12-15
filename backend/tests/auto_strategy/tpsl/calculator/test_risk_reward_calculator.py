@@ -60,3 +60,5 @@ class TestRiskRewardCalculator:
         # Defaults: sl=0.03, ratio=2.0
         assert result.stop_loss_pct == 0.03
         assert result.take_profit_pct == 0.06
+
+

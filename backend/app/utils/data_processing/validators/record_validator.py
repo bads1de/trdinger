@@ -121,3 +121,5 @@ class RecordValidator:
 
 # 後方互換性のためのエイリアス
 DataValidator = RecordValidator
+
+

@@ -377,3 +377,5 @@ def downgrade() -> None:
     op.drop_index("idx_backtest_created_at", table_name="backtest_results")
     op.drop_table("backtest_results")
     # ### end Alembic commands ###
+
+

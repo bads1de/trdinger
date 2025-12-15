@@ -16,3 +16,5 @@ Pythonモジュールが含まれています。
 作成者: Trdinger Development Team
 バージョン: 2.0.0 (backtesting.py統一版)
 """
+
+

@@ -143,3 +143,5 @@ def get_model_info_with_defaults(
         "feature_importance": metadata.get("feature_importance", {}),
         "classification_report": metadata.get("classification_report", {}),
     }
+
+

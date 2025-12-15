@@ -60,3 +60,5 @@ class GRUModel(BaseRNNModel):
         return GRUClassifier(
             self.input_dim, self.hidden_dim, self.num_layers, self.dropout
         )
+
+

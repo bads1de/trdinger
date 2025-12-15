@@ -280,3 +280,5 @@ def get_data_service(db: Session = Depends(get_db)) -> BacktestDataService:
     oi_repo = OpenInterestRepository(db)
     fr_repo = FundingRateRepository(db)
     return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
+
+

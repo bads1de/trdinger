@@ -130,3 +130,5 @@ class TestGenerateFallbackCondition:
         generator = ConditionGenerator(Mock())
         condition = generator._generate_fallback_condition("exit")
         assert condition.operator == "<"
+
+

@@ -69,3 +69,5 @@ class TestStructuredEvolution:
         # 簡単な実装では、型が違う場合は交叉しない
         assert isinstance(child1, Condition)
         assert isinstance(child2, ConditionGroup)
+
+

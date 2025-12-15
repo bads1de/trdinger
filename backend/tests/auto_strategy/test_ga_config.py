@@ -95,3 +95,5 @@ class TestGAConfig:
         assert config.adaptive_mutation_rate_increase_multiplier == 1.5
         assert config.valid_condition_operators == ["==", "!="]
 
+
+

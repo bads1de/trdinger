@@ -176,3 +176,5 @@ class BacktestConfigValidator:
                 return datetime.strptime(date_value, "%Y-%m-%d")
         else:
             raise ValueError(f"サポートされていない日付形式: {type(date_value)}")
+
+

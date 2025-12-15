@@ -147,3 +147,5 @@ class StatisticalCalculator(BaseTPSLCalculator):
                 "lookback_period": 150,
             },
         )
+
+

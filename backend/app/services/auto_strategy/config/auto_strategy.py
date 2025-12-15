@@ -73,3 +73,5 @@ class AutoStrategyConfig:
             "tpsl": TPSLSettings().get_default_values(),
             "position_sizing": PositionSizingSettings().get_default_values(),
         }
+
+

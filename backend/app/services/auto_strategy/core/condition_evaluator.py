@@ -325,7 +325,7 @@ class ConditionEvaluator:
         Returns:
             条件成立ならTrue
         """
-        from ..models.stateful_condition import StatefulCondition
+        from ..models.conditions import StatefulCondition
 
         if not isinstance(stateful_condition, StatefulCondition):
             logger.warning(f"不正な型: {type(stateful_condition)}")
@@ -371,7 +371,7 @@ class ConditionEvaluator:
         Returns:
             トリガー条件が成立したか
         """
-        from ..models.stateful_condition import StatefulCondition
+        from ..models.conditions import StatefulCondition
 
         if not isinstance(stateful_condition, StatefulCondition):
             return False
@@ -391,3 +391,5 @@ class ConditionEvaluator:
             logger.debug(f"トリガー記録: {event_name} at bar {current_bar}")
 
         return trigger_result
+
+

@@ -194,3 +194,5 @@ class TestCalculatorFactoryIntegration:
         # インスタンスなしで呼び出せることを確認
         methods = CalculatorFactory.get_available_methods()
         assert methods is not None
+
+

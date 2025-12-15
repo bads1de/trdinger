@@ -193,3 +193,5 @@ class BackgroundTaskManager:
 
 # グローバルインスタンス
 background_task_manager = BackgroundTaskManager()
+
+

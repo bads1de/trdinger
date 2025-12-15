@@ -35,3 +35,5 @@ class EntryType(Enum):
     LIMIT = "limit"  # 指値注文（有利な価格での約定を狙う）
     STOP = "stop"  # 逆指値注文（ブレイクアウト戦略向け）
     STOP_LIMIT = "stop_limit"  # 逆指値指値注文（より精密な制御）
+
+

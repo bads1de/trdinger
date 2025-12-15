@@ -125,3 +125,5 @@ class AdaptiveCalculator(BaseTPSLCalculator):
         except Exception as e:
             logger.error(f"最適方式選択エラー: {e}")
             return "fixed_percentage"
+
+

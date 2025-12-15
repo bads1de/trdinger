@@ -81,3 +81,4 @@ class TestTripleBarrierMetaLabeling:
         
         # ケース3: 時間切れ -> 0
         assert labels.loc[self.close.index[20], 'bin'] == 0.0
+

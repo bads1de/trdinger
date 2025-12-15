@@ -46,3 +46,5 @@ class IndicatorSettings(BaseConfig):
     def get_indicator_characteristics(self, indicator: str) -> Optional[Dict[str, Any]]:
         """特定の指標の特性を取得"""
         return self.indicator_characteristics.get(indicator)
+
+

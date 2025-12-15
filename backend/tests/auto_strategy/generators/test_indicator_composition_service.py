@@ -187,3 +187,5 @@ class TestIndicatorCompositionService:
                 ["SMA", "EMA"], existing_periods
             )
             assert result is not None
+
+

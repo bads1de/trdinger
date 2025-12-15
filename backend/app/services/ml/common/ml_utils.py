@@ -301,3 +301,5 @@ def prepare_data_for_prediction(
     except Exception as e:
         logger.error(f"データ前処理エラー: {e}")
         return features_df
+
+

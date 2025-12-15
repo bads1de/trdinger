@@ -186,3 +186,5 @@ class TestIndicatorGeneratorBasic:
             assert indicator.type is not None
             assert isinstance(indicator.type, str)
             assert len(indicator.type) > 0
+
+

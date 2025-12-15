@@ -202,3 +202,5 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             # ボラティリティ特徴量
             "Parkinson_Vol_20",
         ]
+
+

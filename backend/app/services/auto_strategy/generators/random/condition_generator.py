@@ -80,3 +80,5 @@ class ConditionGenerator:
             return Condition(left_operand="close", operator=">", right_operand="SMA")
         else:
             return Condition(left_operand="close", operator="<", right_operand="SMA")
+
+

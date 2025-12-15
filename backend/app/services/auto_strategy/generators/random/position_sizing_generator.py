@@ -50,3 +50,5 @@ class PositionSizingGenerator:
                 max_position_size=20.0,  # より大きなデフォルト値
                 enabled=True,
             )
+
+

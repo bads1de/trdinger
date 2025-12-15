@@ -96,3 +96,5 @@ def get_t1_series(
 
     t1 = pd.Series(indices + delta, index=indices)
     return t1
+
+

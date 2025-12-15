@@ -63,3 +63,5 @@ class TestAutoStrategyFlow:
 
         # 基本的な構造が維持されていることを確認
         assert len(mutated_child1.indicators) > 0
+
+

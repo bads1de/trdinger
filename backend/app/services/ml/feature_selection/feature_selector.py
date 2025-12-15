@@ -633,3 +633,5 @@ class FeatureSelector:
                 feature_names[: min(5, len(feature_names))] if feature_names else []
             )
             return fallback_features, {"error": str(e)}
+
+

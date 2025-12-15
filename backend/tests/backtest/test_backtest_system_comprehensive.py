@@ -604,3 +604,5 @@ class TestBacktestSystemComprehensive:
 
         # システムが整合している
         assert True
+
+

@@ -241,3 +241,5 @@ class HalfOptimalFCalculator(BaseCalculator):
             }
 
         return _fallback()
+
+

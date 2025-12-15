@@ -142,3 +142,5 @@ class OpenInterestRepository(BaseRepository):
             f"シンボル '{symbol}' のオープンインタレストデータを削除しました: {deleted_count}件"
         )
         return deleted_count
+
+

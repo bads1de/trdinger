@@ -590,3 +590,5 @@ class TestPipelineIntegration:
         # すべての処理が正常に実行される
         assert result is not None
         assert not np.isnan(result).any()
+
+

@@ -82,3 +82,5 @@ class PendingOrder:
     def is_short(self) -> bool:
         """ショート注文かどうか"""
         return self.direction < 0
+
+

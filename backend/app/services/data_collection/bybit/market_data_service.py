@@ -164,3 +164,5 @@ class BybitMarketDataService(BybitService):
                 raise ValueError(
                     f"ローソク足データ[{i}]に負の出来高が含まれています: {candle}"
                 )
+
+

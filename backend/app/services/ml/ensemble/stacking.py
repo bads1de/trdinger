@@ -658,3 +658,5 @@ class StackingEnsemble(BaseEnsemble):
 
         self.is_fitted = False
         logger.info("StackingEnsembleのリソースクリーンアップ完了")
+
+

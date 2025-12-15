@@ -81,3 +81,5 @@ class TestLSTMModel:
         assert isinstance(preds, np.ndarray)
         assert np.all((preds >= 0) & (preds <= 1))
         assert not np.isnan(preds).any()
+
+

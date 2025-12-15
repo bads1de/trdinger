@@ -200,3 +200,5 @@ class TestEnsembleTrainerErrorHandling:
 
         assert len(result) == len(X)
         assert np.all(result == 0)  # 全てNo Trade
+
+

@@ -66,3 +66,5 @@ class TestInteractionFeatureCalculator:
         assert isinstance(feature_names, list)
         # 現在は空リストを返す
         assert len(feature_names) == 0
+
+

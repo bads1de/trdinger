@@ -543,3 +543,5 @@ class TestErrorHandling:
                     start_date=datetime(2024, 1, 5),
                     end_date=datetime(2024, 1, 1),
                 )
+
+

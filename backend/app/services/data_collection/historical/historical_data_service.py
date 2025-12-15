@@ -479,3 +479,5 @@ class HistoricalDataService:
         )
 
         return results
+
+

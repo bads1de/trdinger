@@ -399,3 +399,5 @@ class TestHybridIntegration:
             assert isinstance(signals, dict)
             assert "is_valid" in signals
             assert signals["is_valid"] == 0.5
+
+

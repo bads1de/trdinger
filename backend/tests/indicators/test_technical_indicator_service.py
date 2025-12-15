@@ -135,3 +135,5 @@ class TestTechnicalIndicatorService:
         assert result is not None
         # NaNで埋められた結果が返される
         assert isinstance(result, (np.ndarray, pd.Series, tuple))
+
+

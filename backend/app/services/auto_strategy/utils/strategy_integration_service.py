@@ -320,3 +320,5 @@ class StrategyIntegrationService:
         except Exception as e:
             logger.error(f"戦略取得エラー: {e}", exc_info=True)
             raise
+
+

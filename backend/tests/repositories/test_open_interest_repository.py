@@ -260,3 +260,5 @@ class TestErrorHandling:
             repository.clear_all_open_interest_data()
 
         repository.db.rollback.assert_called()
+
+

@@ -259,3 +259,5 @@ class TestCreateParallelMap:
         assert len(result) == 5
         for i, fitness in enumerate(result):
             assert fitness == (float(i + 1),)
+
+

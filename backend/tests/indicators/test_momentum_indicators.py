@@ -298,3 +298,5 @@ class TestMomentumIndicators:
         except ValueError:
             # PSYがサポートされていない場合はスキップ
             pytest.skip("PSY indicator not supported")
+
+

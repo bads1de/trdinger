@@ -81,3 +81,5 @@ def test_indicator_settings_and_service_support_new_indicators():
     kvo_line, signal_line = kvo_result
     assert len(kvo_line) >= rows - 50
     assert len(signal_line) >= rows - 50
+
+

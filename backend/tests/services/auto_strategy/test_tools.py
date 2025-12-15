@@ -286,3 +286,5 @@ class TestUniversalStrategyToolsIntegration:
 
         # ツール遺伝子がないのでエントリー許可
         assert strategy._tools_block_entry() is False
+
+

@@ -461,3 +461,5 @@ class TestErrorHandling:
 
         # safe_operationによりエラー時は0が返される
         assert result == 0
+
+

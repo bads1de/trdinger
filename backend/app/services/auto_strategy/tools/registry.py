@@ -94,3 +94,5 @@ def register_tool(tool: BaseTool) -> BaseTool:
     """
     tool_registry.register(tool)
     return tool
+
+

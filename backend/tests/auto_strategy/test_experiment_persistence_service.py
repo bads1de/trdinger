@@ -236,3 +236,5 @@ class TestExperimentPersistenceService:
 
                 # バックテスト結果が保存されたか確認
                 mock_bt_repo.save_backtest_result.assert_called_once()
+
+

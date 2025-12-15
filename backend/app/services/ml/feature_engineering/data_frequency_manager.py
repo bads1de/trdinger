@@ -421,3 +421,5 @@ class DataFrequencyManager:
             validation_result["is_valid"] = False
 
         return validation_result
+
+

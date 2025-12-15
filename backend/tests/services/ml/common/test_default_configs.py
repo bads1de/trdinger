@@ -84,3 +84,5 @@ class TestModuleLevelFunctions:
         function_single = get_default_single_model_config()
 
         assert class_single == function_single
+
+

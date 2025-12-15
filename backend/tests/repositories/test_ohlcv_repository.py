@@ -380,3 +380,5 @@ class TestErrorHandling:
             repository.clear_ohlcv_data_by_symbol_and_timeframe("BTC/USDT:USDT", "1h")
 
         repository.db.rollback.assert_called()
+
+

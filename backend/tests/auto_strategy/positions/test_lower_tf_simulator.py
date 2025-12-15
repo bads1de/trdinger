@@ -229,3 +229,5 @@ class TestGetMinuteDataForBar:
             minute_data_up_trend, bar_start, bar_end
         )
         assert len(result) == 0
+
+

@@ -223,3 +223,5 @@ class BaseFeatureCalculator(ABC):
         # ゼロ除算を防ぐ
         ratio = numerator / denominator.replace(0, np.nan)
         return ratio.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
+
+

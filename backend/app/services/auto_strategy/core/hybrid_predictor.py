@@ -383,3 +383,5 @@ class HybridPredictor:
             "down": down / total,
             "range": range_score / total,
         }
+
+

@@ -8,8 +8,8 @@ StatefulCondition のテスト
 import pytest
 from unittest.mock import MagicMock
 
-from app.services.auto_strategy.models.condition import Condition
-from app.services.auto_strategy.models.stateful_condition import (
+from app.services.auto_strategy.models.conditions import (
+    Condition,
     StatefulCondition,
     StateTracker,
 )
@@ -605,3 +605,5 @@ class TestStatefulConditionIntegration:
         assert sc.trigger_condition.left_operand == "RSI"
         assert sc.follow_condition.right_operand == "SMA_20"
         assert sc.lookback_bars == 5
+
+

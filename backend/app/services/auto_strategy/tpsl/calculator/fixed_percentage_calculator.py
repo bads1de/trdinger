@@ -85,3 +85,5 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
             confidence_score=0.5,
             expected_performance={"type": "fixed_percentage_fallback"},
         )
+
+

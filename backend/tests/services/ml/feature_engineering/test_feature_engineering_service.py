@@ -104,3 +104,5 @@ class TestFeatureEngineeringServicePerformance:
 
         # 500行で30秒以内（余裕を持たせた値）
         assert duration < 30.0, f"Processing took too long: {duration:.2f}s"
+
+

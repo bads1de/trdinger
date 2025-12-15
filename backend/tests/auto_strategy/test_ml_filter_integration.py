@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.models.condition import Condition
+from app.services.auto_strategy.models.conditions import Condition
 from app.services.auto_strategy.models import (
     IndicatorGene,
     StrategyGene,
@@ -403,3 +403,5 @@ class TestMLFilterIntegration:
 
             assert isinstance(features, pd.DataFrame)
             assert not features.empty
+
+

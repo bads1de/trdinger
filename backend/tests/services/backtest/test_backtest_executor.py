@@ -744,3 +744,5 @@ class TestErrorHandling:
                     initial_capital=-1000.0,  # 負の値
                     commission_rate=0.001,
                 )
+
+

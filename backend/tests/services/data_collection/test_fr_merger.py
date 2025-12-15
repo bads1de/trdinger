@@ -326,3 +326,5 @@ class TestEdgeCases:
 
         assert "funding_rate" in result.columns
         # merge_asof with backward direction should handle this
+
+

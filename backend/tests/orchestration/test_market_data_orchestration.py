@@ -468,3 +468,5 @@ class TestMultipleSymbols:
 
                 assert result["success"] is True
                 assert result["data"]["symbol"] == symbol
+
+

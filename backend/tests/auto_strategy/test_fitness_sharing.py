@@ -378,3 +378,5 @@ class TestFitnessSharing:
             # Operands: 1 Numeric ('30'), 1 Dynamic ('sma')
             assert vec[-2] == 1.0
             assert vec[-1] == 1.0
+
+

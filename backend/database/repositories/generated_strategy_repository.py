@@ -373,3 +373,5 @@ class GeneratedStrategyRepository(BaseRepository):
             return count
 
         return _unlink_backtest_result()
+
+

@@ -632,3 +632,5 @@ class GAConditionGenerator(ConditionGenerator):
                 f"単一条件最適化エラー ({indicator.type}, {direction}): {e}"
             )
             return None
+
+

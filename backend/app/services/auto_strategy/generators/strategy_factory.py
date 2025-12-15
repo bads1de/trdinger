@@ -74,3 +74,5 @@ class StrategyFactory:
         except Exception as e:
             logger.error(f"遺伝子検証エラー: {e}")
             return False, [f"検証エラー: {str(e)}"]
+
+

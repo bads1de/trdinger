@@ -324,3 +324,5 @@ class TestGAConditionGenerator:
             )
 
             assert result is None  # エラー時はNoneを返す
+
+

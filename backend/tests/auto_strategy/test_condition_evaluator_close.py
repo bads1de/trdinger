@@ -190,3 +190,5 @@ class TestConditionEvaluatorClose:
 
         # 空のグループなのでFalseが返される
         assert not result
+
+

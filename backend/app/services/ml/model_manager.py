@@ -579,3 +579,5 @@ class ModelManager:
 
 # グローバルインスタンス
 model_manager = ModelManager()
+
+

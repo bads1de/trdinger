@@ -523,3 +523,5 @@ class TestErrorHandling:
             repository._delete_all_records()
 
         repository.db.rollback.assert_called()
+
+

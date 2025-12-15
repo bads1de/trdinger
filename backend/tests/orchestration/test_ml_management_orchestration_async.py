@@ -108,3 +108,5 @@ class TestAsyncExecution:
             # list_modelsがthreadpoolで実行されたか確認
             assert mock_run_in_threadpool.call_count >= 1
             assert mock_run_in_threadpool.call_args[0][0] == mock_manager.list_models
+
+

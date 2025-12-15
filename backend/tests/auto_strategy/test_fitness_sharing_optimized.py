@@ -312,3 +312,5 @@ class TestSamplingOptimization:
 
         assert len(niche_counts) == len(vectors)
         assert all(nc >= 1.0 for nc in niche_counts)
+
+

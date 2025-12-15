@@ -150,3 +150,5 @@ class TestPositionSizingGeneIntegration:
         assert isinstance(result.fixed_ratio, float)
         assert isinstance(result.max_position_size, float)
         assert isinstance(result.enabled, bool)
+
+

@@ -286,7 +286,7 @@ class GeneValidator:
     )
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
         """戦略遺伝子の妥当性を検証"""
-        from .condition import ConditionGroup
+        from .conditions import ConditionGroup
 
         errors: List[str] = []
 
@@ -420,3 +420,5 @@ class GeneValidator:
                 return True
 
         return False
+
+

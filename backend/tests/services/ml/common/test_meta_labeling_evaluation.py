@@ -182,3 +182,5 @@ class TestOptimalThresholdFinding:
         result = find_optimal_threshold(y_true, y_pred_proba)
 
         assert 0.0 <= result["optimal_threshold"] <= 1.0
+
+

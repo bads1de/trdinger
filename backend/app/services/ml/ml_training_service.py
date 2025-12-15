@@ -421,3 +421,5 @@ class MLTrainingService(BaseResourceManager):
 
 # グローバルインスタンス（デフォルトはアンサンブル）
 ml_training_service = MLTrainingService(trainer_type="ensemble")
+
+

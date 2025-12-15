@@ -190,3 +190,5 @@ class TestTimeframeToMinutes:
         assert TIMEFRAME_TO_MINUTES["4h"] == 240
         assert TIMEFRAME_TO_MINUTES["1d"] == 1440
         assert TIMEFRAME_TO_MINUTES["1w"] == 10080
+
+

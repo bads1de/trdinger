@@ -307,3 +307,5 @@ class TestMLTrainingService:
         assert settings.enabled is False
         assert settings.n_calls == 100
         assert settings.parameter_space == param_space
+
+

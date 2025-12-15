@@ -125,3 +125,5 @@ class EntryGene:
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
         )
+
+

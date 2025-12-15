@@ -152,3 +152,5 @@ class BaseRNNModel(ABC):
         """クラス予測"""
         proba = self.predict_proba(X)
         return (proba >= threshold).astype(int)
+
+

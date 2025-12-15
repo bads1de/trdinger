@@ -201,3 +201,5 @@ class BacktestDataService:
             データ概要の辞書
         """
         return self._integration_service.get_data_summary(df)
+
+

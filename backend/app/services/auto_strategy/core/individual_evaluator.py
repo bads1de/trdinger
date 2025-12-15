@@ -884,3 +884,5 @@ class IndividualEvaluator:
             logger.error(f"多目的フィットネス計算エラー: {e}")
             # エラー時は目的数に応じたデフォルト値を返す
             return tuple(0.0 for _ in config.objectives)
+
+

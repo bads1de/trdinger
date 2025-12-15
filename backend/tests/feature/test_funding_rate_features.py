@@ -460,3 +460,5 @@ class TestFundingRateFeatureCalculator:
             nan_ratio = result[col].isna().sum() / len(result)
             # ラグ3(24h)や相関(24h)などは初期にNaNが入る
             assert nan_ratio < 0.5, f"{col}のNaN比率が高すぎます: {nan_ratio:.2%}"
+
+

@@ -117,3 +117,5 @@ class YamlTestUtils:
             result["errors"].append(f"全体テスト失敗: {e}")
 
         return result
+
+

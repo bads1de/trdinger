@@ -358,3 +358,5 @@ class TestGeneValidator:
         assert result is False
         assert len(errors) > 0
         assert "有効な指標" in errors[0]
+
+

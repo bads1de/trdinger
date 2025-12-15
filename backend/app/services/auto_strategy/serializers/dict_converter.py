@@ -639,7 +639,7 @@ class DictConverter:
             if data is None:
                 return None
 
-            from ..models.stateful_condition import StatefulCondition
+            from ..models.conditions import StatefulCondition
 
             trigger_condition = self.dict_to_condition(data["trigger_condition"])
             follow_condition = self.dict_to_condition(data["follow_condition"])
@@ -656,3 +656,5 @@ class DictConverter:
         except Exception as e:
             logger.error(f"StatefulCondition復元エラー: {e}")
             raise ValueError(f"StatefulConditionの復元に失敗: {e}")
+
+

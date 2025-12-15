@@ -375,3 +375,5 @@ class TPSLService:
                 return 0 <= percentage <= 10.0
             else:
                 return 0 <= percentage <= 1.0
+
+

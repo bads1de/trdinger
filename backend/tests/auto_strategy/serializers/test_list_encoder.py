@@ -164,3 +164,5 @@ class TestListEncoder:
 
         assert len(enc1) == len(enc2)
         assert enc1 == enc2
+
+

@@ -1005,3 +1005,5 @@ class MomentumIndicators:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
 
         return result
+
+

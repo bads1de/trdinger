@@ -213,3 +213,5 @@ class TestGeneUtils:
         assert BaseGene._is_datetime_type(datetime) is True
         assert BaseGene._is_datetime_type(str) is False
         assert BaseGene._is_datetime_type(MockEnum) is False
+
+

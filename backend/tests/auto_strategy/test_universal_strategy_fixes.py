@@ -14,8 +14,8 @@ from app.services.auto_strategy.models import (
     IndicatorGene,
     PositionSizingGene,
 )
-from app.services.auto_strategy.models.condition import Condition
-from app.services.auto_strategy.models.stateful_condition import StatefulCondition
+from app.services.auto_strategy.models.conditions import Condition
+from app.services.auto_strategy.models.conditions import StatefulCondition
 from app.services.auto_strategy.config.enums import PositionSizingMethod
 
 
@@ -314,3 +314,5 @@ class TestStatefulConditionSerialization:
 
         # デフォルト値 "long" が使用される
         assert result.direction == "long"
+
+

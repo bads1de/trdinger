@@ -225,3 +225,5 @@ def test_calculate_features_with_frac_diff(sample_ohlcv_data):
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
     assert "FracDiff_04" in result.columns
+
+

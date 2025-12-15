@@ -75,3 +75,4 @@ class TestPurgedCVUnification:
                 assert "cv_scores" in cv_result
                 assert "fold_results" in cv_result
                 assert len(cv_result["fold_results"]) == 3
+

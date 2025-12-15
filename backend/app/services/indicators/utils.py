@@ -187,3 +187,5 @@ def validate_multi_series_params(
         return pd.Series(np.full(len(first_series), np.nan), index=first_series.index)
 
     return None
+
+

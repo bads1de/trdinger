@@ -136,3 +136,5 @@ class LightGBMModel(BaseGradientBoostingModel):
             np.ndarray,
             self.model.predict(data, num_iteration=self.model.best_iteration),
         )
+
+

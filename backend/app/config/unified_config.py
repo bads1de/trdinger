@@ -796,3 +796,5 @@ class UnifiedConfig(BaseSettings):
 
 # 統一設定のシングルトンインスタンス
 unified_config = UnifiedConfig()
+
+

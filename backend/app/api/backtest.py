@@ -204,3 +204,5 @@ async def get_supported_strategies(
         return await orchestration_service.get_supported_strategies()
 
     return await ErrorHandler.safe_execute_async(_get_strategies)
+
+

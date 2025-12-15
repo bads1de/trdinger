@@ -371,3 +371,5 @@ class TestEdgeCases:
         assert "open_interest" in result.columns
         assert len(result) == 168
         # toleranceが1日なので、時間足データに日次OIデータがマージされる
+
+

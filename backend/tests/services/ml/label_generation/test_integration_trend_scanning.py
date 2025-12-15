@@ -61,3 +61,5 @@ class TestTrendScanningIntegration:
             # Since we have a strong uptrend, we expect mostly 1s
             assert labels.sum() > 0
             assert labels.isin([0, 1]).all()
+
+

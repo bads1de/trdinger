@@ -562,3 +562,5 @@ class TestErrorHandling:
 
         # アサーション
         assert response.status_code == 422
+
+

@@ -112,3 +112,5 @@ class CusumSignalGenerator:
         vol = returns.ewm(span=span).std()
 
         return vol
+
+

@@ -388,3 +388,5 @@ class TestWFAMultiObjective:
         # 評価が呼ばれた回数だけ目的値が返される
         if mock_perform_eval.call_count > 0:
             assert len(result) == 3
+
+

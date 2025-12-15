@@ -547,3 +547,5 @@ class BaseEnsemble(ABC):
         except Exception as e:
             logger.error(f"アンサンブルモデルの読み込みに失敗: {e}")
             return False
+
+

@@ -20,3 +20,5 @@ __all__ = [
     "RecordValidator",
     "DataValidator",  # 後方互換性のためのエイリアス
 ]
+
+

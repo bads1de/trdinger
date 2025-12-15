@@ -796,3 +796,5 @@ class MetricsCalculator:
 
 # グローバルインスタンス（統合されたメトリクス計算器・収集器）
 metrics_collector = MetricsCalculator()
+
+

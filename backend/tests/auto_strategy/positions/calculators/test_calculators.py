@@ -121,3 +121,5 @@ class TestVolatilityBasedCalculator:
             assert result["details"]["risk_controls"]["var_adjusted"] is True
             # 制限後のサイズ = 100円 / 0.1 = 1000円 (ポジション価値) => 10株
             assert result["position_size"] == pytest.approx(10.0)
+
+

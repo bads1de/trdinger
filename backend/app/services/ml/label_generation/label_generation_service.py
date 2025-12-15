@@ -148,3 +148,5 @@ class LabelGenerationService:
         except Exception as e:
             logger.error(f"❌ ラベル生成設定でエラー発生: {e}", exc_info=True)
             raise DataError(f"ラベル生成に失敗しました: {e}")
+
+

@@ -16,3 +16,5 @@ __all__ = [
     "ListDecoder",  # リストデコード
     "JsonConverter",  # JSON変換
 ]
+
+

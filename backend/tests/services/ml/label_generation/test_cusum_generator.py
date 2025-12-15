@@ -116,3 +116,5 @@ class TestCusumSignalGenerator:
         assert len(vol) == len(sample_data)
         # 最初のほうはNaNになる
         assert pd.isna(vol.iloc[0])
+
+

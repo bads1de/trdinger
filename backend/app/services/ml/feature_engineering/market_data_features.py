@@ -655,3 +655,5 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             "OI_BB_Width",
             "FR_MACD",
         ]
+
+

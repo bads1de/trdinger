@@ -151,3 +151,5 @@ class TestEnsembleSelection:
         assert len(X_selected.columns) > 0
         assert results["method"] == "ensemble"
         assert "feature_votes" in results
+
+

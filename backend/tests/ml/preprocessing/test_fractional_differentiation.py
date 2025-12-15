@@ -105,3 +105,4 @@ class TestFractionalDifferentiation:
         # カットオフ付きの反復重み計算を実装している場合、長さは可変になります。
         # 実装がwindow_sizeまたは指定された閾値を尊重すると仮定します。
         pass
+

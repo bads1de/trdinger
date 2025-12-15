@@ -529,3 +529,5 @@ class TestHybridIndividualEvaluator:
         assert mock_adapter.gene_to_features.called
         assert isinstance(fitness, tuple)
         assert fitness[0] > 0
+
+

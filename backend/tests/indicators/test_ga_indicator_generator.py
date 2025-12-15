@@ -111,3 +111,5 @@ class TestIndicatorGenerator:
             assert hasattr(indicator, "type")
             assert isinstance(indicator.type, str)
             assert len(indicator.type) > 0
+
+

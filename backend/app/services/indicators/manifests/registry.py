@@ -232,3 +232,5 @@ def manifest_to_yaml_dict() -> Dict[str, Any]:
         "scale_types": SCALE_TYPES,
         "default_thresholds": DEFAULT_THRESHOLDS,
     }
+
+

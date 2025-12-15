@@ -543,3 +543,5 @@ class TestIntegration:
         assert 50 <= result.best_params["population_size"] <= 200
         assert 0.6 <= result.best_params["crossover_prob"] <= 0.9
         assert 0.01 <= result.best_params["mutation_prob"] <= 0.2
+
+

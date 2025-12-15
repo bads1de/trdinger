@@ -343,3 +343,5 @@ def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
     calc = FixedRatioCalculator()
     raw = calc.calculate(gene, 10000.0, 0.0)
     assert raw["position_size"] >= gene.min_position_size
+
+

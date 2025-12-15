@@ -285,3 +285,5 @@ class TripleBarrier:
                     out.loc[out["ret"] < -out["trgt"] * self.sl * 0.999, "bin"] = -1.0
 
         return out
+
+

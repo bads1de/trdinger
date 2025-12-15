@@ -499,3 +499,5 @@ def test_strategy_gene_with_mtf_indicators_round_trip(
     assert restored.indicators[0].timeframe is None  # デフォルト
     assert restored.indicators[1].timeframe == "1d"  # 日足
     assert restored.indicators[2].timeframe == "4h"  # 4時間足
+
+

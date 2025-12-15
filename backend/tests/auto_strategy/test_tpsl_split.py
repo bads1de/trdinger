@@ -91,3 +91,4 @@ class TestTPSLSplit:
         # オブジェクトIDが異なること（ディープコピーされていること）
         assert mutated.long_tpsl_gene is not gene.long_tpsl_gene
         assert mutated.short_tpsl_gene is not gene.short_tpsl_gene
+

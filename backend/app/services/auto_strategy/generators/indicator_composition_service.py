@@ -141,3 +141,5 @@ class IndicatorCompositionService:
             if ind.type not in MOVING_AVERAGE_INDICATORS:
                 indicators.pop(i)
                 break
+
+

@@ -88,3 +88,5 @@ class TestStackingLeak:
         assert isinstance(
             cv, StratifiedKFold
         ), f"StratifiedKFold must be used when specified. Got: {type(cv)}"
+
+

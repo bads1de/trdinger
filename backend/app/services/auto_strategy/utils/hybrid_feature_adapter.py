@@ -460,3 +460,5 @@ class WaveletFeatureTransformer:
         detail = series - coarse
         detail = detail.replace([np.inf, -np.inf], 0.0).fillna(0.0)
         return detail
+
+

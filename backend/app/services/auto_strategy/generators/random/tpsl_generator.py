@@ -94,3 +94,5 @@ class TPSLGenerator:
                 base_stop_loss=0.03,
                 enabled=True,
             )
+
+

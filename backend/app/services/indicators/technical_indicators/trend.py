@@ -600,3 +600,5 @@ class TrendIndicators:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
 
         return result
+
+

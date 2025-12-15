@@ -42,3 +42,5 @@ def get_worker_data(key: str) -> Optional[Any]:
         データオブジェクト、またはNone
     """
     return _WORKER_DATA_CONTEXT.get(key)
+
+

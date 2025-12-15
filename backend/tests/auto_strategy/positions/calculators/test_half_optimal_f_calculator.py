@@ -127,3 +127,5 @@ class TestHalfOptimalFCalculator:
             assert (
                 result["details"]["fallback_reason"] == "simplified_calculation_failed"
             )
+
+

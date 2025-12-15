@@ -89,3 +89,5 @@ class TestBaseRNNModel:
         preds = model.predict(X, threshold=0.5)
 
         assert np.array_equal(preds, np.array([0, 1, 0, 1]))
+
+

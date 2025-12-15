@@ -286,3 +286,5 @@ class SignalGenerator:
         )
 
         return combined
+
+

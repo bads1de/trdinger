@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from app.services.auto_strategy.models.condition import Condition
+from app.services.auto_strategy.models.conditions import Condition
 from app.services.auto_strategy.models.indicator_gene import IndicatorGene
 from app.services.auto_strategy.models.strategy_gene import StrategyGene
 from app.services.auto_strategy.models.tpsl_gene import TPSLGene
@@ -674,3 +674,5 @@ class TestErrorHandling:
                 integration_service.get_strategies()
 
             assert "Database connection error" in str(exc_info.value)
+
+
