@@ -9,12 +9,10 @@
 
 import logging
 import random
-from typing import List, Union, Dict, Tuple, Optional, Any
+from typing import List, Union, Dict, Tuple
 
 from app.services.indicators.config import (
-    indicator_registry,
     IndicatorScaleType,
-    IndicatorConfig,
 )
 from ...config.constants import IndicatorType
 from ...genes import Condition, ConditionGroup, IndicatorGene
@@ -75,8 +73,8 @@ class ComplexConditionsStrategy(ConditionStrategy):
     def _classify_indicators(
         self, indicators: List[IndicatorGene]
     ) -> Dict[IndicatorType, List[IndicatorGene]]:
-        """指標をタイプ別に分類"""
-        categorized = {
+        """指標をタイプ別に分類（ベースクラスのヘルパーを使用）"""
+        categorized: Dict[IndicatorType, List[IndicatorGene]] = {
             IndicatorType.MOMENTUM: [],
             IndicatorType.TREND: [],
             IndicatorType.VOLATILITY: [],
@@ -85,21 +83,14 @@ class ComplexConditionsStrategy(ConditionStrategy):
             if not ind.enabled:
                 continue
             try:
-                ind_type = self.condition_generator._get_indicator_type(ind)
+                ind_type = self._get_indicator_type(ind)
                 categorized[ind_type].append(ind)
             except Exception:
                 # 分類不能な場合はTREND扱い（安全策）
                 categorized[IndicatorType.TREND].append(ind)
         return categorized
 
-    def _get_indicator_name(self, indicator: IndicatorGene) -> str:
-        """IndicatorCalculatorと一致する一意な指標名を取得"""
-        indicator_id_suffix = f"_{indicator.id[:8]}" if indicator.id else ""
-        return f"{indicator.type}{indicator_id_suffix}"
-
-    def _get_indicator_config(self, indicator_type: str) -> Optional[IndicatorConfig]:
-        """指標設定を取得"""
-        return indicator_registry.get_indicator_config(indicator_type)
+    # NOTE: _get_indicator_name, _get_indicator_config はベースクラスから継承
 
     def _create_trend_pullback_conditions(
         self, classified: Dict[IndicatorType, List[IndicatorGene]]
@@ -352,31 +343,4 @@ class ComplexConditionsStrategy(ConditionStrategy):
             [],
         )
 
-    def _structure_conditions(
-        self, conditions: List[Union[Condition, ConditionGroup]]
-    ) -> List[Union[Condition, ConditionGroup]]:
-        """条件リストを確率的に階層化（グループ化）"""
-        if len(conditions) < 2:
-            return conditions
-
-        structured = []
-        i = 0
-        while i < len(conditions):
-            # 残りが2つ以上あり、30%の確率でグループ化（AND結合された条件をORでまとめるなど）
-            # 今回のロジックでは基本的にAND結合を意図しているので、ORグループ化は控えめに
-            if i + 1 < len(conditions) and random.random() < 0.3:
-                group = ConditionGroup(
-                    operator="OR", conditions=[conditions[i], conditions[i + 1]]
-                )
-                structured.append(group)
-                i += 2
-            else:
-                structured.append(conditions[i])
-                i += 1
-
-        return structured
-
-
-
-
-
+    # NOTE: _structure_conditions はベースクラスから継承
