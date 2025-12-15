@@ -266,29 +266,35 @@ class GeneticAlgorithmEngine:
             # 並列ワーカー用のデータ準備
             worker_initializer = None
             worker_initargs = ()
-            
+
             try:
                 # バックテスト設定が存在する場合のみデータを準備
-                if hasattr(self.individual_evaluator, "_fixed_backtest_config") and self.individual_evaluator._fixed_backtest_config:
+                if (
+                    hasattr(self.individual_evaluator, "_fixed_backtest_config")
+                    and self.individual_evaluator._fixed_backtest_config
+                ):
                     bc = self.individual_evaluator._fixed_backtest_config
-                    
+
                     # メインデータを取得（キャッシュになければロードされる）
                     main_data = self.individual_evaluator._get_cached_data(bc)
-                    
+
                     # 1分足データを取得（存在する場合）
                     minute_data = self.individual_evaluator._get_cached_minute_data(bc)
-                    
+
                     data_context = {"main_data": main_data}
                     if minute_data is not None:
                         data_context["minute_data"] = minute_data
-                        
+
                     from .worker_initializer import initialize_worker
+
                     worker_initializer = initialize_worker
                     worker_initargs = (data_context,)
-                    
+
                     logger.info("並列ワーカー用の共有データを準備しました")
             except Exception as e:
-                logger.warning(f"並列ワーカー用データ準備中にエラーが発生しました（データ共有なしで続行）: {e}")
+                logger.warning(
+                    f"並列ワーカー用データ準備中にエラーが発生しました（データ共有なしで続行）: {e}"
+                )
 
             parallel_evaluator = ParallelEvaluator(
                 evaluate_func=EvaluatorWrapper(self.individual_evaluator, config),
@@ -389,7 +395,7 @@ class GeneticAlgorithmEngine:
         Returns:
             tuple: 最良個体、最良遺伝子、および最良戦略のタプル。
         """
-        from ..models.strategy_models import StrategyGene
+        from ..models import StrategyGene
         from ..serializers.gene_serialization import GeneSerializer
 
         gene_serializer = GeneSerializer()

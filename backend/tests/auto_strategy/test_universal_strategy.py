@@ -5,7 +5,7 @@ UniversalStrategy のテスト
 from unittest.mock import MagicMock, patch, PropertyMock
 import pytest
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
-from app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     StrategyGene,
     IndicatorGene,
     TPSLGene,

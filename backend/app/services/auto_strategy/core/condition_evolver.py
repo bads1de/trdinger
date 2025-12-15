@@ -26,7 +26,7 @@ import yaml
 from app.services.backtest.backtest_service import BacktestService
 from app.services.indicators.manifests.registry import manifest_to_yaml_dict
 from app.utils.error_handler import safe_operation
-from ..models.strategy_models import Condition, ConditionGroup
+from ..models import Condition, ConditionGroup
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,7 @@ class EvolutionConfig:
 
 class EarlyStopping:
     """早期打ち切り機能"""
+
     def __init__(self, patience: int = 5, min_delta: float = 0.001):
         self.patience = patience
         self.min_delta = min_delta
@@ -74,6 +75,7 @@ class EarlyStopping:
 
 class FitnessCache:
     """適応度キャッシュ"""
+
     def __init__(self, max_size: int = 1000):
         self.max_size = max_size
         self._cache: OrderedDict[str, float] = OrderedDict()
@@ -127,6 +129,7 @@ class FitnessCache:
 
 class ParallelFitnessEvaluator:
     """並列適応度評価器"""
+
     def __init__(
         self,
         backtest_service: BacktestService,
@@ -140,7 +143,9 @@ class ParallelFitnessEvaluator:
         self.cache = cache
 
     def _evaluate_single(
-        self, condition: Union[Condition, ConditionGroup], backtest_config: Dict[str, Any]
+        self,
+        condition: Union[Condition, ConditionGroup],
+        backtest_config: Dict[str, Any],
     ) -> float:
         if self.cache:
             cached = self.cache.get(condition)
@@ -152,7 +157,7 @@ class ParallelFitnessEvaluator:
             test_config = backtest_config.copy()
             test_config.update(strategy_config["parameters"])
             result = self.backtest_service.run_backtest(test_config)
-            
+
             metrics = result.get("performance_metrics", {})
             total_return = metrics.get("total_return", 0.0)
             sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
@@ -178,7 +183,9 @@ class ParallelFitnessEvaluator:
             return 0.0
 
     def evaluate_population(
-        self, population: List[Union[Condition, ConditionGroup]], backtest_config: Dict[str, Any]
+        self,
+        population: List[Union[Condition, ConditionGroup]],
+        backtest_config: Dict[str, Any],
     ) -> List[float]:
         fitness_values = [0.0] * len(population)
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -198,6 +205,7 @@ class ParallelFitnessEvaluator:
 
 class YamlIndicatorUtils:
     """YAML設定ファイルから指標情報を管理するユーティリティクラス"""
+
     def __init__(self, config_path: Optional[str] = None):
         self.config_path = Path(config_path) if config_path else None
         self.config = self._load_yaml_config()
@@ -226,15 +234,18 @@ class YamlIndicatorUtils:
         return self.config["indicators"][indicator_name].copy()
 
 
-def create_simple_strategy(condition: Union[Condition, ConditionGroup]) -> Dict[str, Any]:
+def create_simple_strategy(
+    condition: Union[Condition, ConditionGroup],
+) -> Dict[str, Any]:
     """条件からシンプルな戦略設定を作成"""
+
     # ネストされた構造を辞書形式に変換するヘルパー
     def _cond_to_dict(cond):
         if isinstance(cond, ConditionGroup):
             return {
                 "type": "group",
                 "operator": cond.operator,
-                "conditions": [_cond_to_dict(c) for c in cond.conditions]
+                "conditions": [_cond_to_dict(c) for c in cond.conditions],
             }
         else:
             # Condition
@@ -250,19 +261,17 @@ def create_simple_strategy(condition: Union[Condition, ConditionGroup]) -> Dict[
             }
 
     cond_dict = _cond_to_dict(condition)
-    
+
     # ルートが単一Conditionの場合のラッパー
     if cond_dict["type"] == "single":
-         # 古いcreate_simple_strategyとの互換性
-         entry_config = cond_dict
+        # 古いcreate_simple_strategyとの互換性
+        entry_config = cond_dict
     else:
-         entry_config = cond_dict
+        entry_config = cond_dict
 
     return {
         "name": f"Strategy_{id(condition)}",
-        "conditions": {
-            "entry": entry_config
-        },
+        "conditions": {"entry": entry_config},
         "parameters": {"symbol": "BTC/USDT:USDT", "timeframe": "1h"},
     }
 
@@ -285,16 +294,21 @@ class ConditionEvolver:
         self.yaml_indicator_utils = yaml_indicator_utils
         self.enable_parallel = enable_parallel
         self.max_workers = max_workers
-        
+
         self.cache = FitnessCache(max_size=cache_size) if enable_cache else None
         self.early_stopping = (
-            EarlyStopping(patience=early_stopping_patience, min_delta=early_stopping_min_delta)
-            if early_stopping_patience else None
+            EarlyStopping(
+                patience=early_stopping_patience, min_delta=early_stopping_min_delta
+            )
+            if early_stopping_patience
+            else None
         )
         self.parallel_evaluator = (
             ParallelFitnessEvaluator(
                 backtest_service, yaml_indicator_utils, max_workers, self.cache
-            ) if enable_parallel else None
+            )
+            if enable_parallel
+            else None
         )
         logger.info(f"ConditionEvolver 初期化完了")
 
@@ -313,9 +327,7 @@ class ConditionEvolver:
         threshold = self._generate_threshold(indicator_info)
 
         cond = Condition(
-            left_operand=indicator_name,
-            operator=operator,
-            right_operand=threshold
+            left_operand=indicator_name, operator=operator, right_operand=threshold
         )
         # 動的にdirection属性を追加（進化コンテキスト用）
         cond.direction = direction
@@ -349,7 +361,9 @@ class ConditionEvolver:
 
     @safe_operation(context="ConditionEvolver.evaluate_fitness", default_return=0.0)
     def evaluate_fitness(
-        self, condition: Union[Condition, ConditionGroup], backtest_config: Dict[str, Any]
+        self,
+        condition: Union[Condition, ConditionGroup],
+        backtest_config: Dict[str, Any],
     ) -> float:
         if self.cache:
             cached = self.cache.get(condition)
@@ -358,7 +372,9 @@ class ConditionEvolver:
 
         try:
             # 並列評価器と同じロジックを使用（再利用）
-            evaluator = ParallelFitnessEvaluator(self.backtest_service, self.yaml_indicator_utils, cache=self.cache)
+            evaluator = ParallelFitnessEvaluator(
+                self.backtest_service, self.yaml_indicator_utils, cache=self.cache
+            )
             return evaluator._evaluate_single(condition, backtest_config)
 
         except Exception as e:
@@ -366,7 +382,10 @@ class ConditionEvolver:
             return 0.0
 
     def tournament_selection(
-        self, population: List[Union[Condition, ConditionGroup]], fitness_values: List[float], k: int = 3
+        self,
+        population: List[Union[Condition, ConditionGroup]],
+        fitness_values: List[float],
+        k: int = 3,
     ) -> List[Union[Condition, ConditionGroup]]:
         selected = []
         for _ in range(len(population)):
@@ -376,10 +395,12 @@ class ConditionEvolver:
         return selected
 
     def crossover(
-        self, parent1: Union[Condition, ConditionGroup], parent2: Union[Condition, ConditionGroup]
+        self,
+        parent1: Union[Condition, ConditionGroup],
+        parent2: Union[Condition, ConditionGroup],
     ) -> Tuple[Union[Condition, ConditionGroup], Union[Condition, ConditionGroup]]:
         """多態性対応の交叉"""
-        
+
         # 1. 両方がConditionGroupの場合
         if isinstance(parent1, ConditionGroup) and isinstance(parent2, ConditionGroup):
             # 構造が同じ（要素数が同じ）なら、子要素同士を交叉
@@ -390,9 +411,13 @@ class ConditionEvolver:
                     nc1, nc2 = self.crossover(c1, c2)
                     new_conds1.append(nc1)
                     new_conds2.append(nc2)
-                
-                child1 = ConditionGroup(operator=parent1.operator, conditions=new_conds1)
-                child2 = ConditionGroup(operator=parent2.operator, conditions=new_conds2)
+
+                child1 = ConditionGroup(
+                    operator=parent1.operator, conditions=new_conds1
+                )
+                child2 = ConditionGroup(
+                    operator=parent2.operator, conditions=new_conds2
+                )
                 return child1, child2
             else:
                 # 構造が違う場合は交叉しない（コピーを返す）
@@ -402,24 +427,30 @@ class ConditionEvolver:
         # 2. 両方がConditionの場合
         elif isinstance(parent1, Condition) and isinstance(parent2, Condition):
             crossover_point = random.choice(["operator", "threshold"])
-            
+
             # direction属性の維持（あれば）
             d1 = getattr(parent1, "direction", "long")
             d2 = getattr(parent2, "direction", "long")
-            
+
             if crossover_point == "operator":
-                child1 = Condition(parent1.left_operand, parent2.operator, parent1.right_operand)
-                child2 = Condition(parent2.left_operand, parent1.operator, parent2.right_operand)
+                child1 = Condition(
+                    parent1.left_operand, parent2.operator, parent1.right_operand
+                )
+                child2 = Condition(
+                    parent2.left_operand, parent1.operator, parent2.right_operand
+                )
             else:
                 # 閾値平均
                 try:
-                    avg = (float(parent1.right_operand) + float(parent2.right_operand)) / 2
+                    avg = (
+                        float(parent1.right_operand) + float(parent2.right_operand)
+                    ) / 2
                 except:
-                    avg = parent1.right_operand # 数値でない場合はそのまま
-                    
+                    avg = parent1.right_operand  # 数値でない場合はそのまま
+
                 child1 = Condition(parent1.left_operand, parent1.operator, avg)
                 child2 = Condition(parent2.left_operand, parent2.operator, avg)
-            
+
             child1.direction = d1
             child2.direction = d2
             return child1, child2
@@ -428,28 +459,32 @@ class ConditionEvolver:
         else:
             return copy.deepcopy(parent1), copy.deepcopy(parent2)
 
-    def mutate(self, condition: Union[Condition, ConditionGroup]) -> Union[Condition, ConditionGroup]:
+    def mutate(
+        self, condition: Union[Condition, ConditionGroup]
+    ) -> Union[Condition, ConditionGroup]:
         """多態性対応の突然変異"""
-        
+
         if isinstance(condition, ConditionGroup):
             # グループの場合: 子要素のどれかを変異させる
             mutated_group = copy.deepcopy(condition)
             if mutated_group.conditions:
                 idx = random.randrange(len(mutated_group.conditions))
-                mutated_group.conditions[idx] = self.mutate(mutated_group.conditions[idx])
+                mutated_group.conditions[idx] = self.mutate(
+                    mutated_group.conditions[idx]
+                )
             return mutated_group
 
         elif isinstance(condition, Condition):
             # Conditionの場合: 既存ロジック
             mutated = copy.deepcopy(condition)
             mutation_type = random.choice(["operator", "threshold", "indicator"])
-            
+
             if mutation_type == "operator":
                 operators = [">", "<", ">=", "<=", "==", "!="]
                 if mutated.operator in operators:
                     operators.remove(mutated.operator)
                 mutated.operator = random.choice(operators)
-            
+
             elif mutation_type == "threshold":
                 try:
                     val = float(mutated.right_operand)
@@ -457,7 +492,7 @@ class ConditionEvolver:
                     mutated.right_operand = max(0, val * (1 + variation))
                 except:
                     pass
-            
+
             elif mutation_type == "indicator":
                 # 指標変更
                 available = self.yaml_indicator_utils.get_available_indicators()
@@ -468,9 +503,9 @@ class ConditionEvolver:
                     mutated.left_operand = new_ind
                     info = self.yaml_indicator_utils.get_indicator_info(new_ind)
                     mutated.right_operand = self._generate_threshold(info)
-            
+
             return mutated
-        
+
         return condition
 
     def run_evolution(
@@ -493,17 +528,24 @@ class ConditionEvolver:
 
             for generation in range(generations):
                 if self.enable_parallel and self.parallel_evaluator:
-                    fitness_values = self.parallel_evaluator.evaluate_population(population, backtest_config)
+                    fitness_values = self.parallel_evaluator.evaluate_population(
+                        population, backtest_config
+                    )
                 else:
-                    fitness_values = [self.evaluate_fitness(ind, backtest_config) for ind in population]
+                    fitness_values = [
+                        self.evaluate_fitness(ind, backtest_config)
+                        for ind in population
+                    ]
 
                 best_fitness = max(fitness_values)
                 avg_fitness = sum(fitness_values) / len(fitness_values)
-                evolution_history.append({
-                    "generation": generation + 1,
-                    "best_fitness": best_fitness,
-                    "avg_fitness": avg_fitness,
-                })
+                evolution_history.append(
+                    {
+                        "generation": generation + 1,
+                        "best_fitness": best_fitness,
+                        "avg_fitness": avg_fitness,
+                    }
+                )
 
                 generations_completed = generation + 1
 
@@ -523,13 +565,20 @@ class ConditionEvolver:
                     else:
                         offspring.extend([selected[i], selected[i + 1]])
 
-                offspring = [self.mutate(ind) if random.random() < 0.2 else ind for ind in offspring]
+                offspring = [
+                    self.mutate(ind) if random.random() < 0.2 else ind
+                    for ind in offspring
+                ]
                 population = (elite + offspring)[:population_size]
 
             if self.enable_parallel and self.parallel_evaluator:
-                fitness_values = self.parallel_evaluator.evaluate_population(population, backtest_config)
+                fitness_values = self.parallel_evaluator.evaluate_population(
+                    population, backtest_config
+                )
             else:
-                fitness_values = [self.evaluate_fitness(ind, backtest_config) for ind in population]
+                fitness_values = [
+                    self.evaluate_fitness(ind, backtest_config) for ind in population
+                ]
 
             best_idx = fitness_values.index(max(fitness_values))
             best_condition = population[best_idx]

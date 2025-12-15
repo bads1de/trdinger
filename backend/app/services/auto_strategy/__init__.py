@@ -5,7 +5,7 @@
 """
 
 from .config import GAConfig
-from .models.strategy_models import StrategyGene
+from .models import StrategyGene
 from .positions import PositionSizingService
 from .services.auto_strategy_service import AutoStrategyService
 from .tpsl import TPSLService

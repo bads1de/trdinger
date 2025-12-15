@@ -4,7 +4,7 @@ YAML関連ユーティリティのテスト
 
 import pytest
 from unittest.mock import Mock, patch, mock_open
-from backend.app.services.auto_strategy.utils.yaml_utils import (
+from app.services.auto_strategy.utils.yaml_utils import (
     YamlLoadUtils,
     YamlIndicatorUtils,
 )

@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from app.services.auto_strategy.generators.random.condition_generator import (
     ConditionGenerator,
 )
-from app.services.auto_strategy.models.strategy_models import Condition
+from app.services.auto_strategy.models import Condition
 
 
 class TestConditionGeneratorInit:

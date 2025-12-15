@@ -7,8 +7,8 @@ Risk Reward Calculator
 import logging
 from typing import Any, Dict, Optional
 
-from ...models.strategy_models import TPSLGene
-from ...models.tpsl_result import TPSLResult
+from ...models import TPSLGene
+from ...models.tpsl_gene import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 
 logger = logging.getLogger(__name__)

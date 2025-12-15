@@ -9,7 +9,7 @@ from app.services.auto_strategy.tpsl.calculator.statistical_calculator import (
     StatisticalCalculator,
 )
 from app.services.auto_strategy.models.tpsl_gene import TPSLGene
-from app.services.auto_strategy.models.tpsl_result import TPSLResult
+from app.services.auto_strategy.models import TPSLResult
 
 
 class TestStatisticalCalculator:

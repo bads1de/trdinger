@@ -13,7 +13,7 @@ import pandas as pd
 
 from app.services.indicators import TechnicalIndicatorService
 
-from ..models.strategy_models import IndicatorGene
+from ..models import IndicatorGene
 from .mtf_data_provider import MultiTimeframeDataProvider
 
 logger = logging.getLogger(__name__)
@@ -196,8 +196,14 @@ class IndicatorCalculator:
 
                 # MTF指標名のベースを決定（タイムフレームサフィックス付き）
                 # IDを使って一意にする（SMA_10, SMA_50のように区別するため）
-                indicator_id_suffix = f"_{indicator_gene.id[:8]}" if hasattr(indicator_gene, "id") and indicator_gene.id else ""
-                base_indicator_name = f"{indicator_gene.type}{timeframe_suffix}{indicator_id_suffix}"
+                indicator_id_suffix = (
+                    f"_{indicator_gene.id[:8]}"
+                    if hasattr(indicator_gene, "id") and indicator_gene.id
+                    else ""
+                )
+                base_indicator_name = (
+                    f"{indicator_gene.type}{timeframe_suffix}{indicator_id_suffix}"
+                )
 
                 # 指標をbacktesting.pyと互換性のある方法で確実に登録
                 logger.warning(

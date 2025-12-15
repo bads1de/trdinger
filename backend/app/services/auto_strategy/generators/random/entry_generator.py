@@ -8,7 +8,7 @@ import logging
 import random
 
 from ...models.entry_gene import EntryGene
-from ...models.enums import EntryType
+from ...config.enums import EntryType
 
 logger = logging.getLogger(__name__)
 

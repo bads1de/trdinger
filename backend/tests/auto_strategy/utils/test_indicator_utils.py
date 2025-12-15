@@ -5,7 +5,7 @@ Indicator Utils Tests
 import pytest
 from unittest.mock import MagicMock, patch
 
-from backend.app.services.auto_strategy.utils.indicator_utils import (
+from app.services.auto_strategy.utils.indicator_utils import (
     indicators_by_category,
     get_all_indicators,
     get_all_indicator_ids,
@@ -19,7 +19,7 @@ class TestIndicatorUtils:
     @pytest.fixture
     def mock_registry(self):
         with patch(
-            "backend.app.services.auto_strategy.utils.indicator_utils._load_indicator_registry"
+            "app.services.auto_strategy.utils.indicator_utils._load_indicator_registry"
         ) as mock_load:
             registry = MagicMock()
             registry._configs = {
@@ -46,18 +46,10 @@ class TestIndicatorUtils:
         assert "RSI" in momentum
         assert "SMA" not in momentum
 
-    @patch(
-        "backend.app.services.auto_strategy.utils.indicator_utils.get_volume_indicators"
-    )
-    @patch(
-        "backend.app.services.auto_strategy.utils.indicator_utils.get_momentum_indicators"
-    )
-    @patch(
-        "backend.app.services.auto_strategy.utils.indicator_utils.get_trend_indicators"
-    )
-    @patch(
-        "backend.app.services.auto_strategy.utils.indicator_utils.get_volatility_indicators"
-    )
+    @patch("app.services.auto_strategy.utils.indicator_utils.get_volume_indicators")
+    @patch("app.services.auto_strategy.utils.indicator_utils.get_momentum_indicators")
+    @patch("app.services.auto_strategy.utils.indicator_utils.get_trend_indicators")
+    @patch("app.services.auto_strategy.utils.indicator_utils.get_volatility_indicators")
     def test_get_all_indicators(
         self, mock_volatility, mock_trend, mock_momentum, mock_volume
     ):
@@ -78,9 +70,7 @@ class TestIndicatorUtils:
         assert "SMA" in all_inds
         assert "ATR" in all_inds
 
-    @patch(
-        "backend.app.services.auto_strategy.utils.indicator_utils.TechnicalIndicatorService"
-    )
+    @patch("app.services.auto_strategy.utils.indicator_utils.TechnicalIndicatorService")
     def test_get_all_indicator_ids(self, MockService):
         """指標IDマッピング取得"""
         service = MockService.return_value

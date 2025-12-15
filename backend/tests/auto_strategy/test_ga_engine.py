@@ -6,17 +6,17 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from backend.app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from backend.app.services.auto_strategy.core.individual_evaluator import (
+from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.core.individual_evaluator import (
     IndividualEvaluator,
 )
-from backend.app.services.auto_strategy.generators.random_gene_generator import (
+from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from backend.app.services.auto_strategy.generators.strategy_factory import (
+from app.services.auto_strategy.generators.strategy_factory import (
     StrategyFactory,
 )
-from backend.app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.backtest_service import BacktestService
 
 
 class TestGeneticAlgorithmEngine:
@@ -45,7 +45,7 @@ class TestGeneticAlgorithmEngine:
     def mock_gene_generator(self):
         """Mock RandomGeneGenerator"""
         generator = Mock(spec=RandomGeneGenerator)
-        from backend.app.services.auto_strategy.models.strategy_models import (
+        from app.services.auto_strategy.models import (
             IndicatorGene,
             PositionSizingGene,
             PositionSizingMethod,
@@ -146,7 +146,7 @@ class TestGeneticAlgorithmEngine:
         assert engine.individual_class is None  # setup_deap前はNone
         assert engine.fitness_sharing is None  # setup_deap前はNone
 
-    @patch("backend.app.services.auto_strategy.core.ga_engine.EvolutionRunner")
+    @patch("app.services.auto_strategy.core.ga_engine.EvolutionRunner")
     def test_run_evolution_flow(
         self,
         mock_runner_cls,
@@ -206,8 +206,8 @@ class TestGeneticAlgorithmEngine:
         engine._process_results.assert_called_once()
         assert result["execution_time"] == 1.0
 
-    @patch("backend.app.services.auto_strategy.core.ga_engine.ParallelEvaluator")
-    @patch("backend.app.services.auto_strategy.core.ga_engine.EvolutionRunner")
+    @patch("app.services.auto_strategy.core.ga_engine.ParallelEvaluator")
+    @patch("app.services.auto_strategy.core.ga_engine.EvolutionRunner")
     def test_run_evolution_with_parallel_config(
         self,
         mock_runner_cls,

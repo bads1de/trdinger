@@ -9,7 +9,7 @@ from typing import Tuple, Type
 
 from backtesting import Strategy
 
-from ..models.strategy_models import StrategyGene
+from ..models import StrategyGene
 
 logger = logging.getLogger(__name__)
 

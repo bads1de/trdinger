@@ -13,7 +13,7 @@ from typing import Union
 
 import numpy as np
 
-from ..models.strategy_models import (
+from ..models import (
     StrategyGene,
     create_random_tpsl_gene,
     crossover_position_sizing_genes,
@@ -169,7 +169,7 @@ def _mutate_condition_item(condition, mutation_rate, config):
     """
     import random
 
-    from ..models.strategy_models import ConditionGroup
+    from ..models import ConditionGroup
 
     if isinstance(condition, ConditionGroup):
         # ConditionGroupの場合
@@ -364,6 +364,16 @@ def crossover_strategy_genes_pure(
                 child1_short_entry = parent2.short_entry_conditions.copy()
                 child2_short_entry = parent1.short_entry_conditions.copy()
 
+            # ツール遺伝子の交叉
+            parent1_tool_genes = getattr(parent1, "tool_genes", []) or []
+            parent2_tool_genes = getattr(parent2, "tool_genes", []) or []
+            if random.random() < 0.5:
+                child1_tool_genes = copy.deepcopy(parent1_tool_genes)
+                child2_tool_genes = copy.deepcopy(parent2_tool_genes)
+            else:
+                child1_tool_genes = copy.deepcopy(parent2_tool_genes)
+                child2_tool_genes = copy.deepcopy(parent1_tool_genes)
+
             # 子遺伝子の作成
             child1_strategy = StrategyGene(
                 id=str(uuid.uuid4()),
@@ -377,6 +387,7 @@ def crossover_strategy_genes_pure(
                 long_tpsl_gene=child1_long_tpsl,
                 short_tpsl_gene=child1_short_tpsl,
                 position_sizing_gene=child1_position_sizing,
+                tool_genes=child1_tool_genes,
                 metadata=child1_metadata,
             )
 
@@ -392,6 +403,7 @@ def crossover_strategy_genes_pure(
                 long_tpsl_gene=child2_long_tpsl,
                 short_tpsl_gene=child2_short_tpsl,
                 position_sizing_gene=child2_position_sizing,
+                tool_genes=child2_tool_genes,
                 metadata=child2_metadata,
             )
 
@@ -530,6 +542,20 @@ def uniform_crossover(
             else parent1.position_sizing_gene
         )
 
+        # ツール遺伝子の交叉
+        parent1_tool_genes = getattr(parent1, "tool_genes", []) or []
+        parent2_tool_genes = getattr(parent2, "tool_genes", []) or []
+        child1_tool_genes = (
+            copy.deepcopy(parent1_tool_genes)
+            if random.random() < selection_prob
+            else copy.deepcopy(parent2_tool_genes)
+        )
+        child2_tool_genes = (
+            copy.deepcopy(parent2_tool_genes)
+            if random.random() < selection_prob
+            else copy.deepcopy(parent1_tool_genes)
+        )
+
         # メタデータの交叉（共通ユーティリティ使用）
         from ..utils.gene_utils import prepare_crossover_metadata
 
@@ -548,6 +574,7 @@ def uniform_crossover(
             long_tpsl_gene=child1_long_tpsl_gene,
             short_tpsl_gene=child1_short_tpsl_gene,
             position_sizing_gene=child1_position_sizing_gene,
+            tool_genes=child1_tool_genes,
             metadata=child1_metadata,
         )
 
@@ -563,6 +590,7 @@ def uniform_crossover(
             long_tpsl_gene=child2_long_tpsl_gene,
             short_tpsl_gene=child2_short_tpsl_gene,
             position_sizing_gene=child2_position_sizing_gene,
+            tool_genes=child2_tool_genes,
             metadata=child2_metadata,
         )
 
@@ -724,11 +752,27 @@ def mutate_strategy_gene_pure(
                 < mutation_rate
                 * config.position_sizing_gene_creation_probability_multiplier
             ):
-                from ..models.strategy_models import (
+                from ..models import (
                     create_random_position_sizing_gene,
                 )
 
                 mutated.position_sizing_gene = create_random_position_sizing_gene()
+
+        # ツール遺伝子の突然変異
+        tool_genes = getattr(mutated, "tool_genes", None)
+        if tool_genes:
+            from ..tools import tool_registry
+
+            for tool_gene in tool_genes:
+                if random.random() < mutation_rate:
+                    # 有効/無効を反転（20%の確率）
+                    if random.random() < 0.2:
+                        tool_gene.enabled = not tool_gene.enabled
+
+                    # ツール固有のパラメータ変異
+                    tool = tool_registry.get(tool_gene.tool_name)
+                    if tool:
+                        tool_gene.params = tool.mutate_params(tool_gene.params)
 
         # メタデータの更新
         mutated.metadata["mutated"] = True

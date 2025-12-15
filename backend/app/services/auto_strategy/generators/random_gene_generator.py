@@ -12,7 +12,7 @@ from typing import Any, List, Union, cast
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
-from ..models.strategy_models import (
+from ..models import (
     Condition,
     ConditionGroup,
     IndicatorGene,
@@ -21,7 +21,9 @@ from ..models.strategy_models import (
     StrategyGene,
     TPSLGene,
 )
+from ..models.tool_gene import ToolGene
 from ..serializers.gene_serialization import GeneSerializer
+from ..tools import tool_registry
 from .condition_generator import ConditionGenerator
 from .random.condition_generator import ConditionGenerator as RandomConditionGenerator
 from .random.entry_generator import EntryGenerator
@@ -245,6 +247,9 @@ class RandomGeneGenerator:
         long_entry_gene = self.entry_generator.generate_entry_gene()
         short_entry_gene = self.entry_generator.generate_entry_gene()
 
+        # ツール遺伝子を生成（週末フィルターなど）
+        tool_genes = self._generate_tool_genes()
+
         gene = StrategyGene(
             indicators=indicators,
             entry_conditions=entry_conditions,  # 後方互換性
@@ -259,7 +264,40 @@ class RandomGeneGenerator:
             entry_gene=entry_gene,  # エントリー遺伝子
             long_entry_gene=long_entry_gene,  # Longエントリー遺伝子
             short_entry_gene=short_entry_gene,  # Shortエントリー遺伝子
+            tool_genes=tool_genes,  # ツール遺伝子リスト
             metadata={"generated_by": "RandomGeneGenerator"},
         )
 
         return gene
+
+    def _generate_tool_genes(self) -> List[ToolGene]:
+        """
+        ツール遺伝子のリストを生成
+
+        登録されたすべてのツールに対して、ランダムに有効/無効を決定し
+        ToolGene を生成します。
+
+        Returns:
+            ToolGene のリスト
+        """
+        import random
+
+        tool_genes = []
+
+        # すべての登録済みツールを取得
+        for tool in tool_registry.get_all():
+            # 50%の確率で有効化
+            enabled = random.random() < 0.5
+
+            # デフォルトパラメータを取得
+            params = tool.get_default_params()
+
+            tool_genes.append(
+                ToolGene(
+                    tool_name=tool.name,
+                    enabled=enabled,
+                    params=params,
+                )
+            )
+
+        return tool_genes

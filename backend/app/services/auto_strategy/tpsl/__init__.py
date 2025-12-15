@@ -4,7 +4,7 @@ TP/SL管理パッケージ
 Take Profit / Stop Lossに関連する機能を統合します。
 """
 
-from ..models.strategy_models import (
+from ..models import (
     TPSLGene,
     TPSLMethod,
     TPSLResult,

@@ -7,7 +7,7 @@ import pytest
 from app.services.auto_strategy.generators.random.indicator_generator import (
     IndicatorGenerator,
 )
-from app.services.auto_strategy.models.strategy_models import IndicatorGene
+from app.services.auto_strategy.models import IndicatorGene
 
 
 class TestIndicatorGenerator:

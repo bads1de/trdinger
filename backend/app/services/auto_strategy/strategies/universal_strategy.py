@@ -16,10 +16,10 @@ from backtesting import Strategy
 
 from ..core.condition_evaluator import ConditionEvaluator
 from ..models.entry_gene import EntryGene
-from ..models.enums import EntryType
+from ..config.enums import EntryType
 from ..models.pending_order import PendingOrder
 from ..models.stateful_condition import StateTracker
-from ..models.strategy_models import (
+from ..models import (
     Condition,
     ConditionGroup,
     IndicatorGene,
@@ -360,6 +360,11 @@ class UniversalStrategy(Strategy):
 
             # ポジションがない場合のエントリー判定
             if not self.position:
+                # === ツールフィルター判定 ===
+                # 週末フィルターなど、登録されたツールでエントリーをフィルタリング
+                if self._tools_block_entry():
+                    return  # いずれかのツールがエントリーをブロック
+
                 long_signal = self._check_long_entry_conditions()
                 short_signal = self._check_short_entry_conditions()
 
@@ -779,6 +784,71 @@ class UniversalStrategy(Strategy):
             # 予測エラー時はエントリーを許可（フェイルセーフ）
             logger.warning(f"ML予測エラー（フェイルセーフ適用）: {e}")
             return True
+
+    # ===== ツールフィルターメソッド =====
+
+    def _tools_block_entry(self) -> bool:
+        """
+        ツールがエントリーをブロックするかチェック
+
+        tool_genes に設定されたすべてのツールを評価し、
+        いずれかがエントリーをスキップすべきと判断した場合 True を返します。
+
+        Returns:
+            True: エントリーをブロック（スキップすべき）
+            False: エントリーを許可
+        """
+        # 遺伝子が設定されていない場合はエントリーを許可
+        if not self.gene:
+            return False
+        if not hasattr(self.gene, "tool_genes") or not self.gene.tool_genes:
+            return False
+
+        # ツールレジストリをインポート
+        from ..tools import tool_registry, ToolContext
+
+        try:
+            # 現在のバーのタイムスタンプを取得
+            current_timestamp = self.data.index[-1]
+
+            # コンテキストを作成
+            context = ToolContext(
+                timestamp=current_timestamp,
+                current_price=float(self.data.Close[-1]),
+                current_high=float(self.data.High[-1]),
+                current_low=float(self.data.Low[-1]),
+                current_volume=(
+                    float(self.data.Volume[-1]) if hasattr(self.data, "Volume") else 0.0
+                ),
+            )
+
+            # すべての有効なツールをチェック
+            for tool_gene in self.gene.tool_genes:
+                if not tool_gene.enabled:
+                    continue
+
+                # レジストリからツールを取得
+                tool = tool_registry.get(tool_gene.tool_name)
+                if tool is None:
+                    logger.warning(
+                        f"ツール '{tool_gene.tool_name}' がレジストリに見つかりません"
+                    )
+                    continue
+
+                # ツールでフィルタリング
+                if tool.should_skip_entry(context, tool_gene.params):
+                    logger.debug(
+                        f"ツール '{tool_gene.tool_name}' がエントリーをブロック "
+                        f"(params={tool_gene.params})"
+                    )
+                    return True
+
+            return False
+
+        except Exception as e:
+            # エラー時はエントリーを許可（フェイルセーフ）
+            logger.warning(f"ツールフィルターエラー（フェイルセーフ適用）: {e}")
+            return False
 
     def _prepare_current_features(self) -> pd.DataFrame:
         """

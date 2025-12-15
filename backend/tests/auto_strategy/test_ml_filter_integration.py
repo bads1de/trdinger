@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.models.condition import Condition
-from app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     IndicatorGene,
     StrategyGene,
     TPSLGene,

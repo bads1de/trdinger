@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 import pandas as pd
 
-from ..models.enums import EntryType
+from ..config.enums import EntryType
 from ..models.pending_order import PendingOrder
 
 logger = logging.getLogger(__name__)

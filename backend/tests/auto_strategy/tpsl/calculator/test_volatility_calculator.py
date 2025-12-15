@@ -5,10 +5,10 @@ Volatility Calculator Tests
 import pytest
 from unittest.mock import Mock
 
-from backend.app.services.auto_strategy.tpsl.calculator.volatility_calculator import (
+from app.services.auto_strategy.tpsl.calculator.volatility_calculator import (
     VolatilityCalculator,
 )
-from backend.app.services.auto_strategy.models.strategy_models import TPSLGene
+from app.services.auto_strategy.models import TPSLGene
 
 
 class TestVolatilityCalculator:

@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
 from ..config.constants import OPERATORS
-from ..models.strategy_models import ConditionGroup, StrategyGene
+from ..models import ConditionGroup, StrategyGene
 from ..serializers.gene_serialization import GeneSerializer
 from ..utils.indicator_utils import get_valid_indicator_types
 

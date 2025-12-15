@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 import pytest
 
-from backend.app.services.auto_strategy.models.enums import TPSLMethod
+from backend.app.services.auto_strategy.config.enums import TPSLMethod
 from backend.app.services.auto_strategy.models.tpsl_gene import TPSLGene
 from backend.app.services.auto_strategy.models.tpsl_result import TPSLResult
 from backend.app.services.auto_strategy.tpsl.calculator.adaptive_calculator import (

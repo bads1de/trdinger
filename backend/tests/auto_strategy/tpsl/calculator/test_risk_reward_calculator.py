@@ -5,10 +5,10 @@ Risk Reward Calculator Tests
 import pytest
 from unittest.mock import Mock
 
-from backend.app.services.auto_strategy.tpsl.calculator.risk_reward_calculator import (
+from app.services.auto_strategy.tpsl.calculator.risk_reward_calculator import (
     RiskRewardCalculator,
 )
-from backend.app.services.auto_strategy.models.strategy_models import TPSLGene
+from app.services.auto_strategy.models import TPSLGene
 
 
 class TestRiskRewardCalculator:

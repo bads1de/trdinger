@@ -4,7 +4,7 @@ from typing import Dict
 
 import pytest
 
-from app.services.auto_strategy.models.enums import PositionSizingMethod
+from app.services.auto_strategy.config.enums import PositionSizingMethod
 from app.services.auto_strategy.models.position_sizing_gene import PositionSizingGene
 from app.services.auto_strategy.positions.calculators.calculator_factory import (
     CalculatorFactory,

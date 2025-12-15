@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import pytest
 
-from backend.app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     Condition,
     IndicatorGene,
     PositionSizingGene,
@@ -12,7 +12,7 @@ from backend.app.services.auto_strategy.models.strategy_models import (
     TPSLGene,
     TPSLMethod,
 )
-from backend.app.services.auto_strategy.serializers.gene_serialization import (
+from app.services.auto_strategy.serializers.gene_serialization import (
     GeneSerializer,
 )
 
@@ -201,7 +201,7 @@ def test_tpsl_split_round_trip_via_dict(serializer: GeneSerializer) -> None:
     )
 
     data = serializer.strategy_gene_to_dict(strategy_gene)
-    
+
     # 辞書にフィールドが含まれているか確認
     assert "long_tpsl_gene" in data
     assert "short_tpsl_gene" in data
@@ -211,14 +211,14 @@ def test_tpsl_split_round_trip_via_dict(serializer: GeneSerializer) -> None:
     restored = serializer.dict_to_strategy_gene(data, StrategyGene)
 
     assert isinstance(restored, StrategyGene)
-    
+
     # オブジェクトとして正しく復元されているか確認
     assert isinstance(restored.long_tpsl_gene, TPSLGene)
     assert isinstance(restored.short_tpsl_gene, TPSLGene)
-    
+
     assert restored.long_tpsl_gene.stop_loss_pct == pytest.approx(0.01)
     assert restored.long_tpsl_gene.take_profit_pct == pytest.approx(0.03)
-    
+
     assert restored.short_tpsl_gene.stop_loss_pct == pytest.approx(0.02)
     assert restored.short_tpsl_gene.take_profit_pct == pytest.approx(0.06)
 

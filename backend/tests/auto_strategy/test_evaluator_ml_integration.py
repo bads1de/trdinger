@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
-from app.services.auto_strategy.models.strategy_models import StrategyGene
+from app.services.auto_strategy.models import StrategyGene
 from app.services.backtest.backtest_service import BacktestService
 
 
@@ -55,14 +55,14 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         # 今回は evaluate_individual 全体のフローを通して確認する
         # ただし、データキャッシュ部分はモックが必要
 
-        with patch.object(
-            self.evaluator, "_get_cached_data", return_value=MagicMock()
-        ), patch.object(
-            self.evaluator, "_get_cached_minute_data", return_value=None
-        ), patch.object(
-            self.evaluator,
-            "_calculate_multi_objective_fitness",
-            return_value=(1.0,),
+        with (
+            patch.object(self.evaluator, "_get_cached_data", return_value=MagicMock()),
+            patch.object(self.evaluator, "_get_cached_minute_data", return_value=None),
+            patch.object(
+                self.evaluator,
+                "_calculate_multi_objective_fitness",
+                return_value=(1.0,),
+            ),
         ):
             self.evaluator.evaluate_individual(self.gene, self.ga_config)
 
@@ -97,14 +97,14 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         # ロードで例外発生
         mock_model_manager.load_model.side_effect = Exception("Load failed")
 
-        with patch.object(
-            self.evaluator, "_get_cached_data", return_value=MagicMock()
-        ), patch.object(
-            self.evaluator, "_get_cached_minute_data", return_value=None
-        ), patch.object(
-            self.evaluator,
-            "_calculate_multi_objective_fitness",
-            return_value=(1.0,),
+        with (
+            patch.object(self.evaluator, "_get_cached_data", return_value=MagicMock()),
+            patch.object(self.evaluator, "_get_cached_minute_data", return_value=None),
+            patch.object(
+                self.evaluator,
+                "_calculate_multi_objective_fitness",
+                return_value=(1.0,),
+            ),
         ):
             self.evaluator.evaluate_individual(self.gene, self.ga_config)
 

@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
-from app.services.auto_strategy.models.strategy_models import IndicatorGene
+from app.services.auto_strategy.models import IndicatorGene
 
 
 class TestIndicatorCalculator:

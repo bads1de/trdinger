@@ -39,7 +39,7 @@ class AutoStrategyLoader:
         """
         try:
             # 遅延インポート
-            from app.services.auto_strategy.models.strategy_models import StrategyGene
+            from app.services.auto_strategy.models import StrategyGene
             from app.services.auto_strategy.serializers.gene_serialization import (
                 GeneSerializer,
             )

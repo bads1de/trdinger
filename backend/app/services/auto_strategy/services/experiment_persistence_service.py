@@ -18,7 +18,7 @@ from database.repositories.generated_strategy_repository import (
 )
 
 from ..config import GAConfig
-from ..models.strategy_models import StrategyGene
+from ..models import StrategyGene
 
 logger = logging.getLogger(__name__)
 

@@ -9,14 +9,14 @@ import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
-from app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     StrategyGene,
     IndicatorGene,
     PositionSizingGene,
 )
 from app.services.auto_strategy.models.condition import Condition
 from app.services.auto_strategy.models.stateful_condition import StatefulCondition
-from app.services.auto_strategy.models.enums import PositionSizingMethod
+from app.services.auto_strategy.config.enums import PositionSizingMethod
 
 
 class TestPositionSizingNoCaching:

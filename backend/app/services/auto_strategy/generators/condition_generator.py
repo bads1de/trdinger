@@ -13,7 +13,7 @@ from ..core.condition_evolver import (
     ConditionEvolver,
 )
 from ..core.condition_evolver import YamlIndicatorUtils as CoreYamlIndicatorUtils
-from ..models.strategy_models import Condition, ConditionGroup, IndicatorGene
+from ..models import Condition, ConditionGroup, IndicatorGene
 from ..utils.yaml_utils import YamlIndicatorUtils
 from .strategies import (
     ComplexConditionsStrategy,
@@ -113,7 +113,9 @@ class ConditionGenerator:
             mtf_longs, mtf_shorts, _ = mtf_strategy.generate_conditions(indicators)
             longs.extend(mtf_longs)
             shorts.extend(mtf_shorts)
-            self.logger.debug(f"MTF条件追加: Long={len(mtf_longs)}, Short={len(mtf_shorts)}")
+            self.logger.debug(
+                f"MTF条件追加: Long={len(mtf_longs)}, Short={len(mtf_shorts)}"
+            )
         except Exception as e:
             self.logger.warning(f"MTF戦略生成失敗（スキップします）: {e}")
 

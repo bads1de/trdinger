@@ -79,7 +79,7 @@ class TestHybridIntegration:
             ) as mock_backtest_class:
                 mock_backtest = Mock()
                 mock_backtest_class.return_value = mock_backtest
-                
+
                 mock_strategy_factory = Mock()
 
                 engine = GeneticAlgorithmEngine(
@@ -153,7 +153,11 @@ class TestHybridIntegration:
         assert mock_hybrid_predictor.predict.called
 
     def test_hybrid_multi_objective_evaluation(
-        self, hybrid_ga_config, mock_hybrid_predictor, mock_feature_adapter, sample_training_data
+        self,
+        hybrid_ga_config,
+        mock_hybrid_predictor,
+        mock_feature_adapter,
+        sample_training_data,
     ):
         """ハイブリッド多目的評価テスト"""
         from backend.app.services.auto_strategy.core.hybrid_individual_evaluator import (
@@ -215,7 +219,7 @@ class TestHybridIntegration:
             }
             # is_trained プロパティまたはメソッドのモック
             mock_ml_service.trainer.is_trained = True
-            
+
             mock_ml_service.predict.return_value = np.array([0.2, 0.3, 0.5])
             mock_ml_service_class.return_value = mock_ml_service
 
@@ -241,8 +245,12 @@ class TestHybridIntegration:
         mock_feature_adapter,
     ):
         """ハイブリッドGA完全統合テスト"""
-        from app.services.auto_strategy.models.strategy_models import StrategyGene, IndicatorGene, TPSLGene
-        
+        from app.services.auto_strategy.models import (
+            StrategyGene,
+            IndicatorGene,
+            TPSLGene,
+        )
+
         # モック用の有効なStrategyGeneを作成
         valid_gene = StrategyGene(
             indicators=[IndicatorGene(type="SMA", parameters={"period": 14})],
@@ -255,7 +263,7 @@ class TestHybridIntegration:
             long_tpsl_gene=TPSLGene(),
             short_tpsl_gene=TPSLGene(),
             position_sizing_gene=None,
-            metadata={}
+            metadata={},
         )
 
         with patch(
@@ -277,7 +285,9 @@ class TestHybridIntegration:
                     "profit_factor": 1.8,
                     "total_trades": 50,
                 }
-                mock_backtest.data_service.get_ohlcv_data.return_value = sample_training_data
+                mock_backtest.data_service.get_ohlcv_data.return_value = (
+                    sample_training_data
+                )
                 mock_backtest_class.return_value = mock_backtest
 
                 with patch(
@@ -288,7 +298,7 @@ class TestHybridIntegration:
                         "best_fitness": 1.5,
                         "statistics": {"avg_fitness": 1.2},
                     }
-                    
+
                     mock_strategy_factory = Mock()
 
                     engine = GeneticAlgorithmEngine(
@@ -344,6 +354,7 @@ class TestHybridIntegration:
 
         # バリデーションが通ることを確認
         from app.services.auto_strategy.config.validators import ConfigValidator
+
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is True
 
@@ -376,7 +387,7 @@ class TestHybridIntegration:
             }
             # is_trained -> False
             mock_ml_service.trainer.is_trained = False
-            
+
             mock_ml_service_class.return_value = mock_ml_service
 
             predictor = HybridPredictor(trainer_type="single", model_type="lightgbm")

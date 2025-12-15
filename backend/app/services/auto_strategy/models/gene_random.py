@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import random
 
-from .enums import PositionSizingMethod, TPSLMethod
+from ..config.enums import PositionSizingMethod, TPSLMethod
 from .position_sizing_gene import PositionSizingGene
 from .tpsl_gene import TPSLGene
 

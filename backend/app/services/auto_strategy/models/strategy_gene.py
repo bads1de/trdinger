@@ -9,10 +9,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .condition import Condition, ConditionGroup
 from .entry_gene import EntryGene
-from .enums import PositionSizingMethod
+from ..config.enums import PositionSizingMethod
 from .indicator_gene import IndicatorGene
 from .position_sizing_gene import PositionSizingGene
 from .stateful_condition import StatefulCondition
+from .tool_gene import ToolGene
 from .tpsl_gene import TPSLGene
 
 
@@ -43,6 +44,8 @@ class StrategyGene:
     entry_gene: Optional[EntryGene] = None
     long_entry_gene: Optional[EntryGene] = None
     short_entry_gene: Optional[EntryGene] = None
+    # ツール遺伝子（エントリーフィルターなど）
+    tool_genes: List[ToolGene] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def get_effective_long_conditions(self) -> List[Union[Condition, ConditionGroup]]:

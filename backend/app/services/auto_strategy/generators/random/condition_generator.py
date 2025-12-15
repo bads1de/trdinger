@@ -9,7 +9,7 @@ import random
 from typing import List
 
 from ...config.constants import OPERATORS
-from ...models.strategy_models import Condition
+from ...models import Condition
 from .operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)

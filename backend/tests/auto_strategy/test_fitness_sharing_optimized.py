@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
-from app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     Condition,
     IndicatorGene,
     PositionSizingGene,

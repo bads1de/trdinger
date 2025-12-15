@@ -9,7 +9,7 @@ import uuid
 from typing import Any, Dict, Optional
 
 from ..models.entry_gene import EntryGene
-from ..models.strategy_models import (
+from ..models import (
     Condition,
     IndicatorGene,
     PositionSizingGene,
@@ -130,6 +130,9 @@ class DictConverter:
                     self.stateful_condition_to_dict(sc)
                     for sc in getattr(strategy_gene, "stateful_conditions", [])
                 ],
+                "tool_genes": [
+                    tg.to_dict() for tg in getattr(strategy_gene, "tool_genes", [])
+                ],
                 "metadata": strategy_gene.metadata,
             }
 
@@ -174,7 +177,7 @@ class DictConverter:
         """
         try:
             # IndicatorGeneクラスを動的にインポート
-            from ..models.strategy_models import IndicatorGene
+            from ..models import IndicatorGene
 
             return IndicatorGene(
                 type=data["type"],
@@ -211,7 +214,7 @@ class DictConverter:
     def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
         """Condition または ConditionGroup を辞書に変換"""
         try:
-            from ..models.strategy_models import Condition, ConditionGroup
+            from ..models import Condition, ConditionGroup
 
             if isinstance(obj, ConditionGroup):
                 return {
@@ -263,7 +266,7 @@ class DictConverter:
             if data is None:
                 return None
 
-            from ..models.strategy_models import TPSLGene
+            from ..models import TPSLGene
 
             return TPSLGene.from_dict(data)  # type: ignore[cSpell] # TPSL is a valid trading acronym
 
@@ -310,7 +313,7 @@ class DictConverter:
                 return None
 
             # PositionSizingGeneクラスを動的にインポート
-            from ..models.strategy_models import PositionSizingGene
+            from ..models import PositionSizingGene
 
             return PositionSizingGene.from_dict(data)
 
@@ -422,7 +425,7 @@ class DictConverter:
             ]
 
             # 条件の復元
-            from ..models.strategy_models import ConditionGroup
+            from ..models import ConditionGroup
 
             def parse_condition_or_group(cond_data):
                 if isinstance(cond_data, dict):
@@ -510,7 +513,7 @@ class DictConverter:
             # 有効な指標がない場合はデフォルト指標を追加
             enabled_indicators = [ind for ind in indicators if ind.enabled]
             if not enabled_indicators:
-                from ..models.strategy_models import IndicatorGene
+                from ..models import IndicatorGene
 
                 indicators.append(
                     IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
@@ -532,6 +535,15 @@ class DictConverter:
                 if sc_data is not None
             ]
 
+            # ツール遺伝子の復元
+            from ..models.tool_gene import ToolGene
+
+            tool_genes = [
+                ToolGene.from_dict(tg_data)
+                for tg_data in data.get("tool_genes", [])
+                if tg_data is not None
+            ]
+
             return strategy_gene_class(
                 id=data.get("id", str(uuid.uuid4())),
                 indicators=indicators,
@@ -548,6 +560,7 @@ class DictConverter:
                 entry_gene=entry_gene,
                 long_entry_gene=long_entry_gene,
                 short_entry_gene=short_entry_gene,
+                tool_genes=tool_genes,
                 metadata=metadata,
             )
 
@@ -567,7 +580,7 @@ class DictConverter:
             条件オブジェクト
         """
         try:
-            from ..models.strategy_models import Condition
+            from ..models import Condition
 
             return Condition(
                 left_operand=data["left_operand"],

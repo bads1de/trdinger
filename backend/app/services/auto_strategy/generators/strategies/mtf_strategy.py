@@ -10,7 +10,7 @@ import random
 import copy
 from typing import List, Union, Tuple, Dict
 
-from ...models.strategy_models import Condition, ConditionGroup, IndicatorGene
+from ...models import Condition, ConditionGroup, IndicatorGene
 from ...config.constants import IndicatorType
 from .base_strategy import ConditionStrategy
 
@@ -28,9 +28,7 @@ class MTFStrategy(ConditionStrategy):
     4. これらをAND条件で結合。
     """
 
-    def generate_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
+    def generate_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
         List[Union[Condition, ConditionGroup]],
         List[Union[Condition, ConditionGroup]],
         List[Condition],
@@ -55,9 +53,9 @@ class MTFStrategy(ConditionStrategy):
         for ind in indicators:
             if not ind.enabled:
                 continue
-            
+
             ind_type = self.condition_generator._get_indicator_type(ind)
-            
+
             if ind_type == IndicatorType.TREND:
                 trend_indicators.append(ind)
             else:
@@ -81,10 +79,14 @@ class MTFStrategy(ConditionStrategy):
                 # トレンド系の場合は "Close > Indicator" のような形式が望ましい場合もあるが、
                 # ConditionGeneratorの実装に依存する。
                 # ここでは汎用メソッドを使って条件を取得し、必要なら修正する。
-                
+
                 # トレンド系指標の条件生成（上位足）
-                trend_longs = self.condition_generator._generic_long_conditions(trend_ind)
-                trend_shorts = self.condition_generator._generic_short_conditions(trend_ind)
+                trend_longs = self.condition_generator._generic_long_conditions(
+                    trend_ind
+                )
+                trend_shorts = self.condition_generator._generic_short_conditions(
+                    trend_ind
+                )
             except Exception as e:
                 logger.warning(f"MTFトレンド条件生成エラー: {e}")
                 continue
@@ -98,12 +100,19 @@ class MTFStrategy(ConditionStrategy):
 
             for trigger_ind in targets:
                 # 同じ指標の組み合わせは避ける（意味がないため）
-                if trigger_ind.type == trend_ind.type and trigger_ind.parameters == trend_ind.parameters:
+                if (
+                    trigger_ind.type == trend_ind.type
+                    and trigger_ind.parameters == trend_ind.parameters
+                ):
                     continue
 
                 try:
-                    trigger_longs = self.condition_generator._generic_long_conditions(trigger_ind)
-                    trigger_shorts = self.condition_generator._generic_short_conditions(trigger_ind)
+                    trigger_longs = self.condition_generator._generic_long_conditions(
+                        trigger_ind
+                    )
+                    trigger_shorts = self.condition_generator._generic_short_conditions(
+                        trigger_ind
+                    )
 
                     # 組み合わせ: (上位足Long) AND (下位足Long)
                     for tl in trend_longs:
@@ -142,14 +151,16 @@ class MTFStrategy(ConditionStrategy):
             "4h": "1d",
             "1d": "1w",
         }
-        
+
         candidates = mapping.get(current_tf, "1d")
-        
+
         if isinstance(candidates, list):
             return random.choice(candidates)
         return candidates
 
-    def _create_mtf_indicators(self, indicators: List[IndicatorGene], timeframe: str) -> List[IndicatorGene]:
+    def _create_mtf_indicators(
+        self, indicators: List[IndicatorGene], timeframe: str
+    ) -> List[IndicatorGene]:
         """指標のディープコピーを作成し、timeframeを設定"""
         mtf_list = []
         for ind in indicators:

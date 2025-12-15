@@ -7,11 +7,11 @@ import pandas as pd
 import numpy as np
 from unittest.mock import Mock, patch
 
-from backend.app.services.auto_strategy.utils.hybrid_feature_adapter import (
+from app.services.auto_strategy.utils.hybrid_feature_adapter import (
     HybridFeatureAdapter,
     MLFeatureError,
 )
-from backend.app.services.auto_strategy.models.strategy_gene import StrategyGene
+from app.services.auto_strategy.models.strategy_gene import StrategyGene
 
 
 class TestHybridFeatureAdapter:

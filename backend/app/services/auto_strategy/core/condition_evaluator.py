@@ -13,7 +13,7 @@ import pandas as pd
 
 from app.utils.error_handler import safe_operation
 
-from ..models.strategy_models import Condition, ConditionGroup
+from ..models import Condition, ConditionGroup
 
 logger = logging.getLogger(__name__)
 

@@ -7,8 +7,8 @@ Adaptive Calculator
 import logging
 from typing import Any, Dict, Optional
 
-from ...models.strategy_models import TPSLGene
-from ...models.tpsl_result import TPSLResult
+from ...models import TPSLGene
+from ...models.tpsl_gene import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator

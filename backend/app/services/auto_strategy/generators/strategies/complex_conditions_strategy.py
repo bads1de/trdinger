@@ -11,9 +11,13 @@ import logging
 import random
 from typing import List, Union, Dict, Tuple, Optional, Any
 
-from app.services.indicators.config import indicator_registry, IndicatorScaleType, IndicatorConfig
+from app.services.indicators.config import (
+    indicator_registry,
+    IndicatorScaleType,
+    IndicatorConfig,
+)
 from ...config.constants import IndicatorType
-from ...models.strategy_models import Condition, ConditionGroup, IndicatorGene
+from ...models import Condition, ConditionGroup, IndicatorGene
 from .base_strategy import ConditionStrategy
 
 logger = logging.getLogger(__name__)
@@ -25,9 +29,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
     メタデータ駆動型のアプローチにより、未知の指標にも対応します。
     """
 
-    def generate_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
+    def generate_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
         List[Union[Condition, ConditionGroup]],
         List[Union[Condition, ConditionGroup]],
         List[Condition],
@@ -43,7 +45,9 @@ class ComplexConditionsStrategy(ConditionStrategy):
         classified_indicators = self._classify_indicators(indicators)
 
         # 1. トレンド押し目買いパターン (Trend + Momentum)
-        tp_long, tp_short = self._create_trend_pullback_conditions(classified_indicators)
+        tp_long, tp_short = self._create_trend_pullback_conditions(
+            classified_indicators
+        )
         long_conditions.extend(tp_long)
         short_conditions.extend(tp_short)
 
@@ -99,11 +103,13 @@ class ComplexConditionsStrategy(ConditionStrategy):
 
     def _create_trend_pullback_conditions(
         self, classified: Dict[IndicatorType, List[IndicatorGene]]
-    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]
+    ]:
         """トレンド押し目買い/戻り売り条件を生成"""
         longs = []
         shorts = []
-        
+
         trends = classified[IndicatorType.TREND]
         momentums = classified[IndicatorType.MOMENTUM]
 
@@ -113,7 +119,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
         # 組み合わせ（最大1ペア）
         trend = random.choice(trends)
         momentum = random.choice(momentums)
-        
+
         trend_name = self._get_indicator_name(trend)
         momentum_name = self._get_indicator_name(momentum)
 
@@ -125,14 +131,18 @@ class ComplexConditionsStrategy(ConditionStrategy):
         else:
             # ロング用条件セット
             long_set = []
-            long_set.append(Condition(left_operand="Close", operator=">", right_operand=trend_name))
-            
-            momentum_conds = self.condition_generator._generic_short_conditions(momentum)
+            long_set.append(
+                Condition(left_operand="Close", operator=">", right_operand=trend_name)
+            )
+
+            momentum_conds = self.condition_generator._generic_short_conditions(
+                momentum
+            )
             if momentum_conds:
                 cond = momentum_conds[0]
                 cond.left_operand = momentum_name
                 long_set.append(cond)
-                
+
             if len(long_set) > 1:
                 longs.append(ConditionGroup(operator="AND", conditions=long_set))
             elif long_set:
@@ -140,9 +150,13 @@ class ComplexConditionsStrategy(ConditionStrategy):
 
             # ショート用条件セット
             short_set = []
-            short_set.append(Condition(left_operand="Close", operator="<", right_operand=trend_name))
-            
-            momentum_conds_long = self.condition_generator._generic_long_conditions(momentum)
+            short_set.append(
+                Condition(left_operand="Close", operator="<", right_operand=trend_name)
+            )
+
+            momentum_conds_long = self.condition_generator._generic_long_conditions(
+                momentum
+            )
             if momentum_conds_long:
                 cond = momentum_conds_long[0]
                 cond.left_operand = momentum_name
@@ -161,7 +175,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
         """指標クロス条件を生成（メタデータ駆動）"""
         longs = []
         shorts = []
-        
+
         # 価格スケールの指標を抽出
         price_indicators = []
         for ind in indicators:
@@ -172,7 +186,14 @@ class ComplexConditionsStrategy(ConditionStrategy):
             # ここでは厳密にチェック
             if config and config.scale_type == IndicatorScaleType.PRICE_RATIO:
                 price_indicators.append(ind)
-            elif ind.type in ["SMA", "EMA", "WMA", "HMA", "KAMA", "TRIMA"]: # フォールバック
+            elif ind.type in [
+                "SMA",
+                "EMA",
+                "WMA",
+                "HMA",
+                "KAMA",
+                "TRIMA",
+            ]:  # フォールバック
                 price_indicators.append(ind)
 
         if len(price_indicators) < 2:
@@ -181,29 +202,33 @@ class ComplexConditionsStrategy(ConditionStrategy):
         # 2つ選ぶ
         pair = random.sample(price_indicators, 2)
         ind1, ind2 = pair[0], pair[1]
-        
+
         # 期間(period/length)で短期・長期を判別
         def get_period(ind):
             return ind.parameters.get("period", ind.parameters.get("length", 0))
-        
+
         p1 = get_period(ind1)
         p2 = get_period(ind2)
-        
+
         # 同じ期間の場合はクロス条件を作らない
-        if abs(p1 - p2) < 1: 
+        if abs(p1 - p2) < 1:
             return longs, shorts
-            
+
         short_ma = ind1 if p1 < p2 else ind2
         long_ma = ind2 if p1 < p2 else ind1
-        
+
         short_name = self._get_indicator_name(short_ma)
         long_name = self._get_indicator_name(long_ma)
 
         # ゴールデンクロス (短期 > 長期)
-        longs.append(Condition(left_operand=short_name, operator=">", right_operand=long_name))
-        
+        longs.append(
+            Condition(left_operand=short_name, operator=">", right_operand=long_name)
+        )
+
         # デッドクロス (短期 < 長期)
-        shorts.append(Condition(left_operand=short_name, operator="<", right_operand=long_name))
+        shorts.append(
+            Condition(left_operand=short_name, operator="<", right_operand=long_name)
+        )
 
         return longs, shorts
 
@@ -213,31 +238,41 @@ class ComplexConditionsStrategy(ConditionStrategy):
         """ボラティリティブレイクアウト条件を生成（メタデータ駆動）"""
         longs = []
         shorts = []
-        
+
         # バンド系指標（Upper/Lowerを持つ）またはボラティリティ指標を探す
         breakout_candidates = []
-        
+
         for ind in indicators:
             if not ind.enabled:
                 continue
             config = self._get_indicator_config(ind.type)
-            
+
             is_band = False
             if config:
                 # return_cols に upper/lower が含まれるかチェック
                 if config.return_cols:
-                    lower_cols = [c for c in config.return_cols if any(k in c.lower() for k in ["upper", "top", "high"])]
+                    lower_cols = [
+                        c
+                        for c in config.return_cols
+                        if any(k in c.lower() for k in ["upper", "top", "high"])
+                    ]
                     if lower_cols:
                         is_band = True
-                
+
                 # またはカテゴリがVolatilityで、かつ価格スケールであること
-                if not is_band and config.category == "volatility" and config.scale_type == IndicatorScaleType.PRICE_RATIO:
-                    is_band = True # 例: Keltner Channels, Donchian
-            
+                if (
+                    not is_band
+                    and config.category == "volatility"
+                    and config.scale_type == IndicatorScaleType.PRICE_RATIO
+                ):
+                    is_band = True  # 例: Keltner Channels, Donchian
+
             # フォールバック: 名前にBB, BANDなどが含まれる
-            if not config and any(k in ind.type.upper() for k in ["BB", "BAND", "KELTNER", "DONCHIAN"]):
+            if not config and any(
+                k in ind.type.upper() for k in ["BB", "BAND", "KELTNER", "DONCHIAN"]
+            ):
                 is_band = True
-                
+
             if is_band:
                 breakout_candidates.append(ind)
 
@@ -249,9 +284,9 @@ class ComplexConditionsStrategy(ConditionStrategy):
         config = self._get_indicator_config(target_ind.type)
 
         # Upper/Lowerバンド名の解決
-        upper_suffix = "_2" # デフォルト（pandas-taの多くは [lower, mid, upper] の順だが、upperが最後の場合が多い）
+        upper_suffix = "_2"  # デフォルト（pandas-taの多くは [lower, mid, upper] の順だが、upperが最後の場合が多い）
         lower_suffix = "_0"
-        
+
         if config and config.return_cols:
             # メタデータから正確な位置を特定
             for i, col in enumerate(config.return_cols):
@@ -260,18 +295,22 @@ class ComplexConditionsStrategy(ConditionStrategy):
                     upper_suffix = f"_{i}"
                 if "lower" in col_lower or "bottom" in col_lower or "low" in col_lower:
                     lower_suffix = f"_{i}"
-        
+
         # 名前解決（IndicatorCalculatorの命名規則に合わせる）
         # IndicatorCalculatorは複数出力の場合、base_name_0, base_name_1... とする
         upper_name = f"{base_name}{upper_suffix}"
         lower_name = f"{base_name}{lower_suffix}"
-        
+
         # ブレイクアウト条件生成
         # Upperブレイク (Close > UpperBand) -> ロング
-        longs.append(Condition(left_operand="Close", operator=">", right_operand=upper_name))
-        
+        longs.append(
+            Condition(left_operand="Close", operator=">", right_operand=upper_name)
+        )
+
         # Lowerブレイク (Close < LowerBand) -> ショート
-        shorts.append(Condition(left_operand="Close", operator="<", right_operand=lower_name))
+        shorts.append(
+            Condition(left_operand="Close", operator="<", right_operand=lower_name)
+        )
 
         return longs, shorts
 
@@ -281,27 +320,37 @@ class ComplexConditionsStrategy(ConditionStrategy):
         """従来の生成ロジック（フォールバック）"""
         long_conditions = []
         short_conditions = []
-        
+
         for indicator in indicators:
             if not indicator.enabled:
                 continue
-            
+
             ind_name = self._get_indicator_name(indicator)
-            
+
             try:
-                long_conds = self.condition_generator._generic_long_conditions(indicator)
-                short_conds = self.condition_generator._generic_short_conditions(indicator)
-                
+                long_conds = self.condition_generator._generic_long_conditions(
+                    indicator
+                )
+                short_conds = self.condition_generator._generic_short_conditions(
+                    indicator
+                )
+
                 # オペランド名を修正
-                for c in long_conds: c.left_operand = ind_name
-                for c in short_conds: c.left_operand = ind_name
-                
+                for c in long_conds:
+                    c.left_operand = ind_name
+                for c in short_conds:
+                    c.left_operand = ind_name
+
                 long_conditions.extend(long_conds)
                 short_conditions.extend(short_conds)
             except Exception:
                 pass
-                
-        return self._structure_conditions(long_conditions), self._structure_conditions(short_conditions), []
+
+        return (
+            self._structure_conditions(long_conditions),
+            self._structure_conditions(short_conditions),
+            [],
+        )
 
     def _structure_conditions(
         self, conditions: List[Union[Condition, ConditionGroup]]

@@ -8,10 +8,10 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 
-from backend.app.services.auto_strategy.generators.random.indicator_generator import (
+from app.services.auto_strategy.generators.random.indicator_generator import (
     IndicatorGenerator,
 )
-from backend.app.services.auto_strategy.models.strategy_models import IndicatorGene
+from app.services.auto_strategy.models import IndicatorGene
 
 
 @dataclass

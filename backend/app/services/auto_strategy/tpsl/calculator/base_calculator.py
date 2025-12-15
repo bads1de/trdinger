@@ -8,8 +8,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple
 
-from ...models.strategy_models import TPSLGene
-from ...models.tpsl_result import TPSLResult
+from ...models import TPSLGene
+from ...models.tpsl_gene import TPSLResult
 
 logger = logging.getLogger(__name__)
 

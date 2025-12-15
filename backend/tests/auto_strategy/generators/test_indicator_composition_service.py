@@ -5,10 +5,10 @@ IndicatorCompositionService Tests
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 
-from backend.app.services.auto_strategy.generators.indicator_composition_service import (
+from app.services.auto_strategy.generators.indicator_composition_service import (
     IndicatorCompositionService,
 )
-from backend.app.services.auto_strategy.models.strategy_models import IndicatorGene
+from app.services.auto_strategy.models import IndicatorGene
 
 # Mock constants if necessary, or assume they are available from imports within the service
 # The service imports them from ..config.constants.
@@ -37,13 +37,11 @@ class TestIndicatorCompositionService:
 
         return _create
 
-
-
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.random.random"
+        "app.services.auto_strategy.generators.indicator_composition_service.random.random"
     )
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
+        "app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
         ["SMA", "EMA"],
     )
     def test_enhance_with_ma_cross_already_enough_ma(
@@ -59,18 +57,18 @@ class TestIndicatorCompositionService:
         assert len(indicators) == 2
 
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.random.random"
+        "app.services.auto_strategy.generators.indicator_composition_service.random.random"
     )
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
+        "app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
         ["SMA", "EMA"],
     )
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.PREFERRED_MA_INDICATORS",
+        "app.services.auto_strategy.generators.indicator_composition_service.PREFERRED_MA_INDICATORS",
         ["SMA"],
     )
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.MA_INDICATORS_NEEDING_PERIOD",
+        "app.services.auto_strategy.generators.indicator_composition_service.MA_INDICATORS_NEEDING_PERIOD",
         ["SMA", "EMA"],
     )
     def test_enhance_with_ma_cross_add_one(
@@ -88,11 +86,11 @@ class TestIndicatorCompositionService:
         # The logic: pick unique period.
 
         with patch(
-            "backend.app.services.auto_strategy.generators.indicator_composition_service.random.sample",
+            "app.services.auto_strategy.generators.indicator_composition_service.random.sample",
             side_effect=lambda pop, k: list(pop),
         ):
             with patch(
-                "backend.app.services.auto_strategy.generators.indicator_composition_service.random.choice",
+                "app.services.auto_strategy.generators.indicator_composition_service.random.choice",
                 return_value=14,
             ):
                 service.enhance_with_ma_cross_strategy(indicators, available)
@@ -102,10 +100,10 @@ class TestIndicatorCompositionService:
         assert added.type in ["SMA", "EMA"]
 
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.random.random"
+        "app.services.auto_strategy.generators.indicator_composition_service.random.random"
     )
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
+        "app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
         ["SMA", "EMA"],
     )
     def test_enhance_with_ma_cross_prob_fail(
@@ -122,16 +120,14 @@ class TestIndicatorCompositionService:
 
         assert len(indicators) == 1
 
-
-
     @patch(
-        "backend.app.services.auto_strategy.generators.indicator_composition_service.MA_INDICATORS_NEEDING_PERIOD",
+        "app.services.auto_strategy.generators.indicator_composition_service.MA_INDICATORS_NEEDING_PERIOD",
         ["SMA"],
     )
     def test_get_default_params_for_indicator(self, service):
         """デフォルトパラメータ取得"""
         with patch(
-            "backend.app.services.auto_strategy.generators.indicator_composition_service.random.choice",
+            "app.services.auto_strategy.generators.indicator_composition_service.random.choice",
             return_value=20,
         ):
             params = service._get_default_params_for_indicator("SMA")
@@ -147,7 +143,7 @@ class TestIndicatorCompositionService:
         # It imports MOVING_AVERAGE_INDICATORS.
 
         with patch(
-            "backend.app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
+            "app.services.auto_strategy.generators.indicator_composition_service.MOVING_AVERAGE_INDICATORS",
             ["SMA"],
         ):
             indicators = [
@@ -191,5 +187,3 @@ class TestIndicatorCompositionService:
                 ["SMA", "EMA"], existing_periods
             )
             assert result is not None
-
-

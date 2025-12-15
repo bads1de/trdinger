@@ -2,11 +2,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.app.services.auto_strategy.generators.condition_generator import (
+from app.services.auto_strategy.generators.condition_generator import (
     ConditionGenerator,
     GAConditionGenerator,
 )
-from backend.app.services.auto_strategy.models.strategy_models import IndicatorGene
+from app.services.auto_strategy.models import IndicatorGene
 
 
 class TestConditionGenerator:
@@ -72,7 +72,7 @@ class TestConditionGenerator:
         """YAML設定読み込みでエラーが発生した場合に例外を投げることをテスト"""
 
         with patch(
-            "backend.app.services.auto_strategy.generators.condition_generator.YamlIndicatorUtils.load_yaml_config_for_indicators"
+            "app.services.auto_strategy.generators.condition_generator.YamlIndicatorUtils.load_yaml_config_for_indicators"
         ) as mock_load:
             mock_load.side_effect = Exception("YAML読み込みエラー")
 
@@ -113,10 +113,10 @@ class TestGAConditionGenerator:
         """GAコンポーネント初期化が成功することをテスト"""
         with (
             patch(
-                "backend.app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils"
+                "app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils"
             ) as mock_utils,
             patch(
-                "backend.app.services.auto_strategy.generators.condition_generator.ConditionEvolver"
+                "app.services.auto_strategy.generators.condition_generator.ConditionEvolver"
             ) as mock_evolver,
         ):
             mock_yaml_utils = MagicMock()
@@ -140,7 +140,7 @@ class TestGAConditionGenerator:
     def test_ga_components_initialization_missing_yaml_file(self):
         """YAMLファイルが存在しない場合の初期化をテスト"""
         with patch(
-            "backend.app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils"
+            "app.services.auto_strategy.generators.condition_generator.CoreYamlIndicatorUtils"
         ) as mock_utils:
             mock_utils.side_effect = FileNotFoundError("ファイルが見つかりません")
 

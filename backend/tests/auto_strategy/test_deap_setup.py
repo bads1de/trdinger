@@ -12,7 +12,7 @@ from deap import base
 
 from app.services.auto_strategy.config.ga_runtime import GAConfig
 from app.services.auto_strategy.core.deap_setup import DEAPSetup
-from app.services.auto_strategy.models.strategy_models import StrategyGene
+from app.services.auto_strategy.models import StrategyGene
 
 
 class MockCreator(SimpleNamespace):

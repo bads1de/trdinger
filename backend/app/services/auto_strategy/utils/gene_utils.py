@@ -393,7 +393,7 @@ class GeneUtils:
         try:
             # 動的インポートを避けるため、引数として渡すか、呼び出し側でインポートする
             # ここでは基本的な構造のみを提供
-            from ..models.strategy_models import (
+            from ..models import (
                 Condition,
                 IndicatorGene,
                 PositionSizingGene,

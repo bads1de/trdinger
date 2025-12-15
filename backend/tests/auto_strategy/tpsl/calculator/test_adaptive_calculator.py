@@ -9,8 +9,8 @@ from app.services.auto_strategy.tpsl.calculator.adaptive_calculator import (
     AdaptiveCalculator,
 )
 from app.services.auto_strategy.models.tpsl_gene import TPSLGene
-from app.services.auto_strategy.models.enums import TPSLMethod
-from app.services.auto_strategy.models.tpsl_result import TPSLResult
+from app.services.auto_strategy.config.enums import TPSLMethod
+from app.services.auto_strategy.models import TPSLResult
 
 
 class TestAdaptiveCalculator:

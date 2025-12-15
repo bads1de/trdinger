@@ -44,7 +44,7 @@ class TestGenerateTPSLGene:
 
     def test_returns_tpsl_gene(self, generator):
         """TPSLGeneを返す"""
-        from app.services.auto_strategy.models.strategy_models import TPSLGene
+        from app.services.auto_strategy.models import TPSLGene
 
         result = generator.generate_tpsl_gene()
 
@@ -55,7 +55,7 @@ class TestGenerateTPSLGene:
         from app.services.auto_strategy.generators.random.tpsl_generator import (
             TPSLGenerator,
         )
-        from app.services.auto_strategy.models.strategy_models import (
+        from app.services.auto_strategy.models import (
             TPSLGene,
             TPSLMethod,
         )
@@ -171,7 +171,7 @@ class TestGenerateTPSLGene:
 
     def test_returns_fallback_on_error(self, generator):
         """エラー時にフォールバック遺伝子を返す"""
-        from app.services.auto_strategy.models.strategy_models import TPSLMethod
+        from app.services.auto_strategy.models import TPSLMethod
 
         with patch(
             "app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene",
@@ -210,7 +210,7 @@ class TestTPSLGeneConstraintCombinations:
         from app.services.auto_strategy.generators.random.tpsl_generator import (
             TPSLGenerator,
         )
-        from app.services.auto_strategy.models.strategy_models import (
+        from app.services.auto_strategy.models import (
             TPSLGene,
             TPSLMethod,
         )
@@ -264,7 +264,7 @@ class TestTPSLGeneConstraintCombinations:
         from app.services.auto_strategy.generators.random.tpsl_generator import (
             TPSLGenerator,
         )
-        from app.services.auto_strategy.models.strategy_models import TPSLGene
+        from app.services.auto_strategy.models import TPSLGene
 
         config = Mock()
         config.tpsl_method_constraints = None

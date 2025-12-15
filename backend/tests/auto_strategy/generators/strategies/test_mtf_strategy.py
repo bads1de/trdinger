@@ -1,10 +1,12 @@
-
 import pytest
 from unittest.mock import MagicMock, patch
-from backend.app.services.auto_strategy.models.indicator_gene import IndicatorGene
-from backend.app.services.auto_strategy.models.strategy_models import Condition, ConditionGroup
-from backend.app.services.auto_strategy.generators.strategies.mtf_strategy import MTFStrategy
-from backend.app.services.auto_strategy.config.constants import IndicatorType
+from app.services.auto_strategy.models.indicator_gene import IndicatorGene
+from app.services.auto_strategy.models import Condition, ConditionGroup
+from app.services.auto_strategy.generators.strategies.mtf_strategy import (
+    MTFStrategy,
+)
+from app.services.auto_strategy.config.constants import IndicatorType
+
 
 class TestMTFStrategy:
     @pytest.fixture
@@ -12,7 +14,7 @@ class TestMTFStrategy:
         generator = MagicMock()
         # モックのコンテキスト設定
         generator.context = {"timeframe": "1h", "symbol": "BTC/USDT"}
-        
+
         # 指標タイプの分類モック
         def _get_indicator_type(ind):
             if ind.type in ["SMA", "EMA"]:
@@ -20,18 +22,19 @@ class TestMTFStrategy:
             elif ind.type in ["RSI", "MACD"]:
                 return IndicatorType.MOMENTUM
             return IndicatorType.TREND
-            
+
         generator._get_indicator_type.side_effect = _get_indicator_type
-        
+
         # 条件生成のモック
         def _generic_long_conditions(ind):
             return [Condition(ind.type, ">", 0)]
+
         def _generic_short_conditions(ind):
             return [Condition(ind.type, "<", 0)]
-            
+
         generator._generic_long_conditions.side_effect = _generic_long_conditions
         generator._generic_short_conditions.side_effect = _generic_short_conditions
-        
+
         return generator
 
     @pytest.fixture
@@ -51,7 +54,7 @@ class TestMTFStrategy:
         # テスト用指標: トレンド系とモメンタム系を用意
         indicators = [
             IndicatorGene(type="SMA", parameters={"period": 20}),  # トレンド
-            IndicatorGene(type="RSI", parameters={"period": 14})   # モメンタム
+            IndicatorGene(type="RSI", parameters={"period": 14}),  # モメンタム
         ]
 
         longs, shorts, exits = strategy.generate_conditions(indicators)
@@ -76,7 +79,7 @@ class TestMTFStrategy:
                 pass
             elif isinstance(cond, ConditionGroup):
                 pass
-        
+
         # 簡易的なチェック: 少なくとも2つの要素が結合されていること
         assert len(first_long.conditions) >= 2
 
@@ -84,20 +87,19 @@ class TestMTFStrategy:
         """指標へのタイムフレーム割り当てロジックをテスト"""
         indicators = [
             IndicatorGene(type="SMA", parameters={"period": 20}),
-            IndicatorGene(type="RSI", parameters={"period": 14})
+            IndicatorGene(type="RSI", parameters={"period": 14}),
         ]
-        
+
         # 上位足を4hに設定して割り当て実行
         higher_tf = "4h"
         mtf_indicators = strategy._create_mtf_indicators(indicators, higher_tf)
-        
+
         # 元のリストとは別のインスタンスになっているか
         assert mtf_indicators is not indicators
-        
+
         # 全ての指標に上位足が設定されているか確認（ヘルパーメソッドは無差別に適用するため）
         sma = next(i for i in mtf_indicators if i.type == "SMA")
         assert sma.timeframe == higher_tf
-        
+
         rsi = next(i for i in mtf_indicators if i.type == "RSI")
         assert rsi.timeframe == higher_tf
-

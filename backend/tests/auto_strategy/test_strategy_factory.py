@@ -8,7 +8,7 @@ import pytest
 from backtesting import Strategy
 
 from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
-from app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     IndicatorGene,
     StrategyGene,
 )

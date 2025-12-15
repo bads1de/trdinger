@@ -7,7 +7,7 @@ LowerTimeframeSimulator のテスト
 import pandas as pd
 import pytest
 from app.services.auto_strategy.models.pending_order import PendingOrder
-from app.services.auto_strategy.models.enums import EntryType
+from app.services.auto_strategy.config.enums import EntryType
 from app.services.auto_strategy.positions.lower_tf_simulator import (
     LowerTimeframeSimulator,
 )

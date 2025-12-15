@@ -7,7 +7,7 @@ TP/SL生成器
 import logging
 import random
 
-from ...models.strategy_models import TPSLGene, TPSLMethod, create_random_tpsl_gene
+from ...models import TPSLGene, TPSLMethod, create_random_tpsl_gene
 
 logger = logging.getLogger(__name__)
 

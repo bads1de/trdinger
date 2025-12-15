@@ -79,7 +79,7 @@ class IndividualEvaluator:
             # ここでは警告に留める
 
         self._fixed_backtest_config = self._select_timeframe_config(backtest_config)
-        
+
         # 設定変更時は結果キャッシュもクリア（前提が変わるため）
         with self._lock:
             self._result_cache.clear()
@@ -111,21 +111,21 @@ class IndividualEvaluator:
         # ロックはPickle不可
         if "_lock" in state:
             del state["_lock"]
-        
+
         # キャッシュはプロセス間で共有せず、転送コスト削減のために除外する
         # ワーカープロセスは空のキャッシュで開始する
         if "_data_cache" in state:
             del state["_data_cache"]
         if "_result_cache" in state:
             del state["_result_cache"]
-            
+
         return state
 
     def __setstate__(self, state):
         """Pickle復元時の状態設定（ロックとキャッシュを再生成）"""
         self.__dict__.update(state)
         self._lock = threading.Lock()
-        
+
         # キャッシュの再初期化（空の状態）
         if not hasattr(self, "_data_cache"):
             self._data_cache = LRUCache(maxsize=self._max_cache_size)
@@ -145,7 +145,7 @@ class IndividualEvaluator:
         """
         try:
             # 遺伝子デコード
-            from ..models.strategy_models import StrategyGene
+            from ..models import StrategyGene
             from ..serializers.gene_serialization import GeneSerializer
 
             if isinstance(individual, StrategyGene):
@@ -161,14 +161,14 @@ class IndividualEvaluator:
             # 今回は _fixed_backtest_config は set_backtest_config で固定され、変更時にキャッシュクリアされるため
             # gene.id だけで十分かもしれないが、念のため安全策を取る。
             # geneにはハッシュメソッドがあるか不明だが、文字列表現はユニークと仮定。
-            
+
             # 遺伝子の文字列表現（パラメータ全体を含む）を一意なキーとして使用
             # IDだけでは、パラメータが同じでIDが違う場合に対応できないが、
             # GAではパラメータが同じなら結果も同じはずなので、パラメータのハッシュが良い。
             # しかし実装が複雑になるため、ここでは gene.id を使用する（IDは生成時に付与される前提）。
             # IDがない場合はstr(gene)を使う。
             cache_key = getattr(gene, "id", str(gene))
-            
+
             with self._lock:
                 if cache_key in self._result_cache:
                     self._cache_hits += 1
@@ -184,11 +184,11 @@ class IndividualEvaluator:
 
             # 評価実行
             fitness = self._execute_evaluation_logic(gene, base_backtest_config, config)
-            
+
             # 結果をキャッシュ
             with self._lock:
                 self._result_cache[cache_key] = fitness
-                
+
             return fitness
 
         except Exception as e:
@@ -199,12 +199,10 @@ class IndividualEvaluator:
         self, gene, base_backtest_config, config
     ) -> Tuple[float, ...]:
         """実際の評価ロジック（OOS/WFA分岐）"""
-        
+
         # Walk-Forward Analysis が有効な場合
         if getattr(config, "enable_walk_forward", False):
-            return self._evaluate_with_walk_forward(
-                gene, base_backtest_config, config
-            )
+            return self._evaluate_with_walk_forward(gene, base_backtest_config, config)
 
         # OOS検証の有無を確認
         oos_ratio = getattr(config, "oos_split_ratio", 0.0)
@@ -217,10 +215,7 @@ class IndividualEvaluator:
             )
         else:
             # 通常評価（全期間）
-            return self._perform_single_evaluation(
-                gene, base_backtest_config, config
-            )
-
+            return self._perform_single_evaluation(gene, base_backtest_config, config)
 
     def _evaluate_with_oos(
         self,
@@ -409,6 +404,7 @@ class IndividualEvaluator:
         # 並列ワーカー内の共有データをチェック
         try:
             from .worker_initializer import get_worker_data
+
             worker_data = get_worker_data("main_data")
             if worker_data is not None:
                 return worker_data
@@ -455,6 +451,7 @@ class IndividualEvaluator:
         # 並列ワーカー内の共有データをチェック
         try:
             from .worker_initializer import get_worker_data
+
             worker_data = get_worker_data("minute_data")
             # 1分足データは存在しない場合もある（None）ため、キーが存在するか確認するロジックが必要だが
             # get_worker_dataは存在しない場合にNoneを返す仕様。

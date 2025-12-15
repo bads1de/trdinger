@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.tpsl.tpsl_service import TPSLService
 from app.services.auto_strategy.models.tpsl_gene import TPSLGene
-from app.services.auto_strategy.models.enums import TPSLMethod
-from app.services.auto_strategy.models.tpsl_result import TPSLResult
+from app.services.auto_strategy.config.enums import TPSLMethod
+from app.services.auto_strategy.models import TPSLResult
 
 
 class TestTPSLService:

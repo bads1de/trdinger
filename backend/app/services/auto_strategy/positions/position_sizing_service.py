@@ -309,7 +309,7 @@ class PositionSizingService:
 
     def _create_default_gene(self, **kwargs):
         """デフォルト遺伝子を作成"""
-        from ..models.strategy_models import (
+        from ..models import (
             PositionSizingGene,
             PositionSizingMethod,
         )

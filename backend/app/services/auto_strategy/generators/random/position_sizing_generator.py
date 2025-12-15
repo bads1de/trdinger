@@ -6,7 +6,7 @@
 
 import logging
 
-from ...models.strategy_models import (
+from ...models import (
     PositionSizingGene,
     PositionSizingMethod,
     create_random_position_sizing_gene,

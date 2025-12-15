@@ -18,7 +18,7 @@ from app.services.auto_strategy.core.genetic_operators import (
     mutate_strategy_gene_pure,
     uniform_crossover,
 )
-from app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     Condition,
     IndicatorGene,
     PositionSizingGene,

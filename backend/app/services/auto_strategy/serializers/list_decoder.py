@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict, List
 
-from ..models.strategy_models import (
+from ..models import (
     PositionSizingGene,
     PositionSizingMethod,
     TPSLGene,
@@ -83,7 +83,7 @@ class ListDecoder:
                         parameters = self._generate_indicator_parameters(
                             indicator_type, param_val
                         )
-                        from ..models.strategy_models import IndicatorGene
+                        from ..models import IndicatorGene
 
                         indicators.append(
                             IndicatorGene(
@@ -103,7 +103,7 @@ class ListDecoder:
                     )
                 else:
                     # ConditionGeneratorが無効な場合のフォールバック
-                    from ..models.strategy_models import Condition
+                    from ..models import Condition
 
                     long_entry_conditions = [
                         Condition(
@@ -124,7 +124,7 @@ class ListDecoder:
                 entry_conditions = long_entry_conditions
             else:
                 # フォールバック条件
-                from ..models.strategy_models import Condition
+                from ..models import Condition
 
                 long_entry_conditions = [
                     Condition(left_operand="close", operator=">", right_operand="open")

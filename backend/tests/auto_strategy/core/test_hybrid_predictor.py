@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from unittest.mock import Mock, MagicMock, patch
 
-from backend.app.services.auto_strategy.core.hybrid_predictor import (
+from app.services.auto_strategy.core.hybrid_predictor import (
     HybridPredictor,
     MLPredictionError,
 )
@@ -19,7 +19,7 @@ class TestHybridPredictor:
     @pytest.fixture
     def mock_training_service_cls(self):
         with patch(
-            "backend.app.services.auto_strategy.core.hybrid_predictor.HybridPredictor._resolve_training_service_cls"
+            "app.services.auto_strategy.core.hybrid_predictor.HybridPredictor._resolve_training_service_cls"
         ) as mock_cls:
             # Create a mock service class that returns a mock service instance
             service_instance = Mock()
@@ -47,7 +47,7 @@ class TestHybridPredictor:
     @pytest.fixture
     def mock_model_manager(self):
         with patch(
-            "backend.app.services.auto_strategy.core.hybrid_predictor.HybridPredictor._resolve_model_manager"
+            "app.services.auto_strategy.core.hybrid_predictor.HybridPredictor._resolve_model_manager"
         ) as mock_mgr:
             manager = Mock()
             manager.get_latest_model.return_value = "/path/to/model.pkl"

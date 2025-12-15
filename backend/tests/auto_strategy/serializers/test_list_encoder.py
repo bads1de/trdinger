@@ -3,7 +3,7 @@ from app.services.auto_strategy.serializers.list_encoder import (
     ListEncoder,
     NormalizationConstants,
 )
-from app.services.auto_strategy.models.strategy_models import (
+from app.services.auto_strategy.models import (
     StrategyGene,
     IndicatorGene,
     Condition,

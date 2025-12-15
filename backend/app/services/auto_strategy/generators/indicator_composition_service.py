@@ -14,7 +14,7 @@ from ..config.constants import (
     MOVING_AVERAGE_INDICATORS,
     PREFERRED_MA_INDICATORS,
 )
-from ..models.strategy_models import IndicatorGene
+from ..models import IndicatorGene
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,6 @@ class IndicatorCompositionService:
     def __init__(self, config):
         self.config = config
         self.indicator_service = TechnicalIndicatorService()
-
-
 
     def enhance_with_ma_cross_strategy(
         self, indicators: List[IndicatorGene], available_indicators: List[str]

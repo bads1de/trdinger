@@ -6,7 +6,7 @@ EntryExecutor サービスのテスト
 
 import pytest
 from app.services.auto_strategy.models.entry_gene import EntryGene
-from app.services.auto_strategy.models.enums import EntryType
+from app.services.auto_strategy.config.enums import EntryType
 from app.services.auto_strategy.positions.entry_executor import EntryExecutor
 
 

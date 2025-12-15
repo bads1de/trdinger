@@ -5,10 +5,10 @@ Fixed Percentage Calculator Tests
 import pytest
 from unittest.mock import Mock
 
-from backend.app.services.auto_strategy.tpsl.calculator.fixed_percentage_calculator import (
+from app.services.auto_strategy.tpsl.calculator.fixed_percentage_calculator import (
     FixedPercentageCalculator,
 )
-from backend.app.services.auto_strategy.models.strategy_models import TPSLGene
+from app.services.auto_strategy.models import TPSLGene
 
 
 class TestFixedPercentageCalculator:

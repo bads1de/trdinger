@@ -6,7 +6,7 @@
 import logging
 from typing import Any, Dict
 
-from ..models.strategy_models import TPSLMethod, TPSLResult
+from ..models import TPSLMethod, TPSLResult
 
 logger = logging.getLogger(__name__)
 

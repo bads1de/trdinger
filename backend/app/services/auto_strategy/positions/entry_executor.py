@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..models.entry_gene import EntryGene
-from ..models.enums import EntryType
+from ..config.enums import EntryType
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ UnifiedTPSLGenerator Tests
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 
-from backend.app.services.auto_strategy.tpsl.generator import (
+from app.services.auto_strategy.tpsl.generator import (
     UnifiedTPSLGenerator,
     RiskRewardStrategy,
     StatisticalStrategy,

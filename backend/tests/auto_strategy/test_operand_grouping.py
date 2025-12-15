@@ -6,7 +6,7 @@ OperandGroupingSystemの機能をテストする。
 
 import pytest
 
-from backend.app.services.auto_strategy.core.operand_grouping import (
+from app.services.auto_strategy.core.operand_grouping import (
     OperandGroup,
     OperandGroupingSystem,
     get_compatibility_score,
