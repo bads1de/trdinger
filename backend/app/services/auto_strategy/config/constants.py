@@ -120,8 +120,14 @@ MA_INDICATORS_NEEDING_PERIOD = {
 TPSL_METHODS = [m.value for m in TPSLMethod]
 
 TPSL_LIMITS = {
-    "stop_loss_pct": (0.005, 0.15),  # 0.5% ~ 15%
-    "take_profit_pct": (0.01, 0.3),  # 1% ~ 30%
+    "stop_loss_pct": (0.005, 0.15),
+    "take_profit_pct": (0.01, 0.3),
+    "base_stop_loss": (0.005, 0.15),
+    "atr_multiplier_sl": (0.5, 5.0),
+    "atr_multiplier_tp": (1.0, 10.0),
+    "atr_period": (5, 50),
+    "lookback_period": (20, 500),
+    "confidence_threshold": (0.1, 1.0),
 }
 
 # === ポジションサイジング関連定数 ===
@@ -239,4 +245,67 @@ GA_MUTATION_SETTINGS = {
     "numeric_threshold_probability": 0.3,
     "min_compatibility_score": 0.5,
     "strict_compatibility_score": 0.7,
+}
+
+# === GA TPSL関連定数 ===
+GA_DEFAULT_TPSL_METHOD_CONSTRAINTS = [
+    "fixed_percentage",
+    "risk_reward_ratio",
+    "volatility_based",
+    "statistical",
+    "adaptive",
+]
+
+GA_TPSL_SL_RANGE = [0.01, 0.08]  # SL範囲（1%-8%）
+GA_TPSL_TP_RANGE = [0.02, 0.20]  # TP範囲（2%-20%）
+GA_TPSL_RR_RANGE = [1.2, 4.0]  # リスクリワード比範囲
+GA_TPSL_ATR_MULTIPLIER_RANGE = [1.0, 4.0]  # ATR倍率範囲
+
+# === GA ポジションサイジング関連定数 ===
+GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS = [
+    "half_optimal_f",
+    "volatility_based",
+    "fixed_ratio",
+    "fixed_quantity",
+]
+
+GA_POSITION_SIZING_LOOKBACK_RANGE = [50, 200]  # ハーフオプティマルF用ルックバック期間
+GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE = [0.25, 0.75]  # オプティマルF倍率範囲
+GA_POSITION_SIZING_ATR_PERIOD_RANGE = [10, 30]  # ATR計算期間範囲
+GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE = [
+    1.0,
+    4.0,
+]  # ポジションサイジング用ATR倍率範囲
+GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [
+    0.01,
+    0.05,
+]  # 1取引あたりのリスク範囲（1%-5%）
+GA_POSITION_SIZING_FIXED_RATIO_RANGE = [0.05, 0.3]  # 固定比率範囲（5%-30%）
+GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 5.0]  # 固定枚数範囲
+GA_POSITION_SIZING_MIN_SIZE_RANGE = [0.01, 0.1]  # 最小ポジションサイズ範囲
+GA_POSITION_SIZING_MAX_SIZE_RANGE = [
+    0.001,
+    1.0,
+]  # 最大ポジションサイズ範囲（システム全体のmax_position_sizeに一致）
+GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]  # 優先度範囲
+GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE = [0.8, 0.99]  # VaR信頼水準
+GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE = [0.005, 0.05]  # VaR許容比率
+GA_POSITION_SIZING_MAX_ES_RATIO_RANGE = [0.01, 0.1]  # ES許容比率
+GA_POSITION_SIZING_VAR_LOOKBACK_RANGE = [50, 500]  # VaR計算のルックバック期間
+
+# ポジションサイジング制限設定
+POSITION_SIZING_LIMITS = {
+    "lookback_period": (10, 500),
+    "optimal_f_multiplier": (0.1, 1.0),
+    "atr_period": (5, 50),
+    "atr_multiplier": (0.5, 10.0),
+    "risk_per_trade": (0.001, 0.1),
+    "fixed_ratio": (0.01, 10.0),
+    "fixed_quantity": (0.01, 1000.0),
+    "min_position_size": (0.001, 1.0),
+    "max_position_size": (0.001, 1.0),
+    "var_confidence": (0.8, 0.999),
+    "max_var_ratio": (0.001, 0.1),
+    "max_expected_shortfall_ratio": (0.001, 0.2),
+    "var_lookback": (20, 1000),
 }
