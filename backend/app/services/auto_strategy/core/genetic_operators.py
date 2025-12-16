@@ -42,7 +42,7 @@ def _convert_to_strategy_gene(individual_or_gene) -> StrategyGene:
     # DEAPのIndividualオブジェクト（リスト）の場合はデコード
     if isinstance(individual_or_gene, list):
         try:
-            from ..serializers.gene_serialization import GeneSerializer
+            from ..serializers.serialization import GeneSerializer
 
             gene_serializer = GeneSerializer()
             return gene_serializer.decode_list_to_strategy_gene(

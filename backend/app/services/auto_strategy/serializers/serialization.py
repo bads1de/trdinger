@@ -1,9 +1,11 @@
 """
-辞書形式変換コンポーネント
+統一遺伝子シリアライゼーション
 
-戦略遺伝子の辞書形式変換機能を担当します。
+戦略遺伝子のシリアライゼーション・デシリアライゼーションを担当するモジュール。
+DictConverterとGeneSerializerを統合し、JSON/Dict形式の相互変換を提供します。
 """
 
+import json
 import logging
 import uuid
 from typing import Any, Dict, Optional
@@ -260,7 +262,7 @@ class DictConverter:
 
             from ..genes import TPSLGene
 
-            return TPSLGene.from_dict(data)  # type: ignore[cSpell] # TPSL is a valid trading acronym
+            return TPSLGene.from_dict(data)
 
         except Exception as e:
             logger.error(f"TP/SL遺伝子復元エラー: {e}")
@@ -457,8 +459,6 @@ class DictConverter:
                 for cond_data in data.get("short_entry_conditions", [])
             ]
 
-            # exit_conditions は廃止されたため読み込まない
-
             # リスク管理設定
             risk_management = data.get("risk_management", {})
 
@@ -645,6 +645,105 @@ class DictConverter:
             raise ValueError(f"StatefulConditionの復元に失敗: {e}")
 
 
+class GeneSerializer:
+    """
+    統一遺伝子シリアライザー
 
+    DictConverterをラップし、JSON/Dict形式の相互変換を提供します。
+    """
 
+    def __init__(self, enable_smart_generation: bool = True):
+        """
+        初期化
 
+        Args:
+            enable_smart_generation: ConditionGeneratorを使用するか
+        """
+        self.dict_converter = DictConverter(enable_smart_generation)
+        self.enable_smart_generation = enable_smart_generation
+
+    # DictConverterのメソッドを委譲
+    def strategy_gene_to_dict(self, strategy_gene) -> Dict[str, Any]:
+        """戦略遺伝子を辞書形式に変換"""
+        return self.dict_converter.strategy_gene_to_dict(strategy_gene)
+
+    def indicator_gene_to_dict(self, indicator_gene) -> Dict[str, Any]:
+        """指標遺伝子を辞書形式に変換"""
+        return self.dict_converter.indicator_gene_to_dict(indicator_gene)
+
+    def dict_to_indicator_gene(self, data: Dict[str, Any]):
+        """辞書形式から指標遺伝子を復元"""
+        return self.dict_converter.dict_to_indicator_gene(data)
+
+    def condition_to_dict(self, condition) -> Dict[str, Any]:
+        """条件を辞書形式に変換"""
+        return self.dict_converter.condition_to_dict(condition)
+
+    def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
+        """Condition または ConditionGroup を辞書に変換"""
+        return self.dict_converter.condition_or_group_to_dict(obj)
+
+    def tpsl_gene_to_dict(self, tpsl_gene):
+        """TP/SL遺伝子を辞書形式に変換"""
+        return self.dict_converter.tpsl_gene_to_dict(tpsl_gene)
+
+    def dict_to_tpsl_gene(self, data: Dict[str, Any]):
+        """辞書形式からTP/SL遺伝子を復元"""
+        return self.dict_converter.dict_to_tpsl_gene(data)
+
+    def position_sizing_gene_to_dict(self, position_sizing_gene):
+        """ポジションサイジング遺伝子を辞書形式に変換"""
+        return self.dict_converter.position_sizing_gene_to_dict(position_sizing_gene)
+
+    def dict_to_position_sizing_gene(self, data: Dict[str, Any]):
+        """辞書形式からポジションサイジング遺伝子を復元"""
+        return self.dict_converter.dict_to_position_sizing_gene(data)
+
+    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class):
+        """辞書形式から戦略遺伝子を復元"""
+        return self.dict_converter.dict_to_strategy_gene(data, strategy_gene_class)
+
+    def dict_to_condition(self, data: Dict[str, Any]):
+        """辞書形式から条件を復元"""
+        return self.dict_converter.dict_to_condition(data)
+
+    # JSON変換機能（JsonConverterを廃止してここに統合）
+    def strategy_gene_to_json(self, strategy_gene) -> str:
+        """
+        戦略遺伝子をJSON文字列に変換
+
+        Args:
+            strategy_gene: 戦略遺伝子オブジェクト
+
+        Returns:
+            JSON文字列
+        """
+        try:
+            data = self.dict_converter.strategy_gene_to_dict(strategy_gene)
+            return json.dumps(data, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"戦略遺伝子JSON変換エラー: {e}")
+            raise ValueError(f"戦略遺伝子のJSON変換に失敗: {e}")
+
+    def json_to_strategy_gene(self, json_str: str, strategy_gene_class):
+        """
+        JSON文字列から戦略遺伝子を復元
+
+        Args:
+            json_str: JSON文字列
+            strategy_gene_class: StrategyGeneクラス
+
+        Returns:
+            戦略遺伝子オブジェクト
+        """
+        try:
+            data = json.loads(json_str)
+            return self.dict_converter.dict_to_strategy_gene(data, strategy_gene_class)
+        except Exception as e:
+            logger.error(f"戦略遺伝子JSON復元エラー: {e}")
+            raise ValueError(f"戦略遺伝子のJSON復元に失敗: {e}")
+
+    # 後方互換性のためのエイリアスメソッド（ListEncoder廃止に伴い不要かもしれないが念のため残すか、削除するか）
+    # ListEncoder は削除されたので、これらのメソッドも削除してよい。
+    # しかし既存コードが呼んでいる可能性を考慮して、ダミーを残すか、エラーを出すか。
+    # 完全に削除する方針だったので削除します。

@@ -692,7 +692,7 @@ class GeneticAlgorithmEngine:
             tuple: 最良個体、最良遺伝子、および最良戦略のタプル。
         """
         from ..genes import StrategyGene
-        from ..serializers.gene_serialization import GeneSerializer
+        from ..serializers.serialization import GeneSerializer
 
         gene_serializer = GeneSerializer()
 

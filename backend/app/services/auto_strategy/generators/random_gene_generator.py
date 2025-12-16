@@ -22,7 +22,7 @@ from ..genes import (
     TPSLGene,
 )
 from ..genes.tool import ToolGene
-from ..serializers.gene_serialization import GeneSerializer
+from ..serializers.serialization import GeneSerializer
 from ..tools import tool_registry
 from .component_generators import (
     EntryGenerator,

@@ -60,7 +60,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             フィットネス値のタプル
         """
         try:
-            from ..serializers.gene_serialization import GeneSerializer
+            from ..serializers.serialization import GeneSerializer
 
             serializer = GeneSerializer()
 

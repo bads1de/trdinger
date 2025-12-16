@@ -2,9 +2,10 @@
 GeneSerializerのテスト
 """
 
+import json
 import pytest
 from unittest.mock import Mock, patch
-from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer
+from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
 
 class TestGeneSerializerInit:
@@ -12,19 +13,11 @@ class TestGeneSerializerInit:
 
     def test_init_initializes_components(self):
         """コンポーネントを初期化する"""
-        with (
-            patch(
-                "app.services.auto_strategy.serializers.dict_converter.DictConverter"
-            ) as mock_dict,
-            patch(
-                "app.services.auto_strategy.serializers.json_converter.JsonConverter"
-            ) as mock_json,
-        ):
-
+        with patch(
+            "app.services.auto_strategy.serializers.serialization.DictConverter"
+        ) as mock_dict:
             serializer = GeneSerializer(enable_smart_generation=True)
-
             mock_dict.assert_called_once_with(True)
-            mock_json.assert_called_once()
 
 
 class TestDelegation:
@@ -32,13 +25,8 @@ class TestDelegation:
 
     @pytest.fixture
     def serializer(self):
-        with (
-            patch(
-                "app.services.auto_strategy.serializers.dict_converter.DictConverter"
-            ),
-            patch(
-                "app.services.auto_strategy.serializers.json_converter.JsonConverter"
-            ),
+        with patch(
+            "app.services.auto_strategy.serializers.serialization.DictConverter"
         ):
             return GeneSerializer()
 
@@ -48,21 +36,18 @@ class TestDelegation:
         serializer.strategy_gene_to_dict(gene)
         serializer.dict_converter.strategy_gene_to_dict.assert_called_once_with(gene)
 
-    def test_json_conversion_delegates(self, serializer):
-        """JSON変換の委譲"""
+    def test_json_conversion(self, serializer):
+        """JSON変換のテスト（委譲ではなく統合されたロジック）"""
         gene = Mock()
-        json_str = "{}"
+        expected_dict = {"id": "test"}
+        serializer.dict_converter.strategy_gene_to_dict.return_value = expected_dict
+        
+        # JSON変換
+        json_str = serializer.strategy_gene_to_json(gene)
+        assert json.loads(json_str) == expected_dict
+        serializer.dict_converter.strategy_gene_to_dict.assert_called_once_with(gene)
+
+        # JSON復元
         cls = Mock()
-
-        serializer.strategy_gene_to_json(gene)
-        serializer.json_converter.strategy_gene_to_json.assert_called_once_with(gene)
-
         serializer.json_to_strategy_gene(json_str, cls)
-        serializer.json_converter.json_to_strategy_gene.assert_called_once_with(
-            json_str, cls
-        )
-
-
-
-
-
+        serializer.dict_converter.dict_to_strategy_gene.assert_called_once_with(expected_dict, cls)

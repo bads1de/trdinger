@@ -255,7 +255,7 @@ class IndividualEvaluator:
         try:
             # 遺伝子デコード
             from ..genes import StrategyGene
-            from ..serializers.gene_serialization import GeneSerializer
+            from ..serializers.serialization import GeneSerializer
 
             if isinstance(individual, StrategyGene):
                 gene = individual
@@ -609,7 +609,7 @@ class IndividualEvaluator:
         """単一期間での評価実行"""
         try:
             # 遺伝子から戦略設定を生成
-            from ..serializers.gene_serialization import GeneSerializer
+            from ..serializers.serialization import GeneSerializer
 
             serializer = GeneSerializer()
 

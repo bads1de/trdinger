@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer
+from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.backtest.backtest_service import BacktestService
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
