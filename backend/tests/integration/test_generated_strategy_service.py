@@ -1,5 +1,5 @@
 """
-StrategyIntegrationService統合テスト
+GeneratedStrategyService統合テスト
 
 戦略統合サービスのデータ変換と互換性をテストします。
 """
@@ -14,13 +14,13 @@ from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
-from app.services.auto_strategy.utils.strategy_integration_service import (
-    StrategyIntegrationService,
+from app.services.auto_strategy.services.generated_strategy_service import (
+    GeneratedStrategyService,
 )
 from database.models import BacktestResult, GeneratedStrategy
 
 
-class TestStrategyIntegrationService:
+class TestGeneratedStrategyService:
     """戦略統合サービスのテスト"""
 
     @pytest.fixture
@@ -36,16 +36,16 @@ class TestStrategyIntegrationService:
         return session
 
     @pytest.fixture
-    def integration_service(self, mock_db_session: Mock) -> StrategyIntegrationService:
+    def integration_service(self, mock_db_session: Mock) -> GeneratedStrategyService:
         """戦略統合サービスのインスタンス
 
         Args:
             mock_db_session: モックDBセッション
 
         Returns:
-            StrategyIntegrationServiceのインスタンス
+            GeneratedStrategyServiceのインスタンス
         """
-        return StrategyIntegrationService(db=mock_db_session)
+        return GeneratedStrategyService(db=mock_db_session)
 
     @pytest.fixture
     def sample_gene_data(self) -> Dict[str, Any]:
@@ -61,14 +61,14 @@ class TestStrategyIntegrationService:
                 {"type": "rsi", "params": {"period": 14}, "enabled": True},
                 {"type": "macd", "params": {}, "enabled": False},
             ],
-            "entry_conditions": [
+            "long_entry_conditions": [
                 {
                     "left_operand": {"indicator": "sma"},
                     "operator": ">",
                     "right_operand": {"indicator": "close"},
                 }
             ],
-            "exit_conditions": [
+            "short_entry_conditions": [
                 {
                     "left_operand": {"indicator": "rsi"},
                     "operator": ">",
@@ -131,7 +131,7 @@ class TestStrategyIntegrationService:
 
     def test_convert_strategy_to_display_format(
         self,
-        integration_service: StrategyIntegrationService,
+        integration_service: GeneratedStrategyService,
         sample_generated_strategy: GeneratedStrategy,
     ) -> None:
         """正常系: 戦略を表示形式に変換
@@ -155,7 +155,7 @@ class TestStrategyIntegrationService:
 
     def test_extract_strategy_name(
         self,
-        integration_service: StrategyIntegrationService,
+        integration_service: GeneratedStrategyService,
         sample_gene_data: Dict[str, Any],
     ) -> None:
         """戦略名の抽出
@@ -171,7 +171,7 @@ class TestStrategyIntegrationService:
         assert "RSI" in strategy_name
 
     def test_extract_strategy_name_empty_indicators(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """インジケーターなしの戦略名
 
@@ -185,7 +185,7 @@ class TestStrategyIntegrationService:
 
     def test_generate_strategy_description(
         self,
-        integration_service: StrategyIntegrationService,
+        integration_service: GeneratedStrategyService,
         sample_gene_data: Dict[str, Any],
     ) -> None:
         """戦略説明の生成
@@ -204,7 +204,7 @@ class TestStrategyIntegrationService:
 
     def test_extract_indicators(
         self,
-        integration_service: StrategyIntegrationService,
+        integration_service: GeneratedStrategyService,
         sample_gene_data: Dict[str, Any],
     ) -> None:
         """インジケーターの抽出
@@ -221,7 +221,7 @@ class TestStrategyIntegrationService:
 
     def test_extract_parameters(
         self,
-        integration_service: StrategyIntegrationService,
+        integration_service: GeneratedStrategyService,
         sample_gene_data: Dict[str, Any],
     ) -> None:
         """パラメータの抽出
@@ -234,19 +234,19 @@ class TestStrategyIntegrationService:
 
         assert "indicators" in parameters
         assert "risk_management" in parameters
-        assert "entry_conditions" in parameters
-        assert "exit_conditions" in parameters
+        assert "long_entry_conditions" in parameters
+        assert "short_entry_conditions" in parameters
 
     def test_extract_parameters_includes_tpsl(
         self,
-        integration_service: StrategyIntegrationService,
+        integration_service: GeneratedStrategyService,
     ) -> None:
         """TP/SLおよびポジションサイジングパラメータの抽出"""
         gene_data = {
             "indicators": {},
             "risk_management": {},
-            "entry_conditions": {},
-            "exit_conditions": {},
+            "long_entry_conditions": {},
+            "short_entry_conditions": {},
             "tpsl_gene": {"stop_loss_pct": 0.01},
             "long_tpsl_gene": {"stop_loss_pct": 0.02},
             "short_tpsl_gene": {"stop_loss_pct": 0.03},
@@ -268,7 +268,7 @@ class TestStrategyIntegrationService:
         assert parameters["position_sizing_gene"]["risk_per_trade"] == 0.01
 
     def test_extract_performance_metrics(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """パフォーマンス指標の抽出
 
@@ -294,7 +294,7 @@ class TestStrategyIntegrationService:
         assert metrics["win_rate"] == 0.65
 
     def test_extract_performance_metrics_none(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """バックテスト結果がNoneの場合
 
@@ -309,7 +309,7 @@ class TestStrategyIntegrationService:
         assert metrics["total_trades"] == 0
 
     def test_calculate_risk_level_low(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """リスクレベル計算: 低
 
@@ -322,7 +322,7 @@ class TestStrategyIntegrationService:
         assert risk_level == "low"
 
     def test_calculate_risk_level_medium(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """リスクレベル計算: 中
 
@@ -335,7 +335,7 @@ class TestStrategyIntegrationService:
         assert risk_level == "medium"
 
     def test_calculate_risk_level_high(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """リスクレベル計算: 高
 
@@ -349,7 +349,7 @@ class TestStrategyIntegrationService:
 
     def test_get_strategies(
         self,
-        integration_service: StrategyIntegrationService,
+        integration_service: GeneratedStrategyService,
         mock_db_session: Mock,
         sample_generated_strategy: GeneratedStrategy,
     ) -> None:
@@ -376,7 +376,7 @@ class TestStrategyIntegrationService:
             assert len(result["strategies"]) == 1
 
     def test_get_strategies_with_filters(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """フィルター付き戦略取得
 
@@ -401,7 +401,7 @@ class TestStrategyIntegrationService:
             assert call_kwargs["min_fitness"] == 1.0
 
     def test_get_strategies_with_response(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """APIレスポンス形式での戦略取得
 
@@ -438,14 +438,14 @@ class TestDataConversion:
                 IndicatorGene(type="sma", parameters={"period": 50}, enabled=True),
                 IndicatorGene(type="ema", parameters={"period": 20}, enabled=True),
             ],
-            entry_conditions=[
+            long_entry_conditions=[
                 Condition(
                     left_operand={"indicator": "ema"},
                     operator="cross_above",
                     right_operand={"indicator": "sma"},
                 )
             ],
-            exit_conditions=[
+            short_entry_conditions=[
                 Condition(
                     left_operand={"indicator": "close"},
                     operator="<",
@@ -472,14 +472,14 @@ class TestDataConversion:
                 }
                 for ind in ga_strategy.indicators
             ],
-            "entry_conditions_count": len(ga_strategy.entry_conditions),
-            "exit_conditions_count": len(ga_strategy.exit_conditions),
+            "long_entry_conditions_count": len(ga_strategy.long_entry_conditions),
+            "short_entry_conditions_count": len(ga_strategy.short_entry_conditions),
         }
 
         assert strategy_dict["id"] == "conversion_test"
         assert len(strategy_dict["indicators"]) == 2
-        assert strategy_dict["entry_conditions_count"] == 1
-        assert strategy_dict["exit_conditions_count"] == 1
+        assert strategy_dict["long_entry_conditions_count"] == 1
+        assert strategy_dict["short_entry_conditions_count"] == 1
 
     def test_strategy_backward_compatibility(self) -> None:
         """戦略の後方互換性テスト"""
@@ -524,14 +524,14 @@ class TestMLPredictionIntegration:
             indicators=[
                 IndicatorGene(type="sma", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[
+            long_entry_conditions=[
                 Condition(
                     left_operand={"indicator": "close"},
                     operator=">",
                     right_operand={"indicator": "sma"},
                 )
             ],
-            exit_conditions=[],
+            short_entry_conditions=[],
         )
 
         # ML予測をシミュレート
@@ -544,7 +544,7 @@ class TestMLPredictionIntegration:
             right_operand=threshold,
         )
 
-        enhanced_conditions = strategy.entry_conditions + [ml_condition]
+        enhanced_conditions = strategy.long_entry_conditions + [ml_condition]
 
         # ML予測が条件に追加されたことを確認
         assert len(enhanced_conditions) == 2
@@ -595,19 +595,19 @@ class TestErrorHandling:
         return session
 
     @pytest.fixture
-    def integration_service(self, mock_db_session: Mock) -> StrategyIntegrationService:
+    def integration_service(self, mock_db_session: Mock) -> GeneratedStrategyService:
         """統合サービス
 
         Args:
             mock_db_session: モックDBセッション
 
         Returns:
-            StrategyIntegrationServiceのインスタンス
+            GeneratedStrategyServiceのインスタンス
         """
-        return StrategyIntegrationService(db=mock_db_session)
+        return GeneratedStrategyService(db=mock_db_session)
 
     def test_handle_invalid_gene_data(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """無効な遺伝子データの処理
 
@@ -627,7 +627,7 @@ class TestErrorHandling:
         assert result is None
 
     def test_handle_missing_backtest_result(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """バックテスト結果がない場合の処理
 
@@ -657,7 +657,7 @@ class TestErrorHandling:
             assert result["max_drawdown"] == 0.0
 
     def test_handle_database_errors(
-        self, integration_service: StrategyIntegrationService
+        self, integration_service: GeneratedStrategyService
     ) -> None:
         """データベースエラーの処理
 
@@ -674,7 +674,3 @@ class TestErrorHandling:
                 integration_service.get_strategies()
 
             assert "Database connection error" in str(exc_info.value)
-
-
-
-

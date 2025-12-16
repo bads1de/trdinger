@@ -11,7 +11,7 @@ import pytest
 from deap import base
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core.deap_setup import DEAPSetup
+from app.services.auto_strategy.core.ga_engine import DEAPSetup
 from app.services.auto_strategy.genes import StrategyGene
 
 

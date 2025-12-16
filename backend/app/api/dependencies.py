@@ -9,8 +9,8 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.services.auto_strategy import AutoStrategyService
-from app.services.auto_strategy.utils.strategy_integration_service import (
-    StrategyIntegrationService,
+from app.services.auto_strategy.services.generated_strategy_service import (
+    GeneratedStrategyService,
 )
 from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.backtest.backtest_service import BacktestService
@@ -69,17 +69,17 @@ def get_backtest_service_with_db(db: Session) -> BacktestService:
     return BacktestService(data_service)
 
 
-def get_strategy_integration_service(db: Session) -> StrategyIntegrationService:
+def get_generated_strategy_service(db: Session) -> GeneratedStrategyService:
     """
-    StrategyIntegrationServiceのインスタンスを取得
+    GeneratedStrategyServiceのインスタンスを取得
 
     Args:
         db: データベースセッション
 
     Returns:
-        StrategyIntegrationServiceインスタンス
+        GeneratedStrategyServiceインスタンス
     """
-    return StrategyIntegrationService(db)
+    return GeneratedStrategyService(db)
 
 
 def get_market_data_orchestration_service(
@@ -120,19 +120,19 @@ def get_auto_strategy_service() -> AutoStrategyService:
         )
 
 
-def get_strategy_integration_service_with_db(
+def get_generated_strategy_service_with_db(
     db: Session = Depends(get_db),
-) -> StrategyIntegrationService:
+) -> GeneratedStrategyService:
     """
-    StrategyIntegrationServiceのインスタンスを取得（依存性注入用）
+    GeneratedStrategyServiceのインスタンスを取得（依存性注入用）
 
     Args:
         db: データベースセッション（依存性注入）
 
     Returns:
-        StrategyIntegrationServiceインスタンス
+        GeneratedStrategyServiceインスタンス
     """
-    return StrategyIntegrationService(db)
+    return GeneratedStrategyService(db)
 
 
 # get_automl_feature_generation_service は削除されました（autofeat機能の削除に伴う）
@@ -324,6 +324,3 @@ def get_long_short_ratio_service() -> BybitLongShortRatioService:
     BybitLongShortRatioService のインスタンスを取得（依存性注入用）
     """
     return BybitLongShortRatioService()
-
-
-

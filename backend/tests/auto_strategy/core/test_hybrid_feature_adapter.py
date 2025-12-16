@@ -7,10 +7,10 @@ import pandas as pd
 import numpy as np
 from unittest.mock import Mock, patch
 
-from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+from app.services.auto_strategy.core.hybrid_feature_adapter import (
     HybridFeatureAdapter,
-    MLFeatureError,
 )
+from app.services.ml.exceptions import MLFeatureError
 from app.services.auto_strategy.genes.strategy import StrategyGene
 
 
@@ -40,8 +40,8 @@ class TestHybridFeatureAdapter:
             Mock(type="RSI", parameters={"period": 14}),
             Mock(type="SMA", parameters={"period": 20}),
         ]
-        gene.get_effective_long_conditions.return_value = ["cond1"]
-        gene.get_effective_short_conditions.return_value = ["cond2"]
+        gene.long_entry_conditions = ["cond1"]
+        gene.short_entry_conditions = ["cond2"]
         gene.has_long_short_separation.return_value = True
 
         # Nested mocks for tpsl/position sizing
@@ -128,7 +128,3 @@ class TestHybridFeatureAdapter:
         # Verify adapter instantiates BaseMLTrainer lazily
         assert adapter._preprocess_trainer is not None
         assert isinstance(processed, pd.DataFrame)
-
-
-
-

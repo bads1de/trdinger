@@ -95,7 +95,7 @@ class ExperimentManager:
         if ga_config.hybrid_mode:
             logger.info("🔬 ハイブリッドGA+MLモードを初期化")
             from ..core.hybrid_predictor import HybridPredictor
-            from ..utils.hybrid_feature_adapter import HybridFeatureAdapter
+            from ..core.hybrid_feature_adapter import HybridFeatureAdapter
 
             model_types = ga_config.hybrid_model_types
             if model_types and len(model_types) > 1:

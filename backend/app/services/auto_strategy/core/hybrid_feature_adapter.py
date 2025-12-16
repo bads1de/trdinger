@@ -205,8 +205,8 @@ class HybridFeatureAdapter:
         features["indicator_count"] = len(gene.indicators) if gene.indicators else 0
 
         # 条件数
-        long_conditions = gene.get_effective_long_conditions()
-        short_conditions = gene.get_effective_short_conditions()
+        long_conditions = gene.long_entry_conditions or []
+        short_conditions = gene.short_entry_conditions or []
         features["condition_count"] = len(long_conditions) + len(short_conditions)
         features["long_condition_count"] = len(long_conditions)
         features["short_condition_count"] = len(short_conditions)

@@ -5,19 +5,18 @@ DEAPライブラリを使用したGA実装。
 """
 
 import logging
+import random
 import time
 from dataclasses import fields
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-from deap import tools
+from deap import base, creator, tools
 
 from app.services.backtest.backtest_service import BacktestService
 
 from ..config.ga import GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
-from .deap_setup import DEAPSetup
-from .evolution_runner import EvolutionRunner
 from .fitness_sharing import FitnessSharing
 from .genetic_operators import (
     create_deap_mutate_wrapper,
@@ -28,6 +27,307 @@ from .individual_evaluator import IndividualEvaluator
 from .parallel_evaluator import ParallelEvaluator
 
 logger = logging.getLogger(__name__)
+
+
+class EvolutionRunner:
+    """
+    進化計算の実行を担当するクラス
+
+    単一目的と多目的最適化のロジックをカプセル化した独立クラス。
+    GAエンジンから分割されたが、現在は同一モジュール内で定義。
+    並列評価をサポート。
+    """
+
+    def __init__(
+        self,
+        toolbox,
+        stats,
+        fitness_sharing: Optional[FitnessSharing] = None,
+        population: Optional[List[Any]] = None,
+        parallel_evaluator: Optional[ParallelEvaluator] = None,
+    ):
+        """
+        初期化
+
+        Args:
+            toolbox: DEAPツールボックス
+            stats: 統計情報収集オブジェクト
+            fitness_sharing: 適応度共有オブジェクト（オプション）
+            population: 個体集団（適応的突然変異用）
+            parallel_evaluator: 並列評価器（オプション）
+        """
+        self.toolbox = toolbox
+        self.stats = stats
+        self.fitness_sharing = fitness_sharing
+        self.population = population  # 適応的突然変異用
+        self.parallel_evaluator = parallel_evaluator
+
+    def run_evolution(
+        self, population: List[Any], config: Any, halloffame: Optional[Any] = None
+    ) -> tuple[List[Any], Any]:
+        """
+        進化アルゴリズムの実行（単一・多目的 統一版）
+
+        単一目的・多目的を問わず、toolboxに登録された演算子と
+        渡されたhalloffameオブジェクト（HallOfFame または ParetoFront）を使用して
+        進化計算を実行します。
+
+        Args:
+            population: 初期個体群
+            config: GA設定
+            halloffame: 殿堂入り個体リスト（HallOfFame または ParetoFront）
+
+        Returns:
+            (最終個体群, 進化ログ)
+        """
+        logger.info(
+            f"進化アルゴリズムを開始（世代数: {config.generations}, 目的数: {len(config.objectives)}）"
+        )
+
+        # 初期適応度評価
+        population = self._evaluate_population(population)
+        self._update_dynamic_objective_scalars(population, config)
+
+        # Hall of Fame / Pareto Front 初回更新
+        if halloffame is not None:
+            halloffame.update(population)
+
+        logbook = tools.Logbook()
+
+        # 世代ループ
+        for gen in range(config.generations):
+            logger.debug(f"世代 {gen + 1}/{config.generations} を開始")
+
+            # 適応度共有の適用（有効な場合、世代毎）
+            if (
+                getattr(config, "enable_fitness_sharing", False)
+                and self.fitness_sharing
+            ):
+                population = self.fitness_sharing.apply_fitness_sharing(population)
+
+            # 選択（親個体の選択）
+            # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
+            offspring = list(self.toolbox.map(self.toolbox.clone, population))
+
+            # 交叉
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() < config.crossover_rate:
+                    self.toolbox.mate(child1, child2)
+                    del child1.fitness.values
+                    del child2.fitness.values
+
+            # 突然変異
+            for mutant in offspring:
+                if random.random() < config.mutation_rate:
+                    self.toolbox.mutate(mutant)
+                    del mutant.fitness.values
+
+            # 未評価個体の評価（並列評価対応）
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            self._evaluate_invalid_individuals(invalid_ind)
+
+            # 次世代の選択 (mu+lambda)
+            # toolbox.select は DEAPSetup で NSGA-II などが登録されている
+            population[:] = self.toolbox.select(offspring + population, len(population))
+
+            self._update_dynamic_objective_scalars(population, config)
+
+            # 統計の記録
+            record = self.stats.compile(population) if self.stats else {}
+            logbook.record(gen=gen, **record)
+
+            # Hall of Fame / Pareto Front の更新
+            if halloffame is not None:
+                halloffame.update(population)
+
+        logger.info("進化アルゴリズム完了")
+        return population, logbook
+
+    def _evaluate_population(self, population: List[Any]) -> List[Any]:
+        """
+        個体群の適応度評価（並列評価対応）
+
+        Args:
+            population: 評価対象の個体群
+
+        Returns:
+            評価された個体群
+        """
+        if self.parallel_evaluator:
+            # 並列評価
+            fitnesses = self.parallel_evaluator.evaluate_population(population)
+            for ind, fit in zip(population, fitnesses):
+                ind.fitness.values = fit
+        else:
+            # シーケンシャル評価（フォールバック）
+            fitnesses = list(self.toolbox.map(self.toolbox.evaluate, population))
+            for ind, fit in zip(population, fitnesses):
+                ind.fitness.values = fit
+
+        return population
+
+    def _evaluate_invalid_individuals(self, invalid_ind: List[Any]) -> None:
+        """
+        適応度が無効な個体のみを評価（並列評価対応）
+
+        Args:
+            invalid_ind: 評価対象の無効な個体リスト
+        """
+        if not invalid_ind:
+            return
+
+        if self.parallel_evaluator:
+            # 並列評価
+            fitnesses = self.parallel_evaluator.evaluate_population(invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+        else:
+            # シーケンシャル評価（フォールバック）
+            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+    def _update_dynamic_objective_scalars(
+        self, population: List[Any], config: Any
+    ) -> None:
+        """Update dynamic objective scaling factors for risk-aware weighting."""
+
+        if not getattr(config, "dynamic_objective_reweighting", False):
+            config.objective_dynamic_scalars = {}
+            return
+
+        if not population:
+            config.objective_dynamic_scalars = {}
+            return
+
+        scalars: Dict[str, float] = {}
+        for index, objective in enumerate(getattr(config, "objectives", [])):
+            values: List[float] = []
+            for individual in population:
+                fitness = getattr(individual, "fitness", None)
+                if not fitness or not getattr(fitness, "valid", False):
+                    continue
+                fitness_values = getattr(fitness, "values", ())
+                if len(fitness_values) <= index:
+                    continue
+                try:
+                    values.append(float(fitness_values[index]))
+                except (TypeError, ValueError):
+                    continue
+
+            if not values:
+                continue
+
+            average_value = float(np.mean(values))
+            if objective in {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}:
+                scalars[objective] = min(2.0, 1.0 + max(average_value, 0.0))
+            else:
+                scalars[objective] = 1.0
+
+        config.objective_dynamic_scalars = scalars
+
+
+class DEAPSetup:
+    """
+    DEAP設定クラス
+
+    DEAPライブラリの設定とツールボックスの初期化を担当します。
+    """
+
+    def __init__(self):
+        """初期化"""
+        self.toolbox: Optional[base.Toolbox] = None
+        self.Individual = None
+
+    def setup_deap(
+        self,
+        config: GAConfig,
+        create_individual_func,
+        evaluate_func,
+        crossover_func,
+        mutate_func,
+    ):
+        """
+        DEAP環境のセットアップ（多目的最適化専用）
+
+        Args:
+            config: GA設定
+            create_individual_func: 個体生成関数
+            evaluate_func: 評価関数
+            crossover_func: 交叉関数
+            mutate_func: 突然変異関数
+        """
+        # 多目的最適化用フィットネスクラスの定義
+        fitness_class_name = "FitnessMulti"
+        weights = tuple(config.objective_weights)
+        logger.info(f"多目的最適化モード: 目的={config.objectives}, 重み={weights}")
+
+        # 既存のフィットネスクラスを削除（再定義のため）
+        if hasattr(creator, fitness_class_name):
+            delattr(creator, fitness_class_name)
+
+        # フィットネスクラスを作成
+        creator.create(fitness_class_name, base.Fitness, weights=weights)
+        fitness_class = getattr(creator, fitness_class_name)
+
+        # 個体クラスの定義
+        if hasattr(creator, "Individual"):
+            delattr(creator, "Individual")
+
+        from ..genes import StrategyGene
+
+        # StrategyGeneを継承し、fitness属性を持つクラスを作成
+        creator.create("Individual", StrategyGene, fitness=fitness_class)  # type: ignore
+        self.Individual = creator.Individual  # type: ignore # 生成したクラスをインスタンス変数に格納
+
+        # ツールボックスの初期化
+        self.toolbox = base.Toolbox()
+
+        # 個体生成関数の登録
+        self.toolbox.register("individual", create_individual_func)
+        self.toolbox.register(
+            "population",
+            tools.initRepeat,
+            list,
+            self.toolbox.individual,  # type: ignore
+        )
+
+        # 評価関数の登録
+        self.toolbox.register("evaluate", evaluate_func, config=config)
+
+        # 進化演算子の登録（戦略遺伝子レベル）
+        self.toolbox.register("mate", crossover_func, config=config)
+
+        # 突然変異の登録（DEAP互換の返り値 (ind,) を保証するラッパー）
+        def _mutate_wrapper(individual):
+            res = mutate_func(individual, mutation_rate=config.mutation_rate)
+            if isinstance(res, tuple):
+                return res
+            return (res,)
+
+        self.toolbox.register("mutate", _mutate_wrapper)
+
+        # 選択アルゴリズムの登録（目的数に応じて切り替え）
+        if config.enable_multi_objective:
+            self.toolbox.register("select", tools.selNSGA2)
+            logger.info("多目的最適化モード: NSGA-II選択アルゴリズムを登録")
+        else:
+            # 単一目的の場合はトーナメント選択（デフォルトサイズ3）
+            tourn_size = getattr(config, "tournament_size", 3)
+            self.toolbox.register("select", tools.selTournament, tournsize=tourn_size)
+            logger.info(
+                f"単一目的最適化モード: トーナメント選択アルゴリズム(size={tourn_size})を登録"
+            )
+
+        logger.info("DEAP環境のセットアップ完了")
+
+    def get_toolbox(self) -> Optional[base.Toolbox]:
+        """ツールボックスを取得"""
+        return self.toolbox
+
+    def get_individual_class(self):
+        """個体クラスを取得"""
+        return self.Individual
 
 
 class EvaluatorWrapper:
@@ -281,7 +581,7 @@ class GeneticAlgorithmEngine:
                     if minute_data is not None:
                         data_context["minute_data"] = minute_data
 
-                    from .worker_initializer import initialize_worker
+                    from .parallel_evaluator import initialize_worker
 
                     worker_initializer = initialize_worker
                     worker_initargs = (data_context,)

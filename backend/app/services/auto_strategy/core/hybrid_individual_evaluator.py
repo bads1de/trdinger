@@ -15,7 +15,7 @@ from app.services.ml.exceptions import MLPredictionError, MLTrainingError
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
-    from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+    from app.services.auto_strategy.core.hybrid_feature_adapter import (
         HybridFeatureAdapter,
     )
 
@@ -130,7 +130,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _resolve_feature_adapter_cls(self) -> Type["HybridFeatureAdapter"]:
         module = importlib.import_module(
-            "app.services.auto_strategy.utils.hybrid_feature_adapter"
+            "app.services.auto_strategy.core.hybrid_feature_adapter"
         )
         return getattr(module, "HybridFeatureAdapter")
 

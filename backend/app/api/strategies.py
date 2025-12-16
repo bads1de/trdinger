@@ -10,10 +10,10 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from app.api.dependencies import get_strategy_integration_service_with_db
+from app.api.dependencies import get_generated_strategy_service_with_db
 from app.config.unified_config import unified_config
-from app.services.auto_strategy.utils.strategy_integration_service import (
-    StrategyIntegrationService,
+from app.services.auto_strategy.services.generated_strategy_service import (
+    GeneratedStrategyService,
 )
 from app.utils.error_handler import ErrorHandler
 
@@ -61,8 +61,8 @@ async def get_strategies(
     min_fitness: Optional[float] = Query(None, description="最小フィットネススコア"),
     sort_by: str = Query("fitness_score", description="ソート項目"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="ソート順序"),
-    strategy_service: StrategyIntegrationService = Depends(
-        get_strategy_integration_service_with_db
+    strategy_service: GeneratedStrategyService = Depends(
+        get_generated_strategy_service_with_db
     ),
 ):
     """
@@ -97,6 +97,3 @@ async def get_strategies(
         )
 
     return await ErrorHandler.safe_execute_async(_get_strategies)
-
-
-

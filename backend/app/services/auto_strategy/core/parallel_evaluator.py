@@ -16,7 +16,7 @@ from concurrent.futures import TimeoutError as FuturesTimeoutError
 from concurrent.futures import (
     as_completed,
 )
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -409,6 +409,41 @@ def create_parallel_map(
         return evaluator.evaluate_population(individuals)
 
     return parallel_map
+
+
+# =============================================================================
+# ワーカー初期化ロジック (旧 worker_initializer.py)
+# =============================================================================
+
+# ワーカープロセス内で共有されるデータコンテキスト
+_WORKER_DATA_CONTEXT: Dict[str, Any] = {}
+
+
+def initialize_worker(data_context: Dict[str, Any]):
+    """
+    ワーカープロセスの初期化
+
+    Args:
+        data_context: 共有データ（OHLCVデータなど）
+    """
+    global _WORKER_DATA_CONTEXT
+    try:
+        _WORKER_DATA_CONTEXT.update(data_context)
+    except Exception as e:
+        logger.error(f"Worker initialization failed: {e}")
+
+
+def get_worker_data(key: str) -> Optional[Any]:
+    """
+    共有データの取得
+
+    Args:
+        key: データのキー
+
+    Returns:
+        データオブジェクト、またはNone
+    """
+    return _WORKER_DATA_CONTEXT.get(key)
 
 
 

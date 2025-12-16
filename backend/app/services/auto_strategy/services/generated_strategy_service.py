@@ -19,7 +19,7 @@ from database.repositories.generated_strategy_repository import (
 logger = logging.getLogger(__name__)
 
 
-class StrategyIntegrationService:
+class GeneratedStrategyService:
     """
     生成済み戦略サービス
 
@@ -220,8 +220,8 @@ class StrategyIntegrationService:
         return {
             "indicators": gene_data.get("indicators", {}),
             "risk_management": gene_data.get("risk_management", {}),
-            "entry_conditions": gene_data.get("entry_conditions", {}),
-            "exit_conditions": gene_data.get("exit_conditions", {}),
+            "long_entry_conditions": gene_data.get("long_entry_conditions", {}),
+            "short_entry_conditions": gene_data.get("short_entry_conditions", {}),
             "tpsl_gene": gene_data.get("tpsl_gene", None),
             "long_tpsl_gene": gene_data.get("long_tpsl_gene", None),
             "short_tpsl_gene": gene_data.get("short_tpsl_gene", None),

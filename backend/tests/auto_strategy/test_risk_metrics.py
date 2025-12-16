@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.services.auto_strategy.core.risk_metrics import (
+from app.services.auto_strategy.core.individual_evaluator import (
     calculate_trade_frequency_penalty,
     calculate_ulcer_index,
 )
