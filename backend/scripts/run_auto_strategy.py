@@ -41,7 +41,6 @@ from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine  # 
 from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402
     RandomGeneGenerator,
 )
-from app.services.auto_strategy.generators.strategy_factory import StrategyFactory  # noqa: E402
 from app.services.auto_strategy.genes.strategy import StrategyGene  # noqa: E402
 from app.services.auto_strategy.serializers.gene_serialization import GeneSerializer  # noqa: E402
 from app.services.backtest.backtest_service import BacktestService  # noqa: E402
@@ -400,14 +399,12 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
     # サービスの初期化
     logger.info("サービスを初期化中...")
     backtest_service = BacktestService()
-    strategy_factory = StrategyFactory()
     gene_generator = RandomGeneGenerator(config=ga_config)
 
     # GAエンジンの作成
     logger.info("GAエンジンを初期化中...")
     ga_engine = GeneticAlgorithmEngine(
         backtest_service=backtest_service,
-        strategy_factory=strategy_factory,
         gene_generator=gene_generator,
         hybrid_mode=False,
     )

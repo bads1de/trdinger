@@ -15,8 +15,8 @@ from app.services.indicators.config import (
     IndicatorScaleType,
     indicator_registry,
 )
-from ...config.constants import IndicatorType
-from ...genes import Condition, ConditionGroup, IndicatorGene
+from ..config.constants import IndicatorType
+from ..genes import Condition, ConditionGroup, IndicatorGene
 
 logger = logging.getLogger(__name__)
 

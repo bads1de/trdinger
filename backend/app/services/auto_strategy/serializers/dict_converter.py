@@ -72,10 +72,6 @@ class DictConverter:
                 "indicators": [
                     self.indicator_gene_to_dict(ind) for ind in strategy_gene.indicators
                 ],
-                "entry_conditions": [
-                    self.condition_or_group_to_dict(cond)
-                    for cond in strategy_gene.entry_conditions
-                ],
                 "long_entry_conditions": [
                     self.condition_or_group_to_dict(cond)
                     for cond in strategy_gene.long_entry_conditions
@@ -83,10 +79,6 @@ class DictConverter:
                 "short_entry_conditions": [
                     self.condition_or_group_to_dict(cond)
                     for cond in strategy_gene.short_entry_conditions
-                ],
-                "exit_conditions": [
-                    self.condition_or_group_to_dict(cond)
-                    for cond in strategy_gene.exit_conditions
                 ],
                 "risk_management": clean_risk_management,
                 "tpsl_gene": (
@@ -465,10 +457,7 @@ class DictConverter:
                 for cond_data in data.get("short_entry_conditions", [])
             ]
 
-            exit_conditions = [
-                parse_condition_or_group(cond_data)
-                for cond_data in data.get("exit_conditions", [])
-            ]
+            # exit_conditions は廃止されたため読み込まない
 
             # リスク管理設定
             risk_management = data.get("risk_management", {})
@@ -522,7 +511,7 @@ class DictConverter:
                     "有効な指標がなかったため、デフォルト指標SMAを追加しました"
                 )
 
-            # 後方互換性のための処理
+            # 後方互換性のための処理: 古い entry_conditions があれば移行
             if not long_entry_conditions and entry_conditions:
                 long_entry_conditions = entry_conditions
             if not short_entry_conditions and entry_conditions:
@@ -547,10 +536,8 @@ class DictConverter:
             return strategy_gene_class(
                 id=data.get("id", str(uuid.uuid4())),
                 indicators=indicators,
-                entry_conditions=entry_conditions,
                 long_entry_conditions=long_entry_conditions,
                 short_entry_conditions=short_entry_conditions,
-                exit_conditions=exit_conditions,
                 stateful_conditions=stateful_conditions,
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,

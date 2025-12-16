@@ -24,13 +24,15 @@ from ..genes import (
 from ..genes.tool import ToolGene
 from ..serializers.gene_serialization import GeneSerializer
 from ..tools import tool_registry
+from .component_generators import (
+    EntryGenerator,
+    PositionSizingGenerator,
+    TPSLGenerator,
+)
 from .condition_generator import ConditionGenerator
-from .random.condition_generator import ConditionGenerator as RandomConditionGenerator
-from .random.entry_generator import EntryGenerator
-from .random.indicator_generator import IndicatorGenerator
-from .random.operand_generator import OperandGenerator
-from .random.position_sizing_generator import PositionSizingGenerator
-from .random.tpsl_generator import TPSLGenerator
+from .random_condition_generator import ConditionGenerator as RandomConditionGenerator
+from .random_indicator_generator import IndicatorGenerator
+from .random_operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -161,8 +163,6 @@ class RandomGeneGenerator:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            exit_conditions=[],
             long_entry_conditions=[],
             short_entry_conditions=[],
             risk_management={},
@@ -185,15 +185,10 @@ class RandomGeneGenerator:
         # 指標を生成
         indicators = self.indicator_generator.generate_random_indicators()
 
-        # 条件を生成（後方互換性のため保持）
-        entry_conditions = self.condition_generator.generate_random_conditions(
-            indicators, "entry"
-        )
-
-        # TP/SL遺伝子を先に生成してイグジット条件生成を調整
+        # TP/SL遺伝子を生成
         tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
 
-        # Auto-StrategyではTP/SLを常に有効化し、エグジット条件は冗長のため生成しない
+        # Auto-StrategyではTP/SLを常に有効化
         if tpsl_gene:
             tpsl_gene.enabled = True
 
@@ -205,14 +200,6 @@ class RandomGeneGenerator:
         short_tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
         if short_tpsl_gene:
             short_tpsl_gene.enabled = True
-
-        # TP/SL遺伝子が有効な場合はイグジット条件を最小化
-        if tpsl_gene and tpsl_gene.enabled:
-            exit_conditions = []
-        else:
-            exit_conditions = self.condition_generator.generate_random_conditions(
-                indicators, "exit"
-            )
 
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
@@ -252,10 +239,8 @@ class RandomGeneGenerator:
 
         gene = StrategyGene(
             indicators=indicators,
-            entry_conditions=entry_conditions,  # 後方互換性
-            exit_conditions=exit_conditions,
-            long_entry_conditions=long_entry_conditions,  # 新機能
-            short_entry_conditions=short_entry_conditions,  # 新機能
+            long_entry_conditions=long_entry_conditions,
+            short_entry_conditions=short_entry_conditions,
             risk_management=risk_management,
             tpsl_gene=tpsl_gene,  # TP/SL遺伝子
             long_tpsl_gene=long_tpsl_gene,  # Long TP/SL

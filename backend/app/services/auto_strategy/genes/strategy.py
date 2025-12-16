@@ -26,8 +26,6 @@ class StrategyGene:
 
     id: str = ""
     indicators: List[IndicatorGene] = field(default_factory=list)
-    entry_conditions: List[Condition] = field(default_factory=list)
-    exit_conditions: List[Condition] = field(default_factory=list)
     long_entry_conditions: List[Union[Condition, ConditionGroup]] = field(
         default_factory=list
     )
@@ -47,33 +45,9 @@ class StrategyGene:
     tool_genes: List[ToolGene] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def get_effective_long_conditions(self) -> List[Union[Condition, ConditionGroup]]:
-        """有効なロング条件を取得（後方互換性を考慮）"""
-        if self.long_entry_conditions:
-            return self.long_entry_conditions
-        elif self.entry_conditions:
-            return list(self.entry_conditions)
-        else:
-            return []
-
-    def get_effective_short_conditions(self) -> List[Union[Condition, ConditionGroup]]:
-        """有効なショート条件を取得（後方互換性を考慮）"""
-        if self.short_entry_conditions:
-            return self.short_entry_conditions
-        elif self.entry_conditions and not self.long_entry_conditions:
-            return list(self.entry_conditions)
-        else:
-            return []
-
     def has_long_short_separation(self) -> bool:
-        """ロング・ショート条件が分離されているかチェック"""
-        return (
-            self.long_entry_conditions is not None
-            and len(self.long_entry_conditions) > 0
-        ) or (
-            self.short_entry_conditions is not None
-            and len(self.short_entry_conditions) > 0
-        )
+        """ロング・ショート条件が分離されているかチェック（常にTrue）"""
+        return True
 
     @property
     def method(self):

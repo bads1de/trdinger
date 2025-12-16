@@ -14,9 +14,9 @@ from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
-from ...genes import IndicatorGene
-from ...utils.indicator_utils import get_all_indicators
-from ..indicator_composition_service import IndicatorCompositionService
+from ..genes import IndicatorGene
+from ..utils.indicator_utils import get_all_indicators
+from .indicator_composition_service import IndicatorCompositionService
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class IndicatorGenerator:
         Returns:
             利用可能なタイムフレームのリスト
         """
-        from ...config.constants import SUPPORTED_TIMEFRAMES
+        from ..config.constants import SUPPORTED_TIMEFRAMES
 
         # 設定から利用可能タイムフレームを取得
         available = config.available_timeframes

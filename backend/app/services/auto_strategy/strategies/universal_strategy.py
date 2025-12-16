@@ -239,19 +239,10 @@ class UniversalStrategy(Strategy):
         """ロングエントリー条件をチェック"""
         long_conditions = cast(
             List[Union[Condition, ConditionGroup]],
-            self.gene.get_effective_long_conditions(),
+            self.gene.long_entry_conditions,
         )
 
         if not long_conditions:
-            # 条件が空の場合は、entry_conditionsを使用
-            if self.gene.entry_conditions:
-                entry_conditions = cast(
-                    List[Union[Condition, ConditionGroup]],
-                    self.gene.entry_conditions,
-                )
-                return self.condition_evaluator.evaluate_conditions(
-                    entry_conditions, self
-                )
             return False
 
         return self.condition_evaluator.evaluate_conditions(long_conditions, self)
@@ -260,37 +251,13 @@ class UniversalStrategy(Strategy):
         """ショートエントリー条件をチェック"""
         short_conditions = cast(
             List[Union[Condition, ConditionGroup]],
-            self.gene.get_effective_short_conditions(),
+            self.gene.short_entry_conditions,
         )
 
         if not short_conditions:
-            # ショート条件が空の場合は、entry_conditionsを使用
-            if self.gene.entry_conditions:
-                entry_conditions = cast(
-                    List[Union[Condition, ConditionGroup]],
-                    self.gene.entry_conditions,
-                )
-                return self.condition_evaluator.evaluate_conditions(
-                    entry_conditions, self
-                )
             return False
 
         return self.condition_evaluator.evaluate_conditions(short_conditions, self)
-
-    def _check_exit_conditions(self) -> bool:
-        """イグジット条件をチェック"""
-        # TP/SL遺伝子が存在し有効な場合はイグジット条件をスキップ
-        if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-            return False
-
-        # 通常のイグジット条件をチェック
-        exit_conditions = cast(
-            List[Union[Condition, ConditionGroup]], self.gene.exit_conditions
-        )
-        if not exit_conditions:
-            return False
-
-        return self.condition_evaluator.evaluate_conditions(exit_conditions, self)
 
     def _calculate_position_size(self) -> float:
         """
@@ -476,10 +443,6 @@ class UniversalStrategy(Strategy):
                             tp_price=tp_price,
                             entry_gene=entry_gene,
                         )
-
-            # ポジションがある場合のイグジット判定
-            elif self.position and self._check_exit_conditions():
-                self.position.close()
 
         except Exception as e:
             logger.error(f"戦略実行エラー: {e}")

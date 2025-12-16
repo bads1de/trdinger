@@ -632,10 +632,6 @@ class FitnessSharing:
 
             # 条件を収集（すべての条件リストから）
             all_conditions = []
-            if gene.entry_conditions:
-                all_conditions.extend(gene.entry_conditions)
-            if gene.exit_conditions:
-                all_conditions.extend(gene.exit_conditions)
             if gene.long_entry_conditions:
                 all_conditions.extend(gene.long_entry_conditions)
             if gene.short_entry_conditions:
@@ -679,10 +675,6 @@ class FitnessSharing:
         dynamic_operands = 0.0
 
         all_conditions = []
-        if gene.entry_conditions:
-            all_conditions.extend(gene.entry_conditions)
-        if gene.exit_conditions:
-            all_conditions.extend(gene.exit_conditions)
         if gene.long_entry_conditions:
             all_conditions.extend(gene.long_entry_conditions)
         if gene.short_entry_conditions:

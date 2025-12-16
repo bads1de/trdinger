@@ -80,8 +80,8 @@ class AutoStrategyLoader:
         """
         # 遅延インポートで循環参照を回避
         try:
-            from app.services.auto_strategy.generators.strategy_factory import (
-                StrategyFactory,
+            from app.services.auto_strategy.strategies.universal_strategy import (
+                UniversalStrategy,
             )
         except ImportError as e:
             raise AutoStrategyLoaderError(
@@ -91,11 +91,15 @@ class AutoStrategyLoader:
         # 遺伝子をロードして検証（整合性チェックのため）
         gene = self.load_strategy_gene(strategy_config)
 
-        # 戦略ファクトリーで戦略クラスを取得（UniversalStrategyが返される）
-        strategy_factory = StrategyFactory()
-        strategy_class = strategy_factory.create_strategy_class(gene)
+        # 遺伝子のバリデーション実行
+        is_valid, errors = gene.validate()
+        if not is_valid:
+            raise AutoStrategyLoaderError(
+                f"無効な戦略遺伝子です: {', '.join(errors)}"
+            )
 
-        return strategy_class
+        # UniversalStrategyクラスを返す
+        return UniversalStrategy
 
     def _extract_strategy_gene(self, strategy_config: Dict[str, Any]) -> Dict[str, Any]:
         """戦略設定から戦略遺伝子を抽出"""

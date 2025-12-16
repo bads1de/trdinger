@@ -10,8 +10,8 @@ import random
 import copy
 from typing import List, Union, Tuple, Dict, Any
 
-from ...genes import Condition, ConditionGroup, IndicatorGene
-from ...config.constants import IndicatorType
+from ..genes import Condition, ConditionGroup, IndicatorGene
+from ..config.constants import IndicatorType
 
 logger = logging.getLogger(__name__)
 

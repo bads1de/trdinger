@@ -13,9 +13,6 @@ from app.services.auto_strategy.core.individual_evaluator import (
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.services.auto_strategy.generators.strategy_factory import (
-    StrategyFactory,
-)
 from app.services.backtest.backtest_service import BacktestService
 
 
@@ -37,11 +34,6 @@ class TestGeneticAlgorithmEngine:
         return service
 
     @pytest.fixture
-    def mock_strategy_factory(self):
-        """Mock StrategyFactory"""
-        return Mock(spec=StrategyFactory)
-
-    @pytest.fixture
     def mock_gene_generator(self):
         """Mock RandomGeneGenerator"""
         generator = Mock(spec=RandomGeneGenerator)
@@ -57,8 +49,6 @@ class TestGeneticAlgorithmEngine:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            exit_conditions=[],
             long_entry_conditions=[],
             short_entry_conditions=[],
             risk_management={},
@@ -74,13 +64,11 @@ class TestGeneticAlgorithmEngine:
     def test_standard_mode_initialization(
         self,
         mock_backtest_service,
-        mock_strategy_factory,
         mock_gene_generator,
     ):
         """標準GAモードでの初期化を確認"""
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
-            strategy_factory=mock_strategy_factory,
             gene_generator=mock_gene_generator,
             hybrid_mode=False,
             hybrid_predictor=None,
@@ -91,13 +79,11 @@ class TestGeneticAlgorithmEngine:
         assert engine.hybrid_mode is False
         assert isinstance(engine.individual_evaluator, IndividualEvaluator)
         assert engine.backtest_service == mock_backtest_service
-        assert engine.strategy_factory == mock_strategy_factory
         assert engine.gene_generator == mock_gene_generator
 
     def test_hybrid_mode_initialization(
         self,
         mock_backtest_service,
-        mock_strategy_factory,
         mock_gene_generator,
     ):
         """ハイブリッドGA+MLモードでの初期化を確認"""
@@ -106,7 +92,6 @@ class TestGeneticAlgorithmEngine:
 
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
-            strategy_factory=mock_strategy_factory,
             gene_generator=mock_gene_generator,
             hybrid_mode=True,
             hybrid_predictor=mock_predictor,
@@ -121,13 +106,11 @@ class TestGeneticAlgorithmEngine:
     def test_engine_components_are_set(
         self,
         mock_backtest_service,
-        mock_strategy_factory,
         mock_gene_generator,
     ):
         """エンジンのコンポーネントが正しく設定されることを確認"""
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
-            strategy_factory=mock_strategy_factory,
             gene_generator=mock_gene_generator,
             hybrid_mode=False,
             hybrid_predictor=None,
@@ -136,7 +119,6 @@ class TestGeneticAlgorithmEngine:
 
         # 必須コンポーネントが設定されていることを確認
         assert engine.backtest_service is not None
-        assert engine.strategy_factory is not None
         assert engine.gene_generator is not None
         assert engine.individual_evaluator is not None
         assert engine.deap_setup is not None
@@ -151,14 +133,12 @@ class TestGeneticAlgorithmEngine:
         self,
         mock_runner_cls,
         mock_backtest_service,
-        mock_strategy_factory,
         mock_gene_generator,
     ):
         """GAエンジンの実行フローを確認"""
         # セットアップ
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
-            strategy_factory=mock_strategy_factory,
             gene_generator=mock_gene_generator,
         )
 
@@ -213,13 +193,11 @@ class TestGeneticAlgorithmEngine:
         mock_runner_cls,
         mock_parallel_evaluator_cls,
         mock_backtest_service,
-        mock_strategy_factory,
         mock_gene_generator,
     ):
         """並列評価設定時の挙動確認"""
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
-            strategy_factory=mock_strategy_factory,
             gene_generator=mock_gene_generator,
         )
 
@@ -262,7 +240,3 @@ class TestGeneticAlgorithmEngine:
         runner_call_args = mock_runner_cls.call_args[0]
         # 5番目の引数がparallel_evaluator
         assert runner_call_args[4] == mock_parallel_evaluator_cls.return_value
-
-
-
-

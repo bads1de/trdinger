@@ -15,7 +15,7 @@ class GeneSerializer:
     """
     統一遺伝子シリアライザー
 
-    分割されたコンポーネント（DictConverter, ListEncoder, ListDecoder, JsonConverter）を
+    分割されたコンポーネント（DictConverter, JsonConverter）を
     統合して統一的なインターフェースを提供します。
     """
 
@@ -29,12 +29,8 @@ class GeneSerializer:
         # コンポーネントの初期化
         from .dict_converter import DictConverter
         from .json_converter import JsonConverter
-        from .list_decoder import ListDecoder
-        from .list_encoder import ListEncoder
 
         self.dict_converter = DictConverter(enable_smart_generation)
-        self.list_encoder = ListEncoder()
-        self.list_decoder = ListDecoder(enable_smart_generation)
         self.json_converter = JsonConverter(self.dict_converter)
 
         self.enable_smart_generation = enable_smart_generation
@@ -84,16 +80,6 @@ class GeneSerializer:
         """辞書形式から条件を復元"""
         return self.dict_converter.dict_to_condition(data)
 
-    # ListEncoderのメソッドを委譲
-    def to_list(self, strategy_gene) -> List[float]:
-        """戦略遺伝子を固定長の数値リストにエンコード"""
-        return self.list_encoder.to_list(strategy_gene)
-
-    # ListDecoderのメソッドを委譲
-    def from_list(self, encoded: List[float], strategy_gene_class):
-        """数値リストから戦略遺伝子にデコード"""
-        return self.list_decoder.from_list(encoded, strategy_gene_class)
-
     # JsonConverterのメソッドを委譲
     def strategy_gene_to_json(self, strategy_gene) -> str:
         """戦略遺伝子をJSON文字列に変換"""
@@ -102,15 +88,6 @@ class GeneSerializer:
     def json_to_strategy_gene(self, json_str: str, strategy_gene_class):
         """JSON文字列から戦略遺伝子を復元"""
         return self.json_converter.json_to_strategy_gene(json_str, strategy_gene_class)
-
-    # 後方互換性のためのエイリアスメソッド
-    def decode_list_to_strategy_gene(self, encoded: List[float], strategy_gene_class):
-        """数値リストから戦略遺伝子にデコード（旧GeneDecoder.decode_list_to_strategy_gene）"""
-        return self.from_list(encoded, strategy_gene_class)
-
-    def encode_strategy_gene_to_list(self, strategy_gene):
-        """戦略遺伝子を数値リストにエンコード（旧GeneEncoder.encode_strategy_gene_to_list）"""
-        return self.to_list(strategy_gene)
 
 
 

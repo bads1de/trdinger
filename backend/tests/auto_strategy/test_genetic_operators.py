@@ -45,12 +45,6 @@ class TestGeneticOperators:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
-            ],
-            exit_conditions=[
-                Condition(left_operand="close", operator="<", right_operand="ema")
-            ],
             long_entry_conditions=[
                 Condition(left_operand="close", operator=">", right_operand="sma")
             ],
@@ -163,23 +157,23 @@ class TestGeneticOperators:
         assert len(sample_strategy_gene.indicators) >= 1
 
     @patch("random.random", return_value=0.1)
-    def test_mutate_conditions_entry_conditions(
+    def test_mutate_conditions_long_entry_conditions(
         self, mock_random, sample_strategy_gene, ga_config
     ):
-        """エントリー条件の突然変異テスト"""
+        """ロングエントリー条件の突然変異テスト"""
         _mutate_conditions(sample_strategy_gene, mutation_rate=0.5, config=ga_config)
 
         # テストはモックなので変更を確認しにくいが、エラーが発生しないことを確認
-        assert len(sample_strategy_gene.entry_conditions) >= 0
+        assert len(sample_strategy_gene.long_entry_conditions) >= 0
 
     @patch("random.random", return_value=0.1)
-    def test_mutate_conditions_exit_conditions(
+    def test_mutate_conditions_short_entry_conditions(
         self, mock_random, sample_strategy_gene, ga_config
     ):
-        """エグジット条件の突然変異テスト"""
+        """ショートエントリー条件の突然変異テスト"""
         _mutate_conditions(sample_strategy_gene, mutation_rate=0.5, config=ga_config)
 
-        assert len(sample_strategy_gene.exit_conditions) >= 0
+        assert len(sample_strategy_gene.short_entry_conditions) >= 0
 
     def test_mutate_strategy_gene_pure_with_high_mutation_rate(
         self, sample_strategy_gene, ga_config
@@ -256,12 +250,6 @@ class TestGeneticOperators:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
-            ],
-            exit_conditions=[
-                Condition(left_operand="close", operator="<", right_operand="ema")
-            ],
             long_entry_conditions=[
                 Condition(left_operand="close", operator=">", right_operand="sma")
             ],
@@ -283,12 +271,6 @@ class TestGeneticOperators:
             indicators=[
                 IndicatorGene(type="RSI", parameters={"period": 14}),
                 IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
-            ],
-            entry_conditions=[
-                Condition(left_operand="rsi", operator="<", right_operand="30")
-            ],
-            exit_conditions=[
-                Condition(left_operand="rsi", operator=">", right_operand="70")
             ],
             long_entry_conditions=[
                 Condition(left_operand="macd", operator=">", right_operand="signal")
@@ -317,12 +299,12 @@ class TestGeneticOperators:
         # Verify diversity: not all children are identical to parents
         parent1_str = (
             str(parent1.indicators)
-            + str(parent1.entry_conditions)
+            + str(parent1.long_entry_conditions)
             + str(parent1.risk_management)
         )
         parent2_str = (
             str(parent2.indicators)
-            + str(parent2.entry_conditions)
+            + str(parent2.long_entry_conditions)
             + str(parent2.risk_management)
         )
 
@@ -330,7 +312,7 @@ class TestGeneticOperators:
         for child in children:
             child_str = (
                 str(child.indicators)
-                + str(child.entry_conditions)
+                + str(child.long_entry_conditions)
                 + str(child.risk_management)
             )
             if child_str != parent1_str and child_str != parent2_str:
@@ -370,12 +352,6 @@ class TestGeneticOperators:
                         IndicatorGene(type="RSI", parameters={"period": 14}),
                         IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
                     ],
-                    entry_conditions=[
-                        Condition(left_operand="rsi", operator="<", right_operand="30")
-                    ],
-                    exit_conditions=[
-                        Condition(left_operand="rsi", operator=">", right_operand="70")
-                    ],
                     long_entry_conditions=[
                         Condition(
                             left_operand="macd", operator=">", right_operand="signal"
@@ -399,16 +375,6 @@ class TestGeneticOperators:
                     indicators=[
                         IndicatorGene(type="BB", parameters={"period": 20, "std": 2})
                     ],
-                    entry_conditions=[
-                        Condition(
-                            left_operand="close", operator="<", right_operand="bb_lower"
-                        )
-                    ],
-                    exit_conditions=[
-                        Condition(
-                            left_operand="close", operator=">", right_operand="bb_upper"
-                        )
-                    ],
                     long_entry_conditions=[],
                     short_entry_conditions=[
                         Condition(
@@ -430,14 +396,6 @@ class TestGeneticOperators:
                             type="STOCH", parameters={"k_period": 14, "d_period": 3}
                         )
                     ],
-                    entry_conditions=[
-                        Condition(
-                            left_operand="stoch_k",
-                            operator=">",
-                            right_operand="stoch_d",
-                        )
-                    ],
-                    exit_conditions=[],
                     long_entry_conditions=[
                         Condition(
                             left_operand="stoch_k",

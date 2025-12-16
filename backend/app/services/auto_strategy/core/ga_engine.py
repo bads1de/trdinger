@@ -16,7 +16,6 @@ from app.services.backtest.backtest_service import BacktestService
 
 from ..config.ga import GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
-from ..generators.strategy_factory import StrategyFactory
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner
 from .fitness_sharing import FitnessSharing
@@ -52,7 +51,6 @@ class GeneticAlgorithmEngine:
     def __init__(
         self,
         backtest_service: BacktestService,
-        strategy_factory: StrategyFactory,
         gene_generator: RandomGeneGenerator,
         hybrid_mode: bool = False,
         hybrid_predictor: Optional[Any] = None,
@@ -62,14 +60,12 @@ class GeneticAlgorithmEngine:
 
         Args:
             backtest_service (BacktestService): バックテストサービス。
-            strategy_factory (StrategyFactory): 戦略ファクトリー。
             gene_generator (RandomGeneGenerator): 遺伝子生成器。
             hybrid_mode (bool): ハイブリッドGA+MLモードを有効化。デフォルトはFalse。
             hybrid_predictor (Optional[Any]): ハイブリッド予測器（hybrid_mode=Trueの場合）。
             hybrid_feature_adapter (Optional[Any]): 特徴量アダプタ（hybrid_mode=Trueの場合）。
         """
         self.backtest_service = backtest_service
-        self.strategy_factory = strategy_factory
         self.gene_generator = gene_generator
         self.hybrid_mode = hybrid_mode
 

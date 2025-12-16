@@ -320,7 +320,6 @@ class GeneValidator:
             for i, condition in enumerate(cond_list):
                 _validate_recursive(condition, f"{label_prefix}{i}")
 
-        _validate_mixed_conditions(strategy_gene.entry_conditions, "エントリー条件")
         _validate_mixed_conditions(
             strategy_gene.long_entry_conditions, "ロングエントリー条件"
         )
@@ -328,36 +327,26 @@ class GeneValidator:
             strategy_gene.short_entry_conditions, "ショートエントリー条件"
         )
 
-        for i, condition in enumerate(strategy_gene.exit_conditions):
-            self.clean_condition(condition)
-            is_valid, error_detail = self.validate_condition(condition)
-            if not is_valid:
-                errors.append(f"イグジット条件{i}が無効です: {error_detail}")
-
         # 最低限の条件チェック
-        has_entry_conditions = (
-            bool(strategy_gene.entry_conditions)
-            or bool(strategy_gene.long_entry_conditions)
-            or bool(strategy_gene.short_entry_conditions)
+        has_entry_conditions = bool(strategy_gene.long_entry_conditions) or bool(
+            strategy_gene.short_entry_conditions
         )
         if not has_entry_conditions:
             errors.append("エントリー条件が設定されていません")
 
         # イグジット条件またはTP/SL遺伝子の存在チェック
-        if not strategy_gene.exit_conditions:
-            has_tpsl = (
-                (strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled)
-                or (
-                    strategy_gene.long_tpsl_gene
-                    and strategy_gene.long_tpsl_gene.enabled
-                )
-                or (
-                    strategy_gene.short_tpsl_gene
-                    and strategy_gene.short_tpsl_gene.enabled
-                )
+        # exit_conditions は廃止されたため、TP/SL遺伝子の存在を必須とする
+        has_tpsl = (
+            (strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled)
+            or (
+                strategy_gene.long_tpsl_gene and strategy_gene.long_tpsl_gene.enabled
             )
-            if not has_tpsl:
-                errors.append("イグジット条件が設定されていません")
+            or (
+                strategy_gene.short_tpsl_gene and strategy_gene.short_tpsl_gene.enabled
+            )
+        )
+        if not has_tpsl:
+            errors.append("TP/SL設定（イグジット条件）が設定されていません")
 
         # TP/SL遺伝子のバリデーション
         if strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled:

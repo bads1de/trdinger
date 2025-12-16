@@ -196,23 +196,23 @@ def _mutate_conditions(mutated, mutation_rate, config):
         config: GAConfigオブジェクト
     """
     if random.random() < mutation_rate * config.condition_change_probability_multiplier:
-        # エントリー条件の変更
+        # ロングエントリー条件の変更
         if (
-            mutated.entry_conditions
+            mutated.long_entry_conditions
             and random.random() < config.condition_selection_probability
         ):
-            condition_idx = random.randint(0, len(mutated.entry_conditions) - 1)
-            condition = mutated.entry_conditions[condition_idx]
+            condition_idx = random.randint(0, len(mutated.long_entry_conditions) - 1)
+            condition = mutated.long_entry_conditions[condition_idx]
             _mutate_condition_item(condition, mutation_rate, config)
 
     if random.random() < mutation_rate * config.condition_change_probability_multiplier:
-        # エグジット条件の変更
+        # ショートエントリー条件の変更
         if (
-            mutated.exit_conditions
+            mutated.short_entry_conditions
             and random.random() < config.condition_selection_probability
         ):
-            condition_idx = random.randint(0, len(mutated.exit_conditions) - 1)
-            condition = mutated.exit_conditions[condition_idx]
+            condition_idx = random.randint(0, len(mutated.short_entry_conditions) - 1)
+            condition = mutated.short_entry_conditions[condition_idx]
             _mutate_condition_item(condition, mutation_rate, config)
 
 
@@ -291,21 +291,6 @@ def crossover_strategy_genes_pure(
             child1_indicators = child1_indicators[:max_indicators]
             child2_indicators = child2_indicators[:max_indicators]
 
-            # 条件の交叉（ランダム選択）
-            if random.random() < 0.5:
-                child1_entry = parent1.entry_conditions.copy()
-                child2_entry = parent2.entry_conditions.copy()
-            else:
-                child1_entry = parent2.entry_conditions.copy()
-                child2_entry = parent1.entry_conditions.copy()
-
-            if random.random() < 0.5:
-                child1_exit = parent1.exit_conditions.copy()
-                child2_exit = parent2.exit_conditions.copy()
-            else:
-                child1_exit = parent2.exit_conditions.copy()
-                child2_exit = parent1.exit_conditions.copy()
-
             # リスク管理設定の交叉（平均値）
             child1_risk = {}
             child2_risk = {}
@@ -378,8 +363,6 @@ def crossover_strategy_genes_pure(
             child1_strategy = StrategyGene(
                 id=str(uuid.uuid4()),
                 indicators=child1_indicators,
-                entry_conditions=child1_entry,
-                exit_conditions=child1_exit,
                 long_entry_conditions=child1_long_entry,
                 short_entry_conditions=child1_short_entry,
                 risk_management=child1_risk,
@@ -394,8 +377,6 @@ def crossover_strategy_genes_pure(
             child2_strategy = StrategyGene(
                 id=str(uuid.uuid4()),
                 indicators=child2_indicators,
-                entry_conditions=child2_entry,
-                exit_conditions=child2_exit,
                 long_entry_conditions=child2_long_entry,
                 short_entry_conditions=child2_short_entry,
                 risk_management=child2_risk,
@@ -445,28 +426,6 @@ def uniform_crossover(
             parent2.indicators
             if random.random() < selection_prob
             else parent1.indicators
-        )
-
-        child1_entry_conditions = (
-            parent1.entry_conditions
-            if random.random() < selection_prob
-            else parent2.entry_conditions
-        )
-        child2_entry_conditions = (
-            parent2.entry_conditions
-            if random.random() < selection_prob
-            else parent1.entry_conditions
-        )
-
-        child1_exit_conditions = (
-            parent1.exit_conditions
-            if random.random() < selection_prob
-            else parent2.exit_conditions
-        )
-        child2_exit_conditions = (
-            parent2.exit_conditions
-            if random.random() < selection_prob
-            else parent1.exit_conditions
         )
 
         child1_long_entry_conditions = (
@@ -565,8 +524,6 @@ def uniform_crossover(
         child1 = StrategyGene(
             id=str(uuid.uuid4()),
             indicators=child1_indicators,
-            entry_conditions=child1_entry_conditions,
-            exit_conditions=child1_exit_conditions,
             long_entry_conditions=child1_long_entry_conditions,
             short_entry_conditions=child1_short_entry_conditions,
             risk_management=child1_risk_management,
@@ -581,8 +538,6 @@ def uniform_crossover(
         child2 = StrategyGene(
             id=str(uuid.uuid4()),
             indicators=child2_indicators,
-            entry_conditions=child2_entry_conditions,
-            exit_conditions=child2_exit_conditions,
             long_entry_conditions=child2_long_entry_conditions,
             short_entry_conditions=child2_short_entry_conditions,
             risk_management=child2_risk_management,
@@ -595,6 +550,11 @@ def uniform_crossover(
         )
 
         return child1, child2
+
+    except Exception as e:
+        logger.error(f"uniform crossoverエラー: {e}")
+        # エラー時は親をそのまま返す
+        return parent1, parent2
 
     except Exception as e:
         logger.error(f"uniform crossoverエラー: {e}")

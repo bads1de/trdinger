@@ -12,7 +12,6 @@ from app.services.backtest.backtest_service import BacktestService
 from ..config.ga import GAConfig
 from ..core.ga_engine import GeneticAlgorithmEngine
 from ..generators.random_gene_generator import RandomGeneGenerator
-from ..generators.strategy_factory import StrategyFactory
 from .experiment_persistence_service import ExperimentPersistenceService
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,6 @@ class ExperimentManager:
         """初期化"""
         self.backtest_service = backtest_service
         self.persistence_service = persistence_service
-        self.strategy_factory = StrategyFactory()
         self.ga_engine: Optional[GeneticAlgorithmEngine] = None
 
     def run_experiment(
@@ -126,7 +124,6 @@ class ExperimentManager:
 
         self.ga_engine = GeneticAlgorithmEngine(
             self.backtest_service,
-            self.strategy_factory,
             gene_generator,
             hybrid_mode=ga_config.hybrid_mode,
             hybrid_predictor=hybrid_predictor,

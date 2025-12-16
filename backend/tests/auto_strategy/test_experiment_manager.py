@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, Mock
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.generators.strategy_factory import StrategyFactory
 from app.services.auto_strategy.services.experiment_manager import ExperimentManager
 
 
@@ -25,7 +24,6 @@ class TestExperimentManager:
         """初期化のテスト"""
         assert self.manager.backtest_service == self.mock_backtest_service
         assert self.manager.persistence_service == self.mock_persistence_service
-        assert isinstance(self.manager.strategy_factory, StrategyFactory)
         assert self.manager.ga_engine is None
 
     def test_initialize_ga_engine(self):

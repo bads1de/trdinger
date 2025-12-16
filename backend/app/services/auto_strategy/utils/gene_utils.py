@@ -412,10 +412,6 @@ class GeneUtils:
             short_entry_conditions = [
                 Condition(left_operand="close", operator="<", right_operand="open")
             ]
-            exit_conditions = [
-                Condition(left_operand="close", operator="==", right_operand="open")
-            ]
-            entry_conditions = long_entry_conditions
 
             # デフォルトリスク管理
             risk_management = {"position_size": 0.1}
@@ -444,10 +440,8 @@ class GeneUtils:
             return strategy_gene_class(
                 id=str(uuid.uuid4()),  # 新しいIDを生成
                 indicators=indicators,
-                entry_conditions=entry_conditions,
                 long_entry_conditions=long_entry_conditions,
                 short_entry_conditions=short_entry_conditions,
-                exit_conditions=exit_conditions,
                 risk_management=risk_management,
                 tpsl_gene=tpsl_gene,
                 position_sizing_gene=position_sizing_gene,

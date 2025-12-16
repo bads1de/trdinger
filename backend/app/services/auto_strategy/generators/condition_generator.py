@@ -15,10 +15,8 @@ from ..core.condition_evolver import (
 from ..core.condition_evolver import YamlIndicatorUtils as CoreYamlIndicatorUtils
 from ..genes import Condition, ConditionGroup, IndicatorGene
 from ..utils.yaml_utils import YamlIndicatorUtils
-from .strategies import (
-    ComplexConditionsStrategy,
-    MTFStrategy,
-)
+from .complex_conditions_strategy import ComplexConditionsStrategy
+from .mtf_strategy import MTFStrategy
 
 logger = logging.getLogger(__name__)
 

@@ -8,9 +8,9 @@ import logging
 import random
 from typing import List
 
-from ...config.constants import OPERATORS
-from ...genes import Condition
-from .operand_generator import OperandGenerator
+from ..config.constants import OPERATORS
+from ..genes import Condition
+from .random_operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)
 
