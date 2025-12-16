@@ -36,7 +36,7 @@ from typing import Any, Dict
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.services.auto_strategy.config.ga_runtime import GAConfig  # noqa: E402
+from app.services.auto_strategy.config.ga import GAConfig  # noqa: E402
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine  # noqa: E402
 from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402
     RandomGeneGenerator,

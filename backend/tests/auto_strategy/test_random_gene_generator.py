@@ -1,4 +1,4 @@
-from app.services.auto_strategy.config.ga import GASettings
+from app.services.auto_strategy.config import GASettings
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -58,7 +58,3 @@ class TestRandomGeneGenerator:
 
         # IDが異なる（別オブジェクトである）ことを確認
         assert gene.long_tpsl_gene is not gene.short_tpsl_gene
-
-
-
-

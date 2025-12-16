@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..config.ga_runtime import GAConfig
+from ..config.ga import GAConfig
 from ..core.ga_engine import GeneticAlgorithmEngine
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..generators.strategy_factory import StrategyFactory
@@ -157,8 +157,3 @@ class ExperimentManager:
             return True
 
         return _stop_experiment()
-
-
-
-
-

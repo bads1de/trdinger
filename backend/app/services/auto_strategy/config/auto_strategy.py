@@ -8,7 +8,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
-from .ga import GA_THRESHOLD_RANGES, GASettings
+from .constants import GA_THRESHOLD_RANGES
+from .ga import GAConfig
 from .indicators import IndicatorSettings
 from .position_sizing import PositionSizingSettings
 from .tpsl import TPSLSettings
@@ -27,7 +28,7 @@ class AutoStrategyConfig:
     # 設定グループ
     trading: TradingSettings = field(default_factory=TradingSettings)
     indicators: IndicatorSettings = field(default_factory=IndicatorSettings)
-    ga: GASettings = field(default_factory=GASettings)
+    ga: GAConfig = field(default_factory=GAConfig)
     tpsl: TPSLSettings = field(default_factory=TPSLSettings)
     position_sizing: PositionSizingSettings = field(
         default_factory=PositionSizingSettings
@@ -69,12 +70,7 @@ class AutoStrategyConfig:
             "threshold_ranges": GA_THRESHOLD_RANGES.copy(),
             "trading": TradingSettings().get_default_values(),
             "indicators": IndicatorSettings().get_default_values(),
-            "ga": GASettings().get_default_values(),
+            "ga": GAConfig().get_default_values(),
             "tpsl": TPSLSettings().get_default_values(),
             "position_sizing": PositionSizingSettings().get_default_values(),
         }
-
-
-
-
-

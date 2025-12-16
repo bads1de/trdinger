@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
-from ..config.ga_runtime import GAConfig
+from ..config.ga import GAConfig
 from ..core.individual_evaluator import IndividualEvaluator
 from ..genes.strategy import StrategyGene
 from .strategy_parameter_space import StrategyParameterSpace
@@ -195,8 +195,3 @@ class StrategyParameterTuner:
             tuned_genes.append(tuned_gene)
 
         return tuned_genes
-
-
-
-
-

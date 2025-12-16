@@ -1,4 +1,4 @@
-from app.services.auto_strategy.config.ga import GASettings
+from app.services.auto_strategy.config import GASettings
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -63,7 +63,3 @@ class TestAutoStrategyFlow:
 
         # 基本的な構造が維持されていることを確認
         assert len(mutated_child1.indicators) > 0
-
-
-
-

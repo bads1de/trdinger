@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple
 
 from .auto_strategy import AutoStrategyConfig
 from .base import BaseConfig
-from .ga_runtime import GAConfig
+from .ga import GAConfig
 
 logger = logging.getLogger(__name__)
 
@@ -217,8 +217,3 @@ class ConfigValidator:
             is_valid = False
 
         return is_valid, all_errors
-
-
-
-
-

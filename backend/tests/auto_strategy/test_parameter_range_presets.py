@@ -247,7 +247,7 @@ class TestGAConfigPresetSetting:
 
     def test_ga_config_has_parameter_range_preset_field(self):
         """GAConfig に parameter_range_preset フィールドが存在することをテスト"""
-        from app.services.auto_strategy.config.ga_runtime import GAConfig
+        from app.services.auto_strategy.config.ga import GAConfig
 
         # GAConfig インスタンスを作成
         config = GAConfig()
@@ -259,7 +259,7 @@ class TestGAConfigPresetSetting:
 
     def test_ga_config_default_preset_is_none(self):
         """デフォルトではプリセットが None（デフォルト範囲を使用）"""
-        from app.services.auto_strategy.config.ga_runtime import GAConfig
+        from app.services.auto_strategy.config.ga import GAConfig
 
         config = GAConfig()
 
@@ -268,7 +268,7 @@ class TestGAConfigPresetSetting:
 
     def test_ga_config_preset_serialization(self):
         """GAConfig のプリセット設定がシリアライズ/デシリアライズされることをテスト"""
-        from app.services.auto_strategy.config.ga_runtime import GAConfig
+        from app.services.auto_strategy.config.ga import GAConfig
 
         # プリセットを設定した GAConfig を作成
         config = GAConfig(parameter_range_preset="short_term")

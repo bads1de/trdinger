@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.config.ga_runtime import GAConfig
+from app.services.auto_strategy.config.ga import GAConfig
 from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.exceptions import MLTrainingError
 

@@ -124,8 +124,9 @@ def test_hierarchical_mutation_safety():
 
     for _ in range(30):
         # mutation_rate 1.0 ensures mutation attempt if logic allows
-        from app.services.auto_strategy.config.ga import GASettings
-        config = GASettings() # 設定オブジェクトを作成
+        from app.services.auto_strategy.config import GASettings
+
+        config = GASettings()  # 設定オブジェクトを作成
         mutated = mutate_strategy_gene_pure(strategy, config, mutation_rate=1.0)
 
         # Check if entry_conditions[0] is still a ConditionGroup and operator is valid
@@ -137,7 +138,3 @@ def test_hierarchical_mutation_safety():
                     "AND",
                     "OR",
                 ], f"Operator was corrupted to: {mutated_group.operator}"
-
-
-
-

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 import pandas as pd
 
-from app.services.auto_strategy.config.ga_runtime import GAConfig
+from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
 from app.services.backtest.backtest_service import BacktestService
@@ -361,8 +361,3 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 fitness_list[pred_score_index] = 0.0
 
         return tuple(fitness_list)
-
-
-
-
-

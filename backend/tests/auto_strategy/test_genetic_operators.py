@@ -32,7 +32,7 @@ class TestGeneticOperators:
 
     @pytest.fixture
     def ga_config(self):
-        from app.services.auto_strategy.config.ga import GASettings
+        from app.services.auto_strategy.config import GASettings
 
         return GASettings()
 
@@ -515,7 +515,3 @@ class TestGeneticOperators:
         assert (
             shared_variance >= original_variance * 0.6
         ), "Silhouette-based sharing should maintain diversity"
-
-
-
-

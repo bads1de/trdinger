@@ -21,7 +21,7 @@ from backend.app.config.unified_config import (
     MLPredictionConfig,
     UnifiedConfig,
 )
-from backend.app.services.auto_strategy.config.ga_runtime import (
+from backend.app.services.auto_strategy.config.ga import (
     GAConfig as GAConfigRuntime,
 )
 from backend.app.services.auto_strategy.config.validators import ConfigValidator

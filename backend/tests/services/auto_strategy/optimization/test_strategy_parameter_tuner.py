@@ -5,7 +5,7 @@ StrategyParameterTuner のテスト
 import pytest
 from unittest.mock import Mock, patch
 
-from app.services.auto_strategy.config.ga_runtime import GAConfig
+from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene

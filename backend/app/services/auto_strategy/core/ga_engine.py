@@ -14,7 +14,7 @@ from deap import tools
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..config.ga_runtime import GAConfig
+from ..config.ga import GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
 from ..generators.strategy_factory import StrategyFactory
 from .deap_setup import DEAPSetup
@@ -505,8 +505,3 @@ class GeneticAlgorithmEngine:
             logger.warning(f"パラメータチューニング中にエラーが発生: {e}")
             # エラー時は元の遺伝子を返す
             return best_gene
-
-
-
-
-

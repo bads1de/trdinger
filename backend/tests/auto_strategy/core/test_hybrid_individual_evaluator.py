@@ -74,7 +74,7 @@ class TestEnsureBacktestDefaults:
 
     def test_uses_existing_symbol_and_timeframe(self, evaluator):
         """既存のシンボルとタイムフレームを使用"""
-        from app.services.auto_strategy.config.ga_runtime import GAConfig
+        from app.services.auto_strategy.config.ga import GAConfig
 
         backtest_config = {"symbol": "ETHUSDT", "timeframe": "4h"}
         ga_config = Mock(spec=GAConfig)
@@ -88,7 +88,7 @@ class TestEnsureBacktestDefaults:
 
     def test_uses_ga_config_defaults(self, evaluator):
         """GA設定のデフォルト値を使用"""
-        from app.services.auto_strategy.config.ga_runtime import GAConfig
+        from app.services.auto_strategy.config.ga import GAConfig
 
         backtest_config = {}
         ga_config = Mock(spec=GAConfig)
@@ -108,7 +108,7 @@ class TestEnsureBacktestDefaults:
 
     def test_uses_fallback_defaults(self, evaluator):
         """フォールバックのデフォルト値を使用"""
-        from app.services.auto_strategy.config.ga_runtime import GAConfig
+        from app.services.auto_strategy.config.ga import GAConfig
 
         backtest_config = {}
         ga_config = Mock(spec=GAConfig)

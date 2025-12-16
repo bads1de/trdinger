@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pandas as pd
 
-from backend.app.services.auto_strategy.config.ga import GASettings
+from backend.app.services.auto_strategy.config import GASettings
 from backend.app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -125,7 +125,3 @@ def test_hybrid_feature_adapter_label_features():
     assert "funding_rate_change" in features_df.columns
     assert "sentiment_smoothed" in features_df.columns
     assert not features_df["sentiment_smoothed"].isna().any()
-
-
-
-

@@ -5,7 +5,7 @@ from app.services.auto_strategy.genes.tpsl import TPSLGene
 from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 
-from app.services.auto_strategy.config.ga import GASettings
+from app.services.auto_strategy.config import GASettings
 from app.services.auto_strategy.core.genetic_operators import (
     crossover_strategy_genes_pure,
     mutate_strategy_gene_pure,
