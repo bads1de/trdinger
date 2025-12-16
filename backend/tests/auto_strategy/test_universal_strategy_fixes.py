@@ -47,10 +47,6 @@ class TestPositionSizingNoCaching:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            exit_conditions=[],
-            long_entry_conditions=[],
-            short_entry_conditions=[],
             position_sizing_gene=PositionSizingGene(
                 enabled=True,
                 method=PositionSizingMethod.FIXED_RATIO,
@@ -157,9 +153,6 @@ class TestStatefulConditionDirection:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            long_entry_conditions=[],
-            short_entry_conditions=[],
             stateful_conditions=[stateful_short],
             risk_management={},
             metadata={},
@@ -203,9 +196,6 @@ class TestStatefulConditionDirection:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            long_entry_conditions=[],
-            short_entry_conditions=[],
             stateful_conditions=[stateful_long],
             risk_management={},
             metadata={},
@@ -242,7 +232,7 @@ class TestStatefulConditionSerialization:
 
     def test_direction_serialization(self):
         """direction フィールドが正しくシリアライズされることをテスト"""
-        from app.services.auto_strategy.serializers.dict_converter import DictConverter
+        from app.services.auto_strategy.serializers.serialization import DictConverter
 
         converter = DictConverter()
 
@@ -262,7 +252,7 @@ class TestStatefulConditionSerialization:
 
     def test_direction_deserialization(self):
         """direction フィールドが正しくデシリアライズされることをテスト"""
-        from app.services.auto_strategy.serializers.dict_converter import DictConverter
+        from app.services.auto_strategy.serializers.serialization import DictConverter
 
         converter = DictConverter()
 
@@ -289,7 +279,7 @@ class TestStatefulConditionSerialization:
 
     def test_direction_default_on_deserialization(self):
         """direction が省略された場合はデフォルト値 'long' が使用されることをテスト"""
-        from app.services.auto_strategy.serializers.dict_converter import DictConverter
+        from app.services.auto_strategy.serializers.serialization import DictConverter
 
         converter = DictConverter()
 

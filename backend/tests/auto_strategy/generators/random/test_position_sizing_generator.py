@@ -13,7 +13,7 @@ class TestPositionSizingGeneratorInit:
 
     def test_init_stores_config(self):
         """設定が保存される"""
-        from app.services.auto_strategy.generators.random.position_sizing_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             PositionSizingGenerator,
         )
 
@@ -29,7 +29,7 @@ class TestGeneratePositionSizingGene:
     @pytest.fixture
     def generator(self):
         """テスト用ジェネレータ"""
-        from app.services.auto_strategy.generators.random.position_sizing_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             PositionSizingGenerator,
         )
 
@@ -51,7 +51,7 @@ class TestGeneratePositionSizingGene:
         )
 
         with patch(
-            "app.services.auto_strategy.generators.random.position_sizing_generator.create_random_position_sizing_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
             return_value=mock_gene,
         ):
             result = generator.generate_position_sizing_gene()
@@ -68,7 +68,7 @@ class TestGeneratePositionSizingGene:
         )
 
         with patch(
-            "app.services.auto_strategy.generators.random.position_sizing_generator.create_random_position_sizing_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
             side_effect=Exception("Random generation failed"),
         ):
             result = generator.generate_position_sizing_gene()
@@ -82,11 +82,11 @@ class TestGeneratePositionSizingGene:
     def test_logs_error_on_failure(self, generator):
         """失敗時にエラーをログ"""
         with patch(
-            "app.services.auto_strategy.generators.random.position_sizing_generator.create_random_position_sizing_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
             side_effect=Exception("Test error"),
         ):
             with patch(
-                "app.services.auto_strategy.generators.random.position_sizing_generator.logger"
+                "app.services.auto_strategy.generators.component_generators.logger"
             ) as mock_logger:
                 generator.generate_position_sizing_gene()
 
@@ -108,7 +108,7 @@ class TestGeneratePositionSizingGene:
         )
 
         with patch(
-            "app.services.auto_strategy.generators.random.position_sizing_generator.create_random_position_sizing_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
             return_value=mock_gene,
         ) as mock_create:
             generator.generate_position_sizing_gene()
@@ -121,7 +121,7 @@ class TestPositionSizingGeneIntegration:
 
     def test_generated_gene_has_required_attributes(self):
         """生成された遺伝子に必須属性がある"""
-        from app.services.auto_strategy.generators.random.position_sizing_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             PositionSizingGenerator,
         )
         from app.services.auto_strategy.genes import (
@@ -134,7 +134,7 @@ class TestPositionSizingGeneIntegration:
 
         # フォールバック遺伝子を使用するようにエラーを発生させる
         with patch(
-            "app.services.auto_strategy.generators.random.position_sizing_generator.create_random_position_sizing_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
             side_effect=Exception("Force fallback"),
         ):
             result = generator.generate_position_sizing_gene()
@@ -150,6 +150,7 @@ class TestPositionSizingGeneIntegration:
         assert isinstance(result.fixed_ratio, float)
         assert isinstance(result.max_position_size, float)
         assert isinstance(result.enabled, bool)
+
 
 
 

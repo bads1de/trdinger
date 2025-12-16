@@ -73,8 +73,9 @@ class TestGeneValidatorTPSLSplit:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[Condition("close", ">", "SMA_20")],
-            exit_conditions=[],  # TPSLがあれば空でもOK
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
             long_tpsl_gene=long_tpsl,
             short_tpsl_gene=short_tpsl,
         )
@@ -198,7 +199,3 @@ class TestGeneValidatorBasic:
         indicator = IndicatorGene(type="SMA", parameters={"period": 0}, enabled=True)
 
         assert validator.validate_indicator_gene(indicator) is False
-
-
-
-

@@ -4,7 +4,7 @@ ConditionGeneratorのテスト
 
 import pytest
 from unittest.mock import Mock, patch
-from app.services.auto_strategy.generators.random.condition_generator import (
+from app.services.auto_strategy.generators.random_condition_generator import (
     ConditionGenerator,
 )
 from app.services.auto_strategy.genes import Condition
@@ -130,7 +130,3 @@ class TestGenerateFallbackCondition:
         generator = ConditionGenerator(Mock())
         condition = generator._generate_fallback_condition("exit")
         assert condition.operator == "<"
-
-
-
-

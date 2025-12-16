@@ -45,12 +45,6 @@ class TestGeneticOperators:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            long_entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
-            ],
-            short_entry_conditions=[
-                Condition(left_operand="close", operator="<", right_operand="ema")
-            ],
             risk_management={"position_size": 0.1},
             tpsl_gene=TPSLGene(),
             position_sizing_gene=PositionSizingGene(),
@@ -250,12 +244,6 @@ class TestGeneticOperators:
                 IndicatorGene(type="SMA", parameters={"period": 10}),
                 IndicatorGene(type="EMA", parameters={"period": 20}),
             ],
-            long_entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
-            ],
-            short_entry_conditions=[
-                Condition(left_operand="close", operator="<", right_operand="ema")
-            ],
             risk_management={"position_size": 0.1, "stop_loss": 0.05},
             tpsl_gene=TPSLGene(
                 stop_loss_pct=0.05, take_profit_pct=0.15, risk_reward_ratio=3.0
@@ -271,12 +259,6 @@ class TestGeneticOperators:
             indicators=[
                 IndicatorGene(type="RSI", parameters={"period": 14}),
                 IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
-            ],
-            long_entry_conditions=[
-                Condition(left_operand="macd", operator=">", right_operand="signal")
-            ],
-            short_entry_conditions=[
-                Condition(left_operand="macd", operator="<", right_operand="signal")
             ],
             risk_management={"position_size": 0.2, "take_profit": 0.1},
             tpsl_gene=TPSLGene(
@@ -352,16 +334,6 @@ class TestGeneticOperators:
                         IndicatorGene(type="RSI", parameters={"period": 14}),
                         IndicatorGene(type="MACD", parameters={"fast": 12, "slow": 26}),
                     ],
-                    long_entry_conditions=[
-                        Condition(
-                            left_operand="macd", operator=">", right_operand="signal"
-                        )
-                    ],
-                    short_entry_conditions=[
-                        Condition(
-                            left_operand="macd", operator="<", right_operand="signal"
-                        )
-                    ],
                     risk_management={"position_size": 0.2},
                     tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.10),
                     position_sizing_gene=PositionSizingGene(),
@@ -374,12 +346,6 @@ class TestGeneticOperators:
                     id="gene3",
                     indicators=[
                         IndicatorGene(type="BB", parameters={"period": 20, "std": 2})
-                    ],
-                    long_entry_conditions=[],
-                    short_entry_conditions=[
-                        Condition(
-                            left_operand="close", operator="<", right_operand="bb_lower"
-                        )
                     ],
                     risk_management={"position_size": 0.15},
                     tpsl_gene=TPSLGene(stop_loss_pct=0.04, take_profit_pct=0.12),
@@ -396,14 +362,6 @@ class TestGeneticOperators:
                             type="STOCH", parameters={"k_period": 14, "d_period": 3}
                         )
                     ],
-                    long_entry_conditions=[
-                        Condition(
-                            left_operand="stoch_k",
-                            operator=">",
-                            right_operand="stoch_d",
-                        )
-                    ],
-                    short_entry_conditions=[],
                     risk_management={"position_size": 0.25},
                     tpsl_gene=TPSLGene(stop_loss_pct=0.02, take_profit_pct=0.08),
                     position_sizing_gene=PositionSizingGene(),

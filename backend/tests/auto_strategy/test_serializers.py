@@ -12,7 +12,7 @@ from app.services.auto_strategy.genes import (
     TPSLGene,
     TPSLMethod,
 )
-from app.services.auto_strategy.serializers.gene_serialization import (
+from app.services.auto_strategy.serializers.serialization import (
     GeneSerializer,
 )
 
@@ -30,14 +30,12 @@ def base_strategy_gene() -> StrategyGene:
         IndicatorGene(type="SMA", parameters={"period": 10}, enabled=True),
         IndicatorGene(type="EMA", parameters={"period": 20}, enabled=True),
     ]
-    entry_conditions = [
+    long_entry_conditions = [
         Condition(left_operand="close", operator=">", right_operand="sma"),
     ]
-    exit_conditions = [
+    short_entry_conditions = [
         Condition(left_operand="close", operator="<", right_operand="ema"),
     ]
-    long_entry_conditions = entry_conditions
-    short_entry_conditions = exit_conditions
 
     tpsl_gene = TPSLGene(
         enabled=True,
@@ -66,8 +64,6 @@ def base_strategy_gene() -> StrategyGene:
     return StrategyGene(
         id="test-strategy",
         indicators=indicators,
-        entry_conditions=entry_conditions,
-        exit_conditions=exit_conditions,
         long_entry_conditions=long_entry_conditions,
         short_entry_conditions=short_entry_conditions,
         risk_management={"position_size": 0.1234567, "max_risk": 0.05},
@@ -97,8 +93,12 @@ def test_strategy_gene_round_trip_dict(
         assert got.parameters == orig.parameters
         assert got.enabled is orig.enabled
     # 条件
-    assert len(restored.entry_conditions) == len(base_strategy_gene.entry_conditions)
-    assert len(restored.exit_conditions) == len(base_strategy_gene.exit_conditions)
+    assert len(restored.long_entry_conditions) == len(
+        base_strategy_gene.long_entry_conditions
+    )
+    assert len(restored.short_entry_conditions) == len(
+        base_strategy_gene.short_entry_conditions
+    )
     # TP/SL Gene
     assert isinstance(restored.tpsl_gene, TPSLGene)
     assert restored.tpsl_gene.enabled is True
@@ -191,8 +191,6 @@ def test_tpsl_split_round_trip_via_dict(serializer: GeneSerializer) -> None:
     strategy_gene = StrategyGene(
         id="split-tpsl-test",
         indicators=[],
-        entry_conditions=[],
-        exit_conditions=[],
         risk_management={},
         tpsl_gene=None,  # 共通設定はNone
         long_tpsl_gene=long_tpsl,
@@ -333,61 +331,7 @@ def test_invalid_position_sizing_dict_raises_or_falls_back(
 
 
 # d. List/ネスト構造: ListEncoder/ListDecoder 安定性
-
-
-def test_strategy_list_encoding_and_decoding_is_stable(
-    serializer: GeneSerializer, base_strategy_gene: StrategyGene
-) -> None:
-    """
-    ListEncoder.to_list / ListDecoder.from_list の往復で
-    少なくとも基本構造が破綻しないこと。
-
-    注意:
-    - ListEncoder/ListDecoder は情報圧縮・ヒューリスティック生成を行うため、
-      完全な同一オブジェクトにはならない設計。
-    - ここでは「有効なStrategyGeneとして復元されること」「指標やTP/SL情報が一貫していること」を確認。
-    """
-    encoded = serializer.to_list(base_strategy_gene)
-    assert isinstance(encoded, list)
-    assert len(encoded) >= 10  # デフォルト設計に基づく最低長
-
-    restored = serializer.from_list(encoded, StrategyGene)
-    assert isinstance(restored, StrategyGene)
-
-    # ListDecoderは必要に応じてデフォルト条件/リスク管理を生成する仕様
-    assert restored.indicators  # 少なくとも1つ
-    assert restored.entry_conditions
-    assert restored.long_entry_conditions
-    assert restored.short_entry_conditions
-    assert isinstance(restored.risk_management, dict)
-
-    # TP/SL および PositionSizing の有無はエンコード長等に依存するため、
-    # enabled な場合は構造が妥当であることのみ確認
-    if restored.tpsl_gene:
-        assert isinstance(restored.tpsl_gene, TPSLGene)
-    if restored.position_sizing_gene:
-        assert isinstance(restored.position_sizing_gene, PositionSizingGene)
-
-
-def test_list_decoder_fallback_to_default_on_short_list(
-    serializer: GeneSerializer,
-) -> None:
-    """短すぎるエンコードリストではデフォルトStrategyGeneにフォールバックする仕様を固定."""
-    restored = serializer.from_list([0.1, 0.2], StrategyGene)
-    assert isinstance(restored, StrategyGene)
-    # GeneUtils.create_default_strategy_gene による生成が想定されるため最低限の構造をチェック
-    assert restored.indicators
-    assert isinstance(restored.risk_management, dict)
-
-
-def test_list_decoder_generates_metadata(serializer: GeneSerializer) -> None:
-    """ListDecoder.from_list がメタデータを設定する現行仕様をテストで固定."""
-    encoded = [0.5] * 40  # 十分な長さ
-    restored = serializer.from_list(encoded, StrategyGene)
-
-    assert isinstance(restored.metadata, dict)
-    assert "generated_by" in restored.metadata
-    assert "decoded_from_length" in restored.metadata
+# 注: to_list/from_list メソッドはリファクタリングで廃止されました
 
 
 # 追加: indicator/condition 単体の変換
@@ -474,16 +418,13 @@ def test_strategy_gene_with_mtf_indicators_round_trip(
             type="RSI", parameters={"period": 14}, enabled=True, timeframe="4h"
         ),  # 4時間足
     ]
-    entry_conditions = [
+    long_entry_conditions = [
         Condition(left_operand="close", operator=">", right_operand="EMA_20"),
     ]
     strategy_gene = StrategyGene(
         id="mtf-strategy-test",
         indicators=indicators,
-        entry_conditions=entry_conditions,
-        long_entry_conditions=entry_conditions,
-        short_entry_conditions=[],
-        exit_conditions=[],
+        long_entry_conditions=long_entry_conditions,
         risk_management={},
         tpsl_gene=TPSLGene(enabled=True, method=TPSLMethod.FIXED_PERCENTAGE),
         metadata={"mtf_enabled": True},
@@ -499,7 +440,3 @@ def test_strategy_gene_with_mtf_indicators_round_trip(
     assert restored.indicators[0].timeframe is None  # デフォルト
     assert restored.indicators[1].timeframe == "1d"  # 日足
     assert restored.indicators[2].timeframe == "4h"  # 4時間足
-
-
-
-

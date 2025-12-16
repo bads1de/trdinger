@@ -34,14 +34,6 @@ class TestOptimizedFitnessSharing:
         return StrategyGene(
             id="test_gene",
             indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
-            entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
-            ],
-            exit_conditions=[],
-            long_entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
-            ],
-            short_entry_conditions=[],
             risk_management={"position_size": 0.1},
             tpsl_gene=TPSLGene(),
             position_sizing_gene=PositionSizingGene(),

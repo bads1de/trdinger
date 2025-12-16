@@ -44,10 +44,6 @@ class TestUniversalStrategy:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            exit_conditions=[],
-            long_entry_conditions=[dummy_cond],
-            short_entry_conditions=[dummy_cond],
             risk_management={},
             metadata={"test": True},
         )
@@ -223,10 +219,8 @@ class TestUniversalStrategy:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
             long_entry_conditions=[],  # 通常条件は空
-            short_entry_conditions=[],
-            stateful_conditions=[stateful],  # ステートフル条件のみ
+            short_stateful_conditions=[stateful],  # ステートフル条件のみ
             risk_management={},
             metadata={},
         )
@@ -324,7 +318,3 @@ class TestUniversalStrategy:
                     # スライスサイズは atr_period + 1 (True Range 計算用のバッファ)
                     expected_slice_size = tpsl_gene.atr_period + 1
                     assert len(market_data["ohlc_data"]) == expected_slice_size
-
-
-
-

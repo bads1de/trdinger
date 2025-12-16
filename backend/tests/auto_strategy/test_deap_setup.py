@@ -61,7 +61,7 @@ class TestDEAPSetup:
         assert deap_setup.Individual is None
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_creates_fitness_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -81,7 +81,7 @@ class TestDEAPSetup:
         )
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_creates_individual_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -109,7 +109,7 @@ class TestDEAPSetup:
         assert "fitness" in individual_call[1]
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_registers_toolbox_functions(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -134,7 +134,7 @@ class TestDEAPSetup:
         assert hasattr(toolbox, "select")
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_registers_nsga2_for_multi_objective(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -144,12 +144,12 @@ class TestDEAPSetup:
 
         # base.Toolboxをモック化してregister呼び出しを検証可能にする
         with patch(
-            "app.services.auto_strategy.core.deap_setup.base.Toolbox"
+            "app.services.auto_strategy.core.ga_engine.base.Toolbox"
         ) as MockToolbox:
             mock_toolbox_instance = MockToolbox.return_value
 
             with patch(
-                "app.services.auto_strategy.core.deap_setup.tools"
+                "app.services.auto_strategy.core.ga_engine.tools"
             ) as mock_tools:
                 deap_setup.setup_deap(
                     mock_config,
@@ -165,7 +165,7 @@ class TestDEAPSetup:
                 assert select_call[0][1] == mock_tools.selNSGA2
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_registers_tournament_for_single_objective(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -175,12 +175,12 @@ class TestDEAPSetup:
         mock_config.tournament_size = 5
 
         with patch(
-            "app.services.auto_strategy.core.deap_setup.base.Toolbox"
+            "app.services.auto_strategy.core.ga_engine.base.Toolbox"
         ) as MockToolbox:
             mock_toolbox_instance = MockToolbox.return_value
 
             with patch(
-                "app.services.auto_strategy.core.deap_setup.tools"
+                "app.services.auto_strategy.core.ga_engine.tools"
             ) as mock_tools:
                 deap_setup.setup_deap(
                     mock_config,
@@ -197,7 +197,7 @@ class TestDEAPSetup:
                 assert select_call[1]["tournsize"] == 5
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_mutate_wrapper(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -221,7 +221,7 @@ class TestDEAPSetup:
         mock_functions["mutate"].assert_called_once_with(individual, mutation_rate=0.2)
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_get_toolbox(self, mock_creator, deap_setup, mock_config, mock_functions):
         """ツールボックスの取得テスト"""
@@ -237,7 +237,7 @@ class TestDEAPSetup:
         assert toolbox is not None
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_get_individual_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -256,7 +256,7 @@ class TestDEAPSetup:
         assert individual_class == mock_creator.Individual
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_deletes_existing_classes(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -291,7 +291,7 @@ class TestDEAPSetup:
         assert hasattr(mock_creator, "Individual")
 
     @patch(
-        "app.services.auto_strategy.core.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.ga_engine.creator", new_callable=MockCreator
     )
     def test_setup_deap_error_handling(
         self, mock_creator, deap_setup, mock_config, mock_functions

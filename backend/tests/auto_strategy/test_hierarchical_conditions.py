@@ -68,6 +68,8 @@ def test_hierarchical_condition_evaluation_complex_false():
 
 def test_hierarchical_validation():
     """ネストされたConditionGroupのバリデーションテスト"""
+    from app.services.auto_strategy.genes import TPSLGene
+
     # Mock get_all_indicators to include our test operands "A", "B", "C"
     with patch(
         "app.services.auto_strategy.genes.validator.get_all_indicators",
@@ -84,9 +86,9 @@ def test_hierarchical_validation():
         group_or = ConditionGroup(operator="OR", conditions=[group_and, cond_c])
 
         strategy = StrategyGene(
-            entry_conditions=[group_or],
-            exit_conditions=[Condition("A", ">", 10)],
             indicators=[IndicatorGene(type="A", enabled=True, parameters={})],
+            long_entry_conditions=[cond_a],
+            tpsl_gene=TPSLGene(enabled=True, stop_loss_pct=0.01),
         )
 
         # This should pass if validator handles recursion correctly
@@ -106,8 +108,7 @@ def test_hierarchical_mutation_safety():
     strategy = StrategyGene(
         id="test",
         indicators=[],
-        entry_conditions=[group],
-        exit_conditions=[],
+        long_entry_conditions=[group],
         risk_management={},
         metadata={},
     )
@@ -119,7 +120,7 @@ def test_hierarchical_mutation_safety():
     # Force mutation on conditions
     # We loop multiple times to ensure the random chance hits condition mutation logic
     # _mutate_conditions probability is mutation_rate * 0.5
-    # Then inside, another 0.5 chance for entry_conditions.
+    # Then inside, another 0.5 chance for long_entry_conditions.
     # So we need high mutation rate and iterations.
 
     for _ in range(30):
@@ -129,10 +130,10 @@ def test_hierarchical_mutation_safety():
         config = GASettings()  # 設定オブジェクトを作成
         mutated = mutate_strategy_gene_pure(strategy, config, mutation_rate=1.0)
 
-        # Check if entry_conditions[0] is still a ConditionGroup and operator is valid
+        # Check if long_entry_conditions[0] is still a ConditionGroup and operator is valid
         # Mutated strategy creates a deep copy, so we check the mutated object.
-        if mutated.entry_conditions:
-            mutated_group = mutated.entry_conditions[0]
+        if mutated.long_entry_conditions:
+            mutated_group = mutated.long_entry_conditions[0]
             if isinstance(mutated_group, ConditionGroup):
                 assert mutated_group.operator in [
                     "AND",

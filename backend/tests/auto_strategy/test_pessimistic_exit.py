@@ -99,10 +99,6 @@ class TestPessimisticExit:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            exit_conditions=[],
-            long_entry_conditions=[dummy_cond],
-            short_entry_conditions=[],
             tpsl_gene=tpsl_gene,
             risk_management={},
             metadata={"test": True},
@@ -289,10 +285,6 @@ class TestTrailingStop:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            exit_conditions=[],
-            long_entry_conditions=[dummy_cond],
-            short_entry_conditions=[],
             tpsl_gene=tpsl_gene,
             risk_management={},
             metadata={"test": True},
@@ -422,10 +414,6 @@ class TestTrailingTakeProfit:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            entry_conditions=[],
-            exit_conditions=[],
-            long_entry_conditions=[dummy_cond],
-            short_entry_conditions=[],
             tpsl_gene=tpsl_gene,
             risk_management={},
             metadata={"test": True},

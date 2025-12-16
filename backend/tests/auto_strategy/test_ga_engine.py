@@ -49,8 +49,6 @@ class TestGeneticAlgorithmEngine:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
-            long_entry_conditions=[],
-            short_entry_conditions=[],
             risk_management={},
             tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
             position_sizing_gene=PositionSizingGene(

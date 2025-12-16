@@ -42,12 +42,6 @@ class TestFitnessSharing:
                 StrategyGene(
                     id="gene1",
                     indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
-                    entry_conditions=[
-                        Condition(
-                            left_operand="close", operator=">", right_operand="sma"
-                        )
-                    ],
-                    exit_conditions=[],
                     long_entry_conditions=[
                         Condition(
                             left_operand="close", operator=">", right_operand="sma"
@@ -65,12 +59,6 @@ class TestFitnessSharing:
                 StrategyGene(
                     id="gene2",
                     indicators=[IndicatorGene(type="EMA", parameters={"period": 20})],
-                    entry_conditions=[
-                        Condition(
-                            left_operand="close", operator="<", right_operand="ema"
-                        )
-                    ],
-                    exit_conditions=[],
                     long_entry_conditions=[
                         Condition(
                             left_operand="close", operator="<", right_operand="ema"
@@ -88,10 +76,6 @@ class TestFitnessSharing:
                 StrategyGene(
                     id="gene3",
                     indicators=[IndicatorGene(type="RSI", parameters={"period": 14})],
-                    entry_conditions=[
-                        Condition(left_operand="rsi", operator="<", right_operand="30")
-                    ],
-                    exit_conditions=[],
                     long_entry_conditions=[
                         Condition(left_operand="rsi", operator="<", right_operand="30")
                     ],
@@ -378,7 +362,3 @@ class TestFitnessSharing:
             # Operands: 1 Numeric ('30'), 1 Dynamic ('sma')
             assert vec[-2] == 1.0
             assert vec[-1] == 1.0
-
-
-
-

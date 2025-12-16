@@ -56,14 +56,6 @@ class TestMLFilterIntegration:
             indicators=[
                 IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
             ],
-            entry_conditions=[
-                Condition(
-                    left_operand={"indicator": "RSI_14"},
-                    operator="<",
-                    right_operand=30.0,
-                )
-            ],
-            exit_conditions=[],
             tpsl_gene=TPSLGene(
                 enabled=True,
                 method=TPSLMethod.FIXED_PERCENTAGE,

@@ -360,7 +360,7 @@ class TestStatefulConditionSerialization:
 
     def test_stateful_condition_to_dict(self):
         """StatefulCondition を辞書に変換"""
-        from app.services.auto_strategy.serializers.dict_converter import (
+        from app.services.auto_strategy.serializers.serialization import (
             DictConverter,
         )
 
@@ -390,7 +390,7 @@ class TestStatefulConditionSerialization:
 
     def test_dict_to_stateful_condition(self):
         """辞書から StatefulCondition を復元"""
-        from app.services.auto_strategy.serializers.dict_converter import (
+        from app.services.auto_strategy.serializers.serialization import (
             DictConverter,
         )
 
@@ -426,7 +426,7 @@ class TestStatefulConditionSerialization:
 
     def test_round_trip_serialization(self):
         """シリアライズ→デシリアライズのラウンドトリップ"""
-        from app.services.auto_strategy.serializers.dict_converter import (
+        from app.services.auto_strategy.serializers.serialization import (
             DictConverter,
         )
 
@@ -573,7 +573,7 @@ class TestStatefulConditionIntegration:
         シリアライズ/デシリアライズできることを確認
         """
         from app.services.auto_strategy.genes.strategy import StrategyGene
-        from app.services.auto_strategy.serializers.dict_converter import DictConverter
+        from app.services.auto_strategy.serializers.serialization import DictConverter
 
         # StrategyGene を作成
         trigger = Condition(left_operand="RSI", operator="<", right_operand=30.0)
@@ -588,7 +588,6 @@ class TestStatefulConditionIntegration:
         gene = StrategyGene(
             id="test_gene_1",
             indicators=[],
-            entry_conditions=[],
             stateful_conditions=[stateful],
         )
 

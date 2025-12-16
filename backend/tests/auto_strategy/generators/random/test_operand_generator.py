@@ -14,7 +14,7 @@ class TestOperandGeneratorInit:
 
     def test_init_with_default_weights(self):
         """デフォルトの重みで初期化"""
-        from app.services.auto_strategy.generators.random.operand_generator import (
+        from app.services.auto_strategy.generators.random_operand_generator import (
             OperandGenerator,
         )
 
@@ -34,7 +34,7 @@ class TestOperandGeneratorInit:
 
     def test_init_with_custom_weights(self):
         """カスタム重みで初期化"""
-        from app.services.auto_strategy.generators.random.operand_generator import (
+        from app.services.auto_strategy.generators.random_operand_generator import (
             OperandGenerator,
         )
 
@@ -59,7 +59,7 @@ class TestChooseOperand:
     @pytest.fixture
     def generator(self):
         """テスト用ジェネレータ"""
-        from app.services.auto_strategy.generators.random.operand_generator import (
+        from app.services.auto_strategy.generators.random_operand_generator import (
             OperandGenerator,
         )
 
@@ -85,7 +85,7 @@ class TestChooseOperand:
 
         # ランダム選択をモック
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+            "app.services.auto_strategy.generators.random_operand_generator.random.choice",
             return_value="RSI",
         ):
             result = generator.choose_operand([indicator1, indicator2])
@@ -119,7 +119,7 @@ class TestChooseOperand:
             return original_choice(seq)
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+            "app.services.auto_strategy.generators.random_operand_generator.random.choice",
             side_effect=mock_choice,
         ):
             generator.choose_operand([indicator])
@@ -139,7 +139,7 @@ class TestChooseOperand:
             return seq[0]
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+            "app.services.auto_strategy.generators.random_operand_generator.random.choice",
             side_effect=mock_choice,
         ):
             generator.choose_operand([])
@@ -155,7 +155,7 @@ class TestChooseOperand:
             return seq[0]
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+            "app.services.auto_strategy.generators.random_operand_generator.random.choice",
             side_effect=mock_choice,
         ):
             generator.choose_operand([])
@@ -170,7 +170,7 @@ class TestChooseRightOperand:
     @pytest.fixture
     def generator(self):
         """テスト用ジェネレータ"""
-        from app.services.auto_strategy.generators.random.operand_generator import (
+        from app.services.auto_strategy.generators.random_operand_generator import (
             OperandGenerator,
         )
 
@@ -191,7 +191,7 @@ class TestChooseRightOperand:
         """高い確率で数値閾値を返す"""
         # random.random() が 0.5 を返すとき（< 0.8）、数値を返す
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.random",
+            "app.services.auto_strategy.generators.random_operand_generator.random.random",
             return_value=0.5,
         ):
             with patch.object(
@@ -211,7 +211,7 @@ class TestChooseRightOperand:
         generator.config.numeric_threshold_probability = 0.2
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.random",
+            "app.services.auto_strategy.generators.random_operand_generator.random.random",
             return_value=0.5,
         ):  # > 0.2
             with patch.object(
@@ -236,7 +236,7 @@ class TestChooseRightOperand:
         generator.config.min_compatibility_score = 0.8
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.random",
+            "app.services.auto_strategy.generators.random_operand_generator.random.random",
             return_value=0.5,
         ):  # > 0.2
             with patch.object(
@@ -261,7 +261,7 @@ class TestChooseCompatibleOperand:
     @pytest.fixture
     def generator(self):
         """テスト用ジェネレータ"""
-        from app.services.auto_strategy.generators.random.operand_generator import (
+        from app.services.auto_strategy.generators.random_operand_generator import (
             OperandGenerator,
         )
 
@@ -290,7 +290,7 @@ class TestChooseCompatibleOperand:
             operand_grouping_system, "get_compatible_operands", return_value=["SMA"]
         ):
             with patch(
-                "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+                "app.services.auto_strategy.generators.random_operand_generator.random.choice",
                 return_value="SMA",
             ):
                 result = generator.choose_compatible_operand("RSI", [indicator])
@@ -313,7 +313,7 @@ class TestChooseCompatibleOperand:
             side_effect=[[], ["EMA"]],
         ):
             with patch(
-                "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+                "app.services.auto_strategy.generators.random_operand_generator.random.choice",
                 return_value="EMA",
             ):
                 result = generator.choose_compatible_operand("RSI", [indicator])
@@ -333,7 +333,7 @@ class TestChooseCompatibleOperand:
             operand_grouping_system, "get_compatible_operands", side_effect=[[], []]
         ):
             with patch(
-                "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+                "app.services.auto_strategy.generators.random_operand_generator.random.choice",
                 return_value="close",
             ):
                 result = generator.choose_compatible_operand("RSI", [indicator])
@@ -373,7 +373,7 @@ class TestGenerateThresholdValue:
     @pytest.fixture
     def generator(self):
         """テスト用ジェネレータ"""
-        from app.services.auto_strategy.generators.random.operand_generator import (
+        from app.services.auto_strategy.generators.random_operand_generator import (
             OperandGenerator,
         )
 
@@ -571,7 +571,7 @@ class TestGetSafeThreshold:
     @pytest.fixture
     def generator(self):
         """テスト用ジェネレータ"""
-        from app.services.auto_strategy.generators.random.operand_generator import (
+        from app.services.auto_strategy.generators.random_operand_generator import (
             OperandGenerator,
         )
 
@@ -591,7 +591,7 @@ class TestGetSafeThreshold:
         generator.config.threshold_ranges = {"test_key": [10, 20]}
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.uniform",
+            "app.services.auto_strategy.generators.random_operand_generator.random.uniform",
             return_value=15.0,
         ):
             result = generator._get_safe_threshold("test_key", [0, 100])
@@ -603,7 +603,7 @@ class TestGetSafeThreshold:
         generator.config.threshold_ranges = {}
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.uniform",
+            "app.services.auto_strategy.generators.random_operand_generator.random.uniform",
             return_value=50.0,
         ):
             result = generator._get_safe_threshold("missing_key", [0, 100])
@@ -615,7 +615,7 @@ class TestGetSafeThreshold:
         generator.config.threshold_ranges = {"discrete_key": [1, 2, 3, 4, 5]}
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.choice",
+            "app.services.auto_strategy.generators.random_operand_generator.random.choice",
             return_value=3,
         ):
             result = generator._get_safe_threshold(
@@ -629,7 +629,7 @@ class TestGetSafeThreshold:
         generator.config.threshold_ranges = {"range_key": [10, 50]}
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.uniform",
+            "app.services.auto_strategy.generators.random_operand_generator.random.uniform",
             return_value=30.0,
         ):
             result = generator._get_safe_threshold(
@@ -643,12 +643,13 @@ class TestGetSafeThreshold:
         generator.config.threshold_ranges = {"invalid_key": "not_a_list"}
 
         with patch(
-            "app.services.auto_strategy.generators.random.operand_generator.random.uniform",
+            "app.services.auto_strategy.generators.random_operand_generator.random.uniform",
             return_value=50.0,
         ):
             result = generator._get_safe_threshold("invalid_key", [0, 100])
 
         assert result == 50.0
+
 
 
 

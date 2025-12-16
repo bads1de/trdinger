@@ -13,7 +13,7 @@ class TestTPSLGeneratorInit:
 
     def test_init_stores_config(self):
         """設定が保存される"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -29,7 +29,7 @@ class TestGenerateTPSLGene:
     @pytest.fixture
     def generator(self):
         """基本設定のジェネレータ"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -52,7 +52,7 @@ class TestGenerateTPSLGene:
 
     def test_applies_method_constraints(self):
         """メソッド制約を適用"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
         from app.services.auto_strategy.genes import (
@@ -73,7 +73,7 @@ class TestGenerateTPSLGene:
         methods_used = set()
         for _ in range(20):
             with patch(
-                "app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene",
+                "app.services.auto_strategy.generators.component_generators.create_random_tpsl_gene",
                 return_value=TPSLGene(
                     method=TPSLMethod.FIXED_PERCENTAGE,
                     stop_loss_pct=0.02,
@@ -92,7 +92,7 @@ class TestGenerateTPSLGene:
 
     def test_applies_sl_range_constraints(self):
         """SL範囲制約を適用"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -112,7 +112,7 @@ class TestGenerateTPSLGene:
 
     def test_applies_tp_range_constraints(self):
         """TP範囲制約を適用"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -131,7 +131,7 @@ class TestGenerateTPSLGene:
 
     def test_applies_rr_range_constraints(self):
         """リスクリワード比範囲制約を適用"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -150,7 +150,7 @@ class TestGenerateTPSLGene:
 
     def test_applies_atr_multiplier_range_constraints(self):
         """ATR倍率範囲制約を適用"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -174,7 +174,7 @@ class TestGenerateTPSLGene:
         from app.services.auto_strategy.genes import TPSLMethod
 
         with patch(
-            "app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_tpsl_gene",
             side_effect=Exception("Generation failed"),
         ):
             result = generator.generate_tpsl_gene()
@@ -190,11 +190,11 @@ class TestGenerateTPSLGene:
     def test_logs_error_on_failure(self, generator):
         """エラー時にログを出力"""
         with patch(
-            "app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_tpsl_gene",
             side_effect=Exception("Test error"),
         ):
             with patch(
-                "app.services.auto_strategy.generators.random.tpsl_generator.logger"
+                "app.services.auto_strategy.generators.component_generators.logger"
             ) as mock_logger:
                 generator.generate_tpsl_gene()
 
@@ -207,7 +207,7 @@ class TestTPSLGeneConstraintCombinations:
 
     def test_all_constraints_applied(self):
         """全ての制約が同時に適用される"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
         from app.services.auto_strategy.genes import (
@@ -235,7 +235,7 @@ class TestTPSLGeneConstraintCombinations:
         )
 
         with patch(
-            "app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_tpsl_gene",
             return_value=mock_gene,
         ):
             generator = TPSLGenerator(config)
@@ -261,7 +261,7 @@ class TestTPSLGeneConstraintCombinations:
 
     def test_no_constraints_uses_random_values(self):
         """制約なしの場合はランダム値を使用"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
         from app.services.auto_strategy.genes import TPSLGene
@@ -283,7 +283,7 @@ class TestTPSLGeneConstraintCombinations:
         )
 
         with patch(
-            "app.services.auto_strategy.generators.random.tpsl_generator.create_random_tpsl_gene",
+            "app.services.auto_strategy.generators.component_generators.create_random_tpsl_gene",
             return_value=mock_gene,
         ):
             generator = TPSLGenerator(config)
@@ -298,7 +298,7 @@ class TestTPSLGeneMethodConstraintsEdgeCases:
 
     def test_empty_method_constraints_list(self):
         """空のメソッド制約リスト"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -317,7 +317,7 @@ class TestTPSLGeneMethodConstraintsEdgeCases:
 
     def test_hasattr_check_for_missing_attributes(self):
         """属性が存在しない場合のhasattrチェック"""
-        from app.services.auto_strategy.generators.random.tpsl_generator import (
+        from app.services.auto_strategy.generators.component_generators import (
             TPSLGenerator,
         )
 
@@ -328,6 +328,7 @@ class TestTPSLGeneMethodConstraintsEdgeCases:
         # 属性がなくてもエラーにならないことを確認
         result = generator.generate_tpsl_gene()
         assert result is not None
+
 
 
 

@@ -68,16 +68,7 @@ class TestTPSLDataSlicing:
                     enabled=False,
                 )
             ],
-            entry_conditions=[],
-            exit_conditions=[],
-            long_entry_conditions=[
-                Condition(
-                    left_operand="SMA(14)",
-                    operator="<",
-                    right_operand="close",
-                )
-            ],
-            tpsl_gene=tpsl_gene,
+            long_tpsl_gene=tpsl_gene,
         )
 
     @pytest.fixture
@@ -93,16 +84,7 @@ class TestTPSLDataSlicing:
 
         return StrategyGene(
             indicators=[],
-            entry_conditions=[],
-            exit_conditions=[],
-            long_entry_conditions=[
-                Condition(
-                    left_operand="SMA(14)",
-                    operator="<",
-                    right_operand="close",
-                )
-            ],
-            tpsl_gene=tpsl_gene,
+            long_tpsl_gene=tpsl_gene,
         )
 
     def test_data_slice_size_uses_atr_period_when_greater_than_default(

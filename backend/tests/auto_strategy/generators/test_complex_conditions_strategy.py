@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from app.services.auto_strategy.generators.strategies.complex_conditions_strategy import (
+from app.services.auto_strategy.generators.complex_conditions_strategy import (
     ComplexConditionsStrategy,
 )
 from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
@@ -52,11 +52,14 @@ def test_generate_hierarchical_structure():
     # Try multiple times if randomness is involved
     for iteration in range(50):  # 試行回数を増やす
         longs, shorts, exits = strategy.generate_conditions(indicators)
-        
+
         # グループが見つかったか、または複数の条件が生成されたか
-        has_group = any(isinstance(c, ConditionGroup) and len(c.conditions) >= 2 for c in longs + shorts)
+        has_group = any(
+            isinstance(c, ConditionGroup) and len(c.conditions) >= 2
+            for c in longs + shorts
+        )
         has_multiple_conditions = len(longs) + len(shorts) >= 2
-        
+
         if has_group or has_multiple_conditions:
             found_group_or_multiple = True
             break
@@ -65,7 +68,3 @@ def test_generate_hierarchical_structure():
     assert (
         found_group_or_multiple
     ), "ComplexConditionsStrategy should generate ConditionGroups or multiple conditions"
-
-
-
-

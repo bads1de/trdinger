@@ -1,5 +1,5 @@
 from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
-from app.services.auto_strategy.serializers.dict_converter import DictConverter
+from app.services.auto_strategy.serializers.serialization import DictConverter
 
 
 def test_hierarchical_serialization():
@@ -40,7 +40,3 @@ def test_hierarchical_serialization():
 
     # I will rely on `dict_to_strategy_gene` (integration test style) or modify code first.
     pass
-
-
-
-

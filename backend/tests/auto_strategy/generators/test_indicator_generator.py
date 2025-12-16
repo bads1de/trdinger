@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 
-from app.services.auto_strategy.generators.random.indicator_generator import (
+from app.services.auto_strategy.generators.random_indicator_generator import (
     IndicatorGenerator,
 )
 from app.services.auto_strategy.genes import IndicatorGene
@@ -186,7 +186,3 @@ class TestIndicatorGeneratorBasic:
             assert indicator.type is not None
             assert isinstance(indicator.type, str)
             assert len(indicator.type) > 0
-
-
-
-
