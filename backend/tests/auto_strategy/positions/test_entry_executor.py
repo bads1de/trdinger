@@ -6,7 +6,7 @@ EntryExecutor サービスのテスト
 
 import pytest
 from app.services.auto_strategy.genes.entry import EntryGene
-from app.services.auto_strategy.config.enums import EntryType
+from app.services.auto_strategy.config.constants import EntryType
 from app.services.auto_strategy.positions.entry_executor import EntryExecutor
 
 
@@ -205,7 +205,3 @@ class TestEntryGene:
         assert restored.limit_offset_pct == original.limit_offset_pct
         assert restored.stop_offset_pct == original.stop_offset_pct
         assert restored.order_validity_bars == original.order_validity_bars
-
-
-
-

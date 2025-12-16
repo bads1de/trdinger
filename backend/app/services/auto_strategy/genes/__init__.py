@@ -12,7 +12,7 @@ from .conditions import (
     StatefulCondition,
 )
 from .entry import EntryGene
-from ..config.enums import EntryType, PositionSizingMethod, TPSLMethod
+from ..config.constants import EntryType, PositionSizingMethod, TPSLMethod
 from .indicator import IndicatorGene
 from .position_sizing import (
     PositionSizingGene,
@@ -59,8 +59,3 @@ __all__ = [
     "mutate_position_sizing_gene",
     "mutate_tpsl_gene",
 ]
-
-
-
-
-

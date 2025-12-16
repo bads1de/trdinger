@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from ..config.enums import EntryType
+from ..config.constants import EntryType
 
 
 @dataclass
@@ -82,8 +82,3 @@ class PendingOrder:
     def is_short(self) -> bool:
         """ショート注文かどうか"""
         return self.direction < 0
-
-
-
-
-

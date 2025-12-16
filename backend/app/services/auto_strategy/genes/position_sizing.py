@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import List
 
 from ..utils.gene_utils import BaseGene
-from ..config.enums import PositionSizingMethod
+from ..config.constants import PositionSizingMethod
 
 
 @dataclass
@@ -207,8 +207,3 @@ def mutate_position_sizing_gene(
         enum_fields=enum_fields,
         numeric_ranges=numeric_ranges,
     )
-
-
-
-
-

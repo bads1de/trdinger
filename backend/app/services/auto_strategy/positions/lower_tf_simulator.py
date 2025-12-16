@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 import pandas as pd
 
-from ..config.enums import EntryType
+from ..config.constants import EntryType
 from ..positions.pending_order import PendingOrder
 
 logger = logging.getLogger(__name__)
@@ -185,8 +185,3 @@ class LowerTimeframeSimulator:
             return minute_data.loc[mask]
 
         return minute_data
-
-
-
-
-

@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .conditions import Condition, ConditionGroup, StatefulCondition
 from .entry import EntryGene
-from ..config.enums import PositionSizingMethod
+from ..config.constants import PositionSizingMethod
 from .indicator import IndicatorGene
 from .position_sizing import PositionSizingGene
 from .tool import ToolGene
@@ -90,8 +90,3 @@ class StrategyGene:
         validator = GeneValidator()
         is_valid, errors = validator.validate_strategy_gene(self)
         return is_valid, errors
-
-
-
-
-

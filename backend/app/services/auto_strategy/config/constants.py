@@ -1,9 +1,38 @@
 """
-Auto Strategy 共通定数
-
+Auto Strategy 共通定数とEnum定義
 """
 
 from enum import Enum
+
+# === 列挙型定義 ===
+
+
+class PositionSizingMethod(str, Enum):
+    """ポジションサイジング決定方式"""
+
+    HALF_OPTIMAL_F = "half_optimal_f"
+    VOLATILITY_BASED = "volatility_based"
+    FIXED_RATIO = "fixed_ratio"
+    FIXED_QUANTITY = "fixed_quantity"
+
+
+class TPSLMethod(str, Enum):
+    """TP/SL決定方式"""
+
+    FIXED_PERCENTAGE = "fixed_percentage"
+    RISK_REWARD_RATIO = "risk_reward_ratio"
+    VOLATILITY_BASED = "volatility_based"
+    STATISTICAL = "statistical"
+    ADAPTIVE = "adaptive"
+
+
+class EntryType(str, Enum):
+    """エントリー注文タイプ"""
+
+    MARKET = "market"  # 成行注文（現行デフォルト）
+    LIMIT = "limit"  # 指値注文（有利な価格での約定を狙う）
+    STOP = "stop"  # 逆指値注文（ブレイクアウト戦略向け）
+    STOP_LIMIT = "stop_limit"  # 逆指値指値注文（より精密な制御）
 
 
 class IndicatorType(str, Enum):
@@ -88,26 +117,15 @@ MA_INDICATORS_NEEDING_PERIOD = {
 }
 
 # === TP/SL関連定数 ===
-TPSL_METHODS = [
-    "fixed_percentage",
-    "risk_reward_ratio",
-    "volatility_based",
-    "statistical",
-    "adaptive",
-]
+TPSL_METHODS = [m.value for m in TPSLMethod]
 
 TPSL_LIMITS = {
     "stop_loss_pct": (0.005, 0.15),  # 0.5% ~ 15%
-    "take_profit_pct": (0.01, 0.3),   # 1% ~ 30%
+    "take_profit_pct": (0.01, 0.3),  # 1% ~ 30%
 }
 
 # === ポジションサイジング関連定数 ===
-POSITION_SIZING_METHODS = [
-    "half_optimal_f",
-    "volatility_based",
-    "fixed_ratio",
-    "fixed_quantity",
-]
+POSITION_SIZING_METHODS = [m.value for m in PositionSizingMethod]
 
 
 # === エラーコード定数 ===
@@ -127,8 +145,3 @@ CONSTRAINTS = {
     "max_position_size": 1.0,
     "min_position_size": 0.01,
 }
-
-
-
-
-

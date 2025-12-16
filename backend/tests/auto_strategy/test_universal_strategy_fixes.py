@@ -16,7 +16,7 @@ from app.services.auto_strategy.genes import (
 )
 from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.genes.conditions import StatefulCondition
-from app.services.auto_strategy.config.enums import PositionSizingMethod
+from app.services.auto_strategy.config.constants import PositionSizingMethod
 
 
 class TestPositionSizingNoCaching:
@@ -314,7 +314,3 @@ class TestStatefulConditionSerialization:
 
         # デフォルト値 "long" が使用される
         assert result.direction == "long"
-
-
-
-

@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.auto_strategy.config.enums import TPSLMethod
+from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 from app.services.auto_strategy.genes import TPSLResult
 
@@ -232,7 +232,3 @@ class TestTPSLResult:
         # 基本的なパーセンテージ値を検証
         assert basic_tpsl_result.stop_loss_pct == 0.03
         assert basic_tpsl_result.take_profit_pct == 0.06
-
-
-
-

@@ -9,7 +9,7 @@ from app.services.auto_strategy.tpsl.calculator.adaptive_calculator import (
     AdaptiveCalculator,
 )
 from app.services.auto_strategy.genes.tpsl import TPSLGene
-from app.services.auto_strategy.config.enums import TPSLMethod
+from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.genes import TPSLResult
 
 
@@ -100,7 +100,3 @@ class TestAdaptiveCalculator:
             # フォールバック処理が走る
             assert result.stop_loss_pct == 0.03
             assert result.take_profit_pct == 0.06
-
-
-
-

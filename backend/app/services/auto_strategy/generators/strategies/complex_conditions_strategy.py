@@ -9,23 +9,40 @@
 
 import logging
 import random
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict, Tuple, Any
 
 from app.services.indicators.config import (
     IndicatorScaleType,
+    indicator_registry,
 )
 from ...config.constants import IndicatorType
 from ...genes import Condition, ConditionGroup, IndicatorGene
-from .base_strategy import ConditionStrategy
 
 logger = logging.getLogger(__name__)
 
 
-class ComplexConditionsStrategy(ConditionStrategy):
+class ComplexConditionsStrategy:
     """
     複数の指標組み合わせで複雑かつ意味のある条件を生成する戦略。
     メタデータ駆動型のアプローチにより、未知の指標にも対応します。
     """
+
+    def __init__(self, condition_generator: Any) -> None:
+        """
+        コンテキストで戦略を初期化。
+
+        Args:
+            condition_generator: 共有状態のためのConditionGeneratorへの参照
+        """
+        self.condition_generator = condition_generator
+
+    @property
+    def context(self) -> Dict[str, Any]:
+        """
+        生成コンテキストを取得。
+        """
+        ctx = getattr(self.condition_generator, "context", None)
+        return ctx if ctx is not None else {}
 
     def generate_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
         List[Union[Condition, ConditionGroup]],
@@ -73,7 +90,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
     def _classify_indicators(
         self, indicators: List[IndicatorGene]
     ) -> Dict[IndicatorType, List[IndicatorGene]]:
-        """指標をタイプ別に分類（ベースクラスのヘルパーを使用）"""
+        """指標をタイプ別に分類"""
         categorized: Dict[IndicatorType, List[IndicatorGene]] = {
             IndicatorType.MOMENTUM: [],
             IndicatorType.TREND: [],
@@ -83,14 +100,46 @@ class ComplexConditionsStrategy(ConditionStrategy):
             if not ind.enabled:
                 continue
             try:
-                ind_type = self._get_indicator_type(ind)
+                ind_type = self.condition_generator._get_indicator_type(ind)
                 categorized[ind_type].append(ind)
             except Exception:
                 # 分類不能な場合はTREND扱い（安全策）
                 categorized[IndicatorType.TREND].append(ind)
         return categorized
 
-    # NOTE: _get_indicator_name, _get_indicator_config はベースクラスから継承
+    def _get_indicator_name(self, indicator: IndicatorGene) -> str:
+        """
+        IndicatorCalculatorと一致する一意な指標名を取得。
+        """
+        if indicator.id:
+            indicator_id_suffix = f"_{indicator.id[:8]}"
+            return f"{indicator.type}{indicator_id_suffix}"
+        return indicator.type
+
+    def _structure_conditions(
+        self, conditions: List[Union[Condition, ConditionGroup]]
+    ) -> List[Union[Condition, ConditionGroup]]:
+        """
+        条件リストを確率的に階層化（グループ化）。
+        """
+        if len(conditions) < 2:
+            return conditions
+
+        structured: List[Union[Condition, ConditionGroup]] = []
+        i = 0
+        while i < len(conditions):
+            # 残りが2つ以上あり、30%の確率でグループ化
+            if i + 1 < len(conditions) and random.random() < 0.3:
+                group = ConditionGroup(
+                    operator="OR", conditions=[conditions[i], conditions[i + 1]]
+                )
+                structured.append(group)
+                i += 2
+            else:
+                structured.append(conditions[i])
+                i += 1
+
+        return structured
 
     def _create_trend_pullback_conditions(
         self, classified: Dict[IndicatorType, List[IndicatorGene]]
@@ -115,7 +164,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
         momentum_name = self._get_indicator_name(momentum)
 
         # メタデータチェック: トレンド指標が価格スケールであることを確認
-        trend_config = self._get_indicator_config(trend.type)
+        trend_config = indicator_registry.get_indicator_config(trend.type)
         if trend_config and trend_config.scale_type != IndicatorScaleType.PRICE_RATIO:
             # 価格スケールでないトレンド指標（ADXなど）は価格との比較に使えない
             pass
@@ -172,7 +221,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
         for ind in indicators:
             if not ind.enabled:
                 continue
-            config = self._get_indicator_config(ind.type)
+            config = indicator_registry.get_indicator_config(ind.type)
             # 設定がない場合は安全のためスキップ、またはデフォルトで価格スケールとみなすか？
             # ここでは厳密にチェック
             if config and config.scale_type == IndicatorScaleType.PRICE_RATIO:
@@ -236,7 +285,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
         for ind in indicators:
             if not ind.enabled:
                 continue
-            config = self._get_indicator_config(ind.type)
+            config = indicator_registry.get_indicator_config(ind.type)
 
             is_band = False
             if config:
@@ -272,7 +321,7 @@ class ComplexConditionsStrategy(ConditionStrategy):
 
         target_ind = random.choice(breakout_candidates)
         base_name = self._get_indicator_name(target_ind)
-        config = self._get_indicator_config(target_ind.type)
+        config = indicator_registry.get_indicator_config(target_ind.type)
 
         # Upper/Lowerバンド名の解決
         upper_suffix = "_2"  # デフォルト（pandas-taの多くは [lower, mid, upper] の順だが、upperが最後の場合が多い）
@@ -342,5 +391,3 @@ class ComplexConditionsStrategy(ConditionStrategy):
             self._structure_conditions(short_conditions),
             [],
         )
-
-    # NOTE: _structure_conditions はベースクラスから継承

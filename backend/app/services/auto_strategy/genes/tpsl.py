@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from ..utils.gene_utils import BaseGene
-from ..config.enums import TPSLMethod
+from ..config.constants import TPSLMethod
 
 logger = logging.getLogger(__name__)
 
@@ -332,8 +332,3 @@ def mutate_tpsl_gene(gene: TPSLGene, mutation_rate: float = 0.1) -> TPSLGene:
                 mutated_gene.method_weights[key] /= total_weight
 
     return mutated_gene
-
-
-
-
-

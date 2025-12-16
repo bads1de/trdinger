@@ -8,16 +8,15 @@
 import logging
 import random
 import copy
-from typing import List, Union, Tuple, Dict
+from typing import List, Union, Tuple, Dict, Any
 
 from ...genes import Condition, ConditionGroup, IndicatorGene
 from ...config.constants import IndicatorType
-from .base_strategy import ConditionStrategy
 
 logger = logging.getLogger(__name__)
 
 
-class MTFStrategy(ConditionStrategy):
+class MTFStrategy:
     """
     マルチタイムフレーム（MTF）戦略
 
@@ -27,6 +26,9 @@ class MTFStrategy(ConditionStrategy):
     3. オシレーター/モメンタム系指標を実行足に適用し、バイアス方向へのエントリータイミングを決定。
     4. これらをAND条件で結合。
     """
+
+    def __init__(self, condition_generator: Any) -> None:
+        self.condition_generator = condition_generator
 
     def generate_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
         List[Union[Condition, ConditionGroup]],
@@ -171,8 +173,3 @@ class MTFStrategy(ConditionStrategy):
                 new_ind.id = f"{new_ind.id}_{timeframe}"
             mtf_list.append(new_ind)
         return mtf_list
-
-
-
-
-

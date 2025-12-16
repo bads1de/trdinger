@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.tpsl.tpsl_service import TPSLService
 from app.services.auto_strategy.genes.tpsl import TPSLGene
-from app.services.auto_strategy.config.enums import TPSLMethod
+from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.genes import TPSLResult
 
 
@@ -154,7 +154,3 @@ class TestTPSLService:
 
         assert service._validate_percentage(0.1, "SL") is True
         assert service._validate_percentage(-0.1, "SL") is False
-
-
-
-

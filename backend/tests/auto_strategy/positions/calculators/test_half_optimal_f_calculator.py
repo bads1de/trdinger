@@ -9,7 +9,7 @@ from app.services.auto_strategy.positions.calculators.half_optimal_f_calculator 
     HalfOptimalFCalculator,
 )
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
-from app.services.auto_strategy.config.enums import PositionSizingMethod
+from app.services.auto_strategy.config.constants import PositionSizingMethod
 
 
 class TestHalfOptimalFCalculator:
@@ -127,7 +127,3 @@ class TestHalfOptimalFCalculator:
             assert (
                 result["details"]["fallback_reason"] == "simplified_calculation_failed"
             )
-
-
-
-

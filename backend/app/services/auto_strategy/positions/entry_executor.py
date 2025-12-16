@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from ..genes.entry import EntryGene
-from ..config.enums import EntryType
+from ..config.constants import EntryType
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +121,3 @@ class EntryExecutor:
             return base_price * (1.0 + offset_pct)
         else:  # Short: 現在価格より低い価格でブレイクアウト
             return base_price * (1.0 - offset_pct)
-
-
-
-
-

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from app.services.auto_strategy.config.enums import PositionSizingMethod
+from app.services.auto_strategy.config.constants import PositionSizingMethod
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.positions.calculators.volatility_based_calculator import (
     VolatilityBasedCalculator,
@@ -310,7 +310,3 @@ class TestDynamicPositionSizing:
         assert (
             time_fast <= time_full * 1.5
         ), f"高速版 ({time_fast:.4f}s) がフル版 ({time_full:.4f}s) より顕著に遅い"
-
-
-
-

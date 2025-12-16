@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
-from app.services.auto_strategy.config.enums import TPSLMethod
+from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 
 from app.services.auto_strategy.config.ga import GASettings
@@ -34,12 +34,8 @@ class TestTPSLSplit:
             method=TPSLMethod.FIXED_PERCENTAGE, take_profit_pct=0.2, enabled=True
         )
 
-        parent1 = StrategyGene(
-            long_tpsl_gene=long_tpsl1, short_tpsl_gene=short_tpsl1
-        )
-        parent2 = StrategyGene(
-            long_tpsl_gene=long_tpsl2, short_tpsl_gene=short_tpsl2
-        )
+        parent1 = StrategyGene(long_tpsl_gene=long_tpsl1, short_tpsl_gene=short_tpsl1)
+        parent2 = StrategyGene(long_tpsl_gene=long_tpsl2, short_tpsl_gene=short_tpsl2)
 
         # 交叉実行
         child1, child2 = crossover_strategy_genes_pure(
@@ -91,6 +87,3 @@ class TestTPSLSplit:
         # オブジェクトIDが異なること（ディープコピーされていること）
         assert mutated.long_tpsl_gene is not gene.long_tpsl_gene
         assert mutated.short_tpsl_gene is not gene.short_tpsl_gene
-
-
-

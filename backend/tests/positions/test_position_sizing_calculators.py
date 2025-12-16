@@ -4,7 +4,7 @@ from typing import Dict
 
 import pytest
 
-from app.services.auto_strategy.config.enums import PositionSizingMethod
+from app.services.auto_strategy.config.constants import PositionSizingMethod
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.positions.calculators.calculator_factory import (
     CalculatorFactory,
@@ -112,9 +112,9 @@ def test_fixed_quantity_returns_constant_size_for_any_input(
 
     for balance, price in [(1000.0, 10.0), (5000.0, 250.0), (100000.0, 50000.0)]:
         result = calculator.calculate(gene, balance, price)
-        assert result["position_size"] == pytest.approx(fixed_qty), (
-            "固定枚数方式は口座残高や価格に依存せず一定サイズを返すべき"
-        )
+        assert result["position_size"] == pytest.approx(
+            fixed_qty
+        ), "固定枚数方式は口座残高や価格に依存せず一定サイズを返すべき"
 
 
 def test_volatility_based_size_decreases_when_volatility_increases(
@@ -343,7 +343,3 @@ def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
     calc = FixedRatioCalculator()
     raw = calc.calculate(gene, 10000.0, 0.0)
     assert raw["position_size"] >= gene.min_position_size
-
-
-
-

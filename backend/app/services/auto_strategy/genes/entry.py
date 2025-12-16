@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from ..config.enums import EntryType
+from ..config.constants import EntryType
 
 
 @dataclass
@@ -125,8 +125,3 @@ class EntryGene:
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
         )
-
-
-
-
-

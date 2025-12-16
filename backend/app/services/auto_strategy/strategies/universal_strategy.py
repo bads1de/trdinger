@@ -16,7 +16,7 @@ from backtesting import Strategy
 
 from ..core.condition_evaluator import ConditionEvaluator
 from ..genes.entry import EntryGene
-from ..config.enums import EntryType
+from ..config.constants import EntryType
 from ..positions.pending_order import PendingOrder
 from ..genes.conditions import StateTracker
 from ..genes import (
@@ -1076,8 +1076,3 @@ class UniversalStrategy(Strategy):
             "1d": pd.Timedelta(days=1),
         }
         return timeframe_map.get(self.base_timeframe)
-
-
-
-
-
