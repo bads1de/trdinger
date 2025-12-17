@@ -5,9 +5,8 @@
 """
 
 import logging
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
-from .auto_strategy import AutoStrategyConfig
 from .base import BaseConfig
 from .ga import GAConfig
 
@@ -25,8 +24,6 @@ class ConfigValidator:
         # クラスごとの追加検証
         if isinstance(config, GAConfig):
             errors.extend(ConfigValidator._validate_ga_config(config))
-        elif isinstance(config, AutoStrategyConfig):
-            errors.extend(ConfigValidator._validate_auto_strategy_config(config))
 
         # 将来的に TradingSettings などの検証が必要になったらここに追加
 
@@ -169,51 +166,3 @@ class ConfigValidator:
                 errors.append("並列プロセス数は32以下である必要があります")
 
         return errors
-
-    @staticmethod
-    def _validate_auto_strategy_config(config: AutoStrategyConfig) -> List[str]:
-        """AutoStrategyConfig固有の検証"""
-        errors = []
-
-        # cache_ttl_hoursの検証
-        if (
-            isinstance(config.cache_ttl_hours, (int, float))
-            and config.cache_ttl_hours < 0
-        ):
-            errors.append("キャッシュTTLは正の数である必要があります")
-
-        # log_levelの検証
-        valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
-        if config.log_level not in valid_log_levels:
-            errors.append(f"無効なログレベル: {config.log_level}")
-
-        return errors
-
-    @staticmethod
-    def validate_all(config: AutoStrategyConfig) -> Tuple[bool, Dict[str, List[str]]]:
-        """AutoStrategyConfigの全階層を検証"""
-        all_errors = {}
-        is_valid = True
-
-        # 各設定グループの検証
-        settings_groups = {
-            "trading": config.trading,
-            "indicators": config.indicators,
-            "ga": config.ga,
-            "tpsl": config.tpsl,
-            "position_sizing": config.position_sizing,
-        }
-
-        for group_name, group_config in settings_groups.items():
-            valid, errors = ConfigValidator.validate(group_config)
-            if not valid:
-                all_errors[group_name] = errors
-                is_valid = False
-
-        # メイン設定の検証
-        main_valid, main_errors = ConfigValidator.validate(config)
-        if not main_valid:
-            all_errors["main"] = main_errors
-            is_valid = False
-
-        return is_valid, all_errors

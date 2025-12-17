@@ -42,7 +42,7 @@ class TestYamlIndicatorUtils:
             },
         }
 
-    @patch("app.services.auto_strategy.core.condition_evolver.yaml.safe_load")
+    @patch("app.services.auto_strategy.utils.yaml_utils.yaml.safe_load")
     @patch("builtins.open")
     @patch("pathlib.Path.exists")
     def test_initialization(
@@ -55,7 +55,7 @@ class TestYamlIndicatorUtils:
         utils = YamlIndicatorUtils("config.yaml")
         assert utils.config == mock_yaml_config
 
-    @patch("app.services.auto_strategy.core.condition_evolver.manifest_to_yaml_dict")
+    @patch("app.services.auto_strategy.utils.yaml_utils.manifest_to_yaml_dict")
     def test_initialization_with_default(self, mock_manifest, mock_yaml_config):
         """デフォルト設定での初期化テスト"""
         mock_manifest.return_value = mock_yaml_config
@@ -63,7 +63,7 @@ class TestYamlIndicatorUtils:
         utils = YamlIndicatorUtils()
         assert utils.config == mock_yaml_config
 
-    @patch("app.services.auto_strategy.core.condition_evolver.manifest_to_yaml_dict")
+    @patch("app.services.auto_strategy.utils.yaml_utils.manifest_to_yaml_dict")
     def test_get_available_indicators(self, mock_manifest, mock_yaml_config):
         """利用可能な指標取得テスト"""
         mock_manifest.return_value = mock_yaml_config
@@ -74,7 +74,7 @@ class TestYamlIndicatorUtils:
         assert "MACD" in indicators
         assert len(indicators) == 2
 
-    @patch("app.services.auto_strategy.core.condition_evolver.manifest_to_yaml_dict")
+    @patch("app.services.auto_strategy.utils.yaml_utils.manifest_to_yaml_dict")
     def test_get_indicator_info(self, mock_manifest, mock_yaml_config):
         """指標情報取得テスト"""
         mock_manifest.return_value = mock_yaml_config
@@ -623,11 +623,7 @@ class TestConditionEvolverWithParallelization:
             cache_stats = evolver.cache.get_stats()
             assert "hits" in cache_stats
             assert "misses" in cache_stats
-        
+
         # 結果の基本的な構造を確認
         assert "best_condition" in result
         assert "best_fitness" in result
-
-
-
-

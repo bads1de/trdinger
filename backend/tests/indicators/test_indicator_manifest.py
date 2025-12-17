@@ -40,7 +40,7 @@ def test_indicator_settings_and_service_support_new_indicators():
     import numpy as np
     import pandas as pd
 
-    from app.services.auto_strategy.config.indicators import IndicatorSettings
+    from app.services.auto_strategy.config import IndicatorSettings
     from app.services.indicators import TechnicalIndicatorService
 
     indicator_registry.reset()
@@ -81,7 +81,3 @@ def test_indicator_settings_and_service_support_new_indicators():
     kvo_line, signal_line = kvo_result
     assert len(kvo_line) >= rows - 50
     assert len(signal_line) >= rows - 50
-
-
-
-

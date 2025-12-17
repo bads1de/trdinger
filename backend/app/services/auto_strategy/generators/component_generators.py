@@ -93,8 +93,8 @@ class TPSLGenerator:
 
             return tpsl_gene
 
-        except Exception as e:
-            logger.error(f"TP/SL遺伝子生成エラー: {e}")
+        except (ValueError, TypeError, KeyError, AttributeError) as e:
+            logger.error(f"エラー: TP/SL遺伝子生成中に例外が発生しました: {e}")
             # フォールバック: デフォルトのTP/SL遺伝子
             return TPSLGene(
                 method=TPSLMethod.RISK_REWARD_RATIO,
@@ -132,8 +132,8 @@ class PositionSizingGenerator:
         """
         try:
             return create_random_position_sizing_gene(self.config)
-        except Exception as e:
-            logger.error(f"ポジションサイジング遺伝子生成失敗: {e}")
+        except (ValueError, TypeError, KeyError, AttributeError) as e:
+            logger.error(f"エラー: ポジションサイジング遺伝子生成に失敗しました: {e}")
             # フォールバック: デフォルト遺伝子を返す
             return PositionSizingGene(
                 method=PositionSizingMethod.FIXED_RATIO,
@@ -192,8 +192,8 @@ class EntryGenerator:
                 priority=random.uniform(0.5, 1.5),
             )
 
-        except Exception as e:
-            logger.error(f"エントリー遺伝子生成エラー: {e}")
+        except (ValueError, TypeError, KeyError, AttributeError) as e:
+            logger.error(f"エラー: エントリー遺伝子生成中に例外が発生しました: {e}")
             # フォールバック: 成行注文のデフォルト遺伝子
             return EntryGene(
                 entry_type=EntryType.MARKET,

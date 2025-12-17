@@ -23,11 +23,19 @@ class Condition:
     条件
 
     エントリー・イグジット条件を表現します。
+
+    Attributes:
+        left_operand: 左辺オペランド（指標名、辞書、または数値）
+        operator: 比較演算子（>, <, >=, <=, ==, !=）
+        right_operand: 右辺オペランド（閾値、辞書、または数値）
+        direction: エントリー方向（"long", "short", または None）。
+                   進化アルゴリズムのコンテキストで使用されます。
     """
 
     left_operand: Union[Dict[str, Any], str, float]
     operator: str
     right_operand: Union[Dict[str, Any], str, float]
+    direction: Optional[EntryDirection] = None
 
     def __post_init__(self) -> None:
         """型の正規化: 数値はfloatへ（テストの型要件に合わせる）"""
@@ -235,8 +243,3 @@ class StatefulCondition:
             f"lookback={self.lookback_bars}, "
             f"cooldown={self.cooldown_bars})"
         )
-
-
-
-
-

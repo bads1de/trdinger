@@ -22,7 +22,6 @@ from backend.app.services.auto_strategy.tpsl.calculator.statistical_calculator i
 from backend.app.services.auto_strategy.tpsl.calculator.volatility_calculator import (
     VolatilityCalculator,
 )
-from backend.app.services.auto_strategy.tpsl.generator import UnifiedTPSLGenerator
 from backend.app.services.auto_strategy.tpsl.tpsl_service import TPSLService
 
 
@@ -448,55 +447,6 @@ class TestAdaptiveCalculator:
 
         # エラー時は FixedPercentageCalculator の結果をフォールバックとして返す
         assert result.method_used == "fixed_percentage"
-
-
-class TestUnifiedTPSLGenerator:
-    @pytest.mark.parametrize(
-        "method, expected_enum",
-        [
-            ("risk_reward", TPSLMethod.RISK_REWARD_RATIO),
-            ("risk_reward_ratio", TPSLMethod.RISK_REWARD_RATIO),
-            ("statistical", TPSLMethod.STATISTICAL),
-            ("volatility", TPSLMethod.VOLATILITY_BASED),
-            ("volatility_based", TPSLMethod.VOLATILITY_BASED),
-            ("fixed", TPSLMethod.FIXED_PERCENTAGE),
-            ("fixed_percentage", TPSLMethod.FIXED_PERCENTAGE),
-            ("adaptive", TPSLMethod.ADAPTIVE),
-        ],
-    )
-    def test_generate_tpsl_dispatch(
-        self, method: str, expected_enum: TPSLMethod
-    ) -> None:
-        generator = UnifiedTPSLGenerator()
-        result = generator.generate_tpsl(
-            method, stop_loss_pct=0.03, take_profit_pct=0.06
-        )
-        assert isinstance(result, TPSLResult)
-        # result.method_used は各 Strategy 実装に依存するため、
-        # ここでは例外なく到達しうることと、Unknown でないことを確認
-        assert result.method_used in {
-            "risk_reward",
-            "statistical",
-            "volatility",
-            "fixed_percentage",
-        }
-
-    def test_generate_tpsl_invalid_method_raises(self) -> None:
-        generator = UnifiedTPSLGenerator()
-        with pytest.raises(ValueError):
-            generator.generate_tpsl("unknown_method")
-
-    def test_generate_adaptive_tpsl_uses_market_conditions(self) -> None:
-        generator = UnifiedTPSLGenerator()
-        market_conditions = {"volatility": "high"}
-        result = generator.generate_adaptive_tpsl(
-            market_conditions,
-            base_atr_pct=0.02,
-            atr_multiplier_sl=1.0,
-            atr_multiplier_tp=2.0,
-        )
-        # high volatility では volatility 戦略を選択する仕様
-        assert result.method_used in {"volatility", "volatility_based"}
 
 
 class TestTPSLService:

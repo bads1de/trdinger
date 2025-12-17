@@ -175,7 +175,7 @@ class TestGenerateTPSLGene:
 
         with patch(
             "app.services.auto_strategy.generators.component_generators.create_random_tpsl_gene",
-            side_effect=Exception("Generation failed"),
+            side_effect=ValueError("Generation failed"),
         ):
             result = generator.generate_tpsl_gene()
 
@@ -191,7 +191,7 @@ class TestGenerateTPSLGene:
         """エラー時にログを出力"""
         with patch(
             "app.services.auto_strategy.generators.component_generators.create_random_tpsl_gene",
-            side_effect=Exception("Test error"),
+            side_effect=ValueError("Test error"),
         ):
             with patch(
                 "app.services.auto_strategy.generators.component_generators.logger"
@@ -328,8 +328,3 @@ class TestTPSLGeneMethodConstraintsEdgeCases:
         # 属性がなくてもエラーにならないことを確認
         result = generator.generate_tpsl_gene()
         assert result is not None
-
-
-
-
-

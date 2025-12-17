@@ -1,11 +1,11 @@
 """
-ConditionGeneratorのテスト
+RandomConditionGeneratorのテスト
 """
 
 import pytest
 from unittest.mock import Mock, patch
 from app.services.auto_strategy.generators.random_condition_generator import (
-    ConditionGenerator,
+    RandomConditionGenerator,
 )
 from app.services.auto_strategy.genes import Condition
 
@@ -16,7 +16,7 @@ class TestConditionGeneratorInit:
     def test_init_stores_config(self):
         """設定を保存する"""
         config = Mock()
-        generator = ConditionGenerator(config)
+        generator = RandomConditionGenerator(config)
         assert generator.config == config
         assert generator.operand_generator is not None
         assert generator.available_operators is not None
@@ -31,7 +31,7 @@ class TestGenerateRandomConditions:
         # 条件数の範囲
         config.min_conditions = 1
         config.max_conditions = 3
-        return ConditionGenerator(config)
+        return RandomConditionGenerator(config)
 
     def test_generates_conditions_within_range(self, generator):
         """指定された範囲内の数の条件を生成"""
@@ -96,7 +96,7 @@ class TestGenerateSingleCondition:
     @pytest.fixture
     def generator(self):
         config = Mock()
-        return ConditionGenerator(config)
+        return RandomConditionGenerator(config)
 
     def test_generates_valid_condition(self, generator):
         """有効な条件を生成"""
@@ -121,12 +121,12 @@ class TestGenerateFallbackCondition:
 
     def test_entry_fallback(self):
         """エントリー用フォールバック"""
-        generator = ConditionGenerator(Mock())
+        generator = RandomConditionGenerator(Mock())
         condition = generator._generate_fallback_condition("entry")
         assert condition.operator == ">"
 
     def test_exit_fallback(self):
         """エグジット用フォールバック"""
-        generator = ConditionGenerator(Mock())
+        generator = RandomConditionGenerator(Mock())
         condition = generator._generate_fallback_condition("exit")
         assert condition.operator == "<"

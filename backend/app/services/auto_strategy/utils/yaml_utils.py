@@ -307,6 +307,64 @@ class YamlIndicatorUtils:
         return None
 
 
+class IndicatorConfigProvider:
+    """
+    指標設定プロバイダー（インスタンスベース）
+
+    ConditionEvolver等で使用するためのインスタンスベースのラッパー。
+    YamlIndicatorUtilsのクラスメソッドをラップし、
+    インスタンス生成時にconfigをキャッシュします。
+
+    Note:
+        後方互換性のため、condition_evolver.pyでは
+        このクラスを `YamlIndicatorUtils` としてインポートして使用できます。
+    """
+
+    def __init__(self, config_path: Optional[str] = None):
+        """
+        初期化
+
+        Args:
+            config_path: YAML設定ファイルのパス（オプション）。
+                         Noneの場合はmanifest_to_yaml_dictを使用。
+        """
+        self._logger = logging.getLogger(__name__)
+        self.config_path = Path(config_path) if config_path else None
+        self.config = self._load_yaml_config()
+
+    def _load_yaml_config(self) -> Dict[str, Any]:
+        """YAML設定を読み込み"""
+        if self.config_path and self.config_path.exists():
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as file:
+                    return yaml.safe_load(file) or {"indicators": {}}
+            except (yaml.YAMLError, OSError) as exc:
+                self._logger.warning("YAMLロード失敗: %s", exc)
+        return manifest_to_yaml_dict()
+
+    def get_available_indicators(self) -> List[str]:
+        """利用可能な指標名のリストを取得"""
+        return list(self.config.get("indicators", {}).keys())
+
+    def get_indicator_info(self, indicator_name: str) -> Dict[str, Any]:
+        """
+        指標の設定情報を取得
+
+        Args:
+            indicator_name: 指標名
+
+        Returns:
+            指標の設定情報
+
+        Raises:
+            ValueError: 指標が見つからない場合
+        """
+        indicators = self.config.get("indicators", {})
+        if indicator_name not in indicators:
+            raise ValueError(f"Unknown indicator: {indicator_name}")
+        return indicators[indicator_name].copy()
+
+
 class YamlLoadUtils:
     """YAMLローディングユーティリティ"""
 
@@ -440,8 +498,3 @@ class YamlLoadUtils:
         """
         indicators = yaml_config.get("indicators", {})
         return list(indicators.keys())
-
-
-
-
-

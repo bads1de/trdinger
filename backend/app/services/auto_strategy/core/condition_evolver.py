@@ -11,22 +11,19 @@ YAML設定ファイルから指標情報を読み込み、DEAPベースのGAエ�
 - 早期打ち切り（EarlyStopping）
 """
 
+import copy
 import logging
 import os
 import random
-import copy
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import yaml
-
 from app.services.backtest.backtest_service import BacktestService
-from app.services.indicators.manifests.registry import manifest_to_yaml_dict
 from app.utils.error_handler import safe_operation
 from ..genes import Condition, ConditionGroup
+from ..utils.yaml_utils import IndicatorConfigProvider as YamlIndicatorUtils
 
 logger = logging.getLogger(__name__)
 
@@ -203,37 +200,6 @@ class ParallelFitnessEvaluator:
         return fitness_values
 
 
-class YamlIndicatorUtils:
-    """YAML設定ファイルから指標情報を管理するユーティリティクラス"""
-
-    def __init__(self, config_path: Optional[str] = None):
-        self.config_path = Path(config_path) if config_path else None
-        self.config = self._load_yaml_config()
-        self._validate_config()
-
-    def _load_yaml_config(self) -> Dict[str, Any]:
-        if self.config_path and self.config_path.exists():
-            try:
-                with open(self.config_path, "r", encoding="utf-8") as file:
-                    return yaml.safe_load(file)
-            except Exception as exc:
-                logger.warning("YAMLロード失敗: %s", exc)
-        return manifest_to_yaml_dict()
-
-    def _validate_config(self):
-        if not self.config or "indicators" not in self.config:
-            # 必須ではないが警告
-            pass
-
-    def get_available_indicators(self) -> List[str]:
-        return list(self.config.get("indicators", {}).keys())
-
-    def get_indicator_info(self, indicator_name: str) -> Dict[str, Any]:
-        if indicator_name not in self.config.get("indicators", {}):
-            raise ValueError(f"Unknown indicator: {indicator_name}")
-        return self.config["indicators"][indicator_name].copy()
-
-
 def create_simple_strategy(
     condition: Union[Condition, ConditionGroup],
 ) -> Dict[str, Any]:
@@ -310,10 +276,10 @@ class ConditionEvolver:
             if enable_parallel
             else None
         )
-        logger.info(f"ConditionEvolver 初期化完了")
+        logger.info("ConditionEvolver 初期化完了")
 
     def _create_individual(self) -> Condition:
-        """単一のCondition個体を生成（動的direction属性付き）"""
+        """単一のCondition個体を生成"""
         available_indicators = self.yaml_indicator_utils.get_available_indicators()
         if not available_indicators:
             raise ValueError("利用可能な指標がありません")
@@ -326,12 +292,12 @@ class ConditionEvolver:
         operator = random.choice(operators)
         threshold = self._generate_threshold(indicator_info)
 
-        cond = Condition(
-            left_operand=indicator_name, operator=operator, right_operand=threshold
+        return Condition(
+            left_operand=indicator_name,
+            operator=operator,
+            right_operand=threshold,
+            direction=direction,
         )
-        # 動的にdirection属性を追加（進化コンテキスト用）
-        cond.direction = direction
-        return cond
 
     def _generate_threshold(self, indicator_info: Dict[str, Any]) -> float:
         scale_type = indicator_info.get("scale_type", "oscillator_0_100")
@@ -428,16 +394,22 @@ class ConditionEvolver:
         elif isinstance(parent1, Condition) and isinstance(parent2, Condition):
             crossover_point = random.choice(["operator", "threshold"])
 
-            # direction属性の維持（あれば）
-            d1 = getattr(parent1, "direction", "long")
-            d2 = getattr(parent2, "direction", "long")
+            # direction属性の維持
+            d1 = parent1.direction or "long"
+            d2 = parent2.direction or "long"
 
             if crossover_point == "operator":
                 child1 = Condition(
-                    parent1.left_operand, parent2.operator, parent1.right_operand
+                    left_operand=parent1.left_operand,
+                    operator=parent2.operator,
+                    right_operand=parent1.right_operand,
+                    direction=d1,
                 )
                 child2 = Condition(
-                    parent2.left_operand, parent1.operator, parent2.right_operand
+                    left_operand=parent2.left_operand,
+                    operator=parent1.operator,
+                    right_operand=parent2.right_operand,
+                    direction=d2,
                 )
             else:
                 # 閾値平均
@@ -445,14 +417,21 @@ class ConditionEvolver:
                     avg = (
                         float(parent1.right_operand) + float(parent2.right_operand)
                     ) / 2
-                except:
+                except (ValueError, TypeError):
                     avg = parent1.right_operand  # 数値でない場合はそのまま
 
-                child1 = Condition(parent1.left_operand, parent1.operator, avg)
-                child2 = Condition(parent2.left_operand, parent2.operator, avg)
-
-            child1.direction = d1
-            child2.direction = d2
+                child1 = Condition(
+                    left_operand=parent1.left_operand,
+                    operator=parent1.operator,
+                    right_operand=avg,
+                    direction=d1,
+                )
+                child2 = Condition(
+                    left_operand=parent2.left_operand,
+                    operator=parent2.operator,
+                    right_operand=avg,
+                    direction=d2,
+                )
             return child1, child2
 
         # 3. 型が異なる場合
@@ -490,7 +469,7 @@ class ConditionEvolver:
                     val = float(mutated.right_operand)
                     variation = random.uniform(-0.1, 0.1)
                     mutated.right_operand = max(0, val * (1 + variation))
-                except:
+                except (ValueError, TypeError):
                     pass
 
             elif mutation_type == "indicator":
@@ -602,8 +581,3 @@ class ConditionEvolver:
         except Exception as e:
             logger.error(f"進化実行エラー: {e}")
             raise
-
-
-
-
-

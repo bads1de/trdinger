@@ -69,7 +69,7 @@ class TestGeneratePositionSizingGene:
 
         with patch(
             "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
-            side_effect=Exception("Random generation failed"),
+            side_effect=ValueError("Random generation failed"),
         ):
             result = generator.generate_position_sizing_gene()
 
@@ -83,7 +83,7 @@ class TestGeneratePositionSizingGene:
         """失敗時にエラーをログ"""
         with patch(
             "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
-            side_effect=Exception("Test error"),
+            side_effect=ValueError("Test error"),
         ):
             with patch(
                 "app.services.auto_strategy.generators.component_generators.logger"
@@ -135,7 +135,7 @@ class TestPositionSizingGeneIntegration:
         # フォールバック遺伝子を使用するようにエラーを発生させる
         with patch(
             "app.services.auto_strategy.generators.component_generators.create_random_position_sizing_gene",
-            side_effect=Exception("Force fallback"),
+            side_effect=ValueError("Force fallback"),
         ):
             result = generator.generate_position_sizing_gene()
 
@@ -150,8 +150,3 @@ class TestPositionSizingGeneIntegration:
         assert isinstance(result.fixed_ratio, float)
         assert isinstance(result.max_position_size, float)
         assert isinstance(result.enabled, bool)
-
-
-
-
-

@@ -1,23 +1,22 @@
 """
-AutoStrategyConfigモジュール
+Auto Strategy Config モジュール
 
 オートストラテジーの全ての設定クラスを提供します。
 """
-
-# 統合設定クラス
-from .auto_strategy import AutoStrategyConfig
 
 # 基底クラス
 from .base import BaseConfig
 
 # GA実行時設定クラス（メイン）
 from .ga import GAConfig
-from .indicators import IndicatorSettings
-from .position_sizing import PositionSizingSettings
-from .tpsl import TPSLSettings
 
-# 個別設定クラス
-from .trading import TradingSettings
+# 個別設定クラス（統合済み）
+from .settings import (
+    IndicatorSettings,
+    PositionSizingSettings,
+    TPSLSettings,
+    TradingSettings,
+)
 
 # 後方互換性のためのエイリアス
 GASettings = GAConfig
@@ -33,6 +32,4 @@ __all__ = [
     "GAConfig",
     "TPSLSettings",
     "PositionSizingSettings",
-    # 統合設定クラス
-    "AutoStrategyConfig",
 ]

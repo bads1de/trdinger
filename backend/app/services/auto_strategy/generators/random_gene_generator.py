@@ -30,7 +30,7 @@ from .component_generators import (
     TPSLGenerator,
 )
 from .condition_generator import ConditionGenerator
-from .random_condition_generator import ConditionGenerator as RandomConditionGenerator
+from .random_condition_generator import RandomConditionGenerator
 from .random_indicator_generator import IndicatorGenerator
 from .random_operand_generator import OperandGenerator
 
@@ -286,8 +286,3 @@ class RandomGeneGenerator:
             )
 
         return tool_genes
-
-
-
-
-

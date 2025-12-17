@@ -15,9 +15,13 @@ from .random_operand_generator import OperandGenerator
 logger = logging.getLogger(__name__)
 
 
-class ConditionGenerator:
+class RandomConditionGenerator:
     """
     ランダム戦略の条件生成を担当するクラス
+
+    Note:
+        condition_generator.py の ConditionGenerator とは異なり、
+        こちらは純粋にランダムな条件生成に特化しています。
     """
 
     def __init__(self, config: any):
@@ -80,8 +84,3 @@ class ConditionGenerator:
             return Condition(left_operand="close", operator=">", right_operand="SMA")
         else:
             return Condition(left_operand="close", operator="<", right_operand="SMA")
-
-
-
-
-
