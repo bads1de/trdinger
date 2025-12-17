@@ -278,23 +278,23 @@ class TestGeneValidator:
         indicator_mock.timeframe = None
         indicators = [indicator_mock]
         strategy.indicators = indicators
+        
         # エントリー条件が必要
         entry_condition_mock = Mock()
         entry_condition_mock.operator = ">"
         entry_condition_mock.left_operand = "SMA_20"
         entry_condition_mock.right_operand = "SMA_50"
-        strategy.entry_conditions = [entry_condition_mock]
-        strategy.long_entry_conditions = []
+        strategy.long_entry_conditions = [entry_condition_mock]
         strategy.short_entry_conditions = []
-        # イグジット条件も必要
-        exit_condition_mock = Mock()
-        exit_condition_mock.operator = "<"
-        exit_condition_mock.left_operand = "SMA_20"
-        exit_condition_mock.right_operand = "SMA_50"
-        strategy.exit_conditions = [exit_condition_mock]
-        strategy.tpsl_gene = None
+        
+        # TP/SL遺伝子のモック（必須）
+        tpsl_mock = Mock()
+        tpsl_mock.enabled = True
+        tpsl_mock.validate.return_value = (True, [])
+        strategy.tpsl_gene = tpsl_mock
         strategy.long_tpsl_gene = None
         strategy.short_tpsl_gene = None
+        
         strategy.MAX_INDICATORS = 5
 
         result, errors = validator.validate_strategy_gene(strategy)
@@ -337,27 +337,28 @@ class TestGeneValidator:
         indicator_mock.timeframe = None
         indicators = [indicator_mock]
         strategy.indicators = indicators
+        
         entry_condition_mock = Mock()
         entry_condition_mock.operator = ">"
         entry_condition_mock.left_operand = "SMA_20"
         entry_condition_mock.right_operand = "SMA_50"
-        strategy.entry_conditions = [entry_condition_mock]
-        strategy.long_entry_conditions = []
+        strategy.long_entry_conditions = [entry_condition_mock]
         strategy.short_entry_conditions = []
-        exit_condition_mock = Mock()
-        exit_condition_mock.operator = "<"
-        exit_condition_mock.left_operand = "SMA_20"
-        exit_condition_mock.right_operand = "SMA_50"
-        strategy.exit_conditions = [exit_condition_mock]
-        strategy.tpsl_gene = None
+        
+        # TP/SL遺伝子のモック
+        tpsl_mock = Mock()
+        tpsl_mock.enabled = True
+        tpsl_mock.validate.return_value = (True, [])
+        strategy.tpsl_gene = tpsl_mock
         strategy.long_tpsl_gene = None
         strategy.short_tpsl_gene = None
+        
         strategy.MAX_INDICATORS = 5
 
         result, errors = validator.validate_strategy_gene(strategy)
         assert result is False
         assert len(errors) > 0
-        assert "有効な指標" in errors[0]
+        assert any("有効な指標" in e for e in errors)
 
 
 

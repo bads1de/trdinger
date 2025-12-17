@@ -462,12 +462,12 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "result_type": "single",
             "scale_type": "oscillator_0_100",
             "category": "original",
-            "adapter_function": "app.services.indicators.technical_indicators.original.OriginalIndicators.kaufman_efficiency_ratio",
+            "adapter_function": "app.services.indicators.technical_indicators.trend.TrendIndicators.efficiency_ratio",
             "required_data": ["close"],
             "output_names": None,
             "default_output": None,
             "aliases": ["Kaufman_ER", "KER"],
-            "param_map": {"close": "close", "length": "length"},
+            "param_map": {"close": "data", "length": "length"},
             "parameters": {
                 "length": {
                     "default_value": 10,
@@ -929,6 +929,3 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
         },
     },
 }
-
-
-

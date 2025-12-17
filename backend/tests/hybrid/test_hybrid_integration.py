@@ -84,7 +84,6 @@ class TestHybridIntegration:
 
                 engine = GeneticAlgorithmEngine(
                     backtest_service=mock_backtest,
-                    strategy_factory=mock_strategy_factory,
                     gene_generator=mock_generator,
                     hybrid_mode=True,
                     hybrid_predictor=mock_hybrid_predictor,
@@ -112,6 +111,7 @@ class TestHybridIntegration:
         from backend.app.services.auto_strategy.core.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
+        from app.services.auto_strategy.genes.strategy import StrategyGene
 
         mock_backtest = Mock()
         mock_backtest.run_backtest.return_value = {
@@ -131,7 +131,7 @@ class TestHybridIntegration:
             feature_adapter=mock_feature_adapter,
         )
 
-        individual = [0.1, 0.2, 0.3]
+        individual = StrategyGene(id="test_gene")
 
         backtest_config = {
             "symbol": "BTCUSDT",
@@ -184,7 +184,8 @@ class TestHybridIntegration:
             feature_adapter=mock_feature_adapter,
         )
 
-        individual = [0.1, 0.2, 0.3]
+        from app.services.auto_strategy.genes.strategy import StrategyGene
+        individual = StrategyGene(id="test_gene")
 
         backtest_config = {
             "symbol": "BTCUSDT",
@@ -253,9 +254,8 @@ class TestHybridIntegration:
 
         # モック用の有効なStrategyGeneを作成
         valid_gene = StrategyGene(
+            id="valid_gene",
             indicators=[IndicatorGene(type="SMA", parameters={"period": 14})],
-            entry_conditions=[],
-            exit_conditions=[],
             long_entry_conditions=[],
             short_entry_conditions=[],
             risk_management={},
@@ -294,16 +294,13 @@ class TestHybridIntegration:
                     "backend.app.services.auto_strategy.core.ga_engine.GeneticAlgorithmEngine.run_evolution"
                 ) as mock_run_evolution:
                     mock_run_evolution.return_value = {
-                        "best_strategy": {"id": "test_strategy"},
+                        "best_strategy": valid_gene,
                         "best_fitness": 1.5,
                         "statistics": {"avg_fitness": 1.2},
                     }
 
-                    mock_strategy_factory = Mock()
-
                     engine = GeneticAlgorithmEngine(
                         backtest_service=mock_backtest,
-                        strategy_factory=mock_strategy_factory,
                         gene_generator=mock_generator,
                         hybrid_mode=True,
                         hybrid_predictor=mock_hybrid_predictor,
@@ -335,7 +332,8 @@ class TestHybridIntegration:
             feature_adapter=mock_feature_adapter,
         )
 
-        individual = [0.1, 0.2, 0.3]
+        from app.services.auto_strategy.genes.strategy import StrategyGene
+        individual = StrategyGene(id="test_gene")
 
         # エラーが発生してもデフォルトフィットネスが返されることを確認
         fitness = evaluator.evaluate_individual(individual, hybrid_ga_config)

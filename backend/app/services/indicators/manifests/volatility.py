@@ -137,7 +137,7 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
             "result_type": "single",
             "scale_type": "oscillator_0_100",
             "category": "volatility",
-            "adapter_function": "app.services.indicators.technical_indicators.volatility.VolatilityIndicators.chop",
+            "adapter_function": "app.services.indicators.technical_indicators.trend.TrendIndicators.chop",
             "required_data": ["high", "low", "close"],
             "output_names": None,
             "default_output": None,
@@ -743,6 +743,3 @@ MANIFEST_VOLATILITY: Dict[str, Dict[str, Any]] = {
         },
     },
 }
-
-
-

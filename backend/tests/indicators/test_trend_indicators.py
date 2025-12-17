@@ -341,6 +341,33 @@ class TestTrendIndicators:
         assert isinstance(result, pd.Series)
         assert len(result) == len(data)
 
+    def test_calculate_efficiency_ratio_valid_data(self):
+        """有効データでのEfficiency Ratio計算テスト"""
+        # 単調増加データ (ER=1になるはず)
+        data = pd.DataFrame({"close": [100, 101, 102, 103, 104, 105]})
+        result = TrendIndicators.efficiency_ratio(data["close"], length=3)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        # 最初の数要素は計算できないので0 (fillna(0.0)のため)
+        # |103-100| / (|101-100|+|102-101|+|103-102|) = 3/3 = 1
+        assert result.iloc[3] == 1.0
+
+        # ジグザグデータ (ERが小さくなるはず)
+        data_zigzag = pd.DataFrame({"close": [100, 110, 100, 110, 100]})
+        result_zigzag = TrendIndicators.efficiency_ratio(data_zigzag["close"], length=4)
+        # インデックス4: |100-100| / 40 = 0
+        assert result_zigzag.iloc[4] == 0.0
+
+    def test_calculate_efficiency_ratio_invalid_params(self):
+        """無効なパラメータでのEfficiency Ratioテスト"""
+        data = pd.DataFrame({"close": [100, 101, 102]})
+
+        with pytest.raises(TypeError):
+            TrendIndicators.efficiency_ratio("invalid", length=10)
+
+        with pytest.raises(ValueError):
+            TrendIndicators.efficiency_ratio(data["close"], length=0)
+
     def test_calculate_vortex_valid_data(self):
         """有効データでのVORTEX計算テスト"""
         data = pd.DataFrame(
@@ -513,7 +540,3 @@ class TestTrendIndicators:
 if __name__ == "__main__":
     # コマンドラインからの実行用
     pytest.main([__file__, "-v"])
-
-
-
-

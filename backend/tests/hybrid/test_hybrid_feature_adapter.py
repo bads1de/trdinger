@@ -41,8 +41,6 @@ class TestHybridFeatureAdapter:
         gene = StrategyGene(
             id="test_gene_001",
             indicators=[indicator1, indicator2],
-            entry_conditions=[condition1],
-            exit_conditions=[],
             long_entry_conditions=[condition1],
             short_entry_conditions=[],
         )
@@ -74,7 +72,7 @@ class TestHybridFeatureAdapter:
         - 必要な特徴量カラムが存在する
         """
 
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -102,7 +100,7 @@ class TestHybridFeatureAdapter:
         - SMA, RSIなどのインジケータ特徴が生成される
         """
 
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -123,7 +121,7 @@ class TestHybridFeatureAdapter:
         - エントリー条件が特徴量に反映される
         - 条件の複雑さが特徴量化される
         """
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -154,7 +152,7 @@ class TestHybridFeatureAdapter:
         mock_trainer_instance = MagicMock(spec=BaseMLTrainer)
         mock_trainer_instance._preprocess_data.return_value = (sample_ohlcv_data.copy(), sample_ohlcv_data.copy())
 
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -173,7 +171,7 @@ class TestHybridFeatureAdapter:
         検証項目:
         - 無効なGeneでMLFeatureErrorが発生する
         """
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -190,7 +188,7 @@ class TestHybridFeatureAdapter:
         検証項目:
         - 空のOHLCVデータでMLFeatureErrorが発生する
         """
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -211,7 +209,7 @@ class TestHybridFeatureAdapter:
         - ウェーブレット設定が特徴量生成に反映される
         - ウェーブレット派生特徴量が含まれる
         """
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -235,7 +233,7 @@ class TestHybridFeatureAdapter:
         - 複数のGeneを一度に変換できる
         - 各Geneの特徴量が正しく生成される
         """
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
@@ -249,8 +247,8 @@ class TestHybridFeatureAdapter:
             gene = StrategyGene(
                 id=f"gene_{i}",
                 indicators=[indicator],
-                entry_conditions=[],
-                exit_conditions=[],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
             )
             genes.append(gene)
 
@@ -268,20 +266,20 @@ class TestHybridFeatureAdapter:
         Gene SerializationとFeature変換の統合テスト
 
         検証項目:
-        - GeneSerializer.from_listで復元したGeneが使える
+        - GeneSerializer.dict_to_strategy_geneで復元したGeneが使える
         - シリアライズ→デシリアライズ→特徴量変換が動作する
         """
-        from app.services.auto_strategy.serializers.gene_serialization import (
+        from app.services.auto_strategy.serializers.serialization import (
             GeneSerializer,
         )
-        from app.services.auto_strategy.utils.hybrid_feature_adapter import (
+        from app.services.auto_strategy.core.hybrid_feature_adapter import (
             HybridFeatureAdapter,
         )
 
         # Geneをシリアライズ→デシリアライズ
         serializer = GeneSerializer()
-        gene_list = serializer.to_list(sample_strategy_gene)
-        restored_gene = serializer.from_list(gene_list, StrategyGene)
+        gene_dict = serializer.strategy_gene_to_dict(sample_strategy_gene)
+        restored_gene = serializer.dict_to_strategy_gene(gene_dict, StrategyGene)
 
         # 復元したGeneで特徴量変換
         adapter = HybridFeatureAdapter()

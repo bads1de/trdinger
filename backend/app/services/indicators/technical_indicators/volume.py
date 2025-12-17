@@ -92,16 +92,11 @@ class VolumeIndicators:
     @handle_pandas_ta_errors
     def obv(close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
         """オンバランスボリューム"""
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
-
-        # OBVデータの長さチェック
-        if len(close) != len(volume):
-            raise ValueError(
-                f"OBV requires close and volume series to have the same length. Got close={len(close)}, volume={len(volume)}"
-            )
+        validation = validate_multi_series_params(
+            {"close": close, "volume": volume}, length=period
+        )
+        if validation is not None:
+            return validation
 
         # ゼロボリュームの処理: ゼロボリュームをNaNに変換
         volume_clean = volume.replace(0, np.nan)
@@ -594,6 +589,3 @@ class VolumeIndicators:
         score = rvol_series / price_range
 
         return score.replace([np.inf, -np.inf], np.nan).fillna(0.0)
-
-
-

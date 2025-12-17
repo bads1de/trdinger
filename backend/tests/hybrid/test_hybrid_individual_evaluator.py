@@ -8,6 +8,7 @@ from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.hybrid_individual_evaluator import (
     HybridIndividualEvaluator,
 )
+from app.services.auto_strategy.genes.strategy import StrategyGene
 
 
 class TestHybridIndividualEvaluator:
@@ -28,7 +29,7 @@ class TestHybridIndividualEvaluator:
 
     def test_evaluate_individual_success(self):
         """ハイブリッド個体評価成功のテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = StrategyGene(id="test_gene_001")
         mock_backtest_result = {
             "performance_metrics": {
                 "total_return": 0.15,
@@ -67,7 +68,7 @@ class TestHybridIndividualEvaluator:
 
     def test_evaluate_individual_multi_objective(self):
         """ハイブリッド多目的評価のテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = StrategyGene(id="test_gene_001")
         mock_backtest_result = {
             "performance_metrics": {
                 "total_return": 0.15,
@@ -97,7 +98,7 @@ class TestHybridIndividualEvaluator:
 
     def test_evaluate_individual_exception(self):
         """ハイブリッド評価例外のテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = StrategyGene(id="test_gene_001")
 
         # バックテストで例外
         self.mock_backtest_service.run_backtest.side_effect = Exception("Test error")
@@ -111,7 +112,7 @@ class TestHybridIndividualEvaluator:
 
     def test_evaluate_individual_volatility_mode(self):
         """ボラティリティ予測モードでの評価テスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = StrategyGene(id="test_gene_001")
         mock_backtest_result = {
             "performance_metrics": {
                 "total_return": 0.15,
@@ -149,7 +150,7 @@ class TestHybridIndividualEvaluator:
         import pandas as pd
         from unittest.mock import patch
 
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = StrategyGene(id="test_gene_001")
         mock_backtest_result = {
             "performance_metrics": {
                 "total_return": 0.15,

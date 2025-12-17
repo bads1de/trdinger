@@ -253,11 +253,13 @@ class MomentumIndicators:
         return (result.iloc[:, 0], result.iloc[:, 1])
 
     @staticmethod
+    @handle_pandas_ta_errors
     def willr(
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
         length: int = 14,
+        **kwargs,
     ) -> pd.Series:
         """ウィリアムズ%R"""
         if not isinstance(high, pd.Series):
@@ -267,9 +269,34 @@ class MomentumIndicators:
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
 
-        result = ta.willr(high=high, low=low, close=close, length=length)
-        if result is None:
+        # Williams %R requires sufficient data length
+        min_length = max(length * 2, 14)
+        if len(high) < min_length:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        # pandas-taのwpr関数を使用
+        try:
+            result = ta.willr(
+                high=high,
+                low=low,
+                close=close,
+                length=length,
+                **kwargs,
+            )
+        except Exception:
+            # pandas-taが利用できない場合のフォールバック実装
+            # Williams %R = [(highest high - current close) / (highest high - lowest low)] * -100
+
+            # 過去length期間の最高値と最低値を計算
+            highest_high = high.rolling(window=length, min_periods=1).max()
+            lowest_low = low.rolling(window=length, min_periods=1).min()
+
+            # Williams %R計算
+            result = ((highest_high - close) / (highest_high - lowest_low)) * -100
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
         return result
 
     @staticmethod
@@ -427,8 +454,6 @@ class MomentumIndicators:
         close: pd.Series = None,
     ) -> pd.Series:
         """変化率"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
         length = period
         # dataが提供されない場合はcloseを使用
         if data is None and close is not None:
@@ -436,8 +461,9 @@ class MomentumIndicators:
         elif data is None:
             raise ValueError("Either 'data' or 'close' must be provided")
 
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.roc(data, window=length)
         if result is None or result.empty:
@@ -447,8 +473,9 @@ class MomentumIndicators:
     @staticmethod
     def mom(data: pd.Series, length: int = 10) -> pd.Series:
         """モメンタム"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.mom(data, length=length)
         if result is None or result.empty:
@@ -477,8 +504,9 @@ class MomentumIndicators:
     @staticmethod
     def cti(data: pd.Series, length: int = 12) -> pd.Series:
         """Correlation Trend Indicator"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.cti(data, length=length)
         if result is None:
@@ -577,6 +605,7 @@ class MomentumIndicators:
         return result.bfill().fillna(0)
 
     @staticmethod
+    @handle_pandas_ta_errors
     def psl(
         close: pd.Series,
         length: int = 12,
@@ -584,7 +613,7 @@ class MomentumIndicators:
         drift: int = 1,
         open_: Optional[pd.Series] = None,
     ) -> pd.Series:
-        """Psychological Line"""
+        """Psychological Line (PSY)"""
         if not isinstance(close, pd.Series):
             raise TypeError("close must be pandas Series")
         if open_ is not None and not isinstance(open_, pd.Series):
@@ -592,15 +621,35 @@ class MomentumIndicators:
         if length <= 0 or drift <= 0:
             raise ValueError("length and drift must be positive")
 
-        result = ta.psl(
-            close=close,
-            open_=open_,
-            length=length,
-            scalar=scalar,
-            drift=drift,
-        )
-        if result is None or result.empty:
+        # PSY requires sufficient data length
+        min_length = max(length * 2, 12)
+        if len(close) < min_length:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
+
+        try:
+            result = ta.psl(
+                close=close,
+                open_=open_,
+                length=length,
+                scalar=scalar,
+                drift=drift,
+            )
+        except Exception:
+            # pandas-taが利用できない場合のフォールバック実装
+            # PSY = (上昇日数 / 総日数) * 100
+
+            # 価格の変化を計算
+            price_change = close.diff(drift)
+
+            # 上昇日数をカウント
+            up_days = (price_change > 0).rolling(window=length, min_periods=1).sum()
+
+            # PSY計算
+            result = (up_days / length) * scalar
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
         return result.bfill().fillna(0)
 
     @staticmethod
@@ -917,94 +966,3 @@ class MomentumIndicators:
                 "senkou_span_b": senkou_span_b,
                 "chikou_span": chikou_span,
             }
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def williams_r(
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        length: int = 14,
-        **kwargs,
-    ) -> pd.Series:
-        """ウィリアムズ%R"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-
-        # Williams %R requires sufficient data length
-        min_length = max(length * 2, 14)
-        if len(high) < min_length:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
-
-        # pandas-taのwpr関数を使用
-        try:
-            result = ta.wpr(
-                high=high,
-                low=low,
-                close=close,
-                length=length,
-                **kwargs,
-            )
-        except Exception:
-            # pandas-taが利用できない場合のフォールバック実装
-            # Williams %R = [(highest high - current close) / (highest high - lowest low)] * -100
-
-            # 過去length期間の最高値と最低値を計算
-            highest_high = high.rolling(window=length, min_periods=1).max()
-            lowest_low = low.rolling(window=length, min_periods=1).min()
-
-            # Williams %R計算
-            result = ((highest_high - close) / (highest_high - lowest_low)) * -100
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
-
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def psychological_line(
-        close: pd.Series,
-        length: int = 12,
-        offset: int = 0,
-    ) -> pd.Series:
-        """Psychological Line (PSY) - 投資家の心理状態を測定するオシレーター"""
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-
-        # PSY requires sufficient data length
-        min_length = max(length * 2, 12)
-        if len(close) < min_length:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
-
-        # pandas-taのpsl関数を使用 (PSL = Psychological Line)
-        try:
-            result = ta.psl(
-                close=close,
-                length=length,
-                offset=offset,
-            )
-        except Exception:
-            # pandas-taが利用できない場合のフォールバック実装
-            # PSY = (上昇日数 / 総日数) * 100
-
-            # 価格の変化を計算
-            price_change = close.diff()
-
-            # 上昇日数をカウント
-            up_days = (price_change > 0).rolling(window=length, min_periods=1).sum()
-
-            # PSY計算
-            result = (up_days / length) * 100
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
-
-        return result
-
-
-

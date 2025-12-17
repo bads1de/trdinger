@@ -115,13 +115,13 @@ class StrategyParameterSpace:
         if include_thresholds:
             # ロング条件の閾値
             long_threshold_params = self._build_threshold_params(
-                gene.get_effective_long_conditions(), prefix="long"
+                gene.long_entry_conditions, prefix="long"
             )
             parameter_space.update(long_threshold_params)
 
             # ショート条件の閾値
             short_threshold_params = self._build_threshold_params(
-                gene.get_effective_short_conditions(), prefix="short"
+                gene.short_entry_conditions, prefix="short"
             )
             parameter_space.update(short_threshold_params)
 
@@ -276,10 +276,10 @@ class StrategyParameterSpace:
 
         # 閾値パラメータを適用
         self._apply_threshold_params(
-            new_gene.get_effective_long_conditions(), params, prefix="long"
+            new_gene.long_entry_conditions, params, prefix="long"
         )
         self._apply_threshold_params(
-            new_gene.get_effective_short_conditions(), params, prefix="short"
+            new_gene.short_entry_conditions, params, prefix="short"
         )
 
         logger.debug(f"パラメータ適用完了: {len(params)} 個")

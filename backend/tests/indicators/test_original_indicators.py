@@ -260,63 +260,6 @@ class TestOriginalIndicators:
         assert len(result) == len(data)
         assert "MCGINLEY_10" in result.columns
 
-    def test_kaufman_efficiency_ratio_valid_data(self):
-        """有効データでのKaufman Efficiency Ratio計算テスト"""
-        data = pd.DataFrame(
-            {
-                "close": [
-                    100,
-                    102,
-                    104,
-                    106,
-                    105,
-                    107,
-                    109,
-                    108,
-                    110,
-                    112,
-                    111,
-                    113,
-                    115,
-                    114,
-                    116,
-                    118,
-                    117,
-                    119,
-                    121,
-                    120,
-                ]
-            }
-        )
-
-        result = OriginalIndicators.kaufman_efficiency_ratio(data["close"], length=10)
-
-        assert isinstance(result, pd.Series)
-        assert len(result) == len(data)
-        assert result.name == "KER_10"
-        # Efficiency Ratioは0-1の範囲
-        assert result.dropna().min() >= 0.0
-        assert result.dropna().max() <= 1.0
-
-    def test_kaufman_efficiency_ratio_invalid_length(self):
-        """無効なlengthパラメータのKERテスト"""
-        data = pd.DataFrame({"close": [100, 101, 102, 103, 104, 105]})
-
-        with pytest.raises(ValueError, match="length must be >= 2"):
-            OriginalIndicators.kaufman_efficiency_ratio(data["close"], length=1)
-
-    def test_kaufman_efficiency_ratio_wrapper(self):
-        """KER DataFrameラッパーメソッドのテスト"""
-        data = pd.DataFrame(
-            {"close": [100, 102, 104, 106, 105, 107, 109, 108, 110, 112, 111, 113, 115]}
-        )
-
-        result = OriginalIndicators.calculate_kaufman_efficiency_ratio(data, length=10)
-
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == len(data)
-        assert "KER_10" in result.columns
-
     def test_chande_kroll_stop_valid_data(self):
         """有効データでのChande Kroll Stop計算テスト"""
         data = pd.DataFrame(
@@ -2080,7 +2023,3 @@ class TestOriginalIndicators:
 if __name__ == "__main__":
     # コマンドラインからの実行用
     pytest.main([__file__, "-v"])
-
-
-
-

@@ -58,14 +58,14 @@ class TestAutoStrategyE2E:
                 IndicatorGene(type="sma", parameters={"period": 20}, enabled=True),
                 IndicatorGene(type="rsi", parameters={"period": 14}, enabled=True),
             ],
-            entry_conditions=[
+            long_entry_conditions=[
                 Condition(
                     left_operand={"indicator": "sma", "value": "close"},
                     operator="cross_above",
                     right_operand={"indicator": "close"},
                 )
             ],
-            exit_conditions=[
+            short_entry_conditions=[
                 Condition(
                     left_operand={"indicator": "rsi"},
                     operator=">",
@@ -174,7 +174,7 @@ class TestAutoStrategyE2E:
             # 3. 生成された戦略を取得
             best_strategy = result["best_strategy"]
             assert len(best_strategy.indicators) > 0
-            assert len(best_strategy.entry_conditions) > 0
+            assert len(best_strategy.long_entry_conditions) > 0
 
             # 4. バックテスト実行
             backtest_config = {
@@ -245,8 +245,8 @@ class TestAutoStrategyE2E:
         v2_strategy = StrategyGene(
             id=sample_strategy.id,
             indicators=sample_strategy.indicators,
-            entry_conditions=sample_strategy.entry_conditions,
-            exit_conditions=sample_strategy.exit_conditions,
+            long_entry_conditions=sample_strategy.long_entry_conditions,
+            short_entry_conditions=sample_strategy.short_entry_conditions,
             tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.06),
             metadata={"version": "v2", "created_at": datetime.now()},
         )
@@ -469,14 +469,14 @@ class TestAutoStrategyPerformance:
                         type="sma", parameters={"period": 20 + i * 5}, enabled=True
                     )
                 ],
-                entry_conditions=[
+                long_entry_conditions=[
                     Condition(
                         left_operand={"indicator": "sma"},
                         operator=">",
                         right_operand={"indicator": "close"},
                     )
                 ],
-                exit_conditions=[],
+                short_entry_conditions=[],
             )
             strategies.append(strategy)
         return strategies

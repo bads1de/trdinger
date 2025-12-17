@@ -4,15 +4,15 @@ from unittest.mock import MagicMock
 import numpy as np
 import pandas as pd
 
-from backend.app.services.auto_strategy.config import GASettings
-from backend.app.services.auto_strategy.generators.random_gene_generator import (
+from app.services.auto_strategy.config import GASettings
+from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from backend.app.services.auto_strategy.genes.strategy import StrategyGene
-from backend.app.services.auto_strategy.utils.hybrid_feature_adapter import (
+from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.auto_strategy.core.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
-from backend.app.services.backtest.backtest_data_service import BacktestDataService
+from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.label_generation import EventDrivenLabelGenerator
 
 

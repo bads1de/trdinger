@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import Mock
 from typing import List
 
-from app.services.auto_strategy.generators.strategies.complex_conditions_strategy import (
+from app.services.auto_strategy.generators.complex_conditions_strategy import (
     ComplexConditionsStrategy,
 )
 from app.services.auto_strategy.genes import IndicatorGene, Condition, ConditionGroup

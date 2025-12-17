@@ -474,36 +474,6 @@ class VolatilityIndicators:
         return result
 
     @staticmethod
-    def chop(
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        length: int = 14,
-        atr_length: int = 1,
-        scalar: float = 100.0,
-        drift: int = 1,
-        offset: int = 0,
-    ) -> pd.Series:
-        """
-        Choppiness Index
-
-        Note: TrendIndicators.chop へのエイリアス。
-        後方互換性のために維持されています。
-        """
-        # TrendIndicators の実装を使用（重複を避けるため）
-        from .trend import TrendIndicators
-
-        return TrendIndicators.chop(
-            high=high,
-            low=low,
-            close=close,
-            length=length,
-            atr_length=atr_length,
-            scalar=scalar,
-            drift=drift,
-        )
-
-    @staticmethod
     @handle_pandas_ta_errors
     def true_range(
         high: pd.Series,
@@ -670,6 +640,3 @@ class VolatilityIndicators:
 
         # Return volatility (std dev)
         return np.sqrt(rolling_var).fillna(0.0)
-
-
-

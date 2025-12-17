@@ -11,6 +11,9 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.genes.conditions import Condition
+from app.services.auto_strategy.genes.indicator import IndicatorGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.exceptions import MLTrainingError
 
@@ -20,14 +23,23 @@ class TestHybridIndividualEvaluator:
 
     @pytest.fixture
     def sample_individual(self):
-        """サンプル個体（遺伝子リスト形式）"""
-        # GeneSerializerでシリアライズされた形式を想定
-        return [
-            "test_gene_001",  # id
-            [["ind1", "SMA", {"period": 20}]],  # indicators
-            [["cond1", "ind1", "ind2", ">"]],  # entry_conditions
-            [],  # exit_conditions
-        ]
+        """サンプル個体（StrategyGeneオブジェクト）"""
+        indicator1 = IndicatorGene(
+            type="SMA",
+            parameters={"period": 20},
+        )
+        condition1 = Condition(
+            left_operand="close",
+            operator=">",
+            right_operand="SMA",
+        )
+
+        return StrategyGene(
+            id="test_gene_001",
+            indicators=[indicator1],
+            long_entry_conditions=[condition1],
+            short_entry_conditions=[],
+        )
 
     @pytest.fixture
     def ga_config(self):
@@ -487,7 +499,7 @@ class TestHybridIndividualEvaluator:
         assert fitness[0] > 0
 
     @patch(
-        "app.services.auto_strategy.utils.hybrid_feature_adapter.HybridFeatureAdapter"
+        "app.services.auto_strategy.core.hybrid_feature_adapter.HybridFeatureAdapter"
     )
     def test_feature_adapter_integration(
         self,

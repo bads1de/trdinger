@@ -1432,48 +1432,6 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "type": "momentum",
         },
     },
-    "AROON": {
-        "config": {
-            "result_type": "complex",
-            "scale_type": "oscillator_0_100",
-            "category": "momentum",
-            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.aroon",
-            "required_data": ["high", "low"],
-            "output_names": ["AROON_UP", "AROON_DOWN"],
-            "default_output": "AROON_UP",
-            "aliases": None,
-            "param_map": {"high": "high", "low": "low", "length": "length"},
-            "parameters": {
-                "length": {
-                    "default_value": 14,
-                    "min_value": 2,
-                    "max_value": 50,
-                    "description": "AROON期間",
-                }
-            },
-            "pandas_function": "aroon",
-            "data_column": None,
-            "data_columns": ["High", "Low"],
-            "returns": "multiple",
-            "return_cols": ["AROON_UP", "AROON_DOWN"],
-            "multi_column": False,
-            "default_values": {"length": 14},
-            "min_length_func": None,
-        },
-        "yaml": {
-            "conditions": {
-                "long": "{left_operand}_0 > {threshold}",
-                "short": "{left_operand}_1 < {threshold}",
-            },
-            "scale_type": "oscillator_0_100",
-            "thresholds": {
-                "aggressive": {"long_gt": 70, "short_lt": 30},
-                "conservative": {"long_gt": 90, "short_lt": 10},
-                "normal": {"long_gt": 80, "short_lt": 20},
-            },
-            "type": "momentum",
-        },
-    },
     "BOP": {
         "config": {
             "result_type": "single",
@@ -1691,7 +1649,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "result_type": "single",
             "scale_type": "oscillator_0_100",
             "category": "momentum",
-            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.williams_r",
+            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.willr",
             "required_data": ["high", "low", "close"],
             "output_names": None,
             "default_output": None,
@@ -1739,7 +1697,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "result_type": "single",
             "scale_type": "oscillator_0_100",
             "category": "momentum",
-            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.psychological_line",
+            "adapter_function": "app.services.indicators.technical_indicators.momentum.MomentumIndicators.psl",
             "required_data": ["close"],
             "output_names": None,
             "default_output": None,
@@ -1783,6 +1741,3 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
         },
     },
 }
-
-
-

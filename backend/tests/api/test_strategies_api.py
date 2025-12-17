@@ -10,7 +10,7 @@ from unittest.mock import Mock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import get_db, get_strategy_integration_service_with_db
+from app.api.dependencies import get_db, get_generated_strategy_service_with_db
 from app.main import app
 
 
@@ -59,7 +59,7 @@ def override_dependencies(mock_db_session, mock_strategy_integration_service):
         mock_strategy_integration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_strategy_integration_service_with_db] = (
+    app.dependency_overrides[get_generated_strategy_service_with_db] = (
         lambda: mock_strategy_integration_service
     )
     yield

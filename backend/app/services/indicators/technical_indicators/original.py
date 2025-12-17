@@ -1551,90 +1551,6 @@ class OriginalIndicators:
         return result
 
     @staticmethod
-    def kaufman_efficiency_ratio(close: pd.Series, length: int = 10) -> pd.Series:
-        """Kaufman Efficiency Ratio (KER)
-
-        Perry Kaufmanが開発したトレンド効率性を測定する指標。
-        価格変動の方向性とノイズの比率を計算することで、
-        市場がトレンド状態かレンジ状態かを判定する。
-
-        計算式:
-        ER = (Net Change) / (Total Movement)
-        - Net Change = |Close[n] - Close[0]|
-        - Total Movement = Σ|Close[i] - Close[i-1]|
-
-        Args:
-            close: クローズ価格の系列
-            length: 計算期間（>=2）
-
-        Returns:
-            Efficiency Ratio（0-1の範囲）を表す Pandas Series
-
-        特徴:
-        - 0に近い: レンジ相場（ノイズが多い）
-        - 1に近い: 強いトレンド（効率的な動き）
-        - Kaufman's Adaptive Moving Average (KAMA)の基礎
-
-        References:
-            - Kaufman, Perry J. (1995) "Smarter Trading"
-        """
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if length < 2:
-            raise ValueError("length must be >= 2")
-
-        if close.empty or len(close) < length:
-            return pd.Series(
-                np.full(len(close), np.nan), index=close.index, name=f"KER_{length}"
-            )
-
-        prices = close.astype(float).to_numpy()
-        result = np.empty_like(prices)
-        result[:] = np.nan
-
-        for i in range(length - 1, len(prices)):
-            window_start = i - length + 1
-            window = prices[window_start : i + 1]
-
-            # Net Change（方向性）
-            net_change = abs(window[-1] - window[0])
-
-            # Total Movement（総変動）
-            total_movement = np.sum(np.abs(np.diff(window)))
-
-            # Efficiency Ratio計算
-            if total_movement > 0:
-                er = net_change / total_movement
-                result[i] = np.clip(er, 0.0, 1.0)
-            else:
-                result[i] = 0.0
-
-        return pd.Series(result, index=close.index, name=f"KER_{length}")
-
-    @staticmethod
-    def calculate_kaufman_efficiency_ratio(data, length=10):
-        """Kaufman Efficiency Ratio計算のラッパーメソッド"""
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError("data must be pandas DataFrame")
-
-        required_columns = ["close"]
-        for col in required_columns:
-            if col not in data.columns:
-                raise ValueError(f"Missing required column: {col}")
-
-        close = data["close"]
-        ker = OriginalIndicators.kaufman_efficiency_ratio(close, length)
-
-        result = pd.DataFrame(
-            {
-                ker.name: ker,
-            },
-            index=data.index,
-        )
-
-        return result
-
-    @staticmethod
     def chande_kroll_stop(
         high: pd.Series,
         low: pd.Series,
@@ -2057,6 +1973,3 @@ class OriginalIndicators:
         )
 
         return result
-
-
-
