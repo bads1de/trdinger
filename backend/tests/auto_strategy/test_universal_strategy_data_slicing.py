@@ -93,6 +93,12 @@ class TestTPSLDataSlicing:
         """
         atr_period > 30 の場合、30 ではなく atr_period に基づいたスライスサイズを使用することをテスト
         """
+        # long_entry_conditionsを追加して確実にエントリーが発生するようにする
+        from app.services.auto_strategy.genes.conditions import Condition
+        gene_with_large_atr_period.long_entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand="sma")
+        ]
+        
         params = {"strategy_gene": gene_with_large_atr_period}
         strategy = UniversalStrategy(mock_broker, mock_data_large, params)
 
@@ -129,7 +135,7 @@ class TestTPSLDataSlicing:
 
                         # atr_period = 50 なので、少なくとも 50 以上のデータが必要
                         expected_min_size = (
-                            gene_with_large_atr_period.tpsl_gene.atr_period
+                            gene_with_large_atr_period.long_tpsl_gene.atr_period
                         )
                         assert len(ohlc_data) >= expected_min_size, (
                             f"ohlc_data は少なくとも {expected_min_size} エントリ必要ですが、"
@@ -143,6 +149,12 @@ class TestTPSLDataSlicing:
         atr_period < 30 の場合でも、正しいスライスサイズを使用することをテスト
         （後方互換性の確保）
         """
+        # long_entry_conditionsを追加して確実にエントリーが発生するようにする
+        from app.services.auto_strategy.genes.conditions import Condition
+        gene_with_atr_period_21.long_entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand="sma")
+        ]
+        
         params = {"strategy_gene": gene_with_atr_period_21}
         strategy = UniversalStrategy(mock_broker, mock_data_large, params)
 
@@ -178,7 +190,7 @@ class TestTPSLDataSlicing:
                         ohlc_data = market_data["ohlc_data"]
 
                         # atr_period = 21 なので、少なくとも 21 以上のデータがあれば OK
-                        expected_min_size = gene_with_atr_period_21.tpsl_gene.atr_period
+                        expected_min_size = gene_with_atr_period_21.long_tpsl_gene.atr_period
                         assert len(ohlc_data) >= expected_min_size, (
                             f"ohlc_data は少なくとも {expected_min_size} エントリ必要ですが、"
                             f"{len(ohlc_data)} しかありません"

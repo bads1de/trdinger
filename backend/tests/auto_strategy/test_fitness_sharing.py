@@ -188,8 +188,6 @@ class TestFitnessSharing:
                     IndicatorGene(type="SMA", parameters={"period": 10}),
                     IndicatorGene(type="RSI", parameters={"period": 14}),
                 ],
-                entry_conditions=[],
-                exit_conditions=[],
                 long_entry_conditions=[],
                 short_entry_conditions=[],
                 risk_management={},
@@ -204,8 +202,6 @@ class TestFitnessSharing:
                     IndicatorGene(type="EMA", parameters={"period": 20}),
                     IndicatorGene(type="MACD", parameters={}),
                 ],
-                entry_conditions=[],
-                exit_conditions=[],
                 long_entry_conditions=[],
                 short_entry_conditions=[],
                 risk_management={},
@@ -261,7 +257,7 @@ class TestFitnessSharing:
             gene = StrategyGene(
                 id="gene_group",
                 indicators=[],
-                entry_conditions=[
+                long_entry_conditions=[
                     ConditionGroup(
                         operator="AND",
                         conditions=[
@@ -286,8 +282,6 @@ class TestFitnessSharing:
                         ],
                     )
                 ],
-                exit_conditions=[],
-                long_entry_conditions=[],
                 short_entry_conditions=[],
                 risk_management={},
                 tpsl_gene=None,
@@ -327,7 +321,7 @@ class TestFitnessSharing:
                     IndicatorGene(type="EMA", parameters={"period": 50}),
                     IndicatorGene(type="RSI", parameters={"period": 14}),
                 ],
-                entry_conditions=[
+                long_entry_conditions=[
                     Condition(
                         left_operand="close", operator=">", right_operand="sma"
                     ),  # Dynamic
@@ -335,8 +329,6 @@ class TestFitnessSharing:
                         left_operand="rsi", operator="<", right_operand="30"
                     ),  # Numeric
                 ],
-                exit_conditions=[],
-                long_entry_conditions=[],
                 short_entry_conditions=[],
                 risk_management={},
                 tpsl_gene=None,

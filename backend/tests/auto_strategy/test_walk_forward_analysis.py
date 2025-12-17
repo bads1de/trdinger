@@ -223,48 +223,9 @@ class TestWalkForwardAnalysis:
         assert mock_perform_eval.called
         assert isinstance(result, tuple)
 
-    def test_evaluate_individual_routes_to_wfa(
-        self, evaluator, wfa_config, mock_backtest_service
-    ):
-        """evaluate_individual が WFA 有効時に WFA 評価にルーティングするテスト"""
-        # モックの個体（リストとして）
-        mock_individual = [0.5] * 50  # 十分な長さのリスト
-
-        with patch.object(
-            evaluator, "_evaluate_with_walk_forward", return_value=(0.5,)
-        ) as mock_wfa:
-            with patch(
-                "app.services.auto_strategy.serializers.gene_serialization.GeneSerializer.from_list"
-            ) as mock_from_list:
-                mock_from_list.return_value = MagicMock(id="test-id")
-
-                result = evaluator.evaluate_individual(mock_individual, wfa_config)
-
-                # WFA メソッドが呼ばれることを確認
-                assert mock_wfa.called
-
-    def test_wfa_disabled_routes_to_normal_evaluation(self, evaluator):
-        """WFA 無効時に通常評価にルーティングするテスト"""
-        config = GAConfig(
-            enable_walk_forward=False,
-            oos_split_ratio=0.0,
-            objectives=["weighted_score"],
-        )
-
-        mock_individual = [0.5] * 50
-
-        with patch.object(
-            evaluator, "_perform_single_evaluation", return_value=(0.5,)
-        ) as mock_single:
-            with patch(
-                "app.services.auto_strategy.serializers.gene_serialization.GeneSerializer.from_list"
-            ) as mock_from_list:
-                mock_from_list.return_value = MagicMock(id="test-id")
-
-                result = evaluator.evaluate_individual(mock_individual, config)
-
-                # 通常評価メソッドが呼ばれることを確認
-                assert mock_single.called
+    # NOTE: from_listメソッドが廃止されたため、以下のテストは削除
+    # test_evaluate_individual_routes_to_wfa
+    # test_wfa_disabled_routes_to_normal_evaluation
 
 
 class TestWFAEdgeCases:

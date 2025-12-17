@@ -44,6 +44,8 @@ class TestUniversalStrategy:
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
+            long_entry_conditions=[dummy_cond],
+            short_entry_conditions=[dummy_cond],
             risk_management={},
             metadata={"test": True},
         )
@@ -129,34 +131,42 @@ class TestUniversalStrategy:
             strategy.buy.assert_not_called()
 
     def test_next_exit(self, mock_broker, mock_data, valid_gene):
-        """イグジット実行テスト"""
-        valid_gene.exit_conditions = [
-            Condition(left_operand="close", operator=">", right_operand="SMA")
-        ]
+        """イグジット実行テスト（悲観的約定ロジック）"""
+        # TP/SLを設定してイグジットをテスト
+        tpsl_gene = TPSLGene(
+            enabled=True,
+            stop_loss_pct=0.05,
+            take_profit_pct=0.1,
+            method=TPSLMethod.FIXED_PERCENTAGE,
+        )
+        valid_gene.tpsl_gene = tpsl_gene
         params = {"strategy_gene": valid_gene}
 
-        with patch(
-            "app.services.auto_strategy.strategies.universal_strategy.ConditionEvaluator"
-        ) as MockEval:
-            mock_evaluator = MockEval.return_value
+        strategy = UniversalStrategy(mock_broker, mock_data, params)
 
-            strategy = UniversalStrategy(mock_broker, mock_data, params)
+        # ポジションあり状態をモック
+        mock_pos_instance = MagicMock()
 
-            # ポジションあり状態をモック
-            mock_pos_instance = MagicMock()
+        with patch.object(
+            UniversalStrategy, "position", new_callable=PropertyMock
+        ) as mock_position:
+            mock_position.return_value = mock_pos_instance
 
-            with patch.object(
-                UniversalStrategy, "position", new_callable=PropertyMock
-            ) as mock_position:
-                mock_position.return_value = mock_pos_instance
+            # ロングポジションを持っている状態をシミュレート
+            strategy._position_direction = 1.0
+            strategy._entry_price = 100.0
+            strategy._sl_price = 95.0  # -5%
+            strategy._tp_price = 110.0  # +10%
 
-                # イグジット条件成立
-                mock_evaluator.evaluate_conditions.return_value = True
+            # SLに達する価格データを設定
+            mock_data.Low[-1] = 94.0  # SL以下
+            mock_data.High[-1] = 105.0
+            mock_data.Close[-1] = 96.0
 
-                strategy.next()
+            strategy.next()
 
-            # position.close() が呼ばれたか
-            mock_pos_instance.close.assert_called_once()
+        # position.close() が呼ばれたか
+        mock_pos_instance.close.assert_called_once()
 
     def test_tpsl_parameters(self, mock_broker, mock_data, valid_gene):
         """TP/SLパラメータの適用テスト"""
@@ -220,7 +230,7 @@ class TestUniversalStrategy:
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
             long_entry_conditions=[],  # 通常条件は空
-            short_stateful_conditions=[stateful],  # ステートフル条件のみ
+            stateful_conditions=[stateful],  # ステートフル条件のみ
             risk_management={},
             metadata={},
         )

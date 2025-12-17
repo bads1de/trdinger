@@ -112,7 +112,8 @@ class TestOptimizedFitnessSharing:
         vectors = []
         for ind in population:
             try:
-                gene = fitness_sharing.gene_serializer.from_list(ind, StrategyGene)
+                # 個体の最初の要素がStrategyGene
+                gene = ind[0] if isinstance(ind, list) else ind
                 vectors.append(fitness_sharing._vectorize_gene(gene))
             except Exception:
                 pass
@@ -135,7 +136,8 @@ class TestOptimizedFitnessSharing:
         vectors = []
         for ind in population:
             try:
-                gene = fitness_sharing.gene_serializer.from_list(ind, StrategyGene)
+                # 個体の最初の要素がStrategyGene
+                gene = ind[0] if isinstance(ind, list) else ind
                 genes.append(gene)
                 vectors.append(fitness_sharing._vectorize_gene(gene))
             except Exception:

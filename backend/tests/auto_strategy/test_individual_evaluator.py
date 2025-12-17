@@ -3,9 +3,11 @@ IndividualEvaluatorのテスト
 """
 
 from unittest.mock import Mock
+import pytest
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
 
 
 class TestIndividualEvaluator:
@@ -15,6 +17,15 @@ class TestIndividualEvaluator:
         """テスト前のセットアップ"""
         self.mock_backtest_service = Mock()
         self.evaluator = IndividualEvaluator(self.mock_backtest_service)
+
+    def _create_mock_gene(self, gene_id="test-gene"):
+        """テスト用のStrategyGeneを作成するヘルパー"""
+        return StrategyGene(
+            id=gene_id,
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)],
+            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="SMA_20")],
+            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="SMA_20")],
+        )
 
     def test_init(self):
         """初期化のテスト"""
@@ -30,7 +41,7 @@ class TestIndividualEvaluator:
     def test_evaluate_individual_success(self):
         """個体評価成功のテスト"""
         # モック設定
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
                 "total_return": 0.1,
@@ -63,7 +74,7 @@ class TestIndividualEvaluator:
 
     def test_evaluate_individual_multi_objective(self):
         """多目的最適化評価のテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
                 "total_return": 0.1,
@@ -87,7 +98,7 @@ class TestIndividualEvaluator:
 
     def test_evaluate_individual_exception(self):
         """個体評価例外のテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
 
         # バックテストで例外が発生
         self.mock_backtest_service.run_backtest.side_effect = Exception("Test error")
@@ -101,7 +112,7 @@ class TestIndividualEvaluator:
 
     def test_evaluate_individual_multi_objective_exception(self):
         """多目的最適化例外のテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
 
         self.mock_backtest_service.run_backtest.side_effect = Exception("Test error")
 
@@ -331,7 +342,7 @@ class TestIndividualEvaluator:
 
     def test_evaluate_individual_with_ml_filter(self):
         """MLフィルターが有効な場合の個体評価テスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
 
         # ベース設定
         config = {
@@ -475,7 +486,7 @@ class TestIndividualEvaluator:
 
     def test_evaluate_individual_with_oos(self):
         """OOS検証ありの個体評価テスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
 
         # 共通のベース設定
         base_config = {
@@ -578,7 +589,7 @@ class TestIndividualEvaluator:
 
     def test_evaluate_individual_caching(self):
         """データのキャッシング動作テスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
 
         # モックデータ（DataFrameをシミュレート）
         mock_data = Mock(name="MockDataFrame")
@@ -660,7 +671,7 @@ class TestIndividualEvaluator:
 
     def test_evaluate_individual_caching_with_oos(self):
         """OOS検証時のキャッシング動作テスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
 
         # モックデータ1 (In-Sample用)
         mock_data_is = Mock(name="MockDataFrameIS")
@@ -749,13 +760,12 @@ class TestIndividualEvaluator:
         # 検証3: 2回目ではキャッシュからデータ取得（新規取得なし）
         assert call_count_after_2nd == call_count_before_2nd
 
-        # 検証4: それでもrun_backtestには依然としてキャッシュデータが渡されていること
-        calls_2nd = self.mock_backtest_service.run_backtest.call_args_list
-        # call countが増えているので、直近2回分（3回目と4回目）をチェック
-        kwargs_is_2nd = calls_2nd[2].kwargs
-        kwargs_oos_2nd = calls_2nd[3].kwargs
-        assert kwargs_is_2nd.get("preloaded_data") == mock_data_is
-        assert kwargs_oos_2nd.get("preloaded_data") == mock_data_oos
+        # 検証4: 2回目ではrun_backtestのcall_countが変わらない（キャッシュ効果）
+        call_count_run_backtest_2nd = self.mock_backtest_service.run_backtest.call_count
+        # 1回目: IS + OOS = 2回実行
+        # 2回目: キャッシュ使用 = 実行回数変わらず
+        # 2回目実行後のrun_backtest.call_countは1回目と同じ
+        assert call_count_run_backtest_2nd == 2
 
 
 class TestUnifiedEvaluationLogic:
@@ -766,9 +776,18 @@ class TestUnifiedEvaluationLogic:
         self.mock_backtest_service = Mock()
         self.evaluator = IndividualEvaluator(self.mock_backtest_service)
 
+    def _create_mock_gene(self, gene_id="test-gene"):
+        """テスト用のStrategyGeneを作成するヘルパー"""
+        return StrategyGene(
+            id=gene_id,
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)],
+            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="SMA_20")],
+            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="SMA_20")],
+        )
+
     def test_weighted_score_objective(self):
         """weighted_score目的関数のテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
                 "total_return": 0.15,
@@ -813,7 +832,7 @@ class TestUnifiedEvaluationLogic:
 
     def test_single_objective_returns_tuple(self):
         """単一目的でもタプルを返すテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
                 "total_return": 0.1,
@@ -850,7 +869,7 @@ class TestUnifiedEvaluationLogic:
 
     def test_enable_multi_objective_flag_deprecated(self):
         """enable_multi_objectiveフラグが無視されるテスト（後方互換性）"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
                 "total_return": 0.1,
@@ -892,7 +911,7 @@ class TestUnifiedEvaluationLogic:
 
     def test_calculate_weighted_score_value(self):
         """weighted_scoreの計算値が正しいことのテスト"""
-        mock_individual = [1, 2, 3, 4, 5]
+        mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
                 "total_return": 0.1,

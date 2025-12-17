@@ -118,7 +118,7 @@ class TestEvolutionRunnerMultiObjective:
         mock_halloffame = Mock()
 
         with patch(
-            "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
+            "app.services.auto_strategy.core.ga_engine.tools.Logbook"
         ) as mock_logbook_class:
             mock_logbook = Mock()
             mock_logbook.record = Mock()
@@ -152,7 +152,7 @@ class TestEvolutionRunnerMultiObjective:
 
         mock_toolbox.select = mock_select
 
-        with patch("app.services.auto_strategy.core.evolution_runner.tools.Logbook"):
+        with patch("app.services.auto_strategy.core.ga_engine.tools.Logbook"):
             runner.run_evolution(mock_population, mock_config)
 
         # 適応度共有が適用されたことを確認
@@ -229,7 +229,7 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select.side_effect = lambda pop, k: pop[:k]
 
         with patch(
-            "app.services.auto_strategy.core.evolution_runner.logger"
+            "app.services.auto_strategy.core.ga_engine.logger"
         ) as mock_logger:
             runner.run_evolution(mock_population, mock_config)
 
@@ -272,11 +272,11 @@ class TestEvolutionRunnerMultiObjective:
         mock_toolbox.select = mock_select
 
         with patch(
-            "app.services.auto_strategy.core.evolution_runner.random.random",
+            "app.services.auto_strategy.core.ga_engine.random.random",
             side_effect=[0.1] * 20,  # 十分な数の値を提供（交叉+突然変異のチェック用）
         ):  # 確率以下
             with patch(
-                "app.services.auto_strategy.core.evolution_runner.tools.Logbook"
+                "app.services.auto_strategy.core.ga_engine.tools.Logbook"
             ):
                 runner.run_evolution(mock_population, mock_config)
 

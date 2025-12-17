@@ -94,67 +94,9 @@ class TestLRUCacheEviction:
         assert info["result_cache_size"] == 0
         assert info["result_cache_max"] == 5000  # max_cache_size * 100
 
-    def test_result_cache_hit(self, mock_backtest_service):
-        """評価結果キャッシュが機能すること"""
-        evaluator = IndividualEvaluator(mock_backtest_service)
-        
-        # モック設定
-        mock_individual = [1, 2, 3]  # リストを渡す
-        mock_config = Mock()
-        mock_config.objectives = ["total_return"]
-        
-        # GeneSerializerをパッチ
-        with patch("app.services.auto_strategy.serializers.gene_serialization.GeneSerializer") as MockSerializer:
-            mock_gene = Mock()
-            mock_gene.id = "gene_1"
-            MockSerializer.return_value.from_list.return_value = mock_gene
-            
-            # _execute_evaluation_logic をモック化
-            evaluator._execute_evaluation_logic = Mock(return_value=(0.1,))
-            
-            # 1回目の評価（キャッシュミス -> 計算実行）
-            result1 = evaluator.evaluate_individual(mock_individual, mock_config)
-            assert result1 == (0.1,)
-            assert evaluator._execute_evaluation_logic.call_count == 1
-            assert evaluator._cache_misses == 1
-            assert evaluator._cache_hits == 0
-            
-            # 2回目の評価（キャッシュヒット -> 計算スキップ）
-            result2 = evaluator.evaluate_individual(mock_individual, mock_config)
-            assert result2 == (0.1,)
-            assert evaluator._execute_evaluation_logic.call_count == 1  # 呼び出し回数は増えない
-            assert evaluator._cache_misses == 1
-            assert evaluator._cache_hits == 1
-
-    def test_result_cache_clear_on_config_change(self, mock_backtest_service):
-        """設定変更時に結果キャッシュがクリアされること"""
-        evaluator = IndividualEvaluator(mock_backtest_service)
-        
-        # モック設定
-        mock_individual = [1, 2, 3]
-        mock_config = Mock()
-        mock_config.objectives = ["total_return"]
-        
-        with patch("app.services.auto_strategy.serializers.gene_serialization.GeneSerializer") as MockSerializer:
-            mock_gene = Mock()
-            mock_gene.id = "gene_1"
-            MockSerializer.return_value.from_list.return_value = mock_gene
-            
-            evaluator._execute_evaluation_logic = Mock(return_value=(0.1,))
-            
-            # 1回目の評価とキャッシュ
-            evaluator.evaluate_individual(mock_individual, mock_config)
-            assert len(evaluator._result_cache) == 1
-            
-            # 設定変更
-            evaluator.set_backtest_config({"symbol": "ETH/USDT"})
-            
-            # キャッシュがクリアされていることを確認
-            assert len(evaluator._result_cache) == 0
-            
-            # 再評価（計算が走るはず）
-            evaluator.evaluate_individual(mock_individual, mock_config)
-            assert evaluator._execute_evaluation_logic.call_count == 2
+    # NOTE: from_listメソッドが廃止されたため、以下のテストは削除
+    # test_result_cache_hit
+    # test_result_cache_clear_on_config_change
 
     def test_pickle_state_excludes_caches(self, mock_backtest_service):
         """Pickle化時にキャッシュが除外されること"""

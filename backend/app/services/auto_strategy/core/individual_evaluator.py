@@ -259,9 +259,24 @@ class IndividualEvaluator:
 
             if isinstance(individual, StrategyGene):
                 gene = individual
-            else:
+            elif isinstance(individual, dict):
+                # 辞書形式から復元
                 gene_serializer = GeneSerializer()
-                gene = gene_serializer.from_list(individual, StrategyGene)
+                gene = gene_serializer.dict_to_strategy_gene(individual, StrategyGene)
+            elif isinstance(individual, list):
+                # リスト形式の互換性维持（要素の最初をStrategyGeneとして扱う）
+                # DEAP形式: [StrategyGene, ...] もしくは [float, ...] などの場合
+                if len(individual) > 0 and isinstance(individual[0], StrategyGene):
+                    gene = individual[0]
+                elif len(individual) > 0 and hasattr(individual[0], 'id'):
+                    # StrategyGeneオブジェクトそのものと仮定
+                    gene = individual[0]
+                else:
+                    # 互換性のため、StrategyGeneオブジェクトと仮定
+                    gene = individual
+            else:
+                # その他はそのまま渡す（エラーハンドリングは下位で）
+                gene = individual
 
             # キャッシュチェック
             # 遺伝子IDとバックテスト設定（期間など）をキーにする

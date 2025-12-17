@@ -74,7 +74,10 @@ class TestGeneValidatorTPSLSplit:
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
             long_entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
+                Condition(left_operand="close", operator=">", right_operand="SMA_20")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="SMA_20")
             ],
             long_tpsl_gene=long_tpsl,
             short_tpsl_gene=short_tpsl,
@@ -99,6 +102,10 @@ class TestGeneValidatorTPSLSplit:
         gene = self._create_base_strategy(long_tpsl, short_tpsl)
         is_valid, errors = validator.validate_strategy_gene(gene)
 
+        # デバッグ用: エラーを表示
+        if not is_valid:
+            print(f"Validation errors: {errors}")
+        
         assert is_valid is True
         assert len(errors) == 0
 

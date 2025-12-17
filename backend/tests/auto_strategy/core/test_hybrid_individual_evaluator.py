@@ -531,7 +531,7 @@ class TestPerformSingleEvaluation:
         mock_serializer.strategy_gene_to_dict.return_value = {"test": "payload"}
 
         with patch(
-            "app.services.auto_strategy.serializers.gene_serialization.GeneSerializer",
+            "app.services.auto_strategy.serializers.serialization.GeneSerializer",
             return_value=mock_serializer,
         ):
             with patch.object(evaluator, "_fetch_ohlcv_data", return_value=ohlcv_data):
@@ -581,7 +581,7 @@ class TestPerformSingleEvaluation:
         mock_serializer.strategy_gene_to_dict.return_value = {"test": "payload"}
 
         with patch(
-            "app.services.auto_strategy.serializers.gene_serialization.GeneSerializer",
+            "app.services.auto_strategy.serializers.serialization.GeneSerializer",
             return_value=mock_serializer,
         ):
             with patch.object(evaluator, "_fetch_ohlcv_data", return_value=ohlcv_data):
