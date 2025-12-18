@@ -14,8 +14,11 @@ MLモデルラッパーモジュール
 - feature_columns: List[str] プロパティ
 """
 
-# モデルラッパーのインポート（遅延インポートでImportErrorを回避）
-# Essential 3 Models
+from .catboost import CatBoostModel
+from .lightgbm import LightGBMModel
+from .xgboost import XGBoostModel
+from ..common.algorithm_registry import algorithm_registry
+
 __all__ = [
     "LightGBMModel",
     "XGBoostModel",

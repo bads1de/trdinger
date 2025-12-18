@@ -63,30 +63,22 @@ class EnsembleParameterSpace:
     def get_ensemble_parameter_space(
         cls, ensemble_method: str, enabled_models: list
     ) -> Dict[str, ParameterSpace]:
-        """
-        アンサンブル手法と有効なモデルに基づいてパラメータ空間を構築
+        """統合されたパラメータ空間を構築"""
+        ps = {}
+        # ベースモデル
+        mappings = {
+            "lightgbm": cls.get_lightgbm_parameter_space,
+            "xgboost": cls.get_xgboost_parameter_space
+        }
+        for m in enabled_models:
+            if m in mappings:
+                ps.update(mappings[m]())
 
-        Args:
-            ensemble_method: アンサンブル手法 ("stacking")
-            enabled_models: 有効なベースモデルのリスト
-
-        Returns:
-            統合されたパラメータ空間
-        """
-        parameter_space = {}
-
-        # ベースモデルのパラメータ空間を追加
-        if "lightgbm" in enabled_models:
-            parameter_space.update(cls.get_lightgbm_parameter_space())
-
-        if "xgboost" in enabled_models:
-            parameter_space.update(cls.get_xgboost_parameter_space())
-
-        # アンサンブル手法固有のパラメータを追加（スタッキング）
+        # アンサンブル手法
         if ensemble_method == "stacking":
-            parameter_space.update(cls.get_stacking_parameter_space())
+            ps.update(cls.get_stacking_parameter_space())
 
-        return parameter_space
+        return ps
 
     @staticmethod
     def _suggest_lightgbm_params(trial: optuna.Trial) -> Dict[str, Any]:

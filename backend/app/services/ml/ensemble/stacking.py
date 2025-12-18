@@ -113,159 +113,39 @@ class StackingEnsemble(BaseEnsemble):
     ) -> Dict[str, Any]:
         """
         自前実装のスタッキングアンサンブルモデルを学習
-
-        処理フロー:
-        1. 各ベースモデルでcross_val_predictを実行してOOF予測を生成
-        2. OOF予測（+オプションで元特徴量）をメタ特徴量としてメタモデルを学習
-        3. 全データで各ベースモデルを最終フィット（推論時に使用）
-
-        Args:
-            X_train: 学習用特徴量
-            y_train: 学習用ターゲット
-            X_test: テスト用特徴量（オプション）
-            y_test: テスト用ターゲット（オプション）
-            base_model_params: 各ベースモデルの最適化されたパラメータ（オプション）
-
-        Returns:
-            学習結果の辞書
         """
         try:
-            logger.info(
-                "スタッキングアンサンブル学習を開始（自前実装・計算コスト最適化版）"
-            )
-
+            logger.info("スタッキング学習開始（計算コスト最適化版）")
             validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
-
             self.feature_columns = X_train.columns.tolist()
-
-            # ベースモデルのリストを作成
-            try:
-                estimators = self._create_base_estimators()
-                logger.info(f"ベースモデル作成完了: {[name for name, _ in estimators]}")
-            except Exception as e:
-                logger.error(f"ベースモデル作成エラー: {e}")
-                raise ModelError(f"ベースモデルの作成に失敗しました: {e}")
-
-            # クロスバリデーション設定
+            estimators = self._create_base_estimators()
             cv = self._create_cv_splitter(X_train)
 
-            # ============================================================
-            # ステップ1: 各ベースモデルのOOF予測を計算
-            # ============================================================
-            logger.info(
-                f"[Step 1/3] 各ベースモデルのOOF予測を計算中（{self.cv_folds}フォールドCV）..."
+            # ステップ1: OOF予測計算
+            logger.info("[Step 1/3] ベースモデルのOOF予測を計算中...")
+            oof_base_model_preds = self._calculate_oof_predictions(
+                estimators, X_train, y_train, cv
             )
 
-            oof_base_model_preds = pd.DataFrame(index=X_train.index)
-
-            for name, estimator in estimators:
-                logger.debug(f"  {name}のOOF予測を計算中...")
-                try:
-                    # cross_val_predictで各サンプルをOOF方式で予測
-                    oof_pred = cross_val_predict(
-                        estimator,
-                        X_train,
-                        y_train,
-                        cv=cv,
-                        method="predict_proba",
-                        n_jobs=self.n_jobs,
-                        verbose=0,
-                    )
-                    # ポジティブクラス（通常はクラス1）の確率を取得
-                    oof_base_model_preds[name] = oof_pred[:, 1]
-                except Exception as e:
-                    logger.warning(
-                        f"  {name}のOOF予測計算でエラー: {e}。スキップします。"
-                    )
-                    continue
-
-            if oof_base_model_preds.empty:
-                raise ModelError("有効なベースモデルのOOF予測が生成できませんでした")
-
-            logger.info(
-                f"ベースモデルのOOF予測計算完了: {len(oof_base_model_preds.columns)}モデル"
-            )
-
-            # ============================================================
-            # ステップ2: OOF予測を使ってメタモデルを直接学習
-            # ============================================================
+            # ステップ2: メタモデル学習
             logger.info("[Step 2/3] メタモデルを学習中...")
-
-            # メタ特徴量を構築
-            if self.passthrough:
-                # 元特徴量も含める
-                meta_features = pd.concat([oof_base_model_preds, X_train], axis=1)
-                logger.info(
-                    f"メタ特徴量: OOF予測({len(oof_base_model_preds.columns)}) + "
-                    f"元特徴量({len(X_train.columns)}) = {len(meta_features.columns)}"
-                )
-            else:
-                meta_features = oof_base_model_preds
-                logger.info(f"メタ特徴量: OOF予測のみ ({len(meta_features.columns)})")
-
-            # メタモデルを作成して学習
-            try:
-                self._fitted_meta_model = self._create_base_model(self._meta_model_type)
-                self._fitted_meta_model.fit(meta_features, y_train)
-                logger.info(f"メタモデル({self._meta_model_type})の学習完了")
-            except Exception as e:
-                logger.error(f"メタモデル学習エラー: {e}")
-                raise ModelError(f"メタモデルの学習に失敗しました: {e}")
-
-            # メタモデルを使ってOOF予測を生成（メタラベリング用）
-            meta_oof_pred = cross_val_predict(
-                clone(self._create_base_model(self._meta_model_type)),
-                meta_features,
-                y_train,
-                cv=self.cv_folds,  # メタモデルには単純なKFoldでOK
-                method="predict_proba",
-                n_jobs=self.n_jobs,
-                verbose=0,
+            meta_oof_pred = self._train_meta_model(
+                oof_base_model_preds, X_train, y_train
             )
 
-            # ============================================================
-            # ステップ3: 全データでベースモデルを最終フィット（推論用）
-            # ============================================================
-            logger.info("[Step 3/3] ベースモデルを全データでフィット中（推論用）...")
+            # ステップ3: ベースモデル最終フィット
+            logger.info("[Step 3/3] ベースモデルを全データでフィット中...")
+            self._fit_base_models_final(estimators, X_train, y_train)
 
-            self._fitted_base_models.clear()
-            for name, estimator in estimators:
-                if name not in oof_base_model_preds.columns:
-                    continue  # OOF予測生成でスキップされたモデル
-
-                try:
-                    # cloneして新しいインスタンスで学習
-                    fitted_model = clone(estimator)
-                    fitted_model.fit(X_train, y_train)
-                    self._fitted_base_models[name] = fitted_model
-                    logger.debug(f"  {name}のフィット完了")
-                except Exception as e:
-                    logger.warning(
-                        f"  {name}の最終フィットでエラー: {e}。スキップします。"
-                    )
-                    continue
-
-            logger.info(
-                f"ベースモデル最終フィット完了: {len(self._fitted_base_models)}モデル"
-            )
-
-            # ============================================================
             # 学習完了・結果保存
-            # ============================================================
             self.is_fitted = True
-
-            # OOF予測を保存（メタラベリング用）
-            self.oof_predictions = meta_oof_pred[:, 1]  # ポジティブクラスの確率
+            self.oof_predictions = meta_oof_pred[:, 1]
             self.oof_base_model_predictions = oof_base_model_preds
             self.X_train_original = X_train.copy()
             self.y_train_original = y_train.copy()
 
-            logger.info("スタッキングアンサンブル学習完了（計算コスト最適化版）")
-
             # アンサンブル全体の評価
             ensemble_result = self._evaluate_ensemble(X_test, y_test)
-
-            # 学習結果情報を追加
             ensemble_result.update(
                 {
                     "model_type": "StackingEnsemble",
@@ -273,20 +153,68 @@ class StackingEnsemble(BaseEnsemble):
                     "meta_model": self._meta_model_type,
                     "cv_folds": self.cv_folds,
                     "stack_method": self.stack_method,
-                    "n_jobs": self.n_jobs,
-                    "passthrough": self.passthrough,
-                    "sklearn_implementation": False,  # 自前実装
-                    "training_samples": len(X_train),
-                    "test_samples": len(X_test) if X_test is not None else 0,
                     "fitted_base_models": list(self._fitted_base_models.keys()),
                 }
             )
-
             return ensemble_result
 
         except Exception as e:
             logger.error(f"スタッキングアンサンブル学習エラー: {e}")
             raise ModelError(f"スタッキングアンサンブル学習に失敗しました: {e}")
+
+    def _calculate_oof_predictions(
+        self,
+        estimators: List[Tuple[str, Any]],
+        X: pd.DataFrame,
+        y: pd.Series,
+        cv: Any,
+    ) -> pd.DataFrame:
+        """ベースモデルのOOF予測を計算"""
+        oof_preds = pd.DataFrame(index=X.index)
+        for name, estimator in estimators:
+            try:
+                pred = cross_val_predict(
+                    estimator, X, y, cv=cv, method="predict_proba", n_jobs=self.n_jobs
+                )
+                oof_preds[name] = pred[:, 1]
+            except Exception as e:
+                logger.warning(f"  {name}のOOF予測計算エラー: {e}")
+        if oof_preds.empty:
+            raise ModelError("有効なOOF予測が生成できませんでした")
+        return oof_preds
+
+    def _train_meta_model(
+        self, oof_preds: pd.DataFrame, X: pd.DataFrame, y: pd.Series
+    ) -> np.ndarray:
+        """メタモデルを学習"""
+        meta_features = pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
+        self._fitted_meta_model = self._create_base_model(self._meta_model_type)
+        self._fitted_meta_model.fit(meta_features, y)
+
+        return cross_val_predict(
+            clone(self._create_base_model(self._meta_model_type)),
+            meta_features,
+            y,
+            cv=self.cv_folds,
+            method="predict_proba",
+            n_jobs=self.n_jobs,
+        )
+
+    def _fit_base_models_final(
+        self,
+        estimators: List[Tuple[str, Any]],
+        X: pd.DataFrame,
+        y: pd.Series,
+    ) -> None:
+        """全データでベースモデルをフィット"""
+        self._fitted_base_models.clear()
+        for name, estimator in estimators:
+            try:
+                model = clone(estimator)
+                model.fit(X, y)
+                self._fitted_base_models[name] = model
+            except Exception as e:
+                logger.warning(f"  {name}の最終フィットエラー: {e}")
 
     def _create_cv_splitter(self, X_train: pd.DataFrame) -> Any:
         """
@@ -326,40 +254,18 @@ class StackingEnsemble(BaseEnsemble):
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """
         スタッキングアンサンブルで予測確率を取得
-
-        処理フロー:
-        1. 各ベースモデルで予測確率を取得
-        2. 予測確率をメタ特徴量としてメタモデルで最終予測
-
-        Args:
-            X: 特徴量DataFrame
-
-        Returns:
-            予測確率の配列 (shape: [n_samples, 2])
         """
-        if not self.is_fitted:
+        if not self.is_fitted or not self._fitted_base_models or self._fitted_meta_model is None:
             raise ModelError("モデルが学習されていません")
 
-        if not self._fitted_base_models or self._fitted_meta_model is None:
-            raise ModelError("ベースモデルまたはメタモデルが学習されていません")
+        # ベースモデルの予測確率
+        base_preds = pd.DataFrame(
+            {name: model.predict_proba(X)[:, 1] for name, model in self._fitted_base_models.items()},
+            index=X.index
+        )
 
-        # ベースモデルの予測確率を取得
-        base_preds = pd.DataFrame(index=X.index)
-        for name, model in self._fitted_base_models.items():
-            try:
-                proba = model.predict_proba(X)
-                base_preds[name] = proba[:, 1]  # ポジティブクラスの確率
-            except Exception as e:
-                logger.warning(f"ベースモデル({name})の予測でエラー: {e}")
-                raise ModelError(f"ベースモデル({name})の予測に失敗しました: {e}")
-
-        # メタ特徴量を構築
-        if self.passthrough:
-            meta_features = pd.concat([base_preds, X], axis=1)
-        else:
-            meta_features = base_preds
-
-        # メタモデルで最終予測
+        # メタモデルで予測
+        meta_features = pd.concat([base_preds, X], axis=1) if self.passthrough else base_preds
         return self._fitted_meta_model.predict_proba(meta_features)
 
     def _create_base_estimators(self) -> List[Tuple[str, Any]]:

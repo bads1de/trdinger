@@ -100,39 +100,27 @@ class BackgroundTaskManager:
             )
 
     def _cleanup_task_resources(self, task_id: str):
-        """
-        タスクのリソースをクリーンアップ
-
-        Args:
-            task_id: タスクID
-        """
+        """タスクのリソースをクリーンアップ"""
         try:
-            # クリーンアップコールバックを実行
-            callbacks = self._cleanup_callbacks.get(task_id, [])
-            for callback in callbacks:
+            # コールバック実行
+            for callback in self._cleanup_callbacks.get(task_id, []):
                 try:
                     callback()
                 except Exception as e:
-                    logger.error(f"クリーンアップコールバックエラー: {e}")
+                    logger.error(f"Callback error: {e}")
 
-            # リソースをクリア
-            resources = self._task_resources.get(task_id, [])
-            for resource in resources:
+            # リソースクリア
+            for res in self._task_resources.get(task_id, []):
                 try:
-                    if hasattr(resource, "close"):
-                        resource.close()
-                    elif hasattr(resource, "clear"):
-                        resource.clear()
-                    elif hasattr(resource, "__del__"):
-                        del resource
+                    for attr in ["close", "clear"]:
+                        if hasattr(res, attr):
+                            getattr(res, attr)()
                 except Exception as e:
-                    logger.error(f"リソースクリーンアップエラー: {e}")
+                    logger.error(f"Resource cleanup error: {e}")
 
-            # 強制ガベージコレクション
             gc.collect()
-
         except Exception as e:
-            logger.error(f"タスクリソースクリーンアップエラー: {e}")
+            logger.error(f"Task cleanup error: {e}")
 
     @contextmanager
     def managed_task(

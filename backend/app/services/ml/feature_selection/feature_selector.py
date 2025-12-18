@@ -252,387 +252,77 @@ class FeatureSelector:
 
         return selected_features, results
 
+    def _mask_to_features(
+        self, mask: Optional[np.ndarray], scores: np.ndarray, feature_names: List[str], k: int = 5
+    ) -> List[str]:
+        """マスクまたはスコアから特徴量を選択（共通処理）"""
+        if mask is not None and mask.any():
+            selected = [feature_names[i] for i, m in enumerate(mask) if m]
+            if len(selected) >= k:
+                return selected
+        
+        # マスクが無効または数が足りない場合はスコア上位を選択
+        top_idx = np.argsort(np.abs(scores))[-min(k, len(scores)):]
+        return [feature_names[i] for i in top_idx]
+
     def _single_method_selection(
-        self,
-        X: np.ndarray,
-        y: pd.Series,
-        feature_names: List[str],
-        method: SelectionMethod,
+        self, X: np.ndarray, y: pd.Series, feature_names: List[str], method: SelectionMethod
     ) -> Tuple[List[str], Dict[str, Any]]:
         """単一手法による特徴量選択"""
+        try:
+            k_def = self.config.k_features or max(5, int(len(feature_names) * 0.3))
+            
+            if method == SelectionMethod.UNIVARIATE_F:
+                sel = SelectKBest(f_classif, k=k_def).fit(X, y)
+                feats = self._mask_to_features(sel.get_support(), sel.scores_, feature_names)
+                return feats, {"method": "f_classif", "scores": sel.scores_.tolist(), "selected_features": feats}
 
-        if method == SelectionMethod.UNIVARIATE_F:
-            return self._univariate_selection(X, y, feature_names, f_classif)
-        elif method == SelectionMethod.UNIVARIATE_CHI2:
-            return self._univariate_selection(X, y, feature_names, chi2)
-        elif method == SelectionMethod.MUTUAL_INFO:
-            return self._mutual_info_selection(X, y, feature_names)
-        elif method == SelectionMethod.LASSO:
-            return self._lasso_selection(X, y, feature_names)
-        elif method == SelectionMethod.RANDOM_FOREST:
-            return self._random_forest_selection(X, y, feature_names)
-        elif method == SelectionMethod.RFE:
-            return self._rfe_selection(X, y, feature_names)
-        elif method == SelectionMethod.RFECV:
-            return self._rfecv_selection(X, y, feature_names)
-        elif method == SelectionMethod.PERMUTATION:
-            return self._permutation_selection(X, y, feature_names)
-        else:
+            if method == SelectionMethod.UNIVARIATE_CHI2:
+                X_pos = X - X.min(axis=0) + 1e-8
+                sel = SelectKBest(chi2, k=k_def).fit(X_pos, y)
+                feats = self._mask_to_features(sel.get_support(), sel.scores_, feature_names)
+                return feats, {"method": "chi2", "scores": sel.scores_.tolist(), "selected_features": feats}
+
+            if method == SelectionMethod.MUTUAL_INFO:
+                sel = SelectKBest(mutual_info_classif, k=k_def).fit(X, y)
+                feats = self._mask_to_features(sel.get_support(), sel.scores_, feature_names)
+                return feats, {"method": "mutual_info", "scores": sel.scores_.tolist(), "selected_features": feats}
+
+            if method == SelectionMethod.LASSO:
+                model = LassoCV(cv=self.config.cv_folds, random_state=self.config.random_state).fit(X, y)
+                sel = SelectFromModel(model, threshold=self.config.importance_threshold, prefit=True)
+                feats = self._mask_to_features(sel.get_support(), model.coef_, feature_names)
+                return feats, {"method": "lasso", "coefficients": model.coef_.tolist(), "selected_features": feats}
+
+            if method == SelectionMethod.RANDOM_FOREST:
+                model = RandomForestClassifier(n_estimators=100, random_state=self.config.random_state, n_jobs=self.config.n_jobs).fit(X, y)
+                sel = SelectFromModel(model, threshold=self.config.importance_threshold, prefit=True)
+                feats = self._mask_to_features(sel.get_support(), model.feature_importances_, feature_names)
+                return feats, {"method": "random_forest", "importances": model.feature_importances_.tolist(), "selected_features": feats}
+
+            if method == SelectionMethod.RFE:
+                est = RandomForestClassifier(n_estimators=50, random_state=self.config.random_state)
+                sel = RFE(est, n_features_to_select=k_def).fit(X, y)
+                feats = self._mask_to_features(sel.get_support(), -sel.ranking_, feature_names)
+                return feats, {"method": "rfe", "ranking": sel.ranking_.tolist(), "selected_features": feats}
+
+            if method == SelectionMethod.RFECV:
+                est = RandomForestClassifier(n_estimators=50, random_state=self.config.random_state)
+                sel = RFECV(est, cv=self.config.cv_folds).fit(X, y)
+                feats = self._mask_to_features(sel.get_support(), sel.support_.astype(float), feature_names)
+                return feats, {"method": "rfecv", "n_features": int(sel.n_features_), "selected_features": feats}
+
+            if method == SelectionMethod.PERMUTATION:
+                est = RandomForestClassifier(n_estimators=50, random_state=self.config.random_state).fit(X, y)
+                imp = permutation_importance(est, X, y, n_repeats=5, random_state=self.config.random_state)
+                feats = self._mask_to_features(imp.importances_mean > self.config.importance_threshold, imp.importances_mean, feature_names)
+                return feats, {"method": "permutation", "importances": imp.importances_mean.tolist(), "selected_features": feats}
+
             raise ValueError(f"未対応の手法: {method}")
 
-    def _univariate_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str], score_func
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """単変量統計的選択"""
-        try:
-            # Chi2の場合は非負値に変換
-            if score_func == chi2:
-                X_transformed = X - X.min(axis=0) + 1e-8
-            else:
-                X_transformed = X
-
-            k = self.config.k_features or max(5, int(len(feature_names) * 0.3))
-            selector = SelectKBest(score_func=score_func, k=k)
-            selector.fit(X_transformed, y)
-
-            selected_mask = selector.get_support()
-            # selected_mask が None の場合の処理を追加
-            if selected_mask is None:
-                selected_mask = np.zeros(len(feature_names), dtype=bool)
-                selected_mask[: min(k, len(feature_names))] = True
-
-            selected_features = [
-                feature_names[i] for i in range(len(feature_names)) if selected_mask[i]
-            ]
-
-            results = {
-                "method": score_func.__name__,
-                "scores": (
-                    selector.scores_.tolist() if hasattr(selector, "scores_") else []
-                ),
-                "selected_features": selected_features,
-                "k": k,
-            }
-
-            return selected_features, results
-
         except Exception as e:
-            logger.error(f"単変量選択エラー: {e}")
-            # エラー時は最初の5つの特徴量を返す
-            fallback_features = (
-                feature_names[: min(5, len(feature_names))] if feature_names else []
-            )
-            return fallback_features, {"error": str(e)}
-
-    def _mutual_info_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str]
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """相互情報量による選択"""
-        try:
-            k = self.config.k_features or max(5, int(len(feature_names) * 0.3))
-            selector = SelectKBest(score_func=mutual_info_classif, k=k)
-            selector.fit(X, y)
-
-            selected_mask = selector.get_support()
-            # selected_mask が None の場合の処理を追加
-            if selected_mask is None:
-                selected_mask = np.zeros(len(feature_names), dtype=bool)
-                selected_mask[: min(k, len(feature_names))] = True
-
-            selected_features = [
-                feature_names[i] for i in range(len(feature_names)) if selected_mask[i]
-            ]
-
-            results = {
-                "method": "mutual_info",
-                "scores": (
-                    selector.scores_.tolist() if hasattr(selector, "scores_") else []
-                ),
-                "selected_features": selected_features,
-                "k": k,
-            }
-
-            return selected_features, results
-
-        except Exception as e:
-            logger.error(f"相互情報量選択エラー: {e}")
-            # エラー時は最初の5つの特徴量を返す
-            fallback_features = (
-                feature_names[: min(5, len(feature_names))] if feature_names else []
-            )
-            return fallback_features, {"error": str(e)}
-
-    def _lasso_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str]
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """Lasso回帰による選択"""
-        try:
-            lasso = LassoCV(
-                cv=self.config.cv_folds, random_state=self.config.random_state
-            )
-            lasso.fit(X, y)  # 明示的にfitを実行
-
-            selector = SelectFromModel(
-                lasso, threshold=self.config.importance_threshold, prefit=True
-            )
-
-            selected_mask = selector.get_support()
-            # selected_mask が None の場合の処理を追加
-            if selected_mask is None:
-                # 係数の絶対値に基づいて選択
-                importances = np.abs(lasso.coef_)
-                threshold = np.sort(importances)[-min(5, len(importances))]
-                selected_mask = importances >= threshold
-
-            selected_features = [
-                feature_names[i] for i in range(len(feature_names)) if selected_mask[i]
-            ]
-
-            # 最小特徴量数の保証
-            if len(selected_features) < 5:
-                importances = np.abs(lasso.coef_)
-                top_indices = np.argsort(importances)[-min(5, len(importances)) :]
-                selected_features = [feature_names[i] for i in top_indices]
-
-            results = {
-                "method": "lasso",
-                "coefficients": lasso.coef_.tolist(),
-                "alpha": lasso.alpha_,
-                "selected_features": selected_features,
-            }
-
-            return selected_features, results
-
-        except Exception as e:
-            logger.error(f"Lasso選択エラー: {e}")
-            # エラー時は最初の5つの特徴量を返す
-            fallback_features = (
-                feature_names[: min(5, len(feature_names))] if feature_names else []
-            )
-            return fallback_features, {"error": str(e)}
-
-    def _random_forest_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str]
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """ランダムフォレストによる選択"""
-        try:
-            rf = RandomForestClassifier(
-                n_estimators=100,
-                random_state=self.config.random_state,
-                n_jobs=self.config.n_jobs,
-            )
-            rf.fit(X, y)  # 明示的にfitを実行
-
-            selector = SelectFromModel(
-                rf, threshold=self.config.importance_threshold, prefit=True
-            )
-
-            selected_mask = selector.get_support()
-            # selected_mask が None の場合の処理を追加
-            if selected_mask is None:
-                # 重要度に基づいて選択
-                importances = rf.feature_importances_
-                threshold = np.sort(importances)[-min(5, len(importances))]
-                selected_mask = importances >= threshold
-
-            selected_features = [
-                feature_names[i] for i in range(len(feature_names)) if selected_mask[i]
-            ]
-
-            # 最小特徴量数の保証
-            if len(selected_features) < 5:
-                importances = rf.feature_importances_
-                top_indices = np.argsort(importances)[-min(5, len(importances)) :]
-                selected_features = [feature_names[i] for i in top_indices]
-
-            results = {
-                "method": "random_forest",
-                "feature_importances": rf.feature_importances_.tolist(),
-                "selected_features": selected_features,
-            }
-
-            return selected_features, results
-
-        except Exception as e:
-            logger.error(f"ランダムフォレスト選択エラー: {e}")
-            # エラー時は最初の5つの特徴量を返す
-            fallback_features = (
-                feature_names[: min(5, len(feature_names))] if feature_names else []
-            )
-            return fallback_features, {"error": str(e)}
-
-    def _rfe_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str]
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """再帰的特徴量除去"""
-        try:
-            estimator = RandomForestClassifier(
-                n_estimators=50, random_state=self.config.random_state
-            )
-            n_features = self.config.k_features or max(5, int(len(feature_names) * 0.3))
-            selector = RFE(estimator, n_features_to_select=n_features)
-            selector.fit(X, y)
-
-            selected_mask = selector.get_support()
-            # selected_mask が None の場合の処理を追加
-            if selected_mask is None:
-                selected_mask = np.zeros(len(feature_names), dtype=bool)
-                selected_mask[: min(n_features, len(feature_names))] = True
-
-            selected_features = [
-                feature_names[i] for i in range(len(feature_names)) if selected_mask[i]
-            ]
-
-            results = {
-                "method": "rfe",
-                "ranking": (
-                    selector.ranking_.tolist() if hasattr(selector, "ranking_") else []
-                ),
-                "selected_features": selected_features,
-                "n_features": n_features,
-            }
-
-            return selected_features, results
-
-        except Exception as e:
-            logger.error(f"RFE選択エラー: {e}")
-            # エラー時は最初の5つの特徴量を返す
-            fallback_features = (
-                feature_names[: min(5, len(feature_names))] if feature_names else []
-            )
-            return fallback_features, {"error": str(e)}
-
-    def _rfecv_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str]
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """クロスバリデーション付き再帰的特徴量除去"""
-        try:
-            estimator = RandomForestClassifier(
-                n_estimators=50, random_state=self.config.random_state
-            )
-            selector = RFECV(estimator, cv=self.config.cv_folds)
-            selector.fit(X, y)
-
-            selected_mask = selector.get_support()
-            # selected_mask が None の場合の処理を追加
-            if selected_mask is None:
-                # cv_results_ から最適な特徴量数を取得
-                if (
-                    hasattr(selector, "cv_results_")
-                    and "mean_test_score" in selector.cv_results_
-                ):
-                    n_features = np.argmax(selector.cv_results_["mean_test_score"]) + 1
-                else:
-                    n_features = min(5, len(feature_names))
-                selected_mask = np.zeros(len(feature_names), dtype=bool)
-                selected_mask[:n_features] = True
-
-            selected_features = [
-                feature_names[i] for i in range(len(feature_names)) if selected_mask[i]
-            ]
-
-            results = {
-                "method": "rfecv",
-                "ranking": (
-                    selector.ranking_.tolist() if hasattr(selector, "ranking_") else []
-                ),
-                "cv_scores": (
-                    selector.cv_results_["mean_test_score"].tolist()
-                    if hasattr(selector, "cv_results_")
-                    and "mean_test_score" in selector.cv_results_
-                    else []
-                ),
-                "optimal_features": (
-                    selector.n_features_
-                    if hasattr(selector, "n_features_")
-                    else len(selected_features)
-                ),
-                "selected_features": selected_features,
-            }
-
-            return selected_features, results
-
-        except Exception as e:
-            logger.error(f"RFECV選択エラー: {e}")
-            # エラー時は最初の5つの特徴量を返す
-            fallback_features = (
-                feature_names[: min(5, len(feature_names))] if feature_names else []
-            )
-            return fallback_features, {"error": str(e)}
-
-    def _permutation_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str]
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """順列重要度による選択"""
-        try:
-            estimator = RandomForestClassifier(
-                n_estimators=50, random_state=self.config.random_state
-            )
-            estimator.fit(X, y)
-
-            perm_importance = permutation_importance(
-                estimator, X, y, n_repeats=5, random_state=self.config.random_state
-            )
-
-            # 重要度の閾値以上の特徴量を選択
-            # 安全に属性にアクセスする
-            if isinstance(perm_importance, dict):
-                importances_mean = perm_importance.get(
-                    "importances_mean", np.zeros(len(feature_names))
-                )
-            else:
-                importances_mean = getattr(
-                    perm_importance, "importances_mean", np.zeros(len(feature_names))
-                )
-
-            # numpy配列に変換
-            if not isinstance(importances_mean, np.ndarray):
-                importances_mean = np.array(importances_mean)
-
-            important_features = importances_mean > self.config.importance_threshold
-            selected_features = [
-                feature_names[i]
-                for i in range(len(feature_names))
-                if i < len(important_features) and important_features[i]
-            ]
-
-            # 最小特徴量数の保証
-            if len(selected_features) < 5:
-                top_indices = np.argsort(importances_mean)[
-                    -min(5, len(importances_mean)) :
-                ]
-                selected_features = [feature_names[i] for i in top_indices]
-
-            # importances_std の処理
-            if isinstance(perm_importance, dict):
-                importances_std = perm_importance.get("importances_std", [])
-            else:
-                importances_std = getattr(perm_importance, "importances_std", [])
-
-            # numpy配列に変換
-            if not isinstance(importances_std, np.ndarray):
-                importances_std = (
-                    np.array(importances_std)
-                    if len(importances_std) > 0
-                    else np.zeros(len(importances_mean))
-                )
-
-            results = {
-                "method": "permutation",
-                "importances_mean": importances_mean.tolist(),
-                "importances_std": importances_std.tolist(),
-                "selected_features": selected_features,
-            }
-
-            return selected_features, results
-
-        except Exception as e:
-            logger.error(f"順列重要度選択エラー: {e}")
-            # エラー時は最初の5つの特徴量を返す
-            fallback_features = (
-                feature_names[: min(5, len(feature_names))] if feature_names else []
-            )
-            return fallback_features, {"error": str(e)}
+            logger.error(f"{method.value}選択エラー: {e}")
+            return feature_names[:5], {"error": str(e)}
 
 
 

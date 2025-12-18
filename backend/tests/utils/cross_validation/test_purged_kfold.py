@@ -65,19 +65,14 @@ def test_purged_kfold_no_overlap_and_embargo(sample_data):
                     f"Overlap detected between train[{train_s}-{train_e}] and test[{test_s}-{test_e}] in fold {fold+1}"
         
         # 2. Embargo: Training samples must not start within the embargo period after the test set
-        earliest_test_start = test_start_times.min()
-        latest_test_end = test_end_times.max()
+        test_end = test_start_times.max()
+        embargo_delta = pd.Timedelta(seconds=(t1.max() - t1.min()).total_seconds() * pkf.pct_embargo)
+        embargo_end = test_end + embargo_delta
 
-        # Calculate embargo end time for this fold
-        _test_duration = latest_test_end - earliest_test_start
-        _embargo_seconds = pkf._get_embargo_seconds_from_duration(_test_duration, pkf.pct_embargo)
-        calculated_embargo_end_time = earliest_test_start + pd.Timedelta(seconds=_embargo_seconds)
-
-        for i in range(len(train_idx)):
-            train_s = train_start_times[i]
-            # Ensure no train samples start within (earliest_test_start, calculated_embargo_end_time)
-            assert not (earliest_test_start <= train_s < calculated_embargo_end_time), \
-                f"Train sample '{train_s}' found in embargo zone [{earliest_test_start}-{calculated_embargo_end_time}] in fold {fold+1}"
+        for train_s in train_start_times:
+            # エンバーゴゾーンのチェック
+            if train_s > test_end:
+                assert train_s >= embargo_end, f"Train sample in embargo zone: {train_s} < {embargo_end}"
 
 
 

@@ -5,7 +5,9 @@ ML共通ユーティリティ関数
 """
 
 import logging
+from typing import Any, Optional
 
+import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -14,32 +16,21 @@ logger = logging.getLogger(__name__)
 def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """
     データ型を最適化してメモリ使用量を削減
-
-    Args:
-        df: 最適化するDataFrame
-
-    Returns:
-        最適化されたDataFrame
     """
     try:
-        optimized_df = df.copy()
+        df = df.copy()
+        # float64を一括でfloat32に変換
+        float_cols = df.select_dtypes(include=["float64"]).columns
+        df[float_cols] = df[float_cols].astype("float32")
 
-        for col in optimized_df.columns:
+        # int64を条件付きでint32に変換
+        for col in df.select_dtypes(include=["int64"]).columns:
             if col == "timestamp":
                 continue
-
-            if optimized_df[col].dtype == "float64":
-                # float64をfloat32に変換（精度は十分）
-                optimized_df[col] = optimized_df[col].astype("float32")
-            elif optimized_df[col].dtype == "int64":
-                # int64をint32に変換（範囲が十分な場合）
-                col_min = float(optimized_df[col].min())
-                col_max = float(optimized_df[col].max())
-                if col_min >= -2147483648 and col_max <= 2147483647:
-                    optimized_df[col] = optimized_df[col].astype("int32")
-
-        return optimized_df
-
+            c_min, c_max = df[col].min(), df[col].max()
+            if c_min >= -2147483648 and c_max <= 2147483647:
+                df[col] = df[col].astype("int32")
+        return df
     except Exception as e:
         logger.warning(f"データ型最適化エラー: {e}")
         return df
@@ -47,57 +38,31 @@ def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
 
 def generate_cache_key(
     ohlcv_data: pd.DataFrame,
-    funding_rate_data: pd.DataFrame | None = None,
-    open_interest_data: pd.DataFrame | None = None,
-    extra_params: dict | None = None,
+    funding_rate_data: Optional[pd.DataFrame] = None,
+    open_interest_data: Optional[pd.DataFrame] = None,
+    extra_params: Optional[dict] = None,
 ) -> str:
     """
     データとパラメータからキャッシュキーを生成
-
-    Args:
-        ohlcv_data: OHLCV価格データ
-        funding_rate_data: ファンディングレートデータ（オプション）
-        open_interest_data: 建玉残高データ（オプション）
-        extra_params: その他のパラメータ（辞書）
-
-    Returns:
-        生成されたキャッシュキー文字列
     """
     import hashlib
 
-    try:
-        # pandas.util.hash_pandas_object はインデックスと値をハッシュ化する
-        ohlcv_hash = hashlib.md5(
-            pd.util.hash_pandas_object(ohlcv_data, index=True).values.tobytes()
-        ).hexdigest()[:8]
-    except Exception:
-        # フォールバック
-        data_str = (
-            str(ohlcv_data.shape)
-            + str(ohlcv_data.iloc[0].values)
-            + str(ohlcv_data.iloc[-1].values)
-        )
-        ohlcv_hash = hashlib.md5(data_str.encode()).hexdigest()[:8]
+    def _hash(obj: Any) -> str:
+        if isinstance(obj, pd.DataFrame):
+            try:
+                return hashlib.md5(
+                    pd.util.hash_pandas_object(obj, index=True).values.tobytes()
+                ).hexdigest()[:8]
+            except Exception:
+                return hashlib.md5(str(obj.shape).encode()).hexdigest()[:8]
+        return hashlib.md5(str(obj).encode()).hexdigest()[:8]
 
-    fr_hash = hashlib.md5(
-        str(
-            funding_rate_data.shape if funding_rate_data is not None else "None"
-        ).encode()
-    ).hexdigest()[:8]
+    h1 = _hash(ohlcv_data)
+    h2 = _hash(funding_rate_data.shape if funding_rate_data is not None else None)
+    h3 = _hash(open_interest_data.shape if open_interest_data is not None else None)
+    h4 = _hash(sorted(extra_params.items()) if extra_params else None)
 
-    oi_hash = hashlib.md5(
-        str(
-            open_interest_data.shape if open_interest_data is not None else "None"
-        ).encode()
-    ).hexdigest()[:8]
-
-    params_hash = hashlib.md5(
-        str(
-            sorted(extra_params.items()) if extra_params is not None else "None"
-        ).encode()
-    ).hexdigest()[:8]
-
-    return f"features_{ohlcv_hash}_{fr_hash}_{oi_hash}_{params_hash}"
+    return f"features_{h1}_{h2}_{h3}_{h4}"
 
 
 def calculate_price_change(
@@ -303,4 +268,12 @@ def prepare_data_for_prediction(
         return features_df
 
 
-
+def predict_class_from_proba(
+    predictions_proba: np.ndarray, threshold: float = 0.5
+) -> np.ndarray:
+    """
+    予測確率からクラスを推定
+    """
+    if predictions_proba.ndim == 2:
+        return np.argmax(predictions_proba, axis=1)
+    return (predictions_proba > threshold).astype(int)

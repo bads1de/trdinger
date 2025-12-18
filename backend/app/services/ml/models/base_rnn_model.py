@@ -52,22 +52,14 @@ class BaseRNNModel(ABC):
     def _create_sequences(
         self, data: np.ndarray, targets: Optional[np.ndarray] = None
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-        """
-        時系列データをスライディングウィンドウでシーケンスに変換
-        """
-        xs = []
-        ys = []
-
+        """時系列データをシーケンスに変換（ベクトル化版）"""
         if len(data) < self.seq_len:
-            return np.array([]), np.array([]) if targets is not None else None
+            return np.array([]), (np.array([]) if targets is not None else None)
 
-        for i in range(len(data) - self.seq_len + 1):
-            x = data[i : (i + self.seq_len)]
-            xs.append(x)
-            if targets is not None:
-                ys.append(targets[i + self.seq_len - 1])
-
-        return np.array(xs), np.array(ys) if targets is not None else None
+        from numpy.lib.stride_tricks import sliding_window_view
+        xs = sliding_window_view(data, window_shape=(self.seq_len, data.shape[1])).squeeze(1)
+        ys = targets[self.seq_len - 1 :] if targets is not None else None
+        return xs, ys
 
     def fit(
         self,

@@ -52,58 +52,24 @@ class DataFrequencyManager:
             return timeframe.replace("m", "min")
         return timeframe
 
-    def detect_ohlcv_timeframe(self, ohlcv_data: pd.DataFrame) -> str:
-        """
-        OHLCVデータからtimeframeを自動検出
-
-        Args:
-            ohlcv_data: OHLCVデータ
-
-        Returns:
-            検出されたtimeframe
-        """
-        if ohlcv_data.empty or len(ohlcv_data) < 2:
-            logger.warning("OHLCVデータが不足しているため、デフォルトの1hを使用")
+    def detect_ohlcv_timeframe(self, df: pd.DataFrame) -> str:
+        """OHLCVデータからtimeframeを自動検出"""
+        if df.empty or len(df) < 2:
             return "1h"
-
         try:
-            # timestampカラムまたはindexから時間間隔を計算
-            if "timestamp" in ohlcv_data.columns:
-                timestamps = pd.to_datetime(ohlcv_data["timestamp"])
-            else:
-                timestamps = pd.to_datetime(ohlcv_data.index)
-
-            # 時間差を計算（最初の数個のデータポイントから）
-            time_diffs = timestamps.diff().dropna()
-            if len(time_diffs) == 0:
-                return "1h"
-
-            # TimedeltaIndexをSeriesに変換してmedianを計算
-            time_diffs_series = pd.Series(time_diffs)
-            median_diff = time_diffs_series.median()
-            if str(median_diff) == "NaT":
-                return "1h"
-            median_diff = pd.Timedelta(median_diff)
-            diff_minutes = median_diff.total_seconds() / 60
-
-            # 時間間隔をtimeframeにマッピング
-            if diff_minutes <= 1.5:
-                return "1m"
-            elif diff_minutes <= 7.5:
-                return "5m"
-            elif diff_minutes <= 22.5:
-                return "15m"
-            elif diff_minutes <= 45:
-                return "30m"
-            elif diff_minutes <= 120:
-                return "1h"
-            elif diff_minutes <= 6 * 60:
-                return "4h"
-            else:
-                return "1d"
-
+            ts = pd.to_datetime(df["timestamp"] if "timestamp" in df.columns else df.index)
+            diff_m = ts.to_series().diff().median().total_seconds() / 60
+            
+            # 閾値判定
+            for thresh, tf in [
+                (1.5, "1m"), (7.5, "5m"), (22.5, "15m"), 
+                (45, "30m"), (120, "1h"), (360, "4h")
+            ]:
+                if diff_m <= thresh:
+                    return tf
+            return "1d"
         except Exception as e:
-            logger.warning(f"timeframe自動検出エラー: {e}. デフォルトの1hを使用")
+            logger.warning(f"Detection error: {e}")
             return "1h"
 
     def align_data_frequencies(

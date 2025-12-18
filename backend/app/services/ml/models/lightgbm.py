@@ -53,23 +53,19 @@ class LightGBMModel(BaseGradientBoostingModel):
         return lgb.Dataset(X, label=y, weight=sample_weight, free_raw_data=False)
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
-        """
-        LightGBM固有のパラメータディクショナリを生成します。
-        """
+        """LightGBM固有のパラメータ生成"""
+        is_multi = num_classes > 2
         params = {
-            "objective": "multiclass" if num_classes > 2 else "binary",
-            "num_class": num_classes if num_classes > 2 else None,
-            "metric": "multi_logloss" if num_classes > 2 else "binary_logloss",
-            "boosting_type": "gbdt",
+            "objective": "multiclass" if is_multi else "binary",
+            "num_class": num_classes if is_multi else None,
+            "metric": "multi_logloss" if is_multi else "binary_logloss",
+            "boosting_type": "gbdt", "verbose": -1, "random_state": self.random_state,
             "num_leaves": kwargs.get("num_leaves", 31),
             "learning_rate": kwargs.get("learning_rate", self.learning_rate),
             "feature_fraction": kwargs.get("feature_fraction", 0.9),
             "bagging_fraction": kwargs.get("bagging_fraction", 0.8),
-            "bagging_freq": kwargs.get("bagging_freq", 5),
-            "verbose": -1,
-            "random_state": self.random_state,
+            "bagging_freq": kwargs.get("bagging_freq", 5)
         }
-        # 渡された kwargs でデフォルトを上書き
         params.update(kwargs)
         return params
 

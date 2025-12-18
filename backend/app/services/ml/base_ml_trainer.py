@@ -22,7 +22,11 @@ from ...utils.error_handler import (
 )
 from .common.base_resource_manager import BaseResourceManager, CleanupLevel
 from .common.evaluation_utils import evaluate_model_predictions
-from .common.ml_utils import get_feature_importance_unified, prepare_data_for_prediction
+from .common.ml_utils import (
+    get_feature_importance_unified,
+    predict_class_from_proba,
+    prepare_data_for_prediction,
+)
 from .cross_validation import PurgedKFold
 from .exceptions import MLModelError
 from .feature_engineering.feature_engineering_service import FeatureEngineeringService
@@ -104,126 +108,47 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         model_name: Optional[str] = None,
         **training_params,
     ) -> Dict[str, Any]:
-        """
-        MLモデルを学習（テンプレートメソッドパターン）
-
-        Args:
-            training_data: 学習用OHLCVデータ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-            save_model: モデルを保存するか
-            model_name: モデル名（オプション）
-            **training_params: 追加の学習パラメータ
-
-        Returns:
-            学習結果の辞書
-        """
+        """MLモデルを学習（テンプレートメソッド）"""
         with ml_operation_context("MLモデル学習"):
-            # 1. 入力データの基本検証
-            if training_data is None or training_data.empty:
-                raise DataError("学習データが空です")
-            if len(training_data) < 100:
-                raise DataError("学習データが不足しています（最低100行必要）")
+            if training_data is None or len(training_data) < 100:
+                raise DataError("学習データが不足しています")
 
-            # 2. 特徴量を計算
-            features_df = self._calculate_features(
-                ohlcv_data=training_data,
-                funding_rate_data=funding_rate_data,
-                open_interest_data=open_interest_data,
-            )
-
-            # 3. 学習用データを準備
+            # 1. 特徴量計算とデータ準備
             X, y = self._prepare_training_data(
-                features_df, training_data, **training_params
+                self._calculate_features(training_data, funding_rate_data, open_interest_data),
+                training_data, **training_params
             )
+            if X is None or X.empty:
+                raise DataError("学習データが空です")
 
-            # 学習データが空でないことを確認
-            if X is None or X.empty or y is None or y.empty:
-                raise DataError("前処理後の学習データが空です")
-
-            # 4. クロスバリデーションを実行するかチェック
-            use_cross_validation = training_params.get("use_cross_validation", False)
-
-            if use_cross_validation:
-                # 時系列クロスバリデーションを実行
-                cv_result = self._time_series_cross_validate(X, y, **training_params)
-
-                # 最終モデルは全データで学習
-                logger.info("🎯 最終モデルを全データで学習中...")
-                X_scaled = self._preprocess_data(X, X)[0]  # 全データをスケーリング
-
-                # ダミーのテストデータ（最後の20%）を作成
-                test_size = training_params.get("test_size", 0.2)
-                n_samples = len(X)
-                train_size = int(n_samples * (1 - test_size))
-
-                X_train_final = X_scaled.iloc[:train_size]
-                X_test_final = X_scaled.iloc[train_size:]
-                y_train_final = y.iloc[:train_size]
-                y_test_final = y.iloc[train_size:]
-
-                training_result = self._train_model_impl(
-                    X_train_final,
-                    X_test_final,
-                    y_train_final,
-                    y_test_final,
-                    **training_params,
-                )
-
-                # クロスバリデーション結果を追加
-                training_result.update(cv_result)
-
+            # 2. 学習実行 (CV or Single)
+            if training_params.get("use_cross_validation", False):
+                cv_res = self._time_series_cross_validate(X, y, **training_params)
+                # 全データで最終学習
+                X_s = self._preprocess_data(X, X)[0]
+                idx = int(len(X) * (1 - training_params.get("test_size", 0.2)))
+                res = self._train_model_impl(X_s.iloc[:idx], X_s.iloc[idx:], y.iloc[:idx], y.iloc[idx:], **training_params)
+                res.update(cv_res)
             else:
-                # 通常の単一分割学習
-                # 4. データを分割
-                X_train, X_test, y_train, y_test = self._split_data(
-                    X, y, **training_params
-                )
+                X_tr, X_te, y_tr, y_te = self._split_data(X, y, **training_params)
+                X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
+                res = self._train_model_impl(X_tr_s, X_te_s, y_tr, y_te, **training_params)
 
-                # 5. データを前処理
-                X_train_scaled, X_test_scaled = self._preprocess_data(X_train, X_test)
-
-                # 6. モデルを学習（継承クラスで実装）
-                training_result = self._train_model_impl(
-                    X_train_scaled, X_test_scaled, y_train, y_test, **training_params
-                )
-
-            # 7. 学習完了フラグを設定
             self.is_trained = True
 
-            # 8. モデルを保存
-            should_save_model = bool(save_model) if save_model is not None else True
-            if should_save_model:
-                model_metadata = ModelMetadata.from_training_result(
-                    training_result=training_result,
-                    training_params=training_params,
-                    model_type=self.__class__.__name__,
-                    feature_count=(
-                        len(self.feature_columns) if self.feature_columns else 0
-                    ),
+            # 3. モデル保存
+            if save_model:
+                meta = ModelMetadata.from_training_result(
+                    res, training_params, self.__class__.__name__, len(self.feature_columns or [])
                 )
+                if not meta.validate()["is_valid"]:
+                    logger.warning(f"メタデータ警告: {meta.validate()['warnings']}")
+                
+                path = self.save_model(model_name or self.config.model.auto_strategy_model_name, meta.to_dict())
+                res["model_path"] = self.current_model_path = path
+                self.current_model_metadata = meta.to_dict()
 
-                model_metadata.log_summary()
-
-                validation_result = model_metadata.validate()
-                if not validation_result["is_valid"]:
-                    logger.warning(
-                        f"モデルメタデータの問題: {validation_result['errors']}"
-                    )
-
-                model_path = self.save_model(
-                    model_name or self.config.model.auto_strategy_model_name,
-                    model_metadata.to_dict(),
-                )
-                training_result["model_path"] = model_path
-                self.current_model_path = model_path
-                self.current_model_metadata = model_metadata.to_dict()
-
-            # 9. 学習結果を整形
-            result = self._format_training_result(training_result, X, y)
-
-            logger.info("MLモデル学習完了")
-            return result
+            return self._format_training_result(res, X, y)
 
     @safe_ml_operation(default_return={}, context="モデル評価でエラーが発生しました")
     def evaluate_model(
@@ -255,11 +180,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         # predictは確率を返す
         predictions_proba = self.predict(features_df)
 
-        # クラス予測（確率最大）
-        if predictions_proba.ndim == 2:
-            predictions_class = np.argmax(predictions_proba, axis=1)
-        else:
-            predictions_class = (predictions_proba > 0.5).astype(int)
+        # クラス予測（共通ユーティリティを使用）
+        predictions_class = predict_class_from_proba(predictions_proba)
 
         # 評価結果を作成
         evaluation_result = {

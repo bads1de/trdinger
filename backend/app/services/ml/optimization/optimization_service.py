@@ -91,45 +91,33 @@ class OptimizationService:
         self, trainer: Any, optimization_settings: OptimizationSettings
     ) -> Dict[str, ParameterSpace]:
         """パラメータ空間を準備"""
-        if not optimization_settings.parameter_space:
-            # EnsembleTrainerの場合（単一モデルも含む）
-            if hasattr(trainer, "ensemble_config"):
-                ensemble_method = trainer.ensemble_config.get("method", "stacking")
-                enabled_models = trainer.ensemble_config.get(
-                    "models", ["lightgbm", "xgboost"]
-                )
-                return self.optimizer.get_ensemble_parameter_space(
-                    ensemble_method, enabled_models
-                )
-            else:
-                # フォールバック: デフォルトのLightGBMパラメータ空間
-                return self.optimizer.get_default_parameter_space()
-        else:
+        if optimization_settings.parameter_space:
             return self._convert_parameter_space_config(
                 optimization_settings.parameter_space
             )
+
+        # EnsembleTrainerの場合（単一モデルも含む）
+        if hasattr(trainer, "ensemble_config"):
+            c = trainer.ensemble_config
+            return self.optimizer.get_ensemble_parameter_space(
+                c.get("method", "stacking"), c.get("models", ["lightgbm", "xgboost"])
+            )
+
+        return self.optimizer.get_default_parameter_space()
 
     def _convert_parameter_space_config(
         self, parameter_space_config: Dict[str, Dict[str, Any]]
     ) -> Dict[str, ParameterSpace]:
         """設定辞書をParameterSpaceオブジェクトに変換"""
-        parameter_space = {}
-        for param_name, param_config in parameter_space_config.items():
-            param_type = param_config["type"]
-            low = param_config.get("low")
-            high = param_config.get("high")
-
-            if param_type == "integer" and low is not None and high is not None:
-                low = int(low)
-                high = int(high)
-
-            parameter_space[param_name] = ParameterSpace(
-                type=param_type,
-                low=low,
-                high=high,
-                categories=param_config.get("categories"),
+        return {
+            name: ParameterSpace(
+                type=cfg["type"],
+                low=int(cfg["low"]) if cfg["type"] == "integer" else cfg.get("low"),
+                high=int(cfg["high"]) if cfg["type"] == "integer" else cfg.get("high"),
+                categories=cfg.get("categories"),
             )
-        return parameter_space
+            for name, cfg in parameter_space_config.items()
+        }
 
     def _create_objective_function(
         self,

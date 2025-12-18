@@ -59,45 +59,36 @@ class ModelManager:
         Returns:
             アルゴリズム名
         """
+        if not metadata:
+            metadata = {}
+
+        # 1. メタデータから best_algorithm を取得
+        best_algo = metadata.get("best_algorithm")
+        if best_algo:
+            return best_algo.lower()
+
+        # 2. メタデータから model_type を取得
+        model_type = metadata.get("model_type")
+        if model_type and model_type != "unknown":
+            model_type_lower = model_type.lower()
+            if "ensemble" in model_type_lower:
+                return "ensemble"
+            if "single" in model_type_lower:
+                return "single"
+            return model_type_lower
+
+        # 3. モデルオブジェクトのクラス名から AlgorithmRegistry を使用
         try:
-            # メタデータから best_algorithm を取得（アンサンブルの場合）
-            if metadata and "best_algorithm" in metadata:
-                algorithm = metadata["best_algorithm"]
-                if algorithm:
-                    return algorithm.lower()
-
-            # メタデータから model_type を取得
-            if metadata and "model_type" in metadata:
-                model_type = metadata["model_type"]
-                if model_type and model_type != "unknown":
-                    # EnsembleTrainer などのクラス名から推定
-                    if "ensemble" in model_type.lower():
-                        return "ensemble"
-                    elif "single" in model_type.lower():
-                        return "single"
-                    else:
-                        return model_type.lower()
-
-            # モデルオブジェクトのクラス名から推定
             model_class_name = type(model).__name__.lower()
-
-            # AlgorithmRegistry を使用してアルゴリズム名を取得
             from .common.algorithm_registry import algorithm_registry
 
             algorithm_name = algorithm_registry.get_algorithm_name(model_class_name)
-
             if algorithm_name != "unknown":
-                logger.debug(
-                    f"AlgorithmRegistryからアルゴリズム名を取得: {model_class_name} -> {algorithm_name}"
-                )
                 return algorithm_name
-
-            # デフォルト値
-            return "unknown"
-
         except Exception as e:
-            logger.warning(f"アルゴリズム名の抽出に失敗: {e}")
-            return "unknown"
+            logger.warning(f"AlgorithmRegistryからの抽出失敗: {e}")
+
+        return "unknown"
 
     @safe_ml_operation(default_return=None, context="モデル保存でエラーが発生しました")
     def save_model(

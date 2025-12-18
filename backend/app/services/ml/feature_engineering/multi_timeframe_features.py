@@ -51,12 +51,8 @@ class MultiTimeframeFeatureCalculator:
         df_4h["SMA_200"] = df_4h["close"].rolling(200).mean()
         df_4h["EMA_20"] = df_4h["close"].ewm(span=20).mean()
 
-        # 4時間足トレンド方向
-        df_4h["trend_direction"] = np.where(
-            df_4h["SMA_50"] > df_4h["SMA_200"],
-            1,
-            np.where(df_4h["SMA_50"] < df_4h["SMA_200"], -1, 0),
-        )
+        # トレンド方向 (1:上昇, -1:下落, 0:横ばい)
+        df_4h["trend_direction"] = np.sign(df_4h["SMA_50"] - df_4h["SMA_200"])
 
         # 4時間足トレンド強度（SMA間の距離）
         df_4h["trend_strength"] = (df_4h["SMA_50"] - df_4h["SMA_200"]) / df_4h[
@@ -77,11 +73,7 @@ class MultiTimeframeFeatureCalculator:
         df_1d["SMA_200"] = df_1d["close"].rolling(200).mean()
 
         # 1日足トレンド方向
-        df_1d["trend_direction"] = np.where(
-            df_1d["SMA_50"] > df_1d["SMA_200"],
-            1,
-            np.where(df_1d["SMA_50"] < df_1d["SMA_200"], -1, 0),
-        )
+        df_1d["trend_direction"] = np.sign(df_1d["SMA_50"] - df_1d["SMA_200"])
 
         # 1日足トレンド強度
         df_1d["trend_strength"] = (df_1d["SMA_50"] - df_1d["SMA_200"]) / df_1d[
@@ -91,11 +83,7 @@ class MultiTimeframeFeatureCalculator:
         # === 1時間足のトレンド方向 ===
         df["SMA_50_1h"] = df["close"].rolling(50).mean()
         df["SMA_200_1h"] = df["close"].rolling(200).mean()
-        df["trend_direction_1h"] = np.where(
-            df["SMA_50_1h"] > df["SMA_200_1h"],
-            1,
-            np.where(df["SMA_50_1h"] < df["SMA_200_1h"], -1, 0),
-        )
+        df["trend_direction_1h"] = np.sign(df["SMA_50_1h"] - df["SMA_200_1h"])
 
         # === 1時間足インデックスに統合 ===
         # 4時間足データを1時間足に展開
@@ -180,28 +168,11 @@ class MultiTimeframeFeatureCalculator:
         return result
 
     def _resample_to_timeframe(self, df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
-        """
-        1時間足データを指定時間足にリサンプル
-
-        Args:
-            df: 1時間足OHLCV DataFrame
-            timeframe: 目標時間足（'4h', '1D' など）
-
-        Returns:
-            リサンプルされたDataFrame
-        """
-        resampled = pd.DataFrame()
-
-        resampled["open"] = df["open"].resample(timeframe).first()
-        resampled["high"] = df["high"].resample(timeframe).max()
-        resampled["low"] = df["low"].resample(timeframe).min()
-        resampled["close"] = df["close"].resample(timeframe).last()
-        resampled["volume"] = df["volume"].resample(timeframe).sum()
-
-        # 欠損値を前方埋め
-        resampled = resampled.fillna(method="ffill")
-
-        return resampled
+        """1時間足データを指定時間足にリサンプル"""
+        resampled = df.resample(timeframe).agg({
+            "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
+        })
+        return resampled.ffill()
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """RSIを計算"""

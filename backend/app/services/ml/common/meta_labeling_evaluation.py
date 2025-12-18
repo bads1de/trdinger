@@ -10,16 +10,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    confusion_matrix,
-    f1_score,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
+from sklearn.metrics import precision_recall_curve
 
 logger = logging.getLogger(__name__)
 
@@ -30,115 +21,30 @@ def evaluate_meta_labeling(
     y_pred_proba: Optional[np.ndarray] = None,
     threshold: float = 0.5,
 ) -> Dict[str, Any]:
-    """
-    メタラベリング用の評価指標を計算
+    """メタラベリング用の評価指標を計算"""
+    from ..evaluation.metrics import metrics_collector
+    
+    # 統一評価器で基本メトリクスを計算
+    y_t = y_true.values if hasattr(y_true, "values") else y_true
+    res = metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba)
 
-    Precision（適合率）を最重要指標とし、
-    「MLモデルがOKと判定したシグナルの勝率」を測定します。
+    # メタラベリング固有の指標を追加
+    p = res.get("precision", 0.0)
+    res.update({
+        "win_rate": p,
+        "signal_adoption_rate": np.sum(y_pred) / len(y_pred) if len(y_pred) > 0 else 0.0,
+        "expected_value": (p * 1.0) + ((1 - p) * -1.0),
+        "total_samples": len(y_t),
+        "positive_samples": int(np.sum(y_t)),
+        "negative_samples": int(len(y_t) - np.sum(y_t))
+    })
+    
+    # 互換性のためのキー追加
+    for k, v in [("meta_f1", "f1_score"), ("meta_precision", "precision"), ("meta_recall", "recall")]:
+        if v in res:
+            res[k] = res[v]
 
-    Args:
-        y_true: 実際のターゲット値（0=失敗, 1=成功）
-        y_pred: 予測値（0 or 1）
-        y_pred_proba: 予測確率（オプション）
-        threshold: 確率閾値（デフォルト: 0.5）
-
-    Returns:
-        評価指標の辞書
-    """
-    # numpy配列に変換
-    y_true_array = y_true.values if hasattr(y_true, "values") else y_true
-
-    # 確率から予測クラスを生成（閾値調整可能）
-    if y_pred_proba is not None and len(y_pred_proba.shape) > 1:
-        # 2クラス分類の場合、クラス1の確率を使用
-        y_pred_from_proba = (y_pred_proba[:, 1] >= threshold).astype(int)
-    else:
-        y_pred_from_proba = y_pred
-
-    # Confusion Matrix
-    tn, fp, fn, tp = confusion_matrix(y_true_array, y_pred_from_proba).ravel()
-
-    # Precision（適合率）- 最重要指標
-    # MLがOKと言った時に実際に成功した割合
-    precision = precision_score(y_true_array, y_pred_from_proba, zero_division=0.0)
-
-    # Recall（再現率）
-    # 実際の成功シグナルをどれだけ拾えたか
-    recall = recall_score(y_true_array, y_pred_from_proba, zero_division=0.0)
-
-    # F1-Score（精度と再現率のバランス）
-    f1 = f1_score(y_true_array, y_pred_from_proba, zero_division=0.0)
-
-    # Accuracy（全体の正答率）- メタラベリングではあまり重視しない
-    accuracy = accuracy_score(y_true_array, y_pred_from_proba)
-
-    # Specificity（特異度）
-    # 失敗シグナルを正しく見抜けた割合
-    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-
-    # Positive Predictive Value (PPV) = Precision
-    ppv = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-
-    # Negative Predictive Value (NPV)
-    npv = tn / (tn + fn) if (tn + fn) > 0 else 0.0
-
-    # Win Rate（勝率）= Precision と同じだが明示的に
-    win_rate = precision
-
-    # シグナル採択率（何%のシグナルを採用したか）
-    signal_adoption_rate = np.sum(y_pred_from_proba) / len(y_pred_from_proba)
-
-    # Expected Value（期待値）の簡易計算
-    # 勝ち時の利益を1、負け時の損失を-1と仮定
-    expected_value = (precision * 1.0) + ((1 - precision) * -1.0)
-
-    result = {
-        # === メタラベリング最重要指標 ===
-        "precision": precision,  # 最重要: MLがOKと言った時の勝率
-        "win_rate": win_rate,  # Precision と同じだが明示的
-        "f1_score": f1,  # 精度と再現率のバランス
-        # === 補助指標 ===
-        "recall": recall,  # 成功シグナルの検出率
-        "accuracy": accuracy,  # 全体の正答率
-        "specificity": specificity,  # 失敗シグナルの検出率
-        # === 実用指標 ===
-        "signal_adoption_rate": signal_adoption_rate,  # シグナル採択率
-        "expected_value": expected_value,  # 期待値（簡易版）
-        # === Confusion Matrix ===
-        "true_positives": int(tp),
-        "true_negatives": int(tn),
-        "false_positives": int(fp),
-        "false_negatives": int(fn),
-        # === その他 ===
-        "ppv": ppv,
-        "npv": npv,
-        "total_samples": len(y_true_array),
-        "positive_samples": int(np.sum(y_true_array)),
-        "negative_samples": int(len(y_true_array) - np.sum(y_true_array)),
-    }
-
-    # 確率が利用可能な場合、ROC-AUCとPR-AUCを計算
-    if y_pred_proba is not None:
-        try:
-            if len(y_pred_proba.shape) > 1:
-                proba_positive = y_pred_proba[:, 1]
-            else:
-                proba_positive = y_pred_proba
-
-            # ROC-AUC
-            roc_auc = roc_auc_score(y_true_array, proba_positive)
-            result["roc_auc"] = roc_auc
-
-            # PR-AUC（Precision-Recall AUC）- メタラベリングで重要
-            pr_auc = average_precision_score(y_true_array, proba_positive)
-            result["pr_auc"] = pr_auc
-
-        except Exception as e:
-            logger.warning(f"ROC/PR-AUC計算エラー: {e}")
-            result["roc_auc"] = 0.0
-            result["pr_auc"] = 0.0
-
-    return result
+    return res
 
 
 def print_meta_labeling_report(

@@ -42,46 +42,24 @@ class AlgorithmRegistry:
 
     @classmethod
     def get_algorithm_name(cls, model_class_name: str) -> str:
-        """
-        モデルクラス名から標準化されたアルゴリズム名を取得
-
-        Args:
-            model_class_name: モデルクラス名（小文字）
-
-        Returns:
-            標準化されたアルゴリズム名
-        """
+        """モデルクラス名から標準化されたアルゴリズム名を取得"""
         if not model_class_name:
-            logger.warning("モデルクラス名が空です")
             return "unknown"
+        name = model_class_name.lower()
 
-        # 小文字に変換して処理
-        class_name_lower = model_class_name.lower()
+        # 1. 直接マッピング
+        for key, val in cls._CLASS_TO_ALGORITHM_MAPPING.items():
+            if key in name:
+                return val
 
-        # マッピングから検索
-        for key, value in cls._CLASS_TO_ALGORITHM_MAPPING.items():
-            if key in class_name_lower:
-                logger.debug(
-                    f"アルゴリズム名をマッピング: {class_name_lower} -> {value}"
-                )
-                return value
-
-        # マッピングが見つからない場合はクラス名から推測
-        # "trainer", "model", "classifier", "regressor" などの接尾辞を除去
-        base_name = class_name_lower
-        for suffix in ["trainer", "model", "classifier", "regressor", "wrapper"]:
-            if base_name.endswith(suffix):
-                base_name = base_name[: -len(suffix)]
+        # 2. 接尾辞除去による推測
+        base = name
+        for s in ["trainer", "model", "classifier", "regressor", "wrapper"]:
+            if base.endswith(s):
+                base = base[:-len(s)]
                 break
-
-        if base_name in cls._SUPPORTED_ALGORITHMS:
-            logger.debug(
-                f"クラス名からアルゴリズム名を推測: {class_name_lower} -> {base_name}"
-            )
-            return base_name
-
-        logger.warning(f"未知のモデルクラス名: {model_class_name}")
-        return "unknown"
+        
+        return base if base in cls._SUPPORTED_ALGORITHMS else "unknown"
 
 
 # グローバルインスタンスを作成

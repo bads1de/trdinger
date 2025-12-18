@@ -34,95 +34,40 @@ class BaseResourceManager(ABC):
         self._is_cleaned_up = False
 
     def cleanup_resources(self, level: Optional[CleanupLevel] = None) -> Dict[str, Any]:
-        """
-        リソースの統一クリーンアップ
-
-        Args:
-            level: クリーンアップレベル（指定しない場合はデフォルトレベルを使用）
-
-        Returns:
-            クリーンアップ結果の統計情報
-        """
+        """リソースの統一クリーンアップ"""
         if self._is_cleaned_up:
-            logger.debug("リソースは既にクリーンアップ済みです")
             return {"status": "already_cleaned", "memory_freed": 0}
 
-        cleanup_level = level or self._cleanup_level
-        memory_before = self._get_memory_usage()
-        cleanup_stats = {
-            "level": cleanup_level.value,
-            "memory_before": memory_before,
-            "errors": [],
-            "cleaned_components": [],
-        }
+        lvl = level or self._cleanup_level
+        mem_before = self._get_memory_usage()
+        stats = {"level": lvl.value, "memory_before": mem_before, "errors": [], "cleaned": []}
 
-        try:
-            logger.info(
-                f"リソースクリーンアップを開始（レベル: {cleanup_level.value}）"
-            )
+        # クリーンアップフェーズの定義
+        phases = [
+            ("_cleanup_temporary_files", "temporary_files"),
+            ("_cleanup_cache", "cache"),
+            ("_cleanup_models", "models"),
+            ("_cleanup_other_resources", "other_resources")
+        ]
 
-            # 1. 一時ファイルのクリーンアップ
+        for method_name, name in phases:
             try:
-                self._cleanup_temporary_files(cleanup_level)
-                cleanup_stats["cleaned_components"].append("temporary_files")
+                getattr(self, method_name)(lvl)
+                stats["cleaned"].append(name)
             except Exception as e:
-                error_msg = f"一時ファイルクリーンアップエラー: {e}"
-                logger.warning(error_msg)
-                cleanup_stats["errors"].append(error_msg)
+                err = f"{name} cleanup error: {e}"
+                logger.warning(err)
+                stats["errors"].append(err)
 
-            # 2. キャッシュのクリーンアップ
-            try:
-                self._cleanup_cache(cleanup_level)
-                cleanup_stats["cleaned_components"].append("cache")
-            except Exception as e:
-                error_msg = f"キャッシュクリーンアップエラー: {e}"
-                logger.warning(error_msg)
-                cleanup_stats["errors"].append(error_msg)
+        if lvl in [CleanupLevel.STANDARD, CleanupLevel.THOROUGH]:
+            stats["objects_collected"] = self._force_garbage_collection()
 
-            # 3. モデルオブジェクトのクリーンアップ
-            try:
-                self._cleanup_models(cleanup_level)
-                cleanup_stats["cleaned_components"].append("models")
-            except Exception as e:
-                error_msg = f"モデルクリーンアップエラー: {e}"
-                logger.warning(error_msg)
-                cleanup_stats["errors"].append(error_msg)
+        mem_after = self._get_memory_usage()
+        stats.update({"memory_after": mem_after, "memory_freed": mem_before - mem_after})
+        self._is_cleaned_up = True
 
-            # 4. その他のリソースクリーンアップ
-            try:
-                self._cleanup_other_resources(cleanup_level)
-                cleanup_stats["cleaned_components"].append("other_resources")
-            except Exception as e:
-                error_msg = f"その他リソースクリーンアップエラー: {e}"
-                logger.warning(error_msg)
-                cleanup_stats["errors"].append(error_msg)
-
-            # 5. ガベージコレクション
-            if cleanup_level in [CleanupLevel.STANDARD, CleanupLevel.THOROUGH]:
-                collected = self._force_garbage_collection()
-                cleanup_stats["objects_collected"] = collected
-
-            # 7. メモリ使用量の計算
-            memory_after = self._get_memory_usage()
-            cleanup_stats["memory_after"] = memory_after
-            cleanup_stats["memory_freed"] = memory_before - memory_after
-
-            self._is_cleaned_up = True
-
-            logger.info(
-                f"リソースクリーンアップ完了: "
-                f"{cleanup_stats['memory_freed']:.2f}MB解放, "
-                f"{len(cleanup_stats['cleaned_components'])}コンポーネント処理"
-            )
-
-            return cleanup_stats
-
-        except Exception as e:
-            error_msg = f"リソースクリーンアップ中に予期しないエラー: {e}"
-            logger.error(error_msg)
-            cleanup_stats["errors"].append(error_msg)
-            cleanup_stats["status"] = "failed"
-            return cleanup_stats
+        logger.info(f"Cleanup done: {stats['memory_freed']:.2f}MB freed")
+        return stats
 
     @abstractmethod
     def _cleanup_temporary_files(self, level: CleanupLevel):

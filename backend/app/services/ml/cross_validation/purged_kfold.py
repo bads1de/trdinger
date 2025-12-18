@@ -50,87 +50,37 @@ class PurgedKFold(_BaseKFold):
         y: Optional[pd.Series] = None,
         groups: Optional[Any] = None,
     ):
-        """
-        データを訓練セットとテストセットに分割するためのインデックスを生成します。
+        """データを訓練セットとテストセットに分割するためのインデックスを生成"""
+        if not isinstance(X, pd.DataFrame) or not X.index.equals(self.t1.index):
+            raise ValueError("X must be a DataFrame and have the same index as t1.")
 
-        引数:
-            X (pd.DataFrame): 訓練データ。
-            y (Optional[pd.Series]): ターゲット変数（無視されますが、scikit-learnとの互換性のために保持されています）。
-            groups (Optional[Any]): サンプルのグループラベル（無視されます）。
-
-        返り値:
-            Tuple[np.ndarray, np.ndarray]: その分割に対する訓練セットとテストセットのインデックス。
-        """
-        if not isinstance(X, pd.DataFrame):
-            raise ValueError("X must be a pandas DataFrame.")
-        if not X.index.equals(self.t1.index):
-            raise ValueError("X and t1 must have the same index.")
-
-        indices = np.arange(X.shape[0])
+        indices = np.arange(len(X))
+        fold_size = len(X) // self.n_splits
 
         for i in range(self.n_splits):
-            test_start_idx = (X.shape[0] // self.n_splits) * i
-            test_end_idx = (X.shape[0] // self.n_splits) * (i + 1)
+            start = i * fold_size
+            end = len(X) if i == self.n_splits - 1 else (i + 1) * fold_size
+            test_idx = indices[start:end]
 
-            # 最終フォールドの test_end を調整
-            if i == self.n_splits - 1:
-                test_end_idx = X.shape[0]
-
-            test_indices = indices[test_start_idx:test_end_idx]
-
-            if len(test_indices) == 0:
+            if len(test_idx) == 0:
                 continue
 
-            # テストセットの期間
-            test_start_time = X.index[test_start_idx]
-            # 正しい重複チェックとエンバーゴのためにテストセット内の最大 t1 を決定
-            test_max_t1 = self.t1.iloc[test_indices].max()
+            test_start_time = X.index[start]
+            test_max_t1 = self.t1.iloc[test_idx].max()
 
-            # 訓練サンプルに対する「禁止」時間範囲を定義
-            # 訓練サンプル (t_start, t_end) がテストセットと重複するのは、
-            # t_start <= test_max_t1 かつ t_end >= test_start_time の場合
+            # エンバーゴ期間計算
+            embargo_sec = (test_max_t1 - test_start_time).total_seconds() * self.pct_embargo
+            embargo_end = test_max_t1 + pd.Timedelta(seconds=embargo_sec)
 
-            # 保持する訓練サンプルを特定
-            # 1. テストセットより完全に前のサンプル
-            #    t_end < test_start_time
-            # 2. テストセットより完全に後のサンプル (エンバーゴ期間後)
-            #    t_start > test_max_t1 + embargo
+            # パージングとエンバーゴ適用
+            train_mask = (self.t1 < test_start_time) | (X.index > embargo_end)
+            train_idx = indices[train_mask]
 
-            # エンバーゴ期間を計算
-            test_duration = test_max_t1 - test_start_time
-            embargo_seconds = self._get_embargo_seconds_from_duration(
-                test_duration, self.pct_embargo
-            )
-            embargo_end_time = test_max_t1 + pd.Timedelta(seconds=embargo_seconds)
-
-            # 有効な訓練サンプルのためのブールマスク
-            # 条件 1: 訓練サンプルの終了時刻がテストセットの開始時刻より厳密に前である
-            train_indices_before = self.t1 < test_start_time
-
-            # 条件 2: 訓練サンプルの開始時刻がテストセットの終了時刻 (プラスエンバーゴ) より厳密に後である
-            train_indices_after = X.index > embargo_end_time
-
-            # マスクを結合
-            train_mask = train_indices_before | train_indices_after
-
-            train_indices = indices[train_mask]
-
-            # 空のトレーニングセットをチェック
-            if len(train_indices) == 0:
-                logger.warning(
-                    f"Fold {i + 1}/{self.n_splits}: Training set is empty after purging and embargo. "
-                    f"Test period: {test_start_time} - {test_max_t1}, Embargo end: {embargo_end_time}. "
-                    f"Skipping this fold."
-                )
+            if len(train_idx) == 0:
+                logger.warning(f"Fold {i+1}: Training set is empty. Skipping.")
                 continue
 
-            yield train_indices, test_indices
-
-    def _get_embargo_seconds_from_duration(
-        self, duration: pd.Timedelta, pct_embargo: float
-    ) -> float:
-        """テストセットの期間と割合に基づいてエンバーゴ秒数を計算します。"""
-        return duration.total_seconds() * pct_embargo
+            yield train_idx, test_idx
 
 
 # テスト/デバッグ用のヘルパー

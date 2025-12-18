@@ -14,88 +14,43 @@ logger = logging.getLogger(__name__)
 
 
 def infer_timeframe(index: pd.DatetimeIndex) -> str:
-    """
-    DatetimeIndexから時間足を推定する
-
-    Args:
-        index: 時系列インデックス
-
-    Returns:
-        推定された時間足文字列 (例: '1h', '4h', '1d', '15m')
-        推定できない場合はデフォルトとして '1h' を返す
-    """
+    """DatetimeIndexから時間足を推定する"""
     if len(index) < 2:
         return "1h"
-
-    # インデックス間の差分を計算
     diffs = index.to_series().diff().dropna()
-
-    # 最頻値を計算 (mode)
     if diffs.empty:
         return "1h"
 
-    mode_diff = diffs.mode().iloc[0]
+    sec = diffs.mode().iloc[0].total_seconds()
+    mapping = {900: "15m", 1800: "30m", 3600: "1h", 14400: "4h", 86400: "1d"}
+    if sec in mapping:
+        return mapping[sec]
 
-    # Timedeltaを文字列に変換
-    seconds = mode_diff.total_seconds()
-
-    if seconds == 900:  # 15 * 60
-        return "15m"
-    elif seconds == 1800:  # 30 * 60
-        return "30m"
-    elif seconds == 3600:  # 60 * 60
-        return "1h"
-    elif seconds == 14400:  # 4 * 60 * 60
-        return "4h"
-    elif seconds == 86400:  # 24 * 60 * 60
-        return "1d"
-    else:
-        # その他の場合は時間単位で近似
-        hours = seconds / 3600
-        if hours >= 1 and hours.is_integer():
-            return f"{int(hours)}h"
-
-        minutes = seconds / 60
-        if minutes >= 1 and minutes.is_integer():
-            return f"{int(minutes)}m"
-
-        return "1h"  # デフォルト
+    # 近似
+    if sec >= 3600 and (sec / 3600).is_integer():
+        return f"{int(sec / 3600)}h"
+    if sec >= 60 and (sec / 60).is_integer():
+        return f"{int(sec / 60)}m"
+    return "1h"
 
 
 def get_t1_series(
     indices: pd.DatetimeIndex, horizon_n: int, timeframe: Optional[str] = None
 ) -> pd.Series:
-    """
-    PurgedKFold用のt1（ラベル終了時刻）シリーズを計算する
-
-    Args:
-        indices: 時系列インデックス
-        horizon_n: 予測ホライゾン（バー数）
-        timeframe: 時間足（指定がない場合はインデックスから推定）
-
-    Returns:
-        t1シリーズ（各バーの予測対象期間の終了時刻）
-    """
-    if timeframe is None:
-        timeframe = infer_timeframe(indices)
-
-    # 時間足文字列からTimedeltaを生成
-    if timeframe.endswith("m"):
-        minutes = int(timeframe[:-1])
-        delta = pd.Timedelta(minutes=minutes * horizon_n)
-    elif timeframe.endswith("h"):
-        hours = int(timeframe[:-1])
-        delta = pd.Timedelta(hours=hours * horizon_n)
-    elif timeframe.endswith("d"):
-        days = int(timeframe[:-1])
-        delta = pd.Timedelta(days=days * horizon_n)
+    """PurgedKFold用のt1（ラベル終了時刻）シリーズを計算"""
+    tf = timeframe or infer_timeframe(indices)
+    
+    if tf.endswith("m"):
+        delta = pd.Timedelta(minutes=int(tf[:-1]) * horizon_n)
+    elif tf.endswith("h"):
+        delta = pd.Timedelta(hours=int(tf[:-1]) * horizon_n)
+    elif tf.endswith("d"):
+        delta = pd.Timedelta(days=int(tf[:-1]) * horizon_n)
     else:
-        # デフォルトは1時間と仮定
-        logger.warning(f"不明な時間足形式: {timeframe}。1hとして扱います。")
+        logger.warning(f"Unknown tf format: {tf}, default to 1h")
         delta = pd.Timedelta(hours=horizon_n)
 
-    t1 = pd.Series(indices + delta, index=indices)
-    return t1
+    return pd.Series(indices + delta, index=indices)
 
 
 

@@ -85,33 +85,8 @@ class CusumSignalGenerator:
         return pd.DatetimeIndex(t_events)
 
     def get_daily_volatility(self, close: pd.Series, span: int = 100) -> pd.Series:
-        """
-        日次ボラティリティを計算する。
-        Exponential Weighted Moving Standard Deviation of Returns.
-
-        Args:
-            close: 終値シリーズ
-            span: EWMのspan（期間）
-
-        Returns:
-            pd.Series: 日次ボラティリティ
-        """
-        # 前日比（対数収益率ではないが、近似として変化率を使用）
-        # 本によっては対数収益率を使う場合もあるが、ここではシンプルにpct_change
-        # ただし、CUSUMで対数収益率を使うならここも合わせるべき
-
-        # 1. 前日（1日前のデータ）とのインデックスを合わせる
-        # データが1時間足の場合、"1日"は24本分ではない。
-        # ここでは単純に「直前の足とのリターン」の標準偏差を計算し、
-        # それをイベント検知の閾値として使う。
-        # "Daily" Volatilityという名前だが、実際には "Local" Volatility として機能する。
-
-        returns = np.log(close / close.shift(1))
-
-        # 指数加重移動標準偏差
-        vol = returns.ewm(span=span).std()
-
-        return vol
+        """ローカルボラティリティを計算 (EWM Std of Log Returns)"""
+        return np.log(close / close.shift(1)).ewm(span=span).std()
 
 
 

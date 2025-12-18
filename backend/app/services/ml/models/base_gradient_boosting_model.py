@@ -42,57 +42,28 @@ class BaseGradientBoostingModel(ABC):
         **kwargs,
     ) -> "BaseGradientBoostingModel":
         """
-        sklearn互換のfitメソッド。
-        内部で_train_model_implを呼び出します。
+        sklearn互換のfitメソッド
         """
         try:
-            # numpy配列をDataFrameに変換
+            # 入力整形
             if not isinstance(X, pd.DataFrame):
-                # feature_columnsが設定されていない場合は仮の列名を使用
-                columns = (
-                    self.feature_columns
-                    if self.feature_columns
-                    else [f"feature_{i}" for i in range(X.shape[1])]
-                )
-                X = pd.DataFrame(X, columns=cast(Any, columns))
-
+                cols = self.feature_columns or [f"feature_{i}" for i in range(X.shape[1])]
+                X = pd.DataFrame(X, columns=cast(Any, cols))
             if not isinstance(y, pd.Series):
                 y = pd.Series(y)
 
-            # 検証用データの準備
-            # 1. eval_setが指定されている場合 (sklearn非標準だがxgboost等はサポート)
+            # 検証データ準備
             eval_set = kwargs.get("eval_set")
-            early_stopping_rounds = kwargs.get("early_stopping_rounds")
+            early_stop = kwargs.get("early_stopping_rounds")
+            X_train, y_train, X_val, y_val = X, y, None, None
 
-            if eval_set:
-                # eval_setが提供されている場合はそれを使用
-                X_train, y_train = X, y
-                # eval_setは [(X_val, y_val)] の形式を想定
-                if isinstance(eval_set, list) and len(eval_set) > 0:
-                    X_val, y_val = eval_set[0]
-                else:
-                    logger.warning(
-                        "無効なeval_set形式です。検証データなしで学習します。"
-                    )
-                    X_val, y_val = None, None
-            elif early_stopping_rounds:
-                # Early Stoppingが有効で、eval_setがない場合は分割が必要
-                # 時系列データのため、シャッフルせずに分割（最後の20%を検証用）
-                logger.info(
-                    f"Early Stopping有効(rounds={early_stopping_rounds}): データを分割して学習します"
-                )
-                split_index = int(len(X) * 0.8)
-                X_train = X.iloc[:split_index]
-                X_val = X.iloc[split_index:]
-                y_train = y.iloc[:split_index]
-                y_val = y.iloc[split_index:]
-            else:
-                # Early Stoppingが無効、かつeval_setもない場合
-                # 全データを学習に使用し、検証データはなし
-                X_train, y_train = X, y
-                X_val, y_val = None, None
+            if eval_set and isinstance(eval_set, list) and len(eval_set) > 0:
+                X_val, y_val = eval_set[0]
+            elif early_stop:
+                logger.info(f"Early Stopping有効(rounds={early_stop}): データを分割します")
+                idx = int(len(X) * 0.8)
+                X_train, X_val, y_train, y_val = X.iloc[:idx], X.iloc[idx:], y.iloc[:idx], y.iloc[idx:]
 
-            # 内部の学習メソッドを呼び出し
             self._train_model_impl(
                 cast(pd.DataFrame, X_train),
                 cast(Optional[pd.DataFrame], X_val),
@@ -105,8 +76,8 @@ class BaseGradientBoostingModel(ABC):
             return self
 
         except Exception as e:
-            logger.error(f"sklearn互換fit実行エラー: {e}")
-            raise ModelError(f"{self.ALGORITHM_NAME}モデルのfit実行に失敗しました: {e}")
+            logger.error(f"fit実行エラー: {e}")
+            raise ModelError(f"{self.ALGORITHM_NAME}モデルのfit失敗: {e}")
 
     def _train_model_impl(
         self,
@@ -266,27 +237,16 @@ class BaseGradientBoostingModel(ABC):
 
     def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
-        sklearn互換の予測メソッド（クラス予測）。
+        sklearn互換の予測メソッド（クラス予測）
         """
         if not self.is_trained or self.model is None:
             raise ModelError("学習済みモデルがありません")
 
-        # feature_columnsを使用してDataFrameを整形
         if self.feature_columns and not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
 
-        # 予測確率を取得
-        predictions_proba = self.predict_proba(X)
-
-        # クラス予測に変換
-        if predictions_proba.ndim == 1:
-            return (predictions_proba > 0.5).astype(int)
-        elif predictions_proba.shape[1] == 2:
-            # 2クラス分類の場合、確率が高い方のクラスを返す（0.5閾値と同じ）
-            return np.argmax(predictions_proba, axis=1)
-        else:
-            # 多クラス分類
-            return np.argmax(predictions_proba, axis=1)
+        from ..common.ml_utils import predict_class_from_proba
+        return predict_class_from_proba(self.predict_proba(X))
 
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """

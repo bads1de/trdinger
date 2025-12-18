@@ -132,20 +132,21 @@ class EventDrivenLabelGenerator:
         if n <= 0:
             return np.array([], dtype=int)
 
-        close = market_data["close"].to_numpy(dtype=float)
-        high = market_data["high"].to_numpy(dtype=float)
-        low = market_data["low"].to_numpy(dtype=float)
-
+        close, high, low = market_data["close"].values, market_data["high"].values, market_data["low"].values
         labels = np.zeros(n, dtype=int)
+        
+        # デフォルトファクターを取得
+        def_factors = self.REGIME_FACTORS["default"]
+
         for idx in range(n):
-            regime_value = int(regime_array[idx]) if regime_array is not None else None
-            factors = self._resolve_regime_factors(regime_value)
-            tp_mult = profile.base_tp * factors["tp"]
-            sl_mult = profile.base_sl * factors["sl"]
-            holding = max(1, int(round(profile.holding_period * factors["holding"])))
-            labels[idx] = self._first_touch_label(
-                close, high, low, idx, tp_mult, sl_mult, holding
-            )
+            reg = regime_array[idx] if regime_array is not None else "default"
+            f = self.REGIME_FACTORS.get(reg, def_factors)
+            
+            tp = profile.base_tp * f["tp"]
+            sl = profile.base_sl * f["sl"]
+            hld = max(1, int(round(profile.holding_period * f["holding"])))
+            
+            labels[idx] = self._first_touch_label(close, high, low, idx, tp, sl, hld)
 
         return labels
 
@@ -166,26 +167,17 @@ class EventDrivenLabelGenerator:
         if entry_price <= 0:
             return 0
 
-        upper_barrier = entry_price * (1 + tp_mult)
-        lower_barrier = entry_price * (1 - sl_mult)
+        up_bar, dn_bar = entry_price * (1 + tp_mult), entry_price * (1 - sl_mult)
         end_idx = min(len(close) - 1, start_idx + holding)
 
-        if start_idx + 1 > end_idx:
-            return 0
-
-        for offset in range(start_idx + 1, end_idx + 1):
-            hit_up = high[offset] >= upper_barrier
-            hit_down = low[offset] <= lower_barrier
-
-            if hit_up and hit_down:
-                up_gap = high[offset] - upper_barrier
-                down_gap = lower_barrier - low[offset]
-                return -1 if down_gap >= up_gap else 1
+        for i in range(start_idx + 1, end_idx + 1):
+            hit_up, hit_dn = high[i] >= up_bar, low[i] <= dn_bar
+            if hit_up and hit_dn:
+                return -1 if (dn_bar - low[i]) >= (high[i] - up_bar) else 1
             if hit_up:
                 return 1
-            if hit_down:
+            if hit_dn:
                 return -1
-
         return 0
 
     def _summarize_regime_profiles(

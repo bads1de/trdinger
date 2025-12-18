@@ -43,31 +43,13 @@ def evaluate_model_predictions(
 
 
 def get_default_metrics() -> Dict[str, float]:
-    """
-    デフォルトの評価メトリクス辞書を返す（全て0.0初期化）
-    """
-    return {
-        "accuracy": 0.0,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1_score": 0.0,
-        "auc_score": 0.0,
-        "auc_roc": 0.0,
-        "auc_pr": 0.0,
-        "balanced_accuracy": 0.0,
-        "matthews_corrcoef": 0.0,
-        "cohen_kappa": 0.0,
-        "specificity": 0.0,
-        "sensitivity": 0.0,
-        "npv": 0.0,
-        "ppv": 0.0,
-        "log_loss": 0.0,
-        "brier_score": 0.0,
-        "loss": 0.0,
-        "val_accuracy": 0.0,
-        "val_loss": 0.0,
-        "training_time": 0.0,
-    }
+    """デフォルトの評価メトリクス辞書を返す（全て0.0初期化）"""
+    keys = [
+        "accuracy", "precision", "recall", "f1_score", "auc_score", "auc_roc", "auc_pr",
+        "balanced_accuracy", "matthews_corrcoef", "cohen_kappa", "specificity", "sensitivity",
+        "npv", "ppv", "log_loss", "brier_score", "loss", "val_accuracy", "val_loss", "training_time"
+    ]
+    return {k: 0.0 for k in keys}
 
 
 

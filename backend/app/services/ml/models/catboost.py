@@ -97,31 +97,21 @@ class CatBoostModel(BaseGradientBoostingModel):
         return X_data
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
-        """
-        CatBoost固有のパラメータディクショナリを生成します。
-        """
+        """CatBoost固有のパラメータを生成"""
         params = {
             "iterations": kwargs.get("iterations", self.iterations),
             "learning_rate": kwargs.get("learning_rate", self.learning_rate),
-            "depth": kwargs.get("depth", 6),
-            "l2_leaf_reg": kwargs.get("l2_leaf_reg", 3.0),
-            "random_seed": self.random_state,
-            "verbose": 0,
-            "allow_writing_files": False,  # 一時ファイル作成を無効化
+            "depth": kwargs.get("depth", 6), "l2_leaf_reg": kwargs.get("l2_leaf_reg", 3.0),
+            "random_seed": self.random_state, "verbose": 0, "allow_writing_files": False
         }
+        # class_weight関連の追加
+        for k in ["auto_class_weights", "class_weights"]:
+            if k in kwargs:
+                params[k] = kwargs[k]
 
-        # auto_class_weights/class_weightsがkwargsにある場合は追加
-        if "auto_class_weights" in kwargs:
-            params["auto_class_weights"] = kwargs["auto_class_weights"]
-        if "class_weights" in kwargs:
-            params["class_weights"] = kwargs["class_weights"]
-
-        # 渡された kwargs でデフォルトを上書き（class_weight関連は除く）
-        for key, value in kwargs.items():
-            if key not in ["class_weight", "early_stopping_rounds", "num_boost_round"]:
-                if key not in params:
-                    params[key] = value
-
+        # 残りのパラメータをマージ
+        exclude = {"class_weight", "early_stopping_rounds", "num_boost_round", *params.keys()}
+        params.update({k: v for k, v in kwargs.items() if k not in exclude})
         return params
 
     def _train_internal(

@@ -79,43 +79,17 @@ class MicrostructureFeatureCalculator:
         return pd.Series(roll, index=df.index)
 
     def calculate_vpin_proxy(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
-        """
-        VPIN (Volume-Synchronized Probability of Informed Trading) の簡易プロキシ。
-        Bulk Volume Classification を用いて Buy/Sell Volume を推定し、その不均衡を計算する。
+        """VPINの簡易プロキシ"""
+        # 出来高の割り当て
+        buy_vol = np.where(df["close"] > df["open"], df["volume"], 
+                  np.where(df["close"] == df["open"], df["volume"] * 0.5, 0.0))
+        sell_vol = np.where(df["close"] < df["open"], df["volume"], 
+                   np.where(df["close"] == df["open"], df["volume"] * 0.5, 0.0))
 
-        VPIN ~ |V_buy - V_sell| / (V_buy + V_sell)
-        """
-        # Bulk Volume Classification:
-        # Close > Open -> Buy Volume (買い出来高)
-        # Close < Open -> Sell Volume (売り出来高)
-        # Close == Open -> 前回の方向を維持（ここでは簡易的に0.5ずつ配分）
-
-        buy_vol = pd.Series(0.0, index=df.index)
-        sell_vol = pd.Series(0.0, index=df.index)
-
-        # 上昇足
-        up_mask = df["close"] > df["open"]
-        buy_vol[up_mask] = df.loc[up_mask, "volume"]
-
-        # 下落足
-        down_mask = df["close"] < df["open"]
-        sell_vol[down_mask] = df.loc[down_mask, "volume"]
-
-        # 同値足（簡易的に折半）
-        flat_mask = df["close"] == df["open"]
-        buy_vol[flat_mask] = df.loc[flat_mask, "volume"] * 0.5
-        sell_vol[flat_mask] = df.loc[flat_mask, "volume"] * 0.5
-
-        # 移動合計
-        buy_sum = buy_vol.rolling(window=window).sum()
-        sell_sum = sell_vol.rolling(window=window).sum()
-        total_sum = buy_sum + sell_sum
-
-        # 不均衡度 (Order Flow Imbalance)
-        # |Buy - Sell| / Total
-        vpin = (buy_sum - sell_sum).abs() / (total_sum + 1e-9)
-
-        return vpin
+        buy_sum = pd.Series(buy_vol, index=df.index).rolling(window=window).sum()
+        sell_sum = pd.Series(sell_vol, index=df.index).rolling(window=window).sum()
+        
+        return (buy_sum - sell_sum).abs() / (buy_sum + sell_sum + 1e-9)
 
     def calculate_kyles_lambda(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
         """

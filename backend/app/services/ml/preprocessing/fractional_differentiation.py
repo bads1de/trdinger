@@ -1,7 +1,10 @@
+import logging
 from typing import Union
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class FractionalDifferentiation:
@@ -51,66 +54,27 @@ class FractionalDifferentiation:
     def transform(
         self, data: Union[pd.DataFrame, pd.Series]
     ) -> Union[pd.DataFrame, pd.Series]:
-        """
-        データに対して分数次差分を適用する。
-
-        Args:
-            data (Union[pd.DataFrame, pd.Series]): 入力時系列データ
-
-        Returns:
-            Union[pd.DataFrame, pd.Series]: 差分化されたデータ
-        """
-        # 単一のSeriesの場合
+        """データに対して分数次差分を適用する"""
         if isinstance(data, pd.Series):
             return self._transform_series(data)
-
-        # DataFrameの場合
-        elif isinstance(data, pd.DataFrame):
-            result = pd.DataFrame(index=data.index)
-            for col in data.columns:
-                result[col] = self._transform_series(data[col])
-            return result
-
-        else:
-            raise TypeError("Input must be a pandas Series or DataFrame")
+        if isinstance(data, pd.DataFrame):
+            return data.apply(self._transform_series)
+        raise TypeError("Input must be a Series or DataFrame")
 
     def _transform_series(self, series: pd.Series) -> pd.Series:
-        """
-        単一のSeriesに対して分数次差分を適用する（固定ウィンドウ方式）。
-
-        Args:
-            series (pd.Series): 入力Series
-
-        Returns:
-            pd.Series: 差分化されたSeries
-        """
-        # nullチェック
-        if series.isnull().any():
-            pass
-
-        # Ensure window_size is int
+        """単一のSeriesに対して分数次差分を適用する（固定ウィンドウ方式）"""
         window_size = int(self.window_size)
-
-        weights = self._get_weights(self.d, window_size)
-        w_reversed = weights[::-1]
-
-        # data values as numpy array
-        arr = series.values
-
-        if len(arr) < window_size:
+        if len(series) < window_size:
             return pd.Series(np.nan, index=series.index)
 
-        # raw=Trueでnumpy配列として受け取ることで高速化
+        weights = self._get_weights(self.d, window_size)[::-1]
         try:
-            result = series.rolling(window=window_size).apply(
-                lambda x: np.dot(x, w_reversed), raw=True
+            return series.rolling(window=window_size).apply(
+                lambda x: np.dot(x, weights), raw=True
             )
         except Exception as e:
-            print(f"Error in rolling apply: {e}")
-            print(f"Window size: {window_size} (type: {type(window_size)})")
-            raise e
-
-        return result
+            logger.error(f"Error in FractionalDifferentiation: {e}")
+            raise
 
 
 

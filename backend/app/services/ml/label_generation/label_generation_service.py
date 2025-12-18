@@ -36,84 +36,41 @@ class LabelGenerationService:
         Args:
             features_df: 特徴量DataFrame
             ohlcv_df: OHLCV DataFrame (LabelCache初期化用)
-            use_signal_generator: SignalGeneratorを使用するか（デフォルト: False）
-            signal_config: SignalGeneratorの設定（デフォルト: None）
-            use_cusum: CUSUMフィルターを使用するか（デフォルト: False）
-            cusum_threshold: CUSUMフィルターの閾値（Noneの場合はボラティリティを使用）
-            cusum_vol_multiplier: CUSUMフィルターの動的閾値乗数（デフォルト: 1.0）
+            use_signal_generator: SignalGeneratorを使用するか
+            signal_config: SignalGeneratorの設定
+            use_cusum: CUSUMフィルターを使用するか
+            cusum_threshold: CUSUMフィルターの閾値
+            cusum_vol_multiplier: CUSUMフィルターの動的閾値乗数
             **training_params: 学習パラメータ
 
         Returns:
             Tuple[pd.DataFrame, pd.Series]: (クリーニング済み特徴量, 数値化済みラベル)
-
-        Notes:
-            - use_cusum=True の場合、CusumSignalGenerator でイベントを検出します（Scientific Meta-Labeling）。
-            - use_signal_generator=True の場合、SignalGenerator でイベントを検出します（従来のMeta-Labeling）。
-            - 両方Falseの場合、全ての足をラベリング対象とします。
         """
-        # ラベル生成設定を取得（遅延インポートで循環インポート回避）
         from app.config.unified_config import unified_config
-        from app.services.ml.label_generation.cusum_generator import (
-            CusumSignalGenerator,
-        )
-
         label_config = unified_config.ml.training.label_generation
-
-        # LabelCache を使用してラベルを生成
         label_cache = LabelCache(ohlcv_df)
 
         try:
             logger.info("🎯 トリプルバリア法でラベル生成を開始します。")
 
-            t_events = None
+            # イベント検出
+            t_events = self._detect_events(
+                ohlcv_df,
+                use_cusum,
+                cusum_threshold,
+                cusum_vol_multiplier,
+                use_signal_generator,
+                signal_config,
+            )
 
-            # 1. CUSUMフィルターによるイベント検出 (Scientific Approach)
-            if use_cusum:
-                logger.info("🔍 CUSUMフィルターでイベントを検出します。")
-                cusum_gen = CusumSignalGenerator()
-
-                # ボラティリティ計算
-                volatility = cusum_gen.get_daily_volatility(ohlcv_df["close"])
-
-                t_events = cusum_gen.get_events(
-                    df=ohlcv_df,
-                    threshold=cusum_threshold,
-                    volatility=volatility,
-                    vol_multiplier=cusum_vol_multiplier,
-                )
-                logger.info(f"✅ CUSUMイベント検出: {len(t_events)}件")
-
-            # 2. 従来のSignalGeneratorによるイベント検出 (Heuristic Approach)
-            elif use_signal_generator:
-                logger.info("🔍 SignalGenerator でイベントを検出します。")
-
-                # signal_config のデフォルト値を設定
-                if signal_config is None:
-                    signal_config = {
-                        "use_bb": True,
-                        "use_donchian": False,
-                        "use_volume": False,
-                        "bb_window": 20,
-                        "bb_dev": 2.0,
-                    }
-
-                # SignalGeneratorでイベント検出
-                signal_gen = SignalGenerator()
-                t_events = signal_gen.get_combined_events(df=ohlcv_df, **signal_config)
-
-                logger.info(f"✅ SignalGeneratorイベント検出: {len(t_events)}件")
-
-            # イベントが0件の場合の処理
             if t_events is not None and len(t_events) == 0:
-                logger.warning(
-                    "⚠️ イベントが検出されませんでした。空のデータセットを返します。"
-                )
+                logger.warning("⚠️ イベントが検出されませんでした。")
                 return (
                     pd.DataFrame(columns=features_df.columns),
                     pd.Series(dtype=int, name="label"),
                 )
 
-            # ラベル生成 (t_eventsを指定)
+            # ラベル生成
             labels = label_cache.get_labels(
                 horizon_n=training_params.get("horizon_n", label_config.horizon_n),
                 threshold_method=training_params.get(
@@ -127,27 +84,60 @@ class LabelGenerationService:
                 use_atr=training_params.get("use_atr", True),
                 atr_period=training_params.get("atr_period", 14),
                 binary_label=True,
-                t_events=t_events,  # イベント時刻を渡す
+                t_events=t_events,
                 min_window=training_params.get("min_window", 5),
                 window_step=training_params.get("window_step", 1),
             )
 
-            # NaNを削除してクリーンなデータを作成
-            common_index = features_df.index.intersection(labels.index)
-            features_clean = features_df.loc[common_index].copy()
-            labels_clean = labels.loc[common_index].copy()
-
-            valid_idx = labels_clean.notna()
-            features_clean = features_clean[valid_idx]
-            labels_clean = labels_clean[valid_idx].astype(int)
+            # データクリーニング
+            common_idx = features_df.index.intersection(labels.index)
+            labels_clean = labels.loc[common_idx].dropna().astype(int)
+            features_clean = features_df.loc[labels_clean.index]
 
             logger.info(f"✅ ラベル生成完了: {len(features_clean)}サンプル")
-
             return features_clean, labels_clean
 
         except Exception as e:
-            logger.error(f"❌ ラベル生成設定でエラー発生: {e}", exc_info=True)
+            logger.error(f"❌ ラベル生成エラー: {e}", exc_info=True)
             raise DataError(f"ラベル生成に失敗しました: {e}")
+
+    def _detect_events(
+        self,
+        ohlcv_df: pd.DataFrame,
+        use_cusum: bool,
+        cusum_threshold: Optional[float],
+        cusum_vol_multiplier: float,
+        use_signal_generator: bool,
+        signal_config: Optional[Dict[str, Any]],
+    ) -> Optional[pd.Index]:
+        """イベント時刻を検出"""
+        if use_cusum:
+            from app.services.ml.label_generation.cusum_generator import (
+                CusumSignalGenerator,
+            )
+
+            logger.info("🔍 CUSUMフィルターでイベントを検出します。")
+            cusum_gen = CusumSignalGenerator()
+            volatility = cusum_gen.get_daily_volatility(ohlcv_df["close"])
+            return cusum_gen.get_events(
+                df=ohlcv_df,
+                threshold=cusum_threshold,
+                volatility=volatility,
+                vol_multiplier=cusum_vol_multiplier,
+            )
+
+        if use_signal_generator:
+            logger.info("🔍 SignalGenerator でイベントを検出します。")
+            config = signal_config or {
+                "use_bb": True,
+                "use_donchian": False,
+                "use_volume": False,
+                "bb_window": 20,
+                "bb_dev": 2.0,
+            }
+            return SignalGenerator().get_combined_events(df=ohlcv_df, **config)
+
+        return None
 
 
 

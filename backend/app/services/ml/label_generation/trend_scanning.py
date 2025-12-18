@@ -149,104 +149,40 @@ class TrendScanning:
         close: pd.Series,
         t_events: Optional[pd.DatetimeIndex] = None,
     ) -> pd.DataFrame:
-        """
-        トレンドスキャンを使用してラベルを生成します。
-
-        Args:
-            close (pd.Series): 終値。
-            t_events (pd.DatetimeIndex): ラベル付けするタイムスタンプ。Noneの場合、すべてをラベル付けします。
-
-        Returns:
-            pd.DataFrame: 以下の列を持つDataFrame:
-                - t1: 選択されたトレンドウィンドウの終了タイムスタンプ。
-                - t_value: 選択されたトレンドのt統計量。
-                - bin: ラベル（上昇の場合は1、下降の場合は-1、トレンドなしの場合は0）。
-                - ret: 選択されたウィンドウでの収益率。
-        """
-        if t_events is None:
-            t_events = close.index
-
-        # t_events が close.index に存在することを確認
+        """トレンドスキャンを使用してラベルを生成"""
+        t_events = t_events if t_events is not None else close.index
         t_events = t_events[t_events.isin(close.index)]
+        if t_events.empty:
+            return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
 
-        out = pd.DataFrame(index=t_events, columns=["t1", "t_value", "bin", "ret"])
-
-        # 速度向上のために close を numpy に変換
-        # float64 を保証
         close_np = close.values.astype(np.float64)
-
-        # インデックスを整数位置にマップ
-        # 最適化：ループ内でのインデックスアクセスは遅いため、マップの方が適しています。
-        # t_events が close.index のサブセットと一致する場合は、インデックスを見つけるだけで済みます。
-        # しかし、close はギャップのある時系列かもしれません。
-        # タイムスタンプが正確に一致すると仮定します。
-
-        # t_events のタイムスタンプを close_np の整数位置に効率的にマップするには：
-        # 両方がソートされている場合、searchsorted を使用できます。
-        # しかし、処理なしでは完全に整列していないか、一意でない可能性があると仮定しましょう。
-        # 辞書マップの使用は、セットアップが O(N)、ルックアップが O(1) です。
-        idx_map = {idx: i for i, idx in enumerate(close.index)}
-
-        # DataFrame を一度に構築するために結果用の配列を事前に割り当て（loc セッターよりも高速）
-        n_events = len(t_events)
-        t1_results = np.empty(n_events, dtype=object)
-        t_val_results = np.zeros(n_events, dtype=np.float64)
-        bin_results = np.zeros(n_events, dtype=int)
-        ret_results = np.zeros(n_events, dtype=np.float64)
-
-        # t_events に対する反復処理
-        # このループはPythonのままですが、重い処理はNumbaで行われます
-
-        for i, t0 in enumerate(t_events):
-            if t0 not in idx_map:
+        idxs = close.index.get_indexer(t_events)
+        
+        results = []
+        for i, t0_idx in enumerate(idxs):
+            if t0_idx == -1:
                 continue
-
-            t0_idx = idx_map[t0]
-
-            # Numba最適化関数の呼び出し
-            best_L, best_t_val, best_slope = _find_best_window_numba(
+            
+            best_L, best_t, best_slope = _find_best_window_numba(
                 close_np, t0_idx, self.min_window, self.max_window, self.step
             )
-
-            if best_L == 0.0 and best_t_val == 0.0 and best_slope == 0.0:
-                # 有効なウィンドウが見つかりません
+            if best_L == 0:
                 continue
 
-            best_L_int = int(best_L)
+            label = 1 if best_t > self.min_t_value else (-1 if best_t < -self.min_t_value else 0)
+            t1_idx = t0_idx + int(best_L)
+            
+            results.append({
+                "t0": t_events[i], "t1": close.index[t1_idx],
+                "t_value": best_t, "bin": label,
+                "ret": (close_np[t1_idx] / close_np[t0_idx]) - 1
+            })
 
-            # ラベルの決定
-            label = 0
-            if best_t_val > self.min_t_value:
-                label = 1
-            elif best_t_val < -self.min_t_value:
-                label = -1
-
-            # インデックスの計算
-            t1_idx = t0_idx + best_L_int
-
-            # 結果の設定
-            t1_results[i] = close.index[t1_idx]
-            t_val_results[i] = best_t_val
-            bin_results[i] = label
-
-            # リターン
-            ret = (close_np[t1_idx] / close_np[t0_idx]) - 1
-            ret_results[i] = ret
-
-        out["t1"] = t1_results
-        out["t_value"] = t_val_results
-        out["bin"] = bin_results
-        out["ret"] = ret_results
-
-        # 実行に失敗した行を削除（t1がNoneなど）
-        # 事前割り当てでは、オブジェクト配列のデフォルトはNoneですか？いいえ、未初期化です。
-        # フィルタリングする方が良いです。
-
-        # 無効な行（何も書き込まなかった行）を除外
-        # t1_results の None/Null チェック
-        mask = pd.notna(t1_results)  # boolean array
-        out = out[mask]
-
+        if not results:
+            return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
+            
+        out = pd.DataFrame(results).set_index("t0")
+        out.index.name = None
         return out
 
 

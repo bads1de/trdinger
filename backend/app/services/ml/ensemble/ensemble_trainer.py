@@ -13,7 +13,7 @@ import pandas as pd
 from ....utils.error_handler import ModelError
 from ..base_ml_trainer import BaseMLTrainer
 from ..common.evaluation_utils import evaluate_model_predictions
-from ..common.ml_utils import validate_training_inputs
+from ..common.ml_utils import predict_class_from_proba, validate_training_inputs
 from .meta_labeling import MetaLabelingService
 from .stacking import StackingEnsemble
 
@@ -53,26 +53,14 @@ class EnsembleTrainer(BaseMLTrainer):
 
         # 単一モデルモードかアンサンブルモードかを判定
         models = ensemble_config.get("models", [])
-        model_type = ensemble_config.get("model_type")  # 後方互換
+        model_type = ensemble_config.get("model_type")
 
-        # 判定ロジック
-        if model_type:
-            # model_type 指定があれば単一モデルモード
+        if model_type or len(models) == 1:
             self.is_single_model = True
-            self.model_type = model_type
-            # modelsリストにも反映
+            self.model_type = model_type or models[0]
             if not models:
-                self.ensemble_config["models"] = [model_type]
-        elif len(models) == 1:
-            # modelsが1つだけなら単一モデルモード
-            self.is_single_model = True
-            self.model_type = models[0]
-        elif len(models) > 1:
-            # modelsが複数ならアンサンブルモード
-            self.is_single_model = False
-            self.model_type = "EnsembleModel"
+                self.ensemble_config["models"] = [self.model_type]
         else:
-            # modelsが空またはNoneならデフォルトでアンサンブル（後方互換）
             self.is_single_model = False
             self.model_type = "EnsembleModel"
 
@@ -96,37 +84,34 @@ class EnsembleTrainer(BaseMLTrainer):
             分離されたパラメータ辞書
         """
         optimized_params = {
-            "base_models": {
-                "lightgbm": {},
-                "xgboost": {},
-            },
+            "base_models": {"lightgbm": {}, "xgboost": {}},
             "stacking": {},
         }
 
+        prefix_map = {
+            "lgb_": ("base_models", "lightgbm"),
+            "xgb_": ("base_models", "xgboost"),
+        }
+
         for param_name, param_value in training_params.items():
-            # LightGBMパラメータ
-            if param_name.startswith("lgb_"):
-                clean_name = param_name.replace("lgb_", "")
-                optimized_params["base_models"]["lightgbm"][clean_name] = param_value
-
-            # XGBoostパラメータ
-            elif param_name.startswith("xgb_"):
-                clean_name = param_name.replace("xgb_", "")
-                optimized_params["base_models"]["xgboost"][clean_name] = param_value
-
-            # スタッキングパラメータ
-            elif param_name.startswith("stacking_"):
-                clean_name = param_name.replace("stacking_", "")
-                if clean_name.startswith("meta_"):
-                    # メタモデルパラメータ
-                    meta_param = clean_name.replace("meta_", "")
-                    if "meta_model_params" not in optimized_params["stacking"]:
-                        optimized_params["stacking"]["meta_model_params"] = {}
-                    optimized_params["stacking"]["meta_model_params"][
-                        meta_param
-                    ] = param_value
-                else:
-                    optimized_params["stacking"][clean_name] = param_value
+            # ベースモデルパラメータ
+            for prefix, (cat, subcat) in prefix_map.items():
+                if param_name.startswith(prefix):
+                    clean_name = param_name[len(prefix) :]
+                    optimized_params[cat][subcat][clean_name] = param_value
+                    break
+            else:
+                # スタッキングパラメータ
+                if param_name.startswith("stacking_"):
+                    clean_name = param_name[len("stacking_") :]
+                    if clean_name.startswith("meta_"):
+                        meta_param = clean_name[len("meta_") :]
+                        meta_params = optimized_params["stacking"].setdefault(
+                            "meta_model_params", {}
+                        )
+                        meta_params[meta_param] = param_value
+                    else:
+                        optimized_params["stacking"][clean_name] = param_value
 
         return optimized_params
 
@@ -293,11 +278,7 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # 予測と評価
             y_pred_proba = self.ensemble_model.predict_proba(X_test)
-            # predict_probaの結果からクラスを推定
-            if y_pred_proba.ndim == 2:
-                y_pred = np.argmax(y_pred_proba, axis=1)
-            else:
-                y_pred = (y_pred_proba > 0.5).astype(int)
+            y_pred = predict_class_from_proba(y_pred_proba)
 
             # 統一された評価システムを使用
             detailed_metrics = evaluate_model_predictions(

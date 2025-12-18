@@ -1,6 +1,5 @@
 import logging
 
-import torch
 import torch.nn as nn
 
 from .base_rnn_model import BaseRNNModel
@@ -36,20 +35,10 @@ class LSTMClassifier(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        # x: (batch_size, seq_len, input_dim)
-
-        # 初期隠れ状態とセル状態
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
-
-        # LSTM Forward
-        # out: (batch_size, seq_len, hidden_dim)
-        out, _ = self.lstm(x, (h0, c0))
-
+        # LSTM Forward (初期状態は自動的にゼロ初期化される)
+        out, _ = self.lstm(x)
         # 最後のタイムステップの出力を使用
-        out = self.fc(out[:, -1, :])
-        out = self.sigmoid(out)
-        return out
+        return self.sigmoid(self.fc(out[:, -1, :]))
 
 
 class LSTMModel(BaseRNNModel):

@@ -6,7 +6,7 @@ APIルーター内に散在していたMLトレーニング関連のビジネス
 
 import logging
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -314,89 +314,10 @@ class MLTrainingOrchestrationService:
                     }
                 )
 
-                # トレーナータイプの決定
-                ensemble_config_dict = None
-                single_model_config_dict = None
-                trainer_type = "ensemble"  # デフォルト
-
-                try:
-                    logger.info("🔍 トレーナータイプ決定プロセス開始")
-
-                    if config.ensemble_config:
-                        logger.info(
-                            f"📋 受信したアンサンブル設定: {config.ensemble_config}"
-                        )
-                        ensemble_config_dict = config.ensemble_config.model_dump()
-                        logger.info(
-                            f"📋 変換後のアンサンブル設定辞書: {ensemble_config_dict}"
-                        )
-
-                        # アンサンブルが無効化されている場合は単一モデルを使用
-                        enabled_value = ensemble_config_dict.get("enabled", True)
-                        logger.info(
-                            f"🔍 enabled値の確認: {enabled_value} (型: {type(enabled_value)})"
-                        )
-
-                        if not enabled_value:
-                            trainer_type = "single"
-                            logger.info(
-                                "🔄 アンサンブルが無効化されているため、単一モデルトレーニングを使用します"
-                            )
-                            logger.info(
-                                f"📋 アンサンブル設定確認: enabled={enabled_value}"
-                            )
-                        else:
-                            logger.info(
-                                "🔗 アンサンブルが有効化されているため、アンサンブルトレーニングを使用します"
-                            )
-                    else:
-                        logger.info(
-                            "📋 アンサンブル設定が提供されていません。デフォルト（アンサンブル）を使用します"
-                        )
-                        ensemble_config_dict = get_default_ensemble_config()
-
-                    # 単一モデル設定の準備
-                    if config.single_model_config:
-                        logger.info(
-                            f"📋 受信した単一モデル設定: {config.single_model_config}"
-                        )
-                        single_model_config_dict = (
-                            config.single_model_config.model_dump()
-                        )
-                        logger.info(
-                            f"📋 変換後の単一モデル設定辞書: {single_model_config_dict}"
-                        )
-
-                        if trainer_type == "single":
-                            logger.info(
-                                f"📋 単一モデル設定を使用: {single_model_config_dict}"
-                            )
-                    else:
-                        logger.info("📋 単一モデル設定が提供されていません")
-                        if trainer_type == "single":
-                            single_model_config_dict = get_default_single_model_config()
-                            logger.info(
-                                f"📋 デフォルト単一モデル設定を使用: {single_model_config_dict}"
-                            )
-
-                except Exception as e:
-                    logger.error(f"❌ トレーナータイプ決定中にエラーが発生: {e}")
-                    logger.error(f"❌ エラー詳細: {type(e).__name__}: {str(e)}")
-                    logger.warning(
-                        "⚠️ エラーのため、デフォルト（アンサンブル）を使用します"
-                    )
-                    trainer_type = "ensemble"
-
-                # トレーナータイプの最終確認
-                logger.info(f"🎯 最終決定されたトレーナータイプ: {trainer_type}")
-                if trainer_type == "single":
-                    logger.info("🤖 単一モデルトレーニングを実行します")
-                    logger.info(
-                        f"🤖 使用する単一モデル設定: {single_model_config_dict}"
-                    )
-                else:
-                    logger.info("🔗 アンサンブルトレーニングを実行します")
-                    logger.info(f"🔗 使用するアンサンブル設定: {ensemble_config_dict}")
+                # トレーナータイプと設定の決定
+                trainer_type, ensemble_config_dict, single_model_config_dict = (
+                    self._determine_trainer_config(config)
+                )
 
                 # MLサービス初期化とトレーニング実行
                 self._execute_ml_training_with_error_handling(
@@ -420,6 +341,49 @@ class MLTrainingOrchestrationService:
                         "error": str(e),
                     }
                 )
+
+    def _determine_trainer_config(
+        self, config: Any
+    ) -> Tuple[str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+        """
+        トレーナータイプと設定を決定
+
+        Args:
+            config: トレーニング設定
+
+        Returns:
+            Tuple[trainer_type, ensemble_config_dict, single_model_config_dict]
+        """
+        trainer_type = "ensemble"
+        ensemble_config_dict = None
+        single_model_config_dict = None
+
+        try:
+            # アンサンブル設定の処理
+            if config.ensemble_config:
+                ensemble_config_dict = config.ensemble_config.model_dump()
+                if not ensemble_config_dict.get("enabled", True):
+                    trainer_type = "single"
+            else:
+                ensemble_config_dict = get_default_ensemble_config()
+
+            # 単一モデル設定の処理
+            if config.single_model_config:
+                single_model_config_dict = config.single_model_config.model_dump()
+            elif trainer_type == "single":
+                single_model_config_dict = get_default_single_model_config()
+
+            logger.info(
+                f"🎯 トレーナータイプ決定: {trainer_type} "
+                f"(Ensemble: {'有効' if trainer_type == 'ensemble' else '無効'})"
+            )
+
+        except Exception as e:
+            logger.error(f"❌ トレーナー設定決定エラー: {e}")
+            trainer_type = "ensemble"
+            ensemble_config_dict = ensemble_config_dict or get_default_ensemble_config()
+
+        return trainer_type, ensemble_config_dict, single_model_config_dict
 
     @safe_ml_operation(context="MLトレーニング実行")
     def _execute_ml_training_with_error_handling(

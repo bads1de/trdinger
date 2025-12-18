@@ -54,46 +54,16 @@ def calculate_volatility_atr(
     window: int = 14,
     as_percentage: bool = False,
 ) -> pd.Series:
-    """
-    ATR（Average True Range）ベースのボラティリティ計算
-
-    True Rangeの移動平均を計算します。価格の絶対的な変動幅を表します。
-
-    Args:
-        high: 高値系列
-        low: 安値系列
-        close: 終値系列
-        window: ATRの計算期間（デフォルト: 14）
-        as_percentage: Trueの場合、終値に対する比率で返す
-
-    Returns:
-        ATR系列
-
-    Examples:
-        >>> atr = calculate_volatility_atr(df['high'], df['low'], df['close'], window=14)
-        >>> atr_pct = calculate_volatility_atr(..., as_percentage=True)
-    """
+    """ATRベースのボラティリティ計算"""
     if len(high) == 0:
         return pd.Series([], dtype=float)
 
-    # True Rangeの計算
-    # TR = max(high - low, abs(high - prev_close), abs(low - prev_close))
-    prev_close = close.shift(1)
+    # True Range = max(h-l, |h-pc|, |l-pc|)
+    pc = close.shift(1)
+    tr = pd.concat([high - low, (high - pc).abs(), (low - pc).abs()], axis=1).max(axis=1)
+    atr = tr.rolling(window=window).mean()
 
-    tr1 = high - low
-    tr2 = (high - prev_close).abs()
-    tr3 = (low - prev_close).abs()
-
-    true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-
-    # ATR = True Rangeの移動平均
-    atr = true_range.rolling(window=window).mean()
-
-    # パーセンテージ表記の場合は終値で正規化
-    if as_percentage:
-        atr = atr / close
-
-    return atr
+    return atr / close if as_percentage else atr
 
 
 def calculate_historical_volatility(

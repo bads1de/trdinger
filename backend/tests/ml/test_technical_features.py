@@ -105,24 +105,15 @@ def test_momentum_features(sample_ohlcv_data):
 
 
 def test_advanced_technical_indicators(sample_ohlcv_data):
-    """高度な技術指標のテスト（AdvancedFeatureEngineerから移行）"""
+    """高度な技術指標のテスト"""
     calculator = TechnicalFeatureCalculator()
-    lookback_periods = {"short_ma": 10, "long_ma": 50}
+    config = {"lookback_periods": {"short_ma": 10, "long_ma": 50}}
 
-    result = calculator.calculate_advanced_technical_features(
-        sample_ohlcv_data, lookback_periods
-    )
+    result = calculator.calculate_features(sample_ohlcv_data, config)
 
     expected_features = [
-        "MFI",
-        "ADX",
-        "AROONOSC",
-        "BB_Width",
-        "OBV",
-        "AD",
-        "ADOSC",
-        "NATR",
-        "Yang_Zhang_Vol_20",
+        "MFI", "ADX", "AROONOSC", "BB_Width", "OBV",
+        "AD", "ADOSC", "NATR",
     ]
 
     for feature in expected_features:

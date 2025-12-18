@@ -86,207 +86,73 @@ class MetaLabelingService:
 
         return trend_mask, y_meta
 
+    def _init_model(self) -> Any:
+        """モデルを初期化"""
+        if self.model_type == "random_forest":
+            params = {
+                "n_estimators": 100, "max_depth": 5, "class_weight": "balanced",
+                "random_state": 42, "n_jobs": -1, **self.model_params
+            }
+            return RandomForestClassifier(**params)
+        if self.model_type == "lightgbm":
+            params = {
+                "n_estimators": 100, "learning_rate": 0.05, "num_leaves": 31,
+                "random_state": 42, "n_jobs": -1, "class_weight": "balanced",
+                "reg_lambda": 1.0, "verbose": -1, **self.model_params
+            }
+            return lgb.LGBMClassifier(**params)
+        raise ValueError(f"未サポートのモデルタイプ: {self.model_type}")
+
+    def _prepare_meta_features(
+        self, X: pd.DataFrame, primary_proba: pd.Series, base_probs: pd.DataFrame, mask: pd.Index
+    ) -> pd.DataFrame:
+        """メタ特徴量を準備"""
+        X_meta = X.loc[mask].copy()
+        X_meta["primary_proba"] = primary_proba.loc[mask]
+        X_meta = pd.concat([X_meta, base_probs.loc[mask]], axis=1)
+        return self._add_base_model_statistics(X_meta, base_probs.loc[mask])
+
     def train(
         self,
         X_train: pd.DataFrame,
         y_train: pd.Series,
         primary_proba_train: pd.Series,
-        base_model_probs_df: pd.DataFrame,  # 追加: 各ベースモデルの予測確率
+        base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
     ) -> Dict[str, Any]:
-        """
-        メタモデルを学習します。
-
-        Args:
-            X_train: 学習用特徴量（元の特徴量）
-            y_train: 学習用正解ラベル（元のラベル）
-            primary_proba_train: 学習用データの一次モデル予測確率
-            base_model_probs_df: 各ベースモデルのOOF予測確率DataFrame
-            threshold: 一次モデルの閾値
-
-        Returns:
-            学習結果メトリクス
-        """
+        """メタモデルを学習"""
         self.oof_preds_df = base_model_probs_df
-        self.base_model_names = (
-            base_model_probs_df.columns.tolist()
-        )  # base_model_namesを保存
+        self.base_model_names = base_model_probs_df.columns.tolist()
 
-        # メタラベルの作成
-        trend_mask, y_meta = self.create_meta_labels(
-            primary_proba_train, y_train, threshold
-        )
-
-        if len(y_meta) < 50:  # 学習データが少なすぎる場合はスキップ
-            logger.warning(
-                f"メタモデルの学習データが不足しています: {len(y_meta)}サンプル"
-            )
+        trend_mask, y_meta = self.create_meta_labels(primary_proba_train, y_train, threshold)
+        if len(y_meta) < 50:
             return {"status": "skipped", "reason": "insufficient_data"}
 
-        # メタモデル用の特徴量を作成
-        X_meta = X_train.loc[trend_mask].copy()
-        X_meta["primary_proba"] = primary_proba_train.loc[trend_mask]
-
-        # 各ベースモデルの予測確率を追加
-        X_meta = pd.concat([X_meta, base_model_probs_df.loc[trend_mask]], axis=1)
-
-        # モデル間の合意度・不一致度を示す統計量を追加（共通メソッド使用）
-        base_probs_filtered = base_model_probs_df.loc[trend_mask]
-        X_meta = self._add_base_model_statistics(X_meta, base_probs_filtered)
-
-        # モデルの初期化と学習
-        if self.model_type == "random_forest":
-            # デフォルトパラメータ
-            rf_params = {
-                "n_estimators": 100,
-                "max_depth": 5,
-                "class_weight": "balanced",
-                "random_state": 42,
-                "n_jobs": -1,
-            }
-            # ユーザー指定パラメータで上書き
-            rf_params.update(self.model_params)
-
-            self.model = RandomForestClassifier(**rf_params)
-        elif self.model_type == "lightgbm":
-            # LightGBMパラメータ
-            lgb_params = {
-                "n_estimators": 100,
-                "learning_rate": 0.05,
-                "num_leaves": 31,
-                "random_state": 42,
-                "n_jobs": -1,
-                "class_weight": "balanced",
-                "reg_lambda": 1.0,
-                "verbose": -1,
-            }
-            lgb_params.update(self.model_params)
-            self.model = lgb.LGBMClassifier(**lgb_params)
-        else:
-            raise ValueError(f"未サポートのモデルタイプ: {self.model_type}")
-
-        logger.info(
-            f"メタモデル学習開始: {len(X_meta)}サンプル, Positive Rate: {y_meta.mean():.2%}"
-        )
+        X_meta = self._prepare_meta_features(X_train, primary_proba_train, base_model_probs_df, trend_mask)
+        self.model = self._init_model()
         self.model.fit(X_meta, y_meta)
         self.is_trained = True
-
         return {"status": "success", "samples": len(X_meta)}
 
     def predict(
         self,
         X: pd.DataFrame,
         primary_proba: pd.Series,
-        base_model_probs_df: pd.DataFrame,  # 追加: 各ベースモデルの予測確率
+        base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
     ) -> pd.Series:
-        """
-        メタモデルによるフィルタリング予測を行います。
-
-        Args:
-            X: 特徴量
-            primary_proba: 一次モデルの予測確率
-            base_model_probs_df: 各ベースモデルのOOF予測確率DataFrame
-            threshold: 一次モデルの閾値
-
-        Returns:
-            最終的な予測フラグ (1=Execute, 0=Pass/Range)
-            一次モデルがRangeと予測したものは0、
-            Trendと予測したもののうちメタモデルがNGと出したものも0になります。
-        """
+        """予測を実行"""
         if not self.is_trained:
             raise RuntimeError("メタモデルが学習されていません")
 
-        # デフォルトは全て0 (Pass)
         final_pred = pd.Series(0, index=X.index)
-
-        # 一次モデルがトレンドと予測した箇所を特定
         trend_mask = primary_proba >= threshold
-
         if not trend_mask.any():
             return final_pred
 
-        # メタモデル用特徴量
-        X_meta = X.loc[trend_mask].copy()
-        X_meta["primary_proba"] = primary_proba.loc[trend_mask]
-
-        # 各ベースモデルの予測確率を追加
-        X_meta = pd.concat([X_meta, base_model_probs_df.loc[trend_mask]], axis=1)
-
-        # モデル間の合意度・不一致度を示す統計量を追加（共通メソッド使用）
-        base_probs_filtered = base_model_probs_df[self.base_model_names].loc[trend_mask]
-        X_meta = self._add_base_model_statistics(X_meta, base_probs_filtered)
-
-        # メタモデル予測 (1=Execute, 0=Pass)
-        meta_pred = self.model.predict(X_meta)
-
-        # 結果を格納
-        final_pred.loc[trend_mask] = meta_pred
-
+        X_meta = self._prepare_meta_features(X, primary_proba, base_model_probs_df, trend_mask)
+        final_pred.loc[trend_mask] = self.model.predict(X_meta)
         return final_pred
-
-    def evaluate(
-        self,
-        X_test: pd.DataFrame,
-        y_test: pd.Series,
-        primary_proba_test: pd.Series,
-        base_model_probs_df: pd.DataFrame,  # 追加
-        threshold: float = 0.5,
-    ) -> Dict[str, float]:
-        """
-        メタラベリング適用後のパフォーマンスを評価します。
-        """
-        from ..common.evaluation_utils import evaluate_model_predictions
-
-        # メタラベリング適用後の最終予測
-        final_pred = self.predict(
-            X_test, primary_proba_test, base_model_probs_df, threshold
-        )
-
-        # 統一された評価システムを使用してメタモデルの評価
-        meta_metrics = evaluate_model_predictions(
-            y_true=y_test,
-            y_pred=(
-                final_pred.values if isinstance(final_pred, pd.Series) else final_pred
-            ),
-            y_pred_proba=None,  # メタモデルは2値予測のみ
-        )
-
-        # 一次モデル（Primary Model）の評価
-        primary_pred_bin = (primary_proba_test >= threshold).astype(int)
-        primary_metrics = evaluate_model_predictions(
-            y_true=y_test,
-            y_pred=(
-                primary_pred_bin.values
-                if isinstance(primary_pred_bin, pd.Series)
-                else primary_pred_bin
-            ),
-            y_pred_proba=None,
-        )
-
-        # 結果を整形して返す
-        return {
-            "meta_accuracy": meta_metrics.get("accuracy", 0.0),
-            "meta_precision": meta_metrics.get("precision", 0.0),
-            "meta_recall": meta_metrics.get("recall", 0.0),
-            "meta_f1": meta_metrics.get("f1_score", 0.0),
-            "primary_accuracy": primary_metrics.get("accuracy", 0.0),
-            "primary_precision": primary_metrics.get("precision", 0.0),
-            "primary_recall": primary_metrics.get("recall", 0.0),
-            "primary_f1": primary_metrics.get("f1_score", 0.0),
-            "improvement_precision": meta_metrics.get("precision", 0.0)
-            - primary_metrics.get("precision", 0.0),
-            "improvement_recall": meta_metrics.get("recall", 0.0)
-            - primary_metrics.get("recall", 0.0),
-            "improvement_f1": meta_metrics.get("f1_score", 0.0)
-            - primary_metrics.get("f1_score", 0.0),
-            "meta_classification_report": meta_metrics.get("classification_report", {}),
-            "primary_classification_report": primary_metrics.get(
-                "classification_report", {}
-            ),
-            "meta_balanced_accuracy": meta_metrics.get("balanced_accuracy", 0.0),
-            "primary_balanced_accuracy": primary_metrics.get("balanced_accuracy", 0.0),
-        }
 
     def cross_validate(
         self,
@@ -299,110 +165,61 @@ class MetaLabelingService:
         t1: Optional[pd.Series] = None,
         pct_embargo: float = 0.01,
     ) -> pd.Series:
-        """
-        メタモデルのCross-Validationを行い、OOF予測を返します。
-
-        Args:
-            X: 特徴量
-            y: 正解ラベル
-            primary_proba: 一次モデルの予測確率
-            base_model_probs_df: 各ベースモデルのOOF予測確率DataFrame
-            threshold: 一次モデルの閾値
-            n_splits: 分割数
-            t1: PurgedKFold用のt1情報 (Optional)
-            pct_embargo: PurgedKFold用のembargo率
-
-        Returns:
-            OOF予測 (Series)
-        """
+        """Cross-Validationを実行"""
         from sklearn.model_selection import KFold
-
         from ..cross_validation.purged_kfold import PurgedKFold
 
-        # 一次モデルがトレンドと予測した箇所のみが対象
         trend_mask = primary_proba >= threshold
-
-        # OOF予測の初期化 (デフォルトは0)
         oof_preds = pd.Series(0, index=X.index, dtype=int)
-
         if not trend_mask.any():
             return oof_preds
 
-        # 対象となるデータのインデックス
-        target_indices = X.index[trend_mask]
+        target_idx = X.index[trend_mask]
+        X_meta_target = self._prepare_meta_features(X, primary_proba, base_model_probs_df, trend_mask)
+        y_target = y.loc[target_idx]
 
-        # 対象データのみ抽出
-        X_target = X.loc[target_indices]
-        y_target = y.loc[target_indices]
-        primary_proba_target = primary_proba.loc[target_indices]
-        base_model_probs_target = base_model_probs_df.loc[target_indices]
+        cv = PurgedKFold(n_splits=n_splits, t1=t1.loc[target_idx], pct_embargo=pct_embargo) if t1 is not None else KFold(n_splits=n_splits, shuffle=False)
 
-        # メタ特徴量の作成 (全対象データ)
-        X_meta_target = X_target.copy()
-        X_meta_target["primary_proba"] = primary_proba_target
-        X_meta_target = pd.concat([X_meta_target, base_model_probs_target], axis=1)
-
-        base_probs_filtered = base_model_probs_target[base_model_probs_df.columns]
-        X_meta_target = self._add_base_model_statistics(
-            X_meta_target, base_probs_filtered
-        )
-
-        # CVの設定
-        if t1 is not None:
-            # t1もフィルタリングが必要
-            t1_target = t1.loc[target_indices]
-            cv = PurgedKFold(n_splits=n_splits, t1=t1_target, pct_embargo=pct_embargo)
-        else:
-            cv = KFold(n_splits=n_splits, shuffle=False)
-
-        # CVループ
-        for train_idx, val_idx in cv.split(X_meta_target, y_target):
-            # インデックス位置から実際のインデックスを取得
-            train_indices = X_meta_target.index[train_idx]
-            val_indices = X_meta_target.index[val_idx]
-
-            X_train_fold = X_meta_target.loc[train_indices]
-            y_train_fold = y_target.loc[train_indices]
-            X_val_fold = X_meta_target.loc[val_indices]
-
-            # モデルの初期化 (パラメータはインスタンスのものを使用)
-            if self.model_type == "random_forest":
-                rf_params = {
-                    "n_estimators": 100,
-                    "max_depth": 5,
-                    "class_weight": "balanced",
-                    "random_state": 42,
-                    "n_jobs": -1,
-                }
-                rf_params.update(self.model_params)
-                model = RandomForestClassifier(**rf_params)
-            elif self.model_type == "lightgbm":
-                # LightGBMパラメータ
-                lgb_params = {
-                    "n_estimators": 100,
-                    "learning_rate": 0.05,
-                    "num_leaves": 31,
-                    "random_state": 42,
-                    "n_jobs": -1,
-                    "class_weight": "balanced",
-                    "reg_lambda": 1.0,
-                    "verbose": -1,
-                }
-                lgb_params.update(self.model_params)
-                model = lgb.LGBMClassifier(**lgb_params)
-            else:
-                continue
-
-            # 学習
-            model.fit(X_train_fold, y_train_fold)
-
-            # 予測
-            pred_fold = model.predict(X_val_fold)
-
-            # OOF予測に格納
-            oof_preds.loc[val_indices] = pred_fold
+        for tr_idx, val_idx in cv.split(X_meta_target, y_target):
+            tr_indices, val_indices = X_meta_target.index[tr_idx], X_meta_target.index[val_idx]
+            model = self._init_model()
+            model.fit(X_meta_target.loc[tr_indices], y_target.loc[tr_indices])
+            oof_preds.loc[val_indices] = model.predict(X_meta_target.loc[val_indices])
 
         return oof_preds
+
+    def evaluate(
+        self,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+        primary_proba_test: pd.Series,
+        base_model_probs_df: pd.DataFrame,
+        threshold: float = 0.5,
+    ) -> Dict[str, float]:
+        """メタラベリング適用後のパフォーマンスを評価"""
+        from ..common.evaluation_utils import evaluate_model_predictions
+
+        # メタ予測と一次予測（バイナリ）
+        final_pred = self.predict(X_test, primary_proba_test, base_model_probs_df, threshold)
+        primary_pred = (primary_proba_test >= threshold).astype(int)
+
+        # メトリクス計算
+        m_met = evaluate_model_predictions(y_test, final_pred.values)
+        p_met = evaluate_model_predictions(y_test, primary_pred.values)
+
+        return {
+            "meta_accuracy": m_met["accuracy"], "meta_precision": m_met["precision"],
+            "meta_recall": m_met["recall"], "meta_f1": m_met["f1_score"],
+            "primary_accuracy": p_met["accuracy"], "primary_precision": p_met["precision"],
+            "primary_recall": p_met["recall"], "primary_f1": p_met["f1_score"],
+            "improvement_precision": m_met["precision"] - p_met["precision"],
+            "improvement_recall": m_met["recall"] - p_met["recall"],
+            "improvement_f1": m_met["f1_score"] - p_met["f1_score"],
+            "meta_classification_report": m_met.get("classification_report", {}),
+            "primary_classification_report": p_met.get("classification_report", {}),
+            "meta_balanced_accuracy": m_met.get("balanced_accuracy", 0.0),
+            "primary_balanced_accuracy": p_met.get("balanced_accuracy", 0.0),
+        }
 
 
 

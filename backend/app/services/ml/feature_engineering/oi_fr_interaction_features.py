@@ -116,14 +116,11 @@ class OIFRInteractionFeatureCalculator:
         fr_direction = np.sign(fr_value)
         result["OI_Momentum_FR_Confirmed"] = oi_momentum * fr_direction
 
-        # === 8. Funding Rate Regime（FR状態分類）===
+        # === 8. Funding Rate Regime ===
         fr_abs = np.abs(fr_value)
-        fr_percentile = fr_abs.rolling(50).apply(
-            lambda x: (
-                (x.iloc[-1] > np.percentile(x, 75)).astype(float) if len(x) > 0 else 0
-            )
-        )
-        result["FR_Extreme_Regime"] = fr_percentile
+        # rolling.quantile を使用してベクトル化
+        fr_q75 = fr_abs.rolling(50).quantile(0.75)
+        result["FR_Extreme_Regime"] = (fr_abs > fr_q75).astype(float).fillna(0)
 
         # === 9. OI-Volume Interaction（OI-出来高相互作用）===
         volume_change = df["volume"].pct_change()

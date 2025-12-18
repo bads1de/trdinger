@@ -44,24 +44,14 @@ class XGBoostModel(BaseGradientBoostingModel):
         y: Optional[Union[pd.Series, np.ndarray]] = None,
         sample_weight: Optional[np.ndarray] = None,
     ) -> xgb.DMatrix:
-        """
-        XGBoost固有のデータセットオブジェクトを作成します。
-        """
+        """XGBoost固有のデータセットを作成"""
+        # 基底クラスで既にDataFrame化されているはずだが、念のため
         if not isinstance(X, pd.DataFrame):
-            # feature_columnsが設定されていない場合は仮の列名を使用
-            columns = (
-                self.feature_columns
-                if self.feature_columns
-                else [f"feature_{i}" for i in range(X.shape[1])]
-            )
-            X = pd.DataFrame(X, columns=cast(Any, columns))
+            cols = self.feature_columns or [f"feature_{i}" for i in range(X.shape[1])]
+            X = pd.DataFrame(X, columns=cast(Any, cols))
 
-        # 特徴量名を保存 (XGBoostのDMatrixで必要になるため)
         self.feature_names = X.columns.tolist()
-
-        return xgb.DMatrix(
-            X, label=y, feature_names=self.feature_names, weight=sample_weight
-        )
+        return xgb.DMatrix(X, label=y, feature_names=self.feature_names, weight=sample_weight)
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """

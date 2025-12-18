@@ -159,7 +159,7 @@ class TestMLPipelinesComprehensive:
     def test_invalid_classification_selection_method_error(self):
         """無効な分類特徴量選択方法のテスト"""
         with pytest.raises(
-            ValueError, match="Unsupported classification selection method"
+            ValueError, match="サポートされていない選択方法"
         ):
             create_classification_pipeline(
                 feature_selection=True, n_features=2, selection_method="invalid_method"

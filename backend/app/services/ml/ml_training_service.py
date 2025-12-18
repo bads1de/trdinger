@@ -79,64 +79,49 @@ class MLTrainingService(BaseResourceManager):
         統一されたトレーナー設定を作成（EnsembleTrainer用）
 
         Args:
-            trainer_type: トレーナータイプ
+            trainer_type: トレーナータイプ ('ensemble' or 'single')
             ensemble_config: アンサンブル設定
             single_model_config: 単一モデル設定
 
         Returns:
             EnsembleTrainer用の設定辞書
         """
-        if trainer_type.lower() == "single":
-            # 単一モデルをEnsembleTrainer形式に変換
-            model_type = "lightgbm"
-            config_copy = {}
+        trainer_type_lower = trainer_type.lower()
 
-            if single_model_config:
-                config_copy = single_model_config.copy()
-                if "model_type" in config_copy:
-                    model_type = config_copy.pop("model_type")
+        if trainer_type_lower == "single":
+            # 単一モデルをEnsembleTrainer形式に変換
+            config = (single_model_config or {}).copy()
+            model_type = config.pop("model_type", "lightgbm")
 
             # 単一モデルもStackingEnsemble（モデル数1）として扱う
-            # これにより、統一されたインターフェースで学習・評価が可能
-            unified_conf = {
-                "method": "stacking",
-                "models": [model_type],
-            }
-            # 残りの設定をマージ（必要に応じて）
-            unified_conf.update(config_copy)
-
+            unified_conf = {"method": "stacking", "models": [model_type]}
+            unified_conf.update(config)
             return unified_conf
 
-        elif trainer_type.lower() == "ensemble":
-            # アンサンブル設定のデフォルト値 (unified_configから取得)
-            ensemble_settings = self.config.ensemble
-
-            default_config = {
-                "method": ensemble_settings.default_method,
-                "models": ensemble_settings.algorithms,
+        if trainer_type_lower == "ensemble":
+            # アンサンブル設定のデフォルト値
+            s = self.config.ensemble
+            final_config = {
+                "method": s.default_method,
+                "models": s.algorithms,
                 "stacking_params": {
-                    "meta_model": ensemble_settings.stacking_meta_model,
-                    "cv_folds": ensemble_settings.stacking_cv_folds,
-                    "stack_method": ensemble_settings.stacking_stack_method,
-                    "n_jobs": ensemble_settings.stacking_n_jobs,
-                    "passthrough": ensemble_settings.stacking_passthrough,
+                    "meta_model": s.stacking_meta_model,
+                    "cv_folds": s.stacking_cv_folds,
+                    "stack_method": s.stacking_stack_method,
+                    "n_jobs": s.stacking_n_jobs,
+                    "passthrough": s.stacking_passthrough,
                     "use_probas": True,
                     "random_state": 42,
                 },
             }
-
-            # 設定をマージ
-            final_config = default_config.copy()
             if ensemble_config:
                 final_config.update(ensemble_config)
-
             return final_config
 
-        else:
-            raise ValueError(
-                f"サポートされていないトレーナータイプ: {trainer_type}。"
-                f"サポートされているタイプ: 'ensemble', 'single'"
-            )
+        raise ValueError(
+            f"サポートされていないトレーナータイプ: {trainer_type}。 "
+            "サポートされているタイプ: 'ensemble', 'single'"
+        )
 
     @staticmethod
     def get_available_single_models() -> List[str]:

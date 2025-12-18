@@ -101,47 +101,29 @@ def get_latest_model_with_info(
 def get_model_info_with_defaults(
     model_info: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """
-    モデル情報にデフォルト値を適用
-
-    Args:
-        model_info: get_latest_model_with_infoから返されたモデル情報、またはNone
-
-    Returns:
-        デフォルト値が適用されたモデル情報辞書
-    """
+    """モデル情報にデフォルト値を適用"""
     if not model_info:
-        # モデルが存在しない場合のデフォルト
-        default_metrics = get_default_metrics()
         return {
-            **default_metrics,
-            "model_type": "No Model",
-            "feature_count": 0,
-            "training_samples": 0,
-            "last_updated": "未学習",
-            "file_size_mb": 0.0,
+            **get_default_metrics(), "model_type": "No Model",
+            "feature_count": 0, "training_samples": 0,
+            "last_updated": "未学習", "file_size_mb": 0.0
         }
 
-    # モデル情報が存在する場合
-    metadata = model_info["metadata"]
-    # metricsキーが存在しない場合でも安全にアクセス
-    metrics = model_info.get("metrics", get_default_metrics())
-    file_info = model_info["file_info"]
-
+    m, meta, f = model_info.get("metrics", get_default_metrics()), model_info["metadata"], model_info["file_info"]
     return {
-        **metrics,
-        "model_type": metadata.get("model_type", "Unknown"),
-        "feature_count": metadata.get("feature_count", 0),
-        "training_samples": metadata.get("training_samples", 0),
-        "test_samples": metadata.get("test_samples", 0),
-        "last_updated": file_info["modified_at"].isoformat(),
-        "file_size_mb": file_info["size_mb"],
-        "num_classes": metadata.get("num_classes", 2),
-        "best_iteration": metadata.get("best_iteration", 0),
-        "train_test_split": metadata.get("train_test_split", 0.8),
-        "random_state": metadata.get("random_state", 42),
-        "feature_importance": metadata.get("feature_importance", {}),
-        "classification_report": metadata.get("classification_report", {}),
+        **m,
+        "model_type": meta.get("model_type", "Unknown"),
+        "feature_count": meta.get("feature_count", 0),
+        "training_samples": meta.get("training_samples", 0),
+        "test_samples": meta.get("test_samples", 0),
+        "last_updated": f["modified_at"].isoformat(),
+        "file_size_mb": f["size_mb"],
+        "num_classes": meta.get("num_classes", 2),
+        "best_iteration": meta.get("best_iteration", 0),
+        "train_test_split": meta.get("train_test_split", 0.8),
+        "random_state": meta.get("random_state", 42),
+        "feature_importance": meta.get("feature_importance", {}),
+        "classification_report": meta.get("classification_report", {}),
     }
 
 

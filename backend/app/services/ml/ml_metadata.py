@@ -80,50 +80,29 @@ class ModelMetadata:
         model_type: str = "",
         feature_count: int = 0,
     ) -> "ModelMetadata":
-        """
-        学習結果からModelMetadataを構築するファクトリメソッド
-
-        Args:
-            training_result: 学習結果の辞書
-            training_params: 学習パラメータの辞書
-            model_type: モデルタイプ
-            feature_count: 特徴量数
-
-        Returns:
-            ModelMetadata インスタンス
-        """
+        """学習結果からModelMetadataを構築するファクトリメソッド"""
+        r, p = training_result, training_params
         return cls(
-            # 基本性能指標
-            accuracy=training_result.get("accuracy", 0.0),
-            precision=training_result.get("precision", 0.0),
-            recall=training_result.get("recall", 0.0),
-            f1_score=training_result.get("f1_score", 0.0),
-            # AUC指標
-            auc_score=training_result.get("auc_score", 0.0),
-            auc_roc=training_result.get("roc_auc", training_result.get("auc_roc", 0.0)),
-            auc_pr=training_result.get("pr_auc", training_result.get("auc_pr", 0.0)),
-            # 高度な指標
-            balanced_accuracy=training_result.get("balanced_accuracy", 0.0),
-            matthews_corrcoef=training_result.get("matthews_corrcoef", 0.0),
-            cohen_kappa=training_result.get("cohen_kappa", 0.0),
-            # 専門指標
-            specificity=training_result.get("specificity", 0.0),
-            sensitivity=training_result.get("sensitivity", 0.0),
-            npv=training_result.get("npv", 0.0),
-            ppv=training_result.get("ppv", 0.0),
-            # 確率指標
-            log_loss=training_result.get("log_loss", 0.0),
-            brier_score=training_result.get("brier_score", 0.0),
-            # モデル情報
+            # 指標
+            accuracy=r.get("accuracy", 0.0), precision=r.get("precision", 0.0),
+            recall=r.get("recall", 0.0), f1_score=r.get("f1_score", 0.0),
+            auc_score=r.get("auc_score", 0.0),
+            auc_roc=r.get("roc_auc", r.get("auc_roc", 0.0)),
+            auc_pr=r.get("pr_auc", r.get("auc_pr", 0.0)),
+            balanced_accuracy=r.get("balanced_accuracy", 0.0),
+            matthews_corrcoef=r.get("matthews_corrcoef", 0.0),
+            cohen_kappa=r.get("cohen_kappa", 0.0),
+            specificity=r.get("specificity", 0.0), sensitivity=r.get("sensitivity", 0.0),
+            npv=r.get("npv", 0.0), ppv=r.get("ppv", 0.0),
+            log_loss=r.get("log_loss", 0.0), brier_score=r.get("brier_score", 0.0),
+            # 情報
             feature_count=feature_count,
-            training_samples=training_result.get("training_samples", 0),
-            test_samples=training_result.get("test_samples", 0),
-            best_iteration=training_result.get("best_iteration", 0),
-            num_classes=training_result.get("num_classes", 2),
-            # 学習パラメータ
-            train_test_split=training_params.get("train_test_split", 0.8),
-            random_state=training_params.get("random_state", 42),
-            # システム情報
+            training_samples=r.get("training_samples", 0),
+            test_samples=r.get("test_samples", 0),
+            best_iteration=r.get("best_iteration", 0),
+            num_classes=r.get("num_classes", 2),
+            train_test_split=p.get("train_test_split", 0.8),
+            random_state=p.get("random_state", 42),
             model_type=model_type,
         )
 

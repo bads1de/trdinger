@@ -87,63 +87,24 @@ class BaseEnsemble(ABC):
         """
 
     def _create_base_model(self, model_type: str) -> Any:
-        """
-        ベースモデルを作成（Essential 2 Modelsのみサポート）
+        """ベースモデルを作成"""
+        mt = model_type.lower()
+        seed = unified_config.ml.training.random_state
 
-        Args:
-            model_type: モデルタイプ（lightgbm, xgboost, logistic_regression, catboost）
-
-        Returns:
-            作成されたモデル
-        """
-        if model_type.lower() == "lightgbm":
-            try:
-                import lightgbm as lgb
-
-                # デフォルトパラメータは後でset_paramsで上書きされるか、fitの引数で渡される
-                return lgb.LGBMClassifier(
-                    n_jobs=1,  # 並列処理はStackingClassifier側で制御
-                    random_state=unified_config.ml.training.random_state,
-                )
-            except ImportError:
-                raise MLModelError("LightGBMのインポートに失敗しました")
-        elif model_type.lower() == "xgboost":
-            try:
-                import xgboost as xgb
-
-                return xgb.XGBClassifier(
-                    n_jobs=1,
-                    random_state=unified_config.ml.training.random_state,
-                    eval_metric="logloss",
-                )
-            except ImportError:
-                raise MLModelError("XGBoostのインポートに失敗しました")
-        elif model_type.lower() == "catboost":
-            try:
-                import catboost as cb
-
-                return cb.CatBoostClassifier(
-                    thread_count=1,
-                    random_seed=unified_config.ml.training.random_state,
-                    verbose=0,
-                    allow_writing_files=False,
-                )
-            except ImportError:
-                raise MLModelError("CatBoostのインポートに失敗しました")
-        elif model_type.lower() == "logistic_regression":
-            # scikit-learnのLogisticRegressionを直接使用
+        if mt == "lightgbm":
+            import lightgbm as lgb
+            return lgb.LGBMClassifier(n_jobs=1, random_state=seed)
+        if mt == "xgboost":
+            import xgboost as xgb
+            return xgb.XGBClassifier(n_jobs=1, random_state=seed, eval_metric="logloss")
+        if mt == "catboost":
+            import catboost as cb
+            return cb.CatBoostClassifier(thread_count=1, random_seed=seed, verbose=0, allow_writing_files=False)
+        if mt == "logistic_regression":
             from sklearn.linear_model import LogisticRegression
-
-            return LogisticRegression(
-                random_state=unified_config.ml.training.random_state,
-                max_iter=unified_config.ml.training.lr_max_iter,
-                solver="lbfgs",  # 多クラス分類に適したソルバー
-                verbose=0,  # ログ抑制
-            )
-        else:
-            raise MLModelError(
-                f"サポートされていないモデルタイプ: {model_type}。サポートされているタイプ: lightgbm, xgboost, catboost, logistic_regression"
-            )
+            return LogisticRegression(random_state=seed, max_iter=unified_config.ml.training.lr_max_iter, solver="lbfgs")
+        
+        raise MLModelError(f"Unsupported model type: {model_type}")
 
     def _evaluate_predictions(
         self,
@@ -218,334 +179,78 @@ class BaseEnsemble(ABC):
         return {}
 
     def save_models(self, base_path: str) -> List[str]:
-        """
-        アンサンブルモデルを保存（自前実装StackingEnsemble対応）
-
-        Args:
-            base_path: 保存先ベースパス
-
-        Returns:
-            保存されたファイルパスのリスト
-        """
+        """アンサンブルモデルを保存"""
         import os
         from datetime import datetime
-
         import joblib
-
         from ..model_manager import model_manager
 
-        saved_paths = []
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        # base_pathからモデル名を抽出
-        model_name = os.path.basename(base_path)
-
-        # 自前実装のStackingEnsembleの保存（優先）
-        if hasattr(self, "_fitted_base_models") and hasattr(self, "_fitted_meta_model"):
-            if self._fitted_base_models and self._fitted_meta_model is not None:
-                # 自前実装形式で保存
-                model_data = {
-                    "fitted_base_models": self._fitted_base_models,
-                    "fitted_meta_model": self._fitted_meta_model,
-                    "base_model_types": getattr(self, "_base_model_types", []),
-                    "meta_model_type": getattr(
-                        self, "_meta_model_type", "logistic_regression"
-                    ),
-                    "config": self.config,
-                    "feature_columns": self.feature_columns,
-                    "is_fitted": self.is_fitted,
-                    "passthrough": getattr(self, "passthrough", False),
-                    "ensemble_type": "StackingEnsemble",
-                    "sklearn_implementation": False,  # 自前実装
-                }
-
-                metadata = {
-                    "ensemble_type": "StackingEnsemble",
-                    "sklearn_implementation": False,
-                    "feature_count": (
-                        len(self.feature_columns) if self.feature_columns else 0
-                    ),
-                    "fitted_base_models": list(self._fitted_base_models.keys()),
-                }
-
-                try:
-                    model_path = model_manager.save_model(
-                        model=model_data,
-                        model_name=model_name,
-                        metadata=metadata,
-                        feature_columns=self.feature_columns,
-                    )
-                    if model_path:
-                        saved_paths.append(model_path)
-                        logger.info(
-                            f"StackingEnsemble（自前実装）をmodel_managerで保存: {model_path}"
-                        )
-                except Exception as e:
-                    logger.error(f"model_managerによる保存に失敗: {e}")
-                    # フォールバック: 従来のjoblib保存
-                    model_path = f"{base_path}_stacking_ensemble_{timestamp}.pkl"
-                    joblib.dump(model_data, model_path)
-                    saved_paths.append(model_path)
-                    logger.info(
-                        f"StackingEnsembleをjoblibで保存(フォールバック): {model_path}"
-                    )
-
-                return saved_paths
-
-        # 旧形式: scikit-learn StackingClassifierの保存（後方互換性）
-        if (
-            hasattr(self, "stacking_classifier")
-            and self.stacking_classifier is not None
-        ):
-            # model_managerを使用して保存
-            # StackingEnsembleの状態を含めた辞書を作成
-            model_data = {
-                "ensemble_classifier": self.stacking_classifier,
-                "config": self.config,
-                "feature_columns": self.feature_columns,
-                "is_fitted": self.is_fitted,
-                "ensemble_type": "StackingEnsemble",
-                "sklearn_implementation": True,
+        m_name = os.path.basename(base_path)
+        
+        # 1. 自前実装 StackingEnsemble
+        if hasattr(self, "_fitted_base_models") and self._fitted_base_models:
+            data = {
+                "fitted_base_models": self._fitted_base_models, "fitted_meta_model": self._fitted_meta_model,
+                "base_model_types": getattr(self, "_base_model_types", []),
+                "meta_model_type": getattr(self, "_meta_model_type", "logistic_regression"),
+                "config": self.config, "feature_columns": self.feature_columns, "is_fitted": self.is_fitted,
+                "passthrough": getattr(self, "passthrough", False), "ensemble_type": "StackingEnsemble"
             }
-
-            metadata = {
-                "ensemble_type": "StackingEnsemble",
-                "sklearn_implementation": True,
-                "feature_count": (
-                    len(self.feature_columns) if self.feature_columns else 0
-                ),
+            meta = {
+                "ensemble_type": "StackingEnsemble", "feature_count": len(self.feature_columns or []),
+                "fitted_base_models": list(self._fitted_base_models.keys())
             }
+            path = model_manager.save_model(model=data, model_name=m_name, metadata=meta, feature_columns=self.feature_columns)
+            return [path] if path else []
 
-            try:
-                # model_manager.save_modelはパスを返す
-                model_path = model_manager.save_model(
-                    model=model_data,
-                    model_name=model_name,
-                    metadata=metadata,
-                    feature_columns=self.feature_columns,
-                )
-                if model_path:
-                    saved_paths.append(model_path)
-                    logger.info(
-                        f"StackingClassifierをmodel_managerで保存: {model_path}"
-                    )
-            except Exception as e:
-                logger.error(f"model_managerによる保存に失敗: {e}")
-                # フォールバック: 従来のjoblib保存
-                model_path = f"{base_path}_stacking_classifier_{timestamp}.pkl"
-                joblib.dump(model_data, model_path)
-                saved_paths.append(model_path)
-                logger.info(
-                    f"StackingClassifierをjoblibで保存(フォールバック): {model_path}"
-                )
+        # 2. 旧形式 StackingClassifier
+        if hasattr(self, "stacking_classifier") and self.stacking_classifier:
+            data = {
+                "ensemble_classifier": self.stacking_classifier, "config": self.config,
+                "feature_columns": self.feature_columns, "is_fitted": self.is_fitted
+            }
+            path = model_manager.save_model(model=data, model_name=m_name, metadata={"ensemble_type": "StackingEnsemble"}, feature_columns=self.feature_columns)
+            return [path] if path else []
 
-        else:
-            # 従来の実装（後方互換性のため）
-            logger.warning("従来のアンサンブル実装を保存")
-
-            # 最高性能モデル1つのみを保存
-            if len(self.base_models) == 1 and hasattr(self, "best_algorithm"):
-                algorithm_name = getattr(self, "best_algorithm", "unknown")
-                model_path = f"{base_path}_{algorithm_name}_{timestamp}.pkl"
-
-                model_data = {
-                    "model": self.base_models[0],
-                    "config": self.config,
-                    "feature_columns": self.feature_columns,
-                    "is_fitted": self.is_fitted,
-                    "best_algorithm": algorithm_name,
-                    "best_model_score": getattr(self, "best_model_score", None),
-                    "ensemble_type": self.__class__.__name__,
-                    "selected_model_only": True,
-                }
-                joblib.dump(model_data, model_path)
-                saved_paths.append(model_path)
-                logger.info(f"最高性能モデルを保存: {model_path}")
-
-            else:
-                # 複数ファイル保存
-                for i, model in enumerate(self.base_models):
-                    model_path = f"{base_path}_base_model_{i}_{timestamp}.pkl"
-                    joblib.dump(model, model_path)
-                    saved_paths.append(model_path)
-
-                if self.meta_model is not None:
-                    meta_path = f"{base_path}_meta_model_{timestamp}.pkl"
-                    joblib.dump(self.meta_model, meta_path)
-                    saved_paths.append(meta_path)
-
-                config_path = f"{base_path}_config_{timestamp}.pkl"
-                config_data = {
-                    "config": self.config,
-                    "feature_columns": self.feature_columns,
-                    "is_fitted": self.is_fitted,
-                    "best_algorithm": getattr(self, "best_algorithm", None),
-                    "best_model_score": getattr(self, "best_model_score", None),
-                }
-                joblib.dump(config_data, config_path)
-                saved_paths.append(config_path)
-
-        return saved_paths
+        # 3. その他（従来形式）
+        logger.warning("Falling back to legacy model saving")
+        path = f"{base_path}_legacy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pkl"
+        joblib.dump(self, path)
+        return [path]
 
     def load_models(self, base_path: str) -> bool:
-        """
-        アンサンブルモデルを読み込み（scikit-learn StackingClassifier対応）
-
-        Args:
-            base_path: 読み込み元ベースパス
-
-        Returns:
-            読み込み成功フラグ
-        """
+        """アンサンブルモデルを読み込み"""
         import glob
-        import os
-        import warnings
-
         import joblib
         from sklearn.exceptions import InconsistentVersionWarning
+        import warnings
 
         try:
-            # scikit-learn StackingClassifierファイルを検索
-            sklearn_patterns = [
-                f"{base_path}_stacking_classifier_*.pkl",
-            ]
-
-            sklearn_files = []
-            for pattern in sklearn_patterns:
-                sklearn_files.extend(glob.glob(pattern))
-
-            if sklearn_files:
-                # scikit-learn StackingClassifierファイルで読み込み
-                sklearn_file = sorted(sklearn_files)[-1]  # 最新のファイルを選択
-                logger.info(
-                    f"scikit-learn StackingClassifierファイルでモデルを読み込み: {sklearn_file}"
-                )
-
+            # 1. StackingClassifier ファイル検索
+            f_list = sorted(glob.glob(f"{base_path}_stacking_classifier_*.pkl"))
+            if f_list:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
-                    model_data = joblib.load(sklearn_file)
-
-                # scikit-learn StackingClassifierからデータを復元
-                if isinstance(model_data, dict) and "ensemble_classifier" in model_data:
-                    # StackingClassifierを復元
-                    if "stacking_classifier" in sklearn_file:
-                        self.stacking_classifier = model_data["ensemble_classifier"]
-                        logger.info("StackingClassifierを復元")
-
-                    self.config = model_data.get("config", {})
-                    self.feature_columns = model_data.get("feature_columns", [])
-                    self.is_fitted = model_data.get("is_fitted", False)
-
-                    logger.info("scikit-learn StackingClassifierモデルの読み込み完了")
+                    data = joblib.load(f_list[-1])
+                if isinstance(data, dict) and "ensemble_classifier" in data:
+                    self.stacking_classifier = data["ensemble_classifier"]
+                    self.config, self.feature_columns, self.is_fitted = data.get("config", {}), data.get("feature_columns", []), data.get("is_fitted", False)
                     return True
 
-            # 従来の統合ファイル形式を試す
-            algorithm_pattern = f"{base_path}_*_*.pkl"
-            unified_files = [
-                f
-                for f in glob.glob(algorithm_pattern)
-                if not f.endswith("_config.pkl")
-                and not f.endswith("_meta_model.pkl")
-                and "stacking_classifier" not in f
-            ]
-
-            if unified_files:
-                # 統合ファイル形式で読み込み
-                unified_file = sorted(unified_files)[-1]  # 最新のファイルを選択
-                logger.info(f"統合ファイル形式でモデルを読み込み: {unified_file}")
-
+            # 2. 統合モデルファイル検索
+            f_list = sorted([f for f in glob.glob(f"{base_path}_*_*.pkl") if not f.endswith(("_config.pkl", "_meta_model.pkl"))])
+            if f_list:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
-                    model_data = joblib.load(unified_file)
-
-                # 統合ファイルからデータを復元
-                if isinstance(model_data, dict) and "model" in model_data:
-                    self.base_models = [model_data["model"]]
-                    self.config = model_data.get("config", {})
-                    self.feature_columns = model_data.get("feature_columns", [])
-                    self.is_fitted = model_data.get("is_fitted", False)
-                    self.best_algorithm = model_data.get("best_algorithm", "unknown")
-                    self.best_model_score = model_data.get("best_model_score", 0.0)
-                    self.meta_model = None  # 統合ファイルではメタモデルは使用しない
-
-                    logger.info(
-                        f"統合ファイルから最高性能モデルを読み込み: {self.best_algorithm}"
-                    )
+                    data = joblib.load(f_list[-1])
+                if isinstance(data, dict) and "model" in data:
+                    self.base_models, self.config, self.is_fitted = [data["model"]], data.get("config", {}), data.get("is_fitted", False)
                     return True
-                else:
-                    # 古い形式の単一モデルファイル
-                    self.base_models = [model_data]
-                    logger.info("古い形式の単一モデルファイルを読み込み")
 
-            # 従来の分離ファイル形式で読み込み（後方互換性）
-            logger.info("従来の分離ファイル形式で読み込みを試行")
-
-            # 設定ファイルを検索
-            config_patterns = [
-                f"{base_path}_config_*.pkl",  # 新形式（タイムスタンプ付き）
-                f"{base_path}_config.pkl",  # 旧形式
-            ]
-
-            config_path = None
-            for pattern in config_patterns:
-                files = glob.glob(pattern)
-                if files:
-                    config_path = sorted(files)[-1]  # 最新のファイルを選択
-                    break
-
-            if config_path and os.path.exists(config_path):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", InconsistentVersionWarning)
-                    config_data = joblib.load(config_path)
-                self.config = config_data["config"]
-                self.feature_columns = config_data["feature_columns"]
-                self.is_fitted = config_data["is_fitted"]
-
-                # 新しい属性を読み込み（存在する場合）
-                if "best_algorithm" in config_data:
-                    self.best_algorithm = config_data["best_algorithm"]
-                if "best_model_score" in config_data:
-                    self.best_model_score = config_data["best_model_score"]
-
-            # ベースモデルを読み込み（従来形式）
-            self.base_models = []
-
-            # 旧形式のファイルを検索
-            i = 0
-            while True:
-                model_path = f"{base_path}_base_model_{i}.pkl"
-                if not os.path.exists(model_path):
-                    break
-
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", InconsistentVersionWarning)
-                    model = joblib.load(model_path)
-                self.base_models.append(model)
-                i += 1
-
-            # メタモデルを読み込み（存在する場合）
-            meta_patterns = [
-                f"{base_path}_meta_model_*.pkl",  # 新形式
-                f"{base_path}_meta_model.pkl",  # 旧形式
-            ]
-
-            for pattern in meta_patterns:
-                files = glob.glob(pattern)
-                if files:
-                    meta_path = sorted(files)[-1]  # 最新のファイルを選択
-                    if os.path.exists(meta_path):
-                        with warnings.catch_warnings():
-                            warnings.simplefilter("ignore", InconsistentVersionWarning)
-                            self.meta_model = joblib.load(meta_path)
-                    break
-
-            logger.info(
-                f"従来形式でモデルを読み込み: ベースモデル{len(self.base_models)}個"
-            )
-            return True
-
+            logger.warning(f"No suitable model found for {base_path}")
+            return False
         except Exception as e:
-            logger.error(f"アンサンブルモデルの読み込みに失敗: {e}")
+            logger.error(f"Load failed: {e}")
             return False
 
 

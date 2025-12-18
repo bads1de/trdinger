@@ -34,37 +34,16 @@ class BaseFeatureCalculator(ABC):
     def validate_input_data(
         self, df: pd.DataFrame, required_columns: Optional[list] = None
     ) -> bool:
-        """
-        入力データの妥当性を検証
-
-        Args:
-            df: 検証するDataFrame
-            required_columns: 必須カラムのリスト
-
-        Returns:
-            データが有効な場合True、無効な場合False
-        """
-        if df is None:
-            logger.warning("入力データがNoneです")
-            return False
-
-        # カラム名を小文字に統一して検証
-        df_columns = [col.lower() for col in df.columns]
-        if required_columns is not None:
-            required_columns = [col.lower() for col in required_columns]
-
-        if df.empty:
-            logger.warning("入力データが空です")
+        """入力データの妥当性を検証"""
+        if df is None or df.empty:
             return False
 
         if required_columns:
-            missing_columns = [col for col in required_columns if col not in df_columns]
-            if missing_columns:
-                logger.warning(
-                    f"必須カラムが不足しています（小文字化対応）: {missing_columns}"
-                )
+            df_cols = {c.lower() for c in df.columns}
+            missing = [c for c in required_columns if c.lower() not in df_cols]
+            if missing:
+                logger.warning(f"Missing columns: {missing}")
                 return False
-
         return True
 
     def create_result_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -196,33 +175,15 @@ class BaseFeatureCalculator(ABC):
 
     def safe_ratio_calculation(
         self,
-        numerator: pd.Series | Any,
-        denominator: pd.Series | Any,
+        numerator: Any,
+        denominator: Any,
         fill_value: float = 0.0,
     ) -> pd.Series:
-        """
-        ゼロ除算を防ぐための安全な比率計算
+        """ゼロ除算を防ぐための安全な比率計算"""
+        if not isinstance(numerator, pd.Series) or not isinstance(denominator, pd.Series):
+            return pd.Series([fill_value] * (len(numerator) if hasattr(numerator, "__len__") else 0))
 
-        Args:
-            numerator: 分子
-            denominator: 分母
-            fill_value: ゼロ除算時の埋め値
-
-        Returns:
-            計算結果のSeries
-        """
-        if (
-            denominator is None
-            or numerator is None
-            or not isinstance(numerator, pd.Series)
-            or not isinstance(denominator, pd.Series)
-        ):
-            length = len(numerator) if isinstance(numerator, pd.Series) else 0
-            return pd.Series([fill_value] * length)
-
-        # ゼロ除算を防ぐ
-        ratio = numerator / denominator.replace(0, np.nan)
-        return ratio.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
+        return (numerator / denominator.replace(0, np.nan)).replace([np.inf, -np.inf], np.nan).fillna(fill_value)
 
 
 

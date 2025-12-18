@@ -1,6 +1,5 @@
 import logging
 
-import torch
 import torch.nn as nn
 
 from .base_rnn_model import BaseRNNModel
@@ -36,19 +35,10 @@ class GRUClassifier(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        # x: (batch_size, seq_len, input_dim)
-
-        # 初期隠れ状態 (num_layers, batch_size, hidden_dim)
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
-
-        # GRU Forward
-        # out: (batch_size, seq_len, hidden_dim)
-        out, _ = self.gru(x, h0)
-
+        # GRU Forward (初期状態は自動的にゼロ初期化される)
+        out, _ = self.gru(x)
         # 最後のタイムステップの出力を使用
-        out = self.fc(out[:, -1, :])
-        out = self.sigmoid(out)
-        return out
+        return self.sigmoid(self.fc(out[:, -1, :]))
 
 
 class GRUModel(BaseRNNModel):

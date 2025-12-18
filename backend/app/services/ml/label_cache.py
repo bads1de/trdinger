@@ -57,47 +57,15 @@ class LabelCache:
         t_events: Optional[pd.DatetimeIndex] = None,
         min_window: int = 5,
         window_step: int = 1,
-        **kwargs,  # 後方互換性のため不明な引数を無視
+        **kwargs,
     ) -> pd.Series:
-        """キャッシュを使ってラベルを取得（二値分類専用）
-
-        Args:
-            horizon_n: N本先を見る (Trend Scanningの場合はmax_window)
-            threshold_method: 閾値計算方法
-            threshold: 閾値 (Trend Scanningの場合はmin_t_value)
-            timeframe: 時間足
-            price_column: 価格カラム名
-            pt_factor: トリプルバリア法のプロフィットテイキング乗数。
-            sl_factor: トリプルバリア法のストップロス乗数。
-            use_atr: トリプルバリア法でボラティリティにATRを使用するかどうか。
-            atr_period: ATR計算期間。
-            t_events: ラベル付け対象のイベント時刻
-            min_window: Trend Scanningの最小ウィンドウサイズ
-            window_step: Trend Scanningのウィンドウステップ
-            **kwargs: 後方互換性のための不明な引数（無視されます）
-
-        Returns:
-            pd.Series: 二値ラベル (0/1)
-        """
+        """キャッシュを使ってラベルを取得"""
         use_cache = t_events is None
-
-        cache_key = (
-            horizon_n,
-            threshold_method,
-            threshold,
-            timeframe,
-            price_column,
-            pt_factor,
-            sl_factor,
-            use_atr,
-            atr_period,
-            min_window,
-            window_step,
-        )
+        cache_key = (horizon_n, threshold_method, threshold, timeframe, price_column, 
+                     pt_factor, sl_factor, use_atr, atr_period, min_window, window_step)
 
         if use_cache and cache_key in self.cache:
             self.hit_count += 1
-            logger.debug(f"キャッシュヒット: {threshold_method}")
             return self.cache[cache_key]
 
         if use_cache:
@@ -105,85 +73,39 @@ class LabelCache:
             logger.info(f"ラベル生成: {threshold_method}")
 
         try:
-            threshold_method_enum = ThresholdMethod[threshold_method]
+            m = ThresholdMethod[threshold_method]
         except KeyError:
-            valid_methods = [m.name for m in ThresholdMethod]
-            raise ValueError(
-                f"無効な閾値計算方法: {threshold_method}, 有効なメソッド: {valid_methods}"
-            )
+            raise ValueError(f"無効な閾値計算方法: {threshold_method}")
 
-        if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
-            # presets.py の実装を使用（常に二値分類）
-            # min_ret=0.0001, volatility_window=24 は以前のLabelCache実装に合わせてハードコード
+        if m == ThresholdMethod.TRIPLE_BARRIER:
             labels = triple_barrier_method_preset(
-                df=self.ohlcv_df,
-                timeframe=timeframe,
-                horizon_n=horizon_n,
-                pt=pt_factor,
-                sl=sl_factor,
-                min_ret=0.0001,
-                price_column=price_column,
-                volatility_window=24,
-                use_atr=use_atr,
-                atr_period=atr_period,
-                t_events=t_events,
+                self.ohlcv_df, timeframe, horizon_n, pt_factor, sl_factor, 0.0001, 
+                price_column, 24, use_atr, atr_period, t_events
             )
-
-        elif threshold_method_enum == ThresholdMethod.TREND_SCANNING:
-            # presets.py の実装を使用（常に二値分類）
+        elif m == ThresholdMethod.TREND_SCANNING:
             labels = trend_scanning_preset(
-                df=self.ohlcv_df,
-                timeframe=timeframe,
-                horizon_n=horizon_n,
-                threshold=threshold,
-                min_window=min_window,
-                window_step=window_step,
-                price_column=price_column,
-                t_events=t_events,
+                self.ohlcv_df, timeframe, horizon_n, threshold, min_window, window_step, 
+                price_column, t_events
             )
-
         else:
             raise NotImplementedError(f"Method {threshold_method} not supported")
 
         if use_cache:
             self.cache[cache_key] = labels
-
         return labels
 
     def get_t1(
         self, indices: pd.DatetimeIndex, horizon_n: int, timeframe: str = "1h"
     ) -> pd.Series:
-        """
-        各観測点のラベル終了時刻 (t1) を取得
-
-        PurgedKFoldで使用するために、各サンプルのラベルがいつ確定するかを返します。
-        単純なホライズン加算ですが、Triple Barrier Methodなどの複雑なロジックに
-        拡張する場合はここで計算ロジックを変更できます。
-
-        Args:
-            indices: 観測開始時刻のインデックス
-            horizon_n: N本先
-            timeframe: 時間足 (デフォルト "1h")
-
-        Returns:
-            pd.Series: t1 (ラベル終了時刻)
-        """
-        # タイムフレームに応じてtimedeltaを計算
-        if timeframe == "1h":
-            delta = pd.Timedelta(hours=horizon_n)
-        elif timeframe == "4h":
-            delta = pd.Timedelta(hours=4 * horizon_n)
-        elif timeframe == "1d":
-            delta = pd.Timedelta(days=horizon_n)
-        elif timeframe == "15m":
-            delta = pd.Timedelta(minutes=15 * horizon_n)
-        else:
-            # デフォルトは1hとみなす（簡易実装）
-            delta = pd.Timedelta(hours=horizon_n)
-
-        # t1を計算
-        t1 = pd.Series(indices + delta, index=indices)
-        return t1
+        """各観測点のラベル終了時刻 (t1) を取得"""
+        deltas = {
+            "1h": pd.Timedelta(hours=horizon_n),
+            "4h": pd.Timedelta(hours=4 * horizon_n),
+            "1d": pd.Timedelta(days=horizon_n),
+            "15m": pd.Timedelta(minutes=15 * horizon_n)
+        }
+        delta = deltas.get(timeframe, pd.Timedelta(hours=horizon_n))
+        return pd.Series(indices + delta, index=indices)
 
     def get_hit_rate(self) -> float:
         """キャッシュヒット率を取得

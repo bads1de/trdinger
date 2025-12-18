@@ -16,6 +16,23 @@ logger = logging.getLogger(__name__)
 
 
 @jit(nopython=True)
+def _numba_calc_bins(w_high, w_low, w_vol, price_min, bin_step, num_bins):
+    """ビンごとの出来高を計算（共通Numba関数）"""
+    bin_volume = np.zeros(num_bins)
+    for j in range(len(w_high)):
+        s_bin = int((w_low[j] - price_min) / bin_step)
+        e_bin = int((w_high[j] - price_min) / bin_step)
+        s_bin = max(0, min(s_bin, num_bins - 1))
+        e_bin = max(0, min(e_bin, num_bins - 1))
+        
+        num_aff = e_bin - s_bin + 1
+        vol_per = w_vol[j] / num_aff
+        for b in range(s_bin, e_bin + 1):
+            bin_volume[b] += vol_per
+    return bin_volume
+
+
+@jit(nopython=True)
 def _numba_rolling_volume_profile(
     high_arr: np.ndarray,
     low_arr: np.ndarray,
@@ -25,127 +42,47 @@ def _numba_rolling_volume_profile(
     num_bins: int,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     n = len(close_arr)
-    poc_arr = np.full(n, np.nan)
-    vah_arr = np.full(n, np.nan)
-    val_arr = np.full(n, np.nan)
-
-    # 可能であればメモリを再利用するためにビン配列を事前割り当てするか？
-    # Numba parallel=Falseの場合、内部で割り当てるだけです。
-    # 渡さずに反復間で簡単に再利用することはできませんが、割り当ては比較的安価です。
+    poc_arr, vah_arr, val_arr = np.full(n, np.nan), np.full(n, np.nan), np.full(n, np.nan)
 
     for i in range(window, n):
-        # ウィンドウのスライスインデックス
-        start_idx = i - window
-        end_idx = i
+        w_h, w_l, w_c, w_v = high_arr[i-window:i], low_arr[i-window:i], close_arr[i-window:i], volume_arr[i-window:i]
+        p_min, p_max = w_l.min(), w_h.max()
 
-        # スライスの抽出
-        w_high = high_arr[start_idx:end_idx]
-        w_low = low_arr[start_idx:end_idx]
-        w_close = close_arr[start_idx:end_idx]
-        w_vol = volume_arr[start_idx:end_idx]
-
-        # 価格範囲
-        price_min = w_low.min()
-        price_max = w_high.max()
-
-        if price_min == price_max:
-            # 値動きなし
-            last_close = w_close[-1]
-            poc_arr[i] = last_close
-            vah_arr[i] = last_close
-            val_arr[i] = last_close
+        if p_min == p_max or p_max - p_min == 0:
+            poc_arr[i] = vah_arr[i] = val_arr[i] = w_c[-1]
             continue
 
-        # ビンの設定
-        # bins = np.linspace(price_min, price_max, num_bins + 1)
-        # bin_width = (price_max - price_min) / num_bins
+        bin_step = (p_max - p_min) / num_bins
+        bin_vol = _numba_calc_bins(w_h, w_l, w_v, p_min, bin_step, num_bins)
 
-        bin_volume = np.zeros(num_bins)
+        # POC
+        poc_bin = np.argmax(bin_vol)
+        poc_arr[i] = p_min + (poc_bin + 0.5) * bin_step
 
-        # ビンの充填
-        # ここで最適化を行いました：出来高を分配するために手動で反復処理します
-        bin_step = (price_max - price_min) / num_bins
+        # VAH/VAL (70%)
+        target_v = bin_vol.sum() * 0.70
+        vah_b, val_bin, acc_v = poc_bin, poc_bin, bin_vol[poc_bin]
 
-        # ゼロ除算の回避
-        if bin_step == 0:
-            last_close = w_close[-1]
-            poc_arr[i] = last_close
-            vah_arr[i] = last_close
-            val_arr[i] = last_close
-            continue
-
-        for j in range(window):  # スライスの長さ
-            bar_h = w_high[j]
-            bar_l = w_low[j]
-            bar_v = w_vol[j]
-
-            # 影響を受けるビンのインデックスを検索
-            # bin_start_idx = int((bar_l - price_min) / bin_step)
-            # bin_end_idx = int((bar_h - price_min) / bin_step)
-
-            # 安全のためにインデックスをクリップ
-            start_bin = int((bar_l - price_min) / bin_step)
-            end_bin = int((bar_h - price_min) / bin_step)
-
-            if start_bin < 0:
-                start_bin = 0
-            if start_bin >= num_bins:
-                start_bin = num_bins - 1
-
-            # bar_hがprice_maxと正確に一致する場合、end_bin = num_binsとなります。
-            if end_bin < 0:
-                end_bin = 0
-            if end_bin >= num_bins:
-                end_bin = num_bins - 1
-
-            # 影響を受けるビンの数
-            num_affected = end_bin - start_bin + 1
-
-            vol_per_bin = bar_v / num_affected
-
-            for b in range(start_bin, end_bin + 1):
-                bin_volume[b] += vol_per_bin
-
-        # POC（Point of Control）の検索
-        poc_bin = np.argmax(bin_volume)
-        # POC価格 = ビンの中点
-        poc_price = price_min + (poc_bin + 0.5) * bin_step
-        poc_arr[i] = poc_price
-
-        # VAH/VALの検索 (Value Area 70%)
-        total_volume = bin_volume.sum()
-        target_volume = total_volume * 0.70
-
-        vah_bin = poc_bin
-        val_bin = poc_bin
-        accumulated_volume = bin_volume[poc_bin]
-
-        while accumulated_volume < target_volume:
-            vol_above = bin_volume[vah_bin + 1] if vah_bin + 1 < num_bins else 0.0
-            vol_below = bin_volume[val_bin - 1] if val_bin > 0 else 0.0
-
-            if vol_above == 0.0 and vol_below == 0.0:
+        while acc_v < target_v:
+            v_up = bin_vol[vah_b + 1] if vah_b + 1 < num_bins else 0.0
+            v_dn = bin_vol[val_bin - 1] if val_bin > 0 else 0.0
+            if v_up == 0 and v_dn == 0:
                 break
-
-            if vol_above > vol_below:
-                vah_bin += 1
-                accumulated_volume += vol_above
+            if v_up > v_dn:
+                vah_b += 1
+                acc_v += v_up
             else:
                 val_bin -= 1
-                accumulated_volume += vol_below
+                acc_v += v_dn
 
-        # VAH = vah_binの上部, VAL = val_binの下部
-        vah_price = price_min + (vah_bin + 1) * bin_step
-        val_price = price_min + val_bin * bin_step
-
-        vah_arr[i] = vah_price
-        val_arr[i] = val_price
+        vah_arr[i] = p_min + (vah_b + 1) * bin_step
+        val_arr[i] = p_min + val_bin * bin_step
 
     return poc_arr, vah_arr, val_arr
 
 
 @jit(nopython=True)
-def _numba_detect_volume_nodes(
+def _numba_detect_volume_nodes_signed(
     high_arr: np.ndarray,
     low_arr: np.ndarray,
     close_arr: np.ndarray,
@@ -154,104 +91,41 @@ def _numba_detect_volume_nodes(
     num_bins: int,
 ) -> Tuple[np.ndarray, np.ndarray]:
     n = len(close_arr)
-    hvn_dist_arr = np.zeros(n)
-    lvn_dist_arr = np.zeros(n)
+    hvn_dist, lvn_dist = np.zeros(n), np.zeros(n)
 
     for i in range(window, n):
-        start_idx = i - window
-        end_idx = i
-
-        w_high = high_arr[start_idx:end_idx]
-        w_low = low_arr[start_idx:end_idx]
-        w_vol = volume_arr[start_idx:end_idx]
-
-        price_min = w_low.min()
-        price_max = w_high.max()
-
-        if price_min == price_max:
+        w_h, w_l, w_v = high_arr[i-window:i], low_arr[i-window:i], volume_arr[i-window:i]
+        p_min, p_max = w_l.min(), w_h.max()
+        if p_min == p_max or p_max - p_min == 0:
             continue
 
-        bin_step = (price_max - price_min) / num_bins
-        if bin_step == 0:
-            continue
+        bin_step = (p_max - p_min) / num_bins
+        bin_vol = _numba_calc_bins(w_h, w_l, w_v, p_min, bin_step, num_bins)
 
-        bin_volume = np.zeros(num_bins)
+        sorted_vol = np.sort(bin_vol)
+        lvn_th, hvn_th = sorted_vol[int(0.25 * (num_bins - 1))], sorted_vol[int(0.75 * (num_bins - 1))]
+        curr_p = close_arr[i]
 
-        for j in range(window):
-            bar_h = w_high[j]
-            bar_l = w_low[j]
-            bar_v = w_vol[j]
+        def find_best(th, is_hvn):
+            best_p, min_d = -1.0, 1e30
+            for b in range(num_bins):
+                cond = (bin_vol[b] >= th) if is_hvn else (bin_vol[b] <= th)
+                if cond:
+                    p = p_min + (b + 0.5) * bin_step
+                    d = abs(curr_p - p)
+                    if d < min_d:
+                        min_d, best_p = d, p
+            return best_p
 
-            start_bin = int((bar_l - price_min) / bin_step)
-            end_bin = int((bar_h - price_min) / bin_step)
+        hvn_p = find_best(hvn_th, True)
+        if hvn_p != -1.0 and curr_p != 0:
+            hvn_dist[i] = (curr_p - hvn_p) / curr_p
+        
+        lvn_p = find_best(lvn_th, False)
+        if lvn_p != -1.0 and curr_p != 0:
+            lvn_dist[i] = (curr_p - lvn_p) / curr_p
 
-            if start_bin < 0:
-                start_bin = 0
-            if start_bin >= num_bins:
-                start_bin = num_bins - 1
-            if end_bin < 0:
-                end_bin = 0
-            if end_bin >= num_bins:
-                end_bin = num_bins - 1
-
-            num_affected = end_bin - start_bin + 1
-            vol_per_bin = bar_v / num_affected
-
-            for b in range(start_bin, end_bin + 1):
-                bin_volume[b] += vol_per_bin
-
-        # しきい値を手動で計算 (パーセンタイル)
-        # 出来高をソートしてパーセンタイルを見つける
-        sorted_vol = np.sort(bin_volume)
-        # 25パーセンタイルインデックス = 0.25 * (num_bins - 1)
-        idx_25 = int(0.25 * (num_bins - 1))
-        idx_75 = int(0.75 * (num_bins - 1))
-
-        lvn_threshold = sorted_vol[idx_25]
-        hvn_threshold = sorted_vol[idx_75]
-
-        current_price = close_arr[i]
-
-        # HVN（高出来高ノード）距離
-        min_hvn_dist = 1e9  # 無限大
-        found_hvn = False
-        for b in range(num_bins):
-            if bin_volume[b] >= hvn_threshold:
-                # ビンの中心価格
-                bin_price = price_min + (b + 0.5) * bin_step
-                dist = abs(current_price - bin_price)
-                if dist < min_hvn_dist:
-                    min_hvn_dist = dist
-                    found_hvn = True
-
-        if found_hvn and current_price != 0:
-            hvn_dist_arr[i] = min_hvn_dist / current_price
-
-        # LVN（低出来高ノード）距離
-        min_lvn_dist = 1e9
-        found_lvn = False
-        for b in range(num_bins):
-            if bin_volume[b] <= lvn_threshold:
-                bin_price = price_min + (b + 0.5) * bin_step
-                dist = abs(current_price - bin_price)
-                if dist < min_lvn_dist:
-                    min_lvn_dist = dist
-                    found_lvn = True
-
-        if found_lvn and current_price != 0:
-            lvn_dist_arr[i] = (
-                min_lvn_dist / current_price
-            )  # 元のコードは (current - lvn) / current でした
-            # 待てよ、元のコードは符号付き距離だったか？
-            # 元: (current - nearest_lvn) / current.
-            # はい、符号付きでした。しかし、通常「距離」は絶対値を意味します。
-            # 元のロジックに合わせて符号付きのままにしましょう。
-            # 元のコードを再確認:
-            # nearest_hvn = hvn_prices[np.argmin(np.abs(hvn_prices - current))]
-            # hvn_distance.iloc[i] = (current - nearest_hvn) / current
-            # 値は正または負になります。
-
-    return hvn_dist_arr, lvn_dist_arr
+    return hvn_dist, lvn_dist
 
 
 @jit(nopython=True)

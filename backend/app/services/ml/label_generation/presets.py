@@ -20,6 +20,15 @@ logger = logging.getLogger(__name__)
 SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 
 
+def _log_distribution(name: str, labels: pd.Series) -> None:
+    """ラベルの分布をログ出力"""
+    counts = labels.value_counts()
+    total = len(labels.dropna())
+    if total > 0:
+        v_pct, i_pct = (counts.get(1, 0) / total) * 100, (counts.get(0, 0) / total) * 100
+        logger.info(f"{name}完了: Valid={counts.get(1, 0)}({v_pct:.1f}%), Invalid={counts.get(0, 0)}({i_pct:.1f}%)")
+
+
 def triple_barrier_method_preset(
     df: pd.DataFrame,
     timeframe: str = "4h",
@@ -33,98 +42,29 @@ def triple_barrier_method_preset(
     atr_period: int = 14,
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
-    """
-    Triple Barrier Method (TBM) ラベル生成プリセット（二値分類専用）。
-
-    Args:
-        df: OHLCV データフレーム
-        timeframe: 時間足
-        horizon_n: 垂直バリア（時間切れ）までのバー数
-        pt: 利食い（Profit Taking）乗数 (ボラティリティ * pt)
-        sl: 損切り（Stop Loss）乗数 (ボラティリティ * sl)
-        min_ret: 最小リターン閾値
-        price_column: 価格カラム名
-        volatility_window: ボラティリティ計算ウィンドウ（use_atr=Falseの場合）
-        use_atr: ATRをボラティリティとして使用するか
-        atr_period: ATR計算期間
-        t_events: イベント時刻（指定された場合、この時刻のみ計算）
-
-    Returns:
-        pd.Series: 0/1 のバイナリラベル（メタラベリング / ダマシ予測用）
-    """
+    """TBM ラベル生成プリセット"""
     if timeframe not in SUPPORTED_TIMEFRAMES:
-        raise ValueError(f"未サポートの時間足です: {timeframe}")
+        raise ValueError(f"Unsupported timeframe: {timeframe}")
 
-    logger.info(
-        f"TBMラベル生成開始: timeframe={timeframe}, horizon={horizon_n}, "
-        f"pt={pt}, sl={sl}, min_ret={min_ret}, use_atr={use_atr}"
-    )
-
+    logger.info(f"TBMラベル生成開始: {timeframe}, horizon={horizon_n}")
     try:
-        # 1. 準備
         close = df[price_column]
-
-        # ボラティリティ計算
         if use_atr:
-            # ATR計算 (共通ユーティリティを使用)
-            volatility = calculate_volatility_atr(
-                high=df["high"],
-                low=df["low"],
-                close=close,
-                window=atr_period,
-                as_percentage=True,
-            )
-
+            vol = calculate_volatility_atr(df["high"], df["low"], close, atr_period, True)
         else:
-            # 従来: リターンの標準偏差 (共通ユーティリティを使用)
-            returns = close.pct_change()
-            volatility = calculate_volatility_std(
-                returns=returns, window=volatility_window
-            )
+            vol = calculate_volatility_std(close.pct_change(), volatility_window)
 
-        # t_events: 指定がなければ全てのバーをイベント候補とする
-        if t_events is None:
-            t_events = close.index
+        t_ev = t_events if t_events is not None else close.index
+        v_bar = pd.Series(close.index, index=close.index).shift(-horizon_n)
 
-        # vertical_barrier_times: horizon_n本後の時刻
-        vertical_barrier_times = pd.Series(close.index, index=close.index).shift(
-            -horizon_n
-        )
+        tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret)
+        events = tb.get_events(close, t_ev, [pt, sl], vol, min_ret, v_bar)
+        labels = tb.get_bins(events, close, binary_label=True)["bin"]
 
-        # 2. Triple Barrier 実行
-        tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret, num_threads=1)
-
-        events = tb.get_events(
-            close=close,
-            t_events=t_events,
-            pt_sl=[pt, sl],
-            target=volatility,
-            min_ret=min_ret,
-            vertical_barrier_times=vertical_barrier_times,
-        )
-
-        # 3. ラベル生成 (get_bins) - 常にバイナリラベル
-        bins = tb.get_bins(events, close, binary_label=True)
-
-        # 4. バイナリラベルを返す
-        labels = bins["bin"]
-
-        # 分布ログ
-        counts = labels.value_counts()
-        total = len(labels.dropna())
-        if total > 0:
-            valid_pct = (counts.get(1, 0) / total) * 100
-            invalid_pct = (counts.get(0, 0) / total) * 100
-            logger.info(
-                f"TBMラベル生成完了: "
-                f"Valid={counts.get(1, 0)}({valid_pct:.1f}%), "
-                f"Invalid={counts.get(0, 0)}({invalid_pct:.1f}%)"
-            )
-
+        _log_distribution("TBMラベル生成", labels)
         return labels
-
     except Exception as e:
-        logger.error(f"TBMラベル生成エラー: {e}")
+        logger.error(f"TBM error: {e}")
         raise
 
 
@@ -138,66 +78,20 @@ def trend_scanning_preset(
     price_column: str = "close",
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
-    """
-    Trend Scanning ラベル生成プリセット（二値分類専用）。
-
-    Args:
-        df: OHLCV データフレーム
-        timeframe: 時間足
-        horizon_n: 最大ウィンドウサイズ (max_window)
-        threshold: t値の閾値 (min_t_value)
-        min_window: 最小ウィンドウサイズ
-        window_step: ウィンドウステップサイズ
-        price_column: 価格カラム名
-        t_events: イベント時刻（指定された場合、この時刻のみ計算）
-
-    Returns:
-        pd.Series: 0/1 のバイナリラベル（メタラベリング / ダマシ予測用）
-    """
+    """Trend Scanning ラベル生成プリセット"""
     if timeframe not in SUPPORTED_TIMEFRAMES:
-        raise ValueError(f"未サポートの時間足です: {timeframe}")
+        raise ValueError(f"Unsupported timeframe: {timeframe}")
 
-    logger.info(
-        f"TrendScanningラベル生成開始: timeframe={timeframe}, horizon(max)={horizon_n}, "
-        f"threshold(t)={threshold}, min_window={min_window}"
-    )
-
+    logger.info(f"TSラベル生成開始: {timeframe}, threshold={threshold}")
     try:
-        # 1. 準備
         close = df[price_column]
-        if t_events is None:
-            t_events = close.index  # 全ての足を対象
+        ts = TrendScanning(min_window, horizon_n, window_step, threshold)
+        labels = ts.get_labels(close, t_events)["bin"].abs().astype(int)
 
-        # 2. Trend Scanning 実行
-        ts = TrendScanning(
-            min_window=min_window,
-            max_window=horizon_n,
-            step=window_step,
-            min_t_value=threshold,
-        )
-
-        labels_df = ts.get_labels(close=close, t_events=t_events)
-
-        # 3. ラベル変換（常にバイナリラベル）
-        # 絶対値をとってバイナリ化 (0 or 1)
-        labels = labels_df["bin"].abs().astype(int)
-
-        # 分布ログ
-        counts = labels.value_counts()
-        total = len(labels.dropna())
-        if total > 0:
-            valid_pct = (counts.get(1, 0) / total) * 100
-            invalid_pct = (counts.get(0, 0) / total) * 100
-            logger.info(
-                f"TSラベル生成完了: "
-                f"Valid={counts.get(1, 0)}({valid_pct:.1f}%), "
-                f"Invalid={counts.get(0, 0)}({invalid_pct:.1f}%)"
-            )
-
+        _log_distribution("TSラベル生成", labels)
         return labels
-
     except Exception as e:
-        logger.error(f"TrendScanningラベル生成エラー: {e}")
+        logger.error(f"TS error: {e}")
         raise
 
 

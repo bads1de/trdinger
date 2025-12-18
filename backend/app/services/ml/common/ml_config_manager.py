@@ -171,22 +171,16 @@ class MLConfigManager:
             return False
 
     def _merge_config_updates(
-        self, current_config: Dict[str, Any], updates: Dict[str, Any]
+        self, current: Dict[str, Any], updates: Dict[str, Any]
     ) -> Dict[str, Any]:
         """設定更新をマージ"""
-        merged = current_config.copy()
-
-        for section, section_updates in updates.items():
-            if (
-                section in merged
-                and isinstance(section_updates, dict)
-                and isinstance(merged[section], dict)
-            ):
-                merged[section].update(section_updates)
+        res = current.copy()
+        for k, v in updates.items():
+            if isinstance(v, dict) and isinstance(res.get(k), dict):
+                res[k] = {**res[k], **v}
             else:
-                merged[section] = section_updates
-
-        return merged
+                res[k] = v
+        return res
 
     def _apply_config_dict(self, config_dict: Dict[str, Any]) -> None:
         """

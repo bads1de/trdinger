@@ -148,24 +148,18 @@ class OptunaOptimizer:
     ) -> Dict[str, Any]:
         """パラメータをサジェスト"""
         params = {}
-
-        for param_name, param_config in parameter_space.items():
-            if param_config.type == "real":
-                assert param_config.low is not None and param_config.high is not None
-                params[param_name] = trial.suggest_float(
-                    param_name, param_config.low, param_config.high
-                )
-            elif param_config.type == "integer":
-                assert param_config.low is not None and param_config.high is not None
-                params[param_name] = trial.suggest_int(
-                    param_name, int(param_config.low), int(param_config.high)
-                )
-            elif param_config.type == "categorical":
-                assert param_config.categories is not None
-                params[param_name] = trial.suggest_categorical(
-                    param_name, param_config.categories
-                )
-
+        for name, cfg in parameter_space.items():
+            if cfg.type in ["real", "integer"]:
+                if cfg.low is None or cfg.high is None:
+                    raise AssertionError(f"Bounds (low, high) required for {cfg.type} parameter: {name}")
+                if cfg.type == "real":
+                    params[name] = trial.suggest_float(name, cfg.low, cfg.high)
+                else:
+                    params[name] = trial.suggest_int(name, int(cfg.low), int(cfg.high))
+            elif cfg.type == "categorical":
+                if not cfg.categories:
+                    raise AssertionError(f"Categories required for categorical parameter: {name}")
+                params[name] = trial.suggest_categorical(name, cfg.categories)
         return params
 
     @staticmethod

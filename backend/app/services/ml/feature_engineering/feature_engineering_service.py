@@ -314,96 +314,75 @@ class FeatureEngineeringService:
             # データ型を最適化
             result_df = optimize_dtypes(result_df)
 
-            # 価格特徴量
-            result_df = self.price_calculator.calculate_features(
-                result_df, {"lookback_periods": lookback_periods}
-            )
+            # 1. 基本的な特徴量計算（result_dfを直接更新するタイプ）
+            core_calculators = [
+                (self.price_calculator, {"lookback_periods": lookback_periods}),
+                (self.technical_calculator, {"lookback_periods": lookback_periods}),
+                (
+                    self.market_data_calculator,
+                    {
+                        "lookback_periods": lookback_periods,
+                        "funding_rate_data": funding_rate_data,
+                        "open_interest_data": open_interest_data,
+                    },
+                ),
+            ]
 
-            # テクニカル特徴量
-            result_df = self.technical_calculator.calculate_features(
-                result_df, {"lookback_periods": lookback_periods}
-            )
+            for calc, config in core_calculators:
+                result_df = calc.calculate_features(result_df, config)
 
-            # 市場データ特徴量
-            config = {
-                "lookback_periods": lookback_periods,
-                "funding_rate_data": funding_rate_data,
-                "open_interest_data": open_interest_data,
-            }
-            result_df = self.market_data_calculator.calculate_features(
-                result_df, config
-            )
-
-            # 暗号通貨特化特徴量
-            if self.crypto_features is not None:
+            # 2. 特化型特徴量計算（独自のメソッド名を持つタイプ）
+            if self.crypto_features:
                 logger.debug("暗号通貨特化特徴量を計算中...")
                 result_df = self.crypto_features.create_crypto_features(
                     result_df, funding_rate_data, open_interest_data
                 )
 
-            # 相互作用特徴量
             result_df = self.interaction_calculator.calculate_interaction_features(
                 result_df
             )
 
-            # === 新規追加: 学術的に実証済みの強力な特徴量 ===
+            # 3. 追加の特徴量計算（追加のDataFrameを返し、最後にconcatするタイプ）
             logger.info("学術論文・Kaggle実証済み特徴量を計算中...")
-
-            # 特徴量DataFrameをリストに収集し、最後に一度だけconcatする（パフォーマンス最適化）
             additional_features_list = []
 
-            # Volume Profile特徴量
-            volume_profile_features = self.volume_profile_calculator.calculate_features(
-                result_df
-            )
-            additional_features_list.append(volume_profile_features)
+            # (電卓, 引数リスト) の形式で定義
+            additional_calculators = [
+                (self.volume_profile_calculator, [result_df]),
+                (
+                    self.oi_fr_interaction_calculator,
+                    [result_df, open_interest_data, funding_rate_data],
+                ),
+                (self.advanced_stats_calculator, [result_df]),
+                (self.multi_timeframe_calculator, [result_df]),
+                (self.microstructure_calculator, [result_df]),
+            ]
 
-            # OI/FR相互作用特徴量
-            oi_fr_features = self.oi_fr_interaction_calculator.calculate_features(
-                result_df, open_interest_data, funding_rate_data
-            )
-            additional_features_list.append(oi_fr_features)
+            for calc, args in additional_calculators:
+                try:
+                    feat_df = calc.calculate_features(*args)
+                    additional_features_list.append(feat_df)
+                except Exception as e:
+                    logger.error(f"{calc.__class__.__name__} の計算中にエラー: {e}")
 
-            # Advanced Rolling Statistics特徴量
-            advanced_stats_features = self.advanced_stats_calculator.calculate_features(
-                result_df
-            )
-            additional_features_list.append(advanced_stats_features)
-
-            # Multi-Timeframe特徴量
-            multi_timeframe_features = (
-                self.multi_timeframe_calculator.calculate_features(result_df)
-            )
-            additional_features_list.append(multi_timeframe_features)
-
-            # Microstructure特徴量 (New)
-            microstructure_features = self.microstructure_calculator.calculate_features(
-                result_df
-            )
-            additional_features_list.append(microstructure_features)
-
-            # 一度だけconcatを実行（5回 -> 1回に削減）
+            # 一度だけconcatを実行
             if additional_features_list:
                 result_df = pd.concat([result_df] + additional_features_list, axis=1)
 
             # 重複カラムを削除（新しい値を優先）
             result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
 
-            # データ前処理（ベクトル化された処理でパフォーマンス最適化）
+            # データ前処理
             logger.info("統計的手法による特徴量前処理を実行中...")
             try:
-                numeric_columns = result_df.select_dtypes(include=[np.number]).columns
-
-                # ベクトル化された一括処理（列ごとのループを排除）
-                # 1. 無限大値をNaNに変換
-                result_df[numeric_columns] = result_df[numeric_columns].replace(
-                    [np.inf, -np.inf], np.nan
+                # 数値列の一括処理
+                num_cols = result_df.select_dtypes(include=[np.number]).columns
+                result_df[num_cols] = (
+                    result_df[num_cols]
+                    .replace([np.inf, -np.inf], np.nan)
+                    .ffill()
+                    .fillna(0.0)
                 )
-                # 2. NaN値を前方補完
-                result_df[numeric_columns] = result_df[numeric_columns].ffill()
-                # 3. 残りを0で埋める
-                result_df[numeric_columns] = result_df[numeric_columns].fillna(0.0)
-
                 logger.info("データ前処理完了")
             except Exception as e:
                 logger.error(f"データ前処理中にエラーが発生: {e}")
@@ -441,6 +420,3 @@ class FeatureEngineeringService:
             del self.feature_cache[oldest_key]
 
         self.feature_cache[key] = {"data": data, "timestamp": datetime.now()}
-
-
-

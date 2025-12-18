@@ -32,129 +32,57 @@ class MLManagementOrchestrationService:
         pass
 
     async def get_formatted_models(self) -> Dict[str, List[Dict[str, Any]]]:
-        """
-        学習済みモデルの一覧を取得し、フロントエンド表示用に整形する
-        """
-        # ブロッキングI/Oをスレッドプールで実行
+        """学習済みモデルの一覧を取得し、整形する"""
         models = await run_in_threadpool(model_manager.list_models, "*")
-
-        # モデル情報を整形
-        formatted_models = []
-        for model in models:
-            # 基本情報
-            model_info = {
-                "id": model["name"],
-                "name": model["name"],
-                "path": model["path"],
-                "size_mb": model["size_mb"],
-                "modified_at": model["modified_at"].isoformat(),
-                "directory": model["directory"],
-                "is_active": self._is_active_model(model),  # アクティブモデルの判定
+        formatted = []
+        for m in models:
+            info = {
+                "id": m["name"], "name": m["name"], "path": m["path"], "size_mb": m["size_mb"],
+                "modified_at": m["modified_at"].isoformat(), "directory": m["directory"],
+                "is_active": self._is_active_model(m)
             }
-
-            # モデルの詳細情報を取得
             try:
-                # ブロッキングI/Oをスレッドプールで実行
-                model_data = await run_in_threadpool(
-                    load_model_metadata_safely, model["path"]
-                )
-                if model_data:
-                    metadata = model_data["metadata"]
-
-                    # ModelManagerユーティリティで性能メトリクスを抽出
-                    # これも重い処理の可能性があるためスレッドプールで実行
-                    metrics = await run_in_threadpool(
-                        model_manager.extract_model_performance_metrics,
-                        model["path"],
-                        metadata=metadata,
-                    )
-                    model_info.update(metrics)
-
-                    # その他の情報を追加
-                    model_info.update(
-                        {
-                            "feature_count": metadata.get("feature_count", 0),
-                            "model_type": metadata.get("model_type", "LightGBM"),
-                            "training_samples": metadata.get("training_samples", 0),
-                        }
-                    )
-                else:
-                    # メタデータを取得できなかった場合
-                    self._apply_default_model_metrics(model_info)
-
-            except (KeyError, ValueError, OSError) as e:
-                logger.warning(
-                    f"モデル詳細情報取得エラー {model['name']}: {e}", exc_info=True
-                )
-                # エラーの場合はデフォルト値を設定
-                self._apply_default_model_metrics(model_info)
+                data = await run_in_threadpool(load_model_metadata_safely, m["path"])
+                meta = data["metadata"] if data else {}
+                metrics = await run_in_threadpool(model_manager.extract_model_performance_metrics, m["path"], metadata=meta)
+                info.update(metrics)
+                info.update({
+                    "feature_count": meta.get("feature_count", 0),
+                    "model_type": meta.get("model_type", "Unknown"),
+                    "training_samples": meta.get("training_samples", 0)
+                })
             except Exception as e:
-                # 予期しない例外はエラーレベルで記録
-                logger.error(f"予期しないエラー {model['name']}: {e}", exc_info=True)
-                # エラーの場合はデフォルト値を設定
-                self._apply_default_model_metrics(model_info)
-
-            formatted_models.append(model_info)
-
-        return {"models": formatted_models}
+                logger.warning(f"詳細情報取得失敗 {m['name']}: {e}")
+                self._apply_default_model_metrics(info)
+            formatted.append(info)
+        return {"models": formatted}
 
     def _apply_default_model_metrics(self, model_info: Dict[str, Any]) -> None:
-        """
-        モデル情報にデフォルトのメトリクスを適用
-
-        Args:
-            model_info: モデル情報辞書（更新される）
-        """
-        default_metrics = get_default_metrics()
-        model_info.update(
-            {
-                "accuracy": default_metrics["accuracy"],
-                "precision": default_metrics["precision"],
-                "recall": default_metrics["recall"],
-                "f1_score": default_metrics["f1_score"],
-                "feature_count": 0,
-                "model_type": "Unknown",
-                "training_samples": 0,
-            }
-        )
+        """モデル情報にデフォルトメトリクスを適用"""
+        d = get_default_metrics()
+        model_info.update({
+            "accuracy": d["accuracy"], "precision": d["precision"], "recall": d["recall"],
+            "f1_score": d["f1_score"], "feature_count": 0, "model_type": "Unknown", "training_samples": 0
+        })
 
     async def delete_model(self, model_id: str) -> Dict[str, str]:
-        """
-        指定されたモデルを削除
-        """
+        """指定されたモデルを削除"""
         logger.info(f"モデル削除要求: {model_id}")
-
-        decoded_model_id = unquote(model_id)
-
-        # ブロッキングI/Oをスレッドプールで実行
+        dec_id = unquote(model_id)
         models = await run_in_threadpool(model_manager.list_models, "*")
-        target_model = None
+        target = next((m for m in models if m["name"] in [dec_id, model_id]), None)
 
-        for model in models:
-            if model["name"] == decoded_model_id or model["name"] == model_id:
-                target_model = model
-                break
-
-        if not target_model:
-            logger.warning(f"モデルが見つかりません: {decoded_model_id}")
-            logger.info(f"利用可能なモデル: {[m['name'] for m in models]}")
-            raise HTTPException(
-                status_code=404, detail=f"モデルが見つかりません: {decoded_model_id}"
-            )
+        if not target:
+            raise HTTPException(status_code=404, detail=f"モデルが見つかりません: {dec_id}")
 
         try:
-            # ブロッキングI/Oをスレッドプールで実行
-            await run_in_threadpool(os.remove, target_model["path"])
-            logger.info(f"モデル削除完了: {decoded_model_id} -> {target_model['path']}")
+            await run_in_threadpool(os.remove, target["path"])
             return api_response(success=True, message="モデルが削除されました")
         except FileNotFoundError:
-            logger.warning(f"モデルファイルが存在しません: {target_model['path']}")
             raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
         except Exception as e:
-            logger.error(f"モデルファイル削除エラー: {e}")
-            raise HTTPException(
-                status_code=500, detail="モデルファイルの削除に失敗しました"
-            )
+            logger.error(f"削除エラー: {e}")
+            raise HTTPException(status_code=500, detail="削除失敗")
 
     async def delete_all_models(self) -> Dict[str, Any]:
         """
