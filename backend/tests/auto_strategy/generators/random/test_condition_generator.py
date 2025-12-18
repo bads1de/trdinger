@@ -1,11 +1,11 @@
 """
-RandomConditionGeneratorのテスト
+ConditionGenerator (Random features) のテスト
 """
 
 import pytest
 from unittest.mock import Mock, patch
-from app.services.auto_strategy.generators.random_condition_generator import (
-    RandomConditionGenerator,
+from app.services.auto_strategy.generators.condition_generator import (
+    ConditionGenerator,
 )
 from app.services.auto_strategy.genes import Condition
 
@@ -16,8 +16,9 @@ class TestConditionGeneratorInit:
     def test_init_stores_config(self):
         """設定を保存する"""
         config = Mock()
-        generator = RandomConditionGenerator(config)
-        assert generator.config == config
+        generator = ConditionGenerator(enable_smart_generation=False, ga_config=config)
+        # ConditionGeneratorでは config は ga_config_obj として保存される
+        assert generator.ga_config_obj == config
         assert generator.operand_generator is not None
         assert generator.available_operators is not None
 
@@ -31,7 +32,7 @@ class TestGenerateRandomConditions:
         # 条件数の範囲
         config.min_conditions = 1
         config.max_conditions = 3
-        return RandomConditionGenerator(config)
+        return ConditionGenerator(enable_smart_generation=False, ga_config=config)
 
     def test_generates_conditions_within_range(self, generator):
         """指定された範囲内の数の条件を生成"""
@@ -71,8 +72,8 @@ class TestGenerateRandomConditions:
 
     def test_handles_inverted_min_max_config(self, generator):
         """min > maxの設定でも正しく動作する"""
-        generator.config.min_conditions = 5
-        generator.config.max_conditions = 2
+        generator.ga_config_obj.min_conditions = 5
+        generator.ga_config_obj.max_conditions = 2
 
         indicators = [Mock()]
         condition_type = "entry"
@@ -96,7 +97,7 @@ class TestGenerateSingleCondition:
     @pytest.fixture
     def generator(self):
         config = Mock()
-        return RandomConditionGenerator(config)
+        return ConditionGenerator(enable_smart_generation=False, ga_config=config)
 
     def test_generates_valid_condition(self, generator):
         """有効な条件を生成"""
@@ -121,12 +122,12 @@ class TestGenerateFallbackCondition:
 
     def test_entry_fallback(self):
         """エントリー用フォールバック"""
-        generator = RandomConditionGenerator(Mock())
+        generator = ConditionGenerator(enable_smart_generation=False, ga_config=Mock())
         condition = generator._generate_fallback_condition("entry")
         assert condition.operator == ">"
 
     def test_exit_fallback(self):
         """エグジット用フォールバック"""
-        generator = RandomConditionGenerator(Mock())
+        generator = ConditionGenerator(enable_smart_generation=False, ga_config=Mock())
         condition = generator._generate_fallback_condition("exit")
         assert condition.operator == "<"

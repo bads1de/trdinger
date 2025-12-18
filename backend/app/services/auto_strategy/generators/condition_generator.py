@@ -8,6 +8,7 @@ from app.utils.error_handler import safe_operation
 
 from ..config.constants import (
     IndicatorType,
+    OPERATORS,
 )
 from ..core.condition_evolver import (
     ConditionEvolver,
@@ -17,6 +18,7 @@ from ..genes import Condition, ConditionGroup, IndicatorGene
 from ..utils.yaml_utils import YamlIndicatorUtils
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
+from .random_operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ class ConditionGenerator:
     2. 時間軸分離戦略
     3. 複合条件戦略
     4. 指標特性活用戦略
+    5. 純粋ランダム条件生成（RandomConditionGeneratorより統合）
     """
 
     @safe_operation(context="ConditionGenerator初期化", is_api_call=False)
@@ -59,6 +62,10 @@ class ConditionGenerator:
         # geneに含まれる指標一覧をオプションで保持
         self.indicators: List[IndicatorGene] | None = None
 
+        # ランダム生成用コンポーネント（RandomConditionGeneratorより統合）
+        self.operand_generator = OperandGenerator(ga_config)
+        self.available_operators = OPERATORS
+
     @safe_operation(context="コンテキスト設定", is_api_call=False)
     def set_context(
         self,
@@ -79,6 +86,63 @@ class ConditionGenerator:
             self.context["threshold_profile"] = threshold_profile
         if regime_thresholds is not None:
             self.context["regime_thresholds"] = regime_thresholds
+
+    def generate_random_conditions(
+        self, indicators: List[any], condition_type: str
+    ) -> List[Condition]:
+        """ランダムな条件リストを生成"""
+        # 条件数はプロファイルや生成器の方針により 1〜max_conditions に広げる
+        # ここでは min_conditions〜max_conditions の範囲で選択（下限>上限にならないようにガード）
+        low = 3  # デフォルト値
+        high = 5  # デフォルト値
+
+        if self.ga_config_obj:
+            if hasattr(self.ga_config_obj, "min_conditions"):
+                low = int(self.ga_config_obj.min_conditions)
+            if hasattr(self.ga_config_obj, "max_conditions"):
+                high = int(self.ga_config_obj.max_conditions)
+
+        if high < low:
+            low, high = high, low
+        num_conditions = random.randint(low, max(low, high))
+        conditions = []
+
+        for _ in range(num_conditions):
+            condition = self._generate_single_condition(indicators, condition_type)
+            if condition:
+                conditions.append(condition)
+
+        # 最低1つの条件は保証
+        if not conditions:
+            conditions.append(self._generate_fallback_condition(condition_type))
+
+        return conditions
+
+    def _generate_single_condition(
+        self, indicators: List[any], condition_type: str
+    ) -> Condition:
+        """単一の条件を生成"""
+        # 左オペランドの選択
+        left_operand = self.operand_generator.choose_operand(indicators)
+
+        # 演算子の選択
+        operator = random.choice(self.available_operators)
+
+        # 右オペランドの選択
+        right_operand = self.operand_generator.choose_right_operand(
+            left_operand, indicators, condition_type
+        )
+
+        return Condition(
+            left_operand=left_operand, operator=operator, right_operand=right_operand
+        )
+
+    def _generate_fallback_condition(self, condition_type: str) -> Condition:
+        """フォールバック用の基本条件を生成（JSON形式の指標名）"""
+        if condition_type == "entry":
+            return Condition(left_operand="close", operator=">", right_operand="SMA")
+        else:
+            return Condition(left_operand="close", operator="<", right_operand="SMA")
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
     def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[

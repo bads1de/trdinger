@@ -20,17 +20,15 @@ from ..genes import (
     PositionSizingMethod,
     StrategyGene,
     TPSLGene,
+    create_random_entry_gene,
+    create_random_position_sizing_gene,
+    create_random_tpsl_gene,
 )
 from ..genes.tool import ToolGene
 from ..serializers.serialization import GeneSerializer
 from ..tools import tool_registry
-from .component_generators import (
-    EntryGenerator,
-    PositionSizingGenerator,
-    TPSLGenerator,
-)
+
 from .condition_generator import ConditionGenerator
-from .random_condition_generator import RandomConditionGenerator
 from .random_indicator_generator import IndicatorGenerator
 from .random_operand_generator import OperandGenerator
 
@@ -93,11 +91,7 @@ class RandomGeneGenerator:
         self.threshold_ranges = config.threshold_ranges
 
         self.indicator_generator = IndicatorGenerator(config)
-        self.condition_generator = RandomConditionGenerator(config)
-        self.tpsl_generator = TPSLGenerator(config)
-        self.position_sizing_generator = PositionSizingGenerator(config)
         self.operand_generator = OperandGenerator(config)
-        self.entry_generator = EntryGenerator(config)
 
     def _ensure_or_with_fallback(
         self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
@@ -186,18 +180,18 @@ class RandomGeneGenerator:
         indicators = self.indicator_generator.generate_random_indicators()
 
         # TP/SL遺伝子を生成
-        tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
+        tpsl_gene = create_random_tpsl_gene(self.config)
 
         # Auto-StrategyではTP/SLを常に有効化
         if tpsl_gene:
             tpsl_gene.enabled = True
 
         # Long/Short TP/SL遺伝子も個別に生成
-        long_tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
+        long_tpsl_gene = create_random_tpsl_gene(self.config)
         if long_tpsl_gene:
             long_tpsl_gene.enabled = True
 
-        short_tpsl_gene = self.tpsl_generator.generate_tpsl_gene()
+        short_tpsl_gene = create_random_tpsl_gene(self.config)
         if short_tpsl_gene:
             short_tpsl_gene.enabled = True
 
@@ -225,14 +219,12 @@ class RandomGeneGenerator:
         }
 
         # ポジションサイジング遺伝子を生成（GA最適化対象）
-        position_sizing_gene = (
-            self.position_sizing_generator.generate_position_sizing_gene()
-        )
+        position_sizing_gene = create_random_position_sizing_gene(self.config)
 
         # エントリー遺伝子を生成（GA最適化対象）
-        entry_gene = self.entry_generator.generate_entry_gene()
-        long_entry_gene = self.entry_generator.generate_entry_gene()
-        short_entry_gene = self.entry_generator.generate_entry_gene()
+        entry_gene = create_random_entry_gene(self.config)
+        long_entry_gene = create_random_entry_gene(self.config)
+        short_entry_gene = create_random_entry_gene(self.config)
 
         # ツール遺伝子を生成（週末フィルターなど）
         tool_genes = self._generate_tool_genes()

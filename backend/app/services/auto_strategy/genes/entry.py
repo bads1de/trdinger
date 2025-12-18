@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 from ..config.constants import EntryType
 
@@ -124,4 +124,64 @@ class EntryGene:
             order_validity_bars=data.get("order_validity_bars", 5),
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
+        )
+
+
+def create_random_entry_gene(config: Any = None) -> EntryGene:
+    """
+    ランダムなエントリー遺伝子を生成
+
+    Args:
+        config: GA設定オブジェクト（オプション）
+
+    Returns:
+        生成されたエントリー遺伝子
+    """
+    import random
+
+    # エントリータイプの出現確率（初期段階では成行注文を多めに設定）
+    default_weights = {
+        EntryType.MARKET: 0.6,
+        EntryType.LIMIT: 0.2,
+        EntryType.STOP: 0.15,
+        EntryType.STOP_LIMIT: 0.05,
+    }
+
+    try:
+        # 重み付きでエントリータイプを選択
+        weights = default_weights
+        if config and hasattr(config, "entry_type_weights"):
+            custom_weights = config.entry_type_weights
+            if custom_weights:
+                weights = {EntryType(k): v for k, v in custom_weights.items()}
+
+        types = list(weights.keys())
+        type_weights = list(weights.values())
+
+        entry_type = random.choices(types, weights=type_weights, k=1)[0]
+
+        # オフセット値をランダム生成（0.1% ~ 2.0%）
+        limit_offset_pct = random.uniform(0.001, 0.02)
+        stop_offset_pct = random.uniform(0.001, 0.02)
+
+        # 有効期限をランダム生成（1 ~ 20バー）
+        order_validity_bars = random.randint(1, 20)
+
+        return EntryGene(
+            entry_type=entry_type,
+            limit_offset_pct=limit_offset_pct,
+            stop_offset_pct=stop_offset_pct,
+            order_validity_bars=order_validity_bars,
+            enabled=True,
+            priority=random.uniform(0.5, 1.5),
+        )
+
+    except (ValueError, TypeError, KeyError, AttributeError):
+        # フォールバック: 成行注文のデフォルト遺伝子
+        return EntryGene(
+            entry_type=EntryType.MARKET,
+            limit_offset_pct=0.005,
+            stop_offset_pct=0.005,
+            order_validity_bars=5,
+            enabled=True,
         )

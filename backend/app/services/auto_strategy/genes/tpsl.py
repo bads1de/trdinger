@@ -174,7 +174,7 @@ class TPSLResult:
         }
 
 
-def create_random_tpsl_gene() -> TPSLGene:
+def create_random_tpsl_gene(config: Any = None) -> TPSLGene:
     """ランダムなTP/SL遺伝子を生成"""
     import random
 
@@ -193,7 +193,7 @@ def create_random_tpsl_gene() -> TPSLGene:
         for key in method_weights:
             method_weights[key] /= total_weight
 
-    return TPSLGene(
+    tpsl_gene = TPSLGene(
         method=method,
         stop_loss_pct=random.uniform(0.01, 0.08),
         take_profit_pct=random.uniform(0.02, 0.15),
@@ -208,6 +208,42 @@ def create_random_tpsl_gene() -> TPSLGene:
         enabled=True,
         priority=random.uniform(0.5, 1.5),
     )
+
+    if config:
+        # Anyの制約を適用（設定されている場合）
+        if hasattr(config, "tpsl_method_constraints"):
+            # 許可されたメソッドのみを使用
+            allowed_methods = config.tpsl_method_constraints
+            if allowed_methods:
+                tpsl_gene.method = random.choice(
+                    [TPSLMethod(m) for m in allowed_methods]
+                )
+
+        if hasattr(config, "tpsl_sl_range") and config.tpsl_sl_range is not None:
+            sl_min, sl_max = config.tpsl_sl_range
+            tpsl_gene.stop_loss_pct = random.uniform(sl_min, sl_max)
+            tpsl_gene.base_stop_loss = random.uniform(sl_min, sl_max)
+
+        if hasattr(config, "tpsl_tp_range") and config.tpsl_tp_range is not None:
+            # TP範囲制約
+            tp_min, tp_max = config.tpsl_tp_range
+            tpsl_gene.take_profit_pct = random.uniform(tp_min, tp_max)
+
+        if hasattr(config, "tpsl_rr_range") and config.tpsl_rr_range is not None:
+            # リスクリワード比範囲制約
+            rr_min, rr_max = config.tpsl_rr_range
+            tpsl_gene.risk_reward_ratio = random.uniform(rr_min, rr_max)
+
+        if (
+            hasattr(config, "tpsl_atr_multiplier_range")
+            and config.tpsl_atr_multiplier_range is not None
+        ):
+            # ATR倍率範囲制約
+            atr_min, atr_max = config.tpsl_atr_multiplier_range
+            tpsl_gene.atr_multiplier_sl = random.uniform(atr_min, atr_max)
+            tpsl_gene.atr_multiplier_tp = random.uniform(atr_min * 1.5, atr_max * 2.0)
+
+    return tpsl_gene
 
 
 def crossover_tpsl_genes(

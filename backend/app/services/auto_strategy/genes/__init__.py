@@ -11,7 +11,7 @@ from .conditions import (
     StateTracker,
     StatefulCondition,
 )
-from .entry import EntryGene
+from .entry import EntryGene, create_random_entry_gene
 from ..config.constants import EntryType, PositionSizingMethod, TPSLMethod
 from .indicator import IndicatorGene
 from .position_sizing import (
@@ -58,4 +58,5 @@ __all__ = [
     "crossover_tpsl_genes",
     "mutate_position_sizing_gene",
     "mutate_tpsl_gene",
+    "create_random_entry_gene",
 ]
