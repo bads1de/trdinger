@@ -21,7 +21,22 @@ class HalfOptimalFCalculator(BaseCalculator):
     def calculate(
         self, gene, account_balance: float, current_price: float, **kwargs
     ) -> Dict[str, Any]:
-        """ハーフオプティマルF方式の拡張計算"""
+        """
+        ハーフオプティマルF方式を用いてポジションサイズを計算
+
+        過去の取引履歴（損益）を分析し、オプティマルF（ケリー基準の派生）
+        を計算します。リスクを抑えるため、計算された比率の半分（ハーフ）
+        を適用します。履歴不足時は簡易計算または固定比率にフォールバックします。
+
+        Args:
+            gene: ポジションサイジング遺伝子
+            account_balance: 現在の口座残高
+            current_price: 現在価格
+            **kwargs: trade_history (List) を含む必要がある
+
+        Returns:
+            計算結果を含む辞書
+        """
         trade_history = kwargs.get("trade_history")
         details: Dict[str, Any] = {"method": "half_optimal_f"}
         warnings: List[str] = []
@@ -241,8 +256,3 @@ class HalfOptimalFCalculator(BaseCalculator):
             }
 
         return _fallback()
-
-
-
-
-

@@ -8,7 +8,16 @@ import logging
 import math
 import threading
 from datetime import datetime
-from typing import Any, Dict, Iterable, Mapping, MutableSequence, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 import pandas as pd
 from cachetools import LRUCache
@@ -245,12 +254,15 @@ class IndividualEvaluator:
         """
         個体評価（OOS検証/WFA対応版）
 
+        遺伝子をデコードし、キャッシュを確認してから
+        指定された検証手法（通常、OOS、WFA）を用いて評価を実行します。
+
         Args:
-            individual: 評価する個体
+            individual: 評価対象の個体 (StrategyGene, dict, または list)
             config: GA設定
 
         Returns:
-            フィットネス値のタプル
+            フィットネス値のタプル (目的関数の数に対応)
         """
         try:
             # 遺伝子デコード
@@ -268,7 +280,7 @@ class IndividualEvaluator:
                 # DEAP形式: [StrategyGene, ...] もしくは [float, ...] などの場合
                 if len(individual) > 0 and isinstance(individual[0], StrategyGene):
                     gene = individual[0]
-                elif len(individual) > 0 and hasattr(individual[0], 'id'):
+                elif len(individual) > 0 and hasattr(individual[0], "id"):
                     # StrategyGeneオブジェクトそのものと仮定
                     gene = individual[0]
                 else:
@@ -317,7 +329,8 @@ class IndividualEvaluator:
 
         except Exception as e:
             logger.error(f"個体評価エラー: {e}")
-            return tuple(0.0 for _ in config.objectives)
+            # エラー発生時は目的プロトコルに合わせて0.0のタプルを返す
+            return tuple(0.0 for _ in getattr(config, "objectives", []))
 
     def _execute_evaluation_logic(
         self, gene, base_backtest_config, config
@@ -348,8 +361,23 @@ class IndividualEvaluator:
         config: GAConfig,
         oos_ratio: float,
         oos_weight: float,
-    ):
-        """OOS検証付き評価"""
+    ) -> Tuple[float, ...]:
+        """
+        Out-of-Sample (OOS) 検証を含む評価を実行します。
+
+        全体期間をトレーニング期間（In-Sample）とテスト期間（Out-of-Sample）に分割し、
+        それぞれのフィットネス値を加重平均して最終的な評価値とします。
+
+        Args:
+            gene: 評価対象の戦略遺伝子
+            base_backtest_config: ベースとなるバックテスト設定
+            config: GA設定
+            oos_ratio: OOS期間の割合 (0.0 - 1.0)
+            oos_weight: OOSスコアの重み (0.0 - 1.0)
+
+        Returns:
+            加重平均されたフィットネス値のタプル
+        """
         try:
             start_date = pd.to_datetime(base_backtest_config.get("start_date"))
             end_date = pd.to_datetime(base_backtest_config.get("end_date"))
@@ -621,7 +649,20 @@ class IndividualEvaluator:
     def _perform_single_evaluation(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Tuple[float, ...]:
-        """単一期間での評価実行"""
+        """
+        単一期間でのバックテストとフィットネス評価を実行
+
+        バックテスト設定の構築、データの準備、外部オブジェクトの注入を行い、
+        バックテストエンジンを呼び出した後、多目的フィットネスを計算します。
+
+        Args:
+            gene: 評価対象の戦略遺伝子
+            backtest_config: バックテスト実行用設定
+            config: GA設定
+
+        Returns:
+            フィットネス値のタプル
+        """
         try:
             # 1. 実行用設定の構築
             run_config = self._prepare_run_config(gene, backtest_config, config)
@@ -630,7 +671,7 @@ class IndividualEvaluator:
 
             # 2. データの準備
             data = self._get_cached_data(backtest_config)
-            
+
             # モデル外のオブジェクトを注入
             self._inject_external_objects(run_config, backtest_config, config)
 
@@ -640,10 +681,14 @@ class IndividualEvaluator:
             )
 
             # 4. 追加のコンテキスト情報（ML予測シグナルなど）を取得
-            evaluation_context = self._get_evaluation_context(gene, backtest_config, config)
+            evaluation_context = self._get_evaluation_context(
+                gene, backtest_config, config
+            )
 
             # 5. フィットネス計算
-            return self._calculate_multi_objective_fitness(result, config, **evaluation_context)
+            return self._calculate_multi_objective_fitness(
+                result, config, **evaluation_context
+            )
 
         except Exception as e:
             logger.error(f"単一評価実行エラー: {e}")
@@ -655,10 +700,11 @@ class IndividualEvaluator:
         """バックテスト実行用設定の構築"""
         try:
             from ..serializers.serialization import GeneSerializer
+
             serializer = GeneSerializer()
 
             config_dict = backtest_config.copy()
-            
+
             strategy_parameters = {
                 "strategy_gene": serializer.strategy_gene_to_dict(gene),
                 "ml_filter_enabled": config.ml_filter_enabled,
@@ -681,7 +727,10 @@ class IndividualEvaluator:
             return None
 
     def _inject_external_objects(
-        self, run_config: Dict[str, Any], backtest_config: Dict[str, Any], config: GAConfig
+        self,
+        run_config: Dict[str, Any],
+        backtest_config: Dict[str, Any],
+        config: GAConfig,
     ) -> None:
         """実行設定への外部オブジェクト注入（1分足データ、MLモデルなど）"""
         # 1分足データを取得（1分足シミュレーション用）
@@ -694,14 +743,18 @@ class IndividualEvaluator:
             try:
                 ml_filter_model = model_manager.load_model(config.ml_model_path)
                 if ml_filter_model:
-                    run_config["strategy_config"]["parameters"]["ml_predictor"] = ml_filter_model
-                    run_config["strategy_config"]["parameters"]["ml_filter_threshold"] = 0.5
+                    run_config["strategy_config"]["parameters"][
+                        "ml_predictor"
+                    ] = ml_filter_model
+                    run_config["strategy_config"]["parameters"][
+                        "ml_filter_threshold"
+                    ] = 0.5
             except Exception:
                 # ロード失敗時は無効化
                 run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
         elif config.ml_filter_enabled:
-             # パス指定なしなどの場合
-             run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
+            # パス指定なしなどの場合
+            run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
 
     def _get_evaluation_context(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
@@ -773,10 +826,7 @@ class IndividualEvaluator:
         return metrics
 
     def _calculate_fitness(
-        self,
-        backtest_result: Dict[str, Any],
-        config: GAConfig,
-        **kwargs
+        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
     ) -> float:
         """
         フィットネス計算（ロング・ショートバランス評価を含む）
@@ -945,21 +995,22 @@ class IndividualEvaluator:
         return backtest_config.copy()
 
     def _calculate_multi_objective_fitness(
-        self,
-        backtest_result: Dict[str, Any],
-        config: GAConfig,
-        **kwargs
-    ) -> tuple:
+        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
+    ) -> Tuple[float, ...]:
         """
-        多目的最適化用フィットネス計算
+        多目的適応度の計算
+
+        バックテスト結果からパフォーマンスメトリクスを抽出し、
+        GA設定で定義された各目的関数（利益、リスク、取引回数など）
+        に対応する値を算出してタプルとして返します。
 
         Args:
-            backtest_result: バックテスト結果
+            backtest_result: バックテスト実行結果
             config: GA設定
-            **kwargs: 追加のコンテキスト情報
+            **kwargs: 追加の評価コンテキスト
 
         Returns:
-            各目的の評価値のタプル
+            各目的関数の評価値を含むタプル
         """
         try:
             # パフォーマンスメトリクスを抽出
@@ -1023,8 +1074,3 @@ class IndividualEvaluator:
             logger.error(f"多目的フィットネス計算エラー: {e}")
             # エラー時は目的数に応じたデフォルト値を返す
             return tuple(0.0 for _ in config.objectives)
-
-
-
-
-

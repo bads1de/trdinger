@@ -37,25 +37,49 @@ class OperandGroupingSystem:
     # 指標とグループのマッピング（クラス定数として定義）
     GROUP_PATTERNS: Dict[OperandGroup, List[str]] = {
         OperandGroup.PRICE_BASED: [
-            "SMA", "EMA", "SAR", "KELTNER", "DONCHIAN", "SUPERTREND", "VWAP", "BB", "ACCBANDS",
-            "close", "open", "high", "low"
+            "SMA",
+            "EMA",
+            "SAR",
+            "KELTNER",
+            "DONCHIAN",
+            "SUPERTREND",
+            "VWAP",
+            "BB",
+            "ACCBANDS",
+            "close",
+            "open",
+            "high",
+            "low",
         ],
-        OperandGroup.PERCENTAGE_0_100: [
-            "RSI", "STOCH", "ADX", "MFI", "QQE", "UI"
-        ],
-        OperandGroup.PERCENTAGE_NEG100_100: [
-            "CCI", "CMO", "AROONOSC"
-        ],
+        OperandGroup.PERCENTAGE_0_100: ["RSI", "STOCH", "ADX", "MFI", "QQE", "UI"],
+        OperandGroup.PERCENTAGE_NEG100_100: ["CCI", "CMO", "AROONOSC"],
         OperandGroup.ZERO_CENTERED: [
-            "MACD", "ROC", "MOM", "OBV", "EFI", "CMF", "WILLR", "AD", "ADOSC", "SQUEEZE"
+            "MACD",
+            "ROC",
+            "MOM",
+            "OBV",
+            "EFI",
+            "CMF",
+            "WILLR",
+            "AD",
+            "ADOSC",
+            "SQUEEZE",
         ],
         OperandGroup.SPECIAL_SCALE: [
-            "volume", "OpenInterest", "FundingRate", "FUNDING_RATE", "OPEN_INTEREST"
-        ]
+            "volume",
+            "OpenInterest",
+            "FundingRate",
+            "FUNDING_RATE",
+            "OPEN_INTEREST",
+        ],
     }
 
     def __init__(self):
-        """グループ化システムを初期化"""
+        """
+        オペランドグループ化システムを初期化
+
+        内部で使用するマッピングと互換性マトリックスを生成します。
+        """
         # パターンから逆引きマップを作成
         self._group_mappings: Dict[str, OperandGroup] = {}
         for group, patterns in self.GROUP_PATTERNS.items():
@@ -68,7 +92,14 @@ class OperandGroupingSystem:
     def _initialize_compatibility_matrix(
         self,
     ) -> Dict[Tuple[OperandGroup, OperandGroup], float]:
-        """グループ間の互換性マトリックスを初期化"""
+        """
+        グループ間の互換性マトリックスを初期化
+
+        各グループのペアに対して、0.0から1.0の互換性スコアを定義します。
+
+        Returns:
+            互換性マトリックス (ペア -> スコア)
+        """
         matrix = {}
 
         # 同一グループ内は完全に互換
@@ -98,14 +129,24 @@ class OperandGroupingSystem:
         return matrix
 
     def get_operand_group(self, operand: str) -> OperandGroup:
-        """オペランドのグループを取得"""
+        """
+        オペランドのグループを取得
+
+        指定されたオペランド名がどのスケールグループに属するかを判定します。
+
+        Args:
+            operand: オペランド名（SMA, RSI, closeなど）
+
+        Returns:
+            属するOperandGroup。不明な場合はデフォルトでPRICE_BASEDを返します。
+        """
         if DEBUG_MODE:
             logger.debug("get_operand_group called for operand='%s'", operand)
 
         # 1. 直接マップまたは完全一致チェック
         if operand in self._group_mappings:
             return self._group_mappings[operand]
-        
+
         upper_operand = operand.upper()
         if upper_operand in self._group_mappings:
             return self._group_mappings[upper_operand]
@@ -264,8 +305,3 @@ def validate_condition(left_operand: str, right_operand) -> Tuple[bool, str]:
         (妥当性, 理由)のタプル
     """
     return operand_grouping_system.validate_condition(left_operand, right_operand)
-
-
-
-
-

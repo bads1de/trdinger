@@ -143,7 +143,20 @@ class ParallelEvaluator:
         index_map: dict,
         default_fitness: Tuple[float, ...],
     ) -> List[Optional[Tuple[float, ...]]]:
-        """ThreadPoolExecutorを使用した評価"""
+        """
+        ThreadPoolExecutorを使用した並列評価を実行します。
+
+        I/Oバウンドなタスク（外部API呼び出しやDBアクセスなど）に適しています。
+
+        Args:
+            population: 評価対象の個体リスト
+            results: 結果を格納するリスト
+            index_map: 個体IDからインデックスへのマップ
+            default_fitness: 失敗時のデフォルト値
+
+        Returns:
+            評価結果が格納されたリスト
+        """
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_individual = {
                 executor.submit(self._evaluate_single, ind): ind for ind in population
@@ -193,7 +206,21 @@ class ParallelEvaluator:
         index_map: dict,
         default_fitness: Tuple[float, ...],
     ) -> List[Optional[Tuple[float, ...]]]:
-        """ProcessPoolExecutorを使用した評価（ゾンビ対策済み）"""
+        """
+        ProcessPoolExecutorを使用した並列評価を実行します。
+
+        CPUバウンドなタスクに適しており、かつタイムアウト時に
+        ワーカープロセスを強制終了できるためゾンビプロセスを防げます。
+
+        Args:
+            population: 評価対象の個体リスト
+            results: 結果を格納するリスト
+            index_map: 個体IDからインデックスへのマップ
+            default_fitness: 失敗時のデフォルト値
+
+        Returns:
+            評価結果が格納されたリスト
+        """
         # ProcessPoolExecutorは子プロセスを強制終了できるため、
         # タイムアウト時にゾンビプロセスが発生しない
 
@@ -253,26 +280,29 @@ class ParallelEvaluator:
 
     def _evaluate_single(self, individual: Any) -> Tuple[float, ...]:
         """
-        単一個体の評価
+        単一個体の評価を実行
 
         Args:
             individual: 評価対象の個体
 
         Returns:
-            フィットネス値のタプル
+            適応度（フィットネス）のタプル
         """
         return self.evaluate_func(individual)
 
     def _categorize_error(self, error: Exception, index: int) -> str:
         """
-        エラーを種別に分類
+        発生した例外をエラーカテゴリに分類し、統計を更新
+
+        メモリエラー、データエラー、ロジックエラー、タイムアウトなどを
+        例外の型やメッセージから判別します。
 
         Args:
-            error: 発生した例外
-            index: 個体のインデックス
+            error: 発生した例外オブジェクト
+            index: 個体のインデックス（集団内）
 
         Returns:
-            エラーカテゴリ名
+            エラーカテゴリ識別子 ("memory", "data_error", "logic_error", "timeout", "other")
         """
         error_type = type(error).__name__
         error_message = str(error).lower()
@@ -371,7 +401,10 @@ class ParallelEvaluator:
         self._recent_errors.clear()
 
     def _reset_generation_stats(self) -> None:
-        """世代ごとの統計をリセット（成功/失敗/タイムアウトのみ）"""
+        """
+        世代ごとの評価統計（成功・失敗・タイムアウト数）をリセットします。
+        累計統計は維持されます。
+        """
         self._successful_evaluations = 0
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
@@ -444,8 +477,3 @@ def get_worker_data(key: str) -> Optional[Any]:
         データオブジェクト、またはNone
     """
     return _WORKER_DATA_CONTEXT.get(key)
-
-
-
-
-

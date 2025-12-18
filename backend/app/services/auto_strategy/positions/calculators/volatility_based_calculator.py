@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from ..risk_metrics import (
     calculate_expected_shortfall,
@@ -20,7 +20,22 @@ class VolatilityBasedCalculator(BaseCalculator):
     def calculate(
         self, gene, account_balance: float, current_price: float, **kwargs
     ) -> Dict[str, Any]:
-        """ボラティリティベース方式の拡張計算"""
+        """
+        ボラティリティ（ATR）に基づいてポジションサイズを計算
+
+        ボラティリティが高い時はサイズを小さく、低い時は大きく調整します。
+        また、歴史的VaRおよび期待ショートフォール（ES）による
+        リスク制限を適用して、極端な損失リスクを抑制します。
+
+        Args:
+            gene: ポジションサイジング遺伝子
+            account_balance: 現在の口座残高
+            current_price: 現在価格
+            **kwargs: market_data (Dict) を含み、'atr', 'returns' が必要
+
+        Returns:
+            計算結果を含む辞書
+        """
         market_data = kwargs.get("market_data", {})
         details: Dict[str, Any] = {"method": "volatility_based"}
         warnings = []
@@ -33,7 +48,7 @@ class VolatilityBasedCalculator(BaseCalculator):
         # 2. 基本ポジションサイズの計算
         risk_amount = account_balance * self._get_param(gene, "risk_per_trade", 0.02)
         volatility_factor = atr_pct * self._get_param(gene, "atr_multiplier", 2.0)
-        
+
         if volatility_factor > 0:
             position_size = risk_amount / (current_price * volatility_factor)
         else:
@@ -42,13 +57,21 @@ class VolatilityBasedCalculator(BaseCalculator):
 
         # 3. リスク制限（VaR / Expected Shortfall）の適用
         raw_returns = market_data.get("returns")
-        returns_data = list(raw_returns)[-risk_params["var_lookback"]:] if raw_returns is not None else []
+        returns_data = (
+            list(raw_returns)[-risk_params["var_lookback"] :]
+            if raw_returns is not None
+            else []
+        )
 
-        var_ratio = calculate_historical_var(returns_data, risk_params["var_confidence"])
-        es_ratio = calculate_expected_shortfall(returns_data, risk_params["var_confidence"])
+        var_ratio = calculate_historical_var(
+            returns_data, risk_params["var_confidence"]
+        )
+        es_ratio = calculate_expected_shortfall(
+            returns_data, risk_params["var_confidence"]
+        )
 
         price_for_adj = max(current_price, 1e-8)
-        
+
         # VaR制限
         max_var = account_balance * risk_params["max_var_ratio"]
         if var_ratio > 0 and max_var > 0:
@@ -64,18 +87,17 @@ class VolatilityBasedCalculator(BaseCalculator):
                 warnings.append("期待ショートフォール制限を適用")
 
         # 4. 詳細情報の構築
-        details.update({
-            "atr_pct": atr_pct,
-            "risk_amount": risk_amount,
-            "volatility_factor": volatility_factor,
-            "var_ratio": var_ratio,
-            "es_ratio": es_ratio,
-            "return_sample_size": len(returns_data)
-        })
+        details.update(
+            {
+                "atr_pct": atr_pct,
+                "risk_amount": risk_amount,
+                "volatility_factor": volatility_factor,
+                "var_ratio": var_ratio,
+                "es_ratio": es_ratio,
+                "return_sample_size": len(returns_data),
+            }
+        )
 
-        return self._apply_size_limits_and_finalize(position_size, details, warnings, gene)
-
-
-
-
-
+        return self._apply_size_limits_and_finalize(
+            position_size, details, warnings, gene
+        )

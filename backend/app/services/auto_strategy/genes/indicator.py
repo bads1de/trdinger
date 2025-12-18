@@ -50,7 +50,15 @@ class IndicatorGene:
         return validator.validate_indicator_gene(self)
 
     def get_json_config(self) -> Dict[str, Any]:
-        """JSON形式の設定を取得"""
+        """
+        インジケーター設定をJSON互換の辞書形式で取得
+
+        レジストリから指標の定義を取得し、デフォルト値と
+        現在のパラメータをマージして返します。
+
+        Returns:
+            JSON互換の設定辞書 {"indicator": str, "parameters": dict}
+        """
         try:
             from app.services.indicators.config import indicator_registry
 
@@ -152,23 +160,43 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
     return indicators
 
 
-def _enhance_with_ma_cross(indicators: List[IndicatorGene], available: List[str], config: Any) -> List[IndicatorGene]:
-    """MAクロス戦略を可能にするためにMA指標を確率的に追加"""
+def _enhance_with_ma_cross(
+    indicators: List[IndicatorGene], available: List[str], config: Any
+) -> List[IndicatorGene]:
+    """
+    MAクロス戦略の生成を助けるため、MA指標を確率的に補完
+
+    個体の中に移動平均指標が少ない場合、MAクロスなどの一般的なパターンが
+    発生しやすくなるよう、異なる期間を持つMA指標を追加します。
+    最大指標数を超えないよう、他の指標を削除して調整することもあります。
+
+    Args:
+        indicators: 現在の指標リスト
+        available: 利用可能な全指標名のリスト
+        config: GA設定
+
+    Returns:
+        補完・調整後の指標リスト
+    """
     from ..config.constants import MOVING_AVERAGE_INDICATORS, PREFERRED_MA_INDICATORS
-    
+
     ma_count = sum(1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS)
     if ma_count < 2 and random.random() < 0.25:
         ma_pool = [n for n in available if n in MOVING_AVERAGE_INDICATORS]
         if ma_pool:
             preferred = [n for n in ma_pool if n in PREFERRED_MA_INDICATORS]
             chosen = random.choice(preferred or ma_pool)
-            
+
             # 既存の期間と被らないように調整
-            existing_periods = {ind.parameters.get("period") for ind in indicators if "period" in ind.parameters}
+            existing_periods = {
+                ind.parameters.get("period")
+                for ind in indicators
+                if "period" in ind.parameters
+            }
             period = random.choice([10, 14, 20, 30, 50])
             while period in existing_periods and len(existing_periods) < 5:
                 period = random.choice([10, 14, 20, 30, 50])
-            
+
             indicators.append(IndicatorGene(type=chosen, parameters={"period": period}))
             if len(indicators) > getattr(config, "max_indicators", 5):
                 for i, ind in enumerate(indicators):
@@ -176,9 +204,3 @@ def _enhance_with_ma_cross(indicators: List[IndicatorGene], available: List[str]
                         indicators.pop(i)
                         break
     return indicators
-
-
-
-
-
-

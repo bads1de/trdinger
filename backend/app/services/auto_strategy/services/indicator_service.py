@@ -107,17 +107,18 @@ class IndicatorCalculator:
         np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
     ]:
         """
-        DataFrameから指標を計算
+        OHLCVのDataFrameを直接指定して指標を計算
 
-        MTFデータプロバイダーから取得したDataFrameに対して指標を計算します。
+        MTFデータプロバイダーから取得した、異なるタイムフレームの
+        DataFrameに対して指標計算を行う際に使用されます。
 
         Args:
-            df: OHLCVデータを含むDataFrame
-            indicator_type: 指標タイプ
-            parameters: パラメータ
+            df: OHLCVデータ（Open, High, Low, Close, Volume）を含むDataFrame
+            indicator_type: 指標の名称
+            parameters: 指標の計算パラメータ
 
         Returns:
-            計算結果
+            計算された指標値（単一または複数のSeries/NDArray）
         """
         try:
             if df is None or df.empty:
@@ -191,8 +192,14 @@ class IndicatorCalculator:
 
             if result is not None:
                 # MTF指標名のベースを決定（タイムフレームサフィックス付き）
-                indicator_id_suffix = f"_{indicator_gene.id[:8]}" if hasattr(indicator_gene, "id") and indicator_gene.id else ""
-                base_indicator_name = f"{indicator_gene.type}{timeframe_suffix}{indicator_id_suffix}"
+                indicator_id_suffix = (
+                    f"_{indicator_gene.id[:8]}"
+                    if hasattr(indicator_gene, "id") and indicator_gene.id
+                    else ""
+                )
+                base_indicator_name = (
+                    f"{indicator_gene.type}{timeframe_suffix}{indicator_id_suffix}"
+                )
 
                 # indicators辞書を確実に作成
                 if not hasattr(strategy_instance, "indicators"):
@@ -222,8 +229,3 @@ class IndicatorCalculator:
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")
 
         _init_indicator()
-
-
-
-
-

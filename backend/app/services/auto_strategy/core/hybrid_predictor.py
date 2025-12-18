@@ -160,7 +160,16 @@ class HybridPredictor:
     def _run_time_series_cv(
         self, service: "MLTrainingService", features_df: pd.DataFrame
     ) -> None:
-        """必要に応じて時系列クロスバリデーションを実行"""
+        """
+        必要に応じて時系列クロスバリデーション（Walk-Forward予測）を実行します。
+
+        特徴量データに基づいてモデルの学習状態を最新、または特定の時点に
+        合わせるための処理を各サービスで呼び出します。
+
+        Args:
+            service: MLトレーニングサービスインスタンス
+            features_df: 特徴量DataFrame
+        """
 
         if not self.use_time_series_cv:
             return
@@ -263,6 +272,15 @@ class HybridPredictor:
 
     @staticmethod
     def _service_is_trained(service: "MLTrainingService") -> bool:
+        """
+        サービス配下のトレーナーが学習済み（モデル保持状態）か判定します。
+
+        Args:
+            service: MLトレーニングサービス
+
+        Returns:
+            学習済みであればTrue
+        """
         trainer = getattr(service, "trainer", None)
         if trainer is None:
             return True

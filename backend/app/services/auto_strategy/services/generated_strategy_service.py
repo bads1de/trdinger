@@ -44,7 +44,22 @@ class GeneratedStrategyService:
         sort_order: str = "desc",
     ) -> Dict[str, Any]:
         """
-        生成済み戦略の一覧を効率的に取得
+        生成済み戦略の一覧を取得
+
+        DBから指定された条件（リスクレベル、実験ID、フィットネス等）で
+        戦略を抽出し、フロントエンドでの表示に適した形式に変換して返します。
+
+        Args:
+            limit: 取得件数
+            offset: 取得開始位置
+            risk_level: リスクフィルター（'low', 'medium', 'high'）
+            experiment_id: 特定の実験に紐づくもののみ取得
+            min_fitness: 最小適応度
+            sort_by: ソート対象フィールド
+            sort_order: ソート順（'asc', 'desc'）
+
+        Returns:
+            {'strategies': List, 'total_count': int, 'has_more': bool}
         """
         try:
             # フィルタリングとソートをリポジトリ層で実行
@@ -320,8 +335,3 @@ class GeneratedStrategyService:
         except Exception as e:
             logger.error(f"戦略取得エラー: {e}", exc_info=True)
             raise
-
-
-
-
-

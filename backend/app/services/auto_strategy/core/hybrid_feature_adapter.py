@@ -61,13 +61,32 @@ class HybridFeatureAdapter:
         label_data: Optional[pd.DataFrame] = None,
         sentiment_scores: Optional[pd.Series] = None,
     ) -> pd.DataFrame:
-        """StrategyGene → 特徴量DataFrame変換"""
+        """
+        戦略遺伝子と市場データを統合して、MLモデル用の特徴量DataFrameを生成します。
+
+        工程:
+        1. 遺伝子の構造（指標数、条件数、TP/SL設定等）を数値化
+        2. イベントラベル（HRHP等）を統合
+        3. 市場データ（OI/FR）の統計量を計算
+        4. ウェーブレット変換や派生統計量を付与
+        5. スケーリングやフィリング等の前処理を適用
+
+        Args:
+            gene: 変換対象の戦略遺伝子
+            ohlcv_data: 特徴量抽出のベースとなるOHLCVデータ
+            apply_preprocessing: スケーリング等の前処理を適用するか
+            label_data: 外部から提供される正解ラベルや市場環境データ
+            sentiment_scores: SNS等のセンチメントスコア
+
+        Returns:
+            統合された特徴量DataFrame
+        """
         try:
             if gene is None or ohlcv_data is None or ohlcv_data.empty:
                 raise MLFeatureError("入力データが無効です")
 
             features_df = ohlcv_data.copy()
-            
+
             # 1. Gene情報から特徴量を抽出・追加
             for key, value in self._extract_gene_features(gene).items():
                 features_df[key] = value
@@ -77,7 +96,9 @@ class HybridFeatureAdapter:
             if label_data is not None and not label_data.empty:
                 aligned = label_data.reindex(features_df.index).ffill().fillna(0)
                 for col in label_cols:
-                    features_df[f"{col}_signal" if "label" in col else col] = aligned.get(col, 0.0)
+                    features_df[f"{col}_signal" if "label" in col else col] = (
+                        aligned.get(col, 0.0)
+                    )
             else:
                 for col in label_cols:
                     features_df[f"{col}_signal" if "label" in col else col] = 0.0
@@ -85,32 +106,49 @@ class HybridFeatureAdapter:
             # 3. マーケット特性（OI/FR/Sentiment）
             # OI変化率
             if "open_interest" in features_df.columns:
-                features_df["oi_pct_change"] = features_df["open_interest"].replace(0, np.nan).pct_change().fillna(0)
+                features_df["oi_pct_change"] = (
+                    features_df["open_interest"]
+                    .replace(0, np.nan)
+                    .pct_change()
+                    .fillna(0)
+                )
             else:
                 features_df["oi_pct_change"] = 0.0
 
             # FR変化
             if "funding_rate" in features_df.columns:
-                features_df["funding_rate_change"] = features_df["funding_rate"].diff().fillna(0)
+                features_df["funding_rate_change"] = (
+                    features_df["funding_rate"].diff().fillna(0)
+                )
             else:
                 features_df["funding_rate_change"] = 0.0
 
             # センチメント
             if sentiment_scores is not None and not sentiment_scores.empty:
-                features_df["sentiment_smoothed"] = sentiment_scores.reindex(features_df.index).ffill().rolling(3, min_periods=1).mean().fillna(0)
+                features_df["sentiment_smoothed"] = (
+                    sentiment_scores.reindex(features_df.index)
+                    .ffill()
+                    .rolling(3, min_periods=1)
+                    .mean()
+                    .fillna(0)
+                )
             else:
                 features_df["sentiment_smoothed"] = 0.0
 
             # 4. 拡張特徴量（Wavelet / 派生）
             if self._wavelet_transformer:
                 features_df = self._wavelet_transformer.append_features(features_df)
-            
+
             if self._use_derived_features:
                 features_df = self._augment_with_derived_features(features_df)
 
             # 5. 前処理
-            features_df = self._apply_preprocessing(features_df) if apply_preprocessing else self._fallback_preprocess(features_df)
-            
+            features_df = (
+                self._apply_preprocessing(features_df)
+                if apply_preprocessing
+                else self._fallback_preprocess(features_df)
+            )
+
             return features_df.loc[:, ~features_df.columns.duplicated()]
 
         except Exception as e:
@@ -118,13 +156,23 @@ class HybridFeatureAdapter:
             raise MLFeatureError(f"変換失敗: {e}")
 
     def _extract_gene_features(self, gene: StrategyGene) -> Dict[str, Any]:
-        """遺伝子構造から特徴量を抽出"""
+        """
+        戦略遺伝子の構成（指標、条件、パラメータ、メタデータ等）をベクトル化可能な辞書に変換します。
+
+        Args:
+            gene: 抽出元の戦略遺伝子
+
+        Returns:
+            特徴量キーと値の辞書
+        """
         enabled_inds = [ind for ind in gene.indicators if ind.enabled]
         long_c = len(gene.long_entry_conditions or [])
         short_c = len(gene.short_entry_conditions or [])
-        
-        periods = [i.parameters.get("period") for i in enabled_inds if "period" in i.parameters]
-        
+
+        periods = [
+            i.parameters.get("period") for i in enabled_inds if "period" in i.parameters
+        ]
+
         features = {
             "indicator_count": len(enabled_inds),
             "condition_count": long_c + short_c,
@@ -136,20 +184,30 @@ class HybridFeatureAdapter:
 
         # 指標の有無
         for itype in ["SMA", "EMA", "RSI", "MACD", "BollingerBands"]:
-            features[f"has_{itype.lower()}"] = int(any(itype in ind.type for ind in enabled_inds))
+            features[f"has_{itype.lower()}"] = int(
+                any(itype in ind.type for ind in enabled_inds)
+            )
 
         # TP/SL & ポジションサイジング
         tpsl = gene.tpsl_gene
-        features.update({
-            "has_tpsl": int(bool(tpsl and tpsl.enabled)),
-            "take_profit_ratio": getattr(tpsl, "take_profit_pct", 0.02) if tpsl else 0.02,
-            "stop_loss_ratio": getattr(tpsl, "stop_loss_pct", 0.01) if tpsl else 0.01
-        })
+        features.update(
+            {
+                "has_tpsl": int(bool(tpsl and tpsl.enabled)),
+                "take_profit_ratio": (
+                    getattr(tpsl, "take_profit_pct", 0.02) if tpsl else 0.02
+                ),
+                "stop_loss_ratio": (
+                    getattr(tpsl, "stop_loss_pct", 0.01) if tpsl else 0.01
+                ),
+            }
+        )
 
         ps = gene.position_sizing_gene
         features["has_position_sizing"] = int(bool(ps and ps.enabled))
         method_str = str(getattr(ps, "method", ""))
-        features["position_sizing_method"] = int(hashlib.md5(method_str.encode()).hexdigest()[:6], 16) if ps else 0
+        features["position_sizing_method"] = (
+            int(hashlib.md5(method_str.encode()).hexdigest()[:6], 16) if ps else 0
+        )
 
         return features
 
@@ -333,13 +391,18 @@ class WaveletFeatureTransformer:
 
     @staticmethod
     def _haar_detail(series: pd.Series, scale: int) -> pd.Series:
+        """
+        指定されたスケールでHaar様（移動平均との差分）のディテール成分を計算します。
+
+        Args:
+            series: 入力データ
+            scale: 窓幅
+
+        Returns:
+            高周波（ディテール）成分の時系列
+        """
         window = max(2, scale)
         coarse = series.rolling(window=window, min_periods=1).mean()
         detail = series - coarse
         detail = detail.replace([np.inf, -np.inf], 0.0).fillna(0.0)
         return detail
-
-
-
-
-

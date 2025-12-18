@@ -7,14 +7,11 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 
 import logging
 import random
-from typing import Any, List, Union, cast
+from typing import Any, List
 
-from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
 from ..genes import (
-    Condition,
-    ConditionGroup,
     IndicatorGene,
     PositionSizingGene,
     PositionSizingMethod,
@@ -108,15 +105,18 @@ class RandomGeneGenerator:
         """
         ランダムな戦略遺伝子を生成
 
+        指標、TP/SL、エントリー、ポジションサイジング、ツール設定をランダムに組み合わせた
+        完全な戦略遺伝子を構築します。スマート生成が有効な場合は、
+        ConditionGeneratorを使用して意味のある取引条件を生成します。
+
         Returns:
-            生成された戦略遺伝子
+            生成されたStrategyGeneオブジェクト
         """
         # 指標を生成
         indicators = generate_random_indicators(self.config)
 
         # TP/SL遺伝子を生成
         tpsl_gene = create_random_tpsl_gene(self.config)
-
 
         # Auto-StrategyではTP/SLを常に有効化
         if tpsl_gene:
@@ -127,9 +127,10 @@ class RandomGeneGenerator:
         if long_tpsl_gene:
             long_tpsl_gene.enabled = True
 
-        short_tpsl_gene = create_random_tpsl_gene(self.config)
-        if short_tpsl_gene:
-            short_tpsl_gene.enabled = True
+        xtpsl_gene = create_random_tpsl_gene(self.config)
+        if xtpsl_gene:
+            xtpsl_gene.enabled = True
+        short_tpsl_gene = xtpsl_gene
 
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
@@ -183,16 +184,14 @@ class RandomGeneGenerator:
 
     def _generate_tool_genes(self) -> List[ToolGene]:
         """
-        ツール遺伝子のリストを生成
+        ツール遺伝子のリストをランダムに生成
 
-        登録されたすべてのツールに対して、ランダムに有効/無効を決定し
-        ToolGene を生成します。
+        登録されたすべてのツール（週末フィルター等）に対して、
+        ランダムに有効/無効を決定し、デフォルトパラメータを持つToolGeneを生成します。
 
         Returns:
-            ToolGene のリスト
+            生成されたToolGeneのリスト
         """
-        import random
-
         tool_genes = []
 
         # すべての登録済みツールを取得

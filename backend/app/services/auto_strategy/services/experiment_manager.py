@@ -14,7 +14,6 @@ from .experiment_persistence_service import ExperimentPersistenceService
 
 if TYPE_CHECKING:
     from ..core.ga_engine import GeneticAlgorithmEngine
-    from ..generators.random_gene_generator import RandomGeneGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,15 @@ class ExperimentManager:
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
     ):
         """
-        実験をバックグラウンドで実行
+        GA実験を非同期（バックグラウンド）実行の文脈で処理
+
+        GAエンジンの実行、結果の永続化、およびステータス管理（完了/失敗）を
+        一連のフローとして実行します。
+
+        Args:
+            experiment_id: 実験の一意識別子（UUID）
+            ga_config: GA実行設定
+            backtest_config: バックテスト実行設定
         """
         from app.utils.error_handler import safe_operation
 
@@ -50,7 +57,7 @@ class ExperimentManager:
                 raise RuntimeError("GAエンジンが初期化されていません。")
 
             logger.info(f"GA実行開始: {experiment_id}")
-            
+
             # コンテキスト情報の付与
             backtest_config["experiment_id"] = experiment_id
 
@@ -58,7 +65,9 @@ class ExperimentManager:
             result = self.ga_engine.run_evolution(ga_config, backtest_config)
 
             # 結果の永続化
-            self.persistence_service.save_experiment_result(experiment_id, result, ga_config, backtest_config)
+            self.persistence_service.save_experiment_result(
+                experiment_id, result, ga_config, backtest_config
+            )
             self.persistence_service.complete_experiment(experiment_id)
 
             logger.info(f"GA実行完了: {experiment_id}")
@@ -72,13 +81,21 @@ class ExperimentManager:
     def initialize_ga_engine(self, ga_config: GAConfig):
         """GAエンジンを初期化（Factoryを使用）"""
         from ..core.ga_engine_factory import GeneticAlgorithmEngineFactory
-        
+
         self.ga_engine = GeneticAlgorithmEngineFactory.create_engine(
             self.backtest_service, ga_config
         )
 
     def stop_experiment(self, experiment_id: str) -> bool:
-        """実験を停止"""
+        """
+        実行中の実験に停止シグナルを送信
+
+        Args:
+            experiment_id: 停止対象の実験ID
+
+        Returns:
+            停止処理が受け付けられた場合はTrue
+        """
         if self.ga_engine:
             self.ga_engine.stop_evolution()
 

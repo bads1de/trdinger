@@ -9,12 +9,8 @@
 
 import logging
 import random
-from typing import List, Union, Dict, Tuple, Any
+from typing import Any, List, Tuple, Union
 
-from app.services.indicators.config import (
-    IndicatorScaleType,
-    indicator_registry,
-)
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
 
@@ -35,7 +31,16 @@ class ComplexConditionsStrategy:
         List[Condition],
     ]:
         """
-        複数の指標を組み合わせて条件を生成。
+        複数の指標を組み合わせて王道パターンに基づいた条件を生成
+
+        トレンド押し目買い、移動平均クロス、ボラティリティブレイクアウトの
+        3つの主要なパターンから取引条件を構築します。
+
+        Args:
+            indicators: 生成済みの指標遺伝子リスト
+
+        Returns:
+            (ロング条件, ショート条件, 予備)のタプル
         """
         long_conds, short_conds = [], []
 
@@ -62,61 +67,97 @@ class ComplexConditionsStrategy:
         return (
             self.gen._structure_conditions(long_conds),
             self.gen._structure_conditions(short_conds),
-            []
+            [],
         )
 
     def _create_trend_pullback(self, classified):
         """トレンド押し目買い/戻り売り条件を生成"""
         longs, shorts = [], []
-        trends, momentums = classified[IndicatorType.TREND], classified[IndicatorType.MOMENTUM]
-        if not trends or not momentums: return longs, shorts
+        trends, momentums = (
+            classified[IndicatorType.TREND],
+            classified[IndicatorType.MOMENTUM],
+        )
+        if not trends or not momentums:
+            return longs, shorts
 
         trend, momentum = random.choice(trends), random.choice(momentums)
-        t_name, m_name = self.gen._get_indicator_name(trend), self.gen._get_indicator_name(momentum)
+        t_name, m_name = self.gen._get_indicator_name(
+            trend
+        ), self.gen._get_indicator_name(momentum)
 
         # ロング: Close > Trend AND Momentum Oversold
-        longs.append(ConditionGroup(operator="AND", conditions=[
-            Condition(left_operand="Close", operator=">", right_operand=t_name),
-            self.gen._create_side_condition(momentum, "long", m_name)
-        ]))
+        longs.append(
+            ConditionGroup(
+                operator="AND",
+                conditions=[
+                    Condition(left_operand="Close", operator=">", right_operand=t_name),
+                    self.gen._create_side_condition(momentum, "long", m_name),
+                ],
+            )
+        )
         # ショート: Close < Trend AND Momentum Overbought
-        shorts.append(ConditionGroup(operator="AND", conditions=[
-            Condition(left_operand="Close", operator="<", right_operand=t_name),
-            self.gen._create_side_condition(momentum, "short", m_name)
-        ]))
+        shorts.append(
+            ConditionGroup(
+                operator="AND",
+                conditions=[
+                    Condition(left_operand="Close", operator="<", right_operand=t_name),
+                    self.gen._create_side_condition(momentum, "short", m_name),
+                ],
+            )
+        )
         return longs, shorts
 
     def _create_cross(self, indicators):
         """指標クロス条件を生成"""
         longs, shorts = [], []
-        price_inds = [i for i in indicators if i.enabled and self.gen._is_price_scale(i)]
-        if len(price_inds) < 2: return longs, shorts
+        price_inds = [
+            i for i in indicators if i.enabled and self.gen._is_price_scale(i)
+        ]
+        if len(price_inds) < 2:
+            return longs, shorts
 
         i1, i2 = random.sample(price_inds, 2)
         p1, p2 = i1.parameters.get("period", 0), i2.parameters.get("period", 0)
-        if abs(p1 - p2) < 1: return longs, shorts
+        if abs(p1 - p2) < 1:
+            return longs, shorts
 
         short_ma, long_ma = (i1, i2) if p1 < p2 else (i2, i1)
-        s_name, l_name = self.gen._get_indicator_name(short_ma), self.gen._get_indicator_name(long_ma)
+        s_name, l_name = self.gen._get_indicator_name(
+            short_ma
+        ), self.gen._get_indicator_name(long_ma)
 
         longs.append(Condition(left_operand=s_name, operator=">", right_operand=l_name))
-        shorts.append(Condition(left_operand=s_name, operator="<", right_operand=l_name))
+        shorts.append(
+            Condition(left_operand=s_name, operator="<", right_operand=l_name)
+        )
         return longs, shorts
 
     def _create_breakout(self, indicators):
         """ボラティリティブレイクアウト条件を生成"""
         longs, shorts = [], []
-        candidates = [i for i in indicators if i.enabled and self.gen._is_band_indicator(i)]
-        if not candidates: return longs, shorts
+        candidates = [
+            i for i in indicators if i.enabled and self.gen._is_band_indicator(i)
+        ]
+        if not candidates:
+            return longs, shorts
 
         target = random.choice(candidates)
         up_name, low_name = self.gen._get_band_names(target)
 
-        longs.append(Condition(left_operand="Close", operator=">", right_operand=up_name))
-        shorts.append(Condition(left_operand="Close", operator="<", right_operand=low_name))
+        longs.append(
+            Condition(left_operand="Close", operator=">", right_operand=up_name)
+        )
+        shorts.append(
+            Condition(left_operand="Close", operator="<", right_operand=low_name)
+        )
         return longs, shorts
 
     # テスト互換用エイリアス
-    def _get_indicator_name(self, ind): return self.gen._get_indicator_name(ind)
-    def _classify_indicators(self, inds): return self.gen._classify_indicators(inds)
-    def _structure_conditions(self, conds): return self.gen._structure_conditions(conds)
+    def _get_indicator_name(self, ind):
+        return self.gen._get_indicator_name(ind)
+
+    def _classify_indicators(self, inds):
+        return self.gen._classify_indicators(inds)
+
+    def _structure_conditions(self, conds):
+        return self.gen._structure_conditions(conds)

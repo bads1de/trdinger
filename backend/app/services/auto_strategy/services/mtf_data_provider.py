@@ -159,11 +159,28 @@ class MultiTimeframeDataProvider:
         return True
 
     def _resample_ohlcv(self, target_timeframe: str) -> pd.DataFrame:
-        """OHLCVデータを目標タイムフレームにリサンプリング"""
+        """
+        OHLCVデータを目標タイムフレームにリサンプリング
+
+        pandasのresampleを使用して、Open/High/Low/Close/Volumeの各カラムを
+        適切に集約します。インデックスがDatetimeIndexでない場合は変換を試みます。
+
+        Args:
+            target_timeframe: 目標タイムフレーム（'1h', '4h', '1d' など）
+
+        Returns:
+            リサンプリングされたDataFrame
+        """
         # マッピングを統合して管理
         rule_map = {
-            "1m": "1min", "5m": "5min", "15m": "15min", "30m": "30min",
-            "1h": "1h", "4h": "4h", "1d": "1D", "1w": "1W"
+            "1m": "1min",
+            "5m": "5min",
+            "15m": "15min",
+            "30m": "30min",
+            "1h": "1h",
+            "4h": "4h",
+            "1d": "1D",
+            "1w": "1W",
         }
         rule = rule_map.get(target_timeframe, "1h")
 
@@ -171,9 +188,19 @@ class MultiTimeframeDataProvider:
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
 
-        return df.resample(rule).agg({
-            "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
-        }).dropna()
+        return (
+            df.resample(rule)
+            .agg(
+                {
+                    "Open": "first",
+                    "High": "max",
+                    "Low": "min",
+                    "Close": "last",
+                    "Volume": "sum",
+                }
+            )
+            .dropna()
+        )
 
     def clear_cache(self) -> None:
         """キャッシュをクリア"""
@@ -184,8 +211,3 @@ class MultiTimeframeDataProvider:
     def cached_timeframes(self) -> List[str]:
         """キャッシュされているタイムフレームのリスト"""
         return list(self._cache.keys())
-
-
-
-
-

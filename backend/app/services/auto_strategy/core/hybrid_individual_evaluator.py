@@ -48,7 +48,19 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     def _prepare_run_config(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Optional[Dict[str, Any]]:
-        """バックテスト実行用設定の構築（Hybrid拡張）"""
+        """
+        ハイブリッド評価用のバックテスト実行設定を構築します。
+
+        デフォルト値の補完を行った後、基底クラスの構築処理を呼び出します。
+
+        Args:
+            gene: 評価対象の遺伝子
+            backtest_config: 基本的なバックテスト設定
+            config: GA設定
+
+        Returns:
+            準備された実行設定辞書
+        """
         # バックテスト設定の補完
         ensured_config = self._ensure_backtest_defaults(backtest_config, config)
         return super()._prepare_run_config(gene, ensured_config, config)
@@ -56,7 +68,19 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     def _get_evaluation_context(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Dict[str, Any]:
-        """評価計算に必要な追加コンテキスト（ML予測シグナル）を取得"""
+        """
+        評価計算に必要な追加コンテキスト（ML予測シグナル等）を取得します。
+
+        遺伝子から特徴量を生成し、予測器を用いて将来の予測シグナルを取得します。
+
+        Args:
+            gene: 評価対象の遺伝子
+            backtest_config: バックテスト設定
+            config: GA設定
+
+        Returns:
+            予測シグナルを含むコンテキスト辞書
+        """
         if not self.predictor:
             return {}
 
@@ -67,27 +91,22 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 features_df = self.feature_adapter.gene_to_features(
                     gene,
                     ohlcv_data,
-                    apply_preprocessing=self._should_apply_preprocessing(
-                        config
-                    ),
+                    apply_preprocessing=self._should_apply_preprocessing(config),
                 )
 
                 prediction_signals = self.predictor.predict(features_df)
                 logger.debug("ML予測: %s", prediction_signals)
                 return {"prediction_signals": prediction_signals}
-                
+
         except (MLTrainingError, MLPredictionError) as e:
             logger.warning(f"ML予測エラー: {e}")
         except Exception as e:
             logger.error(f"ML予測エラー（予期しない）: {e}")
-        
+
         return {}
 
     def _calculate_fitness(
-        self,
-        backtest_result: Dict[str, Any],
-        config: GAConfig,
-        **kwargs
+        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
     ) -> float:
         """
         フィットネス計算（ML予測スコア統合版）
@@ -149,10 +168,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         return base_fitness
 
     def _calculate_multi_objective_fitness(
-        self,
-        backtest_result: Dict[str, Any],
-        config: GAConfig,
-        **kwargs
+        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
     ) -> tuple:
         """
         多目的最適化用フィットネス計算（ML予測スコア統合版）

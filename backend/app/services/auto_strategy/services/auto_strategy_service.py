@@ -5,6 +5,7 @@ GA実行、進捗管理、結果保存、戦略テストを統合的に管理し
 """
 
 import logging
+
 from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks
@@ -45,13 +46,18 @@ class AutoStrategyService:
         # 管理マネージャー
         self.experiment_manager: Optional[ExperimentManager] = None
 
+        # Note: _init_services is called synchronously from __init__.
+        # If it were truly async, it would need to be awaited,
+        # which is not directly possible in __init__.
+        # Keeping it synchronous for now to maintain functional integrity.
         self._init_services()
 
-    def _init_services(self):
+    def _init_services(self) -> None:
         """
-        サービスの初期化
+        必要な内部サービスを遅延初期化します。
 
-        必要最小限のサービス初期化を行います。
+        循環参照を避けるためにメソッド内でインポートを行い、
+        DBリポジトリやバックテストサービスなどへの参照を確立します。
         """
         from app.utils.error_handler import safe_operation
 
@@ -140,13 +146,24 @@ class AutoStrategyService:
 
         return experiment_id
 
-    def _prepare_ga_config(self, ga_config_dict: Dict[str, Any]) -> GAConfig:
-        """GA設定を構築し、検証する"""
+    def _prepare_ga_config(self, settings: Dict[str, Any]) -> GAConfig:
+        """
+        GAの設定オブジェクトを準備します。
+
+        入力された設定値をバリデートし、デフォルト値とマージして
+        GAConfigインスタンスを生成します。
+
+        Args:
+            settings: ユーザー定義の設定
+
+        Returns:
+            初期化されたGAConfig
+        """
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="GA設定構築と検証", is_api_call=True)
         def _validate_ga_config():
-            ga_config = GAConfig.from_dict(ga_config_dict)
+            ga_config = GAConfig.from_dict(settings)
             from ..config.validators import ConfigValidator
 
             is_valid, errors = ConfigValidator.validate(ga_config)
@@ -159,7 +176,15 @@ class AutoStrategyService:
     def _prepare_backtest_config(
         self, backtest_config_dict: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """バックテスト設定を準備する"""
+        """
+        バックテスト設定の最終調整
+
+        Args:
+            backtest_config_dict: ユーザー入力の設定辞書
+
+        Returns:
+            シンボル等のデフォルト値が補完された設定辞書
+        """
         backtest_config = backtest_config_dict.copy()
         backtest_config["symbol"] = backtest_config.get("symbol", DEFAULT_SYMBOL)
         return backtest_config
@@ -171,14 +196,27 @@ class AutoStrategyService:
         ga_config: GAConfig,
         backtest_config: Dict[str, Any],
     ):
-        """実験を作成する"""
+        """
+        データベースに実験レコードを作成
+
+        Args:
+            experiment_id: 実験の一意識別子
+            experiment_name: 実験の表示名
+            ga_config: GA設定
+            backtest_config: バックテスト設定
+        """
         # フロントエンドから送信されたexperiment_idを使用
         self.persistence_service.create_experiment(
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
     def _initialize_ga_engine(self, ga_config: GAConfig):
-        """GAエンジンを初期化する"""
+        """
+        GAエンジンを初期化
+
+        Args:
+            ga_config: 実験で使用するGA設定
+        """
         if not self.experiment_manager:
             raise RuntimeError("実験管理マネージャーが初期化されていません。")
         self.experiment_manager.initialize_ga_engine(ga_config)
@@ -254,8 +292,3 @@ class AutoStrategyService:
                 }
 
         return _stop_experiment()
-
-
-
-
-

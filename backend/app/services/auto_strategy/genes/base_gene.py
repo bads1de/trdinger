@@ -58,7 +58,19 @@ class BaseGene(ABC):
 
     @staticmethod
     def _convert_enum_value(value: Any, param_type) -> Any:
-        """Enum型への変換"""
+        """
+        値をEnum型に変換
+
+        文字列が渡された場合、指定されたEnumクラスのメンバーに変換を試みます。
+        変換に失敗した場合は、Enumの最初のメンバーをデフォルト値として返します。
+
+        Args:
+            value: 変換対象の値
+            param_type: 目標とするEnumクラス
+
+        Returns:
+            Enumメンバーインスタンス
+        """
         if isinstance(value, str):
             try:
                 return param_type(value)
@@ -70,7 +82,18 @@ class BaseGene(ABC):
 
     @staticmethod
     def _convert_datetime_value(value: Any) -> Any:
-        """datetime型への変換"""
+        """
+        値をdatetime型に変換（ISOフォーマット対応）
+
+        文字列が渡された場合、ISO 8601フォーマットからのパースを試みます。
+        失敗した場合は現在時刻を返します。
+
+        Args:
+            value: 変換対象の値
+
+        Returns:
+            datetimeオブジェクト
+        """
         if isinstance(value, str):
             try:
                 return datetime.fromisoformat(value)
@@ -93,7 +116,7 @@ class BaseGene(ABC):
     def from_dict(cls, data: Dict[str, Any]) -> Any:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
-        
+
         # クラスアノテーションを取得（継承チェーンを含む）
         annotations = {}
         for base in reversed(cls.__mro__):
@@ -145,7 +168,19 @@ class BaseGene(ABC):
         param_name: str,
         errors: List[str],
     ) -> bool:
-        """範囲検証のヘルパー関数"""
+        """
+        数値パラメータの範囲検証
+
+        Args:
+            value: 判定対象の値
+            min_val: 最小許容値
+            max_val: 最大許容値
+            param_name: パラメータ名（エラーメッセージ用）
+            errors: エラーメッセージを追記するリスト
+
+        Returns:
+            範囲内であればTrue
+        """
         if not (min_val <= value <= max_val):
             errors.append(
                 f"{param_name}は{min_val}-{max_val}の範囲である必要があります"

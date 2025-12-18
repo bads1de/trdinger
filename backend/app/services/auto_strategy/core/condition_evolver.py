@@ -13,10 +13,8 @@ YAML設定ファイルから指標情報を読み込み、DEAPベースのGAエ�
 
 import copy
 import logging
-import os
 import random
 from collections import OrderedDict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -193,27 +191,34 @@ class ConditionEvolver:
             if early_stopping_patience
             else None
         )
-        
+
         # ParallelEvaluatorの初期化（依存関係の解決のためローカルインポート）
         if self.enable_parallel:
             from .parallel_evaluator import ParallelEvaluator
+
             # ラッパー関数を渡す（タプルを返す必要があるため）
             self.parallel_evaluator = ParallelEvaluator(
-                evaluate_func=self._evaluate_for_parallel,
-                max_workers=max_workers
+                evaluate_func=self._evaluate_for_parallel, max_workers=max_workers
             )
         else:
             self.parallel_evaluator = None
-            
+
         self._current_backtest_config = {}
         logger.info("ConditionEvolver 初期化完了")
 
-    def _evaluate_for_parallel(self, condition: Union[Condition, ConditionGroup]) -> Tuple[float, ...]:
+    def _evaluate_for_parallel(
+        self, condition: Union[Condition, ConditionGroup]
+    ) -> Tuple[float, ...]:
         """並列評価用のラッパー（タプルを返す）"""
         return (self.evaluate_fitness(condition, self._current_backtest_config),)
 
     def _create_individual(self) -> Condition:
-        """単一のCondition個体を生成"""
+        """
+        単一の条件個体を取得可能な指標の中からランダムに生成します。
+
+        Returns:
+            初期化されたConditionオブジェクト
+        """
         available_indicators = self.yaml_indicator_utils.get_available_indicators()
         if not available_indicators:
             raise ValueError("利用可能な指標がありません")
@@ -234,6 +239,15 @@ class ConditionEvolver:
         )
 
     def _generate_threshold(self, indicator_info: Dict[str, Any]) -> float:
+        """
+        指標のスケールタイプに基づいて、適切な閾値をランダムに生成します。
+
+        Args:
+            indicator_info: YAMLから取得した指標の設定情報
+
+        Returns:
+            生成された閾値
+        """
         scale_type = indicator_info.get("scale_type", "oscillator_0_100")
         thresholds = indicator_info.get("thresholds", {})
 
@@ -275,11 +289,11 @@ class ConditionEvolver:
             # 条件から戦略設定を作成
             strategy_config = create_simple_strategy(condition)
             test_config = backtest_config.copy()
-            
+
             # バックテスト実行に必要な設定を注入
             if "parameters" in strategy_config:
                 test_config.update(strategy_config["parameters"])
-            
+
             # バックテスト実行
             result = self.backtest_service.run_backtest(test_config)
 
@@ -301,13 +315,13 @@ class ConditionEvolver:
                     + 0.2 * max(0, (1 - max_drawdown))
                     + 0.1 * min(1, total_trades / 100)
                 )
-            
+
             fitness = max(0.0, fitness)
 
             # キャッシュに保存
             if self.cache:
                 self.cache.set(condition, fitness)
-                
+
             return fitness
 
         except Exception as e:
@@ -320,6 +334,17 @@ class ConditionEvolver:
         fitness_values: List[float],
         k: int = 3,
     ) -> List[Union[Condition, ConditionGroup]]:
+        """
+        トーナメント方式により次世代の親を選択します。
+
+        Args:
+            population: 現在の集団
+            fitness_values: 各個体の適応度
+            k: トーナメントサイズ
+
+        Returns:
+            選択された個体のリスト
+        """
         selected = []
         for _ in range(len(population)):
             tournament = random.sample(list(zip(population, fitness_values)), k)
@@ -522,9 +547,7 @@ class ConditionEvolver:
 
             # 最終世代の評価
             if self.enable_parallel and self.parallel_evaluator:
-                raw_fitness = self.parallel_evaluator.evaluate_population(
-                    population
-                )
+                raw_fitness = self.parallel_evaluator.evaluate_population(population)
                 fitness_values = [f[0] for f in raw_fitness]
             else:
                 fitness_values = [

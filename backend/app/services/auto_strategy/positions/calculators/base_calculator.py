@@ -39,11 +39,22 @@ class BaseCalculator(ABC):
     def _apply_size_limits_and_finalize(
         self, position_size: float, details: Dict[str, Any], warnings: List[str], gene
     ) -> Dict[str, Any]:
-        """統一された最終処理"""
+        """
+        計算されたサイズに対して最小・最大制限を適用し、最終結果を構築
+
+        Args:
+            position_size: 計算された生ポジションサイズ
+            details: 計算の詳細情報
+            warnings: 警告メッセージのリスト
+            gene: ポジションサイジング遺伝子
+
+        Returns:
+            正規化された最終出力辞書
+        """
         # 最小/最大サイズ制限の適用
         min_size = self._get_param(gene, "min_position_size", 0.001)
         max_size = self._get_param(gene, "max_position_size", 9999.0)
-        
+
         position_size = max(min_size, min(max_size, position_size))
         details["final_position_size"] = position_size
 
@@ -61,7 +72,21 @@ class BaseCalculator(ABC):
         warning_msg: str = "現在価格が無効",
         warnings_list: Optional[List[str]] = None,
     ) -> float:
-        """価格チェック共通処理"""
+        """
+        現在価格の妥当性をチェックしてから計算を実行
+
+        価格が0以下の場合は計算をスキップし、フォールバック値を返します。
+
+        Args:
+            calculator_fn: 実行する計算関数
+            current_price: 現在の市場価格
+            fallback_value: 価格無効時の戻り値
+            warning_msg: 価格無効時の警告メッセージ
+            warnings_list: 警告を追記するリスト
+
+        Returns:
+            計算結果またはフォールバック値
+        """
         if current_price > 0:
             return calculator_fn()
         else:
@@ -76,8 +101,3 @@ class BaseCalculator(ABC):
         return self._apply_size_limits_and_finalize(
             position_size, details, warnings, gene
         )
-
-
-
-
-

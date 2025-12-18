@@ -66,9 +66,15 @@ class ConditionGenerator:
 
         # ランダム生成用設定（OperandGeneratorより統合）
         self.available_operators = OPERATORS
-        self.price_data_weight = getattr(ga_config, "price_data_weight", 5) if ga_config else 5
-        self.volume_data_weight = getattr(ga_config, "volume_data_weight", 2) if ga_config else 2
-        self.oi_fr_data_weight = getattr(ga_config, "oi_fr_data_weight", 1) if ga_config else 1
+        self.price_data_weight = (
+            getattr(ga_config, "price_data_weight", 5) if ga_config else 5
+        )
+        self.volume_data_weight = (
+            getattr(ga_config, "volume_data_weight", 2) if ga_config else 2
+        )
+        self.oi_fr_data_weight = (
+            getattr(ga_config, "oi_fr_data_weight", 1) if ga_config else 1
+        )
         self._valid_indicator_names = self._initialize_valid_indicators()
 
     def _initialize_valid_indicators(self) -> set:
@@ -100,9 +106,21 @@ class ConditionGenerator:
             self.context["regime_thresholds"] = regime_thresholds
 
     def generate_random_conditions(
-        self, indicators: List[any], condition_type: str
+        self, indicators: List[Any], condition_type: str
     ) -> List[Condition]:
-        """ランダムな条件リストを生成"""
+        """
+        ランダムな条件リストを生成します。
+
+        設定された最小・最大条件数の範囲内で、複数のシングル条件を生成し、
+        リストとして返します。最低1つの条件が含まれることを保証します。
+
+        Args:
+            indicators: 利用可能な指標遺伝子のリスト
+            condition_type: 条件のタイプ ("entry" など)
+
+        Returns:
+            生成された条件オブジェクトのリスト
+        """
         # 条件数はプロファイルや生成器の方針により 1〜max_conditions に広げる
         # ここでは min_conditions〜max_conditions の範囲で選択（下限>上限にならないようにガード）
         low = 3  # デフォルト値
@@ -131,9 +149,21 @@ class ConditionGenerator:
         return conditions
 
     def _generate_single_condition(
-        self, indicators: List[any], condition_type: str
+        self, indicators: List[Any], condition_type: str
     ) -> Condition:
-        """単一の条件を生成"""
+        """
+        単一の取引条件を構成要素から生成
+
+        左オペランド、演算子、右オペランドを個別に選択し、
+        それらを組み合わせて新しいConditionオブジェクトを作成します。
+
+        Args:
+            indicators: 利用可能な指標遺伝子リスト
+            condition_type: 条件のタイプ (例: "entry")
+
+        Returns:
+            生成されたConditionオブジェクト
+        """
         # 左オペランドの選択
         left_operand = self.choose_operand(indicators)
 
@@ -149,8 +179,19 @@ class ConditionGenerator:
             left_operand=left_operand, operator=operator, right_operand=right_operand
         )
 
-    def choose_operand(self, indicators: List[any]) -> str:
-        """オペランドを選択（指標名またはデータソース）"""
+    def choose_operand(self, indicators: List[Any]) -> str:
+        """
+        比較の左辺に使用するオペランドを選択します。
+
+        重み付けに基づいて、テクニカル指標、OHLCVデータ、または
+        その他の市場データソースからランダムに選択します。
+
+        Args:
+            indicators: 利用可能な指標遺伝子のリスト
+
+        Returns:
+            選択されたオペランドの文字列
+        """
         choices = []
 
         # テクニカル指標名を追加
@@ -171,10 +212,25 @@ class ConditionGenerator:
         return random.choice(choices) if choices else "close"
 
     def choose_right_operand(
-        self, left_operand: str, indicators: List[any], condition_type: str
+        self, left_operand: str, indicators: List[Any], condition_type: str
     ):
-        """右オペランドを選択（指標名、データソース、または数値）"""
-        if self.ga_config_obj and random.random() < getattr(self.ga_config_obj, "numeric_threshold_probability", 0.5):
+        """
+        左オペランドに対応する右オペランドを選択
+
+        左オペランドの性質（スケール、グループ）に基づいて、
+        互換性のある指標名、市場データソース、または数値を右オペランドとして選択します。
+
+        Args:
+            left_operand: 比較の左辺
+            indicators: 利用可能な指標遺伝子リスト
+            condition_type: 条件のタイプ
+
+        Returns:
+            選択された右オペランド（str または float）
+        """
+        if self.ga_config_obj and random.random() < getattr(
+            self.ga_config_obj, "numeric_threshold_probability", 0.5
+        ):
             return self.generate_threshold_value(left_operand, condition_type)
 
         compatible_operand = self.choose_compatible_operand(left_operand, indicators)
@@ -183,23 +239,45 @@ class ConditionGenerator:
             compatibility = operand_grouping_system.get_compatibility_score(
                 left_operand, compatible_operand
             )
-            min_score = getattr(self.ga_config_obj, "min_compatibility_score", 0.1) if self.ga_config_obj else 0.1
+            min_score = (
+                getattr(self.ga_config_obj, "min_compatibility_score", 0.1)
+                if self.ga_config_obj
+                else 0.1
+            )
             if compatibility < min_score:
                 return self.generate_threshold_value(left_operand, condition_type)
 
         return compatible_operand
 
     def choose_compatible_operand(
-        self, left_operand: str, indicators: List[any]
+        self, left_operand: str, indicators: List[Any]
     ) -> str:
-        """左オペランドと互換性の高い右オペランドを選択"""
+        """
+        左オペランドと互換性の高い右オペランド（指標またはデータ）を選択
+
+        OperandGroupingSystemを使用して、スケールが近い（互換性が高い）
+        オペランドを候補リストから抽出します。
+
+        Args:
+            left_operand: 対象の左オペランド
+            indicators: 利用可能な指標遺伝子リスト
+
+        Returns:
+            互換性のある右オペランド名
+        """
         available_operands = []
         for indicator_gene in indicators:
             available_operands.append(indicator_gene.type)
 
-        available_operands.extend(["close", "open", "high", "low", "volume", "OpenInterest", "FundingRate"])
+        available_operands.extend(
+            ["close", "open", "high", "low", "volume", "OpenInterest", "FundingRate"]
+        )
 
-        strict_score = getattr(self.ga_config_obj, "strict_compatibility_score", 0.8) if self.ga_config_obj else 0.8
+        strict_score = (
+            getattr(self.ga_config_obj, "strict_compatibility_score", 0.8)
+            if self.ga_config_obj
+            else 0.8
+        )
         strict_compatible = operand_grouping_system.get_compatible_operands(
             left_operand,
             available_operands,
@@ -209,7 +287,11 @@ class ConditionGenerator:
         if strict_compatible:
             return random.choice(strict_compatible)
 
-        min_score = getattr(self.ga_config_obj, "min_compatibility_score", 0.1) if self.ga_config_obj else 0.1
+        min_score = (
+            getattr(self.ga_config_obj, "min_compatibility_score", 0.1)
+            if self.ga_config_obj
+            else 0.1
+        )
         high_compatible = operand_grouping_system.get_compatible_operands(
             left_operand,
             available_operands,
@@ -225,9 +307,13 @@ class ConditionGenerator:
     def generate_threshold_value(self, operand: str, condition_type: str) -> float:
         """オペランドの型に応じて、データ駆動で閾値を生成"""
         if "FundingRate" in operand:
-            return self._get_safe_threshold("funding_rate", [0.0001, 0.001], allow_choice=True)
+            return self._get_safe_threshold(
+                "funding_rate", [0.0001, 0.001], allow_choice=True
+            )
         if "OpenInterest" in operand:
-            return self._get_safe_threshold("open_interest", [1000000, 50000000], allow_choice=True)
+            return self._get_safe_threshold(
+                "open_interest", [1000000, 50000000], allow_choice=True
+            )
         if operand == "volume":
             return self._get_safe_threshold("volume", [1000, 100000])
 
@@ -237,10 +323,15 @@ class ConditionGenerator:
             if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
                 return self._get_safe_threshold("oscillator_0_100", [20, 80])
             if scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-                return self._get_safe_threshold("oscillator_plus_minus_100", [-100, 100])
+                return self._get_safe_threshold(
+                    "oscillator_plus_minus_100", [-100, 100]
+                )
             if scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
                 return self._get_safe_threshold("momentum_zero_centered", [-0.5, 0.5])
-            if scale_type in (IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE):
+            if scale_type in (
+                IndicatorScaleType.PRICE_RATIO,
+                IndicatorScaleType.PRICE_ABSOLUTE,
+            ):
                 return self._get_safe_threshold("price_ratio", [0.95, 1.05])
             if scale_type == IndicatorScaleType.VOLUME:
                 return self._get_safe_threshold("volume", [1000, 100000])
@@ -251,7 +342,11 @@ class ConditionGenerator:
         self, key: str, default_range: List[float], allow_choice: bool = False
     ) -> float:
         """設定から値を取得し、安全に閾値を生成する"""
-        config_ranges = getattr(self.ga_config_obj, "threshold_ranges", {}) if self.ga_config_obj else {}
+        config_ranges = (
+            getattr(self.ga_config_obj, "threshold_ranges", {})
+            if self.ga_config_obj
+            else {}
+        )
         range_ = config_ranges.get(key, default_range)
 
         if isinstance(range_, list):
@@ -260,7 +355,11 @@ class ConditionGenerator:
                     return float(random.choice(range_))
                 except (ValueError, TypeError):
                     pass
-            if len(range_) >= 2 and isinstance(range_[0], (int, float)) and isinstance(range_[1], (int, float)):
+            if (
+                len(range_) >= 2
+                and isinstance(range_[0], (int, float))
+                and isinstance(range_[1], (int, float))
+            ):
                 return random.uniform(range_[0], range_[1])
         return random.uniform(default_range[0], default_range[1])
 
@@ -273,7 +372,10 @@ class ConditionGenerator:
 
     @safe_operation(context="条件正規化", is_api_call=False)
     def normalize_conditions(
-        self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators: List[IndicatorGene]
+        self,
+        conds: List[Union[Condition, ConditionGroup]],
+        side: str,
+        indicators: List[IndicatorGene],
     ) -> List[Union[Condition, ConditionGroup]]:
         """
         条件の正規化/組立ヘルパー：
@@ -282,7 +384,7 @@ class ConditionGenerator:
         """
         # トレンド系指標の優先順位
         trend_pref = ("SMA", "EMA")
-        
+
         # フォールバック候補の抽出
         trend_pool = []
         for ind in indicators or []:
@@ -291,20 +393,26 @@ class ConditionGenerator:
             cfg = indicator_registry.get_indicator_config(ind.type)
             if cfg and getattr(cfg, "category", None) == "trend":
                 trend_pool.append(ind.type)
-        
+
         # 優先候補の決定
         pref = [n for n in trend_pool if n in trend_pref]
-        trend_name = random.choice(pref) if pref else (random.choice(trend_pool) if trend_pool else random.choice(trend_pref))
-        
+        trend_name = (
+            random.choice(pref)
+            if pref
+            else (
+                random.choice(trend_pool) if trend_pool else random.choice(trend_pref)
+            )
+        )
+
         fallback = Condition(
             left_operand="close",
             operator=">" if side == "long" else "<",
             right_operand=trend_name or "open",
         )
-        
+
         if not conds:
             return [fallback]
-            
+
         # 平坦化（既に OR グループがある場合は中身だけ取り出す）
         flat: List[Condition] = []
         for c in conds:
@@ -312,7 +420,7 @@ class ConditionGenerator:
                 flat.extend(c.conditions)
             else:
                 flat.append(c)
-                
+
         # フォールバックの重複チェック
         exists = any(
             x.left_operand == fallback.left_operand
@@ -320,13 +428,13 @@ class ConditionGenerator:
             and x.right_operand == fallback.right_operand
             for x in flat
         )
-        
+
         if len(flat) == 1:
             return cast(
                 List[Union[Condition, ConditionGroup]],
                 flat if exists else flat + [fallback],
             )
-            
+
         top_level: List[Union[Condition, ConditionGroup]] = [
             ConditionGroup(conditions=flat)
         ]
@@ -348,37 +456,44 @@ class ConditionGenerator:
 
         # 統合された戦略パターン（Complex & MTF）
         longs, shorts = [], []
-        
+
         # 1. 複雑な組み合わせ戦略
         try:
             strategy = ComplexConditionsStrategy(self)
-            l, s, _ = strategy.generate_conditions(indicators)
-            longs.extend(l); shorts.extend(s)
+            complex_longs, complex_shorts, _ = strategy.generate_conditions(indicators)
+            longs.extend(complex_longs)
+            shorts.extend(complex_shorts)
         except Exception as e:
             logger.warning(f"ComplexStrategy生成失敗: {e}")
 
         # 2. MTF戦略
         try:
             mtf_strategy = MTFStrategy(self)
-            ml, ms, _ = mtf_strategy.generate_conditions(indicators)
-            longs.extend(ml); shorts.extend(ms)
+            mtf_longs, mtf_shorts, _ = mtf_strategy.generate_conditions(indicators)
+            longs.extend(mtf_longs)
+            shorts.extend(mtf_shorts)
         except Exception as e:
             logger.debug(f"MTFStrategy生成スキップ: {e}")
 
         # 3. 制限とフォールバック
         max_conds = getattr(self.ga_config_obj, "max_conditions", 3)
+
         def _finalize(lst, side):
-            if not lst: return self.normalize_conditions([], side, indicators)
+            if not lst:
+                return self.normalize_conditions([], side, indicators)
             res = random.sample(lst, max_conds) if len(lst) > max_conds else lst
             return self.normalize_conditions(res, side, indicators)
 
         return _finalize(longs, "long"), _finalize(shorts, "short"), []
 
-    def generate_fallback_conditions(self, indicators: List[IndicatorGene]) -> Tuple[List, List, List]:
+    def generate_fallback_conditions(
+        self, indicators: List[IndicatorGene]
+    ) -> Tuple[List, List, List]:
         """従来の生成ロジック（フォールバック）"""
         longs, shorts = [], []
         for ind in indicators:
-            if not ind.enabled: continue
+            if not ind.enabled:
+                continue
             name = self._get_indicator_name(ind)
             longs.extend(self._create_side_conditions(ind, "long", name))
             shorts.extend(self._create_side_conditions(ind, "short", name))
@@ -395,19 +510,22 @@ class ConditionGenerator:
         base = self._get_indicator_name(indicator)
         cfg = indicator_registry.get_indicator_config(indicator.type)
         up_idx, low_idx = 2, 0  # デフォルト [lower, mid, upper]
-        
+
         if cfg and cfg.return_cols:
             for i, col in enumerate(cfg.return_cols):
                 c = col.lower()
-                if any(k in c for k in ["upper", "top", "high"]): up_idx = i
-                if any(k in c for k in ["lower", "bottom", "low"]): low_idx = i
-        
+                if any(k in c for k in ["upper", "top", "high"]):
+                    up_idx = i
+                if any(k in c for k in ["lower", "bottom", "low"]):
+                    low_idx = i
+
         return f"{base}_{up_idx}", f"{base}_{low_idx}"
 
     def _is_price_scale(self, indicator: IndicatorGene) -> bool:
         """価格スケールの指標かどうか"""
         cfg = indicator_registry.get_indicator_config(indicator.type)
-        if cfg: return cfg.scale_type == IndicatorScaleType.PRICE_RATIO
+        if cfg:
+            return cfg.scale_type == IndicatorScaleType.PRICE_RATIO
         return indicator.type in ["SMA", "EMA", "WMA", "HMA", "KAMA", "TRIMA", "VWAP"]
 
     def _is_band_indicator(self, indicator: IndicatorGene) -> bool:
@@ -417,32 +535,47 @@ class ConditionGenerator:
             cols = [c.lower() for c in cfg.return_cols]
             has_up = any(k in c for c in cols for k in ["upper", "top", "high"])
             has_low = any(k in c for c in cols for k in ["lower", "bottom", "low"])
-            if has_up and has_low: return True
-        return any(k in indicator.type.upper() for k in ["BB", "BAND", "KELTNER", "DONCHIAN"])
+            if has_up and has_low:
+                return True
+        return any(
+            k in indicator.type.upper() for k in ["BB", "BAND", "KELTNER", "DONCHIAN"]
+        )
 
-    def _create_side_condition(self, indicator: IndicatorGene, side: str, name: Optional[str] = None) -> Condition:
+    def _create_side_condition(
+        self, indicator: IndicatorGene, side: str, name: Optional[str] = None
+    ) -> Condition:
         """単一のサイド別条件を生成（ヘルパー）"""
         conds = self._create_side_conditions(indicator, side)
         res = conds[0]
-        if name: res.left_operand = name
+        if name:
+            res.left_operand = name
         return res
 
     @safe_operation(context="サイド別条件生成", is_api_call=False)
-    def _create_side_conditions(self, indicator: IndicatorGene, side: str, name: Optional[str] = None) -> List[Condition]:
+    def _create_side_conditions(
+        self, indicator: IndicatorGene, side: str, name: Optional[str] = None
+    ) -> List[Condition]:
         """統合されたサイド別条件生成ロジック"""
         target_name = name or indicator.type
-        config = YamlIndicatorUtils.get_indicator_config_from_yaml(self.yaml_config, indicator.type)
-        
+        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
+            self.yaml_config, indicator.type
+        )
+
         threshold = 0
         if config:
-            val = YamlIndicatorUtils.get_threshold_from_yaml(self.yaml_config, config, side, self.context)
-            if val is not None: threshold = val
+            val = YamlIndicatorUtils.get_threshold_from_yaml(
+                self.yaml_config, config, side, self.context
+            )
+            if val is not None:
+                threshold = val
 
-        return [Condition(
-            left_operand=target_name,
-            operator=">" if side == "long" else "<",
-            right_operand=threshold
-        )]
+        return [
+            Condition(
+                left_operand=target_name,
+                operator=">" if side == "long" else "<",
+                right_operand=threshold,
+            )
+        ]
 
     def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
         return self._create_side_conditions(ind, "long")
@@ -450,14 +583,21 @@ class ConditionGenerator:
     def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
         return self._create_side_conditions(ind, "short")
 
-    def _structure_conditions(self, conditions: List[Union[Condition, ConditionGroup]]) -> List[Union[Condition, ConditionGroup]]:
+    def _structure_conditions(
+        self, conditions: List[Union[Condition, ConditionGroup]]
+    ) -> List[Union[Condition, ConditionGroup]]:
         """条件リストを確率的に階層化"""
-        if len(conditions) < 2: return conditions
+        if len(conditions) < 2:
+            return conditions
         res = []
         i = 0
         while i < len(conditions):
             if i + 1 < len(conditions) and random.random() < 0.3:
-                res.append(ConditionGroup(operator="OR", conditions=[conditions[i], conditions[i + 1]]))
+                res.append(
+                    ConditionGroup(
+                        operator="OR", conditions=[conditions[i], conditions[i + 1]]
+                    )
+                )
                 i += 2
             else:
                 res.append(conditions[i])
@@ -465,13 +605,17 @@ class ConditionGenerator:
         return res
 
     @safe_operation(context="指標タイプ取得", is_api_call=False)
-    def _get_indicator_type(self, indicator: Union[IndicatorGene, str]) -> IndicatorType:
+    def _get_indicator_type(
+        self, indicator: Union[IndicatorGene, str]
+    ) -> IndicatorType:
         """
         指標のタイプを取得（統合版）
         優先順位: YAML設定 > indicator_registry > Characteristics
         """
-        indicator_name = indicator.type if isinstance(indicator, IndicatorGene) else indicator
-        
+        indicator_name = (
+            indicator.type if isinstance(indicator, IndicatorGene) else indicator
+        )
+
         # 1. YAML設定をチェック
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(
             self.yaml_config, indicator_name
@@ -480,7 +624,7 @@ class ConditionGenerator:
             type_map = {
                 "momentum": IndicatorType.MOMENTUM,
                 "trend": IndicatorType.TREND,
-                "volatility": IndicatorType.VOLATILITY
+                "volatility": IndicatorType.VOLATILITY,
             }
             if config["type"] in type_map:
                 return type_map[config["type"]]
@@ -492,7 +636,9 @@ class ConditionGenerator:
             if cat == "momentum":
                 return IndicatorType.MOMENTUM
             elif cat in ("trend", "volatility"):
-                return IndicatorType.TREND if cat == "trend" else IndicatorType.VOLATILITY
+                return (
+                    IndicatorType.TREND if cat == "trend" else IndicatorType.VOLATILITY
+                )
 
         # 3. Characteristicsをチェック
         characteristics = YamlIndicatorUtils.get_characteristics()
@@ -500,7 +646,9 @@ class ConditionGenerator:
             return characteristics[indicator_name]["type"]
 
         # デフォルト
-        logger.warning(f"指標 {indicator_name} のタイプを特定できませんでした。トレンド系として扱います。")
+        logger.warning(
+            f"指標 {indicator_name} のタイプを特定できませんでした。トレンド系として扱います。"
+        )
         return IndicatorType.TREND
 
     @safe_operation(context="動的指標分類", is_api_call=False)
@@ -517,7 +665,7 @@ class ConditionGenerator:
         for ind in indicators:
             if not ind.enabled:
                 continue
-            
+
             try:
                 ind_type = self._get_indicator_type(ind)
                 categorized[ind_type].append(ind)
@@ -659,13 +807,21 @@ class GAConditionGenerator(ConditionGenerator):
                         )
 
                         if evolution_result and "best_condition" in evolution_result:
-                            optimized_conditions.append(evolution_result["best_condition"])
+                            optimized_conditions.append(
+                                evolution_result["best_condition"]
+                            )
                         else:
                             # 個別フォールバック
-                            optimized_conditions.extend(self._create_side_conditions(indicator, "long"))
+                            optimized_conditions.extend(
+                                self._create_side_conditions(indicator, "long")
+                            )
                     except Exception as e:
-                        self.logger.error(f"指標 {indicator.type} のGA最適化エラー: {e}")
-                        optimized_conditions.extend(self._create_side_conditions(indicator, "long"))
+                        self.logger.error(
+                            f"指標 {indicator.type} のGA最適化エラー: {e}"
+                        )
+                        optimized_conditions.extend(
+                            self._create_side_conditions(indicator, "long")
+                        )
 
             if not optimized_conditions:
                 return self.generate_balanced_conditions(indicators)
@@ -678,15 +834,25 @@ class GAConditionGenerator(ConditionGenerator):
 
     def _process_generated_conditions(
         self, conditions: List[Condition], indicators: List[IndicatorGene]
-    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]], List[Condition]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
         """生成された条件の分離、制限、および最終フォールバック処理"""
-        long_conditions = [c for c in conditions if getattr(c, "direction", "long") == "long"]
-        short_conditions = [c for c in conditions if getattr(c, "direction", "long") == "short"]
+        long_conditions = [
+            c for c in conditions if getattr(c, "direction", "long") == "long"
+        ]
+        short_conditions = [
+            c for c in conditions if getattr(c, "direction", "long") == "short"
+        ]
 
         # ロング条件がない場合はバランス生成から補完
         if not long_conditions:
             self.logger.warning("ロング条件不足のため、標準生成で補完します")
-            fallback_longs, fallback_shorts, fallback_exits = self.generate_balanced_conditions(indicators)
+            fallback_longs, fallback_shorts, fallback_exits = (
+                self.generate_balanced_conditions(indicators)
+            )
             return fallback_longs, fallback_shorts, fallback_exits
 
         # 条件数を制限
@@ -697,7 +863,6 @@ class GAConditionGenerator(ConditionGenerator):
             short_conditions = random.sample(short_conditions, max_conditions)
 
         return long_conditions, short_conditions, []
-
 
     def set_ga_config(
         self,
@@ -768,8 +933,3 @@ class GAConditionGenerator(ConditionGenerator):
                 f"単一条件最適化エラー ({indicator.type}, {direction}): {e}"
             )
             return None
-
-
-
-
-

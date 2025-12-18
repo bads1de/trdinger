@@ -5,7 +5,7 @@
 """
 
 import random
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class GeneticUtils:
@@ -71,15 +71,18 @@ class GeneticUtils:
         choice_fields: Optional[List[str]] = None,
     ):
         """
-        ジェネリック遺伝子交叉関数
+        複数種類のフィールドを持つ汎用遺伝子の交叉を実行
+
+        数値フィールド（平均化）、Enumフィールド（ランダム選択）、
+        およびどちらか一方を継承するフィールドを処理し、2つの子個体を生成します。
 
         Args:
-            parent1_gene: 親1遺伝子
-            parent2_gene: 親2遺伝子
-            gene_class: 遺伝子クラス
-            numeric_fields: 数値フィールドのリスト（平均化）
-            enum_fields: Enumフィールドのリスト（ランダム選択）
-            choice_fields: どちらかを選択するフィールドのリスト
+            parent1_gene: 親1の遺伝子インスタンス
+            parent2_gene: 親2の遺伝子インスタンス
+            gene_class: 生成する子のクラス（BaseGeneを継承）
+            numeric_fields: 数値として平均化処理を行うフィールド名のリスト
+            enum_fields: Enum値としてランダムにどちらかを選ぶフィールド名のリスト
+            choice_fields: 単純にどちらか一方の親から値を継承するフィールド名のリスト
 
         Returns:
             (child1_gene, child2_gene) のタプル
@@ -154,18 +157,21 @@ class GeneticUtils:
         numeric_ranges: Optional[Dict[str, Tuple[float, float]]] = None,
     ):
         """
-        ジェネリック遺伝子突然変異関数
+        汎用遺伝子の突然変異を実行
+
+        数値フィールドに対してはガウス的な変動を与え、
+        Enumフィールドに対してはランダムな再選択を行います。
 
         Args:
-            gene: 突然変異対象の遺伝子
-            gene_class: 遺伝子クラス
-            mutation_rate: 突然変異率
-            numeric_fields: 数値フィールドのリスト
-            enum_fields: Enumフィールドのリスト
-            numeric_ranges: 数値フィールドの範囲 {"field_name": (min_val, max_val)}
+            gene: 突然変異対象の遺伝子インスタンス
+            gene_class: 生成する遺伝子のクラス
+            mutation_rate: 各フィールドが変異する確率
+            numeric_fields: 数値として変動させるフィールド名のリスト
+            enum_fields: Enum値として再選択させるフィールド名のリスト
+            numeric_ranges: 数値フィールドの許容範囲 {"field_name": (min, max)}
 
         Returns:
-            突然変異後の遺伝子
+            突然変異後の新しい遺伝子インスタンス
         """
         import random
 

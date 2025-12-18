@@ -27,7 +27,18 @@ class YamlIndicatorUtils:
 
     @classmethod
     def generate_characteristics_from_yaml(cls, yaml_file_path: str) -> Dict[str, Dict]:
-        """YAMLファイルから指標特性を動的に生成"""
+        """
+        YAMLファイルから指標特性を動的に生成
+
+        指定されたYAMLファイルをロードしてパースし、
+        指標ごとの特性（タイプ、スケール、しきい値等）を抽出した辞書を返します。
+
+        Args:
+            yaml_file_path: YAMLファイルの絶対パス
+
+        Returns:
+            指標名をキーとする特性情報の辞書
+        """
         try:
             with open(yaml_file_path, "r", encoding="utf-8") as file:
                 config = yaml.safe_load(file)
@@ -41,15 +52,16 @@ class YamlIndicatorUtils:
         """YAML設定データから指標特性を解析"""
         characteristics = {}
         indicators = config.get("indicators", {})
-        
+
         for name, cfg in indicators.items():
-            if not isinstance(cfg, dict): continue
-            
+            if not isinstance(cfg, dict):
+                continue
+
             char = {
                 "type": cfg.get("type", "unknown"),
                 "scale_type": cfg.get("scale_type", "price_absolute"),
             }
-            
+
             thresholds = cfg.get("thresholds", {})
             if thresholds and isinstance(thresholds, dict):
                 for level, risk_cfg in thresholds.items():
@@ -60,13 +72,24 @@ class YamlIndicatorUtils:
                     else:
                         char.update(cls._process_thresholds({level: risk_cfg}))
                 char.update(cls._extract_oscillator_settings(char, cfg, thresholds))
-            
+
             characteristics[name] = char
         return characteristics
 
     @classmethod
     def _process_thresholds(cls, thresholds: Dict[str, Any]) -> Dict[str, Any]:
-        """しきい値の設定を処理"""
+        """
+        しきい値設定の構造化処理
+
+        YAML内の簡略化されたしきい値キー（long_gt等）を、
+        内部で使用する詳細なキー名に変換します。
+
+        Args:
+            thresholds: パース途中のしきい値設定
+
+        Returns:
+            正規化されたしきい値情報
+        """
         processed = {}
         for key, value in thresholds.items():
             if key in ["long_gt", "short_lt"]:
@@ -88,12 +111,14 @@ class YamlIndicatorUtils:
         scale_type = indicator_config.get("scale_type", "price_absolute")
 
         if scale_type == "oscillator_0_100":
-            settings.update({
-                "range": (0, 100),
-                "oversold_threshold": 30,
-                "overbought_threshold": 70,
-                "neutral_zone": (40, 60),
-            })
+            settings.update(
+                {
+                    "range": (0, 100),
+                    "oversold_threshold": 30,
+                    "overbought_threshold": 70,
+                    "neutral_zone": (40, 60),
+                }
+            )
         elif scale_type == "oscillator_plus_minus_100":
             settings.update({"range": (-100, 100), "neutral_zone": (-20, 20)})
         elif scale_type == "momentum_zero_centered":
@@ -109,10 +134,14 @@ class YamlIndicatorUtils:
         cls, settings: Dict, conditions: Dict, thresholds: Dict
     ) -> Dict[str, Any]:
         """条件ベースの設定を適用"""
-        if "long_lt" in str(conditions.get("long", "")) and "short_gt" in str(conditions.get("short", "")):
+        if "long_lt" in str(conditions.get("long", "")) and "short_gt" in str(
+            conditions.get("short", "")
+        ):
             settings["oversold_based"] = True
             settings["overbought_based"] = True
-        elif "long_gt" in str(conditions.get("long", "")) and "short_lt" in str(conditions.get("short", "")):
+        elif "long_gt" in str(conditions.get("long", "")) and "short_lt" in str(
+            conditions.get("short", "")
+        ):
             settings["zero_cross"] = True
         return settings
 

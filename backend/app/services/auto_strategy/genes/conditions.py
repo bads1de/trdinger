@@ -68,9 +68,16 @@ class ConditionGroup:
     conditions: List[Union[Condition, "ConditionGroup"]] = field(default_factory=list)
 
     def is_empty(self) -> bool:
+        """グループ内に条件が含まれているかを確認"""
         return len(self.conditions) == 0
 
     def validate(self) -> bool:
+        """
+        グループ全体の妥当性を検証（演算子および内部の各条件）
+
+        Returns:
+            妥当であればTrue
+        """
         from .validator import GeneValidator
 
         validator = GeneValidator()
@@ -152,11 +159,11 @@ class StateTracker:
         return current_bar - self._events[event_name]
 
     def reset(self) -> None:
-        """全イベントをクリア"""
+        """全イベントをクリア（新しいバックテストの開始時などに使用）"""
         self._events.clear()
 
     def get_all_events(self) -> Dict[str, int]:
-        """全イベントのコピーを取得（デバッグ用）"""
+        """全イベントのコピーを取得（デバッグや可視化用）"""
         return self._events.copy()
 
 
@@ -187,10 +194,13 @@ class StatefulCondition:
 
     def validate(self) -> Tuple[bool, List[str]]:
         """
-        バリデーション
+        ステートフル条件のパラメータ妥当性を検証
+
+        ルックバック期間やクールダウン期間の範囲、および
+        トリガー/フォロー条件の存在を確認します。
 
         Returns:
-            (is_valid, errors) のタプル
+            (妥当かどうか, エラーメッセージのリスト) のタプル
         """
         errors: List[str] = []
 

@@ -84,11 +84,24 @@ class IndicatorSettings(BaseConfig):
     data_sources: List[str] = field(default_factory=lambda: DATA_SOURCES.copy())
 
     def get_all_indicators(self) -> List[str]:
-        """全指標タイプを取得"""
+        """
+        システムで利用可能な全テクニカル指標のリストを取得
+
+        Returns:
+            指標名のリスト（例: ['SMA', 'RSI', ...]）
+        """
         return self.valid_indicator_types
 
     def get_indicator_characteristics(self, indicator: str) -> Optional[Dict[str, Any]]:
-        """特定の指標の特性を取得"""
+        """
+        特定の指標の特性（スケールタイプ、デフォルト閾値等）を取得
+
+        Args:
+            indicator: 指標名
+
+        Returns:
+            特性情報を含む辞書。見つからない場合はNone。
+        """
         return self.indicator_characteristics.get(indicator)
 
 

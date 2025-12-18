@@ -315,12 +315,42 @@ class FitnessSharing:
         try:
             # 構成要素と計算メソッドのマッピング
             components = [
-                (gene1.indicators, gene2.indicators, self._calculate_indicator_similarity, 0.2),
-                (gene1.long_entry_conditions, gene2.long_entry_conditions, self._calculate_condition_similarity, 0.2),
-                (gene1.short_entry_conditions, gene2.short_entry_conditions, self._calculate_condition_similarity, 0.2),
-                (gene1.risk_management, gene2.risk_management, self._calculate_risk_management_similarity, 0.2),
-                (gene1.tpsl_gene, gene2.tpsl_gene, self._calculate_tpsl_similarity, 0.15),
-                (gene1.position_sizing_gene, gene2.position_sizing_gene, self._calculate_position_sizing_similarity, 0.05),
+                (
+                    gene1.indicators,
+                    gene2.indicators,
+                    self._calculate_indicator_similarity,
+                    0.2,
+                ),
+                (
+                    gene1.long_entry_conditions,
+                    gene2.long_entry_conditions,
+                    self._calculate_condition_similarity,
+                    0.2,
+                ),
+                (
+                    gene1.short_entry_conditions,
+                    gene2.short_entry_conditions,
+                    self._calculate_condition_similarity,
+                    0.2,
+                ),
+                (
+                    gene1.risk_management,
+                    gene2.risk_management,
+                    self._calculate_risk_management_similarity,
+                    0.2,
+                ),
+                (
+                    gene1.tpsl_gene,
+                    gene2.tpsl_gene,
+                    self._calculate_tpsl_similarity,
+                    0.15,
+                ),
+                (
+                    gene1.position_sizing_gene,
+                    gene2.position_sizing_gene,
+                    self._calculate_position_sizing_similarity,
+                    0.05,
+                ),
             ]
 
             total_similarity = 0.0
@@ -335,17 +365,41 @@ class FitnessSharing:
             return 0.0
 
     def _check_none_similarity(self, val1: Any, val2: Any) -> Optional[float]:
-        """Noneチェック共通処理"""
-        if val1 is None and val2 is None: return 1.0
-        if val1 is None or val2 is None: return 0.0
+        """
+        None値に対する類似度チェックの共通処理
+
+        両方がNoneなら完全一致(1.0)、片方のみNoneなら不一致(0.0)を返します。
+        両方がNoneでない場合はNoneを返し、後続の計算を促します。
+
+        Args:
+            val1: 比較対象1
+            val2: 比較対象2
+
+        Returns:
+            確定した類似度、または後続計算が必要な場合はNone
+        """
+        if val1 is None and val2 is None:
+            return 1.0
+        if val1 is None or val2 is None:
+            return 0.0
         return None
 
     def _calculate_indicator_similarity(
         self, indicators1: List[Any], indicators2: List[Any]
     ) -> float:
-        """指標の類似度を計算"""
+        """
+        2つの指標セット間の類似度を計算します（Jaccard係数を使用）。
+
+        Args:
+            indicators1: 指標リスト1
+            indicators2: 指標リスト2
+
+        Returns:
+            類似度 (0.0 - 1.0)
+        """
         res = self._check_none_similarity(indicators1, indicators2)
-        if res is not None: return res
+        if res is not None:
+            return res
 
         # 指標タイプのJaccard係数
         types1 = {ind.type for ind in indicators1}
@@ -356,19 +410,34 @@ class FitnessSharing:
     def _calculate_condition_similarity(
         self, conditions1: List[Any], conditions2: List[Any]
     ) -> float:
-        """条件の類似度を計算"""
+        """
+        2つの条件リスト間の類似度を計算します。
+
+        演算子と左辺の型の一致具合を評価します。
+
+        Args:
+            conditions1: 条件リスト1
+            conditions2: 条件リスト2
+
+        Returns:
+            類似度 (0.0 - 1.0)
+        """
         res = self._check_none_similarity(conditions1, conditions2)
-        if res is not None: return res
+        if res is not None:
+            return res
 
         similar_count = 0
         total = max(len(conditions1), len(conditions2))
-        if total == 0: return 1.0
+        if total == 0:
+            return 1.0
 
         for c1, c2 in zip(conditions1, conditions2):
             # 演算子と型の一致を評価
             if getattr(c1, "operator", None) == getattr(c2, "operator", None):
                 similar_count += 0.5
-            if str(type(getattr(c1, "left_operand", None))) == str(type(getattr(c2, "left_operand", None))):
+            if str(type(getattr(c1, "left_operand", None))) == str(
+                type(getattr(c2, "left_operand", None))
+            ):
                 similar_count += 0.5
 
         return similar_count / total
@@ -376,18 +445,33 @@ class FitnessSharing:
     def _calculate_risk_management_similarity(
         self, risk1: Dict[str, Any], risk2: Dict[str, Any]
     ) -> float:
-        """リスク管理の類似度を計算"""
+        """
+        リスク管理設定の類似度を計算
+
+        共通するキー（position_size等）の値を比較し、
+        数値の場合はその差の比率に基づいてスコアを算出します。
+
+        Args:
+            risk1: リスク管理辞書1
+            risk2: リスク管理辞書2
+
+        Returns:
+            類似度 (0.0 - 1.0)
+        """
         res = self._check_none_similarity(risk1, risk2)
-        if res is not None: return res
+        if res is not None:
+            return res
 
         common_fields = set(risk1.keys()) & set(risk2.keys())
-        if not common_fields: return 0.0
+        if not common_fields:
+            return 0.0
 
         score = 0.0
         for field in common_fields:
             v1, v2 = risk1[field], risk2[field]
             if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
-                if v1 == v2: score += 1.0
+                if v1 == v2:
+                    score += 1.0
                 else:
                     max_v = max(abs(v1), abs(v2))
                     score += max(0.0, 1.0 - abs(v1 - v2) / max_v) if max_v > 0 else 1.0
@@ -399,7 +483,8 @@ class FitnessSharing:
     def _calculate_tpsl_similarity(self, tpsl1: Any, tpsl2: Any) -> float:
         """TP/SL遺伝子の類似度を計算"""
         res = self._check_none_similarity(tpsl1, tpsl2)
-        if res is not None: return res
+        if res is not None:
+            return res
 
         score = 0.5 if tpsl1.method == tpsl2.method else 0.0
         # 主要パラメータの類似度
@@ -413,10 +498,13 @@ class FitnessSharing:
     def _calculate_position_sizing_similarity(self, ps1: Any, ps2: Any) -> float:
         """ポジションサイジング遺伝子の類似度を計算"""
         res = self._check_none_similarity(ps1, ps2)
-        if res is not None: return res
+        if res is not None:
+            return res
 
         score = 0.5 if ps1.method == ps2.method else 0.0
-        v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(ps2, "risk_per_trade", None)
+        v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(
+            ps2, "risk_per_trade", None
+        )
         if v1 is not None and v2 is not None:
             diff = abs(v1 - v2)
             score += max(0.0, 0.5 * (1 - diff / max(v1, v2, 1e-6)))
@@ -490,13 +578,17 @@ class FitnessSharing:
 
     def _vectorize_gene(self, gene: StrategyGene) -> np.ndarray:
         """
-        StrategyGeneを特徴ベクトルに変換
+        StrategyGeneを数値的な特徴ベクトルに変換します。
+
+        クラスタリングや近傍探索に使用されます。
+        指標数、条件数、リスク設定、指標タイプ、オペレータの使用頻度などを
+        固定長のベクトルにまとめます。
 
         Args:
-            gene: 戦略遺伝子
+            gene: 変換対象の戦略遺伝子
 
         Returns:
-            特徴ベクトル
+            特徴ベクトル (numpy array)
         """
         features = []
 
@@ -660,9 +752,3 @@ class FitnessSharing:
                     dynamic += 1.0
 
         return numeric, dynamic
-
-
-
-
-
-

@@ -46,7 +46,21 @@ class MarketDataHandler:
         market_data: Optional[Dict[str, Any]],
         use_cache: bool,
     ) -> Dict[str, Any]:
-        """市場データの準備と拡張（整理版）"""
+        """
+        市場データを準備し、デフォルト値やキャッシュで情報を拡張します。
+
+        ATR値やボラティリティ指標がmarket_dataに含まれていない場合、
+        キャッシュまたは設定ファイルからのデフォルト値（例: 2%）で補完します。
+
+        Args:
+            symbol: 通貨ペア
+            current_price: 現在価格
+            market_data: 外部から提供された市場データ（任意）
+            use_cache: キャッシュを利用するかどうか
+
+        Returns:
+            拡張された市場データの辞書
+        """
         enhanced = market_data.copy() if market_data else {}
 
         # 1. キャッシュの統合
@@ -57,11 +71,13 @@ class MarketDataHandler:
         # 2. ATR値の保証
         if "atr" not in enhanced and "atr_pct" not in enhanced:
             default_atr_pct = unified_config.auto_strategy.default_atr_multiplier
-            enhanced.update({
-                "atr": current_price * default_atr_pct,
-                "atr_pct": default_atr_pct,
-                "atr_source": "default"
-            })
+            enhanced.update(
+                {
+                    "atr": current_price * default_atr_pct,
+                    "atr_pct": default_atr_pct,
+                    "atr_source": "default",
+                }
+            )
 
         # 3. ボラティリティメトリクスの正規化
         # デフォルト値は 0.02 (2%)
@@ -94,8 +110,3 @@ class MarketDataHandler:
     def is_cache_valid(self) -> bool:
         """キャッシュが有効かチェック"""
         return self._cache is not None and not self._cache.is_expired()
-
-
-
-
-

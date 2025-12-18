@@ -18,7 +18,15 @@ class CalculatorFactory:
 
     @staticmethod
     def create_calculator(method: str) -> BaseCalculator:
-        """手法に応じた計算機インスタンスを生成"""
+        """
+        手法名に対応したポジションサイズ計算機インスタンスを生成
+
+        Args:
+            method: 計算方式名（'half_optimal_f', 'volatility_based' 等）
+
+        Returns:
+            BaseCalculatorを継承した計算機インスタンス
+        """
         method_map = {
             "half_optimal_f": HalfOptimalFCalculator,
             "volatility_based": VolatilityBasedCalculator,
@@ -44,8 +52,3 @@ class CalculatorFactory:
             "fixed_ratio": "固定比率",
             "fixed_quantity": "固定枚数",
         }
-
-
-
-
-

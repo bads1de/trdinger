@@ -59,7 +59,18 @@ class StrategyParameterTuner:
         self.optimizer = OptunaOptimizer()
 
     def tune(self, gene: StrategyGene) -> StrategyGene:
-        """パラメータチューニングを実行"""
+        """
+        単一の戦略遺伝子に対してパラメータチューニングを実行
+
+        Optunaを使用して、指標の期間、TP/SL、あるいは取引条件の閾値などの
+        連続変数/離散変数を最適化し、より高いフィットネスを持つ遺伝子を返します。
+
+        Args:
+            gene: チューニング対象の戦略遺伝子
+
+        Returns:
+            最適化されたパラメータを適用した新しいStrategyGene
+        """
         logger.info("🔧 戦略パラメータチューニングを開始")
 
         parameter_space = self.parameter_space_builder.build_parameter_space(
@@ -77,15 +88,19 @@ class StrategyParameterTuner:
 
         try:
             res = self.optimizer.optimize(objective, parameter_space, self.n_trials)
-            
+
             # 最適パラメータの適用とメタデータ更新
-            best_gene = self.parameter_space_builder.apply_params_to_gene(gene, res.best_params)
-            best_gene.metadata.update({
-                "optuna_tuned": True,
-                "optuna_best_score": res.best_score,
-                "optuna_trials": res.total_evaluations,
-                "optuna_time": res.optimization_time
-            })
+            best_gene = self.parameter_space_builder.apply_params_to_gene(
+                gene, res.best_params
+            )
+            best_gene.metadata.update(
+                {
+                    "optuna_tuned": True,
+                    "optuna_best_score": res.best_score,
+                    "optuna_trials": res.total_evaluations,
+                    "optuna_time": res.optimization_time,
+                }
+            )
             return best_gene
 
         except Exception as e:

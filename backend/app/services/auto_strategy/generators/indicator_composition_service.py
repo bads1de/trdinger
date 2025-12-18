@@ -88,7 +88,15 @@ class IndicatorCompositionService:
         return indicators
 
     def _get_default_params_for_indicator(self, indicator_type: str) -> dict:
-        """指標のデフォルトパラメータを取得"""
+        """
+        指標タイプに応じたデフォルトパラメータを取得
+
+        Args:
+            indicator_type: 指標タイプ (SMA, RSIなど)
+
+        Returns:
+            パラメータ辞書
+        """
         try:
             if indicator_type in MA_INDICATORS_NEEDING_PERIOD:
                 return {"period": random.choice([10, 14, 20, 30, 50])}
@@ -98,7 +106,15 @@ class IndicatorCompositionService:
             return {"period": 20}  # SMA用フォールバック
 
     def _get_existing_periods(self, indicators: List[IndicatorGene]) -> set:
-        """既存の指標のパラメータを取得"""
+        """
+        リスト内の指標が使用しているperiodパラメータの集合を取得
+
+        Args:
+            indicators: 指標遺伝子リスト
+
+        Returns:
+            period値のセット
+        """
         periods = set()
         for ind in indicators:
             if hasattr(ind, "parameters") and isinstance(ind.parameters, dict):
@@ -110,7 +126,16 @@ class IndicatorCompositionService:
     def _choose_ma_with_unique_period(
         self, ma_pool: List[str], existing_periods: set
     ) -> str | None:
-        """重複しないperiodのMAを選択"""
+        """
+        既存の指標と重複しないperiodを持つMAを選択
+
+        Args:
+            ma_pool: 選択肢となるMA指標名のリスト
+            existing_periods: すでに使用されているperiodの集合
+
+        Returns:
+            選択されたMA指標名、またはNone
+        """
         try:
             # 優先MAから選択
             preferred = [name for name in ma_pool if name in PREFERRED_MA_INDICATORS]

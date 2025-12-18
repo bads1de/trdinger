@@ -31,7 +31,16 @@ class LowerTimeframeSimulator:
     ) -> Tuple[bool, Optional[float]]:
         """
         1分足データを使用して注文の約定をチェック
-        ベクトル演算を使用して高速化しています。
+
+        注文タイプ（指値、逆指値）に合わせて、高値・安値のベクトル
+        を使用して、バー内での約定有無と約定価格を判定します。
+
+        Args:
+            order: 判定対象の未執行注文オブジェクト
+            minute_data: 該当期間をカバーする1分足データ
+
+        Returns:
+            (約定したかどうか, 約定価格) のタプル
         """
         if minute_data.empty:
             return False, None
@@ -42,14 +51,24 @@ class LowerTimeframeSimulator:
         highs = minute_data[cols.get("high", "High")]
 
         if order.order_type == EntryType.LIMIT:
-            if order.limit_price is None: return False, None
-            mask = (lows <= order.limit_price) if order.is_long else (highs >= order.limit_price)
+            if order.limit_price is None:
+                return False, None
+            mask = (
+                (lows <= order.limit_price)
+                if order.is_long
+                else (highs >= order.limit_price)
+            )
             if mask.any():
                 return True, order.limit_price
 
         elif order.order_type == EntryType.STOP:
-            if order.stop_price is None: return False, None
-            mask = (highs >= order.stop_price) if order.is_long else (lows <= order.stop_price)
+            if order.stop_price is None:
+                return False, None
+            mask = (
+                (highs >= order.stop_price)
+                if order.is_long
+                else (lows <= order.stop_price)
+            )
             if mask.any():
                 return True, order.stop_price
 
@@ -58,14 +77,20 @@ class LowerTimeframeSimulator:
 
         return False, None
 
-    def _check_stop_limit_fill_vectorized(self, order: PendingOrder, lows: pd.Series, highs: pd.Series) -> Tuple[bool, Optional[float]]:
+    def _check_stop_limit_fill_vectorized(
+        self, order: PendingOrder, lows: pd.Series, highs: pd.Series
+    ) -> Tuple[bool, Optional[float]]:
         """逆指値指値注文の約定判定（ベクトル化）"""
         if order.stop_price is None or order.limit_price is None:
             return False, None
 
         # 1. ストップ条件の判定
         if not order.stop_triggered:
-            stop_mask = (highs >= order.stop_price) if order.is_long else (lows <= order.stop_price)
+            stop_mask = (
+                (highs >= order.stop_price)
+                if order.is_long
+                else (lows <= order.stop_price)
+            )
             if stop_mask.any():
                 order.stop_triggered = True
                 # トリガーした以降のデータのみを対象に指値判定を行う必要がある
@@ -76,7 +101,11 @@ class LowerTimeframeSimulator:
                 return False, None
 
         # 2. 指値条件の判定
-        limit_mask = (lows <= order.limit_price) if order.is_long else (highs >= order.limit_price)
+        limit_mask = (
+            (lows <= order.limit_price)
+            if order.is_long
+            else (highs >= order.limit_price)
+        )
         if limit_mask.any():
             return True, order.limit_price
 

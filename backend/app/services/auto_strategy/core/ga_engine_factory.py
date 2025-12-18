@@ -5,7 +5,7 @@ GAエンジンの構築とコンポーネントの初期化を担当します。
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+
 
 from app.services.backtest.backtest_service import BacktestService
 from .ga_engine import GeneticAlgorithmEngine
@@ -36,7 +36,9 @@ class GeneticAlgorithmEngineFactory:
         """
         # ログレベルの設定
         auto_strategy_logger = logging.getLogger("app.services.auto_strategy")
-        auto_strategy_logger.setLevel(getattr(logging, ga_config.log_level.upper(), logging.INFO))
+        auto_strategy_logger.setLevel(
+            getattr(logging, ga_config.log_level.upper(), logging.INFO)
+        )
 
         # 遺伝子生成器の初期化
         gene_generator = RandomGeneGenerator(ga_config)
@@ -46,7 +48,9 @@ class GeneticAlgorithmEngineFactory:
         hybrid_feature_adapter = None
 
         if ga_config.hybrid_mode:
-            hybrid_predictor, hybrid_feature_adapter = GeneticAlgorithmEngineFactory._setup_hybrid_components(ga_config)
+            hybrid_predictor, hybrid_feature_adapter = (
+                GeneticAlgorithmEngineFactory._setup_hybrid_components(ga_config)
+            )
 
         # エンジンの生成
         engine = GeneticAlgorithmEngine(
@@ -57,17 +61,31 @@ class GeneticAlgorithmEngineFactory:
             hybrid_feature_adapter=hybrid_feature_adapter,
         )
 
-        logger.info(f"GAエンジンを初期化しました (Mode: {'Hybrid' if ga_config.hybrid_mode else 'Standard'})")
+        logger.info(
+            f"GAエンジンを初期化しました (Mode: {'Hybrid' if ga_config.hybrid_mode else 'Standard'})"
+        )
         return engine
 
     @staticmethod
     def _setup_hybrid_components(ga_config: GAConfig) -> tuple:
-        """ハイブリッドモード用コンポーネントのセットアップ"""
+        """
+        ハイブリッドモード（GA+ML）用コンポーネントのセットアップ
+
+        GA設定に基づき、予測モデル（HybridPredictor）と
+        特徴量アダプター（HybridFeatureAdapter）を初期化します。
+        複数モデルのアンサンブルや、単一モデルの選択に対応しています。
+
+        Args:
+            ga_config: GA設定情報
+
+        Returns:
+            (predictor, adapter) のタプル
+        """
         from .hybrid_predictor import HybridPredictor
         from .hybrid_feature_adapter import HybridFeatureAdapter
 
         logger.info("🔬 ハイブリッドGA+MLモードのコンポーネントを準備中")
-        
+
         # 予測器の初期化
         model_types = ga_config.hybrid_model_types
         if model_types and len(model_types) > 1:

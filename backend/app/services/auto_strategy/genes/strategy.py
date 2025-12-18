@@ -9,7 +9,7 @@ import logging
 import random
 import uuid
 from datetime import datetime
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -73,7 +73,7 @@ class StrategyGene:
         indicators = [
             IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
         ]
-        
+
         return cls(
             id=str(uuid.uuid4()),
             indicators=indicators,
@@ -86,7 +86,9 @@ class StrategyGene:
             risk_management={"position_size": 0.1},
             tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005, enabled=True),
             position_sizing_gene=PositionSizingGene(
-                method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000, enabled=True
+                method=PositionSizingMethod.FIXED_QUANTITY,
+                fixed_quantity=1000,
+                enabled=True,
             ),
             metadata={"generated_by": "create_default"},
         )
@@ -106,14 +108,20 @@ class StrategyGene:
         short_entry_gene: Optional[EntryGene] = None,
         tool_genes: Optional[List[ToolGene]] = None,
         risk_management: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> "StrategyGene":
         """
         パーツから戦略遺伝子を組み立てる
+
+        提供された各コンポーネントを組み合わせて、新しいStrategyGeneインスタンスを生成します。
+        IDは新しく採番され、メタデータにアセンブル時刻が追加されます。
+
+        Returns:
+            構築されたStrategyGene
         """
         final_metadata = metadata or {}
         final_metadata.setdefault("assembled_at", datetime.now().isoformat())
-        
+
         return cls(
             id=str(uuid.uuid4()),
             indicators=indicators,
@@ -128,7 +136,7 @@ class StrategyGene:
             short_entry_gene=short_entry_gene,
             tool_genes=tool_genes or [],
             risk_management=risk_management or {"position_size": 0.1},
-            metadata=final_metadata
+            metadata=final_metadata,
         )
 
     def has_long_short_separation(self) -> bool:
@@ -153,9 +161,17 @@ class StrategyGene:
 
     def mutate(self, config: Any, mutation_rate: float = 0.1) -> StrategyGene:
         """
-        戦略遺伝子の突然変異（純粋版）
+        戦略遺伝子の突然変異を実行します。
 
-        自身のコピーを作成して変異させ、新しいインスタンスを返します。
+        自身のコピーを作成し、各サブコンポーネント（指標、条件、リスク管理、TPSLなど）
+        に対して確率的に変異を適用します。
+
+        Args:
+            config: GA設定（パラメータ範囲や変異確率の倍率を含む）
+            mutation_rate: 基本となる突然変異率 (0.0 - 1.0)
+
+        Returns:
+            突然変異が適用された新しいStrategyGeneインスタンス
         """
         try:
             # 深いコピーを作成
@@ -299,7 +315,16 @@ class StrategyGene:
         crossover_type: str = "uniform",
     ) -> Tuple[StrategyGene, StrategyGene]:
         """
-        戦略遺伝子の交叉
+        2つの親個体から交叉により新しい子個体を生成します。
+
+        Args:
+            parent1: 親個体1
+            parent2: 親個体2
+            config: GA設定
+            crossover_type: 交叉の種類 ("uniform" または "single_point")
+
+        Returns:
+            生成された2つの子個体のタプル
         """
         try:
             if crossover_type == "uniform":
@@ -313,8 +338,13 @@ class StrategyGene:
             return parent1, parent2
 
     @staticmethod
-    def _mutate_indicators(mutated: StrategyGene, mutation_rate: float, config: Any):
-        """指標の突然変異"""
+    def _mutate_indicators(mutated: "StrategyGene", mutation_rate: float, config: Any):
+        """
+        指標遺伝子の突然変異処理
+
+        1. 確率的に既存指標のパラメータ（period等）を変更します。
+        2. 確率的に指標の新規追加、または既存指標の削除を行います。
+        """
         min_multiplier, max_multiplier = config.indicator_param_mutation_range
         # 指標パラメータの突然変異
         for i, indicator in enumerate(mutated.indicators):
@@ -367,8 +397,13 @@ class StrategyGene:
                 mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
     @staticmethod
-    def _mutate_conditions(mutated: StrategyGene, mutation_rate: float, config: Any):
-        """条件の突然変異"""
+    def _mutate_conditions(mutated: "StrategyGene", mutation_rate: float, config: Any):
+        """
+        取引条件の突然変異処理
+
+        ロング/ショートそれぞれの条件リストに対して、
+        演算子の切り替えや条件の書き換えを確率的に実行します。
+        """
 
         def mutate_item(condition):
             if isinstance(condition, ConditionGroup):
@@ -479,7 +514,9 @@ class StrategyGene:
     ) -> Tuple[StrategyGene, StrategyGene]:
         """一点交叉"""
         min_indicators = min(len(parent1.indicators), len(parent2.indicators))
-        crossover_point = 0 if min_indicators <= 1 else random.randint(1, min_indicators)
+        crossover_point = (
+            0 if min_indicators <= 1 else random.randint(1, min_indicators)
+        )
 
         c1_ind = (
             parent1.indicators[:crossover_point] + parent2.indicators[crossover_point:]
@@ -578,4 +615,3 @@ class StrategyGene:
         )
 
         return child1, child2
-

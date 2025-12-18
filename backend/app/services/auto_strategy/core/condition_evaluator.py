@@ -30,10 +30,20 @@ class ConditionEvaluator:
         self, conditions: List[Union[Condition, ConditionGroup]], strategy_instance
     ) -> bool:
         """
-        条件評価（AND）
+        条件リストの全体評価を実行（論理積：AND）
 
-        - 通常のConditionはそのまま評価（AND）
-        - ConditionGroupは内部のORで評価し、グループ全体を1つの条件として扱う
+        リスト内の各条件（単一条件または条件グループ）を順次評価し、
+        すべての条件が真である場合にのみTrueを返します。短絡評価を行います。
+
+        ConditionGroupが含まれる場合、その内部（通常はOR）で評価された結果を
+        一つの条件として扱います。
+
+        Args:
+            conditions: 評価対象の条件リスト
+            strategy_instance: パラメータやデータへのアクセスを提供する戦略インスタンス
+
+        Returns:
+            すべての条件が成立していればTrue
         """
         if not conditions:
             return True
@@ -50,7 +60,16 @@ class ConditionEvaluator:
     def _evaluate_recursive_item(
         self, item: Union[Condition, ConditionGroup], strategy_instance
     ) -> bool:
-        """再帰的に条件アイテムを評価"""
+        """
+        条件アイテムの種類（単一またはグループ）を判定して再帰的に評価
+
+        Args:
+            item: 評価対象のConditionまたはConditionGroup
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            評価結果
+        """
         if isinstance(item, ConditionGroup):
             return self._evaluate_condition_group(item, strategy_instance)
         elif isinstance(item, Condition):
@@ -63,7 +82,19 @@ class ConditionEvaluator:
     def _evaluate_condition_group(
         self, group: ConditionGroup, strategy_instance
     ) -> bool:
-        """条件グループ評価（AND/OR対応）"""
+        """
+        条件グループ内の全条件を評価（AND/OR対応）
+
+        グループが保持する演算子（デフォルトはOR）に従って、
+        内部の条件リストに対する評価を統合します。
+
+        Args:
+            group: 評価対象のConditionGroup
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            グループ全体としての評価結果
+        """
         if not group or group.is_empty():
             return False
 
@@ -76,7 +107,19 @@ class ConditionEvaluator:
     def evaluate_single_condition(
         self, condition: Condition, strategy_instance
     ) -> bool:
-        """単一条件の評価"""
+        """
+        最末端の単一条件を評価
+
+        左辺と右辺のオペランドの値を解決（数値化）し、
+        指定された比較演算子を適用します。
+
+        Args:
+            condition: 評価対象のConditionオブジェクト
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            比較結果（数値化不可能等の場合はFalse）
+        """
         left_val = self.get_condition_value(condition.left_operand, strategy_instance)
         right_val = self.get_condition_value(condition.right_operand, strategy_instance)
 
@@ -89,33 +132,61 @@ class ConditionEvaluator:
         return self._compare_values(left_val, right_val, condition.operator)
 
     def _is_comparable(self, v1: Any, v2: Any) -> bool:
-        """値が比較可能（数値）かどうかを判定"""
+        """
+        値が比較可能（数値）かどうかを判定します。
+
+        Args:
+            v1: 比較する値1
+            v2: 比較する値2
+
+        Returns:
+            両方の値が数値型であればTrue
+        """
+
         def check(v):
             return isinstance(v, (int, float, Real, np.number))
+
         return check(v1) and check(v2)
 
     def _compare_values(self, v1: float, v2: float, operator: str) -> bool:
-        """演算子に応じた比較を実行"""
+        """
+        演算子に応じた比較を実行します。
+
+        Args:
+            v1: 左辺の値
+            v2: 右辺の値
+            operator: 比較演算子 (">", "<", ">=", "<=", "==", "!=")
+
+        Returns:
+            比較結果
+        """
         import operator as op_module
-        
+
         ops = {
             ">": op_module.gt,
             "<": op_module.lt,
             ">=": op_module.ge,
             "<=": op_module.le,
             "==": lambda x, y: np.isclose(x, y, atol=1e-8),
-            "!=": lambda x, y: not np.isclose(x, y, atol=1e-8)
+            "!=": lambda x, y: not np.isclose(x, y, atol=1e-8),
         }
-        
+
         func = ops.get(operator)
         if func:
             return bool(func(v1, v2))
-        
+
         logger.warning(f"未対応の演算子: {operator}")
         return False
 
     def _log_comparison_warning(self, condition, left_val, right_val):
-        """比較失敗時のログ出力"""
+        """
+        比較失敗時のログを出力します。
+
+        Args:
+            condition: 評価中の条件オブジェクト
+            left_val: 左辺の解決された値
+            right_val: 右辺の解決された値
+        """
         logger.warning(
             f"比較できない値です: left={left_val}({type(left_val)}), "
             f"right={right_val}({type(right_val)}), "
@@ -123,7 +194,17 @@ class ConditionEvaluator:
         )
 
     def _get_final_value(self, value: Any) -> float:
-        """型に応じて末尾の有限値を取得"""
+        """
+        型に応じて末尾の有限値を取得します。
+
+        pandas.Seriesやリストの場合は最後の要素を取得し、floatに変換します。
+
+        Args:
+            value: 取得対象の値
+
+        Returns:
+            変換されたfloat値。失敗時や非有限値の場合は0.0
+        """
         try:
             if isinstance(value, pd.Series):
                 val = value.iloc[-1]
@@ -131,7 +212,7 @@ class ConditionEvaluator:
                 val = value[-1]
             else:
                 val = value
-            
+
             f_val = float(val)
             return f_val if np.isfinite(f_val) else 0.0
         except (TypeError, ValueError, IndexError):
@@ -140,16 +221,34 @@ class ConditionEvaluator:
     def get_condition_value(
         self, operand: Union[Dict[str, Any], str, int, float], strategy_instance
     ) -> float:
-        """オペランドから値を取得"""
+        """
+        オペランドから具体的な数値を取得します。
+
+        Args:
+            operand: オペランド（数値、文字列、または辞書形式の指標指定）
+            strategy_instance: 戦略インスタンス（属性アクセス用）
+
+        Returns:
+            取得された数値
+        """
         if isinstance(operand, (int, float)):
             return float(operand)
 
-        target_attr = operand.get("indicator") if isinstance(operand, dict) else str(operand)
-        
+        target_attr = (
+            operand.get("indicator") if isinstance(operand, dict) else str(operand)
+        )
+
         # 1. OHLCVデータ（文字列の場合）
-        if isinstance(operand, str) and operand.lower() in ["open", "high", "low", "close", "volume"]:
+        if isinstance(operand, str) and operand.lower() in [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+        ]:
             val = self._get_ohlcv_value(operand, strategy_instance)
-            if val is not None: return val
+            if val is not None:
+                return val
 
         # 2. 戦略インスタンスの属性（pandas-ta指標など）
         try:
@@ -158,7 +257,8 @@ class ConditionEvaluator:
         except AttributeError:
             # 3. 数値文字列への変換
             try:
-                if isinstance(operand, str): return float(operand)
+                if isinstance(operand, str):
+                    return float(operand)
             except (ValueError, TypeError):
                 pass
 
@@ -302,8 +402,3 @@ class ConditionEvaluator:
             logger.debug(f"トリガー記録: {event_name} at bar {current_bar}")
 
         return trigger_result
-
-
-
-
-

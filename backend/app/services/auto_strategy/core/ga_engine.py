@@ -7,7 +7,7 @@ DEAPライブラリを使用したGA実装。
 import logging
 import random
 import time
-from dataclasses import fields, asdict
+from dataclasses import fields
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -26,17 +26,49 @@ logger = logging.getLogger(__name__)
 
 
 def crossover_strategy_genes(parent1, parent2, config):
-    """戦略遺伝子の交叉ラッパー"""
+    """
+    戦略遺伝子の交叉ラッパー
+
+    Args:
+        parent1: 親個体1
+        parent2: 親個体2
+        config: GA設定
+
+    Returns:
+        交叉後の個体（タプル形式、(child1, child2)）
+    """
     return StrategyGene.crossover(parent1, parent2, config)
 
 
 def mutate_strategy_gene(gene, config, mutation_rate=0.1):
-    """戦略遺伝子の突然変異ラッパー"""
+    """
+    戦略遺伝子の突然変異ラッパー
+
+    Args:
+        gene: 突然変異対象の遺伝子
+        config: GA設定
+        mutation_rate: 突然変異率
+
+    Returns:
+        突然変異後の遺伝子
+    """
     return gene.mutate(config, mutation_rate)
 
 
 def create_deap_mutate_wrapper(individual_class, population, config):
-    """DEAP用の突然変異ラッパー関数を作成"""
+    """
+    DEAP用の突然変異ラッパー関数を作成します。
+
+    適応的突然変異（Adaptive Mutation）をサポートするためのクロージャを返します。
+
+    Args:
+        individual_class: 生成する個体クラス
+        population: 現在の集団（適応的突然変異用）
+        config: GA設定
+
+    Returns:
+        DEAPに登録可能な突然変異ラッパー関数
+    """
 
     def mutate_wrapper(individual):
         try:
@@ -53,7 +85,10 @@ def create_deap_mutate_wrapper(individual_class, population, config):
 
             # StrategyGeneをIndividualに変換
             # StrategyGeneを継承しているため、フィールドを展開して初期化
-            gene_dict = {f.name: getattr(mutated_strategy, f.name) for f in fields(mutated_strategy)}
+            gene_dict = {
+                f.name: getattr(mutated_strategy, f.name)
+                for f in fields(mutated_strategy)
+            }
             return (individual_class(**gene_dict),)
 
         except Exception as e:
@@ -181,11 +216,15 @@ class EvolutionRunner:
         """
         個体群の適応度評価（並列評価対応）
 
+        ツールボックスに登録された評価関数を使用して、
+        集団内の全個体の適応度を計算します。並列評価器が利用可能な場合は、
+        複数のプロセスで並列に評価を実行し、計算時間を短縮します。
+
         Args:
             population: 評価対象の個体群
 
         Returns:
-            評価された個体群
+            評価値（fitness.values）が設定された個体群
         """
         if self.parallel_evaluator:
             # 並列評価
@@ -224,7 +263,16 @@ class EvolutionRunner:
     def _update_dynamic_objective_scalars(
         self, population: List[Any], config: Any
     ) -> None:
-        """Update dynamic objective scaling factors for risk-aware weighting."""
+        """
+        リスク回避型の重み付けのために、動的な目的正規化係数を更新します。
+
+        集団全体の平均的なパフォーマンスに基づいて、特定の指標（ドローダウンなど）の
+        ペナルティやウェイトを調整します。
+
+        Args:
+            population: 現在の集団
+            config: GA設定
+        """
 
         if not getattr(config, "dynamic_objective_reweighting", False):
             config.objective_dynamic_scalars = {}
@@ -356,22 +404,53 @@ class DEAPSetup:
         logger.info("DEAP環境のセットアップ完了")
 
     def get_toolbox(self) -> Optional[base.Toolbox]:
-        """ツールボックスを取得"""
+        """
+        DEAPツールボックスを取得
+
+        Returns:
+            初期化済みのbase.Toolboxオブジェクト、未初期化の場合はNone
+        """
         return self.toolbox
 
     def get_individual_class(self):
-        """個体クラスを取得"""
+        """
+        生成された個体クラスを取得
+
+        Returns:
+            creator.createによって生成されたIndividualクラス、未生成の場合はNone
+        """
         return self.Individual
 
 
 class EvaluatorWrapper:
-    """評価関数のラッパー（Pickle化対応）"""
+    """
+    評価関数のラッパー（Pickle化対応）
+
+    並列処理（ProcessPoolExecutor）で個体評価を行う際に、
+    評価器と設定を一緒に配信するためのクラスです。
+    """
 
     def __init__(self, evaluator, config):
+        """
+        初期化
+
+        Args:
+            evaluator: 個体評価器（IndividualEvaluatorインスタンス）
+            config: GA設定
+        """
         self.evaluator = evaluator
         self.config = config
 
     def __call__(self, individual):
+        """
+        評価実行
+
+        Args:
+            individual: 評価対象の個体
+
+        Returns:
+            フィットネス値のタプル
+        """
         return self.evaluator.evaluate_individual(individual, self.config)
 
 
@@ -560,10 +639,14 @@ class GeneticAlgorithmEngine:
             pass
 
     def _create_statistics(self):
-        """統計情報収集オブジェクトを作成します。
+        """
+        統計情報収集オブジェクトを作成
+
+        世代ごとのフィットネスの平均、標準偏差、最小値、最大値を
+        記録するためのDEAP Statisticsオブジェクトを構築します。
 
         Returns:
-            DEAP Statistics: 統計情報収集オブジェクト。
+            統計情報収集用オブジェクト
         """
         stats = tools.Statistics(lambda ind: ind.fitness.values)
         stats.register("avg", np.mean)
@@ -726,9 +809,6 @@ class GeneticAlgorithmEngine:
             tuple: 最良個体、最良遺伝子、および最良戦略のタプル。
         """
         from ..genes import StrategyGene
-        from ..serializers.serialization import GeneSerializer
-
-        gene_serializer = GeneSerializer()
 
         best_strategies = None
         best_individual = None
@@ -748,7 +828,7 @@ class GeneticAlgorithmEngine:
                 best_individuals = [tools.selBest(population, 1)[0]]
 
             best_individual = best_individuals[0]
-    
+
             best_strategies = []
             for ind in best_individuals[:10]:  # 上位10個のパレート最適解
                 if isinstance(ind, StrategyGene):
@@ -757,7 +837,7 @@ class GeneticAlgorithmEngine:
                     # 個体がオブジェクトでない場合は、シリアライザーを使用せずにエラーログを出力
                     logger.error(f"個体がStrategyGene型ではありません: {type(ind)}")
                     continue
-    
+
                 best_strategies.append(
                     {"strategy": gene, "fitness_values": list(ind.fitness.values)}
                 )
@@ -767,14 +847,17 @@ class GeneticAlgorithmEngine:
                 best_individual = halloffame[0]
             else:
                 best_individual = tools.selBest(population, 1)[0]
-    
+
         if isinstance(best_individual, StrategyGene):
             best_gene = best_individual
         else:
-            logger.error(f"最良個体がStrategyGene型ではありません: {type(best_individual)}")
+            logger.error(
+                f"最良個体がStrategyGene型ではありません: {type(best_individual)}"
+            )
             best_gene = None
-    
+
         return best_individual, best_gene, best_strategies
+
     def stop_evolution(self):
         """進化を停止します。"""
         self.is_running = False

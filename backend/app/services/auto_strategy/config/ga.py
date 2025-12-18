@@ -202,7 +202,14 @@ class GAConfig(BaseConfig):
     )
 
     def to_dict(self) -> Dict[str, Any]:
-        """辞書形式に変換"""
+        """
+        設定オブジェクトを辞書形式に変換
+
+        DBへの保存やJSONシリアライズのために使用されます。
+
+        Returns:
+            設定値を含む辞書
+        """
         return {
             "population_size": self.population_size,
             "generations": self.generations,
@@ -282,7 +289,18 @@ class GAConfig(BaseConfig):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
-        """辞書から復元"""
+        """
+        辞書形式からGAConfigインスタンスを生成
+
+        パラメータが不足している場合は定数で定義された
+        デフォルト値で補完します。
+
+        Args:
+            data: 設定値を含む辞書
+
+        Returns:
+            初期化されたGAConfigインスタンス
+        """
         # デフォルト値を設定
         defaults = {
             "population_size": GA_DEFAULT_CONFIG["population_size"],

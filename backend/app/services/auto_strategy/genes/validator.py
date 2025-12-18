@@ -118,15 +118,31 @@ class GeneValidator:
 
         return True, ""
 
-    @safe_operation(context="オペランド検証", is_api_call=False, default_return=(False, "エラー"))
+    @safe_operation(
+        context="オペランド検証", is_api_call=False, default_return=(False, "エラー")
+    )
     def _is_valid_operand_detailed(self, operand: Any) -> Tuple[bool, str]:
-        """オペランドの妥当性を詳細に検証"""
-        if operand is None: return False, "オペランドがNoneです"
-        if isinstance(operand, (int, float)): return True, ""
-        
+        """
+        オペランドの妥当性を詳細に検証
+
+        数値、文字列（指標名や価格フィールド）、または辞書形式のオペランドが
+        正しい形式であるか、また存在するかをチェックします。
+
+        Args:
+            operand: 検証対象のオペランド
+
+        Returns:
+            (妥当かどうか, エラーメッセージ) のタプル
+        """
+        if operand is None:
+            return False, "オペランドがNoneです"
+        if isinstance(operand, (int, float)):
+            return True, ""
+
         if isinstance(operand, str):
             val = operand.strip()
-            if not val: return False, "空のオペランド"
+            if not val:
+                return False, "空のオペランド"
             # 数値、指標名、データソースのいずれかならOK
             try:
                 float(val)
@@ -140,16 +156,19 @@ class GeneValidator:
             op_type = operand.get("type")
             if op_type == "indicator":
                 name = str(operand.get("name", "")).strip()
-                if self._is_indicator_name(name): return True, ""
+                if self._is_indicator_name(name):
+                    return True, ""
                 return False, f"無効な指標名: '{name}'"
             elif op_type == "price":
                 name = str(operand.get("name", "")).strip()
-                if name in self.valid_data_sources: return True, ""
+                if name in self.valid_data_sources:
+                    return True, ""
                 return False, f"無効なデータソース: '{name}'"
             elif op_type == "value":
                 v = operand.get("value")
                 try:
-                    if v is not None: float(v)
+                    if v is not None:
+                        float(v)
                     return True, ""
                 except (ValueError, TypeError):
                     return False, f"無効な数値: '{v}'"
@@ -158,11 +177,24 @@ class GeneValidator:
         return False, f"未対応の型: {type(operand)}"
 
     def _is_indicator_name(self, name: str) -> bool:
-        """指標名かどうかを判定（SMA_20, RSI_14_0 等に対応）"""
-        if not name: return False
+        """
+        文字列が有効な指標名（またはその派生）かを判定
+
+        'SMA', 'RSI' 等の基本名だけでなく、'SMA_20', 'RSI_14_0' のように
+        パラメータや出力インデックスが付与された形式にも対応します。
+
+        Args:
+            name: 判定対象の文字列
+
+        Returns:
+            有効な指標名であればTrue
+        """
+        if not name:
+            return False
         clean_name = name.strip()
-        if clean_name in self.valid_indicator_types: return True
-        
+        if clean_name in self.valid_indicator_types:
+            return True
+
         # 接尾辞（パラメータや出力インデックス）を除去して試行
         # 例: SMA_20 -> SMA, RSI_14_0 -> RSI
         base_name = clean_name.split("_")[0]
@@ -218,9 +250,12 @@ class GeneValidator:
 
         # 1. 指標数の制約チェック
         from ..config import GAConfig
+
         max_indicators = GAConfig().max_indicators
         if len(strategy_gene.indicators) > max_indicators:
-            errors.append(f"指標数が上限({max_indicators})を超えています: {len(strategy_gene.indicators)}")
+            errors.append(
+                f"指標数が上限({max_indicators})を超えています: {len(strategy_gene.indicators)}"
+            )
 
         # 2. 個別指標の妥当性
         for i, indicator in enumerate(strategy_gene.indicators):
@@ -228,17 +263,23 @@ class GeneValidator:
                 errors.append(f"指標{i}が無効です: {indicator.type}")
 
         # 3. 条件の妥当性（ロング・ショート）
-        self._validate_all_conditions(strategy_gene.long_entry_conditions, "ロング", errors)
-        self._validate_all_conditions(strategy_gene.short_entry_conditions, "ショート", errors)
+        self._validate_all_conditions(
+            strategy_gene.long_entry_conditions, "ロング", errors
+        )
+        self._validate_all_conditions(
+            strategy_gene.short_entry_conditions, "ショート", errors
+        )
 
-        if not (strategy_gene.long_entry_conditions or strategy_gene.short_entry_conditions):
+        if not (
+            strategy_gene.long_entry_conditions or strategy_gene.short_entry_conditions
+        ):
             errors.append("エントリー条件が設定されていません")
 
         # 4. TP/SL設定の検証（ループで一括処理）
         sub_genes = [
             ("共通", strategy_gene.tpsl_gene),
             ("ロング", strategy_gene.long_tpsl_gene),
-            ("ショート", strategy_gene.short_tpsl_gene)
+            ("ショート", strategy_gene.short_tpsl_gene),
         ]
         has_any_tpsl = False
         for label, gene in sub_genes:
@@ -247,7 +288,7 @@ class GeneValidator:
                 valid, sub_errors = gene.validate()
                 if not valid:
                     errors.extend([f"{label}TP/SL: {e}" for e in sub_errors])
-        
+
         if not has_any_tpsl:
             errors.append("有効なTP/SL設定（イグジット条件）がありません")
 
@@ -312,8 +353,3 @@ class GeneValidator:
                 return True
 
         return False
-
-
-
-
-

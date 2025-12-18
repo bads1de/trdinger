@@ -97,12 +97,14 @@ class StrategyParameterSpace:
             tpsl_fields = [
                 ("tpsl_gene", "tpsl"),
                 ("long_tpsl_gene", "long_tpsl"),
-                ("short_tpsl_gene", "short_tpsl")
+                ("short_tpsl_gene", "short_tpsl"),
             ]
             for field_name, prefix in tpsl_fields:
                 gene_obj = getattr(gene, field_name, None)
                 if gene_obj:
-                    parameter_space.update(self._build_tpsl_params(gene_obj, prefix=prefix))
+                    parameter_space.update(
+                        self._build_tpsl_params(gene_obj, prefix=prefix)
+                    )
 
         if include_thresholds:
             # ロング条件の閾値
@@ -123,7 +125,18 @@ class StrategyParameterSpace:
     def _build_indicator_params(
         self, indicators: List[IndicatorGene]
     ) -> Dict[str, ParameterSpace]:
-        """インジケーターパラメータ空間を構築"""
+        """
+        インジケーターパラメータ空間を構築
+
+        有効なインジケーターの数値パラメータ（period等）を抽出し、
+        最適化可能なパラメータ範囲を定義します。
+
+        Args:
+            indicators: 指標遺伝子リスト
+
+        Returns:
+            インジケーター用パラメータ空間
+        """
         params: Dict[str, ParameterSpace] = {}
 
         for idx, indicator in enumerate(indicators):
@@ -160,7 +173,18 @@ class StrategyParameterSpace:
     def _get_indicator_param_ranges(
         self, config: Optional[IndicatorConfig], indicator_type: str
     ) -> Dict[str, Dict[str, Any]]:
-        """インジケーター設定からパラメータ範囲を取得"""
+        """
+        インジケーター設定からパラメータ範囲を取得
+
+        レジストリで定義された最小値/最大値を使用して、探索空間の制約を決定します。
+
+        Args:
+            config: 指標設定オブジェクト
+            indicator_type: 指標タイプ
+
+        Returns:
+            パラメータ名ごとの範囲情報辞書
+        """
         ranges: Dict[str, Dict[str, Any]] = {}
 
         if config and config.parameters:
@@ -189,7 +213,19 @@ class StrategyParameterSpace:
     def _build_tpsl_params(
         self, tpsl_gene: TPSLGene, prefix: str
     ) -> Dict[str, ParameterSpace]:
-        """TPSLパラメータ空間を構築"""
+        """
+        TPSLパラメータ空間を構築
+
+        利確・損切のパーセンテージやATR倍率などのリスク管理パラメータを
+        探索空間に追加します。
+
+        Args:
+            tpsl_gene: TPSL遺伝子
+            prefix: パラメータ名に使用する接頭辞
+
+        Returns:
+            TPSL用パラメータ空間
+        """
         params: Dict[str, ParameterSpace] = {}
 
         for param_name, range_info in self.TPSL_RANGES.items():
@@ -211,7 +247,19 @@ class StrategyParameterSpace:
         conditions: List[Union[Condition, ConditionGroup]],
         prefix: str,
     ) -> Dict[str, ParameterSpace]:
-        """条件の閾値パラメータ空間を構築"""
+        """
+        条件の閾値パラメータ空間を構築
+
+        取引条件に使用されている数値（しきい値）を抽出し、
+        それらを調整するためのパラメータ空間を定義します。
+
+        Args:
+            conditions: 条件のリスト（ConditionGroupを含む可能性あり）
+            prefix: パラメータ名に使用する接頭辞
+
+        Returns:
+            しきい値用パラメータ空間
+        """
         params: Dict[str, ParameterSpace] = {}
         threshold_idx = 0
 
@@ -260,7 +308,7 @@ class StrategyParameterSpace:
         tpsl_fields = [
             ("tpsl_gene", "tpsl"),
             ("long_tpsl_gene", "long_tpsl"),
-            ("short_tpsl_gene", "short_tpsl")
+            ("short_tpsl_gene", "short_tpsl"),
         ]
         for field_name, prefix in tpsl_fields:
             gene_obj = getattr(new_gene, field_name, None)
@@ -334,8 +382,3 @@ class StrategyParameterSpace:
                         else:
                             condition.right_operand = float(params[param_key])
                     threshold_idx += 1
-
-
-
-
-

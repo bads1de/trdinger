@@ -62,7 +62,9 @@ class ExperimentPersistenceService:
                 total_generations=ga_config.generations,
                 status="running",
             )
-            logger.info(f"実験を作成しました: {experiment_name} (UUID: {experiment_id})")
+            logger.info(
+                f"実験を作成しました: {experiment_name} (UUID: {experiment_id})"
+            )
             return experiment_id
 
     def save_experiment_result(
@@ -114,7 +116,9 @@ class ExperimentPersistenceService:
             fitness_score = best_fitness[0] if best_fitness else 0.0
         else:
             fitness_values = None
-            fitness_score = best_fitness if isinstance(best_fitness, (int, float)) else 0.0
+            fitness_score = (
+                best_fitness if isinstance(best_fitness, (int, float)) else 0.0
+            )
 
         serializer = GeneSerializer()
         best_strategy_record = generated_strategy_repo.save_strategy(
@@ -125,15 +129,23 @@ class ExperimentPersistenceService:
             fitness_values=fitness_values,
         )
 
-        logger.info(f"最良戦略を保存しました (ID: {best_strategy_record.id}). 詳細バックテストを開始します...")
+        logger.info(
+            f"最良戦略を保存しました (ID: {best_strategy_record.id}). 詳細バックテストを開始します..."
+        )
 
         # 詳細バックテストの実行
-        detailed_config = self._prepare_detailed_backtest_config(best_strategy, experiment_info, backtest_config)
+        detailed_config = self._prepare_detailed_backtest_config(
+            best_strategy, experiment_info, backtest_config
+        )
         detailed_result = self.backtest_service.run_backtest(detailed_config)
 
         # バックテスト結果の保存
         result_data = self._prepare_backtest_result_data(
-            detailed_result, detailed_config, experiment_id, db_experiment_id, fitness_score
+            detailed_result,
+            detailed_config,
+            experiment_id,
+            db_experiment_id,
+            fitness_score,
         )
         backtest_result_repo.save_backtest_result(result_data)
         logger.info(f"最良戦略のバックテスト結果を保存しました。")
@@ -144,7 +156,20 @@ class ExperimentPersistenceService:
         experiment_info: Dict[str, Any],
         backtest_config: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """詳細バックテスト用の設定を準備する"""
+        """
+        詳細バックテスト用の最終的な設定を構築
+
+        元の実験名から不要な情報を削ぎ落とし、読みやすい戦略名（AS_...）を生成し、
+        戦略の遺伝子データをバックテスト設定に組み込みます。
+
+        Args:
+            best_strategy: 最良個体の遺伝子
+            experiment_info: 文脈情報としての実験情報辞書
+            backtest_config: ベースとなるバックテスト設定
+
+        Returns:
+            詳細バックテスト実行用の設定辞書
+        """
         serializer = GeneSerializer()
         config = backtest_config.copy()
 
@@ -183,7 +208,19 @@ class ExperimentPersistenceService:
         db_experiment_id: int,
         best_fitness: float,
     ) -> Dict[str, Any]:
-        """backtest_resultsテーブルに保存するためのデータを構築する"""
+        """
+        データベースの backtest_results テーブルへ保存するためのレコードデータを構築
+
+        Args:
+            detailed_result: 詳細バックテストの実行結果
+            config: バックテスト実行時に使用した設定
+            experiment_id: フロントエンド向けUUID
+            db_experiment_id: データベース上の実験ID
+            best_fitness: GAで得られた最適適応度
+
+        Returns:
+            リポジトリに渡すためのレコード用辞書
+        """
         return {
             "strategy_name": config["strategy_name"],
             "symbol": config["symbol"],
@@ -313,8 +350,12 @@ class ExperimentPersistenceService:
                     "id": exp.id,
                     "experiment_name": exp.name,
                     "status": exp.status,
-                    "created_at": exp.created_at.isoformat() if exp.created_at else None,
-                    "completed_at": exp.completed_at.isoformat() if exp.completed_at else None,
+                    "created_at": (
+                        exp.created_at.isoformat() if exp.created_at else None
+                    ),
+                    "completed_at": (
+                        exp.completed_at.isoformat() if exp.completed_at else None
+                    ),
                 }
                 for exp in experiments
             ]
@@ -348,8 +389,3 @@ class ExperimentPersistenceService:
             "created_at": exp.created_at,
             "completed_at": exp.completed_at,
         }
-
-
-
-
-

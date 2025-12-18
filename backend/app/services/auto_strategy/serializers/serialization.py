@@ -95,8 +95,13 @@ class DictConverter:
 
             # サブ遺伝子フィールドを一括処理
             sub_gene_fields = [
-                "tpsl_gene", "long_tpsl_gene", "short_tpsl_gene",
-                "position_sizing_gene", "entry_gene", "long_entry_gene", "short_entry_gene"
+                "tpsl_gene",
+                "long_tpsl_gene",
+                "short_tpsl_gene",
+                "position_sizing_gene",
+                "entry_gene",
+                "long_entry_gene",
+                "short_entry_gene",
             ]
             for field in sub_gene_fields:
                 gene_obj = getattr(strategy_gene, field, None)
@@ -399,13 +404,30 @@ class DictConverter:
                 if not isinstance(cond_data, dict):
                     return None
                 if cond_data.get("type") in ("GROUP", "OR_GROUP"):
-                    conditions = [parse_condition_or_group(c) for c in cond_data.get("conditions", [])]
-                    operator = "OR" if cond_data.get("type") == "OR_GROUP" else cond_data.get("operator", "OR")
+                    conditions = [
+                        parse_condition_or_group(c)
+                        for c in cond_data.get("conditions", [])
+                    ]
+                    operator = (
+                        "OR"
+                        if cond_data.get("type") == "OR_GROUP"
+                        else cond_data.get("operator", "OR")
+                    )
                     return ConditionGroup(operator=operator, conditions=conditions)
                 return self.dict_to_condition(cond_data)
 
-            long_entry_conditions = [parse_condition_or_group(c) for c in data.get("long_entry_conditions", data.get("entry_conditions", []))]
-            short_entry_conditions = [parse_condition_or_group(c) for c in data.get("short_entry_conditions", data.get("entry_conditions", []))]
+            long_entry_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get(
+                    "long_entry_conditions", data.get("entry_conditions", [])
+                )
+            ]
+            short_entry_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get(
+                    "short_entry_conditions", data.get("entry_conditions", [])
+                )
+            ]
 
             # サブ遺伝子の復元
             from ..genes import TPSLGene, PositionSizingGene, EntryGene
@@ -419,9 +441,9 @@ class DictConverter:
                 "position_sizing_gene": PositionSizingGene,
                 "entry_gene": EntryGene,
                 "long_entry_gene": EntryGene,
-                "short_entry_gene": EntryGene
+                "short_entry_gene": EntryGene,
             }
-            
+
             for field, cls in mapping.items():
                 gene_data = data.get(field)
                 sub_genes[field] = cls.from_dict(gene_data) if gene_data else None
@@ -434,7 +456,9 @@ class DictConverter:
             ]
 
             # ツール遺伝子
-            tool_genes = [ToolGene.from_dict(tg) for tg in data.get("tool_genes", []) if tg]
+            tool_genes = [
+                ToolGene.from_dict(tg) for tg in data.get("tool_genes", []) if tg
+            ]
 
             return strategy_gene_class(
                 id=data.get("id", str(uuid.uuid4())),
@@ -445,7 +469,7 @@ class DictConverter:
                 tool_genes=tool_genes,
                 risk_management=data.get("risk_management", {"position_size": 0.1}),
                 metadata=data.get("metadata", {}),
-                **sub_genes
+                **sub_genes,
             )
 
         except Exception as e:
@@ -563,49 +587,137 @@ class GeneSerializer:
         self.dict_converter = DictConverter(enable_smart_generation)
         self.enable_smart_generation = enable_smart_generation
 
-    # DictConverterのメソッドを委譲
     def strategy_gene_to_dict(self, strategy_gene) -> Dict[str, Any]:
-        """戦略遺伝子を辞書形式に変換"""
+        """
+        戦略遺伝子を辞書形式に変換します。
+
+        Args:
+            strategy_gene: 変換対象のStrategyGene
+
+        Returns:
+            辞書形式のデータ
+        """
         return self.dict_converter.strategy_gene_to_dict(strategy_gene)
 
     def indicator_gene_to_dict(self, indicator_gene) -> Dict[str, Any]:
-        """指標遺伝子を辞書形式に変換"""
+        """
+        指標遺伝子を辞書形式に変換します。
+
+        Args:
+            indicator_gene: 変換対象のIndicatorGene
+
+        Returns:
+            辞書形式のデータ
+        """
         return self.dict_converter.indicator_gene_to_dict(indicator_gene)
 
     def dict_to_indicator_gene(self, data: Dict[str, Any]):
-        """辞書形式から指標遺伝子を復元"""
+        """
+        辞書形式から指標遺伝子を復元します。
+
+        Args:
+            data: 辞書形式の指標データ
+
+        Returns:
+            復元されたIndicatorGene
+        """
         return self.dict_converter.dict_to_indicator_gene(data)
 
     def condition_to_dict(self, condition) -> Dict[str, Any]:
-        """条件を辞書形式に変換"""
+        """
+        条件を辞書形式に変換します。
+
+        Args:
+            condition: 変換対象のCondition
+
+        Returns:
+            辞書形式のデータ
+        """
         return self.dict_converter.condition_to_dict(condition)
 
     def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
-        """Condition または ConditionGroup を辞書に変換"""
+        """
+        Condition または ConditionGroup を辞書に変換します。
+
+        Args:
+            obj: 変換対象のCondition/ConditionGroup
+
+        Returns:
+            辞書形式のデータ
+        """
         return self.dict_converter.condition_or_group_to_dict(obj)
 
     def tpsl_gene_to_dict(self, tpsl_gene):
-        """TP/SL遺伝子を辞書形式に変換"""
+        """
+        TP/SL遺伝子を辞書形式に変換します。
+
+        Args:
+            tpsl_gene: 変換対象のTPSLGene
+
+        Returns:
+            辞書形式のデータ
+        """
         return self.dict_converter.tpsl_gene_to_dict(tpsl_gene)
 
     def dict_to_tpsl_gene(self, data: Dict[str, Any]):
-        """辞書形式からTP/SL遺伝子を復元"""
+        """
+        辞書形式からTP/SL遺伝子を復元します。
+
+        Args:
+            data: 辞書形式のTP/SLデータ
+
+        Returns:
+            復元されたTPSLGene
+        """
         return self.dict_converter.dict_to_tpsl_gene(data)
 
     def position_sizing_gene_to_dict(self, position_sizing_gene):
-        """ポジションサイジング遺伝子を辞書形式に変換"""
+        """
+        ポジションサイジング遺伝子を辞書形式に変換します。
+
+        Args:
+            position_sizing_gene: 変換対象のPositionSizingGene
+
+        Returns:
+            辞書形式のデータ
+        """
         return self.dict_converter.position_sizing_gene_to_dict(position_sizing_gene)
 
     def dict_to_position_sizing_gene(self, data: Dict[str, Any]):
-        """辞書形式からポジションサイジング遺伝子を復元"""
+        """
+        辞書形式からポジションサイジング遺伝子を復元します。
+
+        Args:
+            data: 辞書形式のポジションサイジングデータ
+
+        Returns:
+            復元されたPositionSizingGene
+        """
         return self.dict_converter.dict_to_position_sizing_gene(data)
 
     def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class):
-        """辞書形式から戦略遺伝子を復元"""
+        """
+        辞書形式から戦略遺伝子を復元します。
+
+        Args:
+            data: 辞書形式の戦略遺伝子データ
+            strategy_gene_class: 復元に使用するクラス
+
+        Returns:
+            復元されたStrategyGene
+        """
         return self.dict_converter.dict_to_strategy_gene(data, strategy_gene_class)
 
     def dict_to_condition(self, data: Dict[str, Any]):
-        """辞書形式から条件を復元"""
+        """
+        辞書形式から条件を復元します。
+
+        Args:
+            data: 辞書形式の条件データ
+
+        Returns:
+            復元されたCondition
+        """
         return self.dict_converter.dict_to_condition(data)
 
     # JSON変換機能（JsonConverterを廃止してここに統合）

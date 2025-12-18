@@ -30,13 +30,17 @@ class EntryExecutor:
         """
         backtesting.py の buy/sell メソッドに渡すパラメータを計算
 
+        注文タイプ（成行、指値、逆指値等）に応じた適切な
+        価格パラメータを生成します。
+
         Args:
             entry_gene: エントリー遺伝子（Noneの場合は成行注文）
-            current_price: 現在価格
+            current_price: 現在価格（基準価格）
             direction: 取引方向 (1.0=Long, -1.0=Short)
 
         Returns:
-            パラメータ辞書（例: {"limit": price} or {"stop": price} or {}）
+            buy()/sell() に渡すキーワード引数の辞書
+            （例: {"limit": 50000.0}）
         """
         # entry_gene が None または無効な場合は成行注文
         if entry_gene is None or not entry_gene.enabled:
