@@ -17,8 +17,6 @@ from .indicator import IndicatorGene, generate_random_indicators, create_random_
 from .position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,
-    crossover_position_sizing_genes,
-    mutate_position_sizing_gene,
 )
 from .strategy import StrategyGene
 from .tool import ToolGene
@@ -26,8 +24,6 @@ from .tpsl import (
     TPSLGene,
     TPSLResult,
     create_random_tpsl_gene,
-    crossover_tpsl_genes,
-    mutate_tpsl_gene,
 )
 from .validator import GeneValidator
 
@@ -54,10 +50,6 @@ __all__ = [
     # Utilities
     "create_random_position_sizing_gene",
     "create_random_tpsl_gene",
-    "crossover_position_sizing_genes",
-    "crossover_tpsl_genes",
-    "mutate_position_sizing_gene",
-    "mutate_tpsl_gene",
     "create_random_entry_gene",
     "generate_random_indicators",
     "create_random_indicator_gene",

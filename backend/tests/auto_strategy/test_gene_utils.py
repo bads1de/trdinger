@@ -138,7 +138,13 @@ class TestGeneUtils:
         """アノテーションなしクラスのテスト"""
         data = {"field1": "value1", "field2": 42, "field3": {"nested": "data"}}
 
+        # クラスの状態を確認
+        print(f"DEBUG: Annotations: {getattr(MockGeneWithoutAnnotations, '__annotations__', 'N/A')}")
+        
         gene = MockGeneWithoutAnnotations.from_dict(data)
+
+        # 生成されたオブジェクトの状態を確認
+        print(f"DEBUG: Gene __dict__: {gene.__dict__}")
 
         assert gene.field1 == "value1"
         assert gene.field2 == 42

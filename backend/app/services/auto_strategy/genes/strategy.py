@@ -20,15 +20,11 @@ from .indicator import IndicatorGene
 from .position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,
-    crossover_position_sizing_genes,
-    mutate_position_sizing_gene,
 )
 from .tool import ToolGene
 from .tpsl import (
     TPSLGene,
     create_random_tpsl_gene,
-    crossover_tpsl_genes,
-    mutate_tpsl_gene,
 )
 
 logger = logging.getLogger(__name__)
@@ -121,58 +117,39 @@ class StrategyGene:
                             min_risk_multiplier, max_risk_multiplier
                         )
 
-            # TP/SL遺伝子の突然変異
-            if mutated.tpsl_gene:
-                if random.random() < mutation_rate:
-                    mutated.tpsl_gene = mutate_tpsl_gene(
-                        mutated.tpsl_gene, mutation_rate
-                    )
-            else:
-                if (
-                    random.random()
-                    < mutation_rate * config.tpsl_gene_creation_probability_multiplier
-                ):
-                    mutated.tpsl_gene = create_random_tpsl_gene()
+            # サブ遺伝子の突然変異処理
+            gene_fields = [
+                (
+                    "tpsl_gene",
+                    create_random_tpsl_gene,
+                    config.tpsl_gene_creation_probability_multiplier,
+                ),
+                (
+                    "long_tpsl_gene",
+                    create_random_tpsl_gene,
+                    config.tpsl_gene_creation_probability_multiplier,
+                ),
+                (
+                    "short_tpsl_gene",
+                    create_random_tpsl_gene,
+                    config.tpsl_gene_creation_probability_multiplier,
+                ),
+                (
+                    "position_sizing_gene",
+                    create_random_position_sizing_gene,
+                    config.position_sizing_gene_creation_probability_multiplier,
+                ),
+            ]
 
-            # Long TP/SL遺伝子の突然変異
-            if mutated.long_tpsl_gene:
-                if random.random() < mutation_rate:
-                    mutated.long_tpsl_gene = mutate_tpsl_gene(
-                        mutated.long_tpsl_gene, mutation_rate
-                    )
-            else:
-                if (
-                    random.random()
-                    < mutation_rate * config.tpsl_gene_creation_probability_multiplier
-                ):
-                    mutated.long_tpsl_gene = create_random_tpsl_gene()
-
-            # Short TP/SL遺伝子の突然変異
-            if mutated.short_tpsl_gene:
-                if random.random() < mutation_rate:
-                    mutated.short_tpsl_gene = mutate_tpsl_gene(
-                        mutated.short_tpsl_gene, mutation_rate
-                    )
-            else:
-                if (
-                    random.random()
-                    < mutation_rate * config.tpsl_gene_creation_probability_multiplier
-                ):
-                    mutated.short_tpsl_gene = create_random_tpsl_gene()
-
-            # ポジションサイジング遺伝子の突然変異
-            if mutated.position_sizing_gene:
-                if random.random() < mutation_rate:
-                    mutated.position_sizing_gene = mutate_position_sizing_gene(
-                        mutated.position_sizing_gene, mutation_rate
-                    )
-            else:
-                if (
-                    random.random()
-                    < mutation_rate
-                    * config.position_sizing_gene_creation_probability_multiplier
-                ):
-                    mutated.position_sizing_gene = create_random_position_sizing_gene()
+            for field_name, creator_func, creation_prob_mult in gene_fields:
+                gene = getattr(mutated, field_name)
+                if gene:
+                    if random.random() < mutation_rate:
+                        # BaseGeneを継承しているため .mutate() が利用可能
+                        setattr(mutated, field_name, gene.mutate(mutation_rate))
+                else:
+                    if random.random() < mutation_rate * creation_prob_mult:
+                        setattr(mutated, field_name, creator_func())
 
             # ツール遺伝子の突然変異
             if mutated.tool_genes:
@@ -359,7 +336,7 @@ class StrategyGene:
         parent1_tpsl: Optional[TPSLGene], parent2_tpsl: Optional[TPSLGene]
     ) -> Tuple[Optional[TPSLGene], Optional[TPSLGene]]:
         if parent1_tpsl and parent2_tpsl:
-            return crossover_tpsl_genes(parent1_tpsl, parent2_tpsl)
+            return TPSLGene.crossover(parent1_tpsl, parent2_tpsl)
         elif parent1_tpsl:
             return parent1_tpsl, copy.deepcopy(parent1_tpsl)
         elif parent2_tpsl:
@@ -373,7 +350,7 @@ class StrategyGene:
         parent2_ps: Optional[PositionSizingGene],
     ) -> Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]:
         if parent1_ps and parent2_ps:
-            return crossover_position_sizing_genes(parent1_ps, parent2_ps)
+            return PositionSizingGene.crossover(parent1_ps, parent2_ps)
         elif parent1_ps:
             return parent1_ps, copy.deepcopy(parent1_ps)
         elif parent2_ps:
@@ -388,135 +365,41 @@ class StrategyGene:
         """ユニフォーム交叉"""
         selection_prob = config.crossover_field_selection_probability
 
-        # 各フィールドを確率的に選択
-        c1_ind = (
-            parent1.indicators
-            if random.random() < selection_prob
-            else parent2.indicators
-        )
-        c2_ind = (
-            parent2.indicators
-            if random.random() < selection_prob
-            else parent1.indicators
-        )
+        child1_params = {"id": str(uuid.uuid4())}
+        child2_params = {"id": str(uuid.uuid4())}
 
-        c1_long = (
-            parent1.long_entry_conditions
-            if random.random() < selection_prob
-            else parent2.long_entry_conditions
-        )
-        c2_long = (
-            parent2.long_entry_conditions
-            if random.random() < selection_prob
-            else parent1.long_entry_conditions
-        )
+        # 交叉対象のフィールド
+        fields = [
+            "indicators",
+            "long_entry_conditions",
+            "short_entry_conditions",
+            "risk_management",
+            "tpsl_gene",
+            "long_tpsl_gene",
+            "short_tpsl_gene",
+            "position_sizing_gene",
+            "tool_genes",
+        ]
 
-        c1_short = (
-            parent1.short_entry_conditions
-            if random.random() < selection_prob
-            else parent2.short_entry_conditions
-        )
-        c2_short = (
-            parent2.short_entry_conditions
-            if random.random() < selection_prob
-            else parent1.short_entry_conditions
-        )
+        for field_name in fields:
+            val1 = getattr(parent1, field_name)
+            val2 = getattr(parent2, field_name)
 
-        c1_risk = (
-            parent1.risk_management
-            if random.random() < selection_prob
-            else parent2.risk_management
-        )
-        c2_risk = (
-            parent2.risk_management
-            if random.random() < selection_prob
-            else parent1.risk_management
-        )
-
-        c1_tpsl = (
-            parent1.tpsl_gene if random.random() < selection_prob else parent2.tpsl_gene
-        )
-        c2_tpsl = (
-            parent2.tpsl_gene if random.random() < selection_prob else parent1.tpsl_gene
-        )
-
-        c1_long_tpsl = (
-            parent1.long_tpsl_gene
-            if random.random() < selection_prob
-            else parent2.long_tpsl_gene
-        )
-        c2_long_tpsl = (
-            parent2.long_tpsl_gene
-            if random.random() < selection_prob
-            else parent1.long_tpsl_gene
-        )
-
-        c1_short_tpsl = (
-            parent1.short_tpsl_gene
-            if random.random() < selection_prob
-            else parent2.short_tpsl_gene
-        )
-        c2_short_tpsl = (
-            parent2.short_tpsl_gene
-            if random.random() < selection_prob
-            else parent1.short_tpsl_gene
-        )
-
-        c1_ps = (
-            parent1.position_sizing_gene
-            if random.random() < selection_prob
-            else parent2.position_sizing_gene
-        )
-        c2_ps = (
-            parent2.position_sizing_gene
-            if random.random() < selection_prob
-            else parent1.position_sizing_gene
-        )
-
-        c1_tool = (
-            copy.deepcopy(parent1.tool_genes)
-            if random.random() < selection_prob
-            else copy.deepcopy(parent2.tool_genes)
-        )
-        c2_tool = (
-            copy.deepcopy(parent2.tool_genes)
-            if random.random() < selection_prob
-            else copy.deepcopy(parent1.tool_genes)
-        )
+            if random.random() < selection_prob:
+                child1_params[field_name] = copy.deepcopy(val1)
+                child2_params[field_name] = copy.deepcopy(val2)
+            else:
+                child1_params[field_name] = copy.deepcopy(val2)
+                child2_params[field_name] = copy.deepcopy(val1)
 
         from .genetic_utils import GeneticUtils
 
         c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
 
-        child1 = cls(
-            id=str(uuid.uuid4()),
-            indicators=c1_ind,
-            long_entry_conditions=c1_long,
-            short_entry_conditions=c1_short,
-            risk_management=c1_risk,
-            tpsl_gene=c1_tpsl,
-            long_tpsl_gene=c1_long_tpsl,
-            short_tpsl_gene=c1_short_tpsl,
-            position_sizing_gene=c1_ps,
-            tool_genes=c1_tool,
-            metadata=c1_meta,
-        )
+        child1_params["metadata"] = c1_meta
+        child2_params["metadata"] = c2_meta
 
-        child2 = cls(
-            id=str(uuid.uuid4()),
-            indicators=c2_ind,
-            long_entry_conditions=c2_long,
-            short_entry_conditions=c2_short,
-            risk_management=c2_risk,
-            tpsl_gene=c2_tpsl,
-            long_tpsl_gene=c2_long_tpsl,
-            short_tpsl_gene=c2_short_tpsl,
-            position_sizing_gene=c2_ps,
-            tool_genes=c2_tool,
-            metadata=c2_meta,
-        )
-
-        return child1, child2
+        return cls(**child1_params), cls(**child2_params)
 
     @classmethod
     def _single_point_crossover(

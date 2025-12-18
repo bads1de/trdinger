@@ -292,28 +292,23 @@ class TestParallelFitnessEvaluator:
         self, mock_backtest_service, mock_yaml_utils
     ):
         """並列評価器の初期化テスト"""
-        from app.services.auto_strategy.core.condition_evolver import (
-            ParallelFitnessEvaluator,
-        )
-
-        evaluator = ParallelFitnessEvaluator(
+        evolver = ConditionEvolver(
             backtest_service=mock_backtest_service,
             yaml_indicator_utils=mock_yaml_utils,
+            enable_parallel=True,
             max_workers=4,
         )
 
-        assert evaluator.max_workers == 4
-        assert evaluator.backtest_service is not None
+        assert evolver.enable_parallel is True
+        assert evolver.parallel_evaluator is not None
+        assert evolver.parallel_evaluator.max_workers == 4
 
     def test_parallel_evaluate_population(self, mock_backtest_service, mock_yaml_utils):
         """個体群の並列評価テスト"""
-        from app.services.auto_strategy.core.condition_evolver import (
-            ParallelFitnessEvaluator,
-        )
-
-        evaluator = ParallelFitnessEvaluator(
+        evolver = ConditionEvolver(
             backtest_service=mock_backtest_service,
             yaml_indicator_utils=mock_yaml_utils,
+            enable_parallel=True,
             max_workers=2,
         )
 
@@ -321,24 +316,19 @@ class TestParallelFitnessEvaluator:
         c1.direction = "long"
         c2 = Condition(left_operand="MACD", operator="<", right_operand=0.0)
         c2.direction = "short"
-        c3 = Condition(left_operand="RSI", operator="<", right_operand=70.0)
-        c3.direction = "short"
-        c4 = Condition(left_operand="MACD", operator=">", right_operand=0.5)
-        c4.direction = "long"
-        population = [c1, c2, c3, c4]
-        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
+        population = [c1, c2]
+        evolver._current_backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
-        fitness_values = evaluator.evaluate_population(population, backtest_config)
+        # ParallelEvaluator.evaluate_populationを直接テスト
+        fitness_tuples = evolver.parallel_evaluator.evaluate_population(population)
 
-        assert len(fitness_values) == len(population)
-        assert all(isinstance(f, float) for f in fitness_values)
+        assert len(fitness_tuples) == len(population)
+        assert all(isinstance(f, tuple) for f in fitness_tuples)
+        assert all(isinstance(f[0], float) for f in fitness_tuples)
 
     def test_parallel_faster_than_serial(self, mock_backtest_service, mock_yaml_utils):
         """並列評価が直列評価より高速であることのテスト"""
         import time
-        from app.services.auto_strategy.core.condition_evolver import (
-            ParallelFitnessEvaluator,
-        )
 
         # バックテストに遅延を追加
         def slow_backtest(*args, **kwargs):
@@ -355,25 +345,26 @@ class TestParallelFitnessEvaluator:
 
         mock_backtest_service.run_backtest.side_effect = slow_backtest
 
-        evaluator = ParallelFitnessEvaluator(
+        evolver = ConditionEvolver(
             backtest_service=mock_backtest_service,
             yaml_indicator_utils=mock_yaml_utils,
+            enable_parallel=True,
             max_workers=4,
         )
+        evolver._current_backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         population = []
         for _ in range(8):
             c = Condition(left_operand="RSI", operator=">", right_operand=30.0)
             c.direction = "long"
             population.append(c)
-        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
 
         start_time = time.time()
-        evaluator.evaluate_population(population, backtest_config)
+        evolver.parallel_evaluator.evaluate_population(population)
         parallel_time = time.time() - start_time
 
         # 並列処理では8個体 * 50ms = 400ms が理論上 ~100ms で終わるはず
-        # 直列だと最低400ms、並列だと100-200ms程度を期待
+        # 4ワーカーなので。
         assert parallel_time < 0.35  # 350ms未満で終わること
 
 

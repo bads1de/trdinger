@@ -332,64 +332,12 @@ class ConditionGenerator:
 
         return long_conditions, short_conditions, exit_conditions
 
-    @safe_operation(context="戦略タイプ選択", is_api_call=False)
-    def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
-        """統合された汎用ロング条件生成"""
-        self.logger.debug(f"{ind.type}のロング条件を生成中")
-        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
-            self.yaml_config, ind.type
-        )
-        self.logger.debug(f"{ind.type}の設定: {config}")
-        if config:
-            threshold = YamlIndicatorUtils.get_threshold_from_yaml(
-                self.yaml_config, config, "long", self.context
-            )
-            if threshold is not None:
-                self.logger.debug(f"{ind.type}に閾値{threshold}を使用")
-                # DEBUG: 条件生成詳細ログ
-                final_condition = Condition(
-                    left_operand=ind.type, operator=">", right_operand=threshold
-                )
-                self.logger.debug(f"ロング条件生成: {ind.type} > {threshold}")
-                return [final_condition]
-        self.logger.warning(
-            f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用"
-        )
-        final_condition = Condition(
-            left_operand=ind.type, operator=">", right_operand=0
-        )
-        self.logger.debug(f"フォールバックロング条件生成: {ind.type} > 0")
-        return [final_condition]
-
-    def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
-        """統合された汎用ショート条件生成"""
-        self.logger.debug(f"{ind.type}のショート条件を生成中")
-        config = YamlIndicatorUtils.get_indicator_config_from_yaml(
-            self.yaml_config, ind.type
-        )
-        self.logger.debug(f"{ind.type}の設定: {config}")
-        if config:
-            threshold = YamlIndicatorUtils.get_threshold_from_yaml(
-                self.yaml_config, config, "short", self.context
-            )
-            if threshold is not None:
-                self.logger.debug(f"{ind.type}に閾値{threshold}を使用")
-                return [
-                    Condition(
-                        left_operand=ind.type, operator="<", right_operand=threshold
-                    )
-                ]
-        self.logger.warning(
-            f"{ind.type}の閾値が見つからないため、フォールバックとして0を使用"
-        )
-        return [Condition(left_operand=ind.type, operator="<", right_operand=0)]
-
-    def _create_type_based_conditions(
-        self, indicator: IndicatorGene, side: str
-    ) -> List[Condition]:
-        """統合された型別条件生成 - YAML設定優先"""
-
-        # YAML設定チェック
+    @safe_operation(context="サイド別条件生成", is_api_call=False)
+    def _create_side_conditions(self, indicator: IndicatorGene, side: str) -> List[Condition]:
+        """統合されたサイド別条件生成ロジック"""
+        self.logger.debug(f"{indicator.type}の{side}条件を生成中")
+        
+        # 1. YAML設定から閾値を取得
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(
             self.yaml_config, indicator.type
         )
@@ -398,90 +346,82 @@ class ConditionGenerator:
                 self.yaml_config, config, side, self.context
             )
             if threshold is not None:
-                final_condition = Condition(
+                return [Condition(
                     left_operand=indicator.type,
                     operator=">" if side == "long" else "<",
-                    right_operand=threshold,
-                )
-                self.logger.debug(
-                    f"YAMLベースの{side}条件 ({indicator.type}): {indicator.type} {'>' if side == 'long' else '<'} {threshold}"
-                )
-                return [final_condition]
+                    right_operand=threshold
+                )]
 
-        # デフォルト
-        final_condition = Condition(
+        # 2. フォールバック
+        self.logger.warning(f"{indicator.type}の閾値が見つからないため、デフォルト値を使用")
+        return [Condition(
             left_operand=indicator.type,
             operator=">" if side == "long" else "<",
-            right_operand=0,
-        )
-        self.logger.debug(
-            f"デフォルト{side}条件 ({indicator.type}): {indicator.type} {'>' if side == 'long' else '<'} 0"
-        )
-        return [final_condition]
+            right_operand=0
+        )]
 
-    def _create_trend_long_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """統合されたトレンド系ロング条件生成"""
-        return self._create_type_based_conditions(indicator, "long")
+    def _generic_long_conditions(self, ind: IndicatorGene) -> List[Condition]:
+        """旧互換用: ロング条件生成"""
+        return self._create_side_conditions(ind, "long")
 
-    def _create_trend_short_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """統合されたトレンド系ショート条件生成"""
-        return self._create_type_based_conditions(indicator, "short")
+    def _generic_short_conditions(self, ind: IndicatorGene) -> List[Condition]:
+        """旧互換用: ショート条件生成"""
+        return self._create_side_conditions(ind, "short")
 
-    def _create_momentum_long_conditions(
-        self, indicator: IndicatorGene
-    ) -> List[Condition]:
-        """統合されたモメンタム系ロング条件生成"""
-        return self._create_type_based_conditions(indicator, "long")
+    def _create_type_based_conditions(self, indicator: IndicatorGene, side: str) -> List[Condition]:
+        """旧互換用: 型別条件生成"""
+        return self._create_side_conditions(indicator, side)
 
     def _create_momentum_short_conditions(
         self, indicator: IndicatorGene
     ) -> List[Condition]:
-        """統合されたモメンタム系ショート条件生成"""
-        return self._create_type_based_conditions(indicator, "short")
+        """旧互換用: モメンタム系ショート条件生成"""
+        return self._create_side_conditions(indicator, "short")
 
     @safe_operation(context="指標タイプ取得", is_api_call=False)
-    def _get_indicator_type(self, indicator: IndicatorGene) -> IndicatorType:
-        """指標のタイプを取得"""
+    def _get_indicator_type(self, indicator: Union[IndicatorGene, str]) -> IndicatorType:
+        """
+        指標のタイプを取得（統合版）
+        優先順位: YAML設定 > indicator_registry > Characteristics
+        """
+        indicator_name = indicator.type if isinstance(indicator, IndicatorGene) else indicator
+        
+        # 1. YAML設定をチェック
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(
-            self.yaml_config, indicator.type
+            self.yaml_config, indicator_name
         )
         if config and "type" in config:
-            type_str = config["type"]
-            if type_str == "momentum":
-                return IndicatorType.MOMENTUM
-            elif type_str == "trend":
-                return IndicatorType.TREND
-            elif type_str == "volatility":
-                return IndicatorType.VOLATILITY
+            type_map = {
+                "momentum": IndicatorType.MOMENTUM,
+                "trend": IndicatorType.TREND,
+                "volatility": IndicatorType.VOLATILITY
+            }
+            if config["type"] in type_map:
+                return type_map[config["type"]]
 
-        cfg = indicator_registry.get_indicator_config(indicator.type)
-        logger.debug(f"[_get_indicator_type] Checking indicator.type: {indicator.type}")
-        logger.debug(
-            f"[_get_indicator_type] indicator_registry._configs keys: {list(indicator_registry._configs.keys())}"
-        )
+        # 2. indicator_registryをチェック
+        cfg = indicator_registry.get_indicator_config(indicator_name)
         if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
             cat = getattr(cfg, "category")
             if cat == "momentum":
                 return IndicatorType.MOMENTUM
-            elif cat == "trend":
-                return IndicatorType.TREND
+            elif cat in ("trend", "volatility"):
+                return IndicatorType.TREND if cat == "trend" else IndicatorType.VOLATILITY
 
-        if indicator.type in YamlIndicatorUtils.get_characteristics():
-            return YamlIndicatorUtils.get_characteristics()[indicator.type]["type"]
+        # 3. Characteristicsをチェック
+        characteristics = YamlIndicatorUtils.get_characteristics()
+        if indicator_name in characteristics:
+            return characteristics[indicator_name]["type"]
 
-        raise ValueError(f"不明な指標タイプ: {indicator.type}")
+        # デフォルト
+        logger.warning(f"指標 {indicator_name} のタイプを特定できませんでした。トレンド系として扱います。")
+        return IndicatorType.TREND
 
     @safe_operation(context="動的指標分類", is_api_call=False)
     def _dynamic_classify(
         self, indicators: List[IndicatorGene]
     ) -> Dict[IndicatorType, List[IndicatorGene]]:
-        """
-        動的指標分類
-        """
+        """動的指標分類（統合されたタイプ取得メソッドを使用）"""
         categorized = {
             IndicatorType.MOMENTUM: [],
             IndicatorType.TREND: [],
@@ -491,25 +431,13 @@ class ConditionGenerator:
         for ind in indicators:
             if not ind.enabled:
                 continue
-
-            name = ind.type
-            cfg = indicator_registry.get_indicator_config(name)
-
-            if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
-                cat = getattr(cfg, "category")
-                if cat == "momentum":
-                    categorized[IndicatorType.MOMENTUM].append(ind)
-                elif cat == "trend":
-                    categorized[IndicatorType.TREND].append(ind)
-                elif cat == "volatility":
-                    categorized[IndicatorType.VOLATILITY].append(ind)
-                else:
-                    categorized[IndicatorType.TREND].append(ind)
-            elif name in YamlIndicatorUtils.get_characteristics():
-                char = YamlIndicatorUtils.get_characteristics()[name]
-                categorized[char["type"]].append(ind)
-            else:
-                raise ValueError(f"分類できない指標タイプ: {name}")
+            
+            try:
+                ind_type = self._get_indicator_type(ind)
+                categorized[ind_type].append(ind)
+            except Exception as e:
+                logger.error(f"指標 {ind.type} の分類中にエラー: {e}")
+                categorized[IndicatorType.TREND].append(ind)
 
         return categorized
 
@@ -615,59 +543,29 @@ class GAConditionGenerator(ConditionGenerator):
         List[Union[Condition, ConditionGroup]],
         List[Condition],
     ]:
-        """
-        階層的GAによる最適化条件生成
-
-        Args:
-            indicators: 指標リスト
-            backtest_config: バックテスト設定
-
-        Returns:
-            (long_entry_conditions, short_entry_conditions, exit_conditions)のタプル
-        """
-        if not self.use_hierarchical_ga:
-            self.logger.info("階層的GAが無効のため、標準生成にフォールバック")
+        """階層的GAによる最適化条件生成"""
+        if not self.use_hierarchical_ga or not self.initialize_ga_components():
+            self.logger.info("階層的GAが無効または初期化失敗のため、標準生成を使用")
             return self.generate_balanced_conditions(indicators)
-
-        if not self.initialize_ga_components():
-            self.logger.warning(
-                "GAコンポーネント初期化失敗のため、標準生成にフォールバック"
-            )
-            return self.generate_balanced_conditions(indicators)
-
-        if self.condition_evolver is None:
-            raise RuntimeError("ConditionEvolverが初期化されていません")
 
         try:
             self.logger.info(f"階層的GA条件生成開始: {len(indicators)}個の指標")
+            backtest_config = backtest_config or {
+                "symbol": "BTC/USDT:USDT",
+                "timeframe": "1h",
+                "initial_balance": 10000,
+                "fee_rate": 0.001,
+            }
 
-            # バックテスト設定の準備
-            if backtest_config is None:
-                backtest_config = {
-                    "symbol": "BTC/USDT:USDT",
-                    "timeframe": "1h",
-                    "initial_balance": 10000,
-                    "fee_rate": 0.001,
-                }
-
-            # 32指標全てに対応した並列処理
             optimized_conditions = []
-
-            # 指標タイプ別に処理を分ける（並列化対応）
             indicator_types = self._dynamic_classify(indicators)
 
             for indicator_type, type_indicators in indicator_types.items():
                 if not type_indicators:
                     continue
 
-                self.logger.info(
-                    f"{indicator_type.name}タイプの指標を処理: {len(type_indicators)}個"
-                )
-
-                # 各指標に対してGA最適化を実行
                 for indicator in type_indicators:
                     try:
-                        # ConditionEvolverで最適化
                         evolution_result = self.condition_evolver.run_evolution(
                             backtest_config=backtest_config,
                             population_size=self.ga_config["population_size"],
@@ -675,82 +573,45 @@ class GAConditionGenerator(ConditionGenerator):
                         )
 
                         if evolution_result and "best_condition" in evolution_result:
-                            best_condition = evolution_result["best_condition"]
-                            optimized_conditions.append(best_condition)
-                            self.logger.info(
-                                f"指標 {indicator.type} の最適化完了: {best_condition}"
-                            )
+                            optimized_conditions.append(evolution_result["best_condition"])
                         else:
-                            self.logger.warning(f"指標 {indicator.type} の最適化に失敗")
-
+                            # 個別フォールバック
+                            optimized_conditions.extend(self._create_side_conditions(indicator, "long"))
                     except Exception as e:
-                        self.logger.error(
-                            f"指標 {indicator.type} のGA最適化エラー: {e}"
-                        )
-                        # フォールバック: 標準条件生成
-                        try:
-                            fallback_conditions = self._create_type_based_conditions(
-                                indicator, "long"
-                            )
-                            optimized_conditions.extend(fallback_conditions)
-                            self.logger.info(
-                                f"指標 {indicator.type} のフォールバック条件生成完了"
-                            )
-                        except Exception as fallback_error:
-                            self.logger.error(
-                                f"指標 {indicator.type} のフォールバック処理も失敗: {fallback_error}"
-                            )
+                        self.logger.error(f"指標 {indicator.type} のGA最適化エラー: {e}")
+                        optimized_conditions.extend(self._create_side_conditions(indicator, "long"))
 
-            # 最適化された条件からロング・ショート条件を分離
-            long_conditions = []
-            short_conditions = []
-            exit_conditions = []
+            if not optimized_conditions:
+                return self.generate_balanced_conditions(indicators)
 
-            for condition in optimized_conditions:
-                if hasattr(condition, "direction"):
-                    if condition.direction == "long":
-                        long_conditions.append(condition)
-                    elif condition.direction == "short":
-                        short_conditions.append(condition)
-
-            # 条件が生成できなかった場合は完全フォールバック
-            if not long_conditions:
-                self.logger.warning(
-                    "ロング条件が生成されなかったため、標準生成にフォールバック"
-                )
-                fallback_longs, fallback_shorts, fallback_exits = (
-                    self.generate_balanced_conditions(indicators)
-                )
-                long_conditions = fallback_longs
-                short_conditions = fallback_shorts
-                exit_conditions = fallback_exits
-
-            # 条件数を制限
-            max_conditions = 3
-            if self.ga_config_obj and hasattr(self.ga_config_obj, "max_conditions"):
-                max_conditions = self.ga_config_obj.max_conditions
-
-            if len(long_conditions) > max_conditions:
-                long_conditions = random.sample(long_conditions, max_conditions)
-            if len(short_conditions) > max_conditions:
-                short_conditions = random.sample(short_conditions, max_conditions)
-
-            self.logger.info(
-                f"階層的GA条件生成完了: "
-                f"ロング={len(long_conditions)}件, "
-                f"ショート={len(short_conditions)}件"
-            )
-
-            return long_conditions, short_conditions, exit_conditions
+            return self._process_generated_conditions(optimized_conditions, indicators)
 
         except Exception as e:
             self.logger.error(f"階層的GA条件生成エラー: {e}")
-            # 完全フォールバック
-            try:
-                return self.generate_balanced_conditions(indicators)
-            except Exception as fallback_error:
-                self.logger.error(f"フォールバック処理も失敗: {fallback_error}")
-                raise RuntimeError(f"条件生成に完全に失敗しました: {e}")
+            return self.generate_balanced_conditions(indicators)
+
+    def _process_generated_conditions(
+        self, conditions: List[Condition], indicators: List[IndicatorGene]
+    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]], List[Condition]]:
+        """生成された条件の分離、制限、および最終フォールバック処理"""
+        long_conditions = [c for c in conditions if getattr(c, "direction", "long") == "long"]
+        short_conditions = [c for c in conditions if getattr(c, "direction", "long") == "short"]
+
+        # ロング条件がない場合はバランス生成から補完
+        if not long_conditions:
+            self.logger.warning("ロング条件不足のため、標準生成で補完します")
+            fallback_longs, fallback_shorts, fallback_exits = self.generate_balanced_conditions(indicators)
+            return fallback_longs, fallback_shorts, fallback_exits
+
+        # 条件数を制限
+        max_conditions = getattr(self.ga_config_obj, "max_conditions", 3)
+        if len(long_conditions) > max_conditions:
+            long_conditions = random.sample(long_conditions, max_conditions)
+        if len(short_conditions) > max_conditions:
+            short_conditions = random.sample(short_conditions, max_conditions)
+
+        return long_conditions, short_conditions, []
+
 
     def set_ga_config(
         self,

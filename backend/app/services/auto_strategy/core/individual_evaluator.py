@@ -623,16 +623,42 @@ class IndividualEvaluator:
     ) -> Tuple[float, ...]:
         """単一期間での評価実行"""
         try:
-            # 遺伝子から戦略設定を生成
-            from ..serializers.serialization import GeneSerializer
+            # 1. 実行用設定の構築
+            run_config = self._prepare_run_config(gene, backtest_config, config)
+            if not run_config:
+                return tuple(0.0 for _ in config.objectives)
 
+            # 2. データの準備
+            data = self._get_cached_data(backtest_config)
+            
+            # モデル外のオブジェクトを注入
+            self._inject_external_objects(run_config, backtest_config, config)
+
+            # 3. バックテスト実行
+            result = self.backtest_service.run_backtest(
+                config=run_config, preloaded_data=data
+            )
+
+            # 4. 追加のコンテキスト情報（ML予測シグナルなど）を取得
+            evaluation_context = self._get_evaluation_context(gene, backtest_config, config)
+
+            # 5. フィットネス計算
+            return self._calculate_multi_objective_fitness(result, config, **evaluation_context)
+
+        except Exception as e:
+            logger.error(f"単一評価実行エラー: {e}")
+            return tuple(0.0 for _ in config.objectives)
+
+    def _prepare_run_config(
+        self, gene, backtest_config: Dict[str, Any], config: GAConfig
+    ) -> Optional[Dict[str, Any]]:
+        """バックテスト実行用設定の構築"""
+        try:
+            from ..serializers.serialization import GeneSerializer
             serializer = GeneSerializer()
 
-            # Pydanticモデルを使用して設定を構築
-            # 1. 辞書をコピーしてベースにする
             config_dict = backtest_config.copy()
-
-            # 2. StrategyConfig部分を構築
+            
             strategy_parameters = {
                 "strategy_gene": serializer.strategy_gene_to_dict(gene),
                 "ml_filter_enabled": config.ml_filter_enabled,
@@ -643,59 +669,45 @@ class IndividualEvaluator:
                 "strategy_type": "GENERATED_GA",
                 "parameters": strategy_parameters,
             }
-            config_dict["strategy_name"] = f"GA_Individual_{gene.id[:8]}"
+            # gene.id があれば使う
+            gene_id = getattr(gene, "id", "unknown")[:8]
+            config_dict["strategy_name"] = f"GA_Individual_{gene_id}"
 
-            # 3. モデル化（バリデーション）
+            # バリデーション
+            backtest_config_model = BacktestConfig(**config_dict)
+            return backtest_config_model.model_dump()
+        except ValidationError as e:
+            logger.error(f"バックテスト設定モデル生成エラー: {e}")
+            return None
+
+    def _inject_external_objects(
+        self, run_config: Dict[str, Any], backtest_config: Dict[str, Any], config: GAConfig
+    ) -> None:
+        """実行設定への外部オブジェクト注入（1分足データ、MLモデルなど）"""
+        # 1分足データを取得（1分足シミュレーション用）
+        minute_data = self._get_cached_minute_data(backtest_config)
+        if minute_data is not None:
+            run_config["strategy_config"]["parameters"]["minute_data"] = minute_data
+
+        # MLフィルター設定
+        if config.ml_filter_enabled and config.ml_model_path:
             try:
-                backtest_config_model = BacktestConfig(**config_dict)
-            except ValidationError as e:
-                logger.error(f"バックテスト設定モデル生成エラー: {e}")
-                return tuple(0.0 for _ in config.objectives)
-
-            # MLフィルター設定（モデル外のオブジェクト）
-            ml_filter_model = None
-            if config.ml_filter_enabled and config.ml_model_path:
-                try:
-                    ml_filter_model = model_manager.load_model(config.ml_model_path)
-                except Exception:
-                    # エラー時は設定を無効化
-                    pass
-
-            # データをキャッシュから取得または新規取得
-            # キャッシュキー作成には辞書を使用（モデルでも良いが既存踏襲）
-            data = self._get_cached_data(config_dict)
-
-            # 1分足データを取得（1分足シミュレーション用）
-            minute_data = self._get_cached_minute_data(config_dict)
-
-            # 実行用辞書の作成
-            run_config = backtest_config_model.model_dump()
-
-            # モデル外のオブジェクトを注入
-            if minute_data is not None:
-                run_config["strategy_config"]["parameters"]["minute_data"] = minute_data
-
-            if ml_filter_model:
-                run_config["strategy_config"]["parameters"][
-                    "ml_predictor"
-                ] = ml_filter_model
-                # ダマシ予測モデル用の閾値: 0.5 = 50%以上の確率で有効ならエントリー許可
-                # 将来的にGAConfigに追加することを検討
-                run_config["strategy_config"]["parameters"]["ml_filter_threshold"] = 0.5
-            elif config.ml_filter_enabled:  # ロード失敗時
+                ml_filter_model = model_manager.load_model(config.ml_model_path)
+                if ml_filter_model:
+                    run_config["strategy_config"]["parameters"]["ml_predictor"] = ml_filter_model
+                    run_config["strategy_config"]["parameters"]["ml_filter_threshold"] = 0.5
+            except Exception:
+                # ロード失敗時は無効化
                 run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
+        elif config.ml_filter_enabled:
+             # パス指定なしなどの場合
+             run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
 
-            # バックテスト実行
-            result = self.backtest_service.run_backtest(
-                config=run_config, preloaded_data=data
-            )
-
-            # フィットネス計算（常に統一ロジックを使用）
-            return self._calculate_multi_objective_fitness(result, config)
-
-        except Exception as e:
-            logger.error(f"単一評価実行エラー: {e}")
-            return tuple(0.0 for _ in config.objectives)
+    def _get_evaluation_context(
+        self, gene, backtest_config: Dict[str, Any], config: GAConfig
+    ) -> Dict[str, Any]:
+        """評価計算に必要な追加コンテキストを取得（サブクラスでオーバーライド）"""
+        return {}
 
     def _extract_performance_metrics(
         self, backtest_result: Dict[str, Any]
@@ -764,6 +776,7 @@ class IndividualEvaluator:
         self,
         backtest_result: Dict[str, Any],
         config: GAConfig,
+        **kwargs
     ) -> float:
         """
         フィットネス計算（ロング・ショートバランス評価を含む）
@@ -935,6 +948,7 @@ class IndividualEvaluator:
         self,
         backtest_result: Dict[str, Any],
         config: GAConfig,
+        **kwargs
     ) -> tuple:
         """
         多目的最適化用フィットネス計算
@@ -942,6 +956,7 @@ class IndividualEvaluator:
         Args:
             backtest_result: バックテスト結果
             config: GA設定
+            **kwargs: 追加のコンテキスト情報
 
         Returns:
             各目的の評価値のタプル
@@ -972,7 +987,7 @@ class IndividualEvaluator:
             for objective in config.objectives:
                 if objective == "weighted_score":
                     # 従来の重み付けスコア計算を利用
-                    value = self._calculate_fitness(backtest_result, config)
+                    value = self._calculate_fitness(backtest_result, config, **kwargs)
                 elif objective == "total_return":
                     value = metrics["total_return"]
                 elif objective == "sharpe_ratio":

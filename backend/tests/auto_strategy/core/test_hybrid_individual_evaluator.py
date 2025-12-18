@@ -287,7 +287,7 @@ class TestCalculateFitness:
             evaluator.__class__.__bases__[0], "_calculate_fitness", return_value=0.5
         ):
             result = evaluator._calculate_fitness(
-                backtest_result, config, prediction_signals
+                backtest_result, config, prediction_signals=prediction_signals
             )
 
         # base_fitness (0.5) + prediction_weight (0.2) * prediction_score (0.4) = 0.58
@@ -311,7 +311,7 @@ class TestCalculateFitness:
             evaluator.__class__.__bases__[0], "_calculate_fitness", return_value=0.5
         ):
             result = evaluator._calculate_fitness(
-                backtest_result, config, prediction_signals
+                backtest_result, config, prediction_signals=prediction_signals
             )
 
         # base_fitness (0.5) + prediction_weight (0.1) * (trend - 0.5) = 0.5 + 0.1 * 0.3 = 0.53
@@ -335,7 +335,7 @@ class TestCalculateFitness:
             evaluator.__class__.__bases__[0], "_calculate_fitness", return_value=-0.5
         ):
             result = evaluator._calculate_fitness(
-                backtest_result, config, prediction_signals
+                backtest_result, config, prediction_signals=prediction_signals
             )
 
         # 取引なしの場合は max(0, base_fitness) を返す
@@ -402,14 +402,15 @@ class TestCalculateMultiObjectiveFitness:
             evaluator.__class__.__bases__[0],
             "_calculate_multi_objective_fitness",
             return_value=base_values,
-        ):
+        ) as mock_base:
             result = evaluator._calculate_multi_objective_fitness(
-                backtest_result, config, prediction_signals
+                backtest_result, config, prediction_signals=prediction_signals
             )
 
-        # weighted_score = 0.5 + 0.1 * (0.8 - 0.2) = 0.56
-        expected_ws = max(0.0, 0.5 + 0.1 * (0.8 - 0.2))
-        assert result[0] == pytest.approx(expected_ws, rel=1e-5)
+        # 基底クラスのメソッドが、予測信号を保持したまま呼ばれたことを確認
+        mock_base.assert_called_once()
+        assert mock_base.call_args.kwargs["prediction_signals"] == prediction_signals
+        assert result == base_values
         assert result[1] == 0.6
 
     def test_handles_prediction_score_objective(self, evaluator):
@@ -432,7 +433,7 @@ class TestCalculateMultiObjectiveFitness:
             return_value=base_values,
         ):
             result = evaluator._calculate_multi_objective_fitness(
-                backtest_result, config, prediction_signals
+                backtest_result, config, prediction_signals=prediction_signals
             )
 
         # prediction_score = 0.7 - 0.3 = 0.4
@@ -455,7 +456,7 @@ class TestCalculateMultiObjectiveFitness:
             return_value=base_values,
         ):
             result = evaluator._calculate_multi_objective_fitness(
-                backtest_result, config, prediction_signals
+                backtest_result, config, prediction_signals=prediction_signals
             )
 
         # prediction_score = 0.9 - 0.5 = 0.4
@@ -515,14 +516,16 @@ class TestPerformSingleEvaluation:
         config.fallback_start_date = None
         config.fallback_end_date = None
         config.preprocess_features = True
+        config.ml_filter_enabled = False
+        config.ml_model_path = ""
 
         backtest_config = {
             "symbol": "BTCUSDT",
             "timeframe": "1h",
             "start_date": "2023-01-01",
             "end_date": "2023-12-31",
+            "initial_capital": 10000.0,
         }
-
         # OHLCVデータのモック
         ohlcv_data = pd.DataFrame({"close": [100, 101, 102]})
 
@@ -566,14 +569,16 @@ class TestPerformSingleEvaluation:
         config.fallback_start_date = None
         config.fallback_end_date = None
         config.preprocess_features = True
+        config.ml_filter_enabled = False
+        config.ml_model_path = ""
 
         backtest_config = {
             "symbol": "BTCUSDT",
             "timeframe": "1h",
             "start_date": "2023-01-01",
             "end_date": "2023-12-31",
+            "initial_capital": 10000.0,
         }
-
         ohlcv_data = pd.DataFrame({"close": [100, 101, 102]})
 
         # GeneSerializerをモック
@@ -597,8 +602,8 @@ class TestPerformSingleEvaluation:
 
         # 予測がNoneで呼び出されることを確認
         mock_fitness.assert_called_once()
-        call_args = mock_fitness.call_args
-        assert call_args[0][2] is None  # prediction_signals がNone
+        call_kwargs = mock_fitness.call_args.kwargs
+        assert call_kwargs.get("prediction_signals") is None  # prediction_signals がNone
 
     def test_returns_zero_fitness_on_error(self, mock_dependencies):
         """エラー時にゼロフィットネスを返す"""
@@ -618,9 +623,16 @@ class TestPerformSingleEvaluation:
         config.timeframe = None
         config.fallback_start_date = None
         config.fallback_end_date = None
+        config.ml_filter_enabled = False
+        config.ml_model_path = ""
 
-        backtest_config = {}
-
+        backtest_config = {
+            "symbol": "BTCUSDT",
+            "timeframe": "1h",
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "initial_capital": 10000.0,
+        }
         result = evaluator._perform_single_evaluation(gene, backtest_config, config)
 
         assert result == (0.0, 0.0)

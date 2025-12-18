@@ -124,82 +124,6 @@ class FitnessCache:
         }
 
 
-class ParallelFitnessEvaluator:
-    """並列適応度評価器"""
-
-    def __init__(
-        self,
-        backtest_service: BacktestService,
-        yaml_indicator_utils: "YamlIndicatorUtils",
-        max_workers: Optional[int] = None,
-        cache: Optional[FitnessCache] = None,
-    ):
-        self.backtest_service = backtest_service
-        self.yaml_indicator_utils = yaml_indicator_utils
-        self.max_workers = max_workers or min(os.cpu_count() or 4, 8)
-        self.cache = cache
-
-    def _evaluate_single(
-        self,
-        condition: Union[Condition, ConditionGroup],
-        backtest_config: Dict[str, Any],
-    ) -> float:
-        if self.cache:
-            cached = self.cache.get(condition)
-            if cached is not None:
-                return cached
-
-        try:
-            strategy_config = create_simple_strategy(condition)
-            test_config = backtest_config.copy()
-            test_config.update(strategy_config["parameters"])
-            result = self.backtest_service.run_backtest(test_config)
-
-            metrics = result.get("performance_metrics", {})
-            total_return = metrics.get("total_return", 0.0)
-            sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
-            max_drawdown = metrics.get("max_drawdown", 1.0)
-            total_trades = metrics.get("total_trades", 0)
-
-            if total_trades < 10:
-                fitness = 0.1
-            else:
-                fitness = (
-                    0.4 * max(0, total_return)
-                    + 0.3 * max(0, sharpe_ratio)
-                    + 0.2 * max(0, (1 - max_drawdown))
-                    + 0.1 * min(1, total_trades / 100)
-                )
-            fitness = max(0.0, fitness)
-
-            if self.cache:
-                self.cache.set(condition, fitness)
-            return fitness
-        except Exception as e:
-            logger.error(f"適応度評価エラー: {e}")
-            return 0.0
-
-    def evaluate_population(
-        self,
-        population: List[Union[Condition, ConditionGroup]],
-        backtest_config: Dict[str, Any],
-    ) -> List[float]:
-        fitness_values = [0.0] * len(population)
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            future_to_index = {
-                executor.submit(self._evaluate_single, condition, backtest_config): i
-                for i, condition in enumerate(population)
-            }
-            for future in as_completed(future_to_index):
-                index = future_to_index[future]
-                try:
-                    fitness_values[index] = future.result()
-                except Exception as e:
-                    logger.error(f"並列評価エラー (index={index}): {e}")
-                    fitness_values[index] = 0.0
-        return fitness_values
-
-
 def create_simple_strategy(
     condition: Union[Condition, ConditionGroup],
 ) -> Dict[str, Any]:
@@ -269,14 +193,24 @@ class ConditionEvolver:
             if early_stopping_patience
             else None
         )
-        self.parallel_evaluator = (
-            ParallelFitnessEvaluator(
-                backtest_service, yaml_indicator_utils, max_workers, self.cache
+        
+        # ParallelEvaluatorの初期化（依存関係の解決のためローカルインポート）
+        if self.enable_parallel:
+            from .parallel_evaluator import ParallelEvaluator
+            # ラッパー関数を渡す（タプルを返す必要があるため）
+            self.parallel_evaluator = ParallelEvaluator(
+                evaluate_func=self._evaluate_for_parallel,
+                max_workers=max_workers
             )
-            if enable_parallel
-            else None
-        )
+        else:
+            self.parallel_evaluator = None
+            
+        self._current_backtest_config = {}
         logger.info("ConditionEvolver 初期化完了")
+
+    def _evaluate_for_parallel(self, condition: Union[Condition, ConditionGroup]) -> Tuple[float, ...]:
+        """並列評価用のラッパー（タプルを返す）"""
+        return (self.evaluate_fitness(condition, self._current_backtest_config),)
 
     def _create_individual(self) -> Condition:
         """単一のCondition個体を生成"""
@@ -331,17 +265,50 @@ class ConditionEvolver:
         condition: Union[Condition, ConditionGroup],
         backtest_config: Dict[str, Any],
     ) -> float:
+        """単一の条件を評価してフィットネス値を返す"""
         if self.cache:
             cached = self.cache.get(condition)
             if cached is not None:
                 return cached
 
         try:
-            # 並列評価器と同じロジックを使用（再利用）
-            evaluator = ParallelFitnessEvaluator(
-                self.backtest_service, self.yaml_indicator_utils, cache=self.cache
-            )
-            return evaluator._evaluate_single(condition, backtest_config)
+            # 条件から戦略設定を作成
+            strategy_config = create_simple_strategy(condition)
+            test_config = backtest_config.copy()
+            
+            # バックテスト実行に必要な設定を注入
+            if "parameters" in strategy_config:
+                test_config.update(strategy_config["parameters"])
+            
+            # バックテスト実行
+            result = self.backtest_service.run_backtest(test_config)
+
+            # パフォーマンスメトリクスの抽出
+            metrics = result.get("performance_metrics", {})
+            total_return = metrics.get("total_return", 0.0)
+            sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
+            max_drawdown = metrics.get("max_drawdown", 1.0)
+            total_trades = metrics.get("total_trades", 0)
+
+            # 取引回数が少ない場合のペナルティ
+            if total_trades < 10:
+                fitness = 0.1
+            else:
+                # 複数の指標を重み付けしてフィットネスを算出
+                fitness = (
+                    0.4 * max(0, total_return)
+                    + 0.3 * max(0, sharpe_ratio)
+                    + 0.2 * max(0, (1 - max_drawdown))
+                    + 0.1 * min(1, total_trades / 100)
+                )
+            
+            fitness = max(0.0, fitness)
+
+            # キャッシュに保存
+            if self.cache:
+                self.cache.set(condition, fitness)
+                
+            return fitness
 
         except Exception as e:
             logger.error(f"適応度評価エラー: {e}")
@@ -496,6 +463,7 @@ class ConditionEvolver:
         """進化アルゴリズムを実行"""
         try:
             logger.info(f"進化開始: 個体数={population_size}, 世代数={generations}")
+            self._current_backtest_config = backtest_config
 
             if self.early_stopping:
                 self.early_stopping.reset()
@@ -507,9 +475,11 @@ class ConditionEvolver:
 
             for generation in range(generations):
                 if self.enable_parallel and self.parallel_evaluator:
-                    fitness_values = self.parallel_evaluator.evaluate_population(
-                        population, backtest_config
+                    # ParallelEvaluatorはTuple[float, ...]のリストを返す
+                    raw_fitness = self.parallel_evaluator.evaluate_population(
+                        population
                     )
+                    fitness_values = [f[0] for f in raw_fitness]
                 else:
                     fitness_values = [
                         self.evaluate_fitness(ind, backtest_config)
@@ -550,10 +520,12 @@ class ConditionEvolver:
                 ]
                 population = (elite + offspring)[:population_size]
 
+            # 最終世代の評価
             if self.enable_parallel and self.parallel_evaluator:
-                fitness_values = self.parallel_evaluator.evaluate_population(
-                    population, backtest_config
+                raw_fitness = self.parallel_evaluator.evaluate_population(
+                    population
                 )
+                fitness_values = [f[0] for f in raw_fitness]
             else:
                 fitness_values = [
                     self.evaluate_fitness(ind, backtest_config) for ind in population

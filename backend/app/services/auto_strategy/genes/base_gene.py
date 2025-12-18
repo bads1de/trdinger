@@ -18,7 +18,14 @@ class BaseGene(ABC):
 
     PositionSizingGeneとTPSLGeneの共通機能を統合した抽象基底クラスです。
     to_dict(), from_dict(), validate() の共通実装を提供します。
+    また、遺伝的操作（交叉・突然変異）のための共通インターフェースとデフォルト実装を提供します。
     """
+
+    # 遺伝的操作のための設定（サブクラスでオーバーライド）
+    NUMERIC_FIELDS: List[str] = []
+    ENUM_FIELDS: List[str] = []
+    CHOICE_FIELDS: List[str] = []
+    NUMERIC_RANGES: Dict[str, Tuple[float, float]] = {}
 
     def to_dict(self) -> Dict[str, Any]:
         """オブジェクトを辞書形式に変換"""
@@ -86,22 +93,25 @@ class BaseGene(ABC):
     def from_dict(cls, data: Dict[str, Any]) -> Any:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
+        
+        # クラスアノテーションを取得（継承チェーンを含む）
+        annotations = {}
+        for base in reversed(cls.__mro__):
+            annotations.update(getattr(base, "__annotations__", {}))
 
-        # クラスアノテーションがある場合
-        if hasattr(cls, "__annotations__") and cls.__annotations__:
-            annotations = cls.__annotations__
+        # 1. アノテーションがあるフィールドについては型変換を試みる
+        for param_name, param_type in annotations.items():
+            if param_name in data:
+                raw_value = data[param_name]
+                init_params[param_name] = cls._convert_value(raw_value, param_type)
 
-            for param_name, param_type in annotations.items():
-                if param_name in data:
-                    raw_value = data[param_name]
-                    init_params[param_name] = cls._convert_value(raw_value, param_type)
-        else:
-            # アノテーションがないまたは空の場合はデータ全体を使用
-            logger.warning(
-                f"クラス {cls.__name__} に型アノテーションがないため、辞書データを直接使用"
-            )
-            init_params = data.copy()
+        # 2. アノテーションにないフィールドもすべて含める（型変換なし）
+        for key, value in data.items():
+            if key not in init_params:
+                init_params[key] = value
 
+        # 3. 実際のクラス生成
+        # クラスが受け取れない引数が含まれている場合のガード（任意だが、通常は**init_paramsで十分）
         return cls(**init_params)
 
     def validate(self) -> Tuple[bool, List[str]]:
@@ -142,3 +152,40 @@ class BaseGene(ABC):
             )
             return False
         return True
+
+    def mutate(self, mutation_rate: float = 0.1) -> "BaseGene":
+        """
+        遺伝子の突然変異（デフォルト実装）
+        GeneticUtils.mutate_generic_geneを使用します。
+        特殊なロジックが必要な場合はサブクラスでオーバーライドしてください。
+        """
+        from .genetic_utils import GeneticUtils
+
+        return GeneticUtils.mutate_generic_gene(
+            gene=self,
+            gene_class=self.__class__,
+            mutation_rate=mutation_rate,
+            numeric_fields=self.NUMERIC_FIELDS,
+            enum_fields=self.ENUM_FIELDS,
+            numeric_ranges=self.NUMERIC_RANGES,
+        )
+
+    @classmethod
+    def crossover(
+        cls, parent1: "BaseGene", parent2: "BaseGene"
+    ) -> Tuple["BaseGene", "BaseGene"]:
+        """
+        遺伝子の交叉（デフォルト実装）
+        GeneticUtils.crossover_generic_genesを使用します。
+        特殊なロジックが必要な場合はサブクラスでオーバーライドしてください。
+        """
+        from .genetic_utils import GeneticUtils
+
+        return GeneticUtils.crossover_generic_genes(
+            parent1_gene=parent1,
+            parent2_gene=parent2,
+            gene_class=cls,
+            numeric_fields=cls.NUMERIC_FIELDS,
+            enum_fields=cls.ENUM_FIELDS,
+            choice_fields=cls.CHOICE_FIELDS,
+        )

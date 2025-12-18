@@ -20,6 +20,33 @@ class PositionSizingGene(BaseGene):
     BaseGeneを継承して共通機能を活用します。
     """
 
+    NUMERIC_FIELDS = [
+        "lookback_period",
+        "optimal_f_multiplier",
+        "atr_multiplier",
+        "risk_per_trade",
+        "fixed_ratio",
+        "fixed_quantity",
+        "min_position_size",
+        "max_position_size",
+        "priority",
+        "atr_period",
+    ]
+    ENUM_FIELDS = ["method"]
+    CHOICE_FIELDS = ["enabled"]
+    NUMERIC_RANGES = {
+        "lookback_period": (50, 200),
+        "optimal_f_multiplier": (0.25, 0.75),
+        "atr_multiplier": (0.1, 5.0),
+        "risk_per_trade": (0.001, 0.1),
+        "fixed_ratio": (0.001, 1.0),
+        "fixed_quantity": (0.1, 10.0),
+        "min_position_size": (0.001, 0.1),
+        "max_position_size": (5.0, 50.0),
+        "priority": (0.5, 1.5),
+        "atr_period": (10, 30),
+    }
+
     method: PositionSizingMethod = PositionSizingMethod.VOLATILITY_BASED
     lookback_period: int = 100
     optimal_f_multiplier: float = 0.5
@@ -127,83 +154,4 @@ def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
         max_position_size=random.uniform(5.0, 50.0),
         enabled=True,
         priority=random.uniform(0.5, 1.5),
-    )
-
-
-def crossover_position_sizing_genes(
-    parent1: PositionSizingGene, parent2: PositionSizingGene
-) -> tuple[PositionSizingGene, PositionSizingGene]:
-    """ポジションサイジング遺伝子の交叉（ジェネリック関数使用）"""
-    from .genetic_utils import GeneticUtils
-
-    # フィールドのカテゴリ分け
-    numeric_fields = [
-        "optimal_f_multiplier",
-        "atr_multiplier",
-        "risk_per_trade",
-        "fixed_ratio",
-        "fixed_quantity",
-        "min_position_size",
-        "max_position_size",
-        "priority",
-        "lookback_period",
-        "atr_period",
-    ]
-    enum_fields = ["method"]
-    choice_fields = ["enabled"]
-
-    return GeneticUtils.crossover_generic_genes(
-        parent1_gene=parent1,
-        parent2_gene=parent2,
-        gene_class=PositionSizingGene,
-        numeric_fields=numeric_fields,
-        enum_fields=enum_fields,
-        choice_fields=choice_fields,
-    )
-
-
-def mutate_position_sizing_gene(
-    gene: PositionSizingGene, mutation_rate: float = 0.1
-) -> PositionSizingGene:
-    """ポジションサイジング遺伝子の突然変異（ジェネリック関数使用）"""
-    from typing import Dict
-    from .genetic_utils import GeneticUtils
-
-    # フィールドルール定義
-    numeric_fields: List[str] = [
-        "lookback_period",
-        "optimal_f_multiplier",
-        "atr_multiplier",
-        "risk_per_trade",
-        "fixed_ratio",
-        "fixed_quantity",
-        "min_position_size",
-        "max_position_size",
-        "priority",
-        "atr_period",
-    ]
-
-    enum_fields = ["method"]
-
-    # 各フィールドの許容範囲
-    numeric_ranges: Dict[str, tuple[float, float]] = {
-        "lookback_period": (50, 200),
-        "optimal_f_multiplier": (0.25, 0.75),
-        "atr_multiplier": (0.1, 5.0),
-        "risk_per_trade": (0.001, 0.1),
-        "fixed_ratio": (0.001, 1.0),
-        "fixed_quantity": (0.1, 10.0),
-        "min_position_size": (0.001, 0.1),
-        "max_position_size": (5.0, 50.0),
-        "priority": (0.5, 1.5),
-        "atr_period": (10, 30),
-    }
-
-    return GeneticUtils.mutate_generic_gene(
-        gene=gene,
-        gene_class=PositionSizingGene,
-        mutation_rate=mutation_rate,
-        numeric_fields=numeric_fields,
-        enum_fields=enum_fields,
-        numeric_ranges=numeric_ranges,
     )

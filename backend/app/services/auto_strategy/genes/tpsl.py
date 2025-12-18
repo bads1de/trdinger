@@ -23,6 +23,33 @@ class TPSLGene(BaseGene):
     BaseGeneを継承して共通機能を活用します。
     """
 
+    NUMERIC_FIELDS = [
+        "stop_loss_pct",
+        "take_profit_pct",
+        "risk_reward_ratio",
+        "base_stop_loss",
+        "atr_multiplier_sl",
+        "atr_multiplier_tp",
+        "confidence_threshold",
+        "priority",
+        "lookback_period",
+        "atr_period",
+    ]
+    ENUM_FIELDS = ["method"]
+    CHOICE_FIELDS = ["enabled"]
+    NUMERIC_RANGES = {
+        "stop_loss_pct": (0.005, 0.15),  # 0.5%-15%
+        "take_profit_pct": (0.01, 0.3),  # 1%-30%
+        "risk_reward_ratio": (1.0, 10.0),  # 1:10まで
+        "base_stop_loss": (0.01, 0.06),
+        "atr_multiplier_sl": (0.5, 3.0),
+        "atr_multiplier_tp": (1.0, 5.0),
+        "confidence_threshold": (0.1, 0.9),
+        "priority": (0.5, 1.5),
+        "lookback_period": (50, 200),
+        "atr_period": (10, 30),
+    }
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> TPSLGene:
         """辞書形式からTPSLGeneオブジェクトを復元
@@ -140,6 +167,75 @@ class TPSLGene(BaseGene):
             if not (0.01 <= self.take_profit_pct <= 0.3):
                 errors.append("take_profit_pct must be between 1% and 30%")
 
+    def mutate(self, mutation_rate: float = 0.1) -> "TPSLGene":
+        """TP/SL遺伝子の突然変異"""
+        import random
+
+        # ジェネリック突然変異を実行（基底クラスのメソッド呼び出し）
+        mutated_gene = super().mutate(mutation_rate)
+
+        # method_weightsの突然変異（辞書フィールドの特殊処理）
+        if random.random() < mutation_rate:
+            # method_weightsを乱数で調整
+            for key in mutated_gene.method_weights:
+                current_weight = mutated_gene.method_weights[key]
+                # 現在の値を中心とした範囲で変動
+                mutated_gene.method_weights[key] = current_weight * random.uniform(
+                    0.8, 1.2
+                )
+
+            # 合計が1.0になるよう正規化
+            total_weight = sum(mutated_gene.method_weights.values())
+            if total_weight > 0:
+                for key in mutated_gene.method_weights:
+                    mutated_gene.method_weights[key] /= total_weight
+
+        return mutated_gene
+
+    @classmethod
+    def crossover(
+        cls, parent1: "TPSLGene", parent2: "TPSLGene"
+    ) -> tuple["TPSLGene", "TPSLGene"]:
+        """TP/SL遺伝子の交叉"""
+
+        # ジェネリック交叉を実行（基底クラスのメソッド呼び出し）
+        child1, child2 = super().crossover(parent1, parent2)
+
+        # 共有参照を防ぐため、method_weightsをコピー
+        if hasattr(child1, "method_weights") and isinstance(
+            child1.method_weights, dict
+        ):
+            child1.method_weights = child1.method_weights.copy()
+        if hasattr(child2, "method_weights") and isinstance(
+            child2.method_weights, dict
+        ):
+            child2.method_weights = child2.method_weights.copy()
+
+        # method_weightsの特殊処理
+        # 辞書の各キーにたいして比率の平均を取る
+        all_keys = set(parent1.method_weights.keys()) | set(
+            parent2.method_weights.keys()
+        )
+        for key in all_keys:
+            if key in parent1.method_weights and key in parent2.method_weights:
+                # 両方にある場合、平均を取る
+                child1.method_weights[key] = (
+                    parent1.method_weights[key] + parent2.method_weights[key]
+                ) / 2
+                child2.method_weights[key] = (
+                    parent1.method_weights[key] + parent2.method_weights[key]
+                ) / 2
+            else:
+                # 片方しかない場合、そのまま継承
+                if key in parent1.method_weights:
+                    child1.method_weights[key] = parent1.method_weights[key]
+                    child2.method_weights[key] = parent1.method_weights[key]
+                else:
+                    child1.method_weights[key] = parent2.method_weights[key]
+                    child2.method_weights[key] = parent2.method_weights[key]
+
+        return child1, child2
+
 
 @dataclass
 class TPSLResult:
@@ -244,127 +340,3 @@ def create_random_tpsl_gene(config: Any = None) -> TPSLGene:
             tpsl_gene.atr_multiplier_tp = random.uniform(atr_min * 1.5, atr_max * 2.0)
 
     return tpsl_gene
-
-
-def crossover_tpsl_genes(
-    parent1: TPSLGene, parent2: TPSLGene
-) -> tuple[TPSLGene, TPSLGene]:
-    """TP/SL遺伝子の交叉（ジェネリック関数使用）"""
-    from .genetic_utils import GeneticUtils
-
-    # 基本フィールドのカテゴリ分け
-    numeric_fields = [
-        "stop_loss_pct",
-        "take_profit_pct",
-        "risk_reward_ratio",
-        "base_stop_loss",
-        "atr_multiplier_sl",
-        "atr_multiplier_tp",
-        "confidence_threshold",
-        "priority",
-        "lookback_period",
-        "atr_period",
-    ]
-    enum_fields = ["method"]
-    choice_fields = ["enabled"]
-
-    # ジェネリック交叉を実行
-    child1, child2 = GeneticUtils.crossover_generic_genes(
-        parent1_gene=parent1,
-        parent2_gene=parent2,
-        gene_class=TPSLGene,
-        numeric_fields=numeric_fields,
-        enum_fields=enum_fields,
-        choice_fields=choice_fields,
-    )
-
-    # 共有参照を防ぐため、method_weightsをコピー
-    if hasattr(child1, "method_weights") and isinstance(child1.method_weights, dict):
-        child1.method_weights = child1.method_weights.copy()
-    if hasattr(child2, "method_weights") and isinstance(child2.method_weights, dict):
-        child2.method_weights = child2.method_weights.copy()
-
-    # method_weightsの特殊処理
-    # 辞書の各キーにたいして比率の平均を取る
-    all_keys = set(parent1.method_weights.keys()) | set(parent2.method_weights.keys())
-    for key in all_keys:
-        if key in parent1.method_weights and key in parent2.method_weights:
-            # 両方にある場合、平均を取る
-            child1.method_weights[key] = (
-                parent1.method_weights[key] + parent2.method_weights[key]
-            ) / 2
-            child2.method_weights[key] = (
-                parent1.method_weights[key] + parent2.method_weights[key]
-            ) / 2
-        else:
-            # 片方しかない場合、そのまま継承
-            if key in parent1.method_weights:
-                child1.method_weights[key] = parent1.method_weights[key]
-                child2.method_weights[key] = parent1.method_weights[key]
-            else:
-                child1.method_weights[key] = parent2.method_weights[key]
-                child2.method_weights[key] = parent2.method_weights[key]
-
-    return child1, child2
-
-
-def mutate_tpsl_gene(gene: TPSLGene, mutation_rate: float = 0.1) -> TPSLGene:
-    """TP/SL遺伝子の突然変異（ジェネリック関数使用）"""
-    import random
-    from .genetic_utils import GeneticUtils
-
-    # 基本フィールド
-    numeric_fields: List[str] = [
-        "stop_loss_pct",
-        "take_profit_pct",
-        "risk_reward_ratio",
-        "base_stop_loss",
-        "atr_multiplier_sl",
-        "atr_multiplier_tp",
-        "confidence_threshold",
-        "priority",
-        "lookback_period",
-        "atr_period",
-    ]
-
-    enum_fields = ["method"]
-
-    # 各フィールドの許容範囲
-    numeric_ranges: Dict[str, tuple[float, float]] = {
-        "stop_loss_pct": (0.005, 0.15),  # 0.5%-15%
-        "take_profit_pct": (0.01, 0.3),  # 1%-30%
-        "risk_reward_ratio": (1.0, 10.0),  # 1:10まで
-        "base_stop_loss": (0.01, 0.06),
-        "atr_multiplier_sl": (0.5, 3.0),
-        "atr_multiplier_tp": (1.0, 5.0),
-        "confidence_threshold": (0.1, 0.9),
-        "priority": (0.5, 1.5),
-        "lookback_period": (50, 200),
-        "atr_period": (10, 30),
-    }
-
-    # ジェネリック突然変異を実行
-    mutated_gene = GeneticUtils.mutate_generic_gene(
-        gene=gene,
-        gene_class=TPSLGene,
-        mutation_rate=mutation_rate,
-        numeric_fields=numeric_fields,
-        enum_fields=enum_fields,
-        numeric_ranges=numeric_ranges,
-    )
-
-    # method_weightsの突然変異（辞書フィールドの特殊処理）
-    if random.random() < mutation_rate:
-        # method_weightsを乱数で調整
-        for key in mutated_gene.method_weights:
-            current_weight = mutated_gene.method_weights[key]
-            # 現在の値を中心とした範囲で変動
-            mutated_gene.method_weights[key] = current_weight * random.uniform(0.8, 1.2)
-
-        # 合計が1.0になるよう正規化
-        total_weight = sum(mutated_gene.method_weights.values())
-        if total_weight > 0:
-            for key in mutated_gene.method_weights:
-                mutated_gene.method_weights[key] /= total_weight
-
-    return mutated_gene
