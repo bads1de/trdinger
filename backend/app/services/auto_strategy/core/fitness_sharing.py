@@ -303,7 +303,7 @@ class FitnessSharing:
 
     def _calculate_similarity(self, gene1: StrategyGene, gene2: StrategyGene) -> float:
         """
-        2つの戦略遺伝子間の類似度を計算
+        2つの戦略遺伝子間の類似度を計算（ループによる共通化）
 
         Args:
             gene1: 戦略遺伝子1
@@ -313,199 +313,113 @@ class FitnessSharing:
             類似度（0.0-1.0）
         """
         try:
-            similarity_scores = []
+            # 構成要素と計算メソッドのマッピング
+            components = [
+                (gene1.indicators, gene2.indicators, self._calculate_indicator_similarity, 0.2),
+                (gene1.long_entry_conditions, gene2.long_entry_conditions, self._calculate_condition_similarity, 0.2),
+                (gene1.short_entry_conditions, gene2.short_entry_conditions, self._calculate_condition_similarity, 0.2),
+                (gene1.risk_management, gene2.risk_management, self._calculate_risk_management_similarity, 0.2),
+                (gene1.tpsl_gene, gene2.tpsl_gene, self._calculate_tpsl_similarity, 0.15),
+                (gene1.position_sizing_gene, gene2.position_sizing_gene, self._calculate_position_sizing_similarity, 0.05),
+            ]
 
-            # 指標の類似度
-            indicator_similarity = self._calculate_indicator_similarity(
-                gene1.indicators, gene2.indicators
-            )
-            similarity_scores.append(indicator_similarity)
+            total_similarity = 0.0
+            for val1, val2, calc_func, weight in components:
+                similarity = calc_func(val1, val2)
+                total_similarity += similarity * weight
 
-            # ロング条件の類似度
-            long_similarity = self._calculate_condition_similarity(
-                gene1.long_entry_conditions, gene2.long_entry_conditions
-            )
-            similarity_scores.append(long_similarity)
-
-            # ショート条件の類似度
-            short_similarity = self._calculate_condition_similarity(
-                gene1.short_entry_conditions, gene2.short_entry_conditions
-            )
-            similarity_scores.append(short_similarity)
-
-            # リスク管理の類似度
-            risk_similarity = self._calculate_risk_management_similarity(
-                gene1.risk_management, gene2.risk_management
-            )
-            similarity_scores.append(risk_similarity)
-
-            # TP/SL遺伝子の類似度
-            tpsl_similarity = self._calculate_tpsl_similarity(
-                gene1.tpsl_gene, gene2.tpsl_gene
-            )
-            similarity_scores.append(tpsl_similarity)
-
-            # ポジションサイジング遺伝子の類似度
-            position_sizing_similarity = self._calculate_position_sizing_similarity(
-                gene1.position_sizing_gene, gene2.position_sizing_gene
-            )
-            similarity_scores.append(position_sizing_similarity)
-
-            # 重み付き平均（指標、条件、リスク管理、TP/SL、ポジションサイジングを考慮）
-            # 各要素の重要度に応じて重みを調整
-            weights = [0.2, 0.2, 0.2, 0.15, 0.15, 0.1]  # 合計1.0
-            weighted_similarity = sum(
-                score * weight for score, weight in zip(similarity_scores, weights)
-            )
-
-            return max(0.0, min(1.0, weighted_similarity))
+            return max(0.0, min(1.0, total_similarity))
 
         except Exception as e:
             logger.error(f"類似度計算エラー: {e}")
             return 0.0
 
+    def _check_none_similarity(self, val1: Any, val2: Any) -> Optional[float]:
+        """Noneチェック共通処理"""
+        if val1 is None and val2 is None: return 1.0
+        if val1 is None or val2 is None: return 0.0
+        return None
+
     def _calculate_indicator_similarity(
         self, indicators1: List[Any], indicators2: List[Any]
     ) -> float:
         """指標の類似度を計算"""
-        try:
-            if not indicators1 or not indicators2:
-                return 0.0 if indicators1 != indicators2 else 1.0
+        res = self._check_none_similarity(indicators1, indicators2)
+        if res is not None: return res
 
-            # 指標タイプの集合を作成
-            types1 = {ind.type for ind in indicators1}
-            types2 = {ind.type for ind in indicators2}
-
-            # Jaccard係数を計算
-            intersection = len(types1 & types2)
-            union = len(types1 | types2)
-
-            return intersection / union if union > 0 else 0.0
-
-        except Exception:
-            return 0.0
+        # 指標タイプのJaccard係数
+        types1 = {ind.type for ind in indicators1}
+        types2 = {ind.type for ind in indicators2}
+        union = len(types1 | types2)
+        return len(types1 & types2) / union if union > 0 else 0.0
 
     def _calculate_condition_similarity(
         self, conditions1: List[Any], conditions2: List[Any]
     ) -> float:
         """条件の類似度を計算"""
-        try:
-            if not conditions1 or not conditions2:
-                return 0.0 if conditions1 != conditions2 else 1.0
+        res = self._check_none_similarity(conditions1, conditions2)
+        if res is not None: return res
 
-            # 条件の構造的類似度を計算
-            similar_conditions = 0
-            total_conditions = max(len(conditions1), len(conditions2))
+        similar_count = 0
+        total = max(len(conditions1), len(conditions2))
+        if total == 0: return 1.0
 
-            for i in range(min(len(conditions1), len(conditions2))):
-                cond1 = conditions1[i]
-                cond2 = conditions2[i]
+        for c1, c2 in zip(conditions1, conditions2):
+            # 演算子と型の一致を評価
+            if getattr(c1, "operator", None) == getattr(c2, "operator", None):
+                similar_count += 0.5
+            if str(type(getattr(c1, "left_operand", None))) == str(type(getattr(c2, "left_operand", None))):
+                similar_count += 0.5
 
-                # 演算子の一致
-                if hasattr(cond1, "operator") and hasattr(cond2, "operator"):
-                    if cond1.operator == cond2.operator:
-                        similar_conditions += 0.5
-
-                # オペランドタイプの一致（簡易版）
-                if hasattr(cond1, "left_operand") and hasattr(cond2, "left_operand"):
-                    if str(type(cond1.left_operand)) == str(type(cond2.left_operand)):
-                        similar_conditions += 0.5
-
-            return (
-                similar_conditions / total_conditions if total_conditions > 0 else 0.0
-            )
-
-        except Exception:
-            return 0.0
+        return similar_count / total
 
     def _calculate_risk_management_similarity(
         self, risk1: Dict[str, Any], risk2: Dict[str, Any]
     ) -> float:
         """リスク管理の類似度を計算"""
-        try:
-            if not risk1 or not risk2:
-                return 0.0 if risk1 != risk2 else 1.0
+        res = self._check_none_similarity(risk1, risk2)
+        if res is not None: return res
 
-            similarity_score = 0.0
-            total_fields = 0
+        common_fields = set(risk1.keys()) & set(risk2.keys())
+        if not common_fields: return 0.0
 
-            # 共通フィールドの類似度を計算
-            common_fields = set(risk1.keys()) & set(risk2.keys())
-
-            for field in common_fields:
-                total_fields += 1
-                val1 = risk1[field]
-                val2 = risk2[field]
-
-                if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
-                    # 数値の場合は相対差を計算
-                    if val1 == 0 and val2 == 0:
-                        similarity_score += 1.0
-                    elif val1 != 0 or val2 != 0:
-                        max_val = max(abs(val1), abs(val2))
-                        if max_val > 0:
-                            diff = abs(val1 - val2) / max_val
-                            similarity_score += max(0.0, 1.0 - diff)
+        score = 0.0
+        for field in common_fields:
+            v1, v2 = risk1[field], risk2[field]
+            if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
+                if v1 == v2: score += 1.0
                 else:
-                    # その他の場合は完全一致
-                    if val1 == val2:
-                        similarity_score += 1.0
+                    max_v = max(abs(v1), abs(v2))
+                    score += max(0.0, 1.0 - abs(v1 - v2) / max_v) if max_v > 0 else 1.0
+            elif v1 == v2:
+                score += 1.0
 
-            return similarity_score / total_fields if total_fields > 0 else 0.0
-
-        except Exception:
-            return 0.0
+        return score / len(common_fields)
 
     def _calculate_tpsl_similarity(self, tpsl1: Any, tpsl2: Any) -> float:
         """TP/SL遺伝子の類似度を計算"""
-        if tpsl1 is None and tpsl2 is None:
-            return 1.0
-        if tpsl1 is None or tpsl2 is None:
-            return 0.0
+        res = self._check_none_similarity(tpsl1, tpsl2)
+        if res is not None: return res
 
-        # 例: メソッドと主要パラメータの一致度
-        score = 0.0
-        if tpsl1.method == tpsl2.method:
-            score += 0.5
-
-        # 数値パラメータの類似度（例: stop_loss_pct, take_profit_pct）
-        if tpsl1.stop_loss_pct is not None and tpsl2.stop_loss_pct is not None:
-            diff = abs(tpsl1.stop_loss_pct - tpsl2.stop_loss_pct)
-            score += max(
-                0.0,
-                0.25 * (1 - diff / max(tpsl1.stop_loss_pct, tpsl2.stop_loss_pct, 1e-6)),
-            )
-
-        if tpsl1.take_profit_pct is not None and tpsl2.take_profit_pct is not None:
-            diff = abs(tpsl1.take_profit_pct - tpsl2.take_profit_pct)
-            score += max(
-                0.0,
-                0.25
-                * (1 - diff / max(tpsl1.take_profit_pct, tpsl2.take_profit_pct, 1e-6)),
-            )
-
+        score = 0.5 if tpsl1.method == tpsl2.method else 0.0
+        # 主要パラメータの類似度
+        for attr in ["stop_loss_pct", "take_profit_pct"]:
+            v1, v2 = getattr(tpsl1, attr, None), getattr(tpsl2, attr, None)
+            if v1 is not None and v2 is not None:
+                diff = abs(v1 - v2)
+                score += max(0.0, 0.25 * (1 - diff / max(v1, v2, 1e-6)))
         return min(1.0, score)
 
     def _calculate_position_sizing_similarity(self, ps1: Any, ps2: Any) -> float:
         """ポジションサイジング遺伝子の類似度を計算"""
-        if ps1 is None and ps2 is None:
-            return 1.0
-        if ps1 is None or ps2 is None:
-            return 0.0
+        res = self._check_none_similarity(ps1, ps2)
+        if res is not None: return res
 
-        # 例: メソッドと主要パラメータの一致度
-        score = 0.0
-        if ps1.method == ps2.method:
-            score += 0.5
-
-        # 数値パラメータの類似度（例: risk_per_trade）
-        if ps1.risk_per_trade is not None and ps2.risk_per_trade is not None:
-            diff = abs(ps1.risk_per_trade - ps2.risk_per_trade)
-            score += max(
-                0.0,
-                0.5 * (1 - diff / max(ps1.risk_per_trade, ps2.risk_per_trade, 1e-6)),
-            )
-
+        score = 0.5 if ps1.method == ps2.method else 0.0
+        v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(ps2, "risk_per_trade", None)
+        if v1 is not None and v2 is not None:
+            diff = abs(v1 - v2)
+            score += max(0.0, 0.5 * (1 - diff / max(v1, v2, 1e-6)))
         return min(1.0, score)
 
     def silhouette_based_sharing(self, population: List[Any]) -> List[Any]:
@@ -747,20 +661,6 @@ class FitnessSharing:
 
         return numeric, dynamic
 
-    def _sharing_function(self, similarity: float) -> float:
-        """
-        共有関数
-
-        Args:
-            similarity: 類似度
-
-        Returns:
-            共有値
-        """
-        if similarity >= 0.0 and similarity <= self.sharing_radius:
-            return 1.0  # 半径内では完全共有
-        else:
-            return 0.0  # 半径外では共有なし
 
 
 

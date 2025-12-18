@@ -37,16 +37,16 @@ class TestHybridFeatureAdapter:
     def mock_gene(self):
         gene = Mock(spec=StrategyGene)
         gene.indicators = [
-            Mock(type="RSI", parameters={"period": 14}),
-            Mock(type="SMA", parameters={"period": 20}),
+            Mock(type="RSI", parameters={"period": 14}, enabled=True),
+            Mock(type="SMA", parameters={"period": 20}, enabled=True),
         ]
         gene.long_entry_conditions = ["cond1"]
         gene.short_entry_conditions = ["cond2"]
         gene.has_long_short_separation.return_value = True
 
         # Nested mocks for tpsl/position sizing
-        gene.tpsl_gene = Mock(take_profit_pct=0.05, stop_loss_pct=0.02)
-        gene.position_sizing_gene = Mock(method="fixed")
+        gene.tpsl_gene = Mock(take_profit_pct=0.05, stop_loss_pct=0.02, enabled=True)
+        gene.position_sizing_gene = Mock(method="fixed", enabled=True)
 
         return gene
 

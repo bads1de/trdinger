@@ -161,11 +161,6 @@ class TestHybridIndividualEvaluator:
     ):
         """
         ML予測を含む個体評価テスト
-
-        検証項目:
-        - バックテストが実行される
-        - ML予測が実行される
-        - 予測スコアがフィットネスに統合される
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
@@ -175,6 +170,14 @@ class TestHybridIndividualEvaluator:
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
+        # バックテスト設定をセット（バリデーションエラー回避）
+        evaluator.set_backtest_config({
+            "symbol": "BTCUSDT",
+            "timeframe": "1h",
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "initial_capital": 10000.0
+        })
 
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
 
@@ -195,10 +198,6 @@ class TestHybridIndividualEvaluator:
     ):
         """
         ML予測なしの個体評価テスト（従来のGA評価）
-
-        検証項目:
-        - predictorがNoneの場合、従来の評価が行われる
-        - フィットネスが正しく計算される
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
@@ -208,6 +207,14 @@ class TestHybridIndividualEvaluator:
             backtest_service=mock_backtest_service,
             predictor=None,  # 予測なし
         )
+        # バックテスト設定をセット
+        evaluator.set_backtest_config({
+            "symbol": "BTCUSDT",
+            "timeframe": "1h",
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "initial_capital": 10000.0
+        })
 
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
 
@@ -489,11 +496,18 @@ class TestHybridIndividualEvaluator:
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
+        # バックテスト設定をセット
+        evaluator.set_backtest_config({
+            "symbol": "BTCUSDT",
+            "timeframe": "1h",
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "initial_capital": 10000.0
+        })
 
         fitness = evaluator.evaluate_individual(
             sample_individual, ga_config_no_prediction
         )
-
         # ML予測は呼ばれるが、フィットネスには影響しない
         assert isinstance(fitness, tuple)
         assert fitness[0] > 0
@@ -511,10 +525,6 @@ class TestHybridIndividualEvaluator:
     ):
         """
         HybridFeatureAdapterとの統合テスト
-
-        検証項目:
-        - Gene → 特徴量変換 → ML予測の流れが動作する
-        - HybridFeatureAdapterが正しく呼ばれる
         """
         from app.services.auto_strategy.core.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
@@ -534,6 +544,14 @@ class TestHybridIndividualEvaluator:
             backtest_service=mock_backtest_service,
             predictor=mock_hybrid_predictor,
         )
+        # バックテスト設定をセット
+        evaluator.set_backtest_config({
+            "symbol": "BTCUSDT",
+            "timeframe": "1h",
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "initial_capital": 10000.0
+        })
 
         fitness = evaluator.evaluate_individual(sample_individual, ga_config)
 

@@ -34,80 +34,41 @@ class OperandGroupingSystem:
     同一グループ内での比較を優先する仕組みを提供します。
     """
 
+    # 指標とグループのマッピング（クラス定数として定義）
+    GROUP_PATTERNS: Dict[OperandGroup, List[str]] = {
+        OperandGroup.PRICE_BASED: [
+            "SMA", "EMA", "SAR", "KELTNER", "DONCHIAN", "SUPERTREND", "VWAP", "BB", "ACCBANDS",
+            "close", "open", "high", "low"
+        ],
+        OperandGroup.PERCENTAGE_0_100: [
+            "RSI", "STOCH", "ADX", "MFI", "QQE", "UI"
+        ],
+        OperandGroup.PERCENTAGE_NEG100_100: [
+            "CCI", "CMO", "AROONOSC"
+        ],
+        OperandGroup.ZERO_CENTERED: [
+            "MACD", "ROC", "MOM", "OBV", "EFI", "CMF", "WILLR", "AD", "ADOSC", "SQUEEZE"
+        ],
+        OperandGroup.SPECIAL_SCALE: [
+            "volume", "OpenInterest", "FundingRate", "FUNDING_RATE", "OPEN_INTEREST"
+        ]
+    }
+
     def __init__(self):
         """グループ化システムを初期化"""
-        self._group_mappings = self._initialize_group_mappings()
+        # パターンから逆引きマップを作成
+        self._group_mappings: Dict[str, OperandGroup] = {}
+        for group, patterns in self.GROUP_PATTERNS.items():
+            for p in patterns:
+                self._group_mappings[p] = group
+                self._group_mappings[p.upper()] = group
+
         self._compatibility_matrix = self._initialize_compatibility_matrix()
-
-    def _initialize_group_mappings(self) -> Dict[str, OperandGroup]:
-        """オペランドとグループのマッピングを初期化"""
-        mappings = {}
-
-        # 価格ベース指標を追加（価格と同じスケール）
-        mappings.update(self._get_price_based_mappings())
-
-        return mappings
-
-    def _get_price_based_mappings(self) -> Dict[str, OperandGroup]:
-        """価格ベース指標マッピングを取得"""
-        return {
-            # Price-based indicators
-            "SMA": OperandGroup.PRICE_BASED,
-            "EMA": OperandGroup.PRICE_BASED,
-            "close": OperandGroup.PRICE_BASED,
-            "open": OperandGroup.PRICE_BASED,
-            "high": OperandGroup.PRICE_BASED,
-            "low": OperandGroup.PRICE_BASED,
-            # 0-100%オシレーター
-            "RSI": OperandGroup.PERCENTAGE_0_100,
-            "STOCH": OperandGroup.PERCENTAGE_0_100,
-            "ADX": OperandGroup.PERCENTAGE_0_100,
-            "MFI": OperandGroup.PERCENTAGE_0_100,
-            "QQE": OperandGroup.PERCENTAGE_0_100,
-            # ±100オシレーター
-            "CCI": OperandGroup.PERCENTAGE_NEG100_100,
-            # ゼロ中心の変化率・モメンタム指標
-            "MACD": OperandGroup.ZERO_CENTERED,
-            "ROC": OperandGroup.ZERO_CENTERED,
-            "MOM": OperandGroup.ZERO_CENTERED,
-            # Trend indicators
-            "SAR": OperandGroup.PRICE_BASED,
-            "KELTNER": OperandGroup.PRICE_BASED,
-            "DONCHIAN": OperandGroup.PRICE_BASED,
-            "SUPERTREND": OperandGroup.PRICE_BASED,
-            # Volatility indicators
-            "ATR": OperandGroup.PRICE_BASED,
-            "UI": OperandGroup.PERCENTAGE_0_100,
-            # Volume indicators
-            "OBV": OperandGroup.ZERO_CENTERED,
-            "VWAP": OperandGroup.PRICE_BASED,
-            "EFI": OperandGroup.ZERO_CENTERED,
-            "CMF": OperandGroup.ZERO_CENTERED,
-            # Special scale
-            "volume": OperandGroup.SPECIAL_SCALE,
-            "OpenInterest": OperandGroup.SPECIAL_SCALE,
-            "FundingRate": OperandGroup.SPECIAL_SCALE,
-            # Additional indicators
-            "WILLR": OperandGroup.ZERO_CENTERED,
-            "BB": OperandGroup.PRICE_BASED,
-            "ACCBANDS": OperandGroup.PRICE_BASED,
-            "AD": OperandGroup.ZERO_CENTERED,
-            "ADOSC": OperandGroup.ZERO_CENTERED,
-            "SQUEEZE": OperandGroup.ZERO_CENTERED,
-        }
 
     def _initialize_compatibility_matrix(
         self,
     ) -> Dict[Tuple[OperandGroup, OperandGroup], float]:
-        """グループ間の互換性マトリックスを初期化
-
-        Returns:
-            グループペアと互換性スコア（0.0-1.0）のマッピング
-            1.0 = 完全に互換（同一グループ）
-            0.8 = 高い互換性
-            0.3 = 低い互換性
-            0.1 = 非常に低い互換性
-        """
+        """グループ間の互換性マトリックスを初期化"""
         matrix = {}
 
         # 同一グループ内は完全に互換
@@ -137,111 +98,28 @@ class OperandGroupingSystem:
         return matrix
 
     def get_operand_group(self, operand: str) -> OperandGroup:
-        """オペランドのグループを取得
-
-        Args:
-            operand: オペランド名
-
-        Returns:
-            オペランドのグループ
-        """
-        logger.debug("get_operand_group called for operand='%s'", operand)
-
-        # 直接マッピングがある場合
-        if operand in self._group_mappings:
-            group = self._group_mappings[operand]
-            if DEBUG_MODE:
-                logger.debug("Direct mapping found for %s -> %s", operand, group.value)
-            return group
-
-        # パターンマッチングで判定
-        group = self._classify_by_pattern(operand)
+        """オペランドのグループを取得"""
         if DEBUG_MODE:
-            logger.debug("Pattern matching resulted for %s -> %s", operand, group.value)
-        return group
+            logger.debug("get_operand_group called for operand='%s'", operand)
+
+        # 1. 直接マップまたは完全一致チェック
+        if operand in self._group_mappings:
+            return self._group_mappings[operand]
+        
+        upper_operand = operand.upper()
+        if upper_operand in self._group_mappings:
+            return self._group_mappings[upper_operand]
+
+        # 2. パターンマッチング（部分一致）
+        for group, patterns in self.GROUP_PATTERNS.items():
+            if any(p in upper_operand for p in patterns):
+                return group
+
+        return OperandGroup.PRICE_BASED
 
     def _classify_by_pattern(self, operand: str) -> OperandGroup:
-        """パターンマッチングによるオペランド分類
-
-        Args:
-            operand: オペランド名
-
-        Returns:
-            推定されるグループ
-        """
-        operand_upper = operand.upper()
-
-        # 0-100%オシレーターのパターン
-        if any(
-            pattern in operand_upper
-            for pattern in ["RSI", "STOCH", "ADX", "MFI", "QQE", "UI"]
-        ):
-            return OperandGroup.PERCENTAGE_0_100
-
-        # ±100オシレーターのパターン
-        if any(pattern in operand_upper for pattern in ["CCI", "CMO", "AROONOSC"]):
-            return OperandGroup.PERCENTAGE_NEG100_100
-
-        # ゼロ中心のパターン (新規指標拡張)
-        if any(
-            pattern in operand_upper
-            for pattern in [
-                "MACD",
-                "MOM",
-                "OBV",
-                "ROC",
-                "EFI",
-                "CMF",
-                "SQUEEZE",
-                "WILLR",
-                "AD",
-                "ADOSC",
-            ]
-        ):
-            return OperandGroup.ZERO_CENTERED
-
-        # 新規Trend系パターン + ボリンジャーバンド
-        if any(
-            pattern in operand_upper
-            for pattern in [
-                "SMA",
-                "EMA",
-                "KELTNER",
-                "DONCHIAN",
-                "SUPERTREND",
-                "BB",
-                "ACCBANDS",
-                "SAR",
-            ]
-        ):
-            return OperandGroup.PRICE_BASED
-
-        # 新規Volatility系パターン
-        if any(
-            pattern in operand_upper
-            for pattern in ["KELTNER", "DONCHIAN", "SUPERTREND"]
-        ):
-            return OperandGroup.PRICE_BASED
-        if any(pattern in operand_upper for pattern in ["ACCBANDS", "UI"]):
-            return OperandGroup.PERCENTAGE_0_100
-
-        # 新規Volume系パターン
-        if any(pattern in operand_upper for pattern in ["EFI", "CMF"]):
-            return OperandGroup.ZERO_CENTERED
-        if "VWAP" in operand_upper:
-            return OperandGroup.PRICE_BASED
-
-        # 特殊スケールのパターン
-        if any(
-            pattern in operand_upper
-            for pattern in ["OPENINTEREST", "FUNDING_RATE", "VOLUME"]
-        ):
-            return OperandGroup.SPECIAL_SCALE
-
-        # デフォルトは価格ベース
-        if DEBUG_MODE:
-            logger.debug("Default classification for %s -> PRICE_BASED", operand)
-        return OperandGroup.PRICE_BASED
+        """後方互換性のためのエイリアス"""
+        return self.get_operand_group(operand)
 
     def get_compatibility_score(self, operand1: str, operand2: str) -> float:
         """2つのオペランド間の互換性スコアを取得

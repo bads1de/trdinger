@@ -154,9 +154,11 @@ class TestOptimizedFitnessSharing:
             niche_count = 0.0
             for j, gene_j in enumerate(genes):
                 similarity = fitness_sharing._calculate_similarity(gene_i, gene_j)
-                sharing_value = fitness_sharing._sharing_function(similarity)
+                # 類似度ベースの共有判定: 類似度が高い(1.0に近い)ほど共有される
+                # ここでは単純化して、類似度 > (1 - radius) を共有範囲とする
+                sharing_value = 1.0 if similarity >= (1.0 - fitness_sharing.sharing_radius) else 0.0
                 niche_count += sharing_value
-            naive_counts.append(max(1.0, niche_count))
+            naive_counts.append(niche_count)
 
         # 類似度計算アルゴリズムが異なるため、完全一致は期待しない
         # ただし、同程度の範囲にあることを確認

@@ -191,7 +191,7 @@ class HybridFeatureAdapter:
 
     def _extract_gene_features(self, gene: StrategyGene) -> Dict[str, Any]:
         """
-        StrategyGeneから特徴量を抽出
+        StrategyGeneから特徴量を抽出（整理版）
 
         Args:
             gene: 戦略遺伝子
@@ -201,76 +201,38 @@ class HybridFeatureAdapter:
         """
         features = {}
 
-        # インジケータ数
-        features["indicator_count"] = len(gene.indicators) if gene.indicators else 0
+        # 1. 構造の統計
+        enabled_inds = [ind for ind in gene.indicators if ind.enabled]
+        features["indicator_count"] = len(enabled_inds)
+        
+        long_count = len(gene.long_entry_conditions or [])
+        short_count = len(gene.short_entry_conditions or [])
+        features["long_condition_count"] = long_count
+        features["short_condition_count"] = short_count
+        features["condition_count"] = long_count + short_count
+        features["has_long_short_separation"] = int(bool(gene.has_long_short_separation()))
 
-        # 条件数
-        long_conditions = gene.long_entry_conditions or []
-        short_conditions = gene.short_entry_conditions or []
-        features["condition_count"] = len(long_conditions) + len(short_conditions)
-        features["long_condition_count"] = len(long_conditions)
-        features["short_condition_count"] = len(short_conditions)
+        # 2. 指標特性の抽出
+        indicator_types = [ind.type for ind in enabled_inds]
+        for itype in ["SMA", "EMA", "RSI", "MACD", "BollingerBands"]:
+            features[f"has_{itype.lower()}"] = int(itype in indicator_types)
 
-        # ロング・ショート分離フラグ
-        features["has_long_short_separation"] = int(gene.has_long_short_separation())
+        # 指標パラメータ（期間）の平均
+        periods = [ind.parameters.get("period") for ind in enabled_inds if "period" in ind.parameters]
+        features["avg_indicator_period"] = np.mean(periods) if periods else 0.0
 
-        # インジケータタイプの特徴
-        if gene.indicators:
-            indicator_types = [getattr(ind, "type", "") for ind in gene.indicators]
-            # 主要インジケータの存在フラグ
-            features["has_sma"] = int("SMA" in indicator_types)
-            features["has_ema"] = int("EMA" in indicator_types)
-            features["has_rsi"] = int("RSI" in indicator_types)
-            features["has_macd"] = int("MACD" in indicator_types)
-            features["has_bollinger"] = int("BollingerBands" in indicator_types)
+        # 3. TP/SL および ポジションサイジング設定
+        tpsl = gene.tpsl_gene
+        features["has_tpsl"] = int(bool(tpsl is not None and getattr(tpsl, "enabled", False)))
+        features["take_profit_ratio"] = getattr(tpsl, "take_profit_pct", 0.02) if tpsl else 0.02
+        features["stop_loss_ratio"] = getattr(tpsl, "stop_loss_pct", 0.01) if tpsl else 0.01
 
-            # インジケータパラメータの平均
-            periods = []
-            for ind in gene.indicators:
-                parameters = getattr(ind, "parameters", {}) or {}
-                if "period" in parameters:
-                    periods.append(parameters["period"])
-            if periods:
-                features["avg_indicator_period"] = np.mean(periods)
-            else:
-                features["avg_indicator_period"] = 0
+        ps = gene.position_sizing_gene
+        features["has_position_sizing"] = int(bool(ps is not None and getattr(ps, "enabled", False)))
+        if ps:
+            method_str = str(getattr(ps, "method", ""))
+            features["position_sizing_method"] = int(hashlib.sha256(method_str.encode()).hexdigest()[:6], 16)
         else:
-            features.update(
-                {
-                    "has_sma": 0,
-                    "has_ema": 0,
-                    "has_rsi": 0,
-                    "has_macd": 0,
-                    "has_bollinger": 0,
-                    "avg_indicator_period": 0,
-                }
-            )
-
-        # TPSL設定
-        if gene.tpsl_gene:
-            features["has_tpsl"] = 1
-            tpsl_gene = gene.tpsl_gene
-            tp_value = getattr(tpsl_gene, "take_profit_ratio", None)
-            if tp_value is None:
-                tp_value = getattr(tpsl_gene, "take_profit_pct", 0)
-            sl_value = getattr(tpsl_gene, "stop_loss_ratio", None)
-            if sl_value is None:
-                sl_value = getattr(tpsl_gene, "stop_loss_pct", 0)
-            features["take_profit_ratio"] = tp_value
-            features["stop_loss_ratio"] = sl_value
-        else:
-            features["has_tpsl"] = 0
-            features["take_profit_ratio"] = 0
-            features["stop_loss_ratio"] = 0
-
-        # ポジションサイジング設定
-        if gene.position_sizing_gene:
-            features["has_position_sizing"] = 1
-            method_repr = str(getattr(gene.position_sizing_gene, "method", ""))
-            digest = hashlib.sha256(method_repr.encode("utf-8")).hexdigest()
-            features["position_sizing_method"] = int(digest[:6], 16)
-        else:
-            features["has_position_sizing"] = 0
             features["position_sizing_method"] = 0
 
         return features

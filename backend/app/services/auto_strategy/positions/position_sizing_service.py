@@ -49,6 +49,7 @@ class PositionSizingService:
         self._calculator_factory = CalculatorFactory()
         self._calculation_history: List[PositionSizingResult] = []
 
+    @safe_operation(context="ポジションサイズ計算", is_api_call=False)
     def calculate_position_size(
         self,
         gene,
@@ -61,100 +62,58 @@ class PositionSizingService:
     ) -> PositionSizingResult:
         """
         ポジションサイズを計算
-
-        Args:
-            gene: ポジションサイジング遺伝子
-            account_balance: 口座残高
-            current_price: 現在価格
-            symbol: 取引ペア
-            market_data: 市場データ
-            trade_history: 取引履歴
-            use_cache: キャッシュを使用するか
-
-        Returns:
-            計算結果
         """
+        start_time = datetime.now()
+        warnings: List[str] = []
 
-        @safe_operation(
-            context="ポジションサイズ計算",
-            is_api_call=False,
-            default_return=self._create_error_result(
-                "計算処理でエラーが発生しました",
-                gene.method.value if gene and hasattr(gene, "method") else "unknown",
-            ),
+        # 1. 入力値の検証
+        validation_result = self._validate_inputs(gene, account_balance, current_price)
+        if not validation_result["valid"]:
+            method_name = gene.method.value if gene and hasattr(gene, "method") else "unknown"
+            return self._create_error_result(validation_result["error"], method_name)
+
+        # 2. 市場データの準備
+        enhanced_market_data = self._market_data_handler.prepare_market_data(
+            symbol, current_price, market_data, use_cache
         )
-        def _calculate_position_size():
-            start_time = datetime.now()
-            warnings: List[str] = []
 
-            # 入力値の検証
-            validation_result = self._validate_inputs(
-                gene, account_balance, current_price
-            )
-            if not validation_result["valid"]:
-                method_name = (
-                    gene.method.value if gene and hasattr(gene, "method") else "unknown"
-                )
-                return self._create_error_result(
-                    validation_result["error"], method_name
-                )
+        # 3. 計算機の実行
+        calculator = self._calculator_factory.create_calculator(gene.method.value)
+        result = calculator.calculate(
+            gene, account_balance, current_price,
+            market_data=enhanced_market_data, trade_history=trade_history
+        )
 
-            # 市場データの準備
-            enhanced_market_data = self._market_data_handler.prepare_market_data(
-                symbol, current_price, market_data, use_cache
-            )
+        # 4. リスクと信頼度の計算
+        risk_metrics = self._calculate_risk_metrics(
+            result["position_size"], account_balance, current_price, enhanced_market_data, gene
+        )
+        confidence_score = self._calculate_confidence_score(gene, enhanced_market_data, trade_history)
 
-            # 計算機の選択と実行
-            calculator = self._calculator_factory.create_calculator(gene.method.value)
-            result = calculator.calculate(
-                gene,
-                account_balance,
-                current_price,
-                market_data=enhanced_market_data,
-                trade_history=trade_history,
-            )
+        # 5. 結果の構築
+        calculation_time = (datetime.now() - start_time).total_seconds()
+        final_result = PositionSizingResult(
+            position_size=result["position_size"],
+            method_used=gene.method.value,
+            calculation_details={
+                **result["details"],
+                "calculation_time_seconds": calculation_time,
+                "account_balance": account_balance,
+                "current_price": current_price,
+                "symbol": symbol,
+            },
+            confidence_score=confidence_score,
+            risk_metrics=risk_metrics,
+            warnings=warnings + result.get("warnings", []),
+            timestamp=datetime.now(),
+        )
 
-            # リスクメトリクスの計算
-            risk_metrics = self._calculate_risk_metrics(
-                result["position_size"],
-                account_balance,
-                current_price,
-                enhanced_market_data,
-                gene,
-            )
+        # 履歴の管理
+        self._calculation_history.append(final_result)
+        if len(self._calculation_history) > 1000:
+            self._calculation_history = self._calculation_history[-500:]
 
-            # 信頼度スコアの計算
-            confidence_score = self._calculate_confidence_score(
-                gene, enhanced_market_data, trade_history
-            )
-
-            # 結果の作成
-            calculation_time = (datetime.now() - start_time).total_seconds()
-
-            final_result = PositionSizingResult(
-                position_size=result["position_size"],
-                method_used=gene.method.value,
-                calculation_details={
-                    **result["details"],
-                    "calculation_time_seconds": calculation_time,
-                    "account_balance": account_balance,
-                    "current_price": current_price,
-                    "symbol": symbol,
-                },
-                confidence_score=confidence_score,
-                risk_metrics=risk_metrics,
-                warnings=warnings + result.get("warnings", []),
-                timestamp=datetime.now(),
-            )
-
-            # 履歴に追加
-            self._calculation_history.append(final_result)
-            if len(self._calculation_history) > 1000:
-                self._calculation_history = self._calculation_history[-500:]
-
-            return final_result
-
-        return _calculate_position_size()
+        return final_result
 
     def _validate_inputs(
         self, gene, account_balance: float, current_price: float
@@ -176,6 +135,7 @@ class PositionSizingService:
 
         return {"valid": True}
 
+    @safe_operation(context="リスクメトリクス計算", is_api_call=False)
     def _calculate_risk_metrics(
         self,
         position_size: float,
@@ -185,75 +145,52 @@ class PositionSizingService:
         gene,
     ) -> Dict[str, float]:
         """リスクメトリクスの計算"""
-
-        @safe_operation(
-            context="リスクメトリクス計算",
-            is_api_call=False,
-            default_return={
-                "position_value": 0.0,
-                "position_ratio": 0.0,
-                "potential_loss_1atr": 0.0,
-                "potential_loss_ratio": 0.0,
-                "atr_used": 0.0,
-            },
+        # 基本メトリクス
+        position_value = position_size * current_price
+        position_ratio = (
+            position_value / account_balance if account_balance > 0 else 0
         )
-        def _calculate_risk_metrics_impl():
-            # 基本メトリクス
-            position_value = position_size * current_price
-            position_ratio = (
-                position_value / account_balance if account_balance > 0 else 0
-            )
 
-            # ボラティリティベースのリスク
-            atr_pct = market_data.get("atr_pct", 0.02)
-            potential_loss_1atr = position_value * atr_pct
-            potential_loss_ratio = (
-                potential_loss_1atr / account_balance if account_balance > 0 else 0
-            )
+        # ボラティリティベースのリスク
+        atr_pct = market_data.get("atr_pct", 0.02)
+        potential_loss_1atr = position_value * atr_pct
+        potential_loss_ratio = (
+            potential_loss_1atr / account_balance if account_balance > 0 else 0
+        )
 
-            returns_data = market_data.get("returns")
-            returns_sample: List[float] = []
-            if returns_data is not None:
-                try:
-                    returns_list = list(returns_data)
-                    lookback = max(
-                        int(getattr(gene, "var_lookback", len(returns_list))), 1
-                    )
-                    returns_sample = returns_list[-lookback:]
-                except TypeError:
-                    returns_sample = []
+        returns_data = market_data.get("returns")
+        returns_sample: List[float] = []
+        if returns_data is not None:
+            try:
+                returns_list = list(returns_data)
+                lookback = max(int(getattr(gene, "var_lookback", len(returns_list))), 1)
+                returns_sample = returns_list[-lookback:]
+            except TypeError:
+                returns_sample = []
 
-            var_ratio = calculate_historical_var(
-                returns_sample, getattr(gene, "var_confidence", 0.95)
-            )
-            expected_shortfall_ratio = calculate_expected_shortfall(
-                returns_sample, getattr(gene, "var_confidence", 0.95)
-            )
+        var_ratio = calculate_historical_var(
+            returns_sample, getattr(gene, "var_confidence", 0.95)
+        )
+        expected_shortfall_ratio = calculate_expected_shortfall(
+            returns_sample, getattr(gene, "var_confidence", 0.95)
+        )
 
-            var_loss = position_value * var_ratio
-            es_loss = position_value * expected_shortfall_ratio
-            max_var_allowed = account_balance * getattr(gene, "max_var_ratio", 0.0)
-            max_es_allowed = account_balance * getattr(
-                gene, "max_expected_shortfall_ratio", 0.0
-            )
+        return {
+            "position_value": position_value,
+            "position_ratio": position_ratio,
+            "potential_loss_1atr": potential_loss_1atr,
+            "potential_loss_ratio": potential_loss_ratio,
+            "atr_used": atr_pct,
+            "var": var_ratio,
+            "var_loss": position_value * var_ratio,
+            "max_var_allowed": account_balance * getattr(gene, "max_var_ratio", 0.0),
+            "expected_shortfall": expected_shortfall_ratio,
+            "expected_shortfall_loss": position_value * expected_shortfall_ratio,
+            "max_expected_shortfall_allowed": account_balance * getattr(gene, "max_expected_shortfall_ratio", 0.0),
+            "return_sample_size": len(returns_sample),
+        }
 
-            return {
-                "position_value": position_value,
-                "position_ratio": position_ratio,
-                "potential_loss_1atr": potential_loss_1atr,
-                "potential_loss_ratio": potential_loss_ratio,
-                "atr_used": atr_pct,
-                "var": var_ratio,
-                "var_loss": var_loss,
-                "max_var_allowed": max_var_allowed,
-                "expected_shortfall": expected_shortfall_ratio,
-                "expected_shortfall_loss": es_loss,
-                "max_expected_shortfall_allowed": max_es_allowed,
-                "return_sample_size": len(returns_sample),
-            }
-
-        return _calculate_risk_metrics_impl()
-
+    @safe_operation(context="信頼度スコア計算", is_api_call=False)
     def _calculate_confidence_score(
         self,
         gene,
@@ -261,33 +198,23 @@ class PositionSizingService:
         trade_history: Optional[List[Dict[str, Any]]],
     ) -> float:
         """信頼度スコアの計算"""
+        score = 0.5  # ベーススコア
 
-        @safe_operation(
-            context="信頼度スコア計算", is_api_call=False, default_return=0.5
-        )
-        def _calculate_confidence_score_impl():
-            score = 0.5  # ベーススコア
+        # データ品質による調整
+        atr_source = market_data.get("atr_source")
+        if atr_source == "real": score += 0.2
+        elif atr_source == "calculated": score += 0.1
 
-            # データ品質による調整
-            if market_data.get("atr_source") == "real":
-                score += 0.2
-            elif market_data.get("atr_source") == "calculated":
-                score += 0.1
+        # 取引履歴による調整
+        if trade_history:
+            if len(trade_history) >= 50: score += 0.2
+            elif len(trade_history) >= 20: score += 0.1
 
-            # 取引履歴による調整
-            if trade_history and len(trade_history) >= 50:
-                score += 0.2
-            elif trade_history and len(trade_history) >= 20:
-                score += 0.1
+        # 遺伝子の妥当性
+        is_valid, _ = gene.validate()
+        if is_valid: score += 0.1
 
-            # 遺伝子パラメータの妥当性による調整
-            is_valid, _ = gene.validate()
-            if is_valid:
-                score += 0.1
-
-            return min(1.0, max(0.0, score))
-
-        return _calculate_confidence_score_impl()
+        return min(1.0, max(0.0, score))
 
     def _create_error_result(
         self, error_message: str, method: str

@@ -48,40 +48,22 @@ class ExperimentPersistenceService:
     ) -> str:
         """
         実験を作成
-
-        Args:
-            experiment_id: フロントエンドで生成された実験ID（UUID）
-            experiment_name: 実験名
-            ga_config: GA設定
-            backtest_config: バックテスト設定
-
-        Returns:
-            実験ID（入力されたものと同じ）
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="実験作成", is_api_call=False)
-        def _create_experiment():
-            with self.db_session_factory() as db:
-                ga_experiment_repo = GAExperimentRepository(db)
-                config_data = {
-                    "ga_config": ga_config.to_dict(),
-                    "backtest_config": backtest_config,
-                    "experiment_id": experiment_id,  # フロントエンドで生成されたUUIDを保存
-                }
-                db_experiment = ga_experiment_repo.create_experiment(
-                    name=experiment_name,
-                    config=config_data,
-                    total_generations=ga_config.generations,
-                    status="running",
-                )
-                logger.info(
-                    f"実験を作成しました: {experiment_name} (DB ID: {db_experiment.id}, UUID: {experiment_id})"
-                )
-                # フロントエンドで生成されたUUIDを返す
-                return experiment_id
-
-        return _create_experiment()
+        with self.db_session_factory() as db:
+            ga_experiment_repo = GAExperimentRepository(db)
+            config_data = {
+                "ga_config": ga_config.to_dict(),
+                "backtest_config": backtest_config,
+                "experiment_id": experiment_id,
+            }
+            ga_experiment_repo.create_experiment(
+                name=experiment_name,
+                config=config_data,
+                total_generations=ga_config.generations,
+                status="running",
+            )
+            logger.info(f"実験を作成しました: {experiment_name} (UUID: {experiment_id})")
+            return experiment_id
 
     def save_experiment_result(
         self,
@@ -91,35 +73,23 @@ class ExperimentPersistenceService:
         backtest_config: Dict[str, Any],
     ):
         """実験結果をデータベースに保存"""
-        from app.utils.error_handler import safe_operation
+        experiment_info = self.get_experiment_info(experiment_id)
+        if not experiment_info:
+            logger.error(f"実験情報が見つかりません: {experiment_id}")
+            return
 
-        @safe_operation(context="実験結果保存", is_api_call=False)
-        def _save_experiment_result():
-            experiment_info = self.get_experiment_info(experiment_id)
-            if not experiment_info:
-                logger.error(f"実験情報が見つかりません: {experiment_id}")
-                return
+        logger.info(f"実験結果保存開始: {experiment_id}")
 
-            logger.info(f"実験結果保存開始: {experiment_id}")
+        with self.db_session_factory() as db:
+            self._save_best_strategy_and_run_detailed_backtest(
+                db, experiment_id, experiment_info, result, ga_config, backtest_config
+            )
+            self._save_other_strategies(db, experiment_info, result, ga_config)
 
-            with self.db_session_factory() as db:
-                self._save_best_strategy_and_run_detailed_backtest(
-                    db,
-                    experiment_id,
-                    experiment_info,
-                    result,
-                    ga_config,
-                    backtest_config,
-                )
-                self._save_other_strategies(db, experiment_info, result, ga_config)
+            if ga_config.enable_multi_objective and "pareto_front" in result:
+                self._save_pareto_front(db, experiment_info, result, ga_config)
 
-                # 多目的最適化の場合、パレート最適解も保存
-                if ga_config.enable_multi_objective and "pareto_front" in result:
-                    self._save_pareto_front(db, experiment_info, result, ga_config)
-
-            logger.info(f"実験結果保存完了: {experiment_id}")
-
-        _save_experiment_result()
+        logger.info(f"実験結果保存完了: {experiment_id}")
 
     def _save_best_strategy_and_run_detailed_backtest(
         self,
@@ -138,17 +108,13 @@ class ExperimentPersistenceService:
         best_strategy = result["best_strategy"]
         best_fitness = result["best_fitness"]
 
-        # 多目的最適化の場合、fitness_valuesも保存
-        fitness_values = None
+        # フィットネス値の整理
         if ga_config.enable_multi_objective and isinstance(best_fitness, (list, tuple)):
             fitness_values = list(best_fitness)
-            fitness_score = (
-                best_fitness[0] if best_fitness else 0.0
-            )  # 後方互換性のため最初の値を使用
+            fitness_score = best_fitness[0] if best_fitness else 0.0
         else:
-            fitness_score = (
-                best_fitness if isinstance(best_fitness, (int, float)) else 0.0
-            )
+            fitness_values = None
+            fitness_score = best_fitness if isinstance(best_fitness, (int, float)) else 0.0
 
         serializer = GeneSerializer()
         best_strategy_record = generated_strategy_repo.save_strategy(
@@ -159,35 +125,18 @@ class ExperimentPersistenceService:
             fitness_values=fitness_values,
         )
 
-        logger.info(f"最良戦略を保存しました: DB ID {best_strategy_record.id}")
+        logger.info(f"最良戦略を保存しました (ID: {best_strategy_record.id}). 詳細バックテストを開始します...")
 
-        from app.utils.error_handler import safe_operation
+        # 詳細バックテストの実行
+        detailed_config = self._prepare_detailed_backtest_config(best_strategy, experiment_info, backtest_config)
+        detailed_result = self.backtest_service.run_backtest(detailed_config)
 
-        @safe_operation(context="最良戦略の詳細バックテスト", is_api_call=False)
-        def _save_detailed_backtest():
-            logger.info("最良戦略の詳細バックテストと結果保存を開始...")
-            detailed_backtest_config = self._prepare_detailed_backtest_config(
-                best_strategy, experiment_info, backtest_config
-            )
-            detailed_result = self.backtest_service.run_backtest(
-                detailed_backtest_config
-            )
-
-            backtest_result_data = self._prepare_backtest_result_data(
-                detailed_result,
-                detailed_backtest_config,
-                experiment_id,
-                db_experiment_id,
-                fitness_score,
-            )
-            saved_backtest_result = backtest_result_repo.save_backtest_result(
-                backtest_result_data
-            )
-            logger.info(
-                f"最良戦略のバックテスト結果を保存しました: ID {saved_backtest_result.get('id')}"
-            )
-
-        _save_detailed_backtest()
+        # バックテスト結果の保存
+        result_data = self._prepare_backtest_result_data(
+            detailed_result, detailed_config, experiment_id, db_experiment_id, fitness_score
+        )
+        backtest_result_repo.save_backtest_result(result_data)
+        logger.info(f"最良戦略のバックテスト結果を保存しました。")
 
     def _prepare_detailed_backtest_config(
         self,
@@ -332,157 +281,73 @@ class ExperimentPersistenceService:
 
     def complete_experiment(self, experiment_id: str):
         """実験を完了状態にする"""
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="実験完了処理", is_api_call=False)
-        def _complete_experiment():
-            experiment_info = self.get_experiment_info(experiment_id)
-            if not experiment_info:
-                logger.error(f"実験情報が見つかりません: {experiment_id}")
-                return
+        experiment_info = self.get_experiment_info(experiment_id)
+        if experiment_info:
             with self.db_session_factory() as db:
-                ga_experiment_repo = GAExperimentRepository(db)
-                db_experiment_id = experiment_info["db_id"]
-                ga_experiment_repo.update_experiment_status(
-                    db_experiment_id, "completed"
-                )
-
-        _complete_experiment()
+                repo = GAExperimentRepository(db)
+                repo.update_experiment_status(experiment_info["db_id"], "completed")
 
     def fail_experiment(self, experiment_id: str):
         """実験を失敗状態にする"""
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="実験失敗処理", is_api_call=False)
-        def _fail_experiment():
-            experiment_info = self.get_experiment_info(experiment_id)
-            if not experiment_info:
-                logger.error(f"実験情報が見つかりません: {experiment_id}")
-                return
+        experiment_info = self.get_experiment_info(experiment_id)
+        if experiment_info:
             with self.db_session_factory() as db:
-                ga_experiment_repo = GAExperimentRepository(db)
-                db_experiment_id = experiment_info["db_id"]
-                ga_experiment_repo.update_experiment_status(db_experiment_id, "failed")
-
-        _fail_experiment()
+                repo = GAExperimentRepository(db)
+                repo.update_experiment_status(experiment_info["db_id"], "failed")
 
     def stop_experiment(self, experiment_id: str):
         """実験を停止状態にする"""
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="実験停止処理", is_api_call=False)
-        def _stop_experiment():
-            experiment_info = self.get_experiment_info(experiment_id)
-            if not experiment_info:
-                logger.error(f"実験情報が見つかりません: {experiment_id}")
-                return
+        experiment_info = self.get_experiment_info(experiment_id)
+        if experiment_info:
             with self.db_session_factory() as db:
-                ga_experiment_repo = GAExperimentRepository(db)
-                db_experiment_id = experiment_info["db_id"]
-                ga_experiment_repo.update_experiment_status(db_experiment_id, "stopped")
-
-        _stop_experiment()
+                repo = GAExperimentRepository(db)
+                repo.update_experiment_status(experiment_info["db_id"], "stopped")
 
     def list_experiments(self) -> List[Dict[str, Any]]:
         """実験一覧を取得"""
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="実験一覧取得", is_api_call=False, default_return=[])
-        def _list_experiments():
-            with self.db_session_factory() as db:
-                ga_experiment_repo = GAExperimentRepository(db)
-                experiments = ga_experiment_repo.get_recent_experiments(limit=100)
-
-                return [
-                    {
-                        "id": exp.id,
-                        "experiment_name": exp.name,
-                        "status": exp.status,
-                        "created_at": (
-                            exp.created_at.isoformat()
-                            if exp.created_at is not None
-                            else None
-                        ),
-                        "completed_at": (
-                            exp.completed_at.isoformat()
-                            if exp.completed_at is not None
-                            else None
-                        ),
-                    }
-                    for exp in experiments
-                ]
-
-        return _list_experiments()
+        with self.db_session_factory() as db:
+            repo = GAExperimentRepository(db)
+            experiments = repo.get_recent_experiments(limit=100)
+            return [
+                {
+                    "id": exp.id,
+                    "experiment_name": exp.name,
+                    "status": exp.status,
+                    "created_at": exp.created_at.isoformat() if exp.created_at else None,
+                    "completed_at": exp.completed_at.isoformat() if exp.completed_at else None,
+                }
+                for exp in experiments
+            ]
 
     def get_experiment_info(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """実験情報を取得"""
-        from app.utils.error_handler import safe_operation
+        with self.db_session_factory() as db:
+            repo = GAExperimentRepository(db)
+            experiments = repo.get_recent_experiments(limit=100)
 
-        @safe_operation(context="実験情報取得", is_api_call=False, default_return=None)
-        def _get_experiment_info():
-            with self.db_session_factory() as db:
-                ga_experiment_repo = GAExperimentRepository(db)
-                experiments = ga_experiment_repo.get_recent_experiments(limit=100)
+            for exp in experiments:
+                # 1. config内のexperiment_idで照合
+                cfg = exp.config or {}
+                if cfg.get("experiment_id") == experiment_id:
+                    return self._map_experiment_info(exp)
 
-                logger.info(
-                    f"実験検索開始: {experiment_id}, 総実験数: {len(experiments)}"
-                )
+                # 2. 名前またはDB IDで照合
+                if str(exp.name) == experiment_id or str(exp.id) == experiment_id:
+                    return self._map_experiment_info(exp)
 
-                for exp in experiments:
-                    # まずconfig内のexperiment_idで照合
-                    try:
-                        cfg = exp.config or {}
-                        if cfg.get("experiment_id") == experiment_id:
-                            logger.info(
-                                f"実験ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}"
-                            )
-                            return {
-                                "db_id": exp.id,
-                                "name": exp.name,
-                                "status": exp.status,
-                                "config": exp.config,
-                                "created_at": exp.created_at,
-                                "completed_at": exp.completed_at,
-                            }
-                    except Exception as e:
-                        logger.warning(f"実験config解析エラー: {e}")
+            logger.warning(f"実験が見つかりません: {experiment_id}")
+            return None
 
-                    # 次に名前で照合
-                    if (
-                        hasattr(exp, "name")
-                        and exp.name is not None
-                        and str(exp.name) == experiment_id
-                    ):
-                        logger.info(
-                            f"実験名一致で見つかりました: {experiment_id} -> DB ID: {exp.id}"
-                        )
-                        return {
-                            "db_id": exp.id,
-                            "name": exp.name,
-                            "status": exp.status,
-                            "config": exp.config,
-                            "created_at": exp.created_at,
-                            "completed_at": exp.completed_at,
-                        }
-
-                    # 最後にDB IDで照合
-                    if str(exp.id) == experiment_id:
-                        logger.info(
-                            f"DB ID一致で見つかりました: {experiment_id} -> DB ID: {exp.id}"
-                        )
-                        return {
-                            "db_id": exp.id,
-                            "name": exp.name,
-                            "status": exp.status,
-                            "config": exp.config,
-                            "created_at": exp.created_at,
-                            "completed_at": exp.completed_at,
-                        }
-
-                logger.warning(f"実験が見つかりません: {experiment_id}")
-                return None
-
-        return _get_experiment_info()
+    def _map_experiment_info(self, exp: Any) -> Dict[str, Any]:
+        """DBモデルから辞書形式に変換"""
+        return {
+            "db_id": exp.id,
+            "name": exp.name,
+            "status": exp.status,
+            "config": exp.config,
+            "created_at": exp.created_at,
+            "completed_at": exp.completed_at,
+        }
 
 
 

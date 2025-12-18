@@ -8,6 +8,7 @@ import copy
 import logging
 import random
 import uuid
+from datetime import datetime
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -58,6 +59,77 @@ class StrategyGene:
     # ツール遺伝子（エントリーフィルターなど）
     tool_genes: List[ToolGene] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def create_default(cls) -> "StrategyGene":
+        """
+        デフォルトの戦略遺伝子を作成
+        """
+        from .tpsl import TPSLGene
+        from .position_sizing import PositionSizingGene, PositionSizingMethod
+        from .indicator import IndicatorGene
+        from .conditions import Condition
+
+        indicators = [
+            IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+        ]
+        
+        return cls(
+            id=str(uuid.uuid4()),
+            indicators=indicators,
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="open")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="open")
+            ],
+            risk_management={"position_size": 0.1},
+            tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005, enabled=True),
+            position_sizing_gene=PositionSizingGene(
+                method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000, enabled=True
+            ),
+            metadata={"generated_by": "create_default"},
+        )
+
+    @classmethod
+    def assemble(
+        cls,
+        indicators: List[IndicatorGene],
+        long_entry_conditions: List[Union[Condition, ConditionGroup]],
+        short_entry_conditions: List[Union[Condition, ConditionGroup]],
+        tpsl_gene: Optional[TPSLGene] = None,
+        position_sizing_gene: Optional[PositionSizingGene] = None,
+        long_tpsl_gene: Optional[TPSLGene] = None,
+        short_tpsl_gene: Optional[TPSLGene] = None,
+        entry_gene: Optional[EntryGene] = None,
+        long_entry_gene: Optional[EntryGene] = None,
+        short_entry_gene: Optional[EntryGene] = None,
+        tool_genes: Optional[List[ToolGene]] = None,
+        risk_management: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> "StrategyGene":
+        """
+        パーツから戦略遺伝子を組み立てる
+        """
+        final_metadata = metadata or {}
+        final_metadata.setdefault("assembled_at", datetime.now().isoformat())
+        
+        return cls(
+            id=str(uuid.uuid4()),
+            indicators=indicators,
+            long_entry_conditions=long_entry_conditions,
+            short_entry_conditions=short_entry_conditions,
+            tpsl_gene=tpsl_gene,
+            long_tpsl_gene=long_tpsl_gene,
+            short_tpsl_gene=short_tpsl_gene,
+            position_sizing_gene=position_sizing_gene,
+            entry_gene=entry_gene,
+            long_entry_gene=long_entry_gene,
+            short_entry_gene=short_entry_gene,
+            tool_genes=tool_genes or [],
+            risk_management=risk_management or {"position_size": 0.1},
+            metadata=final_metadata
+        )
 
     def has_long_short_separation(self) -> bool:
         """ロング・ショート条件が分離されているかチェック（常にTrue）"""

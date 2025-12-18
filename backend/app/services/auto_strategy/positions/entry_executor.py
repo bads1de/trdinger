@@ -78,46 +78,27 @@ class EntryExecutor:
         )
         return {}
 
+    def _calculate_offset_price(
+        self, base_price: float, direction: float, offset_pct: float, is_limit: bool
+    ) -> float:
+        """
+        オフセット価格を計算（共通ロジック）
+        is_limit=True の場合、有利な価格（指値）を計算
+        is_limit=False の場合、不利な価格（逆指値）を計算
+        """
+        # Longの場合: limitはマイナス(下落待ち), stopはプラス(ブレイク待ち)
+        # Shortの場合: limitはプラス(上昇待ち), stopはマイナス(ブレイク待ち)
+        multiplier = -1.0 if (direction > 0) == is_limit else 1.0
+        return base_price * (1.0 + multiplier * offset_pct)
+
     def _calculate_limit_price(
         self, base_price: float, direction: float, offset_pct: float
     ) -> float:
-        """
-        指値価格を計算
-
-        Long: 現在価格より低い価格で買い指値（有利な価格）
-        Short: 現在価格より高い価格で売り指値（有利な価格）
-
-        Args:
-            base_price: 基準価格
-            direction: 取引方向 (1.0=Long, -1.0=Short)
-            offset_pct: オフセット比率
-
-        Returns:
-            指値価格
-        """
-        if direction > 0:  # Long: 現在価格より低い価格
-            return base_price * (1.0 - offset_pct)
-        else:  # Short: 現在価格より高い価格
-            return base_price * (1.0 + offset_pct)
+        """指値価格を計算（有利な価格）"""
+        return self._calculate_offset_price(base_price, direction, offset_pct, True)
 
     def _calculate_stop_price(
         self, base_price: float, direction: float, offset_pct: float
     ) -> float:
-        """
-        逆指値価格を計算
-
-        Long: 現在価格より高い価格でブレイクアウト買い
-        Short: 現在価格より低い価格でブレイクアウト売り
-
-        Args:
-            base_price: 基準価格
-            direction: 取引方向 (1.0=Long, -1.0=Short)
-            offset_pct: オフセット比率
-
-        Returns:
-            逆指値価格
-        """
-        if direction > 0:  # Long: 現在価格より高い価格でブレイクアウト
-            return base_price * (1.0 + offset_pct)
-        else:  # Short: 現在価格より低い価格でブレイクアウト
-            return base_price * (1.0 - offset_pct)
+        """逆指値価格を計算（ブレイクアウト価格）"""
+        return self._calculate_offset_price(base_price, direction, offset_pct, False)

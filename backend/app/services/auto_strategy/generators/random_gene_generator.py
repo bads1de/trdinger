@@ -41,11 +41,7 @@ class RandomGeneGenerator:
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
 
-    # トレンド系指標の優先順位
-    TREND_PREF = (
-        "SMA",
-        "EMA",
-    )
+    # トレンド系指標の優先順位（normalize_conditionsに移譲されたため削除可能だが、一旦メソッド削除を優先）
 
     def __init__(
         self,
@@ -88,63 +84,6 @@ class RandomGeneGenerator:
         self.max_conditions = config.max_conditions
         self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
-
-    def _ensure_or_with_fallback(
-        self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
-    ) -> List[Union[Condition, ConditionGroup]]:
-        """
-        条件の正規化/組立ヘルパー：
-        - フォールバック（価格 vs トレンド or open）の注入
-        - 1件なら素条件のまま、2件以上なら OR グルーピング
-        """
-        # フォールバック (PriceTrendPolicyのロジックを直接実装)
-        trend_pool = []
-        for ind in indicators or []:
-            if not getattr(ind, "enabled", True):
-                continue
-            cfg = indicator_registry.get_indicator_config(ind.type)
-            if cfg and getattr(cfg, "category", None) == "trend":
-                trend_pool.append(ind.type)
-        # 優先候補
-        pref = [n for n in trend_pool if n in self.TREND_PREF]
-        if pref:
-            trend_name = random.choice(pref)
-        elif trend_pool:
-            trend_name = random.choice(trend_pool)
-        else:
-            trend_name = random.choice(self.TREND_PREF)
-        fallback = Condition(
-            left_operand="close",
-            operator=">" if side == "long" else "<",
-            right_operand=trend_name or "open",
-        )
-        if not conds:
-            return [fallback]
-        # 平坦化（既に OR グループがある場合は中身だけ取り出す）
-        flat: List[Condition] = []
-        for c in conds:
-            if isinstance(c, ConditionGroup):
-                flat.extend(c.conditions)
-            else:
-                flat.append(c)
-        # フォールバックの重複チェック
-        exists = any(
-            x.left_operand == fallback.left_operand
-            and x.operator == fallback.operator
-            and x.right_operand == fallback.right_operand
-            for x in flat
-        )
-        if len(flat) == 1:
-            return cast(
-                List[Union[Condition, ConditionGroup]],
-                flat if exists else flat + [fallback],
-            )
-        top_level: List[Union[Condition, ConditionGroup]] = [
-            ConditionGroup(conditions=flat)
-        ]
-        # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
-        top_level.append(fallback)
-        return top_level
 
     @safe_operation(
         context="ランダム戦略遺伝子生成",
@@ -203,10 +142,10 @@ class RandomGeneGenerator:
         )
 
         # 条件の成立性を底上げ：OR 正規化と価格vsトレンド(or open)フォールバックをコアに委譲
-        long_entry_conditions = self._ensure_or_with_fallback(
+        long_entry_conditions = self.smart_condition_generator.normalize_conditions(
             long_entry_conditions, "long", indicators
         )
-        short_entry_conditions = self._ensure_or_with_fallback(
+        short_entry_conditions = self.smart_condition_generator.normalize_conditions(
             short_entry_conditions, "short", indicators
         )
 
@@ -226,23 +165,21 @@ class RandomGeneGenerator:
         # ツール遺伝子を生成（週末フィルターなど）
         tool_genes = self._generate_tool_genes()
 
-        gene = StrategyGene(
+        return StrategyGene.assemble(
             indicators=indicators,
             long_entry_conditions=long_entry_conditions,
             short_entry_conditions=short_entry_conditions,
+            tpsl_gene=tpsl_gene,
+            long_tpsl_gene=long_tpsl_gene,
+            short_tpsl_gene=short_tpsl_gene,
+            position_sizing_gene=position_sizing_gene,
+            entry_gene=entry_gene,
+            long_entry_gene=long_entry_gene,
+            short_entry_gene=short_entry_gene,
+            tool_genes=tool_genes,
             risk_management=risk_management,
-            tpsl_gene=tpsl_gene,  # TP/SL遺伝子
-            long_tpsl_gene=long_tpsl_gene,  # Long TP/SL
-            short_tpsl_gene=short_tpsl_gene,  # Short TP/SL
-            position_sizing_gene=position_sizing_gene,  # ポジションサイジング遺伝子
-            entry_gene=entry_gene,  # エントリー遺伝子
-            long_entry_gene=long_entry_gene,  # Longエントリー遺伝子
-            short_entry_gene=short_entry_gene,  # Shortエントリー遺伝子
-            tool_genes=tool_genes,  # ツール遺伝子リスト
             metadata={"generated_by": "RandomGeneGenerator"},
         )
-
-        return gene
 
     def _generate_tool_genes(self) -> List[ToolGene]:
         """

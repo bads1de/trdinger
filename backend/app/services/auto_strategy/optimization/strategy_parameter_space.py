@@ -93,24 +93,16 @@ class StrategyParameterSpace:
             parameter_space.update(indicator_params)
 
         if include_tpsl:
-            # 共通TPSL
-            if gene.tpsl_gene:
-                tpsl_params = self._build_tpsl_params(gene.tpsl_gene, prefix="tpsl")
-                parameter_space.update(tpsl_params)
-
-            # ロング専用TPSL
-            if gene.long_tpsl_gene:
-                long_tpsl_params = self._build_tpsl_params(
-                    gene.long_tpsl_gene, prefix="long_tpsl"
-                )
-                parameter_space.update(long_tpsl_params)
-
-            # ショート専用TPSL
-            if gene.short_tpsl_gene:
-                short_tpsl_params = self._build_tpsl_params(
-                    gene.short_tpsl_gene, prefix="short_tpsl"
-                )
-                parameter_space.update(short_tpsl_params)
+            # 各TPSL遺伝子をループで処理
+            tpsl_fields = [
+                ("tpsl_gene", "tpsl"),
+                ("long_tpsl_gene", "long_tpsl"),
+                ("short_tpsl_gene", "short_tpsl")
+            ]
+            for field_name, prefix in tpsl_fields:
+                gene_obj = getattr(gene, field_name, None)
+                if gene_obj:
+                    parameter_space.update(self._build_tpsl_params(gene_obj, prefix=prefix))
 
         if include_thresholds:
             # ロング条件の閾値
@@ -265,14 +257,15 @@ class StrategyParameterSpace:
         self._apply_indicator_params(new_gene.indicators, params)
 
         # TPSLパラメータを適用
-        if new_gene.tpsl_gene:
-            self._apply_tpsl_params(new_gene.tpsl_gene, params, prefix="tpsl")
-        if new_gene.long_tpsl_gene:
-            self._apply_tpsl_params(new_gene.long_tpsl_gene, params, prefix="long_tpsl")
-        if new_gene.short_tpsl_gene:
-            self._apply_tpsl_params(
-                new_gene.short_tpsl_gene, params, prefix="short_tpsl"
-            )
+        tpsl_fields = [
+            ("tpsl_gene", "tpsl"),
+            ("long_tpsl_gene", "long_tpsl"),
+            ("short_tpsl_gene", "short_tpsl")
+        ]
+        for field_name, prefix in tpsl_fields:
+            gene_obj = getattr(new_gene, field_name, None)
+            if gene_obj:
+                self._apply_tpsl_params(gene_obj, params, prefix=prefix)
 
         # 閾値パラメータを適用
         self._apply_threshold_params(

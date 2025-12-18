@@ -193,34 +193,31 @@ class TestMLFilterIntegration:
                 strategy, "_ml_allows_entry", return_value=False
             ) as mock_ml_check:
                 with patch.object(
-                    strategy, "_check_long_entry_conditions", return_value=True
+                    strategy, "_check_entry_conditions", return_value=True
                 ):
                     with patch.object(
-                        strategy, "_check_short_entry_conditions", return_value=False
+                        strategy.order_manager, "check_pending_order_fills", return_value=None
                     ):
                         with patch.object(
-                            strategy.order_manager, "check_pending_order_fills", return_value=None
+                            strategy.order_manager, "expire_pending_orders", return_value=None
                         ):
                             with patch.object(
-                                strategy.order_manager, "expire_pending_orders", return_value=None
+                                strategy,
+                                "_process_stateful_triggers",
+                                return_value=None,
                             ):
                                 with patch.object(
                                     strategy,
-                                    "_process_stateful_triggers",
+                                    "_get_stateful_entry_direction",
                                     return_value=None,
                                 ):
                                     with patch.object(
-                                        strategy,
-                                        "_get_stateful_entry_direction",
+                                        type(strategy),
+                                        "position",
+                                        new_callable=PropertyMock,
                                         return_value=None,
                                     ):
-                                        with patch.object(
-                                            type(strategy),
-                                            "position",
-                                            new_callable=PropertyMock,
-                                            return_value=None,
-                                        ):
-                                            strategy.next()
+                                        strategy.next()
 
             # MLフィルターがチェックされたことを確認
             mock_ml_check.assert_called_once_with(1.0)
@@ -258,49 +255,46 @@ class TestMLFilterIntegration:
                 strategy, "_ml_allows_entry", return_value=True
             ) as mock_ml_check:
                 with patch.object(
-                    strategy, "_check_long_entry_conditions", return_value=True
+                    strategy, "_check_entry_conditions", return_value=True
                 ):
                     with patch.object(
-                        strategy, "_check_short_entry_conditions", return_value=False
+                        strategy.order_manager, "check_pending_order_fills", return_value=None
                     ):
                         with patch.object(
-                            strategy.order_manager, "check_pending_order_fills", return_value=None
+                            strategy.order_manager, "expire_pending_orders", return_value=None
                         ):
                             with patch.object(
-                                strategy.order_manager, "expire_pending_orders", return_value=None
+                                strategy,
+                                "_process_stateful_triggers",
+                                return_value=None,
                             ):
                                 with patch.object(
                                     strategy,
-                                    "_process_stateful_triggers",
+                                    "_get_stateful_entry_direction",
                                     return_value=None,
                                 ):
                                     with patch.object(
                                         strategy,
-                                        "_get_stateful_entry_direction",
-                                        return_value=None,
+                                        "_calculate_position_size",
+                                        return_value=0.01,
                                     ):
                                         with patch.object(
                                             strategy,
-                                            "_calculate_position_size",
-                                            return_value=0.01,
+                                            "_calculate_effective_tpsl_prices",
+                                            return_value=(None, None),
                                         ):
                                             with patch.object(
                                                 strategy,
-                                                "_get_effective_tpsl_gene",
+                                                "_get_effective_entry_gene",
                                                 return_value=None,
                                             ):
                                                 with patch.object(
-                                                    strategy,
-                                                    "_get_effective_entry_gene",
+                                                    type(strategy),
+                                                    "position",
+                                                    new_callable=PropertyMock,
                                                     return_value=None,
                                                 ):
-                                                    with patch.object(
-                                                        type(strategy),
-                                                        "position",
-                                                        new_callable=PropertyMock,
-                                                        return_value=None,
-                                                    ):
-                                                        strategy.next()
+                                                    strategy.next()
 
             # MLフィルターがチェックされたことを確認
             mock_ml_check.assert_called_once_with(1.0)

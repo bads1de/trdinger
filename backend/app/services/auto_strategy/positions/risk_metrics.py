@@ -24,33 +24,30 @@ def _prepare_returns(raw_returns: Iterable[float]) -> np.ndarray:
     return array[np.isfinite(array)]
 
 
+def _clamp_confidence(confidence: float) -> float:
+    """信頼区間を[0, 0.999]の範囲に制限"""
+    return float(min(max(confidence, 0.0), 0.999))
+
+
 def calculate_historical_var(returns: Iterable[float], confidence: float) -> float:
     """ヒストリカルVaR（損失率）を計算"""
-
     prepared = _prepare_returns(returns)
-    if prepared.size == 0:
-        return 0.0
+    if prepared.size == 0: return 0.0
 
-    clamped_confidence = float(min(max(confidence, 0.0), 0.999))
-    quantile = np.quantile(prepared, 1 - clamped_confidence)
+    quantile = np.quantile(prepared, 1 - _clamp_confidence(confidence))
     return float(abs(min(quantile, 0.0)))
 
 
 def calculate_expected_shortfall(returns: Iterable[float], confidence: float) -> float:
     """ヒストリカルES（条件付平均損失率）を計算"""
-
     prepared = _prepare_returns(returns)
-    if prepared.size == 0:
-        return 0.0
+    if prepared.size == 0: return 0.0
 
-    clamped_confidence = float(min(max(confidence, 0.0), 0.999))
-    threshold = np.quantile(prepared, 1 - clamped_confidence)
+    threshold = np.quantile(prepared, 1 - _clamp_confidence(confidence))
     tail_losses = prepared[prepared <= threshold]
-    if tail_losses.size == 0:
-        return 0.0
+    if tail_losses.size == 0: return 0.0
 
-    clipped = np.minimum(tail_losses, 0.0)
-    return float(abs(clipped.mean()))
+    return float(abs(np.minimum(tail_losses, 0.0).mean()))
 
 
 

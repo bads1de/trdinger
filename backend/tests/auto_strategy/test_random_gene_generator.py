@@ -20,26 +20,9 @@ class TestRandomGeneGenerator:
         assert hasattr(gene, "short_entry_conditions")
         assert hasattr(gene, "tpsl_gene")
         assert hasattr(gene, "position_sizing_gene")
-
-    def test_ensure_or_with_fallback_basic(self):
-        """_ensure_or_with_fallbackの基本テスト"""
-        from app.services.auto_strategy.genes import Condition
-
-        # シンプルな条件のみのリスト
-        simple_conditions = [
-            Condition(left_operand="close", operator=">", right_operand="open")
-        ]
-
-        indicators = [type("MockIndicator", (), {"type": "SMA", "enabled": True})()]
-
-        result = self.generator._ensure_or_with_fallback(
-            simple_conditions, "long", indicators
-        )
-
-        # 結果がリストであること
-        assert isinstance(result, list)
-        # 単一条件の場合は追加条件が含まれる可能性
-        assert len(result) >= 1
+        assert gene.id != ""
+        assert "generated_by" in gene.metadata
+        assert gene.metadata["generated_by"] == "RandomGeneGenerator"
 
     def test_generate_random_gene_populates_split_tpsl(self):
         """ランダム生成時にlong/short別のTPSL設定が生成されることを確認"""

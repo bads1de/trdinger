@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from app.services.backtest.backtest_service import BacktestService
 from app.services.indicators.config import indicator_registry, IndicatorScaleType
@@ -270,6 +270,69 @@ class ConditionGenerator:
             return Condition(left_operand="close", operator=">", right_operand="SMA")
         else:
             return Condition(left_operand="close", operator="<", right_operand="SMA")
+
+    @safe_operation(context="条件正規化", is_api_call=False)
+    def normalize_conditions(
+        self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators: List[IndicatorGene]
+    ) -> List[Union[Condition, ConditionGroup]]:
+        """
+        条件の正規化/組立ヘルパー：
+        - フォールバック（価格 vs トレンド or open）の注入
+        - 1件なら素条件のまま、2件以上なら OR グルーピング
+        """
+        # トレンド系指標の優先順位
+        trend_pref = ("SMA", "EMA")
+        
+        # フォールバック候補の抽出
+        trend_pool = []
+        for ind in indicators or []:
+            if not getattr(ind, "enabled", True):
+                continue
+            cfg = indicator_registry.get_indicator_config(ind.type)
+            if cfg and getattr(cfg, "category", None) == "trend":
+                trend_pool.append(ind.type)
+        
+        # 優先候補の決定
+        pref = [n for n in trend_pool if n in trend_pref]
+        trend_name = random.choice(pref) if pref else (random.choice(trend_pool) if trend_pool else random.choice(trend_pref))
+        
+        fallback = Condition(
+            left_operand="close",
+            operator=">" if side == "long" else "<",
+            right_operand=trend_name or "open",
+        )
+        
+        if not conds:
+            return [fallback]
+            
+        # 平坦化（既に OR グループがある場合は中身だけ取り出す）
+        flat: List[Condition] = []
+        for c in conds:
+            if isinstance(c, ConditionGroup):
+                flat.extend(c.conditions)
+            else:
+                flat.append(c)
+                
+        # フォールバックの重複チェック
+        exists = any(
+            x.left_operand == fallback.left_operand
+            and x.operator == fallback.operator
+            and x.right_operand == fallback.right_operand
+            for x in flat
+        )
+        
+        if len(flat) == 1:
+            return cast(
+                List[Union[Condition, ConditionGroup]],
+                flat if exists else flat + [fallback],
+            )
+            
+        top_level: List[Union[Condition, ConditionGroup]] = [
+            ConditionGroup(conditions=flat)
+        ]
+        # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
+        top_level.append(fallback)
+        return top_level
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
     def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[

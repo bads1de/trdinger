@@ -7,7 +7,7 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 
@@ -142,73 +142,80 @@ class UniversalStrategy(Strategy):
             if ind.enabled
         )
 
-    def _get_effective_tpsl_gene(self, direction: float) -> Union[None, object]:
+    def _get_effective_sub_gene(self, direction: float, gene_type: str) -> Any:
         """
-        方向に応じた有効なTPSL遺伝子を取得
-
+        方向とタイプに応じた有効なサブ遺伝子を取得（統合版）
+        
         Args:
             direction: 1.0 (Long) or -1.0 (Short)
-
+            gene_type: 'tpsl' or 'entry'
+            
         Returns:
-            有効なTPSLGeneまたはNone
+            有効なサブ遺伝子またはNone
         """
         if not self.gene:
             return None
 
-        # 方向別設定を優先確認
-        target_gene = None
-        if direction > 0:  # Long
-            if hasattr(self.gene, "long_tpsl_gene") and self.gene.long_tpsl_gene:
-                target_gene = self.gene.long_tpsl_gene
-        elif direction < 0:  # Short
-            if hasattr(self.gene, "short_tpsl_gene") and self.gene.short_tpsl_gene:
-                target_gene = self.gene.short_tpsl_gene
+        # フィールド名の構築（例: long_tpsl_gene）
+        prefix = "long" if direction > 0 else "short"
+        specific_field = f"{prefix}_{gene_type}_gene"
+        common_field = f"{gene_type}_gene"
 
-        # 有効な個別設定があれば返す
-        if target_gene and target_gene.enabled:
+        # 1. 方向別設定を優先
+        target_gene = getattr(self.gene, specific_field, None)
+        if target_gene and getattr(target_gene, "enabled", True):
             return target_gene
 
-        # フォールバック: 共通設定
-        if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-            return self.gene.tpsl_gene
+        # 2. フォールバック: 共通設定
+        common_gene = getattr(self.gene, common_field, None)
+        if common_gene and getattr(common_gene, "enabled", True):
+            return common_gene
 
         return None
+
+    def _get_effective_tpsl_gene(self, direction: float) -> Union[None, object]:
+        """旧互換用: 有効なTPSL遺伝子を取得"""
+        return self._get_effective_sub_gene(direction, "tpsl")
 
     def _get_effective_entry_gene(self, direction: float) -> Union[None, EntryGene]:
-        """
-        方向に応じた有効なエントリー遺伝子を取得
+        """旧互換用: 有効なエントリー遺伝子を取得"""
+        return self._get_effective_sub_gene(direction, "entry")
 
-        Args:
-            direction: 1.0 (Long) or -1.0 (Short)
+    def _check_entry_conditions(self, direction: float) -> bool:
+        """指定された方向のエントリー条件をチェック"""
+        field_name = "long_entry_conditions" if direction > 0 else "short_entry_conditions"
+        conditions = cast(List[Union[Condition, ConditionGroup]], getattr(self.gene, field_name, []))
+        
+        if not conditions:
+            return False
+            
+        return self.condition_evaluator.evaluate_conditions(conditions, self)
 
-        Returns:
-            有効なEntryGeneまたはNone
-        """
-        if not self.gene:
-            return None
+    def _calculate_position_size(self) -> float:
+        """ポジションサイズを計算"""
+        try:
+            # PositionSizingGeneが有効な場合
+            if (
+                self.gene.position_sizing_gene
+                and self.gene.position_sizing_gene.enabled
+            ):
+                current_price = (
+                    self.data.Close[-1]
+                    if hasattr(self, "data") and len(self.data.Close) > 0
+                    else 50000.0
+                )
+                account_balance = getattr(self, "equity", 100000.0)
 
-        # 方向別設定を優先確認
-        target_gene = None
-        if direction > 0:  # Long
-            if hasattr(self.gene, "long_entry_gene") and self.gene.long_entry_gene:
-                target_gene = self.gene.long_entry_gene
-        elif direction < 0:  # Short
-            if hasattr(self.gene, "short_entry_gene") and self.gene.short_entry_gene:
-                target_gene = self.gene.short_entry_gene
-
-        # 有効な個別設定があれば返す
-        if target_gene and target_gene.enabled:
-            return target_gene
-
-        # フォールバック: 共通設定
-        if (
-            hasattr(self.gene, "entry_gene")
-            and self.gene.entry_gene
-            and self.gene.entry_gene.enabled
-        ):
-            return self.gene.entry_gene
-
-        return None
+                position_size = self.position_sizing_service.calculate_position_size_fast(
+                    gene=self.gene.position_sizing_gene,
+                    account_balance=account_balance,
+                    current_price=current_price,
+                )
+                return max(0.001, min(0.2, float(position_size)))
+            return 0.01
+        except Exception as e:
+            logger.warning(f"ポジションサイズ計算エラー、フォールバック使用: {e}")
+            return 0.01
 
     def init(self):
         """指標の初期化"""
@@ -236,217 +243,92 @@ class UniversalStrategy(Strategy):
             # エラーを再発生させて上位で適切に処理
             raise
 
-    def _check_long_entry_conditions(self) -> bool:
-        """ロングエントリー条件をチェック"""
-        long_conditions = cast(
-            List[Union[Condition, ConditionGroup]],
-            self.gene.long_entry_conditions,
+    def _calculate_effective_tpsl_prices(self, direction: float, current_price: float) -> Tuple[Optional[float], Optional[float]]:
+        """有効なTP/SL価格を計算"""
+        active_tpsl_gene = self._get_effective_tpsl_gene(direction)
+        if not active_tpsl_gene:
+            return None, None
+
+        market_data = {}
+        tpsl_method = active_tpsl_gene.method
+
+        if tpsl_method in (TPSLMethod.VOLATILITY_BASED, TPSLMethod.ADAPTIVE, TPSLMethod.STATISTICAL):
+            atr_period = getattr(active_tpsl_gene, "atr_period", 14)
+            required_slice_size = atr_period + 1
+
+            if len(self.data) > required_slice_size:
+                highs = self.data.High[-required_slice_size:]
+                lows = self.data.Low[-required_slice_size:]
+                closes = self.data.Close[-required_slice_size:]
+                market_data["ohlc_data"] = [
+                    {"high": h, "low": low_val, "close": c}
+                    for h, low_val, c in zip(highs, lows, closes)
+                ]
+
+        return self.tpsl_service.calculate_tpsl_prices(
+            current_price=current_price,
+            tpsl_gene=active_tpsl_gene,
+            position_direction=direction,
+            market_data=market_data,
         )
-
-        if not long_conditions:
-            return False
-
-        return self.condition_evaluator.evaluate_conditions(long_conditions, self)
-
-    def _check_short_entry_conditions(self) -> bool:
-        """ショートエントリー条件をチェック"""
-        short_conditions = cast(
-            List[Union[Condition, ConditionGroup]],
-            self.gene.short_entry_conditions,
-        )
-
-        if not short_conditions:
-            return False
-
-        return self.condition_evaluator.evaluate_conditions(short_conditions, self)
-
-    def _calculate_position_size(self) -> float:
-        """
-        ポジションサイズを計算
-
-        Note: キャッシュを使用しない。エントリー時に毎回計算することで、
-        口座残高の変動（複利効果）に対応する。
-        """
-        try:
-            # PositionSizingGeneが有効な場合
-            if (
-                self.gene.position_sizing_gene
-                and self.gene.position_sizing_gene.enabled
-            ):
-                # 現在の市場データ（該当するものがなければデフォルト値を使用）
-                current_price = (
-                    self.data.Close[-1]
-                    if hasattr(self, "data") and len(self.data.Close) > 0
-                    else 50000.0
-                )
-
-                # 現在の口座残高を取得（backtesting.py の equity 属性）
-                # これにより複利効果が機能する
-                account_balance = getattr(
-                    self, "equity", 100000.0
-                )  # デフォルト口座残高
-
-                # 高速計算メソッドを使用（VaR等の重い計算をスキップ）
-                position_size = (
-                    self.position_sizing_service.calculate_position_size_fast(
-                        gene=self.gene.position_sizing_gene,
-                        account_balance=account_balance,
-                        current_price=current_price,
-                    )
-                )
-
-                # 結果を安全範囲に制限
-                return max(0.001, min(0.2, float(position_size)))
-            else:
-                # デフォルトサイズを使用
-                return 0.01
-
-        except Exception as e:
-            logger.warning(f"ポジションサイズ計算エラー、フォールバック使用: {e}")
-            # エラー時はデフォルトサイズを使用
-            return 0.01
 
     def next(self):
         """各バーでの戦略実行"""
         try:
-            # バーインデックスを更新
             self._current_bar_index += 1
 
-            # === 保留注文の約定チェック（1分足シミュレーション） ===
-            self.order_manager.check_pending_order_fills(
-                self._minute_data, self.data.index[-1], self._current_bar_index
-            )
+            # 1. 保留注文とステートフルトリガーの処理
+            self.order_manager.check_pending_order_fills(self._minute_data, self.data.index[-1], self._current_bar_index)
             self.order_manager.expire_pending_orders(self._current_bar_index)
-
-            # ステートフル条件のトリガーをチェック・記録
             self._process_stateful_triggers()
 
-            # === 悲観的約定ロジック (Pessimistic Exit) ===
-            # ポジションがあり、SL/TPが設定されている場合、SL優先で決済判定
+            # 2. 既存ポジションの悲観的決済チェック
             if self.position and self._sl_price is not None:
-                exited = self._check_pessimistic_exit()
-                if exited:
-                    return  # 決済したのでこの足ではこれ以上処理しない
+                if self._check_pessimistic_exit():
+                    return
 
-            # ポジションがない場合のエントリー判定
+            # 3. 新規エントリー判定（ノーポジション時）
             if not self.position:
-                # === ツールフィルター判定 ===
-                # 週末フィルターなど、登録されたツールでエントリーをフィルタリング
                 if self._tools_block_entry():
-                    return  # いずれかのツールがエントリーをブロック
+                    return
 
-                long_signal = self._check_long_entry_conditions()
-                short_signal = self._check_short_entry_conditions()
+                # 方向の決定（優先順位: 通常ロング > 通常ショート > ステートフル）
+                direction = 0.0
+                if self._check_entry_conditions(1.0): direction = 1.0
+                elif self._check_entry_conditions(-1.0): direction = -1.0
+                else:
+                    stateful_dir = self._get_stateful_entry_direction()
+                    if stateful_dir is not None: direction = stateful_dir
 
-                # ステートフル条件も評価（方向情報付き）
-                stateful_direction = self._get_stateful_entry_direction()
+                if direction == 0.0:
+                    return
 
-                # 通常条件またはステートフル条件いずれかでエントリー
-                if long_signal or short_signal or stateful_direction is not None:
-                    # ポジションサイズを決定
-                    position_size = self._calculate_position_size()
-                    current_price = self.data.Close[-1]
+                # 4. MLフィルター判定
+                if self.ml_predictor and not self._ml_allows_entry(direction):
+                    return
 
-                    # エントリー方向を決定
-                    # 優先順位: long_signal > short_signal > stateful_direction
-                    direction = 0.0
-                    if long_signal:
-                        direction = 1.0
-                    elif short_signal:
-                        direction = -1.0
-                    elif stateful_direction is not None:
-                        direction = stateful_direction
+                # 5. TP/SLおよびエントリーパラメータの計算
+                current_price = self.data.Close[-1]
+                sl_price, tp_price = self._calculate_effective_tpsl_prices(direction, current_price)
+                
+                entry_gene = self._get_effective_entry_gene(direction)
+                entry_params = self.entry_executor.calculate_entry_params(entry_gene, current_price, direction)
+                position_size = self._calculate_position_size()
 
-                    # === ML フィルター判定 ===
-                    # エントリー方向が決まった後、MLが許可するかチェック
-                    if direction != 0.0 and self.ml_predictor is not None:
-                        if not self._ml_allows_entry(direction):
-                            # MLがエントリーを拒否した場合、スキップ
-                            return
-
-                    # TP/SL価格を計算
-                    sl_price = None
-                    tp_price = None
-
-                    if direction != 0.0:
-                        active_tpsl_gene = self._get_effective_tpsl_gene(direction)
-
-                        if active_tpsl_gene:
-                            # 市場データの準備（必要な場合のみ）
-                            market_data = {}
-                            tpsl_method = active_tpsl_gene.method
-
-                            # ボラティリティベース、適応型、または統計的手法の場合、OHLCデータを作成
-                            if tpsl_method in (
-                                TPSLMethod.VOLATILITY_BASED,
-                                TPSLMethod.ADAPTIVE,
-                                TPSLMethod.STATISTICAL,
-                            ):
-                                # atr_period に基づいて必要なスライスサイズを決定
-                                # True Range 計算には (atr_period + 1) 本のデータが必要
-                                atr_period = getattr(active_tpsl_gene, "atr_period", 14)
-                                required_slice_size = atr_period + 1
-
-                                if len(self.data) > required_slice_size:
-                                    # 必要な期間のみスライス（動的に決定）
-                                    highs = self.data.High[-required_slice_size:]
-                                    lows = self.data.Low[-required_slice_size:]
-                                    closes = self.data.Close[-required_slice_size:]
-
-                                    # VolatilityCalculatorが期待する形式（list of dicts）に変換
-                                    market_data["ohlc_data"] = [
-                                        {"high": h, "low": low_val, "close": c}
-                                        for h, low_val, c in zip(highs, lows, closes)
-                                    ]
-
-                            # TPSLServiceを使用して価格を計算
-                            sl_price, tp_price = (
-                                self.tpsl_service.calculate_tpsl_prices(
-                                    current_price=current_price,
-                                    tpsl_gene=active_tpsl_gene,
-                                    position_direction=direction,
-                                    market_data=market_data,
-                                )
-                            )
-
-                    # エントリー注文パラメータを計算
-                    entry_gene = self._get_effective_entry_gene(direction)
-                    entry_params = self.entry_executor.calculate_entry_params(
-                        entry_gene, current_price, direction
+                # 6. 注文実行
+                is_market = entry_gene is None or not entry_gene.enabled or entry_gene.entry_type == EntryType.MARKET
+                if is_market:
+                    if direction > 0: self.buy(size=position_size)
+                    else: self.sell(size=position_size)
+                    
+                    self._entry_price, self._sl_price, self._tp_price = current_price, sl_price, tp_price
+                    self._position_direction = direction
+                else:
+                    self.order_manager.create_pending_order(
+                        direction=direction, size=position_size, entry_params=entry_params,
+                        sl_price=sl_price, tp_price=tp_price, entry_gene=entry_gene,
+                        current_bar_index=self._current_bar_index
                     )
-
-                    # 注文タイプを判定
-                    is_market_order = (
-                        entry_gene is None
-                        or not entry_gene.enabled
-                        or entry_gene.entry_type == EntryType.MARKET
-                    )
-
-                    if is_market_order:
-                        # 成行注文: 即時実行
-                        if direction > 0:  # Long
-                            self.buy(size=position_size)
-                            self._entry_price = current_price
-                            self._sl_price = sl_price
-                            self._tp_price = tp_price
-                            self._position_direction = 1.0
-                        elif direction < 0:  # Short
-                            self.sell(size=position_size)
-                            self._entry_price = current_price
-                            self._sl_price = sl_price
-                            self._tp_price = tp_price
-                            self._position_direction = -1.0
-                    else:
-                        # 指値/逆指値注文: 保留リストに追加
-                        self.order_manager.create_pending_order(
-                            direction=direction,
-                            size=position_size,
-                            entry_params=entry_params,
-                            sl_price=sl_price,
-                            tp_price=tp_price,
-                            entry_gene=entry_gene,
-                            current_bar_index=self._current_bar_index,
-                        )
 
         except Exception as e:
             logger.error(f"戦略実行エラー: {e}")
@@ -820,92 +702,32 @@ class UniversalStrategy(Strategy):
     def _prepare_current_features(self) -> pd.DataFrame:
         """
         現在のバーからML用特徴量を準備
-
-        OHLCVデータを使用して、HybridPredictorが期待する形式の
-        特徴量DataFrameを生成します。
-
-        Returns:
-            特徴量DataFrame
+        HybridFeatureAdapterに委譲して一貫性を確保します。
         """
         try:
-            # 過去N本分のデータを取得（特徴量計算に必要な期間）
-            lookback = 20  # デフォルトルックバック期間
-
-            # データが十分にあるか確認
-            data_length = len(self.data) if hasattr(self.data, "__len__") else 0
-            actual_lookback = min(lookback, max(data_length - 1, 1))
-
-            # OHLCVデータを抽出
-            closes = list(self.data.Close[-actual_lookback:])
-            highs = list(self.data.High[-actual_lookback:])
-            lows = list(self.data.Low[-actual_lookback:])
-
-            # 基本特徴量を計算
-            features: Dict[str, Any] = {}
-
-            # 価格関連
-            current_close = closes[-1] if closes else 0.0
-            features["close"] = current_close
-            features["high"] = highs[-1] if highs else current_close
-            features["low"] = lows[-1] if lows else current_close
-
-            # リターン系特徴量
-            if len(closes) >= 2:
-                features["close_return_1"] = (
-                    (closes[-1] - closes[-2]) / closes[-2] if closes[-2] != 0 else 0
-                )
-            else:
-                features["close_return_1"] = 0
-
-            if len(closes) >= 6:
-                features["close_return_5"] = (
-                    (closes[-1] - closes[-6]) / closes[-6] if closes[-6] != 0 else 0
-                )
-            else:
-                features["close_return_5"] = 0
-
-            # ローリング統計量
-            if len(closes) >= 5:
-                arr = np.array(closes[-5:])
-                features["close_rolling_mean_5"] = float(np.mean(arr))
-                features["close_rolling_std_5"] = float(np.std(arr))
-            else:
-                features["close_rolling_mean_5"] = current_close
-                features["close_rolling_std_5"] = 0
-
-            # 戦略構造特徴量（StrategyGeneから抽出）
-            if self.gene:
-                features["indicator_count"] = len(
-                    [ind for ind in self.gene.indicators if ind.enabled]
-                )
-                features["condition_count"] = len(self.gene.entry_conditions or [])
-                features["has_tpsl"] = (
-                    1 if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled else 0
-                )
-
-                if self.gene.tpsl_gene and self.gene.tpsl_gene.enabled:
-                    features["take_profit_ratio"] = getattr(
-                        self.gene.tpsl_gene, "take_profit_pct", 0.02
-                    )
-                    features["stop_loss_ratio"] = getattr(
-                        self.gene.tpsl_gene, "stop_loss_pct", 0.01
-                    )
-                else:
-                    features["take_profit_ratio"] = 0.02
-                    features["stop_loss_ratio"] = 0.01
-
-            return pd.DataFrame([features])
+            # 現在のバーのOHLCVデータを取得
+            # backtesting.pyのdataオブジェクトをDataFrameに変換（直近のみ）
+            lookback = 30  # 特徴量計算に必要な最低限のルックバック
+            data_len = len(self.data)
+            actual_lookback = min(lookback, data_len)
+            
+            # 効率のため必要な分だけスライス
+            subset = self.data.df.iloc[-actual_lookback:].copy()
+            
+            # 既存のカラム名を小文字に統一（アダプタの期待に合わせる）
+            subset.columns = [c.lower() for c in subset.columns]
+            
+            # アダプタを使用して特徴量変換
+            features_df = self.feature_adapter.gene_to_features(
+                gene=self.gene,
+                ohlcv_data=subset,
+                apply_preprocessing=False # 推論時は基本的なクリーニングのみ
+            )
+            
+            # 直近の1行のみを返す
+            return features_df.iloc[[-1]]
 
         except Exception as e:
-            logger.error(f"特徴量準備エラー: {e}")
-            # エラー時はデフォルト特徴量を返す
-            return pd.DataFrame(
-                [
-                    {
-                        "close": 0,
-                        "close_return_1": 0,
-                        "close_return_5": 0,
-                        "indicator_count": 1,
-                    }
-                ]
-            )
+            logger.error(f"特徴量準備エラー (Adapter使用): {e}")
+            # フォールバック（最小限の構造を持つDataFrame）
+            return pd.DataFrame([{"close": self.data.Close[-1], "indicator_count": 1}])

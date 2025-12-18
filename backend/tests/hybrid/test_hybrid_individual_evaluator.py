@@ -183,6 +183,15 @@ class TestHybridIndividualEvaluator:
         ga_config = GAConfig()
         ga_config.enable_multi_objective = False
 
+        # バックテスト設定をセット
+        self.evaluator.set_backtest_config({
+            "symbol": "BTCUSDT",
+            "timeframe": "1h",
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "initial_capital": 10000.0
+        })
+
         # _get_cached_dataをモックして、preloaded_dataが渡されることを検証
         with patch.object(
             self.evaluator, "_get_cached_data", return_value=mock_data

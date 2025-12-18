@@ -69,7 +69,7 @@ class DictConverter:
                 strategy_gene.risk_management
             )
 
-            return {
+            result = {
                 "id": strategy_gene.id,
                 "indicators": [
                     self.indicator_gene_to_dict(ind) for ind in strategy_gene.indicators
@@ -83,43 +83,6 @@ class DictConverter:
                     for cond in strategy_gene.short_entry_conditions
                 ],
                 "risk_management": clean_risk_management,
-                "tpsl_gene": (
-                    self.tpsl_gene_to_dict(strategy_gene.tpsl_gene)
-                    if strategy_gene.tpsl_gene
-                    else None
-                ),
-                "long_tpsl_gene": (
-                    self.tpsl_gene_to_dict(strategy_gene.long_tpsl_gene)
-                    if getattr(strategy_gene, "long_tpsl_gene", None)
-                    else None
-                ),
-                "short_tpsl_gene": (
-                    self.tpsl_gene_to_dict(strategy_gene.short_tpsl_gene)
-                    if getattr(strategy_gene, "short_tpsl_gene", None)
-                    else None
-                ),
-                "position_sizing_gene": (
-                    self.position_sizing_gene_to_dict(
-                        strategy_gene.position_sizing_gene
-                    )
-                    if getattr(strategy_gene, "position_sizing_gene", None)
-                    else None
-                ),
-                "entry_gene": (
-                    self.entry_gene_to_dict(strategy_gene.entry_gene)
-                    if getattr(strategy_gene, "entry_gene", None)
-                    else None
-                ),
-                "long_entry_gene": (
-                    self.entry_gene_to_dict(strategy_gene.long_entry_gene)
-                    if getattr(strategy_gene, "long_entry_gene", None)
-                    else None
-                ),
-                "short_entry_gene": (
-                    self.entry_gene_to_dict(strategy_gene.short_entry_gene)
-                    if getattr(strategy_gene, "short_entry_gene", None)
-                    else None
-                ),
                 "stateful_conditions": [
                     self.stateful_condition_to_dict(sc)
                     for sc in getattr(strategy_gene, "stateful_conditions", [])
@@ -129,6 +92,17 @@ class DictConverter:
                 ],
                 "metadata": strategy_gene.metadata,
             }
+
+            # サブ遺伝子フィールドを一括処理
+            sub_gene_fields = [
+                "tpsl_gene", "long_tpsl_gene", "short_tpsl_gene",
+                "position_sizing_gene", "entry_gene", "long_entry_gene", "short_entry_gene"
+            ]
+            for field in sub_gene_fields:
+                gene_obj = getattr(strategy_gene, field, None)
+                result[field] = gene_obj.to_dict() if gene_obj else None
+
+            return result
 
         except Exception as e:
             logger.error(f"戦略遺伝子辞書変換エラー: {e}")
@@ -410,7 +384,7 @@ class DictConverter:
                 logger.warning(
                     "戦略遺伝子データが空です。デフォルト戦略遺伝子を返します。"
                 )
-                return GeneUtils.create_default_strategy_gene(strategy_gene_class)
+                return strategy_gene_class.create_default()
 
             # 指標遺伝子の復元
             indicators = [
@@ -422,116 +396,45 @@ class DictConverter:
             from ..genes import ConditionGroup
 
             def parse_condition_or_group(cond_data):
-                if isinstance(cond_data, dict):
-                    # 新しいグループ形式
-                    if cond_data.get("type") == "GROUP":
-                        conditions = [
-                            parse_condition_or_group(c)
-                            for c in cond_data.get("conditions", [])
-                        ]
-                        operator = cond_data.get("operator", "OR")
-                        return ConditionGroup(operator=operator, conditions=conditions)
-                    # 古いグループ形式（互換性用）
-                    elif cond_data.get("type") == "OR_GROUP":
-                        conditions = [
-                            parse_condition_or_group(c)
-                            for c in cond_data.get("conditions", [])
-                        ]
-                        return ConditionGroup(operator="OR", conditions=conditions)
-                    else:
-                        return self.dict_to_condition(cond_data)
-                else:
-                    logger.warning(f"不正な条件データ形式: {str(cond_data)[:50]}")
+                if not isinstance(cond_data, dict):
                     return None
+                if cond_data.get("type") in ("GROUP", "OR_GROUP"):
+                    conditions = [parse_condition_or_group(c) for c in cond_data.get("conditions", [])]
+                    operator = "OR" if cond_data.get("type") == "OR_GROUP" else cond_data.get("operator", "OR")
+                    return ConditionGroup(operator=operator, conditions=conditions)
+                return self.dict_to_condition(cond_data)
 
-            entry_conditions = [
-                parse_condition_or_group(cond_data)
-                for cond_data in data.get("entry_conditions", [])
-            ]
+            long_entry_conditions = [parse_condition_or_group(c) for c in data.get("long_entry_conditions", data.get("entry_conditions", []))]
+            short_entry_conditions = [parse_condition_or_group(c) for c in data.get("short_entry_conditions", data.get("entry_conditions", []))]
 
-            long_entry_conditions = [
-                parse_condition_or_group(cond_data)
-                for cond_data in data.get("long_entry_conditions", [])
-            ]
+            # サブ遺伝子の復元
+            from ..genes import TPSLGene, PositionSizingGene, EntryGene
+            from ..genes.tool import ToolGene
 
-            short_entry_conditions = [
-                parse_condition_or_group(cond_data)
-                for cond_data in data.get("short_entry_conditions", [])
-            ]
+            sub_genes = {}
+            mapping = {
+                "tpsl_gene": TPSLGene,
+                "long_tpsl_gene": TPSLGene,
+                "short_tpsl_gene": TPSLGene,
+                "position_sizing_gene": PositionSizingGene,
+                "entry_gene": EntryGene,
+                "long_entry_gene": EntryGene,
+                "short_entry_gene": EntryGene
+            }
+            
+            for field, cls in mapping.items():
+                gene_data = data.get(field)
+                sub_genes[field] = cls.from_dict(gene_data) if gene_data else None
 
-            # リスク管理設定
-            risk_management = data.get("risk_management", {})
-
-            # TP/SL遺伝子の復元
-            tpsl_gene = None
-            if "tpsl_gene" in data and data["tpsl_gene"]:
-                tpsl_gene = self.dict_to_tpsl_gene(data["tpsl_gene"])
-
-            # Long/Short TP/SL遺伝子の復元
-            long_tpsl_gene = None
-            if "long_tpsl_gene" in data and data["long_tpsl_gene"]:
-                long_tpsl_gene = self.dict_to_tpsl_gene(data["long_tpsl_gene"])
-
-            short_tpsl_gene = None
-            if "short_tpsl_gene" in data and data["short_tpsl_gene"]:
-                short_tpsl_gene = self.dict_to_tpsl_gene(data["short_tpsl_gene"])
-
-            # ポジションサイジング遺伝子の復元
-            position_sizing_gene = None
-            if "position_sizing_gene" in data and data["position_sizing_gene"]:
-                position_sizing_gene = self.dict_to_position_sizing_gene(
-                    data["position_sizing_gene"]
-                )
-
-            # エントリー遺伝子の復元
-            entry_gene = None
-            if "entry_gene" in data and data["entry_gene"]:
-                entry_gene = self.dict_to_entry_gene(data["entry_gene"])
-
-            long_entry_gene = None
-            if "long_entry_gene" in data and data["long_entry_gene"]:
-                long_entry_gene = self.dict_to_entry_gene(data["long_entry_gene"])
-
-            short_entry_gene = None
-            if "short_entry_gene" in data and data["short_entry_gene"]:
-                short_entry_gene = self.dict_to_entry_gene(data["short_entry_gene"])
-
-            # メタデータ
-            metadata = data.get("metadata", {})
-
-            # 有効な指標がない場合はデフォルト指標を追加
-            enabled_indicators = [ind for ind in indicators if ind.enabled]
-            if not enabled_indicators:
-                from ..genes import IndicatorGene
-
-                indicators.append(
-                    IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
-                )
-                logger.warning(
-                    "有効な指標がなかったため、デフォルト指標SMAを追加しました"
-                )
-
-            # 後方互換性のための処理: 古い entry_conditions があれば移行
-            if not long_entry_conditions and entry_conditions:
-                long_entry_conditions = entry_conditions
-            if not short_entry_conditions and entry_conditions:
-                short_entry_conditions = entry_conditions
-
-            # ステートフル条件の復元
+            # ステートフル条件
             stateful_conditions = [
                 self.dict_to_stateful_condition(sc_data)
                 for sc_data in data.get("stateful_conditions", [])
-                if sc_data is not None
+                if sc_data
             ]
 
-            # ツール遺伝子の復元
-            from ..genes.tool import ToolGene
-
-            tool_genes = [
-                ToolGene.from_dict(tg_data)
-                for tg_data in data.get("tool_genes", [])
-                if tg_data is not None
-            ]
+            # ツール遺伝子
+            tool_genes = [ToolGene.from_dict(tg) for tg in data.get("tool_genes", []) if tg]
 
             return strategy_gene_class(
                 id=data.get("id", str(uuid.uuid4())),
@@ -539,17 +442,15 @@ class DictConverter:
                 long_entry_conditions=long_entry_conditions,
                 short_entry_conditions=short_entry_conditions,
                 stateful_conditions=stateful_conditions,
-                risk_management=risk_management,
-                tpsl_gene=tpsl_gene,
-                long_tpsl_gene=long_tpsl_gene,
-                short_tpsl_gene=short_tpsl_gene,
-                position_sizing_gene=position_sizing_gene,
-                entry_gene=entry_gene,
-                long_entry_gene=long_entry_gene,
-                short_entry_gene=short_entry_gene,
                 tool_genes=tool_genes,
-                metadata=metadata,
+                risk_management=data.get("risk_management", {"position_size": 0.1}),
+                metadata=data.get("metadata", {}),
+                **sub_genes
             )
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子辞書復元エラー: {e}")
+            return strategy_gene_class.create_default()
 
         except Exception as e:
             logger.error(f"戦略遺伝子辞書復元エラー: {e}")

@@ -63,195 +63,106 @@ class ConditionEvaluator:
     def _evaluate_condition_group(
         self, group: ConditionGroup, strategy_instance
     ) -> bool:
-        """
-        条件グループ評価
-
-        operator="AND" -> 全てTrueならTrue
-        operator="OR"  -> いずれかがTrueならTrue
-        """
+        """条件グループ評価（AND/OR対応）"""
         if not group or group.is_empty():
             return False
 
-        is_and = getattr(group, "operator", "OR") == "AND"
-
-        for c in group.conditions:
-            result = self._evaluate_recursive_item(c, strategy_instance)
-
-            if is_and:
-                if not result:
-                    return False
-            else:  # OR
-                if result:
-                    return True
-
-        return True if is_and else False
+        eval_fn = self._evaluate_recursive_item
+        if getattr(group, "operator", "OR") == "AND":
+            return all(eval_fn(c, strategy_instance) for c in group.conditions)
+        else:
+            return any(eval_fn(c, strategy_instance) for c in group.conditions)
 
     def evaluate_single_condition(
         self, condition: Condition, strategy_instance
     ) -> bool:
-        """
-        単一条件の評価
+        """単一条件の評価"""
+        left_val = self.get_condition_value(condition.left_operand, strategy_instance)
+        right_val = self.get_condition_value(condition.right_operand, strategy_instance)
 
-        Args:
-            condition: 評価する条件
-            strategy_instance: 戦略インスタンス
+        # 1. 数値妥当性チェック
+        if not self._is_comparable(left_val, right_val):
+            self._log_comparison_warning(condition, left_val, right_val)
+            return False
 
-        Returns:
-            条件の評価結果
-        """
-        # 左オペランドの値を取得
-        left_value = self.get_condition_value(condition.left_operand, strategy_instance)
-        right_value = self.get_condition_value(
-            condition.right_operand, strategy_instance
+        # 2. 比較演算の実行
+        return self._compare_values(left_val, right_val, condition.operator)
+
+    def _is_comparable(self, v1: Any, v2: Any) -> bool:
+        """値が比較可能（数値）かどうかを判定"""
+        def check(v):
+            return isinstance(v, (int, float, Real, np.number))
+        return check(v1) and check(v2)
+
+    def _compare_values(self, v1: float, v2: float, operator: str) -> bool:
+        """演算子に応じた比較を実行"""
+        import operator as op_module
+        
+        ops = {
+            ">": op_module.gt,
+            "<": op_module.lt,
+            ">=": op_module.ge,
+            "<=": op_module.le,
+            "==": lambda x, y: np.isclose(x, y, atol=1e-8),
+            "!=": lambda x, y: not np.isclose(x, y, atol=1e-8)
+        }
+        
+        func = ops.get(operator)
+        if func:
+            return bool(func(v1, v2))
+        
+        logger.warning(f"未対応の演算子: {operator}")
+        return False
+
+    def _log_comparison_warning(self, condition, left_val, right_val):
+        """比較失敗時のログ出力"""
+        logger.warning(
+            f"比較できない値です: left={left_val}({type(left_val)}), "
+            f"right={right_val}({type(right_val)}), "
+            f"original={condition.left_operand} {condition.operator} {condition.right_operand}"
         )
 
-        # 両方の値が数値であることを確認（numpy互換）
-        def is_numeric_value(val):
-            import numpy as np
-
-            # Pythonの組み込み数値型
-            if isinstance(val, (int, float, complex)):
-                return True
-            # numpyの数値型
-            if hasattr(val, "dtype") and np.issubdtype(val.dtype, np.number):
-                return True
-            # numbersモジュールの数値
-            if isinstance(val, Real):
-                return True
-            return False
-
-        # 元のオペランドが文字列で、数値変換が失敗した場合のチェック
-        left_is_string = isinstance(condition.left_operand, str)
-        right_is_string = isinstance(condition.right_operand, str)
-
-        # 数値チェックのヘルパー関数
-        def _is_original_numeric(operand) -> bool:
-            """オペランドが本来の数値かどうかを判定"""
-            if isinstance(operand, (int, float)):
-                return True
-            if isinstance(operand, str):
-                cleaned = (
-                    operand.replace(".", "")
-                    .replace("-", "")
-                    .replace("+", "")
-                    .replace("e", "")
-                    .replace("E", "")
-                )
-                return cleaned.isdigit() and "." not in operand[1:]
-            return False
-
-        left_is_original_numeric = _is_original_numeric(condition.left_operand)
-        right_is_original_numeric = _is_original_numeric(condition.right_operand)
-
-        if not is_numeric_value(left_value) or not is_numeric_value(right_value):
-            logger.warning(
-                f"比較できない値です: left={left_value}({type(left_value)}), "
-                f"right={right_value}({type(right_value)}), "
-                f"original_left={condition.left_operand}, original_right={condition.right_operand}"
-            )
-            return False
-        elif left_is_string and not left_is_original_numeric and left_value == 0.0:
-            # 元のオペランドが数値文字列ではなく、値が0.0の場合（属性アクセス失敗）
-            logger.warning(
-                f"非数値文字列オペランドが数値に変換されました: '{condition.left_operand}' -> {left_value}, "
-                f"戦略インスタンスの属性が見つかりませんでした"
-            )
-        elif right_is_string and not right_is_original_numeric and right_value == 0.0:
-            # 右オペランドも同様
-            logger.warning(
-                f"非数値文字列オペランドが数値に変換されました: '{condition.right_operand}' -> {right_value}, "
-                f"戦略インスタンスの属性が見つかりませんでした"
-            )
-
-        # 条件評価（numpy互換）
-        result = False
-        if condition.operator == ">":
-            result = left_value > right_value
-        elif condition.operator == "<":
-            result = left_value < right_value
-        elif condition.operator == ">=":
-            result = left_value >= right_value
-        elif condition.operator == "<=":
-            result = left_value <= right_value
-        elif condition.operator == "==":
-            result = np.isclose(left_value, right_value, atol=1e-8)
-        elif condition.operator == "!=":
-            result = not np.isclose(left_value, right_value, atol=1e-8)
-        else:
-            logger.warning(f"未対応の演算子: {condition.operator}")
-            return False
-
-        return result
-
-    def _get_final_value(self, value) -> float:
-        """配列/シーケンスから末尾の有限値を取得（pandas-ta対応）"""
-        # pandas Series の場合
-        if isinstance(value, pd.Series):
-            return value.iloc[-1]  # pandas Seriesの末尾値
-        # リスト/array対応
-        elif hasattr(value, "__getitem__") and not isinstance(value, (str, bytes)):
-            val = float(value[-1])
-            return val if pd.notna(val) else 0.0
-        # スカラー値の場合
-        else:
-            val = float(value)
-            return val if pd.notna(val) else 0.0
+    def _get_final_value(self, value: Any) -> float:
+        """型に応じて末尾の有限値を取得"""
+        try:
+            if isinstance(value, pd.Series):
+                val = value.iloc[-1]
+            elif hasattr(value, "__getitem__") and not isinstance(value, (str, bytes)):
+                val = value[-1]
+            else:
+                val = value
+            
+            f_val = float(val)
+            return f_val if np.isfinite(f_val) else 0.0
+        except (TypeError, ValueError, IndexError):
+            return 0.0
 
     def get_condition_value(
         self, operand: Union[Dict[str, Any], str, int, float], strategy_instance
     ) -> float:
-        """
-        条件オペランドから値を取得（pandas-ta統合済み）
-
-        Args:
-            operand: オペランド（辞書、文字列、数値）
-            strategy_instance: 戦略インスタンス
-
-        Returns:
-            オペランドの値（末尾の有限値を優先して返す）
-        """
-        # 数値はそのまま返す
+        """オペランドから値を取得"""
         if isinstance(operand, (int, float)):
             return float(operand)
 
-        # dictオペランドの処理
-        if isinstance(operand, dict):
-            indicator_name = operand.get("indicator")
-            if indicator_name:
-                # pandas-ta直接アクセス
-                try:
-                    value = getattr(strategy_instance, indicator_name)
-                    return self._get_final_value(value)
-                except AttributeError:
-                    pass  # 処理続行
+        target_attr = operand.get("indicator") if isinstance(operand, dict) else str(operand)
+        
+        # 1. OHLCVデータ（文字列の場合）
+        if isinstance(operand, str) and operand.lower() in ["open", "high", "low", "close", "volume"]:
+            val = self._get_ohlcv_value(operand, strategy_instance)
+            if val is not None: return val
 
-        # 文字列オペランドの処理
-        if isinstance(operand, str):
-            # OHLCVデータの処理
-            if operand.lower() in ["open", "high", "low", "close", "volume"]:
-                ohlcv_value = self._get_ohlcv_value(operand, strategy_instance)
-                if ohlcv_value is not None:
-                    return ohlcv_value
-
-            # pandas-taの標準指標名で直接アクセス
+        # 2. 戦略インスタンスの属性（pandas-ta指標など）
+        try:
+            attr_val = getattr(strategy_instance, target_attr)
+            return self._get_final_value(attr_val)
+        except AttributeError:
+            # 3. 数値文字列への変換
             try:
-                value = getattr(strategy_instance, operand)
-                return self._get_final_value(value)
-            except AttributeError:
-                # 数値文字列として変換を試みる
-                try:
-                    # 数値に変換可能か試す
-                    numeric_value = float(operand)
-                    return numeric_value
-                except (ValueError, TypeError):
-                    # 未解決の場合の警告
-                    logger.warning(
-                        f"未対応のオペランド: {operand} (利用可能な属性: "
-                        f"{[attr for attr in dir(strategy_instance) if not attr.startswith('_')]})"
-                    )
-                    return 0.0
+                if isinstance(operand, str): return float(operand)
+            except (ValueError, TypeError):
+                pass
 
-        # それ以外は失敗
+        logger.warning(f"オペランド解決失敗: {target_attr}")
         return 0.0
 
     def _get_ohlcv_value(self, operand: str, strategy_instance) -> float | None:
