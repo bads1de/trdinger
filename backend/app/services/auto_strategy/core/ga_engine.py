@@ -748,14 +748,16 @@ class GeneticAlgorithmEngine:
                 best_individuals = [tools.selBest(population, 1)[0]]
 
             best_individual = best_individuals[0]
-
+    
             best_strategies = []
             for ind in best_individuals[:10]:  # 上位10個のパレート最適解
                 if isinstance(ind, StrategyGene):
                     gene = ind
                 else:
-                    gene = gene_serializer.from_list(ind, StrategyGene)
-
+                    # 個体がオブジェクトでない場合は、シリアライザーを使用せずにエラーログを出力
+                    logger.error(f"個体がStrategyGene型ではありません: {type(ind)}")
+                    continue
+    
                 best_strategies.append(
                     {"strategy": gene, "fitness_values": list(ind.fitness.values)}
                 )
@@ -765,14 +767,14 @@ class GeneticAlgorithmEngine:
                 best_individual = halloffame[0]
             else:
                 best_individual = tools.selBest(population, 1)[0]
-
+    
         if isinstance(best_individual, StrategyGene):
             best_gene = best_individual
         else:
-            best_gene = gene_serializer.from_list(best_individual, StrategyGene)
-
+            logger.error(f"最良個体がStrategyGene型ではありません: {type(best_individual)}")
+            best_gene = None
+    
         return best_individual, best_gene, best_strategies
-
     def stop_evolution(self):
         """進化を停止します。"""
         self.is_running = False

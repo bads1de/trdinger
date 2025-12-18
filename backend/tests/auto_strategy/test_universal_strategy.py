@@ -155,18 +155,38 @@ class TestUniversalStrategy:
             # ロングポジションを持っている状態をシミュレート
             strategy._position_direction = 1.0
             strategy._entry_price = 100.0
-            strategy._sl_price = 95.0  # -5%
-            strategy._tp_price = 110.0  # +10%
+            strategy._sl_price = 95.0
+            strategy._tp_price = 110.0
 
             # SLに達する価格データを設定
-            mock_data.Low[-1] = 94.0  # SL以下
-            mock_data.High[-1] = 105.0
-            mock_data.Close[-1] = 96.0
+            mock_data.Low = [94.0]
+            mock_data.High = [105.0]
+            mock_data.Close = [96.0]
 
             strategy.next()
 
         # position.close() が呼ばれたか
         mock_pos_instance.close.assert_called_once()
+
+    def test_get_effective_sub_gene_fallback(self, mock_broker, mock_data):
+        """sub-gene選択のフォールバックテスト"""
+        common_tpsl = TPSLGene(stop_loss_pct=0.02, enabled=True)
+        long_tpsl = TPSLGene(stop_loss_pct=0.05, enabled=True)
+        
+        gene = StrategyGene(
+            tpsl_gene=common_tpsl,
+            long_tpsl_gene=long_tpsl,
+            short_tpsl_gene=None # ショートは共通にフォールバック
+        )
+        strategy = UniversalStrategy(mock_broker, mock_data, {"strategy_gene": gene})
+        
+        # 1. ロング時は専用設定が優先される
+        res_long = strategy._get_effective_sub_gene(1.0, "tpsl")
+        assert res_long.stop_loss_pct == 0.05
+        
+        # 2. ショート時は共通設定にフォールバックされる
+        res_short = strategy._get_effective_sub_gene(-1.0, "tpsl")
+        assert res_short.stop_loss_pct == 0.02
 
     def test_tpsl_parameters(self, mock_broker, mock_data, valid_gene):
         """TP/SLパラメータの適用テスト"""

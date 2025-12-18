@@ -102,26 +102,14 @@ def test_strategy_gene_round_trip_dict(
     # TP/SL Gene
     assert isinstance(restored.tpsl_gene, TPSLGene)
     assert restored.tpsl_gene.enabled is True
-    # 現行実装では Enum ではなく文字列として復元されるため、value ベースで比較
-    assert str(restored.tpsl_gene.method) == str(
-        base_strategy_gene.tpsl_gene.method.value
-        if hasattr(base_strategy_gene.tpsl_gene.method, "value")
-        else base_strategy_gene.tpsl_gene.method
-    )
-    assert restored.tpsl_gene.stop_loss_pct == pytest.approx(
-        base_strategy_gene.tpsl_gene.stop_loss_pct
-    )
+    # Enum の値（文字列）が正しく保持されていることを確認
+    assert restored.tpsl_gene.method == base_strategy_gene.tpsl_gene.method.value
+    assert restored.tpsl_gene.stop_loss_pct == pytest.approx(base_strategy_gene.tpsl_gene.stop_loss_pct)
+
     # PositionSizingGene
     assert isinstance(restored.position_sizing_gene, PositionSizingGene)
-    # 現行実装では Enum ではなく文字列として復元されるため、value ベースで比較
-    assert str(restored.position_sizing_gene.method) == str(
-        base_strategy_gene.position_sizing_gene.method.value
-        if hasattr(base_strategy_gene.position_sizing_gene.method, "value")
-        else base_strategy_gene.position_sizing_gene.method
-    )
-    assert restored.position_sizing_gene.fixed_quantity == pytest.approx(
-        base_strategy_gene.position_sizing_gene.fixed_quantity
-    )
+    assert restored.position_sizing_gene.method == base_strategy_gene.position_sizing_gene.method.value
+    assert restored.position_sizing_gene.fixed_quantity == pytest.approx(base_strategy_gene.position_sizing_gene.fixed_quantity)
     # risk_management は DictConverter._clean_risk_management により加工される仕様
     assert "position_size" in data["risk_management"]
     assert data["risk_management"]["position_size"] == pytest.approx(0.123457, rel=1e-6)

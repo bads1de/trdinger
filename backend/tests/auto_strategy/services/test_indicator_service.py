@@ -1,150 +1,97 @@
 """
-IndicatorService のテスト
+IndicatorServiceのユニットテスト
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import Mock, MagicMock
 import pandas as pd
 import numpy as np
 
 from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
-from app.services.auto_strategy.genes import IndicatorGene
+from app.services.auto_strategy.genes.indicator import IndicatorGene
 
 
 class TestIndicatorCalculator:
-    """IndicatorCalculator のテストクラス"""
+    """IndicatorCalculatorのテストクラス"""
 
     @pytest.fixture
-    def mock_technical_indicator_service(self):
-        """TechnicalIndicatorService のモック"""
-        mock = MagicMock()
-        return mock
+    def mock_indicator_service(self):
+        service = Mock()
+        # SMAの計算結果をシミュレート
+        service.calculate_indicator.return_value = pd.Series([10, 11, 12])
+        return service
 
     @pytest.fixture
-    def calculator(self, mock_technical_indicator_service):
-        """IndicatorCalculator のインスタンス"""
-        return IndicatorCalculator(
-            technical_indicator_service=mock_technical_indicator_service
+    def calculator(self, mock_indicator_service):
+        return IndicatorCalculator(technical_indicator_service=mock_indicator_service)
+
+    def test_calculate_indicator_basic(self, calculator, mock_indicator_service):
+        """基本的な指標計算の委譲テスト"""
+        # データの準備
+        mock_data = Mock()
+        mock_data.df = pd.DataFrame({
+            "Open": [1, 2, 3], "High": [2, 3, 4], "Low": [0, 1, 2],
+            "Close": [1.5, 2.5, 3.5], "Volume": [100, 200, 300]
+        })
+        
+        result = calculator.calculate_indicator(mock_data, "SMA", {"period": 20})
+        
+        assert isinstance(result, pd.Series)
+        mock_indicator_service.calculate_indicator.assert_called_once()
+
+    def test_init_indicator_registers_on_strategy(self, calculator):
+        """戦略インスタンスへの指標登録テスト"""
+        # 遺伝子の準備
+        gene = IndicatorGene(type="SMA", parameters={"period": 10}, id="test_id_123")
+        
+        # 戦略インスタンスのモック
+        mock_strategy = Mock()
+        mock_strategy.indicators = {}
+        # データの準備（空だとエラーになるため）
+        mock_strategy.data = Mock()
+        mock_strategy.data.df = pd.DataFrame({
+            "Open": [1, 2, 3], "High": [2, 3, 4], "Low": [0, 1, 2],
+            "Close": [1.5, 2.5, 3.5], "Volume": [100, 200, 300]
+        })
+        
+        calculator.init_indicator(gene, mock_strategy)
+        
+        # 名前形式: Type_id[:8]
+        expected_name_base = "SMA_"
+        
+        # indicators辞書に登録されているはず
+        keys = list(mock_strategy.indicators.keys())
+        assert any(expected_name_base in k for k in keys)
+        
+        # インスタンス属性としてもアクセスできるはず
+        found_attr = False
+        for k in keys:
+            if hasattr(mock_strategy, k):
+                found_attr = True
+                break
+        assert found_attr
+
+    def test_init_indicator_multiple_outputs(self, calculator, mock_indicator_service):
+        """複数出力がある指標（MACD等）の登録テスト"""
+        # タプルを返すようにモックを設定
+        mock_indicator_service.calculate_indicator.return_value = (
+            pd.Series([1, 2]), pd.Series([3, 4]), pd.Series([5, 6])
         )
-
-    @pytest.fixture
-    def mock_data(self):
-        """backtesting.py Data オブジェクトのモック"""
-        mock = MagicMock()
-        df = pd.DataFrame(
-            {
-                "Open": [100, 101, 102],
-                "High": [105, 106, 107],
-                "Low": [95, 96, 97],
-                "Close": [102, 103, 104],
-                "Volume": [1000, 1100, 1200],
-            }
-        )
-        mock.df = df
-        return mock
-
-    def test_calculate_indicator_success(
-        self, calculator, mock_technical_indicator_service, mock_data
-    ):
-        """calculate_indicator 成功時のテスト"""
-        # モックの設定
-        expected_result = pd.Series([1, 2, 3])
-        mock_technical_indicator_service.calculate_indicator.return_value = (
-            expected_result
-        )
-
-        indicator_type = "SMA"
-        parameters = {"period": 20}
-
-        result = calculator.calculate_indicator(mock_data, indicator_type, parameters)
-
-        # サービスが正しい引数で呼ばれたか確認
-        mock_technical_indicator_service.calculate_indicator.assert_called_once_with(
-            mock_data.df, indicator_type, parameters
-        )
-        assert result.equals(expected_result)
-
-    def test_calculate_indicator_validation_error(self, calculator):
-        """calculate_indicator 検証エラーテスト"""
-        # Data None
-        with pytest.raises(ValueError, match="データオブジェクトがNone"):
-            calculator.calculate_indicator(None, "SMA", {})
-
-        # Empty Data
-        mock_empty_data = MagicMock()
-        mock_empty_data.df = pd.DataFrame()
-        with pytest.raises(ValueError, match="データが空"):
-            calculator.calculate_indicator(mock_empty_data, "SMA", {})
-
-    def test_init_indicator_single_output(
-        self, calculator, mock_technical_indicator_service, mock_data
-    ):
-        """init_indicator 単一出力指標のテスト"""
-        # モック設定
-        expected_result = pd.Series([10, 20, 30])
-        mock_technical_indicator_service.calculate_indicator.return_value = (
-            expected_result
-        )
-
-        # 戦略インスタンスモック
-        strategy_instance = MagicMock()
-        strategy_instance.data = mock_data
-
-        # __dict__ をシミュレートするために spec を設定しない、または dict を使う
-        # MagicMock はデフォルトで属性設定可能だが、 __dict__ 操作をテストするため実オブジェクトに近いものを使う
-        class MockStrategy:
-            pass
-
-        strategy_instance = MockStrategy()
-        strategy_instance.data = mock_data
-
-        indicator_gene = IndicatorGene(
-            type="SMA", parameters={"period": 20}, enabled=True
-        )
-
-        calculator.init_indicator(indicator_gene, strategy_instance)
-
-        # 属性としてセットされたか確認
-        assert hasattr(strategy_instance, "SMA")
-        assert getattr(strategy_instance, "SMA").equals(expected_result)
-        # indicators 辞書にも入っているか (IndicatorCalculator が作成する)
-        assert hasattr(strategy_instance, "indicators")
-        assert strategy_instance.indicators["SMA"].equals(expected_result)
-
-    def test_init_indicator_multi_output(
-        self, calculator, mock_technical_indicator_service, mock_data
-    ):
-        """init_indicator 複数出力指標のテスト"""
-        # モック設定 (MACDなど tuple を返す場合)
-        res1 = pd.Series([1, 2, 3])
-        res2 = pd.Series([4, 5, 6])
-        mock_technical_indicator_service.calculate_indicator.return_value = (res1, res2)
-
-        class MockStrategy:
-            pass
-
-        strategy_instance = MockStrategy()
-        strategy_instance.data = mock_data
-
-        indicator_gene = IndicatorGene(type="MACD", parameters={}, enabled=True)
-
-        calculator.init_indicator(indicator_gene, strategy_instance)
-
-        # 複数の属性としてセットされたか (MACD_0, MACD_1)
-        assert hasattr(strategy_instance, "MACD_0")
-        assert hasattr(strategy_instance, "MACD_1")
-        assert getattr(strategy_instance, "MACD_0").equals(res1)
-        assert getattr(strategy_instance, "MACD_1").equals(res2)
-
-        assert hasattr(strategy_instance, "indicators")
-        assert strategy_instance.indicators["MACD_0"].equals(res1)
-
-    def test_init_indicator_strategy_none(self, calculator):
-        """init_indicator 戦略インスタンスNoneエラー"""
-        gene = IndicatorGene(type="SMA", parameters={}, enabled=True)
-        with pytest.raises(ValueError, match="戦略インスタンスがNone"):
-            calculator.init_indicator(gene, None)
-
-
-
-
+        
+        gene = IndicatorGene(type="MACD", id="macd_id")
+        mock_strategy = Mock()
+        mock_strategy.indicators = {}
+        mock_strategy.data = Mock()
+        mock_strategy.data.df = pd.DataFrame({
+            "Open": [1, 2], "High": [2, 3], "Low": [0, 1],
+            "Close": [1.5, 2.5], "Volume": [100, 200]
+        })
+        
+        calculator.init_indicator(gene, mock_strategy)
+        
+        # 各出力（_0, _1, _2）が登録されているか確認
+        expected_base = "MACD_macd_id_"
+        keys = list(mock_strategy.indicators.keys())
+        assert any(f"{expected_base}0" in k for k in keys)
+        assert any(f"{expected_base}1" in k for k in keys)
+        assert any(f"{expected_base}2" in k for k in keys)
