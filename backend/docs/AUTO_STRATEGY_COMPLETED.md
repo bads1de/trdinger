@@ -336,3 +336,18 @@ ProcessPoolExecutor 使用時に DB セッションなどが原因で Pickle エ
 
 **解決された問題:**
 過学習のリスクが高い単純な検証手法から、より堅牢な評価手法へ移行しました。
+
+## 8. コードベースの最適化 (Refactoring)
+
+### 8.1 戦略生成ロジックの統合と整理
+
+> **解決日: 2025-12-18**
+>
+> - `RandomConditionGenerator` を `ConditionGenerator` に統合し、条件生成の責務を一元化
+> - `component_generators.py` (TPSL, Entry, PositionSizing) を廃止し、各遺伝子定義クラス (`genes/tpsl.py` 等) にファクトリ関数として統合
+> - `genetic_operators.py` を廃止し、交叉・突然変異ロジックを `StrategyGene` クラスのメソッドとして統合
+> - `RandomGeneGenerator` の依存関係を整理し、不要な中間ファイルを削除して見通しを改善
+
+**解決された問題:**
+機能ごとにファイルが分散し、ロジックが重複していた問題を解決しました。コードの凝集度が高まり、保守性が向上しました。
+

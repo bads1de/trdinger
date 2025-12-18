@@ -19,7 +19,7 @@ class TestConditionGeneratorInit:
         generator = ConditionGenerator(enable_smart_generation=False, ga_config=config)
         # ConditionGeneratorでは config は ga_config_obj として保存される
         assert generator.ga_config_obj == config
-        assert generator.operand_generator is not None
+        assert hasattr(generator, "choose_operand")
         assert generator.available_operators is not None
 
 
@@ -104,17 +104,16 @@ class TestGenerateSingleCondition:
         indicators = [Mock()]
         condition_type = "entry"
 
-        # オペランド生成のモック
-        generator.operand_generator.choose_operand = Mock(return_value="RSI")
-        generator.operand_generator.choose_right_operand = Mock(return_value=70)
+        # オペランド生成のモック（メソッドを直接モック）
+        with patch.object(generator, "choose_operand", return_value="RSI"):
+            with patch.object(generator, "choose_right_operand", return_value=70):
+                # 演算子選択のモック
+                with patch("random.choice", return_value=">"):
+                    condition = generator._generate_single_condition(indicators, condition_type)
 
-        # 演算子選択のモック
-        with patch("random.choice", return_value=">"):
-            condition = generator._generate_single_condition(indicators, condition_type)
-
-            assert condition.left_operand == "RSI"
-            assert condition.operator == ">"
-            assert condition.right_operand == 70
+                    assert condition.left_operand == "RSI"
+                    assert condition.operator == ">"
+                    assert condition.right_operand == 70
 
 
 class TestGenerateFallbackCondition:

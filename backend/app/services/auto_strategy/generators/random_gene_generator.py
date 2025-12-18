@@ -23,14 +23,13 @@ from ..genes import (
     create_random_entry_gene,
     create_random_position_sizing_gene,
     create_random_tpsl_gene,
+    generate_random_indicators,
 )
 from ..genes.tool import ToolGene
 from ..serializers.serialization import GeneSerializer
 from ..tools import tool_registry
 
 from .condition_generator import ConditionGenerator
-from .random_indicator_generator import IndicatorGenerator
-from .random_operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -89,9 +88,6 @@ class RandomGeneGenerator:
         self.max_conditions = config.max_conditions
         self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
-
-        self.indicator_generator = IndicatorGenerator(config)
-        self.operand_generator = OperandGenerator(config)
 
     def _ensure_or_with_fallback(
         self, conds: List[Union[Condition, ConditionGroup]], side: str, indicators
@@ -177,10 +173,11 @@ class RandomGeneGenerator:
             生成された戦略遺伝子
         """
         # 指標を生成
-        indicators = self.indicator_generator.generate_random_indicators()
+        indicators = generate_random_indicators(self.config)
 
         # TP/SL遺伝子を生成
         tpsl_gene = create_random_tpsl_gene(self.config)
+
 
         # Auto-StrategyではTP/SLを常に有効化
         if tpsl_gene:

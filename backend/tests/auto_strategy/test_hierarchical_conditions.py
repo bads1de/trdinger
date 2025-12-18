@@ -113,10 +113,6 @@ def test_hierarchical_mutation_safety():
         metadata={},
     )
 
-    from app.services.auto_strategy.core.genetic_operators import (
-        mutate_strategy_gene_pure,
-    )
-
     # Force mutation on conditions
     # We loop multiple times to ensure the random chance hits condition mutation logic
     # _mutate_conditions probability is mutation_rate * 0.5
@@ -128,7 +124,7 @@ def test_hierarchical_mutation_safety():
         from app.services.auto_strategy.config import GASettings
 
         config = GASettings()  # 設定オブジェクトを作成
-        mutated = mutate_strategy_gene_pure(strategy, config, mutation_rate=1.0)
+        mutated = strategy.mutate(config, mutation_rate=1.0)
 
         # Check if long_entry_conditions[0] is still a ConditionGroup and operator is valid
         # Mutated strategy creates a deep copy, so we check the mutated object.

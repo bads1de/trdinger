@@ -3,7 +3,7 @@ import random
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from app.services.backtest.backtest_service import BacktestService
-from app.services.indicators.config import indicator_registry
+from app.services.indicators.config import indicator_registry, IndicatorScaleType
 from app.utils.error_handler import safe_operation
 
 from ..config.constants import (
@@ -14,11 +14,12 @@ from ..core.condition_evolver import (
     ConditionEvolver,
 )
 from ..core.condition_evolver import YamlIndicatorUtils as CoreYamlIndicatorUtils
+from ..core.operand_grouping import operand_grouping_system
 from ..genes import Condition, ConditionGroup, IndicatorGene
+from ..utils.indicator_utils import get_all_indicators
 from ..utils.yaml_utils import YamlIndicatorUtils
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
-from .random_operand_generator import OperandGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class ConditionGenerator:
     3. 複合条件戦略
     4. 指標特性活用戦略
     5. 純粋ランダム条件生成（RandomConditionGeneratorより統合）
+    6. オペランド生成（OperandGeneratorより統合）
     """
 
     @safe_operation(context="ConditionGenerator初期化", is_api_call=False)
@@ -62,9 +64,19 @@ class ConditionGenerator:
         # geneに含まれる指標一覧をオプションで保持
         self.indicators: List[IndicatorGene] | None = None
 
-        # ランダム生成用コンポーネント（RandomConditionGeneratorより統合）
-        self.operand_generator = OperandGenerator(ga_config)
+        # ランダム生成用設定（OperandGeneratorより統合）
         self.available_operators = OPERATORS
+        self.price_data_weight = getattr(ga_config, "price_data_weight", 5) if ga_config else 5
+        self.volume_data_weight = getattr(ga_config, "volume_data_weight", 2) if ga_config else 2
+        self.oi_fr_data_weight = getattr(ga_config, "oi_fr_data_weight", 1) if ga_config else 1
+        self._valid_indicator_names = self._initialize_valid_indicators()
+
+    def _initialize_valid_indicators(self) -> set:
+        """有効な指標名を初期化"""
+        try:
+            return set(get_all_indicators())
+        except Exception:
+            return set()
 
     @safe_operation(context="コンテキスト設定", is_api_call=False)
     def set_context(
@@ -123,19 +135,134 @@ class ConditionGenerator:
     ) -> Condition:
         """単一の条件を生成"""
         # 左オペランドの選択
-        left_operand = self.operand_generator.choose_operand(indicators)
+        left_operand = self.choose_operand(indicators)
 
         # 演算子の選択
         operator = random.choice(self.available_operators)
 
         # 右オペランドの選択
-        right_operand = self.operand_generator.choose_right_operand(
+        right_operand = self.choose_right_operand(
             left_operand, indicators, condition_type
         )
 
         return Condition(
             left_operand=left_operand, operator=operator, right_operand=right_operand
         )
+
+    def choose_operand(self, indicators: List[any]) -> str:
+        """オペランドを選択（指標名またはデータソース）"""
+        choices = []
+
+        # テクニカル指標名を追加
+        for indicator_gene in indicators:
+            indicator_type = indicator_gene.type
+            if (
+                self._valid_indicator_names
+                and indicator_type in self._valid_indicator_names
+            ):
+                choices.append(indicator_type)
+
+        # 基本データソース
+        basic_sources = ["close", "open", "high", "low"]
+        choices.extend(basic_sources * self.price_data_weight)
+        choices.extend(["volume"] * self.volume_data_weight)
+        choices.extend(["OpenInterest", "FundingRate"] * self.oi_fr_data_weight)
+
+        return random.choice(choices) if choices else "close"
+
+    def choose_right_operand(
+        self, left_operand: str, indicators: List[any], condition_type: str
+    ):
+        """右オペランドを選択（指標名、データソース、または数値）"""
+        if self.ga_config_obj and random.random() < getattr(self.ga_config_obj, "numeric_threshold_probability", 0.5):
+            return self.generate_threshold_value(left_operand, condition_type)
+
+        compatible_operand = self.choose_compatible_operand(left_operand, indicators)
+
+        if compatible_operand != left_operand:
+            compatibility = operand_grouping_system.get_compatibility_score(
+                left_operand, compatible_operand
+            )
+            min_score = getattr(self.ga_config_obj, "min_compatibility_score", 0.1) if self.ga_config_obj else 0.1
+            if compatibility < min_score:
+                return self.generate_threshold_value(left_operand, condition_type)
+
+        return compatible_operand
+
+    def choose_compatible_operand(
+        self, left_operand: str, indicators: List[any]
+    ) -> str:
+        """左オペランドと互換性の高い右オペランドを選択"""
+        available_operands = []
+        for indicator_gene in indicators:
+            available_operands.append(indicator_gene.type)
+
+        available_operands.extend(["close", "open", "high", "low", "volume", "OpenInterest", "FundingRate"])
+
+        strict_score = getattr(self.ga_config_obj, "strict_compatibility_score", 0.8) if self.ga_config_obj else 0.8
+        strict_compatible = operand_grouping_system.get_compatible_operands(
+            left_operand,
+            available_operands,
+            min_compatibility=strict_score,
+        )
+
+        if strict_compatible:
+            return random.choice(strict_compatible)
+
+        min_score = getattr(self.ga_config_obj, "min_compatibility_score", 0.1) if self.ga_config_obj else 0.1
+        high_compatible = operand_grouping_system.get_compatible_operands(
+            left_operand,
+            available_operands,
+            min_compatibility=min_score,
+        )
+
+        if high_compatible:
+            return random.choice(high_compatible)
+
+        fallback_operands = [op for op in available_operands if op != left_operand]
+        return random.choice(fallback_operands) if fallback_operands else "close"
+
+    def generate_threshold_value(self, operand: str, condition_type: str) -> float:
+        """オペランドの型に応じて、データ駆動で閾値を生成"""
+        if "FundingRate" in operand:
+            return self._get_safe_threshold("funding_rate", [0.0001, 0.001], allow_choice=True)
+        if "OpenInterest" in operand:
+            return self._get_safe_threshold("open_interest", [1000000, 50000000], allow_choice=True)
+        if operand == "volume":
+            return self._get_safe_threshold("volume", [1000, 100000])
+
+        indicator_config = indicator_registry.get_indicator_config(operand)
+        if indicator_config and indicator_config.scale_type:
+            scale_type = indicator_config.scale_type
+            if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
+                return self._get_safe_threshold("oscillator_0_100", [20, 80])
+            if scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+                return self._get_safe_threshold("oscillator_plus_minus_100", [-100, 100])
+            if scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+                return self._get_safe_threshold("momentum_zero_centered", [-0.5, 0.5])
+            if scale_type in (IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE):
+                return self._get_safe_threshold("price_ratio", [0.95, 1.05])
+            if scale_type == IndicatorScaleType.VOLUME:
+                return self._get_safe_threshold("volume", [1000, 100000])
+
+        return self._get_safe_threshold("price_ratio", [0.95, 1.05])
+
+    def _get_safe_threshold(
+        self, key: str, default_range: List[float], allow_choice: bool = False
+    ) -> float:
+        """設定から値を取得し、安全に閾値を生成する"""
+        config_ranges = getattr(self.ga_config_obj, "threshold_ranges", {}) if self.ga_config_obj else {}
+        range_ = config_ranges.get(key, default_range)
+
+        if isinstance(range_, list):
+            if allow_choice and len(range_) > 2:
+                try:
+                    return float(random.choice(range_))
+                except (ValueError, TypeError):
+                    pass
+            if len(range_) >= 2 and isinstance(range_[0], (int, float)) and isinstance(range_[1], (int, float)):
+                return random.uniform(range_[0], range_[1])
+        return random.uniform(default_range[0], default_range[1])
 
     def _generate_fallback_condition(self, condition_type: str) -> Condition:
         """フォールバック用の基本条件を生成（JSON形式の指標名）"""

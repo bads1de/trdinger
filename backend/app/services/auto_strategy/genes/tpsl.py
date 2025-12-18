@@ -8,7 +8,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from ..utils.gene_utils import BaseGene
+from .base_gene import BaseGene
 from ..config.constants import TPSLMethod
 
 logger = logging.getLogger(__name__)
@@ -250,7 +250,7 @@ def crossover_tpsl_genes(
     parent1: TPSLGene, parent2: TPSLGene
 ) -> tuple[TPSLGene, TPSLGene]:
     """TP/SL遺伝子の交叉（ジェネリック関数使用）"""
-    from ..utils.gene_utils import GeneticUtils
+    from .genetic_utils import GeneticUtils
 
     # 基本フィールドのカテゴリ分け
     numeric_fields = [
@@ -311,7 +311,7 @@ def crossover_tpsl_genes(
 def mutate_tpsl_gene(gene: TPSLGene, mutation_rate: float = 0.1) -> TPSLGene:
     """TP/SL遺伝子の突然変異（ジェネリック関数使用）"""
     import random
-    from ..utils.gene_utils import GeneticUtils
+    from .genetic_utils import GeneticUtils
 
     # 基本フィールド
     numeric_fields: List[str] = [

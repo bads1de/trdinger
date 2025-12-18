@@ -166,11 +166,7 @@ class TestMLFilterIntegration:
     def test_ml_filter_blocks_entry_in_next(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):
-        """next()でMLフィルターがエントリーをブロックすることをテスト
-
-        このテストでは、_ml_allows_entryがFalseを返す場合に
-        buy()が呼ばれないことを検証します。
-        """
+        """next()でMLフィルターがエントリーをブロックすることをテスト"""
         with patch.object(UniversalStrategy, "init"):
             params = {
                 "strategy_gene": valid_gene,
@@ -184,7 +180,6 @@ class TestMLFilterIntegration:
 
             # 必須属性の初期化
             strategy._current_bar_index = 0
-            strategy._pending_orders = []
             strategy._minute_data = None
             strategy._sl_price = None
             strategy._tp_price = None
@@ -204,10 +199,10 @@ class TestMLFilterIntegration:
                         strategy, "_check_short_entry_conditions", return_value=False
                     ):
                         with patch.object(
-                            strategy, "_check_pending_order_fills", return_value=None
+                            strategy.order_manager, "check_pending_order_fills", return_value=None
                         ):
                             with patch.object(
-                                strategy, "_expire_pending_orders", return_value=None
+                                strategy.order_manager, "expire_pending_orders", return_value=None
                             ):
                                 with patch.object(
                                     strategy,
@@ -235,11 +230,7 @@ class TestMLFilterIntegration:
     def test_ml_filter_allows_entry_in_next(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):
-        """next()でMLフィルターがエントリーを許可することをテスト
-
-        このテストでは、_ml_allows_entryがTrueを返す場合に
-        buy()が呼ばれることを検証します。
-        """
+        """next()でMLフィルターがエントリーを許可することをテスト"""
         with patch.object(UniversalStrategy, "init"):
             params = {
                 "strategy_gene": valid_gene,
@@ -254,7 +245,6 @@ class TestMLFilterIntegration:
 
             # 必須属性の初期化
             strategy._current_bar_index = 0
-            strategy._pending_orders = []
             strategy._minute_data = None
             strategy._sl_price = None
             strategy._tp_price = None
@@ -274,10 +264,10 @@ class TestMLFilterIntegration:
                         strategy, "_check_short_entry_conditions", return_value=False
                     ):
                         with patch.object(
-                            strategy, "_check_pending_order_fills", return_value=None
+                            strategy.order_manager, "check_pending_order_fills", return_value=None
                         ):
                             with patch.object(
-                                strategy, "_expire_pending_orders", return_value=None
+                                strategy.order_manager, "expire_pending_orders", return_value=None
                             ):
                                 with patch.object(
                                     strategy,
@@ -395,7 +385,3 @@ class TestMLFilterIntegration:
 
             assert isinstance(features, pd.DataFrame)
             assert not features.empty
-
-
-
-

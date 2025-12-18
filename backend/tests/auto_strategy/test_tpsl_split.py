@@ -6,10 +6,6 @@ from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 
 from app.services.auto_strategy.config import GASettings
-from app.services.auto_strategy.core.genetic_operators import (
-    crossover_strategy_genes_pure,
-    mutate_strategy_gene_pure,
-)
 
 
 class TestTPSLSplit:
@@ -38,7 +34,7 @@ class TestTPSLSplit:
         parent2 = StrategyGene(long_tpsl_gene=long_tpsl2, short_tpsl_gene=short_tpsl2)
 
         # 交叉実行
-        child1, child2 = crossover_strategy_genes_pure(
+        child1, child2 = StrategyGene.crossover(
             parent1, parent2, config
         )  # configを渡す
 
@@ -69,8 +65,8 @@ class TestTPSLSplit:
 
         gene = StrategyGene(long_tpsl_gene=long_tpsl, short_tpsl_gene=short_tpsl)
 
-        mutated = mutate_strategy_gene_pure(
-            gene, config, mutation_rate=1.0
+        mutated = gene.mutate(
+            config, mutation_rate=1.0
         )  # configを渡す
 
         # 変異しているか確認（値が変わっているか、あるいはオブジェクトが変わっているか）

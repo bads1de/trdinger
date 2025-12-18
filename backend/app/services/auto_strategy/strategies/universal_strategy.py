@@ -17,7 +17,6 @@ from backtesting import Strategy
 from ..core.condition_evaluator import ConditionEvaluator
 from ..genes.entry import EntryGene
 from ..config.constants import EntryType
-from ..positions.pending_order import PendingOrder
 from ..genes.conditions import StateTracker
 from ..genes import (
     Condition,
@@ -30,6 +29,7 @@ from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.position_sizing_service import PositionSizingService
 from ..services.indicator_service import IndicatorCalculator
 from ..tpsl.tpsl_service import TPSLService
+from .order_manager import OrderManager
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +70,9 @@ class UniversalStrategy(Strategy):
         self.state_tracker = StateTracker()  # ステートフル条件用
         self._current_bar_index = 0  # バーインデックストラッカー
 
-        # 保留注文管理用
-        self._pending_orders: list[PendingOrder] = []
+        # 注文管理マネージャーの初期化
+        self.order_manager = OrderManager(self, self.lower_tf_simulator)
+        
         self._minute_data = None  # 1分足DataFrame（パラメータから取得）
 
         # 悲観的約定ロジック用: SL/TP管理変数
@@ -312,8 +313,10 @@ class UniversalStrategy(Strategy):
             self._current_bar_index += 1
 
             # === 保留注文の約定チェック（1分足シミュレーション） ===
-            self._check_pending_order_fills()
-            self._expire_pending_orders()
+            self.order_manager.check_pending_order_fills(
+                self._minute_data, self.data.index[-1], self._current_bar_index
+            )
+            self.order_manager.expire_pending_orders(self._current_bar_index)
 
             # ステートフル条件のトリガーをチェック・記録
             self._process_stateful_triggers()
@@ -435,13 +438,14 @@ class UniversalStrategy(Strategy):
                             self._position_direction = -1.0
                     else:
                         # 指値/逆指値注文: 保留リストに追加
-                        self._create_pending_order(
+                        self.order_manager.create_pending_order(
                             direction=direction,
                             size=position_size,
                             entry_params=entry_params,
                             sl_price=sl_price,
                             tp_price=tp_price,
                             entry_gene=entry_gene,
+                            current_bar_index=self._current_bar_index,
                         )
 
         except Exception as e:
@@ -905,137 +909,3 @@ class UniversalStrategy(Strategy):
                     }
                 ]
             )
-
-    # ===== 保留注文管理メソッド =====
-
-    def _check_pending_order_fills(self) -> None:
-        """
-        保留注文の約定をチェック
-
-        1分足データを使用して、各保留注文が約定したかを判定します。
-        約定した場合は即座に取引を実行し、保留リストから削除します。
-        """
-        if not self._pending_orders or self._minute_data is None:
-            return
-
-        if self.position:
-            # 既にポジションがある場合は保留注文をキャンセル
-            self._pending_orders.clear()
-            return
-
-        # 現在のバーの時刻範囲を取得
-        # Note: backtesting.py の data.index[-1] は現在のバーの開始時刻を指すと仮定
-        # (Pandas の resample/date_range の標準的な挙動)
-        current_bar_time = self.data.index[-1]
-        bar_duration = self._get_bar_duration()
-
-        if bar_duration is None:
-            return
-
-        # 期間: [OpenTime, OpenTime + Duration)
-        # つまり、今確定したバーの期間データを取得する
-        bar_start = current_bar_time
-        bar_end = current_bar_time + bar_duration
-
-        # 該当期間の1分足を抽出
-        minute_bars = self.lower_tf_simulator.get_minute_data_for_bar(
-            self._minute_data, bar_start, bar_end
-        )
-
-        if minute_bars.empty:
-            return
-
-        filled_orders = []
-
-        for order in self._pending_orders:
-            filled, fill_price = self.lower_tf_simulator.check_order_fill(
-                order, minute_bars
-            )
-
-            if filled and fill_price is not None:
-                # 約定実行
-                self._execute_filled_order(order, fill_price)
-                filled_orders.append(order)
-                break  # 1バーで1注文のみ約定
-
-        # 約定した注文を削除
-        for order in filled_orders:
-            self._pending_orders.remove(order)
-
-    def _expire_pending_orders(self) -> None:
-        """期限切れの保留注文を削除"""
-        self._pending_orders = [
-            order
-            for order in self._pending_orders
-            if not order.is_expired(self._current_bar_index)
-        ]
-
-    def _create_pending_order(
-        self,
-        direction: float,
-        size: float,
-        entry_params: dict,
-        sl_price: float | None,
-        tp_price: float | None,
-        entry_gene: EntryGene,
-    ) -> None:
-        """
-        保留注文を作成
-
-        Args:
-            direction: 取引方向 (1.0=Long, -1.0=Short)
-            size: ポジションサイズ
-            entry_params: エントリーパラメータ (limit, stop)
-            sl_price: ストップロス価格
-            tp_price: テイクプロフィット価格
-            entry_gene: エントリー遺伝子
-        """
-        order = PendingOrder(
-            order_type=entry_gene.entry_type,
-            direction=direction,
-            limit_price=entry_params.get("limit"),
-            stop_price=entry_params.get("stop"),
-            size=size,
-            created_bar_index=self._current_bar_index,
-            validity_bars=entry_gene.order_validity_bars,
-            sl_price=sl_price,
-            tp_price=tp_price,
-        )
-        self._pending_orders.append(order)
-
-    def _execute_filled_order(self, order: PendingOrder, fill_price: float) -> None:
-        """
-        約定した注文を実行
-
-        Args:
-            order: 約定した保留注文
-            fill_price: 約定価格
-        """
-        if order.is_long():
-            self.buy(size=order.size)
-        else:
-            self.sell(size=order.size)
-
-        # 内部状態を設定
-        self._entry_price = fill_price
-        self._sl_price = order.sl_price
-        self._tp_price = order.tp_price
-        self._position_direction = order.direction
-
-    def _get_bar_duration(self):
-        """
-        現在のタイムフレームのバー期間を取得
-
-        Returns:
-            pd.Timedelta または None
-        """
-        timeframe_map = {
-            "1m": pd.Timedelta(minutes=1),
-            "5m": pd.Timedelta(minutes=5),
-            "15m": pd.Timedelta(minutes=15),
-            "30m": pd.Timedelta(minutes=30),
-            "1h": pd.Timedelta(hours=1),
-            "4h": pd.Timedelta(hours=4),
-            "1d": pd.Timedelta(days=1),
-        }
-        return timeframe_map.get(self.base_timeframe)

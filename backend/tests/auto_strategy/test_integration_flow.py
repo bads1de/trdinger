@@ -3,10 +3,6 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.genes.validator import GeneValidator
-from app.services.auto_strategy.core.genetic_operators import (
-    crossover_strategy_genes_pure,
-    mutate_strategy_gene_pure,
-)
 from app.services.auto_strategy.genes.strategy import StrategyGene
 
 
@@ -45,13 +41,13 @@ class TestAutoStrategyFlow:
             print(f"Parent1 invalid: {errors1}")
 
         # 3. 交叉
-        child1, child2 = crossover_strategy_genes_pure(parent1, parent2, config)
+        child1, child2 = StrategyGene.crossover(parent1, parent2, config)
 
         assert child1.long_tpsl_gene is not None
         assert child1.short_tpsl_gene is not None
 
         # 4. 変異
-        mutated_child1 = mutate_strategy_gene_pure(child1, config, mutation_rate=0.5)
+        mutated_child1 = child1.mutate(config, mutation_rate=0.5)
 
         assert mutated_child1.long_tpsl_gene is not None
         assert mutated_child1.short_tpsl_gene is not None

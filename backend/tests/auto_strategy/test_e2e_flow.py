@@ -146,43 +146,26 @@ class TestE2EFlow:
         manager.initialize_ga_engine(ga_config)
 
         # インジケーター生成をモック化（パラメータ生成エラー回避のため）
-        if manager.ga_engine and manager.ga_engine.gene_generator:
-            from app.services.auto_strategy.genes import IndicatorGene
+        from app.services.auto_strategy.genes import IndicatorGene
+        sma_gene = IndicatorGene(
+            type="SMA", parameters={"period": 14}, enabled=True
+        )
 
-            sma_gene = IndicatorGene(
-                type="SMA", parameters={"period": 14}, enabled=True
-            )
-
-            manager.ga_engine.gene_generator.indicator_generator.generate_random_indicators = Mock(
-                return_value=[sma_gene]
-            )
-
-        # 実験実行（同期的に実行されるはず）
-        # run_experiment内で例外が出ないことを確認
-        try:
-            manager.run_experiment(experiment_id, ga_config, backtest_config)
-        except Exception as e:
-            pytest.fail(f"run_experiment failed with exception: {e}")
+        with patch("app.services.auto_strategy.generators.random_gene_generator.generate_random_indicators", return_value=[sma_gene]):
+            # 実験実行（同期的に実行されるはず）
+            try:
+                manager.run_experiment(experiment_id, ga_config, backtest_config)
+            except Exception as e:
+                pytest.fail(f"run_experiment failed with exception: {e}")
 
         # 検証
 
         # 1. バックテストが実行されたか
-        # キャッシュ導入により、同一遺伝子の場合はバックテストがスキップされるため
-        # 呼び出し回数が個体数より少なくなる可能性がある。
-        # 少なくとも1回は実行されていることを確認する。
         assert mock_backtest_service.run_backtest.called
         assert mock_backtest_service.run_backtest.call_count >= 1
 
         # 2. 結果保存
-        # 世代ごとの保存は現在の実装では保証されないためスキップ
-        # assert mock_persistence_service.save_generation_results.call_count == ga_config.generations
-
-        # 最終結果の保存
         assert mock_persistence_service.save_experiment_result.called
 
         # 完了ステータス更新
         mock_persistence_service.complete_experiment.assert_called_with(experiment_id)
-
-
-
-

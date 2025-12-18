@@ -7,7 +7,7 @@ DEAPライブラリを使用したGA実装。
 import logging
 import random
 import time
-from dataclasses import fields
+from dataclasses import fields, asdict
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -18,15 +18,49 @@ from app.services.backtest.backtest_service import BacktestService
 from ..config.ga import GAConfig
 from ..generators.random_gene_generator import RandomGeneGenerator
 from .fitness_sharing import FitnessSharing
-from .genetic_operators import (
-    create_deap_mutate_wrapper,
-    crossover_strategy_genes,
-    mutate_strategy_gene,
-)
 from .individual_evaluator import IndividualEvaluator
 from .parallel_evaluator import ParallelEvaluator
+from ..genes import StrategyGene
 
 logger = logging.getLogger(__name__)
+
+
+def crossover_strategy_genes(parent1, parent2, config):
+    """戦略遺伝子の交叉ラッパー"""
+    return StrategyGene.crossover(parent1, parent2, config)
+
+
+def mutate_strategy_gene(gene, config, mutation_rate=0.1):
+    """戦略遺伝子の突然変異ラッパー"""
+    return gene.mutate(config, mutation_rate)
+
+
+def create_deap_mutate_wrapper(individual_class, population, config):
+    """DEAP用の突然変異ラッパー関数を作成"""
+
+    def mutate_wrapper(individual):
+        try:
+            # 適応的突然変異を使用
+            if population is not None:
+                # individual自体がStrategyGeneのインスタンス
+                mutated_strategy = individual.adaptive_mutate(
+                    population, config, base_mutation_rate=config.mutation_rate
+                )
+            else:
+                mutated_strategy = individual.mutate(
+                    config, mutation_rate=config.mutation_rate
+                )
+
+            # StrategyGeneをIndividualに変換
+            # StrategyGeneを継承しているため、フィールドを展開して初期化
+            gene_dict = {f.name: getattr(mutated_strategy, f.name) for f in fields(mutated_strategy)}
+            return (individual_class(**gene_dict),)
+
+        except Exception as e:
+            logger.error(f"DEAP突然変異ラッパーエラー: {e}")
+            return (individual,)
+
+    return mutate_wrapper
 
 
 class EvolutionRunner:

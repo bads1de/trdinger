@@ -209,9 +209,7 @@ class TestIndicatorGeneratorWithPreset:
 
     def test_indicator_generator_respects_preset_config(self):
         """IndicatorGenerator が GAConfig のプリセット設定を尊重することをテスト"""
-        from app.services.auto_strategy.generators.random_indicator_generator import (
-            IndicatorGenerator,
-        )
+        from app.services.auto_strategy.genes import generate_random_indicators
 
         # プリセットを含む GAConfig モック
         mock_config = MagicMock()
@@ -223,17 +221,15 @@ class TestIndicatorGeneratorWithPreset:
 
         # indicator_registry をモックしてプリセット付きパラメータを返す
         with patch(
-            "app.services.auto_strategy.generators.random_indicator_generator.indicator_registry"
+            "app.services.auto_strategy.genes.indicator.indicator_registry"
         ) as mock_registry:
             # プリセットを考慮したパラメータ生成をモック
             mock_registry.generate_parameters_for_indicator.return_value = {
                 "length": 10  # short_term 範囲内
             }
 
-            generator = IndicatorGenerator(mock_config)
-
             # 生成された指標のパラメータがプリセット範囲内であることを確認
-            indicators = generator.generate_random_indicators()
+            indicators = generate_random_indicators(mock_config)
 
             # 少なくとも 1 つの指標が生成される
             assert len(indicators) >= 1

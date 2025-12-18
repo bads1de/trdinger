@@ -1,0 +1,144 @@
+"""
+遺伝子基底クラス
+
+すべての遺伝子モデルの共通基底クラスを提供します。
+"""
+
+import logging
+from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any, Dict, List, Tuple, Union
+
+logger = logging.getLogger(__name__)
+
+
+class BaseGene(ABC):
+    """
+    遺伝子クラスの基底クラス
+
+    PositionSizingGeneとTPSLGeneの共通機能を統合した抽象基底クラスです。
+    to_dict(), from_dict(), validate() の共通実装を提供します。
+    """
+
+    def to_dict(self) -> Dict[str, Any]:
+        """オブジェクトを辞書形式に変換"""
+        result = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):  # プライベート属性は除外
+                continue
+
+            # Enumの処理
+            if hasattr(value, "value"):
+                result[key] = value.value
+            # datetimeの処理
+            elif isinstance(value, datetime):
+                result[key] = value.isoformat()
+            # その他の値
+            else:
+                result[key] = value
+
+        return result
+
+    @staticmethod
+    def _is_enum_type(param_type) -> bool:
+        """パラメータタイプがEnum型かどうかをチェック"""
+        return hasattr(param_type, "__members__")
+
+    @staticmethod
+    def _is_datetime_type(param_type) -> bool:
+        """パラメータタイプがdatetime型かどうかをチェック"""
+        return param_type == datetime
+
+    @staticmethod
+    def _convert_enum_value(value: Any, param_type) -> Any:
+        """Enum型への変換"""
+        if isinstance(value, str):
+            try:
+                return param_type(value)
+            except ValueError:
+                logger.warning(f"無効なEnum値 {value} を無視、デフォルト値を設定")
+                # Enumの最初の値をデフォルトとして返す
+                return next(iter(param_type))
+        return value
+
+    @staticmethod
+    def _convert_datetime_value(value: Any) -> Any:
+        """datetime型への変換"""
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                logger.warning(f"無効なdatetime値 {value} を無視、デフォルト値を設定")
+                return datetime.now()  # デフォルトとして現在時刻
+        return value
+
+    @staticmethod
+    def _convert_value(value: Any, param_type) -> Any:
+        """一般的な値変換"""
+        if BaseGene._is_enum_type(param_type):
+            return BaseGene._convert_enum_value(value, param_type)
+        elif BaseGene._is_datetime_type(param_type):
+            return BaseGene._convert_datetime_value(value)
+        else:
+            return value
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Any:
+        """辞書形式からオブジェクトを復元"""
+        init_params = {}
+
+        # クラスアノテーションがある場合
+        if hasattr(cls, "__annotations__") and cls.__annotations__:
+            annotations = cls.__annotations__
+
+            for param_name, param_type in annotations.items():
+                if param_name in data:
+                    raw_value = data[param_name]
+                    init_params[param_name] = cls._convert_value(raw_value, param_type)
+        else:
+            # アノテーションがないまたは空の場合はデータ全体を使用
+            logger.warning(
+                f"クラス {cls.__name__} に型アノテーションがないため、辞書データを直接使用"
+            )
+            init_params = data.copy()
+
+        return cls(**init_params)
+
+    def validate(self) -> Tuple[bool, List[str]]:
+        """遺伝子の妥当性を検証"""
+        errors = []
+
+        try:
+            # 基本的な属性チェック
+            if hasattr(self, "enabled") and not isinstance(
+                getattr(self, "enabled", True), bool
+            ):
+                errors.append("enabled属性がbool型である必要があります")
+
+            # サブクラス固有の検証を呼び出し
+            self._validate_parameters(errors)
+
+        except Exception as e:
+            errors.append(f"検証処理でエラーが発生: {e}")
+
+        return len(errors) == 0, errors
+
+    @abstractmethod
+    def _validate_parameters(self, errors: List[str]) -> None:
+        """サブクラスで固有のパラメータ検証を実装"""
+
+    def _validate_range(
+        self,
+        value: Union[int, float],
+        min_val: Union[int, float],
+        max_val: Union[int, float],
+        param_name: str,
+        errors: List[str],
+    ) -> bool:
+        """範囲検証のヘルパー関数"""
+        if not (min_val <= value <= max_val):
+            errors.append(
+                f"{param_name}は{min_val}-{max_val}の範囲である必要があります"
+            )
+            return False
+        return True

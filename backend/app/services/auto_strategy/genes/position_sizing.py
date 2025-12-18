@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from ..utils.gene_utils import BaseGene
+from .base_gene import BaseGene
 from ..config.constants import PositionSizingMethod
 
 
@@ -134,7 +134,7 @@ def crossover_position_sizing_genes(
     parent1: PositionSizingGene, parent2: PositionSizingGene
 ) -> tuple[PositionSizingGene, PositionSizingGene]:
     """ポジションサイジング遺伝子の交叉（ジェネリック関数使用）"""
-    from ..utils.gene_utils import GeneticUtils
+    from .genetic_utils import GeneticUtils
 
     # フィールドのカテゴリ分け
     numeric_fields = [
@@ -167,7 +167,7 @@ def mutate_position_sizing_gene(
 ) -> PositionSizingGene:
     """ポジションサイジング遺伝子の突然変異（ジェネリック関数使用）"""
     from typing import Dict
-    from ..utils.gene_utils import GeneticUtils
+    from .genetic_utils import GeneticUtils
 
     # フィールドルール定義
     numeric_fields: List[str] = [

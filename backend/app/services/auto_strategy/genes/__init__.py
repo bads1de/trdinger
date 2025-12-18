@@ -13,7 +13,7 @@ from .conditions import (
 )
 from .entry import EntryGene, create_random_entry_gene
 from ..config.constants import EntryType, PositionSizingMethod, TPSLMethod
-from .indicator import IndicatorGene
+from .indicator import IndicatorGene, generate_random_indicators, create_random_indicator_gene
 from .position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,
@@ -59,4 +59,6 @@ __all__ = [
     "mutate_position_sizing_gene",
     "mutate_tpsl_gene",
     "create_random_entry_gene",
+    "generate_random_indicators",
+    "create_random_indicator_gene",
 ]

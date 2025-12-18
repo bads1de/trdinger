@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 
 
-from app.services.auto_strategy.utils.gene_utils import BaseGene
+from app.services.auto_strategy.genes.base_gene import BaseGene
 
 
 class MockEnum(Enum):
