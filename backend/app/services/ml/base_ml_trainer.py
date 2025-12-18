@@ -331,9 +331,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         Returns:
             予測確率の辞書:
-            - 2クラス分類（ダマシ予測）: {"is_valid": float}
-              - is_valid: エントリーが有効である確率 (class 1)
-            - 3クラス分類（方向予測）: {"up": float, "down": float, "range": float}
+            - {"is_valid": float}: エントリーが有効である確率 (class 1)
         """
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
@@ -357,15 +355,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             else:
                 latest_pred = predictions
 
-            # 4. 結果の整形
-            if latest_pred.shape[0] == 3:
-                # 3クラス分類 (down, range, up)
-                return {
-                    "down": float(latest_pred[0]),
-                    "range": float(latest_pred[1]),
-                    "up": float(latest_pred[2]),
-                }
-            elif latest_pred.shape[0] == 2:
+            # 4. 結果の整形（二値分類専用）
+            if latest_pred.shape[0] >= 2:
                 # 2クラス分類（ダマシ予測 / メタラベリング）
                 # class 0 = ダマシ（False Signal / 無効）
                 # class 1 = 有効（Valid Signal）
@@ -734,6 +725,3 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             }
         )
         return fold_result
-
-
-

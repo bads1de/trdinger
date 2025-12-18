@@ -39,7 +39,7 @@ class TestHybridIntegration:
                 "low": [95, 96, 97, 98, 99] * 20,
                 "close": [102, 103, 104, 105, 106] * 20,
                 "volume": [1000, 1100, 1200, 1300, 1400] * 20,
-                "target": [1, 0, 1, 2, 1] * 20,  # 3クラス分類
+                "target": [1, 0, 1, 0, 1] * 20,  # 二値分類（ダマシ予測）
             }
         )
 
@@ -185,6 +185,7 @@ class TestHybridIntegration:
         )
 
         from app.services.auto_strategy.genes.strategy import StrategyGene
+
         individual = StrategyGene(id="test_gene")
 
         backtest_config = {
@@ -214,14 +215,12 @@ class TestHybridIntegration:
         ) as mock_ml_service_class:
             mock_ml_service = Mock()
             mock_ml_service.generate_signals.return_value = {
-                "up": 0.3,
-                "down": 0.4,
-                "range": 0.3,
+                "is_valid": 0.7,
             }
             # is_trained プロパティまたはメソッドのモック
             mock_ml_service.trainer.is_trained = True
 
-            mock_ml_service.predict.return_value = np.array([0.2, 0.3, 0.5])
+            mock_ml_service.predict.return_value = np.array([0.3, 0.7])
             mock_ml_service_class.return_value = mock_ml_service
 
             predictor = HybridPredictor(
@@ -232,11 +231,9 @@ class TestHybridIntegration:
             features_df = pd.DataFrame([[1.0, 2.0]], columns=["close", "volume"])
             prediction = predictor.predict(features_df)
 
-            # 正規化された予測結果の構造を確認
+            # 二値分類の予測結果の構造を確認
             assert isinstance(prediction, dict)
-            assert "up" in prediction
-            assert "down" in prediction
-            assert "range" in prediction
+            assert "is_valid" in prediction
 
     def test_hybrid_ga_full_integration(
         self,
@@ -333,6 +330,7 @@ class TestHybridIntegration:
         )
 
         from app.services.auto_strategy.genes.strategy import StrategyGene
+
         individual = StrategyGene(id="test_gene")
 
         # エラーが発生してもデフォルトフィットネスが返されることを確認
@@ -379,9 +377,7 @@ class TestHybridIntegration:
         ) as mock_ml_service_class:
             mock_ml_service = Mock()
             mock_ml_service.config.prediction.get_default_predictions.return_value = {
-                "up": 0.33,
-                "down": 0.33,
-                "range": 0.34,
+                "is_valid": 0.5,
             }
             # is_trained -> False
             mock_ml_service.trainer.is_trained = False
@@ -397,7 +393,3 @@ class TestHybridIntegration:
             assert isinstance(signals, dict)
             assert "is_valid" in signals
             assert signals["is_valid"] == 0.5
-
-
-
-

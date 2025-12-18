@@ -31,11 +31,10 @@ def triple_barrier_method_preset(
     volatility_window: int = 20,
     use_atr: bool = False,
     atr_period: int = 14,
-    binary_label: bool = False,
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
     """
-    Triple Barrier Method (TBM) ラベル生成プリセット。
+    Triple Barrier Method (TBM) ラベル生成プリセット（二値分類専用）。
 
     Args:
         df: OHLCV データフレーム
@@ -48,11 +47,10 @@ def triple_barrier_method_preset(
         volatility_window: ボラティリティ計算ウィンドウ（use_atr=Falseの場合）
         use_atr: ATRをボラティリティとして使用するか
         atr_period: ATR計算期間
-        binary_label: 0/1のバイナリラベルを生成するか（メタラベリング用）
         t_events: イベント時刻（指定された場合、この時刻のみ計算）
 
     Returns:
-        pd.Series: "UP"/"RANGE"/"DOWN" (binary_label=False) または 0/1 (binary_label=True)
+        pd.Series: 0/1 のバイナリラベル（メタラベリング / ダマシ予測用）
     """
     if timeframe not in SUPPORTED_TIMEFRAMES:
         raise ValueError(f"未サポートの時間足です: {timeframe}")
@@ -105,35 +103,25 @@ def triple_barrier_method_preset(
             vertical_barrier_times=vertical_barrier_times,
         )
 
-        # 3. ラベル生成 (get_bins)
-        bins = tb.get_bins(events, close, binary_label=binary_label)
+        # 3. ラベル生成 (get_bins) - 常にバイナリラベル
+        bins = tb.get_bins(events, close, binary_label=True)
 
-        # 4. ラベル変換
-        if binary_label:
-            return bins["bin"]
-        else:
-            # (-1, 0, 1 -> DOWN, RANGE, UP)
-            label_map = {-1.0: "DOWN", 0.0: "RANGE", 1.0: "UP"}
-            string_labels = bins["bin"].map(label_map)
+        # 4. バイナリラベルを返す
+        labels = bins["bin"]
 
-            # 元のインデックスに合わせる
-            string_labels = string_labels.reindex(df.index)
+        # 分布ログ
+        counts = labels.value_counts()
+        total = len(labels.dropna())
+        if total > 0:
+            valid_pct = (counts.get(1, 0) / total) * 100
+            invalid_pct = (counts.get(0, 0) / total) * 100
+            logger.info(
+                f"TBMラベル生成完了: "
+                f"Valid={counts.get(1, 0)}({valid_pct:.1f}%), "
+                f"Invalid={counts.get(0, 0)}({invalid_pct:.1f}%)"
+            )
 
-            # 分布ログ
-            counts = string_labels.value_counts()
-            total = len(string_labels.dropna())
-            if total > 0:
-                up_pct = (counts.get("UP", 0) / total) * 100
-                range_pct = (counts.get("RANGE", 0) / total) * 100
-                down_pct = (counts.get("DOWN", 0) / total) * 100
-                logger.info(
-                    f"TBMラベル生成完了: "
-                    f"UP={counts.get('UP', 0)}({up_pct:.1f}%), "
-                    f"RANGE={counts.get('RANGE', 0)}({range_pct:.1f}%), "
-                    f"DOWN={counts.get('DOWN', 0)}({down_pct:.1f}%)"
-                )
-
-            return string_labels
+        return labels
 
     except Exception as e:
         logger.error(f"TBMラベル生成エラー: {e}")
@@ -148,11 +136,10 @@ def trend_scanning_preset(
     min_window: int = 10,
     window_step: int = 1,
     price_column: str = "close",
-    binary_label: bool = False,
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
     """
-    Trend Scanning ラベル生成プリセット。
+    Trend Scanning ラベル生成プリセット（二値分類専用）。
 
     Args:
         df: OHLCV データフレーム
@@ -162,11 +149,10 @@ def trend_scanning_preset(
         min_window: 最小ウィンドウサイズ
         window_step: ウィンドウステップサイズ
         price_column: 価格カラム名
-        binary_label: 0/1のバイナリラベルを生成するか
         t_events: イベント時刻（指定された場合、この時刻のみ計算）
 
     Returns:
-        pd.Series: "UP"/"RANGE"/"DOWN" (binary_label=False) または 0/1 (binary_label=True)
+        pd.Series: 0/1 のバイナリラベル（メタラベリング / ダマシ予測用）
     """
     if timeframe not in SUPPORTED_TIMEFRAMES:
         raise ValueError(f"未サポートの時間足です: {timeframe}")
@@ -192,33 +178,23 @@ def trend_scanning_preset(
 
         labels_df = ts.get_labels(close=close, t_events=t_events)
 
-        # 3. ラベル変換
-        if binary_label:
-            # 絶対値をとってバイナリ化 (0 or 1)
-            return labels_df["bin"].abs().astype(int)
-        else:
-            # (-1, 0, 1 -> DOWN, RANGE, UP)
-            label_map = {-1.0: "DOWN", 0.0: "RANGE", 1.0: "UP"}
-            string_labels = labels_df["bin"].map(label_map)
+        # 3. ラベル変換（常にバイナリラベル）
+        # 絶対値をとってバイナリ化 (0 or 1)
+        labels = labels_df["bin"].abs().astype(int)
 
-            # 元のインデックスに合わせる
-            string_labels = string_labels.reindex(df.index)
+        # 分布ログ
+        counts = labels.value_counts()
+        total = len(labels.dropna())
+        if total > 0:
+            valid_pct = (counts.get(1, 0) / total) * 100
+            invalid_pct = (counts.get(0, 0) / total) * 100
+            logger.info(
+                f"TSラベル生成完了: "
+                f"Valid={counts.get(1, 0)}({valid_pct:.1f}%), "
+                f"Invalid={counts.get(0, 0)}({invalid_pct:.1f}%)"
+            )
 
-            # 分布ログ
-            counts = string_labels.value_counts()
-            total = len(string_labels.dropna())
-            if total > 0:
-                up_pct = (counts.get("UP", 0) / total) * 100
-                range_pct = (counts.get("RANGE", 0) / total) * 100
-                down_pct = (counts.get("DOWN", 0) / total) * 100
-                logger.info(
-                    f"TSラベル生成完了: "
-                    f"UP={counts.get('UP', 0)}({up_pct:.1f}%), "
-                    f"RANGE={counts.get('RANGE', 0)}({range_pct:.1f}%), "
-                    f"DOWN={counts.get('DOWN', 0)}({down_pct:.1f}%)"
-                )
-
-            return string_labels
+        return labels
 
     except Exception as e:
         logger.error(f"TrendScanningラベル生成エラー: {e}")
@@ -373,6 +349,3 @@ def apply_preset_by_name(
     }
 
     return labels, preset_info
-
-
-

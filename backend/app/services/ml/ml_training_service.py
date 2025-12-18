@@ -385,7 +385,7 @@ class MLTrainingService(BaseResourceManager):
             features: 特徴量DataFrame
 
         Returns:
-            予測確率の辞書 {"up": float, "down": float, "range": float}
+            予測確率の辞書 {"is_valid": float}
         """
         if not self.trainer:
             logger.warning("トレーナーが初期化されていません")
@@ -421,6 +421,3 @@ class MLTrainingService(BaseResourceManager):
 
 # グローバルインスタンス（デフォルトはアンサンブル）
 ml_training_service = MLTrainingService(trainer_type="ensemble")
-
-
-

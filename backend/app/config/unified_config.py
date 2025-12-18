@@ -406,53 +406,42 @@ class MLPredictionConfig(BaseSettings):
     """ML 予測設定。
 
     MLモデルの予測結果の確率値やデフォルト値を設定します。
+    二値分類（メタラベリング / ダマシ予測）専用です。
     """
 
-    default_up_prob: float = Field(default=0.33, alias="DEFAULT_UP_PROB")
-    default_down_prob: float = Field(default=0.33, alias="DEFAULT_DOWN_PROB")
-    default_range_prob: float = Field(default=0.34, alias="DEFAULT_RANGE_PROB")
-    fallback_up_prob: float = Field(default=0.33, alias="FALLBACK_UP_PROB")
-    fallback_down_prob: float = Field(default=0.33, alias="FALLBACK_DOWN_PROB")
-    fallback_range_prob: float = Field(default=0.34, alias="FALLBACK_RANGE_PROB")
+    # 二値分類用（is_valid: エントリーが有効である確率）
+    default_is_valid_prob: float = Field(
+        default=0.5, alias="DEFAULT_IS_VALID_PROB", description="デフォルトの有効確率"
+    )
+    fallback_is_valid_prob: float = Field(
+        default=0.5,
+        alias="FALLBACK_IS_VALID_PROB",
+        description="フォールバック有効確率",
+    )
+
     min_probability: float = Field(default=0.0, alias="MIN_PROBABILITY")
     max_probability: float = Field(default=1.0, alias="MAX_PROBABILITY")
-    probability_sum_min: float = Field(default=0.8, alias="PROBABILITY_SUM_MIN")
-    probability_sum_max: float = Field(default=1.2, alias="PROBABILITY_SUM_MAX")
     expand_to_data_length: bool = Field(default=True, alias="EXPAND_TO_DATA_LENGTH")
     default_indicator_length: int = Field(default=100, alias="DEFAULT_INDICATOR_LENGTH")
-
-    # ボラティリティ予測用 (Added for compatibility)
-    default_trend_prob: float = Field(default=0.5, alias="DEFAULT_TREND_PROB")
-    default_volatility_range_prob: float = Field(
-        default=0.5, alias="DEFAULT_VOLATILITY_RANGE_PROB"
-    )
-    fallback_trend_prob: float = Field(default=0.5, alias="FALLBACK_TREND_PROB")
-    fallback_volatility_range_prob: float = Field(
-        default=0.5, alias="FALLBACK_VOLATILITY_RANGE_PROB"
-    )
 
     def get_default_predictions(self) -> Dict[str, float]:
         """デフォルトの予測値を取得します。
 
         Returns:
-            Dict[str, float]: 上昇、下降、レンジのデフォルト確率値。
+            Dict[str, float]: is_validのデフォルト確率値。
         """
         return {
-            "up": self.default_up_prob,
-            "down": self.default_down_prob,
-            "range": self.default_range_prob,
+            "is_valid": self.default_is_valid_prob,
         }
 
     def get_fallback_predictions(self) -> Dict[str, float]:
         """フォールバック予測値を取得します。
 
         Returns:
-            Dict[str, float]: 上昇、下降、レンジのフォールバック確率値。
+            Dict[str, float]: is_validのフォールバック確率値。
         """
         return {
-            "up": self.fallback_up_prob,
-            "down": self.fallback_down_prob,
-            "range": self.fallback_range_prob,
+            "is_valid": self.fallback_is_valid_prob,
         }
 
     model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_", extra="ignore")
@@ -550,9 +539,9 @@ class MLTrainingConfig(BaseSettings):
     lgb_learning_rate: float = Field(default=0.1, description="学習率")
     lgb_max_depth: int = Field(default=10, description="最大深度")
     lgb_num_leaves: int = Field(default=31, description="葉の数")
-    lgb_objective: str = Field(default="multiclass", description="目的関数")
-    lgb_num_class: int = Field(default=3, description="クラス数")
-    lgb_metric: str = Field(default="multi_logloss", description="評価指標")
+    lgb_objective: str = Field(default="binary", description="目的関数（二値分類）")
+    lgb_num_class: int = Field(default=2, description="クラス数（二値分類）")
+    lgb_metric: str = Field(default="binary_logloss", description="評価指標")
     lgb_boosting_type: str = Field(default="gbdt", description="ブースティングタイプ")
     lgb_feature_fraction: float = Field(default=0.9, description="特徴量採用率")
     lgb_bagging_fraction: float = Field(default=0.8, description="バギング採用率")
@@ -796,6 +785,3 @@ class UnifiedConfig(BaseSettings):
 
 # 統一設定のシングルトンインスタンス
 unified_config = UnifiedConfig()
-
-
-

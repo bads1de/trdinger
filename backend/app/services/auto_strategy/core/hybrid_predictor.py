@@ -81,24 +81,13 @@ class HybridPredictor:
             self.service = service
 
     @staticmethod
-    def _default_prediction(mode: str = "fakeout") -> Dict[str, float]:
+    def _default_prediction() -> Dict[str, float]:
         """
-        デフォルトの予測値を返す
-
-        Args:
-            mode: 予測モード
-                - "fakeout": ダマシ予測（2クラス分類、デフォルト）
-                - "direction": 方向予測（3クラス分類）
-                - "volatility": ボラティリティ予測
+        デフォルトの予測値を返す（二値分類 / ダマシ予測専用）
 
         Returns:
             デフォルトの予測確率辞書
         """
-        if mode == "volatility":
-            return {"trend": 0.5, "range": 0.5}
-        elif mode == "direction":
-            return {"up": 0.33, "down": 0.33, "range": 0.34}
-        # デフォルト: ダマシ予測（2クラス分類）
         # is_valid = 0.5 は「判断不能」を意味する
         return {"is_valid": 0.5}
 
@@ -125,7 +114,7 @@ class HybridPredictor:
                 if self._service_is_trained(s):
                     self._run_time_series_cv(s, features_df)
                     preds.append(s.generate_signals(features_df))
-            
+
             if not preds:
                 logger.warning("予測可能なモデルがありません")
                 return self._default_prediction()
@@ -136,8 +125,7 @@ class HybridPredictor:
             else:
                 keys = preds[0].keys()
                 ml_prediction = {
-                    k: float(np.mean([p.get(k, 0.0) for p in preds]))
-                    for k in keys
+                    k: float(np.mean([p.get(k, 0.0) for p in preds])) for k in keys
                 }
 
             return self._normalise_prediction(ml_prediction)
@@ -292,7 +280,7 @@ class HybridPredictor:
     @staticmethod
     def _normalise_prediction(prediction: Dict[str, float]) -> Dict[str, float]:
         """
-        予測結果を正規化
+        予測結果を正規化（二値分類 / ダマシ予測専用）
 
         Args:
             prediction: 生の予測結果
@@ -300,7 +288,7 @@ class HybridPredictor:
         Returns:
             正規化された予測結果
         """
-        # ダマシ予測（2クラス分類）の場合
+        # is_validが含まれている場合
         if "is_valid" in prediction:
             is_valid = float(prediction.get("is_valid", 0.5))
             # 0-1の範囲に制限
@@ -309,32 +297,6 @@ class HybridPredictor:
                 is_valid = 0.5
             return {"is_valid": is_valid}
 
-        # ボラティリティ予測の場合
-        if "trend" in prediction:
-            trend = float(prediction.get("trend", 0.0))
-            range_score = float(prediction.get("range", 0.0))
-            total = trend + range_score
-            if total <= 0 or not np.isfinite(total):
-                return {"trend": 0.5, "range": 0.5}
-            return {
-                "trend": trend / total,
-                "range": range_score / total,
-            }
-
-        # 方向予測（3クラス分類）の場合
-        up = float(prediction.get("up", 0.0))
-        down = float(prediction.get("down", 0.0))
-        range_score = float(prediction.get("range", 0.0))
-        total = up + down + range_score
-        if total <= 0 or not np.isfinite(total):
-            return {"up": 1 / 3, "down": 1 / 3, "range": 1 / 3}
-        return {
-            "up": up / total,
-            "down": down / total,
-            "range": range_score / total,
-        }
-
-
-
-
-
+        # 未知のフォーマットの場合はデフォルトを返す
+        logger.warning(f"未知の予測フォーマット: {prediction.keys()}")
+        return {"is_valid": 0.5}

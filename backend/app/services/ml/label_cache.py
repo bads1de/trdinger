@@ -54,12 +54,12 @@ class LabelCache:
         sl_factor: float = 1.0,
         use_atr: bool = False,
         atr_period: int = 14,
-        binary_label: bool = False,
         t_events: Optional[pd.DatetimeIndex] = None,
         min_window: int = 5,
         window_step: int = 1,
+        **kwargs,  # 後方互換性のため不明な引数を無視
     ) -> pd.Series:
-        """キャッシュを使ってラベルを取得
+        """キャッシュを使ってラベルを取得（二値分類専用）
 
         Args:
             horizon_n: N本先を見る (Trend Scanningの場合はmax_window)
@@ -71,13 +71,13 @@ class LabelCache:
             sl_factor: トリプルバリア法のストップロス乗数。
             use_atr: トリプルバリア法でボラティリティにATRを使用するかどうか。
             atr_period: ATR計算期間。
-            binary_label: バイナリ（0/1）ラベルを返すかどうか。
             t_events: ラベル付け対象のイベント時刻
             min_window: Trend Scanningの最小ウィンドウサイズ
             window_step: Trend Scanningのウィンドウステップ
+            **kwargs: 後方互換性のための不明な引数（無視されます）
 
         Returns:
-            pd.Series: ラベル
+            pd.Series: 二値ラベル (0/1)
         """
         use_cache = t_events is None
 
@@ -91,7 +91,6 @@ class LabelCache:
             sl_factor,
             use_atr,
             atr_period,
-            binary_label,
             min_window,
             window_step,
         )
@@ -114,7 +113,7 @@ class LabelCache:
             )
 
         if threshold_method_enum == ThresholdMethod.TRIPLE_BARRIER:
-            # presets.py の実装を使用
+            # presets.py の実装を使用（常に二値分類）
             # min_ret=0.0001, volatility_window=24 は以前のLabelCache実装に合わせてハードコード
             labels = triple_barrier_method_preset(
                 df=self.ohlcv_df,
@@ -127,12 +126,11 @@ class LabelCache:
                 volatility_window=24,
                 use_atr=use_atr,
                 atr_period=atr_period,
-                binary_label=binary_label,
                 t_events=t_events,
             )
 
         elif threshold_method_enum == ThresholdMethod.TREND_SCANNING:
-            # presets.py の実装を使用
+            # presets.py の実装を使用（常に二値分類）
             labels = trend_scanning_preset(
                 df=self.ohlcv_df,
                 timeframe=timeframe,
@@ -141,7 +139,6 @@ class LabelCache:
                 min_window=min_window,
                 window_step=window_step,
                 price_column=price_column,
-                binary_label=binary_label,
                 t_events=t_events,
             )
 
@@ -218,6 +215,3 @@ class LabelCache:
             "cache_size": len(self.cache),
             "hit_rate_pct": self.get_hit_rate(),
         }
-
-
-

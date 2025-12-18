@@ -1,12 +1,12 @@
 """
-ラベル生成モジュール
+ラベル生成モジュール（二値分類 / メタラベリング専用）
 
-価格変化率から3クラス分類（上昇・下落・レンジ）のラベルを生成するためのユーティリティを提供します。
-scikit-learnのKBinsDiscretizerとPipelineを活用し、シンプルで効率的な実装を実現します。
+エントリーシグナルの有効性を判定するための二値ラベル（0/1）を生成します。
+Triple Barrier MethodやTrend Scanningを用いて、ダマシ（False Signal）を検出します。
 
-メタラベリング（Fakeout Detection）向け:
+主要コンポーネント:
 - SignalGenerator: ブレイクアウトなどのイベントを検出
-- LabelGenerationService: イベントベースのラベリングをサポート
+- LabelGenerationService: イベントベースのメタラベリングをサポート
 """
 
 from .enums import ThresholdMethod
@@ -28,6 +28,3 @@ __all__ = [
     "SignalGenerator",
     "LabelGenerationService",
 ]
-
-
-

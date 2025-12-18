@@ -77,10 +77,12 @@ class TestUnifiedConfig:
         assert config.ml.training is not None
 
         # ML設定の具体的な値
-        print(f"DEBUG: config.ml.data_processing.max_ohlcv_rows = {config.ml.data_processing.max_ohlcv_rows}")
+        print(
+            f"DEBUG: config.ml.data_processing.max_ohlcv_rows = {config.ml.data_processing.max_ohlcv_rows}"
+        )
         assert config.ml.data_processing.max_ohlcv_rows == 1000000
         assert config.ml.model.model_save_path == "models/"
-        assert config.ml.prediction.default_up_prob == 0.33
+        assert config.ml.prediction.default_is_valid_prob == 0.5
         assert config.ml.training.lgb_n_estimators == 100
 
     def test_env_nested_delimiter_support(self):
@@ -299,7 +301,9 @@ class TestMLConfig:
     def test_data_processing_config(self):
         """データ処理設定のテスト"""
         config = MLConfig()
-        print(f"DEBUG: config.data_processing.max_ohlcv_rows = {config.data_processing.max_ohlcv_rows}")
+        print(
+            f"DEBUG: config.data_processing.max_ohlcv_rows = {config.data_processing.max_ohlcv_rows}"
+        )
         assert config.data_processing.max_ohlcv_rows == 1000000
         assert config.data_processing.feature_calculation_timeout == 3600
         assert config.data_processing.debug_mode is False
@@ -314,20 +318,17 @@ class TestMLConfig:
     def test_prediction_config(self):
         """予測設定のテスト"""
         config = MLConfig()
-        assert config.prediction.default_up_prob == 0.33
-        assert config.prediction.default_down_prob == 0.33
-        assert config.prediction.default_range_prob == 0.34
+        assert config.prediction.default_is_valid_prob == 0.5
+        assert config.prediction.fallback_is_valid_prob == 0.5
 
     def test_prediction_methods(self):
         """予測設定のメソッドテスト"""
         config = MLConfig()
         default_preds = config.prediction.get_default_predictions()
-        assert default_preds["up"] == 0.33
-        assert default_preds["down"] == 0.33
-        assert default_preds["range"] == 0.34
+        assert default_preds["is_valid"] == 0.5
 
         fallback_preds = config.prediction.get_fallback_predictions()
-        assert fallback_preds["up"] == 0.33
+        assert fallback_preds["is_valid"] == 0.5
 
     def test_training_config(self):
         """学習設定のテスト"""
@@ -392,7 +393,6 @@ class TestConfigValidation:
         assert is_valid is False
         assert any("個体数は正の整数である必要があります" in e for e in errors)
 
-
     def test_invalid_port_number(self):
         """無効なポート番号の検証テスト"""
         # Pydanticが自動的に検証するため、正常に動作することを確認
@@ -420,17 +420,8 @@ class TestConfigValidation:
     def test_ml_prediction_probability_range(self):
         """ML予測確率の範囲テスト"""
         config = MLPredictionConfig()
-        assert 0.0 <= config.default_up_prob <= 1.0
-        assert 0.0 <= config.default_down_prob <= 1.0
-        assert 0.0 <= config.default_range_prob <= 1.0
-
-        # 合計が約1.0になることを確認
-        total = (
-            config.default_up_prob
-            + config.default_down_prob
-            + config.default_range_prob
-        )
-        assert 0.99 <= total <= 1.01
+        assert 0.0 <= config.default_is_valid_prob <= 1.0
+        assert 0.0 <= config.fallback_is_valid_prob <= 1.0
 
 
 class TestEnvironmentVariableSupport:
@@ -558,7 +549,9 @@ class TestGAConfigRuntime:
         config.fitness_weights = {"total_return": 0.5, "sharpe_ratio": 0.3}  # 合計0.8
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
-        assert any("フィットネス重みの合計は1.0である必要があります" in e for e in errors)
+        assert any(
+            "フィットネス重みの合計は1.0である必要があります" in e for e in errors
+        )
 
     def test_validate_missing_required_metrics(self):
         """必要なメトリクスが不足する場合の検証"""
@@ -633,7 +626,6 @@ class TestGAConfigRuntime:
         assert config.objectives == ["sharpe_ratio", "total_return"]
         assert config.objective_weights == [1.0, -0.5]
 
-
     def test_parameter_ranges_validation(self):
         """パラメータ範囲の検証テスト"""
         config = GAConfigRuntime()
@@ -657,9 +649,3 @@ class TestGAConfigRuntime:
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
         assert any("個体数は数値である必要があります" in e for e in errors)
-
-
-
-
-
-

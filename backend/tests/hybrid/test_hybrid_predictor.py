@@ -35,11 +35,9 @@ class TestHybridPredictor:
         """Mock MLTrainingService"""
         service = Mock()
 
-        # generate_signalsのモック
+        # generate_signalsのモック（二値分類 / ダマシ予測）
         service.generate_signals.return_value = {
-            "up": 0.6,
-            "down": 0.2,
-            "range": 0.2,
+            "is_valid": 0.7,
         }
 
         # is_trainedのモック
@@ -91,20 +89,18 @@ class TestHybridPredictor:
     @patch("app.services.ml.ml_training_service.MLTrainingService")
     def test_predict_basic(self, mock_service_class, sample_features_df):
         """
-        基本的な予測テスト
+        基本的な予測テスト（二値分類）
 
         検証項目:
         - 予測が正しく実行される
-        - 確率形式で結果が返される
+        - is_valid確率形式で結果が返される
         """
         from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 
-        # モックの設定
+        # モックの設定（二値分類）
         mock_service = Mock()
         mock_service.generate_signals.return_value = {
-            "up": 0.6,
-            "down": 0.2,
-            "range": 0.2,
+            "is_valid": 0.7,
         }
         mock_service_class.return_value = mock_service
 
@@ -113,18 +109,13 @@ class TestHybridPredictor:
         result = predictor.predict(sample_features_df)
 
         # 予測結果の検証
-        assert "up" in result
-        assert "down" in result
-        assert "range" in result
-        assert 0 <= result["up"] <= 1
-        assert 0 <= result["down"] <= 1
-        assert 0 <= result["range"] <= 1
-        assert abs(sum(result.values()) - 1.0) < 0.01  # 合計が約1.0
+        assert "is_valid" in result
+        assert 0 <= result["is_valid"] <= 1
 
     @patch("app.services.ml.ml_training_service.MLTrainingService")
     def test_predict_with_multiple_models(self, mock_service_class, sample_features_df):
         """
-        複数モデルによる予測テスト
+        複数モデルによる予測テスト（二値分類）
 
         検証項目:
         - 複数モデルの予測が平均化される
@@ -135,8 +126,8 @@ class TestHybridPredictor:
         # 複数モデルの予測結果をモック
         mock_service = Mock()
         mock_service.generate_signals.side_effect = [
-            {"up": 0.7, "down": 0.2, "range": 0.1},  # LightGBM
-            {"up": 0.5, "down": 0.3, "range": 0.2},  # XGBoost
+            {"is_valid": 0.8},  # LightGBM
+            {"is_valid": 0.6},  # XGBoost
         ]
         mock_service_class.return_value = mock_service
 
@@ -148,9 +139,9 @@ class TestHybridPredictor:
         result = predictor.predict(sample_features_df)
 
         # 平均化された結果を検証
-        assert "up" in result
-        # (0.7 + 0.5) / 2 = 0.6
-        assert abs(result["up"] - 0.6) < 0.01
+        assert "is_valid" in result
+        # (0.8 + 0.6) / 2 = 0.7
+        assert abs(result["is_valid"] - 0.7) < 0.01
 
     def test_predict_untrained_model_error(self, sample_features_df):
         """
@@ -247,9 +238,7 @@ class TestHybridPredictor:
 
         mock_service = Mock()
         mock_service.generate_signals.return_value = {
-            "up": 0.6,
-            "down": 0.2,
-            "range": 0.2,
+            "is_valid": 0.75,
         }
         mock_service_class.return_value = mock_service
 
@@ -259,7 +248,7 @@ class TestHybridPredictor:
 
         result = predictor.predict(sample_features_df)
 
-        assert "up" in result
+        assert "is_valid" in result
         assert mock_service.generate_signals.called
 
     def test_predict_batch(self, sample_features_df):
@@ -297,9 +286,7 @@ class TestHybridPredictor:
 
         mock_service = Mock()
         mock_service.generate_signals.return_value = {
-            "up": 0.6,
-            "down": 0.2,
-            "range": 0.2,
+            "is_valid": 0.65,
         }
         mock_service_class.return_value = mock_service
 
@@ -314,7 +301,7 @@ class TestHybridPredictor:
 
         result = predictor.predict(sample_features_df)
 
-        assert "up" in result
+        assert "is_valid" in result
         assert mock_service.generate_signals.called
 
     def test_available_models_list(self):
@@ -334,69 +321,3 @@ class TestHybridPredictor:
         assert "xgboost" in models
         # randomforestはサポートされていない
         assert len(models) >= 2  # 少なくとも2つのモデルがサポートされている
-
-    @patch("app.services.ml.ml_training_service.MLTrainingService")
-    def test_predict_volatility_mode(self, mock_service_class, sample_features_df):
-        """
-        ボラティリティ予測モードのテスト
-
-        検証項目:
-        - trend/rangeの2クラス予測が正しく処理される
-        - 確率の合計が1.0になる
-        """
-        from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
-
-        # モックの設定 (ボラティリティ予測)
-        mock_service = Mock()
-        mock_service.generate_signals.return_value = {
-            "trend": 0.7,
-            "range": 0.3,
-        }
-        mock_service_class.return_value = mock_service
-
-        predictor = HybridPredictor(trainer_type="single", model_type="lightgbm")
-
-        result = predictor.predict(sample_features_df)
-
-        # 予測結果の検証
-        assert "trend" in result
-        assert "range" in result
-        assert "up" not in result  # 方向予測キーは含まれないはず
-        assert 0 <= result["trend"] <= 1
-        assert 0 <= result["range"] <= 1
-        assert abs(sum(result.values()) - 1.0) < 0.01
-
-    @patch("app.services.ml.ml_training_service.MLTrainingService")
-    def test_predict_volatility_with_multiple_models(self, mock_service_class, sample_features_df):
-        """
-        複数モデルによるボラティリティ予測テスト
-
-        検証項目:
-        - 複数モデルのtrend/range予測が平均化される
-        """
-        from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
-
-        # 複数モデルの予測結果をモック
-        mock_service = Mock()
-        mock_service.generate_signals.side_effect = [
-            {"trend": 0.8, "range": 0.2},  # LightGBM
-            {"trend": 0.6, "range": 0.4},  # XGBoost
-        ]
-        mock_service_class.return_value = mock_service
-
-        predictor = HybridPredictor(
-            trainer_type="single",
-            model_types=["lightgbm", "xgboost"],
-        )
-
-        result = predictor.predict(sample_features_df)
-
-        # 平均化された結果を検証
-        assert "trend" in result
-        # (0.8 + 0.6) / 2 = 0.7
-        assert abs(result["trend"] - 0.7) < 0.01
-
-
-
-
-

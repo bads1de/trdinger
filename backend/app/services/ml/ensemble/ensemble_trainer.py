@@ -138,7 +138,7 @@ class EnsembleTrainer(BaseMLTrainer):
             features_df: 特徴量DataFrame
 
         Returns:
-            予測確率の配列 (2クラス分類または3クラス分類)
+            予測確率の配列 (2クラス分類)
         """
         if self.ensemble_model is None or not self.ensemble_model.is_fitted:
             raise ModelError("学習済みアンサンブルモデルがありません")
@@ -532,6 +532,3 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.warning(f"EnsembleTrainerモデルクリーンアップエラー: {e}")
             # エラーが発生してもクリーンアップは続行
             self.ensemble_model = None
-
-
-

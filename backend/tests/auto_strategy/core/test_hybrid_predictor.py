@@ -23,11 +23,9 @@ class TestHybridPredictor:
         ) as mock_cls:
             # Create a mock service class that returns a mock service instance
             service_instance = Mock()
-            # Default behavior for service
+            # Default behavior for service (二値分類: is_valid)
             service_instance.generate_signals.return_value = {
-                "up": 0.8,
-                "down": 0.1,
-                "range": 0.1,
+                "is_valid": 0.75,
             }
             service_instance.get_available_single_models.return_value = [
                 "lightgbm",
@@ -86,27 +84,24 @@ class TestHybridPredictor:
         assert mock_training_service_cls.call_count == 2
 
     def test_predict_single(self, predictor):
-        """単一モデルでの予測"""
+        """単一モデルでの予測（二値分類）"""
         df = pd.DataFrame({"close": [100, 101]})
         result = predictor.predict(df)
 
-        assert "up" in result
-        assert "down" in result
-        assert "range" in result
-        # Expect normalized result
-        assert pytest.approx(sum(result.values())) == 1.0
+        assert "is_valid" in result
+        assert 0.0 <= result["is_valid"] <= 1.0
 
     def test_predict_ensemble_average(
         self, mock_training_service_cls, mock_model_manager
     ):
-        """アンサンブル予測（平均化）"""
+        """アンサンブル予測（平均化、二値分類）"""
         # Setup mock to return different values for different instances
         service1 = Mock()
-        service1.generate_signals.return_value = {"up": 0.8, "down": 0.1, "range": 0.1}
+        service1.generate_signals.return_value = {"is_valid": 0.8}
         service1.trainer.is_trained = True
 
         service2 = Mock()
-        service2.generate_signals.return_value = {"up": 0.4, "down": 0.4, "range": 0.2}
+        service2.generate_signals.return_value = {"is_valid": 0.6}
         service2.trainer.is_trained = True
 
         mock_training_service_cls.side_effect = [service1, service2]
@@ -116,22 +111,18 @@ class TestHybridPredictor:
         df = pd.DataFrame({"close": [100]})
         result = predictor.predict(df)
 
-        # Average: up=(0.8+0.4)/2 = 0.6, down=(0.1+0.4)/2 = 0.25, range=(0.1+0.2)/2 = 0.15
-        assert result["up"] == pytest.approx(0.6)
-        assert result["down"] == pytest.approx(0.25)
-        assert result["range"] == pytest.approx(0.15)
+        # Average: is_valid=(0.8+0.6)/2 = 0.7
+        assert result["is_valid"] == pytest.approx(0.7)
 
-    def test_predict_volatility_mode(self, predictor):
-        """ボラティリティモードの予測"""
-        predictor.service.generate_signals.return_value = {"trend": 0.7, "range": 0.3}
+    def test_predict_is_valid_mode(self, predictor):
+        """二値分類（is_valid）モードの予測"""
+        predictor.service.generate_signals.return_value = {"is_valid": 0.85}
 
         df = pd.DataFrame({"close": [100]})
         result = predictor.predict(df)
 
-        assert "trend" in result
-        assert "range" in result
-        assert "up" not in result
-        assert pytest.approx(sum(result.values())) == 1.0
+        assert "is_valid" in result
+        assert 0.0 <= result["is_valid"] <= 1.0
 
     def test_predict_empty_input(self, predictor):
         """空入力のハンドリング"""
@@ -141,9 +132,10 @@ class TestHybridPredictor:
         def test_predict_model_error(self, predictor):
             """モデルエラー時のデフォルトフォールバック"""
             predictor.service.generate_signals.side_effect = Exception("Model error")
-        
+
             with pytest.raises(MLPredictionError, match="予測失敗"):
                 predictor.predict(pd.DataFrame({"a": [1]}))
+
     def test_predict_untrained_model(self, predictor):
         """未学習モデルのハンドリング"""
         predictor.service.trainer.is_trained = False
@@ -188,17 +180,21 @@ class TestHybridPredictor:
         assert info["status"] == "trained"
 
     def test_normalise_prediction(self):
-        """予測値の正規化"""
-        # Zero sum case
-        pred = {"up": 0.0, "down": 0.0, "range": 0.0}
+        """予測値の正規化（二値分類）"""
+        # is_valid case
+        pred = {"is_valid": 0.75}
         norm = HybridPredictor._normalise_prediction(pred)
-        assert norm["up"] == pytest.approx(1 / 3)
+        assert norm["is_valid"] == pytest.approx(0.75)
 
-        # Normal case
-        pred = {"up": 10, "down": 10, "range": 0}  # Sum 20
+        # Out of range case (should be clamped)
+        pred = {"is_valid": 1.5}
         norm = HybridPredictor._normalise_prediction(pred)
-        assert norm["up"] == 0.5
-        assert norm["range"] == 0.0
+        assert norm["is_valid"] == 1.0
+
+        # Negative case (should be clamped)
+        pred = {"is_valid": -0.1}
+        norm = HybridPredictor._normalise_prediction(pred)
+        assert norm["is_valid"] == 0.0
 
     def test_get_latest_model(self, predictor, mock_model_manager):
         """最新モデルパスの取得"""
@@ -239,7 +235,3 @@ class TestHybridPredictor:
         assert len(info["models"]) == 2
         assert info["models"][0]["acc"] == 0.8
         assert info["models"][1]["acc"] == 0.85
-
-
-
-
