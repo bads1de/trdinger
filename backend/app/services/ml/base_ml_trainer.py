@@ -108,15 +108,38 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         model_name: Optional[str] = None,
         **training_params,
     ) -> Dict[str, Any]:
-        """MLモデルを学習（テンプレートメソッド）"""
+        """
+        MLモデルを学習（テンプレートメソッド）
+
+        データ準備、特徴量計算、クロスバリデーションまたはホールドアウト分割、
+        モデル学習、およびオプションでのモデル保存を一連のフローとして実行します。
+
+        Args:
+            training_data: 学習用OHLCVデータ
+            funding_rate_data: ファンディングレートデータ（オプション）
+            open_interest_data: 建玉残高データ（オプション）
+            save_model: 学習後にモデルを永続化するかどうか
+            model_name: 保存時のモデル名（Noneの場合はデフォルト名）
+            **training_params:
+                - use_cross_validation (bool): CVを実行するか
+                - test_size (float): ホールドアウト分割比率
+                - cv_splits (int): CV分割数
+                - random_state (int): 乱数シード
+
+        Returns:
+            学習結果、評価メトリクス、モデルパス等を含む辞書
+        """
         with ml_operation_context("MLモデル学習"):
             if training_data is None or len(training_data) < 100:
                 raise DataError("学習データが不足しています")
 
             # 1. 特徴量計算とデータ準備
             X, y = self._prepare_training_data(
-                self._calculate_features(training_data, funding_rate_data, open_interest_data),
-                training_data, **training_params
+                self._calculate_features(
+                    training_data, funding_rate_data, open_interest_data
+                ),
+                training_data,
+                **training_params,
             )
             if X is None or X.empty:
                 raise DataError("学習データが空です")
@@ -127,24 +150,38 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 # 全データで最終学習
                 X_s = self._preprocess_data(X, X)[0]
                 idx = int(len(X) * (1 - training_params.get("test_size", 0.2)))
-                res = self._train_model_impl(X_s.iloc[:idx], X_s.iloc[idx:], y.iloc[:idx], y.iloc[idx:], **training_params)
+                res = self._train_model_impl(
+                    X_s.iloc[:idx],
+                    X_s.iloc[idx:],
+                    y.iloc[:idx],
+                    y.iloc[idx:],
+                    **training_params,
+                )
                 res.update(cv_res)
             else:
                 X_tr, X_te, y_tr, y_te = self._split_data(X, y, **training_params)
                 X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
-                res = self._train_model_impl(X_tr_s, X_te_s, y_tr, y_te, **training_params)
+                res = self._train_model_impl(
+                    X_tr_s, X_te_s, y_tr, y_te, **training_params
+                )
 
             self.is_trained = True
 
             # 3. モデル保存
             if save_model:
                 meta = ModelMetadata.from_training_result(
-                    res, training_params, self.__class__.__name__, len(self.feature_columns or [])
+                    res,
+                    training_params,
+                    self.__class__.__name__,
+                    len(self.feature_columns or []),
                 )
                 if not meta.validate()["is_valid"]:
                     logger.warning(f"メタデータ警告: {meta.validate()['warnings']}")
-                
-                path = self.save_model(model_name or self.config.model.auto_strategy_model_name, meta.to_dict())
+
+                path = self.save_model(
+                    model_name or self.config.model.auto_strategy_model_name,
+                    meta.to_dict(),
+                )
                 res["model_path"] = self.current_model_path = path
                 self.current_model_metadata = meta.to_dict()
 
@@ -158,7 +195,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         open_interest_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """
-        学習済みモデルを評価
+        学習済みモデルをテストデータで評価
+
+        特徴量の計算、予測の実行、およびラベル生成を行い、
+        各種評価メトリクス（精度、F1スコア、AUC等）を算出します。
 
         Args:
             test_data: テスト用OHLCVデータ
@@ -166,7 +206,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             open_interest_data: 建玉残高データ（オプション）
 
         Returns:
-            評価結果の辞書
+            評価メトリクス、予測値、サンプル数等を含む辞書
         """
         if not self.is_trained:
             raise MLModelError("評価対象の学習済みモデルがありません")
@@ -245,15 +285,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def predict_signal(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """
-        シグナル予測（クラス確率）を実行
-        前処理から予測、フォーマットまでを一貫して行う
+        最新の特徴量データからシグナル（有効確率）を予測
+
+        入力データの前処理、期待される形式への変換、モデル推論を行い、
+        最終的な「エントリーが有効である確率」を返します。
 
         Args:
-            features_df: 特徴量DataFrame
+            features_df: 特徴量DataFrame（生データ）
 
         Returns:
             予測確率の辞書:
-            - {"is_valid": float}: エントリーが有効である確率 (class 1)
+            - {"is_valid": float}: エントリーが有効である期待確率 (0.0〜1.0)
         """
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
@@ -323,7 +365,20 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
-        """特徴量を計算"""
+        """
+        入力データから特徴量集合を計算
+
+        FeatureEngineeringServiceを使用して、テクニカル指標や
+        マーケットマイクロストラクチャなどの特徴量を生成します。
+
+        Args:
+            ohlcv_data: OHLCVデータ
+            funding_rate_data: ファンディングレートデータ（オプション）
+            open_interest_data: 建玉残高データ（オプション）
+
+        Returns:
+            計算された特徴量を含むDataFrame
+        """
         try:
             # 入力データの検証
             if ohlcv_data is None or ohlcv_data.empty:
@@ -385,7 +440,22 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def _time_series_cross_validate(
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Dict[str, Any]:
-        """時系列クロスバリデーション"""
+        """
+        時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行
+
+        時系列データのリーケージ（未来のデータが過去の学習に混入すること）を防ぐため、
+        PurgedKFoldを使用して学習と検証の分割を行います。
+
+        Args:
+            X: 特徴量マトリックス
+            y: ラベルシリーズ
+            **training_params:
+                - cv_splits: 分割数
+                - pct_embargo: エンバーゴ（学習データの末尾を削除する比率）
+
+        Returns:
+            各フォールドのスコア、平均スコア、詳細結果を含む辞書
+        """
         n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
@@ -494,7 +564,19 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def save_model(
         self, model_name: str, metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
-        """モデルを保存"""
+        """
+        学習済みモデルを永続化
+
+        モデル本体に加えて、スケーラー、使用した特徴量リスト、および
+        性能メトリクス等のメタデータを一括で保存します。
+
+        Args:
+            model_name: 保存時のベースファイル名
+            metadata: 追加で記録したいメタデータ
+
+        Returns:
+            保存されたファイルの絶対パス（失敗時はNone）
+        """
         if not self.is_trained:
             raise MLModelError("学習済みモデルがありません")
 

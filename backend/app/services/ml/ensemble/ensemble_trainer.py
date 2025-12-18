@@ -140,14 +140,18 @@ class EnsembleTrainer(BaseMLTrainer):
 
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
-        アンサンブルモデルで予測を実行（メタラベリング適用）
+        アンサンブルモデルを用いた推論を実行
+
+        メタラベリングが有効な場合は、一次モデルの予測確率に対して
+        メタモデル（Second-stage model）を適用し、最終的な取引実行判断
+        （0 または 1）を返します。
+        無効な場合は、通常のアンサンブル（スタッキング等）の結果を返します。
 
         Args:
-            features_df: 特徴量DataFrame
+            features_df: 特徴量ベクトルを含む DataFrame
 
         Returns:
-            予測確率の配列（2次元配列）
-            メタラベリングが有効な場合は、フィルタリングされた結果（0/1の1次元配列）を返す。
+            予測結果（メタラベリング有効時はクラス、無効時は確率）の配列
         """
         if self.ensemble_model is None or not self.ensemble_model.is_fitted:
             raise ModelError("学習済みアンサンブルモデルがありません")
@@ -214,17 +218,25 @@ class EnsembleTrainer(BaseMLTrainer):
         **training_params,
     ) -> Dict[str, Any]:
         """
-        アンサンブルモデルを学習（BaseMLTrainerの抽象メソッド実装）
+        アンサンブルモデルの各コンポーネントを学習
+
+        以下のステップを実行します：
+        1. 指定された複数のベースモデルの学習
+        2. Out-of-Fold (OOF) 予測を用いたメタモデル（スタッキング）の学習
+        3. （オプション）メタラベリングモデルの学習
+        4. テストデータを用いた最終評価
 
         Args:
             X_train: 学習用特徴量
             X_test: テスト用特徴量
             y_train: 学習用ターゲット
             y_test: テスト用ターゲット
-            **training_params: 追加の学習パラメータ
+            **training_params:
+                - random_state: 乱数シード
+                - n_jobs: 並列処理数
 
         Returns:
-            学習結果
+            アンサンブルモデル全体の評価メトリクス、重要度等を含む辞書
         """
         try:
             logger.info(f"アンサンブル学習開始: method={self.ensemble_method}")

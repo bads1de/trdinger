@@ -50,24 +50,28 @@ class BacktestExecutor:
         preloaded_data: Optional[pd.DataFrame] = None,
     ) -> Any:
         """
-        バックテストを実行
+        指定された戦略とパラメータでバックテスト・シミュレーションを実行
+
+        `backtesting.py` の `FractionalBacktest` をベースに、仮想通貨特有の
+        レバレッジ設定やマージン要件を緩和した状態で実行し、トレード統計
+        （勝率、ドローダウン、総利益等）を算出します。
 
         Args:
-            strategy_class: 戦略クラス
-            strategy_parameters: 戦略パラメータ
+            strategy_class: 実行する `backtesting.Strategy` 継承クラス
+            strategy_parameters: 指標期間等の戦略設定パラメータ
             symbol: 取引ペア
             timeframe: 時間軸
-            start_date: 開始日時
-            end_date: 終了日時
-            initial_capital: 初期資金
-            commission_rate: float
-            preloaded_data: 事前にロードされたデータ（オプション）
+            start_date: 検証開始日時
+            end_date: 検証終了日時
+            initial_capital: 初期証拠金
+            commission_rate: 手数料率（例: 0.0006 for 0.06%）
+            preloaded_data: 外部から提供されたOHLCVデータがある場合に使用
 
         Returns:
-            バックテスト統計結果
+            パフォーマンス統計を含む `backtesting.stats` オブジェクト
 
         Raises:
-            BacktestExecutionError: バックテスト実行に失敗した場合
+            BacktestExecutionError: シミュレーションの初期化または実行中に異常が発生した場合
         """
         try:
             # データ取得
@@ -183,6 +187,3 @@ class BacktestExecutor:
                 },
             }
         }
-
-
-

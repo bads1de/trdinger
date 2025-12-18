@@ -25,9 +25,12 @@ logger = logging.getLogger(__name__)
 
 class DictConverter:
     """
-    辞書形式変換クラス
+    戦略遺伝子と辞書形式の相互変換を行うコンバーター
 
-    戦略遺伝子の辞書形式変換機能を担当します。
+    `StrategyGene` オブジェクトをシリアライズ可能な辞書形式に変換し、
+    また辞書から元のクラス構造を再構築します。
+    サブ遺伝子（TP/SL、サイジング等）や動的な指標パラメータの
+    再帰的な変換を管理します。
     """
 
     def __init__(self, enable_smart_generation: bool = True):
@@ -53,15 +56,19 @@ class DictConverter:
             self._smart_condition_generator = ConditionGenerator(True)
         return self._smart_condition_generator
 
-    def strategy_gene_to_dict(self, strategy_gene) -> Dict[str, Any]:
+    def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """
-        戦略遺伝子を辞書形式に変換
+        戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換
+
+        全指標、エントリー/エグジット条件、リスク管理設定、および
+        サブ遺伝子（TPSL, PositionSizing 等）を再帰的に走査し、
+        一貫性のある JSON 互換辞書を構築します。
 
         Args:
-            strategy_gene: 戦略遺伝子オブジェクト
+            strategy_gene: 変換対象の StrategyGene インスタンス
 
         Returns:
-            辞書形式のデータ
+            JSON シリアライズ可能な辞書
         """
         try:
             # risk_managementからTP/SL関連の設定を除外
@@ -372,16 +379,20 @@ class DictConverter:
 
         return clean_risk_management
 
-    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class):
+    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class: Any):
         """
-        辞書形式から戦略遺伝子を復元
+        辞書形式のデータから戦略遺伝子オブジェクトを復元
+
+        JSON 等からデシリアライズされた辞書を受け取り、
+        内部の指標クラス、条件木（ConditionGroup）、および各種
+        サブ遺伝子クラスを適切にインスタンス化して再構築します。
 
         Args:
-            data: 辞書形式の戦略遺伝子データ
-            strategy_gene_class: StrategyGeneクラス
+            data: シリアライズされた戦略データ
+            strategy_gene_class: インスタンス化する StrategyGene クラス
 
         Returns:
-            戦略遺伝子オブジェクト
+            復元された StrategyGene オブジェクト
         """
         try:
             # 入力データがNoneまたは空でないことを確認
@@ -572,9 +583,10 @@ class DictConverter:
 
 class GeneSerializer:
     """
-    統一遺伝子シリアライザー
+    戦略遺伝子のシリアライゼーションを統括するサービス
 
-    DictConverterをラップし、JSON/Dict形式の相互変換を提供します。
+    `DictConverter` を内部で使用し、`StrategyGene` オブジェクトと
+    辞書形式、または JSON 文字列との間の相互変換インターフェースを提供します。
     """
 
     def __init__(self, enable_smart_generation: bool = True):

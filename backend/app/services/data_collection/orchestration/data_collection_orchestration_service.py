@@ -25,10 +25,13 @@ logger = logging.getLogger(__name__)
 
 class DataCollectionOrchestrationService:
     """
-    データ収集統合管理サービス
+    データ収集プロセスの統合オーケストレーター
 
-    各種データ収集の統合管理、バックグラウンドタスクの管理、
-    データ存在チェック、収集結果の統一的な処理を担当します。
+    各データ種別（OHLCV、ファンディングレート、建玉）の収集ロジックを集約し、
+    一括差分更新、全履歴の新規取得、ビットコイン特化収集などの
+    高レイヤーな「収集タスク」として提供します。
+    バックグラウンド実行のスケジューリングやエラーハンドリング、
+    および API レスポンス形式の統一も担当します。
     """
 
     def __init__(self):
@@ -72,18 +75,22 @@ class DataCollectionOrchestrationService:
         start_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        履歴データ収集を開始
+        特定のシンボルと時間軸の過去価格データ（OHLCV）を収集
+
+        データベースにデータが存在しない場合に、バックグラウンドタスクとして
+        Bybit等の取引所から全履歴データの取得を開始します。
+        `force_update=True` の場合は既存データをクリアして再取得します。
 
         Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-            background_tasks: バックグラウンドタスク
+            symbol: 取引ペア（例: BTC/USDT:USDT）
+            timeframe: 時間軸（1m, 1h, 1d等）
+            background_tasks: 非同期実行のためのバックグラウンドタスク管理基盤
             db: データベースセッション
-            force_update: 強制更新（データが存在しても上書き）
-            start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
+            force_update: Trueの場合、既存データを削除して最初から収集し直す
+            start_date: 収集開始日。未指定時はシステムデフォルト（通常 2020-03-25）
 
         Returns:
-            収集開始結果
+            収集タスクのステータス（started, exists等）を含むレスポンス辞書
         """
         # シンボルと時間軸のバリデーション
         normalized_symbol = self.validate_symbol_and_timeframe(symbol, timeframe)
@@ -135,14 +142,18 @@ class DataCollectionOrchestrationService:
         self, symbol: str, db: Session
     ) -> Dict[str, Any]:
         """
-        一括差分更新を実行（OHLCV、FR、OI）
+        市場全体のデータを最新状態に同期（差分更新オーケストレーション）
+
+        DB 内の既存データ末尾時刻を確認し、現在時刻までの不足分を
+        Bybit API 等から取得・補完します。OHLCV の全時間足、
+        および FR、OI を一括でインクリメンタル更新します。
 
         Args:
-            symbol: 取引ペア
+            symbol: 対象の取引ペア
             db: データベースセッション
 
         Returns:
-            一括差分更新結果
+            更新が成功した時間軸やデータ種別のサマリーを含むレスポンス
         """
         try:
             ohlcv_repository = OHLCVRepository(db)
@@ -172,14 +183,17 @@ class DataCollectionOrchestrationService:
         self, background_tasks: BackgroundTasks, db: Session
     ) -> Dict[str, Any]:
         """
-        ビットコインの全時間軸データ収集を開始
+        ビットコイン（BTC/USDT）の全時間軸、全期間データの収集を予約
+
+        システムがサポートする全時間足（1m から 1d まで）に対して
+        非同期の収集タスクを発行します。
 
         Args:
-            background_tasks: バックグラウンドタスク
+            background_tasks: FastAPI のバックグラウンドタスク管理
             db: データベースセッション
 
         Returns:
-            収集開始レスポンス
+            予約された全タスクの情報を保持するレスポンス
         """
         try:
             # 全時間軸でビットコインデータを収集
@@ -212,16 +226,19 @@ class DataCollectionOrchestrationService:
         start_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
+        サポートされている全シンボル・全時間軸の履歴データ収集を一括予約
+
+        DB を走査し、データが未取得の箇所について自動的に収集タスクを構築
+        および並列実行（バックグラウンド）します。
 
         Args:
-            background_tasks: バックグラウンドタスク
+            background_tasks: 非同期タスク管理
             db: データベースセッション
-            force_update: 強制更新（データが存在しても上書き）
-            start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
+            force_update: 既存データがある場合も削除して再取得するか
+            start_date: 全タスクの開始日付（未指定時はデフォルト 2020-03-25）
 
         Returns:
-            収集開始レスポンス
+            発行された全タスク数と、対象シンボル・時間軸のリスト
         """
         try:
             # 取引ペアと時間軸の定義
@@ -650,6 +667,3 @@ class DataCollectionOrchestrationService:
         finally:
             if hasattr(db, "close"):
                 db.close()
-
-
-

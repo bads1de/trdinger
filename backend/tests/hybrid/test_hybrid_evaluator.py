@@ -179,7 +179,7 @@ class TestHybridIndividualEvaluator:
             "initial_capital": 10000.0
         })
 
-        fitness = evaluator.evaluate_individual(sample_individual, ga_config)
+        fitness = evaluator.evaluate(sample_individual, ga_config)
 
         # フィットネスが返される
         assert isinstance(fitness, tuple)
@@ -216,7 +216,7 @@ class TestHybridIndividualEvaluator:
             "initial_capital": 10000.0
         })
 
-        fitness = evaluator.evaluate_individual(sample_individual, ga_config)
+        fitness = evaluator.evaluate(sample_individual, ga_config)
 
         # フィットネスが返される
         assert isinstance(fitness, tuple)
@@ -346,7 +346,7 @@ class TestHybridIndividualEvaluator:
             predictor=mock_hybrid_predictor,
         )
 
-        fitness = evaluator.evaluate_individual(
+        fitness = evaluator.evaluate(
             sample_individual, ga_config_multi_objective
         )
 
@@ -380,7 +380,7 @@ class TestHybridIndividualEvaluator:
             predictor=Mock(),
         )
 
-        fitness = evaluator.evaluate_individual(sample_individual, ga_config)
+        fitness = evaluator.evaluate(sample_individual, ga_config)
 
         # エラー時はデフォルト値が返される
         assert isinstance(fitness, tuple)
@@ -412,7 +412,7 @@ class TestHybridIndividualEvaluator:
             predictor=mock_predictor,
         )
 
-        fitness = evaluator.evaluate_individual(sample_individual, ga_config)
+        fitness = evaluator.evaluate(sample_individual, ga_config)
 
         # エラーがあってもフィットネスは返される（デフォルト予測使用）
         assert isinstance(fitness, tuple)
@@ -452,7 +452,7 @@ class TestHybridIndividualEvaluator:
             predictor=mock_hybrid_predictor,
         )
 
-        fitness = evaluator.evaluate_individual(sample_individual, ga_config)
+        fitness = evaluator.evaluate(sample_individual, ga_config)
 
         # 取引回数0の場合は低いフィットネス
         assert isinstance(fitness, tuple)
@@ -505,7 +505,7 @@ class TestHybridIndividualEvaluator:
             "initial_capital": 10000.0
         })
 
-        fitness = evaluator.evaluate_individual(
+        fitness = evaluator.evaluate(
             sample_individual, ga_config_no_prediction
         )
         # ML予測は呼ばれるが、フィットネスには影響しない
@@ -553,7 +553,7 @@ class TestHybridIndividualEvaluator:
             "initial_capital": 10000.0
         })
 
-        fitness = evaluator.evaluate_individual(sample_individual, ga_config)
+        fitness = evaluator.evaluate(sample_individual, ga_config)
 
         # HybridFeatureAdapterが呼ばれたことを確認
         assert mock_adapter.gene_to_features.called

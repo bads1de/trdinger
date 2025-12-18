@@ -67,7 +67,7 @@ class TestIndividualEvaluator:
         }
 
         # テスト実行
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
         assert len(result) == 1  # 単一目的最適化
@@ -91,7 +91,7 @@ class TestIndividualEvaluator:
         ga_config.enable_multi_objective = True
         ga_config.objectives = ["total_return", "sharpe_ratio", "max_drawdown"]
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
         assert len(result) == 3  # 3つの目的
@@ -106,7 +106,7 @@ class TestIndividualEvaluator:
         ga_config = GAConfig()
         ga_config.enable_multi_objective = False
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert result == (0.0,)
 
@@ -120,7 +120,7 @@ class TestIndividualEvaluator:
         ga_config.enable_multi_objective = True
         ga_config.objectives = ["total_return", "sharpe_ratio"]
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert result == (0.0, 0.0)  # 目的数に応じた0.0が返される
 
@@ -450,7 +450,7 @@ class TestIndividualEvaluator:
         self.mock_backtest_service.run_backtest.side_effect = run_backtest_side_effect
 
         # 1. MLフィルター無効で評価
-        result_no_ml = self.evaluator.evaluate_individual(
+        result_no_ml = self.evaluator.evaluate(
             mock_individual, ga_config_no_ml
         )
         # run_backtestがMLフィルターなしの引数で呼ばれたことを検証
@@ -471,7 +471,7 @@ class TestIndividualEvaluator:
         assert result_no_ml[0] == expected_fitness_no_ml
 
         # 2. MLフィルター有効で評価
-        result_with_ml = self.evaluator.evaluate_individual(
+        result_with_ml = self.evaluator.evaluate(
             mock_individual, ga_config_with_ml
         )
         # run_backtestがMLフィルターありの引数で呼ばれたことを検証
@@ -561,7 +561,7 @@ class TestIndividualEvaluator:
         }
 
         # 実行
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         # 検証
         assert self.mock_backtest_service.run_backtest.call_count == 2
@@ -637,7 +637,7 @@ class TestIndividualEvaluator:
         }
 
         # 1回目の評価（データ取得発生）
-        self.evaluator.evaluate_individual(mock_individual, ga_config)
+        self.evaluator.evaluate(mock_individual, ga_config)
 
         # 検証1: データ取得が呼ばれたか（メインTF + 1分足の最大2回）
         self.mock_backtest_service.ensure_data_service_initialized.assert_called()
@@ -657,7 +657,7 @@ class TestIndividualEvaluator:
         call_count_before_2nd = (
             self.mock_backtest_service.data_service.get_data_for_backtest.call_count
         )
-        self.evaluator.evaluate_individual(mock_individual, ga_config)
+        self.evaluator.evaluate(mock_individual, ga_config)
         call_count_after_2nd = (
             self.mock_backtest_service.data_service.get_data_for_backtest.call_count
         )
@@ -730,7 +730,7 @@ class TestIndividualEvaluator:
         ga_config.fitness_constraints = {}
 
         # 1. 初回実行（キャッシュなし）
-        self.evaluator.evaluate_individual(mock_individual, ga_config)
+        self.evaluator.evaluate(mock_individual, ga_config)
 
         # 検証1: データ取得が行われた（IS用+OOS用。1分足も必要に応じて）
         # ISとOOSの2回 + 1分足データ取得の可能性
@@ -752,7 +752,7 @@ class TestIndividualEvaluator:
         call_count_before_2nd = (
             self.mock_backtest_service.data_service.get_data_for_backtest.call_count
         )
-        self.evaluator.evaluate_individual(mock_individual, ga_config)
+        self.evaluator.evaluate(mock_individual, ga_config)
         call_count_after_2nd = (
             self.mock_backtest_service.data_service.get_data_for_backtest.call_count
         )
@@ -822,7 +822,7 @@ class TestUnifiedEvaluationLogic:
         }
         ga_config.fitness_constraints = {}
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         # 常にタプルで返される
         assert isinstance(result, tuple)
@@ -861,7 +861,7 @@ class TestUnifiedEvaluationLogic:
         ga_config.objectives = ["sharpe_ratio"]  # 単一目的
         ga_config.fitness_constraints = {}
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
         assert len(result) == 1
@@ -898,7 +898,7 @@ class TestUnifiedEvaluationLogic:
         ga_config.objectives = ["total_return", "sharpe_ratio"]
         ga_config.fitness_constraints = {}
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         # enable_multi_objective=Falseでも、objectivesの数に応じたタプルが返される
         assert isinstance(result, tuple)
@@ -949,7 +949,7 @@ class TestUnifiedEvaluationLogic:
         }
         ga_config.fitness_constraints = {}
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         # 手動計算:
         # total_return: 0.1 * 0.3 = 0.03

@@ -25,14 +25,18 @@ class GeneticAlgorithmEngineFactory:
         backtest_service: BacktestService, ga_config: GAConfig
     ) -> GeneticAlgorithmEngine:
         """
-        設定に基づいてGAエンジンを作成
+        GA 設定および各種サービスに基づき、GA エンジンを構築
+
+        ロガーの初期化、遺伝子生成器のセットアップ、さらにハイブリッドモード
+        （ML との併用）が有効な場合は予測器やアダプターの準備を行い、
+        依存関係が注入された `GeneticAlgorithmEngine` を返します。
 
         Args:
-            backtest_service: バックテストサービス
-            ga_config: GA設定
+            backtest_service: バックテストの実行を担うサービス
+            ga_config: GA の世代交代数、報酬設計、モデル構成等の設定
 
         Returns:
-            構築済みのGeneticAlgorithmEngine
+            初期化済みの GeneticAlgorithmEngine インスタンス
         """
         # ログレベルの設定
         auto_strategy_logger = logging.getLogger("app.services.auto_strategy")

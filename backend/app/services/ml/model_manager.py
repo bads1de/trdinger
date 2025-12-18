@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 class ModelManager:
     """
-    統合MLモデル管理クラス
+    ML モデルの永続化とライフサイクルを一元管理するサービス
 
-    モデルの保存、読み込み、バージョン管理、クリーンアップなど、
-    モデル管理に関する全ての機能を提供します。
-    既存のAPIとの互換性を保持し、効率的なモデル管理を提供します。
+    モデルバイナリ（joblib）の保存・読み込みに加え、スケーラーや
+    特徴量リストの同期、バージョン管理、期限切れモデルの自動削除、
+    およびメタデータのサイドカー保存（JSON）などを担当します。
     """
 
     def __init__(self):
@@ -100,20 +100,22 @@ class ModelManager:
         feature_columns: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
-        モデルを保存（既存API）
+        学習済みモデルと関連アセットを一括保存
+
+        モデル本体に加え、予測時に必要なスケーラーや特徴量カラムリスト、
+        さらに学習時の評価スコアを含むメタデータを永続化します。
+        管理の利便性のため、軽量なメタデータのみを抽出したサイドカー
+        JSON ファイルも同時に生成します。
 
         Args:
-            model: 保存するモデル
-            model_name: モデル名
-            metadata: メタデータ
-            scaler: スケーラー（オプション）
-            feature_columns: 特徴量カラム（オプション）
+            model: 学習済みのモデルオブジェクト
+            model_name: セーブ名のプレフィックス（実際にはタイムスタンプ等が付与されます）
+            metadata: モデル性能やハイパーパラメータ等の詳細情報
+            scaler: 特徴量スケーラー（StandardScaler 等）
+            feature_columns: 学習に使用した特徴量の名前リスト
 
         Returns:
-            保存されたモデルのパス
-
-        Raises:
-            ModelError: モデル保存に失敗した場合
+            保存されたモデルファイルの絶対パス
         """
         try:
             if model is None:
@@ -188,16 +190,18 @@ class ModelManager:
     )
     def load_model(self, model_path: str) -> Optional[Dict[str, Any]]:
         """
-        モデルを読み込み（既存API）
+        指定されたパスからモデルアセット一式をロード
+
+        joblib を用いてバイナリを復元し、スケーラーや特徴量リストを含む
+        辞書形式で返します。古い形式の単一モデルファイルの読み込みにも
+        互換性を維持しています。
 
         Args:
-            model_path: モデルファイルパス
+            model_path: 読み込み対象のモデルファイルパス
 
         Returns:
-            読み込まれたモデルデータ
-
-        Raises:
-            ModelError: モデル読み込みに失敗した場合
+            {'model': Any, 'scaler': Any, 'feature_columns': List, 'metadata': Dict}
+            などのキーを含む辞書。ファイル不在や破損時は None。
         """
         try:
             if not os.path.exists(model_path):
@@ -278,13 +282,13 @@ class ModelManager:
 
     def list_models(self, model_name_pattern: str = "*") -> List[Dict[str, Any]]:
         """
-        モデルファイルの一覧を取得
+        管理パス内にある保存済みモデルのリストを取得
 
         Args:
-            model_name_pattern: モデル名のパターン
+            model_name_pattern: フィルタリング用のワイルドカード（例: 'lightgbm_*'）
 
         Returns:
-            モデル情報のリスト
+            パス、サイズ、最終更新日時等の情報を含む辞書のリスト（新しい順）
         """
         try:
             models = []
@@ -570,6 +574,3 @@ class ModelManager:
 
 # グローバルインスタンス
 model_manager = ModelManager()
-
-
-

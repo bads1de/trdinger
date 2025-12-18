@@ -39,9 +39,13 @@ class ParameterSpace:
 
 class OptunaOptimizer:
     """
-    Optunaベースの最適化エンジン
+    Optuna を活用したハイパーパラメータ最適化エンジン
 
-    既存の複雑なシステムを置き換える、シンプルで効率的な実装。
+    TPE (Tree-structured Parzen Estimator) サンプラーを用いたベイズ最適化を提供します。
+    複雑なモデルのハイパーパラメータ空間を効率的に探索し、
+    指定された目的関数（Objective Function）の最大化を目指します。
+    大量の評価を行う GA やバックテストと統合することを想定し、
+    Study オブジェクトのライフサイクル管理とメモリクリーンアップ機能を備えています。
     """
 
     def __init__(self):
@@ -56,15 +60,21 @@ class OptunaOptimizer:
         n_calls: int = 50,
     ) -> OptimizationResult:
         """
-        Optunaを使用した最適化を実行
+        Optuna を使用したハイパーパラメータ最適化を実行
+
+        最大化（maximize）を目的として TPE サンプラーを用い、
+        指定された試行回数分、目的関数を評価します。
 
         Args:
-            objective_function: 目的関数
-            parameter_space: パラメータ空間
-            n_calls: 最適化試行回数
+            objective_function: パラメータ辞書を受け取りスコアを返す関数
+            parameter_space: 探索対象のパラメータ名とその範囲定義
+            n_calls: 最適化の最大試行回数
 
         Returns:
-            最適化結果
+            ベストパラメータ、ベストスコア、スタディオブジェクト等を含む OptimizationResult
+
+        Raises:
+            RuntimeError: 最適化が実行されなかった場合や結果が得られなかった場合
         """
         logger.info(f"🚀 Optuna最適化を開始: 試行回数={n_calls}")
         start_time = datetime.now()
@@ -120,8 +130,11 @@ class OptunaOptimizer:
     @safe_operation(context="Optunaリソースクリーンアップ", is_api_call=False)
     def cleanup(self):
         """
-        Optunaリソースのクリーンアップ
-        メモリーリーク防止のため、最適化完了後に呼び出す
+        Optuna インスタンスが保持するリソースをクリーンアップ
+
+        大規模な最適化や GA 中の繰り返し呼び出しにおいて、
+        Study オブジェクト内に蓄積される Trial データのメモリを解放し、
+        メモリリークを防止します。
         """
         if self.study is not None:
             # Studyの内部データをクリア
@@ -146,19 +159,35 @@ class OptunaOptimizer:
     def _suggest_parameters(
         self, trial: optuna.Trial, parameter_space: Dict[str, ParameterSpace]
     ) -> Dict[str, Any]:
-        """パラメータをサジェスト"""
+        """
+        ParameterSpace の定義に基づき、現在の試行に使用するパラメータを提案
+
+        Args:
+            trial: Optuna の Trial オブジェクト
+            parameter_space: 探索空間の定義辞書
+
+        Returns:
+            サジェストされたパラメータ（名前と値のペア）
+
+        Raises:
+            AssertionError: パラメータ定義に不足がある場合
+        """
         params = {}
         for name, cfg in parameter_space.items():
             if cfg.type in ["real", "integer"]:
                 if cfg.low is None or cfg.high is None:
-                    raise AssertionError(f"Bounds (low, high) required for {cfg.type} parameter: {name}")
+                    raise AssertionError(
+                        f"Bounds (low, high) required for {cfg.type} parameter: {name}"
+                    )
                 if cfg.type == "real":
                     params[name] = trial.suggest_float(name, cfg.low, cfg.high)
                 else:
                     params[name] = trial.suggest_int(name, int(cfg.low), int(cfg.high))
             elif cfg.type == "categorical":
                 if not cfg.categories:
-                    raise AssertionError(f"Categories required for categorical parameter: {name}")
+                    raise AssertionError(
+                        f"Categories required for categorical parameter: {name}"
+                    )
                 params[name] = trial.suggest_categorical(name, cfg.categories)
         return params
 
@@ -194,6 +223,3 @@ class OptunaOptimizer:
         return EnsembleParameterSpace.get_ensemble_parameter_space(
             ensemble_method, enabled_models
         )
-
-
-

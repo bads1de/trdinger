@@ -26,9 +26,13 @@ logger = logging.getLogger(__name__)
 
 class MLTrainingService(BaseResourceManager):
     """
-    ML学習サービス（統一トレーナー対応）
+    ML 学習ワークフローを統括するオーケストレーションサービス
 
-    EnsembleTrainerを使用してMLモデル（単一・アンサンブル両対応）の学習、評価、保存を行うサービス。
+    `EnsembleTrainer` による学習プロセスと `OptimizationService` による
+    パラメータ探索を統合し、実運用（予測）またはバックテストで使用可能な
+    高性能なモデル（単一またはアンサンブル）を生成・管理します。
+    リソース管理（BaseResourceManager）を継承しており、学習完了後の
+    メモリクリーンアップやキャッシュ制御も一貫して行います。
     """
 
     def __init__(
@@ -142,24 +146,23 @@ class MLTrainingService(BaseResourceManager):
         """
         MLモデルを学習（最適化機能付き）
 
+        指定された設定に基づき、ハイパーパラメータ最適化（Optuna）の
+        実行有無を判定した上で、アンサンブルまたは単一モデルの学習
+        ワークフローを開始します。
+
         Args:
             training_data: 学習用OHLCVデータ
             funding_rate_data: ファンディングレートデータ（オプション）
             open_interest_data: 建玉残高データ（オプション）
-            save_model: モデルを保存するか
-            model_name: モデル名（オプション）
-            optimization_settings: 最適化設定（オプション）
-            **training_params: 追加の学習パラメータ
-                - use_cross_validation: クロスバリデーションを使用（デフォルト: False）
-                - cv_splits: CV分割数（デフォルト: config.training.cv_folds）
+            save_model: モデルをファイルとして保存するか
+            model_name: 保存時のモデル名
+            optimization_settings: Optuna等の最適化を実行する場合の設定
+            **training_params:
+                - use_cross_validation (bool): CVを実行するか
+                - cv_splits (int): CV分割数
 
         Returns:
-            学習結果の辞書
-
-        Raises:
-            MLDataError: データが無効な場合
-            MLModelError: 学習に失敗した場合
-            ValueError: 無効なパラメータ組み合わせの場合
+            学習結果のサマリー辞書
         """
         # TimeSeriesSplit関連パラメータを設定（未指定の場合）
         training_params = self._prepare_training_params(training_params)

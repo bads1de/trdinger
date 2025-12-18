@@ -80,21 +80,37 @@ class ModelMetadata:
         model_type: str = "",
         feature_count: int = 0,
     ) -> "ModelMetadata":
-        """学習結果からModelMetadataを構築するファクトリメソッド"""
+        """
+        学習結果とパラメータを統合してメタデータオブジェクトを生成
+
+        Args:
+            training_result: 学習器が返した生のメトリクス辞書
+            training_params: 学習時に使用された設定パラメータ
+            model_type: モデルのクラス名等
+            feature_count: 入力特徴量の数
+
+        Returns:
+            正規化されたメタデータインスタンス
+        """
         r, p = training_result, training_params
         return cls(
             # 指標
-            accuracy=r.get("accuracy", 0.0), precision=r.get("precision", 0.0),
-            recall=r.get("recall", 0.0), f1_score=r.get("f1_score", 0.0),
+            accuracy=r.get("accuracy", 0.0),
+            precision=r.get("precision", 0.0),
+            recall=r.get("recall", 0.0),
+            f1_score=r.get("f1_score", 0.0),
             auc_score=r.get("auc_score", 0.0),
             auc_roc=r.get("roc_auc", r.get("auc_roc", 0.0)),
             auc_pr=r.get("pr_auc", r.get("auc_pr", 0.0)),
             balanced_accuracy=r.get("balanced_accuracy", 0.0),
             matthews_corrcoef=r.get("matthews_corrcoef", 0.0),
             cohen_kappa=r.get("cohen_kappa", 0.0),
-            specificity=r.get("specificity", 0.0), sensitivity=r.get("sensitivity", 0.0),
-            npv=r.get("npv", 0.0), ppv=r.get("ppv", 0.0),
-            log_loss=r.get("log_loss", 0.0), brier_score=r.get("brier_score", 0.0),
+            specificity=r.get("specificity", 0.0),
+            sensitivity=r.get("sensitivity", 0.0),
+            npv=r.get("npv", 0.0),
+            ppv=r.get("ppv", 0.0),
+            log_loss=r.get("log_loss", 0.0),
+            brier_score=r.get("brier_score", 0.0),
             # 情報
             feature_count=feature_count,
             training_samples=r.get("training_samples", 0),
@@ -116,10 +132,13 @@ class ModelMetadata:
 
     def validate(self) -> Dict[str, Any]:
         """
-        メタデータの妥当性を検証
+        保持しているメタデータが物理的・統計的に妥当であるか検証
+
+        精度が0〜1の範囲内であるか、特徴量数やサンプル数が正の値であるか
+        などをチェックし、異常があればエラーまたは警告を返します。
 
         Returns:
-            検証結果の辞書
+            {'is_valid': bool, 'errors': List[str], 'warnings': List[str]}
         """
         errors = []
         warnings = []
@@ -149,6 +168,3 @@ class ModelMetadata:
             "errors": errors,
             "warnings": warnings,
         }
-
-
-

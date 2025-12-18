@@ -143,7 +143,7 @@ class TestHybridIntegration:
         }
         evaluator.set_backtest_config(backtest_config)
 
-        fitness = evaluator.evaluate_individual(individual, hybrid_ga_config)
+        fitness = evaluator.evaluate(individual, hybrid_ga_config)
 
         assert isinstance(fitness, tuple)
         assert len(fitness) == 1  # 単一目的
@@ -198,7 +198,7 @@ class TestHybridIntegration:
         }
         evaluator.set_backtest_config(backtest_config)
 
-        fitness = evaluator.evaluate_individual(individual, hybrid_ga_config)
+        fitness = evaluator.evaluate(individual, hybrid_ga_config)
 
         assert isinstance(fitness, tuple)
         # 目的数の確認は設定やロジックによるが、少なくともタプルであること
@@ -334,7 +334,7 @@ class TestHybridIntegration:
         individual = StrategyGene(id="test_gene")
 
         # エラーが発生してもデフォルトフィットネスが返されることを確認
-        fitness = evaluator.evaluate_individual(individual, hybrid_ga_config)
+        fitness = evaluator.evaluate(individual, hybrid_ga_config)
 
         assert isinstance(fitness, tuple)
         assert len(fitness) == 1

@@ -14,7 +14,18 @@ logger = logging.getLogger(__name__)
 
 
 def infer_timeframe(index: pd.DatetimeIndex) -> str:
-    """DatetimeIndexから時間足を推定する"""
+    """
+    DatetimeIndex の時間間隔から時間足を自動推定
+
+    データポイントの最頻（Mode）間隔を秒単位で計算し、
+    '15m', '1h', '4h', '1d' 等の文字列形式、あるいは 'Nh' 形式に変換します。
+
+    Args:
+        index: 推定対象の DatetimeIndex（通常、マーケットデータのインデックス）
+
+    Returns:
+        推定された時間足文字列。データ不足時はデフォルトで '1h' を返却。
+    """
     if len(index) < 2:
         return "1h"
     diffs = index.to_series().diff().dropna()
@@ -37,9 +48,23 @@ def infer_timeframe(index: pd.DatetimeIndex) -> str:
 def get_t1_series(
     indices: pd.DatetimeIndex, horizon_n: int, timeframe: Optional[str] = None
 ) -> pd.Series:
-    """PurgedKFold用のt1（ラベル終了時刻）シリーズを計算"""
+    """
+    PurgedKFold 用の t1（ラベリング終了時刻）を計算
+
+    各サンプルの開始時刻（index）に対し、予測ホライゾンを考慮した
+    終了時刻を計算します。これはファイナンスにおける交差検証時の
+    情報のリークを防ぐためのパージング（Purging）に使用されます。
+
+    Args:
+        indices: データのインデックス（開始時刻の集合）
+        horizon_n: 予測ホライゾンの足数（何本先を予測するか）
+        timeframe: 時間足。指定がない場合はインデックスから推定
+
+    Returns:
+        開始時刻をインデックス、終了時刻を値とする pd.Series
+    """
     tf = timeframe or infer_timeframe(indices)
-    
+
     if tf.endswith("m"):
         delta = pd.Timedelta(minutes=int(tf[:-1]) * horizon_n)
     elif tf.endswith("h"):
@@ -51,6 +76,3 @@ def get_t1_series(
         delta = pd.Timedelta(hours=horizon_n)
 
     return pd.Series(indices + delta, index=indices)
-
-
-

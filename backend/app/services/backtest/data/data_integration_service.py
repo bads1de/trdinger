@@ -25,9 +25,13 @@ class DataIntegrationError(Exception):
 
 class DataIntegrationService:
     """
-    データ統合サービス
+    複数ソースのテータをバックテスト用に統合するサービス
 
-    複数のデータソースを統合してバックテスト用のDataFrameを作成します。
+    OHLCV（価格・出来高）、建玉残高（OI）、およびファンディングレート（FR）
+    を、指定された期間とシンボルに基づいて取得・結合します。
+    インデックス（時間軸）の整合性確認、欠損値補完、および
+    メモリ最適化（ダウンキャスト等）を一括で行い、シミュレーターや
+    ML モデルが直接利用可能な DataFrame を生成します。
     """
 
     def __init__(
@@ -71,18 +75,22 @@ class DataIntegrationService:
         include_fr: bool = True,
     ) -> pd.DataFrame:
         """
-        バックテスト用のDataFrameを作成
+        全マーケットデータを統合したバックテスト用 DataFrame を構築
+
+        1. OHLCV データの取得と DatetimeIndex への変換
+        2. OI / FR データの結合（マージャーを使用）
+        3. 重複削除、欠損値補間、およびデータ型の最適化
 
         Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-            start_date: 開始日時
-            end_date: 終了日時
-            include_oi: Open Interestデータを含めるか
-            include_fr: Funding Rateデータを含めるか
+            symbol: 取扱シンボル（例: BTC/USDT:USDT）
+            timeframe: 計算対象の時間軸（1m, 1h 等）
+            start_date: 期間開始日
+            end_date: 期間終了日
+            include_oi: 建玉残高データを含めるか
+            include_fr: ファンディングレートデータを含めるか
 
         Returns:
-            統合されたDataFrame
+            統合・清浄化済みのマーケットデータを含む DataFrame
         """
         # 1. OHLCVデータを取得・変換
         df = self._get_base_ohlcv_dataframe(symbol, timeframe, start_date, end_date)
@@ -180,7 +188,19 @@ class DataIntegrationService:
         default_return=pd.DataFrame(),
     )
     def _clean_and_optimize_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """DataFrameのクリーニングと最適化"""
+        """
+        DataFrame のクリーニング、補間、およびメモリ最適化を実行
+
+        `data_processor` を使用し、inf の除去、欠損値の線形補間、
+        および float64 から float32 へのダウンキャスト等を行い、
+        長期間のバックテストでもメモリ消費を抑えられるように調整します。
+
+        Args:
+            df: 統合済みの生 DataFrame
+
+        Returns:
+            最適化済みの DataFrame
+        """
         # 必須カラムを定義
         required_columns = [
             "open",
@@ -263,6 +283,3 @@ class DataIntegrationService:
             }
 
         return summary
-
-
-

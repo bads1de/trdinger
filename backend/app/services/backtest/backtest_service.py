@@ -4,7 +4,6 @@
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 import pandas as pd
@@ -48,16 +47,17 @@ class BacktestService:
         self, config: Dict[str, Any], preloaded_data: Optional[pd.DataFrame] = None
     ) -> Dict[str, Any]:
         """
-        バックテストを実行
+        指定された設定とデータでバックテストを実行
 
-        バックテストオーケストレーターに処理を委譲します。
+        データ取得、オーケストレーターの初期化、および実際の
+        シミュレーション実行を管理します。
 
         Args:
-            config: バックテスト設定
-            preloaded_data: 事前にロードされたデータ（オプション）
+            config: バックテストの設定（銘柄、期間、戦略パラメータ等）
+            preloaded_data: メモリ上に既にあるOHLCVデータを使用する場合に指定
 
         Returns:
-            バックテスト結果の辞書
+            パフォーマンス推移、統計指標（シャープレシオ等）を含む結果辞書
         """
         try:
             # 1. データサービスの初期化
@@ -136,14 +136,17 @@ class BacktestService:
 
     def execute_and_save_backtest(self, request, db_session: Session) -> Dict[str, Any]:
         """
-        バックテストを実行し、結果をデータベースに保存
+        バックテストを実行し、結果を永続化（Web API向け）
+
+        リクエストオブジェクトから設定を抽出し、バックテストを実行後、
+        その結果をデータベースの `backtest_results` テーブルに保存します。
 
         Args:
-            request: BacktestConfigオブジェクトまたは辞書
+            request: バックテスト設定を含むPydanticモデルまたは辞書
             db_session: データベースセッション
 
         Returns:
-            実行結果の辞書
+            {'success': bool, 'result': saved_model_data} 形式の辞書
         """
         try:
             # リクエストから設定を作成（辞書とPydanticモデルの両方に対応）
@@ -184,6 +187,3 @@ class BacktestService:
         except Exception as e:
             logger.error(f"バックテスト実行・保存エラー: {e}", exc_info=True)
             return {"success": False, "error": str(e), "status_code": 500}
-
-
-

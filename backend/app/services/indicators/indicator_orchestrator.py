@@ -61,22 +61,21 @@ class TechnicalIndicatorService:
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Union[np.ndarray, pd.Series, tuple, tuple[pd.Series, ...]]:
         """
-        指定された指標を計算（簡素化版）
+        OHLCVデータから指定されたテクニカル指標を計算。
 
-        5つの簡素ステップで処理:
-        1. pandas-ta設定取得 → 2. 基本検証 → 3. パラメータ正規化
-        4. pandas-ta直接呼び出し → 5. アダプター方式フォールバック
+        内部でLRUキャッシュを管理し、同一パラメータでの冗長な計算を最小化します。
+        計算フローは以下の通りです：
+        1. キャッシュ確認 2. 指標設定の取得 3. パラメータバリデーション/正規化
+        4. pandas-ta または 独自アダプターによる計算実行 5. 結果の整形。
 
         Args:
-            df: OHLCV価格データ
-            indicator_type: 指標タイプ（SMA, RSI, MACDなど）
-            params: パラメータ辞書（length, fast, slowなど）
+            df: OHLCVデータ（Open, High, Low, Close, Volumeカラムを含む）
+            indicator_type: 指標名（大文字小文字を問いません。例: 'RSI', 'MACD'）
+            params: 指標パラメータ（例: {'length': 14}）
 
         Returns:
-            計算結果（numpy配列またはタプル）
-
-        Raises:
-            ValueError: サポートされていない指標タイプの場合
+            計算結果。単一戻り値の場合は numpy 配列、
+            複数の場合はそれらのタプルを返します。
         """
         # キャッシュチェック
         try:
@@ -84,10 +83,10 @@ class TechnicalIndicatorService:
             # 値は念のため文字列化して比較（型違いによる重複計算を防ぐ意図だが、厳密な型区別はされない）
             # リストなどのミュータブルな値が含まれる場合に対応するため str() を使用
             cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
-            
+
             # DataFrameのIDをキーに含める（バックテスト中は同じオブジェクトが使い回される前提）
             cache_key = (indicator_type, cache_params, id(df))
-            
+
             if cache_key in self._calculation_cache:
                 return self._calculation_cache[cache_key]
         except Exception:
@@ -122,20 +121,26 @@ class TechnicalIndicatorService:
                             df, indicator_type, params, config_obj
                         )
                     else:
-                        raise ValueError(f"指標 {indicator_type} の実装が見つかりません")
+                        raise ValueError(
+                            f"指標 {indicator_type} の実装が見つかりません"
+                        )
                 except ValueError:
                     # レジストリにもない場合
                     if config:
                         # pandas-ta設定はあるが呼び出し失敗の場合
                         result = self._create_nan_result(df, config)
                     else:
-                        raise ValueError(f"指標 {indicator_type} の実装が見つかりません")
-            
+                        raise ValueError(
+                            f"指標 {indicator_type} の実装が見つかりません"
+                        )
+
             # 結果をキャッシュに保存
             try:
                 if result is not None:
                     # 前述のcache_keyロジックと同じ
-                    cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
+                    cache_params = frozenset(
+                        sorted([(k, str(v)) for k, v in params.items()])
+                    )
                     cache_key = (indicator_type, cache_params, id(df))
                     self._calculation_cache[cache_key] = result
             except Exception:
@@ -211,7 +216,19 @@ class TechnicalIndicatorService:
     def _normalize_params(
         self, params: Dict[str, Any], config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """パラメータ正規化 - エイリアスマッピングとガード"""
+        """
+        入力パラメータを pandas-ta 等が期待する内部名称と値に正規化
+
+        エイリアスの解決（例: 'length' -> 'n'）、デフォルト値の補完、
+        およびデータ長等に基づいた最小値ガードの適用を行います。
+
+        Args:
+            params: ユーザー入力パラメータ
+            config: 指標設定辞書
+
+        Returns:
+            正規化済みパラメータ辞書
+        """
         normalized = {}
         for param_name, aliases in config["params"].items():
             value = None
@@ -614,6 +631,3 @@ class TechnicalIndicatorService:
                 "scale_type": config.scale_type.value if config.scale_type else None,
             }
         return infos
-
-
-

@@ -15,7 +15,17 @@ logger = logging.getLogger(__name__)
 
 def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """
-    データ型を最適化してメモリ使用量を削減
+    DataFrame のデータ型を最適化してメモリ消費量を劇的に削減
+
+    1. float64 を float32 に一括変換（精度を維持しつつメモリ半減）
+    2. 整数列（int64）を値の範囲（Min/Max）に基づいて int32 等へダウンキャスト
+    3. `timestamp` カラムは整合性維持のため最適化から除外
+
+    Args:
+        df: 最適化対象の DataFrame
+
+    Returns:
+        メモリ使用量が最適化された DataFrame
     """
     try:
         df = df.copy()
@@ -43,7 +53,20 @@ def generate_cache_key(
     extra_params: Optional[dict] = None,
 ) -> str:
     """
-    データとパラメータからキャッシュキーを生成
+    データの内容とパラメータセットから一意なキャッシュキーを生成
+
+    特徴量計算等の重い処理の重複を避けるため、入力 DataFrame の
+    ハッシュ値とパラメータの組み合わせを MD5 で符号化した
+    'features_xxxx' 形式の識別子を生成します。
+
+    Args:
+        ohlcv_data: 必須の OHLCV データ
+        funding_rate_data: オプションの FR データ
+        open_interest_data: オプションの OI データ
+        extra_params: 指標設定等のハイパーパラメータ
+
+    Returns:
+        キャッシュファイル名やメモリキャッシュのキーとして使用可能な文字列
     """
     import hashlib
 
@@ -272,7 +295,14 @@ def predict_class_from_proba(
     predictions_proba: np.ndarray, threshold: float = 0.5
 ) -> np.ndarray:
     """
-    予測確率からクラスを推定
+    モデルの出力確率または多クラス確率行列からバイナリクラスを推定
+
+    Args:
+        predictions_proba: 予測確率（1次元配列またはクラスごとの2次元配列）
+        threshold: 0/1判定の閾値（バイナリの場合）
+
+    Returns:
+        0または1の整数配列（多クラスの場合はargmaxされたクラスID）
     """
     if predictions_proba.ndim == 2:
         return np.argmax(predictions_proba, axis=1)

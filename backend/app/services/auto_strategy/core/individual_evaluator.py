@@ -142,9 +142,13 @@ def calculate_trade_frequency_penalty(
 
 class IndividualEvaluator:
     """
-    個体評価器
+    遺伝的アルゴリズムの個体評価を管理するエンジン
 
-    遺伝的アルゴリズムの個体評価を担当します。
+    バックテストサービスを介して個体（戦略遺伝子）のシミュレーションを
+    実行し、得られた統計データ（利益、ドローダウン、勝率等）から
+    適応度（Fitness）を算出します。
+    LRU キャッシュを用いて同一遺伝子の再評価をスキップし、
+    並列実行時の効率を高めます。
     """
 
     # デフォルトのキャッシュサイズ上限
@@ -250,19 +254,20 @@ class IndividualEvaluator:
         if not hasattr(self, "_result_cache"):
             self._result_cache = LRUCache(maxsize=self._max_cache_size * 100)
 
-    def evaluate_individual(self, individual, config: GAConfig):
+    def evaluate(self, individual: Any, config: GAConfig) -> Tuple[float, ...]:
         """
-        個体評価（OOS検証/WFA対応版）
+        個体を評価し、適応度（Fitness）のタプルを返す
 
-        遺伝子をデコードし、キャッシュを確認してから
-        指定された検証手法（通常、OOS、WFA）を用いて評価を実行します。
+        DEAP から呼び出されるメインの評価関数です。
+        遺伝子のデコード、キャッシュの確認、実際のバックテスト実行、
+        および結果のキャッシュまでを一貫して行います。
 
         Args:
-            individual: 評価対象の個体 (StrategyGene, dict, または list)
-            config: GA設定
+            individual: 評価対象（StrategyGene オブジェクト、または辞書/リスト）
+            config: GA の目的関数、ペナルティ、期間分割等の設定
 
         Returns:
-            フィットネス値のタプル (目的関数の数に対応)
+            複数の目的関数に対応した評価値のタプル
         """
         try:
             # 遺伝子デコード
@@ -333,9 +338,22 @@ class IndividualEvaluator:
             return tuple(0.0 for _ in getattr(config, "objectives", []))
 
     def _execute_evaluation_logic(
-        self, gene, base_backtest_config, config
+        self, gene: Any, base_backtest_config: Dict[str, Any], config: GAConfig
     ) -> Tuple[float, ...]:
-        """実際の評価ロジック（OOS/WFA分岐）"""
+        """
+        具体的な評価プロセス（OOS 分割や Walk-Forward 分割）を振り分け
+
+        設定に応じて、通常のバックテスト、Out-of-Sample 検証（期間分割）、
+        または Walk-Forward 分析のいずれかのロジックで評価を実行します。
+
+        Args:
+            gene: 評価対象の遺伝子
+            base_backtest_config: 固定的なバックテスト設定
+            config: GA 実行設定
+
+        Returns:
+            算出された適応度（タプル）
+        """
 
         # Walk-Forward Analysis が有効な場合
         if getattr(config, "enable_walk_forward", False):

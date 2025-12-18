@@ -23,8 +23,11 @@ logger = logging.getLogger(__name__)
 
 class BacktestDataService:
     """
-    リファクタリング後のバックテスト用データサービス
+    バックテストおよび ML 学習用データの供給を一元管理するファサードサービス
 
+    `DataRetrieval`（取得）、`DataConversion`（変換）、`DataIntegration`（統合）
+    といった低層サービスを組み合わせ、シミュレーション実行に必要な
+    価格データや、イベントラベル（HRHP/LRLP 等）付きの学習データを生成します。
     """
 
     def __init__(
@@ -67,21 +70,19 @@ class BacktestDataService:
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """
-        OHLCV、OI、FRデータを統合してbacktesting.py形式に変換
+        OHLCV、OI、FR データを統合してシミュレーター形式に変換
 
-        リファクタリング後の実装では、専門サービスに処理を委譲します。
+        指定された期間の全市場データを収集・結合し、
+        backtesting.py 等のライブラリが期待するカラム構成の DataFrame を返します。
 
         Args:
             symbol: 取引ペア（例: BTC/USDT:USDT）
-            timeframe: 時間軸（例: 1h, 4h, 1d）
+            timeframe: 時間軸
             start_date: 開始日時
             end_date: 終了日時
 
         Returns:
-            backtesting.py用のDataFrame（Open, High, Low, Close, Volume, open_interest, funding_rateカラム）
-
-        Raises:
-            DataIntegrationError: データ統合に失敗した場合
+            Open, High, Low, Close, Volume, open_interest, funding_rate を含む DataFrame
         """
         try:
             result = self._integration_service.create_backtest_dataframe(
@@ -100,8 +101,22 @@ class BacktestDataService:
     def get_ohlcv_data(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
-        """OHLCVデータをDataFrameとして取得"""
+        """
+        指定された期間と銘柄のOHLCVデータを取得
 
+        リポジトリ経由で生データを取得し、タイムスタンプをインデックスとする
+        クリーンなDataFrameに整理します。
+
+        Args:
+            symbol: 通貨ペア
+            timeframe: 時間足
+            start_date: 取得開始日
+            end_date: 取得終了日
+
+        Returns:
+            Open, High, Low, Close, Volume を含むDataFrame。
+            取得失敗時は空のDataFrameを返します。
+        """
         raw_data = self._retrieval_service.get_ohlcv_data(
             symbol=symbol,
             timeframe=timeframe,
@@ -129,21 +144,19 @@ class BacktestDataService:
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
         """
-        MLトレーニング用にOHLCV、OI、FRデータを統合
+        ML モデル学習用に、正規化済みの市場統合データを取得
 
-        リファクタリング後の実装では、専門サービスに処理を委譲します。
+        価格データに加えて OI (建玉) や FR (金利) をインデックスで整列させ、
+        欠損値を補完した状態で返します。特徴量エンジニアリングの入力として使用されます。
 
         Args:
-            symbol: 取引ペア（例: BTC/USDT:USDT）
-            timeframe: 時間軸（例: 1h, 4h, 1d）
-            start_date: 開始日時
-            end_date: 終了日時
+            symbol: 通貨ペア
+            timeframe: 時間足
+            start_date: 開始日
+            end_date: 終了日
 
         Returns:
-            統合されたDataFrame（Open, High, Low, Close, Volume, open_interest, funding_rate）
-
-        Raises:
-            DataIntegrationError: データ統合に失敗した場合
+            ML 学習のベースとして利用可能な統合済み DataFrame
         """
         try:
             return self._integration_service.create_ml_training_dataframe(
@@ -163,8 +176,22 @@ class BacktestDataService:
         start_date: datetime,
         end_date: datetime,
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-        """イベントドリブンラベル付きの学習データを取得"""
+        """
+        ボラティリティ等の特定イベントに基づきラベリングされた学習データを取得
 
+        `EventDrivenLabelGenerator` と連携し、価格変動リスクに応じた
+        HRHP (High Reward High Probability) 等のラベルを付与します。
+        これにより、単なる価格予測ではなく「収益機会の有無」を学習させることが可能になります。
+
+        Args:
+            symbol: 通貨ペア
+            timeframe: 時間足
+            start_date: 開始開始日
+            end_date: 終了日
+
+        Returns:
+            (ラベル付き DataFrame, プロファイル情報等のメタデータ辞書)
+        """
         try:
             market_df = self._integration_service.create_ml_training_dataframe(
                 symbol=symbol,
@@ -201,6 +228,3 @@ class BacktestDataService:
             データ概要の辞書
         """
         return self._integration_service.get_data_summary(df)
-
-
-

@@ -61,7 +61,7 @@ class TestHybridIndividualEvaluator:
             "win_rate": 0.1,
         }
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
         assert len(result) == 1
@@ -91,7 +91,7 @@ class TestHybridIndividualEvaluator:
         ga_config.enable_multi_objective = True
         ga_config.objectives = ["total_return", "sharpe_ratio", "hybrid_score"]
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -106,7 +106,7 @@ class TestHybridIndividualEvaluator:
         ga_config = GAConfig()
         ga_config.enable_multi_objective = False
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert result == (0.0,)
 
@@ -138,7 +138,7 @@ class TestHybridIndividualEvaluator:
             "prediction_score": 0.1,
         }
 
-        result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+        result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
         assert len(result) == 1
@@ -196,7 +196,7 @@ class TestHybridIndividualEvaluator:
         with patch.object(
             self.evaluator, "_get_cached_data", return_value=mock_data
         ) as mock_get_cached:
-            result = self.evaluator.evaluate_individual(mock_individual, ga_config)
+            result = self.evaluator.evaluate(mock_individual, ga_config)
 
             # _get_cached_dataが呼ばれたことを確認
             mock_get_cached.assert_called()

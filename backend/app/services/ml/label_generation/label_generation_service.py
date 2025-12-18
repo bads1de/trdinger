@@ -12,11 +12,12 @@ logger = logging.getLogger(__name__)
 
 class LabelGenerationService:
     """
-    ラベル生成サービス
+    機械学習用ラベルの生成とデータクリーニングを担うサービス
 
-    学習用データのラベル生成、クリーニング、マッピングを担当します。
-    メタラベリング対応: SignalGenerator でイベントを検出し、
-    そのイベントが発生した足のみをラベリング対象とします。
+    トリプルバリア法（Triple Barrier Method）をベースに、CUSUM フィルターや
+    SignalGenerator によるイベント駆動型のラベリングをサポートします。
+    特徴量データと OHLCV データを時間足で整列させ、NaN を排除した
+    学習可能（Ready-to-train）なデータセットを構築します。
     """
 
     def prepare_labels(
@@ -31,22 +32,27 @@ class LabelGenerationService:
         **training_params,
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
-        学習用データ（特徴量とラベル）を準備します。
+        学習用データセット（特徴量とそれに対応する正解ラベル）を構築
+
+        各種フィルター（CUSUM、SignalGenerator）により重要なマーケットイベント
+        が発生した足のみを抽出し、それらのポイントに対してトリプルバリア法で
+        バイナリラベル（1: 目標達成、0: 失敗/損切り/期限切れ）を付与します。
 
         Args:
-            features_df: 特徴量DataFrame
-            ohlcv_df: OHLCV DataFrame (LabelCache初期化用)
-            use_signal_generator: SignalGeneratorを使用するか
-            signal_config: SignalGeneratorの設定
-            use_cusum: CUSUMフィルターを使用するか
-            cusum_threshold: CUSUMフィルターの閾値
-            cusum_vol_multiplier: CUSUMフィルターの動的閾値乗数
-            **training_params: 学習パラメータ
+            features_df: 計算済みの特徴量集合（DataFrame）
+            ohlcv_df: ラベリング基準となる OHLCV データ
+            use_signal_generator: ボリンジャーバンド等の条件でイベントを絞り込むか
+            signal_config: SignalGenerator の詳細設定パラメータ
+            use_cusum: ボラティリティの変化に基づきイベントを抽出するか
+            cusum_threshold: CUSUM フィルターの固定閾値
+            cusum_vol_multiplier: ボラティリティ適応型 CUSUM の感度倍率
+            **training_params: トリプルバリアの期間(horizon_n)や、利確・損切幅の倍率(pt_factor, sl_factor)等
 
         Returns:
-            Tuple[pd.DataFrame, pd.Series]: (クリーニング済み特徴量, 数値化済みラベル)
+            インデックスが同期され、NaN が除去された (特徴量 DataFrame, ラベル Series) のタプル
         """
         from app.config.unified_config import unified_config
+
         label_config = unified_config.ml.training.label_generation
         label_cache = LabelCache(ohlcv_df)
 
@@ -110,7 +116,20 @@ class LabelGenerationService:
         use_signal_generator: bool,
         signal_config: Optional[Dict[str, Any]],
     ) -> Optional[pd.Index]:
-        """イベント時刻を検出"""
+        """
+        ラベリングの起点となるイベント時刻（サンプリングポイント）を検出
+
+        Args:
+            ohlcv_df: 元の価格データ
+            use_cusum: CUSUM フィルタリングを有効にするか
+            cusum_threshold: CUSUM の感度（固定）
+            cusum_vol_multiplier: ボラティリティ倍率
+            use_signal_generator: SignalGenerator モードか
+            signal_config: SignalGenerator 用の設定
+
+        Returns:
+            イベントが検出された時刻の DatetimeIndex（フィルタリングなしの場合は None）
+        """
         if use_cusum:
             from app.services.ml.label_generation.cusum_generator import (
                 CusumSignalGenerator,
@@ -138,6 +157,3 @@ class LabelGenerationService:
             return SignalGenerator().get_combined_events(df=ohlcv_df, **config)
 
         return None
-
-
-

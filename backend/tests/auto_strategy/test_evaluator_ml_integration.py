@@ -64,7 +64,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
                 return_value=(1.0,),
             ),
         ):
-            self.evaluator.evaluate_individual(self.gene, self.ga_config)
+            self.evaluator.evaluate(self.gene, self.ga_config)
 
         # BacktestService.run_backtest が呼ばれたか確認
         self.mock_backtest_service.run_backtest.assert_called_once()
@@ -106,7 +106,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
                 return_value=(1.0,),
             ),
         ):
-            self.evaluator.evaluate_individual(self.gene, self.ga_config)
+            self.evaluator.evaluate(self.gene, self.ga_config)
 
         # BacktestService.run_backtest が呼ばれたか確認
         self.mock_backtest_service.run_backtest.assert_called_once()

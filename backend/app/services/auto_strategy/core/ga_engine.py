@@ -8,7 +8,7 @@ import logging
 import random
 import time
 from dataclasses import fields
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from deap import base, creator, tools
@@ -451,7 +451,7 @@ class EvaluatorWrapper:
         Returns:
             フィットネス値のタプル
         """
-        return self.evaluator.evaluate_individual(individual, self.config)
+        return self.evaluator.evaluate(individual, self.config)
 
 
 class GeneticAlgorithmEngine:
@@ -505,17 +505,23 @@ class GeneticAlgorithmEngine:
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing = None  # setup_deap時に初期化
 
-    def setup_deap(self, config: GAConfig):
-        """DEAP環境のセットアップ（統合版）を行います。
+    def setup_deap(self, config: GAConfig) -> None:
+        """
+        DEAP フレームワークのコア設定（個体定義、演算子登録）を実行
+
+        `creator.create` を用いて、適応度（高ければ高いほど良い）と
+        個体クラス（`StrategyGene` を継承）を動的に定義します。
+        その後、選択、交叉、突然変異の各演算子をツールボックスに登録します。
 
         Args:
-            config (GAConfig): GA設定。
+            config: 世代数や個体数、報酬設計等の GA 設定
         """
+        # 単一目的 or 多目的の設定
         # DEAP環境をセットアップ（戦略個体生成メソッドで統合）
         self.deap_setup.setup_deap(
             config,
             self._create_strategy_individual,
-            self.individual_evaluator.evaluate_individual,
+            self.individual_evaluator.evaluate,
             crossover_strategy_genes,
             mutate_strategy_gene,
         )
@@ -539,16 +545,19 @@ class GeneticAlgorithmEngine:
     def run_evolution(
         self, config: GAConfig, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """進化アルゴリズムを実行します。
+        """
+        進化計算プロセスを開始し、最適な取引戦略を探索
 
-        独立したEvolutionRunnerを使って設定に応じて適切な最適化アルゴリズムを呼び出します。
+        設定に基づき、初期集団の生成から、評価・選択・交叉・突然変異の
+        繰り返し（世代交代）を行い、最終的な最良個体群を抽出します。
+        多目的最適化（NSGA-II 等）と単一目的最適化の両方をサポートします。
 
         Args:
-            config (GAConfig): GA設定。
-            backtest_config (Dict[str, Any]): バックテスト設定。
+            config: 最適化のアルゴリズムパラメータ（世代数、突然変異率等）
+            backtest_config: 個体評価に使用するバックテストの設定（銘柄、期間等）
 
         Returns:
-            Dict[str, Any]: 進化結果。
+            最良戦略の遺伝子、評価ログ、実行統計等を含む結果レポート
         """
         try:
             self.is_running = True
@@ -797,21 +806,27 @@ class GeneticAlgorithmEngine:
 
         return result
 
-    def _extract_best_individuals(self, population, config: GAConfig, halloffame=None):
-        """最良個体を抽出し、デコードします。
+    def _extract_best_individuals(
+        self, population: List[Any], config: GAConfig, halloffame: Optional[Any] = None
+    ) -> Tuple[Any, Optional[StrategyGene], Optional[List[Dict[str, Any]]]]:
+        """
+        最終集団または殿堂入りオブジェクトから最良の個体群を抽出
+
+        多目的最適化の場合はパレートフロントから、単一目的の場合は
+        単純な最高スコア個体を選択し、バックテストでそのまま利用可能な
+        形式に変換して返します。
 
         Args:
-            population: 最終個体群。
-            config (GAConfig): GA設定。
-            halloffame: 殿堂入りオブジェクト（HallOfFame または ParetoFront）。
+            population: 最終世代の全個体リスト
+            config: GA 設定
+            halloffame: 保存されている優良個体のリスト（またはパレートフロント）
 
         Returns:
-            tuple: 最良個体、最良遺伝子、および最良戦略のタプル。
+            (最良個体, 最良遺伝子, 最良戦略リスト) のタプル
         """
-        from ..genes import StrategyGene
-
         best_strategies = None
         best_individual = None
+        best_gene = None  # Initialize best_gene
 
         if config.enable_multi_objective:
             # 多目的最適化の場合、パレート最適解を取得

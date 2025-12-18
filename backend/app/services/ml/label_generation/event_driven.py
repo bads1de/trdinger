@@ -23,7 +23,14 @@ class BarrierProfile:
 
 
 class EventDrivenLabelGenerator:
-    """イベント駆動型（トリプルバリア）ラベル生成クラス"""
+    """
+    マーケットイベント（価格変動）に基づくラベル生成器
+
+    トリプルバリア法を拡張し、市場のレジーム（ボラティリティ状態）ごとに
+    利確・損切・保持期間の係数を動的に適用します。
+    HRHP (High Reward High Probability) や LRLP (Low Risk Low Probability)
+    といった戦略的ラベルを生成し、学習効率の高いデータセットを作成します。
+    """
 
     REGIME_FACTORS: Dict[Union[int, str], dict] = {
         0: {"tp": 1.15, "sl": 1.0, "holding": 1.1},
@@ -43,13 +50,21 @@ class EventDrivenLabelGenerator:
         regime_labels: Optional[Sequence[int]] = None,
         profile_overrides: Optional[Dict[str, dict]] = None,
     ) -> Tuple[pd.DataFrame, dict]:
-        if market_data is None or market_data.empty or len(market_data) < 3:
-            logger.warning("Skipping due to insufficient data")
-            empty_df = pd.DataFrame(
-                columns=["label_hrhp", "label_lrlp", "market_regime"]
-            )
-            info = {"regime_profiles": {}, "label_distribution": {}}
-            return empty_df, info
+        """
+        市場レジームに適応したトリプルバリアラベルを生成
+
+        現在の市場のボラティリティやトレンド方向（レジーム）に基づき、
+        動的に調整されたバリア（利確/損切幅）を適用して、
+        理想的なトレード結果（ラベル）を各データポイントに付与します。
+
+        Args:
+            market_data: OHLCV を含むマーケットデータ
+            regime_labels: 各足に対応する市場レジーム（0: 低、1: 中、2: 高ボラ等）
+            profile_overrides: デフォルトのバリア設定を上書きする辞書
+
+        Returns:
+            (生成されたラベルを含む DataFrame, 処理統計や適用プロファイルを含む辞書)
+        """
 
         self._ensure_required_columns(market_data)
         profiles = self._resolve_profiles(profile_overrides)
@@ -132,20 +147,24 @@ class EventDrivenLabelGenerator:
         if n <= 0:
             return np.array([], dtype=int)
 
-        close, high, low = market_data["close"].values, market_data["high"].values, market_data["low"].values
+        close, high, low = (
+            market_data["close"].values,
+            market_data["high"].values,
+            market_data["low"].values,
+        )
         labels = np.zeros(n, dtype=int)
-        
+
         # デフォルトファクターを取得
         def_factors = self.REGIME_FACTORS["default"]
 
         for idx in range(n):
             reg = regime_array[idx] if regime_array is not None else "default"
             f = self.REGIME_FACTORS.get(reg, def_factors)
-            
+
             tp = profile.base_tp * f["tp"]
             sl = profile.base_sl * f["sl"]
             hld = max(1, int(round(profile.holding_period * f["holding"])))
-            
+
             labels[idx] = self._first_touch_label(close, high, low, idx, tp, sl, hld)
 
         return labels
@@ -163,6 +182,24 @@ class EventDrivenLabelGenerator:
         sl_mult: float,
         holding: int,
     ) -> int:
+        """
+        トリプルバリアの「最初の接触（First Touch）」を判定
+
+        水平バリア（利確/損切）または垂直バリア（時間制限）のいずれかに
+        価格が最初に到達した時点の結果を正規化して返します。
+
+        Args:
+            close: 終値配列
+            high: 高値配列
+            low: 安値配列
+            start_idx: エントリー（基準）のインデックス
+            tp_mult: 利確幅（価格に対する割合）
+            sl_mult: 損切幅（価格に対する割合）
+            holding: 最大保持期間（バー数）
+
+        Returns:
+            1: 利確バリアに接触、-1: 損切バリアに接触、0: タイムアウト（時間切れ）
+        """
         entry_price = close[start_idx]
         if entry_price <= 0:
             return 0
@@ -217,6 +254,3 @@ class EventDrivenLabelGenerator:
             "negative_ratio": neg_ratio,
             "neutral_ratio": neu_ratio,
         }
-
-
-

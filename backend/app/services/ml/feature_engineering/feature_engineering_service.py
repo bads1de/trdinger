@@ -179,10 +179,12 @@ FAKEOUT_DETECTION_ALLOWLIST: Optional[List[str]] = [
 
 class FeatureEngineeringService:
     """
-    特徴量エンジニアリングサービス
+    高度な特徴量生成を統括するオーケストレーター
 
-    各特徴量計算クラスを統合し、高度な特徴量を生成します。
-    単一責任原則に従い、各特徴量タイプの計算は専用クラスに委譲します。
+    単一責任原則に基づき、テクニカル指標、マイクロストラクチャ（Roll、Kyle等）、
+    OI/FR 相関、マルチタイムフレーム分析といった各専門分野の計算ロジックを
+    個別の Calculator クラスに委譲し、最終的な特徴量行列を組み立てます。
+    計算結果のキャッシュ、データ型最適化、欠損値補完などの共通処理も一括管理します。
     """
 
     def __init__(self):
@@ -220,18 +222,22 @@ class FeatureEngineeringService:
         profile: Optional[str] = None,
     ) -> pd.DataFrame:
         """
-        高度な特徴量を計算
+        OHLCV、FR、OI データから統合された特徴量セットを効率的に算出
+
+        各専門分野の計算機（テクニカル、マイクロストラクチャ、OI/FR、
+        マルチタイムフレーム等）を順次実行し、最終的な特徴量
+        マトリックスを生成します。インデックスの整合性チェックや、
+        頻度の統一処理、欠損値補完などの前処理も自動的に行います。
 
         Args:
-            ohlcv_data: OHLCV価格データ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-            lookback_periods: 各特徴量の計算期間設定
-            profile: 特徴量プロファイル ('research' または 'production')。
-                    Noneの場合は設定から読み込み
+            ohlcv_data: 基準となる OHLCV 価格データ
+            funding_rate_data: ファンディングレート（FR）データ（任意）
+            open_interest_data: 建玉残高（OI）データ（任意）
+            lookback_periods: 各指標の計算期間（デフォルト設定あり）
+            profile: 特徴量プロファイル（計算範囲の制御用）
 
         Returns:
-            特徴量が追加されたDataFrame
+            インデックスが ohlcv_data と一致する、計算済みの全特徴量を含む DataFrame
         """
         try:
             if ohlcv_data.empty:
