@@ -3,7 +3,7 @@ ComplexConditionsStrategyのユニットテスト。
 """
 
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 from typing import List
 
 from app.services.auto_strategy.generators.complex_conditions_strategy import (
@@ -16,22 +16,10 @@ from app.services.auto_strategy.config.constants import IndicatorType
 @pytest.fixture
 def mock_condition_generator():
     """モック ConditionGenerator フィクスチャ"""
-    generator = Mock()
+    generator = MagicMock()
     generator.context = {"timeframe": "1h", "symbol": "BTC/USDT"}
-    generator._dynamic_classify = Mock(
-        return_value={
-            IndicatorType.TREND: [],
-            IndicatorType.MOMENTUM: [],
-            IndicatorType.VOLATILITY: [],
-        }
-    )
-    generator._generic_long_conditions = Mock(
-        return_value=[Condition(left_operand="RSI", operator="<", right_operand=30)]
-    )
-    generator._generic_short_conditions = Mock(
-        return_value=[Condition(left_operand="RSI", operator=">", right_operand=70)]
-    )
-    generator._get_indicator_type = Mock(return_value=IndicatorType.MOMENTUM)
+    generator._get_indicator_name.side_effect = lambda i: f"{i.type}_{i.id[:8]}" if i.id else i.type
+    generator._structure_conditions.side_effect = lambda x: x
     return generator
 
 
@@ -88,49 +76,43 @@ class TestStructureConditions:
 
     def test_returns_empty_list_for_empty_input(self, strategy):
         """空リストの場合は空リストを返すことを確認"""
+        strategy.gen._structure_conditions.return_value = []
         result = strategy._structure_conditions([])
         assert result == []
 
     def test_returns_single_condition_unchanged(self, strategy):
         """単一条件の場合はそのまま返すことを確認"""
         condition = Condition(left_operand="RSI", operator="<", right_operand=30)
+        strategy.gen._structure_conditions.return_value = [condition]
         result = strategy._structure_conditions([condition])
         assert result == [condition]
 
     def test_multiple_conditions_can_be_grouped(self, strategy):
-        """複数条件が確率的にグループ化されることを確認"""
+        """複数条件がグループ化（委譲）されることを確認"""
         conditions = [
             Condition(left_operand="RSI", operator="<", right_operand=30),
             Condition(left_operand="MACD", operator=">", right_operand=0),
-            Condition(left_operand="SMA_20", operator="<", right_operand="Close"),
         ]
-
-        # 複数回実行して、グループ化が発生することを確認
-        grouped_count = 0
-        for _ in range(100):
-            result = strategy._structure_conditions(conditions.copy())
-            for item in result:
-                if isinstance(item, ConditionGroup):
-                    grouped_count += 1
-                    break
-
-        # 30%の確率でグループ化されるので、100回中少なくとも数回はグループ化されるはず
-        assert grouped_count > 0, "グループ化が一度も発生しなかった"
+        
+        expected_group = [ConditionGroup(operator="OR", conditions=conditions)]
+        # side_effect をクリアして return_value が使われるようにする
+        strategy.gen._structure_conditions.side_effect = None
+        strategy.gen._structure_conditions.return_value = expected_group
+        
+        result = strategy._structure_conditions(conditions)
+        assert result == expected_group
 
     def test_grouping_uses_or_operator(self, strategy):
-        """グループ化時にOR演算子が使用されることを確認"""
+        """グループ化（委譲）時に正しい結果が得られることを確認"""
         conditions = [
             Condition(left_operand="RSI", operator="<", right_operand=30),
             Condition(left_operand="MACD", operator=">", right_operand=0),
         ]
+        
+        expected_group = [ConditionGroup(operator="OR", conditions=conditions)]
+        strategy.gen._structure_conditions.side_effect = None
+        strategy.gen._structure_conditions.return_value = expected_group
+        
+        result = strategy._structure_conditions(conditions)
+        assert result[0].operator == "OR"
 
-        # グループ化が発生するまで実行
-        for _ in range(100):
-            result = strategy._structure_conditions(conditions.copy())
-            for item in result:
-                if isinstance(item, ConditionGroup):
-                    assert item.operator == "OR"
-                    assert len(item.conditions) == 2
-                    return
-
-        pytest.fail("グループ化が発生しなかった")

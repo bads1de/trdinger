@@ -29,38 +29,17 @@ class WeekendFilter(BaseTool):
         return "土曜日・日曜日のエントリーをスキップします"
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
-        """
-        週末かどうかを判定してエントリースキップを決定
-
-        Args:
-            context: 現在のバーのコンテキスト
-            params: パラメータ（enabled のみ使用）
-
-        Returns:
-            True: 週末なのでエントリーをスキップ
-            False: 平日なのでエントリーを許可
-        """
-        # パラメータで無効化されている場合は常に許可
-        if not params.get("enabled", True):
+        """週末かどうかを判定してエントリースキップを決定"""
+        if not params.get("enabled", True) or context.timestamp is None:
             return False
 
-        # タイムスタンプがない場合は許可（フェイルセーフ）
-        if context.timestamp is None:
-            return False
-
-        # 曜日を取得（0=月曜日, ..., 6=日曜日）
+        # 曜日を取得（0=Mon, 5=Sat, 6=Sun）
         try:
-            if hasattr(context.timestamp, "weekday"):
-                weekday = context.timestamp.weekday()
-            elif hasattr(context.timestamp, "dayofweek"):
-                weekday = context.timestamp.dayofweek
-            else:
-                return False  # 曜日取得不可の場合は許可
-        except Exception:
+            # context.timestamp が pd.Timestamp であることを想定
+            weekday = context.timestamp.weekday()
+            return weekday in (5, 6)
+        except (AttributeError, Exception):
             return False
-
-        # 土曜日(5)または日曜日(6)ならスキップ
-        return weekday in (5, 6)
 
     def get_default_params(self) -> Dict[str, Any]:
         """

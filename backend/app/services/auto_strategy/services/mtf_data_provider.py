@@ -159,74 +159,25 @@ class MultiTimeframeDataProvider:
         return True
 
     def _resample_ohlcv(self, target_timeframe: str) -> pd.DataFrame:
-        """
-        OHLCVデータを目標タイムフレームにリサンプリング
+        """OHLCVデータを目標タイムフレームにリサンプリング"""
+        # マッピングを統合して管理
+        rule_map = {
+            "1m": "1min", "5m": "5min", "15m": "15min", "30m": "30min",
+            "1h": "1h", "4h": "4h", "1d": "1D", "1w": "1W"
+        }
+        rule = rule_map.get(target_timeframe, "1h")
 
-        Args:
-            target_timeframe: 目標タイムフレーム
-
-        Returns:
-            リサンプリングされたOHLCVデータ
-        """
-        # pandas resample用のタイムフレーム文字列に変換
-        resample_rule = self._get_resample_rule(target_timeframe)
-
-        # インデックスがDatetimeIndexでない場合は変換
         df = self.base_df.copy()
         if not isinstance(df.index, pd.DatetimeIndex):
-            logger.warning(
-                "インデックスがDatetimeIndexではありません。変換を試みます。"
-            )
-            try:
-                df.index = pd.to_datetime(df.index)
-            except Exception as e:
-                logger.error(f"インデックス変換エラー: {e}")
-                return df
+            df.index = pd.to_datetime(df.index)
 
-        # OHLCVのリサンプリング
-        resampled = df.resample(resample_rule).agg(
-            {
-                "Open": "first",
-                "High": "max",
-                "Low": "min",
-                "Close": "last",
-                "Volume": "sum",
-            }
-        )
-
-        # NaNを削除
-        resampled = resampled.dropna()
-
-        return resampled
-
-    def _get_resample_rule(self, timeframe: str) -> str:
-        """
-        pandasのresample用ルール文字列を取得
-
-        Args:
-            timeframe: タイムフレーム
-
-        Returns:
-            pandas resample用の文字列（例: "1h", "4h", "1D"）
-        """
-        # タイムフレーム変換マッピング
-        mapping = {
-            "1m": "1min",
-            "5m": "5min",
-            "15m": "15min",
-            "30m": "30min",
-            "1h": "1h",
-            "4h": "4h",
-            "1d": "1D",
-            "1w": "1W",
-        }
-        return mapping.get(timeframe, "1h")
+        return df.resample(rule).agg({
+            "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
+        }).dropna()
 
     def clear_cache(self) -> None:
         """キャッシュをクリア"""
-        self._cache.clear()
-        # ベースデータは保持
-        self._cache[self.base_timeframe] = self.base_df
+        self._cache = {self.base_timeframe: self.base_df}
         logger.debug("MTFデータキャッシュをクリアしました")
 
     @property

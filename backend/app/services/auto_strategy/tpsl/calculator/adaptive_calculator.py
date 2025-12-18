@@ -5,7 +5,7 @@ Adaptive Calculator
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
 from ...genes.tpsl import TPSLResult
@@ -21,12 +21,9 @@ logger = logging.getLogger(__name__)
 class AdaptiveCalculator(BaseTPSLCalculator):
     """
     適応的TP/SL計算器
-
-    市場条件に基づいて自動的に最適な計算方式を選択します。
     """
 
     def __init__(self):
-        """初期化"""
         super().__init__("adaptive")
         self.calculators = {
             "fixed_percentage": FixedPercentageCalculator(),
@@ -35,58 +32,27 @@ class AdaptiveCalculator(BaseTPSLCalculator):
             "statistical": StatisticalCalculator(),
         }
 
-    def calculate(
-        self,
-        current_price: float,
-        tpsl_gene: Optional[TPSLGene] = None,
-        market_data: Optional[Dict[str, Any]] = None,
-        position_direction: float = 1.0,
-        **kwargs,
-    ) -> TPSLResult:
-        """
-        適応的にTP/SLを計算
+    def _do_calculate(
+        self, current_price: float, tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+    ) -> Tuple[float, float, float, Dict[str, Any]]:
+        # 1. 最適な計算方式を選択
+        best_method = self._select_best_method(market_data, tpsl_gene)
 
-        Args:
-            current_price: 現在価格
-            tpsl_gene: TP/SL遺伝子
-            market_data: 市場データ
-            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
-            **kwargs: 追加パラメータ
+        # 2. 選択された計算器で計算
+        calculator = self.calculators[best_method]
+        result = calculator.calculate(
+            current_price=current_price,
+            tpsl_gene=tpsl_gene,
+            market_data=market_data,
+            position_direction=position_direction,
+            **kwargs,
+        )
 
-        Returns:
-            TPSLResult: 計算結果
-        """
-        try:
-            # 最適な計算方式を選択
-            best_method = self._select_best_method(market_data, tpsl_gene)
-
-            # 選択された計算器で計算
-            calculator = self.calculators[best_method]
-            result = calculator.calculate(
-                current_price=current_price,
-                tpsl_gene=tpsl_gene,
-                market_data=market_data,
-                position_direction=position_direction,
-                **kwargs,
-            )
-
-            # 適応的選択の情報を追加
-            result.expected_performance["adaptive_selection"] = best_method
-            result.metadata["selected_method"] = best_method
-
-            return result
-
-        except Exception as e:
-            logger.error(f"適応的計算エラー: {e}")
-            # フォールバック
-            fallback_calculator = FixedPercentageCalculator()
-            return fallback_calculator.calculate(
-                current_price=current_price,
-                tpsl_gene=tpsl_gene,
-                market_data=market_data,
-                position_direction=position_direction,
-                **kwargs,
-            )
+        return result.stop_loss_pct, result.take_profit_pct, result.confidence_score, {
+            **result.expected_performance,
+            "adaptive_selection": best_method
+        }
 
     def _select_best_method(
         self,

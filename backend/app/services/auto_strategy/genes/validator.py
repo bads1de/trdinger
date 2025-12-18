@@ -118,127 +118,55 @@ class GeneValidator:
 
         return True, ""
 
-    @safe_operation(
-        context="オペランド検証",
-        is_api_call=False,
-        default_return=(False, "オペランド検証エラー"),
-    )
-    def _is_valid_operand_detailed(self, operand) -> Tuple[bool, str]:
+    @safe_operation(context="オペランド検証", is_api_call=False, default_return=(False, "エラー"))
+    def _is_valid_operand_detailed(self, operand: Any) -> Tuple[bool, str]:
         """オペランドの妥当性を詳細に検証"""
-        try:
-            if operand is None:
-                return False, "オペランドがNoneです"
-
-            if isinstance(operand, (int, float)):
+        if operand is None: return False, "オペランドがNoneです"
+        if isinstance(operand, (int, float)): return True, ""
+        
+        if isinstance(operand, str):
+            val = operand.strip()
+            if not val: return False, "空のオペランド"
+            # 数値、指標名、データソースのいずれかならOK
+            try:
+                float(val)
                 return True, ""
+            except ValueError:
+                if self._is_indicator_name(val) or val in self.valid_data_sources:
+                    return True, ""
+            return False, f"無効な文字列オペランド: '{val}'"
 
-            if isinstance(operand, str):
-                if not operand or not operand.strip():
-                    return False, "オペランドが空文字列です"
-
-                operand = operand.strip()
-
+        if isinstance(operand, dict):
+            op_type = operand.get("type")
+            if op_type == "indicator":
+                name = str(operand.get("name", "")).strip()
+                if self._is_indicator_name(name): return True, ""
+                return False, f"無効な指標名: '{name}'"
+            elif op_type == "price":
+                name = str(operand.get("name", "")).strip()
+                if name in self.valid_data_sources: return True, ""
+                return False, f"無効なデータソース: '{name}'"
+            elif op_type == "value":
+                v = operand.get("value")
                 try:
-                    float(operand)
+                    if v is not None: float(v)
                     return True, ""
-                except ValueError:
-                    pass
+                except (ValueError, TypeError):
+                    return False, f"無効な数値: '{v}'"
+            return False, f"無効な辞書タイプ: '{op_type}'"
 
-                if (
-                    self._is_indicator_name(operand)
-                    or operand in self.valid_data_sources
-                ):
-                    return True, ""
+        return False, f"未対応の型: {type(operand)}"
 
-                return False, f"無効な文字列オペランド: '{operand}'"
-
-            if isinstance(operand, dict):
-                return self._validate_dict_operand_detailed(operand)
-
-            return False, f"サポートされていないオペランド型: {type(operand)}"
-        except Exception as e:
-            return False, f"オペランド検証エラー: {e}"
-
-    @safe_operation(
-        context="辞書オペランド検証",
-        is_api_call=False,
-        default_return=(False, "辞書検証エラー"),
-    )
-    def _validate_dict_operand_detailed(self, operand: dict) -> Tuple[bool, str]:
-        """辞書形式のオペランドを詳細に検証"""
-        try:
-            if operand.get("type") == "indicator":
-                indicator_name = operand.get("name")
-                if not indicator_name or not isinstance(indicator_name, str):
-                    return False, "指標タイプの辞書にnameが設定されていません"
-                if self._is_indicator_name(indicator_name.strip()):
-                    return True, ""
-                else:
-                    return False, f"無効な指標名: '{indicator_name}'"
-
-            elif operand.get("type") == "price":
-                price_name = operand.get("name")
-                if not price_name or not isinstance(price_name, str):
-                    return False, "価格タイプの辞書にnameが設定されていません"
-                if price_name.strip() in self.valid_data_sources:
-                    return True, ""
-                else:
-                    return False, f"無効な価格データソース: '{price_name}'"
-
-            elif operand.get("type") == "value":
-                value = operand.get("value")
-                if value is None:
-                    return False, "数値タイプの辞書にvalueが設定されていません"
-                if isinstance(value, (int, float)):
-                    return True, ""
-                elif isinstance(value, str):
-                    try:
-                        float(value.strip())
-                        return True, ""
-                    except ValueError:
-                        return False, f"数値に変換できない文字列: '{value}'"
-                else:
-                    return False, f"無効な数値型: {type(value)}"
-
-            else:
-                return False, f"無効な辞書タイプ: '{operand.get('type')}'"
-        except Exception as e:
-            return False, f"辞書オペランド検証エラー: {e}"
-
-    @safe_operation(context="指標名判定", is_api_call=False, default_return=False)
     def _is_indicator_name(self, name: str) -> bool:
-        """指標名かどうかを判定"""
-        if not name or not name.strip():
-            return False
-
-        name = name.strip()
-
-        if name in self.valid_indicator_types:
-            return True
-
-        if "_" in name:
-            parts = name.rsplit("_", 1)
-            if len(parts) == 2:
-                potential_indicator = parts[0].strip()
-                potential_param = parts[1].strip()
-
-                try:
-                    float(potential_param)
-                    if potential_indicator in self.valid_indicator_types:
-                        return True
-                except ValueError:
-                    pass
-
-            indicator_type = name.split("_")[0].strip()
-            if indicator_type in self.valid_indicator_types:
-                return True
-
-        if name.endswith(("_0", "_1", "_2", "_3", "_4")):
-            indicator_type = name.rsplit("_", 1)[0].strip()
-            if indicator_type in self.valid_indicator_types:
-                return True
-
-        return False
+        """指標名かどうかを判定（SMA_20, RSI_14_0 等に対応）"""
+        if not name: return False
+        clean_name = name.strip()
+        if clean_name in self.valid_indicator_types: return True
+        
+        # 接尾辞（パラメータや出力インデックス）を除去して試行
+        # 例: SMA_20 -> SMA, RSI_14_0 -> RSI
+        base_name = clean_name.split("_")[0]
+        return base_name in self.valid_indicator_types
 
     @safe_operation(context="条件クリーニング", is_api_call=False, default_return=False)
     def clean_condition(self, condition) -> bool:
@@ -286,90 +214,65 @@ class GeneValidator:
     )
     def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
         """戦略遺伝子の妥当性を検証"""
-        from .conditions import ConditionGroup
-
         errors: List[str] = []
 
-        # 指標数の制約チェック
+        # 1. 指標数の制約チェック
         from ..config import GAConfig
-
         max_indicators = GAConfig().max_indicators
-
         if len(strategy_gene.indicators) > max_indicators:
-            errors.append(
-                f"指標数が上限({max_indicators})を超えています: {len(strategy_gene.indicators)}"
-            )
+            errors.append(f"指標数が上限({max_indicators})を超えています: {len(strategy_gene.indicators)}")
 
-        # 指標の妥当性チェック
+        # 2. 個別指標の妥当性
         for i, indicator in enumerate(strategy_gene.indicators):
             if not self.validate_indicator_gene(indicator):
                 errors.append(f"指標{i}が無効です: {indicator.type}")
 
-        # 条件の妥当性チェック
-        def _validate_mixed_conditions(cond_list, label_prefix: str):
-            def _validate_recursive(condition, current_label: str):
-                if isinstance(condition, ConditionGroup):
-                    for j, c in enumerate(condition.conditions):
-                        _validate_recursive(c, f"{current_label} -> グループ条件{j}")
-                else:
-                    self.clean_condition(condition)
-                    is_valid, error_detail = self.validate_condition(condition)
-                    if not is_valid:
-                        errors.append(f"{current_label}が無効です: {error_detail}")
+        # 3. 条件の妥当性（ロング・ショート）
+        self._validate_all_conditions(strategy_gene.long_entry_conditions, "ロング", errors)
+        self._validate_all_conditions(strategy_gene.short_entry_conditions, "ショート", errors)
 
-            for i, condition in enumerate(cond_list):
-                _validate_recursive(condition, f"{label_prefix}{i}")
-
-        _validate_mixed_conditions(
-            strategy_gene.long_entry_conditions, "ロングエントリー条件"
-        )
-        _validate_mixed_conditions(
-            strategy_gene.short_entry_conditions, "ショートエントリー条件"
-        )
-
-        # 最低限の条件チェック
-        has_entry_conditions = bool(strategy_gene.long_entry_conditions) or bool(
-            strategy_gene.short_entry_conditions
-        )
-        if not has_entry_conditions:
+        if not (strategy_gene.long_entry_conditions or strategy_gene.short_entry_conditions):
             errors.append("エントリー条件が設定されていません")
 
-        # イグジット条件またはTP/SL遺伝子の存在チェック
-        # exit_conditions は廃止されたため、TP/SL遺伝子の存在を必須とする
-        has_tpsl = (
-            (strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled)
-            or (
-                strategy_gene.long_tpsl_gene and strategy_gene.long_tpsl_gene.enabled
-            )
-            or (
-                strategy_gene.short_tpsl_gene and strategy_gene.short_tpsl_gene.enabled
-            )
-        )
-        if not has_tpsl:
-            errors.append("TP/SL設定（イグジット条件）が設定されていません")
+        # 4. TP/SL設定の検証（ループで一括処理）
+        sub_genes = [
+            ("共通", strategy_gene.tpsl_gene),
+            ("ロング", strategy_gene.long_tpsl_gene),
+            ("ショート", strategy_gene.short_tpsl_gene)
+        ]
+        has_any_tpsl = False
+        for label, gene in sub_genes:
+            if gene and gene.enabled:
+                has_any_tpsl = True
+                valid, sub_errors = gene.validate()
+                if not valid:
+                    errors.extend([f"{label}TP/SL: {e}" for e in sub_errors])
+        
+        if not has_any_tpsl:
+            errors.append("有効なTP/SL設定（イグジット条件）がありません")
 
-        # TP/SL遺伝子のバリデーション
-        if strategy_gene.tpsl_gene and strategy_gene.tpsl_gene.enabled:
-            is_valid, tpsl_errors = strategy_gene.tpsl_gene.validate()
-            if not is_valid:
-                errors.extend([f"共通TP/SL: {e}" for e in tpsl_errors])
-
-        if strategy_gene.long_tpsl_gene and strategy_gene.long_tpsl_gene.enabled:
-            is_valid, tpsl_errors = strategy_gene.long_tpsl_gene.validate()
-            if not is_valid:
-                errors.extend([f"ロングTP/SL: {e}" for e in tpsl_errors])
-
-        if strategy_gene.short_tpsl_gene and strategy_gene.short_tpsl_gene.enabled:
-            is_valid, tpsl_errors = strategy_gene.short_tpsl_gene.validate()
-            if not is_valid:
-                errors.extend([f"ショートTP/SL: {e}" for e in tpsl_errors])
-
-        # 有効な指標の存在チェック
-        enabled_indicators = [ind for ind in strategy_gene.indicators if ind.enabled]
-        if not enabled_indicators:
+        # 5. 有効な指標の存在
+        if not any(ind.enabled for ind in strategy_gene.indicators):
             errors.append("有効な指標が設定されていません")
 
         return len(errors) == 0, errors
+
+    def _validate_all_conditions(self, cond_list: List, label: str, errors: List[str]):
+        """条件リストを再帰的に検証"""
+        from .conditions import ConditionGroup
+
+        def _recursive(cond, path: str):
+            if isinstance(cond, ConditionGroup):
+                for j, sub in enumerate(cond.conditions):
+                    _recursive(sub, f"{path} -> グループ{j}")
+            else:
+                self.clean_condition(cond)
+                valid, detail = self.validate_condition(cond)
+                if not valid:
+                    errors.append(f"{path}が無効: {detail}")
+
+        for i, condition in enumerate(cond_list):
+            _recursive(condition, f"{label}エントリー条件{i}")
 
     @safe_operation(
         context="条件のトリビアル判定", is_api_call=False, default_return=False

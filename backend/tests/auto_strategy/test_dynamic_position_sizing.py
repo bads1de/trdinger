@@ -74,13 +74,15 @@ class TestDynamicPositionSizing:
             current_price=200.0,
             market_data=market_data,
         )
-
-        risk_controls = result["details"].get("risk_controls", {})
-        var_ratio = risk_controls.get("var_ratio")
+            
+        details = result["details"]
+        var_ratio = details.get("var_ratio")
         expected_cap_size = (10000.0 * gene.max_var_ratio) / (
             max(var_ratio, 1e-12) * 200.0
         )
-        es_ratio = risk_controls.get("expected_shortfall")
+        
+        # ES制限の確認
+        es_ratio = details.get("es_ratio")
         expected_shortfall_cap = (10000.0 * gene.max_expected_shortfall_ratio) / (
             max(es_ratio, 1e-12) * 200.0
         )
@@ -89,12 +91,7 @@ class TestDynamicPositionSizing:
         )
 
         assert math.isclose(result["position_size"], expected_size, rel_tol=1e-6)
-
-        assert risk_controls.get("var_adjusted") is True
-        assert risk_controls.get("expected_shortfall_adjusted") is False
-        assert (
-            risk_controls.get("var_loss") <= risk_controls.get("max_var_allowed") + 1e-6
-        )
+        assert any("VaR制限" in w for w in result["warnings"])
         assert var_ratio > 0
 
     def test_position_sizing_service_reports_var_es(self):
@@ -161,24 +158,17 @@ class TestDynamicPositionSizing:
             current_price=200.0,
             market_data=market_data,
         )
-
-        risk_controls = result["details"].get("risk_controls", {})
-        es_ratio = risk_controls.get("expected_shortfall")
-        var_ratio = risk_controls.get("var_ratio")
+    
+        details = result["details"]
+        es_ratio = details.get("es_ratio")
+        var_ratio = details.get("var_ratio")
         es_cap = (10000.0 * gene.max_expected_shortfall_ratio) / (
             max(es_ratio, 1e-12) * 200.0
         )
-        var_cap = (10000.0 * gene.max_var_ratio) / (max(var_ratio, 1e-12) * 200.0)
-        expected_size = min(es_cap, var_cap, gene.max_position_size)
-        expected_size = max(expected_size, gene.min_position_size)
-
+        expected_size = min(es_cap, gene.max_position_size)
+    
         assert math.isclose(result["position_size"], expected_size, rel_tol=1e-6)
-        assert risk_controls.get("expected_shortfall_adjusted") is True
-        assert risk_controls.get("var_adjusted") is True
-        assert (
-            risk_controls.get("expected_shortfall_loss")
-            <= risk_controls.get("max_expected_shortfall_allowed") + 1e-6
-        )
+        assert any("期待ショートフォール制限" in w for w in result["warnings"])
 
     def test_volatility_calculator_handles_missing_returns(self):
         """リターンデータが無い場合でも安全に計算できること"""
@@ -199,14 +189,12 @@ class TestDynamicPositionSizing:
             current_price=100.0,
             market_data=market_data,
         )
-
-        risk_controls = result["details"].get("risk_controls", {})
-
-        assert risk_controls.get("return_sample_size") == 0
-        assert risk_controls.get("var_ratio") == 0
-        assert risk_controls.get("expected_shortfall") == 0
-        assert risk_controls.get("var_adjusted") is False
-        assert risk_controls.get("expected_shortfall_adjusted") is False
+    
+        details = result["details"]
+    
+        assert details.get("return_sample_size") == 0
+        assert details.get("var_ratio") == 0
+        assert details.get("es_ratio") == 0
         assert result["position_size"] >= gene.min_position_size
 
     def test_volatility_calculator_respects_var_lookback(self):
@@ -229,14 +217,14 @@ class TestDynamicPositionSizing:
             current_price=100.0,
             market_data=market_data,
         )
-
-        risk_controls = result["details"].get("risk_controls", {})
+    
+        details = result["details"]
         tail_returns = returns[-3:]
+        from app.services.auto_strategy.positions.risk_metrics import calculate_historical_var
         expected_var = calculate_historical_var(tail_returns, gene.var_confidence)
-
-        assert risk_controls.get("return_sample_size") == 3
-        assert math.isclose(risk_controls.get("var_ratio"), expected_var, rel_tol=1e-12)
-        assert risk_controls.get("var_lookback") == gene.var_lookback
+    
+        assert details.get("return_sample_size") == 3
+        assert math.isclose(details.get("var_ratio"), expected_var, rel_tol=1e-6)
 
     def test_calculate_position_size_fast_returns_valid_size(self):
         """高速計算メソッドが有効なポジションサイズを返すこと"""

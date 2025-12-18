@@ -17,66 +17,32 @@ logger = logging.getLogger(__name__)
 class StatisticalCalculator(BaseTPSLCalculator):
     """
     統計的分析ベースのTP/SL計算器
-
-    過去の価格データに基づいて統計的に最適なTP/SLを計算します。
     """
 
     def __init__(self):
-        """初期化"""
         super().__init__("statistical")
 
-    def calculate(
-        self,
-        current_price: float,
-        tpsl_gene: Optional[TPSLGene] = None,
-        market_data: Optional[Dict[str, Any]] = None,
-        position_direction: float = 1.0,
-        **kwargs,
-    ) -> TPSLResult:
-        """
-        統計的分析でTP/SLを計算
+    def _do_calculate(
+        self, current_price: float, tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+    ) -> Tuple[float, float, float, Dict[str, Any]]:
+        # 1. パラメータ取得
+        if tpsl_gene:
+            lookback_period = tpsl_gene.lookback_period or 150
+            confidence_threshold = tpsl_gene.confidence_threshold or 0.95
+        else:
+            lookback_period = kwargs.get("lookback_period_days", kwargs.get("lookback_period", 150))
+            confidence_threshold = kwargs.get("confidence_threshold", 0.95)
 
-        Args:
-            current_price: 現在価格
-            tpsl_gene: TP/SL遺伝子
-            market_data: 市場データ（過去価格データを含む）
-            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
-            **kwargs: 追加パラメータ
+        # 2. 統計分析で最適なTP/SLを計算
+        sl_pct, tp_pct = self._calculate_statistical_levels(
+            market_data, lookback_period, confidence_threshold, current_price
+        )
 
-        Returns:
-            TPSLResult: 計算結果
-        """
-        try:
-            # パラメータ取得
-            if tpsl_gene:
-                lookback_period = tpsl_gene.lookback_period or 150
-                confidence_threshold = tpsl_gene.confidence_threshold or 0.95
-            else:
-                lookback_period = kwargs.get(
-                    "lookback_period_days", kwargs.get("lookback_period", 150)
-                )
-                confidence_threshold = kwargs.get("confidence_threshold", 0.95)
-
-            # 統計分析で最適なTP/SLを計算
-            stop_loss_pct, take_profit_pct = self._calculate_statistical_levels(
-                market_data, lookback_period, confidence_threshold, current_price
-            )
-
-            return self._create_result(
-                stop_loss_pct=stop_loss_pct,
-                take_profit_pct=take_profit_pct,
-                confidence_score=0.7,
-                expected_performance={
-                    "type": "statistical",
-                    "lookback_period": lookback_period,
-                    "confidence_threshold": confidence_threshold,
-                },
-            )
-
-        except Exception as e:
-            logger.error(f"統計的計算エラー: {e}")
-            # フォールバック
-            return self._create_fallback_result()
+        return sl_pct, tp_pct, 0.7, {
+            "lookback_period": lookback_period,
+            "confidence_threshold": confidence_threshold
+        }
 
     def _calculate_statistical_levels(
         self,
@@ -135,20 +101,3 @@ class StatisticalCalculator(BaseTPSLCalculator):
         except Exception as e:
             logger.error(f"統計レベル計算エラー: {e}")
             return 0.03, 0.06
-
-    def _create_fallback_result(self) -> TPSLResult:
-        """フォールバック結果を作成"""
-        return self._create_result(
-            stop_loss_pct=0.03,
-            take_profit_pct=0.06,
-            confidence_score=0.5,
-            expected_performance={
-                "type": "statistical_fallback",
-                "lookback_period": 150,
-            },
-        )
-
-
-
-
-

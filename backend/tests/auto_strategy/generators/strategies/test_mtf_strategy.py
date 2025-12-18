@@ -16,24 +16,21 @@ class TestMTFStrategy:
         generator.context = {"timeframe": "1h", "symbol": "BTC/USDT"}
 
         # 指標タイプの分類モック
-        def _get_indicator_type(ind):
-            if ind.type in ["SMA", "EMA"]:
-                return IndicatorType.TREND
-            elif ind.type in ["RSI", "MACD"]:
-                return IndicatorType.MOMENTUM
-            return IndicatorType.TREND
+        def _classify(indicators):
+            res = {IndicatorType.TREND: [], IndicatorType.MOMENTUM: [], IndicatorType.VOLATILITY: []}
+            for ind in indicators:
+                if ind.type in ["SMA", "EMA"]: res[IndicatorType.TREND].append(ind)
+                else: res[IndicatorType.MOMENTUM].append(ind)
+            return res
+        generator._classify_indicators.side_effect = _classify
 
-        generator._get_indicator_type.side_effect = _get_indicator_type
+        # 名称解決モック
+        generator._get_indicator_name.side_effect = lambda i: i.type
 
         # 条件生成のモック
-        def _generic_long_conditions(ind):
-            return [Condition(ind.type, ">", 0)]
-
-        def _generic_short_conditions(ind):
-            return [Condition(ind.type, "<", 0)]
-
-        generator._generic_long_conditions.side_effect = _generic_long_conditions
-        generator._generic_short_conditions.side_effect = _generic_short_conditions
+        def _create_side(ind, side, name=None):
+            return Condition(name or ind.type, ">" if side=="long" else "<", 0)
+        generator._create_side_condition.side_effect = _create_side
 
         return generator
 
@@ -43,11 +40,11 @@ class TestMTFStrategy:
 
     def test_determine_higher_timeframe(self, strategy):
         """タイムフレームに応じた上位足の決定ロジックをテスト"""
-        assert strategy._determine_higher_timeframe("1m") in ["5m", "15m"]
-        assert strategy._determine_higher_timeframe("5m") in ["15m", "30m", "1h"]
-        assert strategy._determine_higher_timeframe("15m") in ["1h", "4h"]
-        assert strategy._determine_higher_timeframe("1h") in ["4h", "1d"]
-        assert strategy._determine_higher_timeframe("4h") == "1d"
+        assert strategy._determine_higher_tf("1m") in ["5m", "15m"]
+        assert strategy._determine_higher_tf("5m") in ["30m", "1h"]
+        assert strategy._determine_higher_tf("15m") in ["1h", "4h"]
+        assert strategy._determine_higher_tf("1h") in ["4h", "1d"]
+        assert strategy._determine_higher_tf("4h") == "1d"
 
     def test_generate_conditions_structure(self, strategy):
         """生成される条件の構造（AND結合）をテスト"""

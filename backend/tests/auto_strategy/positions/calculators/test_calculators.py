@@ -117,8 +117,9 @@ class TestVolatilityBasedCalculator:
                 current_price=100.0,
                 market_data=market_data,
             )
-
-            assert result["details"]["risk_controls"]["var_adjusted"] is True
+    
+            # リファクタリング後は警告メッセージで制限の適用を確認
+            assert any("VaR制限" in w for w in result["warnings"])
             # 制限後のサイズ = 100円 / 0.1 = 1000円 (ポジション価値) => 10株
             assert result["position_size"] == pytest.approx(10.0)
 

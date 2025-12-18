@@ -27,76 +27,47 @@ class YamlIndicatorUtils:
 
     @classmethod
     def generate_characteristics_from_yaml(cls, yaml_file_path: str) -> Dict[str, Dict]:
-        """
-        YAMLファイルから指標特性を動的に生成
-
-        Args:
-            yaml_file_path: YAML設定ファイルのパス
-
-        Returns:
-            各指標の特性定義を含む辞書
-        """
-        characteristics = {}
-
+        """YAMLファイルから指標特性を動的に生成"""
         try:
             with open(yaml_file_path, "r", encoding="utf-8") as file:
                 config = yaml.safe_load(file)
-
-            if "indicators" not in config:
-                print(f"警告: {yaml_file_path}に'indicators'セクションが見つかりません")
-                return characteristics
-
-            config["indicators"]
-
-            for indicator_name, indicator_config in config["indicators"].items():
-                if not isinstance(indicator_config, dict):
-                    continue
-
-                # 基本構造
-                char = {
-                    "type": indicator_config.get("type", "unknown"),
-                    "scale_type": indicator_config.get("scale_type", "price_absolute"),
-                }
-
-                # thresholdsの処理
-                thresholds = indicator_config.get("thresholds", {})
-                if thresholds:
-                    if isinstance(thresholds, dict):
-                        # riskレベルの処理
-                        for risk_level, risk_config in thresholds.items():
-                            if risk_level in ["aggressive", "normal", "conservative"]:
-                                char[f"{risk_level}_config"] = risk_config
-                            elif risk_level == "all":
-                                char.update(cls._process_thresholds(risk_config))
-                            else:
-                                # その他の特殊なしきい値設定
-                                char.update(
-                                    cls._process_thresholds({risk_level: risk_config})
-                                )
-
-                    # 既存の互換性維持
-                    char.update(
-                        cls._extract_oscillator_settings(
-                            char, indicator_config, thresholds
-                        )
-                    )
-
-                # 特性辞書に追加
-                characteristics[indicator_name] = char
-        except FileNotFoundError:
-            print(f"エラー: YAMLファイルが見つかりません: {yaml_file_path}")
-        except yaml.YAMLError as e:
-            print(f"エラー: YAMLファイルの解析に失敗しました: {e}")
+            return cls._parse_indicator_config(config)
         except Exception as e:
-            print(f"エラー: 特性生成中に予期しないエラーが発生しました: {e}")
+            print(f"エラー: YAML読み込み失敗 ({yaml_file_path}): {e}")
+            return {}
 
+    @classmethod
+    def _parse_indicator_config(cls, config: Dict[str, Any]) -> Dict[str, Dict]:
+        """YAML設定データから指標特性を解析"""
+        characteristics = {}
+        indicators = config.get("indicators", {})
+        
+        for name, cfg in indicators.items():
+            if not isinstance(cfg, dict): continue
+            
+            char = {
+                "type": cfg.get("type", "unknown"),
+                "scale_type": cfg.get("scale_type", "price_absolute"),
+            }
+            
+            thresholds = cfg.get("thresholds", {})
+            if thresholds and isinstance(thresholds, dict):
+                for level, risk_cfg in thresholds.items():
+                    if level in ["aggressive", "normal", "conservative"]:
+                        char[f"{level}_config"] = risk_cfg
+                    elif level == "all":
+                        char.update(cls._process_thresholds(risk_cfg))
+                    else:
+                        char.update(cls._process_thresholds({level: risk_cfg}))
+                char.update(cls._extract_oscillator_settings(char, cfg, thresholds))
+            
+            characteristics[name] = char
         return characteristics
 
     @classmethod
     def _process_thresholds(cls, thresholds: Dict[str, Any]) -> Dict[str, Any]:
         """しきい値の設定を処理"""
         processed = {}
-
         for key, value in thresholds.items():
             if key in ["long_gt", "short_lt"]:
                 processed[key.replace("_", "_signal_")] = value
@@ -106,38 +77,31 @@ class YamlIndicatorUtils:
                 processed[f"{key.removesuffix('_gt')}_overbought"] = value
             else:
                 processed[key] = value
-
         return processed
 
     @classmethod
     def _extract_oscillator_settings(
         cls, char: Dict, indicator_config: Dict, thresholds: Dict
     ) -> Dict[str, Any]:
-        """オシレーター設定を抽出して互換性のための形式に変換"""
+        """オシレーター設定を抽出"""
         settings = {}
-
-        # スケールタイプに基づいてデフォルトの設定を適用
         scale_type = indicator_config.get("scale_type", "price_absolute")
 
         if scale_type == "oscillator_0_100":
-            settings.update(
-                {
-                    "range": (0, 100),
-                    "oversold_threshold": 30,
-                    "overbought_threshold": 70,
-                    "neutral_zone": (40, 60),
-                }
-            )
+            settings.update({
+                "range": (0, 100),
+                "oversold_threshold": 30,
+                "overbought_threshold": 70,
+                "neutral_zone": (40, 60),
+            })
         elif scale_type == "oscillator_plus_minus_100":
             settings.update({"range": (-100, 100), "neutral_zone": (-20, 20)})
         elif scale_type == "momentum_zero_centered":
             settings.update({"range": None, "zero_cross": True})
 
-        # 条件に基づいてゾーン設定を上書き
         conditions = indicator_config.get("conditions", {})
         if conditions:
             cls._apply_condition_based_settings(settings, conditions, thresholds)
-
         return settings
 
     @classmethod
@@ -145,84 +109,32 @@ class YamlIndicatorUtils:
         cls, settings: Dict, conditions: Dict, thresholds: Dict
     ) -> Dict[str, Any]:
         """条件ベースの設定を適用"""
-        if "long_lt" in str(conditions.get("long", "")) and "short_gt" in str(
-            conditions.get("short", "")
-        ):
-            # オーバーソールド/オーバーバウト設定
+        if "long_lt" in str(conditions.get("long", "")) and "short_gt" in str(conditions.get("short", "")):
             settings["oversold_based"] = True
             settings["overbought_based"] = True
-        elif "long_gt" in str(conditions.get("long", "")) and "short_lt" in str(
-            conditions.get("short", "")
-        ):
-            # ゼロクロス設定
+        elif "long_gt" in str(conditions.get("long", "")) and "short_lt" in str(conditions.get("short", "")):
             settings["zero_cross"] = True
-
         return settings
 
     @classmethod
     def _merge_characteristics(cls, existing: Dict, yaml_based: Dict) -> Dict:
         """既存の特性とYAMLベースの特性をマージ"""
         merged = existing.copy()
-
-        for indicator_name, yaml_config in yaml_based.items():
-            if indicator_name in merged:
-                # 既存のエントリをYAMLの設定で更新
-                merged[indicator_name].update(yaml_config)
+        for name, cfg in yaml_based.items():
+            if name in merged:
+                merged[name].update(cfg)
             else:
-                # 新しいエントリを追加
-                merged[indicator_name] = yaml_config
-
+                merged[name] = cfg
         return merged
 
     @classmethod
     def initialize_yaml_based_characteristics(
         cls, existing_characteristics: Dict[str, Dict[str, Any]]
     ) -> Dict[str, Dict[str, Any]]:
-        """
-        YAML設定に基づいて特性を生成してマージ
-
-        Args:
-            existing_characteristics: 既存のINDICATOR_CHARACTERISTICS
-
-        Returns:
-            マージされた特性データ
-        """
+        """YAML設定に基づいて特性を生成してマージ"""
         yaml_config = manifest_to_yaml_dict()
-        yaml_based_characteristics = {}
-
-        for indicator_name, indicator_config in yaml_config.get(
-            "indicators", {}
-        ).items():
-            if not isinstance(indicator_config, dict):
-                continue
-
-            char = {
-                "type": indicator_config.get("type", "unknown"),
-                "scale_type": indicator_config.get("scale_type", "price_absolute"),
-            }
-
-            thresholds = indicator_config.get("thresholds", {})
-            if thresholds:
-                if isinstance(thresholds, dict):
-                    for risk_level, risk_config in thresholds.items():
-                        if risk_level in ["aggressive", "normal", "conservative"]:
-                            char[f"{risk_level}_config"] = risk_config
-                        elif risk_level == "all":
-                            char.update(cls._process_thresholds(risk_config))
-                        else:
-                            char.update(
-                                cls._process_thresholds({risk_level: risk_config})
-                            )
-
-                char.update(
-                    cls._extract_oscillator_settings(char, indicator_config, thresholds)
-                )
-
-            yaml_based_characteristics[indicator_name] = char
-
-        return cls._merge_characteristics(
-            existing_characteristics, yaml_based_characteristics
-        )
+        yaml_based = cls._parse_indicator_config(yaml_config)
+        return cls._merge_characteristics(existing_characteristics, yaml_based)
 
     @classmethod
     def load_yaml_config_for_indicators(cls) -> Dict[str, Any]:

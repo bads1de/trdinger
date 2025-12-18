@@ -70,10 +70,10 @@ class TestPendingOrder:
         stop_limit_order = PendingOrder(order_type=EntryType.STOP_LIMIT, direction=1.0)
         market_order = PendingOrder(order_type=EntryType.MARKET, direction=1.0)
 
-        assert limit_order.is_limit_order() is True
-        assert stop_order.is_limit_order() is False
-        assert stop_limit_order.is_limit_order() is True
-        assert market_order.is_limit_order() is False
+        assert limit_order.is_limit_order is True
+        assert stop_order.is_limit_order is False
+        assert stop_limit_order.is_limit_order is True
+        assert market_order.is_limit_order is False
 
     def test_is_stop_order(self):
         """逆指値注文判定"""
@@ -82,20 +82,20 @@ class TestPendingOrder:
         stop_limit_order = PendingOrder(order_type=EntryType.STOP_LIMIT, direction=1.0)
         market_order = PendingOrder(order_type=EntryType.MARKET, direction=1.0)
 
-        assert limit_order.is_stop_order() is False
-        assert stop_order.is_stop_order() is True
-        assert stop_limit_order.is_stop_order() is True
-        assert market_order.is_stop_order() is False
+        assert limit_order.is_stop_order is False
+        assert stop_order.is_stop_order is True
+        assert stop_limit_order.is_stop_order is True
+        assert market_order.is_stop_order is False
 
     def test_is_long(self):
         """ロング判定"""
         long_order = PendingOrder(order_type=EntryType.LIMIT, direction=1.0)
         short_order = PendingOrder(order_type=EntryType.LIMIT, direction=-1.0)
 
-        assert long_order.is_long() is True
-        assert long_order.is_short() is False
-        assert short_order.is_long() is False
-        assert short_order.is_short() is True
+        assert long_order.is_long is True
+        assert long_order.is_short is False
+        assert short_order.is_long is False
+        assert short_order.is_short is True
 
     def test_full_order_creation(self):
         """完全な注文作成"""
@@ -120,6 +120,6 @@ class TestPendingOrder:
         assert order.validity_bars == 10
         assert order.sl_price == 101.0
         assert order.tp_price == 98.0
-        assert order.is_short() is True
-        assert order.is_limit_order() is True
-        assert order.is_stop_order() is True
+        assert order.is_short is True
+        assert order.is_limit_order is True
+        assert order.is_stop_order is True

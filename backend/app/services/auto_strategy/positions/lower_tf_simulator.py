@@ -43,13 +43,13 @@ class LowerTimeframeSimulator:
 
         if order.order_type == EntryType.LIMIT:
             if order.limit_price is None: return False, None
-            mask = (lows <= order.limit_price) if order.is_long() else (highs >= order.limit_price)
+            mask = (lows <= order.limit_price) if order.is_long else (highs >= order.limit_price)
             if mask.any():
                 return True, order.limit_price
 
         elif order.order_type == EntryType.STOP:
             if order.stop_price is None: return False, None
-            mask = (highs >= order.stop_price) if order.is_long() else (lows <= order.stop_price)
+            mask = (highs >= order.stop_price) if order.is_long else (lows <= order.stop_price)
             if mask.any():
                 return True, order.stop_price
 
@@ -65,7 +65,7 @@ class LowerTimeframeSimulator:
 
         # 1. ストップ条件の判定
         if not order.stop_triggered:
-            stop_mask = (highs >= order.stop_price) if order.is_long() else (lows <= order.stop_price)
+            stop_mask = (highs >= order.stop_price) if order.is_long else (lows <= order.stop_price)
             if stop_mask.any():
                 order.stop_triggered = True
                 # トリガーした以降のデータのみを対象に指値判定を行う必要がある
@@ -76,7 +76,7 @@ class LowerTimeframeSimulator:
                 return False, None
 
         # 2. 指値条件の判定
-        limit_mask = (lows <= order.limit_price) if order.is_long() else (highs >= order.limit_price)
+        limit_mask = (lows <= order.limit_price) if order.is_long else (highs >= order.limit_price)
         if limit_mask.any():
             return True, order.limit_price
 

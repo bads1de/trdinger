@@ -105,7 +105,7 @@ class TestVolatilityCalculator:
 
         result = calculator.calculate(current_price=100.0)
 
-        assert result.expected_performance["type"] == "volatility_fallback"
+        assert result.expected_performance.get("fallback") is True
         assert result.confidence_score == 0.5
 
 

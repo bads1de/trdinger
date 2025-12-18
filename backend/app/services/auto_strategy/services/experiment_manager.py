@@ -5,14 +5,16 @@ GA実験の実行と管理を担当します。
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from app.services.backtest.backtest_service import BacktestService
 
 from ..config.ga import GAConfig
-from ..core.ga_engine import GeneticAlgorithmEngine
-from ..generators.random_gene_generator import RandomGeneGenerator
 from .experiment_persistence_service import ExperimentPersistenceService
+
+if TYPE_CHECKING:
+    from ..core.ga_engine import GeneticAlgorithmEngine
+    from ..generators.random_gene_generator import RandomGeneGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ class ExperimentManager:
         """初期化"""
         self.backtest_service = backtest_service
         self.persistence_service = persistence_service
-        self.ga_engine: Optional[GeneticAlgorithmEngine] = None
+        self.ga_engine: Optional["GeneticAlgorithmEngine"] = None
 
     def run_experiment(
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]

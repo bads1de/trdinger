@@ -61,179 +61,95 @@ class HybridFeatureAdapter:
         label_data: Optional[pd.DataFrame] = None,
         sentiment_scores: Optional[pd.Series] = None,
     ) -> pd.DataFrame:
-        """
-        StrategyGene → 特徴量DataFrame変換
-
-        Args:
-            gene: 戦略遺伝子
-            ohlcv_data: OHLCVデータ
-            apply_preprocessing: 前処理を適用するか
-            label_data: イベントドリブンラベルデータ
-            sentiment_scores: センチメントスコア系列
-
-        Returns:
-            特徴量DataFrame
-
-        Raises:
-            MLFeatureError: 変換に失敗した場合
-        """
+        """StrategyGene → 特徴量DataFrame変換"""
         try:
-            # 入力検証
-            if gene is None:
-                raise MLFeatureError("Geneがnullです")
+            if gene is None or ohlcv_data is None or ohlcv_data.empty:
+                raise MLFeatureError("入力データが無効です")
 
-            if ohlcv_data is None or ohlcv_data.empty:
-                raise MLFeatureError("OHLCVデータが空です")
-
-            # 基本特徴量を作成
             features_df = ohlcv_data.copy()
-            if not isinstance(features_df, pd.DataFrame):
-                raise MLFeatureError("OHLCVデータはDataFrameである必要があります")
-
-            # Gene情報から特徴量を抽出
-            gene_features = self._extract_gene_features(gene)
-
-            # Gene特徴量をDataFrameに追加
-            for key, value in gene_features.items():
+            
+            # 1. Gene情報から特徴量を抽出・追加
+            for key, value in self._extract_gene_features(gene).items():
                 features_df[key] = value
 
-            # イベントラベル特徴量
+            # 2. イベントラベル特徴量（整列して統合）
+            label_cols = ["label_hrhp", "label_lrlp", "market_regime"]
             if label_data is not None and not label_data.empty:
-                aligned_labels = label_data.reindex(features_df.index)
-                aligned_labels = aligned_labels.ffill().fillna(0)
-                if "label_hrhp" in aligned_labels.columns:
-                    features_df["label_hrhp_signal"] = aligned_labels[
-                        "label_hrhp"
-                    ].astype(float)
-                else:
-                    features_df["label_hrhp_signal"] = 0.0
-                if "label_lrlp" in aligned_labels.columns:
-                    features_df["label_lrlp_signal"] = aligned_labels[
-                        "label_lrlp"
-                    ].astype(float)
-                else:
-                    features_df["label_lrlp_signal"] = 0.0
-                if "market_regime" in aligned_labels.columns:
-                    features_df["market_regime"] = aligned_labels[
-                        "market_regime"
-                    ].astype(float)
-                elif "market_regime" not in features_df:
-                    features_df["market_regime"] = 0.0
+                aligned = label_data.reindex(features_df.index).ffill().fillna(0)
+                for col in label_cols:
+                    features_df[f"{col}_signal" if "label" in col else col] = aligned.get(col, 0.0)
             else:
-                features_df["label_hrhp_signal"] = 0.0
-                features_df["label_lrlp_signal"] = 0.0
-                features_df["market_regime"] = 0.0
+                for col in label_cols:
+                    features_df[f"{col}_signal" if "label" in col else col] = 0.0
 
+            # 3. マーケット特性（OI/FR/Sentiment）
             # OI変化率
             if "open_interest" in features_df.columns:
-                oi_series = features_df["open_interest"].astype(float)
-                features_df["oi_pct_change"] = (
-                    oi_series.replace(0, np.nan)
-                    .pct_change()
-                    .replace([np.inf, -np.inf], 0)
-                    .fillna(0)
-                )
+                features_df["oi_pct_change"] = features_df["open_interest"].replace(0, np.nan).pct_change().fillna(0)
             else:
                 features_df["oi_pct_change"] = 0.0
 
-            # ファンディングレート変化
+            # FR変化
             if "funding_rate" in features_df.columns:
-                fr_series = features_df["funding_rate"].astype(float).fillna(0)
-                features_df["funding_rate_change"] = fr_series.diff().fillna(0)
+                features_df["funding_rate_change"] = features_df["funding_rate"].diff().fillna(0)
             else:
                 features_df["funding_rate_change"] = 0.0
 
-            # センチメント特徴
+            # センチメント
             if sentiment_scores is not None and not sentiment_scores.empty:
-                aligned_sentiment = sentiment_scores.reindex(features_df.index)
-                aligned_sentiment = aligned_sentiment.ffill().fillna(0.0)
-                features_df["sentiment_smoothed"] = (
-                    aligned_sentiment.rolling(window=3, min_periods=1)
-                    .mean()
-                    .fillna(0.0)
-                )
+                features_df["sentiment_smoothed"] = sentiment_scores.reindex(features_df.index).ffill().rolling(3, min_periods=1).mean().fillna(0)
             else:
                 features_df["sentiment_smoothed"] = 0.0
 
-            # ウェーブレット特徴量の追加
-            if self._wavelet_transformer is not None:
-                try:
-                    features_df = self._wavelet_transformer.append_features(features_df)
-                except Exception as exc:
-                    logger.warning(
-                        "ウェーブレット特徴量の追加に失敗したためスキップします: %s",
-                        exc,
-                    )
-
-            # 派生特徴量生成（有効な場合）
+            # 4. 拡張特徴量（Wavelet / 派生）
+            if self._wavelet_transformer:
+                features_df = self._wavelet_transformer.append_features(features_df)
+            
             if self._use_derived_features:
-                try:
-                    features_df = self._augment_with_derived_features(features_df)
-                except Exception as e:
-                    logger.warning(f"派生特徴量生成エラー: {e}")
+                features_df = self._augment_with_derived_features(features_df)
 
-            # 前処理（オプション）
-            if apply_preprocessing:
-                features_df = self._apply_preprocessing(features_df)
-            else:
-                features_df = self._fallback_preprocess(features_df)
+            # 5. 前処理
+            features_df = self._apply_preprocessing(features_df) if apply_preprocessing else self._fallback_preprocess(features_df)
+            
+            return features_df.loc[:, ~features_df.columns.duplicated()]
 
-            # 重複カラムを排除（派生特徴量追加時の安全策）
-            features_df = features_df.loc[:, ~features_df.columns.duplicated()]
-
-            return features_df
-
-        except MLFeatureError:
-            raise
         except Exception as e:
             logger.error(f"Gene→特徴量変換エラー: {e}")
-            raise MLFeatureError(f"Gene→特徴量変換に失敗: {e}")
+            raise MLFeatureError(f"変換失敗: {e}")
 
     def _extract_gene_features(self, gene: StrategyGene) -> Dict[str, Any]:
-        """
-        StrategyGeneから特徴量を抽出（整理版）
-
-        Args:
-            gene: 戦略遺伝子
-
-        Returns:
-            特徴量辞書
-        """
-        features = {}
-
-        # 1. 構造の統計
+        """遺伝子構造から特徴量を抽出"""
         enabled_inds = [ind for ind in gene.indicators if ind.enabled]
-        features["indicator_count"] = len(enabled_inds)
+        long_c = len(gene.long_entry_conditions or [])
+        short_c = len(gene.short_entry_conditions or [])
         
-        long_count = len(gene.long_entry_conditions or [])
-        short_count = len(gene.short_entry_conditions or [])
-        features["long_condition_count"] = long_count
-        features["short_condition_count"] = short_count
-        features["condition_count"] = long_count + short_count
-        features["has_long_short_separation"] = int(bool(gene.has_long_short_separation()))
+        periods = [i.parameters.get("period") for i in enabled_inds if "period" in i.parameters]
+        
+        features = {
+            "indicator_count": len(enabled_inds),
+            "condition_count": long_c + short_c,
+            "long_condition_count": long_c,
+            "short_condition_count": short_c,
+            "has_long_short_separation": int(bool(gene.has_long_short_separation())),
+            "avg_indicator_period": np.mean(periods) if periods else 0.0,
+        }
 
-        # 2. 指標特性の抽出
-        indicator_types = [ind.type for ind in enabled_inds]
+        # 指標の有無
         for itype in ["SMA", "EMA", "RSI", "MACD", "BollingerBands"]:
-            features[f"has_{itype.lower()}"] = int(itype in indicator_types)
+            features[f"has_{itype.lower()}"] = int(any(itype in ind.type for ind in enabled_inds))
 
-        # 指標パラメータ（期間）の平均
-        periods = [ind.parameters.get("period") for ind in enabled_inds if "period" in ind.parameters]
-        features["avg_indicator_period"] = np.mean(periods) if periods else 0.0
-
-        # 3. TP/SL および ポジションサイジング設定
+        # TP/SL & ポジションサイジング
         tpsl = gene.tpsl_gene
-        features["has_tpsl"] = int(bool(tpsl is not None and getattr(tpsl, "enabled", False)))
-        features["take_profit_ratio"] = getattr(tpsl, "take_profit_pct", 0.02) if tpsl else 0.02
-        features["stop_loss_ratio"] = getattr(tpsl, "stop_loss_pct", 0.01) if tpsl else 0.01
+        features.update({
+            "has_tpsl": int(bool(tpsl and tpsl.enabled)),
+            "take_profit_ratio": getattr(tpsl, "take_profit_pct", 0.02) if tpsl else 0.02,
+            "stop_loss_ratio": getattr(tpsl, "stop_loss_pct", 0.01) if tpsl else 0.01
+        })
 
         ps = gene.position_sizing_gene
-        features["has_position_sizing"] = int(bool(ps is not None and getattr(ps, "enabled", False)))
-        if ps:
-            method_str = str(getattr(ps, "method", ""))
-            features["position_sizing_method"] = int(hashlib.sha256(method_str.encode()).hexdigest()[:6], 16)
-        else:
-            features["position_sizing_method"] = 0
+        features["has_position_sizing"] = int(bool(ps and ps.enabled))
+        method_str = str(getattr(ps, "method", ""))
+        features["position_sizing_method"] = int(hashlib.md5(method_str.encode()).hexdigest()[:6], 16) if ps else 0
 
         return features
 

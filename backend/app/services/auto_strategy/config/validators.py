@@ -73,50 +73,43 @@ class ConfigValidator:
         """GAConfig固有の検証"""
         errors = []
 
-        # 進化設定の検証
-        try:
-            if config.population_size <= 0:
-                errors.append("個体数は正の整数である必要があります")
-            elif config.population_size > 1000:
-                errors.append(
-                    "個体数は1000以下である必要があります（パフォーマンス上の制約）"
-                )
-        except TypeError:
-            errors.append("個体数は数値である必要があります")
+        def check_range(val, min_v, max_v, name, is_int=True):
+            try:
+                if not isinstance(val, (int, float)):
+                    errors.append(f"{name}は数値である必要があります")
+                    return False
+                if not (min_v <= val <= max_v):
+                    if is_int:
+                        if val > max_v:
+                            errors.append(f"{name}は{max_v}以下である必要があります（パフォーマンス上の制約）")
+                        else:
+                            errors.append(f"{name}は正の整数である必要があります")
+                    else:
+                        errors.append(f"{name}は{min_v}-{max_v}の範囲である必要があります")
+                    return False
+                return True
+            except (TypeError, ValueError):
+                errors.append(f"{name}は数値である必要があります")
+                return False
 
-        try:
-            if config.generations <= 0:
-                errors.append("世代数は正の整数である必要があります")
-            elif config.generations > 500:
-                errors.append(
-                    "世代数は500以下である必要があります（パフォーマンス上の制約）"
-                )
-        except TypeError:
-            errors.append("世代数は数値である必要があります")
-
-        try:
-            if not 0 <= config.crossover_rate <= 1:
-                errors.append("交叉率は0-1の範囲である必要があります")
-        except (TypeError, ValueError):
-            errors.append("交叉率は数値である必要があります")
-
-        try:
-            if not 0 <= config.mutation_rate <= 1:
-                errors.append("突然変異率は0-1の範囲である必要があります")
-        except (TypeError, ValueError):
-            errors.append("突然変異率は数値である必要があります")
-
-        try:
+        # 進化設定
+        check_range(config.population_size, 1, 1000, "個体数")
+        check_range(config.generations, 1, 500, "世代数")
+        check_range(config.crossover_rate, 0, 1, "交叉率", False)
+        check_range(config.mutation_rate, 0, 1, "突然変異率", False)
+        
+        # 数値であることを確認してから比較
+        if isinstance(config.elite_size, (int, float)) and isinstance(config.population_size, (int, float)):
             if config.elite_size < 0 or config.elite_size >= config.population_size:
                 errors.append("エリート保存数は0以上、個体数未満である必要があります")
-        except (TypeError, ValueError):
+        else:
             errors.append("elite_size と population_size は数値である必要があります")
 
-        # OOS設定の検証
-        if not 0.0 <= config.oos_split_ratio < 1.0:
+        # OOS設定
+        if not isinstance(config.oos_split_ratio, (int, float)) or not 0.0 <= config.oos_split_ratio < 1.0:
             errors.append("OOS分割比率は0.0以上1.0未満である必要があります")
 
-        # 評価設定の検証
+        # 評価設定
         if abs(sum(config.fitness_weights.values()) - 1.0) > 0.01:
             errors.append("フィットネス重みの合計は1.0である必要があります")
 
@@ -126,41 +119,24 @@ class ConfigValidator:
             errors.append(f"必要なメトリクスが不足しています: {missing_metrics}")
 
         if config.primary_metric not in config.fitness_weights:
-            errors.append(
-                f"プライマリメトリクス '{config.primary_metric}' がフィットネス重みに含まれていません"
-            )
+            errors.append(f"プライマリメトリクス '{config.primary_metric}' がフィットネス重みに含まれていません")
 
-        # 指標設定の検証
-        try:
-            if config.max_indicators <= 0:
-                errors.append("最大指標数は正の整数である必要があります")
-            elif config.max_indicators > 10:
-                errors.append(
-                    "最大指標数は10以下である必要があります（パフォーマンス上の制約）"
-                )
-        except TypeError:
-            errors.append("最大指標数は数値である必要があります")
+        # 指標設定
+        check_range(config.max_indicators, 1, 10, "最大指標数")
 
-        # パラメータ設定の検証
-        for param_name, range_values in config.parameter_ranges.items():
-            if not isinstance(range_values, list) or len(range_values) != 2:
-                errors.append(
-                    f"パラメータ '{param_name}' の範囲は [min, max] の形式である必要があります"
-                )
-            elif range_values[0] >= range_values[1]:
-                errors.append(
-                    f"パラメータ '{param_name}' の最小値は最大値より小さい必要があります"
-                )
+        # パラメータ範囲の検証
+        for param, r in config.parameter_ranges.items():
+            if not isinstance(r, list) or len(r) != 2:
+                errors.append(f"パラメータ '{param}' の範囲は [min, max] の形式である必要があります")
+            elif r[0] >= r[1]:
+                errors.append(f"パラメータ '{param}' の最小値は最大値より小さい必要があります")
 
-        # 実行設定の検証
-        valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
-        if config.log_level not in valid_log_levels:
-            errors.append(
-                f"無効なログレベル: {config.log_level}. 有効な値: {valid_log_levels}"
-            )
+        # ログレベル
+        if config.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+            errors.append(f"無効なログレベル: {config.log_level}. 有効な値: {{'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}}")
 
         if config.parallel_processes is not None:
-            if config.parallel_processes <= 0:
+            if not isinstance(config.parallel_processes, (int, float)) or config.parallel_processes <= 0:
                 errors.append("並列プロセス数は正の整数である必要があります")
             elif config.parallel_processes > 32:
                 errors.append("並列プロセス数は32以下である必要があります")

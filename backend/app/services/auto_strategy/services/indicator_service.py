@@ -190,141 +190,33 @@ class IndicatorCalculator:
                 )
 
             if result is not None:
-                logger.warning(
-                    f"指標計算結果取得: {indicator_gene.type}, タイプ: {type(result)}"
-                )
-
                 # MTF指標名のベースを決定（タイムフレームサフィックス付き）
-                # IDを使って一意にする（SMA_10, SMA_50のように区別するため）
-                indicator_id_suffix = (
-                    f"_{indicator_gene.id[:8]}"
-                    if hasattr(indicator_gene, "id") and indicator_gene.id
-                    else ""
-                )
-                base_indicator_name = (
-                    f"{indicator_gene.type}{timeframe_suffix}{indicator_id_suffix}"
-                )
-
-                # 指標をbacktesting.pyと互換性のある方法で確実に登録
-                logger.warning(
-                    f"指標登録開始: {base_indicator_name}, 結果タイプ: {type(result)}"
-                )
+                indicator_id_suffix = f"_{indicator_gene.id[:8]}" if hasattr(indicator_gene, "id") and indicator_gene.id else ""
+                base_indicator_name = f"{indicator_gene.type}{timeframe_suffix}{indicator_id_suffix}"
 
                 # indicators辞書を確実に作成
                 if not hasattr(strategy_instance, "indicators"):
                     strategy_instance.indicators = {}
-                    logger.warning("indicators辞書を新規作成")
+
+                # 指標を戦略インスタンスに登録する共通ヘルパー
+                def _register(name, val):
+                    try:
+                        # 1. indicators辞書（独自の管理用）
+                        strategy_instance.indicators[name] = val
+                        # 2. インスタンス属性（backtesting.pyアクセス用）
+                        setattr(strategy_instance, name, val)
+                    except Exception as e:
+                        logger.error(f"指標登録エラー {name}: {e}")
 
                 if isinstance(result, tuple):
                     # 複数の出力がある指標（MACD等）
-                    logger.warning(
-                        f"複数出力指標処理: {base_indicator_name}, 出力数: {len(result)}"
-                    )
                     for i, output in enumerate(result):
-                        indicator_name = f"{base_indicator_name}_{i}"
-
-                        # 複数の方法で指標を確実に登録
-                        try:
-                            # 1. 戦略インスタンスの__dict__に直接追加（最も確実）
-                            strategy_instance.__dict__[indicator_name] = output
-
-                            # 2. setattr でも設定
-                            setattr(strategy_instance, indicator_name, output)
-
-                            # 3. indicators辞書にも保存
-                            strategy_instance.indicators[indicator_name] = output
-
-                            # 4. クラス変数としても設定
-                            setattr(strategy_instance.__class__, indicator_name, output)
-
-                            logger.warning(f"複数出力指標登録完了: {indicator_name}")
-
-                        except Exception as e:
-                            logger.error(
-                                f"複数出力指標登録エラー: {indicator_name}, エラー: {e}"
-                            )
+                        _register(f"{base_indicator_name}_{i}", output)
                 else:
                     # 単一出力の指標
-                    logger.warning(f"単一出力指標処理: {base_indicator_name}")
-                    try:
-                        # 複数の方法で指標を確実に登録
-                        # 1. 戦略インスタンスの__dict__に直接追加（最も確実）
-                        strategy_instance.__dict__[base_indicator_name] = result
+                    _register(base_indicator_name, result)
 
-                        # 2. setattr でも設定
-                        setattr(strategy_instance, base_indicator_name, result)
-
-                        # 3. indicators辞書にも保存
-                        strategy_instance.indicators[base_indicator_name] = result
-
-                        # 4. クラス変数としても設定
-                        setattr(
-                            strategy_instance.__class__, base_indicator_name, result
-                        )
-
-                        logger.warning(f"単一出力指標登録完了: {base_indicator_name}")
-
-                    except Exception as e:
-                        logger.error(
-                            f"単一出力指標登録エラー: {base_indicator_name}, エラー: {e}"
-                        )
-
-                # 詳細な登録確認
-                logger.warning(f"指標登録確認開始: {base_indicator_name}")
-
-                if isinstance(result, tuple):
-                    # 複数出力指標の登録確認
-                    all_registered = True
-                    for i in range(len(result)):
-                        indicator_name = f"{base_indicator_name}_{i}"
-
-                        # 複数の方法で確認
-                        in_dict = indicator_name in strategy_instance.__dict__
-                        has_attr = hasattr(strategy_instance, indicator_name)
-                        in_indicators = indicator_name in strategy_instance.indicators
-
-                        logger.warning(
-                            f"{indicator_name}: __dict__={in_dict}, hasattr={has_attr}, indicators={in_indicators}"
-                        )
-
-                        if not (in_dict and has_attr and in_indicators):
-                            all_registered = False
-
-                    if all_registered:
-                        logger.warning(
-                            f"✅ 複数出力指標登録確認成功: {base_indicator_name}"
-                        )
-                    else:
-                        logger.error(
-                            f"❌ 複数出力指標登録確認失敗: {base_indicator_name}"
-                        )
-                else:
-                    # 単一出力指標の登録確認
-                    in_dict = base_indicator_name in strategy_instance.__dict__
-                    has_attr = hasattr(strategy_instance, base_indicator_name)
-                    in_indicators = base_indicator_name in strategy_instance.indicators
-
-                    logger.warning(
-                        f"{base_indicator_name}: __dict__={in_dict}, hasattr={has_attr}, indicators={in_indicators}"
-                    )
-
-                    if in_dict and has_attr and in_indicators:
-                        logger.warning(
-                            f"✅ 単一出力指標登録確認成功: {base_indicator_name}"
-                        )
-                    else:
-                        logger.error(
-                            f"❌ 単一出力指標登録確認失敗: {base_indicator_name}"
-                        )
-
-                # 戦略インスタンスの全属性をログ出力（デバッグ用）
-                all_attrs = [
-                    attr for attr in dir(strategy_instance) if not attr.startswith("_")
-                ]
-                logger.warning(f"戦略インスタンス属性: {all_attrs}")
-                logger.warning(
-                    f"indicators辞書キー: {list(strategy_instance.indicators.keys()) if hasattr(strategy_instance, 'indicators') else 'なし'}"
-                )
+                logger.debug(f"指標登録完了: {base_indicator_name}")
             else:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")

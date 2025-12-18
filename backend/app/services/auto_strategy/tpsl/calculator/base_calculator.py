@@ -6,7 +6,7 @@ TP/SL計算器の基底クラスを定義します。
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ...genes import TPSLGene
 from ...genes.tpsl import TPSLResult
@@ -19,13 +19,13 @@ class BaseTPSLCalculator(ABC):
     TP/SL計算器の基底クラス
 
     各計算方式の共通インターフェースを提供します。
+    テンプレートメソッドパターンを使用して、共通の例外処理と結果作成を実現します。
     """
 
     def __init__(self, method_name: str):
         """初期化"""
         self.method_name = method_name
 
-    @abstractmethod
     def calculate(
         self,
         current_price: float,
@@ -35,18 +35,40 @@ class BaseTPSLCalculator(ABC):
         **kwargs,
     ) -> TPSLResult:
         """
-        TP/SLを計算
-
-        Args:
-            current_price: 現在価格
-            tpsl_gene: TP/SL遺伝子
-            market_data: 市場データ
-            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
-            **kwargs: 追加パラメータ
-
-        Returns:
-            TPSLResult: 計算結果
+        TP/SLを計算（テンプレートメソッド）
         """
+        try:
+            # サブクラス固有の計算を実行
+            sl_pct, tp_pct, confidence, metrics = self._do_calculate(
+                current_price, tpsl_gene, market_data, position_direction, **kwargs
+            )
+            
+            return self._create_result(
+                stop_loss_pct=sl_pct,
+                take_profit_pct=tp_pct,
+                confidence_score=confidence,
+                expected_performance=metrics,
+                metadata={"method": self.method_name}
+            )
+        except Exception as e:
+            logger.error(f"{self.method_name} 計算エラー: {e}")
+            return self._create_fallback_result()
+
+    @abstractmethod
+    def _do_calculate(
+        self, current_price: float, tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+    ) -> Tuple[float, float, float, Dict[str, Any]]:
+        """固有の計算ロジック（(sl_pct, tp_pct, confidence, metrics) を返す）"""
+
+    def _create_fallback_result(self) -> TPSLResult:
+        """デフォルトのフォールバック結果"""
+        return self._create_result(
+            stop_loss_pct=0.03,
+            take_profit_pct=0.06,
+            confidence_score=0.5,
+            expected_performance={"fallback": True}
+        )
 
     def _make_prices(
         self,
@@ -63,19 +85,13 @@ class BaseTPSLCalculator(ABC):
             if stop_loss_pct == 0:
                 sl_price = current_price
             else:
-                if position_direction > 0:
-                    sl_price = current_price * (1 - stop_loss_pct)
-                else:
-                    sl_price = current_price * (1 + stop_loss_pct)
+                sl_price = current_price * (1 + (position_direction * -1.0 * stop_loss_pct))
 
         if take_profit_pct is not None:
             if take_profit_pct == 0:
                 tp_price = current_price
             else:
-                if position_direction > 0:
-                    tp_price = current_price * (1 + take_profit_pct)
-                else:
-                    tp_price = current_price * (1 - take_profit_pct)
+                tp_price = current_price * (1 + (position_direction * take_profit_pct))
 
         return sl_price, tp_price
 

@@ -138,13 +138,12 @@ class TestHybridPredictor:
         with pytest.raises(MLPredictionError, match="特徴量DataFrameが空"):
             predictor.predict(pd.DataFrame())
 
-    def test_predict_model_error(self, predictor):
-        """モデルエラー時のデフォルトフォールバック"""
-        predictor.service.generate_signals.side_effect = Exception("Model error")
-
-        with pytest.raises(MLPredictionError, match="予測に失敗しました"):
-            predictor.predict(pd.DataFrame({"a": [1]}))
-
+        def test_predict_model_error(self, predictor):
+            """モデルエラー時のデフォルトフォールバック"""
+            predictor.service.generate_signals.side_effect = Exception("Model error")
+        
+            with pytest.raises(MLPredictionError, match="予測失敗"):
+                predictor.predict(pd.DataFrame({"a": [1]}))
     def test_predict_untrained_model(self, predictor):
         """未学習モデルのハンドリング"""
         predictor.service.trainer.is_trained = False

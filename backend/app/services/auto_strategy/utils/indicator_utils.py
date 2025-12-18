@@ -36,45 +36,33 @@ def indicators_by_category(category: str) -> List[str]:
     return results
 
 
-def get_volume_indicators() -> List[str]:
-    return indicators_by_category("volume")
-
-
-def get_momentum_indicators() -> List[str]:
-    return indicators_by_category("momentum")
-
-
-def get_trend_indicators() -> List[str]:
-    return indicators_by_category("trend")
-
-
-def get_volatility_indicators() -> List[str]:
-    return indicators_by_category("volatility")
-
-
-def get_original_indicators() -> List[str]:
-    return indicators_by_category("original")
-
-
-def get_all_indicators() -> List[str]:
-    """全指標タイプを取得（テクニカル + 複合指標）"""
-    # 遅延インポートで循環依存を回避
-    from ..config.constants import COMPOSITE_INDICATORS
-
-    technical = (
-        get_volume_indicators()
-        + get_momentum_indicators()
-        + get_trend_indicators()
-        + get_volatility_indicators()
-    )
+def get_all_indicators(include_composite: bool = True) -> List[str]:
+    """
+    全指標タイプを取得
+    
+    Args:
+        include_composite: 複合指標（COMPOSITE_INDICATORS）を含めるか
+    """
+    categories = ["volume", "momentum", "trend", "volatility", "original"]
+    technical = []
+    for cat in categories:
+        technical.extend(indicators_by_category(cat))
+    
+    all_types = technical
+    if include_composite:
+        from ..config.constants import COMPOSITE_INDICATORS
+        all_types.extend(COMPOSITE_INDICATORS)
+        
     # 重複除去して順序維持
     seen = set()
-    ordered: List[str] = []
-    for n in technical + COMPOSITE_INDICATORS:
-        if n not in seen:
-            seen.add(n)
-            ordered.append(n)
-    return ordered
+    return [x for x in all_types if not (x in seen or seen.add(x))]
+
+
+def get_volume_indicators() -> List[str]: return indicators_by_category("volume")
+def get_momentum_indicators() -> List[str]: return indicators_by_category("momentum")
+def get_trend_indicators() -> List[str]: return indicators_by_category("trend")
+def get_volatility_indicators() -> List[str]: return indicators_by_category("volatility")
+def get_original_indicators() -> List[str]: return indicators_by_category("original")
 
 
 def get_all_indicator_ids() -> Dict[str, int]:
@@ -97,27 +85,8 @@ def get_all_indicator_ids() -> Dict[str, int]:
 
 
 def get_valid_indicator_types() -> List[str]:
-    """有効な指標タイプを取得（VALID_INDICATOR_TYPESの実装）"""
-    # 重複除去して順序維持
-    technical = (
-        get_volume_indicators()
-        + get_momentum_indicators()
-        + get_trend_indicators()
-        + get_volatility_indicators()
-        + get_original_indicators()
-    )
-    from ..config.constants import COMPOSITE_INDICATORS
-
-    all_indicators = technical + COMPOSITE_INDICATORS
-
-    seen = set()
-    valid_types: List[str] = []
-    for name in all_indicators:
-        if name not in seen:
-            seen.add(name)
-            valid_types.append(name)
-
-    return valid_types
+    """有効な指標タイプを取得"""
+    return get_all_indicators(include_composite=True)
 
 
 

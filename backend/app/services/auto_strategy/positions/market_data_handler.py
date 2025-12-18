@@ -46,27 +46,28 @@ class MarketDataHandler:
         market_data: Optional[Dict[str, Any]],
         use_cache: bool,
     ) -> Dict[str, Any]:
-        """市場データの準備と拡張"""
-        enhanced_data = market_data.copy() if market_data else {}
+        """市場データの準備と拡張（整理版）"""
+        enhanced = market_data.copy() if market_data else {}
 
-        # キャッシュチェック
+        # 1. キャッシュの統合
         if use_cache and self._cache and not self._cache.is_expired():
-            enhanced_data.update(self._cache.atr_values)
-            enhanced_data.update(self._cache.volatility_metrics)
+            enhanced.update(self._cache.atr_values)
+            enhanced.update(self._cache.volatility_metrics)
 
-        # ATR値の確保
-        if "atr" not in enhanced_data and "atr_pct" not in enhanced_data:
-            # デフォルトATR値を設定（現在価格の設定値%）
+        # 2. ATR値の保証
+        if "atr" not in enhanced and "atr_pct" not in enhanced:
             default_atr_pct = unified_config.auto_strategy.default_atr_multiplier
-            enhanced_data["atr"] = current_price * default_atr_pct
-            enhanced_data["atr_pct"] = default_atr_pct
-            enhanced_data["atr_source"] = "default"
+            enhanced.update({
+                "atr": current_price * default_atr_pct,
+                "atr_pct": default_atr_pct,
+                "atr_source": "default"
+            })
 
-        # ボラティリティメトリクスの追加
-        if "volatility" not in enhanced_data:
-            enhanced_data["volatility"] = enhanced_data.get("atr_pct", 0.02)
+        # 3. ボラティリティメトリクスの正規化
+        # デフォルト値は 0.02 (2%)
+        enhanced.setdefault("volatility", enhanced.get("atr_pct", 0.02))
 
-        return enhanced_data
+        return enhanced
 
     def update_cache(
         self,

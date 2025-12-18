@@ -7,29 +7,45 @@ from app.services.auto_strategy.genes.indicator import IndicatorGene
 
 
 class MockConditionGenerator:
+    """テスト用のモック生成器"""
+
     def __init__(self):
-        self.logger = MagicMock()
+        self.context = {"timeframe": "1h"}
 
-    def _get_indicator_type(self, ind):
-        return "UNKNOWN"
+    def _get_indicator_name(self, indicator):
+        return indicator.type
 
-    def _generic_long_conditions(self, ind):
-        return [Condition(left_operand=ind.type, operator=">", right_operand=50.0)]
+    def _classify_indicators(self, indicators):
+        # 簡易分類
+        from app.services.auto_strategy.config.constants import IndicatorType
+        res = {IndicatorType.TREND: [], IndicatorType.MOMENTUM: [], IndicatorType.VOLATILITY: []}
+        for ind in indicators:
+            if "rsi" in ind.type.lower() or "macd" in ind.type.lower():
+                res[IndicatorType.MOMENTUM].append(ind)
+            elif "bb" in ind.type.lower():
+                res[IndicatorType.VOLATILITY].append(ind)
+            else:
+                res[IndicatorType.TREND].append(ind)
+        return res
 
-    def _generic_short_conditions(self, ind):
-        return [Condition(left_operand=ind.type, operator="<", right_operand=50.0)]
+    def _get_band_names(self, indicator):
+        return f"{indicator.type}_upper", f"{indicator.type}_lower"
 
-    def _create_momentum_long_conditions(self, ind):
-        return [Condition(left_operand=ind.type, operator=">", right_operand=50.0)]
+    def _is_price_scale(self, indicator):
+        return "ma" in indicator.type.lower()
 
-    def _create_momentum_short_conditions(self, ind):
-        return [Condition(left_operand=ind.type, operator="<", right_operand=50.0)]
+    def _is_band_indicator(self, indicator):
+        return "bb" in indicator.type.lower()
 
-    def _create_trend_long_conditions(self, ind):
-        return [Condition(left_operand=ind.type, operator=">", right_operand=50.0)]
+    def _create_side_condition(self, indicator, side, name):
+        from app.services.auto_strategy.genes import Condition
+        return Condition(left_operand=name, operator=">", right_operand=50)
 
-    def _create_trend_short_conditions(self, ind):
-        return [Condition(left_operand=ind.type, operator="<", right_operand=50.0)]
+    def _structure_conditions(self, conditions):
+        return conditions
+
+    def generate_fallback_conditions(self, indicators):
+        return [], [], []
 
 
 def test_generate_hierarchical_structure():

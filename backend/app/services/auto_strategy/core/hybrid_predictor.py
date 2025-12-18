@@ -114,87 +114,37 @@ class HybridPredictor:
         return service_cls.get_available_single_models()
 
     def predict(self, features_df: pd.DataFrame) -> Dict[str, float]:
-        """
-        予測を実行
-
-        Args:
-            features_df: 特徴量DataFrame
-
-        Returns:
-            予測確率辞書
-            - 方向予測: {"up": float, "down": float, "range": float}
-            - ボラティリティ予測: {"trend": float, "range": float}
-
-        Raises:
-            MLPredictionError: 予測に失敗した場合
-        """
+        """予測を実行（統合版）"""
         try:
-            # 入力検証
             if features_df is None or features_df.empty:
                 raise MLPredictionError("特徴量DataFrameが空です")
 
-            # 複数モデルの場合は平均化
-            if len(self.services) > 1:
-                predictions = []
-                for service in self.services:
-                    try:
-                        self._run_time_series_cv(service, features_df)
-                        pred = service.generate_signals(features_df)
-                        predictions.append(pred)
-                    except Exception as e:
-                        logger.warning(f"モデル予測エラー: {e}")
-                        continue
+            # 全サービスの予測結果を収集
+            preds = []
+            for s in self.services:
+                if self._service_is_trained(s):
+                    self._run_time_series_cv(s, features_df)
+                    preds.append(s.generate_signals(features_df))
+            
+            if not preds:
+                logger.warning("予測可能なモデルがありません")
+                return self._default_prediction()
 
-                if not predictions:
-                    logger.warning("全てのモデルで予測失敗、デフォルト値を返します")
-                    # デフォルトは方向予測と仮定（コンテキストがないため）
-                    ml_prediction = self._default_prediction()
-                else:
-                    # 最初の予測結果からキーを取得してモード判定
-                    first_pred = predictions[0]
-                    if "trend" in first_pred:
-                        # ボラティリティ予測の平均化
-                        ml_prediction = {
-                            "trend": float(
-                                np.mean([p.get("trend", 0.0) for p in predictions])
-                            ),
-                            "range": float(
-                                np.mean([p.get("range", 0.0) for p in predictions])
-                            ),
-                        }
-                    else:
-                        # 方向予測の平均化
-                        ml_prediction = {
-                            "up": float(
-                                np.mean([p.get("up", 0.0) for p in predictions])
-                            ),
-                            "down": float(
-                                np.mean([p.get("down", 0.0) for p in predictions])
-                            ),
-                            "range": float(
-                                np.mean([p.get("range", 0.0) for p in predictions])
-                            ),
-                        }
+            # 複数モデルの結果を平均化
+            if len(preds) == 1:
+                ml_prediction = preds[0]
             else:
-                # 単一モデルの場合
-                service = self.services[0]
-
-                # モデルが学習されているかチェック
-                if not self._service_is_trained(service):
-                    logger.warning("モデル未学習、デフォルト値を返します")
-                    ml_prediction = self._default_prediction()
-                else:
-                    # 予測実行
-                    self._run_time_series_cv(service, features_df)
-                    ml_prediction = service.generate_signals(features_df)
+                keys = preds[0].keys()
+                ml_prediction = {
+                    k: float(np.mean([p.get(k, 0.0) for p in preds]))
+                    for k in keys
+                }
 
             return self._normalise_prediction(ml_prediction)
 
-        except MLPredictionError:
-            raise
         except Exception as e:
             logger.error(f"予測エラー: {e}")
-            raise MLPredictionError(f"予測に失敗しました: {e}")
+            raise MLPredictionError(f"予測失敗: {e}")
 
     def predict_batch(
         self, features_batch: List[pd.DataFrame]

@@ -74,8 +74,8 @@ class TestStatisticalCalculator:
             )
             # method_usedはクラス初期化時のものが使われる仕様を確認済み
             assert result.method_used == "statistical"
-            # その代わり、expected_performance["type"] が fallback を示す
-            assert result.expected_performance["type"] == "statistical_fallback"
+            # その代わり、fallback フラグを確認
+            assert result.expected_performance.get("fallback") is True
             assert result.stop_loss_pct == 0.03
 
     def test_min_max_constraints(self, calculator):

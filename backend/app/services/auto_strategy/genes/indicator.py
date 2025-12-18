@@ -146,14 +146,35 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
         indicator_gene = create_random_indicator_gene(indicator_type, config, timeframe)
         indicators.append(indicator_gene)
 
-    # 指標構成サービスで成立性を底上げ（MAクロス戦略など）
-    from ..generators.indicator_composition_service import IndicatorCompositionService
+    # 指標構成の底上げ（MAクロス戦略など）
+    indicators = _enhance_with_ma_cross(indicators, available_indicators, config)
 
-    composition_service = IndicatorCompositionService(config)
-    indicators = composition_service.enhance_with_ma_cross_strategy(
-        indicators, available_indicators
-    )
+    return indicators
 
+
+def _enhance_with_ma_cross(indicators: List[IndicatorGene], available: List[str], config: Any) -> List[IndicatorGene]:
+    """MAクロス戦略を可能にするためにMA指標を確率的に追加"""
+    from ..config.constants import MOVING_AVERAGE_INDICATORS, PREFERRED_MA_INDICATORS
+    
+    ma_count = sum(1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS)
+    if ma_count < 2 and random.random() < 0.25:
+        ma_pool = [n for n in available if n in MOVING_AVERAGE_INDICATORS]
+        if ma_pool:
+            preferred = [n for n in ma_pool if n in PREFERRED_MA_INDICATORS]
+            chosen = random.choice(preferred or ma_pool)
+            
+            # 既存の期間と被らないように調整
+            existing_periods = {ind.parameters.get("period") for ind in indicators if "period" in ind.parameters}
+            period = random.choice([10, 14, 20, 30, 50])
+            while period in existing_periods and len(existing_periods) < 5:
+                period = random.choice([10, 14, 20, 30, 50])
+            
+            indicators.append(IndicatorGene(type=chosen, parameters={"period": period}))
+            if len(indicators) > getattr(config, "max_indicators", 5):
+                for i, ind in enumerate(indicators):
+                    if ind.type not in MOVING_AVERAGE_INDICATORS:
+                        indicators.pop(i)
+                        break
     return indicators
 
 

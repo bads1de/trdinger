@@ -59,74 +59,39 @@ class StrategyParameterTuner:
         self.optimizer = OptunaOptimizer()
 
     def tune(self, gene: StrategyGene) -> StrategyGene:
-        """
-        パラメータチューニングを実行
-
-        Args:
-            gene: チューニング対象の戦略遺伝子
-
-        Returns:
-            最適化されたパラメータを持つ新しい StrategyGene
-        """
+        """パラメータチューニングを実行"""
         logger.info("🔧 戦略パラメータチューニングを開始")
 
-        # パラメータ空間を構築
         parameter_space = self.parameter_space_builder.build_parameter_space(
-            gene,
-            include_indicators=self.include_indicators,
-            include_tpsl=self.include_tpsl,
-            include_thresholds=self.include_thresholds,
+            gene, self.include_indicators, self.include_tpsl, self.include_thresholds
         )
 
         if not parameter_space:
             logger.warning("最適化可能なパラメータがありません")
             return gene
 
-        logger.info(f"最適化対象パラメータ数: {len(parameter_space)}")
-
-        # 目的関数を定義
-        def objective_function(params: Dict[str, Any]) -> float:
-            # パラメータを適用した遺伝子を作成
-            tuned_gene = self.parameter_space_builder.apply_params_to_gene(gene, params)
-
-            # フィットネスを評価
-            fitness = self._evaluate_gene(tuned_gene)
-
-            return fitness
+        # 目的関数
+        def objective(params: Dict[str, Any]) -> float:
+            tuned = self.parameter_space_builder.apply_params_to_gene(gene, params)
+            return self._evaluate_gene(tuned)
 
         try:
-            # Optuna最適化を実行
-            result = self.optimizer.optimize(
-                objective_function=objective_function,
-                parameter_space=parameter_space,
-                n_calls=self.n_trials,
-            )
-
-            logger.info(
-                f"✅ チューニング完了: ベストスコア={result.best_score:.4f}, "
-                f"試行回数={result.total_evaluations}"
-            )
-
-            # 最適パラメータを適用
-            tuned_gene = self.parameter_space_builder.apply_params_to_gene(
-                gene, result.best_params
-            )
-
-            # メタデータに最適化情報を追加
-            tuned_gene.metadata["optuna_tuned"] = True
-            tuned_gene.metadata["optuna_best_score"] = result.best_score
-            tuned_gene.metadata["optuna_trials"] = result.total_evaluations
-            tuned_gene.metadata["optuna_time"] = result.optimization_time
-
-            return tuned_gene
+            res = self.optimizer.optimize(objective, parameter_space, self.n_trials)
+            
+            # 最適パラメータの適用とメタデータ更新
+            best_gene = self.parameter_space_builder.apply_params_to_gene(gene, res.best_params)
+            best_gene.metadata.update({
+                "optuna_tuned": True,
+                "optuna_best_score": res.best_score,
+                "optuna_trials": res.total_evaluations,
+                "optuna_time": res.optimization_time
+            })
+            return best_gene
 
         except Exception as e:
-            logger.error(f"チューニング中にエラーが発生: {e}")
-            # エラー時は元の遺伝子を返す
+            logger.error(f"チューニングエラー: {e}")
             return gene
-
         finally:
-            # リソースクリーンアップ
             self.optimizer.cleanup()
 
     def _evaluate_gene(self, gene: StrategyGene) -> float:

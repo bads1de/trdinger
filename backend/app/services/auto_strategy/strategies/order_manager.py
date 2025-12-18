@@ -140,27 +140,22 @@ class OrderManager:
     def _execute_filled_order(self, order: PendingOrder, fill_price: float) -> None:
         """
         約定した注文を実行（Strategyに委譲）
-
-        Args:
-            order: 約定した注文
-            fill_price: 約定価格
         """
-        if order.is_long():
+        if order.is_long:
             self.strategy.buy(size=order.size)
         else:
             self.strategy.sell(size=order.size)
 
-        # 戦略の内部状態を更新（コールバック的に処理）
-        # UniversalStrategy側で公開されているメソッドや属性を操作する
-        # ここでは直接属性を操作するが、setterメソッドがあればそちらが望ましい
-        if hasattr(self.strategy, "_entry_price"):
-            self.strategy._entry_price = fill_price
-        if hasattr(self.strategy, "_sl_price"):
-            self.strategy._sl_price = order.sl_price
-        if hasattr(self.strategy, "_tp_price"):
-            self.strategy._tp_price = order.tp_price
-        if hasattr(self.strategy, "_position_direction"):
-            self.strategy._position_direction = order.direction
+        # 戦略の内部状態を一括更新
+        updates = {
+            "_entry_price": fill_price,
+            "_sl_price": order.sl_price,
+            "_tp_price": order.tp_price,
+            "_position_direction": order.direction
+        }
+        for attr, val in updates.items():
+            if hasattr(self.strategy, attr):
+                setattr(self.strategy, attr, val)
 
     def _get_bar_duration(self) -> Optional[pd.Timedelta]:
         """現在のタイムフレームのバー期間を取得"""

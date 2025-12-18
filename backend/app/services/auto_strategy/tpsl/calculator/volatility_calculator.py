@@ -5,7 +5,7 @@ Volatility Calculator
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
 from ...genes.tpsl import TPSLResult
@@ -17,73 +17,40 @@ logger = logging.getLogger(__name__)
 class VolatilityCalculator(BaseTPSLCalculator):
     """
     ボラティリティベースのTP/SL計算器
-
-    ATR（Average True Range）に基づいてTP/SLを計算します。
     """
 
     def __init__(self):
-        """初期化"""
         super().__init__("volatility_based")
 
-    def calculate(
-        self,
-        current_price: float,
-        tpsl_gene: Optional[TPSLGene] = None,
-        market_data: Optional[Dict[str, Any]] = None,
-        position_direction: float = 1.0,
-        **kwargs,
-    ) -> TPSLResult:
-        """
-        ボラティリティベースでTP/SLを計算
+    def _do_calculate(
+        self, current_price: float, tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+    ) -> Tuple[float, float, float, Dict[str, Any]]:
+        # 1. パラメータ取得
+        if tpsl_gene:
+            atr_period = tpsl_gene.atr_period or 21
+            atr_multiplier_sl = tpsl_gene.atr_multiplier_sl or 1.5
+            atr_multiplier_tp = tpsl_gene.atr_multiplier_tp or 3.0
+        else:
+            atr_period = kwargs.get("atr_period", 21)
+            atr_multiplier_sl = kwargs.get("atr_multiplier_sl", 1.5)
+            atr_multiplier_tp = kwargs.get("atr_multiplier_tp", 3.0)
 
-        Args:
-            current_price: 現在価格
-            tpsl_gene: TP/SL遺伝子
-            market_data: 市場データ（ATR値を含む）
-            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
-            **kwargs: 追加パラメータ
+        # 2. ATR値を取得（または計算）
+        atr_value = self._get_atr_value(market_data, atr_period, current_price)
 
-        Returns:
-            TPSLResult: 計算結果
-        """
-        try:
-            # パラメータ取得
-            if tpsl_gene:
-                atr_period = tpsl_gene.atr_period or 21
-                atr_multiplier_sl = tpsl_gene.atr_multiplier_sl or 1.5
-                atr_multiplier_tp = tpsl_gene.atr_multiplier_tp or 3.0
-            else:
-                atr_period = kwargs.get("atr_period", 21)
-                atr_multiplier_sl = kwargs.get("atr_multiplier_sl", 1.5)
-                atr_multiplier_tp = kwargs.get("atr_multiplier_tp", 3.0)
+        # 3. ATRベースの割合を計算
+        base_atr_pct = atr_value / current_price if atr_value else 0.02
+        sl_pct = base_atr_pct * atr_multiplier_sl
+        tp_pct = base_atr_pct * atr_multiplier_tp
 
-            # ATR値を取得（または計算）
-            atr_value = self._get_atr_value(market_data, atr_period, current_price)
-
-            # ATRベースの割合を計算
-            base_atr_pct = atr_value / current_price if atr_value else 0.02
-
-            stop_loss_pct = base_atr_pct * atr_multiplier_sl
-            take_profit_pct = base_atr_pct * atr_multiplier_tp
-
-            return self._create_result(
-                stop_loss_pct=stop_loss_pct,
-                take_profit_pct=take_profit_pct,
-                confidence_score=0.9,
-                expected_performance={
-                    "type": "volatility_based",
-                    "atr_period": atr_period,
-                    "atr_multiplier_sl": atr_multiplier_sl,
-                    "atr_multiplier_tp": atr_multiplier_tp,
-                    "atr_value": atr_value,
-                    "base_atr_pct": base_atr_pct,
-                },
-            )
-
-        except Exception as e:
-            logger.error(f"ボラティリティベース計算エラー: {e}")
-            # フォールバック
-            return self._create_fallback_result()
+        return sl_pct, tp_pct, 0.9, {
+            "atr_period": atr_period,
+            "atr_multiplier_sl": atr_multiplier_sl,
+            "atr_multiplier_tp": atr_multiplier_tp,
+            "atr_value": atr_value,
+            "base_atr_pct": base_atr_pct,
+        }
 
     def _get_atr_value(
         self,
@@ -133,18 +100,6 @@ class VolatilityCalculator(BaseTPSLCalculator):
         except Exception as e:
             logger.error(f"ATR計算エラー: {e}")
             return None
-
-    def _create_fallback_result(self) -> TPSLResult:
-        """フォールバック結果を作成"""
-        return self._create_result(
-            stop_loss_pct=0.03,
-            take_profit_pct=0.06,
-            confidence_score=0.5,
-            expected_performance={
-                "type": "volatility_fallback",
-                "atr_period": 21,
-            },
-        )
 
 
 

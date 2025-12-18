@@ -82,7 +82,7 @@ class TestAdaptiveCalculator:
             mock_calc.assert_called_once()
             # 委譲後に情報が付与されていること
             assert result.expected_performance["adaptive_selection"] == "volatility"
-            assert result.metadata["selected_method"] == "volatility"
+            assert result.metadata["method"] == "adaptive"
             assert result.stop_loss_pct == 0.05
 
     def test_calculate_fallback(self, calculator):

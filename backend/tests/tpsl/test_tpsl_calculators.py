@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
@@ -27,18 +27,17 @@ from backend.app.services.auto_strategy.tpsl.tpsl_service import TPSLService
 
 # 共通ユーティリティ: 価格計算の簡易ヘルパ（BaseTPSLCalculator._make_prices と同等ロジック確認用）
 class _TestableBaseCalculator(BaseTPSLCalculator):
-    def __init__(self) -> None:
-        super().__init__("test")
+    """テスト用の具象クラス"""
 
-    def calculate(  # pragma: no cover - 本テストでは直接使用しない
-        self,
-        current_price: float,
-        tpsl_gene: Optional[TPSLGene] = None,
-        market_data: Optional[Dict[str, Any]] = None,
-        position_direction: float = 1.0,
-        **kwargs: Any,
-    ) -> TPSLResult:
-        raise NotImplementedError
+    def __init__(self, method_name: str = "test"):
+        super().__init__(method_name)
+
+    def _do_calculate(
+        self, current_price: float, tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+    ) -> Tuple[float, float, float, Dict[str, Any]]:
+        # テスト用の固定値を返す
+        return 0.03, 0.06, 0.9, {"test": True}
 
 
 @pytest.mark.parametrize(
@@ -148,7 +147,7 @@ class TestFixedPercentageCalculator:
         # フォールバック仕様: デフォルト0.03/0.06
         assert result.stop_loss_pct == pytest.approx(0.03)
         assert result.take_profit_pct == pytest.approx(0.06)
-        assert result.expected_performance.get("type") == "fixed_percentage_fallback"
+        assert result.expected_performance.get("fallback") is True
 
 
 class TestRiskRewardCalculator:
@@ -311,7 +310,7 @@ class TestVolatilityCalculator:
 
         assert result.stop_loss_pct == pytest.approx(0.03)
         assert result.take_profit_pct == pytest.approx(0.06)
-        assert result.expected_performance.get("type") == "volatility_fallback"
+        assert result.expected_performance.get("fallback") is True
 
 
 class TestStatisticalCalculator:
@@ -370,7 +369,7 @@ class TestStatisticalCalculator:
 
         assert result.stop_loss_pct == pytest.approx(0.03)
         assert result.take_profit_pct == pytest.approx(0.06)
-        assert result.expected_performance.get("type") == "statistical_fallback"
+        assert result.expected_performance.get("fallback") is True
 
 
 class TestAdaptiveCalculator:
@@ -378,43 +377,34 @@ class TestAdaptiveCalculator:
         calc = AdaptiveCalculator()
         current_price = 100.0
         market_data = {"volatility": "high"}
-
+    
         result = calc.calculate(
             current_price=current_price,
             tpsl_gene=None,
             market_data=market_data,
             position_direction=1.0,
         )
-
+    
         # high ボラティリティでは VolatilityCalculator を選択する仕様
         assert result.expected_performance.get("adaptive_selection") == "volatility"
-        assert result.metadata.get("selected_method") == "volatility"
+        assert result.method_used == "adaptive"
 
     def test_adaptive_selects_risk_reward_when_strong_trend(self) -> None:
         calc = AdaptiveCalculator()
         current_price = 100.0
         market_data = {"trend": "strong_up"}
-
+    
         result = calc.calculate(
             current_price=current_price,
             tpsl_gene=None,
             market_data=market_data,
             position_direction=1.0,
         )
-
+    
         assert result.expected_performance.get("adaptive_selection") == "risk_reward"
-        assert result.metadata.get("selected_method") == "risk_reward"
+        assert result.method_used == "adaptive"
 
     def test_adaptive_respects_tpsl_gene_method(self) -> None:
-        """
-        AdaptiveCalculator._select_best_method は market_data を優先し、
-        その後に tpsl_gene.method を考慮する実装。
-        market_data が空の場合は fixed_percentage を返すため、
-        現状仕様では gene.method のみでは volatility が選ばれない。
-
-        破壊的変更を避けるため、
-        「例外なく計算され、TPSLResult が返る」ことのみを検証する。
-        """
         calc = AdaptiveCalculator()
         current_price = 100.0
         gene = TPSLGene(method=TPSLMethod.VOLATILITY_BASED)
@@ -432,22 +422,22 @@ class TestAdaptiveCalculator:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calc = AdaptiveCalculator()
-
+    
         def broken_select(*_: Any, **__: Any) -> str:
             raise RuntimeError("boom")
-
+    
         monkeypatch.setattr(calc, "_select_best_method", broken_select)
-
+    
         result = calc.calculate(
             current_price=100.0,
             tpsl_gene=None,
             market_data=None,
             position_direction=1.0,
         )
-
-        # エラー時は FixedPercentageCalculator の結果をフォールバックとして返す
-        assert result.method_used == "fixed_percentage"
-
+        
+        # エラー時も method_used は 'adaptive' だが、fallback フラグが立つ
+        assert result.method_used == "adaptive"
+        assert result.expected_performance.get("fallback") is True
 
 class TestTPSLService:
     def test_calculate_tpsl_prices_prefers_gene(self) -> None:
