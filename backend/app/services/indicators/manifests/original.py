@@ -372,14 +372,14 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "parameters": {
                 "cycle_periods": {
                     "default_value": [8, 13, 21, 34, 55],
-                    "min_value": [5, 8, 13],
-                    "max_value": [21, 34, 55, 89, 144],
+                    "min_value": None,
+                    "max_value": None,
                     "description": "Fibonacci Cycle計算に使用する期間リスト",
                 },
                 "fib_ratios": {
                     "default_value": [0.618, 1.0, 1.618, 2.618],
-                    "min_value": [0.5, 0.8, 1.2, 2.0],
-                    "max_value": [0.8, 1.2, 2.0, 3.0],
+                    "min_value": None,
+                    "max_value": None,
                     "description": "Fibonacci比率リスト",
                 },
             },
@@ -739,11 +739,7 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "output_names": None,
             "default_output": None,
             "aliases": None,
-            "param_map": {
-                "close": "close",
-                "volume": "volume",
-                "open_interest": "open_interest",
-            },
+            "param_map": {},
             "parameters": {},
             "pandas_function": None,
             "data_column": None,
@@ -772,10 +768,6 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "default_output": None,
             "aliases": None,
             "param_map": {
-                "close": "close",
-                "low": "low",
-                "open_interest": "open_interest",
-                "funding_rate": "funding_rate",
                 "lookback": "lookback",
             },
             "parameters": {
@@ -813,8 +805,6 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "default_output": None,
             "aliases": None,
             "param_map": {
-                "close": "close",
-                "open_interest": "open_interest",
                 "window": "window",
             },
             "parameters": {
@@ -851,10 +841,7 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "output_names": None,
             "default_output": None,
             "aliases": None,
-            "param_map": {
-                "open_interest": "open_interest",
-                "funding_rate": "funding_rate",
-            },
+            "param_map": {},
             "parameters": {},
             "pandas_function": None,
             "data_column": None,
@@ -882,7 +869,7 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "output_names": None,
             "default_output": None,
             "aliases": None,
-            "param_map": {"open_interest": "open_interest", "market_cap": "market_cap"},
+            "param_map": {},
             "parameters": {},
             "pandas_function": None,
             "data_column": None,
@@ -910,7 +897,7 @@ MANIFEST_ORIGINAL: Dict[str, Dict[str, Any]] = {
             "output_names": None,
             "default_output": None,
             "aliases": None,
-            "param_map": {"open_interest": "open_interest", "volume": "volume"},
+            "param_map": {},
             "parameters": {},
             "pandas_function": None,
             "data_column": None,

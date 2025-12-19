@@ -149,7 +149,8 @@ class GeneratedStrategyService:
                 ),
                 "updated_at": (
                     strategy.updated_at.isoformat()
-                    if strategy.updated_at is not None
+                    if hasattr(strategy, "updated_at")
+                    and strategy.updated_at is not None
                     else None
                 ),
             }

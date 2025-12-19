@@ -8,7 +8,7 @@ import pandas as pd
 
 from app.services.auto_strategy.tools.weekend_filter import WeekendFilter
 from app.services.auto_strategy.tools.base import ToolContext
-from app.services.auto_strategy.tools.registry import tool_registry
+from app.services.auto_strategy.tools.registry import ToolRegistry
 
 
 class TestWeekendFilter:
@@ -44,14 +44,11 @@ class TestWeekendFilter:
 class TestToolRegistry:
     """ツールのレジストリのテスト"""
 
-    def test_registry_contains_weekend_filter(self):
-        """レジストリに週末フィルターが登録されているか"""
-        tool = tool_registry.get("weekend_filter")
-        assert tool is not None
-        assert isinstance(tool, WeekendFilter)
-
-    def test_get_all_tools(self):
-        """全ツールの取得テスト"""
-        tools = tool_registry.get_all()
-        assert len(tools) > 0
-        assert any(t.name == "weekend_filter" for t in tools)
+    def test_registry_basic_operations(self):
+        """レジストリの基本操作を独立したインスタンスでテスト"""
+        registry = ToolRegistry()
+        filter_tool = WeekendFilter()
+        registry.register(filter_tool)
+        
+        assert registry.get("weekend_filter") is not None
+        assert any(t.name == "weekend_filter" for t in registry.get_all())

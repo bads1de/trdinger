@@ -39,8 +39,8 @@ class AutoStrategyLoader:
         """
         try:
             # 遅延インポート
-            from app.services.auto_strategy.models import StrategyGene
-            from app.services.auto_strategy.serializers.gene_serialization import (
+            from app.services.auto_strategy.genes import StrategyGene
+            from app.services.auto_strategy.serializers.serialization import (
                 GeneSerializer,
             )
         except ImportError as e:

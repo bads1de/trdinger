@@ -878,54 +878,49 @@ class MomentumIndicators:
             # 結果を処理
             ichimoku_dict = {}
 
-            # tenkan_sen (転換線) - 最短期間の高値と安値の平均
-            if "TENKAN" in result.columns:
-                ichimoku_dict["tenkan_sen"] = result["TENKAN"].fillna(np.nan)
+            # カラム名を特定
+            cols = list(result.columns)
+            tenkan_col = next((c for c in cols if "TENKAN" in c.upper() or "ITS" in c.upper()), None)
+            kijun_col = next((c for c in cols if "KIJUN" in c.upper() or "IKS" in c.upper()), None)
+            senkou_a_col = next((c for c in cols if "SENKOU" in c.upper() or "ISA" in c.upper()), None)
+            senkou_b_col = next((c for c in cols if "SANSEN" in c.upper() or "ISB" in c.upper()), None)
+            chikou_col = next((c for c in cols if "CHIKOU" in c.upper() or "ICS" in c.upper()), None)
+
+            # tenkan_sen (転換線)
+            if tenkan_col:
+                ichimoku_dict["tenkan_sen"] = result[tenkan_col].fillna(np.nan)
             else:
-                # フォールバック計算
                 tenkan_high = high.rolling(window=tenkan_period).max()
                 tenkan_low = low.rolling(window=tenkan_period).min()
-                ichimoku_dict["tenkan_sen"] = ((tenkan_high + tenkan_low) / 2).fillna(
-                    np.nan
-                )
+                ichimoku_dict["tenkan_sen"] = ((tenkan_high + tenkan_low) / 2).fillna(np.nan)
 
-            # kijun_sen (基準線) - 中期間の高値と安値の平均
-            if "KIJUN" in result.columns:
-                ichimoku_dict["kijun_sen"] = result["KIJUN"].fillna(np.nan)
+            # kijun_sen (基準線)
+            if kijun_col:
+                ichimoku_dict["kijun_sen"] = result[kijun_col].fillna(np.nan)
             else:
                 kijun_high = high.rolling(window=kijun_period).max()
                 kijun_low = low.rolling(window=kijun_period).min()
-                ichimoku_dict["kijun_sen"] = ((kijun_high + kijun_low) / 2).fillna(
-                    np.nan
-                )
+                ichimoku_dict["kijun_sen"] = ((kijun_high + kijun_low) / 2).fillna(np.nan)
 
-            # senkou_span_a (先行スパンA) - tenkanとkijunの平均を前方にずらす
-            if "SENKOU" in result.columns:
-                ichimoku_dict["senkou_span_a"] = result["SENKOU"].fillna(np.nan)
+            # senkou_span_a (先行スパンA)
+            if senkou_a_col:
+                ichimoku_dict["senkou_span_a"] = result[senkou_a_col].fillna(np.nan)
             else:
-                # フォールバック計算
-                senkou_a = (
-                    ichimoku_dict["tenkan_sen"] + ichimoku_dict["kijun_sen"]
-                ) / 2
-                # 前方にずらす (pandas-taは自動で処理してくれるが、フォールバックではNaNで埋める)
-                ichimoku_dict["senkou_span_a"] = senkou_a.shift(kijun_period).fillna(
-                    np.nan
-                )
+                senkou_a = (ichimoku_dict["tenkan_sen"] + ichimoku_dict["kijun_sen"]) / 2
+                ichimoku_dict["senkou_span_a"] = senkou_a.shift(kijun_period).fillna(np.nan)
 
-            # senkou_span_b (先行スパンB) - 長期間の高値と安値の平均を前方にずらす
-            if "SANSEN" in result.columns:
-                ichimoku_dict["senkou_span_b"] = result["SANSEN"].fillna(np.nan)
+            # senkou_span_b (先行スパンB)
+            if senkou_b_col:
+                ichimoku_dict["senkou_span_b"] = result[senkou_b_col].fillna(np.nan)
             else:
                 senkou_b_high = high.rolling(window=senkou_span_b_period).max()
                 senkou_b_low = low.rolling(window=senkou_span_b_period).min()
                 senkou_b = (senkou_b_high + senkou_b_low) / 2
-                ichimoku_dict["senkou_span_b"] = senkou_b.shift(kijun_period).fillna(
-                    np.nan
-                )
+                ichimoku_dict["senkou_span_b"] = senkou_b.shift(kijun_period).fillna(np.nan)
 
-            # chikou_span (遅行スパン) - 終値を後方にずらす
-            if "CHIKOU" in result.columns:
-                ichimoku_dict["chikou_span"] = result["CHIKOU"].fillna(np.nan)
+            # chikou_span (遅行スパン)
+            if chikou_col:
+                ichimoku_dict["chikou_span"] = result[chikou_col].fillna(np.nan)
             else:
                 ichimoku_dict["chikou_span"] = close.shift(-kijun_period).fillna(np.nan)
 

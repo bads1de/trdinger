@@ -261,13 +261,30 @@ class TestTechnicalIndicatorService:
         assert isinstance(result[0], bool)
         assert isinstance(result[1], int)
 
+    def test_clear_cache(self, indicator_service, sample_df):
+        """キャッシュクリアのテスト"""
+        # 一度計算してキャッシュさせる
+        indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
+        assert len(indicator_service._calculation_cache) > 0
+        
+        # クリア
+        indicator_service.clear_cache()
+        assert len(indicator_service._calculation_cache) == 0
+
+    def test_calculate_unknown_indicator(self, indicator_service, sample_df):
+        """未登録の指標に対するテスト"""
+        with pytest.raises(ValueError, match="実装が見つかりません"):
+            indicator_service.calculate_indicator(sample_df, "UNKNOWN_INDICATOR", {})
+
     def test_calculate_indicator_error_handling(self, indicator_service, sample_df):
         """指標計算時のエラーハンドリングテスト"""
+        # キャッシュを回避するためにユニークなid(df)を生成
+        unique_df = sample_df.copy()
         with patch.object(
             indicator_service, "_get_config", side_effect=Exception("Test error")
         ):
             with pytest.raises(Exception):
-                indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
+                indicator_service.calculate_indicator(unique_df, "SMA", {"length": 10})
 
 
 

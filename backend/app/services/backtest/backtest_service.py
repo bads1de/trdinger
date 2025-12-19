@@ -79,9 +79,9 @@ class BacktestService:
     def ensure_data_service_initialized(self) -> None:
         """データサービスの初期化を確保"""
         if self.data_service is None:
-            # 新しいDBセッションを作成し、保持する
-            self._db_session = next(get_db())
             try:
+                # 新しいDBセッションを作成し、保持する
+                self._db_session = next(get_db())
                 ohlcv_repo = OHLCVRepository(self._db_session)
                 oi_repo = OpenInterestRepository(self._db_session)
                 fr_repo = FundingRateRepository(self._db_session)

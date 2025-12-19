@@ -6,19 +6,14 @@ from app.services.ml.feature_engineering.volume_profile_features import VolumePr
 class TestVolumeProfileFeatures:
     @pytest.fixture
     def sample_ohlcv(self):
-        """
-        テスト用OHLCVデータを生成。
-        POC, VAH, VAL が意味を持つように、ある価格帯に出来高を集中させる。
-        """
+        """テスト用OHLCVデータを生成"""
         np.random.seed(42)
         n = 300
         dates = pd.date_range(start="2023-01-01", periods=n, freq="h")
         
-        # 価格帯 [100, 110] に出来高を集中
         prices = np.random.normal(105, 2, n)
         highs = prices + 0.5
         lows = prices - 0.5
-        # インデックス 100-200 付近で出来高を大きくする
         volumes = np.random.rand(n) * 100
         volumes[100:200] *= 10
         
@@ -32,24 +27,18 @@ class TestVolumeProfileFeatures:
         calc = VolumeProfileFeatureCalculator(lookback_period=50, num_bins=10)
         res = calc.calculate_features(sample_ohlcv)
         
-        # 主要カラムの存在確認
         assert "POC_Distance_50" in res.columns
         assert "VAH_Distance_50" in res.columns
         assert "In_Value_Area_50" in res.columns
         assert "HVN_Distance" in res.columns
         assert "VP_Skewness" in res.columns
         assert "VP_Kurtosis" in res.columns
-        
-        # NaN が適切に埋められているか
         assert not res.isnull().any().any()
 
     def test_values_correctness_basic(self, sample_ohlcv):
-        """計算値の妥当性（POC周辺）"""
+        """計算値の妥当性"""
         calc = VolumeProfileFeatureCalculator(lookback_period=100, num_bins=20)
         res = calc.calculate_features(sample_ohlcv, lookback_periods=[100])
-        
-        # POC Distance は、価格がPOC付近なら小さくなるはず
-        # 統計的な検証は難しいが、絶対値が大きすぎないことを確認
         assert (res["POC_Distance_100"].abs() < 1.0).all()
 
     def test_zero_volume_handling(self):
@@ -61,8 +50,6 @@ class TestVolumeProfileFeatures:
         
         calc = VolumeProfileFeatureCalculator()
         res = calc.calculate_features(df)
-        
-        # エラーにならず、0埋め等で処理されること
         assert not res.isnull().any().any()
 
     def test_zero_price_range_handling(self):
@@ -80,67 +67,33 @@ class TestVolumeProfileFeatures:
         """歪度と尖度の計算テスト"""
         calc = VolumeProfileFeatureCalculator(lookback_period=50)
         res = calc.calculate_features(sample_ohlcv)
-        
-        # Skewness, Kurtosis が 0 以外の値を持つこと（正規分布にノイズを混ぜているため）
         assert (res["VP_Skewness"] != 0).any()
         assert (res["VP_Kurtosis"] != 0).any()
 
-        def test_extreme_price_spike(self):
+    def test_extreme_price_spike(self):
+        """極端な価格スパイク時のハンドリング"""
+        n = 100
+        prices = [100.0] * n
+        prices[50] = 1000.0
+        df = pd.DataFrame({
+            "high": prices, "low": prices, "close": prices, "volume": [100.0]*n
+        }, index=pd.date_range("2023-01-01", periods=n, freq="h"))
+        
+        calc = VolumeProfileFeatureCalculator(lookback_period=20)
+        res = calc.calculate_features(df, lookback_periods=[20])
+        assert not res.isnull().any().any()
 
-            """極端な価格スパイク時のハンドリング"""
+    def test_various_lookback_periods(self, sample_ohlcv):
+        """複数期間での一括計算"""
+        calc = VolumeProfileFeatureCalculator()
+        res = calc.calculate_features(sample_ohlcv)
+        assert "POC_Distance_50" in res.columns
+        assert "POC_Distance_100" in res.columns
+        assert "POC_Distance_200" in res.columns
 
-            n = 100
-
-            # 1点だけ異常値
-
-            prices = [100.0] * n
-
-            prices[50] = 1000.0
-
-            df = pd.DataFrame({
-
-                "high": prices, "low": prices, "close": prices, "volume": [100.0]*n
-
-            }, index=pd.date_range("2023-01-01", periods=n, freq="h"))
-
-            
-
-            calc = VolumeProfileFeatureCalculator(lookback_period=20)
-
-            res = calc.calculate_features(df, lookback_periods=[20])
-
-            assert not res.isnull().any().any()
-
-    
-
-        def test_various_lookback_periods(self, sample_ohlcv):
-
-            """複数期間での一括計算"""
-
-            calc = VolumeProfileFeatureCalculator()
-
-            # デフォルトの [50, 100, 200] で計算
-
-            res = calc.calculate_features(sample_ohlcv)
-
-            assert "POC_Distance_50" in res.columns
-
-            assert "POC_Distance_100" in res.columns
-
-            assert "POC_Distance_200" in res.columns
-
-    
-
-        def test_empty_input_handling(self):
-
-            """空のDataFrameに対する挙動"""
-
-            df = pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
-
-            calc = VolumeProfileFeatureCalculator()
-
-            res = calc.calculate_features(df)
-
-            assert res.empty
-
-    
+    def test_empty_input_handling(self):
+        """空のDataFrameに対する挙動"""
+        df = pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+        calc = VolumeProfileFeatureCalculator()
+        res = calc.calculate_features(df)
+        assert res.empty

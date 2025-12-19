@@ -383,12 +383,9 @@ class StrategyGene:
                 len(mutated.indicators) < max_indicators
                 and random.random() < config.indicator_add_vs_delete_probability
             ):
-                from ..generators.random_gene_generator import RandomGeneGenerator
+                from .indicator import generate_random_indicators
 
-                generator = RandomGeneGenerator(config)
-                new_indicators = (
-                    generator.indicator_generator.generate_random_indicators()
-                )
+                new_indicators = generate_random_indicators(config)
                 if new_indicators:
                     mutated.indicators.append(random.choice(new_indicators))
             elif len(mutated.indicators) > config.min_indicators and random.random() < (

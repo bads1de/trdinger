@@ -57,6 +57,11 @@ class TechnicalIndicatorService:
             raise ValueError(f"サポートされていない指標タイプ: {indicator_type}")
         return config
 
+    def clear_cache(self) -> None:
+        """計算キャッシュをクリアする"""
+        self._calculation_cache.clear()
+        logger.info("Indicator calculation cache cleared.")
+
     def calculate_indicator(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Union[np.ndarray, pd.Series, tuple, tuple[pd.Series, ...]]:

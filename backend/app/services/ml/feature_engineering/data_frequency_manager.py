@@ -110,10 +110,12 @@ class DataFrequencyManager:
             ohlcv_indexed = ohlcv_data.copy()
             if "timestamp" in ohlcv_indexed.columns:
                 ohlcv_indexed["timestamp"] = pd.to_datetime(ohlcv_indexed["timestamp"])
-                if not isinstance(ohlcv_indexed.index, pd.DatetimeIndex):
-                    ohlcv_indexed = ohlcv_indexed.set_index("timestamp")
-            elif not isinstance(ohlcv_indexed.index, pd.DatetimeIndex):
+                # カラムをインデックスに設定する前に重複チェック
+                ohlcv_indexed = ohlcv_indexed.set_index("timestamp")
+            
+            if not isinstance(ohlcv_indexed.index, pd.DatetimeIndex):
                 ohlcv_indexed.index = pd.to_datetime(ohlcv_indexed.index)
+
 
             target_index = ohlcv_indexed.index
 

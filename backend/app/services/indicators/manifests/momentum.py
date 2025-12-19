@@ -816,9 +816,6 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "default_output": None,
             "aliases": None,
             "param_map": {
-                "high": "high",
-                "low": "low",
-                "close": "close",
                 "fast": "fast",
                 "medium": "medium",
                 "slow": "slow",
@@ -1221,9 +1218,6 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "default_output": None,
             "aliases": None,
             "param_map": {
-                "high": "high",
-                "low": "low",
-                "close": "close",
                 "length": "length",
             },
             "parameters": {
@@ -1236,10 +1230,10 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             },
             "pandas_function": None,
             "data_column": None,
-            "data_columns": None,
+            "data_columns": ["High", "Low", "Close"],
             "returns": "single",
             "return_cols": None,
-            "multi_column": False,
+            "multi_column": True,
             "default_values": {"length": 14},
             "min_length_func": None,
         },
@@ -1655,9 +1649,6 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
             "default_output": None,
             "aliases": ["Williams_%R", "Williams_R"],
             "param_map": {
-                "high": "high",
-                "low": "low",
-                "close": "close",
                 "length": "length",
             },
             "parameters": {
@@ -1668,7 +1659,7 @@ MANIFEST_MOMENTUM: Dict[str, Dict[str, Any]] = {
                     "description": "Williams %R計算期間",
                 }
             },
-            "pandas_function": "wpr",
+            "pandas_function": "willr",
             "data_column": None,
             "data_columns": ["High", "Low", "Close"],
             "returns": "single",

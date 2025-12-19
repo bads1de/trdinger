@@ -209,7 +209,7 @@ class TestNewIndicatorsIntegration:
 
         # BIASのテスト
         bias_result = indicator_service.calculate_indicator(
-            sample_ohlcv, "BIAS", {"length": 26}
+            sample_ohlcv, "BIAS", {"length": 10}
         )
         assert isinstance(bias_result, np.ndarray), "BIAS計算失敗"
         assert not np.isnan(bias_result).all(), "BIASがすべてNaN"

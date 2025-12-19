@@ -310,12 +310,13 @@ class VolumeIndicators:
         close_clean = close_clean.replace([np.inf, -np.inf], np.nan)
         volume_clean = volume_clean.replace([np.inf, -np.inf], np.nan)
 
-        # 極端な値をクリッピング（価格が現実的でない場合）
-        if close_clean.dropna().max() > close_clean.dropna().mean() * 100:
-            # 平均の100倍以上の値をクリッピング
-            max_reasonable = close_clean.dropna().mean() * 100
-            extreme_indices = close_clean > max_reasonable
-            close_clean.loc[extreme_indices] = max_reasonable
+        # 無効な値を除外して統計計算
+        clean_prices = close_clean.replace([np.inf, -np.inf], np.nan).dropna()
+        if not clean_prices.empty and clean_prices.max() > clean_prices.mean() * 100:
+            logger.warning("EFI: extreme values detected, clipping applied")
+            close_clean = close_clean.clip(
+                lower=clean_prices.quantile(0.01), upper=clean_prices.quantile(0.99)
+            )
 
         # 計算実行
         df = ta.efi(

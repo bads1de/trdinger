@@ -26,9 +26,16 @@ def evaluate_meta_labeling(
     
     # 統一評価器で基本メトリクスを計算
     y_t = y_true.values if hasattr(y_true, "values") else y_true
-    res = metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba)
+    res = metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba) or {}
+
+    # 必須キーのデフォルト値を保証
+    for key in ["precision", "recall", "f1_score", "accuracy", "specificity", 
+                "true_positives", "true_negatives", "false_positives", "false_negatives"]:
+        if key not in res:
+            res[key] = 0.0 if "positives" not in key and "negatives" not in key else 0
 
     # メタラベリング固有の指標を追加
+
     p = res.get("precision", 0.0)
     res.update({
         "win_rate": p,

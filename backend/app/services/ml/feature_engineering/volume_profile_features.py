@@ -46,7 +46,8 @@ def _numba_rolling_volume_profile(
 
     for i in range(window, n):
         w_h, w_l, w_v = high_arr[i-window:i], low_arr[i-window:i], volume_arr[i-window:i]
-        p_min, p_max = w_l.min(), w_h.max()
+        p_min, p_max = np.min(w_l), np.max(w_h)
+
 
         if p_min == p_max:
             poc_arr[i] = vah_arr[i] = val_arr[i] = close_arr[i]
@@ -84,7 +85,8 @@ def _numba_detect_volume_nodes_signed(
     hvn_dist, lvn_dist = np.zeros(n), np.zeros(n)
     for i in range(window, n):
         w_h, w_l, w_v = high_arr[i-window:i], low_arr[i-window:i], volume_arr[i-window:i]
-        p_min, p_max = w_l.min(), w_h.max()
+        p_min, p_max = np.min(w_l), np.max(w_h)
+
         if p_min == p_max: continue
         bin_step = (p_max - p_min) / num_bins
         bin_vol = _numba_calc_bins(w_h, w_l, w_v, p_min, bin_step, num_bins)
