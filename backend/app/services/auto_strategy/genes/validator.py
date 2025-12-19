@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Any
+
+import numpy as np
 
 from app.utils.error_handler import safe_operation
 
@@ -124,19 +126,10 @@ class GeneValidator:
     def _is_valid_operand_detailed(self, operand: Any) -> Tuple[bool, str]:
         """
         オペランドの妥当性を詳細に検証
-
-        数値、文字列（指標名や価格フィールド）、または辞書形式のオペランドが
-        正しい形式であるか、また存在するかをチェックします。
-
-        Args:
-            operand: 検証対象のオペランド
-
-        Returns:
-            (妥当かどうか, エラーメッセージ) のタプル
         """
         if operand is None:
             return False, "オペランドがNoneです"
-        if isinstance(operand, (int, float)):
+        if isinstance(operand, (int, float, np.number)):
             return True, ""
 
         if isinstance(operand, str):
@@ -148,7 +141,10 @@ class GeneValidator:
                 float(val)
                 return True, ""
             except ValueError:
-                if self._is_indicator_name(val) or val in self.valid_data_sources:
+                # データソースは大文字小文字を区別せずチェック
+                if val.lower() in [ds.lower() for ds in self.valid_data_sources]:
+                    return True, ""
+                if self._is_indicator_name(val):
                     return True, ""
             return False, f"無効な文字列オペランド: '{val}'"
 
@@ -179,50 +175,66 @@ class GeneValidator:
     def _is_indicator_name(self, name: str) -> bool:
         """
         文字列が有効な指標名（またはその派生）かを判定
-
-        'SMA', 'RSI' 等の基本名だけでなく、'SMA_20', 'RSI_14_0' のように
-        パラメータや出力インデックスが付与された形式にも対応します。
-
-        Args:
-            name: 判定対象の文字列
-
-        Returns:
-            有効な指標名であればTrue
         """
         if not name:
             return False
         clean_name = name.strip()
+        
+        # 1. 完全一致
         if clean_name in self.valid_indicator_types:
             return True
 
-        # 接尾辞（パラメータや出力インデックス）を除去して試行
-        # 例: SMA_20 -> SMA, RSI_14_0 -> RSI
-        base_name = clean_name.split("_")[0]
-        return base_name in self.valid_indicator_types
+        # 2. アンダースコアで分割して接頭辞を試行
+        # LIQUIDATION_CASCADE_xxxx -> LIQUIDATION_CASCADE を探す
+        parts = clean_name.split("_")
+        for i in range(len(parts), 0, -1):
+            prefix = "_".join(parts[:i])
+            if prefix in self.valid_indicator_types:
+                return True
+
+        # 3. 大文字小文字を無視して試行
+        upper_types = [t.upper() for t in self.valid_indicator_types]
+        if clean_name.upper() in upper_types:
+            return True
+            
+        upper_parts = clean_name.upper().split("_")
+        for i in range(len(upper_parts), 0, -1):
+            prefix = "_".join(upper_parts[:i])
+            if prefix in upper_types:
+                return True
+
+        return False
 
     @safe_operation(context="条件クリーニング", is_api_call=False, default_return=False)
     def clean_condition(self, condition) -> bool:
         """条件をクリーニングして修正可能な問題を自動修正"""
-        if isinstance(condition.left_operand, str):
+        from .conditions import ConditionGroup
+        
+        # ConditionGroup の場合はスキップ（内部の条件は _validate_all_conditions で再帰的に処理される）
+        if isinstance(condition, ConditionGroup):
+            return True
+
+        if hasattr(condition, "left_operand") and isinstance(condition.left_operand, str):
             condition.left_operand = condition.left_operand.strip()
 
-        if isinstance(condition.right_operand, str):
+        if hasattr(condition, "right_operand") and isinstance(condition.right_operand, str):
             condition.right_operand = condition.right_operand.strip()
 
-        if isinstance(condition.left_operand, dict):
+        if hasattr(condition, "left_operand") and isinstance(condition.left_operand, dict):
             condition.left_operand = self._extract_operand_from_dict(
                 condition.left_operand
             )
 
-        if isinstance(condition.right_operand, dict):
+        if hasattr(condition, "right_operand") and isinstance(condition.right_operand, dict):
             condition.right_operand = self._extract_operand_from_dict(
                 condition.right_operand
             )
 
-        if condition.operator == "above":
-            condition.operator = ">"
-        elif condition.operator == "below":
-            condition.operator = "<"
+        if hasattr(condition, "operator"):
+            if condition.operator == "above":
+                condition.operator = ">"
+            elif condition.operator == "below":
+                condition.operator = "<"
 
         return True
 

@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import yaml
 
-from app.services.indicators.manifests.registry import manifest_to_yaml_dict
+from app.services.indicators.config.indicator_config import indicator_registry
 
 
 class YamlIndicatorUtils:
@@ -29,15 +29,6 @@ class YamlIndicatorUtils:
     def generate_characteristics_from_yaml(cls, yaml_file_path: str) -> Dict[str, Dict]:
         """
         YAMLファイルから指標特性を動的に生成
-
-        指定されたYAMLファイルをロードしてパースし、
-        指標ごとの特性（タイプ、スケール、しきい値等）を抽出した辞書を返します。
-
-        Args:
-            yaml_file_path: YAMLファイルの絶対パス
-
-        Returns:
-            指標名をキーとする特性情報の辞書
         """
         try:
             with open(yaml_file_path, "r", encoding="utf-8") as file:
@@ -78,18 +69,7 @@ class YamlIndicatorUtils:
 
     @classmethod
     def _process_thresholds(cls, thresholds: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        しきい値設定の構造化処理
-
-        YAML内の簡略化されたしきい値キー（long_gt等）を、
-        内部で使用する詳細なキー名に変換します。
-
-        Args:
-            thresholds: パース途中のしきい値設定
-
-        Returns:
-            正規化されたしきい値情報
-        """
+        """しきい値設定の構造化処理"""
         processed = {}
         for key, value in thresholds.items():
             if key in ["long_gt", "short_lt"]:
@@ -157,6 +137,58 @@ class YamlIndicatorUtils:
         return merged
 
     @classmethod
+    def _generate_yaml_from_registry(cls) -> Dict[str, Any]:
+        """レジストリからYAML互換の辞書を生成"""
+        indicators = {}
+        
+        for name, config in indicator_registry.get_all_indicators().items():
+            scale_type = config.scale_type.value
+            
+            # スケールタイプに基づくデフォルト設定
+            thresholds = {}
+            conditions = {}
+            
+            if scale_type == "oscillator_0_100":
+                thresholds = {
+                    "aggressive": {"long_lt": 35, "short_gt": 65},
+                    "normal": {"long_lt": 30, "short_gt": 70},
+                    "conservative": {"long_lt": 25, "short_gt": 75}
+                }
+                conditions = {
+                    "long": "{left_operand} < {threshold}",
+                    "short": "{left_operand} > {threshold}"
+                }
+            elif scale_type == "oscillator_plus_minus_100":
+                thresholds = {
+                    "normal": {"long_lt": -80, "short_gt": 80}
+                }
+                conditions = {
+                    "long": "{left_operand} < {threshold}",
+                    "short": "{left_operand} > {threshold}"
+                }
+            elif scale_type == "momentum_zero_centered":
+                thresholds = {"normal": {"long_gt": 0, "short_lt": 0}}
+                conditions = {
+                    "long": "{left_operand} > 0",
+                    "short": "{left_operand} < 0"
+                }
+            elif scale_type == "price_absolute":
+                # 価格との比較など
+                conditions = {
+                    "long": "close > {left_operand}",
+                    "short": "close < {left_operand}"
+                }
+            
+            indicators[name] = {
+                "type": config.category or "technical",
+                "scale_type": scale_type,
+                "thresholds": thresholds,
+                "conditions": conditions
+            }
+            
+        return {"indicators": indicators}
+
+    @classmethod
     def initialize_yaml_based_characteristics(
         cls, existing_characteristics: Dict[str, Dict[str, Any]]
     ) -> Dict[str, Dict[str, Any]]:
@@ -167,7 +199,7 @@ class YamlIndicatorUtils:
 
     @classmethod
     def load_yaml_config_for_indicators(cls) -> Dict[str, Any]:
-        """メタデータから技術指標設定を提供（ConditionGenerator用）"""
+        """メタデータから技術指標設定を提供"""
         return manifest_to_yaml_dict()
 
     @classmethod
@@ -175,16 +207,8 @@ class YamlIndicatorUtils:
         cls, yaml_config: Dict[str, Any], indicator_name: str
     ) -> Optional[Dict[str, Any]]:
         """YAMLから指標設定を取得"""
-        logger = logging.getLogger(__name__)
-        logger.debug(f"Looking for indicator config: {indicator_name}")
         indicators_config = yaml_config.get("indicators", {})
-        logger.debug(f"Indicators config keys: {list(indicators_config.keys())}")
-        config = indicators_config.get(indicator_name)
-        if config is None:
-            logger.warning(f"No config found for indicator: {indicator_name}")
-        else:
-            logger.debug(f"Found config for {indicator_name}: {config}")
-        return config
+        return indicators_config.get(indicator_name)
 
     @classmethod
     def get_threshold_from_yaml(
@@ -195,80 +219,46 @@ class YamlIndicatorUtils:
         context: Dict[str, Any],
     ) -> Any:
         """YAMLから閾値取得"""
-        logger = logging.getLogger(__name__)
-
         if not config:
-            logger.debug("YAML config is None")
             return None
 
         thresholds = config.get("thresholds", {})
         if not thresholds:
-            logger.debug("thresholds not found in config")
             return None
 
-        # thresholdsが文字列の場合（例: "close"）
         if isinstance(thresholds, str):
-            logger.debug(f"thresholds is string: {thresholds}")
             return thresholds
 
         profile = context.get("threshold_profile", "normal")
-        logger.debug(f"Using profile: {profile}, side: {side}")
 
         if profile in thresholds and thresholds[profile]:
             profile_config = thresholds[profile]
-            logger.debug(f"Found profile_config: {profile_config}")
             if side == "long" and (
                 "long_gt" in profile_config or "long_lt" in profile_config
             ):
-                threshold = profile_config.get("long_gt", profile_config.get("long_lt"))
-                logger.debug(f"Long threshold: {threshold}")
-                return threshold
+                return profile_config.get("long_gt", profile_config.get("long_lt"))
             elif side == "short" and (
                 "short_lt" in profile_config or "short_gt" in profile_config
             ):
-                threshold = profile_config.get(
+                return profile_config.get(
                     "short_lt", profile_config.get("short_gt")
                 )
-                logger.debug(f"Short threshold: {threshold}")
-                return threshold
 
         if "all" in thresholds and thresholds["all"]:
             all_config = thresholds["all"]
-            logger.debug(f"Using 'all' config: {all_config}")
             if side == "long":
-                threshold = all_config.get("pos_threshold")
-                logger.debug(f"Long threshold from all: {threshold}")
-                return threshold
+                return all_config.get("pos_threshold")
             else:
-                threshold = all_config.get("neg_threshold")
-                logger.debug(f"Short threshold from all: {threshold}")
-                return threshold
+                return all_config.get("neg_threshold")
 
-        logger.debug("No threshold found")
         return None
 
 
 class IndicatorConfigProvider:
-    """
-    指標設定プロバイダー（インスタンスベース）
-
-    ConditionEvolver等で使用するためのインスタンスベースのラッパー。
-    YamlIndicatorUtilsのクラスメソッドをラップし、
-    インスタンス生成時にconfigをキャッシュします。
-
-    Note:
-        後方互換性のため、condition_evolver.pyでは
-        このクラスを `YamlIndicatorUtils` としてインポートして使用できます。
-    """
+    """指標設定プロバイダー（インスタンスベース）"""
 
     def __init__(self, config_path: Optional[str] = None):
-        """
-        初期化
-
-        Args:
-            config_path: YAML設定ファイルのパス（オプション）。
-                         Noneの場合はmanifest_to_yaml_dictを使用。
-        """
+        """初期化"""
         self._logger = logging.getLogger(__name__)
         self.config_path = Path(config_path) if config_path else None
         self.config = self._load_yaml_config()
@@ -288,18 +278,7 @@ class IndicatorConfigProvider:
         return list(self.config.get("indicators", {}).keys())
 
     def get_indicator_info(self, indicator_name: str) -> Dict[str, Any]:
-        """
-        指標の設定情報を取得
-
-        Args:
-            indicator_name: 指標名
-
-        Returns:
-            指標の設定情報
-
-        Raises:
-            ValueError: 指標が見つからない場合
-        """
+        """指標の設定情報を取得"""
         indicators = self.config.get("indicators", {})
         if indicator_name not in indicators:
             raise ValueError(f"Unknown indicator: {indicator_name}")
@@ -313,15 +292,7 @@ class YamlLoadUtils:
     def load_yaml_config(
         config_path: Union[str, Path], fallback: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """YAML設定ファイルを安全に読み込み
-
-        Args:
-            config_path: YAMLファイルのパス
-            fallback: 読み込み失敗時のフォールバックデータ
-
-        Returns:
-            読み込んだ設定データ
-        """
+        """YAML設定ファイルを安全に読み込み"""
         if fallback is None:
             fallback = {"indicators": {}}
 
@@ -341,7 +312,6 @@ class YamlLoadUtils:
                 logger.warning(f"YAML設定ファイルが空です: {path}")
                 return fallback
 
-            # 基本構造の検証
             if not isinstance(config, dict):
                 logger.error(f"無効なYAML構造: {path}")
                 return fallback
@@ -357,24 +327,15 @@ class YamlLoadUtils:
 
     @staticmethod
     def validate_yaml_config(config: Dict[str, Any]) -> tuple[bool, List[str]]:
-        """YAML設定データの妥当性を検証
-
-        Args:
-            config: 検証対象の設定データ
-
-        Returns:
-            (妥当性, エラーメッセージリスト) のタプル
-        """
+        """YAML設定データの妥当性を検証"""
         errors = []
 
         try:
-            # indicators セクションの存在確認
             if "indicators" not in config:
                 errors.append("indicatorsセクションが必須です")
 
             indicators = config.get("indicators", {})
 
-            # 各indicatorの構造検証
             for indicator_name, indicator_config in indicators.items():
                 if not isinstance(indicator_config, dict):
                     errors.append(
@@ -382,7 +343,6 @@ class YamlLoadUtils:
                     )
                     continue
 
-                # 必須フィールドチェック
                 required_fields = ["type", "scale_type", "thresholds", "conditions"]
                 for field in required_fields:
                     if field not in indicator_config:
@@ -390,7 +350,6 @@ class YamlLoadUtils:
                             f"indicator {indicator_name}: {field}フィールドが必須です"
                         )
 
-                # conditionsの検証
                 conditions = indicator_config.get("conditions", {})
                 if conditions is None:
                     errors.append(
@@ -399,7 +358,7 @@ class YamlLoadUtils:
                 elif isinstance(conditions, dict):
                     for side in ["long", "short"]:
                         if side not in conditions:
-                            continue  # オプション
+                            continue
                         condition_template = conditions[side]
                         if not isinstance(condition_template, str):
                             errors.append(
@@ -415,27 +374,19 @@ class YamlLoadUtils:
     def get_indicator_config(
         yaml_config: Dict[str, Any], indicator_name: str
     ) -> Optional[Dict[str, Any]]:
-        """YAML設定から特定のindicator設定を取得
-
-        Args:
-            yaml_config: YAML設定データ
-            indicator_name: 取得対象のindicator名
-
-        Returns:
-            indicator設定
-        """
+        """YAML設定から特定のindicator設定を取得"""
         indicators = yaml_config.get("indicators", {})
         return indicators.get(indicator_name)
 
     @staticmethod
     def get_all_indicator_names(yaml_config: Dict[str, Any]) -> List[str]:
-        """YAML設定に含まれる全indicator名を取得
-
-        Args:
-            yaml_config: YAML設定データ
-
-        Returns:
-            indicator名リスト
-        """
+        """YAML設定に含まれる全indicator名を取得"""
         indicators = yaml_config.get("indicators", {})
         return list(indicators.keys())
+
+
+def manifest_to_yaml_dict(registry=None) -> Dict[str, Any]:
+    """
+    レジストリ設定をYAML互換の辞書形式に変換（後方互換性のため）
+    """
+    return YamlIndicatorUtils._generate_yaml_from_registry()

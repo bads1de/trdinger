@@ -368,6 +368,7 @@ class VolumeIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    @staticmethod
     def pvo(
         volume: pd.Series,
         fast: int = 12,

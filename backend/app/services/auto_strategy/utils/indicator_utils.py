@@ -19,21 +19,29 @@ def _load_indicator_registry():
 
 
 def indicators_by_category(category: str) -> List[str]:
-    """レジストリに登録済みのインジケーターからカテゴリ別に主名称のみ抽出"""
+    """レジストリに登録済みのインジケーターからカテゴリ別に主名称とエイリアスを抽出"""
     registry = _load_indicator_registry()
     seen = set()
     results: List[str] = []
     for name, cfg in registry._configs.items():  # type: ignore[attr-defined]
         try:
             if cfg and getattr(cfg, "category", None) == category:
+                # 主名称を追加
                 primary = getattr(cfg, "indicator_name", name)
                 if primary not in seen:
                     seen.add(primary)
                     results.append(primary)
+                # エイリアスも追加（MDなど）
+                if cfg.aliases:
+                    for alias in cfg.aliases:
+                        if alias not in seen:
+                            seen.add(alias)
+                            results.append(alias)
         except Exception:
             continue
     results.sort()
     return results
+
 
 
 def get_all_indicators(include_composite: bool = True) -> List[str]:
@@ -43,12 +51,9 @@ def get_all_indicators(include_composite: bool = True) -> List[str]:
     Args:
         include_composite: 複合指標（COMPOSITE_INDICATORS）を含めるか
     """
-    categories = ["volume", "momentum", "trend", "volatility", "original"]
-    technical = []
-    for cat in categories:
-        technical.extend(indicators_by_category(cat))
+    registry = _load_indicator_registry()
+    all_types = registry.list_indicators()
     
-    all_types = technical
     if include_composite:
         from ..config.constants import COMPOSITE_INDICATORS
         all_types.extend(COMPOSITE_INDICATORS)

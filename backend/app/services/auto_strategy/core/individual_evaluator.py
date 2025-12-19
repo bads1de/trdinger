@@ -269,8 +269,15 @@ class IndividualEvaluator:
         Returns:
             複数の目的関数に対応した評価値のタプル
         """
+        return self.evaluate_individual(individual, config)
+
+    def evaluate_individual(self, individual: Any, config: GAConfig) -> Tuple[float, ...]:
+        """
+        個体を評価し、適応度（Fitness）のタプルを返す（実体）
+        """
         try:
             # 遺伝子デコード
+
             from ..genes import StrategyGene
             from ..serializers.serialization import GeneSerializer
 

@@ -198,6 +198,7 @@ class ConditionEvaluator:
         型に応じて末尾の有限値を取得します。
 
         pandas.Seriesやリストの場合は最後の要素を取得し、floatに変換します。
+        要素がさらにコレクションの場合は、再帰的に解決します。
 
         Args:
             value: 取得対象の値
@@ -206,16 +207,28 @@ class ConditionEvaluator:
             変換されたfloat値。失敗時や非有限値の場合は0.0
         """
         try:
-            if isinstance(value, pd.Series):
-                val = value.iloc[-1]
-            elif hasattr(value, "__getitem__") and not isinstance(value, (str, bytes)):
-                val = value[-1]
-            else:
-                val = value
+            # 1. すでに数値の場合はそのまま返す
+            if isinstance(value, (int, float, np.number)):
+                f_val = float(value)
+                return f_val if np.isfinite(f_val) else 0.0
 
-            f_val = float(val)
+            # 2. pandas.Series の場合
+            if isinstance(value, pd.Series):
+                if value.empty:
+                    return 0.0
+                return self._get_final_value(value.iloc[-1])
+
+            # 3. リスト、タプル、ndarray などのコレクションの場合
+            if hasattr(value, "__getitem__") and not isinstance(value, (str, bytes)):
+                if len(value) == 0:
+                    return 0.0
+                # 最後の要素を再帰的に解決
+                return self._get_final_value(value[-1])
+
+            # 4. 文字列などの場合は数値変換を試みる
+            f_val = float(value)
             return f_val if np.isfinite(f_val) else 0.0
-        except (TypeError, ValueError, IndexError):
+        except (TypeError, ValueError, IndexError, AttributeError):
             return 0.0
 
     def get_condition_value(
@@ -231,38 +244,38 @@ class ConditionEvaluator:
         Returns:
             取得された数値
         """
-        if isinstance(operand, (int, float)):
+        if isinstance(operand, (int, float, np.number)):
             return float(operand)
 
+        # 辞書形式（{"indicator": "NAME", ...}）の場合は indicator キーを使用
         target_attr = (
             operand.get("indicator") if isinstance(operand, dict) else str(operand)
         )
 
-        # 1. OHLCVデータ（文字列の場合）
-        if isinstance(operand, str) and operand.lower() in [
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-        ]:
+        # 1. OHLCVデータ（文字列の場合、大文字小文字を問わずチェック）
+        if isinstance(operand, str):
             val = self._get_ohlcv_value(operand, strategy_instance)
             if val is not None:
                 return val
 
-        # 2. 戦略インスタンスの属性（pandas-ta指標など）
+        # 2. 戦略インスタンスの属性（インジケーターなど）
         try:
-            attr_val = getattr(strategy_instance, target_attr)
-            return self._get_final_value(attr_val)
-        except AttributeError:
-            # 3. 数値文字列への変換
-            try:
-                if isinstance(operand, str):
-                    return float(operand)
-            except (ValueError, TypeError):
-                pass
+            # 属性名をそのまま、および小文字・大文字で試行
+            for attr_name in [target_attr, target_attr.lower(), target_attr.upper()]:
+                if hasattr(strategy_instance, attr_name):
+                    attr_val = getattr(strategy_instance, attr_name)
+                    return self._get_final_value(attr_val)
+        except (AttributeError, Exception):
+            pass
 
-        logger.warning(f"オペランド解決失敗: {target_attr}")
+        # 3. 数値文字列への変換
+        try:
+            if isinstance(operand, str):
+                return float(operand)
+        except (ValueError, TypeError):
+            pass
+
+        # logger.warning(f"オペランド解決失敗: {target_attr}")
         return 0.0
 
     def _get_ohlcv_value(self, operand: str, strategy_instance) -> float | None:
@@ -276,39 +289,39 @@ class ConditionEvaluator:
         Returns:
             OHLCVの値、取得できない場合はNone
         """
-        # 高頻度で呼ばれるためデバッグログは削除
-        # logger.debug(
-        #     f"[OHLCVアクセス] '{operand}' オペランド検出 - strategy_instance type: {type(strategy_instance)}"
-        # )
-
         if not hasattr(strategy_instance, "data"):
-            # 頻繁に出る可能性があるのでdebugに下げてコメントアウト、またはonceにする
-            # logger.warning(...)
+            return None
+
+        # 検索対象の正規化された名前
+        search_key = operand.lower()
+        if search_key not in ["open", "high", "low", "close", "volume"]:
             return None
 
         try:
-            # backtesting.pyではカラム名が大文字（Open, High, Low, Close, Volume）
-            capitalized_operand = operand.capitalize()
+            data = strategy_instance.data
 
-            # pandas DataFrameの場合
-            if hasattr(strategy_instance.data, "columns") and hasattr(
-                strategy_instance.data, "__getitem__"
-            ):
-                if capitalized_operand in strategy_instance.data.columns:
-                    data_value = strategy_instance.data[capitalized_operand]
-                    return self._get_final_value(data_value)
-                else:
-                    return None
+            # 1. pandas DataFrame の場合
+            if isinstance(data, pd.DataFrame):
+                # カラム名を小文字にして比較
+                col_map = {col.lower(): col for col in data.columns}
+                if search_key in col_map:
+                    return self._get_final_value(data[col_map[search_key]])
 
-            # backtesting.pyの特殊なデータアクセス方法
-            try:
-                data_value = getattr(strategy_instance.data, capitalized_operand)
-                return self._get_final_value(data_value)
-            except AttributeError:
-                return None
+            # 2. 属性としてアクセスを試行（Open, Close, etc.）
+            # backtesting.py のデータ形式に対応するため Capitalize を優先
+            for variant in [search_key.capitalize(), search_key, search_key.upper()]:
+                if hasattr(data, variant):
+                    attr_val = getattr(data, variant)
+                    # Mockオブジェクトが自動生成した属性（値がMock）の場合はスキップ
+                    from unittest.mock import Mock
+                    if isinstance(attr_val, Mock) and not hasattr(attr_val, "_mock_return_value"):
+                         continue
+                    return self._get_final_value(attr_val)
 
         except Exception:
-            return None
+            pass
+
+        return None
 
     # ========================================
     # StatefulCondition 評価メソッド

@@ -194,43 +194,19 @@ class AdvancedFeatures:
         return funding_rate * open_interest
 
     @staticmethod
-    @handle_pandas_ta_errors
-    def leverage_ratio(
-        open_interest: pd.Series,
-        market_cap: pd.Series,
-    ) -> pd.Series:
+    def liquidity_efficiency(open_interest: pd.Series, volume: pd.Series) -> pd.Series:
         """
-        推定レバレッジ比率
-
-        計算式: 合計OI / 推定時価総額
-        市場全体の過熱感を測る指標です。
-
-        注: 時価総額データはOHLCVに含まれていない可能性があるため、
-        利用できない場合はNaNを返すか、外部データの注入が必要です。
+        流動性効率（Open Interest / Volume）
         """
-        if market_cap is None or market_cap.empty:
-            return pd.Series(
-                np.full(len(open_interest), np.nan), index=open_interest.index
-            )
-
-        return open_interest / market_cap
+        return (open_interest / volume).replace([np.inf, -np.inf], 0).fillna(0)
 
     @staticmethod
-    @handle_pandas_ta_errors
-    def liquidity_efficiency(
-        open_interest: pd.Series,
-        volume: pd.Series,
-    ) -> pd.Series:
+    def leverage_ratio(open_interest: pd.Series, market_cap: pd.Series) -> pd.Series:
         """
-        流動性効率（OI / 出来高比率）
+        推定レバレッジ比率（Total OI / Estimated Market Cap）
+        """
+        return (open_interest / market_cap).replace([np.inf, -np.inf], 0).fillna(0)
 
-        計算式: OI / Volume
-        - 高い比率: 出来高に対してOIが大きく、ポジションが膠着している（流動性が低い）状態。
-        - 低い比率: 出来高が活発で、ポジションの入れ替わりが激しい状態。
-        """
-        # ゼロ除算の回避
-        vol_clean = volume.replace(0, 1e-9)
-        return open_interest / vol_clean
 
 
 

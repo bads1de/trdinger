@@ -38,6 +38,28 @@ from .data_validation import create_nan_result, validate_data_length_with_fallba
 logger = logging.getLogger(__name__)
 
 
+# 指標名のエイリアスマッピング（外部からも参照可能）
+INDICATOR_ALIASES = {
+    "BB": "BBANDS",
+    "KC": "KC",
+    "DONCHIAN": "DONCHIAN",
+    "STOCH": "STOCH",
+    "AO": "AO",
+    "APO": "APO",
+    "BOP": "BOP",
+    "MOMENTUM": "MOM",
+    "CG": "CG",
+    "AD": "AD",
+    "ADOSC": "ADOSC",
+    "MFI": "MFI",
+    "OBV": "OBV",
+    "RSI": "RSI",
+    "SMA": "SMA",
+    "EMA": "EMA",
+    "WMA": "WMA",
+}
+
+
 class TechnicalIndicatorService:
     """テクニカル指標統合サービス"""
 
@@ -62,26 +84,27 @@ class TechnicalIndicatorService:
         self._calculation_cache.clear()
         logger.info("Indicator calculation cache cleared.")
 
+    def _resolve_indicator_name(self, indicator_type: str) -> str:
+        """指標名のエイリアスを解決"""
+        upper_name = indicator_type.upper()
+        return INDICATOR_ALIASES.get(upper_name, upper_name)
+
+    def _get_config(self, indicator_type: str) -> Optional[IndicatorConfig]:
+        """
+        指定された指標の pandas-ta 設定を取得
+        """
+        resolved_name = self._resolve_indicator_name(indicator_type)
+        return self.registry.get_indicator_config(resolved_name)
+
     def calculate_indicator(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Union[np.ndarray, pd.Series, tuple, tuple[pd.Series, ...]]:
         """
         OHLCVデータから指定されたテクニカル指標を計算。
-
-        内部でLRUキャッシュを管理し、同一パラメータでの冗長な計算を最小化します。
-        計算フローは以下の通りです：
-        1. キャッシュ確認 2. 指標設定の取得 3. パラメータバリデーション/正規化
-        4. pandas-ta または 独自アダプターによる計算実行 5. 結果の整形。
-
-        Args:
-            df: OHLCVデータ（Open, High, Low, Close, Volumeカラムを含む）
-            indicator_type: 指標名（大文字小文字を問いません。例: 'RSI', 'MACD'）
-            params: 指標パラメータ（例: {'length': 14}）
-
-        Returns:
-            計算結果。単一戻り値の場合は numpy 配列、
-            複数の場合はそれらのタプルを返します。
         """
+        # 指標名の解決
+        indicator_type = self._resolve_indicator_name(indicator_type)
+        
         # キャッシュチェック
         try:
             # パラメータをハッシュ可能な形式に変換（辞書の順序を無視）
@@ -159,7 +182,8 @@ class TechnicalIndicatorService:
 
     def _get_config(self, indicator_type: str) -> Optional[Dict[str, Any]]:
         """設定を取得"""
-        config = indicator_registry.get_indicator_config(indicator_type.upper())
+        resolved_name = self._resolve_indicator_name(indicator_type)
+        config = self.registry.get_indicator_config(resolved_name)
         if config and config.pandas_function:
             # param_map から params 構造を構築
             # params = { "target_param_name": ["alias1", "alias2", ...] }
@@ -173,6 +197,10 @@ class TechnicalIndicatorService:
                             params_mapping[target] = []
                         if alias not in params_mapping[target]:
                             params_mapping[target].append(alias)
+            else:
+                # param_mapがない場合はparametersから直接マッピングを作成
+                for param_name in config.parameters.keys():
+                    params_mapping[param_name] = [param_name]
 
             # IndicatorConfigからPANDAS_TA_CONFIG形式に変換
             return {
@@ -290,15 +318,31 @@ class TechnicalIndicatorService:
             if config.get("multi_column", False):
                 # 複数カラム処理
                 required_columns = config.get("data_columns", [])
+                
+                # pandas-taの関数シグネチャを確認してキーワード引数を準備
+                # 例: chop(high, low, close, length=14, ...)
+                # 多くの関数は high, low, close, volume をキーワード引数としても受け取る
+                ta_args = {}
                 positional_args = []
+                
                 for req_col in required_columns:
                     col_name = self._resolve_column_name(df, req_col)
                     if col_name is None:
                         logger.error(f"必須カラム '{req_col}' が存在しません")
                         return None
-                    positional_args.append(df[col_name])
+                    
+                    # カラム名に基づいて引数名を決定
+                    col_lower = req_col.lower()
+                    if col_lower in ["open", "high", "low", "close", "volume"]:
+                        # chopなどはキーワード引数での指定が必要な場合がある
+                        ta_args[col_lower] = df[col_name]
+                    else:
+                        positional_args.append(df[col_name])
 
-                return func(*positional_args, **params)
+                # 引数の統合（paramsよりも価格データを優先、またはマージ）
+                combined_params = {**params, **ta_args}
+                
+                return func(*positional_args, **combined_params)
             else:
                 # 単一カラム処理
                 col_name = self._resolve_column_name(df, config["data_column"])
@@ -368,7 +412,7 @@ class TechnicalIndicatorService:
                             matching_cols = [
                                 c
                                 for c in result.columns
-                                if col in c or c.startswith(col + "_")
+                                if col in c or col.lower() in c.lower()
                             ]
                             if matching_cols:
                                 selected_cols.append(result[matching_cols[0]].values)
@@ -380,52 +424,45 @@ class TechnicalIndicatorService:
                     return tuple(
                         result.iloc[:, i].values for i in range(result.shape[1])
                     )
-            else:
+            elif isinstance(result, pd.Series):
+                return (result.values,)
+            elif isinstance(result, tuple):
                 return tuple(np.asarray(arr) for arr in result)
+            else:
+                return (np.asarray(result),)
 
     def _prepare_adapter_data(
         self, df: pd.DataFrame, config: IndicatorConfig
-    ) -> Dict[str, pd.Series]:
-        """
-        アダプター関数用のデータを準備
-
-        Args:
-            df: OHLCV価格データ
-            config: 指標設定
-
-        Returns:
-            準備されたデータ辞書
-        """
+    ) -> Dict[str, Union[pd.Series, pd.DataFrame]]:
+        """アダプター関数に渡すデータを準備"""
+        # 利用可能な標準的なデータソース
+        standard_keys = ["open", "high", "low", "close", "volume"]
         required_data = {}
-
-        # param_mapを処理（data_keyがNoneでない場合）
-        if (
-            hasattr(config, "param_map")
-            and config.param_map is not None
-            and isinstance(config.param_map, dict)
-        ):
-            for param_key, data_key in config.param_map.items():
-                if data_key is None:
-                    continue  # パラメータマッピング用なのでスキップ
-                column_name = self._resolve_column_name(df, param_key)
-                if column_name:
-                    required_data[data_key] = df[column_name]
-
-        # 通常のrequired_data処理
-        for data_key in config.required_data:
-            # param_mapで既に処理済みの場合はスキップ
-            if (
-                hasattr(config, "param_map")
-                and config.param_map is not None
-                and isinstance(config.param_map, dict)
-                and data_key in config.param_map.keys()
-            ):
-                continue
-
-            column_name = self._resolve_column_name(df, data_key)
-            if column_name:
-                required_data[data_key] = df[column_name]
-
+        
+        # 1. 明示的に要求されているデータを収集
+        if config.required_data:
+            for key in config.required_data:
+                key_lower = key.lower()
+                if key_lower in standard_keys:
+                    col_name = self._resolve_column_name(df, key_lower)
+                    if col_name:
+                        required_data[key_lower] = df[col_name]
+                elif key_lower in ["data", "df", "ohlcv"]:
+                    required_data[key_lower] = df
+                else:
+                    # その他のカスタムカラム
+                    col_name = self._resolve_column_name(df, key)
+                    if col_name:
+                        required_data[key] = df[col_name]
+        
+        # 2. 補足：基本的なデータが不足している場合の自動追加
+        if not required_data:
+            # デフォルトとしてCloseと全体を渡せるようにしておく
+            col_name = self._resolve_column_name(df, "close")
+            if col_name:
+                required_data["close"] = df[col_name]
+            required_data["data"] = df
+            
         return required_data
 
     def _map_adapter_params(
@@ -436,47 +473,25 @@ class TechnicalIndicatorService:
     ) -> Tuple[Dict[str, Any], Dict[str, pd.Series]]:
         """
         アダプター関数のパラメータをマッピング
-
-        Args:
-            params: 入力パラメータ
-            config: 指標設定
-            required_data: 必要なデータ（変更される可能性あり）
-
-        Returns:
-            (マッピング済みパラメータ, 更新されたrequired_data)
         """
         # パラメータ正規化
         converted_params = config.normalize_params(params)
+        mapped_params = converted_params.copy()
 
-        # param_map を使用してパラメータ名をマッピング
+        # param_map を使用してデータ引数をマッピング
         if (
             hasattr(config, "param_map")
             and config.param_map is not None
             and isinstance(config.param_map, dict)
         ):
-            # パラメータ名をマッピング
-            mapped_params = {}
-            for param_key, param_value in converted_params.items():
-                if param_key in config.param_map:
-                    mapped_key = config.param_map[param_key]
-                    # None の場合は無視（そのパラメータを使わない）
-                    if mapped_key is not None:
-                        mapped_params[mapped_key] = param_value
-                    # None の場合は何もしない（パラメータを除外）
-                else:
-                    mapped_params[param_key] = param_value
-            converted_params = mapped_params
+            for source_name, arg_name in config.param_map.items():
+                # source_name (close, high等) が required_data にあれば、arg_name として mapped_params に追加
+                if source_name in required_data:
+                    mapped_params[arg_name] = required_data[source_name]
+                    # 元の required_data から削除して重複を防ぐ
+                    del required_data[source_name]
 
-            # param_map に data -> close のマッピングがある場合の特別処理
-            if "data" in config.param_map and config.param_map["data"] == "close":
-                # required_data から close データを data として使用
-                if "close" in required_data:
-                    converted_params["data"] = required_data["close"]
-                    # close を required_data から削除して重複を防ぐ
-                    del required_data["close"]
-                converted_params = mapped_params
-
-        return converted_params, required_data
+        return mapped_params, required_data
 
     def _call_adapter_function(
         self,
@@ -487,78 +502,93 @@ class TechnicalIndicatorService:
     ) -> Any:
         """
         アダプター関数を呼び出し
-
-        Args:
-            adapter_function: 呼び出すアダプター関数
-            all_args: 関数に渡す全ての引数
-            indicator_type: 指標タイプ
-            config: 指標設定
-
-        Returns:
-            関数呼び出し結果
         """
-        # 関数シグネチャを動的に検査して呼び出し方を決定
         sig = inspect.signature(adapter_function)
-        valid_params = set(sig.parameters.keys())
+        positional_args = []
+        keyword_args = {}
+        
+        # 利用可能なデータを準備
+        series_data = {k: v for k, v in all_args.items() if isinstance(v, (pd.Series, pd.DataFrame))}
+        scalar_params = {k: v for k, v in all_args.items() if not isinstance(v, (pd.Series, pd.DataFrame))}
+        
+        assigned_params = {}
 
-        # 位置引数を必要とする関数
-        if indicator_type.lower() in POSITIONAL_DATA_FUNCTIONS:
-            # 位置引数を必要とする関数の場合
-            positional_args = []
-            keyword_args = {}
+        # シグネチャに基づいて引数を割り当て
+        for param_name, param in sig.parameters.items():
+            param_lower = param_name.lower()
+            val = None
+            
+            # 1. 直接一致
+            if param_name in all_args:
+                val = all_args[param_name]
+            # 2. データ引数の曖昧解決
+            elif param_lower in ["data", "df", "ohlcv", "close", "open", "high", "low", "volume"]:
+                # 名前に基づく解決
+                target_key = param_lower.rstrip("_")
+                val = series_data.get(target_key) or series_data.get("data")
+            # 3. スカラー引数の曖昧解決
+            elif param_lower in ["length", "period", "window", "n"]:
+                for k in ["length", "period", "window", "n"]:
+                    if k in scalar_params:
+                        val = scalar_params[k]
+                        break
+            
+            if val is not None:
+                assigned_params[param_name] = val
 
-            # required_dataの順序で位置引数を構築
-            for data_key in config.required_data:
-                # param_map がある場合はマッピングされたキーを使用
-                search_key = data_key
-                if (
-                    hasattr(config, "param_map")
-                    and config.param_map
-                    and data_key in config.param_map
-                ):
-                    search_key = config.param_map[data_key]
+        # まだ割り当てられていないスカラー引数があれば追加（キーワード引数として）
+        for k, v in all_args.items():
+            if k not in assigned_params and k in sig.parameters:
+                assigned_params[k] = v
 
-                if search_key in all_args:
-                    positional_args.append(all_args[search_key])
-                    del all_args[search_key]
+        try:
+            # 全てをキーワード引数として渡す（ほとんどのテクニカル指標関数で安全）
+            # シグネチャに含まれるキーのみを抽出して渡す
+            valid_params = {k: v for k, v in assigned_params.items() if k in sig.parameters}
+            result = adapter_function(**valid_params)
+        except TypeError:
+            # キーワード引数がサポートされていない場合（稀なケース）は位置引数にフォールバック
+            try:
+                result = adapter_function(*assigned_params.values())
+            except Exception as e:
+                logger.error(f"{indicator_type} 計算エラー (位置引数フォールバック): {e}")
+                result = None
+        except Exception as e:
+            logger.error(f"{indicator_type} 計算エラー: {e}")
+            result = None
+        except Exception as e:
+            logger.error(f"{indicator_type} 計算エラー: {e}")
+            result = None
 
-            # 残りのパラメータをキーワード引数として渡す
-            for k, v in all_args.items():
-                if k not in config.parameters.keys():
-                    if k in valid_params:
-                        keyword_args[k] = v
-                # config.parameters に含まれるパラメータは除外
-
-            result = adapter_function(*positional_args, **keyword_args)
-        else:
-            # 通常のキーワード引数呼び出し
-            # パラメータの順序を考慮してpositional argsとkeyword argsを分ける
-            # sig は既に上部で取得済み
-            positional_args = []
-            keyword_args = {}
-
-            # パラメータの順序で処理
-            for param_name in sig.parameters:
-                if param_name in all_args:
-                    param = sig.parameters[param_name]
-                    if param.kind in (
-                        inspect.Parameter.POSITIONAL_ONLY,
-                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    ):
-                        positional_args.append(all_args[param_name])
-                    else:
-                        keyword_args[param_name] = all_args[param_name]
-
-            result = adapter_function(*positional_args, **keyword_args)
+        # 結果がNoneの場合のフォールバック
+        if result is None:
+            input_ref = all_args.get("data", all_args.get("close"))
+            data_len = len(input_ref) if input_ref is not None else 0
+            if config.result_type == IndicatorResultType.SINGLE:
+                return np.full(data_len, np.nan)
+            else:
+                num_cols = len(config.return_cols) if config.return_cols else 1
+                return tuple(np.full(data_len, np.nan) for _ in range(num_cols))
 
         # 結果の後処理
         if isinstance(result, pd.Series):
-            return result.values
-        elif (
-            isinstance(result, pd.DataFrame)
-            and config.result_type == IndicatorResultType.SINGLE
-        ):
-            return result.iloc[:, 0].values
+            # NaN処理を追加
+            return result.bfill().fillna(0).values
+        elif isinstance(result, pd.DataFrame):
+            # NaN処理を追加
+            result = result.bfill().fillna(0)
+            if config.result_type == IndicatorResultType.SINGLE:
+                return result.iloc[:, 0].values
+            else:
+                return tuple(result[col].values for col in result.columns)
+        elif isinstance(result, tuple):
+            # タプル内の各要素をnumpy配列に変換し、NaN処理を行う
+            return tuple(
+                (arr.bfill().fillna(0).values if isinstance(arr, pd.Series) else 
+                 (arr.bfill().fillna(0).values if isinstance(arr, pd.DataFrame) else 
+                  np.nan_to_num(np.asarray(arr))))
+                for arr in result
+            )
         else:
             return result
 
@@ -605,11 +635,17 @@ class TechnicalIndicatorService:
             return None
 
         # 優先順位: 元の名前 > 大文字 > 小文字 > Capitalized
+        # また、末尾のアンダースコアを除去したものも候補に入れる (例: open_ -> open)
+        clean_key = data_key.rstrip("_")
         candidates = [
             data_key,
             data_key.upper(),
             data_key.lower(),
             data_key.capitalize(),
+            clean_key,
+            clean_key.upper(),
+            clean_key.lower(),
+            clean_key.capitalize(),
         ]
 
         for candidate in candidates:

@@ -23,15 +23,16 @@ class TestIndicatorUtils:
         ) as mock_load:
             registry = MagicMock()
             registry._configs = {
-                "RSI": MagicMock(category="momentum", indicator_name="RSI"),
-                "SMA": MagicMock(category="trend", indicator_name="SMA"),
-                "EMA": MagicMock(category="trend", indicator_name="EMA"),
-                "ATR": MagicMock(category="volatility", indicator_name="ATR"),
-                "OBV": MagicMock(category="volume", indicator_name="OBV"),
-                "Unknown": MagicMock(category="other", indicator_name="Unknown"),
+                "RSI": MagicMock(category="momentum", indicator_name="RSI", aliases=[]),
+                "SMA": MagicMock(category="trend", indicator_name="SMA", aliases=[]),
+                "EMA": MagicMock(category="trend", indicator_name="EMA", aliases=[]),
+                "ATR": MagicMock(category="volatility", indicator_name="ATR", aliases=[]),
+                "OBV": MagicMock(category="volume", indicator_name="OBV", aliases=[]),
+                "Unknown": MagicMock(category="other", indicator_name="Unknown", aliases=[]),
                 # Config with no category should be skipped or handled gracefully
                 "Broken": None,
             }
+            registry.list_indicators.return_value = list(registry._configs.keys())
             mock_load.return_value = registry
             yield registry
 

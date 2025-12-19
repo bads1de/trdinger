@@ -398,6 +398,7 @@ class VolatilityIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    @staticmethod
     def vhf(
         data: pd.Series,
         length: int = 28,

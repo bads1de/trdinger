@@ -558,8 +558,9 @@ def main():
 
     if output_path:
         print("\n" + "-" * 60)
-        print(f"📁 保存先: {output_path}")
+        print(f"保存先: {output_path}")
         print("-" * 60)
+
 
     return 0 if result.get("success") else 1
 

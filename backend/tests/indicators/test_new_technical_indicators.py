@@ -263,7 +263,7 @@ def test_supertrend_returns_trend_and_direction(
         {"length": 10, "multiplier": 3.0},
     )
     assert isinstance(result, tuple)
-    assert len(result) == 2
+    assert len(result) == 3
     for series in result:
         assert isinstance(series, np.ndarray)
         assert series.shape[0] == len(sample_ohlcv)

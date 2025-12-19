@@ -18,6 +18,7 @@ from ..core.operand_grouping import operand_grouping_system
 from ..genes import Condition, ConditionGroup, IndicatorGene
 from ..utils.indicator_utils import get_all_indicators
 from ..utils.yaml_utils import YamlIndicatorUtils
+from ...indicators.indicator_orchestrator import INDICATOR_ALIASES
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
 
@@ -612,9 +613,11 @@ class ConditionGenerator:
         指標のタイプを取得（統合版）
         優先順位: YAML設定 > indicator_registry > Characteristics
         """
-        indicator_name = (
+        raw_name = (
             indicator.type if isinstance(indicator, IndicatorGene) else indicator
         )
+        # エイリアス解決
+        indicator_name = INDICATOR_ALIASES.get(raw_name.upper(), raw_name.upper())
 
         # 1. YAML設定をチェック
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(
@@ -625,6 +628,7 @@ class ConditionGenerator:
                 "momentum": IndicatorType.MOMENTUM,
                 "trend": IndicatorType.TREND,
                 "volatility": IndicatorType.VOLATILITY,
+                "volume": IndicatorType.MOMENTUM,
             }
             if config["type"] in type_map:
                 return type_map[config["type"]]
@@ -632,13 +636,13 @@ class ConditionGenerator:
         # 2. indicator_registryをチェック
         cfg = indicator_registry.get_indicator_config(indicator_name)
         if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
-            cat = getattr(cfg, "category")
-            if cat == "momentum":
+            cat = str(getattr(cfg, "category", "")).lower()
+            if any(k in cat for k in ["momentum", "oscillator", "technical", "custom"]):
                 return IndicatorType.MOMENTUM
-            elif cat in ("trend", "volatility"):
-                return (
-                    IndicatorType.TREND if cat == "trend" else IndicatorType.VOLATILITY
-                )
+            elif any(k in cat for k in ["trend", "overlap", "moving average"]):
+                return IndicatorType.TREND
+            elif any(k in cat for k in ["volatility", "cycle", "statistics"]):
+                return IndicatorType.VOLATILITY
 
         # 3. Characteristicsをチェック
         characteristics = YamlIndicatorUtils.get_characteristics()
@@ -646,9 +650,6 @@ class ConditionGenerator:
             return characteristics[indicator_name]["type"]
 
         # デフォルト
-        logger.warning(
-            f"指標 {indicator_name} のタイプを特定できませんでした。トレンド系として扱います。"
-        )
         return IndicatorType.TREND
 
     @safe_operation(context="動的指標分類", is_api_call=False)
@@ -674,6 +675,11 @@ class ConditionGenerator:
                 categorized[IndicatorType.TREND].append(ind)
 
         return categorized
+
+    def _classify_indicators(self, indicators: List[IndicatorGene]) -> Dict[IndicatorType, List[IndicatorGene]]:
+        """_dynamic_classify のエイリアス（ComplexConditionsStrategy互換用）"""
+        return self._dynamic_classify(indicators)
+
 
 
 class GAConditionGenerator(ConditionGenerator):

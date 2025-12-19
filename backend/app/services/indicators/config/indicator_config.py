@@ -350,33 +350,36 @@ indicator_registry = IndicatorConfigRegistry()
 
 
 def initialize_all_indicators():
-    """全インジケーターの設定を初期化"""
-    from app.services.indicators.manifests.registry import register_indicator_manifest
-
-    register_indicator_manifest(indicator_registry)
+    """全インジケーターの設定を初期化（動的検出）"""
+    try:
+        from .discovery import DynamicIndicatorDiscovery
+        
+        indicators = DynamicIndicatorDiscovery.discover_all()
+        for config in indicators:
+            indicator_registry.register(config)
+            
+        logger.info(f"インジケーター初期化完了: {len(indicators)} 個登録")
+        logger.debug(f"登録された指標: {', '.join(indicator_registry.list_indicators()[:20])}...")
+        
+    except ImportError as e:
+        logger.warning(f"DynamicIndicatorDiscoveryのインポートに失敗しました: {e}")
+    except Exception as e:
+        logger.error(f"インジケーター初期化エラー: {e}")
 
 
 def generate_positional_functions() -> set:
-    """レジストリからPOSITIONAL_DATA_FUNCTIONSを動的生成
-
-    Returns:
-        位置パラメータを使用する関数名のセット
+    """位置パラメータを使用する関数名のセット（互換性維持）
+    
+    新しいアーキテクチャではキーワード引数が推奨されるため、
+    明示的に位置引数が必要なものは空、あるいは発見ロジックに基づき返す。
     """
-    functions = set()
-    all_indicators = indicator_registry.get_all_indicators()
-
-    for name, indicator_config in all_indicators.items():
-        # エイリアスではなく本名のみを使用
-        if not indicator_config.aliases or name not in indicator_config.aliases:
-            functions.add(indicator_config.indicator_name.lower())
-
-    return functions
+    return set()
 
 
 # 全インジケーター初期化
 initialize_all_indicators()
 
-# 動的設定初期化（レジストリから生成）
+# 動的設定初期化
 POSITIONAL_DATA_FUNCTIONS = generate_positional_functions()
 
 

@@ -69,7 +69,9 @@ class PositionSizingService:
         # 1. 入力値の検証
         validation_result = self._validate_inputs(gene, account_balance, current_price)
         if not validation_result["valid"]:
-            method_name = gene.method.value if gene and hasattr(gene, "method") else "unknown"
+            method_name = "unknown"
+            if gene and hasattr(gene, "method"):
+                method_name = gene.method.value if hasattr(gene.method, "value") else str(gene.method)
             return self._create_error_result(validation_result["error"], method_name)
 
         # 2. 市場データの準備
@@ -78,7 +80,8 @@ class PositionSizingService:
         )
 
         # 3. 計算機の実行
-        calculator = self._calculator_factory.create_calculator(gene.method.value)
+        method_val = gene.method.value if hasattr(gene.method, "value") else str(gene.method)
+        calculator = self._calculator_factory.create_calculator(method_val)
         result = calculator.calculate(
             gene, account_balance, current_price,
             market_data=enhanced_market_data, trade_history=trade_history
@@ -94,7 +97,7 @@ class PositionSizingService:
         calculation_time = (datetime.now() - start_time).total_seconds()
         final_result = PositionSizingResult(
             position_size=result["position_size"],
-            method_used=gene.method.value,
+            method_used=method_val,
             calculation_details={
                 **result["details"],
                 "calculation_time_seconds": calculation_time,
@@ -350,7 +353,8 @@ class PositionSizingService:
                 return 0.01  # デフォルトサイズ
 
             # 計算機の選択と実行（市場データなしで高速実行）
-            calculator = self._calculator_factory.create_calculator(gene.method.value)
+            method_val = gene.method.value if hasattr(gene.method, "value") else str(gene.method)
+            calculator = self._calculator_factory.create_calculator(method_val)
             result = calculator.calculate(
                 gene,
                 account_balance,

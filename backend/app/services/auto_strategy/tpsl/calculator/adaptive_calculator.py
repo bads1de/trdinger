@@ -80,8 +80,16 @@ class AdaptiveCalculator(BaseTPSLCalculator):
                     return "statistical"
 
             # TPSL遺伝子がある場合、そのmethodを尊重
-            if tpsl_gene and hasattr(tpsl_gene, "method"):
-                method_name = tpsl_gene.method.name.lower()
+            if tpsl_gene and hasattr(tpsl_gene, "method") and tpsl_gene.method:
+                # Enumオブジェクトの場合は .value または直接文字列として取得
+                method_val = tpsl_gene.method
+                if hasattr(method_val, "value"):
+                    method_name = method_val.value.lower()
+                elif isinstance(method_val, str):
+                    method_name = method_val.lower()
+                else:
+                    method_name = str(method_val).lower()
+
                 if method_name in self.calculators:
                     return method_name
 

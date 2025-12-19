@@ -732,7 +732,37 @@ class GeneSerializer:
         """
         return self.dict_converter.dict_to_condition(data)
 
+    def from_list(self, individual_list: list, strategy_gene_class: Any):
+        """
+        リスト形式（DEAP個体）から戦略遺伝子を復元します。
+
+        Args:
+            individual_list: DEAPの個体（StrategyGeneを継承したリスト、または[StrategyGene]）
+            strategy_gene_class: 復元に使用するクラス
+
+        Returns:
+            復元されたStrategyGene
+        """
+        from ..genes import StrategyGene
+        if not individual_list:
+            return None
+            
+        # 1. 既にStrategyGeneのインスタンスである場合
+        if isinstance(individual_list, StrategyGene):
+            return individual_list
+            
+        # 2. リストの最初の要素がStrategyGeneである場合
+        if len(individual_list) > 0 and isinstance(individual_list[0], StrategyGene):
+            return individual_list[0]
+            
+        # 3. 属性アクセスを試行（DEAP個体はStrategyGeneを継承している場合がある）
+        if hasattr(individual_list, "indicators"):
+            return individual_list
+            
+        return None
+
     # JSON変換機能（JsonConverterを廃止してここに統合）
+
     def strategy_gene_to_json(self, strategy_gene) -> str:
         """
         戦略遺伝子をJSON文字列に変換

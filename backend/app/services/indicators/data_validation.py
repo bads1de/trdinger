@@ -64,11 +64,11 @@ def validate_data_length_with_fallback(
     Returns:
         (データ長が十分かどうか, フォールバック可能な最小データ長)
     """
-    standard_length = get_minimum_data_length(indicator_type, params)
-    absolute_minimum = get_absolute_minimum_length(indicator_type.upper())
+    standard_length = get_minimum_data_length(indicator_type, params) or 1
+    absolute_minimum = get_absolute_minimum_length(indicator_type.upper()) or 1
     
     # パラメータに基づく長さと絶対的な最小長さの大きい方を採用
-    required_length = max(standard_length, absolute_minimum)
+    required_length = max(int(standard_length), int(absolute_minimum))
     
     data_length = len(df)
 
@@ -77,7 +77,7 @@ def validate_data_length_with_fallback(
 
     # フォールバック処理のための緩和された最小長を計算
     # absolute_minimum は絶対に下回れない
-    min_required = max(absolute_minimum, standard_length // 3)
+    min_required = max(int(absolute_minimum), int(standard_length) // 3)
 
     if data_length >= min_required:
         logger.info(
@@ -98,19 +98,10 @@ def validate_data_length_with_fallback(
 def get_absolute_minimum_length(indicator_type: str) -> int:
     """
     各指標の絶対的最小データ長を取得
-
-    この関数は、パラメータに関係なく指標が正常に動作するために
-    必要な最低限のデータポイント数を返します。
-
-    Args:
-        indicator_type: 指標タイプ
-
-    Returns:
-        絶対的最小データ長（デフォルト: 1）
     """
     config = indicator_registry.get_indicator_config(indicator_type.upper())
-    if config:
-        return config.absolute_min_length
+    if config and hasattr(config, "absolute_min_length") and config.absolute_min_length is not None:
+        return int(config.absolute_min_length)
     return 1
 
 
