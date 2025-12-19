@@ -14,7 +14,7 @@ from app.services.ml.common.default_configs import (
     get_default_ensemble_config,
     get_default_single_model_config,
 )
-from app.services.ml.ml_training_service import MLTrainingService
+from .ml_training_service import MLTrainingService
 from app.services.ml.orchestration.background_task_manager import (
     background_task_manager,
 )
@@ -460,6 +460,3 @@ class MLTrainingOrchestrationService:
         )
 
         logger.info("✅ MLトレーニング完了")
-
-
-

@@ -6,8 +6,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 import pandas as pd
 import numpy as np
-from backend.app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
-from backend.app.services.ml.ml_training_service import MLTrainingService
+from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
+from app.services.ml.orchestration.ml_training_service import MLTrainingService
 
 
 class TestPredictionLogicRefactoring:
@@ -27,7 +27,7 @@ class TestPredictionLogicRefactoring:
     @pytest.fixture
     def ml_service(self):
         """MLTrainingServiceのモック"""
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer"):
+        with patch("app.services.ml.orchestration.ml_training_service.EnsembleTrainer"):
             service = MLTrainingService(
                 trainer_type="single", single_model_config={"model_type": "lightgbm"}
             )
@@ -72,7 +72,7 @@ class TestPredictionLogicRefactoring:
     def test_unified_prediction_interface(self, sample_features):
         """統一された予測インターフェースをテスト"""
         # 単一モデル（EnsembleTrainer with models=["lightgbm"]）
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer"):
+        with patch("app.services.ml.orchestration.ml_training_service.EnsembleTrainer"):
             service_single = MLTrainingService(
                 trainer_type="single", single_model_config={"model_type": "lightgbm"}
             )
@@ -92,7 +92,7 @@ class TestPredictionLogicRefactoring:
             assert "predictions" in result_single
 
         # アンサンブルモデル
-        with patch("backend.app.services.ml.ml_training_service.EnsembleTrainer"):
+        with patch("app.services.ml.orchestration.ml_training_service.EnsembleTrainer"):
             service_ensemble = MLTrainingService(
                 trainer_type="ensemble",
                 ensemble_config={"models": ["lightgbm", "xgboost"]},

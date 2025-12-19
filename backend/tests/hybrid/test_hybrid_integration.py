@@ -69,7 +69,7 @@ class TestHybridIntegration:
     ):
         """GAエンジンのハイブリッド初期化テスト"""
         with patch(
-            "backend.app.services.auto_strategy.generators.random_gene_generator.RandomGeneGenerator"
+            "app.services.auto_strategy.generators.random_gene_generator.RandomGeneGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator_class.return_value = mock_generator
@@ -108,7 +108,7 @@ class TestHybridIntegration:
         mock_feature_adapter,
     ):
         """ハイブリッド個体評価テスト"""
-        from backend.app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
         from app.services.auto_strategy.genes.strategy import StrategyGene
@@ -160,7 +160,7 @@ class TestHybridIntegration:
         sample_training_data,
     ):
         """ハイブリッド多目的評価テスト"""
-        from backend.app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -205,13 +205,13 @@ class TestHybridIntegration:
 
     def test_hybrid_predictor_integration(self, mock_hybrid_predictor):
         """ハイブリッド予測器統合テスト"""
-        from backend.app.services.auto_strategy.core.hybrid_predictor import (
+        from app.services.auto_strategy.core.hybrid_predictor import (
             HybridPredictor,
         )
 
         # HybridPredictorの初期化テスト
         with patch(
-            "app.services.ml.ml_training_service.MLTrainingService"
+            "app.services.ml.orchestration.ml_training_service.MLTrainingService"
         ) as mock_ml_service_class:
             mock_ml_service = Mock()
             mock_ml_service.generate_signals.return_value = {
@@ -264,7 +264,7 @@ class TestHybridIntegration:
         )
 
         with patch(
-            "backend.app.services.auto_strategy.generators.random_gene_generator.RandomGeneGenerator"
+            "app.services.auto_strategy.generators.random_gene_generator.RandomGeneGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_random_gene.return_value = valid_gene
@@ -288,7 +288,7 @@ class TestHybridIntegration:
                 mock_backtest_class.return_value = mock_backtest
 
                 with patch(
-                    "backend.app.services.auto_strategy.core.ga_engine.GeneticAlgorithmEngine.run_evolution"
+                    "app.services.auto_strategy.core.ga_engine.GeneticAlgorithmEngine.run_evolution"
                 ) as mock_run_evolution:
                     mock_run_evolution.return_value = {
                         "best_strategy": valid_gene,
@@ -316,7 +316,7 @@ class TestHybridIntegration:
         self, hybrid_ga_config, mock_hybrid_predictor, mock_feature_adapter
     ):
         """ハイブリッド統合時のエラー処理テスト"""
-        from backend.app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -368,12 +368,12 @@ class TestHybridIntegration:
         # 予測器が未学習の場合のフォールバック
         mock_hybrid_predictor.is_trained = False
 
-        from backend.app.services.auto_strategy.core.hybrid_predictor import (
+        from app.services.auto_strategy.core.hybrid_predictor import (
             HybridPredictor,
         )
 
         with patch(
-            "app.services.ml.ml_training_service.MLTrainingService"
+            "app.services.ml.orchestration.ml_training_service.MLTrainingService"
         ) as mock_ml_service_class:
             mock_ml_service = Mock()
             mock_ml_service.config.prediction.get_default_predictions.return_value = {

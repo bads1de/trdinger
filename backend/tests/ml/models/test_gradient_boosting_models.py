@@ -2,9 +2,9 @@ import pytest
 import pandas as pd
 import numpy as np
 from unittest.mock import MagicMock
-from backend.app.services.ml.models.lightgbm import LightGBMModel
-from backend.app.services.ml.models.xgboost import XGBoostModel
-from backend.app.services.ml.models.catboost import CatBoostModel
+from app.services.ml.models.lightgbm import LightGBMModel
+from app.services.ml.models.xgboost import XGBoostModel
+from app.services.ml.models.catboost import CatBoostModel
 
 
 class TestGradientBoostingModels:

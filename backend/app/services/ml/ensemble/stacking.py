@@ -367,17 +367,21 @@ class StackingEnsemble(BaseEnsemble):
             elif hasattr(meta_model, "coef_"):
                 # Linear models
                 coef = meta_model.coef_
+                # 2クラス分類のLogisticRegressionの場合、(1, n_features) の形状
                 if coef.ndim > 1:
-                    coef = np.abs(coef).mean(axis=0)
+                    # 全クラスの平均絶対値、または単一要素ならその行を使用
+                    if coef.shape[0] == 1:
+                        coef = np.abs(coef[0])
+                    else:
+                        coef = np.abs(coef).mean(axis=0)
                 else:
                     coef = np.abs(coef)
 
                 if len(coef) == len(estimator_names):
-                    feature_names = estimator_names
+                    return {estimator_names[i]: float(coef[i]) for i in range(len(coef))}
                 else:
                     feature_names = [f"meta_feature_{i}" for i in range(len(coef))]
-
-                return dict(zip(feature_names, coef))
+                    return {feature_names[i]: float(coef[i]) for i in range(len(coef))}
             else:
                 logger.warning(
                     f"メタモデル({self._meta_model_type})は特徴量重要度をサポートしていません"

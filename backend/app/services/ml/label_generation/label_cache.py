@@ -10,8 +10,8 @@ from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
-from app.services.ml.label_generation.enums import ThresholdMethod
-from app.services.ml.label_generation.presets import (
+from .enums import ThresholdMethod
+from .presets import (
     trend_scanning_preset,
     triple_barrier_method_preset,
 )
@@ -61,8 +61,19 @@ class LabelCache:
     ) -> pd.Series:
         """キャッシュを使ってラベルを取得"""
         use_cache = t_events is None
-        cache_key = (horizon_n, threshold_method, threshold, timeframe, price_column, 
-                     pt_factor, sl_factor, use_atr, atr_period, min_window, window_step)
+        cache_key = (
+            horizon_n,
+            threshold_method,
+            threshold,
+            timeframe,
+            price_column,
+            pt_factor,
+            sl_factor,
+            use_atr,
+            atr_period,
+            min_window,
+            window_step,
+        )
 
         if use_cache and cache_key in self.cache:
             self.hit_count += 1
@@ -79,13 +90,28 @@ class LabelCache:
 
         if m == ThresholdMethod.TRIPLE_BARRIER:
             labels = triple_barrier_method_preset(
-                self.ohlcv_df, timeframe, horizon_n, pt_factor, sl_factor, 0.0001, 
-                price_column, 24, use_atr, atr_period, t_events
+                self.ohlcv_df,
+                timeframe,
+                horizon_n,
+                pt_factor,
+                sl_factor,
+                0.0001,
+                price_column,
+                24,
+                use_atr,
+                atr_period,
+                t_events,
             )
         elif m == ThresholdMethod.TREND_SCANNING:
             labels = trend_scanning_preset(
-                self.ohlcv_df, timeframe, horizon_n, threshold, min_window, window_step, 
-                price_column, t_events
+                self.ohlcv_df,
+                timeframe,
+                horizon_n,
+                threshold,
+                min_window,
+                window_step,
+                price_column,
+                t_events,
             )
         else:
             raise NotImplementedError(f"Method {threshold_method} not supported")
@@ -102,7 +128,7 @@ class LabelCache:
             "1h": pd.Timedelta(hours=horizon_n),
             "4h": pd.Timedelta(hours=4 * horizon_n),
             "1d": pd.Timedelta(days=horizon_n),
-            "15m": pd.Timedelta(minutes=15 * horizon_n)
+            "15m": pd.Timedelta(minutes=15 * horizon_n),
         }
         delta = deltas.get(timeframe, pd.Timedelta(hours=horizon_n))
         return pd.Series(indices + delta, index=indices)

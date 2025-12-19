@@ -10,7 +10,7 @@ from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
 from app.services.backtest.backtest_service import BacktestService
-from app.services.ml.exceptions import MLPredictionError, MLTrainingError
+from app.services.ml.common.exceptions import MLPredictionError, MLTrainingError
 
 logger = logging.getLogger(__name__)
 

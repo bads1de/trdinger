@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.ml.ml_training_service import MLTrainingService
+from app.services.ml.orchestration.ml_training_service import MLTrainingService
 from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingOrchestrationService,
 )

@@ -126,7 +126,12 @@ class CatBoostModel(BaseGradientBoostingModel):
         CatBoost固有の学習プロセスを実行します。
         """
         X_train, y_train = train_data
-        X_val, y_val = valid_data
+        
+        # eval_setの準備
+        eval_set = None
+        if valid_data is not None:
+            X_val, y_val = valid_data
+            eval_set = (X_val, y_val)
 
         # CatBoostClassifierを作成
         model = cb.CatBoostClassifier(**params)
@@ -135,7 +140,8 @@ class CatBoostModel(BaseGradientBoostingModel):
         model.fit(
             X_train,
             y_train,
-            eval_set=(X_val, y_val),
+            eval_set=eval_set,
+            early_stopping_rounds=early_stopping_rounds if eval_set else None,
             verbose=False,
         )
 

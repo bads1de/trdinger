@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock
-from app.services.ml.base_ml_trainer import BaseMLTrainer
+from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
 
 
 class ConcreteMLTrainer(BaseMLTrainer):
@@ -47,7 +47,7 @@ class TestPurgedCVUnification:
             mock_ml_training_config.prediction_horizon = 4
             mock_ml_training_config.pct_embargo = 0.01
             
-            with patch("app.services.ml.base_ml_trainer.PurgedKFold") as MockPurgedKFold:
+            with patch("app.services.ml.trainers.base_ml_trainer.PurgedKFold") as MockPurgedKFold:
                 MockPurgedKFold.return_value.split.return_value = (
                     []
                 )  # 空のジェネレータを返す

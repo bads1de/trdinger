@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from fastapi import HTTPException
 
-from backend.app.utils.error_handler import (
+from app.utils.error_handler import (
     DataError,
     ErrorHandler,
     ModelError,
@@ -45,7 +45,7 @@ class TestErrorHandler:
         """APIエラーハンドリングテスト"""
         error = ValueError("テストエラー")
 
-        with patch("backend.app.utils.error_handler.logger") as mock_logger:
+        with patch("app.utils.error_handler.logger") as mock_logger:
             http_exception = ErrorHandler.handle_api_error(
                 error,
                 context="テストコンテキスト",
@@ -62,7 +62,7 @@ class TestErrorHandler:
         """モデルエラーハンドリングテスト"""
         error = RuntimeError("モデルエラー")
 
-        with patch("backend.app.utils.error_handler.logger") as mock_logger:
+        with patch("app.utils.error_handler.logger") as mock_logger:
             response = ErrorHandler.handle_model_error(
                 error, context="MLコンテキスト", operation="predict"
             )
@@ -124,8 +124,8 @@ class TestErrorHandler:
         with pytest.raises(HTTPException):
             await ErrorHandler.safe_execute_async(test_func, status_code=400)
 
-    @patch("backend.app.utils.error_handler.platform.system")
-    @patch("backend.app.utils.error_handler.concurrent.futures.ThreadPoolExecutor")
+    @patch("app.utils.error_handler.platform.system")
+    @patch("app.utils.error_handler.concurrent.futures.ThreadPoolExecutor")
     def test_handle_timeout_windows(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト処理テスト"""
         mock_platform.return_value = "Windows"
@@ -144,8 +144,8 @@ class TestErrorHandler:
         result = ErrorHandler.handle_timeout(test_func, 5)
         assert result == "success"
 
-    @patch("backend.app.utils.error_handler.platform.system")
-    @patch("backend.app.utils.error_handler.signal")
+    @patch("app.utils.error_handler.platform.system")
+    @patch("app.utils.error_handler.signal")
     def test_handle_timeout_unix(self, mock_signal, mock_platform):
         """Unixタイムアウト処理テスト"""
         mock_platform.return_value = "Linux"
@@ -156,8 +156,8 @@ class TestErrorHandler:
         result = ErrorHandler.handle_timeout(test_func, 5)
         assert result == "success"
 
-    @patch("backend.app.utils.error_handler.platform.system")
-    @patch("backend.app.utils.error_handler.concurrent.futures.ThreadPoolExecutor")
+    @patch("app.utils.error_handler.platform.system")
+    @patch("app.utils.error_handler.concurrent.futures.ThreadPoolExecutor")
     def test_handle_timeout_windows_timeout(self, mock_executor_class, mock_platform):
         """Windowsタイムアウト発生テスト"""
         mock_platform.return_value = "Windows"
@@ -276,7 +276,7 @@ class TestDecoratorsAndContexts:
 
     def test_operation_context_success(self):
         """操作コンテキスト成功テスト"""
-        with patch("backend.app.utils.error_handler.logger") as mock_logger:
+        with patch("app.utils.error_handler.logger") as mock_logger:
             with operation_context("テスト操作"):
                 pass
 
@@ -286,7 +286,7 @@ class TestDecoratorsAndContexts:
 
     def test_operation_context_with_exception(self):
         """操作コンテキスト例外テスト"""
-        with patch("backend.app.utils.error_handler.logger") as mock_logger:
+        with patch("app.utils.error_handler.logger") as mock_logger:
             with pytest.raises(ValueError):
                 with operation_context("テスト操作"):
                     raise ValueError("test error")

@@ -125,14 +125,20 @@ class BaseGradientBoostingModel(ABC):
 
             # モデル固有の学習パラメータ取得
             params = self._get_model_params(num_classes, **kwargs)
+            # sklearn特有のパラメータをモデル用paramsから除去（不具合防止）
+            params.pop("class_weight", None)
 
-            # モデル固有の学習実行
+            # 共通パラメータを除去してモデル固有の学習実行
+            train_kwargs = kwargs.copy()
+            train_kwargs.pop("class_weight", None)
+            es_rounds = train_kwargs.pop("early_stopping_rounds", 50)
+
             self.model = self._train_internal(
                 train_data,
                 valid_data,
                 params,
-                early_stopping_rounds=kwargs.get("early_stopping_rounds", 50),
-                **kwargs,  # ここに **kwargs を追加
+                early_stopping_rounds=es_rounds,
+                **train_kwargs,
             )
 
             # 予測と評価 (検証データがある場合のみ)

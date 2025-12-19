@@ -11,6 +11,7 @@ Triple Barrier MethodやTrend Scanningを用いて、ダマシ（False Signal）
 
 from .enums import ThresholdMethod
 from .event_driven import BarrierProfile, EventDrivenLabelGenerator
+from .label_cache import LabelCache
 from .label_generation_service import LabelGenerationService
 from .presets import (
     apply_preset_by_name,
@@ -27,4 +28,5 @@ __all__ = [
     "apply_preset_by_name",
     "SignalGenerator",
     "LabelGenerationService",
+    "LabelCache",
 ]

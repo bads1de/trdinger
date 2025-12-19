@@ -126,9 +126,10 @@ class FeatureSelector:
         self.selected_features_ = selected_features
         self.selection_results_ = results
 
-        # 選択された特徴量でDataFrameを作成
+        # 選択された特徴量でDataFrameを作成 (インデックス操作を避ける)
         if selected_features:
-            X_selected = X[selected_features].copy()
+            data_dict = {c: X[c].values for c in selected_features if c in X.columns}
+            X_selected = pd.DataFrame(data_dict, index=X.index)
         else:
             # 選択された特徴量がない場合は空のDataFrameを返す
             X_selected = pd.DataFrame(index=X.index)
@@ -144,18 +145,20 @@ class FeatureSelector:
 
     def _preprocess_data(self, X: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
         """データの前処理"""
-        # 欠損値の処理
-        X_filled = X.fillna(X.median())
-
-        # 無限値の処理
-        X_filled = X_filled.replace([np.inf, -np.inf], np.nan)
+        # 欠損値・無限値の処理 (プリミティブな処理に限定)
+        X_filled = X.replace([np.inf, -np.inf], np.nan)
         X_filled = X_filled.fillna(X_filled.median())
 
-        # 定数特徴量の除去
-        constant_features = X_filled.columns[X_filled.nunique() <= 1].tolist()
-        if constant_features:
-            logger.info(f"定数特徴量を除去: {len(constant_features)}個")
-            X_filled = X_filled.drop(columns=constant_features)
+        # 定数特徴量の除去 (インデックス操作を避ける)
+        cols = X_filled.columns.tolist()
+        nunique = [X_filled[c].nunique() for c in cols]
+        keep_cols = [cols[i] for i, n in enumerate(nunique) if n > 1]
+        
+        if len(keep_cols) < len(cols):
+            logger.info(f"定数特徴量を除去: {len(cols) - len(keep_cols)}個")
+            # 辞書から再構築
+            data_dict = {c: X_filled[c].values for c in keep_cols}
+            X_filled = pd.DataFrame(data_dict, index=X_filled.index)
 
         # 高相関特徴量の除去
         X_filled = self._remove_highly_correlated_features(X_filled)
@@ -165,20 +168,26 @@ class FeatureSelector:
     def _remove_highly_correlated_features(self, X: pd.DataFrame) -> pd.DataFrame:
         """高相関特徴量を除去"""
         try:
+            # 相関行列の取得
             corr_matrix = X.corr().abs()
-            upper_triangle = corr_matrix.where(
-                np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
-            )
+            cols = corr_matrix.columns.tolist()
+            drop_cols = []
 
-            to_drop = [
-                column
-                for column in upper_triangle.columns
-                if any(upper_triangle[column] > self.config.correlation_threshold)
-            ]
+            # 2重ループでの相関チェック (ilocを使わずvaluesで高速化)
+            corr_values = corr_matrix.values
+            for i in range(len(cols)):
+                for j in range(i + 1, len(cols)):
+                    if corr_values[i, j] > self.config.correlation_threshold:
+                        col_to_drop = cols[j]
+                        if col_to_drop not in drop_cols:
+                            drop_cols.append(col_to_drop)
 
-            if to_drop:
-                logger.info(f"高相関特徴量を除去: {len(to_drop)}個")
-                X = X.drop(columns=to_drop)
+            if drop_cols:
+                logger.info(f"高相関特徴量を除去: {len(drop_cols)}個")
+                # 必要なカラムのみで再構築
+                keep_cols = [c for c in cols if c not in drop_cols]
+                data_dict = {c: X[c].values for c in keep_cols}
+                X = pd.DataFrame(data_dict, index=X.index)
 
         except Exception as e:
             logger.warning(f"相関除去エラー: {e}")
@@ -321,7 +330,8 @@ class FeatureSelector:
             raise ValueError(f"未対応の手法: {method}")
 
         except Exception as e:
-            logger.error(f"{method.value}選択エラー: {e}")
+            method_name = method.value if hasattr(method, "value") else str(method)
+            logger.error(f"{method_name}選択エラー: {e}")
             return feature_names[:5], {"error": str(e)}
 
 

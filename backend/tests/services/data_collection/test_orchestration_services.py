@@ -2,9 +2,9 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
-from backend.app.services.data_collection.orchestration.funding_rate_orchestration_service import FundingRateOrchestrationService
-from backend.app.services.data_collection.orchestration.open_interest_orchestration_service import OpenInterestOrchestrationService
-from backend.app.services.data_collection.orchestration.long_short_ratio_orchestration_service import LongShortRatioOrchestrationService
+from app.services.data_collection.orchestration.funding_rate_orchestration_service import FundingRateOrchestrationService
+from app.services.data_collection.orchestration.open_interest_orchestration_service import OpenInterestOrchestrationService
+from app.services.data_collection.orchestration.long_short_ratio_orchestration_service import LongShortRatioOrchestrationService
 
 class TestOrchestrationServices:
     
@@ -39,7 +39,7 @@ class TestOrchestrationServices:
         """FundingRateOrchestrationServiceのテスト"""
         
         # リポジトリのモック
-        with patch("backend.app.services.data_collection.orchestration.funding_rate_orchestration_service.FundingRateRepository") as MockRepo:
+        with patch("app.services.data_collection.orchestration.funding_rate_orchestration_service.FundingRateRepository") as MockRepo:
             mock_repo_instance = MockRepo.return_value
             mock_repo_instance.insert_funding_rate_data.return_value = 10
 
@@ -62,7 +62,7 @@ class TestOrchestrationServices:
         """OpenInterestOrchestrationServiceのテスト"""
         
         # リポジトリのモック
-        with patch("backend.app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository") as MockRepo:
+        with patch("app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository") as MockRepo:
             
             service = OpenInterestOrchestrationService(bybit_service=mock_open_interest_service)
             
@@ -82,7 +82,7 @@ class TestOrchestrationServices:
     async def test_long_short_ratio_collection(self, mock_db_session, mock_long_short_service):
         """LongShortRatioOrchestrationServiceのテスト"""
         
-        with patch("backend.app.services.data_collection.orchestration.long_short_ratio_orchestration_service.LongShortRatioRepository") as MockRepo:
+        with patch("app.services.data_collection.orchestration.long_short_ratio_orchestration_service.LongShortRatioRepository") as MockRepo:
             
             service = LongShortRatioOrchestrationService(bybit_service=mock_long_short_service)
             

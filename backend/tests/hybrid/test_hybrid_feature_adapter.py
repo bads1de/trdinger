@@ -14,7 +14,7 @@ import pytest
 from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.ml.exceptions import MLFeatureError
+from app.services.ml.common.exceptions import MLFeatureError
 
 
 class TestHybridFeatureAdapter:
@@ -132,7 +132,7 @@ class TestHybridFeatureAdapter:
         assert "condition_count" in features_df.columns
         assert features_df["condition_count"].iloc[0] >= 1
 
-    @patch("app.services.ml.base_ml_trainer.BaseMLTrainer._preprocess_data")
+    @patch("app.services.ml.trainers.base_ml_trainer.BaseMLTrainer._preprocess_data")
     def test_gene_to_features_with_preprocessing(
         self, mock_preprocess, sample_strategy_gene, sample_ohlcv_data
     ):
@@ -146,7 +146,7 @@ class TestHybridFeatureAdapter:
         # モックの設定
         mock_preprocess.return_value = sample_ohlcv_data.copy()
 
-        from app.services.ml.base_ml_trainer import BaseMLTrainer
+        from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
         from unittest.mock import MagicMock
         
         mock_trainer_instance = MagicMock(spec=BaseMLTrainer)

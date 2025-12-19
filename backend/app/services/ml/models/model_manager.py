@@ -14,9 +14,9 @@ from typing import Any, Dict, List, Optional
 
 import joblib
 
-from ...config.unified_config import unified_config
-from ...utils.error_handler import safe_ml_operation
-from .exceptions import MLModelError
+from ....config.unified_config import unified_config
+from ....utils.error_handler import safe_ml_operation
+from ..common.exceptions import MLModelError
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class ModelManager:
         # 3. モデルオブジェクトのクラス名から AlgorithmRegistry を使用
         try:
             model_class_name = type(model).__name__.lower()
-            from .common.algorithm_registry import algorithm_registry
+            from ..common.algorithm_registry import algorithm_registry
 
             algorithm_name = algorithm_registry.get_algorithm_name(model_class_name)
             if algorithm_name != "unknown":
@@ -406,7 +406,7 @@ class ModelManager:
             model_path: モデルファイルパス
             metadata: メタデータ（オプション）。指定された場合、モデル読み込みをスキップします。
         """
-        from .common.evaluation_utils import get_default_metrics
+        from ..common.evaluation_utils import get_default_metrics
 
         try:
             if metadata is None:

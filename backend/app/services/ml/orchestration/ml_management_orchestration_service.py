@@ -12,8 +12,8 @@ from fastapi import HTTPException
 from starlette.concurrency import run_in_threadpool
 
 from app.services.ml.common.ml_config_manager import ml_config_manager
-from app.services.ml.ml_training_service import ml_training_service
-from app.services.ml.model_manager import model_manager
+from .ml_training_service import ml_training_service
+from app.services.ml.models.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response
 
@@ -37,20 +37,30 @@ class MLManagementOrchestrationService:
         formatted = []
         for m in models:
             info = {
-                "id": m["name"], "name": m["name"], "path": m["path"], "size_mb": m["size_mb"],
-                "modified_at": m["modified_at"].isoformat(), "directory": m["directory"],
-                "is_active": self._is_active_model(m)
+                "id": m["name"],
+                "name": m["name"],
+                "path": m["path"],
+                "size_mb": m["size_mb"],
+                "modified_at": m["modified_at"].isoformat(),
+                "directory": m["directory"],
+                "is_active": self._is_active_model(m),
             }
             try:
                 data = await run_in_threadpool(load_model_metadata_safely, m["path"])
                 meta = data["metadata"] if data else {}
-                metrics = await run_in_threadpool(model_manager.extract_model_performance_metrics, m["path"], metadata=meta)
+                metrics = await run_in_threadpool(
+                    model_manager.extract_model_performance_metrics,
+                    m["path"],
+                    metadata=meta,
+                )
                 info.update(metrics)
-                info.update({
-                    "feature_count": meta.get("feature_count", 0),
-                    "model_type": meta.get("model_type", "Unknown"),
-                    "training_samples": meta.get("training_samples", 0)
-                })
+                info.update(
+                    {
+                        "feature_count": meta.get("feature_count", 0),
+                        "model_type": meta.get("model_type", "Unknown"),
+                        "training_samples": meta.get("training_samples", 0),
+                    }
+                )
             except Exception as e:
                 logger.warning(f"詳細情報取得失敗 {m['name']}: {e}")
                 self._apply_default_model_metrics(info)
@@ -60,10 +70,17 @@ class MLManagementOrchestrationService:
     def _apply_default_model_metrics(self, model_info: Dict[str, Any]) -> None:
         """モデル情報にデフォルトメトリクスを適用"""
         d = get_default_metrics()
-        model_info.update({
-            "accuracy": d["accuracy"], "precision": d["precision"], "recall": d["recall"],
-            "f1_score": d["f1_score"], "feature_count": 0, "model_type": "Unknown", "training_samples": 0
-        })
+        model_info.update(
+            {
+                "accuracy": d["accuracy"],
+                "precision": d["precision"],
+                "recall": d["recall"],
+                "f1_score": d["f1_score"],
+                "feature_count": 0,
+                "model_type": "Unknown",
+                "training_samples": 0,
+            }
+        )
 
     async def delete_model(self, model_id: str) -> Dict[str, str]:
         """指定されたモデルを削除"""
@@ -73,7 +90,9 @@ class MLManagementOrchestrationService:
         target = next((m for m in models if m["name"] in [dec_id, model_id]), None)
 
         if not target:
-            raise HTTPException(status_code=404, detail=f"モデルが見つかりません: {dec_id}")
+            raise HTTPException(
+                status_code=404, detail=f"モデルが見つかりません: {dec_id}"
+            )
 
         try:
             await run_in_threadpool(os.remove, target["path"])
@@ -431,6 +450,3 @@ class MLManagementOrchestrationService:
             # 予期しない例外はログに記録して再スロー
             logger.error(f"予期しないアクティブモデル判定エラー: {e}", exc_info=True)
             return False
-
-
-

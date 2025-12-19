@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import pandas_ta as ta
-from backend.app.services.ml.feature_engineering.technical_features import (
+from app.services.ml.feature_engineering.technical_features import (
     TechnicalFeatureCalculator,
 )
 

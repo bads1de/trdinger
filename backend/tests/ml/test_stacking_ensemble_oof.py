@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from backend.app.services.ml.ensemble.stacking import StackingEnsemble
+from app.services.ml.ensemble.stacking import StackingEnsemble
 
 @pytest.fixture
 def sample_data():

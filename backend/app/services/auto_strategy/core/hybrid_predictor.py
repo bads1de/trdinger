@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 import numpy as np
 import pandas as pd
 
-from app.services.ml.exceptions import MLPredictionError
+from app.services.ml.common.exceptions import MLPredictionError
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
-    from app.services.ml.ml_training_service import MLTrainingService
+    from app.services.ml.orchestration.ml_training_service import MLTrainingService
     from app.services.ml.model_manager import ModelManager
 
 
@@ -258,7 +258,7 @@ class HybridPredictor:
         if override is not None:
             return override
 
-        module = importlib.import_module("app.services.ml.ml_training_service")
+        module = importlib.import_module("app.services.ml.orchestration.ml_training_service")
         return getattr(module, "MLTrainingService")
 
     @staticmethod
@@ -266,7 +266,7 @@ class HybridPredictor:
         if override is not None:
             return override
 
-        module = importlib.import_module("app.services.ml.model_manager")
+        module = importlib.import_module("app.services.ml.models.model_manager")
         manager_cls = getattr(module, "ModelManager")
         return manager_cls()
 

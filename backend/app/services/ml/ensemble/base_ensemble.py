@@ -15,7 +15,7 @@ from app.config.unified_config import unified_config
 
 from ..common.evaluation_utils import evaluate_model_predictions
 from ..common.ml_utils import get_feature_importance_unified
-from ..exceptions import MLModelError
+from ..common.exceptions import MLModelError
 
 logger = logging.getLogger(__name__)
 
@@ -93,17 +93,27 @@ class BaseEnsemble(ABC):
 
         if mt == "lightgbm":
             import lightgbm as lgb
+
             return lgb.LGBMClassifier(n_jobs=1, random_state=seed)
         if mt == "xgboost":
             import xgboost as xgb
+
             return xgb.XGBClassifier(n_jobs=1, random_state=seed, eval_metric="logloss")
         if mt == "catboost":
             import catboost as cb
-            return cb.CatBoostClassifier(thread_count=1, random_seed=seed, verbose=0, allow_writing_files=False)
+
+            return cb.CatBoostClassifier(
+                thread_count=1, random_seed=seed, verbose=0, allow_writing_files=False
+            )
         if mt == "logistic_regression":
             from sklearn.linear_model import LogisticRegression
-            return LogisticRegression(random_state=seed, max_iter=unified_config.ml.training.lr_max_iter, solver="lbfgs")
-        
+
+            return LogisticRegression(
+                random_state=seed,
+                max_iter=unified_config.ml.training.lr_max_iter,
+                solver="lbfgs",
+            )
+
         raise MLModelError(f"Unsupported model type: {model_type}")
 
     def _evaluate_predictions(
@@ -183,33 +193,52 @@ class BaseEnsemble(ABC):
         import os
         from datetime import datetime
         import joblib
-        from ..model_manager import model_manager
+        from ..models.model_manager import model_manager
 
         m_name = os.path.basename(base_path)
-        
+
         # 1. 自前実装 StackingEnsemble
         if hasattr(self, "_fitted_base_models") and self._fitted_base_models:
             data = {
-                "fitted_base_models": self._fitted_base_models, "fitted_meta_model": self._fitted_meta_model,
+                "fitted_base_models": self._fitted_base_models,
+                "fitted_meta_model": self._fitted_meta_model,
                 "base_model_types": getattr(self, "_base_model_types", []),
-                "meta_model_type": getattr(self, "_meta_model_type", "logistic_regression"),
-                "config": self.config, "feature_columns": self.feature_columns, "is_fitted": self.is_fitted,
-                "passthrough": getattr(self, "passthrough", False), "ensemble_type": "StackingEnsemble"
+                "meta_model_type": getattr(
+                    self, "_meta_model_type", "logistic_regression"
+                ),
+                "config": self.config,
+                "feature_columns": self.feature_columns,
+                "is_fitted": self.is_fitted,
+                "passthrough": getattr(self, "passthrough", False),
+                "ensemble_type": "StackingEnsemble",
             }
             meta = {
-                "ensemble_type": "StackingEnsemble", "feature_count": len(self.feature_columns or []),
-                "fitted_base_models": list(self._fitted_base_models.keys())
+                "ensemble_type": "StackingEnsemble",
+                "feature_count": len(self.feature_columns or []),
+                "fitted_base_models": list(self._fitted_base_models.keys()),
             }
-            path = model_manager.save_model(model=data, model_name=m_name, metadata=meta, feature_columns=self.feature_columns)
+            path = model_manager.save_model(
+                model=data,
+                model_name=m_name,
+                metadata=meta,
+                feature_columns=self.feature_columns,
+            )
             return [path] if path else []
 
         # 2. 旧形式 StackingClassifier
         if hasattr(self, "stacking_classifier") and self.stacking_classifier:
             data = {
-                "ensemble_classifier": self.stacking_classifier, "config": self.config,
-                "feature_columns": self.feature_columns, "is_fitted": self.is_fitted
+                "ensemble_classifier": self.stacking_classifier,
+                "config": self.config,
+                "feature_columns": self.feature_columns,
+                "is_fitted": self.is_fitted,
             }
-            path = model_manager.save_model(model=data, model_name=m_name, metadata={"ensemble_type": "StackingEnsemble"}, feature_columns=self.feature_columns)
+            path = model_manager.save_model(
+                model=data,
+                model_name=m_name,
+                metadata={"ensemble_type": "StackingEnsemble"},
+                feature_columns=self.feature_columns,
+            )
             return [path] if path else []
 
         # 3. その他（従来形式）
@@ -234,17 +263,31 @@ class BaseEnsemble(ABC):
                     data = joblib.load(f_list[-1])
                 if isinstance(data, dict) and "ensemble_classifier" in data:
                     self.stacking_classifier = data["ensemble_classifier"]
-                    self.config, self.feature_columns, self.is_fitted = data.get("config", {}), data.get("feature_columns", []), data.get("is_fitted", False)
+                    self.config, self.feature_columns, self.is_fitted = (
+                        data.get("config", {}),
+                        data.get("feature_columns", []),
+                        data.get("is_fitted", False),
+                    )
                     return True
 
             # 2. 統合モデルファイル検索
-            f_list = sorted([f for f in glob.glob(f"{base_path}_*_*.pkl") if not f.endswith(("_config.pkl", "_meta_model.pkl"))])
+            f_list = sorted(
+                [
+                    f
+                    for f in glob.glob(f"{base_path}_*_*.pkl")
+                    if not f.endswith(("_config.pkl", "_meta_model.pkl"))
+                ]
+            )
             if f_list:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
                     data = joblib.load(f_list[-1])
                 if isinstance(data, dict) and "model" in data:
-                    self.base_models, self.config, self.is_fitted = [data["model"]], data.get("config", {}), data.get("is_fitted", False)
+                    self.base_models, self.config, self.is_fitted = (
+                        [data["model"]],
+                        data.get("config", {}),
+                        data.get("is_fitted", False),
+                    )
                     return True
 
             logger.warning(f"No suitable model found for {base_path}")
@@ -252,6 +295,3 @@ class BaseEnsemble(ABC):
         except Exception as e:
             logger.error(f"Load failed: {e}")
             return False
-
-
-

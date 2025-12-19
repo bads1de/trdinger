@@ -1,9 +1,7 @@
 """
 ML学習基盤クラス
 
-学習・評価・前処理・保存に関わる共通ロジックを提供する抽象基盤クラスです。
-具体的なアルゴリズムや最適化手法の詳細説明はDocstringに含めません。
-継承クラスがモデル固有の学習処理を実装します。
+学習・評価・前処理・保存に関わる共通ロジックを提供します。
 """
 
 import logging
@@ -14,25 +12,25 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-from ...config.unified_config import unified_config
-from ...utils.error_handler import (
+from ....config.unified_config import unified_config
+from ....utils.error_handler import (
     DataError,
     ml_operation_context,
     safe_ml_operation,
 )
-from .common.base_resource_manager import BaseResourceManager, CleanupLevel
-from .common.evaluation_utils import evaluate_model_predictions
-from .common.ml_utils import (
+from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
+from ..common.evaluation_utils import evaluate_model_predictions
+from ..common.ml_utils import (
     get_feature_importance_unified,
     predict_class_from_proba,
     prepare_data_for_prediction,
 )
-from .cross_validation import PurgedKFold
-from .exceptions import MLModelError
-from .feature_engineering.feature_engineering_service import FeatureEngineeringService
-from .label_generation.label_generation_service import LabelGenerationService
-from .ml_metadata import ModelMetadata
-from .model_manager import model_manager
+from ..cross_validation import PurgedKFold
+from ..common.exceptions import MLModelError
+from ..feature_engineering.feature_engineering_service import FeatureEngineeringService
+from ..label_generation.label_generation_service import LabelGenerationService
+from ..common.ml_metadata import ModelMetadata
+from ..models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 
@@ -463,7 +461,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         t1_horizon_n = self.config.training.prediction_horizon
 
         # 共通ユーティリティを使用してt1を計算（時間足は自動推定）
-        from .common.time_series_utils import get_t1_series
+        from ..common.time_series_utils import get_t1_series
 
         t1 = get_t1_series(
             X.index,

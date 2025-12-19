@@ -89,8 +89,11 @@ def _find_best_window_numba(
 
         if ss_x <= 1e-9 or sigma_eps < 1e-9:
             # 完全一致
-            max_t = 100.0
-            t_val = max_t if slope > 0 else -max_t
+            if abs(slope) < 1e-9:
+                t_val = 0.0
+            else:
+                max_t = 100.0
+                t_val = max_t if slope > 0 else -max_t
         else:
             se_slope = sigma_eps / np.sqrt(ss_x)
             t_val = slope / se_slope
@@ -181,7 +184,11 @@ class TrendScanning:
         if not results:
             return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
             
-        out = pd.DataFrame(results).set_index("t0")
+        # resultsからインデックス(t0)とデータを分離
+        t0_list = [r["t0"] for r in results]
+        data_list = [{k: v for k, v in r.items() if k != "t0"} for r in results]
+        
+        out = pd.DataFrame(data_list, index=t0_list)
         out.index.name = None
         return out
 

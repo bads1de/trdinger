@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from ....utils.error_handler import ModelError
-from ..base_ml_trainer import BaseMLTrainer
+from ..trainers.base_ml_trainer import BaseMLTrainer
 from ..common.evaluation_utils import evaluate_model_predictions
 from ..common.ml_utils import predict_class_from_proba, validate_training_inputs
 from .meta_labeling import MetaLabelingService
@@ -430,7 +430,7 @@ class EnsembleTrainer(BaseMLTrainer):
         # メタラベリングモデルの保存
         if self.meta_labeling_service and self.meta_labeling_service.is_trained:
             try:
-                from ..model_manager import model_manager
+                from ..models.model_manager import model_manager
 
                 meta_model_path = model_manager.save_model(
                     model=self.meta_labeling_service,
@@ -473,7 +473,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 meta_model_path = self.metadata.get("meta_model_path")
                 if meta_model_path:
                     try:
-                        from ..model_manager import model_manager
+                        from ..models.model_manager import model_manager
 
                         # model_manager.load_model returns dict with 'model' key
                         meta_data = model_manager.load_model(meta_model_path)

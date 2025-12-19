@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 from app.services.auto_strategy.core.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
-from app.services.ml.exceptions import MLFeatureError
+from app.services.ml.common.exceptions import MLFeatureError
 from app.services.auto_strategy.genes.strategy import StrategyGene
 
 
@@ -116,7 +116,7 @@ class TestHybridFeatureAdapter:
         assert not np.isinf(processed.iloc[0, 0])
         assert not processed.isnull().values.any()
 
-    @patch("app.services.ml.base_ml_trainer.BaseMLTrainer")
+    @patch("app.services.ml.trainers.base_ml_trainer.BaseMLTrainer")
     def test_apply_preprocessing_with_trainer(self, MockTrainer, adapter, sample_ohlcv):
         """BaseMLTrainerを使用した前処理"""
         mock_trainer = MockTrainer.return_value

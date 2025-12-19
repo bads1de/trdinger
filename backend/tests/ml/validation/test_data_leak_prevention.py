@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from app.services.ml.base_ml_trainer import BaseMLTrainer
+from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
 from app.utils.data_processing import data_processor
 
 

@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from app.services.ml.common.evaluation_utils import get_default_metrics
-from app.services.ml.model_manager import model_manager
+from app.services.ml.models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 

@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from app.services.ml.base_ml_trainer import BaseMLTrainer
+from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
@@ -23,12 +23,24 @@ class TestRealImplementationDataLeaks:
     def sample_ohlcv_data(self):
         """サンプルOHLCVデータ"""
         dates = pd.date_range(start="2023-01-01", periods=500, freq="1h")
+        
+        # 基本となる価格の動き（ランダムウォーク）
+        base_price = np.random.randn(500).cumsum() + 100
+        
+        # 各価格を生成
+        open_price = base_price + np.random.randn(500) * 0.5
+        close_price = base_price + np.random.randn(500) * 0.5
+        
+        # High/LowはOpen/Closeの外側にあるように生成
+        high_price = np.maximum(open_price, close_price) + np.abs(np.random.randn(500) * 0.5)
+        low_price = np.minimum(open_price, close_price) - np.abs(np.random.randn(500) * 0.5)
+        
         return pd.DataFrame(
             {
-                "open": np.random.randn(500).cumsum() + 100,
-                "high": np.random.randn(500).cumsum() + 105,
-                "low": np.random.randn(500).cumsum() + 95,
-                "close": np.random.randn(500).cumsum() + 102,
+                "open": open_price,
+                "high": high_price,
+                "low": low_price,
+                "close": close_price,
                 "volume": np.random.randint(1000, 10000, 500),
             },
             index=dates,

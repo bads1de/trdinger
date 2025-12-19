@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from backend.app.services.indicators.indicator_orchestrator import (
+from app.services.indicators.indicator_orchestrator import (
     TechnicalIndicatorService,
 )
 
@@ -122,7 +122,7 @@ class TestTechnicalIndicatorService:
                     indicator_service.calculate_indicator(sample_df, "UNSUPPORTED", {})
 
     @patch(
-        "backend.app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
+        "app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
     )
     def test_basic_validation_success(
         self, mock_validate_length, indicator_service, sample_df
@@ -135,7 +135,7 @@ class TestTechnicalIndicatorService:
         assert result is True
 
     @patch(
-        "backend.app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
+        "app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
     )
     def test_basic_validation_data_too_short(
         self, mock_validate_length, indicator_service, sample_df
@@ -185,7 +185,7 @@ class TestTechnicalIndicatorService:
         result = indicator_service._normalize_params(params, config)
         assert result["length"] == 5  # 調整される
 
-    @patch("backend.app.services.indicators.indicator_orchestrator.ta")
+    @patch("app.services.indicators.indicator_orchestrator.ta")
     def test_call_pandas_ta_single_column(self, mock_ta, indicator_service, sample_df):
         """pandas-ta単一カラム呼び出しテスト"""
         expected_series = pd.Series([1, 2, 3])
@@ -201,7 +201,7 @@ class TestTechnicalIndicatorService:
         assert result.equals(expected_series)
         mock_func.assert_called_once()
 
-    @patch("backend.app.services.indicators.indicator_orchestrator.create_nan_result")
+    @patch("app.services.indicators.indicator_orchestrator.create_nan_result")
     def test_create_nan_result(self, mock_create_nan, indicator_service, sample_df):
         """NaN結果作成テスト"""
         mock_create_nan.return_value = np.array([np.nan] * len(sample_df))
@@ -251,7 +251,7 @@ class TestTechnicalIndicatorService:
 
     def test_validate_data_length_with_fallback(self, sample_df):
         """データ長検証テスト - data_validation.pyの関数を直接テスト"""
-        from backend.app.services.indicators.data_validation import (
+        from app.services.indicators.data_validation import (
             validate_data_length_with_fallback,
         )
 

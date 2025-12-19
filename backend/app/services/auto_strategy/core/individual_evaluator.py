@@ -25,7 +25,7 @@ from pydantic import ValidationError
 
 from app.services.backtest.backtest_config import BacktestConfig
 from app.services.backtest.backtest_service import BacktestService
-from app.services.ml.model_manager import model_manager
+from app.services.ml.models.model_manager import model_manager
 
 from ..config import GAConfig
 

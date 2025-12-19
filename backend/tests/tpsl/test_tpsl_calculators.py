@@ -2,27 +2,27 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
-from backend.app.services.auto_strategy.config.constants import TPSLMethod
-from backend.app.services.auto_strategy.genes.tpsl import TPSLGene, TPSLResult
-from backend.app.services.auto_strategy.tpsl.calculator.adaptive_calculator import (
+from app.services.auto_strategy.config.constants import TPSLMethod
+from app.services.auto_strategy.genes.tpsl import TPSLGene, TPSLResult
+from app.services.auto_strategy.tpsl.calculator.adaptive_calculator import (
     AdaptiveCalculator,
 )
-from backend.app.services.auto_strategy.tpsl.calculator.base_calculator import (
+from app.services.auto_strategy.tpsl.calculator.base_calculator import (
     BaseTPSLCalculator,
 )
-from backend.app.services.auto_strategy.tpsl.calculator.fixed_percentage_calculator import (
+from app.services.auto_strategy.tpsl.calculator.fixed_percentage_calculator import (
     FixedPercentageCalculator,
 )
-from backend.app.services.auto_strategy.tpsl.calculator.risk_reward_calculator import (
+from app.services.auto_strategy.tpsl.calculator.risk_reward_calculator import (
     RiskRewardCalculator,
 )
-from backend.app.services.auto_strategy.tpsl.calculator.statistical_calculator import (
+from app.services.auto_strategy.tpsl.calculator.statistical_calculator import (
     StatisticalCalculator,
 )
-from backend.app.services.auto_strategy.tpsl.calculator.volatility_calculator import (
+from app.services.auto_strategy.tpsl.calculator.volatility_calculator import (
     VolatilityCalculator,
 )
-from backend.app.services.auto_strategy.tpsl.tpsl_service import TPSLService
+from app.services.auto_strategy.tpsl.tpsl_service import TPSLService
 
 
 # 共通ユーティリティ: 価格計算の簡易ヘルパ（BaseTPSLCalculator._make_prices と同等ロジック確認用）

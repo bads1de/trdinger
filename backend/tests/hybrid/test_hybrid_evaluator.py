@@ -15,7 +15,7 @@ from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.backtest.backtest_service import BacktestService
-from app.services.ml.exceptions import MLTrainingError
+from app.services.ml.common.exceptions import MLTrainingError
 
 
 class TestHybridIndividualEvaluator:

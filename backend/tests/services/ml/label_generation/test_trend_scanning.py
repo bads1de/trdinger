@@ -97,36 +97,9 @@ class TestTrendScanning:
         dates = pd.date_range(start="2023-01-01", periods=30, freq="h")
         prices = np.array(
             [
-                10,
-                9,
-                11,
-                10,
-                12,
-                11,
-                13,
-                12,
-                14,
-                13,
-                15,
-                14,
-                16,
-                15,
-                17,
-                16,
-                18,
-                17,
-                19,
-                18,
-                20,
-                21,
-                22,
-                23,
-                24,
-                25,
-                26,
-                27,
-                28,
-                29,
+                10, 9, 11, 10, 12, 11, 13, 12, 14, 13, 
+                15, 14, 16, 15, 17, 16, 18, 17, 19, 18, 
+                20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
             ]
         )
         # Overall strong uptrend.
@@ -139,6 +112,104 @@ class TestTrendScanning:
         # Should pick a window that captures the trend
         assert labels.iloc[0]["bin"] == 1
         assert pd.notna(labels.iloc[0]["t1"])
+
+    def test_empty_input(self):
+        """空の入力に対するテスト"""
+        ts = TrendScanning()
+        empty_s = pd.Series([], dtype=float)
+        labels = ts.get_labels(empty_s)
+        assert labels.empty
+
+    def test_insufficient_data(self):
+        """データ不足のテスト"""
+        ts = TrendScanning(min_window=10)
+        dates = pd.date_range(start="2023-01-01", periods=5, freq="h")
+        s = pd.Series(np.random.randn(5), index=dates)
+        
+        # ウィンドウサイズ(10)よりデータが少ない場合、ラベルは生成されないはず
+        labels = ts.get_labels(s)
+        assert labels.empty
+
+    def test_no_events_found(self, sample_data):
+        """該当イベントがない場合のテスト"""
+        ts = TrendScanning()
+        # データに存在しないタイムスタンプを指定
+        t_events = pd.to_datetime(["2025-01-01"])
+        labels = ts.get_labels(sample_data, t_events=t_events)
+        assert labels.empty
+
+    def test_constant_price(self):
+        """価格が一定の場合のテスト"""
+        ts = TrendScanning(min_window=5, max_window=10)
+        dates = pd.date_range(start="2023-01-01", periods=20, freq="h")
+        s = pd.Series(100.0, index=dates)
+        
+        labels = ts.get_labels(s)
+        # 傾きが0なので、t値も0になり、binは0になるはず
+        assert not labels.empty
+        assert (labels["bin"] == 0).all()
+        assert (labels["t_value"] == 0).all()
+
+    def test_mixed_events(self, sample_data):
+        """存在するイベントと存在しないイベントが混在する場合"""
+        ts = TrendScanning(min_window=5, max_window=10)
+        valid_event = sample_data.index[5]
+        invalid_event = pd.Timestamp("2025-01-01")
+        t_events = pd.DatetimeIndex([valid_event, invalid_event])
+        
+        labels = ts.get_labels(sample_data, t_events=t_events)
+        # 有効なイベントのみ処理されるはず
+        assert len(labels) == 1
+        assert labels.index[0] == valid_event
+
+    def test_very_small_window(self):
+        """非常に小さいウィンドウサイズでの動作"""
+        # n <= 2 のケースを避けるため min_window=2 (n=3)
+        ts = TrendScanning(min_window=2, max_window=4)
+        dates = pd.date_range(start="2023-01-01", periods=10, freq="h")
+        s = pd.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], index=dates, dtype=float)
+        
+        labels = ts.get_labels(s)
+        assert not labels.empty
+        assert (labels["bin"] == 1).all()
+
+    def test_perfect_linear_trend(self):
+        """完全な線形トレンド（誤差0）のケース"""
+        ts = TrendScanning(min_window=5, max_window=10)
+        dates = pd.date_range(start="2023-01-01", periods=20, freq="h")
+        # ノイズなしの完全な線形増加
+        s = pd.Series(np.arange(20) * 1.5, index=dates)
+        
+        labels = ts.get_labels(s)
+        assert not labels.empty
+        # sigma_eps が 0 になるため、t_value は 100 にクリップされるはず
+        assert (labels["t_value"] == 100.0).all()
+        assert (labels["bin"] == 1).all()
+
+    def test_perfect_linear_down_trend(self):
+        """完全な線形下降トレンド"""
+        ts = TrendScanning(min_window=5, max_window=10)
+        dates = pd.date_range(start="2023-01-01", periods=20, freq="h")
+        s = pd.Series(100 - np.arange(20) * 1.5, index=dates)
+        
+        labels = ts.get_labels(s)
+        assert not labels.empty
+        assert (labels["t_value"] == -100.0).all()
+        assert (labels["bin"] == -1).all()
+
+    def test_max_window_out_of_bounds(self):
+        """max_window が系列の終わりを超える場合"""
+        # min_window=4 にすれば、インデックス15から系列末尾20までの L=4 (15+4=19 < 20) が計算可能
+        ts = TrendScanning(min_window=4, max_window=100)
+        dates = pd.date_range(start="2023-01-01", periods=20, freq="h")
+        s = pd.Series(np.random.randn(20), index=dates)
+        
+        # インデックス 15 から開始
+        t_event = dates[15]
+        labels = ts.get_labels(s, t_events=pd.DatetimeIndex([t_event]))
+        
+        # 少なくとも1つのウィンドウ(L=4)は計算されるはず
+        assert not labels.empty
 
 
 

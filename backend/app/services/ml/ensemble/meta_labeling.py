@@ -34,18 +34,38 @@ class MetaLabelingService:
     ) -> pd.DataFrame:
         """
         ベースモデルの予測確率から統計量を計算してメタ特徴量に追加
-
-        Args:
-            X_meta: メタ特徴量DataFrame
-            base_probs_filtered: フィルタリングされたベースモデル予測確率
-
-        Returns:
-            統計量が追加されたメタ特徴量DataFrame
         """
-        X_meta["base_prob_mean"] = base_probs_filtered.mean(axis=1)
-        X_meta["base_prob_std"] = base_probs_filtered.std(axis=1).fillna(0)
-        X_meta["base_prob_min"] = base_probs_filtered.min(axis=1)
-        X_meta["base_prob_max"] = base_probs_filtered.max(axis=1)
+        if base_probs_filtered.empty:
+            return X_meta
+
+        # Pandasの統計メソッドがNumPy不具合で失敗するため、値を一度リスト化して計算
+        probs_values = base_probs_filtered.values
+        
+        # 行ごとの統計量を計算 (NumPyの不具合を避けるため、可能な限りPythonレベルで)
+        means = []
+        stds = []
+        mins = []
+        maxs = []
+        
+        for i in range(len(probs_values)):
+            row = probs_values[i].tolist()
+            means.append(sum(row) / len(row) if row else 0.0)
+            mins.append(min(row) if row else 0.0)
+            maxs.append(max(row) if row else 0.0)
+            
+            # 標準偏差
+            if len(row) > 1:
+                m = sum(row) / len(row)
+                variance = sum((x - m) ** 2 for x in row) / len(row)
+                stds.append(variance ** 0.5)
+            else:
+                stds.append(0.0)
+
+        X_meta["base_prob_mean"] = means
+        X_meta["base_prob_std"] = stds
+        X_meta["base_prob_min"] = mins
+        X_meta["base_prob_max"] = maxs
+        
         return X_meta
 
     def create_meta_labels(

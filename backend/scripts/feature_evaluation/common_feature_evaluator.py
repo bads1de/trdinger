@@ -39,7 +39,7 @@ from database.repositories.open_interest_repository import (  # type: ignore
     OpenInterestRepository,
 )
 from app.services.ml.cross_validation.purged_kfold import PurgedKFold
-from app.services.ml.label_cache import LabelCache
+from app.services.ml.label_generation.label_cache import LabelCache
 from sklearn.metrics import classification_report
 
 logger = logging.getLogger(__name__)

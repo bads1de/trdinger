@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from backend.app.utils.data_processing.validators.data_validator import (
+from app.utils.data_processing.validators.data_validator import (
     validate_data_integrity,
 )
 

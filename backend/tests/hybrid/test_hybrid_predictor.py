@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.ml.exceptions import MLPredictionError
+from app.services.ml.common.exceptions import MLPredictionError
 
 
 class TestHybridPredictor:
@@ -86,7 +86,7 @@ class TestHybridPredictor:
         assert predictor.single_model_config == config
         assert predictor.model_type == "xgboost"
 
-    @patch("app.services.ml.ml_training_service.MLTrainingService")
+    @patch("app.services.ml.orchestration.ml_training_service.MLTrainingService")
     def test_predict_basic(self, mock_service_class, sample_features_df):
         """
         基本的な予測テスト（二値分類）
@@ -112,7 +112,7 @@ class TestHybridPredictor:
         assert "is_valid" in result
         assert 0 <= result["is_valid"] <= 1
 
-    @patch("app.services.ml.ml_training_service.MLTrainingService")
+    @patch("app.services.ml.orchestration.ml_training_service.MLTrainingService")
     def test_predict_with_multiple_models(self, mock_service_class, sample_features_df):
         """
         複数モデルによる予測テスト（二値分類）
@@ -181,7 +181,7 @@ class TestHybridPredictor:
         with pytest.raises(MLPredictionError):
             predictor.predict(None)
 
-    @patch("app.services.ml.ml_training_service.MLTrainingService")
+    @patch("app.services.ml.orchestration.ml_training_service.MLTrainingService")
     def test_load_model(self, mock_service_class):
         """
         モデルロードテスト
@@ -203,7 +203,7 @@ class TestHybridPredictor:
         assert result is True
         assert mock_service.load_model.called
 
-    @patch("app.services.ml.model_manager.ModelManager")
+    @patch("app.services.ml.models.model_manager.ModelManager")
     def test_get_latest_model(self, mock_manager_class):
         """
         最新モデル取得テスト
@@ -225,7 +225,7 @@ class TestHybridPredictor:
         assert model_path == "models/latest_model.pkl"
         assert mock_manager.get_latest_model.called
 
-    @patch("app.services.ml.ml_training_service.MLTrainingService")
+    @patch("app.services.ml.orchestration.ml_training_service.MLTrainingService")
     def test_predict_with_time_series_cv(self, mock_service_class, sample_features_df):
         """
         時系列クロスバリデーションでの予測テスト
@@ -273,7 +273,7 @@ class TestHybridPredictor:
             assert "is_valid" in result
             assert result["is_valid"] == 0.5
 
-    @patch("app.services.ml.ml_training_service.MLTrainingService")
+    @patch("app.services.ml.orchestration.ml_training_service.MLTrainingService")
     def test_predict_with_ensemble(self, mock_service_class, sample_features_df):
         """
         アンサンブルモデルでの予測テスト

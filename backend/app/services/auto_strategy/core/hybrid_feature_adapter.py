@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.ml.exceptions import MLFeatureError
+from app.services.ml.common.exceptions import MLFeatureError
 
 logger = logging.getLogger(__name__)
 
@@ -252,7 +252,7 @@ class HybridFeatureAdapter:
             return self._preprocess_handler
 
         try:
-            from app.services.ml.base_ml_trainer import BaseMLTrainer
+            from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
 
             if self._preprocess_trainer is None:
                 self._preprocess_trainer = BaseMLTrainer(

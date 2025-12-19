@@ -42,6 +42,8 @@ class PurgedKFold(_BaseKFold):
 
         super().__init__(n_splits, shuffle=False, random_state=None)
         self.t1 = t1
+        # インデックス検証エラーを避けるため、値をnumpy配列として保持
+        self.t1_values = t1.values
         self.pct_embargo = pct_embargo
 
     def split(
@@ -56,6 +58,9 @@ class PurgedKFold(_BaseKFold):
 
         indices = np.arange(len(X))
         fold_size = len(X) // self.n_splits
+        # 整数（ナノ秒）として取得
+        x_index_ints = X.index.values.view(np.int64)
+        t1_values_ints = self.t1_values.view(np.int64)
 
         for i in range(self.n_splits):
             start = i * fold_size
@@ -65,15 +70,26 @@ class PurgedKFold(_BaseKFold):
             if len(test_idx) == 0:
                 continue
 
-            test_start_time = X.index[start]
-            test_max_t1 = self.t1.iloc[test_idx].max()
+            test_start_time_ns = int(x_index_ints[start])
+            # NumPyのmax()が不安定な環境のため、Python標準のmax()を使用
+            t1_subset = t1_values_ints[test_idx].tolist()
+            # NaTを除外
+            valid_t1 = [v for v in t1_subset if v > 0]
+            if not valid_t1:
+                test_max_t1_ns = max(t1_subset) if t1_subset else 0
+            else:
+                test_max_t1_ns = max(valid_t1)
+            
+            test_start_time = pd.Timestamp(test_start_time_ns)
+            test_max_t1 = pd.Timestamp(test_max_t1_ns)
 
             # エンバーゴ期間計算
             embargo_sec = (test_max_t1 - test_start_time).total_seconds() * self.pct_embargo
-            embargo_end = test_max_t1 + pd.Timedelta(seconds=embargo_sec)
+            embargo_end_ns = test_max_t1_ns + int(embargo_sec * 1e9)
 
             # パージングとエンバーゴ適用
-            train_mask = (self.t1 < test_start_time) | (X.index > embargo_end)
+            # 整数レベルでマスク計算
+            train_mask = (t1_values_ints < test_start_time_ns) | (x_index_ints > embargo_end_ns)
             train_idx = indices[train_mask]
 
             if len(train_idx) == 0:

@@ -6,9 +6,6 @@
 """
 
 # 循環参照を防ぐため、ここではインポートを行わない
-# from .ml_training_service import MLTrainingService
+# from .orchestration.ml_training_service import MLTrainingService
 
 __all__ = ["MLTrainingService"]
-
-
-

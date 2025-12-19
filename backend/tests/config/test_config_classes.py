@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.app.config.unified_config import (
+from app.config.unified_config import (
     AppConfig,
     AutoStrategyConfig,
     BacktestConfig,
@@ -21,10 +21,10 @@ from backend.app.config.unified_config import (
     MLPredictionConfig,
     UnifiedConfig,
 )
-from backend.app.services.auto_strategy.config.ga import (
+from app.services.auto_strategy.config.ga import (
     GAConfig as GAConfigRuntime,
 )
-from backend.app.services.auto_strategy.config.validators import ConfigValidator
+from app.services.auto_strategy.config.validators import ConfigValidator
 
 
 class TestUnifiedConfig:
@@ -45,7 +45,7 @@ class TestUnifiedConfig:
 
     def test_singleton_instance_access(self):
         """シングルトンインスタンスへのアクセステスト"""
-        from backend.app.config.unified_config import unified_config
+        from app.config.unified_config import unified_config
 
         assert isinstance(unified_config, UnifiedConfig)
         assert unified_config.app.app_name == "Trdinger Trading API"
