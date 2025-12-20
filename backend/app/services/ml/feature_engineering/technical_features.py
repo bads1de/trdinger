@@ -53,7 +53,9 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         # Fractional Differencing
         try:
             log_close = np.log(df["close"])
-            result_df["FracDiff_04"] = AdvancedFeatures.frac_diff_ffd(log_close, d=0.4).fillna(0.0)
+            result_df["FracDiff_04"] = AdvancedFeatures.frac_diff_ffd(
+                log_close, d=0.4
+            ).fillna(0.0)
         except Exception as e:
             logger.warning(f"FracDiff計算失敗: {e}")
             result_df["FracDiff_04"] = 0.0
@@ -75,16 +77,30 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             ).fillna(0.0)
 
             # BBW
-            upper, middle, lower = VolatilityIndicators.bbands(df["close"], length=vol_p)
-            df["BB_Width"] = ((upper - lower) / middle).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            upper, middle, lower = VolatilityIndicators.bbands(
+                df["close"], length=vol_p
+            )
+            df["BB_Width"] = (
+                ((upper - lower) / middle)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
 
             # Yang-Zhang, Parkinson, Garman-Klass
             if "open" in df.columns:
                 df["Yang_Zhang_Vol_20"] = VolatilityIndicators.yang_zhang(
-                    open_=df["open"], high=df["high"], low=df["low"], close=df["close"], length=vol_p
+                    open_=df["open"],
+                    high=df["high"],
+                    low=df["low"],
+                    close=df["close"],
+                    length=vol_p,
                 ).fillna(0.0)
                 df[f"Garman_Klass_Vol_{vol_p}"] = VolatilityIndicators.garman_klass(
-                    open_=df["open"], high=df["high"], low=df["low"], close=df["close"], length=vol_p
+                    open_=df["open"],
+                    high=df["high"],
+                    low=df["low"],
+                    close=df["close"],
+                    length=vol_p,
                 ).fillna(0.0)
 
             df[f"Parkinson_Vol_{vol_p}"] = VolatilityIndicators.parkinson(
@@ -115,15 +131,29 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # VWAP & Deviation
             vwap = VolumeIndicators.vwap(
-                high=df["high"], low=df["low"], close=df["close"], volume=df["volume"], period=vol_p
+                high=df["high"],
+                low=df["low"],
+                close=df["close"],
+                volume=df["volume"],
+                period=vol_p,
             ).fillna(df["close"])
-            df["VWAP_Deviation"] = ((df["close"] - vwap) / vwap).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            df["VWAP_Deviation"] = (
+                ((df["close"] - vwap) / vwap)
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
 
             # その他指標
             df["MFI"] = VolumeIndicators.mfi(
-                high=df["high"], low=df["low"], close=df["close"], volume=df["volume"], length=14
+                high=df["high"],
+                low=df["low"],
+                close=df["close"],
+                volume=df["volume"],
+                length=14,
             ).fillna(50.0)
-            df["OBV"] = VolumeIndicators.obv(close=df["close"], volume=df["volume"]).fillna(0.0)
+            df["OBV"] = VolumeIndicators.obv(
+                close=df["close"], volume=df["volume"]
+            ).fillna(0.0)
             df["AD"] = VolumeIndicators.ad(
                 high=df["high"], low=df["low"], close=df["close"], volume=df["volume"]
             ).fillna(0.0)
@@ -131,9 +161,15 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 high=df["high"], low=df["low"], close=df["close"], volume=df["volume"]
             ).fillna(0.0)
             df[f"VWAP_Z_Score_{vol_p}"] = VolumeIndicators.vwap_z_score(
-                high=df["high"], low=df["low"], close=df["close"], volume=df["volume"], period=vol_p
+                high=df["high"],
+                low=df["low"],
+                close=df["close"],
+                volume=df["volume"],
+                period=vol_p,
             ).fillna(0.0)
-            df[f"RVOL_{vol_p}"] = VolumeIndicators.rvol(df["volume"], window=vol_p).fillna(0.0)
+            df[f"RVOL_{vol_p}"] = VolumeIndicators.rvol(
+                df["volume"], window=vol_p
+            ).fillna(0.0)
             df[f"Absorption_Score_{vol_p}"] = VolumeIndicators.absorption_score(
                 high=df["high"], low=df["low"], volume=df["volume"], window=vol_p
             ).fillna(0.0)
@@ -155,19 +191,24 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             vol_p = lookback_periods.get("volatility", 20)
             rets = df["close"].pct_change(fill_method=None).fillna(0)
-            
+
             new_features = {
-                "Market_Efficiency": rets.rolling(window=vol_p, min_periods=3).corr(
-                    rets.shift(1).rolling(window=vol_p, min_periods=3).mean()
-                ).fillna(0.0),
+                "Market_Efficiency": rets.rolling(window=vol_p, min_periods=3)
+                .corr(rets.shift(1).rolling(window=vol_p, min_periods=3).mean())
+                .fillna(0.0),
                 "Choppiness_Index_14": TrendIndicators.chop(
                     high=df["high"], low=df["low"], close=df["close"], length=14
                 ).fillna(50.0),
-                "Amihud_Illiquidity": np.log(rets.abs() / (df["volume"] * df["close"] + 1e-9) + 1e-9).fillna(0.0),
-                "Efficiency_Ratio": (df["close"].diff(10).abs() / (
-                    df["close"].diff().abs().rolling(window=10).sum() + 1e-9
-                )).fillna(0.0),
-                "Market_Impact": np.log((df["high"] - df["low"]) / (df["volume"] + 1e-9) + 1e-9).fillna(0.0)
+                "Amihud_Illiquidity": np.log(
+                    rets.abs() / (df["volume"] * df["close"] + 1e-9) + 1e-9
+                ).fillna(0.0),
+                "Efficiency_Ratio": (
+                    df["close"].diff(10).abs()
+                    / (df["close"].diff().abs().rolling(window=10).sum() + 1e-9)
+                ).fillna(0.0),
+                "Market_Impact": np.log(
+                    (df["high"] - df["low"]) / (df["volume"] + 1e-9) + 1e-9
+                ).fillna(0.0),
             }
 
             return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
@@ -188,7 +229,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 "MACD_Histogram": hist.fillna(0.0),
                 "Williams_R": MomentumIndicators.willr(
                     high=df["high"], low=df["low"], close=df["close"]
-                ).fillna(-50.0)
+                ).fillna(-50.0),
             }
             return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
         except Exception as e:
@@ -203,19 +244,45 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             if not self.validate_input_data(df, ["close", "high", "low"]):
                 return df
 
-            adx, _, _ = TrendIndicators.adx(high=df["high"], low=df["low"], close=df["close"])
+            adx, _, _ = TrendIndicators.adx(
+                high=df["high"], low=df["low"], close=df["close"]
+            )
             _, _, aroon_osc = TrendIndicators.aroon(high=df["high"], low=df["low"])
-            ichimoku = MomentumIndicators.ichimoku(high=df["high"], low=df["low"], close=df["close"])
+            ichimoku = TrendIndicators.ichimoku(
+                high=df["high"], low=df["low"], close=df["close"]
+            )
             psar = TrendIndicators.sar(high=df["high"], low=df["low"])
-            
+
+            # Ichimoku安全策
+            if (
+                not ichimoku.empty
+                and "tenkan_sen" in ichimoku.columns
+                and "kijun_sen" in ichimoku.columns
+            ):
+                tenkan = ichimoku["tenkan_sen"]
+                kijun = ichimoku["kijun_sen"]
+            else:
+                tenkan = df["close"]
+                kijun = df["close"]
+
             new_features = {
                 "ADX": adx.fillna(0.0),
                 "AROONOSC": aroon_osc.fillna(0.0),
-                "MA_Long": TrendIndicators.sma(df["close"], length=lookback_periods.get("long_ma", 50)).fillna(df["close"]),
-                "Ichimoku_TK_Dist": ((ichimoku["tenkan_sen"] - ichimoku["kijun_sen"]) / df["close"]).fillna(0.0),
-                "Ichimoku_Kijun_Dist": ((df["close"] - ichimoku["kijun_sen"]) / df["close"]).fillna(0.0),
+                "MA_Long": TrendIndicators.sma(
+                    df["close"], length=lookback_periods.get("long_ma", 50)
+                ).fillna(df["close"]),
+                "Ichimoku_TK_Dist": ((tenkan - kijun) / df["close"]).fillna(0.0),
+                "Ichimoku_Kijun_Dist": ((df["close"] - kijun) / df["close"]).fillna(
+                    0.0
+                ),
                 "PSAR_Trend": ((df["close"] - psar) / df["close"]).fillna(0.0),
-                "SMA_Cross_50_200": ((TrendIndicators.sma(df["close"], 50) - TrendIndicators.sma(df["close"], 200)) / df["close"]).fillna(0.0)
+                "SMA_Cross_50_200": (
+                    (
+                        TrendIndicators.sma(df["close"], 50)
+                        - TrendIndicators.sma(df["close"], 200)
+                    )
+                    / df["close"]
+                ).fillna(0.0),
             }
             return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
         except Exception as e:
@@ -260,6 +327,3 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             "ADX",
             "AROONOSC",
         ]
-
-
-

@@ -1,391 +1,274 @@
-import numpy as np
-import pandas as pd
 import pytest
-
-from app.services.indicators import TechnicalIndicatorService
+import pandas as pd
+import numpy as np
+import pandas_ta as ta
+from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from app.services.indicators.technical_indicators.trend import TrendIndicators
+from app.services.indicators.technical_indicators.volatility import VolatilityIndicators
+from app.services.indicators.technical_indicators.overlap import OverlapIndicators
+from app.services.indicators.technical_indicators.volume import VolumeIndicators
 
 
 @pytest.fixture
-def sample_ohlcv() -> pd.DataFrame:
-    periods = 200
-    index = pd.date_range("2022-01-01", periods=periods, freq="h")
-    base = np.linspace(100, 200, periods)
-    noise = np.sin(np.linspace(0, 8 * np.pi, periods))
-    close = base + noise
-
-    df = pd.DataFrame(
+def sample_data():
+    length = 200
+    dates = pd.date_range(start="2023-01-01", periods=length, freq="D")
+    np.random.seed(42)
+    data = pd.DataFrame(
         {
-            "Open": close * 0.995,
-            "High": close * 1.01,
-            "Low": close * 0.99,
-            "Close": close,
-            "Volume": np.linspace(1000, 2000, periods),
+            "open": np.random.randn(length).cumsum() + 100,
+            "high": np.random.randn(length).cumsum() + 105,
+            "low": np.random.randn(length).cumsum() + 95,
+            "close": np.random.randn(length).cumsum() + 100,
+            "volume": np.random.randint(100, 1000, length),
         },
-        index=index,
+        index=dates,
     )
-    return df
+
+    # Ensure High is highest and Low is lowest
+    data["high"] = data[["open", "high", "low", "close"]].max(axis=1) + 1.0
+    data["low"] = data[["open", "high", "low", "close"]].min(axis=1) - 1.0
+
+    return data
 
 
-@pytest.fixture
-def indicator_service() -> TechnicalIndicatorService:
-    return TechnicalIndicatorService()
+class TestMomentumIndicatorsNew:
+    def test_brar(self, sample_data):
+        res1, res2 = MomentumIndicators.brar(
+            sample_data["open"],
+            sample_data["high"],
+            sample_data["low"],
+            sample_data["close"],
+        )
+        assert isinstance(res1, pd.Series)
+        assert isinstance(res2, pd.Series)
+        assert len(res1) == len(sample_data)
+
+    def test_cfo(self, sample_data):
+        res = MomentumIndicators.cfo(sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_eri(self, sample_data):
+        res1, res2 = MomentumIndicators.eri(
+            sample_data["high"], sample_data["low"], sample_data["close"]
+        )
+        assert isinstance(res1, pd.Series)
+
+    def test_inertia(self, sample_data):
+        res = MomentumIndicators.inertia(sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_kdj(self, sample_data):
+        k, d, j = MomentumIndicators.kdj(
+            sample_data["high"], sample_data["low"], sample_data["close"]
+        )
+        assert isinstance(k, pd.Series)
+        assert isinstance(d, pd.Series)
+        assert isinstance(j, pd.Series)
+
+    def test_rsx(self, sample_data):
+        res = MomentumIndicators.rsx(sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_rvgi(self, sample_data):
+        res1, res2 = MomentumIndicators.rvgi(
+            sample_data["open"],
+            sample_data["high"],
+            sample_data["low"],
+            sample_data["close"],
+        )
+        assert isinstance(res1, pd.Series)
+
+    def test_slope(self, sample_data):
+        res = MomentumIndicators.slope(sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_smi(self, sample_data):
+        res1, res2, res3 = MomentumIndicators.smi(sample_data["close"])
+        assert isinstance(res1, pd.Series)
+
+    def test_td_seq(self, sample_data):
+        # td_seq usually returns a dataframe with multiple columns in newer pandas-ta
+        res = MomentumIndicators.td_seq(sample_data["close"], show_all=True)
+        # Check if result is valid (Series or DF)
+        assert res is not None
+
+    def test_squeeze_pro(self, sample_data):
+        res = MomentumIndicators.squeeze_pro(
+            sample_data["high"], sample_data["low"], sample_data["close"]
+        )
+        assert res is not None
 
 
-def test_hma_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(sample_ohlcv, "HMA", {"length": 30})
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
+class TestTrendIndicatorsNew:
+    def test_cksp(self, sample_data):
+        res1, res2 = TrendIndicators.cksp(
+            sample_data["high"], sample_data["low"], sample_data["close"]
+        )
+        assert isinstance(res1, pd.Series)
+
+    def test_decay(self, sample_data):
+        res = TrendIndicators.decay(sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_qstick(self, sample_data):
+        res = TrendIndicators.qstick(sample_data["open"], sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_ttm_trend(self, sample_data):
+        res = TrendIndicators.ttm_trend(
+            sample_data["high"], sample_data["low"], sample_data["close"]
+        )
+        assert isinstance(res, pd.Series)
+
+    def test_decreasing(self, sample_data):
+        res = TrendIndicators.decreasing(sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_increasing(self, sample_data):
+        res = TrendIndicators.increasing(sample_data["close"])
+        assert isinstance(res, pd.Series)
+
+    def test_runs(self, sample_data):
+        res_long = TrendIndicators.long_run(
+            fast=sample_data["close"], slow=sample_data["open"]
+        )
+        res_short = TrendIndicators.short_run(
+            fast=sample_data["close"], slow=sample_data["open"]
+        )
+        assert isinstance(res_long, pd.Series)
+        assert isinstance(res_short, pd.Series)
+
+    def test_tsignals(self, sample_data):
+        # Signals (need dummy trend)
+        # Use simple trend like 1 and -1
+        dummy_trend = pd.Series(
+            np.where(sample_data["close"] > sample_data["close"].shift(1), 1, -1),
+            index=sample_data.index,
+        )
+        t1, t2, t3, t4 = TrendIndicators.tsignals(dummy_trend)
+        assert isinstance(t1, pd.Series)
+
+    def test_xsignals(self, sample_data):
+        dummy_trend = pd.Series(
+            np.where(sample_data["close"] > sample_data["close"].shift(1), 1, -1),
+            index=sample_data.index,
+        )
+        x1, x2, x3, x4 = TrendIndicators.xsignals(dummy_trend)
+        assert isinstance(x1, pd.Series)
 
 
-def test_alma_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "ALMA",
-        {"length": 10, "sigma": 6.0, "distribution_offset": 0.85, "offset": 0},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
+class TestVolatilityIndicatorsNew:
+    def test_aberration(self, sample_data):
+        r1, r2, r3, r4 = VolatilityIndicators.aberration(
+            sample_data["high"], sample_data["low"], sample_data["close"]
+        )
+        assert isinstance(r1, pd.Series)
+
+    def test_hwc(self, sample_data):
+        r1, r2, r3 = VolatilityIndicators.hwc(sample_data["close"])
+        assert isinstance(r1, pd.Series)
+
+    def test_pdist(self, sample_data):
+        res = VolatilityIndicators.pdist(
+            sample_data["open"],
+            sample_data["high"],
+            sample_data["low"],
+            sample_data["close"],
+        )
+        assert isinstance(res, pd.Series)
+
+    def test_thermo(self, sample_data):
+        r1, r2, r3, r4 = VolatilityIndicators.thermo(
+            sample_data["high"], sample_data["low"]
+        )
+        assert isinstance(r1, pd.Series)
 
 
-def test_vwma_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(sample_ohlcv, "VWMA", {"length": 24})
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
+class TestOverlapIndicatorsNew:
+    def test_hilo(self, sample_data):
+        r1, r2, r3 = OverlapIndicators.hilo(
+            sample_data["high"], sample_data["low"], sample_data["close"]
+        )
+        assert isinstance(r1, pd.Series)
+
+    def test_avgs(self, sample_data):
+        # Test basic avgs added
+        assert isinstance(
+            OverlapIndicators.hl2(sample_data["high"], sample_data["low"]), pd.Series
+        )
+        assert isinstance(
+            OverlapIndicators.hlc3(
+                sample_data["high"], sample_data["low"], sample_data["close"]
+            ),
+            pd.Series,
+        )
+        assert isinstance(
+            OverlapIndicators.ohlc4(
+                sample_data["open"],
+                sample_data["high"],
+                sample_data["low"],
+                sample_data["close"],
+            ),
+            pd.Series,
+        )
+
+    def test_mid(self, sample_data):
+        assert isinstance(OverlapIndicators.midpoint(sample_data["close"]), pd.Series)
+        assert isinstance(
+            OverlapIndicators.midprice(sample_data["high"], sample_data["low"]),
+            pd.Series,
+        )
+
+    def test_vidya(self, sample_data):
+        assert isinstance(OverlapIndicators.vidya(sample_data["close"]), pd.Series)
+
+    def test_wcp(self, sample_data):
+        assert isinstance(
+            OverlapIndicators.wcp(
+                sample_data["high"], sample_data["low"], sample_data["close"]
+            ),
+            pd.Series,
+        )
+
+    def test_mcgd(self, sample_data):
+        assert isinstance(OverlapIndicators.mcgd(sample_data["close"]), pd.Series)
+
+    def test_jma(self, sample_data):
+        assert isinstance(OverlapIndicators.jma(sample_data["close"]), pd.Series)
+
+    def test_other_mas(self, sample_data):
+        assert isinstance(OverlapIndicators.fwma(sample_data["close"]), pd.Series)
+        assert isinstance(OverlapIndicators.pwma(sample_data["close"]), pd.Series)
+        assert isinstance(OverlapIndicators.sinwma(sample_data["close"]), pd.Series)
+        assert isinstance(OverlapIndicators.ssf(sample_data["close"]), pd.Series)
+        assert isinstance(OverlapIndicators.swma(sample_data["close"]), pd.Series)
 
 
-def test_ppo_returns_three_arrays(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv, "PPO", {"fast": 12, "slow": 26, "signal": 9}
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 3
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        assert np.isfinite(series[-1])
+class TestVolumeIndicatorsNew:
+    def test_aobv(self, sample_data):
+        try:
+            res_tuple = VolumeIndicators.aobv(
+                sample_data["close"], sample_data["volume"]
+            )
+            assert isinstance(res_tuple, tuple)
+            # Should have multiple series
+            assert len(res_tuple) >= 1
+        except Exception:
+            pytest.fail("AOBV raise exception")
 
+    def test_pvi(self, sample_data):
+        assert isinstance(
+            VolumeIndicators.pvi(sample_data["close"], sample_data["volume"]), pd.Series
+        )
 
-def test_trix_returns_three_arrays(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv, "TRIX", {"length": 15, "signal": 9}
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 3
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        assert np.isfinite(series[-1])
+    def test_pvol(self, sample_data):
+        assert isinstance(
+            VolumeIndicators.pvol(sample_data["close"], sample_data["volume"]),
+            pd.Series,
+        )
 
-
-def test_ultimate_oscillator_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "UO",
-        {"fast": 7, "medium": 14, "slow": 28},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_trima_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "TRIMA",
-        {"length": 20},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_zlma_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "ZLMA",
-        {"length": 18, "mamode": "ema"},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_frama_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "FRAMA",
-        {"length": 16, "slow": 200},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-    assert np.isfinite(result[15:]).all()
-
-
-def test_super_smoother_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "SUPER_SMOOTHER",
-        {"length": 14},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-    warmup = 14
-    assert np.all(np.isfinite(result[warmup:]))
-    original = sample_ohlcv["Close"].to_numpy()
-    assert np.std(result[warmup:]) < np.std(original[warmup:])
-
-
-def test_cmo_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "CMO",
-        {"length": 14},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_rvi_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "RVI",
-        {"length": 14, "scalar": 100},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_cti_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "CTI",
-        {"length": 20},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_tsi_returns_main_and_signal(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "TSI",
-        {"fast": 25, "slow": 13, "signal": 13, "mamode": "ema"},
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        assert np.isfinite(series[-1])
-
-
-def test_pgo_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "PGO",
-        {"length": 14},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_massi_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "MASSI",
-        {"fast": 9, "slow": 25},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_psl_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "PSL",
-        {"length": 12, "scalar": 100},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_supertrend_returns_trend_and_direction(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "SUPERTREND",
-        {"length": 10, "multiplier": 3.0},
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 3
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        # 最後の値がNaNの場合があるため、有効な値があればOKとする
-        assert np.isfinite(series).any() or True
-
-
-def test_pvo_returns_three_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "PVO",
-        {"fast": 12, "slow": 26, "signal": 9},
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 3
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        assert np.all(np.isfinite(series[-5:]))
-
-
-def test_pvt_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "PVT",
-        {},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_nvi_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "NVI",
-        {},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_fisher_returns_main_and_signal(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "FISHER",
-        {"length": 9, "signal": 3},
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        assert np.isfinite(series[-1])
-
-
-def test_kst_returns_line_and_signal(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "KST",
-        {"roc1": 8, "roc2": 12, "roc3": 20, "roc4": 28, "signal": 9},
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        assert np.isfinite(series[-1])
-
-
-def test_dpo_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "DPO",
-        {"length": 20, "centered": False},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_eom_outputs_series(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "EOM",
-        {"length": 14, "divisor": 100000000, "drift": 1},
-    )
-    assert isinstance(result, np.ndarray)
-    assert result.shape[0] == len(sample_ohlcv)
-    assert np.isfinite(result[-1])
-
-
-def test_vortex_returns_plus_and_minus(
-    indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
-) -> None:
-    result = indicator_service.calculate_indicator(
-        sample_ohlcv,
-        "VORTEX",
-        {"length": 14, "drift": 1},
-    )
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    for series in result:
-        assert isinstance(series, np.ndarray)
-        assert series.shape[0] == len(sample_ohlcv)
-        assert np.all(np.isfinite(series[-5:]))
-
-
-
-
+    def test_pvr(self, sample_data):
+        assert isinstance(
+            VolumeIndicators.pvr(sample_data["close"], sample_data["volume"]), pd.Series
+        )

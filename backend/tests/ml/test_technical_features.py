@@ -112,8 +112,14 @@ def test_advanced_technical_indicators(sample_ohlcv_data):
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
     expected_features = [
-        "MFI", "ADX", "AROONOSC", "BB_Width", "OBV",
-        "AD", "ADOSC", "NATR",
+        "MFI",
+        "ADX",
+        "AROONOSC",
+        "BB_Width",
+        "OBV",
+        "AD",
+        "ADOSC",
+        "NATR",
     ]
 
     for feature in expected_features:
@@ -216,7 +222,3 @@ def test_calculate_features_with_frac_diff(sample_ohlcv_data):
     result = calculator.calculate_features(sample_ohlcv_data, config)
 
     assert "FracDiff_04" in result.columns
-
-
-
-

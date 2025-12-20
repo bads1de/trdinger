@@ -344,3 +344,323 @@ class TrendIndicators:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def cksp(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        p: int = 10,
+        x: float = 1.0,
+        q: int = 9,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Chande Kroll Stop"""
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, p
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series
+
+        result = ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q)
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series
+
+        return result.iloc[:, 0], result.iloc[:, 1]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def decay(
+        close: pd.Series,
+        length: int = 5,
+        mode: str = "linear",
+    ) -> pd.Series:
+        """Decay"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.decay(close=close, length=length, mode=mode)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.fillna(0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def qstick(
+        open_: pd.Series,
+        close: pd.Series,
+        length: int = 8,
+    ) -> pd.Series:
+        """QStick"""
+        validation = validate_multi_series_params(
+            {"open_": open_, "close": close}, length
+        )
+        if validation is not None:
+            return validation
+
+        result = ta.qstick(open_=open_, close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.fillna(0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ttm_trend(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 6,
+    ) -> pd.Series:
+        """TTM Trend"""
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
+
+        result = ta.ttm_trend(high=high, low=low, close=close, length=length)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+
+        if isinstance(result, pd.DataFrame):
+            return result.iloc[:, 0]
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def decreasing(
+        close: pd.Series,
+        length: int = 1,
+        strict: bool = False,
+        as_int: bool = True,
+    ) -> pd.Series:
+        """Decreasing"""
+        # Data validation might be minimal for simple comparisons
+        if close is None:
+            return pd.Series([], dtype=float)
+
+        result = ta.decreasing(close=close, length=length, strict=strict, asint=as_int)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def increasing(
+        close: pd.Series,
+        length: int = 1,
+        strict: bool = False,
+        as_int: bool = True,
+    ) -> pd.Series:
+        """Increasing"""
+        if close is None:
+            return pd.Series([], dtype=float)
+
+        result = ta.increasing(close=close, length=length, strict=strict, asint=as_int)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def long_run(
+        fast: pd.Series,
+        slow: pd.Series,
+        length: int = 2,
+    ) -> pd.Series:
+        """Long Run"""
+        # Requires len(fast) >= length
+        validation = validate_multi_series_params({"fast": fast, "slow": slow}, length)
+        if validation is not None:
+            return validation
+
+        result = ta.long_run(fast=fast, slow=slow, length=length)
+        if result is None:
+            return pd.Series(np.full(len(fast), np.nan), index=fast.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def short_run(
+        fast: pd.Series,
+        slow: pd.Series,
+        length: int = 2,
+    ) -> pd.Series:
+        """Short Run"""
+        validation = validate_multi_series_params({"fast": fast, "slow": slow}, length)
+        if validation is not None:
+            return validation
+
+        result = ta.short_run(fast=fast, slow=slow, length=length)
+        if result is None:
+            return pd.Series(np.full(len(fast), np.nan), index=fast.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def tsignals(
+        trend: pd.Series,
+        signal: pd.Series = None,  # Some use cases imply creating signal internally or passing trend as signal
+        trend_reset: int = 0,
+        trade_offset: int = 0,
+        trend_offset: int = 0,  # Depending on pandas-ta version
+    ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+        """Trend Signals"""
+        # This function typically takes a 'trend' indicator output (like 1, -1) and generates signals
+        if trend is None:
+            nan_series = pd.Series([], dtype=float)
+            return nan_series, nan_series, nan_series, nan_series
+
+        # signal argument is often just the trend itself if not separated?
+        # Actually ta.tsignals needs `trend` series.
+        result = ta.tsignals(
+            trend=trend,
+            trend_reset=trend_reset,
+            trade_offset=trade_offset,
+            trend_offset=trend_offset,
+        )
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(trend), np.nan), index=trend.index)
+            # Returns TS_Trends, TS_Trades, TS_Entries, TS_Exits usually
+            return nan_series, nan_series, nan_series, nan_series
+
+        # Ensure we have enough columns
+        if result.shape[1] < 4:
+            # If not enough columns, pad with NaNs or handle gracefully
+            # Creating a list of series from columns available
+            columns = [result.iloc[:, i] for i in range(result.shape[1])]
+            # Pad with NaNs
+            nan_series = pd.Series(np.full(len(trend), np.nan), index=trend.index)
+            while len(columns) < 4:
+                columns.append(nan_series)
+            return tuple(columns[:4])
+
+        return (
+            result.iloc[:, 0],
+            result.iloc[:, 1],
+            result.iloc[:, 2],
+            result.iloc[:, 3],
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def xsignals(
+        signal: pd.Series,
+        xa: float = 80,
+        xb: float = 20,
+        above: bool = True,
+        long: bool = True,
+        str_tag: str = "XA",
+    ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+        """Cross Signals"""
+        if signal is None:
+            nan_series = pd.Series([], dtype=float)
+            return nan_series, nan_series, nan_series, nan_series
+
+        result = ta.xsignals(
+            signal=signal, xa=xa, xb=xb, above=above, long=long, str=str_tag
+        )
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(signal), np.nan), index=signal.index)
+            # Returns TS_Trends, TS_Trades, TS_Entries, TS_Exits typically or similar struct
+            return nan_series, nan_series, nan_series, nan_series
+
+        # Ensure we have enough columns
+        if result.shape[1] < 4:
+            columns = [result.iloc[:, i] for i in range(result.shape[1])]
+            nan_series = pd.Series(np.full(len(signal), np.nan), index=signal.index)
+            while len(columns) < 4:
+                columns.append(nan_series)
+            return tuple(columns[:4])
+
+        return (
+            result.iloc[:, 0],
+            result.iloc[:, 1],
+            result.iloc[:, 2],
+            result.iloc[:, 3],
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def linregslope(
+        close: pd.Series,
+        length: int = 14,
+    ) -> pd.Series:
+        """Linear Regression Slope"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        # pandas-ta uses 'slope'
+        result = ta.slope(close=close, length=length)
+
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ichimoku(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        tenkan: int = 9,
+        kijun: int = 26,
+        senkou: int = 52,
+        include_chikou: bool = True,
+        offset: int = 26,
+    ) -> pd.DataFrame:
+        """Ichimoku Kinko Hyo"""
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, senkou
+        )
+        if validation is not None:
+            return pd.DataFrame()
+
+        try:
+            result, span = ta.ichimoku(
+                high=high,
+                low=low,
+                close=close,
+                tenkan=tenkan,
+                kijun=kijun,
+                senkou=senkou,
+                include_chikou=include_chikou,
+                offset=offset,
+            )
+        except Exception:
+            return pd.DataFrame()
+
+        if result is None or result.empty:
+            return pd.DataFrame()
+
+        rename_map = {
+            f"ITS_{tenkan}_{kijun}_{senkou}": "tenkan_sen",
+            f"IKS_{tenkan}_{kijun}_{senkou}": "kijun_sen",
+            f"ISA_{tenkan}_{kijun}_{senkou}": "senkou_span_a",
+            f"ISB_{tenkan}_{kijun}_{senkou}": "senkou_span_b",
+            f"ICS_{tenkan}_{kijun}_{senkou}": "chikou_span",
+        }
+
+        result = result.rename(columns=rename_map)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def sma(
+        close: pd.Series,
+        length: int = 10,
+    ) -> pd.Series:
+        """Simple Moving Average"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.sma(close=close, length=length)
+
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result

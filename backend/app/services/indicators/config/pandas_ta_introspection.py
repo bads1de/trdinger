@@ -79,7 +79,7 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
         patterns = [
             r"(\w+)\s*=\s*int\s*\(\s*\1\s*\)\s+if\s+\1\s+and\s+\1\s*>\s*0\s+else\s+(\d+)",
             r"(\w+)\s*=\s*\1\s+if\s+\1\s+and\s+\1\s*>\s*0\s+else\s+(\d+)",
-            r"(\w+)\s*=\s*float\s*\(\s*\1\s*\)\s+if\s+\1(?:\s+and|\s*\)).*?else\s+(\d+(?:\.\d+)?)"
+            r"(\w+)\s*=\s*float\s*\(\s*\1\s*\)\s+if\s+\1(?:\s+and|\s*\)).*?else\s+(\d+(?:\.\d+)?)",
         ]
 
         for pattern in patterns:
@@ -158,6 +158,11 @@ def is_multi_column_indicator(indicator_name: str) -> bool:
     if func is None:
         return False
 
+    # 既知のマルチカラムインジケーター（解析漏れ対策）
+    # ソースコード解析で検知できない場合のためのホワイトリスト
+    if name_lower in ["fisher", "aroon", "adx", "supertrend"]:
+        return True
+
     # 1. docstringから型情報を優先的に取得
     doc = getattr(func, "__doc__", "")
 
@@ -174,17 +179,14 @@ def is_multi_column_indicator(indicator_name: str) -> bool:
 
         # docstringとコメントを除去
         source_clean = re.sub(
-            r'("""[\s\S]*?"""|"""[\s\S]*?"""|#.*$)',
-            "",
-            source,
-            flags=re.MULTILINE
+            r'("""[\s\S]*?"""|"""[\s\S]*?"""|#.*$)', "", source, flags=re.MULTILINE
         )
 
         # DataFrameを返す特徴的なキーワードを検索
         indicators_returning_df = [
             r"return\s+DataFrame\(",
             r"return\s+pd\.concat\(",
-            r"return\s+\w+df\b"
+            r"return\s+\w+df\b",
         ]
 
         return any(re.search(p, source_clean) for p in indicators_returning_df)
@@ -234,13 +236,15 @@ def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
         np.random.seed(42)
         n = 100
 
-        df = pd.DataFrame({
-            "open": np.random.uniform(100, 110, n),
-            "high": np.random.uniform(105, 115, n),
-            "low": np.random.uniform(95, 105, n),
-            "close": np.random.uniform(100, 110, n),
-            "volume": np.random.uniform(1000, 5000, n),
-        })
+        df = pd.DataFrame(
+            {
+                "open": np.random.uniform(100, 110, n),
+                "high": np.random.uniform(105, 115, n),
+                "low": np.random.uniform(95, 105, n),
+                "close": np.random.uniform(100, 110, n),
+                "volume": np.random.uniform(1000, 5000, n),
+            }
+        )
 
         # high > low を保証
         df["high"] = np.maximum(df["high"], df["low"] + 1)
@@ -315,6 +319,7 @@ def extract_default_parameters(indicator_name: str) -> Dict[str, Any]:
 
     except Exception:
         return {}
+
 
 def get_all_pandas_ta_indicators() -> List[str]:
     """

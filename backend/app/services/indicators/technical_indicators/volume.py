@@ -509,3 +509,84 @@ class VolumeIndicators:
         score = rvol_series / price_range
 
         return score.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def aobv(
+        close: pd.Series,
+        volume: pd.Series,
+        fast: int = 4,
+        slow: int = 12,
+        max_lookback: int = 2,
+        min_lookback: int = 5,
+        mamode: str = "ema",
+        scalar: float = 100.0,
+    ) -> Tuple[
+        pd.Series, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series
+    ]:
+        """Archer On-Balance Volume"""
+        validation = validate_multi_series_params(
+            {"close": close, "volume": volume}, slow
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            # AOBV returns 7 columns typically: OBV, MA_OBV, OBV_min_2, OBV_max_2, OBV_min_5, OBV_max_5, AOBV_LR_2
+            # We conform to return all if possible, or key ones.
+            # Let's return tuple of 7 NaNs to be safe as per type hint or simplified representation.
+            return (nan_series,) * 7
+
+        result = ta.aobv(
+            close=close,
+            volume=volume,
+            fast=fast,
+            slow=slow,
+            max_lookback=max_lookback,
+            min_lookback=min_lookback,
+            mamode=mamode,
+            scalar=scalar,
+        )
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return (nan_series,) * 7
+
+        # Ensure we return valid series tuple
+        return tuple(result.iloc[:, i] for i in range(result.shape[1]))
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pvi(close: pd.Series, volume: pd.Series, length: int = 13) -> pd.Series:
+        """Positive Volume Index"""
+        validation = validate_multi_series_params({"close": close, "volume": volume})
+        if validation is not None:
+            return validation
+
+        result = ta.pvi(close=close, volume=volume, length=length)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.fillna(0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pvol(close: pd.Series, volume: pd.Series) -> pd.Series:
+        """Price-Volume"""
+        validation = validate_multi_series_params({"close": close, "volume": volume})
+        if validation is not None:
+            return validation
+
+        result = ta.pvol(close=close, volume=volume)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.fillna(0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pvr(close: pd.Series, volume: pd.Series) -> pd.Series:
+        """Price Volume Rank"""
+        validation = validate_multi_series_params({"close": close, "volume": volume})
+        if validation is not None:
+            return validation
+
+        result = ta.pvr(close=close, volume=volume)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.fillna(0)

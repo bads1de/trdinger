@@ -42,6 +42,9 @@ class BaseFeatureCalculator(ABC):
             df_cols = {c.lower() for c in df.columns}
             missing = [c for c in required_columns if c.lower() not in df_cols]
             if missing:
+                print(
+                    f"DEBUG: Missing columns in validation: {missing}, Present: {df.columns.tolist()}"
+                )
                 logger.warning(f"Missing columns: {missing}")
                 return False
         return True
@@ -180,10 +183,15 @@ class BaseFeatureCalculator(ABC):
         fill_value: float = 0.0,
     ) -> pd.Series:
         """ゼロ除算を防ぐための安全な比率計算"""
-        if not isinstance(numerator, pd.Series) or not isinstance(denominator, pd.Series):
-            return pd.Series([fill_value] * (len(numerator) if hasattr(numerator, "__len__") else 0))
+        if not isinstance(numerator, pd.Series) or not isinstance(
+            denominator, pd.Series
+        ):
+            return pd.Series(
+                [fill_value] * (len(numerator) if hasattr(numerator, "__len__") else 0)
+            )
 
-        return (numerator / denominator.replace(0, np.nan)).replace([np.inf, -np.inf], np.nan).fillna(fill_value)
-
-
-
+        return (
+            (numerator / denominator.replace(0, np.nan))
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(fill_value)
+        )

@@ -454,3 +454,232 @@ class OverlapIndicators:
         except (KeyError, Exception):
             # pandas-taが想定外の結果を返した場合
             return nan_result()
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hilo(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        high_length: int = 13,
+        low_length: int = 13,
+        mamode: str = "sma",
+        offset: int = 0,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Gann HiLo"""
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, max(high_length, low_length)
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series
+
+        result = ta.hilo(
+            high=high,
+            low=low,
+            close=close,
+            high_length=high_length,
+            low_length=low_length,
+            mamode=mamode,
+            offset=offset,
+        )
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series
+
+        # Returns HILO, HILOl, HILOs
+        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hl2(high: pd.Series, low: pd.Series) -> pd.Series:
+        """High-Low Average"""
+        validation = validate_multi_series_params({"high": high, "low": low})
+        if validation is not None:
+            return validation  # Should return Series
+
+        result = ta.hl2(high=high, low=low)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hlc3(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
+        """HLC Average"""
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            return validation
+
+        result = ta.hlc3(high=high, low=low, close=close)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ohlc4(
+        open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+    ) -> pd.Series:
+        """OHLC Average"""
+        validation = validate_multi_series_params(
+            {"open_": open_, "high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            return validation
+
+        result = ta.ohlc4(open_=open_, high=high, low=low, close=close)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def midpoint(close: pd.Series, length: int = 2) -> pd.Series:
+        """Midpoint"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.midpoint(close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def midprice(high: pd.Series, low: pd.Series, length: int = 2) -> pd.Series:
+        """Midprice"""
+        validation = validate_multi_series_params({"high": high, "low": low}, length)
+        if validation is not None:
+            return validation
+
+        result = ta.midprice(high=high, low=low, length=length)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vidya(
+        close: pd.Series, length: int = 14, drift: int = 1, offset: int = 0
+    ) -> pd.Series:
+        """VIDYA"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.vidya(close=close, length=length, drift=drift, offset=offset)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def wcp(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
+        """Weighted Close Price"""
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            return validation
+
+        result = ta.wcp(high=high, low=low, close=close)
+        if result is None:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def mcgd(close: pd.Series, length: int = 10, offset: int = 0) -> pd.Series:
+        """McGinley Dynamic"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.mcgd(close=close, length=length, offset=offset)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def jma(
+        close: pd.Series, length: int = 7, phase: int = 50, offset: int = 0
+    ) -> pd.Series:
+        """Jurik Moving Average"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.jma(close=close, length=length, phase=phase, offset=offset)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def fwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
+        """Fibonacci Weighted Moving Average"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.fwma(close=close, length=length, asc=asc)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
+        """Pascal Weighted Moving Average"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.pwma(close=close, length=length, asc=asc)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def sinwma(close: pd.Series, length: int = 14) -> pd.Series:
+        """Sine Weighted Moving Average"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.sinwma(close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def ssf(close: pd.Series, length: int = 10, poles: int = 2) -> pd.Series:
+        """Ehlers Super Smoother Filter"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.ssf(close=close, length=length, poles=poles)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def swma(close: pd.Series, length: int = 10) -> pd.Series:
+        """Symmetric Weighted Moving Average"""
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
+
+        result = ta.swma(close=close, length=length)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result

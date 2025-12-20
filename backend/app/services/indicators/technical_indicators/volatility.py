@@ -489,3 +489,114 @@ class VolatilityIndicators:
         if result is None or result.empty:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result.bfill().fillna(0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def aberration(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 5,
+        atr_length: int = 15,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+        """Aberration"""
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, max(length, atr_length)
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series, nan_series
+
+        result = ta.aberration(
+            high=high, low=low, close=close, length=length, atr_length=atr_length
+        )
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series, nan_series
+
+        # Returns multiple columns. Usually ZG, SG, XG, ATR
+        return (
+            result.iloc[:, 0],
+            result.iloc[:, 1],
+            result.iloc[:, 2],
+            result.iloc[:, 3],
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hwc(
+        close: pd.Series,
+        na: int = 2,
+        nb: int = 3,
+        nc: int = 4,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Holt-Winter Channel"""
+        validation = validate_series_params(close, max(na, nb, nc))
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series
+
+        result = ta.hwc(close=close, na=na, nb=nb, nc=nc)
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series, nan_series
+
+        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def pdist(
+        open_: pd.Series,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+    ) -> pd.Series:
+        """Price Distance"""
+        validation = validate_multi_series_params(
+            {"open_": open_, "high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            return validation
+
+        result = ta.pdist(open_=open_, high=high, low=low, close=close)
+        if result is None:
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        return result.fillna(0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def thermo(
+        high: pd.Series,
+        low: pd.Series,
+        length: int = 20,
+        long_: int = 2,
+        short: int = 2,
+        mamode: str = "ema",
+        drift: int = 1,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+        """Thermo"""
+        validation = validate_multi_series_params({"high": high, "low": low}, length)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series, nan_series
+
+        result = ta.thermo(
+            high=high,
+            low=low,
+            length=length,
+            long=long_,
+            short=short,
+            mamode=mamode,
+            drift=drift,
+        )
+        if result is None or result.empty:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series, nan_series
+
+        # Returns Thermo, ThermoMa, ThermoLa, ThermoSa
+        return (
+            result.iloc[:, 0],
+            result.iloc[:, 1],
+            result.iloc[:, 2],
+            result.iloc[:, 3],
+        )
