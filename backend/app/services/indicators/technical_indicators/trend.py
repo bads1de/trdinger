@@ -29,7 +29,11 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from ..data_validation import handle_pandas_ta_errors, validate_series_params
+from ..data_validation import (
+    handle_pandas_ta_errors,
+    validate_multi_series_params,
+    validate_series_params,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +63,9 @@ class TrendIndicators:
         ER = Change / Volatility
            = |Price[t] - Price[t-N]| / Sum(|Price[i] - Price[i-1]| for i in t..t-N)
         """
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         change = data.diff(length).abs()
         volatility = data.diff(1).abs().rolling(window=length).sum()
@@ -244,16 +247,11 @@ class TrendIndicators:
         length: int = 20,
     ) -> pd.Series:
         """出来高加重移動平均"""
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
-        if len(close) != len(volume):
-            raise ValueError("close and volume series must share the same length")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if len(close) == 0:
-            return pd.Series(np.full(0, np.nan), index=close.index)
+        validation = validate_multi_series_params(
+            {"close": close, "volume": volume}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.vwma(close=close, volume=volume, length=length)
         if result is None:
@@ -335,8 +333,9 @@ class TrendIndicators:
         pandas_taのデフォルト実装はデータの全長に依存して初期化されるため、
         未来データのリークを防ぐためにカスタム実装を使用します。
         """
-        if not isinstance(high, pd.Series) or not isinstance(low, pd.Series):
-            raise TypeError("high and low must be pandas Series")
+        validation = validate_multi_series_params({"high": high, "low": low})
+        if validation is not None:
+            return validation
 
         n = len(high)
         if n < 2:
@@ -405,14 +404,9 @@ class TrendIndicators:
         """Archer Moving Averages Trends"""
         # AMAT特有のデータ検証
         min_length = max(fast, slow, signal) + 10
-
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-
-        if len(data) < min_length:
-            raise ValueError(
-                f"Insufficient data for AMAT calculation. Need at least {min_length} points, got {len(data)}"
-            )
+        validation = validate_series_params(data, min_data_length=min_length)
+        if validation is not None:
+            return validation
 
         result = ta.amat(data, fast=fast, slow=slow, signal=signal)
         if result is None or (hasattr(result, "empty") and result.empty):
@@ -469,14 +463,13 @@ class TrendIndicators:
         offset: int = 0,
     ) -> Tuple[pd.Series, pd.Series]:
         """Vortex Indicator"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+
         if drift <= 0:
             raise ValueError(f"drift must be positive: {drift}")
 
@@ -552,14 +545,12 @@ class TrendIndicators:
         mamode: str = "rma",
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """ADX: returns (adx, dmp, dmn)"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
 
         result = ta.adx(
             high=high,
@@ -596,12 +587,10 @@ class TrendIndicators:
         scalar: float = 100.0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_multi_series_params({"high": high, "low": low}, length)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
 
         result = ta.aroon(high=high, low=low, length=length, scalar=scalar)
 
@@ -633,14 +622,11 @@ class TrendIndicators:
         drift: int = 1,
     ) -> pd.Series:
         """Choppiness Index"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.chop(
             high=high,

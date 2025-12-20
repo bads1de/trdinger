@@ -220,27 +220,17 @@ class MomentumIndicators:
         Returns:
             Tuple[pd.Series, pd.Series]: (%K, %D)
         """
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if rsi_length <= 0:
-            raise ValueError(f"rsi_length must be positive: {rsi_length}")
-        if stoch_length <= 0:
-            raise ValueError(f"stoch_length must be positive: {stoch_length}")
-        if k <= 0:
-            raise ValueError(f"k must be positive: {k}")
-        if d <= 0:
-            raise ValueError(f"d must be positive: {d}")
-
-        # 空データの処理
-        if len(data) == 0:
-            empty_series = pd.Series([], dtype=float, index=data.index)
-            return empty_series, empty_series
-
         # 最小必要データ長の確認
         min_required_length = rsi_length + stoch_length
-        if len(data) < min_required_length:
+        validation = validate_series_params(
+            data, rsi_length, min_data_length=min_required_length
+        )
+        if validation is not None:
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series
+
+        if stoch_length <= 0 or k <= 0 or d <= 0:
+            raise ValueError("stoch_length, k, and d must be positive")
 
         result = ta.stochrsi(
             close=data,
@@ -329,10 +319,9 @@ class MomentumIndicators:
         talib: bool | None = None,
     ) -> pd.Series:
         """チャンデ・モメンタム・オシレーター"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
         result = ta.cmo(data, length=length, talib=talib)
         if result is None or result.empty:
@@ -349,12 +338,12 @@ class MomentumIndicators:
         d2: int = 3,
     ) -> pd.Series:
         """Schaff Trend Cycle"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data, cycle)
+        if validation is not None:
+            return validation
+
         if fast <= 0 or slow <= 0:
             raise ValueError("fast and slow must be positive")
-        if cycle <= 0:
-            raise ValueError("cycle must be positive")
 
         factor_base = max(d1, d2)
         factor = max(0.1, min(factor_base / max(cycle, 1), 0.9))
@@ -384,12 +373,11 @@ class MomentumIndicators:
         signal: int = 1,
     ) -> Tuple[pd.Series, pd.Series]:
         """フィッシャー変換"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
+        validation = validate_multi_series_params({"high": high, "low": low}, length)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series
+
         if signal <= 0:
             raise ValueError(f"signal must be positive: {signal}")
 
@@ -415,21 +403,11 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """Know Sure Thing"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        for name, value in {
-            "roc1": roc1,
-            "roc2": roc2,
-            "roc3": roc3,
-            "roc4": roc4,
-            "sma1": sma1,
-            "sma2": sma2,
-            "sma3": sma3,
-            "sma4": sma4,
-            "signal": signal,
-        }.items():
-            if value <= 0:
-                raise ValueError(f"{name} must be positive: {value}")
+        max_period = max(roc1, roc2, roc3, roc4, sma1, sma2, sma3, sma4, signal)
+        validation = validate_series_params(data, max_period)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series
 
         result = ta.kst(
             data,
@@ -488,8 +466,10 @@ class MomentumIndicators:
     @staticmethod
     def qqe(data: pd.Series, length: int = 14) -> pd.Series:
         """Qualitative Quantitative Estimation"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
+
         result = ta.qqe(data, length=length)
 
         if result is None or result.empty:
@@ -524,10 +504,12 @@ class MomentumIndicators:
         ma_mode: str = "ema",
     ) -> pd.Series:
         """Absolute Price Oscillator"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if fast <= 0 or slow <= 0:
-            raise ValueError("fast and slow must be positive")
+        validation = validate_series_params(data, slow)
+        if validation is not None:
+            return validation
+
+        if fast <= 0:
+            raise ValueError("fast must be positive")
         if fast >= slow:
             raise ValueError("fast period must be less than slow period")
 
@@ -547,10 +529,12 @@ class MomentumIndicators:
         drift: int = 1,
     ) -> Tuple[pd.Series, pd.Series]:
         """True Strength Index"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-        if fast <= 0 or slow <= 0 or signal <= 0:
-            raise ValueError("fast, slow, signal must be positive")
+        max_period = max(fast, slow, signal)
+        validation = validate_series_params(data, max_period)
+        if validation is not None:
+            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
+            return nan_series, nan_series
+
         if drift <= 0:
             raise ValueError("drift must be positive")
 
@@ -579,9 +563,11 @@ class MomentumIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Pretty Good Oscillator"""
-        for series, name in ((high, "high"), (low, "low"), (close, "close")):
-            if not isinstance(series, pd.Series):
-                raise TypeError(f"{name} must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.pgo(high=high, low=low, close=close, length=length)
         if result is None or result.empty:
@@ -596,11 +582,12 @@ class MomentumIndicators:
         slow: int = 25,
     ) -> pd.Series:
         """Mass Index"""
-        for series, name in ((high, "high"), (low, "low")):
-            if not isinstance(series, pd.Series):
-                raise TypeError(f"{name} must be pandas Series")
-        if fast <= 0 or slow <= 0:
-            raise ValueError("fast and slow must be positive")
+        validation = validate_multi_series_params({"high": high, "low": low}, slow)
+        if validation is not None:
+            return validation
+
+        if fast <= 0:
+            raise ValueError("fast must be positive")
 
         result = ta.massi(high=high, low=low, fast=fast, slow=slow)
         if result is None or result.empty:
@@ -656,12 +643,11 @@ class MomentumIndicators:
         use_tr: bool = True,
     ) -> pd.Series:
         """Squeeze"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, max(bb_length, kc_length)
+        )
+        if validation is not None:
+            return validation
 
         result = ta.squeeze(
             high=high,
@@ -689,12 +675,11 @@ class MomentumIndicators:
         slow: int = 28,
     ) -> pd.Series:
         """Ultimate Oscillator"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, slow
+        )
+        if validation is not None:
+            return validation
 
         result = ta.uo(
             high=high, low=low, close=close, fast=fast, medium=medium, slow=slow
@@ -707,21 +692,9 @@ class MomentumIndicators:
     @staticmethod
     def ao(high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34) -> pd.Series:
         """Awesome Oscillator"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-
-        # AO特有のデータ検証
-        if len(high) != len(low):
-            raise ValueError("AO requires high and low series to have the same length")
-
-        # 最小データ長チェック
-        min_length = slow + 5
-        if len(high) < min_length:
-            raise ValueError(
-                f"Insufficient data for AO calculation. Need at least {min_length} points, got {len(high)}"
-            )
+        validation = validate_multi_series_params({"high": high, "low": low}, slow)
+        if validation is not None:
+            return validation
 
         result = ta.ao(high=high, low=low, fast=fast, slow=slow)
         if result is None:
@@ -733,37 +706,24 @@ class MomentumIndicators:
         open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
     ) -> pd.Series:
         """Balance of Power"""
-        if not isinstance(open_, pd.Series):
-            raise TypeError("open_ must be pandas Series")
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-
-        # BOP特有のデータ検証
-        series_lengths = [len(open_), len(high), len(low), len(close)]
-        if not all(length == series_lengths[0] for length in series_lengths):
-            raise ValueError("BOP requires all series to have the same length")
+        validation = validate_multi_series_params(
+            {"open_": open_, "high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            return validation
 
         result = ta.bop(open_=open_, high=high, low=low, close=close)
         if result is None:
-            return pd.Series(np.full(series_lengths[0], np.nan), index=open_.index)
+            return pd.Series(np.full(len(open_), np.nan), index=open_.index)
         return result.bfill().fillna(0)
 
     @staticmethod
     def cg(data: pd.Series, length: int = 10) -> pd.Series:
         """Center of Gravity"""
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-
-        # CG特有のデータ検証
-        min_length = length + 2
-        if len(data) < min_length:
-            raise ValueError(
-                f"Insufficient data for CG calculation. Need at least {min_length} points, got {len(data)}"
-            )
+        # CG特有のデータ検証 (min_length = length + 2)
+        validation = validate_series_params(data, length, min_data_length=length + 2)
+        if validation is not None:
+            return validation
 
         result = ta.cg(data, length=length)
         if result is None:
@@ -775,15 +735,10 @@ class MomentumIndicators:
         close: pd.Series, length: int = 11, fast: int = 14, slow: int = 10
     ) -> pd.Series:
         """Coppock Curve"""
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-
-        # Coppock特有のデータ検証
         min_length = slow + fast + 5
-        if len(close) < min_length:
-            raise ValueError(
-                f"Insufficient data for Coppock calculation. Need at least {min_length} points, got {len(close)}"
-            )
+        validation = validate_series_params(close, length, min_data_length=min_length)
+        if validation is not None:
+            return validation
 
         result = ta.coppock(close=close, length=length, fast=fast, slow=slow)
         if result is None:
@@ -799,48 +754,20 @@ class MomentumIndicators:
         kijun_period: int = 26,
         senkou_span_b_period: int = 52,
     ) -> dict:
-        """Ichimoku Cloud (一目均衡表)
-
-        トレンド、サポート/レジスタンス、モメンタムを同時に分析する包括的なインジケーター。
-        5つのコンポーネントで構成される:
-        - Tenkan-sen (転換線): 短期トレンド
-        - Kijun-sen (基準線): 中期トレンド
-        - Senkou Span A (先行スパンA): 未来のサポート/レジスタンス
-        - Senkou Span B (先行スパンB): より長期のサポート/レジスタンス
-        - Chikou Span (遅行スパン): 遅行スパン
-
-        Args:
-            high: 高値の系列
-            low: 安値の系列
-            close: 終値の系列
-            tenkan_period: 転換線の期間 (default: 9)
-            kijun_period: 基準線の期間 (default: 26)
-            senkou_span_b_period: 先行スパンBの期間 (default: 52)
-
-        Returns:
-            dict: 各コンポーネントを含む辞書
-        """
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-
-        # データ長の検証
-        series_lengths = [len(high), len(low), len(close)]
-        if not all(length == series_lengths[0] for length in series_lengths):
-            raise ValueError("Ichimoku requires all series to have the same length")
-
-        if len(high) == 0:
-            # 空データの場合
-            empty_series = pd.Series(np.full(0, np.nan), index=high.index)
+        """Ichimoku Cloud (一目均衡表)"""
+        max_period = max(tenkan_period, kijun_period, senkou_span_b_period)
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, max_period
+        )
+        if validation is not None:
+            # 辞書を返す必要があるため、個別に処理
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return {
-                "tenkan_sen": empty_series,
-                "kijun_sen": empty_series,
-                "senkou_span_a": empty_series,
-                "senkou_span_b": empty_series,
-                "chikou_span": empty_series,
+                "tenkan_sen": nan_series,
+                "kijun_sen": nan_series,
+                "senkou_span_a": nan_series,
+                "senkou_span_b": nan_series,
+                "chikou_span": nan_series,
             }
 
         # pandas-taを使ってIchimoku Cloudを計算

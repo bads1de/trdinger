@@ -79,11 +79,11 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Normalized Average True Range"""
-        for series, name in ((high, "high"), (low, "low"), (close, "close")):
-            if not isinstance(series, pd.Series):
-                raise TypeError(f"{name} must be pandas Series")
-        if length <= 0:
-            raise ValueError("length must be positive")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.natr(high=high, low=low, close=close, length=length)
         if result is None or (hasattr(result, "empty") and result.empty):
@@ -454,12 +454,11 @@ class VolatilityIndicators:
         drift: int = 1,
     ) -> pd.Series:
         """True Range"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            return validation
 
         result = ta.true_range(high=high, low=low, close=close, drift=drift)
 
@@ -479,18 +478,12 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """
         Yang-Zhang Volatility Estimator
-
-        Overnight volatility + Open-to-Close volatility + Rogers-Satchell volatility
-        Minimum drift and opening jump optimized.
         """
-        if not isinstance(open_, pd.Series):
-            raise TypeError("open_ must be pandas Series")
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"open_": open_, "high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         N = length
 
@@ -535,15 +528,10 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """
         Parkinson Volatility Estimator
-
-        Uses High and Low prices to estimate volatility.
-        More efficient than Close-to-Close estimator.
-        Formula: sigma^2 = (1 / (4 * ln(2))) * (ln(H/L))^2
         """
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
+        validation = validate_multi_series_params({"high": high, "low": low}, length)
+        if validation is not None:
+            return validation
 
         # Prevent division by zero or log of zero/negative
         # Assuming High >= Low > 0
@@ -578,19 +566,12 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """
         Garman-Klass Volatility Estimator
-
-        Extensions of Parkinson that includes Open and Close information.
-        Assumes no opening jumps (opening gaps).
-        Formula: sigma^2 = 0.5 * (ln(H/L))^2 - (2*ln(2) - 1) * (ln(C/O))^2
         """
-        if not isinstance(open_, pd.Series):
-            raise TypeError("open_ must be pandas Series")
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        validation = validate_multi_series_params(
+            {"open_": open_, "high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         # 1. (ln(H/L))^2
         log_hl_sq = np.log(high / low) ** 2

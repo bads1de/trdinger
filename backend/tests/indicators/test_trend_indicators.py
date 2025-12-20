@@ -222,7 +222,7 @@ class TestTrendIndicators:
         data_volume = pd.DataFrame({"volume": [1000, 1100]})  # 長さが異なる
 
         with pytest.raises(
-            ValueError, match="close and volume series must share the same length"
+            ValueError, match="All series must have the same length"
         ):
             TrendIndicators.vwma(data_close["close"], data_volume["volume"], length=3)
 
@@ -316,8 +316,8 @@ class TestTrendIndicators:
         """不十分なデータでのAMAT計算テスト"""
         data = pd.DataFrame({"close": [100, 101, 102]})  # 不十分
 
-        with pytest.raises(ValueError, match="Insufficient data for AMAT calculation"):
-            TrendIndicators.amat(data["close"], fast=3, slow=30, signal=10)
+        result = TrendIndicators.amat(data["close"], fast=3, slow=30, signal=10)
+        assert result.isna().all()
 
     def test_calculate_rma_valid_data(self):
         """有効データでのRMA計算テスト"""
