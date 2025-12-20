@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from unittest.mock import MagicMock, patch
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from app.services.indicators.technical_indicators.overlap import OverlapIndicators
 
 
 class TestMomentumUnitExtended:
@@ -227,20 +228,21 @@ class TestMomentumUnitExtended:
         assert isinstance(MomentumIndicators.coppock(c), pd.Series)
 
     def test_ichimoku_extended(self, sample_df):
+        """Ichimoku は OverlapIndicators に移動済み"""
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         # 1. 正常 (pandas-ta)
-        res = MomentumIndicators.ichimoku(h, l, c)
+        res = OverlapIndicators.ichimoku(h, l, c)
         assert "tenkan_sen" in res
+        assert isinstance(res["tenkan_sen"], pd.Series)
 
-        # 2. カラム名が想定と異なる場合のフォールバックロジックをテスト
-        mock_df = pd.DataFrame({"Wrong": [1] * 100}, index=h.index)
-        with patch("pandas_ta.ichimoku", return_value=(mock_df, mock_df)):
-            res = MomentumIndicators.ichimoku(h, l, c)
+        # 2. pandas-taが失敗した場合はNaNを返す（フォールバックは廃止）
+        with patch("pandas_ta.ichimoku", return_value=None):
+            res = OverlapIndicators.ichimoku(h, l, c)
             assert "tenkan_sen" in res
-            assert not res["tenkan_sen"].isna().all()
+            assert res["tenkan_sen"].isna().all()
 
-        # 3. pandas-ta 失敗 (Exception)
+        # 3. 例外発生時もNaNを返す
         with patch("pandas_ta.ichimoku", side_effect=Exception("Internal Error")):
-            res = MomentumIndicators.ichimoku(h, l, c)
+            res = OverlapIndicators.ichimoku(h, l, c)
             assert "tenkan_sen" in res
-            assert not res["tenkan_sen"].isna().all()
+            assert res["tenkan_sen"].isna().all()

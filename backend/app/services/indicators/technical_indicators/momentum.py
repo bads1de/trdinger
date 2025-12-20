@@ -1,5 +1,8 @@
 """
-モメンタム系テクニカル指標
+モメンタム系テクニカル指標 (Momentum Indicators)
+
+pandas-ta の momentum カテゴリに対応。
+価格の勢いと転換点の検出に使用する指標群。
 
 登録してあるテクニカルの一覧:
 - RSI (Relative Strength Index)
@@ -18,13 +21,14 @@
 - CTI (Correlation Trend Indicator)
 - TSI (True Strength Index)
 - PGO (Pretty Good Oscillator)
-- MASSI (Mass Index)
 - PSL (Psychological Line)
 - AO (Awesome Oscillator)
 - BOP (Balance of Power)
 - CG (Center of Gravity)
 - COPPOCK (Coppock Curve)
 - STOCHRSI (Stochastic RSI)
+- BIAS (Bias Indicator)
+- ER (Efficiency Ratio)
 """
 
 import logging
@@ -421,6 +425,7 @@ class MomentumIndicators:
             sma4=sma4,
             signal=signal,
         )
+
         if result is None or result.empty:
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series
@@ -492,6 +497,7 @@ class MomentumIndicators:
             return validation
 
         result = ta.cti(data, length=length)
+
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result.bfill().fillna(0)
@@ -514,6 +520,7 @@ class MomentumIndicators:
             raise ValueError("fast period must be less than slow period")
 
         result = ta.apo(data, fast=fast, slow=slow, ma_mode=ma_mode)
+
         if result is None or result.empty:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
         return result.bfill().fillna(0)
@@ -570,28 +577,9 @@ class MomentumIndicators:
             return validation
 
         result = ta.pgo(high=high, low=low, close=close, length=length)
+
         if result is None or result.empty:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.bfill().fillna(0)
-
-    @staticmethod
-    def massi(
-        high: pd.Series,
-        low: pd.Series,
-        fast: int = 9,
-        slow: int = 25,
-    ) -> pd.Series:
-        """Mass Index"""
-        validation = validate_multi_series_params({"high": high, "low": low}, slow)
-        if validation is not None:
-            return validation
-
-        if fast <= 0:
-            raise ValueError("fast must be positive")
-
-        result = ta.massi(high=high, low=low, fast=fast, slow=slow)
-        if result is None or result.empty:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result.bfill().fillna(0)
 
     @staticmethod
@@ -661,6 +649,7 @@ class MomentumIndicators:
             mom_smooth=mom_smooth,
             use_tr=use_tr,
         )
+
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
         return result
@@ -746,155 +735,65 @@ class MomentumIndicators:
         return result.bfill().fillna(0)
 
     @staticmethod
-    def ichimoku(
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        tenkan_period: int = 9,
-        kijun_period: int = 26,
-        senkou_span_b_period: int = 52,
-    ) -> dict:
-        """Ichimoku Cloud (一目均衡表)"""
-        max_period = max(tenkan_period, kijun_period, senkou_span_b_period)
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, max_period
-        )
+    @handle_pandas_ta_errors
+    def bias(
+        data: pd.Series,
+        length: int = 26,
+        ma_type: str = "sma",
+        offset: int = 0,
+    ) -> pd.Series:
+        """Bias Indicator - 移動平均からの乖離率"""
+        # BIAS requires sufficient data length
+        min_length = length * 2
+        validation = validate_series_params(data, length, min_data_length=min_length)
         if validation is not None:
-            # 辞書を返す必要があるため、個別に処理
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return {
-                "tenkan_sen": nan_series,
-                "kijun_sen": nan_series,
-                "senkou_span_a": nan_series,
-                "senkou_span_b": nan_series,
-                "chikou_span": nan_series,
-            }
+            return validation
 
-        # pandas-taを使ってIchimoku Cloudを計算
+        # pandas-taのbias関数を直接使用
         try:
-            result = ta.ichimoku(
-                high=high,
-                low=low,
-                close=close,
-                tenkan=tenkan_period,
-                kijun=kijun_period,
-                senkou=senkou_span_b_period,
+            result = ta.bias(
+                close=data,
+                length=length,
+                ma_type=ma_type,
+                offset=offset,
             )
+        except Exception:
+            # pandas-taのbiasが利用できない場合のフォールバック実装
+            ma_func = {
+                "sma": ta.sma,
+                "ema": ta.ema,
+                "wma": ta.wma,
+                "hma": ta.hma,
+                "zlma": ta.zlma,
+            }.get(ma_type, ta.sma)
 
-            if result is None or result.empty:
-                # pandas-taが失敗した場合のフォールバック
-                nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-                return {
-                    "tenkan_sen": nan_series,
-                    "kijun_sen": nan_series,
-                    "senkou_span_a": nan_series,
-                    "senkou_span_b": nan_series,
-                    "chikou_span": nan_series,
-                }
+            ma_result = ma_func(data, length=length)
+            if ma_result is None or ma_result.isna().all():
+                return pd.Series(np.full(len(data), np.nan), index=data.index)
 
-            # 結果を処理
-            ichimoku_dict = {}
+            # BIAS = (close - ma) / ma * 100
+            result = ((data - ma_result) / ma_result) * 100
 
-            # カラム名を特定
-            cols = list(result.columns)
-            tenkan_col = next(
-                (c for c in cols if "TENKAN" in c.upper() or "ITS" in c.upper()), None
-            )
-            kijun_col = next(
-                (c for c in cols if "KIJUN" in c.upper() or "IKS" in c.upper()), None
-            )
-            senkou_a_col = next(
-                (c for c in cols if "SENKOU" in c.upper() or "ISA" in c.upper()), None
-            )
-            senkou_b_col = next(
-                (c for c in cols if "SANSEN" in c.upper() or "ISB" in c.upper()), None
-            )
-            chikou_col = next(
-                (c for c in cols if "CHIKOU" in c.upper() or "ICS" in c.upper()), None
-            )
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
-            # tenkan_sen (転換線)
-            if tenkan_col:
-                ichimoku_dict["tenkan_sen"] = result[tenkan_col].fillna(np.nan)
-            else:
-                tenkan_high = high.rolling(window=tenkan_period).max()
-                tenkan_low = low.rolling(window=tenkan_period).min()
-                ichimoku_dict["tenkan_sen"] = ((tenkan_high + tenkan_low) / 2).fillna(
-                    np.nan
-                )
+        return result
 
-            # kijun_sen (基準線)
-            if kijun_col:
-                ichimoku_dict["kijun_sen"] = result[kijun_col].fillna(np.nan)
-            else:
-                kijun_high = high.rolling(window=kijun_period).max()
-                kijun_low = low.rolling(window=kijun_period).min()
-                ichimoku_dict["kijun_sen"] = ((kijun_high + kijun_low) / 2).fillna(
-                    np.nan
-                )
+    @staticmethod
+    @handle_pandas_ta_errors
+    def efficiency_ratio(data: pd.Series, length: int = 10) -> pd.Series:
+        """
+        Kaufman Efficiency Ratio (ER)
 
-            # senkou_span_a (先行スパンA)
-            if senkou_a_col:
-                ichimoku_dict["senkou_span_a"] = result[senkou_a_col].fillna(np.nan)
-            else:
-                senkou_a = (
-                    ichimoku_dict["tenkan_sen"] + ichimoku_dict["kijun_sen"]
-                ) / 2
-                ichimoku_dict["senkou_span_a"] = senkou_a.shift(kijun_period).fillna(
-                    np.nan
-                )
+        ER = Change / Volatility
+           = |Price[t] - Price[t-N]| / Sum(|Price[i] - Price[i-1]| for i in t..t-N)
+        """
+        validation = validate_series_params(data, length)
+        if validation is not None:
+            return validation
 
-            # senkou_span_b (先行スパンB)
-            if senkou_b_col:
-                ichimoku_dict["senkou_span_b"] = result[senkou_b_col].fillna(np.nan)
-            else:
-                senkou_b_high = high.rolling(window=senkou_span_b_period).max()
-                senkou_b_low = low.rolling(window=senkou_span_b_period).min()
-                senkou_b = (senkou_b_high + senkou_b_low) / 2
-                ichimoku_dict["senkou_span_b"] = senkou_b.shift(kijun_period).fillna(
-                    np.nan
-                )
+        change = data.diff(length).abs()
+        volatility = data.diff(1).abs().rolling(window=length).sum()
 
-            # chikou_span (遅行スパン)
-            if chikou_col:
-                ichimoku_dict["chikou_span"] = result[chikou_col].fillna(np.nan)
-            else:
-                ichimoku_dict["chikou_span"] = close.shift(-kijun_period).fillna(np.nan)
-
-            return ichimoku_dict
-
-        except Exception as e:
-            logger.warning(
-                f"Ichimoku calculation failed with pandas-ta: {e}. Using fallback calculation."
-            )
-            # pandas-taが失敗した場合のフォールバック計算
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-
-            # 単純なフォールバック計算
-            tenkan_high = high.rolling(window=tenkan_period).max()
-            tenkan_low = low.rolling(window=tenkan_period).min()
-            tenkan_sen = ((tenkan_high + tenkan_low) / 2).fillna(np.nan)
-
-            kijun_high = high.rolling(window=kijun_period).max()
-            kijun_low = low.rolling(window=kijun_period).min()
-            kijun_sen = ((kijun_high + kijun_low) / 2).fillna(np.nan)
-
-            senkou_span_a = (
-                ((tenkan_sen + kijun_sen) / 2).shift(kijun_period).fillna(np.nan)
-            )
-
-            senkou_b_high = high.rolling(window=senkou_span_b_period).max()
-            senkou_b_low = low.rolling(window=senkou_span_b_period).min()
-            senkou_span_b = (
-                ((senkou_b_high + senkou_b_low) / 2).shift(kijun_period).fillna(np.nan)
-            )
-
-            chikou_span = close.shift(-kijun_period).fillna(np.nan)
-
-            return {
-                "tenkan_sen": tenkan_sen,
-                "kijun_sen": kijun_sen,
-                "senkou_span_a": senkou_span_a,
-                "senkou_span_b": senkou_span_b,
-                "chikou_span": chikou_span,
-            }
+        er = change / volatility
+        return er.replace([np.inf, -np.inf], 0.0).fillna(0.0)

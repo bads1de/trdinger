@@ -1,24 +1,18 @@
 """
-トレンド系テクニカル指標
+トレンド系テクニカル指標 (Trend Indicators)
+
+pandas-ta の trend カテゴリに対応。
+トレンドの方向性と強さを分析する指標群。
 
 登録してあるテクニカルの一覧:
-- SMA (Simple Moving Average)
-- EMA (Exponential Moving Average)
-- WMA (Weighted Moving Average)
-- DEMA (Double Exponential Moving Average)
-- TEMA (Triple Exponential Moving Average)
-- T3 (Tillson's T3 Moving Average)
-- KAMA (Kaufman's Adaptive Moving Average)
-- HMA (Hull Moving Average)
-- VWMA (Volume Weighted Moving Average)
-- ALMA (Arnaud Legoux Moving Average)
-- TRIMA (Triangular Moving Average)
-- ZLMA (Zero Lag Moving Average)
 - SAR (Parabolic SAR)
 - AMAT (Archer Moving Averages Trends)
-- RMA (Wilde's Moving Average)
 - DPO (Detrended Price Oscillator)
 - VORTEX (Vortex Indicator)
+- ADX (Average Directional Index)
+- AROON (Aroon Indicator)
+- CHOP (Choppiness Index)
+- VHF (Vertical Horizontal Filter)
 """
 
 import logging
@@ -50,274 +44,9 @@ class TrendIndicators:
     """
     トレンド系指標クラス
 
-    移動平均線、Parabolic SARなどのトレンド系テクニカル指標を提供。
+    Parabolic SAR, ADX などのトレンド方向性を分析するテクニカル指標を提供。
     トレンドの方向性と強さの分析に使用します。
     """
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def efficiency_ratio(data: pd.Series, length: int = 10) -> pd.Series:
-        """
-        Kaufman Efficiency Ratio (ER)
-
-        ER = Change / Volatility
-           = |Price[t] - Price[t-N]| / Sum(|Price[i] - Price[i-1]| for i in t..t-N)
-        """
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        change = data.diff(length).abs()
-        volatility = data.diff(1).abs().rolling(window=length).sum()
-
-        er = change / volatility
-        return er.replace([np.inf, -np.inf], 0.0).fillna(0.0)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def sma(data: pd.Series, length: int) -> pd.Series:
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        return ta.sma(data, length=length)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def ema(data: pd.Series, length: int) -> pd.Series:
-        """指数移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-        return ta.ema(data, window=length, adjust=False, sma=True)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def wma(
-        data: pd.Series = None,
-        length: int = 14,
-        close: pd.Series = None,
-    ) -> pd.Series:
-        """加重移動平均"""
-        # dataが提供されない場合はcloseを使用
-        if data is None and close is not None:
-            data = close
-        elif data is None:
-            raise ValueError("Either 'data' or 'close' must be provided")
-
-        if not isinstance(data, pd.Series):
-            raise TypeError("data must be pandas Series")
-
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-        return ta.wma(data, window=length)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def trima(
-        data: pd.Series, length: int = 10, talib: bool | None = None
-    ) -> pd.Series:
-        """三角移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            # validate_series_params returns empty series, but trima might handle generic None return differently if implemented via ta.trima manually?
-            # No, standard is return empty/NaN.
-            return validation
-
-        result = ta.trima(data, length=length, talib=talib)
-        if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def zlma(
-        data: pd.Series,
-        length: int = 10,
-        mamode: str = "ema",
-        offset: int = 0,
-    ) -> pd.Series:
-        """Zero Lag移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.zlma(data, length=length, mamode=mamode, offset=offset)
-        if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def alma(
-        data: pd.Series,
-        length: int = 10,
-        sigma: float = 6.0,
-        distribution_offset: float = 0.85,
-        offset: int = 0,
-    ) -> pd.Series:
-        """Arnaud Legoux Moving Average"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-        if sigma <= 0:
-            raise ValueError(f"sigma must be positive: {sigma}")
-        if not 0.0 <= distribution_offset <= 1.0:
-            raise ValueError(
-                f"distribution_offset must be between 0.0 and 1.0: {distribution_offset}"
-            )
-
-        result = ta.alma(
-            data,
-            length=length,
-            sigma=sigma,
-            distribution_offset=distribution_offset,
-            offset=offset,
-        )
-        if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def dema(data: pd.Series, length: int) -> pd.Series:
-        """二重指数移動平均"""
-        # logger.debug(f"DEMA calculation started: data_length={len(data)}, length={length}")
-        validation = validate_series_params(data, length, min_data_length=length * 2)
-        if validation is not None:
-            return validation
-
-        # logger.debug("DEMA: Calling pandas-ta.dema()")
-        result = ta.dema(data, window=length)
-        # logger.debug(f"DEMA: Calculation completed, result_length={len(result) if result is not None else 'None'}")
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def tema(data: pd.Series, length: int) -> pd.Series:
-        """三重指数移動平均"""
-        validation = validate_series_params(data, length, min_data_length=length * 3)
-        if validation is not None:
-            return validation
-
-        return ta.tema(data, window=length)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def t3(data: pd.Series, length: int, a: float = 0.7) -> pd.Series:
-        """T3移動平均"""
-        validation = validate_series_params(data, length, min_data_length=length * 6)
-        if validation is not None:
-            return validation
-
-        # Use pandas-ta directly
-        result = ta.t3(data, window=length, a=a)
-        if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def kama(data: pd.Series, length: int = 30) -> pd.Series:
-        """カウフマン適応移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-        return ta.kama(data, window=length)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def hma(data: pd.Series, length: int = 20) -> pd.Series:
-        """Hull移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.hma(data, length=length)
-        if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def vwma(
-        close: pd.Series,
-        volume: pd.Series,
-        length: int = 20,
-    ) -> pd.Series:
-        """出来高加重移動平均"""
-        validation = validate_multi_series_params(
-            {"close": close, "volume": volume}, length
-        )
-        if validation is not None:
-            return validation
-
-        result = ta.vwma(close=close, volume=volume, length=length)
-        if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def linreg(
-        data: pd.Series,
-        length: int = 14,
-        scalar: float = 1.0,
-        intercept: bool = False,
-    ) -> pd.Series:
-        """線形回帰 (pandas-ta)"""
-        validation = validate_series_params(data, length, min_data_length=length)
-        if validation is not None:
-            return validation
-
-        values = [np.nan] * (length - 1)
-
-        for i in range(length - 1, len(data)):
-            window = data[i - length + 1 : i + 1]
-
-            # 欠損値が含まれる場合は計算をスキップ
-            if window.isna().any():
-                values.append(np.nan)
-                continue
-
-            x = np.arange(length)
-            coeffs = np.polyfit(x, window, 1)  # [slope, intercept]
-            if intercept:
-                value = coeffs[1]  # y切片
-            else:
-                # 中心点の値を計算
-                mid_x = (length - 1) / 2
-                value = coeffs[0] * mid_x + coeffs[1]
-            values.append(value * scalar)
-
-        return pd.Series(values, index=data.index)
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def linregslope(
-        data: pd.Series, length: int = 14, scalar: float = 1.0
-    ) -> pd.Series:
-        """線形回帰スロープ"""
-        validation = validate_series_params(data, length, min_data_length=length)
-        if validation is not None:
-            return validation
-
-        slopes = [np.nan] * (length - 1)
-
-        for i in range(length - 1, len(data)):
-            window = data[i - length + 1 : i + 1]
-
-            # 欠損値が含まれる場合は計算をスキップ
-            if window.isna().any():
-                slopes.append(np.nan)
-                continue
-
-            x = np.arange(length)
-            slope = np.polyfit(x, window, 1)[0]  # 1次多項式の係数（スロープ）
-            slopes.append(slope * scalar)  # scalarを適用
-
-        return pd.Series(slopes, index=data.index)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -418,19 +147,6 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def rma(data: pd.Series, length: int = 10) -> pd.Series:
-        """Wilde's Moving Average"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.rma(data, length=length)
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
     def dpo(
         data: pd.Series,
         length: int = 20,
@@ -490,51 +206,6 @@ class TrendIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def bias(
-        data: pd.Series,
-        length: int = 26,
-        ma_type: str = "sma",
-        offset: int = 0,
-    ) -> pd.Series:
-        """Bias Indicator - 移動平均からの乖離率"""
-        # BIAS requires sufficient data length
-        min_length = length * 2
-        validation = validate_series_params(data, length, min_data_length=min_length)
-        if validation is not None:
-            return validation
-
-        # pandas-taのbias関数を直接使用
-        try:
-            result = ta.bias(
-                close=data,
-                length=length,
-                ma_type=ma_type,
-                offset=offset,
-            )
-        except Exception:
-            # pandas-taのbiasが利用できない場合のフォールバック実装
-            ma_func = {
-                "sma": ta.sma,
-                "ema": ta.ema,
-                "wma": ta.wma,
-                "hma": ta.hma,
-                "zlma": ta.zlma,
-            }.get(ma_type, ta.sma)
-
-            ma_result = ma_func(data, length=length)
-            if ma_result is None or ma_result.isna().all():
-                return pd.Series(np.full(len(data), np.nan), index=data.index)
-
-            # BIAS = (close - ma) / ma * 100
-            result = ((data - ma_result) / ma_result) * 100
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
     def adx(
         high: pd.Series,
         low: pd.Series,
@@ -548,9 +219,13 @@ class TrendIndicators:
         validation = validate_multi_series_params(
             {"high": high, "low": low, "close": close}, length
         )
-        if validation is not None:
+
+        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
+            return nan_series, nan_series.copy(), nan_series.copy()
+
+        if validation is not None:
+            return nan_result()
 
         result = ta.adx(
             high=high,
@@ -563,20 +238,17 @@ class TrendIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
+            return nan_result()
 
-        # カラム名の特定 (ADX_14, DMP_14, DMN_14 など)
-        cols = result.columns
-        adx_col = next((c for c in cols if c.startswith("ADX")), None)
-        dmp_col = next((c for c in cols if c.startswith("DMP")), None)
-        dmn_col = next((c for c in cols if c.startswith("DMN")), None)
-
-        if adx_col is None or dmp_col is None or dmn_col is None:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
-
-        return result[adx_col], result[dmp_col], result[dmn_col]
+        # カラム名: ADX_{length}, DMP_{length}, DMN_{length}
+        try:
+            return (
+                result[f"ADX_{length}"],
+                result[f"DMP_{length}"],
+                result[f"DMN_{length}"],
+            )
+        except (KeyError, Exception):
+            return nan_result()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -588,27 +260,28 @@ class TrendIndicators:
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
         validation = validate_multi_series_params({"high": high, "low": low}, length)
-        if validation is not None:
+
+        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
+            return nan_series, nan_series.copy(), nan_series.copy()
+
+        if validation is not None:
+            return nan_result()
 
         result = ta.aroon(high=high, low=low, length=length, scalar=scalar)
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
+            return nan_result()
 
-        # カラム名の特定
-        cols = result.columns
-        up_col = next((c for c in cols if c.startswith("AROONU")), None)
-        down_col = next((c for c in cols if c.startswith("AROOND")), None)
-        osc_col = next((c for c in cols if c.startswith("AROONOSC")), None)
-
-        if up_col is None or down_col is None or osc_col is None:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
-
-        return result[up_col], result[down_col], result[osc_col]
+        # カラム名: AROONU_{length}, AROOND_{length}, AROONOSC_{length}
+        try:
+            return (
+                result[f"AROONU_{length}"],
+                result[f"AROOND_{length}"],
+                result[f"AROONOSC_{length}"],
+            )
+        except (KeyError, Exception):
+            return nan_result()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -640,5 +313,34 @@ class TrendIndicators:
 
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vhf(
+        data: pd.Series,
+        length: int = 28,
+        scalar: float = 100.0,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Vertical Horizontal Filter"""
+        # VHF requires sufficient data length
+        min_length = length * 2
+        validation = validate_series_params(data, length, min_data_length=min_length)
+        if validation is not None:
+            return validation
+
+        result = ta.vhf(
+            close=data,
+            length=length,
+            scalar=scalar,
+            drift=drift,
+            offset=offset,
+        )
+
+        if result is None or (hasattr(result, "isna") and result.isna().all()):
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
         return result

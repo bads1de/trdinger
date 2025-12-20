@@ -16,6 +16,7 @@
 - CHANDE_KROLL_STOP (Chande Kroll Stop)
 - TREND_INTENSITY_INDEX (Trend Intensity Index)
 - CONNORS_RSI (Connors RSI)
+- GRI (Gopalakrishnan Range Index)
 """
 
 from __future__ import annotations
@@ -46,8 +47,7 @@ class OriginalIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def frama(close: pd.Series, length: int = 16, slow: int = 200) -> pd.Series:
-        """Fractal Adaptive Moving Average (FRAMA)
-        """
+        """Fractal Adaptive Moving Average (FRAMA)"""
         if length < 4:
             raise ValueError("length must be >= 4")
         if length % 2 != 0:
@@ -57,7 +57,9 @@ class OriginalIndicators:
 
         validation = validate_series_params(close, length, min_data_length=length)
         if validation is not None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index, name="FRAMA")
+            return pd.Series(
+                np.full(len(close), np.nan), index=close.index, name="FRAMA"
+            )
 
         prices = close.astype(float).to_numpy(copy=True)
         result = np.empty_like(prices)
@@ -102,14 +104,15 @@ class OriginalIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def super_smoother(close: pd.Series, length: int = 10) -> pd.Series:
-        """Ehlers 2-Pole Super Smoother Filter
-        """
+        """Ehlers 2-Pole Super Smoother Filter"""
         if length < 2:
             raise ValueError("length must be >= 2")
 
         validation = validate_series_params(close, length, min_data_length=length)
         if validation is not None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index, name="SUPER_SMOOTHER")
+            return pd.Series(
+                np.full(len(close), np.nan), index=close.index, name="SUPER_SMOOTHER"
+            )
 
         prices = close.astype(float).to_numpy(copy=True)
         result = np.empty_like(prices)
@@ -149,8 +152,7 @@ class OriginalIndicators:
         length: int = 13,
         ema_length: int = 16,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Elder Ray Index
-        """
+        """Elder Ray Index"""
         if length <= 0:
             raise ValueError("length must be positive")
         if ema_length <= 0:
@@ -382,15 +384,22 @@ class OriginalIndicators:
     def prime_oscillator(
         close: pd.Series, length: int = 14, signal_length: int = 3
     ) -> Tuple[pd.Series, pd.Series]:
-        """Prime Number Oscillator (素数オシレーター)
-        """
+        """Prime Number Oscillator (素数オシレーター)"""
         if length < 2:
             raise ValueError("length must be >= 2")
 
         validation = validate_series_params(close, length, min_data_length=length)
         if validation is not None:
-            nan_osc = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"PRIME_OSC_{length}")
-            nan_sig = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"PRIME_SIGNAL_{length}_{signal_length}")
+            nan_osc = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"PRIME_OSC_{length}",
+            )
+            nan_sig = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"PRIME_SIGNAL_{length}_{signal_length}",
+            )
             return nan_osc, nan_sig
 
         if signal_length < 2:
@@ -513,8 +522,7 @@ class OriginalIndicators:
         cycle_periods: list[int] = None,
         fib_ratios: list[float] = None,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Fibonacci Cycle Indicator (フィボナッチサイクルインジケーター)
-        """
+        """Fibonacci Cycle Indicator (フィボナッチサイクルインジケーター)"""
         if cycle_periods is None:
             cycle_periods = [8, 13, 21, 34, 55]
         if fib_ratios is None:
@@ -525,10 +533,20 @@ class OriginalIndicators:
         if not fib_ratios:
             raise ValueError("fib_ratios must not be empty")
 
-        validation = validate_series_params(close, max(cycle_periods), min_data_length=max(cycle_periods))
+        validation = validate_series_params(
+            close, max(cycle_periods), min_data_length=max(cycle_periods)
+        )
         if validation is not None:
-            nan_cycle = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"FIBO_CYCLE_{len(cycle_periods)}")
-            nan_sig = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"FIBO_SIGNAL_{len(cycle_periods)}")
+            nan_cycle = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"FIBO_CYCLE_{len(cycle_periods)}",
+            )
+            nan_sig = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"FIBO_SIGNAL_{len(cycle_periods)}",
+            )
             return nan_cycle, nan_sig
 
         prices = close.astype(float).to_numpy()
@@ -635,8 +653,7 @@ class OriginalIndicators:
         long_length: int = 28,
         signal_length: int = 5,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """Adaptive Entropy Oscillator (適応的エントロピーオシレーター)
-        """
+        """Adaptive Entropy Oscillator (適応的エントロピーオシレーター)"""
         if short_length < 5:
             raise ValueError("short_length must be >= 5")
         if long_length < 10:
@@ -646,11 +663,25 @@ class OriginalIndicators:
         if short_length >= long_length:
             raise ValueError("short_length must be < long_length")
 
-        validation = validate_series_params(close, long_length, min_data_length=long_length)
+        validation = validate_series_params(
+            close, long_length, min_data_length=long_length
+        )
         if validation is not None:
-            nan_osc = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}")
-            nan_sig = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}")
-            nan_ratio = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}")
+            nan_osc = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}",
+            )
+            nan_sig = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}",
+            )
+            nan_ratio = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}",
+            )
             return nan_osc, nan_sig, nan_ratio
 
         prices = close.astype(float).to_numpy()
@@ -730,19 +761,26 @@ class OriginalIndicators:
         length: int = 14,
         flow_length: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Quantum Flow Analysis (量子インスパイアード・フローアナリシス)
-        """
+        """Quantum Flow Analysis (量子インスパイアード・フローアナリシス)"""
         if length < 5:
             raise ValueError("length must be >= 5")
         if flow_length < 3:
             raise ValueError("flow_length must be >= 3")
 
         validation = validate_multi_series_params(
-            {"close": close, "high": high, "low": low, "volume": volume}, length, min_data_length=length
+            {"close": close, "high": high, "low": low, "volume": volume},
+            length,
+            min_data_length=length,
         )
         if validation is not None:
-            nan_flow = pd.Series(np.full(len(close), np.nan), index=close.index, name="QUANTUM_FLOW")
-            nan_sig = pd.Series(np.full(len(close), np.nan), index=close.index, name="QUANTUM_FLOW_SIGNAL")
+            nan_flow = pd.Series(
+                np.full(len(close), np.nan), index=close.index, name="QUANTUM_FLOW"
+            )
+            nan_sig = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name="QUANTUM_FLOW_SIGNAL",
+            )
             return nan_flow, nan_sig
 
         # 価格データの前処理
@@ -876,8 +914,7 @@ class OriginalIndicators:
         resonance_bands: int = 5,
         signal_length: int = 3,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Harmonic Resonance Indicator (HRI)
-        """
+        """Harmonic Resonance Indicator (HRI)"""
         if length < 10:
             raise ValueError("length must be >= 10")
         if resonance_bands < 3 or resonance_bands > 10:
@@ -889,8 +926,14 @@ class OriginalIndicators:
             {"close": close, "high": high, "low": low}, length, min_data_length=length
         )
         if validation is not None:
-            nan_hri = pd.Series(np.full(len(close), np.nan), index=close.index, name="HARMONIC_RESONANCE")
-            nan_sig = pd.Series(np.full(len(close), np.nan), index=close.index, name="HRI_SIGNAL")
+            nan_hri = pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name="HARMONIC_RESONANCE",
+            )
+            nan_sig = pd.Series(
+                np.full(len(close), np.nan), index=close.index, name="HRI_SIGNAL"
+            )
             return nan_hri, nan_sig
 
         prices = close.astype(float).to_numpy()
@@ -959,10 +1002,7 @@ class OriginalIndicators:
                 result[i] = resonance_score
 
         hri_series = pd.Series(result, index=close.index, name="HARMONIC_RESONANCE")
-        signal = (
-            hri_series.rolling(window=signal_length, min_periods=1)
-            .mean()
-        )
+        signal = hri_series.rolling(window=signal_length, min_periods=1).mean()
         signal.name = "HRI_SIGNAL"
 
         return hri_series, signal
@@ -1071,8 +1111,7 @@ class OriginalIndicators:
         embedding_dim: int = 3,
         signal_length: int = 4,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Chaos Theory Fractal Dimension (CTFD)
-        """
+        """Chaos Theory Fractal Dimension (CTFD)"""
         if length < 15:
             raise ValueError("length must be >= 15")
         if embedding_dim < 2 or embedding_dim > 5:
@@ -1081,11 +1120,17 @@ class OriginalIndicators:
             raise ValueError("signal_length must be >= 2")
 
         validation = validate_multi_series_params(
-            {"close": close, "high": high, "low": low, "volume": volume}, length, min_data_length=length
+            {"close": close, "high": high, "low": low, "volume": volume},
+            length,
+            min_data_length=length,
         )
         if validation is not None:
-            nan_ctf = pd.Series(np.full(len(close), np.nan), index=close.index, name="CHAOS_FRACTAL_DIM")
-            nan_sig = pd.Series(np.full(len(close), np.nan), index=close.index, name="CTFD_SIGNAL")
+            nan_ctf = pd.Series(
+                np.full(len(close), np.nan), index=close.index, name="CHAOS_FRACTAL_DIM"
+            )
+            nan_sig = pd.Series(
+                np.full(len(close), np.nan), index=close.index, name="CTFD_SIGNAL"
+            )
             return nan_ctf, nan_sig
 
         prices = close.astype(float).to_numpy()
@@ -1155,10 +1200,7 @@ class OriginalIndicators:
                 result[i] = predictability
 
         ctf_series = pd.Series(result, index=close.index, name="CHAOS_FRACTAL_DIM")
-        signal = (
-            ctf_series.rolling(window=signal_length, min_periods=1)
-            .mean()
-        )
+        signal = ctf_series.rolling(window=signal_length, min_periods=1).mean()
         signal.name = "CTFD_SIGNAL"
 
         return ctf_series, signal
@@ -1201,14 +1243,17 @@ class OriginalIndicators:
     def mcginley_dynamic(
         close: pd.Series, length: int = 10, k: float = 0.6
     ) -> pd.Series:
-        """McGinley Dynamic (MD)
-        """
+        """McGinley Dynamic (MD)"""
         if length < 1:
             raise ValueError("length must be >= 1")
 
         validation = validate_series_params(close, length, min_data_length=length)
         if validation is not None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index, name=f"MCGINLEY_{length}")
+            return pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"MCGINLEY_{length}",
+            )
 
         if k <= 0:
             raise ValueError("k must be > 0")
@@ -1275,19 +1320,24 @@ class OriginalIndicators:
         x: float = 1.0,
         q: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Chande Kroll Stop
-        """
+        """Chande Kroll Stop"""
         if p < 1:
             raise ValueError("p must be >= 1")
         if q < 1:
             raise ValueError("q must be >= 1")
 
         validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, max(p, q), min_data_length=max(p, q)
+            {"high": high, "low": low, "close": close},
+            max(p, q),
+            min_data_length=max(p, q),
         )
         if validation is not None:
-            nan_long = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"CKS_LONG_{p}")
-            nan_short = pd.Series(np.full(len(close), np.nan), index=close.index, name=f"CKS_SHORT_{p}")
+            nan_long = pd.Series(
+                np.full(len(close), np.nan), index=close.index, name=f"CKS_LONG_{p}"
+            )
+            nan_short = pd.Series(
+                np.full(len(close), np.nan), index=close.index, name=f"CKS_SHORT_{p}"
+            )
             return nan_long, nan_short
 
         if x <= 0:
@@ -1356,18 +1406,23 @@ class OriginalIndicators:
         length: int = 14,
         sma_length: int = 30,
     ) -> pd.Series:
-        """Trend Intensity Index (TII)
-        """
+        """Trend Intensity Index (TII)"""
         if length < 1:
             raise ValueError("length must be >= 1")
         if sma_length < 1:
             raise ValueError("sma_length must be >= 1")
 
         validation = validate_multi_series_params(
-            {"close": close, "high": high, "low": low}, max(length, sma_length), min_data_length=max(length, sma_length)
+            {"close": close, "high": high, "low": low},
+            max(length, sma_length),
+            min_data_length=max(length, sma_length),
         )
         if validation is not None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index, name=f"TII_{length}_{sma_length}")
+            return pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"TII_{length}_{sma_length}",
+            )
 
         # SMAの計算
         sma = close.rolling(window=sma_length).mean()
@@ -1420,8 +1475,7 @@ class OriginalIndicators:
         streak_periods: int = 2,
         rank_periods: int = 100,
     ) -> pd.Series:
-        """Connors RSI (ローレンス・コナーズ RSI)
-        """
+        """Connors RSI (ローレンス・コナーズ RSI)"""
         if rsi_periods < 2:
             raise ValueError("rsi_periods must be >= 2")
         if streak_periods < 1:
@@ -1430,9 +1484,15 @@ class OriginalIndicators:
             raise ValueError("rank_periods must be >= 2")
 
         max_period = max(rsi_periods, streak_periods, rank_periods)
-        validation = validate_series_params(close, max_period, min_data_length=max_period)
+        validation = validate_series_params(
+            close, max_period, min_data_length=max_period
+        )
         if validation is not None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index, name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}")
+            return pd.Series(
+                np.full(len(close), np.nan),
+                index=close.index,
+                name=f"CONNORS_RSI_{rsi_periods}_{streak_periods}_{rank_periods}",
+            )
 
         prices = close.astype(float).to_numpy()
         result = np.empty_like(prices)
@@ -1528,7 +1588,9 @@ class OriginalIndicators:
                 if len(valid_components) == 3:
                     connors_value = np.mean(valid_components)
                 elif len(valid_components) == 2:
-                    connors_value = np.mean(valid_components) * (3.0 / len(valid_components))
+                    connors_value = np.mean(valid_components) * (
+                        3.0 / len(valid_components)
+                    )
                 else:
                     connors_value = valid_components[0]
                 result[i] = max(0, min(100, connors_value))
@@ -1562,5 +1624,49 @@ class OriginalIndicators:
             },
             index=data.index,
         )
+
+        return result
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def gri(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        length: int = 14,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Gopalakrishnan Range Index (GRI)
+
+        期間内の最高値と最安値のレンジを分析し、市場のボラティリティ/フラクタル特性を測定する。
+        GRI = log(max(High, n) - min(Low, n)) / log(n)
+
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            length: 期間（デフォルト: 14）
+            offset: シフト量
+
+        Returns:
+            GRI シリーズ
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
+
+        # GRI の計算: log(MaxHigh_n - MinLow_n) / log(n)
+        hh = high.rolling(window=length).max()
+        ll = low.rolling(window=length).min()
+
+        # ゼロ以下にならないよう微小値を加算
+        tr = (hh - ll).replace(0, 1e-9)
+
+        result = np.log(tr) / np.log(float(length))
+
+        if offset != 0:
+            result = result.shift(offset)
 
         return result

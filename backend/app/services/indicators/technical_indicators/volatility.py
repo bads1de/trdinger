@@ -1,19 +1,27 @@
 """
-ボラティリティ系テクニカル指標
+ボラティリティ系テクニカル指標 (Volatility Indicators)
+
+pandas-ta の volatility カテゴリに対応。
+市場の変動性とリスク評価に使用する指標群。
 
 登録してあるテクニカルの一覧:
 - ATR (Average True Range)
+- NATR (Normalized ATR)
 - Bollinger Bands
 - Keltner Channels
 - Donchian Channels
-- Supertrend
 - Acceleration Bands
 - Ulcer Index
 - Relative Volatility Index (RVI)
+- True Range
+- Yang-Zhang Volatility
+- Parkinson Volatility
+- Garman-Klass Volatility
+- Mass Index (MASSI)
 """
 
 import logging
-from typing import Optional, Tuple
+from typing import Final, Tuple
 
 import numpy as np
 import pandas as pd
@@ -130,56 +138,54 @@ class VolatilityIndicators:
         close: pd.Series,
         period: int = 20,
         scalar: float = 2.0,
-        std_dev: Optional[float] = None,
+        mamode: str = "sma",
+        std_dev: bool = False,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Keltner Channels: returns (upper, middle, lower)"""
-
         validation = validate_multi_series_params(
             {"high": high, "low": low, "close": close}, period
         )
+
+        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series.copy(), nan_series.copy()
+
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return nan_result()
 
-        # std_dev パラメータは使用しないが、互換性のため受け入れる
-        _ = std_dev
-
-        # データ長チェック
-        min_length = max(period * 2, 20)  # 最小データ長
-        if len(high) < min_length:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
-
+        # keltner (kc) を計算
         df = ta.kc(
-            high=high.values,
-            low=low.values,
-            close=close.values,
+            high=high,
+            low=low,
+            close=close,
             length=period,
             scalar=scalar,
-            mamode="sma",
+            mamode=mamode,
         )
 
-        if df is None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+        if df is None or df.empty:
+            return nan_result()
 
-        # パフォーマンスカラム抽出処理
-        cols = list(df.columns)
-
-        upper = df[
-            next((c for c in cols if "KCu" in c or "upper" in c.lower()), cols[0])
-        ]
-        middle = df[
-            next(
-                (c for c in cols if "KCe" in c or "KCM" in c or "mid" in c.lower()),
-                cols[1 if len(cols) > 1 else 0],
+        # カラム名: KC{mamode[0]}_{length}_{scalar}
+        m = mamode[0].lower()
+        # pandas-ta は整数として埋め込む場合と浮動小数点として埋め込む場合があるため、両方試行
+        try:
+            # 浮動小数点形式 (例: 2.0)
+            return (
+                df[f"KCU{m}_{period}_{float(scalar)}"],
+                df[f"KCB{m}_{period}_{float(scalar)}"],
+                df[f"KCL{m}_{period}_{float(scalar)}"],
             )
-        ]
-        lower = df[
-            next((c for c in cols if "KCl" in c or "lower" in c.lower()), cols[-1])
-        ]
-
-        return upper, middle, lower
+        except KeyError:
+            try:
+                # 整数形式 (例: 2)
+                return (
+                    df[f"KCU{m}_{period}_{int(scalar)}"],
+                    df[f"KCB{m}_{period}_{int(scalar)}"],
+                    df[f"KCL{m}_{period}_{int(scalar)}"],
+                )
+            except (KeyError, Exception):
+                return nan_result()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -190,86 +196,28 @@ class VolatilityIndicators:
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Donchian Channels: returns (upper, middle, lower)"""
         validation = validate_multi_series_params({"high": high, "low": low}, length)
-        if validation is not None:
+
+        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
+            return nan_series, nan_series.copy(), nan_series.copy()
+
+        if validation is not None:
+            return nan_result()
 
         df = ta.donchian(high=high, low=low, length=length)
 
         if df is None or df.empty:
-            logger.error("DONCHIAN: Calculation returned None - returning NaN series")
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
+            return nan_result()
 
-        cols = list(df.columns)
-        upper = df[
-            next((c for c in cols if "DCHU" in c or "upper" in c.lower()), cols[0])
-        ]
-        middle = df[
-            next(
-                (c for c in cols if "DCHM" in c or "mid" in c.lower()),
-                cols[1 if len(cols) > 1 else 0],
+        # カラム名: DCU_{length}_{length}, DCM_{length}_{length}, DCL_{length}_{length}
+        try:
+            return (
+                df[f"DCU_{length}_{length}"],
+                df[f"DCM_{length}_{length}"],
+                df[f"DCL_{length}_{length}"],
             )
-        ]
-        lower = df[
-            next((c for c in cols if "DCHL" in c or "lower" in c.lower()), cols[-1])
-        ]
-        return upper, middle, lower
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def supertrend(
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        period: int = 7,
-        multiplier: float = 3.0,
-        **kwargs,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """
-        Supertrend インジケーター
-
-        Args:
-            high: 高値
-            low: 安値
-            close: 終値
-            period: 期間（デフォルト: 7）
-            multiplier: ATR乗数（デフォルト: 3.0）
-            **kwargs: 'factor' を 'multiplier' のエイリアスとしてサポート
-
-        Returns:
-            Tuple[lower, upper, direction]:
-                - lower: 下側バンド (SUPERTl)
-                - upper: 上側バンド (SUPERTs)
-                - direction: 方向 (1=強気, -1=弱気)
-        """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, period
-        )
-        if validation is not None:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
-
-        # 'factor' を 'multiplier' のエイリアスとしてサポート
-        if "factor" in kwargs:
-            multiplier = kwargs["factor"]
-
-        df = ta.supertrend(
-            high=high, low=low, close=close, length=period, multiplier=multiplier
-        )
-
-        if df is None or df.empty:
-            logger.warning("Supertrend: Calculation returned None - returning NaN")
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
-
-        cols = list(df.columns)
-        # pandas-ta returns: SUPERT_, SUPERTd_, SUPERTl_, SUPERTs_
-        lower = df[next((c for c in cols if "SUPERTl_" in c), cols[0])]
-        upper = df[next((c for c in cols if "SUPERTs_" in c), cols[-1])]
-        direction = df[next((c for c in cols if "SUPERTd_" in c), cols[1])]
-
-        return lower, upper, direction
+        except (KeyError, Exception):
+            return nan_result()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -281,37 +229,30 @@ class VolatilityIndicators:
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Acceleration Bands: returns (upper, middle, lower)"""
         validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}
+            {"high": high, "low": low, "close": close}, period
         )
+
+        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
+            return nan_series, nan_series.copy(), nan_series.copy()
+
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return nan_result()
 
-        length = period
+        result = ta.accbands(high=high, low=low, close=close, length=period)
 
-        result = ta.accbands(
-            high=high, low=low, close=close, length=length, mamode="sma"
-        )
+        if result is None or result.empty:
+            return nan_result()
 
-        if result is None or (hasattr(result, "isna") and result.isna().all().all()):
-            logger.error("ACCBANDS: Calculation returned None - returning NaN series")
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
-
-        cols = list(result.columns)
-        upper = result[
-            next((c for c in cols if "ACCBU" in c or "upper" in c.lower()), cols[0])
-        ]
-        middle = result[
-            next(
-                (c for c in cols if "ACCBM" in c or "mid" in c.lower()),
-                cols[1 if len(cols) > 1 else 0],
+        # カラム名: ACCBU_{length}, ACCBM_{length}, ACCBL_{length}
+        try:
+            return (
+                result[f"ACCBU_{period}"],
+                result[f"ACCBM_{period}"],
+                result[f"ACCBL_{period}"],
             )
-        ]
-        lower = result[
-            next((c for c in cols if "ACCBL" in c or "lower" in c.lower()), cols[-1])
-        ]
-        return upper, middle, lower
+        except (KeyError, Exception):
+            return nan_result()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -361,84 +302,6 @@ class VolatilityIndicators:
             drift=drift,
             offset=offset,
         )
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
-
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    @staticmethod
-    def vhf(
-        data: pd.Series,
-        length: int = 28,
-        scalar: float = 100.0,
-        drift: int = 1,
-        offset: int = 0,
-    ) -> pd.Series:
-        """Vertical Horizontal Filter"""
-        # VHF requires sufficient data length
-        min_length = length * 2
-        validation = validate_series_params(data, length, min_data_length=min_length)
-        if validation is not None:
-            return validation
-
-        result = ta.vhf(
-            close=data,
-            length=length,
-            scalar=scalar,
-            drift=drift,
-            offset=offset,
-        )
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
-
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def gri(
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        length: int = 14,
-        offset: int = 0,
-    ) -> pd.Series:
-        """Gopalakrishnan Range Index (GRI) - 市場のレンジ幅を測定するオシレーター"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
-        )
-        if validation is not None:
-            return validation
-
-        # pandas-taのkvo（Know Sure Thing）を使用して代替実装
-        # KVOは同様のレンジベースの計算を行う
-        try:
-            result = ta.kvo(
-                high=high,
-                low=low,
-                close=close,
-                fast=length,
-                slow=length * 2,
-                signal=None,  # 信号線は不要
-                offset=offset,
-            )
-        except Exception:
-            # pandas-taが使えない場合のフォールバック実装
-            # 簡易的なGRI計算
-            typical_range = high - low
-            typical_price = (high + low) / 2
-
-            # 簡易的なレンジインデックスを計算
-            gri_raw = typical_range / typical_price * 100
-
-            # 移動平均でスムージング
-            if len(gri_raw) >= length:
-                result = gri_raw.rolling(window=length, min_periods=1).mean()
-            else:
-                result = pd.Series(np.full(len(gri_raw), np.nan), index=gri_raw.index)
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
             return pd.Series(np.full(len(close), np.nan), index=close.index)
@@ -593,3 +456,36 @@ class VolatilityIndicators:
 
         # Return volatility (std dev)
         return np.sqrt(rolling_var).fillna(0.0)
+
+    @staticmethod
+    def massi(
+        high: pd.Series,
+        low: pd.Series,
+        fast: int = 9,
+        slow: int = 25,
+    ) -> pd.Series:
+        """Mass Index
+
+        トレンドの反転を予測するためのボラティリティ指標。
+        高値と安値のレンジ拡大パターンを検出。
+
+        Args:
+            high: 高値
+            low: 安値
+            fast: 高速 EMA 期間（デフォルト: 9）
+            slow: 低速 EMA 期間（デフォルト: 25）
+
+        Returns:
+            Mass Index
+        """
+        validation = validate_multi_series_params({"high": high, "low": low}, slow)
+        if validation is not None:
+            return validation
+
+        if fast <= 0:
+            raise ValueError("fast must be positive")
+
+        result = ta.massi(high=high, low=low, fast=fast, slow=slow)
+        if result is None or result.empty:
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        return result.bfill().fillna(0)

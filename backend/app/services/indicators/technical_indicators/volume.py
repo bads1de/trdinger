@@ -160,46 +160,41 @@ class VolumeIndicators:
         close: pd.Series,
         volume: pd.Series,
         period: int = 10,
-        anchor: str | None = None,
+        anchor: str | None = None,  # 互換性のため残すが未使用
     ) -> pd.Series:
-        """Volume Weighted Average Price"""
+        """Volume Weighted Average Price
+
+        pandas-taのVWAPは時系列インデックスを必須とするため、
+        独自の累積VWAP実装を使用。
+
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            volume: 出来高
+            period: 未使用（互換性のため残す）
+            anchor: 未使用（互換性のため残す）
+
+        Returns:
+            VWAP (累積ベース)
+        """
         validation = validate_multi_series_params(
             {"high": high, "low": low, "close": close, "volume": volume}
         )
         if validation is not None:
             return validation
 
-        # pandas-taのVWAP関数は時系列インデックスが必要なため、独自実装を使用
-        try:
-            # pandas-taのVWAPを試行（時系列インデックスがある場合）
-            if hasattr(high.index, "to_period"):
-                df = ta.vwap(
-                    high=high,
-                    low=low,
-                    close=close,
-                    volume=volume,
-                    length=period,
-                    anchor=anchor,
-                )
-                return df if df is not None else pd.Series([], dtype=float)
-        except Exception:
-            pass
-
-        # フォールバック: 独自VWAP実装
         # 典型価格 = (H + L + C) / 3
         typical_price = (high + low + close) / 3
 
         # VWAP = Σ(典型価格 × 出来高) / Σ(出来高)
-        # 累積で計算
         cumulative_pv = (typical_price * volume).cumsum()
         cumulative_volume = volume.cumsum()
 
-        # ゼロ除算を避ける - pandas使用
-        vwap = np.where(
-            cumulative_volume != 0, cumulative_pv / cumulative_volume, typical_price
-        )
+        # ゼロ除算を避ける
+        vwap = cumulative_pv / cumulative_volume.replace(0, np.nan)
 
-        return pd.Series(vwap, index=high.index if hasattr(high, "index") else None)
+        return vwap.fillna(typical_price)
 
     @staticmethod
     @handle_pandas_ta_errors

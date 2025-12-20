@@ -104,9 +104,9 @@ class DynamicIndicatorDiscovery:
             or param_lower in ["data", "series"]
         )
 
-    # pandas-ta カテゴリ -> システムカテゴリの例外マッピング
+    # pandas-ta カテゴリ -> システムカテゴリのマッピング
+    # overlap は移動平均系などを含むため、独自カテゴリとして維持
     _TA_CATEGORY_MAP = {
-        "overlap": "trend",
         "cycles": "cycle",
         "statistics": "statistic",
         "performance": "statistic",

@@ -1,5 +1,8 @@
 """
 VolatilityIndicatorsのテスト
+
+pandas-taのvolatilityカテゴリに対応する指標のテスト。
+ATR, BBands, Keltnerなどのボラティリティ系指標を含む。
 """
 
 import numpy as np
@@ -190,51 +193,6 @@ class TestVolatilityIndicators:
         assert len(middle) == len(data)
         assert len(lower) == len(data)
 
-    def test_calculate_supertrend_valid_data(self):
-        """有効データでのSupertrend計算テスト"""
-        data = pd.DataFrame(
-            {
-                "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
-                "low": [98, 99, 100, 101, 102, 103, 104, 105, 106, 107],
-                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
-            }
-        )
-
-        result = VolatilityIndicators.supertrend(
-            data["high"], data["low"], data["close"], period=7, multiplier=3.0
-        )
-
-        assert isinstance(result, tuple)
-        assert len(result) == 3
-        upper, lower, direction = result
-        assert len(upper) == len(data)
-        assert len(lower) == len(data)
-        assert len(direction) == len(data)
-        # directionは1.0または-1.0
-        assert set(direction.dropna().unique()).issubset({1.0, -1.0})
-
-    def test_calculate_supertrend_insufficient_data(self):
-        """不十分なデータでのSupertrend計算テスト"""
-        data = pd.DataFrame(
-            {
-                "high": [102, 103],
-                "low": [98, 99],
-                "close": [100, 101],
-            }
-        )
-
-        result = VolatilityIndicators.supertrend(
-            data["high"], data["low"], data["close"], period=14, multiplier=3.0
-        )
-
-        assert isinstance(result, tuple)
-        assert len(result) == 3
-        upper, lower, direction = result
-        # 不十分なデータではNaN
-        assert upper.isna().all()
-        assert lower.isna().all()
-        assert direction.isna().all()
-
     def test_calculate_accbands_valid_data(self):
         """有効データでのAcceleration Bands計算テスト"""
         data = pd.DataFrame(
@@ -307,8 +265,8 @@ class TestVolatilityIndicators:
         with pytest.raises(ValueError, match="length must be positive"):
             VolatilityIndicators.rvi(data["close"], data["high"], data["low"], length=0)
 
-    def test_calculate_gri_valid_data(self):
-        """有効データでのGRI計算テスト"""
+    def test_calculate_true_range_valid_data(self):
+        """有効データでのTrue Range計算テスト"""
         data = pd.DataFrame(
             {
                 "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
@@ -317,48 +275,78 @@ class TestVolatilityIndicators:
             }
         )
 
-        result = VolatilityIndicators.gri(
-            data["high"], data["low"], data["close"], length=5
+        result = VolatilityIndicators.true_range(
+            data["high"], data["low"], data["close"]
         )
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(data)
-        # GRIは振動型指標なので、正負の値を取り得る
-        assert not result.isna().all()
+        # True Rangeは0以上の値（NaN値がない場合）
+        valid_values = result.dropna()
+        if len(valid_values) > 0:
+            assert valid_values.min() >= 0
 
-    def test_calculate_gri_insufficient_data(self):
-        """データ不足でのGRI計算テスト"""
-        data = pd.DataFrame(
-            {
-                "high": [102, 103],
-                "low": [98, 99],
-                "close": [100, 101],
-            }
-        )
+    def test_calculate_yang_zhang_valid_data(self):
+        """有効データでのYang-Zhang Volatility計算テスト"""
+        np.random.seed(42)
+        length = 50
+        close = 100 + np.cumsum(np.random.randn(length))
+        high = close + abs(np.random.randn(length))
+        low = close - abs(np.random.randn(length))
+        open_ = close - 0.5 + np.random.randn(length) * 0.5
 
-        result = VolatilityIndicators.gri(
-            data["high"], data["low"], data["close"], length=14
+        data = pd.DataFrame({"open": open_, "high": high, "low": low, "close": close})
+
+        result = VolatilityIndicators.yang_zhang(
+            data["open"], data["high"], data["low"], data["close"], length=20
         )
 
         assert isinstance(result, pd.Series)
-        assert len(result) == 2
-        # 不十分なデータではNaN
-        assert result.isna().all()
+        assert len(result) == len(data)
+        # Volatilityは0以上
+        valid_values = result.dropna()
+        if len(valid_values) > 0:
+            assert valid_values.min() >= 0
 
-    def test_calculate_gri_invalid_length(self):
-        """無効な長さのGRIテスト"""
+    def test_calculate_parkinson_valid_data(self):
+        """有効データでのParkinson Volatility計算テスト"""
         data = pd.DataFrame(
             {
-                "high": [102, 103, 104],
-                "low": [98, 99, 100],
-                "close": [100, 101, 102],
+                "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
+                "low": [98, 99, 100, 101, 102, 103, 104, 105, 106, 107],
             }
         )
 
-        with pytest.raises(ValueError, match="length must be positive"):
-            VolatilityIndicators.gri(
-                data["high"], data["low"], data["close"], length=-1
-            )
+        result = VolatilityIndicators.parkinson(data["high"], data["low"], length=5)
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        # Volatilityは0以上
+        valid_values = result.dropna()
+        if len(valid_values) > 0:
+            assert valid_values.min() >= 0
+
+    def test_calculate_garman_klass_valid_data(self):
+        """有効データでのGarman-Klass Volatility計算テスト"""
+        np.random.seed(42)
+        length = 50
+        close = 100 + np.cumsum(np.random.randn(length))
+        high = close + abs(np.random.randn(length))
+        low = close - abs(np.random.randn(length))
+        open_ = close - 0.5 + np.random.randn(length) * 0.5
+
+        data = pd.DataFrame({"open": open_, "high": high, "low": low, "close": close})
+
+        result = VolatilityIndicators.garman_klass(
+            data["open"], data["high"], data["low"], data["close"], length=20
+        )
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        # Volatilityは0以上
+        valid_values = result.dropna()
+        if len(valid_values) > 0:
+            assert valid_values.min() >= 0
 
     def test_handle_invalid_data_types(self):
         """無効なデータ型のテスト"""
@@ -540,38 +528,6 @@ class TestVolatilityIndicators:
             assert (upper2[valid_idx] >= upper1[valid_idx] - 1e-10).all()
             assert (lower2[valid_idx] <= lower1[valid_idx] + 1e-10).all()
 
-    def test_supertrend_with_different_multipliers(self):
-        """異なる乗数でのSupertrendテスト"""
-        data = pd.DataFrame(
-            {
-                "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
-                "low": [98, 99, 100, 101, 102, 103, 104, 105, 106, 107],
-                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
-            }
-        )
-
-        # multiplier=2.0
-        result1 = VolatilityIndicators.supertrend(
-            data["high"], data["low"], data["close"], period=7, multiplier=2.0
-        )
-        # multiplier=3.0
-        result2 = VolatilityIndicators.supertrend(
-            data["high"], data["low"], data["close"], period=7, multiplier=3.0
-        )
-
-        assert isinstance(result1, tuple)
-        assert isinstance(result2, tuple)
-
-        lower1, upper1, _ = result1
-        lower2, upper2, _ = result2
-
-        # NaN値を除外してから比較
-        valid_idx = ~(upper1.isna() | upper2.isna() | lower1.isna() | lower2.isna())
-        if valid_idx.any():
-            # multiplierが大きいほどバンド幅が広い（小さな誤差を許容）
-            assert (upper2[valid_idx] >= upper1[valid_idx] - 1e-10).all()
-            assert (lower2[valid_idx] <= lower1[valid_idx] + 1e-10).all()
-
     def test_atr_with_different_periods(self):
         """異なる期間でのATRテスト"""
         data = pd.DataFrame(
@@ -607,7 +563,3 @@ class TestVolatilityIndicators:
 if __name__ == "__main__":
     # コマンドラインからの実行用
     pytest.main([__file__, "-v"])
-
-
-
-

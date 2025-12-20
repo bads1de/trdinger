@@ -772,6 +772,7 @@ class TestOriginalIndicators:
                 length=14,
                 flow_length=2,
             )
+
     def test_quantum_flow_missing_columns(self):
         """欠損列でのQuantum Flowテスト"""
         # volume列が欠損
@@ -1193,11 +1194,11 @@ class TestOriginalIndicators:
         data = pd.DataFrame(
             {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
         )
-    
+
         # lengthが負
         with pytest.raises(ValueError):
             OriginalIndicators.frama(data["close"], length=-1, slow=200)
-    
+
         # slowが負
         with pytest.raises(ValueError):
             OriginalIndicators.frama(data["close"], length=16, slow=0)
@@ -1772,16 +1773,11 @@ class TestOriginalIndicators:
             assert non_nan_values.max() <= 100
 
         def test_prime_oscillator_parameter_validation(self):
-
             """Prime Number Oscillatorのパラメータ検証テスト"""
 
             data = pd.DataFrame(
-
                 {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
-
             )
-
-        
 
             # lengthが小さすぎる
 
@@ -1789,13 +1785,13 @@ class TestOriginalIndicators:
 
                 OriginalIndicators.calculate_prime_oscillator(data, length=1)
 
-        
-
             # signal_lengthが小さすぎる
 
             with pytest.raises(ValueError):
 
-                OriginalIndicators.calculate_prime_oscillator(data, length=14, signal_length=1)
+                OriginalIndicators.calculate_prime_oscillator(
+                    data, length=14, signal_length=1
+                )
 
         # 不正なデータ型
         with pytest.raises(TypeError, match="data must be pandas DataFrame"):
@@ -2021,6 +2017,57 @@ class TestOriginalIndicators:
         assert isinstance(result, pd.DataFrame)
         assert len(result) == len(large_data)
         # 大きなデータでも処理できる
+
+    def test_calculate_gri_valid_data(self):
+        """有効データでのGRI計算テスト"""
+        data = pd.DataFrame(
+            {
+                "high": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
+                "low": [98, 99, 100, 101, 102, 103, 104, 105, 106, 107],
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+            }
+        )
+
+        result = OriginalIndicators.gri(
+            data["high"], data["low"], data["close"], length=5
+        )
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        # GRIはボラティリティ指標（fractal dimension関連）
+        assert not result.isna().all()
+
+    def test_calculate_gri_insufficient_data(self):
+        """データ不足でのGRI計算テスト"""
+        data = pd.DataFrame(
+            {
+                "high": [102, 103],
+                "low": [98, 99],
+                "close": [100, 101],
+            }
+        )
+
+        result = OriginalIndicators.gri(
+            data["high"], data["low"], data["close"], length=14
+        )
+
+        assert isinstance(result, pd.Series)
+        assert len(result) == 2
+        # 不十分なデータではNaN
+        assert result.isna().all()
+
+    def test_calculate_gri_invalid_length(self):
+        """無効な長さのGRIテスト"""
+        data = pd.DataFrame(
+            {
+                "high": [102, 103, 104],
+                "low": [98, 99, 100],
+                "close": [100, 101, 102],
+            }
+        )
+
+        with pytest.raises(ValueError, match="length must be positive"):
+            OriginalIndicators.gri(data["high"], data["low"], data["close"], length=-1)
 
 
 if __name__ == "__main__":

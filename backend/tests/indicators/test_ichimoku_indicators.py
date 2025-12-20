@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from app.services.indicators.technical_indicators.overlap import OverlapIndicators
 
 
 class TestIchimokuIndicators:
@@ -37,7 +37,7 @@ class TestIchimokuIndicators:
 
     def test_ichimoku_basic_calculation(self, sample_data):
         """Ichimoku Cloudの基本計算をテスト"""
-        result = MomentumIndicators.ichimoku(
+        result = OverlapIndicators.ichimoku(
             high=sample_data["high"], low=sample_data["low"], close=sample_data["close"]
         )
 
@@ -60,7 +60,7 @@ class TestIchimokuIndicators:
 
     def test_ichimoku_with_custom_parameters(self, sample_data):
         """カスタムパラメータでのIchimoku Cloud計算をテスト"""
-        result = MomentumIndicators.ichimoku(
+        result = OverlapIndicators.ichimoku(
             high=sample_data["high"],
             low=sample_data["low"],
             close=sample_data["close"],
@@ -86,7 +86,7 @@ class TestIchimokuIndicators:
         """空のデータでのテスト"""
         empty_series = pd.Series([], dtype=float)
 
-        result = MomentumIndicators.ichimoku(
+        result = OverlapIndicators.ichimoku(
             high=empty_series, low=empty_series, close=empty_series
         )
 
@@ -109,7 +109,7 @@ class TestIchimokuIndicators:
         # 最小データ長より少ないデータ
         short_data = pd.Series([100, 101, 102, 103, 104])
 
-        result = MomentumIndicators.ichimoku(
+        result = OverlapIndicators.ichimoku(
             high=short_data, low=short_data - 1, close=short_data - 0.5
         )
 
@@ -134,12 +134,12 @@ class TestIchimokuIndicators:
         close = pd.Series([99, 100, 101])
 
         # 正常な計算
-        result = MomentumIndicators.ichimoku(high=high, low=low, close=close)
+        result = OverlapIndicators.ichimoku(high=high, low=low, close=close)
         assert isinstance(result, dict)
 
         # pandas Series以外のデータ型でテスト（エラーになることを確認）
         with pytest.raises(TypeError):
-            MomentumIndicators.ichimoku(
+            OverlapIndicators.ichimoku(
                 high=[100, 101, 102], low=[98, 99, 100], close=[99, 100, 101]
             )
 
@@ -151,11 +151,11 @@ class TestIchimokuIndicators:
 
         # 長さが異なる場合はエラーになることを確認
         with pytest.raises(ValueError):
-            MomentumIndicators.ichimoku(high=high, low=low, close=close)
+            OverlapIndicators.ichimoku(high=high, low=low, close=close)
 
     def test_ichimoku_component_properties(self, sample_data):
         """各コンポーネントの特性をテスト"""
-        result = MomentumIndicators.ichimoku(
+        result = OverlapIndicators.ichimoku(
             high=sample_data["high"], low=sample_data["low"], close=sample_data["close"]
         )
 
@@ -188,7 +188,7 @@ class TestIchimokuIndicators:
         close = sample_data["close"]
 
         # 正常な範囲のパラメータ
-        result1 = MomentumIndicators.ichimoku(
+        result1 = OverlapIndicators.ichimoku(
             high=high,
             low=low,
             close=close,
@@ -199,7 +199,7 @@ class TestIchimokuIndicators:
         assert isinstance(result1, dict)
 
         # 小さなパラメータ
-        result2 = MomentumIndicators.ichimoku(
+        result2 = OverlapIndicators.ichimoku(
             high=high,
             low=low,
             close=close,
@@ -210,7 +210,7 @@ class TestIchimokuIndicators:
         assert isinstance(result2, dict)
 
         # 大きなパラメータ
-        result3 = MomentumIndicators.ichimoku(
+        result3 = OverlapIndicators.ichimoku(
             high=high,
             low=low,
             close=close,
@@ -231,7 +231,7 @@ class TestIchimokuIndicators:
         low_with_nan.iloc[20:25] = np.nan
         close_with_nan.iloc[30:35] = np.nan
 
-        result = MomentumIndicators.ichimoku(
+        result = OverlapIndicators.ichimoku(
             high=high_with_nan, low=low_with_nan, close=close_with_nan
         )
 
@@ -247,7 +247,3 @@ class TestIchimokuIndicators:
             assert isinstance(result[component], pd.Series)
             # NaNが適切に処理されていることを確認
             assert len(result[component]) == len(sample_data)
-
-
-
-

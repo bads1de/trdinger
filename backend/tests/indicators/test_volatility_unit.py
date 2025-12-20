@@ -1,20 +1,27 @@
 import pytest
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from app.services.indicators.technical_indicators.volatility import VolatilityIndicators
+from app.services.indicators.technical_indicators.overlap import OverlapIndicators
+from app.services.indicators.technical_indicators.trend import TrendIndicators
+from app.services.indicators.technical_indicators.original import OriginalIndicators
+
 
 class TestVolatilityUnitExtended:
     @pytest.fixture
     def sample_df(self):
         rows = 100
-        return pd.DataFrame({
-            "open": np.random.normal(100, 5, rows),
-            "high": np.random.normal(105, 5, rows),
-            "low": np.random.normal(95, 5, rows),
-            "close": np.random.normal(100, 5, rows),
-            "volume": np.random.normal(1000, 100, rows)
-        }, index=pd.date_range("2023-01-01", periods=rows))
+        return pd.DataFrame(
+            {
+                "open": np.random.normal(100, 5, rows),
+                "high": np.random.normal(105, 5, rows),
+                "low": np.random.normal(95, 5, rows),
+                "close": np.random.normal(100, 5, rows),
+                "volume": np.random.normal(1000, 100, rows),
+            },
+            index=pd.date_range("2023-01-01", periods=rows),
+        )
 
     def test_atr_natr_comprehensive(self, sample_df):
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
@@ -45,33 +52,39 @@ class TestVolatilityUnitExtended:
             res = VolatilityIndicators.donchian(h, l)
             assert all(np.isnan(s).all() for s in res)
 
-    def test_ui_rvi_vhf_gri(self, sample_df):
+    def test_ui_rvi_gri(self, sample_df):
+        """UI, RVI, GRIのテスト（VHFはTrendIndicatorsに移動）"""
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         # UI
         assert isinstance(VolatilityIndicators.ui(c), pd.Series)
         # RVI
         assert isinstance(VolatilityIndicators.rvi(c, h, l), pd.Series)
-        # VHF
-        assert isinstance(VolatilityIndicators.vhf(c), pd.Series)
         # GRI
-        assert isinstance(VolatilityIndicators.gri(h, l, c), pd.Series)
-        # GRI 失敗フォールバック
-        with patch("pandas_ta.kvo", side_effect=Exception()):
-            assert isinstance(VolatilityIndicators.gri(h, l, c), pd.Series)
+        assert isinstance(OriginalIndicators.gri(h, l, c), pd.Series)
 
+    def test_vhf_in_trend_indicators(self, sample_df):
+        """VHFはTrendIndicatorsに移動済み"""
+        c = sample_df["close"]
+        assert isinstance(TrendIndicators.vhf(c), pd.Series)
 
-    def test_supertrend_extended(self, sample_df):
+    def test_supertrend_in_overlap_indicators(self, sample_df):
+        """SupertrendはOverlapIndicatorsに移動済み"""
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         # 1. 正常
-        res = VolatilityIndicators.supertrend(h, l, c)
+        res = OverlapIndicators.supertrend(h, l, c)
         assert len(res) == 3
         # 2. 失敗 (df is None)
         with patch("pandas_ta.supertrend", return_value=None):
-            res = VolatilityIndicators.supertrend(h, l, c)
+            res = OverlapIndicators.supertrend(h, l, c)
             assert len(res) == 3
 
     def test_yang_zhang_parkinson_garman(self, sample_df):
-        o, h, l, c = sample_df["open"], sample_df["high"], sample_df["low"], sample_df["close"]
+        o, h, l, c = (
+            sample_df["open"],
+            sample_df["high"],
+            sample_df["low"],
+            sample_df["close"],
+        )
         assert isinstance(VolatilityIndicators.yang_zhang(o, h, l, c), pd.Series)
         assert isinstance(VolatilityIndicators.parkinson(h, l), pd.Series)
         assert isinstance(VolatilityIndicators.garman_klass(o, h, l, c), pd.Series)
