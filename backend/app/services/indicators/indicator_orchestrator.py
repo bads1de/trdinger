@@ -257,7 +257,7 @@ class TechnicalIndicatorService:
                         return None
 
                     col_lower = req_col.lower()
-                    if col_lower in ["open", "high", "low", "close", "volume"]:
+                    if col_lower in ["open", "high", "low", "close", "volume", "open_"]:
                         ta_args[col_lower] = df[col_name]
                     else:
                         positional_args.append(df[col_name])
@@ -278,7 +278,13 @@ class TechnicalIndicatorService:
                     )
                     return None
 
-                return func(df[col_name], **params)
+                # 安全策: 位置引数として渡すデータと同じ名前のパラメータがあれば削除
+                call_params = params.copy()
+                target_arg = config.get("data_column", "").lower()
+                if target_arg in call_params:
+                    del call_params[target_arg]
+
+                return func(df[col_name], **call_params)
 
         except Exception as e:
             logger.error(f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}")
@@ -385,7 +391,7 @@ class TechnicalIndicatorService:
             for source_name, arg_name in config.param_map.items():
                 if source_name in required_data and arg_name:
                     mapped_params[arg_name] = required_data[source_name]
-                    del required_data[source_name]
+                    # del required_data[source_name] # 同一ソースを複数回使う場合に問題になるため削除しない
 
         return mapped_params, required_data
 
@@ -427,9 +433,21 @@ class TechnicalIndicatorService:
                 "high",
                 "low",
                 "volume",
+                "fast",
+                "slow",
+                "trend",
+                "signal",
+                "series",
+                "market_cap",
+                "funding_rate",
+                "open_interest",
             ]:
                 target_key = param_lower.rstrip("_")
-                val = series_data.get(target_key) or series_data.get("data")
+                val = (
+                    series_data.get(target_key)
+                    or series_data.get("close")
+                    or series_data.get("data")
+                )
             elif param_lower in ["length", "period", "window", "n"]:
                 for k in ["length", "period", "window", "n"]:
                     if k in scalar_params:

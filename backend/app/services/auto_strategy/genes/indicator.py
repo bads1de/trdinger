@@ -135,6 +135,30 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
     num_indicators = random.randint(config.min_indicators, config.max_indicators)
     indicators = []
 
+    # トレンド系指標を優先するためのリスト作成
+    trend_indicators = []
+    preferred_trend_names = [
+        "SMA",
+        "EMA",
+        "ADX",
+        "SUPERTREND",
+        "VORTEX",
+        "AROON",
+        "CHOP",
+        "HMA",
+        "KAMA",
+        "ZLEMA",
+    ]
+
+    for name in available_indicators:
+        cfg = indicator_registry.get_indicator_config(name)
+        # カテゴリがtrend または 優先リストに含まれる場合
+        if (cfg and getattr(cfg, "category", "") == "trend") or (
+            name in preferred_trend_names
+        ):
+            if name not in trend_indicators:
+                trend_indicators.append(name)
+
     # MTF設定の準備
     from ..config.constants import SUPPORTED_TIMEFRAMES
 
@@ -149,7 +173,12 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
 
     # 各指標を生成
     for _ in range(num_indicators):
-        indicator_type = random.choice(available_indicators)
+        # 70%の確率でトレンド系指標を選択（リストがあれば）
+        if trend_indicators and random.random() < 0.7:
+            indicator_type = random.choice(trend_indicators)
+        else:
+            indicator_type = random.choice(available_indicators)
+
         timeframe = get_random_timeframe()
         indicator_gene = create_random_indicator_gene(indicator_type, config, timeframe)
         indicators.append(indicator_gene)

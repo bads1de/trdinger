@@ -37,10 +37,26 @@ class DynamicIndicatorDiscovery:
     """インジケーター動的検出クラス"""
 
     # プロジェクト固有のデータカラム（pandas-ta標準以外）
-    _PROJECT_DATA_COLUMNS = {"openinterest", "fundingrate"}
+    _PROJECT_DATA_COLUMNS = {
+        "openinterest",
+        "fundingrate",
+        "open_interest",
+        "funding_rate",
+        "market_cap",
+    }
 
     # pandas-ta標準のデータ引数（動的検出用）
-    _STANDARD_DATA_ARGS = {"open", "high", "low", "close", "volume", "open_"}
+    # fast, slow, signal はパラメータと競合するためここには入れない
+    _STANDARD_DATA_ARGS = {
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "open_",
+        "trend",
+        "series",
+    }
 
     @classmethod
     def _calculate_param_range(
@@ -88,21 +104,42 @@ class DynamicIndicatorDiscovery:
         """
         try:
             sig = inspect.signature(func)
-            params = {p.lower() for p in sig.parameters.keys()}
-            # 価格データ引数があるかチェック
-            return bool(params & cls._STANDARD_DATA_ARGS)
+            for param in sig.parameters.values():
+                if cls._is_data_argument(param):
+                    return True
+            return False
         except (ValueError, TypeError):
             return False
 
     @classmethod
-    def _is_data_argument(cls, param_name: str) -> bool:
+    def _is_data_argument(cls, param: inspect.Parameter) -> bool:
         """引数がデータ引数かどうかを判定"""
-        param_lower = param_name.lower()
-        return (
+        # 1. 型ヒントによる判定 (最優先)
+        if param.annotation != inspect.Parameter.empty:
+            type_str = str(param.annotation)
+            # 文字列でSeriesやDataFrameを含むかチェック
+            if "Series" in type_str or "DataFrame" in type_str:
+                return True
+            # 数値型ならFalse
+            if "int" in type_str or "float" in type_str:
+                return False
+
+        # 2. デフォルト値による判定
+        if param.default != inspect.Parameter.empty and param.default is not None:
+            # デフォルト値が数値ならデータ引数ではない
+            if isinstance(param.default, (int, float)):
+                return False
+
+        # 3. 名前による判定
+        param_lower = param.name.lower()
+        if (
             param_lower in cls._STANDARD_DATA_ARGS
             or param_lower in cls._PROJECT_DATA_COLUMNS
             or param_lower in ["data", "series"]
-        )
+        ):
+            return True
+
+        return False
 
     # pandas-ta カテゴリ -> システムカテゴリのマッピング
     # overlap は移動平均系などを含むため、独自カテゴリとして維持
@@ -338,6 +375,17 @@ class DynamicIndicatorDiscovery:
     ) -> Optional[IndicatorConfig]:
         """関数を解析してIndicatorConfigを生成"""
         try:
+            name_lower = name.lower()
+
+            # 除外対象のフィルタリング
+            # 1. キャンドル系 (TA-Lib依存やオートストラテジー不適合)
+            if "cdl" in name_lower or "candle" in name_lower:
+                return None
+
+            # 2. シグナル生成・複雑な戻り値の関数
+            if name_lower in ["tsignals", "xsignals"]:
+                return None
+
             sig = inspect.signature(func)
 
             # 1. 必要なデータカラムとパラメータを分離
@@ -352,7 +400,7 @@ class DynamicIndicatorDiscovery:
 
                 # データ引数かパラメータかを動的に判定
                 param_lower = param_name.lower()
-                if cls._is_data_argument(param_name):
+                if cls._is_data_argument(param):
                     # データ引数
                     source = param_lower
                     if param_lower in ["data", "series"]:

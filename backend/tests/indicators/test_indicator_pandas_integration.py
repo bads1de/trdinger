@@ -51,7 +51,6 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
         "WPR",  # pandas_taに存在しない
         "LONG_RUN",  # 必須引数が必要
         "SHORT_RUN",  # 必須引数が必要
-        "XSIGNALS",  # 必須引数が必要
         "MA",  # 汎用的すぎて単体テストには不向き
     }
 

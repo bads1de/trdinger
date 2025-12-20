@@ -37,10 +37,6 @@ class MockConditionGenerator:
     def _is_band_indicator(self, indicator):
         return "bb" in indicator.type.lower()
 
-    def _create_side_condition(self, indicator, side, name):
-        from app.services.auto_strategy.genes import Condition
-        return Condition(left_operand=name, operator=">", right_operand=50)
-
     def _structure_conditions(self, conditions):
         return conditions
 

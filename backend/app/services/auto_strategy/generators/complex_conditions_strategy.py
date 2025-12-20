@@ -11,6 +11,7 @@ import logging
 import random
 from typing import Any, List, Tuple, Union
 
+from app.services.indicators.config import indicator_registry, IndicatorScaleType
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
 
@@ -33,7 +34,7 @@ class ComplexConditionsStrategy:
         """
         複数の指標を組み合わせて王道パターンに基づいた条件を生成
 
-        トレンド押し目買い、移動平均クロス、ボラティリティブレイクアウトの
+        トレンドフォロー、移動平均クロス、ボラティリティブレイクアウトの
         3つの主要なパターンから取引条件を構築します。
 
         Args:
@@ -44,9 +45,9 @@ class ComplexConditionsStrategy:
         """
         long_conds, short_conds = [], []
 
-        # 1. トレンド押し目買いパターン (Trend + Momentum)
+        # 1. トレンドフォローパターン (Trend + Momentum 順張り)
         classified = self.gen._classify_indicators(indicators)
-        tp_long, tp_short = self._create_trend_pullback(classified)
+        tp_long, tp_short = self._create_trend_follow(classified)
         long_conds.extend(tp_long)
         short_conds.extend(tp_short)
 
@@ -70,8 +71,8 @@ class ComplexConditionsStrategy:
             [],
         )
 
-    def _create_trend_pullback(self, classified):
-        """トレンド押し目買い/戻り売り条件を生成"""
+    def _create_trend_follow(self, classified):
+        """トレンドフォロー条件（順張り特化）を生成"""
         longs, shorts = [], []
         trends, momentums = (
             classified[IndicatorType.TREND],
@@ -85,23 +86,44 @@ class ComplexConditionsStrategy:
             trend
         ), self.gen._get_indicator_name(momentum)
 
-        # ロング: Close > Trend AND Momentum Oversold
+        # 順張り特化: Close > Trend AND Momentum > Bullish
+        cfg = indicator_registry.get_indicator_config(momentum.type)
+        scale_type = cfg.scale_type if cfg else None
+
+        th_long, th_short = 0, 0
+        if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
+            th_long = random.choice([55, 60, 65])
+            th_short = random.choice([45, 40, 35])
+        elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+            th_long = random.choice([10, 25, 50])
+            th_short = random.choice([-10, -25, -50])
+        elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+            th_long = 0
+            th_short = 0
+        else:
+            # 不明な場合はデフォルト（価格比率などはここでは扱わない）
+            th_long = 0
+            th_short = 0
+
+        # ロング: Close > Trend AND Momentum > High
         longs.append(
             ConditionGroup(
                 operator="AND",
                 conditions=[
                     Condition(left_operand="Close", operator=">", right_operand=t_name),
-                    self.gen._create_side_condition(momentum, "long", m_name),
+                    Condition(left_operand=m_name, operator=">", right_operand=th_long),
                 ],
             )
         )
-        # ショート: Close < Trend AND Momentum Overbought
+        # ショート: Close < Trend AND Momentum < Low
         shorts.append(
             ConditionGroup(
                 operator="AND",
                 conditions=[
                     Condition(left_operand="Close", operator="<", right_operand=t_name),
-                    self.gen._create_side_condition(momentum, "short", m_name),
+                    Condition(
+                        left_operand=m_name, operator="<", right_operand=th_short
+                    ),
                 ],
             )
         )

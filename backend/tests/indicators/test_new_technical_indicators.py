@@ -139,24 +139,6 @@ class TestTrendIndicatorsNew:
         assert isinstance(res_long, pd.Series)
         assert isinstance(res_short, pd.Series)
 
-    def test_tsignals(self, sample_data):
-        # Signals (need dummy trend)
-        # Use simple trend like 1 and -1
-        dummy_trend = pd.Series(
-            np.where(sample_data["close"] > sample_data["close"].shift(1), 1, -1),
-            index=sample_data.index,
-        )
-        t1, t2, t3, t4 = TrendIndicators.tsignals(dummy_trend)
-        assert isinstance(t1, pd.Series)
-
-    def test_xsignals(self, sample_data):
-        dummy_trend = pd.Series(
-            np.where(sample_data["close"] > sample_data["close"].shift(1), 1, -1),
-            index=sample_data.index,
-        )
-        x1, x2, x3, x4 = TrendIndicators.xsignals(dummy_trend)
-        assert isinstance(x1, pd.Series)
-
 
 class TestVolatilityIndicatorsNew:
     def test_aberration(self, sample_data):
