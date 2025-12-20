@@ -18,7 +18,6 @@ from ..core.operand_grouping import operand_grouping_system
 from ..genes import Condition, ConditionGroup, IndicatorGene
 from ..utils.indicator_utils import get_all_indicators
 from ..utils.yaml_utils import YamlIndicatorUtils
-from ...indicators.indicator_orchestrator import INDICATOR_ALIASES
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
 
@@ -613,11 +612,9 @@ class ConditionGenerator:
         指標のタイプを取得（統合版）
         優先順位: YAML設定 > indicator_registry > Characteristics
         """
-        raw_name = (
-            indicator.type if isinstance(indicator, IndicatorGene) else indicator
-        )
-        # エイリアス解決
-        indicator_name = INDICATOR_ALIASES.get(raw_name.upper(), raw_name.upper())
+        raw_name = indicator.type if isinstance(indicator, IndicatorGene) else indicator
+        # レジストリがエイリアス解決を自動で行う
+        indicator_name = raw_name.upper()
 
         # 1. YAML設定をチェック
         config = YamlIndicatorUtils.get_indicator_config_from_yaml(
@@ -676,10 +673,11 @@ class ConditionGenerator:
 
         return categorized
 
-    def _classify_indicators(self, indicators: List[IndicatorGene]) -> Dict[IndicatorType, List[IndicatorGene]]:
+    def _classify_indicators(
+        self, indicators: List[IndicatorGene]
+    ) -> Dict[IndicatorType, List[IndicatorGene]]:
         """_dynamic_classify のエイリアス（ComplexConditionsStrategy互換用）"""
         return self._dynamic_classify(indicators)
-
 
 
 class GAConditionGenerator(ConditionGenerator):

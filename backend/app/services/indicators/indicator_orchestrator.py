@@ -25,28 +25,6 @@ from .data_validation import create_nan_result, validate_data_length_with_fallba
 
 logger = logging.getLogger(__name__)
 
-# 後方互換性のためのエイリアスマッピング
-# 注意: 新しいコードではレジストリのエイリアス機能を使用してください
-INDICATOR_ALIASES = {
-    "BB": "BBANDS",
-    "KC": "KC",
-    "DONCHIAN": "DONCHIAN",
-    "STOCH": "STOCH",
-    "AO": "AO",
-    "APO": "APO",
-    "BOP": "BOP",
-    "MOMENTUM": "MOM",
-    "CG": "CG",
-    "AD": "AD",
-    "ADOSC": "ADOSC",
-    "MFI": "MFI",
-    "OBV": "OBV",
-    "RSI": "RSI",
-    "SMA": "SMA",
-    "EMA": "EMA",
-    "WMA": "WMA",
-}
-
 
 class TechnicalIndicatorService:
     """テクニカル指標統合サービス

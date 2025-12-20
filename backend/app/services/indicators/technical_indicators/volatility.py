@@ -226,77 +226,48 @@ class VolatilityIndicators:
         multiplier: float = 3.0,
         **kwargs,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """Supertrend: returns (lower, upper, direction)"""
+        """
+        Supertrend インジケーター
 
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            period: 期間（デフォルト: 7）
+            multiplier: ATR乗数（デフォルト: 3.0）
+            **kwargs: 'factor' を 'multiplier' のエイリアスとしてサポート
+
+        Returns:
+            Tuple[lower, upper, direction]:
+                - lower: 下側バンド (SUPERTl)
+                - upper: 上側バンド (SUPERTs)
+                - direction: 方向 (1=強気, -1=弱気)
+        """
         validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}
+            {"high": high, "low": low, "close": close}, period
         )
         if validation is not None:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series, nan_series
 
-        # Support 'factor' parameter as alias for 'multiplier'
+        # 'factor' を 'multiplier' のエイリアスとしてサポート
         if "factor" in kwargs:
             multiplier = kwargs["factor"]
 
-        # Enhanced data length check - Supertrend requires sufficient data
-        length = period
-        min_length = max(
-            length * 2, 14
-        )  # Relaxed minimum (Green Phase: more flexible data requirements)
-        if len(high) < min_length:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
-
-        # Calculate basic bands for compatibility with enhanced parameter validation
-        hl2 = (high + low) / 2
-        atr_length = max(period, 14)  # Ensure ATR length is sufficient
-        atr = VolatilityIndicators.atr(high, low, close, atr_length)
-
-        # Add NaN check for ATR
-        if atr is None or atr.isna().all():
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series
-
-        upper = hl2 + multiplier * atr
-        lower = hl2 - multiplier * atr
-
         df = ta.supertrend(
-            high=high.values,
-            low=low.values,
-            close=close.values,
-            length=length,
-            multiplier=multiplier,
+            high=high, low=low, close=close, length=period, multiplier=multiplier
         )
 
-        if df is None:
-            direction = pd.Series(
-                np.where(close >= (upper + lower) / 2, 1.0, -1.0), index=close.index
-            )
-            return lower, upper, direction
+        if df is None or df.empty:
+            logger.warning("Supertrend: Calculation returned None - returning NaN")
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
+            return nan_series, nan_series, nan_series
 
-        assert df is not None  # for type checker
         cols = list(df.columns)
-        st_col = next(
-            (c for c in cols if "SUPERT_" in c.upper() or "supertrend" in c.lower()),
-            cols[0],
-        )
-        dir_col = next(
-            (c for c in cols if "SUPERTd_" in c.upper() or "direction" in c.lower()),
-            None,
-        )
-        if dir_col is None:
-            direction = pd.Series(
-                np.where(close.to_numpy() >= df[st_col].to_numpy(), 1.0, -1.0),
-                index=close.index,
-            )
-        else:
-            direction = df[dir_col].fillna(0)
-            if direction.isna().all():
-                direction = pd.Series(
-                    np.where(close.to_numpy() >= df[st_col].to_numpy(), 1.0, -1.0),
-                    index=close.index,
-                )
+        # pandas-ta returns: SUPERT_, SUPERTd_, SUPERTl_, SUPERTs_
+        lower = df[next((c for c in cols if "SUPERTl_" in c), cols[0])]
+        upper = df[next((c for c in cols if "SUPERTs_" in c), cols[-1])]
+        direction = df[next((c for c in cols if "SUPERTd_" in c), cols[1])]
 
         return lower, upper, direction
 

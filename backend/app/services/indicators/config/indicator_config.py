@@ -116,9 +116,27 @@ class IndicatorConfig:
     absolute_min_length: int = 1
 
     def __post_init__(self):
-        """後処理でパラメータを構築"""
+        """後処理でパラメータおよび派生属性を構築"""
         if not self.parameters:
             self.parameters = self._build_parameters_from_defaults()
+
+        # 派生属性の判定と自動設定
+        # returns (single / multiple)
+        if hasattr(self, "returns") and (not self.returns or self.returns == "single"):
+            if self.result_type == IndicatorResultType.COMPLEX:
+                self.returns = "multiple"
+            else:
+                self.returns = "single"
+
+        # multi_column
+        self.multi_column = len(self.required_data) > 1
+
+        # data_column / data_columns
+        if not self.data_column and self.required_data:
+            self.data_column = self.required_data[0].capitalize()
+
+        if not self.data_columns and len(self.required_data) > 1:
+            self.data_columns = [col.capitalize() for col in self.required_data]
 
     def validate_constraints(self, params: Dict[str, Any]) -> tuple[bool, List[str]]:
         """

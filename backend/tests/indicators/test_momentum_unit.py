@@ -4,21 +4,28 @@ import pandas as pd
 from unittest.mock import MagicMock, patch
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
 
+
 class TestMomentumUnitExtended:
     @pytest.fixture
     def sample_data(self):
-        return pd.Series(np.random.normal(100, 5, 100), index=pd.date_range("2023-01-01", periods=100))
+        return pd.Series(
+            np.random.normal(100, 5, 100),
+            index=pd.date_range("2023-01-01", periods=100),
+        )
 
     @pytest.fixture
     def sample_df(self):
         rows = 100
-        return pd.DataFrame({
-            "open": np.random.normal(100, 5, rows),
-            "high": np.random.normal(105, 5, rows),
-            "low": np.random.normal(95, 5, rows),
-            "close": np.random.normal(100, 5, rows),
-            "volume": np.random.normal(1000, 100, rows)
-        }, index=pd.date_range("2023-01-01", periods=rows))
+        return pd.DataFrame(
+            {
+                "open": np.random.normal(100, 5, rows),
+                "high": np.random.normal(105, 5, rows),
+                "low": np.random.normal(95, 5, rows),
+                "close": np.random.normal(100, 5, rows),
+                "volume": np.random.normal(1000, 100, rows),
+            },
+            index=pd.date_range("2023-01-01", periods=rows),
+        )
 
     def test_rsi_comprehensive(self, sample_data):
         # 1. 正常
@@ -68,8 +75,10 @@ class TestMomentumUnitExtended:
         # 2. d_length使用
         assert len(MomentumIndicators.stoch(h, l, c, d_length=5)) == 2
         # 3. 異常系
-        with pytest.raises(TypeError): MomentumIndicators.stoch(None, l, c)
-        with pytest.raises(ValueError): MomentumIndicators.stoch(h, l, c, k=0)
+        with pytest.raises(TypeError):
+            MomentumIndicators.stoch(None, l, c)
+        with pytest.raises(ValueError):
+            MomentumIndicators.stoch(h, l, c, k=0)
         # 4. pandas-ta 失敗
         with patch("pandas_ta.stoch", return_value=None):
             res = MomentumIndicators.stoch(h, l, c)
@@ -79,7 +88,8 @@ class TestMomentumUnitExtended:
         # 1. 正常
         assert len(MomentumIndicators.stochrsi(sample_data)) == 2
         # 2. 異常系 (パラメータ)
-        with pytest.raises(ValueError): MomentumIndicators.stochrsi(sample_data, rsi_length=0)
+        with pytest.raises(ValueError):
+            MomentumIndicators.stochrsi(sample_data, rsi_length=0)
         # 3. データ不足
         res = MomentumIndicators.stochrsi(sample_data[:5])
         assert all(np.isnan(s).all() for s in res)
@@ -89,17 +99,17 @@ class TestMomentumUnitExtended:
             assert all(np.isnan(s).all() for s in res)
 
     def test_willr_comprehensive(self, sample_df):
+        from app.services.indicators.data_validation import PandasTAError
+
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         # 1. 正常
         assert isinstance(MomentumIndicators.willr(h, l, c), pd.Series)
-        # 2. フォールバック (ta.willrが例外を投げる場合)
+        # 2. pandas-ta例外時はPandasTAError
         with patch("pandas_ta.willr", side_effect=Exception("API Error")):
-            res = MomentumIndicators.willr(h, l, c)
-            assert isinstance(res, pd.Series)
-            assert not res.isna().all()
-        # 3. 完全に失敗
+            with pytest.raises(PandasTAError):
+                MomentumIndicators.willr(h, l, c)
+        # 3. pandas-taがNone返却時
         with patch("pandas_ta.willr", return_value=None):
-            # フォールバックも失敗させるために値をいじるか、Noneを期待
             res = MomentumIndicators.willr(h, l, c)
             assert isinstance(res, pd.Series)
 
@@ -144,16 +154,20 @@ class TestMomentumUnitExtended:
             res = MomentumIndicators.qqe(sample_data)
             assert isinstance(res, pd.Series)
         # 3. RSIも失敗
-        with patch("pandas_ta.qqe", return_value=None), patch("pandas_ta.rsi", return_value=None):
+        with (
+            patch("pandas_ta.qqe", return_value=None),
+            patch("pandas_ta.rsi", return_value=None),
+        ):
             res = MomentumIndicators.qqe(sample_data)
             assert np.isnan(res).all()
         # 4. 型エラー
-        with pytest.raises(TypeError): MomentumIndicators.qqe(None)
+        with pytest.raises(TypeError):
+            MomentumIndicators.qqe(None)
 
     def test_apo_error_handling(self, sample_data):
         res = MomentumIndicators.apo(sample_data)
         assert isinstance(res, pd.Series)
-        
+
         with pytest.raises(ValueError, match="less than slow"):
             MomentumIndicators.apo(sample_data, fast=20, slow=10)
         with pytest.raises(ValueError, match="positive"):
@@ -173,17 +187,21 @@ class TestMomentumUnitExtended:
         try:
             res = MomentumIndicators.pgo(h, l, c)
             assert isinstance(res, pd.Series)
-        except Exception: pass
+        except Exception:
+            pass
         # 失敗
         with patch("pandas_ta.pgo", return_value=None):
             assert np.isnan(MomentumIndicators.pgo(h, l, c)).all()
 
     def test_psl_comprehensive(self, sample_df):
+        from app.services.indicators.data_validation import PandasTAError
+
         c = sample_df["close"]
         assert isinstance(MomentumIndicators.psl(c), pd.Series)
-        # フォールバック
+        # pandas-ta例外時はPandasTAError
         with patch("pandas_ta.psl", side_effect=Exception()):
-            assert isinstance(MomentumIndicators.psl(c), pd.Series)
+            with pytest.raises(PandasTAError):
+                MomentumIndicators.psl(c)
 
     def test_squeeze_comprehensive(self, sample_df):
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
@@ -192,7 +210,13 @@ class TestMomentumUnitExtended:
             assert np.isnan(MomentumIndicators.squeeze(h, l, c)).all().all()
 
     def test_ao_bop_cg_coppock(self, sample_df):
-        h, l, c, o, v = sample_df["high"], sample_df["low"], sample_df["close"], sample_df["open"], sample_df["volume"]
+        h, l, c, o, v = (
+            sample_df["high"],
+            sample_df["low"],
+            sample_df["close"],
+            sample_df["open"],
+            sample_df["volume"],
+        )
         # AO
         assert isinstance(MomentumIndicators.ao(h, l), pd.Series)
         # BOP
@@ -207,9 +231,9 @@ class TestMomentumUnitExtended:
         # 1. 正常 (pandas-ta)
         res = MomentumIndicators.ichimoku(h, l, c)
         assert "tenkan_sen" in res
-        
+
         # 2. カラム名が想定と異なる場合のフォールバックロジックをテスト
-        mock_df = pd.DataFrame({"Wrong": [1]*100}, index=h.index)
+        mock_df = pd.DataFrame({"Wrong": [1] * 100}, index=h.index)
         with patch("pandas_ta.ichimoku", return_value=(mock_df, mock_df)):
             res = MomentumIndicators.ichimoku(h, l, c)
             assert "tenkan_sen" in res

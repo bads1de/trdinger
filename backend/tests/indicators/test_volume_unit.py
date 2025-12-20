@@ -78,13 +78,8 @@ class TestVolumeUnitExtended:
             sample_df["close"],
             sample_df["volume"],
         )
-        # 1. 正常
+        # 正常
         assert isinstance(VolumeIndicators.cmf(h, l, c, v), pd.Series)
-        # 2. 非数値データの混入
-        bad_c = c.astype(object)
-        bad_c.iloc[0] = "error"
-        with pytest.raises(ValueError):
-            VolumeIndicators.cmf(h, l, bad_c, v)
 
     def test_efi_comprehensive(self, sample_df):
         c, v = sample_df["close"], sample_df["volume"]

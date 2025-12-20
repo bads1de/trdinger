@@ -116,21 +116,24 @@ class VolumeIndicators:
         drift: int = 1,
         offset: int = 0,
     ) -> pd.Series:
-        """Ease of Movement"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
-        if length <= 0:
-            raise ValueError(f"length must be positive: {length}")
-        if drift <= 0:
-            raise ValueError(f"drift must be positive: {drift}")
-        if len({len(high), len(low), len(close), len(volume)}) != 1:
-            raise ValueError("high, low, close, volume must have the same length")
+        """
+        Ease of Movement（イーズ・オブ・ムーブメント）
+
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            volume: 出来高
+            length: 期間（デフォルト: 14）
+
+        Returns:
+            EOM の値
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close, "volume": volume}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.eom(
             high=high,
@@ -206,61 +209,31 @@ class VolumeIndicators:
         volume: pd.Series,
         length: int = 20,
     ) -> pd.Series:
-        """Chaikin Money Flow"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
+        """
+        Chaikin Money Flow（チャイキン・マネーフロー）
 
-        # CMF特有のデータ検証: 全てのSeriesの長さが一致するか確認
-        series_lengths = [len(high), len(low), len(close), len(volume)]
-        if not all(length == series_lengths[0] for length in series_lengths):
-            raise ValueError(
-                f"CMF requires all input series to have the same length. Got lengths: high={len(high)}, low={len(low)}, close={len(close)}, volume={len(volume)}"
-            )
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            volume: 出来高
+            length: 期間（デフォルト: 20）
 
-        # 最小データ長チェック（pandas-taの要求）
-        min_length = length + 1
-        if series_lengths[0] < min_length:
-            raise ValueError(
-                f"Insufficient data for CMF calculation. Need at least {min_length} points, got {series_lengths[0]}"
-            )
+        Returns:
+            CMF の値
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close, "volume": volume}, length
+        )
+        if validation is not None:
+            return validation
 
-        # データ型チェック: 数値のみ許可
-        for series_name, series in [
-            ("high", high),
-            ("low", low),
-            ("close", close),
-            ("volume", volume),
-        ]:
-            if series.dtype not in ["float64", "int64", "float32", "int32"]:
-                try:
-                    # 数値変換を試行
-                    converted = pd.to_numeric(series, errors="coerce")
-                    # NaNが発生した場合、無効なデータとしてエラー
-                    if converted.isna().any():
-                        raise ValueError(
-                            f"CMF {series_name} series must contain valid numeric values"
-                        )
-                    if series_name == "high":
-                        high = converted
-                    elif series_name == "low":
-                        low = converted
-                    elif series_name == "close":
-                        close = converted
-                    elif series_name == "volume":
-                        volume = converted
-                except (ValueError, TypeError):
-                    raise ValueError(
-                        f"CMF {series_name} series must contain valid numeric values"
-                    )
+        result = ta.cmf(high=high, low=low, close=close, volume=volume, length=length)
 
-        df = ta.cmf(high=high, low=low, close=close, volume=volume, window=length)
-        return df if df is not None else pd.Series([], dtype=float)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(high), np.nan), index=high.index)
+
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -271,70 +244,37 @@ class VolumeIndicators:
         mamode: str = "ema",
         drift: int = 1,
     ) -> pd.Series:
-        """Elder's Force Index"""
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
+        """
+        Elder's Force Index（エルダーの勢力指数）
 
-        # EFI特有のデータ検証: 不正値チェック
-        if len(close) != len(volume):
-            raise ValueError(
-                "EFI requires close and volume series to have the same length"
-            )
+        Args:
+            close: 終値
+            volume: 出来高
+            period: 期間（デフォルト: 13）
+            mamode: 移動平均タイプ（デフォルト: "ema"）
+            drift: 差分期間（デフォルト: 1）
 
-        # 最小データ長チェック
-        length = period  # lengthパラメータを定義
-        min_length = length + drift
-        if len(close) < min_length:
-            raise ValueError(
-                f"Insufficient data for EFI calculation. Need at least {min_length} points, got {len(close)}"
-            )
+        Returns:
+            Elder's Force Index の値
+        """
+        validation = validate_multi_series_params(
+            {"close": close, "volume": volume}, period
+        )
+        if validation is not None:
+            return validation
 
-        # データの健全性チェックとクリーニング
-        close_clean = close.copy()
-        volume_clean = volume.copy()
-
-        # 負の値や不正な値を処理
-        if (close_clean < 0).any():
-            # 警告を発行しながら負の価格を処理（絶対値に変換するか、無効として扱う）
-            negative_indices = close_clean < 0
-            close_clean.loc[negative_indices] = np.nan  # 無効化
-
-        if (volume_clean < 0).any():
-            # 負の出来高を無効化
-            negative_indices = volume_clean < 0
-            volume_clean.loc[negative_indices] = np.nan
-
-        # inf/NaNの処理
-        close_clean = close_clean.replace([np.inf, -np.inf], np.nan)
-        volume_clean = volume_clean.replace([np.inf, -np.inf], np.nan)
-
-        # 無効な値を除外して統計計算
-        clean_prices = close_clean.replace([np.inf, -np.inf], np.nan).dropna()
-        if not clean_prices.empty and clean_prices.max() > clean_prices.mean() * 100:
-            logger.warning("EFI: extreme values detected, clipping applied")
-            close_clean = close_clean.clip(
-                lower=clean_prices.quantile(0.01), upper=clean_prices.quantile(0.99)
-            )
-
-        # 計算実行
-        df = ta.efi(
-            close=close_clean,
-            volume=volume_clean,
+        result = ta.efi(
+            close=close,
+            volume=volume,
             length=period,
             mamode=mamode,
             drift=drift,
         )
 
-        # 結果の後処理
-        if df is not None:
-            # 結果がinfやNaNを含む場合のクリーンアップ
-            df = df.replace([np.inf, -np.inf], np.nan)
-        else:
-            df = pd.Series([], dtype=float)
+        if result is None or (hasattr(result, "empty") and result.empty):
+            return pd.Series(np.full(len(close), np.nan), index=close.index)
 
-        return df
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -345,25 +285,30 @@ class VolumeIndicators:
         volume: pd.Series,
         length: int = 14,
     ) -> pd.Series:
-        """マネーフローインデックス"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
+        """
+        Money Flow Index（マネーフローインデックス）
 
-        result = ta.mfi(
-            high=high.astype(float),
-            low=low.astype(float),
-            close=close.astype(float),
-            volume=volume.astype(float),
-            length=length,
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            volume: 出来高
+            length: 期間（デフォルト: 14）
+
+        Returns:
+            MFI の値（0-100 の範囲）
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close, "volume": volume}, length
         )
-        if result is None:
+        if validation is not None:
+            return validation
+
+        result = ta.mfi(high=high, low=low, close=close, volume=volume, length=length)
+
+        if result is None or (hasattr(result, "empty") and result.empty):
             return pd.Series(np.full(len(high), np.nan), index=high.index)
+
         return result
 
     @staticmethod
@@ -429,29 +374,27 @@ class VolumeIndicators:
         mamode: str = "ema",
         drift: int = 1,
     ) -> Tuple[pd.Series, pd.Series]:
-        """Klinger Volume Oscillator"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if not isinstance(volume, pd.Series):
-            raise TypeError("volume must be pandas Series")
+        """
+        Klinger Volume Oscillator（クリンガー出来高オシレーター）
 
-        # KVO特有のデータ検証
-        series_lengths = [len(high), len(low), len(close), len(volume)]
-        if not all(length == series_lengths[0] for length in series_lengths):
-            raise ValueError(
-                f"KVO requires all input series to have the same length. Got lengths: high={len(high)}, low={len(low)}, close={len(close)}, volume={len(volume)}"
-            )
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            volume: 出来高
+            fast: 短期EMA期間（デフォルト: 34）
+            slow: 長期EMA期間（デフォルト: 55）
+            signal: シグナル期間（デフォルト: 13）
 
-        # 最小データ長チェック
-        min_length = max(fast, slow) + drift + 5
-        if series_lengths[0] < min_length:
-            raise ValueError(
-                f"Insufficient data for KVO calculation. Need at least {min_length} points, got {series_lengths[0]}"
-            )
+        Returns:
+            Tuple[KVO, Signal]
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            max(fast, slow),
+        )
+        if validation is not None:
+            return validation, validation
 
         result = ta.kvo(
             high=high,
@@ -467,17 +410,10 @@ class VolumeIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(series_lengths[0], np.nan))
+            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
 
-        # 結果が複数列の場合の処理
-        if isinstance(result, pd.DataFrame):
-            if len(result.columns) >= 2:
-                return result.iloc[:, 0], result.iloc[:, 1]
-            elif len(result.columns) == 1:
-                return result.iloc[:, 0], pd.Series(np.full(len(result), np.nan))
-
-        return result, pd.Series(np.full(len(result), np.nan))
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors

@@ -36,6 +36,7 @@ import pandas_ta as ta
 
 from ..data_validation import (
     handle_pandas_ta_errors,
+    validate_multi_series_params,
     validate_series_params,
 )
 
@@ -150,6 +151,7 @@ class MomentumIndicators:
         return trix_line, signal_line, histogram
 
     @staticmethod
+    @handle_pandas_ta_errors
     def stoch(
         high: pd.Series,
         low: pd.Series,
@@ -159,37 +161,40 @@ class MomentumIndicators:
         smooth_k: int = 3,
         d_length: int = None,
     ) -> Tuple[pd.Series, pd.Series]:
-        """ストキャスティクス"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if k <= 0:
-            raise ValueError(f"k must be positive: {k}")
-        if d <= 0:
-            raise ValueError(f"d must be positive: {d}")
-        if smooth_k <= 0:
-            raise ValueError(f"smooth_k must be positive: {smooth_k}")
+        """
+        ストキャスティクス（Stochastic Oscillator）
+
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            k: %K期間（デフォルト: 14）
+            d: %D平滑化期間（デフォルト: 3）
+            smooth_k: %K平滑化期間（デフォルト: 3）
+            d_length: d のエイリアス（後方互換性）
+
+        Returns:
+            Tuple[%K, %D]
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, k
+        )
+        if validation is not None:
+            return validation, validation
 
         # d_lengthパラメータが指定された場合の処理（後方互換性）
-        if d_length is not None and d == 3:  # dがデフォルトの場合のみ
+        if d_length is not None and d == 3:
             d = d_length
 
         result = ta.stoch(
-            high=high,
-            low=low,
-            close=close,
-            length=k,
-            smoothd=d,
-            smoothk=smooth_k,
+            high=high, low=low, close=close, length=k, smoothd=d, smoothk=smooth_k
         )
 
         if result is None or result.empty:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
-        return (result.iloc[:, 0], result.iloc[:, 1])
+
+        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     def stochrsi(
@@ -261,38 +266,23 @@ class MomentumIndicators:
         length: int = 14,
         **kwargs,
     ) -> pd.Series:
-        """ウィリアムズ%R"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        """
+        ウィリアムズ%R（Williams %R）
 
-        # Williams %R requires sufficient data length
-        min_length = max(length * 2, 14)
-        if len(high) < min_length:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            length: 期間（デフォルト: 14）
 
-        # pandas-taのwpr関数を使用
-        try:
-            result = ta.willr(
-                high=high,
-                low=low,
-                close=close,
-                length=length,
-                **kwargs,
-            )
-        except Exception:
-            # pandas-taが利用できない場合のフォールバック実装
-            # Williams %R = [(highest high - current close) / (highest high - lowest low)] * -100
+        Returns:
+            Williams %R の値（-100 から 0 の範囲）
+        """
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
 
-            # 過去length期間の最高値と最低値を計算
-            highest_high = high.rolling(window=length, min_periods=1).max()
-            lowest_low = low.rolling(window=length, min_periods=1).min()
-
-            # Williams %R計算
-            result = ((highest_high - close) / (highest_high - lowest_low)) * -100
+        result = ta.willr(high=high, low=low, close=close, length=length, **kwargs)
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
             return pd.Series(np.full(len(close), np.nan), index=close.index)
@@ -300,23 +290,36 @@ class MomentumIndicators:
         return result
 
     @staticmethod
+    @handle_pandas_ta_errors
     def cci(
         high: pd.Series,
         low: pd.Series,
         close: pd.Series,
         length: int = 20,
     ) -> pd.Series:
-        """商品チャネル指数"""
-        if not isinstance(high, pd.Series):
-            raise TypeError("high must be pandas Series")
-        if not isinstance(low, pd.Series):
-            raise TypeError("low must be pandas Series")
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
+        """
+        Commodity Channel Index（商品チャネル指数）
+
+        Args:
+            high: 高値
+            low: 安値
+            close: 終値
+            length: 期間（デフォルト: 20）
+
+        Returns:
+            CCI の値
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}, length
+        )
+        if validation is not None:
+            return validation
 
         result = ta.cci(high=high, low=low, close=close, length=length)
-        if result is None:
+
+        if result is None or (hasattr(result, "empty") and result.empty):
             return pd.Series(np.full(len(high), np.nan), index=high.index)
+
         return result
 
     @staticmethod
@@ -613,39 +616,26 @@ class MomentumIndicators:
         drift: int = 1,
         open_: Optional[pd.Series] = None,
     ) -> pd.Series:
-        """Psychological Line (PSY)"""
-        if not isinstance(close, pd.Series):
-            raise TypeError("close must be pandas Series")
-        if open_ is not None and not isinstance(open_, pd.Series):
-            raise TypeError("open_ must be pandas Series")
-        if length <= 0 or drift <= 0:
-            raise ValueError("length and drift must be positive")
+        """
+        Psychological Line（心理線）
 
-        # PSY requires sufficient data length
-        min_length = max(length * 2, 12)
-        if len(close) < min_length:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+        Args:
+            close: 終値
+            length: 期間（デフォルト: 12）
+            scalar: スケーリング係数（デフォルト: 100.0）
+            drift: ドリフト（デフォルト: 1）
+            open_: 始値（オプション）
 
-        try:
-            result = ta.psl(
-                close=close,
-                open_=open_,
-                length=length,
-                scalar=scalar,
-                drift=drift,
-            )
-        except Exception:
-            # pandas-taが利用できない場合のフォールバック実装
-            # PSY = (上昇日数 / 総日数) * 100
+        Returns:
+            PSL の値
+        """
+        validation = validate_series_params(close, length)
+        if validation is not None:
+            return validation
 
-            # 価格の変化を計算
-            price_change = close.diff(drift)
-
-            # 上昇日数をカウント
-            up_days = (price_change > 0).rolling(window=length, min_periods=1).sum()
-
-            # PSY計算
-            result = (up_days / length) * scalar
+        result = ta.psl(
+            close=close, open_=open_, length=length, scalar=scalar, drift=drift
+        )
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
             return pd.Series(np.full(len(close), np.nan), index=close.index)
