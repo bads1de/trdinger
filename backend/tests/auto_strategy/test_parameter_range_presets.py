@@ -8,12 +8,12 @@ Issue: パラメータの探索範囲が GAConfig でグローバルに定義さ
 追加し、GAConfig でプリセットを選択可能にする。
 """
 
-from unittest.mock import patch, MagicMock
 import random
+from unittest.mock import MagicMock, patch
 
 from app.services.indicators.config.indicator_config import (
-    ParameterConfig,
     IndicatorConfig,
+    ParameterConfig,
 )
 
 
@@ -107,13 +107,11 @@ class TestParameterConfigPresets:
         assert max_val == 200
 
 
-class TestIndicatorParameterManagerWithPresets:
-    """IndicatorParameterManager でプリセットを使用したパラメータ生成テスト"""
+class TestIndicatorConfigParameterGenerationWithPresets:
+    """IndicatorConfig でプリセットを使用したパラメータ生成テスト"""
 
     def test_generate_parameters_with_preset(self):
         """プリセットを指定してパラメータ生成"""
-        from app.services.indicators.parameter_manager import IndicatorParameterManager
-
         # プリセット付きの ParameterConfig
         param_config = ParameterConfig(
             name="length",
@@ -133,11 +131,9 @@ class TestIndicatorParameterManagerWithPresets:
             default_values={"length": 14},
         )
 
-        manager = IndicatorParameterManager()
-
         # short_term プリセットでパラメータ生成
         random.seed(42)  # 再現性のため固定
-        params = manager.generate_parameters("RSI", config, preset="short_term")
+        params = config.generate_random_parameters(preset="short_term")
 
         # 生成されたパラメータが short_term 範囲内であることを確認
         assert "length" in params
@@ -145,8 +141,6 @@ class TestIndicatorParameterManagerWithPresets:
 
     def test_generate_parameters_with_long_term_preset(self):
         """long_term プリセットでパラメータ生成"""
-        from app.services.indicators.parameter_manager import IndicatorParameterManager
-
         # プリセット付きの ParameterConfig
         param_config = ParameterConfig(
             name="length",
@@ -165,11 +159,9 @@ class TestIndicatorParameterManagerWithPresets:
             default_values={"length": 14},
         )
 
-        manager = IndicatorParameterManager()
-
         # 複数回実行して範囲内であることを確認
         for _ in range(10):
-            params = manager.generate_parameters("RSI", config, preset="long_term")
+            params = config.generate_random_parameters(preset="long_term")
             assert "length" in params
             assert (
                 50 <= params["length"] <= 100
@@ -177,8 +169,6 @@ class TestIndicatorParameterManagerWithPresets:
 
     def test_generate_parameters_without_preset(self):
         """プリセット未指定の場合はデフォルト範囲を使用"""
-        from app.services.indicators.parameter_manager import IndicatorParameterManager
-
         param_config = ParameterConfig(
             name="length",
             default_value=14,
@@ -195,11 +185,9 @@ class TestIndicatorParameterManagerWithPresets:
             default_values={"length": 14},
         )
 
-        manager = IndicatorParameterManager()
-
         # プリセット未指定（デフォルト範囲）
         for _ in range(10):
-            params = manager.generate_parameters("RSI", config)
+            params = config.generate_random_parameters()
             assert "length" in params
             assert 2 <= params["length"] <= 200
 

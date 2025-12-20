@@ -1,11 +1,10 @@
 """
 インジケーター設定モジュール
 
-JSON形式でのインジケーター設定管理を提供します。
+動的検出されたインジケーター設定を管理します。
 """
 
 from .indicator_config import (
-    POSITIONAL_DATA_FUNCTIONS,
     IndicatorConfig,
     IndicatorConfigRegistry,
     IndicatorResultType,
@@ -23,8 +22,4 @@ __all__ = [
     "IndicatorConfigRegistry",
     "indicator_registry",
     "initialize_all_indicators",
-    "POSITIONAL_DATA_FUNCTIONS",
 ]
-
-
-

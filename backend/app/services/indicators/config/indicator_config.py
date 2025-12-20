@@ -1,14 +1,16 @@
 """
-インジケーター設定管理クラス
+インジケーター設定管理モジュール
 
-JSON形式でのインジケーター設定を管理し、
-パラメータ埋め込み文字列からの移行をサポートします。
+動的に検出されたインジケーター設定を管理するためのクラスを提供します。
+オートストラテジー（GA）との連携を前提とした設計になっています。
 """
 
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Union
+
+logger = logging.getLogger(__name__)
 
 
 class IndicatorScaleType(Enum):
@@ -24,9 +26,6 @@ class IndicatorScaleType(Enum):
     PRICE_ABSOLUTE = "price_absolute"  # 絶対価格
 
 
-logger = logging.getLogger(__name__)
-
-
 class IndicatorResultType(Enum):
     """インジケーター結果タイプ"""
 
@@ -36,12 +35,16 @@ class IndicatorResultType(Enum):
 
 @dataclass
 class ParameterConfig:
-    """パラメータ設定"""
+    """パラメータ設定
+
+    インジケーターの各パラメータの制約と探索範囲を定義します。
+    GAによるパラメータ最適化で使用されます。
+    """
 
     name: str  # パラメータ名（例：period, fast_period）
     default_value: Union[int, float, str, bool]  # デフォルト値
-    min_value: Optional[Union[int, float, str, bool]] = None  # 最小値
-    max_value: Optional[Union[int, float, str, bool]] = None  # 最大値
+    min_value: Optional[Union[int, float]] = None  # 最小値
+    max_value: Optional[Union[int, float]] = None  # 最大値
     description: Optional[str] = None  # パラメータの説明
     # 探索プリセット: 用途に応じた探索範囲（例: short_term, mid_term, long_term）
     presets: Optional[Dict[str, tuple]] = None
@@ -49,7 +52,7 @@ class ParameterConfig:
     def validate_value(self, value: Any) -> bool:
         """与えられた値がこのパラメータの制約（範囲など）を満たすか検証する"""
         if not isinstance(value, (int, float)):
-            # 数値でない場合は検証スキップ（または型チェックを厳密に行う）
+            # 数値でない場合は検証スキップ
             return True
 
         if self.min_value is not None and value < self.min_value:
@@ -69,7 +72,6 @@ class ParameterConfig:
         Returns:
             (min_value, max_value) のタプル
         """
-        # プリセットが定義されていて、該当するプリセット名がある場合
         if self.presets and preset_name in self.presets:
             return self.presets[preset_name]
 
@@ -79,13 +81,14 @@ class ParameterConfig:
 
 @dataclass
 class IndicatorConfig:
-    """インジケーター設定のメタ情報を保持するシンプルなデータクラス
+    """インジケーター設定
 
-    pandas-taとの連携設定を含む完全なインジケーター定義を提供します。
+    テクニカル指標の計算に必要なすべての設定を保持します。
+    pandas-taとの連携設定および独自実装のアダプター設定を含みます。
     """
 
     indicator_name: str
-    adapter_function: Optional[Any] = None
+    adapter_function: Optional[Callable] = None
     required_data: List[str] = field(default_factory=list)
     result_type: IndicatorResultType = IndicatorResultType.SINGLE
     scale_type: IndicatorScaleType = IndicatorScaleType.PRICE_RATIO
@@ -94,8 +97,7 @@ class IndicatorConfig:
     default_output: Optional[str] = None
     aliases: Optional[List[str]] = None
     param_map: Dict[str, Optional[str]] = field(default_factory=dict)
-    # 後方互換性のための追加
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: Dict[str, ParameterConfig] = field(default_factory=dict)
 
     # pandas-ta連携設定
     pandas_function: Optional[str] = None
@@ -108,12 +110,9 @@ class IndicatorConfig:
     min_length_func: Optional[Callable[[Dict[str, Any]], int]] = None
 
     # パラメータ依存関係制約
-    # 例: [{"type": "less_than", "param1": "fast", "param2": "slow"}]
-    # type: "less_than" (param1 < param2), "greater_than" (param1 > param2),
-    #       "min_difference" (param1 - param2 >= min_diff)
     parameter_constraints: Optional[List[Dict[str, Any]]] = None
 
-    # 絶対的最小データ長（パラメータに関係なく必要な最低限のデータポイント数）
+    # 絶対的最小データ長
     absolute_min_length: int = 1
 
     def __post_init__(self):
@@ -141,21 +140,18 @@ class IndicatorConfig:
             param1_name = constraint.get("param1")
             param2_name = constraint.get("param2")
 
-            # 必要なパラメータが存在しない場合はスキップ
             if param1_name not in params or param2_name not in params:
                 continue
 
             param1_value = params[param1_name]
             param2_value = params[param2_name]
 
-            # 数値でない場合はスキップ
             if not isinstance(param1_value, (int, float)) or not isinstance(
                 param2_value, (int, float)
             ):
                 continue
 
             if constraint_type == "less_than":
-                # param1 < param2 でなければならない
                 if param1_value >= param2_value:
                     errors.append(
                         f"{param1_name}({param1_value}) は "
@@ -163,7 +159,6 @@ class IndicatorConfig:
                     )
 
             elif constraint_type == "greater_than":
-                # param1 > param2 でなければならない
                 if param1_value <= param2_value:
                     errors.append(
                         f"{param1_name}({param1_value}) は "
@@ -171,7 +166,6 @@ class IndicatorConfig:
                     )
 
             elif constraint_type == "min_difference":
-                # param1 - param2 >= min_diff でなければならない
                 min_diff = constraint.get("min_diff", 0)
                 actual_diff = param1_value - param2_value
                 if actual_diff < min_diff:
@@ -182,9 +176,9 @@ class IndicatorConfig:
 
         return len(errors) == 0, errors
 
-    def _build_parameters_from_defaults(self) -> Dict[str, Any]:
+    def _build_parameters_from_defaults(self) -> Dict[str, ParameterConfig]:
         """デフォルト値からパラメータを構築"""
-        params = {}
+        params: Dict[str, ParameterConfig] = {}
 
         # param_mapからパラメータ名を取得
         param_names = set()
@@ -203,8 +197,8 @@ class IndicatorConfig:
 
             # length/periodパラメータの特別処理
             if any(word in param_name for word in ["length", "period"]):
-                min_val = 2
-                max_val = 200
+                min_val: Optional[Union[int, float]] = 2
+                max_val: Optional[Union[int, float]] = 200
             else:
                 min_val = None
                 max_val = None
@@ -220,7 +214,7 @@ class IndicatorConfig:
         return params
 
     def get_parameter_ranges(self) -> Dict[str, Dict[str, Any]]:
-        """パラメータ範囲を取得"""
+        """パラメータ範囲を取得（GA用）"""
         ranges = {}
 
         for param_name, param_config in self.parameters.items():
@@ -248,7 +242,10 @@ class IndicatorConfig:
         return ranges
 
     def normalize_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """パラメータ正規化"""
+        """パラメータ正規化
+
+        エイリアスを解決し、範囲内に値を制限します。
+        """
         normalized = params.copy()
 
         # param_mapに基づいてエイリアスマッピング
@@ -265,7 +262,6 @@ class IndicatorConfig:
             if param_name in normalized and isinstance(param_config, ParameterConfig):
                 value = normalized[param_name]
 
-                # 範囲チェック
                 if param_config.min_value is not None and isinstance(
                     value, (int, float)
                 ):
@@ -279,12 +275,58 @@ class IndicatorConfig:
 
         return normalized
 
+    def generate_random_parameters(self, preset: str | None = None) -> Dict[str, Any]:
+        """
+        ランダムなパラメータを生成（GA用）
+
+        Args:
+            preset: 探索プリセット名（例：short_term, mid_term, long_term）
+                None の場合はデフォルト範囲を使用
+
+        Returns:
+            生成されたパラメータ辞書
+        """
+        import random
+
+        params = {}
+        for param_name, param_config in self.parameters.items():
+            if not isinstance(param_config, ParameterConfig):
+                continue
+
+            # プリセットが指定されている場合はプリセット範囲を使用
+            if preset:
+                min_val, max_val = param_config.get_range_for_preset(preset)
+            else:
+                min_val = param_config.min_value
+                max_val = param_config.max_value
+
+            if min_val is not None and max_val is not None:
+                # リストの場合は最初の要素を使用
+                if isinstance(min_val, list):
+                    min_val = min_val[0]
+                if isinstance(max_val, list):
+                    max_val = max_val[0]
+
+                if isinstance(param_config.default_value, int):
+                    params[param_name] = random.randint(int(min_val), int(max_val))
+                else:
+                    params[param_name] = random.uniform(float(min_val), float(max_val))
+            else:
+                params[param_name] = param_config.default_value
+
+        return params
+
 
 class IndicatorConfigRegistry:
-    """インジケーター設定レジストリ"""
+    """インジケーター設定レジストリ
+
+    すべてのインジケーター設定を一元管理し、
+    名前やエイリアスによる検索を提供します。
+    """
 
     def __init__(self):
         self._configs: Dict[str, IndicatorConfig] = {}
+        self._initialized: bool = False
 
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
@@ -295,92 +337,77 @@ class IndicatorConfigRegistry:
                 self._configs[alias] = config
 
     def reset(self) -> None:
-        """レジストリをクリア（テスト用ユーティリティ）"""
+        """レジストリをクリア（テスト用）"""
         self._configs.clear()
+        self._initialized = False
 
     def get_indicator_config(self, indicator_name: str) -> Optional[IndicatorConfig]:
-        """設定を取得 (get をリネーム)"""
-        return self._configs.get(indicator_name)
+        """設定を取得"""
+        return self._configs.get(indicator_name.upper()) or self._configs.get(
+            indicator_name
+        )
 
     def list_indicators(self) -> List[str]:
         """登録されているインジケーター名のリストを取得"""
         return list(self._configs.keys())
 
     def get_all_indicators(self) -> Dict[str, IndicatorConfig]:
-        """登録済みインジケーターのディクショナリを取得
-
-        Returns:
-            Dict[str, IndicatorConfig]: name/alias -> IndicatorConfig のマップ
-        """
+        """登録済みインジケーターの辞書を取得"""
         return dict(self._configs)
 
     def generate_parameters_for_indicator(
         self, indicator_type: str, preset: str | None = None
     ) -> Dict[str, Any]:
         """
-        指標タイプに応じたパラメータを生成
+        指標タイプに応じたランダムパラメータを生成（GA用）
 
         Args:
             indicator_type: 指標タイプ（例：RSI, MACD）
-            preset: 探索プリセット名（例：short_term, mid_term, long_term）
-                None の場合はデフォルト範囲を使用
+            preset: 探索プリセット名
 
         Returns:
             生成されたパラメータ辞書
         """
-        from app.services.indicators.parameter_manager import IndicatorParameterManager
-
-        try:
-            config = self.get_indicator_config(indicator_type)
-            if config:
-                manager = IndicatorParameterManager()
-                return manager.generate_parameters(
-                    indicator_type, config, preset=preset
-                )
-            else:
-                logger.warning(f"指標 {indicator_type} の設定が見つかりません")
-                return {}
-        except Exception as e:
-            logger.error(f"指標 {indicator_type} のパラメータ生成に失敗: {e}")
+        config = self.get_indicator_config(indicator_type)
+        if config:
+            return config.generate_random_parameters(preset)
+        else:
+            logger.warning(f"指標 {indicator_type} の設定が見つかりません")
             return {}
+
+    def ensure_initialized(self) -> None:
+        """レジストリが初期化されていることを確認"""
+        if not self._initialized:
+            _initialize_registry(self)
+            self._initialized = True
 
 
 # グローバルレジストリインスタンス
 indicator_registry = IndicatorConfigRegistry()
 
 
-def initialize_all_indicators():
-    """全インジケーターの設定を初期化（動的検出）"""
+def _initialize_registry(registry: IndicatorConfigRegistry) -> None:
+    """レジストリを初期化（動的検出）"""
     try:
         from .discovery import DynamicIndicatorDiscovery
-        
+
         indicators = DynamicIndicatorDiscovery.discover_all()
         for config in indicators:
-            indicator_registry.register(config)
-            
+            registry.register(config)
+
         logger.info(f"インジケーター初期化完了: {len(indicators)} 個登録")
-        logger.debug(f"登録された指標: {', '.join(indicator_registry.list_indicators()[:20])}...")
-        
+        registry._initialized = True
+
     except ImportError as e:
         logger.warning(f"DynamicIndicatorDiscoveryのインポートに失敗しました: {e}")
     except Exception as e:
         logger.error(f"インジケーター初期化エラー: {e}")
 
 
-def generate_positional_functions() -> set:
-    """位置パラメータを使用する関数名のセット（互換性維持）
-    
-    新しいアーキテクチャではキーワード引数が推奨されるため、
-    明示的に位置引数が必要なものは空、あるいは発見ロジックに基づき返す。
-    """
-    return set()
+def initialize_all_indicators() -> None:
+    """全インジケーターの設定を初期化（後方互換性用）"""
+    indicator_registry.ensure_initialized()
 
 
-# 全インジケーター初期化
+# モジュールロード時に自動初期化
 initialize_all_indicators()
-
-# 動的設定初期化
-POSITIONAL_DATA_FUNCTIONS = generate_positional_functions()
-
-
-

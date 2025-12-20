@@ -40,7 +40,7 @@ class TestTrendIndicators:
         data = pd.DataFrame({"close": [100, 101]})  # 不十分なデータ
 
         # データ不足でPandasTAErrorが発生する
-        from app.services.indicators.utils import PandasTAError
+        from app.services.indicators.data_validation import PandasTAError
 
         with pytest.raises(PandasTAError):
             TrendIndicators.sma(data["close"], length=14)
@@ -411,7 +411,7 @@ class TestTrendIndicators:
         data = pd.DataFrame({"close": ["invalid", "data"]})
 
         # 無効なデータ型でもPandasTAErrorが発生
-        from app.services.indicators.utils import PandasTAError
+        from app.services.indicators.data_validation import PandasTAError
 
         with pytest.raises(PandasTAError):
             TrendIndicators.sma(data["close"], length=5)
@@ -447,7 +447,7 @@ class TestTrendIndicators:
         data = pd.DataFrame({"close": [100]})
 
         # 単一値でもPandasTAErrorが発生
-        from app.services.indicators.utils import PandasTAError
+        from app.services.indicators.data_validation import PandasTAError
 
         with pytest.raises(PandasTAError):
             TrendIndicators.sma(data["close"], length=5)

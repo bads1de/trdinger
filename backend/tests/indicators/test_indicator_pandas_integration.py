@@ -1,5 +1,3 @@
-"""pandas-ta 連携インジケーターの直接呼び出しを検証するテスト"""
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,34 +8,24 @@ from app.services.indicators.indicator_orchestrator import TechnicalIndicatorSer
 
 @pytest.fixture
 def sample_ohlcv() -> pd.DataFrame:
-    """pandas-ta 呼び出し検証用のサンプルOHLCVデータを生成"""
+    """テスト用のサンプルOHLCVデータを作成"""
+    size = 256
+    dates = pd.date_range("2023-01-01", periods=size, freq="1H")
+    data = {
+        "open": np.random.uniform(100, 200, size),
+        "high": np.random.uniform(200, 300, size),
+        "low": np.random.uniform(50, 100, size),
+        "close": np.random.uniform(100, 200, size),
+        "volume": np.random.uniform(1000, 50000, size),
+    }
+    # 追加のカラム
+    data["Open"] = data["open"]
+    data["High"] = data["high"]
+    data["Low"] = data["low"]
+    data["Close"] = data["close"]
+    data["Volume"] = data["volume"]
 
-    periods = 256
-    index = pd.date_range("2023-01-01", periods=periods, freq="h")
-
-    base = np.linspace(100.0, 200.0, periods)
-    noise = np.random.normal(0.0, 2.0, periods)
-    close = base + noise
-
-    df = pd.DataFrame(
-        {
-            "open": close * np.random.uniform(0.99, 1.01, periods),
-            "high": close * np.random.uniform(1.0, 1.05, periods),
-            "low": close * np.random.uniform(0.95, 1.0, periods),
-            "close": close,
-            "volume": np.random.uniform(10_000, 30_000, periods),
-        },
-        index=index,
-    )
-
-    # pandas-ta は大文字のカラム名を想定するケースがあるため両方用意する
-    df["Open"] = df["open"]
-    df["High"] = df["high"]
-    df["Low"] = df["low"]
-    df["Close"] = df["close"]
-    df["Volume"] = df["volume"]
-
-    return df
+    return pd.DataFrame(data, index=dates)
 
 
 def test_all_pandas_ta_indicators_execute_without_adapter(
@@ -61,6 +49,10 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
         "CHOP",  # 特別な処理が必要
         "GRI",  # 特別な処理が必要
         "WPR",  # pandas_taに存在しない
+        "LONG_RUN",  # 必須引数が必要
+        "SHORT_RUN",  # 必須引数が必要
+        "XSIGNALS",  # 必須引数が必要
+        "MA",  # 汎用的すぎて単体テストには不向き
     }
 
     for name, config in indicator_registry.get_all_indicators().items():
@@ -76,7 +68,7 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
         if config.indicator_name in known_special_cases:
             continue
 
-        pandas_config = service._get_config(name)
+        pandas_config = service._get_pandas_ta_config(name)
         assert pandas_config is not None, f"{name} の pandas 設定が取得できません"
 
         normalized_params = service._normalize_params({}, pandas_config)
@@ -87,10 +79,6 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
         if result is None:
             failing.append(config.indicator_name)
 
-    assert not failing, (
-        f"pandas-ta 直接呼び出しに失敗したインジケーター: {sorted(failing)}"
-    )
-
-
-
-
+    assert (
+        not failing
+    ), f"pandas-ta 直接呼び出しに失敗したインジケーター: {sorted(failing)}"

@@ -1,13 +1,14 @@
 import pytest
 import numpy as np
 import pandas as pd
-from app.services.indicators.utils import (
+from app.services.indicators.data_validation import (
     validate_input,
     handle_pandas_ta_errors,
     validate_series_params,
     validate_multi_series_params,
-    PandasTAError
+    PandasTAError,
 )
+
 
 class TestIndicatorUtils:
     def test_validate_input_none(self):
@@ -15,7 +16,9 @@ class TestIndicatorUtils:
             validate_input(None, 10)
 
     def test_validate_input_not_series(self):
-        with pytest.raises(PandasTAError, match="入力データはpandas.Seriesである必要があります"):
+        with pytest.raises(
+            PandasTAError, match="入力データはpandas.Seriesである必要があります"
+        ):
             validate_input([1, 2, 3], 10)
 
     def test_validate_input_empty(self):
@@ -27,11 +30,15 @@ class TestIndicatorUtils:
             validate_input(pd.Series([1, 2, 3]), 0)
 
     def test_validate_input_length_short(self):
-        with pytest.raises(PandasTAError, match="データ長\(3\)が期間\(10\)より短いです"):
+        with pytest.raises(
+            PandasTAError, match="データ長\(3\)が期間\(10\)より短いです"
+        ):
             validate_input(pd.Series([1, 2, 3]), 10)
 
     def test_validate_input_inf(self):
-        with pytest.raises(PandasTAError, match="入力データに無限大の値が含まれています"):
+        with pytest.raises(
+            PandasTAError, match="入力データに無限大の値が含まれています"
+        ):
             validate_input(pd.Series([1, np.inf, 3]), 2)
 
     def test_validate_input_nan_warning(self, caplog):
@@ -42,7 +49,7 @@ class TestIndicatorUtils:
         @handle_pandas_ta_errors
         def mock_func():
             return None
-        
+
         with pytest.raises(PandasTAError, match="mock_func: 計算結果がNoneです"):
             mock_func()
 
@@ -50,7 +57,7 @@ class TestIndicatorUtils:
         @handle_pandas_ta_errors
         def mock_func():
             return np.array([])
-        
+
         with pytest.raises(PandasTAError, match="mock_func: 計算結果が空です"):
             mock_func()
 
@@ -58,7 +65,7 @@ class TestIndicatorUtils:
         @handle_pandas_ta_errors
         def mock_func():
             return np.array([np.nan, np.nan])
-        
+
         with pytest.raises(PandasTAError, match="mock_func: 計算結果が全てNaNです"):
             mock_func()
 
@@ -66,7 +73,7 @@ class TestIndicatorUtils:
         @handle_pandas_ta_errors
         def mock_func():
             return (np.array([1, 2]), None)
-        
+
         with pytest.raises(PandasTAError, match="mock_func: 結果\[1\]が無効です"):
             mock_func()
 
@@ -74,7 +81,7 @@ class TestIndicatorUtils:
         @handle_pandas_ta_errors
         def mock_func():
             raise Exception("Some error")
-        
+
         with pytest.raises(PandasTAError, match="mock_func 計算エラー: Some error"):
             mock_func()
 
@@ -110,10 +117,9 @@ class TestIndicatorUtils:
 
     def test_validate_multi_series_params_mismatch_length(self):
         with pytest.raises(ValueError, match="All series must have the same length"):
-            validate_multi_series_params({
-                "high": pd.Series([1, 2, 3]),
-                "low": pd.Series([1, 2])
-            })
+            validate_multi_series_params(
+                {"high": pd.Series([1, 2, 3]), "low": pd.Series([1, 2])}
+            )
 
     def test_validate_multi_series_params_invalid_length(self):
         with pytest.raises(ValueError, match="length must be positive"):
@@ -124,9 +130,16 @@ class TestIndicatorUtils:
         assert len(res) == 0
 
     def test_validate_multi_series_params_short(self):
-        res = validate_multi_series_params({"high": pd.Series([1, 2, 3])}, min_data_length=10)
+        res = validate_multi_series_params(
+            {"high": pd.Series([1, 2, 3])}, min_data_length=10
+        )
         assert len(res) == 3
         assert np.isnan(res).all()
 
     def test_validate_multi_series_params_ok(self):
-        assert validate_multi_series_params({"high": pd.Series([1, 2, 3])}, min_data_length=2) is None
+        assert (
+            validate_multi_series_params(
+                {"high": pd.Series([1, 2, 3])}, min_data_length=2
+            )
+            is None
+        )

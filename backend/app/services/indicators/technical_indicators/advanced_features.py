@@ -8,7 +8,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from ..utils import handle_pandas_ta_errors
+from ..data_validation import handle_pandas_ta_errors
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +206,3 @@ class AdvancedFeatures:
         推定レバレッジ比率（Total OI / Estimated Market Cap）
         """
         return (open_interest / market_cap).replace([np.inf, -np.inf], 0).fillna(0)
-
-
-
-

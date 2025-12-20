@@ -42,21 +42,18 @@ class TestTechnicalIndicatorService:
 
     def test_get_indicator_config(self, indicator_service):
         """指標設定取得テスト"""
-        # 実際のregistryを使用してSMA設定を取得
         config = indicator_service._get_indicator_config("SMA")
         assert config is not None
         assert config.indicator_name == "SMA"
-        assert config.adapter_function is not None
 
     def test_get_indicator_config_invalid(self, indicator_service):
         """無効な指標設定取得テスト"""
-        # 実際のregistryは存在しない指標に対してNoneを返すか、例外を発生させる
         with pytest.raises(ValueError, match="サポートされていない指標タイプ"):
             indicator_service._get_indicator_config(
                 "INVALID_INDICATOR_THAT_DOES_NOT_EXIST"
             )
 
-    @patch.object(TechnicalIndicatorService, "_get_config")
+    @patch.object(TechnicalIndicatorService, "_get_pandas_ta_config")
     @patch.object(TechnicalIndicatorService, "_normalize_params")
     @patch.object(TechnicalIndicatorService, "_basic_validation")
     @patch.object(TechnicalIndicatorService, "_call_pandas_ta")
@@ -72,7 +69,6 @@ class TestTechnicalIndicatorService:
         sample_df,
     ):
         """pandas-taを使用した指標計算成功テスト"""
-        # モックの設定
         mock_config = {"function": "sma", "returns": "single"}
         mock_get_config.return_value = mock_config
         mock_normalize.return_value = {"length": 10}
@@ -89,7 +85,7 @@ class TestTechnicalIndicatorService:
         mock_call_pandas_ta.assert_called()
         mock_post_process.assert_called()
 
-    @patch.object(TechnicalIndicatorService, "_get_config")
+    @patch.object(TechnicalIndicatorService, "_get_pandas_ta_config")
     @patch.object(TechnicalIndicatorService, "_get_indicator_config")
     @patch.object(TechnicalIndicatorService, "_calculate_with_adapter")
     def test_calculate_indicator_adapter_fallback(
@@ -114,7 +110,9 @@ class TestTechnicalIndicatorService:
 
     def test_calculate_indicator_unsupported(self, indicator_service, sample_df):
         """サポートされていない指標テスト"""
-        with patch.object(indicator_service, "_get_config", return_value=None):
+        with patch.object(
+            indicator_service, "_get_pandas_ta_config", return_value=None
+        ):
             with patch.object(
                 indicator_service, "_get_indicator_config", side_effect=ValueError
             ):
@@ -197,7 +195,6 @@ class TestTechnicalIndicatorService:
 
         result = indicator_service._call_pandas_ta(sample_df, config, params)
 
-        # pandas Seriesの比較は.equals()を使用
         assert result.equals(expected_series)
         mock_func.assert_called_once()
 
@@ -231,7 +228,6 @@ class TestTechnicalIndicatorService:
 
     def test_get_supported_indicators(self, indicator_service):
         """サポート指標取得テスト"""
-        # 実際のregistryを使用してサポート指標リストを取得
         result = indicator_service.get_supported_indicators()
 
         # SMAが含まれていることを確認
@@ -250,7 +246,7 @@ class TestTechnicalIndicatorService:
         assert "max" in sma_config["parameters"]["length"]
 
     def test_validate_data_length_with_fallback(self, sample_df):
-        """データ長検証テスト - data_validation.pyの関数を直接テスト"""
+        """データ長検証テスト"""
         from app.services.indicators.data_validation import (
             validate_data_length_with_fallback,
         )
@@ -266,7 +262,7 @@ class TestTechnicalIndicatorService:
         # 一度計算してキャッシュさせる
         indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
         assert len(indicator_service._calculation_cache) > 0
-        
+
         # クリア
         indicator_service.clear_cache()
         assert len(indicator_service._calculation_cache) == 0
@@ -278,14 +274,18 @@ class TestTechnicalIndicatorService:
 
     def test_calculate_indicator_error_handling(self, indicator_service, sample_df):
         """指標計算時のエラーハンドリングテスト"""
-        # キャッシュを回避するためにユニークなid(df)を生成
         unique_df = sample_df.copy()
         with patch.object(
-            indicator_service, "_get_config", side_effect=Exception("Test error")
+            indicator_service,
+            "_get_pandas_ta_config",
+            side_effect=Exception("Test error"),
         ):
             with pytest.raises(Exception):
                 indicator_service.calculate_indicator(unique_df, "SMA", {"length": 10})
 
-
-
-
+    def test_make_cache_key(self, indicator_service, sample_df):
+        """キャッシュキー生成テスト"""
+        cache_key = indicator_service._make_cache_key("SMA", {"length": 10}, sample_df)
+        assert cache_key is not None
+        assert len(cache_key) == 3
+        assert cache_key[0] == "SMA"
