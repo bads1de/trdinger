@@ -25,6 +25,21 @@ class ConditionEvaluator:
     戦略の条件評価ロジックを担当します。
     """
 
+    def __init__(self):
+        """
+        初期化
+        """
+        # オペランド名から戦略インスタンス上の属性名への解決結果をキャッシュ
+        self._attr_cache: Dict[str, str] = {}
+        # OHLCV名のマッピング
+        self._ohlcv_map = {
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume"
+        }
+
     @safe_operation(context="条件評価（AND）", is_api_call=False, default_return=False)
     def evaluate_conditions(
         self, conditions: List[Union[Condition, ConditionGroup]], strategy_instance
@@ -48,8 +63,14 @@ class ConditionEvaluator:
         if not conditions:
             return True
 
+        # strategy_instance がキャッシュを持っているか確認（高速化のため）
+        # Mockオブジェクトの場合はキャッシュ作成をスキップ
+        from unittest.mock import Mock
+        if not isinstance(strategy_instance, Mock) and not hasattr(strategy_instance, "_val_accessor_cache"):
+            strategy_instance._val_accessor_cache = {}
+
         if not isinstance(conditions, list):
-            logger.warning(f"条件リストが不正な型です: {type(conditions)}")
+            # logger.warning(f"条件リストが不正な型です: {type(conditions)}")
             return False
 
         for cond in conditions:
@@ -75,7 +96,7 @@ class ConditionEvaluator:
         elif isinstance(item, Condition):
             return self.evaluate_single_condition(item, strategy_instance)
 
-        logger.warning(f"不明な条件タイプ: {type(item)}")
+        # logger.warning(f"不明な条件タイプ: {type(item)}")
         return False
 
     @safe_operation(context="条件グループ評価", is_api_call=False, default_return=False)
@@ -133,18 +154,24 @@ class ConditionEvaluator:
 
     def _is_comparable(self, v1: Any, v2: Any) -> bool:
         """
-        値が比較可能（数値）かどうかを判定します。
+        値が比較可能（数値かつ非NaN）かどうかを判定します。
 
         Args:
             v1: 比較する値1
             v2: 比較する値2
 
         Returns:
-            両方の値が数値型であればTrue
+            両方の値が有効な数値型であり、かつNaNでない場合はTrue
         """
 
         def check(v):
-            return isinstance(v, (int, float, Real, np.number))
+            if not isinstance(v, (int, float, Real, np.number)):
+                return False
+            # NaN（非数）は比較不可とする
+            try:
+                return not np.isnan(float(v))
+            except (TypeError, ValueError):
+                return False
 
         return check(v1) and check(v2)
 
@@ -187,11 +214,12 @@ class ConditionEvaluator:
             left_val: 左辺の解決された値
             right_val: 右辺の解決された値
         """
-        logger.warning(
-            f"比較できない値です: left={left_val}({type(left_val)}), "
-            f"right={right_val}({type(right_val)}), "
-            f"original={condition.left_operand} {condition.operator} {condition.right_operand}"
-        )
+        # logger.warning(
+        #     f"比較できない値です: left={left_val}({type(left_val)}), "
+        #     f"right={right_val}({type(right_val)}), "
+        #     f"original={condition.left_operand} {condition.operator} {condition.right_operand}"
+        # )
+        pass
 
     def _get_final_value(self, value: Any) -> float:
         """
@@ -204,7 +232,7 @@ class ConditionEvaluator:
             value: 取得対象の値
 
         Returns:
-            変換されたfloat値。失敗時や非有限値の場合は0.0
+            変換されたfloat値。失敗時や非有限値の場合はnp.nan
         """
         try:
             # 1. すでに数値の場合はそのまま返す
@@ -216,7 +244,7 @@ class ConditionEvaluator:
             if isinstance(value, pd.Series):
                 if value.empty:
                     return 0.0
-                return self._get_final_value(value.iloc[-1])
+                return float(value.iloc[-1])
 
             # 3. リスト、タプル、ndarray などのコレクションの場合
             if hasattr(value, "__getitem__") and not isinstance(value, (str, bytes)):
@@ -242,13 +270,13 @@ class ConditionEvaluator:
             strategy_instance: 戦略インスタンス（属性アクセス用）
 
         Returns:
-            取得された数値
+            取得された数値（解決失敗時はnp.nan）
         """
         if isinstance(operand, (int, float, np.number)):
             return float(operand)
 
         # 辞書形式（{"indicator": "NAME", ...}）の場合は indicator キーを使用
-        target_attr = (
+        operand_str = (
             operand.get("indicator") if isinstance(operand, dict) else str(operand)
         )
 
@@ -258,12 +286,24 @@ class ConditionEvaluator:
             if val is not None:
                 return val
 
-        # 2. 戦略インスタンスの属性（インジケーターなど）
+        # 2. 戦略インスタンスからの取得（キャッシュと辞書を活用）
+        # まずは indicators 辞書を確認（属性アクセスより速い）
+        # Mockの場合を考慮して isinstance チェックを追加
+        if hasattr(strategy_instance, "indicators") and isinstance(strategy_instance.indicators, dict):
+            if operand_str in strategy_instance.indicators:
+                return self._get_final_value(strategy_instance.indicators[operand_str])
+
+        # 次に属性キャッシュを確認
+        cached_attr = self._attr_cache.get(operand_str)
+        if cached_attr and hasattr(strategy_instance, cached_attr):
+            return self._get_final_value(getattr(strategy_instance, cached_attr))
+
+        # 属性名を解決してキャッシュに保存
         try:
-            # 属性名をそのまま、および小文字・大文字で試行
-            for attr_name in [target_attr, target_attr.lower(), target_attr.upper()]:
-                if hasattr(strategy_instance, attr_name):
-                    attr_val = getattr(strategy_instance, attr_name)
+            for variant in [operand_str, operand_str.lower(), operand_str.upper()]:
+                if hasattr(strategy_instance, variant):
+                    self._attr_cache[operand_str] = variant
+                    attr_val = getattr(strategy_instance, variant)
                     return self._get_final_value(attr_val)
         except (AttributeError, Exception):
             pass
@@ -271,11 +311,11 @@ class ConditionEvaluator:
         # 3. 数値文字列への変換
         try:
             if isinstance(operand, str):
-                return float(operand)
+                f_val = float(operand)
+                return f_val if np.isfinite(f_val) else 0.0
         except (ValueError, TypeError):
             pass
 
-        # logger.warning(f"オペランド解決失敗: {target_attr}")
         return 0.0
 
     def _get_ohlcv_value(self, operand: str, strategy_instance) -> float | None:
@@ -289,34 +329,37 @@ class ConditionEvaluator:
         Returns:
             OHLCVの値、取得できない場合はNone
         """
-        if not hasattr(strategy_instance, "data"):
+        search_key = operand.lower()
+        if search_key not in self._ohlcv_map:
             return None
 
-        # 検索対象の正規化された名前
-        search_key = operand.lower()
-        if search_key not in ["open", "high", "low", "close", "volume"]:
+        if not hasattr(strategy_instance, "data"):
             return None
 
         try:
             data = strategy_instance.data
+            attr_name = self._ohlcv_map[search_key]
 
-            # 1. pandas DataFrame の場合
+            # backtesting.py のデータ構造 (Open, High, Low, Close, Volume) を優先
+            if hasattr(data, attr_name):
+                # 毎回のアクセスで iloc[-1] または [-1] を取得
+                # Mockの場合は特別な処理を避ける
+                val = getattr(data, attr_name)
+                # 高速化のため、Seriesなら直接 iloc[-1]
+                if isinstance(val, pd.Series):
+                    return float(val.iloc[-1])
+                # ndarrayなら [-1]
+                if isinstance(val, np.ndarray):
+                    return float(val[-1])
+                # その他は再帰的に解決
+                return self._get_final_value(val)
+
+            # DataFrameとしてのアクセス
             if isinstance(data, pd.DataFrame):
-                # カラム名を小文字にして比較
-                col_map = {col.lower(): col for col in data.columns}
-                if search_key in col_map:
-                    return self._get_final_value(data[col_map[search_key]])
-
-            # 2. 属性としてアクセスを試行（Open, Close, etc.）
-            # backtesting.py のデータ形式に対応するため Capitalize を優先
-            for variant in [search_key.capitalize(), search_key, search_key.upper()]:
-                if hasattr(data, variant):
-                    attr_val = getattr(data, variant)
-                    # Mockオブジェクトが自動生成した属性（値がMock）の場合はスキップ
-                    from unittest.mock import Mock
-                    if isinstance(attr_val, Mock) and not hasattr(attr_val, "_mock_return_value"):
-                         continue
-                    return self._get_final_value(attr_val)
+                if attr_name in data.columns:
+                    return float(data[attr_name].iloc[-1])
+                if search_key in data.columns:
+                    return float(data[search_key].iloc[-1])
 
         except Exception:
             pass

@@ -1,8 +1,8 @@
 """
-メタラベリング（Fakeout Detection）用評価ユーティリティ
+MLモデル評価ユーティリティ
 
-Meta-Labelingでは Precision（適合率）が最重要指標となります。
-「エントリーした時にどれだけ勝てるか」を評価します。
+モデルの予測結果を評価するための共通関数を提供します。
+一般指標とメタラベリング（Fakeout Detection）用の指標をカバーします。
 """
 
 import logging
@@ -12,7 +12,45 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_recall_curve
 
+# 統一されたMetricsCalculatorのグローバルインスタンスをインポート
+from ..evaluation.metrics import metrics_collector
+
 logger = logging.getLogger(__name__)
+
+
+def evaluate_model_predictions(
+    y_true: pd.Series,
+    y_pred: np.ndarray,
+    y_pred_proba: Optional[np.ndarray] = None,
+) -> Dict[str, Any]:
+    """
+    予測結果を評価するための共通関数
+
+    Args:
+        y_true: 実際のターゲット値
+        y_pred: 予測値
+        y_pred_proba: 予測確率（オプション）
+
+    Returns:
+        評価指標の辞書
+    """
+    y_true_array = y_true.values if hasattr(y_true, "values") else y_true
+    return metrics_collector.calculate_comprehensive_metrics(
+        y_true_array, y_pred, y_pred_proba
+    )
+
+
+def get_default_metrics() -> Dict[str, float]:
+    """デフォルトの評価メトリクス辞書を返す（全て0.0初期化）"""
+    keys = [
+        "accuracy", "precision", "recall", "f1_score", "auc_score", "auc_roc", "auc_pr",
+        "balanced_accuracy", "matthews_corrcoef", "cohen_kappa", "specificity", "sensitivity",
+        "npv", "ppv", "log_loss", "brier_score", "loss", "val_accuracy", "val_loss", "training_time"
+    ]
+    return {k: 0.0 for k in keys}
+
+
+# --- メタラベリング評価 ---
 
 
 def evaluate_meta_labeling(
@@ -22,9 +60,6 @@ def evaluate_meta_labeling(
     threshold: float = 0.5,
 ) -> Dict[str, Any]:
     """メタラベリング用の評価指標を計算"""
-    from ..evaluation.metrics import metrics_collector
-    
-    # 統一評価器で基本メトリクスを計算
     y_t = y_true.values if hasattr(y_true, "values") else y_true
     res = metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba) or {}
 
@@ -33,8 +68,6 @@ def evaluate_meta_labeling(
                 "true_positives", "true_negatives", "false_positives", "false_negatives"]:
         if key not in res:
             res[key] = 0.0 if "positives" not in key and "negatives" not in key else 0
-
-    # メタラベリング固有の指標を追加
 
     p = res.get("precision", 0.0)
     res.update({
@@ -46,7 +79,6 @@ def evaluate_meta_labeling(
         "negative_samples": int(len(y_t) - np.sum(y_t))
     })
     
-    # 互換性のためのキー追加
     for k, v in [("meta_f1", "f1_score"), ("meta_precision", "precision"), ("meta_recall", "recall")]:
         if v in res:
             res[k] = res[v]
@@ -59,14 +91,7 @@ def print_meta_labeling_report(
     y_pred: np.ndarray,
     y_pred_proba: Optional[np.ndarray] = None,
 ) -> None:
-    """
-    メタラベリング評価レポートを出力
-
-    Args:
-        y_true: 実際のターゲット値
-        y_pred: 予測値
-        y_pred_proba: 予測確率（オプション）
-    """
+    """メタラベリング評価レポートを出力"""
     metrics = evaluate_meta_labeling(y_true, y_pred, y_pred_proba)
 
     print("\n" + "=" * 60)
@@ -103,8 +128,6 @@ def print_meta_labeling_report(
         print(f"  PR-AUC:                {metrics['pr_auc']:.4f}")
 
     print("\n" + "=" * 60)
-
-    # 解釈ガイド
     print("\n💡 解釈ガイド:")
     if metrics["precision"] >= 0.60:
         print("  ✅ Precision >= 60%: 優秀なモデルです")
@@ -117,7 +140,6 @@ def print_meta_labeling_report(
         print("  ⚠️  シグナル採択率が低い（<10%）: 機会損失の可能性")
     elif metrics["signal_adoption_rate"] > 0.5:
         print("  ⚠️  シグナル採択率が高い（>50%）: フィルタリングが甘い可能性")
-
     print("=" * 60 + "\n")
 
 
@@ -127,21 +149,7 @@ def find_optimal_threshold(
     metric: str = "precision",
     min_recall: float = 0.3,
 ) -> Dict[str, Any]:
-    """
-    最適な確率閾値を見つける
-
-    Meta-Labelingでは Precision を最大化しつつ、
-    Recall が一定以上（機会損失を避ける）になる閾値を探します。
-
-    Args:
-        y_true: 実際のターゲット値
-        y_pred_proba: 予測確率
-        metric: 最適化する指標（"precision", "f1"）
-        min_recall: 最小Recall制約（デフォルト: 0.3）
-
-    Returns:
-        最適閾値と各種指標の辞書
-    """
+    """最適な確率閾値を見つける"""
     y_true_array = y_true.values if hasattr(y_true, "values") else y_true
 
     if len(y_pred_proba.shape) > 1:
@@ -149,50 +157,31 @@ def find_optimal_threshold(
     else:
         proba_positive = y_pred_proba
 
-    # Precision-Recall曲線を計算
     precisions, recalls, thresholds = precision_recall_curve(
         y_true_array, proba_positive
     )
 
-    # Recall制約を満たす閾値のみを考慮
     valid_indices = recalls[:-1] >= min_recall
-
     if not np.any(valid_indices):
         logger.warning(f"Recall >= {min_recall} を満たす閾値が見つかりません")
-        return {
-            "optimal_threshold": 0.5,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1": 0.0,
-        }
+        return {"optimal_threshold": 0.5, "precision": 0.0, "recall": 0.0, "f1": 0.0}
 
     valid_precisions = precisions[:-1][valid_indices]
     valid_recalls = recalls[:-1][valid_indices]
     valid_thresholds = thresholds[valid_indices]
 
     if metric == "precision":
-        # Precisionを最大化
         best_idx = np.argmax(valid_precisions)
     elif metric == "f1":
-        # F1-Scoreを最大化
-        f1_scores = (
-            2
-            * (valid_precisions * valid_recalls)
-            / (valid_precisions + valid_recalls + 1e-10)
-        )
+        f1_scores = 2 * (valid_precisions * valid_recalls) / (valid_precisions + valid_recalls + 1e-10)
         best_idx = np.argmax(f1_scores)
     else:
         raise ValueError(f"Unknown metric: {metric}")
 
     optimal_threshold = valid_thresholds[best_idx]
+    metrics = evaluate_meta_labeling(y_true, (proba_positive >= optimal_threshold).astype(int), y_pred_proba, threshold=optimal_threshold)
 
-    # 最適閾値での評価
-    y_pred_optimal = (proba_positive >= optimal_threshold).astype(int)
-    metrics = evaluate_meta_labeling(
-        y_true, y_pred_optimal, y_pred_proba, threshold=optimal_threshold
-    )
-
-    result = {
+    return {
         "optimal_threshold": float(optimal_threshold),
         "precision": metrics["precision"],
         "recall": metrics["recall"],
@@ -200,14 +189,3 @@ def find_optimal_threshold(
         "signal_adoption_rate": metrics["signal_adoption_rate"],
         "expected_value": metrics["expected_value"],
     }
-
-    logger.info(
-        f"最適閾値: {optimal_threshold:.3f} "
-        f"(Precision={metrics['precision']:.3f}, "
-        f"Recall={metrics['recall']:.3f})"
-    )
-
-    return result
-
-
-

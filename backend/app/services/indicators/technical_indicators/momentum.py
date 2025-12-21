@@ -112,8 +112,6 @@ class MomentumIndicators:
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series, nan_series
 
-        result = result.bfill().fillna(0)
-
         return (
             result.iloc[:, 0].to_numpy(),
             result.iloc[:, 1].to_numpy(),
@@ -148,7 +146,6 @@ class MomentumIndicators:
             nan_array = np.full(len(data), np.nan)
             return nan_array, nan_array, nan_array
 
-        result = result.bfill().fillna(0)
         trix_line = result.iloc[:, 0].to_numpy()
         signal_line = result.iloc[:, 1].to_numpy()
         histogram = trix_line - signal_line
@@ -330,7 +327,7 @@ class MomentumIndicators:
         result = ta.cmo(data, length=length, talib=talib)
         if result is None or result.empty:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def stc(
@@ -367,7 +364,7 @@ class MomentumIndicators:
         else:
             series = result
 
-        return series.bfill().fillna(0)
+        return series
 
     @staticmethod
     def fisher(
@@ -390,7 +387,6 @@ class MomentumIndicators:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series
 
-        result = result.bfill().fillna(0)
         return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
@@ -430,7 +426,6 @@ class MomentumIndicators:
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series
 
-        result = result.bfill().fillna(0)
         return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
@@ -565,7 +560,7 @@ class MomentumIndicators:
 
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def apo(
@@ -588,7 +583,7 @@ class MomentumIndicators:
 
         if result is None or result.empty:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def tsi(
@@ -624,7 +619,6 @@ class MomentumIndicators:
             nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
             return nan_series, nan_series
 
-        result = result.bfill().fillna(0)
         return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
@@ -645,7 +639,7 @@ class MomentumIndicators:
 
         if result is None or result.empty:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -680,7 +674,7 @@ class MomentumIndicators:
         if result is None or (hasattr(result, "isna") and result.isna().all()):
             return pd.Series(np.full(len(close), np.nan), index=close.index)
 
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def squeeze(
@@ -741,7 +735,7 @@ class MomentumIndicators:
 
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def ao(high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34) -> pd.Series:
@@ -753,7 +747,7 @@ class MomentumIndicators:
         result = ta.ao(high=high, low=low, fast=fast, slow=slow)
         if result is None:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def bop(
@@ -769,7 +763,7 @@ class MomentumIndicators:
         result = ta.bop(open_=open_, high=high, low=low, close=close)
         if result is None:
             return pd.Series(np.full(len(open_), np.nan), index=open_.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def cg(data: pd.Series, length: int = 10) -> pd.Series:
@@ -782,7 +776,7 @@ class MomentumIndicators:
         result = ta.cg(data, length=length)
         if result is None:
             return pd.Series(np.full(len(data), np.nan), index=data.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     def coppock(
@@ -797,7 +791,7 @@ class MomentumIndicators:
         result = ta.coppock(close=close, length=length, fast=fast, slow=slow)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -898,7 +892,7 @@ class MomentumIndicators:
         result = ta.cfo(close=close, length=length)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -955,7 +949,7 @@ class MomentumIndicators:
         )
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -992,7 +986,7 @@ class MomentumIndicators:
         result = ta.rsx(close=close, length=length, drift=drift)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1037,7 +1031,7 @@ class MomentumIndicators:
         result = ta.slope(close=close, length=length)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors

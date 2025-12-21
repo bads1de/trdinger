@@ -2,7 +2,7 @@
 デフォルト設定のテスト
 """
 
-from app.services.ml.common.default_configs import (
+from app.services.ml.common.config import (
     get_default_ensemble_config,
     get_default_single_model_config,
 )

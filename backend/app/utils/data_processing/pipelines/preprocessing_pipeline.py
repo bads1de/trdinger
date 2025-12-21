@@ -8,7 +8,7 @@ dtype最適化のための複数のトランスフォーマーを組み合わせ
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -481,6 +481,3 @@ def get_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
         info["feature_names_out"] = None
 
     return info
-
-
-

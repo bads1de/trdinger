@@ -1,11 +1,11 @@
 import pytest
 import pandas as pd
 import numpy as np
-from app.services.ml.common.volatility_utils import (
+from app.services.ml.common.utils import (
     calculate_volatility_std,
     calculate_volatility_atr,
     calculate_historical_volatility,
-    calculate_realized_volatility
+    calculate_realized_volatility,
 )
 
 class TestVolatilityUtils:

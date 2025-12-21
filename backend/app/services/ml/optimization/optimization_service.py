@@ -236,7 +236,3 @@ class OptimizationService:
         else:
             # フォールバック: デフォルト設定でEnsembleTrainer作成
             return EnsembleTrainer(ensemble_config={"method": "stacking"})
-
-    def cleanup(self):
-        """リソースクリーンアップ"""
-        self.optimizer.cleanup()

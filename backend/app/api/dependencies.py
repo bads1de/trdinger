@@ -215,24 +215,24 @@ def get_open_interest_orchestration_service(
         )
 
 
-def get_ml_training_orchestration_service():
+def get_ml_training_service():
     """
-    MLTrainingOrchestrationService のインスタンスを取得（依存性注入用）
+    MLTrainingService のインスタンスを取得（依存性注入用）
     """
     try:
         from app.services.ml.orchestration.ml_training_orchestration_service import (
-            MLTrainingOrchestrationService,
+            MLTrainingService,
         )
 
-        return MLTrainingOrchestrationService()
+        return MLTrainingService()
     except Exception as e:
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"MLTrainingOrchestrationService初期化エラー: {e}", exc_info=True)
+        logger.error(f"MLTrainingService初期化エラー: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="MLTrainingOrchestrationServiceが利用できません。サーバーログを確認してください。",
+            detail="MLTrainingServiceが利用できません。サーバーログを確認してください。",
         )
 
 

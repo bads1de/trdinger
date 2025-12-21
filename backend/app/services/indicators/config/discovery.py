@@ -386,6 +386,17 @@ class DynamicIndicatorDiscovery:
             if name_lower in ["tsignals", "xsignals"]:
                 return None
 
+            # 3. ユーティリティ関数およびデータ整合性チェック関数の除外
+            utility_names = {
+                "above", "above_value", "below", "below_value", "cross", "cross_value",
+                "df_dates", "df_error_analysis", "df_month_to_date", "df_quarter_to_date",
+                "df_year_to_date", "downside_deviation", "is_datetime_ordered",
+                "jensens_alpha", "linear_regression", "mtd", "qtd", "total_time",
+                "to_utc", "ytd", "verify_series", "short_run", "long_run"
+            }
+            if name_lower in utility_names:
+                return None
+
             sig = inspect.signature(func)
 
             # 1. 必要なデータカラムとパラメータを分離

@@ -97,6 +97,7 @@ class TestTechnicalIndicatorService:
         sample_df,
     ):
         """アダプターフォールバックテスト"""
+        indicator_service.clear_cache()  # キャッシュをクリア
         mock_config = Mock()
         mock_config.adapter_function = Mock()
         mock_get_indicator_config.return_value = mock_config

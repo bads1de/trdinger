@@ -114,9 +114,9 @@ class UniversalStrategy(Strategy):
                 base_data=data,
                 base_timeframe=self.base_timeframe,
             )
-            logger.debug(
-                f"MTFデータプロバイダー初期化: base_timeframe={self.base_timeframe}"
-            )
+            # logger.debug(
+            #     f"MTFデータプロバイダー初期化: base_timeframe={self.base_timeframe}"
+            # )
 
         # IndicatorCalculatorの初期化（MTFデータプロバイダー付き）
         self.indicator_calculator = IndicatorCalculator(
@@ -228,15 +228,42 @@ class UniversalStrategy(Strategy):
             if not self.gene:
                 return
 
-            # 各指標を初期化
+            # 1. 各指標を初期化
             enabled_indicators = [ind for ind in self.gene.indicators if ind.enabled]
 
             for indicator_gene in enabled_indicators:
                 self._init_indicator(indicator_gene)
 
+            # 2. MLフィルター用の特徴量事前計算
+            if self.ml_predictor:
+                self._precompute_ml_features()
+
         except Exception as e:
             logger.error(f"戦略初期化エラー: {e}", exc_info=True)
             raise
+
+    def _precompute_ml_features(self):
+        """ML予測に必要な全期間の特徴量を一括計算してキャッシュする"""
+        try:
+            from ..core.hybrid_feature_adapter import HybridFeatureAdapter
+            
+            # アダプターの初期化
+            self.feature_adapter = HybridFeatureAdapter()
+
+            # 全期間のデータを準備
+            full_ohlcv = self.data.df.copy()
+            full_ohlcv.columns = [c.lower() for c in full_ohlcv.columns]
+
+            # 一括変換実行
+            self._precomputed_features = self.feature_adapter.gene_to_features(
+                gene=self.gene,
+                ohlcv_data=full_ohlcv,
+                apply_preprocessing=False
+            )
+            # logger.info(f"ML特徴量の一括計算完了: {len(self._precomputed_features)}行")
+        except Exception as e:
+            logger.error(f"ML特徴量事前計算エラー: {e}")
+            self._precomputed_features = None
 
     def _init_indicator(self, indicator_gene: IndicatorGene):
         """単一指標の初期化"""
@@ -492,18 +519,18 @@ class UniversalStrategy(Strategy):
             new_trailing_sl = current_close * (1.0 - trailing_step)
             if new_trailing_sl > self._trailing_tp_sl:
                 self._trailing_tp_sl = new_trailing_sl
-                logger.debug(
-                    f"トレーリングTP利益確保ライン更新 (Long): {self._trailing_tp_sl:.2f}"
-                )
+                # logger.debug(
+                #     f"トレーリングTP利益確保ライン更新 (Long): {self._trailing_tp_sl:.2f}"
+                # )
 
         # ショートポジションの場合
         elif self._position_direction < 0:
             new_trailing_sl = current_close * (1.0 + trailing_step)
             if new_trailing_sl < self._trailing_tp_sl:
                 self._trailing_tp_sl = new_trailing_sl
-                logger.debug(
-                    f"トレーリングTP利益確保ライン更新 (Short): {self._trailing_tp_sl:.2f}"
-                )
+                # logger.debug(
+                #     f"トレーリングTP利益確保ライン更新 (Short): {self._trailing_tp_sl:.2f}"
+                # )
 
     def _update_trailing_stop(self) -> None:
         """
@@ -529,14 +556,14 @@ class UniversalStrategy(Strategy):
             new_sl = current_close * (1.0 - trailing_step)
             if new_sl > self._sl_price:
                 self._sl_price = new_sl
-                logger.debug(f"トレーリングSL更新 (Long): {self._sl_price:.2f}")
+                # logger.debug(f"トレーリングSL更新 (Long): {self._sl_price:.2f}")
 
         # ショートポジションの場合: 終値ベースで新SLを計算し、現在SLより低ければ更新
         elif self._position_direction < 0:
             new_sl = current_close * (1.0 + trailing_step)
             if new_sl < self._sl_price:
                 self._sl_price = new_sl
-                logger.debug(f"トレーリングSL更新 (Short): {self._sl_price:.2f}")
+                # logger.debug(f"トレーリングSL更新 (Short): {self._sl_price:.2f}")
 
     def _process_stateful_triggers(self) -> None:
         """
@@ -643,10 +670,20 @@ class UniversalStrategy(Strategy):
             return True
 
         try:
-            # 現在の特徴量を準備
-            features = self._prepare_current_features()
+            # 1. 事前計算済みの特徴量から現在の行を取得
+            current_time = self.data.index[-1]
+            features = None
+            
+            if hasattr(self, "_precomputed_features") and self._precomputed_features is not None:
+                if current_time in self._precomputed_features.index:
+                    # インデックスで高速検索
+                    features = self._precomputed_features.loc[[current_time]]
 
-            # ML予測を実行
+            # 2. キャッシュがない場合はフォールバック（低速）
+            if features is None:
+                features = self._prepare_current_features()
+
+            # 3. ML予測を実行
             prediction = self.ml_predictor.predict(features)
 
             # ダマシ予測モデルの判定
@@ -656,10 +693,11 @@ class UniversalStrategy(Strategy):
             allowed = is_valid >= self.ml_filter_threshold
 
             if not allowed:
-                logger.debug(
-                    f"MLフィルター拒否: direction={direction}, "
-                    f"is_valid={is_valid:.3f}, threshold={self.ml_filter_threshold}"
-                )
+                # logger.debug(
+                #     f"MLフィルター拒否: direction={direction}, "
+                #     f"is_valid={is_valid:.3f}, threshold={self.ml_filter_threshold}"
+                # )
+                pass
 
             return allowed
 
@@ -720,10 +758,10 @@ class UniversalStrategy(Strategy):
 
                 # ツールでフィルタリング
                 if tool.should_skip_entry(context, tool_gene.params):
-                    logger.debug(
-                        f"ツール '{tool_gene.tool_name}' がエントリーをブロック "
-                        f"(params={tool_gene.params})"
-                    )
+                    # logger.debug(
+                    #     f"ツール '{tool_gene.tool_name}' がエントリーをブロック "
+                    #     f"(params={tool_gene.params})"
+                    # )
                     return True
 
             return False
@@ -739,6 +777,12 @@ class UniversalStrategy(Strategy):
         HybridFeatureAdapterに委譲して一貫性を確保します。
         """
         try:
+            from ..core.hybrid_feature_adapter import HybridFeatureAdapter
+            
+            # アダプターの初期化（まだ存在しない場合）
+            if not hasattr(self, "feature_adapter"):
+                self.feature_adapter = HybridFeatureAdapter()
+
             # 現在のバーのOHLCVデータを取得
             # backtesting.pyのdataオブジェクトをDataFrameに変換（直近のみ）
             lookback = 30  # 特徴量計算に必要な最低限のルックバック

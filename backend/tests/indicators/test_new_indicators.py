@@ -76,10 +76,10 @@ class TestVHFIndicator:
         assert not np.isnan(result).all(), "VHFの結果がすべてNaN"
 
         # VHFの値は0-1の範囲内であるべき
-        assert result.min() >= 0, "VHFの最小値が0未満"
-        assert result.max() <= 1, "VHFの最大値が1を超える"
+        assert np.nanmin(result) >= 0, "VHFの最小値が0未満"
+        assert np.nanmax(result) <= 1, "VHFの最大値が1超過"
 
-    def test_vhf_with_custom_length(
+    def test_vhf_requires_data_length(
         self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
     ):
         """VHFのカスタムパラメータをテスト"""
@@ -141,8 +141,8 @@ class TestBIASIndicator:
         assert not np.isnan(result).all(), "BIASの結果がすべてNaN"
 
         # BIASの値は通常-100から100の範囲内
-        assert result.min() >= -100, "BIASの最小値が異常"
-        assert result.max() <= 100, "BIASの最大値が異常"
+        assert np.nanmin(result) >= -100, "BIASの最小値が異常"
+        assert np.nanmax(result) <= 100, "BIASの最大値が異常"
 
     def test_bias_with_custom_parameters(
         self, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame

@@ -11,9 +11,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_ml_training_orchestration_service
+from app.api.dependencies import get_ml_training_service
 from app.services.ml.orchestration.ml_training_orchestration_service import (
-    MLTrainingOrchestrationService,
+    MLTrainingService,
 )
 from app.utils.error_handler import ErrorHandler
 from database.connection import get_db
@@ -182,8 +182,8 @@ class MLStatusResponse(BaseModel):
 async def start_ml_training(
     config: MLTrainingRequest,
     background_tasks: BackgroundTasks,
-    orchestration_service: MLTrainingOrchestrationService = Depends(
-        get_ml_training_orchestration_service
+    ml_service: MLTrainingService = Depends(
+        get_ml_training_service
     ),
     db: Session = Depends(get_db),
 ):
@@ -205,7 +205,7 @@ async def start_ml_training(
     """
 
     async def _start_training():
-        return await orchestration_service.start_training(
+        return await ml_service.start_training(
             config=config, background_tasks=background_tasks, db=db
         )
 
@@ -214,21 +214,21 @@ async def start_ml_training(
 
 @router.get("/training/status", response_model=MLStatusResponse)
 async def get_ml_training_status(
-    orchestration_service: MLTrainingOrchestrationService = Depends(
-        get_ml_training_orchestration_service
+    ml_service: MLTrainingService = Depends(
+        get_ml_training_service
     ),
 ):
     """
     MLトレーニングの状態を取得
     """
-    status = await orchestration_service.get_training_status()
+    status = await ml_service.get_training_status()
     return MLStatusResponse(**status)
 
 
 @router.get("/model-info")
 async def get_ml_model_info(
-    orchestration_service: MLTrainingOrchestrationService = Depends(
-        get_ml_training_orchestration_service
+    ml_service: MLTrainingService = Depends(
+        get_ml_training_service
     ),
 ):
     """
@@ -236,15 +236,15 @@ async def get_ml_model_info(
     """
 
     async def _get_model_info():
-        return await orchestration_service.get_model_info()
+        return await ml_service.get_model_info()
 
     return await ErrorHandler.safe_execute_async(_get_model_info)
 
 
 @router.post("/stop")
 async def stop_ml_training(
-    orchestration_service: MLTrainingOrchestrationService = Depends(
-        get_ml_training_orchestration_service
+    ml_service: MLTrainingService = Depends(
+        get_ml_training_service
     ),
 ):
     """
@@ -252,7 +252,7 @@ async def stop_ml_training(
     """
 
     async def _stop_training():
-        return await orchestration_service.stop_training()
+        return await ml_service.stop_training()
 
     return await ErrorHandler.safe_execute_async(_stop_training)
 

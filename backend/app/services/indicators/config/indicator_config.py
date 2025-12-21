@@ -112,6 +112,9 @@ class IndicatorConfig:
     # パラメータ依存関係制約
     parameter_constraints: Optional[List[Dict[str, Any]]] = None
 
+    # GA用閾値設定
+    thresholds: Dict[str, Any] = field(default_factory=dict)
+
     # 絶対的最小データ長
     absolute_min_length: int = 1
 
@@ -119,6 +122,10 @@ class IndicatorConfig:
         """後処理でパラメータおよび派生属性を構築"""
         if not self.parameters:
             self.parameters = self._build_parameters_from_defaults()
+
+        # thresholdsのデフォルト設定
+        if not self.thresholds:
+            self.thresholds = self._get_default_thresholds()
 
         # 派生属性の判定と自動設定
         # returns (single / multiple)
@@ -193,6 +200,23 @@ class IndicatorConfig:
                     )
 
         return len(errors) == 0, errors
+
+    def _get_default_thresholds(self) -> Dict[str, Any]:
+        """スケールタイプに基づくデフォルトの閾値設定を生成"""
+        if self.scale_type == IndicatorScaleType.OSCILLATOR_0_100:
+            return {
+                "aggressive": {"long_lt": 35, "short_gt": 65},
+                "normal": {"long_lt": 30, "short_gt": 70},
+                "conservative": {"long_lt": 25, "short_gt": 75},
+            }
+        elif self.scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+            return {"normal": {"long_lt": -80, "short_gt": 80}}
+        elif self.scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+            return {"normal": {"long_gt": 0, "short_lt": 0}}
+        elif self.scale_type == IndicatorScaleType.PRICE_RATIO:
+            # SMA/EMAなどの場合はCloseとの比較（ConditionEvaluatorで処理されるため閾値自体は不要な場合も多い）
+            return {}
+        return {}
 
     def _build_parameters_from_defaults(self) -> Dict[str, ParameterConfig]:
         """デフォルト値からパラメータを構築"""

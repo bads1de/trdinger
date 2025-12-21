@@ -385,7 +385,7 @@ class TrendIndicators:
         result = ta.decay(close=close, length=length, mode=mode)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -404,7 +404,7 @@ class TrendIndicators:
         result = ta.qstick(open_=open_, close=close, length=length)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors

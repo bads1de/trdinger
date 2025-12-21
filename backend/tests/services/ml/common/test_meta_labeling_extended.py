@@ -2,10 +2,10 @@ import pytest
 import numpy as np
 import pandas as pd
 from unittest.mock import MagicMock, patch
-from app.services.ml.common.meta_labeling_evaluation import (
+from app.services.ml.common.evaluation import (
     evaluate_meta_labeling,
+    find_optimal_threshold,
     print_meta_labeling_report,
-    find_optimal_threshold
 )
 
 class TestMetaLabelingExtended:
@@ -50,7 +50,7 @@ class TestMetaLabelingExtended:
         y_pred = np.array([1, 0])
         
         # evaluate_meta_labeling そのものを Mock
-        with patch("app.services.ml.common.meta_labeling_evaluation.evaluate_meta_labeling", return_value=full_mock_metrics):
+        with patch("app.services.ml.common.evaluation.evaluate_meta_labeling", return_value=full_mock_metrics) as mock_eval:
             # 1. 優秀なモデル
             print_meta_labeling_report(y_true, y_pred)
             out = capsys.readouterr().out
@@ -59,14 +59,14 @@ class TestMetaLabelingExtended:
             # 2. 改善が必要なモデル
             m = full_mock_metrics.copy()
             m["precision"] = 0.5
-            with patch("app.services.ml.common.meta_labeling_evaluation.evaluate_meta_labeling", return_value=m):
+            with patch("app.services.ml.common.evaluation.evaluate_meta_labeling", return_value=m):
                 print_meta_labeling_report(y_true, y_pred)
                 assert "改善が必要です" in capsys.readouterr().out
 
             # 3. 採択率が高い
             m["precision"] = 0.7
             m["signal_adoption_rate"] = 0.6
-            with patch("app.services.ml.common.meta_labeling_evaluation.evaluate_meta_labeling", return_value=m):
+            with patch("app.services.ml.common.evaluation.evaluate_meta_labeling", return_value=m):
                 print_meta_labeling_report(y_true, y_pred)
                 assert "採択率が高い" in capsys.readouterr().out
 
@@ -74,7 +74,7 @@ class TestMetaLabelingExtended:
         y_true = pd.Series([1, 1, 0, 0])
         y_pred_proba = np.array([0.9, 0.8, 0.2, 0.1])
         
-        with patch("app.services.ml.common.meta_labeling_evaluation.evaluate_meta_labeling", return_value=full_mock_metrics):
+        with patch("app.services.ml.common.evaluation.evaluate_meta_labeling", return_value=full_mock_metrics) as mock_eval:
             # Precision最大化パス
             res_p = find_optimal_threshold(y_true, y_pred_proba, metric="precision")
             assert res_p["optimal_threshold"] > 0

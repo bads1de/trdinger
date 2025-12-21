@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from app.services.ml.common.ml_config_manager import MLConfigManager
+from app.services.ml.common.config import MLConfigManager
 from app.config.unified_config import MLConfig, unified_config
 
 class TestMLConfigManager:

@@ -6,8 +6,6 @@
 
 from .fr_merger import FRMerger
 from .oi_merger import OIMerger
+from .lsr_merger import LSRMerger
 
-__all__ = ["OIMerger", "FRMerger"]
-
-
-
+__all__ = ["OIMerger", "FRMerger", "LSRMerger"]

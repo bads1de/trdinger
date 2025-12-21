@@ -16,8 +16,8 @@ from sklearn.model_selection import KFold, StratifiedKFold, cross_val_predict
 from app.config.unified_config import unified_config
 
 from ....utils.error_handler import ModelError
-from ..common.ml_utils import validate_training_inputs
-from ..common.time_series_utils import get_t1_series
+from ..common.utils import validate_training_inputs
+from ..common.utils import get_t1_series
 from ..cross_validation.purged_kfold import PurgedKFold
 from .base_ensemble import BaseEnsemble
 
@@ -73,8 +73,7 @@ class StackingEnsemble(BaseEnsemble):
         )
         self.y_train_original: Optional[pd.Series] = None  # メタラベル生成のため
 
-        # 後方互換性のためのエイリアス
-        self.stacking_classifier = None  # 互換性のために残す（ただし使用しない）
+        self.y_train_original: Optional[pd.Series] = None  # メタラベル生成のため
 
         logger.info(
             f"StackingEnsemble初期化（自前実装）: base_models={self._base_model_types}, "
@@ -187,7 +186,9 @@ class StackingEnsemble(BaseEnsemble):
         self, oof_preds: pd.DataFrame, X: pd.DataFrame, y: pd.Series
     ) -> np.ndarray:
         """メタモデルを学習"""
-        meta_features = pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
+        meta_features = (
+            pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
+        )
         self._fitted_meta_model = self._create_base_model(self._meta_model_type)
         self._fitted_meta_model.fit(meta_features, y)
 
@@ -255,17 +256,26 @@ class StackingEnsemble(BaseEnsemble):
         """
         スタッキングアンサンブルで予測確率を取得
         """
-        if not self.is_fitted or not self._fitted_base_models or self._fitted_meta_model is None:
+        if (
+            not self.is_fitted
+            or not self._fitted_base_models
+            or self._fitted_meta_model is None
+        ):
             raise ModelError("モデルが学習されていません")
 
         # ベースモデルの予測確率
         base_preds = pd.DataFrame(
-            {name: model.predict_proba(X)[:, 1] for name, model in self._fitted_base_models.items()},
-            index=X.index
+            {
+                name: model.predict_proba(X)[:, 1]
+                for name, model in self._fitted_base_models.items()
+            },
+            index=X.index,
         )
 
         # メタモデルで予測
-        meta_features = pd.concat([base_preds, X], axis=1) if self.passthrough else base_preds
+        meta_features = (
+            pd.concat([base_preds, X], axis=1) if self.passthrough else base_preds
+        )
         return self._fitted_meta_model.predict_proba(meta_features)
 
     def _create_base_estimators(self) -> List[Tuple[str, Any]]:
@@ -378,7 +388,9 @@ class StackingEnsemble(BaseEnsemble):
                     coef = np.abs(coef)
 
                 if len(coef) == len(estimator_names):
-                    return {estimator_names[i]: float(coef[i]) for i in range(len(coef))}
+                    return {
+                        estimator_names[i]: float(coef[i]) for i in range(len(coef))
+                    }
                 else:
                     feature_names = [f"meta_feature_{i}" for i in range(len(coef))]
                     return {feature_names[i]: float(coef[i]) for i in range(len(coef))}
@@ -413,11 +425,6 @@ class StackingEnsemble(BaseEnsemble):
             pattern = f"{base_path}_stacking_ensemble_*.pkl"
             model_files = glob.glob(pattern)
 
-            # 旧形式へのフォールバック
-            if not model_files:
-                pattern = f"{base_path}_stacking_classifier_*.pkl"
-                model_files = glob.glob(pattern)
-
             if not model_files:
                 logger.warning(f"モデルファイルが見つかりません: {pattern}")
                 return False
@@ -442,18 +449,6 @@ class StackingEnsemble(BaseEnsemble):
                     self.config = model_data.get("config", self.config)
                     self.passthrough = model_data.get("passthrough", False)
                     logger.info("自前実装のスタッキングモデルを読み込み完了")
-                # 旧形式: StackingClassifier
-                elif "ensemble_classifier" in model_data:
-                    # 旧形式は後方互換性のために読み込むが警告を出す
-                    logger.warning(
-                        "旧形式（StackingClassifier）のモデルを読み込みます。"
-                        "このモデルは新しい自前実装とは互換性がありません。再学習を推奨します。"
-                    )
-                    self.stacking_classifier = model_data["ensemble_classifier"]
-                    self.feature_columns = model_data.get("feature_columns", None)
-                    self._base_model_types = model_data.get(
-                        "base_models", self._base_model_types
-                    )
                 else:
                     logger.warning("不明なモデル形式です")
                     return False
@@ -563,11 +558,5 @@ class StackingEnsemble(BaseEnsemble):
         self.X_train_original = None
         self.y_train_original = None
 
-        # 後方互換性用
-        self.stacking_classifier = None
-
         self.is_fitted = False
         logger.info("StackingEnsembleのリソースクリーンアップ完了")
-
-
-

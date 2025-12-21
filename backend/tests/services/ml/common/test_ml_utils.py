@@ -2,14 +2,14 @@ import pytest
 import pandas as pd
 import numpy as np
 from unittest.mock import MagicMock
-from app.services.ml.common.ml_utils import (
+from app.services.ml.common.utils import (
     optimize_dtypes,
     generate_cache_key,
-    calculate_price_change,
     validate_training_inputs,
+    predict_class_from_proba,
     get_feature_importance_unified,
+    calculate_price_change,
     prepare_data_for_prediction,
-    predict_class_from_proba
 )
 
 class TestMLUtils:

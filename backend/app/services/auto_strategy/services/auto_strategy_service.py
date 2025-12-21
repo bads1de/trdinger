@@ -55,36 +55,14 @@ class AutoStrategyService:
     def _init_services(self) -> None:
         """
         必要な内部サービスを遅延初期化します。
-
-        循環参照を避けるためにメソッド内でインポートを行い、
-        DBリポジトリやバックテストサービスなどへの参照を確立します。
         """
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="サービス初期化", is_api_call=False)
         def _init_services_impl():
-            # 循環インポート回避のため、ここでインポート
-            from app.services.backtest.backtest_data_service import BacktestDataService
-
-            # データベースリポジトリの初期化
-            with self.db_session_factory() as db:
-                from database.repositories.funding_rate_repository import (
-                    FundingRateRepository,
-                )
-                from database.repositories.ohlcv_repository import OHLCVRepository
-                from database.repositories.open_interest_repository import (
-                    OpenInterestRepository,
-                )
-
-                ohlcv_repo = OHLCVRepository(db)
-                oi_repo = OpenInterestRepository(db)
-                fr_repo = FundingRateRepository(db)
-
-                # バックテストサービスの初期化
-                data_service = BacktestDataService(
-                    ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
-                )
-                self.backtest_service = BacktestService(data_service)
+            # バックテストサービスの初期化
+            # 引数なしで初期化することで、BacktestServiceが実行時に自らセッションを管理するようにする
+            self.backtest_service = BacktestService()
 
             # 永続化サービスの初期化
             self.persistence_service = ExperimentPersistenceService(

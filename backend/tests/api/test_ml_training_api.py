@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import get_db, get_ml_training_orchestration_service
+from app.api.dependencies import get_db, get_ml_training_service
 from app.main import app
 
 
@@ -37,29 +37,29 @@ def mock_db_session() -> Mock:
 
 
 @pytest.fixture(autouse=True)
-def override_dependencies(mock_db_session, mock_ml_training_orchestration_service):
+def override_dependencies(mock_db_session, mock_ml_training_service):
     """
     FastAPIの依存性注入をオーバーライド
 
     Args:
         mock_db_session: モックDBセッション
-        mock_ml_training_orchestration_service: モックサービス
+        mock_ml_training_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_ml_training_orchestration_service] = (
-        lambda: mock_ml_training_orchestration_service
+    app.dependency_overrides[get_ml_training_service] = (
+        lambda: mock_ml_training_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def mock_ml_training_orchestration_service() -> Mock:
+def mock_ml_training_service() -> Mock:
     """
-    MLTrainingOrchestrationServiceのモック
+    MLTrainingServiceのモック
 
     Returns:
-        Mock: モックされたMLトレーニングオーケストレーションサービス
+        Mock: モックされたMLトレーニングサービス
     """
     mock_service = Mock()
     mock_service.start_training = AsyncMock()
@@ -104,22 +104,14 @@ class TestStartTraining:
         self,
         test_client: TestClient,
         mock_db_session: Mock,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
         sample_training_config: Dict[str, Any],
     ) -> None:
         """
         正常系: MLトレーニングが正常に開始される
-
-        Args:
-            mock_get_db: データベース取得関数のモック
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_db_session: DBセッションモック
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
-            sample_training_config: サンプルトレーニング設定
         """
         # モックの設定
-        mock_ml_training_orchestration_service.start_training.return_value = {
+        mock_ml_training_service.start_training.return_value = {
             "success": True,
             "message": "トレーニングを開始しました",
             "training_id": "train_12345",
@@ -141,22 +133,14 @@ class TestStartTraining:
         self,
         test_client: TestClient,
         mock_db_session: Mock,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
         sample_training_config: Dict[str, Any],
     ) -> None:
         """
         正常系: アンサンブル学習でトレーニングが開始される
-
-        Args:
-            mock_get_db: データベース取得関数のモック
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_db_session: DBセッションモック
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
-            sample_training_config: サンプルトレーニング設定
         """
         # モックの設定
-        mock_ml_training_orchestration_service.start_training.return_value = {
+        mock_ml_training_service.start_training.return_value = {
             "success": True,
             "message": "アンサンブル学習を開始しました",
             "training_id": "train_ensemble_12345",
@@ -191,22 +175,14 @@ class TestStartTraining:
         self,
         test_client: TestClient,
         mock_db_session: Mock,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
         sample_training_config: Dict[str, Any],
     ) -> None:
         """
         正常系: 単一モデルでトレーニングが開始される
-
-        Args:
-            mock_get_db: データベース取得関数のモック
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_db_session: DBセッションモック
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
-            sample_training_config: サンプルトレーニング設定
         """
         # モックの設定
-        mock_ml_training_orchestration_service.start_training.return_value = {
+        mock_ml_training_service.start_training.return_value = {
             "success": True,
             "message": "単一モデルトレーニングを開始しました",
             "training_id": "train_single_12345",
@@ -233,23 +209,15 @@ class TestStartTraining:
         self,
         test_client: TestClient,
         mock_db_session: Mock,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         異常系: 無効な設定でトレーニングが失敗する
-
-        Args:
-            mock_get_db: データベース取得関数のモック
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_db_session: DBセッションモック
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
         # 不完全な設定
         invalid_config = {
             "symbol": "BTC/USDT:USDT",
-            # 必須フィールドが欠落
         }
 
         # APIリクエスト
@@ -268,18 +236,13 @@ class TestTrainingStatus:
     def test_get_training_status_in_progress(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         正常系: トレーニング中の状態が取得できる
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_ml_training_orchestration_service.get_training_status.return_value = {
+        mock_ml_training_service.get_training_status.return_value = {
             "is_training": True,
             "progress": 50,
             "status": "training",
@@ -299,18 +262,13 @@ class TestTrainingStatus:
     def test_get_training_status_completed(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         正常系: 完了状態が取得できる
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_ml_training_orchestration_service.get_training_status.return_value = {
+        mock_ml_training_service.get_training_status.return_value = {
             "is_training": False,
             "progress": 100,
             "status": "completed",
@@ -333,18 +291,13 @@ class TestTrainingStatus:
     def test_get_training_status_error(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         エッジケース: エラー状態が取得できる
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_ml_training_orchestration_service.get_training_status.return_value = {
+        mock_ml_training_service.get_training_status.return_value = {
             "is_training": False,
             "progress": 0,
             "status": "error",
@@ -369,18 +322,13 @@ class TestModelInfo:
     def test_get_model_info_success(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         正常系: モデル情報が正常に取得できる
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_ml_training_orchestration_service.get_model_info.return_value = {
+        mock_ml_training_service.get_model_info.return_value = {
             "success": True,
             "data": {
                 "model_type": "ensemble",
@@ -403,18 +351,13 @@ class TestModelInfo:
     def test_get_model_info_no_model(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         エッジケース: モデルが存在しない場合
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_ml_training_orchestration_service.get_model_info.return_value = {
+        mock_ml_training_service.get_model_info.return_value = {
             "success": False,
             "message": "モデルが見つかりません",
         }
@@ -434,18 +377,13 @@ class TestStopTraining:
     def test_stop_training_success(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         正常系: トレーニングが正常に停止される
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_ml_training_orchestration_service.stop_training.return_value = {
+        mock_ml_training_service.stop_training.return_value = {
             "success": True,
             "message": "トレーニングを停止しました",
         }
@@ -462,18 +400,13 @@ class TestStopTraining:
     def test_stop_training_not_running(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         エッジケース: トレーニングが実行されていない場合
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
         # モックの設定
-        mock_ml_training_orchestration_service.stop_training.return_value = {
+        mock_ml_training_service.stop_training.return_value = {
             "success": False,
             "message": "実行中のトレーニングがありません",
         }
@@ -494,22 +427,14 @@ class TestErrorHandling:
         self,
         test_client: TestClient,
         mock_db_session: Mock,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
         sample_training_config: Dict[str, Any],
     ) -> None:
         """
         異常系: サービス層でエラーが発生した場合
-
-        Args:
-            mock_get_db: データベース取得関数のモック
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_db_session: DBセッションモック
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
-            sample_training_config: サンプルトレーニング設定
         """
         # モックの設定
-        mock_ml_training_orchestration_service.start_training.side_effect = Exception(
+        mock_ml_training_service.start_training.side_effect = Exception(
             "Training error"
         )
 
@@ -519,24 +444,19 @@ class TestErrorHandling:
             json=sample_training_config,
         )
 
-        # アサーション（ErrorHandlerによって処理される）
+        # アサーション
         assert response.status_code in [200, 500]
 
     def test_status_error_handling(
         self,
         test_client: TestClient,
-        mock_ml_training_orchestration_service: AsyncMock,
+        mock_ml_training_service: AsyncMock,
     ) -> None:
         """
         異常系: ステータス取得時にエラーが発生した場合
-
-        Args:
-            mock_get_service: サービス取得関数のモック
-            test_client: テストクライアント
-            mock_ml_training_orchestration_service: オーケストレーションサービスモック
         """
-        # モックの設定: Exceptionではなくエラー状態を返す
-        mock_ml_training_orchestration_service.get_training_status.return_value = {
+        # モックの設定 Exceptionではなくエラー状態を返す
+        mock_ml_training_service.get_training_status.return_value = {
             "is_training": False,
             "progress": 0,
             "status": "error",
@@ -551,7 +471,3 @@ class TestErrorHandling:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "error"
-
-
-
-

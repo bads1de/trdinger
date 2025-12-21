@@ -80,59 +80,5 @@ class EnsembleParameterSpace:
 
         return ps
 
-    @staticmethod
-    def _suggest_lightgbm_params(trial: optuna.Trial) -> Dict[str, Any]:
-        """LightGBMパラメータの提案"""
-        return {
-            "lgb_num_leaves": trial.suggest_int("lgb_num_leaves", 10, 100),
-            "lgb_learning_rate": trial.suggest_float(
-                "lgb_learning_rate", 0.01, 0.3, log=True
-            ),
-            "lgb_feature_fraction": trial.suggest_float(
-                "lgb_feature_fraction", 0.5, 1.0
-            ),
-            "lgb_bagging_fraction": trial.suggest_float(
-                "lgb_bagging_fraction", 0.5, 1.0
-            ),
-            "lgb_min_data_in_leaf": trial.suggest_int("lgb_min_data_in_leaf", 5, 50),
-            "lgb_max_depth": trial.suggest_int("lgb_max_depth", 3, 15),
-            "lgb_reg_alpha": trial.suggest_float("lgb_reg_alpha", 0.0, 1.0),
-            "lgb_reg_lambda": trial.suggest_float("lgb_reg_lambda", 0.0, 1.0),
-        }
-
-    @staticmethod
-    def _suggest_xgboost_params(trial: optuna.Trial) -> Dict[str, Any]:
-        """XGBoostパラメータの提案"""
-        return {
-            "xgb_max_depth": trial.suggest_int("xgb_max_depth", 3, 15),
-            "xgb_learning_rate": trial.suggest_float(
-                "xgb_learning_rate", 0.01, 0.3, log=True
-            ),
-            "xgb_subsample": trial.suggest_float("xgb_subsample", 0.5, 1.0),
-            "xgb_colsample_bytree": trial.suggest_float(
-                "xgb_colsample_bytree", 0.5, 1.0
-            ),
-            "xgb_min_child_weight": trial.suggest_int("xgb_min_child_weight", 1, 10),
-            "xgb_reg_alpha": trial.suggest_float("xgb_reg_alpha", 0.0, 1.0),
-            "xgb_reg_lambda": trial.suggest_float("xgb_reg_lambda", 0.0, 1.0),
-            "xgb_gamma": trial.suggest_float("xgb_gamma", 0.0, 0.5),
-        }
-
-    @staticmethod
-    def _suggest_stacking_params(trial: optuna.Trial) -> Dict[str, Any]:
-        """スタッキングパラメータの提案"""
-        return {
-            "stacking_meta_C": trial.suggest_float(
-                "stacking_meta_C", 0.01, 10.0, log=True
-            ),
-            "stacking_meta_penalty": trial.suggest_categorical(
-                "stacking_meta_penalty", ["l1", "l2", "elasticnet"]
-            ),
-            "stacking_meta_solver": trial.suggest_categorical(
-                "stacking_meta_solver", ["liblinear", "saga"]
-            ),
-            "stacking_cv_folds": trial.suggest_int("stacking_cv_folds", 3, 10),
-        }
-
 
 

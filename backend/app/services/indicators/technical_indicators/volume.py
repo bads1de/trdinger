@@ -337,7 +337,6 @@ class VolumeIndicators:
             nan_series = pd.Series(np.full(len(volume), np.nan), index=volume.index)
             return nan_series, nan_series, nan_series
 
-        result = result.bfill().fillna(0)
         return (
             result.iloc[:, 0].to_numpy(),
             result.iloc[:, 1].to_numpy(),
@@ -355,7 +354,7 @@ class VolumeIndicators:
         result = ta.pvt(close=close, volume=volume)
         if result is None:
             return None
-        return result.bfill().fillna(0).to_numpy()
+        return result.to_numpy()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -412,7 +411,7 @@ class VolumeIndicators:
         result = ta.nvi(close=close, volume=volume)
         if result is None or result.empty:
             return None
-        return result.bfill().ffill().to_numpy()
+        return result.to_numpy()
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -444,7 +443,7 @@ class VolumeIndicators:
         # Z-score
         z_score = deviation / sigma
 
-        return z_score.fillna(0.0)
+        return z_score
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -478,7 +477,7 @@ class VolumeIndicators:
             avg_vol = volume.rolling(window=window).mean()
 
         rvol = volume / avg_vol
-        return rvol.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        return rvol.replace([np.inf, -np.inf], np.nan)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -508,7 +507,7 @@ class VolumeIndicators:
 
         score = rvol_series / price_range
 
-        return score.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        return score.replace([np.inf, -np.inf], np.nan)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -563,7 +562,7 @@ class VolumeIndicators:
         result = ta.pvi(close=close, volume=volume, length=length)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -576,7 +575,7 @@ class VolumeIndicators:
         result = ta.pvol(close=close, volume=volume)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -589,4 +588,4 @@ class VolumeIndicators:
         result = ta.pvr(close=close, volume=volume)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result

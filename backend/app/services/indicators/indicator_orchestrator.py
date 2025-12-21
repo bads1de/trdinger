@@ -129,10 +129,25 @@ class TechnicalIndicatorService:
     def _make_cache_key(
         self, indicator_type: str, params: Dict[str, Any], df: pd.DataFrame
     ) -> Optional[tuple]:
-        """キャッシュキーを生成"""
+        """
+        キャッシュキーを生成（データの内容に基づいた一意なキー）
+        id(df) ではなくデータの属性を使用することで、コピー後もキャッシュを有効にする。
+        """
         try:
+            # パラメータをソートされた不変セットに変換
             cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
-            return (indicator_type, cache_params, id(df))
+            
+            # データのメタデータを抽出
+            if not df.empty:
+                data_meta = (
+                    df.index[0],    # 開始日
+                    df.index[-1],   # 終了日
+                    len(df)         # データ長
+                )
+            else:
+                data_meta = ("empty",)
+
+            return (indicator_type, cache_params, data_meta)
         except Exception:
             return None
 
@@ -309,7 +324,9 @@ class TechnicalIndicatorService:
                     result = result.reindex(df.index)
                 except Exception:
                     pass
-            result = result.bfill().fillna(0)
+            # 安易な0埋めを廃止し、NaNを維持する
+            # result = result.bfill().fillna(0)
+            pass
 
         # 戻り値変換
         if config["returns"] == "single":
@@ -443,11 +460,11 @@ class TechnicalIndicatorService:
                 "open_interest",
             ]:
                 target_key = param_lower.rstrip("_")
-                val = (
-                    series_data.get(target_key)
-                    or series_data.get("close")
-                    or series_data.get("data")
-                )
+                val = series_data.get(target_key)
+                if val is None:
+                    val = series_data.get("close")
+                if val is None:
+                    val = series_data.get("data")
             elif param_lower in ["length", "period", "window", "n"]:
                 for k in ["length", "period", "window", "n"]:
                     if k in scalar_params:
@@ -487,9 +504,8 @@ class TechnicalIndicatorService:
 
         # 結果の後処理
         if isinstance(result, pd.Series):
-            return result.bfill().fillna(0).values
+            return result.values
         elif isinstance(result, pd.DataFrame):
-            result = result.bfill().fillna(0)
             if config.result_type == IndicatorResultType.SINGLE:
                 return result.iloc[:, 0].values
             else:
@@ -497,12 +513,12 @@ class TechnicalIndicatorService:
         elif isinstance(result, tuple):
             return tuple(
                 (
-                    arr.bfill().fillna(0).values
+                    arr.values
                     if isinstance(arr, pd.Series)
                     else (
-                        arr.bfill().fillna(0).values
+                        arr.values
                         if isinstance(arr, pd.DataFrame)
-                        else np.nan_to_num(np.asarray(arr))
+                        else np.asarray(arr)
                     )
                 )
                 for arr in result

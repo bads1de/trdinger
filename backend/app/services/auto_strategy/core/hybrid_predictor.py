@@ -12,7 +12,7 @@ from app.services.ml.common.exceptions import MLPredictionError
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
-    from app.services.ml.orchestration.ml_training_service import MLTrainingService
+    from app.services.ml.orchestration.ml_training_orchestration_service import MLTrainingService
     from app.services.ml.model_manager import ModelManager
 
 
@@ -258,7 +258,7 @@ class HybridPredictor:
         if override is not None:
             return override
 
-        module = importlib.import_module("app.services.ml.orchestration.ml_training_service")
+        module = importlib.import_module("app.services.ml.orchestration.ml_training_orchestration_service")
         return getattr(module, "MLTrainingService")
 
     @staticmethod

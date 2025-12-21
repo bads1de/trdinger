@@ -11,14 +11,18 @@ from urllib.parse import unquote
 from fastapi import HTTPException
 from starlette.concurrency import run_in_threadpool
 
-from app.services.ml.common.ml_config_manager import ml_config_manager
-from .ml_training_service import ml_training_service
+from app.services.ml.common.config import ml_config_manager
 from app.services.ml.models.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response
 
-from ..common.evaluation_utils import get_default_metrics
-from .orchestration_utils import get_latest_model_with_info, load_model_metadata_safely
+from ..common.evaluation import get_default_metrics
+from .ml_training_orchestration_service import (
+    ml_training_service,
+    get_latest_model_with_info,
+    load_model_metadata_safely,
+    get_model_info_with_defaults,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -152,8 +156,6 @@ class MLManagementOrchestrationService:
         """
         MLモデルの現在の状態を取得
         """
-        from .orchestration_utils import get_model_info_with_defaults
-
         # デフォルトステータスの初期化
         status = {
             "is_model_loaded": False,

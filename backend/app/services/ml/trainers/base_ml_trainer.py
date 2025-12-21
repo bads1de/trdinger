@@ -19,17 +19,16 @@ from ....utils.error_handler import (
     safe_ml_operation,
 )
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
-from ..common.evaluation_utils import evaluate_model_predictions
-from ..common.ml_utils import (
+from ..common.utils import (
     get_feature_importance_unified,
-    predict_class_from_proba,
     prepare_data_for_prediction,
+    get_t1_series,
 )
 from ..cross_validation import PurgedKFold
 from ..common.exceptions import MLModelError
 from ..feature_engineering.feature_engineering_service import FeatureEngineeringService
 from ..label_generation.label_generation_service import LabelGenerationService
-from ..common.ml_metadata import ModelMetadata
+from ..common.registry import ModelMetadata
 from ..models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -68,19 +67,16 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.trainer_config = trainer_config or {}
 
-        # 以下のプロパティはサブクラスで使用されるため保持
-        # BaseMLTrainer自体では使用しないが、互換性のため維持
+        # 以下のプロパティはサブクラスで使用される可能性があるため保持（互換性）
         self.trainer_type = trainer_type or self.trainer_config.get("type", "single")
         self.model_type = model_type or self.trainer_config.get(
             "model_type", "lightgbm"
         )
-        self.ensemble_config = self.trainer_config.get("ensemble_config", {})
 
         self.scaler = StandardScaler()
         self.feature_columns = None
         self.is_trained = False
         self._model = None
-        self.last_training_results = None
         self.current_model_path = None
         self.current_model_metadata = None
 
@@ -185,90 +181,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             return self._format_training_result(res, X, y)
 
-    @safe_ml_operation(default_return={}, context="モデル評価でエラーが発生しました")
-    def evaluate_model(
-        self,
-        test_data: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
-    ) -> Dict[str, Any]:
-        """
-        学習済みモデルをテストデータで評価
-
-        特徴量の計算、予測の実行、およびラベル生成を行い、
-        各種評価メトリクス（精度、F1スコア、AUC等）を算出します。
-
-        Args:
-            test_data: テスト用OHLCVデータ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-
-        Returns:
-            評価メトリクス、予測値、サンプル数等を含む辞書
-        """
-        if not self.is_trained:
-            raise MLModelError("評価対象の学習済みモデルがありません")
-
-        # 特徴量を計算
-        features_df = self._calculate_features(
-            test_data, funding_rate_data, open_interest_data
-        )
-
-        # 予測を実行（全データ）
-        # predictは確率を返す
-        predictions_proba = self.predict(features_df)
-
-        # クラス予測（共通ユーティリティを使用）
-        predictions_class = predict_class_from_proba(predictions_proba)
-
-        # 評価結果を作成
-        evaluation_result = {
-            "predictions_proba": predictions_proba,
-            "predictions_class": predictions_class,
-            "test_samples": len(features_df),
-            "feature_count": len(self.feature_columns) if self.feature_columns else 0,
-            "model_status": "trained" if self.is_trained else "not_trained",
-        }
-
-        # ラベル生成とメトリクス計算
-        try:
-            # ラベル生成（NaNは削除される）
-            # configからパラメータを取得してラベルを生成
-            features_clean, labels_numeric = self.label_service.prepare_labels(
-                features_df,
-                prediction_horizon=self.config.training.prediction_horizon,
-            )
-
-            if len(labels_numeric) > 0:
-                # インデックスを使用して予測値をアラインメント
-                # features_cleanのインデックスに対応する予測値を抽出
-                valid_indices = features_df.index.get_indexer(features_clean.index)
-
-                # 予測値をフィルタリング
-                y_pred_class_aligned = predictions_class[valid_indices]
-                y_pred_proba_aligned = (
-                    predictions_proba[valid_indices]
-                    if predictions_proba.ndim == 2
-                    else predictions_proba[valid_indices]
-                )
-
-                # メトリクス計算（共通ユーティリティを使用）
-                metrics = evaluate_model_predictions(
-                    labels_numeric, y_pred_class_aligned, y_pred_proba_aligned
-                )
-
-                evaluation_result.update(metrics)
-                logger.info("✅ モデル評価メトリクス計算完了")
-            else:
-                logger.warning(
-                    "評価用ラベルが生成できませんでした（データ不足の可能性）"
-                )
-
-        except Exception as e:
-            logger.warning(f"評価用ラベル生成またはメトリクス計算失敗: {e}")
-
-        return evaluation_result
-
     @abstractmethod
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
@@ -319,10 +231,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             # 4. 結果の整形（二値分類専用）
             if latest_pred.shape[0] >= 2:
-                # 2クラス分類（ダマシ予測 / メタラベリング）
-                # class 0 = ダマシ（False Signal / 無効）
-                # class 1 = 有効（Valid Signal）
-                # is_valid: エントリーが有効である確率
+                # 2クラス分類
                 return {
                     "is_valid": float(latest_pred[1]),
                 }
@@ -345,16 +254,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     ) -> Dict[str, Any]:
         """
         モデル学習の実装（抽象メソッド）
-
-        Args:
-            X_train: 学習用特徴量
-            X_test: テスト用特徴量
-            y_train: 学習用ラベル
-            y_test: テスト用ラベル
-            **training_params: 学習パラメータ
-
-        Returns:
-            学習結果
         """
 
     def _calculate_features(
@@ -363,30 +262,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
-        """
-        入力データから特徴量集合を計算
-
-        FeatureEngineeringServiceを使用して、テクニカル指標や
-        マーケットマイクロストラクチャなどの特徴量を生成します。
-
-        Args:
-            ohlcv_data: OHLCVデータ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-
-        Returns:
-            計算された特徴量を含むDataFrame
-        """
+        """入力データから特徴量集合を計算"""
         try:
-            # 入力データの検証
             if ohlcv_data is None or ohlcv_data.empty:
                 raise ValueError("OHLCVデータが空です")
 
-            # 設定からprofileを取得
             profile = unified_config.ml.feature_engineering.profile
             logger.info(f"📊 特徴量計算を実行中（profile: {profile}）...")
 
-            # 基本特徴量計算
             basic_features = self.feature_service.calculate_advanced_features(
                 ohlcv_data=ohlcv_data,
                 funding_rate_data=funding_rate_data,
@@ -399,7 +282,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         except Exception as e:
             logger.warning(f"特徴量計算でエラー、基本特徴量のみ使用: {e}")
-            # フォールバック処理（簡略化）
             return ohlcv_data.copy()
 
     def _prepare_training_data(
@@ -438,30 +320,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def _time_series_cross_validate(
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Dict[str, Any]:
-        """
-        時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行
-
-        時系列データのリーケージ（未来のデータが過去の学習に混入すること）を防ぐため、
-        PurgedKFoldを使用して学習と検証の分割を行います。
-
-        Args:
-            X: 特徴量マトリックス
-            y: ラベルシリーズ
-            **training_params:
-                - cv_splits: 分割数
-                - pct_embargo: エンバーゴ（学習データの末尾を削除する比率）
-
-        Returns:
-            各フォールドのスコア、平均スコア、詳細結果を含む辞書
-        """
+        """時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行"""
         n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
-        # ラベル生成設定からパラメータを取得
         t1_horizon_n = self.config.training.prediction_horizon
-
-        # 共通ユーティリティを使用してt1を計算（時間足は自動推定）
-        from ..common.time_series_utils import get_t1_series
 
         t1 = get_t1_series(
             X.index,
@@ -476,11 +339,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         fold_results = []
 
         for fold, (train_idx, test_idx) in enumerate(splitter.split(X, y)):
-            # インデックスを使用してデータを分割
             X_train_cv, X_test_cv = X.iloc[train_idx], X.iloc[test_idx]
             y_train_cv, y_test_cv = y.iloc[train_idx], y.iloc[test_idx]
 
-            # スケーリング
             scaler = StandardScaler()
             X_train_scaled = pd.DataFrame(
                 scaler.fit_transform(X_train_cv),
@@ -493,7 +354,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 index=X_test_cv.index,
             )
 
-            # 各フォールドで学習・評価
             fold_result = self._train_fold_with_error_handling(
                 fold + 1,
                 X_train_scaled,
@@ -507,13 +367,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             fold_results.append(fold_result)
 
-            # スコアを記録（accuracyを基本とするが、利用可能ならbalanced_accuracyを使用）
             score = fold_result.get(
                 "balanced_accuracy", fold_result.get("accuracy", 0.0)
             )
             cv_scores.append(score)
 
-        # 平均スコアと標準偏差
         mean_score = np.mean(cv_scores) if cv_scores else 0.0
         std_score = np.std(cv_scores) if cv_scores else 0.0
 
@@ -546,35 +404,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         return X_train_scaled, X_test_scaled
 
     def _get_model_to_save(self) -> Any:
-        """
-        保存対象のモデルオブジェクトを取得
-        サブクラスでオーバーライド可能
-        """
+        """保存対象のモデルオブジェクトを取得"""
         return self._model
 
     def _get_model_specific_metadata(self, model_name: str) -> Dict[str, Any]:
-        """
-        モデル固有のメタデータを取得
-        サブクラスでオーバーライド可能
-        """
+        """モデル固有のメタデータを取得"""
         return {}
 
     def save_model(
         self, model_name: str, metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
-        """
-        学習済みモデルを永続化
-
-        モデル本体に加えて、スケーラー、使用した特徴量リスト、および
-        性能メトリクス等のメタデータを一括で保存します。
-
-        Args:
-            model_name: 保存時のベースファイル名
-            metadata: 追加で記録したいメタデータ
-
-        Returns:
-            保存されたファイルの絶対パス（失敗時はNone）
-        """
+        """学習済みモデルを永続化"""
         if not self.is_trained:
             raise MLModelError("学習済みモデルがありません")
 
@@ -586,7 +426,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         if metadata:
             final_metadata.update(metadata)
 
-        # モデル固有のメタデータを追加
         final_metadata.update(self._get_model_specific_metadata(model_name))
 
         try:
@@ -596,14 +435,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         except Exception as e:
             logger.warning(f"特徴量重要度の取得に失敗: {e}")
 
-        # 保存対象のモデルを取得
         model_to_save = self._get_model_to_save()
         if model_to_save is None:
-            # フォールバック: selfを保存（ただし推奨されない）
             logger.warning("保存対象モデルがNoneです。トレーナー自体を保存します。")
             model_to_save = self
 
-        # 統一されたモデル保存を使用
         model_path = model_manager.save_model(
             model=model_to_save,
             model_name=model_name,
@@ -628,10 +464,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         return result
 
     def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
-        """
-        特徴量重要度を取得（デフォルト実装）
-        サブクラスでオーバーライド可能
-        """
+        """特徴量重要度を取得"""
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
             return {}

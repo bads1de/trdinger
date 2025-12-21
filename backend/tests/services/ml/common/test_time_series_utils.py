@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from app.services.ml.common.time_series_utils import infer_timeframe, get_t1_series
+from app.services.ml.common.utils import infer_timeframe, get_t1_series
 
 class TestTimeSeriesUtils:
     def test_infer_timeframe_standard(self):

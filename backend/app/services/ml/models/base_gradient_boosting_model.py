@@ -8,8 +8,8 @@ from sklearn.utils.class_weight import compute_sample_weight
 
 from app.utils.error_handler import ModelError
 
-from ..common.evaluation_utils import evaluate_model_predictions
-from ..common.ml_utils import get_feature_importance_unified
+from ..common.evaluation import evaluate_model_predictions
+from ..common.utils import get_feature_importance_unified, predict_class_from_proba
 
 logger = logging.getLogger(__name__)
 
@@ -251,7 +251,6 @@ class BaseGradientBoostingModel(ABC):
         if self.feature_columns and not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
 
-        from ..common.ml_utils import predict_class_from_proba
         return predict_class_from_proba(self.predict_proba(X))
 
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:

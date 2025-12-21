@@ -27,7 +27,6 @@ class BackgroundTaskManager:
         self._task_resources: Dict[str, List[Any]] = {}
         self._cleanup_callbacks: Dict[str, List[Callable[[], None]]] = {}
         self._lock = threading.Lock()
-        self._shutdown_event = threading.Event()
 
     def register_task(
         self,
@@ -181,6 +180,3 @@ class BackgroundTaskManager:
 
 # グローバルインスタンス
 background_task_manager = BackgroundTaskManager()
-
-
-

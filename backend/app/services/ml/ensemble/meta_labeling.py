@@ -25,7 +25,6 @@ class MetaLabelingService:
         self.model_type = model_type
         self.model = None
         self.is_trained = False
-        self.oof_preds_df = None
         self.base_model_names = base_model_names
         self.model_params = model_params or {}
 
@@ -70,9 +69,9 @@ class MetaLabelingService:
 
     def create_meta_labels(
         self, primary_preds_proba: pd.Series, y_true: pd.Series, threshold: float = 0.5
-    ) -> Tuple[pd.DataFrame, pd.Series]:
+    ) -> Tuple[pd.Series, pd.Series]:
         """
-        メタラベルとフィルタリングされた特徴量を作成します。
+        メタラベルとフィルタリング用のマスクを作成します。
 
         Args:
             primary_preds_proba: 一次モデルの予測確率 (Trendである確率)
@@ -80,7 +79,7 @@ class MetaLabelingService:
             threshold: 一次モデルがTrendと判定する閾値
 
         Returns:
-            X_meta: メタモデル学習用特徴量 (一次モデルがTrendと判定したサンプルのインデックス)
+            trend_mask: フィルタリング用マスク (一次モデルがTrendと判定した箇所がTrue)
             y_meta: メタラベル (1=一次モデル正解, 0=一次モデル不正解)
         """
         # 一次モデルが「トレンド」と予測したサンプルのみを対象にする
@@ -91,18 +90,12 @@ class MetaLabelingService:
 
         if len(indices) == 0:
             logger.warning("一次モデルがトレンドと予測したサンプルがありません。")
-            return pd.DataFrame(), pd.Series()
+            return pd.Series(dtype=bool), pd.Series()
 
         # メタラベルの生成
         # 一次モデルがTrend(1)と予測し、かつ正解もTrend(1)なら -> 1 (Execute)
         # 一次モデルがTrend(1)と予測したが、正解はRange(0)なら -> 0 (Pass)
-        # ※ trend_maskでフィルタリング済みなので、単純に y_true と一致します。
         y_meta = y_true.loc[indices]
-
-        # メタモデルの特徴量は、ここでは呼び出し元で結合することを想定し、
-        # インデックス情報を保持するためにフィルタリングした予測確率を返す
-        # 実際には、呼び出し元で元の特徴量Xと結合する必要があります。
-        # ここでは便宜上、メタラベル作成ロジックのみを提供します。
 
         return trend_mask, y_meta
 
@@ -124,7 +117,7 @@ class MetaLabelingService:
         raise ValueError(f"未サポートのモデルタイプ: {self.model_type}")
 
     def _prepare_meta_features(
-        self, X: pd.DataFrame, primary_proba: pd.Series, base_probs: pd.DataFrame, mask: pd.Index
+        self, X: pd.DataFrame, primary_proba: pd.Series, base_probs: pd.DataFrame, mask: pd.Series
     ) -> pd.DataFrame:
         """メタ特徴量を準備"""
         X_meta = X.loc[mask].copy()
@@ -141,7 +134,6 @@ class MetaLabelingService:
         threshold: float = 0.5,
     ) -> Dict[str, Any]:
         """メタモデルを学習"""
-        self.oof_preds_df = base_model_probs_df
         self.base_model_names = base_model_probs_df.columns.tolist()
 
         trend_mask, y_meta = self.create_meta_labels(primary_proba_train, y_train, threshold)
@@ -215,9 +207,9 @@ class MetaLabelingService:
         primary_proba_test: pd.Series,
         base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Any]:
         """メタラベリング適用後のパフォーマンスを評価"""
-        from ..common.evaluation_utils import evaluate_model_predictions
+        from ..common.evaluation import evaluate_model_predictions
 
         # メタ予測と一次予測（バイナリ）
         final_pred = self.predict(X_test, primary_proba_test, base_model_probs_df, threshold)
@@ -240,6 +232,3 @@ class MetaLabelingService:
             "meta_balanced_accuracy": m_met.get("balanced_accuracy", 0.0),
             "primary_balanced_accuracy": p_met.get("balanced_accuracy", 0.0),
         }
-
-
-

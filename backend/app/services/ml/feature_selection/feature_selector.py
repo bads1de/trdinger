@@ -90,7 +90,6 @@ class FeatureSelector:
             ]
 
         self.selected_features_ = None
-        self.feature_scores_ = None
         self.selection_results_ = {}
 
     def fit_transform(
@@ -153,7 +152,7 @@ class FeatureSelector:
         cols = X_filled.columns.tolist()
         nunique = [X_filled[c].nunique() for c in cols]
         keep_cols = [cols[i] for i, n in enumerate(nunique) if n > 1]
-        
+
         if len(keep_cols) < len(cols):
             logger.info(f"定数特徴量を除去: {len(cols) - len(keep_cols)}個")
             # 辞書から再構築
@@ -262,70 +261,153 @@ class FeatureSelector:
         return selected_features, results
 
     def _mask_to_features(
-        self, mask: Optional[np.ndarray], scores: np.ndarray, feature_names: List[str], k: int = 5
+        self,
+        mask: Optional[np.ndarray],
+        scores: np.ndarray,
+        feature_names: List[str],
+        k: int = 5,
     ) -> List[str]:
         """マスクまたはスコアから特徴量を選択（共通処理）"""
         if mask is not None and mask.any():
             selected = [feature_names[i] for i, m in enumerate(mask) if m]
             if len(selected) >= k:
                 return selected
-        
+
         # マスクが無効または数が足りない場合はスコア上位を選択
-        top_idx = np.argsort(np.abs(scores))[-min(k, len(scores)):]
+        top_idx = np.argsort(np.abs(scores))[-min(k, len(scores)) :]
         return [feature_names[i] for i in top_idx]
 
     def _single_method_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str], method: SelectionMethod
+        self,
+        X: np.ndarray,
+        y: pd.Series,
+        feature_names: List[str],
+        method: SelectionMethod,
     ) -> Tuple[List[str], Dict[str, Any]]:
         """単一手法による特徴量選択"""
         try:
             k_def = self.config.k_features or max(5, int(len(feature_names) * 0.3))
-            
+
             if method == SelectionMethod.UNIVARIATE_F:
                 sel = SelectKBest(f_classif, k=k_def).fit(X, y)
-                feats = self._mask_to_features(sel.get_support(), sel.scores_, feature_names)
-                return feats, {"method": "f_classif", "scores": sel.scores_.tolist(), "selected_features": feats}
+                feats = self._mask_to_features(
+                    sel.get_support(), sel.scores_, feature_names, k=k_def
+                )
+                return feats, {
+                    "method": "f_classif",
+                    "scores": sel.scores_.tolist(),
+                    "selected_features": feats,
+                }
 
             if method == SelectionMethod.UNIVARIATE_CHI2:
                 X_pos = X - X.min(axis=0) + 1e-8
                 sel = SelectKBest(chi2, k=k_def).fit(X_pos, y)
-                feats = self._mask_to_features(sel.get_support(), sel.scores_, feature_names)
-                return feats, {"method": "chi2", "scores": sel.scores_.tolist(), "selected_features": feats}
+                feats = self._mask_to_features(
+                    sel.get_support(), sel.scores_, feature_names, k=k_def
+                )
+                return feats, {
+                    "method": "chi2",
+                    "scores": sel.scores_.tolist(),
+                    "selected_features": feats,
+                }
 
             if method == SelectionMethod.MUTUAL_INFO:
                 sel = SelectKBest(mutual_info_classif, k=k_def).fit(X, y)
-                feats = self._mask_to_features(sel.get_support(), sel.scores_, feature_names)
-                return feats, {"method": "mutual_info", "scores": sel.scores_.tolist(), "selected_features": feats}
+                feats = self._mask_to_features(
+                    sel.get_support(), sel.scores_, feature_names, k=k_def
+                )
+                return feats, {
+                    "method": "mutual_info",
+                    "scores": sel.scores_.tolist(),
+                    "selected_features": feats,
+                }
 
             if method == SelectionMethod.LASSO:
-                model = LassoCV(cv=self.config.cv_folds, random_state=self.config.random_state).fit(X, y)
-                sel = SelectFromModel(model, threshold=self.config.importance_threshold, prefit=True)
-                feats = self._mask_to_features(sel.get_support(), model.coef_, feature_names)
-                return feats, {"method": "lasso", "coefficients": model.coef_.tolist(), "selected_features": feats}
+                model = LassoCV(
+                    cv=self.config.cv_folds, random_state=self.config.random_state
+                ).fit(X, y)
+                sel = SelectFromModel(
+                    model, threshold=self.config.importance_threshold, prefit=True
+                )
+                feats = self._mask_to_features(
+                    sel.get_support(), model.coef_, feature_names, k=k_def
+                )
+                return feats, {
+                    "method": "lasso",
+                    "coefficients": model.coef_.tolist(),
+                    "selected_features": feats,
+                }
 
             if method == SelectionMethod.RANDOM_FOREST:
-                model = RandomForestClassifier(n_estimators=100, random_state=self.config.random_state, n_jobs=self.config.n_jobs).fit(X, y)
-                sel = SelectFromModel(model, threshold=self.config.importance_threshold, prefit=True)
-                feats = self._mask_to_features(sel.get_support(), model.feature_importances_, feature_names)
-                return feats, {"method": "random_forest", "importances": model.feature_importances_.tolist(), "selected_features": feats}
+                model = RandomForestClassifier(
+                    n_estimators=100,
+                    random_state=self.config.random_state,
+                    n_jobs=self.config.n_jobs,
+                ).fit(X, y)
+                sel = SelectFromModel(
+                    model, threshold=self.config.importance_threshold, prefit=True
+                )
+                feats = self._mask_to_features(
+                    sel.get_support(),
+                    model.feature_importances_,
+                    feature_names,
+                    k=k_def,
+                )
+                return feats, {
+                    "method": "random_forest",
+                    "importances": model.feature_importances_.tolist(),
+                    "selected_features": feats,
+                }
 
             if method == SelectionMethod.RFE:
-                est = RandomForestClassifier(n_estimators=50, random_state=self.config.random_state)
+                est = RandomForestClassifier(
+                    n_estimators=50, random_state=self.config.random_state
+                )
                 sel = RFE(est, n_features_to_select=k_def).fit(X, y)
-                feats = self._mask_to_features(sel.get_support(), -sel.ranking_, feature_names)
-                return feats, {"method": "rfe", "ranking": sel.ranking_.tolist(), "selected_features": feats}
+                feats = self._mask_to_features(
+                    sel.get_support(), -sel.ranking_, feature_names, k=k_def
+                )
+                return feats, {
+                    "method": "rfe",
+                    "ranking": sel.ranking_.tolist(),
+                    "selected_features": feats,
+                }
 
             if method == SelectionMethod.RFECV:
-                est = RandomForestClassifier(n_estimators=50, random_state=self.config.random_state)
+                est = RandomForestClassifier(
+                    n_estimators=50, random_state=self.config.random_state
+                )
                 sel = RFECV(est, cv=self.config.cv_folds).fit(X, y)
-                feats = self._mask_to_features(sel.get_support(), sel.support_.astype(float), feature_names)
-                return feats, {"method": "rfecv", "n_features": int(sel.n_features_), "selected_features": feats}
+                feats = self._mask_to_features(
+                    sel.get_support(),
+                    sel.support_.astype(float),
+                    feature_names,
+                    k=k_def,
+                )
+                return feats, {
+                    "method": "rfecv",
+                    "n_features": int(sel.n_features_),
+                    "selected_features": feats,
+                }
 
             if method == SelectionMethod.PERMUTATION:
-                est = RandomForestClassifier(n_estimators=50, random_state=self.config.random_state).fit(X, y)
-                imp = permutation_importance(est, X, y, n_repeats=5, random_state=self.config.random_state)
-                feats = self._mask_to_features(imp.importances_mean > self.config.importance_threshold, imp.importances_mean, feature_names)
-                return feats, {"method": "permutation", "importances": imp.importances_mean.tolist(), "selected_features": feats}
+                est = RandomForestClassifier(
+                    n_estimators=50, random_state=self.config.random_state
+                ).fit(X, y)
+                imp = permutation_importance(
+                    est, X, y, n_repeats=5, random_state=self.config.random_state
+                )
+                feats = self._mask_to_features(
+                    imp.importances_mean > self.config.importance_threshold,
+                    imp.importances_mean,
+                    feature_names,
+                    k=k_def,
+                )
+                return feats, {
+                    "method": "permutation",
+                    "importances": imp.importances_mean.tolist(),
+                    "selected_features": feats,
+                }
 
             raise ValueError(f"未対応の手法: {method}")
 
@@ -333,6 +415,3 @@ class FeatureSelector:
             method_name = method.value if hasattr(method, "value") else str(method)
             logger.error(f"{method_name}選択エラー: {e}")
             return feature_names[:5], {"error": str(e)}
-
-
-

@@ -42,6 +42,13 @@ class ModelManager:
         """必要なディレクトリを作成"""
         os.makedirs(self.config.model_save_path, exist_ok=True)
 
+    def _get_model_search_paths(self) -> List[str]:
+        """
+        モデル検索パスを取得
+        テスト容易性のためにメソッド化
+        """
+        return unified_config.ml.get_model_search_paths()
+
     # ========================================
     # 既存API（互換性維持）
     # ========================================
@@ -80,7 +87,7 @@ class ModelManager:
         # 3. モデルオブジェクトのクラス名から AlgorithmRegistry を使用
         try:
             model_class_name = type(model).__name__.lower()
-            from ..common.algorithm_registry import algorithm_registry
+            from ..common.registry import algorithm_registry
 
             algorithm_name = algorithm_registry.get_algorithm_name(model_class_name)
             if algorithm_name != "unknown":
@@ -254,7 +261,7 @@ class ModelManager:
             # 複数の検索パスから最新モデルを検索
             all_model_files = []
 
-            for search_path in unified_config.ml.get_model_search_paths():
+            for search_path in self._get_model_search_paths():
                 if os.path.exists(search_path):
                     # .pkl と .joblib ファイルを検索
                     pattern_pkl = os.path.join(
@@ -294,7 +301,7 @@ class ModelManager:
             models = []
             seen_files = set()  # 重複を防ぐためのセット
 
-            for search_path in unified_config.ml.get_model_search_paths():
+            for search_path in self._get_model_search_paths():
                 if not os.path.exists(search_path):
                     continue
 
@@ -345,7 +352,7 @@ class ModelManager:
                 days=self.config.model_retention_days
             )
 
-            for search_path in unified_config.ml.get_model_search_paths():
+            for search_path in self._get_model_search_paths():
                 if not os.path.exists(search_path):
                     continue
 
@@ -359,6 +366,13 @@ class ModelManager:
                             logger.info(
                                 f"期限切れモデルを削除: {os.path.basename(model_file)}"
                             )
+                            # サイドカーファイルも削除
+                            sidecar_path = self._get_sidecar_path(model_file)
+                            if os.path.exists(sidecar_path):
+                                os.remove(sidecar_path)
+                                logger.info(
+                                    f"期限切れモデルのサイドカーを削除: {os.path.basename(sidecar_path)}"
+                                )
                     except Exception as e:
                         logger.warning(f"期限切れモデル削除エラー {model_file}: {e}")
 
@@ -390,6 +404,13 @@ class ModelManager:
                     logger.info(
                         f"古いモデルファイルを削除: {os.path.basename(file_path)}"
                     )
+                    # サイドカーファイルも削除
+                    sidecar_path = self._get_sidecar_path(file_path)
+                    if os.path.exists(sidecar_path):
+                        os.remove(sidecar_path)
+                        logger.info(
+                            f"古いモデルのサイドカーを削除: {os.path.basename(sidecar_path)}"
+                        )
                 except Exception as e:
                     logger.warning(f"モデルファイル削除エラー {file_path}: {e}")
 
@@ -406,7 +427,7 @@ class ModelManager:
             model_path: モデルファイルパス
             metadata: メタデータ（オプション）。指定された場合、モデル読み込みをスキップします。
         """
-        from ..common.evaluation_utils import get_default_metrics
+        from ..common.evaluation import get_default_metrics
 
         try:
             if metadata is None:

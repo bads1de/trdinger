@@ -380,7 +380,7 @@ class VolatilityIndicators:
         # Return volatility (std dev), annualized if needed but here just raw
         # Usually multiplied by sqrt(periods_per_year) for annualized,
         # but we keep it as raw volatility per bar
-        return np.sqrt(yz_variance).fillna(0.0)
+        return np.sqrt(yz_variance)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -416,7 +416,7 @@ class VolatilityIndicators:
         rolling_var = inst_var.rolling(window=length).mean()
 
         # Return volatility (std dev)
-        return np.sqrt(rolling_var).fillna(0.0)
+        return np.sqrt(rolling_var)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -455,7 +455,7 @@ class VolatilityIndicators:
         rolling_var = inst_var.rolling(window=length).mean()
 
         # Return volatility (std dev)
-        return np.sqrt(rolling_var).fillna(0.0)
+        return np.sqrt(rolling_var)
 
     @staticmethod
     def massi(
@@ -488,7 +488,7 @@ class VolatilityIndicators:
         result = ta.massi(high=high, low=low, fast=fast, slow=slow)
         if result is None or result.empty:
             return pd.Series(np.full(len(high), np.nan), index=high.index)
-        return result.bfill().fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -561,7 +561,7 @@ class VolatilityIndicators:
         result = ta.pdist(open_=open_, high=high, low=low, close=close)
         if result is None:
             return pd.Series(np.full(len(close), np.nan), index=close.index)
-        return result.fillna(0)
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors

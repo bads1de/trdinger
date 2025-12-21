@@ -13,8 +13,8 @@ import pandas as pd
 
 from app.config.unified_config import unified_config
 
-from ..common.evaluation_utils import evaluate_model_predictions
-from ..common.ml_utils import get_feature_importance_unified
+from ..common.evaluation import evaluate_model_predictions
+from ..common.utils import get_feature_importance_unified
 from ..common.exceptions import MLModelError
 
 logger = logging.getLogger(__name__)

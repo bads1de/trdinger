@@ -77,16 +77,13 @@ class IndicatorCalculator:
             required_columns = ["Open", "High", "Low", "Close", "Volume"]
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
-                logger.warning(f"不足しているカラム: {missing_columns}")
+                # logger.warning(f"不足しているカラム: {missing_columns}")
+                pass
 
-            required_columns = ["Open", "High", "Low", "Close", "Volume"]
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                logger.warning(f"不足しているカラム: {missing_columns}")
+            # logger.warning(f"指標計算開始: {indicator_type}, パラメータ: {parameters}")
 
-            logger.warning(f"指標計算開始: {indicator_type}, パラメータ: {parameters}")
-
-            # パラメータマッピングをTechnicalIndicatorServiceに任せる
+            # パラメータマッピング
+            # ここで mapped_parameters を確実に定義する
             mapped_parameters = parameters.copy()
 
             # TechnicalIndicatorServiceを使用して計算
@@ -94,9 +91,9 @@ class IndicatorCalculator:
                 df, indicator_type, mapped_parameters
             )
 
-            logger.warning(
-                f"指標計算成功: {indicator_type}, 結果タイプ: {type(result)}"
-            )
+            # logger.warning(
+            #     f"指標計算成功: {indicator_type}, 結果タイプ: {type(result)}"
+            # )
             return result
 
         return _calculate_indicator()
@@ -124,16 +121,16 @@ class IndicatorCalculator:
             if df is None or df.empty:
                 raise ValueError(f"データが空です: {indicator_type}")
 
-            logger.debug(f"MTF指標計算開始: {indicator_type}, パラメータ: {parameters}")
+            # logger.debug(f"MTF指標計算開始: {indicator_type}, パラメータ: {parameters}")
 
             # TechnicalIndicatorServiceを使用して計算
             result = self.technical_indicator_service.calculate_indicator(
                 df, indicator_type, parameters.copy()
             )
 
-            logger.debug(
-                f"MTF指標計算成功: {indicator_type}, 結果タイプ: {type(result)}"
-            )
+            # logger.debug(
+            #     f"MTF指標計算成功: {indicator_type}, 結果タイプ: {type(result)}"
+            # )
             return result
 
         except Exception as e:
@@ -162,11 +159,11 @@ class IndicatorCalculator:
             indicator_timeframe = getattr(indicator_gene, "timeframe", None)
             timeframe_suffix = f"_{indicator_timeframe}" if indicator_timeframe else ""
 
-            logger.warning(
-                f"指標初期化開始: {indicator_gene.type}, "
-                f"パラメータ: {indicator_gene.parameters}, "
-                f"タイムフレーム: {indicator_timeframe or 'デフォルト'}"
-            )
+            # logger.warning(
+            #     f"指標初期化開始: {indicator_gene.type}, "
+            #     f"パラメータ: {indicator_gene.parameters}, "
+            #     f"タイムフレーム: {indicator_timeframe or 'デフォルト'}"
+            # )
 
             if strategy_instance is None:
                 raise ValueError(f"戦略インスタンスがNoneです: {indicator_gene.type}")
@@ -175,25 +172,29 @@ class IndicatorCalculator:
             if indicator_timeframe and self.mtf_data_provider:
                 # MTFデータプロバイダーからタイムフレームに応じたデータを取得
                 mtf_df = self.mtf_data_provider.get_data(indicator_timeframe)
-                logger.debug(
-                    f"MTFデータ取得: {indicator_timeframe}, rows={len(mtf_df)}"
-                )
+                # logger.debug(
+                #     f"MTFデータ取得: {indicator_timeframe}, rows={len(mtf_df)}"
+                # )
                 # DataFrameを使用して指標計算
                 raw_result = self._calculate_indicator_from_df(
                     mtf_df, indicator_gene.type, indicator_gene.parameters
                 )
 
                 # ベースデータのインデックスに合わせてリインデックス（ffill）
-                # これにより、上位足の値を下位足に展開し、配列長を合わせる
+                # 1つ前の（確定済みの）足を参考にするため、上位足の時点で1つシフトする
+                # これにより未来予知（Look-ahead bias）を防止する
                 if raw_result is not None:
                     base_index = strategy_instance.data.df.index
                     
                     def _align_to_base(series: pd.Series) -> pd.Series:
-                        # タイムゾーン情報を合わせる（必要な場合）
-                        if series.index.tz != base_index.tz:
-                            series.index = series.index.tz_convert(base_index.tz)
+                        # 上位足の時点で1つシフト（未来予知防止）
+                        shifted = series.shift(1)
                         
-                        return series.reindex(base_index, method="ffill")
+                        # タイムゾーン情報を合わせる（必要な場合）
+                        if shifted.index.tz != base_index.tz:
+                            shifted.index = shifted.index.tz_convert(base_index.tz)
+                        
+                        return shifted.reindex(base_index, method="ffill")
 
                     if isinstance(raw_result, tuple):
                         result = tuple(_align_to_base(s) for s in raw_result)
@@ -242,7 +243,7 @@ class IndicatorCalculator:
                     # 単一出力の指標
                     _register(base_indicator_name, result)
 
-                logger.debug(f"指標登録完了: {base_indicator_name}")
+                # logger.debug(f"指標登録完了: {base_indicator_name}")
             else:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")

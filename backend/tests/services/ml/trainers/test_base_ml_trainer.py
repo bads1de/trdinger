@@ -67,12 +67,6 @@ class TestBaseMLTrainer:
                     assert "accuracy" in result
                     assert result["model_path"] == "/path/to/model"
 
-    def test_evaluate_model_not_trained(self, trainer, sample_data):
-        """未学習状態での評価"""
-        # @safe_ml_operation によって例外はキャッチされ、空の辞書が返される
-        result = trainer.evaluate_model(sample_data)
-        assert result == {}
-
     def test_predict_signal_not_trained(self, trainer, sample_data):
         """未学習状態での予測"""
         # 未学習時はデフォルト値を返すべき

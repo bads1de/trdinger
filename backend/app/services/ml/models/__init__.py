@@ -17,7 +17,7 @@ MLモデルラッパーモジュール
 from .catboost import CatBoostModel
 from .lightgbm import LightGBMModel
 from .xgboost import XGBoostModel
-from ..common.algorithm_registry import algorithm_registry
+from ..common.registry import algorithm_registry
 
 __all__ = [
     "LightGBMModel",

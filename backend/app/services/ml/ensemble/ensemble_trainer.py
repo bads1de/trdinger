@@ -12,8 +12,8 @@ import pandas as pd
 
 from ....utils.error_handler import ModelError
 from ..trainers.base_ml_trainer import BaseMLTrainer
-from ..common.evaluation_utils import evaluate_model_predictions
-from ..common.ml_utils import predict_class_from_proba, validate_training_inputs
+from ..common.evaluation import evaluate_model_predictions
+from ..common.utils import predict_class_from_proba, validate_training_inputs
 from .meta_labeling import MetaLabelingService
 from .stacking import StackingEnsemble
 
@@ -46,7 +46,6 @@ class EnsembleTrainer(BaseMLTrainer):
         self.ensemble_method = ensemble_config.get("method", "stacking")
         self.ensemble_model = None
         self.meta_labeling_service = None  # メタラベリング サービスを追加
-        self.meta_model_threshold = 0.5  # メタモデルの予測閾値
         self.strict_error_mode = ensemble_config.get(
             "strict_error_mode", True
         )  # エラー時に例外を発生させるか
