@@ -5,9 +5,7 @@
 パラメータ空間を定義します。Optunaの高度な最適化機能を活用。
 """
 
-from typing import Any, Dict
-
-import optuna
+from typing import Dict
 
 from .optuna_optimizer import ParameterSpace
 
@@ -68,7 +66,7 @@ class EnsembleParameterSpace:
         # ベースモデル
         mappings = {
             "lightgbm": cls.get_lightgbm_parameter_space,
-            "xgboost": cls.get_xgboost_parameter_space
+            "xgboost": cls.get_xgboost_parameter_space,
         }
         for m in enabled_models:
             if m in mappings:
@@ -79,6 +77,3 @@ class EnsembleParameterSpace:
             ps.update(cls.get_stacking_parameter_space())
 
         return ps
-
-
-

@@ -63,24 +63,30 @@ class DataFrequencyManager:
                 ts_series = pd.to_datetime(df["timestamp"])
             else:
                 ts_series = pd.to_datetime(df.index.to_series())
-            
+
             # 差分を計算
             deltas = ts_series.diff().dropna()
             if deltas.empty:
                 return "1h"
-                
+
             median_delta = deltas.median()
             diff_m = median_delta.total_seconds() / 60
-            
+
             logger.debug(f"Detected median diff: {diff_m} minutes")
-            
+
             # 閾値判定
-            if diff_m <= 1.5: return "1m"
-            if diff_m <= 7.5: return "5m"
-            if diff_m <= 22.5: return "15m"
-            if diff_m <= 45: return "30m"
-            if diff_m <= 120: return "1h"
-            if diff_m <= 360: return "4h"
+            if diff_m <= 1.5:
+                return "1m"
+            if diff_m <= 7.5:
+                return "5m"
+            if diff_m <= 22.5:
+                return "15m"
+            if diff_m <= 45:
+                return "30m"
+            if diff_m <= 120:
+                return "1h"
+            if diff_m <= 360:
+                return "4h"
             return "1d"
         except Exception as e:
             logger.warning(f"Timeframe detection error: {e}")
@@ -112,10 +118,9 @@ class DataFrequencyManager:
                 ohlcv_indexed["timestamp"] = pd.to_datetime(ohlcv_indexed["timestamp"])
                 # カラムをインデックスに設定する前に重複チェック
                 ohlcv_indexed = ohlcv_indexed.set_index("timestamp")
-            
+
             if not isinstance(ohlcv_indexed.index, pd.DatetimeIndex):
                 ohlcv_indexed.index = pd.to_datetime(ohlcv_indexed.index)
-
 
             target_index = ohlcv_indexed.index
 
@@ -128,17 +133,21 @@ class DataFrequencyManager:
                     fr_work = fr_work.set_index("timestamp")
                 else:
                     fr_work.index = pd.to_datetime(fr_work.index)
-                
+
                 # リサンプリング
                 if ohlcv_timeframe in ["4h", "1d"]:
                     # ダウンサンプリング
-                    resampled_fr = fr_work.resample(resample_timeframe, label='left').mean()
+                    resampled_fr = fr_work.resample(
+                        resample_timeframe, label="left"
+                    ).mean()
                 else:
                     # アップサンプリングまたは同等
                     resampled_fr = fr_work.resample(resample_timeframe).ffill()
-                
+
                 # OHLCVのインデックスに合わせる
-                aligned_fr_data = resampled_fr.reindex(target_index, method="ffill").reset_index()
+                aligned_fr_data = resampled_fr.reindex(
+                    target_index, method="ffill"
+                ).reset_index()
 
             # 建玉残高データの処理
             aligned_oi_data = None
@@ -149,14 +158,18 @@ class DataFrequencyManager:
                     oi_work = oi_work.set_index("timestamp")
                 else:
                     oi_work.index = pd.to_datetime(oi_work.index)
-                
+
                 # リサンプリング
                 if ohlcv_timeframe in ["4h", "1d"]:
-                    resampled_oi = oi_work.resample(resample_timeframe, label='left').mean()
+                    resampled_oi = oi_work.resample(
+                        resample_timeframe, label="left"
+                    ).mean()
                 else:
                     resampled_oi = oi_work.resample(resample_timeframe).ffill()
-                
-                aligned_oi_data = resampled_oi.reindex(target_index, method="ffill").reset_index()
+
+                aligned_oi_data = resampled_oi.reindex(
+                    target_index, method="ffill"
+                ).reset_index()
 
             return aligned_fr_data, aligned_oi_data
 
@@ -320,6 +333,3 @@ class DataFrequencyManager:
             validation_result["is_valid"] = False
 
         return validation_result
-
-
-
