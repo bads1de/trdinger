@@ -37,6 +37,227 @@ class AdvancedFeatures:
         return np.array(w[::-1]).reshape(-1, 1)
 
     @staticmethod
+    def z_score(series: pd.Series, window: int = 20) -> pd.Series:
+        """
+        Zスコアを計算 (x - mean) / std
+        """
+        roll = series.rolling(window=window)
+        return ((series - roll.mean()) / (roll.std() + 1e-9)).fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def void_oscillator(
+        close: pd.Series,
+        volume: pd.Series,
+        window: int = 20,
+        volume_threshold_quantile: float = 0.2
+    ) -> pd.Series:
+        """
+        流動性真空検知器 (Void Oscillator)
+        
+        出来高が薄い中での価格急変動（真空地帯）を検知。
+        大きな値は、薄商いの中での急騰・急落（ダマシの可能性大）を示す。
+        """
+        validation = validate_multi_series_params(
+            {"close": close, "volume": volume}, window
+        )
+        if validation is not None:
+            return validation
+
+        # 1. 価格変動のZスコア
+        ret = np.log(close / close.shift(1)).fillna(0)
+        z_ret = AdvancedFeatures.z_score(ret, window)
+        
+        # 2. 出来高ショック（閾値以下の出来高を検知）
+        # 過去window期間の分位点を計算
+        vol_threshold = volume.rolling(window=window).quantile(volume_threshold_quantile)
+        is_low_volume = (volume < vol_threshold).astype(int)
+        
+        return z_ret * is_low_volume
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def crypto_leverage_index(
+        open_interest: pd.Series,
+        funding_rate: pd.Series,
+        ls_ratio_divergence: pd.Series,
+        window: int = 20
+    ) -> pd.Series:
+        """
+        Crypto Leverage Index (CLI)
+        
+        市場全体のレバレッジ過熱感を示す複合インデックス。
+        Norm(OI Z-Score) + Norm(|FR| * sign(FR)) + Norm(L/S Divergence)
+        """
+        validation = validate_multi_series_params(
+            {
+                "open_interest": open_interest,
+                "funding_rate": funding_rate,
+                "ls_ratio_divergence": ls_ratio_divergence
+            }, window
+        )
+        if validation is not None:
+            return validation
+
+        # 1. OI Z-Score
+        z_oi = AdvancedFeatures.z_score(open_interest, window)
+        
+        # 2. FR Impact (|FR| * sign(FR) = FRそのものだが、概念的に強調)
+        # FRの絶対値が大きいほどレバレッジコストが高い
+        fr_impact = funding_rate # そのまま使用
+        z_fr = AdvancedFeatures.z_score(fr_impact, window)
+        
+        # 3. L/S Divergence (Whale Divergenceなど)
+        # 1.0からの乖離を評価
+        ls_div = ls_ratio_divergence - 1.0
+        z_ls = AdvancedFeatures.z_score(ls_div, window)
+        
+        # 単純加算（重み付けなし）
+        cli = z_oi + z_fr + z_ls
+        
+        return cli
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def triplet_imbalance(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series
+    ) -> pd.Series:
+        """
+        Triplet Imbalance (価格構造の不均衡)
+        
+        (Max - Mid) / (Mid - Min)
+        ここでは (High - Close) / (Close - Low) として実装し、
+        上ヒゲと下ヒゲのバランス（売り圧力 vs 買い圧力）を評価する。
+        値が大きいほど売り圧力（上ヒゲ）が強い。
+        """
+        validation = validate_multi_series_params(
+            {"high": high, "low": low, "close": close}
+        )
+        if validation is not None:
+            return validation
+
+        upper_shadow = high - close
+        lower_shadow = close - low
+        
+        # 0除算回避
+        imbalance = upper_shadow / (lower_shadow + 1e-9)
+        
+        # 対数変換で分布を正規化
+        return np.log(imbalance + 1e-9).fillna(0.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def volume_divergence_fakeout(
+        close: pd.Series,
+        volume: pd.Series,
+        window: int = 20
+    ) -> pd.Series:
+        """
+        Volume Divergence Fakeout (出来高ダイバージェンス)
+        
+        価格が過去N期間の高値を更新したにもかかわらず、
+        出来高が平均以下である場合、ダマシ（Fakeout）の可能性が高い。
+        
+        Returns:
+            Fakeout Score (1.0 = 強いダマシシグナル, 0.0 = 正常)
+        """
+        validation = validate_multi_series_params(
+            {"close": close, "volume": volume}, window
+        )
+        if validation is not None:
+            return validation
+
+        # 1. 新高値フラグ
+        rolling_max = close.rolling(window=window).max().shift(1)
+        is_new_high = (close > rolling_max)
+        
+        # 2. 出来高減衰フラグ (Volume < SMA_Volume)
+        vol_ma = volume.rolling(window=window).mean()
+        is_low_volume = (volume < vol_ma)
+        
+        # 3. 乖離度 (価格の上昇幅 * 出来高の不足分)
+        price_gain = (close - rolling_max) / rolling_max
+        vol_drop = (vol_ma - volume) / vol_ma
+        
+        fakeout_score = np.where(
+            is_new_high & is_low_volume,
+            price_gain * vol_drop * 100, # スコアを見やすくスケーリング
+            0.0
+        )
+        
+        return pd.Series(fakeout_score, index=close.index).fillna(0.0)
+
+    @staticmethod
+    def _calculate_rs_hurst(series_chunk: np.ndarray) -> float:
+        """R/S分析によるハースト指数の単一ウィンドウ計算（ヘルパー）"""
+        if len(series_chunk) < 2:
+            return 0.5
+            
+        # 対数リターン
+        # series_chunk は価格データそのもの想定
+        # 簡易計算のため、ここでは差分（増分）を用いる
+        incs = series_chunk[1:] - series_chunk[:-1]
+        
+        # 平均からの偏差
+        mean_inc = np.mean(incs)
+        centered = incs - mean_inc
+        
+        # 累積偏差 (Cumulative Deviations)
+        z = np.cumsum(centered)
+        
+        # 範囲 (Range)
+        r = np.max(z) - np.min(z)
+        
+        # 標準偏差 (Standard Deviation)
+        s = np.std(incs, ddof=1)
+        
+        if s == 0:
+            return 0.5
+            
+        # R/S
+        rs = r / s
+        
+        # Hurst = log(R/S) / log(n) の簡易推定
+        # 本来は複数のnで回帰分析するが、ローリング計算用に簡易化
+        n = len(incs)
+        if n < 2 or rs <= 0:
+            return 0.5
+            
+        h = np.log(rs) / np.log(n / 2) # n/2は経験的な調整項
+        return float(np.clip(h, 0.0, 1.0))
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def hurst_exponent(
+        close: pd.Series,
+        window: int = 100
+    ) -> pd.Series:
+        """
+        ハースト指数 (Hurst Exponent)
+        
+        時系列の長期記憶性を測定。
+        H < 0.5: 平均回帰的（レンジ）
+        H = 0.5: ランダムウォーク
+        H > 0.5: トレンド持続的
+        
+        注意: 計算コストが高いため、ローリング適用にはNumba等の最適化が望ましいが、
+        ここではPandasのrolling.applyを使用（やや遅い）。
+        """
+        validation = validate_series_params(close, window)
+        if validation is not None:
+            return validation
+
+        # rolling apply で計算
+        # raw=True で numpy array を渡す
+        hurst = close.rolling(window=window).apply(
+            AdvancedFeatures._calculate_rs_hurst, raw=True
+        )
+        
+        return hurst.fillna(0.5)
+
+    @staticmethod
     @handle_pandas_ta_errors
     def frac_diff_ffd(
         series: pd.Series,
@@ -50,6 +271,10 @@ class AdvancedFeatures:
         validation = validate_series_params(series, window)
         if validation is not None:
             return validation
+
+        # d=0 の場合は元のシリーズをそのまま返す（計算コスト削減と精度維持）
+        if abs(d) < 1e-9:
+            return series.copy()
 
         # 1. 重みの計算
         w = AdvancedFeatures.get_weights_ffd(d, thres, window)
@@ -67,7 +292,7 @@ class AdvancedFeatures:
                 window_val = series_vals[i - width + 1 : i + 1]
                 result[i] = np.dot(window_val, w)
 
-        return pd.Series(result, index=series.index)
+        return pd.Series(result, index=series.index, name=series.name)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -180,6 +405,96 @@ class AdvancedFeatures:
             return validation
 
         return funding_rate * open_interest
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def regime_quadrant(
+        close: pd.Series,
+        open_interest: pd.Series,
+    ) -> pd.Series:
+        """
+        価格とOIの変化に基づく4象限レジーム分析
+        
+        0: 強気トレンド (Price↑, OI↑) - 新規買い
+        1: ショートカバー (Price↑, OI↓) - 売り決済（ダマシ予兆）
+        2: 弱気トレンド (Price↓, OI↑) - 新規売り
+        3: ロング清算 (Price↓, OI↓) - 買い決済（反発予兆）
+        """
+        validation = validate_multi_series_params(
+            {"close": close, "open_interest": open_interest}
+        )
+        if validation is not None:
+            return validation
+
+        delta_p = close.diff().fillna(0)
+        delta_oi = open_interest.diff().fillna(0)
+
+        # 条件分岐をベクトル化
+        # デフォルトは -1 (不明/変化なし)
+        regime = pd.Series(-1, index=close.index, dtype=int)
+        
+        # 0: Bull Trend
+        mask_bull = (delta_p > 0) & (delta_oi > 0)
+        regime[mask_bull] = 0
+        
+        # 1: Short Cover
+        mask_cover = (delta_p > 0) & (delta_oi < 0)
+        regime[mask_cover] = 1
+        
+        # 2: Bear Trend
+        mask_bear = (delta_p < 0) & (delta_oi > 0)
+        regime[mask_bear] = 2
+        
+        # 3: Long Liquidation
+        mask_liq = (delta_p < 0) & (delta_oi < 0)
+        regime[mask_liq] = 3
+        
+        return regime
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def whale_divergence(
+        ls_ratio_positions: pd.Series,
+        ls_ratio_accounts: pd.Series,
+    ) -> pd.Series:
+        """
+        クジラ乖離スコア (Whale Divergence Score)
+        
+        Top Trader L/S Ratio (Positions) / Global Account L/S Ratio
+        > 1.0: 大口が個人より強気（スマートマネーの買い）
+        < 1.0: 大口が個人より弱気（天井圏の可能性大）
+        """
+        validation = validate_multi_series_params(
+            {"ls_ratio_positions": ls_ratio_positions, "ls_ratio_accounts": ls_ratio_accounts}
+        )
+        if validation is not None:
+            return validation
+
+        return (ls_ratio_positions / ls_ratio_accounts).replace([np.inf, -np.inf], 1.0).fillna(1.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def oi_price_confirmation(
+        close: pd.Series,
+        open_interest: pd.Series,
+    ) -> pd.Series:
+        """
+        OI-Price Confirmation
+        
+        sign(Delta P) * Delta OI
+        正: トレンドはOI増加によって支持されている
+        負: トレンドとOIが逆行（ダイバージェンス）
+        """
+        validation = validate_multi_series_params(
+            {"close": close, "open_interest": open_interest}
+        )
+        if validation is not None:
+            return validation
+
+        delta_p_sign = np.sign(close.diff().fillna(0))
+        delta_oi = open_interest.diff().fillna(0)
+        
+        return delta_p_sign * delta_oi
 
     @staticmethod
     @handle_pandas_ta_errors

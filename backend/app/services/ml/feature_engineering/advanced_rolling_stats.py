@@ -10,6 +10,8 @@ from typing import List, Optional
 import numpy as np
 import pandas as pd
 
+from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
+
 
 class AdvancedRollingStatsCalculator:
     """
@@ -67,6 +69,9 @@ class AdvancedRollingStatsCalculator:
         for w in [10, 20]:
             res[f"Price_Volume_Corr_{w}"] = rets.rolling(w).corr(vol.pct_change())
             res[f"Volume_Weighted_Returns_Skew_{w}"] = self._volume_weighted_skew(rets, vol, w)
+
+        # ハースト指数 (長期記憶性) - 計算コストが高いため期間固定
+        res["Hurst_Exponent_100"] = AdvancedFeatures.hurst_exponent(df["close"], window=100)
 
         return res.fillna(0)
 

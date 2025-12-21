@@ -79,10 +79,16 @@ class OIFRInteractionFeatureCalculator:
             else pd.Series(0, index=df.index)
         )
 
-        # === 1. OI-Price Regime（市場レジーム識別）===
-        result["OI_Price_Regime"] = (
-            np.sign(price_change) * np.sign(oi_change) * np.abs(oi_change)
-        )
+        # === 1. OI-Price Regime（市場レジーム識別 - 4象限）===
+        # 0: Bull, 1: Short Cover, 2: Bear, 3: Long Liq
+        result["OI_Price_Regime"] = AdvancedFeatures.regime_quadrant(
+            close=df["close"], open_interest=oi_series
+        ).fillna(-1)
+
+        # === 1-B. OI-Price Confirmation (ダイバージェンス検知) ===
+        result["OI_Price_Confirmation"] = AdvancedFeatures.oi_price_confirmation(
+            close=df["close"], open_interest=oi_series
+        ).fillna(0.0)
 
         # === 2. FR Acceleration（FR変化の加速度）===
         fr_change = fr_value.diff()
@@ -125,6 +131,40 @@ class OIFRInteractionFeatureCalculator:
         # === 9. OI-Volume Interaction（OI-出来高相互作用）===
         volume_change = df["volume"].pct_change()
         result["OI_Volume_Interaction"] = oi_change * volume_change
+        
+        # OI / Volume Ratio (Liquidity Efficiency)
+        result["OI_Volume_Ratio"] = AdvancedFeatures.liquidity_efficiency(
+            open_interest=oi_series, volume=df["volume"]
+        ).fillna(0.0)
+
+        # === New 1. Void Oscillator (流動性真空検知器) ===
+        result["Void_Oscillator"] = AdvancedFeatures.void_oscillator(
+            close=df["close"], volume=df["volume"], window=20
+        ).fillna(0.0)
+
+        # === New 2. Crypto Leverage Index (CLI) ===
+        # L/S Ratioデータがこのクラスには渡されていないため、その項は0（中立）として計算
+        # 将来的にMarketDataFeatureCalculatorなどで統合することを推奨
+        dummy_ls_div = pd.Series(0, index=df.index)
+        
+        result["Crypto_Leverage_Index"] = AdvancedFeatures.crypto_leverage_index(
+            open_interest=oi_series,
+            funding_rate=fr_value,
+            ls_ratio_divergence=dummy_ls_div, # L/S情報なし
+            window=50 # 長めの期間で過熱感を見る
+        ).fillna(0.0)
+
+        # === New 3. Triplet Imbalance (Upper/Lower Shadow Balance) ===
+        # (High - Close) / (Close - Low) の対数変換
+        result["Triplet_Imbalance"] = AdvancedFeatures.triplet_imbalance(
+            high=df["high"], low=df["low"], close=df["close"]
+        ).fillna(0.0)
+
+        # === New 4. Fakeout Detection (Volume Divergence) ===
+        # 高値更新時の出来高減衰シグナル
+        result["Fakeout_Volume_Divergence"] = AdvancedFeatures.volume_divergence_fakeout(
+            close=df["close"], volume=df["volume"], window=20
+        ).fillna(0.0)
 
         # === 10. Cumulative OI-Price Divergence（累積OI-価格乖離）===
         oi_price_alignment = (np.sign(oi_change) == np.sign(price_change)).astype(float)

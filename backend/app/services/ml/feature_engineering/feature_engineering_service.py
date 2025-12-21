@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from app.services.ml.common.utils import generate_cache_key, optimize_dtypes
+from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
 
 from .advanced_rolling_stats import AdvancedRollingStatsCalculator
 from .crypto_features import CryptoFeatures
@@ -117,13 +118,6 @@ class FeatureEngineeringService:
                     "DataFrameのインデックスはDatetimeIndexである必要があります"
                 )
 
-            # メモリ使用量制限を撤廃（ユーザー要望により全データ使用）
-            # if len(ohlcv_data) > 200000:
-            #     logger.warning(
-            #         f"大量のデータ（{len(ohlcv_data)}行）、最新200,000行に制限"
-            #     )
-            #     ohlcv_data = ohlcv_data.tail(200000)
-
             # キャッシュキーを生成
             cache_key = generate_cache_key(
                 ohlcv_data,
@@ -225,6 +219,27 @@ class FeatureEngineeringService:
                 except Exception as e:
                     logger.error(f"{calc.__class__.__name__} の計算中にエラー: {e}")
 
+            # === 分数次差分特徴量 (Fractional Differentiation) ===
+            logger.info("分数次差分特徴量を計算中...")
+            try:
+                # 価格の分数差分
+                frac_price = AdvancedFeatures.frac_diff_ffd(
+                    result_df["close"], d=0.4, window=2000
+                )
+                additional_features_list.append(frac_price.rename("FracDiff_Price"))
+
+                # OIの分数差分（存在する場合）
+                if open_interest_data is not None and not open_interest_data.empty:
+                    # OIデータのカラム名を特定（通常は open_interest）
+                    oi_col = open_interest_data.columns[0]
+                    oi_series = open_interest_data[oi_col]
+                    frac_oi = AdvancedFeatures.frac_diff_ffd(
+                        oi_series, d=0.4, window=2000
+                    )
+                    additional_features_list.append(frac_oi.rename("FracDiff_OI"))
+            except Exception as e:
+                logger.error(f"分数次差分計算中にエラー: {e}")
+
             # 一度だけconcatを実行
             if additional_features_list:
                 result_df = pd.concat([result_df] + additional_features_list, axis=1)
@@ -261,6 +276,147 @@ class FeatureEngineeringService:
             logger.error(f"高度な特徴量計算中にエラーが発生: {e}")
             # エラー時は元のDataFrameを返す（最低限の動作保証）
             return ohlcv_data
+
+    def create_feature_superset(
+        self,
+        ohlcv_data: pd.DataFrame,
+        funding_rate_data: Optional[pd.DataFrame] = None,
+        open_interest_data: Optional[pd.DataFrame] = None,
+        frac_diff_d_values: Optional[List[float]] = None,
+    ) -> pd.DataFrame:
+        """
+        Optuna探索用のスーパーセット（全パラメータパターンの特徴量）を生成
+
+        計算コスト削減のため、FracDiff の d を複数値で計算した列を全て含む
+        巨大な DataFrame を生成します。各列名にパラメータ情報を埋め込み、
+        Optuna の目的関数内で必要なカラムのみを選択できるようにします。
+
+        Args:
+            ohlcv_data: OHLCVデータ
+            funding_rate_data: ファンディングレートデータ（任意）
+            open_interest_data: 建玉データ（任意）
+            frac_diff_d_values: 探索する分数次差分のd値リスト
+                                デフォルト: [0.3, 0.4, 0.5, 0.6]
+
+        Returns:
+            全パターンの特徴量を含むDataFrame（カラム名にパラメータ情報付き）
+        """
+        if frac_diff_d_values is None:
+            frac_diff_d_values = [0.3, 0.4, 0.5, 0.6]
+
+        logger.info(f"スーパーセット生成開始: FracDiff d values = {frac_diff_d_values}")
+
+        # 1. 基本特徴量を生成（既存のcalculate_advanced_featuresを活用）
+        #    ただし、内部で生成される FracDiff_Price/FracDiff_OI は後で置換するため
+        #    一旦そのまま生成
+        result_df = self.calculate_advanced_features(
+            ohlcv_data, funding_rate_data, open_interest_data
+        )
+
+        # 2. 既存の単一d値のFracDiff列を削除（後で複数d値で再生成）
+        cols_to_drop = [c for c in result_df.columns if c.startswith("FracDiff_")]
+        if cols_to_drop:
+            result_df = result_df.drop(columns=cols_to_drop)
+            logger.debug(f"既存のFracDiff列を削除: {cols_to_drop}")
+
+        # 3. 複数のd値でFracDiff特徴量を生成
+        frac_diff_features: List[pd.Series] = []
+
+        for d in frac_diff_d_values:
+            try:
+                # 価格の分数次差分
+                frac_price = AdvancedFeatures.frac_diff_ffd(
+                    result_df["close"], d=d, window=2000
+                )
+                frac_diff_features.append(frac_price.rename(f"FracDiff_Price_d{d}"))
+            except Exception as e:
+                logger.warning(f"FracDiff_Price_d{d} 計算失敗: {e}")
+
+            # OIの分数次差分（データが存在する場合）
+            if open_interest_data is not None and not open_interest_data.empty:
+                try:
+                    # OIデータをresult_dfにマージして使用
+                    if "open_interest_value" in result_df.columns:
+                        oi_series = result_df["open_interest_value"]
+                    elif "open_interest" in result_df.columns:
+                        oi_series = result_df["open_interest"]
+                    else:
+                        # open_interest_data から直接取得
+                        oi_col = open_interest_data.columns[0]
+                        oi_series = (
+                            open_interest_data[oi_col].reindex(result_df.index).ffill()
+                        )
+
+                    frac_oi = AdvancedFeatures.frac_diff_ffd(
+                        oi_series, d=d, window=2000
+                    )
+                    frac_diff_features.append(frac_oi.rename(f"FracDiff_OI_d{d}"))
+                except Exception as e:
+                    logger.warning(f"FracDiff_OI_d{d} 計算失敗: {e}")
+
+        # 4. 生成した特徴量をDataFrameに結合
+        if frac_diff_features:
+            result_df = pd.concat([result_df] + frac_diff_features, axis=1)
+
+        # 5. 重複カラムの削除と欠損値処理
+        result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
+
+        num_cols = result_df.select_dtypes(include=[np.number]).columns
+        result_df[num_cols] = (
+            result_df[num_cols].replace([np.inf, -np.inf], np.nan).ffill().fillna(0.0)
+        )
+
+        logger.info(
+            f"スーパーセット生成完了: {len(result_df.columns)} カラム "
+            f"(FracDiff: {len(frac_diff_features)} パターン)"
+        )
+
+        return result_df
+
+    @staticmethod
+    def get_frac_diff_columns_for_d(columns: List[str], d_value: float) -> List[str]:
+        """
+        指定されたd値に対応するFracDiffカラムを選択するヘルパー
+
+        スーパーセットから特定のd値（例: 0.4）を選択する際に使用します。
+        FracDiff_Price_d0.4, FracDiff_OI_d0.4 などを返します。
+
+        Args:
+            columns: 全カラム名のリスト
+            d_value: 選択したいd値
+
+        Returns:
+            d_valueに対応するFracDiffカラム名のリスト
+        """
+        target_suffix = f"_d{d_value}"
+        return [c for c in columns if c.startswith("FracDiff_") and target_suffix in c]
+
+    @staticmethod
+    def filter_superset_for_d(df: pd.DataFrame, d_value: float) -> pd.DataFrame:
+        """
+        スーパーセットから特定のd値に対応するカラムのみを抽出
+
+        FracDiff列については指定されたd値のみを残し、
+        他のd値のFracDiff列は除外します。
+
+        Args:
+            df: スーパーセットDataFrame
+            d_value: 使用するd値
+
+        Returns:
+            フィルタ後のDataFrame
+        """
+        target_suffix = f"_d{d_value}"
+
+        # FracDiff列以外は全て残す
+        non_frac_cols = [c for c in df.columns if not c.startswith("FracDiff_")]
+
+        # 指定されたd値のFracDiff列のみ選択
+        target_frac_cols = [
+            c for c in df.columns if c.startswith("FracDiff_") and target_suffix in c
+        ]
+
+        return df[non_frac_cols + target_frac_cols]
 
     def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
         """キャッシュからデータを取得"""

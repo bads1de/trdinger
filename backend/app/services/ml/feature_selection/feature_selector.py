@@ -253,9 +253,13 @@ class RFECVStrategy(BaseSelectionStrategy):
             n_jobs=config.n_jobs,
         )
 
-        cv = StratifiedKFold(
-            n_splits=config.cv_folds, shuffle=True, random_state=config.random_state
-        )
+        if config.cv_strategy == "timeseries":
+            from sklearn.model_selection import TimeSeriesSplit
+            cv = TimeSeriesSplit(n_splits=config.cv_folds)
+        else:
+            cv = StratifiedKFold(
+                n_splits=config.cv_folds, shuffle=True, random_state=config.random_state
+            )
 
         min_features = config.target_k or config.min_features
         rfecv = RFECV(
@@ -586,6 +590,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         min_relative_importance: float = 0.01,
         importance_threshold: float = 0.001,
         cv_folds: int = 5,
+        cv_strategy: str = "stratified",  # Added
         random_state: int = 42,
         n_jobs: int = 1,
         shadow_iterations: int = 20,
@@ -601,6 +606,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             target_k: 目標特徴量数（Noneで自動決定）
             min_features: 最低保証する特徴量数
             cv_folds: クロスバリデーションのフォールド数
+            cv_strategy: "stratified" (default) or "timeseries"
             random_state: 乱数シード
             n_jobs: 並列ジョブ数
             shadow_iterations: シャドウ特徴量のイテレーション数
@@ -615,10 +621,13 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         self.min_relative_importance = min_relative_importance
         self.importance_threshold = importance_threshold
         self.cv_folds = cv_folds
+        self.cv_strategy = cv_strategy  # Added
         self.random_state = random_state
         self.n_jobs = n_jobs
         self.shadow_iterations = shadow_iterations
         self.staged_methods = staged_methods
+
+    # ... (fit method)
 
     def fit(
         self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]
@@ -680,6 +689,26 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
     def _get_support_mask(self) -> np.ndarray:
         """SelectorMixin用: 選択マスクを返す"""
         return self.support_
+
+    def transform(self, X: Union[pd.DataFrame, np.ndarray]) -> Union[pd.DataFrame, np.ndarray]:
+        """
+        選択された特徴量を抽出する
+
+        Args:
+            X: 特徴量データ
+
+        Returns:
+            選択された特徴量データ
+        """
+        # 親クラス(SelectorMixin)のtransformを呼び出し（マスク適用）
+        X_selected = super().transform(X)
+
+        # 入力がDataFrameの場合、DataFrameとして返す（カラム名付与）
+        if isinstance(X, pd.DataFrame):
+            selected_features = self.get_feature_names_out()
+            return pd.DataFrame(X_selected, columns=selected_features, index=X.index)
+        
+        return X_selected
 
     def fit_transform(
         self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray], **fit_params
@@ -747,6 +776,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             min_relative_importance=self.min_relative_importance,
             importance_threshold=self.importance_threshold,
             cv_folds=self.cv_folds,
+            cv_strategy=self.cv_strategy,  # Added
             random_state=self.random_state,
             n_jobs=self.n_jobs,
             shadow_iterations=self.shadow_iterations,
