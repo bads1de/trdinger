@@ -410,40 +410,6 @@ class ParallelEvaluator:
         self._timeout_evaluations = 0
 
 
-def create_parallel_map(
-    evaluate_func: Callable[[Any], Tuple[float, ...]],
-    max_workers: Optional[int] = None,
-    use_process_pool: bool = False,
-) -> Callable[[Callable, List[Any]], List[Tuple[float, ...]]]:
-    """
-    DEAPツールボックス用の並列mapファンクションを作成
-
-    Args:
-        evaluate_func: 評価関数
-        max_workers: 最大ワーカー数
-        use_process_pool: ProcessPoolExecutorを使用するか
-
-    Returns:
-        toolbox.mapに登録可能な関数
-    """
-    evaluator = ParallelEvaluator(
-        evaluate_func=evaluate_func,
-        max_workers=max_workers,
-        use_process_pool=use_process_pool,
-    )
-
-    def parallel_map(func: Callable, individuals: List[Any]) -> List[Tuple[float, ...]]:
-        """
-        並列map関数
-
-        Note: funcは無視され、初期化時のevaluate_funcが使用されます。
-        これはDEAPのtoolbox.mapインターフェースに合わせるためです。
-        """
-        return evaluator.evaluate_population(individuals)
-
-    return parallel_map
-
-
 # =============================================================================
 # ワーカー初期化ロジック (旧 worker_initializer.py)
 # =============================================================================

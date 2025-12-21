@@ -312,35 +312,6 @@ class HybridFeatureAdapter:
         augmented = augmented.ffill().bfill().fillna(0)
         return augmented
 
-    def genes_to_features_batch(
-        self,
-        genes: List[StrategyGene],
-        ohlcv_data: pd.DataFrame,
-    ) -> List[pd.DataFrame]:
-        """
-        複数Geneのバッチ変換
-
-        Args:
-            genes: 戦略遺伝子リスト
-            ohlcv_data: OHLCVデータ
-
-        Returns:
-            特徴量DataFrameのリスト
-        """
-        features_list = []
-
-        for gene in genes:
-            try:
-                features_df = self.gene_to_features(gene, ohlcv_data)
-                features_list.append(features_df)
-            except Exception as e:
-                gene_id = getattr(gene, "id", "unknown")
-                logger.error(f"Gene {gene_id} の変換エラー: {e}")
-                # エラー時は空のDataFrameを追加
-                features_list.append(pd.DataFrame())
-
-        return features_list
-
 
 class WaveletFeatureTransformer:
     """簡易ウェーブレット変換で特徴量を生成するヘルパー"""

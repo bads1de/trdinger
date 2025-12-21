@@ -580,7 +580,7 @@ class IndividualEvaluator:
         """キャッシュされたバックテストデータを取得"""
         # 並列ワーカー内の共有データをチェック
         try:
-            from .worker_initializer import get_worker_data
+            from .parallel_evaluator import get_worker_data
 
             worker_data = get_worker_data("main_data")
             if worker_data is not None:
@@ -627,7 +627,7 @@ class IndividualEvaluator:
         """
         # 並列ワーカー内の共有データをチェック
         try:
-            from .worker_initializer import get_worker_data
+            from .parallel_evaluator import get_worker_data
 
             worker_data = get_worker_data("minute_data")
             # 1分足データは存在しない場合もある（None）ため、キーが存在するか確認するロジックが必要だが

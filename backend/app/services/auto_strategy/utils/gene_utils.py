@@ -5,10 +5,9 @@ auto_strategy全体で使用される遺伝子関連の共通機能を提供し�
 """
 
 import logging
-import uuid
+
 from typing import Union
 
-from .indicator_utils import get_all_indicators
 
 logger = logging.getLogger(__name__)
 

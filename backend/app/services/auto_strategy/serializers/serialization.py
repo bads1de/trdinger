@@ -17,8 +17,7 @@ from ..genes import (
     PositionSizingGene,
     TPSLGene,
 )
-from ..utils.gene_utils import GeneUtils
-from ..utils.indicator_utils import get_all_indicator_ids
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,23 +37,9 @@ class DictConverter:
         初期化
 
         Args:
-            enable_smart_generation: ConditionGeneratorを使用するか
+            enable_smart_generation: ConditionGeneratorを使用するか（現在このパラメータは未使用だが後方互換性のため保持）
         """
-        self.indicator_ids = get_all_indicator_ids()
-        self.id_to_indicator = {v: k for k, v in self.indicator_ids.items()}
-
-        # ConditionGeneratorの遅延インポート（循環インポート回避）
         self.enable_smart_generation = enable_smart_generation
-        self._smart_condition_generator = None
-
-    @property
-    def smart_condition_generator(self):
-        """ConditionGeneratorの遅延初期化"""
-        if self._smart_condition_generator is None and self.enable_smart_generation:
-            from ..generators.condition_generator import ConditionGenerator
-
-            self._smart_condition_generator = ConditionGenerator(True)
-        return self._smart_condition_generator
 
     def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """
@@ -178,7 +163,7 @@ class DictConverter:
             condition: 条件オブジェクト
 
         Returns:
-            辞書形式のデータ
+            辞書形式의データ
         """
         try:
             return {
@@ -487,11 +472,6 @@ class DictConverter:
             logger.error(f"戦略遺伝子辞書復元エラー: {e}")
             return strategy_gene_class.create_default()
 
-        except Exception as e:
-            logger.error(f"戦略遺伝子辞書復元エラー: {e}")
-            # エラー時はデフォルト戦略遺伝子を返す
-            return GeneUtils.create_default_strategy_gene(strategy_gene_class)
-
     def dict_to_condition(self, data: Dict[str, Any]) -> "Condition":
         """
         辞書形式から条件を復元
@@ -744,21 +724,22 @@ class GeneSerializer:
             復元されたStrategyGene
         """
         from ..genes import StrategyGene
+
         if not individual_list:
             return None
-            
+
         # 1. 既にStrategyGeneのインスタンスである場合
         if isinstance(individual_list, StrategyGene):
             return individual_list
-            
+
         # 2. リストの最初の要素がStrategyGeneである場合
         if len(individual_list) > 0 and isinstance(individual_list[0], StrategyGene):
             return individual_list[0]
-            
+
         # 3. 属性アクセスを試行（DEAP個体はStrategyGeneを継承している場合がある）
         if hasattr(individual_list, "indicators"):
             return individual_list
-            
+
         return None
 
     # JSON変換機能（JsonConverterを廃止してここに統合）
@@ -797,8 +778,3 @@ class GeneSerializer:
         except Exception as e:
             logger.error(f"戦略遺伝子JSON復元エラー: {e}")
             raise ValueError(f"戦略遺伝子のJSON復元に失敗: {e}")
-
-    # 後方互換性のためのエイリアスメソッド（ListEncoder廃止に伴い不要かもしれないが念のため残すか、削除するか）
-    # ListEncoder は削除されたので、これらのメソッドも削除してよい。
-    # しかし既存コードが呼んでいる可能性を考慮して、ダミーを残すか、エラーを出すか。
-    # 完全に削除する方針だったので削除します。

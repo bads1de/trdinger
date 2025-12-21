@@ -91,15 +91,6 @@ class TestHybridFeatureAdapter:
         assert "volume_rolling_mean_5" in df.columns
         assert "hl_spread" in df.columns
 
-    def test_batch_processing(self, adapter, mock_gene, sample_ohlcv):
-        """バッチ処理"""
-        genes = [mock_gene, mock_gene]
-        results = adapter.genes_to_features_batch(genes, sample_ohlcv)
-
-        assert len(results) == 2
-        assert isinstance(results[0], pd.DataFrame)
-        assert len(results[0]) == 100
-
     def test_wavelet_transformer_init(self):
         """WaveletTransformerの初期化"""
         adapter = HybridFeatureAdapter(

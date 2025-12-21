@@ -9,7 +9,6 @@ import pytest
 
 from app.services.auto_strategy.core.parallel_evaluator import (
     ParallelEvaluator,
-    create_parallel_map,
 )
 
 
@@ -237,29 +236,3 @@ class TestParallelEvaluator:
 
                 # ユーザー指定のinitializerが呼ばれたか
                 initializer_mock.assert_called_once_with("arg1", 123)
-
-
-class TestCreateParallelMap:
-    """create_parallel_map関数のテスト"""
-
-    def test_create_and_use_parallel_map(self):
-        """並列map関数を作成して使用できること"""
-
-        def mock_evaluate(ind):
-            return (float(ind),)
-
-        parallel_map = create_parallel_map(
-            evaluate_func=mock_evaluate,
-            max_workers=2,
-        )
-
-        individuals = [1, 2, 3, 4, 5]
-        result = parallel_map(None, individuals)  # funcは無視される
-
-        assert len(result) == 5
-        for i, fitness in enumerate(result):
-            assert fitness == (float(i + 1),)
-
-
-
-

@@ -23,7 +23,6 @@ from ..genes import (
     generate_random_indicators,
 )
 from ..genes.tool import ToolGene
-from ..serializers.serialization import GeneSerializer
 from ..tools import tool_registry
 
 from .condition_generator import ConditionGenerator
@@ -57,9 +56,7 @@ class RandomGeneGenerator:
         self.config = config
         self.enable_smart_generation = enable_smart_generation
         self.smart_context = smart_context or {}
-        self.serializer = GeneSerializer(
-            enable_smart_generation
-        )  # GeneSerializerのインスタンスを作成
+
         self.smart_condition_generator = ConditionGenerator(
             enable_smart_generation, ga_config=config
         )

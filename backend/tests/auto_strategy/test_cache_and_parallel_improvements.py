@@ -12,7 +12,6 @@ from cachetools import LRUCache
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
 from app.services.auto_strategy.core.parallel_evaluator import (
     ParallelEvaluator,
-    create_parallel_map,
 )
 
 
@@ -181,21 +180,6 @@ class TestParallelEvaluatorImprovements:
         # 成功数は前回から累積されていないことを確認
         assert stats2["successful_evaluations"] == 3
 
-    def test_create_parallel_map_with_process_pool(self, mock_evaluate_func):
-        """ProcessPoolExecutor用のparallel_mapが作成できること"""
-        parallel_map = create_parallel_map(
-            evaluate_func=mock_evaluate_func,
-            max_workers=2,
-            use_process_pool=False,  # テストではThreadPoolを使用
-        )
-
-        # parallel_mapは呼び出し可能
-        assert callable(parallel_map)
-
-        # 実行テスト
-        results = parallel_map(None, [1, 2, 3])
-        assert len(results) == 3
-
     def test_timeout_handling(self):
         """タイムアウトが正しく処理されること"""
         import time
@@ -216,6 +200,3 @@ class TestParallelEvaluatorImprovements:
 
         # タイムアウトまたは成功のいずれかの結果が返る
         assert len(results) == 1
-
-
-
