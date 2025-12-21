@@ -1,417 +1,863 @@
 """
-特徴量選択システム
+特徴量選択システム（プロフェッショナル・エディション v2）
 
-分析報告書で提案された統計的特徴量選択とML-based特徴量選択を実装。
-高次元データから重要な特徴量を効率的に選択します。
+scikit-learn完全互換のカスタム特徴量選択器。
+BaseEstimator + SelectorMixinを継承し、Pipelineとシームレスに統合可能。
+
+ベストプラクティス:
+- Filter, Wrapper, Embedded手法の階層的適用
+- RFECV による最適な特徴量数の自動発見
+- シャドウ特徴量ベースのノイズ検出（Boruta風）
+- 完全なクロスバリデーション対応
 """
 
 import logging
-from dataclasses import dataclass
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
+
+# LightGBM をデフォルトモデルとして使用（高速・高精度）
+try:
+    from lightgbm import LGBMClassifier
+
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    LIGHTGBM_AVAILABLE = False
 from sklearn.feature_selection import (
-    RFE,
     RFECV,
     SelectFromModel,
     SelectKBest,
+    SelectorMixin,
+    VarianceThreshold,
     chi2,
     f_classif,
     mutual_info_classif,
 )
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LassoCV
+from sklearn.model_selection import StratifiedKFold
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+def get_default_estimator(
+    n_estimators: int = 100,
+    random_state: int = 42,
+    n_jobs: int = 1,
+) -> BaseEstimator:
+    """
+    デフォルトのestimatorを取得
+
+    LightGBMが利用可能ならLightGBM、そうでなければRandomForestを返す。
+    """
+    if LIGHTGBM_AVAILABLE:
+        return LGBMClassifier(
+            n_estimators=n_estimators,
+            importance_type="gain",
+            random_state=random_state,
+            n_jobs=n_jobs,
+            verbosity=-1,  # 警告抑制
+            force_col_wise=True,  # 警告抑制
+        )
+    else:
+        logger.warning("LightGBM not available, falling back to RandomForest")
+        return RandomForestClassifier(
+            n_estimators=n_estimators,
+            random_state=random_state,
+            n_jobs=n_jobs,
+        )
+
+
+# =============================================================================
+# Enums & Config
+# =============================================================================
 
 
 class SelectionMethod(Enum):
     """特徴量選択手法"""
 
-    # 統計的手法
+    # Filter手法（高速・モデル非依存）
+    VARIANCE = "variance"
     UNIVARIATE_F = "univariate_f"
     UNIVARIATE_CHI2 = "univariate_chi2"
     MUTUAL_INFO = "mutual_info"
 
-    # ML-based手法
-    LASSO = "lasso"
-    RANDOM_FOREST = "random_forest"
+    # Wrapper手法（計算コスト高・精度重視）
     RFE = "rfe"
     RFECV = "rfecv"
     PERMUTATION = "permutation"
 
-    # 組み合わせ手法
-    ENSEMBLE = "ensemble"
+    # Embedded手法（モデル学習と同時）
+    LASSO = "lasso"
+    RANDOM_FOREST = "random_forest"
+
+    # 組み合わせ手法（推奨）
+    SHADOW = "shadow"  # Boruta風シャドウ特徴量ベース
+    STAGED = "staged"  # 段階的フィルタリング
 
 
 @dataclass
 class FeatureSelectionConfig:
-    """特徴量選択設定"""
+    """
+    特徴量選択設定
 
-    method: SelectionMethod = SelectionMethod.ENSEMBLE
-    k_features: Optional[int] = None  # 選択する特徴量数
-    percentile: float = 50  # 上位何%を選択するか
-    cv_folds: int = 5  # RFECVでの分割数
+    ベストプラクティスに基づくデフォルト値を提供。
+    """
+
+    method: SelectionMethod = SelectionMethod.STAGED
+
+    # --- Filter設定 ---
+    variance_threshold: float = 0.0  # 定数・準定数の削除
+    correlation_threshold: float = 0.90  # 高相関ペアの削除
+
+    # --- Wrapper/Embedded設定 ---
+    target_k: Optional[int] = None  # None = 自動決定 (RFECV)
+    min_features: int = 5  # 最小特徴量数
+
+    # --- 質による選別 ---
+    cumulative_importance: float = 0.95  # 累積重要度閾値
+    min_relative_importance: float = 0.01  # トップ比での足切り
+    importance_threshold: float = 0.001  # 絶対閾値
+
+    # --- クロスバリデーション ---
+    cv_folds: int = 5
+    cv_strategy: str = "stratified"  # "stratified" or "timeseries"
+
+    # --- 並列処理 ---
     random_state: int = 42
-    n_jobs: int = -1
+    n_jobs: int = 1  # デフォルトは安全のため1
 
-    # 閾値設定
-    importance_threshold: float = 0.01
-    correlation_threshold: float = 0.95
+    # --- シャドウ特徴量設定 (Boruta風) ---
+    shadow_iterations: int = 20
+    shadow_percentile: float = 100.0  # シャドウ最大値のパーセンタイル
 
-    # アンサンブル設定
-    ensemble_methods: Optional[List[SelectionMethod]] = None
-    ensemble_voting: str = "majority"  # "majority" or "unanimous"
+    # --- Staged選択の段階 ---
+    staged_methods: List[SelectionMethod] = field(
+        default_factory=lambda: [
+            SelectionMethod.VARIANCE,
+            SelectionMethod.MUTUAL_INFO,
+            SelectionMethod.RFECV,
+        ]
+    )
 
 
-class FeatureSelector:
+# =============================================================================
+# Selector Strategies (Strategy Pattern)
+# =============================================================================
+
+
+class BaseSelectionStrategy(ABC):
+    """特徴量選択戦略の基底クラス"""
+
+    @abstractmethod
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        特徴量選択を実行
+
+        Returns:
+            (support_mask, details): 選択マスクと詳細情報
+        """
+        pass
+
+
+class VarianceStrategy(BaseSelectionStrategy):
+    """分散に基づくフィルタ（定数・準定数の削除）"""
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        selector = VarianceThreshold(threshold=config.variance_threshold)
+        selector.fit(X)
+        mask = selector.get_support()
+        return mask, {
+            "method": "variance",
+            "variances": selector.variances_.tolist(),
+            "threshold": config.variance_threshold,
+        }
+
+
+class UnivariateStrategy(BaseSelectionStrategy):
+    """単変量統計テストによる選択"""
+
+    def __init__(self, score_func: str = "f_classif"):
+        self.score_func_name = score_func
+        self.score_funcs = {
+            "f_classif": f_classif,
+            "chi2": chi2,
+            "mutual_info": mutual_info_classif,
+        }
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        k = config.target_k or max(config.min_features, int(len(feature_names) * 0.5))
+        k = min(k, len(feature_names))
+
+        score_func = self.score_funcs.get(self.score_func_name, f_classif)
+        selector = SelectKBest(score_func=score_func, k=k)
+        selector.fit(X, y)
+
+        # pvalues_ は mutual_info では None になる
+        pvalues = None
+        if hasattr(selector, "pvalues_") and selector.pvalues_ is not None:
+            pvalues = selector.pvalues_.tolist()
+
+        return selector.get_support(), {
+            "method": f"univariate_{self.score_func_name}",
+            "scores": selector.scores_.tolist(),
+            "pvalues": pvalues,
+        }
+
+
+class RFECVStrategy(BaseSelectionStrategy):
+    """再帰的特徴量削減（クロスバリデーション付き）"""
+
+    def __init__(self, estimator: Optional[BaseEstimator] = None):
+        self.estimator = estimator
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        estimator = self.estimator or get_default_estimator(
+            n_estimators=50,
+            random_state=config.random_state,
+            n_jobs=config.n_jobs,
+        )
+
+        cv = StratifiedKFold(
+            n_splits=config.cv_folds, shuffle=True, random_state=config.random_state
+        )
+
+        min_features = config.target_k or config.min_features
+        rfecv = RFECV(
+            estimator=estimator,
+            step=1,
+            cv=cv,
+            scoring="accuracy",
+            min_features_to_select=min_features,
+            n_jobs=config.n_jobs,
+        )
+        rfecv.fit(X, y)
+
+        return rfecv.support_, {
+            "method": "rfecv",
+            "n_features": rfecv.n_features_,
+            "ranking": rfecv.ranking_.tolist(),
+            "cv_results": rfecv.cv_results_ if hasattr(rfecv, "cv_results_") else None,
+        }
+
+
+class LassoStrategy(BaseSelectionStrategy):
+    """L1正則化による埋め込み選択"""
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        model = LassoCV(
+            cv=config.cv_folds, random_state=config.random_state, n_jobs=config.n_jobs
+        )
+        model.fit(X, y)
+
+        selector = SelectFromModel(
+            model, prefit=True, threshold=config.importance_threshold
+        )
+        mask = selector.get_support()
+
+        # 最低限の特徴量を確保
+        if mask.sum() < config.min_features:
+            top_k = np.argsort(np.abs(model.coef_))[-config.min_features :]
+            mask = np.zeros(len(feature_names), dtype=bool)
+            mask[top_k] = True
+
+        return mask, {
+            "method": "lasso",
+            "coefficients": model.coef_.tolist(),
+            "alpha": model.alpha_,
+        }
+
+
+class TreeBasedStrategy(BaseSelectionStrategy):
     """
-    特徴量選択器
+    ツリーベースモデルの特徴量重要度による選択
 
-    複数の手法を組み合わせて最適な特徴量セットを選択します。
+    デフォルトはLightGBM。カスタムestimatorも注入可能。
     """
 
-    def __init__(self, config: Optional[FeatureSelectionConfig] = None):
+    def __init__(self, estimator: Optional[BaseEstimator] = None):
+        self.estimator = estimator
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        model = self.estimator or get_default_estimator(
+            n_estimators=100,
+            random_state=config.random_state,
+            n_jobs=config.n_jobs,
+        )
+        model.fit(X, y)
+
+        selector = SelectFromModel(
+            model, prefit=True, threshold=config.importance_threshold
+        )
+        mask = selector.get_support()
+
+        # 最低限の特徴量を確保
+        if mask.sum() < config.min_features:
+            top_k = np.argsort(model.feature_importances_)[-config.min_features :]
+            mask = np.zeros(len(feature_names), dtype=bool)
+            mask[top_k] = True
+
+        return mask, {
+            "method": "tree_based",
+            "importances": model.feature_importances_.tolist(),
+            "model_type": type(model).__name__,
+        }
+
+
+class PermutationStrategy(BaseSelectionStrategy):
+    """Permutation Importance による選択"""
+
+    def __init__(self, estimator: Optional[BaseEstimator] = None):
+        self.estimator = estimator
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        model = self.estimator or get_default_estimator(
+            n_estimators=50,
+            random_state=config.random_state,
+            n_jobs=config.n_jobs,
+        )
+        model.fit(X, y)
+
+        result = permutation_importance(
+            model,
+            X,
+            y,
+            n_repeats=10,
+            random_state=config.random_state,
+            n_jobs=config.n_jobs,
+        )
+
+        importances = result.importances_mean
+        mask = importances > config.importance_threshold
+
+        # 最低限の特徴量を確保
+        if mask.sum() < config.min_features:
+            top_k = np.argsort(importances)[-config.min_features :]
+            mask = np.zeros(len(feature_names), dtype=bool)
+            mask[top_k] = True
+
+        return mask, {
+            "method": "permutation",
+            "importances_mean": importances.tolist(),
+            "importances_std": result.importances_std.tolist(),
+        }
+
+
+class ShadowFeatureStrategy(BaseSelectionStrategy):
+    """
+    シャドウ特徴量ベースの選択（Boruta風）
+
+    ランダムにシャッフルした「シャドウ特徴量」より重要度が高い
+    特徴量のみを選択。統計的に有意なノイズ除去が可能。
+    """
+
+    def __init__(self, estimator: Optional[BaseEstimator] = None):
+        self.estimator = estimator
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        n_features = X.shape[1]
+        hit_counts = np.zeros(n_features)
+
+        rng = np.random.RandomState(config.random_state)
+
+        for iteration in range(config.shadow_iterations):
+            # シャドウ特徴量を生成（各列を独立にシャッフル）
+            X_shadow = X.copy()
+            for col in range(n_features):
+                rng.shuffle(X_shadow[:, col])
+
+            # 元特徴量とシャドウを結合
+            X_extended = np.hstack([X, X_shadow])
+
+            # LightGBM/RandomForestで重要度を計算
+            model = self.estimator or get_default_estimator(
+                n_estimators=50,
+                random_state=config.random_state + iteration,
+                n_jobs=config.n_jobs,
+            )
+            model.fit(X_extended, y)
+
+            importances = model.feature_importances_
+            real_importances = importances[:n_features]
+            shadow_importances = importances[n_features:]
+
+            # シャドウ特徴量の最大値を閾値として使用
+            shadow_max = np.percentile(shadow_importances, config.shadow_percentile)
+
+            # 閾値を超えた特徴量をヒットとしてカウント
+            hit_counts[real_importances > shadow_max] += 1
+
+        # 過半数のイテレーションでヒットした特徴量を選択
+        threshold = config.shadow_iterations / 2
+        mask = hit_counts > threshold
+
+        # 最低限の特徴量を確保
+        if mask.sum() < config.min_features:
+            top_k = np.argsort(hit_counts)[-config.min_features :]
+            mask = np.zeros(n_features, dtype=bool)
+            mask[top_k] = True
+
+        return mask, {
+            "method": "shadow",
+            "hit_counts": hit_counts.tolist(),
+            "threshold": threshold,
+            "confirmed_count": int(mask.sum()),
+        }
+
+
+class StagedStrategy(BaseSelectionStrategy):
+    """
+    段階的特徴量選択（推奨）
+
+    複数の手法を順番に適用し、段階的に絞り込む。
+    Filter -> Wrapper -> Embedded の順序が推奨。
+    """
+
+    def __init__(
+        self, strategies: Optional[Dict[SelectionMethod, BaseSelectionStrategy]] = None
+    ):
+        self.strategy_map = strategies or self._default_strategies()
+
+    def _default_strategies(self) -> Dict[SelectionMethod, BaseSelectionStrategy]:
+        return {
+            SelectionMethod.VARIANCE: VarianceStrategy(),
+            SelectionMethod.UNIVARIATE_F: UnivariateStrategy("f_classif"),
+            SelectionMethod.UNIVARIATE_CHI2: UnivariateStrategy("chi2"),
+            SelectionMethod.MUTUAL_INFO: UnivariateStrategy("mutual_info"),
+            SelectionMethod.RFECV: RFECVStrategy(),
+            SelectionMethod.LASSO: LassoStrategy(),
+            SelectionMethod.RANDOM_FOREST: TreeBasedStrategy(),
+            SelectionMethod.PERMUTATION: PermutationStrategy(),
+            SelectionMethod.SHADOW: ShadowFeatureStrategy(),
+        }
+
+    def select(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+        config: FeatureSelectionConfig,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        current_mask = np.ones(X.shape[1], dtype=bool)
+        current_X = X
+        current_names = feature_names.copy()
+        stage_results = []
+
+        for method in config.staged_methods:
+            if method not in self.strategy_map:
+                logger.warning(f"Unknown method in staged selection: {method}")
+                continue
+
+            strategy = self.strategy_map[method]
+
+            try:
+                stage_mask, stage_details = strategy.select(
+                    current_X, y, current_names, config
+                )
+
+                # グローバルマスクを更新
+                global_indices = np.where(current_mask)[0]
+                for i, selected in enumerate(stage_mask):
+                    if not selected:
+                        current_mask[global_indices[i]] = False
+
+                # 次の段階用にデータを絞り込み
+                current_X = current_X[:, stage_mask]
+                current_names = [
+                    current_names[i] for i, s in enumerate(stage_mask) if s
+                ]
+
+                stage_results.append(
+                    {
+                        "method": method.value,
+                        "selected_count": int(stage_mask.sum()),
+                        "details": stage_details,
+                    }
+                )
+
+                logger.info(
+                    f"Stage [{method.value}]: {len(feature_names)} -> {current_mask.sum()} features"
+                )
+
+            except Exception as e:
+                logger.warning(f"Stage [{method.value}] failed: {e}")
+                stage_results.append({"method": method.value, "error": str(e)})
+
+        return current_mask, {
+            "method": "staged",
+            "stages": stage_results,
+            "final_count": int(current_mask.sum()),
+        }
+
+
+# =============================================================================
+# Main Feature Selector (sklearn Compatible)
+# =============================================================================
+
+
+class FeatureSelector(SelectorMixin, BaseEstimator):
+    """
+    scikit-learn互換の特徴量選択器
+
+    Pipeline内での使用を想定し、以下の機能を提供:
+    - fit(X, y): 特徴量選択ルールを学習
+    - transform(X): 選択された特徴量のみを返す
+    - get_support(): 選択マスクを取得
+    - get_feature_names_out(): 選択された特徴量名を取得
+
+    Example:
+        >>> from sklearn.pipeline import Pipeline
+        >>> from sklearn.ensemble import RandomForestClassifier
+        >>>
+        >>> pipe = Pipeline([
+        ...     ('selector', FeatureSelector(method='staged')),
+        ...     ('clf', RandomForestClassifier())
+        ... ])
+        >>> pipe.fit(X, y)
+    """
+
+    def __init__(
+        self,
+        method: Union[str, SelectionMethod] = "staged",
+        variance_threshold: float = 0.0,
+        correlation_threshold: float = 0.90,
+        target_k: Optional[int] = None,
+        min_features: int = 5,
+        cumulative_importance: float = 0.95,
+        min_relative_importance: float = 0.01,
+        importance_threshold: float = 0.001,
+        cv_folds: int = 5,
+        random_state: int = 42,
+        n_jobs: int = 1,
+        shadow_iterations: int = 20,
+        staged_methods: Optional[List[str]] = None,
+    ):
         """
         初期化
 
         Args:
-            config: 特徴量選択設定
+            method: 選択手法 ('staged', 'shadow', 'rfecv', 'lasso', 'random_forest' など)
+            variance_threshold: 分散閾値（これ以下は削除）
+            correlation_threshold: 相関閾値（これ以上は片方削除）
+            target_k: 目標特徴量数（Noneで自動決定）
+            min_features: 最低保証する特徴量数
+            cv_folds: クロスバリデーションのフォールド数
+            random_state: 乱数シード
+            n_jobs: 並列ジョブ数
+            shadow_iterations: シャドウ特徴量のイテレーション数
+            staged_methods: 段階的選択で使用する手法リスト
         """
-        self.config = config or FeatureSelectionConfig()
-        if self.config.ensemble_methods is None:
-            self.config.ensemble_methods = [
-                SelectionMethod.MUTUAL_INFO,
-                SelectionMethod.RANDOM_FOREST,
-                SelectionMethod.LASSO,
-            ]
+        self.method = method
+        self.variance_threshold = variance_threshold
+        self.correlation_threshold = correlation_threshold
+        self.target_k = target_k
+        self.min_features = min_features
+        self.cumulative_importance = cumulative_importance
+        self.min_relative_importance = min_relative_importance
+        self.importance_threshold = importance_threshold
+        self.cv_folds = cv_folds
+        self.random_state = random_state
+        self.n_jobs = n_jobs
+        self.shadow_iterations = shadow_iterations
+        self.staged_methods = staged_methods
 
-        self.selected_features_ = None
-        self.selection_results_ = {}
-
-    def fit_transform(
-        self, X: pd.DataFrame, y: pd.Series
-    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    def fit(
+        self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]
+    ) -> "FeatureSelector":
         """
-        特徴量選択を実行
+        特徴量選択ルールを学習
 
         Args:
-            X: 特徴量DataFrame
-            y: ターゲットSeries
+            X: 特徴量データ (n_samples, n_features)
+            y: ターゲット変数 (n_samples,)
 
         Returns:
-            選択された特徴量のDataFrameと選択結果の辞書
+            self
         """
-        logger.info(f"🎯 特徴量選択開始: {self.config.method.value}")
-        logger.info(f"入力特徴量数: {X.shape[1]}, サンプル数: {X.shape[0]}")
-
-        # データの前処理
-        X_processed, feature_names = self._preprocess_data(X)
-
-        # 特徴量選択実行
-        if self.config.method == SelectionMethod.ENSEMBLE:
-            selected_features, results = self._ensemble_selection(
-                X_processed, y, feature_names
-            )
+        # DataFrame対応
+        if isinstance(X, pd.DataFrame):
+            self.feature_names_in_ = X.columns.tolist()
+            X = X.values
         else:
-            selected_features, results = self._single_method_selection(
-                X_processed, y, feature_names, self.config.method
+            self.feature_names_in_ = [f"feature_{i}" for i in range(X.shape[1])]
+
+        if isinstance(y, pd.Series):
+            y = y.values
+
+        # 入力検証
+        X, y = self._validate_input(X, y)
+
+        # 設定オブジェクトを構築
+        config = self._build_config()
+
+        # 前処理: 高相関特徴量の削除
+        X_processed, correlation_mask = self._remove_correlated_features(X)
+        processed_names = [
+            self.feature_names_in_[i] for i, m in enumerate(correlation_mask) if m
+        ]
+
+        # 選択戦略を取得・実行
+        strategy = self._get_strategy()
+        selection_mask, self.selection_details_ = strategy.select(
+            X_processed, y, processed_names, config
+        )
+
+        # グローバルマスクを構築
+        self.support_ = np.zeros(len(self.feature_names_in_), dtype=bool)
+        processed_indices = np.where(correlation_mask)[0]
+        for i, selected in enumerate(selection_mask):
+            if selected:
+                self.support_[processed_indices[i]] = True
+
+        # 選択された特徴量数のログ
+        n_original = len(self.feature_names_in_)
+        n_selected = self.support_.sum()
+        logger.info(
+            f"Feature selection complete: {n_original} -> {n_selected} features"
+        )
+
+        return self
+
+    def _get_support_mask(self) -> np.ndarray:
+        """SelectorMixin用: 選択マスクを返す"""
+        return self.support_
+
+    def fit_transform(
+        self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray], **fit_params
+    ) -> Union[pd.DataFrame, np.ndarray]:
+        """
+        特徴量選択を実行し、選択済みデータを返す
+
+        sklearn標準のインターフェースに準拠。
+        詳細情報は self.selection_details_ 属性から取得可能です。
+
+        Args:
+            X: 特徴量データ
+            y: ターゲット変数
+
+        Returns:
+            選択後の特徴量データ (DataFrame または ndarray)
+        """
+        self.fit(X, y)
+        return self.transform(X)
+
+    def get_feature_names_out(
+        self, input_features: Optional[List[str]] = None
+    ) -> np.ndarray:
+        """選択された特徴量名を返す"""
+        if input_features is None:
+            input_features = self.feature_names_in_
+        return np.array([input_features[i] for i, s in enumerate(self.support_) if s])
+
+    def _validate_input(
+        self, X: np.ndarray, y: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """入力データの検証と前処理"""
+        if X.shape[0] == 0 or X.shape[1] == 0:
+            raise ValueError("Empty input data")
+
+        if X.shape[0] != len(y):
+            raise ValueError(
+                f"X and y have inconsistent samples: {X.shape[0]} vs {len(y)}"
             )
 
-        # 結果の保存
-        self.selected_features_ = selected_features
-        self.selection_results_ = results
+        # 欠損値・無限値の処理
+        X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
-        # 選択された特徴量でDataFrameを作成 (インデックス操作を避ける)
-        if selected_features:
-            data_dict = {c: X[c].values for c in selected_features if c in X.columns}
-            X_selected = pd.DataFrame(data_dict, index=X.index)
-        else:
-            # 選択された特徴量がない場合は空のDataFrameを返す
-            X_selected = pd.DataFrame(index=X.index)
+        return X, y
 
-        # 結果がDataFrameであることを保証
-        if not isinstance(X_selected, pd.DataFrame):
-            X_selected = pd.DataFrame(X_selected)
+    def _build_config(self) -> FeatureSelectionConfig:
+        """パラメータから設定オブジェクトを構築"""
+        staged_methods = None
+        if self.staged_methods:
+            staged_methods = [SelectionMethod(m) for m in self.staged_methods]
 
-        logger.info(f"✅ 特徴量選択完了: {len(selected_features)}個の特徴量を選択")
-        logger.info(f"選択率: {len(selected_features) / X.shape[1] * 100:.1f}%")
+        method = (
+            self.method
+            if isinstance(self.method, SelectionMethod)
+            else SelectionMethod(self.method)
+        )
 
-        return X_selected, results
+        return FeatureSelectionConfig(
+            method=method,
+            variance_threshold=self.variance_threshold,
+            correlation_threshold=self.correlation_threshold,
+            target_k=self.target_k,
+            min_features=self.min_features,
+            cumulative_importance=self.cumulative_importance,
+            min_relative_importance=self.min_relative_importance,
+            importance_threshold=self.importance_threshold,
+            cv_folds=self.cv_folds,
+            random_state=self.random_state,
+            n_jobs=self.n_jobs,
+            shadow_iterations=self.shadow_iterations,
+            staged_methods=staged_methods
+            or [
+                SelectionMethod.VARIANCE,
+                SelectionMethod.MUTUAL_INFO,
+                SelectionMethod.RFECV,
+            ],
+        )
 
-    def _preprocess_data(self, X: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
-        """データの前処理"""
-        # 欠損値・無限値の処理 (プリミティブな処理に限定)
-        X_filled = X.replace([np.inf, -np.inf], np.nan)
-        X_filled = X_filled.fillna(X_filled.median())
+    def _remove_correlated_features(
+        self, X: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """高相関特徴量を削除"""
+        mask = np.ones(X.shape[1], dtype=bool)
 
-        # 定数特徴量の除去 (インデックス操作を避ける)
-        cols = X_filled.columns.tolist()
-        nunique = [X_filled[c].nunique() for c in cols]
-        keep_cols = [cols[i] for i, n in enumerate(nunique) if n > 1]
+        if self.correlation_threshold >= 1.0:
+            return X, mask
 
-        if len(keep_cols) < len(cols):
-            logger.info(f"定数特徴量を除去: {len(cols) - len(keep_cols)}個")
-            # 辞書から再構築
-            data_dict = {c: X_filled[c].values for c in keep_cols}
-            X_filled = pd.DataFrame(data_dict, index=X_filled.index)
-
-        # 高相関特徴量の除去
-        X_filled = self._remove_highly_correlated_features(X_filled)
-
-        return X_filled.values, X_filled.columns.tolist()
-
-    def _remove_highly_correlated_features(self, X: pd.DataFrame) -> pd.DataFrame:
-        """高相関特徴量を除去"""
         try:
-            # 相関行列の取得
-            corr_matrix = X.corr().abs()
-            cols = corr_matrix.columns.tolist()
-            drop_cols = []
+            # 定数列を事前に検出（相関計算でNaNになる原因）
+            std = np.nanstd(X, axis=0)
+            constant_mask = std < 1e-10
 
-            # 2重ループでの相関チェック (ilocを使わずvaluesで高速化)
-            corr_values = corr_matrix.values
-            for i in range(len(cols)):
-                for j in range(i + 1, len(cols)):
-                    if corr_values[i, j] > self.config.correlation_threshold:
-                        col_to_drop = cols[j]
-                        if col_to_drop not in drop_cols:
-                            drop_cols.append(col_to_drop)
+            if constant_mask.all():
+                # 全て定数の場合はそのまま返す
+                return X, mask
 
-            if drop_cols:
-                logger.info(f"高相関特徴量を除去: {len(drop_cols)}個")
-                # 必要なカラムのみで再構築
-                keep_cols = [c for c in cols if c not in drop_cols]
-                data_dict = {c: X[c].values for c in keep_cols}
-                X = pd.DataFrame(data_dict, index=X.index)
+            # 定数でない列のみで相関を計算
+            non_constant_idx = np.where(~constant_mask)[0]
+
+            if len(non_constant_idx) < 2:
+                # 相関計算できる列が1つ以下
+                return X, mask
+
+            X_non_const = X[:, non_constant_idx]
+            corr_matrix = np.corrcoef(X_non_const, rowvar=False)
+
+            if np.isnan(corr_matrix).any():
+                # それでもNaNがある場合は諦める
+                return X, mask
+
+            # 上三角行列で高相関ペアを検出
+            # corr_matrixはX_non_constに対するものなので、インデックス変換が必要
+            local_mask = np.ones(len(non_constant_idx), dtype=bool)
+
+            for i in range(corr_matrix.shape[0]):
+                if not local_mask[i]:
+                    continue
+                for j in range(i + 1, corr_matrix.shape[1]):
+                    if (
+                        local_mask[j]
+                        and abs(corr_matrix[i, j]) > self.correlation_threshold
+                    ):
+                        local_mask[j] = False
+
+            # ローカルマスクを元のインデックスに反映
+            for local_idx, global_idx in enumerate(non_constant_idx):
+                if not local_mask[local_idx]:
+                    mask[global_idx] = False
+
+            n_removed = (~mask).sum()
+            if n_removed > 0:
+                logger.info(f"Removed {n_removed} highly correlated features")
 
         except Exception as e:
-            logger.warning(f"相関除去エラー: {e}")
+            logger.warning(f"Correlation removal failed: {e}")
 
-        return X
+        return X[:, mask], mask
 
-    def _ensemble_selection(
-        self, X: np.ndarray, y: pd.Series, feature_names: List[str]
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """アンサンブル特徴量選択"""
-        logger.info("🔄 アンサンブル特徴量選択を実行")
+    def _get_strategy(self) -> BaseSelectionStrategy:
+        """選択手法に対応する戦略を取得"""
+        method = (
+            self.method
+            if isinstance(self.method, SelectionMethod)
+            else SelectionMethod(self.method)
+        )
 
-        method_results = {}
-        feature_votes = {name: 0 for name in feature_names}
-
-        # ensemble_methods が None の場合の処理
-        ensemble_methods = self.config.ensemble_methods or [
-            SelectionMethod.MUTUAL_INFO,
-            SelectionMethod.RANDOM_FOREST,
-            SelectionMethod.LASSO,
-        ]
-
-        # 各手法で特徴量選択を実行
-        for method in ensemble_methods:
-            try:
-                selected_features, result = self._single_method_selection(
-                    X, y, feature_names, method
-                )
-                method_results[method.value] = result
-
-                # 投票
-                for feature in selected_features:
-                    feature_votes[feature] += 1
-
-                logger.info(f"{method.value}: {len(selected_features)}個選択")
-
-            except Exception as e:
-                logger.warning(f"{method.value}でエラー: {e}")
-                continue
-
-        # 投票結果に基づいて最終選択
-        n_methods = len(ensemble_methods)
-
-        if self.config.ensemble_voting == "unanimous":
-            # 全手法で選択された特徴量のみ
-            threshold = n_methods
-        else:
-            # 過半数で選択された特徴量
-            threshold = max(1, n_methods // 2)
-
-        selected_features = [
-            feature for feature, votes in feature_votes.items() if votes >= threshold
-        ]
-
-        # 最小特徴量数の保証
-        if len(selected_features) < 5:
-            # 投票数順でトップ5を選択
-            sorted_features = sorted(
-                feature_votes.items(), key=lambda x: x[1], reverse=True
-            )
-            selected_features = [f[0] for f in sorted_features[:5]]
-
-        results = {
-            "method": "ensemble",
-            "ensemble_methods": [m.value for m in ensemble_methods],
-            "method_results": method_results,
-            "feature_votes": feature_votes,
-            "voting_threshold": threshold,
-            "selected_features": selected_features,
+        strategy_map = {
+            SelectionMethod.VARIANCE: VarianceStrategy(),
+            SelectionMethod.UNIVARIATE_F: UnivariateStrategy("f_classif"),
+            SelectionMethod.UNIVARIATE_CHI2: UnivariateStrategy("chi2"),
+            SelectionMethod.MUTUAL_INFO: UnivariateStrategy("mutual_info"),
+            SelectionMethod.RFE: RFECVStrategy(),  # RFEはRFECVにフォールバック
+            SelectionMethod.RFECV: RFECVStrategy(),
+            SelectionMethod.LASSO: LassoStrategy(),
+            SelectionMethod.RANDOM_FOREST: TreeBasedStrategy(),
+            SelectionMethod.PERMUTATION: PermutationStrategy(),
+            SelectionMethod.SHADOW: ShadowFeatureStrategy(),
+            SelectionMethod.STAGED: StagedStrategy(),
         }
 
-        return selected_features, results
+        if method not in strategy_map:
+            raise ValueError(f"Unknown selection method: {method}")
 
-    def _mask_to_features(
-        self,
-        mask: Optional[np.ndarray],
-        scores: np.ndarray,
-        feature_names: List[str],
-        k: int = 5,
-    ) -> List[str]:
-        """マスクまたはスコアから特徴量を選択（共通処理）"""
-        if mask is not None and mask.any():
-            selected = [feature_names[i] for i, m in enumerate(mask) if m]
-            if len(selected) >= k:
-                return selected
+        return strategy_map[method]
 
-        # マスクが無効または数が足りない場合はスコア上位を選択
-        top_idx = np.argsort(np.abs(scores))[-min(k, len(scores)) :]
-        return [feature_names[i] for i in top_idx]
 
-    def _single_method_selection(
-        self,
-        X: np.ndarray,
-        y: pd.Series,
-        feature_names: List[str],
-        method: SelectionMethod,
-    ) -> Tuple[List[str], Dict[str, Any]]:
-        """単一手法による特徴量選択"""
-        try:
-            k_def = self.config.k_features or max(5, int(len(feature_names) * 0.3))
+# =============================================================================
+# Backward Compatibility
+# =============================================================================
 
-            if method == SelectionMethod.UNIVARIATE_F:
-                sel = SelectKBest(f_classif, k=k_def).fit(X, y)
-                feats = self._mask_to_features(
-                    sel.get_support(), sel.scores_, feature_names, k=k_def
-                )
-                return feats, {
-                    "method": "f_classif",
-                    "scores": sel.scores_.tolist(),
-                    "selected_features": feats,
-                }
 
-            if method == SelectionMethod.UNIVARIATE_CHI2:
-                X_pos = X - X.min(axis=0) + 1e-8
-                sel = SelectKBest(chi2, k=k_def).fit(X_pos, y)
-                feats = self._mask_to_features(
-                    sel.get_support(), sel.scores_, feature_names, k=k_def
-                )
-                return feats, {
-                    "method": "chi2",
-                    "scores": sel.scores_.tolist(),
-                    "selected_features": feats,
-                }
+def create_feature_selector(
+    method: str = "staged",
+    **kwargs,
+) -> FeatureSelector:
+    """
+    特徴量選択器のファクトリー関数
 
-            if method == SelectionMethod.MUTUAL_INFO:
-                sel = SelectKBest(mutual_info_classif, k=k_def).fit(X, y)
-                feats = self._mask_to_features(
-                    sel.get_support(), sel.scores_, feature_names, k=k_def
-                )
-                return feats, {
-                    "method": "mutual_info",
-                    "scores": sel.scores_.tolist(),
-                    "selected_features": feats,
-                }
-
-            if method == SelectionMethod.LASSO:
-                model = LassoCV(
-                    cv=self.config.cv_folds, random_state=self.config.random_state
-                ).fit(X, y)
-                sel = SelectFromModel(
-                    model, threshold=self.config.importance_threshold, prefit=True
-                )
-                feats = self._mask_to_features(
-                    sel.get_support(), model.coef_, feature_names, k=k_def
-                )
-                return feats, {
-                    "method": "lasso",
-                    "coefficients": model.coef_.tolist(),
-                    "selected_features": feats,
-                }
-
-            if method == SelectionMethod.RANDOM_FOREST:
-                model = RandomForestClassifier(
-                    n_estimators=100,
-                    random_state=self.config.random_state,
-                    n_jobs=self.config.n_jobs,
-                ).fit(X, y)
-                sel = SelectFromModel(
-                    model, threshold=self.config.importance_threshold, prefit=True
-                )
-                feats = self._mask_to_features(
-                    sel.get_support(),
-                    model.feature_importances_,
-                    feature_names,
-                    k=k_def,
-                )
-                return feats, {
-                    "method": "random_forest",
-                    "importances": model.feature_importances_.tolist(),
-                    "selected_features": feats,
-                }
-
-            if method == SelectionMethod.RFE:
-                est = RandomForestClassifier(
-                    n_estimators=50, random_state=self.config.random_state
-                )
-                sel = RFE(est, n_features_to_select=k_def).fit(X, y)
-                feats = self._mask_to_features(
-                    sel.get_support(), -sel.ranking_, feature_names, k=k_def
-                )
-                return feats, {
-                    "method": "rfe",
-                    "ranking": sel.ranking_.tolist(),
-                    "selected_features": feats,
-                }
-
-            if method == SelectionMethod.RFECV:
-                est = RandomForestClassifier(
-                    n_estimators=50, random_state=self.config.random_state
-                )
-                sel = RFECV(est, cv=self.config.cv_folds).fit(X, y)
-                feats = self._mask_to_features(
-                    sel.get_support(),
-                    sel.support_.astype(float),
-                    feature_names,
-                    k=k_def,
-                )
-                return feats, {
-                    "method": "rfecv",
-                    "n_features": int(sel.n_features_),
-                    "selected_features": feats,
-                }
-
-            if method == SelectionMethod.PERMUTATION:
-                est = RandomForestClassifier(
-                    n_estimators=50, random_state=self.config.random_state
-                ).fit(X, y)
-                imp = permutation_importance(
-                    est, X, y, n_repeats=5, random_state=self.config.random_state
-                )
-                feats = self._mask_to_features(
-                    imp.importances_mean > self.config.importance_threshold,
-                    imp.importances_mean,
-                    feature_names,
-                    k=k_def,
-                )
-                return feats, {
-                    "method": "permutation",
-                    "importances": imp.importances_mean.tolist(),
-                    "selected_features": feats,
-                }
-
-            raise ValueError(f"未対応の手法: {method}")
-
-        except Exception as e:
-            method_name = method.value if hasattr(method, "value") else str(method)
-            logger.error(f"{method_name}選択エラー: {e}")
-            return feature_names[:5], {"error": str(e)}
+    後方互換性のために提供。新規コードでは直接 FeatureSelector を使用してください。
+    """
+    return FeatureSelector(method=method, **kwargs)

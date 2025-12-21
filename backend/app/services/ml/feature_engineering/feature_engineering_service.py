@@ -31,152 +31,6 @@ from .volume_profile_features import VolumeProfileFeatureCalculator
 logger = logging.getLogger(__name__)
 
 
-# デフォルト特徴量リスト（最適化版: 27個 + 新規強力特徴量）
-# 2025-12-03 学術論文・Kaggle実証済み特徴量を追加
-DEFAULT_FEATURE_ALLOWLIST: Optional[List[str]] = [
-    # === 出来高・需給 (Volume/Flow) - 最重要 ===
-    "AD",  # Accumulation/Distribution
-    "OBV",  # On Balance Volume
-    "Volume_MA_20",
-    "ADOSC",  # Chaikin A/D Oscillator
-    # === モメンタム (Momentum) ===
-    "RSI",  # Relative Strength Index
-    "MACD_Histogram",  # MACD Histogram
-    # === トレンド (Trend) ===
-    "ADX",
-    "MA_Long",
-    "SMA_Cross_50_200",  # SMA Golden/Death Cross Distance
-    "Trend_strength_20",
-    "SMA_50_1h",  # 復活
-    # === ボラティリティ (Volatility) ===
-    "NATR",  # Normalized ATR
-    "Parkinson_Vol_20",  # AdvancedRollingStatsCalculator版を使用
-    "Garman_Klass_Vol_20",  # NEW: 学術的に最強のボラティリティ推定量
-    "Yang_Zhang_Vol_20",  # NEW: ドリフト独立・始値ギャップ対応（PDF推奨No.1）
-    "Close_range_20",
-    "Historical_Volatility_20",
-    "BB_Width",  # Added for squeeze detection
-    "Volume_CV",  # Added for volume volatility
-    # === 価格構造・その他 (Price Structure) ===
-    "price_vs_low_24h",
-    "VWAP_Deviation",  # VWAP Deviation
-    "Price_Skewness_20",
-    # === Volume Profile（学術論文で実証済み）===
-    "POC_Distance_50",  # Point of Control距離
-    "VAH_Distance_50",  # Value Area High距離
-    "VAL_Distance_50",  # Value Area Low距離
-    "In_Value_Area_50",  # Value Area内か
-    "In_Value_Area_100",  # 復活
-    "In_Value_Area_200",  # 復活
-    "HVN_Distance",  # High Volume Node距離
-    "VP_Skewness",  # Volume Profile歪度
-    # === Advanced Rolling Stats（Kaggle上位入賞で頻用）===
-    "Returns_Skewness_20",
-    "Returns_Kurtosis_20",
-    "Volume_Skewness_20",
-    "HL_Ratio_Mean_20",
-    "Return_Asymmetry_20",
-    "Extreme_Returns_Freq_10",  # 復活
-    "Extreme_Returns_Freq_5",  # 復活
-    # === OI/FR Interaction（DRW Kaggleで実証）===
-    "OI_Price_Regime",
-    "FR_Acceleration",
-    "Smart_Money_Flow",
-    "Market_Stress_V2",
-    "OI_Volume_Interaction",
-    # === Multi-Timeframe（複数時間足統合）===
-    "HTF_4h_Trend_Direction",
-    "HTF_4h_Trend_Strength",
-    "HTF_1d_Trend_Direction",
-    "Timeframe_Alignment_Score",
-    "Timeframe_Alignment_Direction",
-    "Price_Distance_From_4h_SMA50",
-    "HTF_4h_Divergence",  # 復活
-    "HTF_1d_Divergence",  # 復活
-    # === Microstructure (New) ===
-    "VPIN_Proxy",  # NEW: Order Flow Toxicity
-    "Roll_Measure",  # NEW: Effective Spread
-    "Kyles_Lambda",  # NEW: Market Impact
-    "Amihud_Illiquidity",
-    # === 市場データ (Market Data) - OI/FR最適化版 ===
-    "Price_OI_Divergence",  # 復活
-    "OI_Volume_Correlation",  # 評価6位
-    "OI_Momentum_Ratio",  # 評価5位
-    "OI_Liquidation_Risk",  # 評価24位
-    "FR_Extremity_Zscore",  # 評価9位
-    "FR_Cumulative_Trend",  # 評価22位
-    "FR_OI_Sentiment",  # 評価12位
-    "Liquidation_Risk",  # 評価19位
-    "FR_Volatility",  # 評価13位
-    "Volume_OI_Ratio",  # 評価4位 - 最重要OI特徴量
-    # === Group B (OI/FR Technicals) ===
-    "OI_MACD",
-    "OI_MACD_Hist",
-    "OI_BB_Position",
-    "OI_BB_Width",
-    "FR_MACD",
-    # === Group C (Market Structure) ===
-    "Efficiency_Ratio",
-    "Market_Impact",
-    # === Advanced Features (New Strategy) ===
-    "FracDiff_04",
-    "VWAP_Z_Score_20",
-    "RVOL_20",
-    "Absorption_Score_20",
-    "Liquidation_Cascade_Score",
-    "Squeeze_Probability",
-    "Trend_Quality_20",
-    "OI_Weighted_FR",
-    "Liquidity_Efficiency",
-    "Leverage_Ratio",
-]
-
-
-# ダマシ検知（Fakeout Detection / Meta-Labeling）用特徴量プリセット
-FAKEOUT_DETECTION_ALLOWLIST: Optional[List[str]] = [
-    # === Microstructure (New) - ダマシ検知の核心 ===
-    "VPIN_Proxy",  # 出来高不均衡
-    "Roll_Measure",  # 実効スプレッド
-    "Kyles_Lambda",  # マーケットインパクト
-    "Amihud_Illiquidity",  # 流動性枯渇度
-    "Volume_CV",  # 出来高変動係数
-    # === Volume Profile - 市場構造 ===
-    "POC_Distance_50",
-    "HVN_Distance",
-    "VP_Skewness",
-    # === Volume & OI - 最重要===
-    "Volume_OI_Ratio",
-    "OI_Momentum_Ratio",
-    "OI_Volume_Correlation",
-    "Volume_MA_20",
-    "AD",
-    "OBV",
-    "ADOSC",
-    # === OI/FR Interaction ===
-    "OI_Price_Regime",
-    "Smart_Money_Flow",
-    "OI_Volume_Interaction",
-    # === Volatility ===
-    "Parkinson_Vol_20",
-    "NATR",
-    "Historical_Volatility_20",
-    "Close_range_20",
-    "Price_Skewness_20",
-    # === Price Action Squeeze ===
-    "BB_Width",
-    "OI_BB_Width",
-    "VWAP_Deviation",
-    # === Funding Rate & Sentiment ===
-    "FR_Extremity_Zscore",
-    "FR_OI_Sentiment",
-    "Liquidation_Risk",
-    # === Trend Strength ===
-    "ADX",
-    "Trend_strength_20",
-    "SMA_Cross_50_200",
-]
-
-
 class FeatureEngineeringService:
     """
     高度な特徴量生成を統括するオーケストレーター
@@ -377,6 +231,10 @@ class FeatureEngineeringService:
 
             # 重複カラムを削除（新しい値を優先）
             result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
+
+            # 特徴量選択（動的選択）への橋渡し：ここではフィルタリングせず、すべてを返す
+            # ALLOWLISTによる手動制限は廃止し、後続のFeatureSelectorに委ねる
+            logger.info(f"生成された全特徴量を使用します: {len(result_df.columns)}個")
 
             # データ前処理
             logger.info("統計的手法による特徴量前処理を実行中...")

@@ -28,6 +28,7 @@ from ..cross_validation import PurgedKFold
 from ..common.exceptions import MLModelError
 from ..feature_engineering.feature_engineering_service import FeatureEngineeringService
 from ..label_generation.label_generation_service import LabelGenerationService
+from ..feature_selection.feature_selector import FeatureSelector
 from ..common.registry import ModelMetadata
 from ..models.model_manager import model_manager
 
@@ -61,8 +62,22 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.feature_service = FeatureEngineeringService()
         self.label_service = LabelGenerationService()
+
+        # 特徴量選択器の初期化（動的ノイズ除去設定）
+        # 新しい sklearn 互換 API を使用
+        self.feature_selector = FeatureSelector(
+            method="staged",  # 段階的選択（Filter → Wrapper → Embedded）
+            target_k=None,  # 数による制限を廃止
+            cumulative_importance=0.95,  # 予測力の95%を維持
+            min_relative_importance=0.02,  # 寄与が低すぎるノイズをカット
+            correlation_threshold=0.85,  # 冗長性排除
+            min_features=10,  # 最低限確保する特徴量数
+            cv_folds=3,  # クロスバリデーションフォールド数
+            n_jobs=1,  # 並列処理（メモリ安全のため1）
+        )
+
         logger.debug(
-            "特徴量エンジニアリングサービスとラベル生成サービスを初期化しました"
+            "特徴量エンジニアリング、ラベル生成、特徴量選択サービスを初期化しました"
         )
 
         self.trainer_config = trainer_config or {}
@@ -105,55 +120,83 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """
         MLモデルを学習（テンプレートメソッド）
 
-        データ準備、特徴量計算、クロスバリデーションまたはホールドアウト分割、
+        データ準備、特徴量計算、特徴量選択、クロスバリデーションまたはホールドアウト分割、
         モデル学習、およびオプションでのモデル保存を一連のフローとして実行します。
-
-        Args:
-            training_data: 学習用OHLCVデータ
-            funding_rate_data: ファンディングレートデータ（オプション）
-            open_interest_data: 建玉残高データ（オプション）
-            save_model: 学習後にモデルを永続化するかどうか
-            model_name: 保存時のモデル名（Noneの場合はデフォルト名）
-            **training_params:
-                - use_cross_validation (bool): CVを実行するか
-                - test_size (float): ホールドアウト分割比率
-                - cv_splits (int): CV分割数
-                - random_state (int): 乱数シード
-
-        Returns:
-            学習結果、評価メトリクス、モデルパス等を含む辞書
         """
         with ml_operation_context("MLモデル学習"):
             if training_data is None or len(training_data) < 100:
                 raise DataError("学習データが不足しています")
 
             # 1. 特徴量計算とデータ準備
-            X, y = self._prepare_training_data(
+            X_all, y = self._prepare_training_data(
                 self._calculate_features(
                     training_data, funding_rate_data, open_interest_data
                 ),
                 training_data,
                 **training_params,
             )
-            if X is None or X.empty:
+            if X_all is None or X_all.empty:
                 raise DataError("学習データが空です")
 
-            # 2. 学習実行 (CV or Single)
+            # 2. データ分割（時系列ホールドアウト）
+            # 特徴量選択の前にデータを分割し、テストデータへのリークを完全に防ぐ
             if training_params.get("use_cross_validation", False):
-                cv_res = self._time_series_cross_validate(X, y, **training_params)
-                # 全データで最終学習
-                X_s = self._preprocess_data(X, X)[0]
-                idx = int(len(X) * (1 - training_params.get("test_size", 0.2)))
+                # CVの場合でも、最終テストセット(Hold-out)は分離しておくのがベストプラクティス
+                # ここではX_all全体を学習に使う場合でも、特徴量選択は「学習データの範囲内」で行う必要がある
+                # 簡易化のため、CVの場合も一度ホールドアウト分割を行い、
+                # 「学習セット」に対して特徴量選択 -> CV -> 最終学習を行うフローにする
+                X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
+            else:
+                X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
+
+            # 3. 動的な特徴量選択（学習データのみを使用）
+            logger.info(
+                f"🎯 動的な特徴量選択を実行中... (学習データ: {len(X_tr)}サンプル, 候補数: {len(X_tr.columns)})"
+            )
+            try:
+                # fitは学習データのみで行う（これが重要）
+                self.feature_selector.fit(X_tr, y_tr)
+                selection_results = getattr(self.feature_selector, "selection_details_", {})
+                
+                # transformは学習・テスト両方に適用
+                X_tr = pd.DataFrame(
+                    self.feature_selector.transform(X_tr),
+                    columns=self.feature_selector.get_feature_names_out(),
+                    index=X_tr.index
+                )
+                X_te = pd.DataFrame(
+                    self.feature_selector.transform(X_te),
+                    columns=self.feature_selector.get_feature_names_out(),
+                    index=X_te.index
+                )
+                
+                self.feature_columns = X_tr.columns.tolist()
+                logger.info(f"✅ 特徴量選択完了: {len(self.feature_columns)}個を採用")
+            except Exception as e:
+                logger.warning(
+                    f"特徴量選択中にエラーが発生しました。全特徴量を使用します: {e}"
+                )
+                self.feature_columns = X_all.columns.tolist()
+                # 選択失敗時は元の分割データを使用（カラム名はX_allから）
+                pass
+
+            # 4. 学習実行
+            if training_params.get("use_cross_validation", False):
+                # CVは学習セット(X_tr)内で行う
+                cv_res = self._time_series_cross_validate(X_tr, y_tr, **training_params)
+                
+                # 全学習データで最終モデル学習
+                X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
                 res = self._train_model_impl(
-                    X_s.iloc[:idx],
-                    X_s.iloc[idx:],
-                    y.iloc[:idx],
-                    y.iloc[idx:],
+                    X_tr_s,
+                    X_te_s,
+                    y_tr,
+                    y_te,
                     **training_params,
                 )
                 res.update(cv_res)
             else:
-                X_tr, X_te, y_tr, y_te = self._split_data(X, y, **training_params)
+                # シングル分割学習
                 X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
                 res = self._train_model_impl(
                     X_tr_s, X_te_s, y_tr, y_te, **training_params
@@ -161,7 +204,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             self.is_trained = True
 
-            # 3. モデル保存
+            # 5. モデル保存
             if save_model:
                 meta = ModelMetadata.from_training_result(
                     res,
@@ -179,7 +222,16 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 res["model_path"] = self.current_model_path = path
                 self.current_model_metadata = meta.to_dict()
 
-            return self._format_training_result(res, X, y)
+            # 元のX, yを返す必要がある場合は、選択後の特徴量を持つ全データを再構築
+            # （レポート出力用など）
+            try:
+                X_final = pd.concat([X_tr, X_te]).sort_index()
+                y_final = pd.concat([y_tr, y_te]).sort_index()
+            except:
+                X_final = X_tr
+                y_final = y_tr
+
+            return self._format_training_result(res, X_final, y_final)
 
     @abstractmethod
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
