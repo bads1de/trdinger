@@ -21,7 +21,7 @@ pandas-ta の volatility カテゴリに対応。
 """
 
 import logging
-from typing import Final, Tuple
+from typing import Tuple
 
 import numpy as np
 import pandas as pd

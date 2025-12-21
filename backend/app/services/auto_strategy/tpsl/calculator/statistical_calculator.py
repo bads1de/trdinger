@@ -8,7 +8,6 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
-from ...genes.tpsl import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 
 logger = logging.getLogger(__name__)
@@ -23,15 +22,21 @@ class StatisticalCalculator(BaseTPSLCalculator):
         super().__init__("statistical")
 
     def _do_calculate(
-        self, current_price: float, tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+        self,
+        current_price: float,
+        tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]],
+        position_direction: float,
+        **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
         # 1. パラメータ取得
         if tpsl_gene:
             lookback_period = tpsl_gene.lookback_period or 150
             confidence_threshold = tpsl_gene.confidence_threshold or 0.95
         else:
-            lookback_period = kwargs.get("lookback_period_days", kwargs.get("lookback_period", 150))
+            lookback_period = kwargs.get(
+                "lookback_period_days", kwargs.get("lookback_period", 150)
+            )
             confidence_threshold = kwargs.get("confidence_threshold", 0.95)
 
         # 2. 統計分析で最適なTP/SLを計算
@@ -39,10 +44,15 @@ class StatisticalCalculator(BaseTPSLCalculator):
             market_data, lookback_period, confidence_threshold, current_price
         )
 
-        return sl_pct, tp_pct, 0.7, {
-            "lookback_period": lookback_period,
-            "confidence_threshold": confidence_threshold
-        }
+        return (
+            sl_pct,
+            tp_pct,
+            0.7,
+            {
+                "lookback_period": lookback_period,
+                "confidence_threshold": confidence_threshold,
+            },
+        )
 
     def _calculate_statistical_levels(
         self,

@@ -71,7 +71,11 @@ class PositionSizingService:
         if not validation_result["valid"]:
             method_name = "unknown"
             if gene and hasattr(gene, "method"):
-                method_name = gene.method.value if hasattr(gene.method, "value") else str(gene.method)
+                method_name = (
+                    gene.method.value
+                    if hasattr(gene.method, "value")
+                    else str(gene.method)
+                )
             return self._create_error_result(validation_result["error"], method_name)
 
         # 2. 市場データの準備
@@ -80,18 +84,29 @@ class PositionSizingService:
         )
 
         # 3. 計算機の実行
-        method_val = gene.method.value if hasattr(gene.method, "value") else str(gene.method)
+        method_val = (
+            gene.method.value if hasattr(gene.method, "value") else str(gene.method)
+        )
         calculator = self._calculator_factory.create_calculator(method_val)
         result = calculator.calculate(
-            gene, account_balance, current_price,
-            market_data=enhanced_market_data, trade_history=trade_history
+            gene,
+            account_balance,
+            current_price,
+            market_data=enhanced_market_data,
+            trade_history=trade_history,
         )
 
         # 4. リスクと信頼度の計算
         risk_metrics = self._calculate_risk_metrics(
-            result["position_size"], account_balance, current_price, enhanced_market_data, gene
+            result["position_size"],
+            account_balance,
+            current_price,
+            enhanced_market_data,
+            gene,
         )
-        confidence_score = self._calculate_confidence_score(gene, enhanced_market_data, trade_history)
+        confidence_score = self._calculate_confidence_score(
+            gene, enhanced_market_data, trade_history
+        )
 
         # 5. 結果の構築
         calculation_time = (datetime.now() - start_time).total_seconds()
@@ -150,9 +165,7 @@ class PositionSizingService:
         """リスクメトリクスの計算"""
         # 基本メトリクス
         position_value = position_size * current_price
-        position_ratio = (
-            position_value / account_balance if account_balance > 0 else 0
-        )
+        position_ratio = position_value / account_balance if account_balance > 0 else 0
 
         # ボラティリティベースのリスク
         atr_pct = market_data.get("atr_pct", 0.02)
@@ -189,7 +202,8 @@ class PositionSizingService:
             "max_var_allowed": account_balance * getattr(gene, "max_var_ratio", 0.0),
             "expected_shortfall": expected_shortfall_ratio,
             "expected_shortfall_loss": position_value * expected_shortfall_ratio,
-            "max_expected_shortfall_allowed": account_balance * getattr(gene, "max_expected_shortfall_ratio", 0.0),
+            "max_expected_shortfall_allowed": account_balance
+            * getattr(gene, "max_expected_shortfall_ratio", 0.0),
             "return_sample_size": len(returns_sample),
         }
 
@@ -205,17 +219,22 @@ class PositionSizingService:
 
         # データ品質による調整
         atr_source = market_data.get("atr_source")
-        if atr_source == "real": score += 0.2
-        elif atr_source == "calculated": score += 0.1
+        if atr_source == "real":
+            score += 0.2
+        elif atr_source == "calculated":
+            score += 0.1
 
         # 取引履歴による調整
         if trade_history:
-            if len(trade_history) >= 50: score += 0.2
-            elif len(trade_history) >= 20: score += 0.1
+            if len(trade_history) >= 50:
+                score += 0.2
+            elif len(trade_history) >= 20:
+                score += 0.1
 
         # 遺伝子の妥当性
         is_valid, _ = gene.validate()
-        if is_valid: score += 0.1
+        if is_valid:
+            score += 0.1
 
         return min(1.0, max(0.0, score))
 
@@ -353,7 +372,9 @@ class PositionSizingService:
                 return 0.01  # デフォルトサイズ
 
             # 計算機の選択と実行（市場データなしで高速実行）
-            method_val = gene.method.value if hasattr(gene.method, "value") else str(gene.method)
+            method_val = (
+                gene.method.value if hasattr(gene.method, "value") else str(gene.method)
+            )
             calculator = self._calculator_factory.create_calculator(method_val)
             result = calculator.calculate(
                 gene,
@@ -368,8 +389,3 @@ class PositionSizingService:
         except Exception as e:
             self.logger.warning(f"高速ポジションサイズ計算エラー: {e}")
             return 0.01  # デフォルトサイズ
-
-
-
-
-

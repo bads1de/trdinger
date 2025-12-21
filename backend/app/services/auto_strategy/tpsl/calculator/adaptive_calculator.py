@@ -8,7 +8,6 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
-from ...genes.tpsl import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator
@@ -33,8 +32,12 @@ class AdaptiveCalculator(BaseTPSLCalculator):
         }
 
     def _do_calculate(
-        self, current_price: float, tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+        self,
+        current_price: float,
+        tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]],
+        position_direction: float,
+        **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
         # 1. 最適な計算方式を選択
         best_method = self._select_best_method(market_data, tpsl_gene)
@@ -49,10 +52,12 @@ class AdaptiveCalculator(BaseTPSLCalculator):
             **kwargs,
         )
 
-        return result.stop_loss_pct, result.take_profit_pct, result.confidence_score, {
-            **result.expected_performance,
-            "adaptive_selection": best_method
-        }
+        return (
+            result.stop_loss_pct,
+            result.take_profit_pct,
+            result.confidence_score,
+            {**result.expected_performance, "adaptive_selection": best_method},
+        )
 
     def _select_best_method(
         self,
@@ -99,8 +104,3 @@ class AdaptiveCalculator(BaseTPSLCalculator):
         except Exception as e:
             logger.error(f"最適方式選択エラー: {e}")
             return "fixed_percentage"
-
-
-
-
-

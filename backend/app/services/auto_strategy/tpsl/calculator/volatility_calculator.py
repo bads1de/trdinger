@@ -8,7 +8,6 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
-from ...genes.tpsl import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 
 logger = logging.getLogger(__name__)
@@ -23,8 +22,12 @@ class VolatilityCalculator(BaseTPSLCalculator):
         super().__init__("volatility_based")
 
     def _do_calculate(
-        self, current_price: float, tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+        self,
+        current_price: float,
+        tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]],
+        position_direction: float,
+        **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
         # 1. パラメータ取得
         if tpsl_gene:
@@ -44,13 +47,18 @@ class VolatilityCalculator(BaseTPSLCalculator):
         sl_pct = base_atr_pct * atr_multiplier_sl
         tp_pct = base_atr_pct * atr_multiplier_tp
 
-        return sl_pct, tp_pct, 0.9, {
-            "atr_period": atr_period,
-            "atr_multiplier_sl": atr_multiplier_sl,
-            "atr_multiplier_tp": atr_multiplier_tp,
-            "atr_value": atr_value,
-            "base_atr_pct": base_atr_pct,
-        }
+        return (
+            sl_pct,
+            tp_pct,
+            0.9,
+            {
+                "atr_period": atr_period,
+                "atr_multiplier_sl": atr_multiplier_sl,
+                "atr_multiplier_tp": atr_multiplier_tp,
+                "atr_value": atr_value,
+                "base_atr_pct": base_atr_pct,
+            },
+        )
 
     def _get_atr_value(
         self,
@@ -100,8 +108,3 @@ class VolatilityCalculator(BaseTPSLCalculator):
         except Exception as e:
             logger.error(f"ATR計算エラー: {e}")
             return None
-
-
-
-
-

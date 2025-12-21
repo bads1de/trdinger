@@ -9,7 +9,7 @@ from ..config.constants import (
     IndicatorType,
 )
 from ..genes import Condition, ConditionGroup, IndicatorGene
-from ..utils.indicator_utils import get_all_indicators, IndicatorCharacteristics
+from ..utils.indicator_utils import IndicatorCharacteristics
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
 

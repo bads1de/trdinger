@@ -179,9 +179,28 @@ class IndicatorCalculator:
                     f"MTFデータ取得: {indicator_timeframe}, rows={len(mtf_df)}"
                 )
                 # DataFrameを使用して指標計算
-                result = self._calculate_indicator_from_df(
+                raw_result = self._calculate_indicator_from_df(
                     mtf_df, indicator_gene.type, indicator_gene.parameters
                 )
+
+                # ベースデータのインデックスに合わせてリインデックス（ffill）
+                # これにより、上位足の値を下位足に展開し、配列長を合わせる
+                if raw_result is not None:
+                    base_index = strategy_instance.data.df.index
+                    
+                    def _align_to_base(series: pd.Series) -> pd.Series:
+                        # タイムゾーン情報を合わせる（必要な場合）
+                        if series.index.tz != base_index.tz:
+                            series.index = series.index.tz_convert(base_index.tz)
+                        
+                        return series.reindex(base_index, method="ffill")
+
+                    if isinstance(raw_result, tuple):
+                        result = tuple(_align_to_base(s) for s in raw_result)
+                    else:
+                        result = _align_to_base(raw_result)
+                else:
+                    result = None
             else:
                 # デフォルト: strategy_instance.data を使用
                 result = self.calculate_indicator(

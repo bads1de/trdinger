@@ -7,9 +7,8 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, List, Optional, Tuple, Union, cast
 
-import numpy as np
 
 import pandas as pd
 from backtesting import Strategy
@@ -72,7 +71,7 @@ class UniversalStrategy(Strategy):
 
         # 注文管理マネージャーの初期化
         self.order_manager = OrderManager(self, self.lower_tf_simulator)
-        
+
         self._minute_data = None  # 1分足DataFrame（パラメータから取得）
 
         # 悲観的約定ロジック用: SL/TP管理変数
@@ -145,11 +144,11 @@ class UniversalStrategy(Strategy):
     def _get_effective_sub_gene(self, direction: float, gene_type: str) -> Any:
         """
         方向とタイプに応じた有効なサブ遺伝子を取得（統合版）
-        
+
         Args:
             direction: 1.0 (Long) or -1.0 (Short)
             gene_type: 'tpsl' or 'entry'
-            
+
         Returns:
             有効なサブ遺伝子またはNone
         """
@@ -183,12 +182,16 @@ class UniversalStrategy(Strategy):
 
     def _check_entry_conditions(self, direction: float) -> bool:
         """指定された方向のエントリー条件をチェック"""
-        field_name = "long_entry_conditions" if direction > 0 else "short_entry_conditions"
-        conditions = cast(List[Union[Condition, ConditionGroup]], getattr(self.gene, field_name, []))
-        
+        field_name = (
+            "long_entry_conditions" if direction > 0 else "short_entry_conditions"
+        )
+        conditions = cast(
+            List[Union[Condition, ConditionGroup]], getattr(self.gene, field_name, [])
+        )
+
         if not conditions:
             return False
-            
+
         return self.condition_evaluator.evaluate_conditions(conditions, self)
 
     def _calculate_position_size(self) -> float:
@@ -206,10 +209,12 @@ class UniversalStrategy(Strategy):
                 )
                 account_balance = getattr(self, "equity", 100000.0)
 
-                position_size = self.position_sizing_service.calculate_position_size_fast(
-                    gene=self.gene.position_sizing_gene,
-                    account_balance=account_balance,
-                    current_price=current_price,
+                position_size = (
+                    self.position_sizing_service.calculate_position_size_fast(
+                        gene=self.gene.position_sizing_gene,
+                        account_balance=account_balance,
+                        current_price=current_price,
+                    )
                 )
                 return max(0.001, min(0.2, float(position_size)))
             return 0.01
@@ -243,7 +248,9 @@ class UniversalStrategy(Strategy):
             # エラーを再発生させて上位で適切に処理
             raise
 
-    def _calculate_effective_tpsl_prices(self, direction: float, current_price: float) -> Tuple[Optional[float], Optional[float]]:
+    def _calculate_effective_tpsl_prices(
+        self, direction: float, current_price: float
+    ) -> Tuple[Optional[float], Optional[float]]:
         """有効なTP/SL価格を計算"""
         active_tpsl_gene = self._get_effective_tpsl_gene(direction)
         if not active_tpsl_gene:
@@ -252,7 +259,11 @@ class UniversalStrategy(Strategy):
         market_data = {}
         tpsl_method = active_tpsl_gene.method
 
-        if tpsl_method in (TPSLMethod.VOLATILITY_BASED, TPSLMethod.ADAPTIVE, TPSLMethod.STATISTICAL):
+        if tpsl_method in (
+            TPSLMethod.VOLATILITY_BASED,
+            TPSLMethod.ADAPTIVE,
+            TPSLMethod.STATISTICAL,
+        ):
             atr_period = getattr(active_tpsl_gene, "atr_period", 14)
             required_slice_size = atr_period + 1
 
@@ -278,7 +289,9 @@ class UniversalStrategy(Strategy):
             self._current_bar_index += 1
 
             # 1. 保留注文とステートフルトリガーの処理
-            self.order_manager.check_pending_order_fills(self._minute_data, self.data.index[-1], self._current_bar_index)
+            self.order_manager.check_pending_order_fills(
+                self._minute_data, self.data.index[-1], self._current_bar_index
+            )
             self.order_manager.expire_pending_orders(self._current_bar_index)
             self._process_stateful_triggers()
 
@@ -294,11 +307,14 @@ class UniversalStrategy(Strategy):
 
                 # 方向の決定（優先順位: 通常ロング > 通常ショート > ステートフル）
                 direction = 0.0
-                if self._check_entry_conditions(1.0): direction = 1.0
-                elif self._check_entry_conditions(-1.0): direction = -1.0
+                if self._check_entry_conditions(1.0):
+                    direction = 1.0
+                elif self._check_entry_conditions(-1.0):
+                    direction = -1.0
                 else:
                     stateful_dir = self._get_stateful_entry_direction()
-                    if stateful_dir is not None: direction = stateful_dir
+                    if stateful_dir is not None:
+                        direction = stateful_dir
 
                 if direction == 0.0:
                     return
@@ -309,25 +325,43 @@ class UniversalStrategy(Strategy):
 
                 # 5. TP/SLおよびエントリーパラメータの計算
                 current_price = self.data.Close[-1]
-                sl_price, tp_price = self._calculate_effective_tpsl_prices(direction, current_price)
-                
+                sl_price, tp_price = self._calculate_effective_tpsl_prices(
+                    direction, current_price
+                )
+
                 entry_gene = self._get_effective_entry_gene(direction)
-                entry_params = self.entry_executor.calculate_entry_params(entry_gene, current_price, direction)
+                entry_params = self.entry_executor.calculate_entry_params(
+                    entry_gene, current_price, direction
+                )
                 position_size = self._calculate_position_size()
 
                 # 6. 注文実行
-                is_market = entry_gene is None or not entry_gene.enabled or entry_gene.entry_type == EntryType.MARKET
+                is_market = (
+                    entry_gene is None
+                    or not entry_gene.enabled
+                    or entry_gene.entry_type == EntryType.MARKET
+                )
                 if is_market:
-                    if direction > 0: self.buy(size=position_size)
-                    else: self.sell(size=position_size)
-                    
-                    self._entry_price, self._sl_price, self._tp_price = current_price, sl_price, tp_price
+                    if direction > 0:
+                        self.buy(size=position_size)
+                    else:
+                        self.sell(size=position_size)
+
+                    self._entry_price, self._sl_price, self._tp_price = (
+                        current_price,
+                        sl_price,
+                        tp_price,
+                    )
                     self._position_direction = direction
                 else:
                     self.order_manager.create_pending_order(
-                        direction=direction, size=position_size, entry_params=entry_params,
-                        sl_price=sl_price, tp_price=tp_price, entry_gene=entry_gene,
-                        current_bar_index=self._current_bar_index
+                        direction=direction,
+                        size=position_size,
+                        entry_params=entry_params,
+                        sl_price=sl_price,
+                        tp_price=tp_price,
+                        entry_gene=entry_gene,
+                        current_bar_index=self._current_bar_index,
                     )
 
         except Exception as e:
@@ -710,20 +744,20 @@ class UniversalStrategy(Strategy):
             lookback = 30  # 特徴量計算に必要な最低限のルックバック
             data_len = len(self.data)
             actual_lookback = min(lookback, data_len)
-            
+
             # 効率のため必要な分だけスライス
             subset = self.data.df.iloc[-actual_lookback:].copy()
-            
+
             # 既存のカラム名を小文字に統一（アダプタの期待に合わせる）
             subset.columns = [c.lower() for c in subset.columns]
-            
+
             # アダプタを使用して特徴量変換
             features_df = self.feature_adapter.gene_to_features(
                 gene=self.gene,
                 ohlcv_data=subset,
-                apply_preprocessing=False # 推論時は基本的なクリーニングのみ
+                apply_preprocessing=False,  # 推論時は基本的なクリーニングのみ
             )
-            
+
             # 直近の1行のみを返す
             return features_df.iloc[[-1]]
 

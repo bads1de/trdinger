@@ -6,7 +6,7 @@ TP/SL計算器の基底クラスを定義します。
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
 from ...genes.tpsl import TPSLResult
@@ -42,13 +42,13 @@ class BaseTPSLCalculator(ABC):
             sl_pct, tp_pct, confidence, metrics = self._do_calculate(
                 current_price, tpsl_gene, market_data, position_direction, **kwargs
             )
-            
+
             return self._create_result(
                 stop_loss_pct=sl_pct,
                 take_profit_pct=tp_pct,
                 confidence_score=confidence,
                 expected_performance=metrics,
-                metadata={"method": self.method_name}
+                metadata={"method": self.method_name},
             )
         except Exception as e:
             logger.error(f"{self.method_name} 計算エラー: {e}")
@@ -56,8 +56,12 @@ class BaseTPSLCalculator(ABC):
 
     @abstractmethod
     def _do_calculate(
-        self, current_price: float, tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+        self,
+        current_price: float,
+        tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]],
+        position_direction: float,
+        **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
         """固有の計算ロジック（(sl_pct, tp_pct, confidence, metrics) を返す）"""
 
@@ -67,7 +71,7 @@ class BaseTPSLCalculator(ABC):
             stop_loss_pct=0.03,
             take_profit_pct=0.06,
             confidence_score=0.5,
-            expected_performance={"fallback": True}
+            expected_performance={"fallback": True},
         )
 
     def _make_prices(
@@ -85,7 +89,9 @@ class BaseTPSLCalculator(ABC):
             if stop_loss_pct == 0:
                 sl_price = current_price
             else:
-                sl_price = current_price * (1 + (position_direction * -1.0 * stop_loss_pct))
+                sl_price = current_price * (
+                    1 + (position_direction * -1.0 * stop_loss_pct)
+                )
 
         if take_profit_pct is not None:
             if take_profit_pct == 0:
@@ -112,8 +118,3 @@ class BaseTPSLCalculator(ABC):
             expected_performance=expected_performance or {},
             metadata=metadata or {},
         )
-
-
-
-
-

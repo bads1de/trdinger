@@ -8,7 +8,6 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
-from ...genes.tpsl import TPSLResult
 from .base_calculator import BaseTPSLCalculator
 
 logger = logging.getLogger(__name__)
@@ -23,8 +22,12 @@ class RiskRewardCalculator(BaseTPSLCalculator):
         super().__init__("risk_reward_ratio")
 
     def _do_calculate(
-        self, current_price: float, tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+        self,
+        current_price: float,
+        tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]],
+        position_direction: float,
+        **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
         # 1. パラメータ取得
         if tpsl_gene:
@@ -37,12 +40,9 @@ class RiskRewardCalculator(BaseTPSLCalculator):
         # 2. RR比に基づいてTPを計算
         tp_pct = sl_pct * rr_ratio
 
-        return sl_pct, tp_pct, 0.85, {
-            "risk_reward_ratio": rr_ratio,
-            "base_stop_loss": sl_pct
-        }
-
-
-
-
-
+        return (
+            sl_pct,
+            tp_pct,
+            0.85,
+            {"risk_reward_ratio": rr_ratio, "base_stop_loss": sl_pct},
+        )

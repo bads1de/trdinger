@@ -10,7 +10,6 @@ from typing import List, Optional
 
 import pandas as pd
 
-from ..config.constants import EntryType
 from ..genes.entry import EntryGene
 from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.pending_order import PendingOrder
@@ -151,7 +150,7 @@ class OrderManager:
             "_entry_price": fill_price,
             "_sl_price": order.sl_price,
             "_tp_price": order.tp_price,
-            "_position_direction": order.direction
+            "_position_direction": order.direction,
         }
         for attr, val in updates.items():
             if hasattr(self.strategy, attr):
@@ -161,7 +160,7 @@ class OrderManager:
         """現在のタイムフレームのバー期間を取得"""
         # UniversalStrategyからbase_timeframeを取得
         timeframe = getattr(self.strategy, "base_timeframe", "1h")
-        
+
         timeframe_map = {
             "1m": pd.Timedelta(minutes=1),
             "5m": pd.Timedelta(minutes=5),
