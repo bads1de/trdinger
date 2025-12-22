@@ -36,7 +36,6 @@ class ModelManager:
         """
         # 既存設定の初期化
         self.config = unified_config.ml.model
-        self._ensure_directories()
 
     def _ensure_directories(self):
         """必要なディレクトリを作成"""
@@ -127,6 +126,9 @@ class ModelManager:
         try:
             if model is None:
                 raise MLModelError("保存するモデルがNullです")
+
+            # 保存ディレクトリの作成を確認
+            self._ensure_directories()
 
             # アルゴリズム名を取得
             algorithm_name = self._extract_algorithm_name(model, metadata)

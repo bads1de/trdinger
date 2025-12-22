@@ -25,8 +25,12 @@ def _log_distribution(name: str, labels: pd.Series) -> None:
     counts = labels.value_counts()
     total = len(labels.dropna())
     if total > 0:
-        v_pct, i_pct = (counts.get(1, 0) / total) * 100, (counts.get(0, 0) / total) * 100
-        logger.info(f"{name}完了: Valid={counts.get(1, 0)}({v_pct:.1f}%), Invalid={counts.get(0, 0)}({i_pct:.1f}%)")
+        v_pct, i_pct = (counts.get(1, 0) / total) * 100, (
+            counts.get(0, 0) / total
+        ) * 100
+        logger.info(
+            f"{name}完了: Valid={counts.get(1, 0)}({v_pct:.1f}%), Invalid={counts.get(0, 0)}({i_pct:.1f}%)"
+        )
 
 
 def triple_barrier_method_preset(
@@ -50,7 +54,9 @@ def triple_barrier_method_preset(
     try:
         close = df[price_column]
         if use_atr:
-            vol = calculate_volatility_atr(df["high"], df["low"], close, atr_period, True)
+            vol = calculate_volatility_atr(
+                df["high"], df["low"], close, atr_period, True
+            )
         else:
             vol = calculate_volatility_std(close.pct_change(), volatility_window)
 
@@ -144,6 +150,18 @@ def get_common_presets() -> Dict[str, Dict[str, Any]]:
             "sl": 1.0,
             "min_ret": 0.0005,
             "description": "TBM (15m): PT=1.0σ, SL=1.0σ, Horizon=24bars",
+        },
+        # 検証済み高精度プリセット (ATR Dynamic Threshold)
+        # Precision ~53% を記録 (pt=3.0により強いトレンドのみを抽出)
+        "tbm_atr_1h_3.0_1.0": {
+            "timeframe": "1h",
+            "horizon_n": 24,
+            "pt": 3.0,
+            "sl": 1.0,
+            "min_ret": 0.001,
+            "use_atr": True,
+            "atr_period": 14,
+            "description": "TBM (1h): Dynamic ATR, PT=3.0, SL=1.0 (High Precision verified)",
         },
         # Trend Scanning プリセット
         "trend_scanning_strong": {

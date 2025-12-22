@@ -21,12 +21,22 @@ class MetaLabelingService:
         model_type: str = "lightgbm",
         base_model_names: Optional[List[str]] = None,
         model_params: Optional[Dict[str, Any]] = None,
+        use_feature_selection: bool = True,
+        feature_selection_params: Optional[Dict[str, Any]] = None,
     ):
         self.model_type = model_type
         self.model = None
         self.is_trained = False
         self.base_model_names = base_model_names
         self.model_params = model_params or {}
+        self.use_feature_selection = use_feature_selection
+        self.feature_selection_params = feature_selection_params or {
+            "method": "staged",
+            "min_features": 5,
+            "random_state": 42,
+        }
+        self.selector = None
+        self.selected_features = None
 
     def _add_base_model_statistics(
         self, X_meta: pd.DataFrame, base_probs_filtered: pd.DataFrame
@@ -39,24 +49,24 @@ class MetaLabelingService:
 
         # Pandasの統計メソッドがNumPy不具合で失敗するため、値を一度リスト化して計算
         probs_values = base_probs_filtered.values
-        
+
         # 行ごとの統計量を計算 (NumPyの不具合を避けるため、可能な限りPythonレベルで)
         means = []
         stds = []
         mins = []
         maxs = []
-        
+
         for i in range(len(probs_values)):
             row = probs_values[i].tolist()
             means.append(sum(row) / len(row) if row else 0.0)
             mins.append(min(row) if row else 0.0)
             maxs.append(max(row) if row else 0.0)
-            
+
             # 標準偏差
             if len(row) > 1:
                 m = sum(row) / len(row)
                 variance = sum((x - m) ** 2 for x in row) / len(row)
-                stds.append(variance ** 0.5)
+                stds.append(variance**0.5)
             else:
                 stds.append(0.0)
 
@@ -64,7 +74,7 @@ class MetaLabelingService:
         X_meta["base_prob_std"] = stds
         X_meta["base_prob_min"] = mins
         X_meta["base_prob_max"] = maxs
-        
+
         return X_meta
 
     def create_meta_labels(
@@ -103,21 +113,35 @@ class MetaLabelingService:
         """モデルを初期化"""
         if self.model_type == "random_forest":
             params = {
-                "n_estimators": 100, "max_depth": 5, "class_weight": "balanced",
-                "random_state": 42, "n_jobs": -1, **self.model_params
+                "n_estimators": 100,
+                "max_depth": 5,
+                "class_weight": "balanced",
+                "random_state": 42,
+                "n_jobs": -1,
+                **self.model_params,
             }
             return RandomForestClassifier(**params)
         if self.model_type == "lightgbm":
             params = {
-                "n_estimators": 100, "learning_rate": 0.05, "num_leaves": 31,
-                "random_state": 42, "n_jobs": -1, "class_weight": "balanced",
-                "reg_lambda": 1.0, "verbose": -1, **self.model_params
+                "n_estimators": 100,
+                "learning_rate": 0.05,
+                "num_leaves": 31,
+                "random_state": 42,
+                "n_jobs": -1,
+                "class_weight": "balanced",
+                "reg_lambda": 1.0,
+                "verbose": -1,
+                **self.model_params,
             }
             return lgb.LGBMClassifier(**params)
         raise ValueError(f"未サポートのモデルタイプ: {self.model_type}")
 
     def _prepare_meta_features(
-        self, X: pd.DataFrame, primary_proba: pd.Series, base_probs: pd.DataFrame, mask: pd.Series
+        self,
+        X: pd.DataFrame,
+        primary_proba: pd.Series,
+        base_probs: pd.DataFrame,
+        mask: pd.Series,
     ) -> pd.DataFrame:
         """メタ特徴量を準備"""
         X_meta = X.loc[mask].copy()
@@ -132,19 +156,44 @@ class MetaLabelingService:
         primary_proba_train: pd.Series,
         base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
+        X_meta_specific: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """メタモデルを学習"""
         self.base_model_names = base_model_probs_df.columns.tolist()
 
-        trend_mask, y_meta = self.create_meta_labels(primary_proba_train, y_train, threshold)
+        trend_mask, y_meta = self.create_meta_labels(
+            primary_proba_train, y_train, threshold
+        )
         if len(y_meta) < 50:
             return {"status": "skipped", "reason": "insufficient_data"}
 
-        X_meta = self._prepare_meta_features(X_train, primary_proba_train, base_model_probs_df, trend_mask)
+        X_meta = self._prepare_meta_features(
+            X_train, primary_proba_train, base_model_probs_df, trend_mask
+        )
+
+        # メタモデル専用特徴量があれば追加
+        if X_meta_specific is not None:
+            X_meta = pd.concat([X_meta, X_meta_specific.loc[trend_mask]], axis=1)
+
+        # 自動特徴量選択
+        if self.use_feature_selection:
+            from ..feature_selection.feature_selector import FeatureSelector
+
+            self.selector = FeatureSelector(**self.feature_selection_params)
+            X_meta = self.selector.fit_transform(X_meta, y_meta)
+            self.selected_features = X_meta.columns.tolist()
+            logger.info(
+                f"Meta-labeling feature selection: {len(self.selector.feature_names_in_)} -> {len(self.selected_features)} features selected."
+            )
+
         self.model = self._init_model()
         self.model.fit(X_meta, y_meta)
         self.is_trained = True
-        return {"status": "success", "samples": len(X_meta)}
+        return {
+            "status": "success",
+            "samples": len(X_meta),
+            "features": self.selected_features,
+        }
 
     def predict(
         self,
@@ -152,6 +201,7 @@ class MetaLabelingService:
         primary_proba: pd.Series,
         base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
+        X_meta_specific: Optional[pd.DataFrame] = None,
     ) -> pd.Series:
         """予測を実行"""
         if not self.is_trained:
@@ -162,7 +212,18 @@ class MetaLabelingService:
         if not trend_mask.any():
             return final_pred
 
-        X_meta = self._prepare_meta_features(X, primary_proba, base_model_probs_df, trend_mask)
+        X_meta = self._prepare_meta_features(
+            X, primary_proba, base_model_probs_df, trend_mask
+        )
+
+        # メタモデル専用特徴量があれば追加
+        if X_meta_specific is not None:
+            X_meta = pd.concat([X_meta, X_meta_specific.loc[trend_mask]], axis=1)
+
+        # 特徴量選択の適用
+        if self.selector:
+            X_meta = self.selector.transform(X_meta)
+
         final_pred.loc[trend_mask] = self.model.predict(X_meta)
         return final_pred
 
@@ -176,6 +237,7 @@ class MetaLabelingService:
         n_splits: int = 5,
         t1: Optional[pd.Series] = None,
         pct_embargo: float = 0.01,
+        X_meta_specific: Optional[pd.DataFrame] = None,
     ) -> pd.Series:
         """Cross-Validationを実行"""
         from sklearn.model_selection import KFold
@@ -187,16 +249,45 @@ class MetaLabelingService:
             return oof_preds
 
         target_idx = X.index[trend_mask]
-        X_meta_target = self._prepare_meta_features(X, primary_proba, base_model_probs_df, trend_mask)
+        X_meta_all = self._prepare_meta_features(
+            X, primary_proba, base_model_probs_df, trend_mask
+        )
+
+        if X_meta_specific is not None:
+            X_meta_all = pd.concat(
+                [X_meta_all, X_meta_specific.loc[trend_mask]], axis=1
+            )
+
         y_target = y.loc[target_idx]
 
-        cv = PurgedKFold(n_splits=n_splits, t1=t1.loc[target_idx], pct_embargo=pct_embargo) if t1 is not None else KFold(n_splits=n_splits, shuffle=False)
+        cv = (
+            PurgedKFold(
+                n_splits=n_splits, t1=t1.loc[target_idx], pct_embargo=pct_embargo
+            )
+            if t1 is not None
+            else KFold(n_splits=n_splits, shuffle=False)
+        )
 
-        for tr_idx, val_idx in cv.split(X_meta_target, y_target):
-            tr_indices, val_indices = X_meta_target.index[tr_idx], X_meta_target.index[val_idx]
+        for tr_idx, val_idx in cv.split(X_meta_all, y_target):
+            tr_indices, val_indices = (
+                X_meta_all.index[tr_idx],
+                X_meta_all.index[val_idx],
+            )
+
+            X_tr, y_tr = X_meta_all.loc[tr_indices], y_target.loc[tr_indices]
+            X_val = X_meta_all.loc[val_indices]
+
+            # 各フォールド内での特徴量選択（リーク防止のため推奨されるが計算コスト高。ここではフラグに従う）
+            if self.use_feature_selection:
+                from ..feature_selection.feature_selector import FeatureSelector
+
+                fold_selector = FeatureSelector(**self.feature_selection_params)
+                X_tr = fold_selector.fit_transform(X_tr, y_tr)
+                X_val = fold_selector.transform(X_val)
+
             model = self._init_model()
-            model.fit(X_meta_target.loc[tr_indices], y_target.loc[tr_indices])
-            oof_preds.loc[val_indices] = model.predict(X_meta_target.loc[val_indices])
+            model.fit(X_tr, y_tr)
+            oof_preds.loc[val_indices] = model.predict(X_val)
 
         return oof_preds
 
@@ -212,7 +303,9 @@ class MetaLabelingService:
         from ..common.evaluation import evaluate_model_predictions
 
         # メタ予測と一次予測（バイナリ）
-        final_pred = self.predict(X_test, primary_proba_test, base_model_probs_df, threshold)
+        final_pred = self.predict(
+            X_test, primary_proba_test, base_model_probs_df, threshold
+        )
         primary_pred = (primary_proba_test >= threshold).astype(int)
 
         # メトリクス計算
@@ -220,10 +313,14 @@ class MetaLabelingService:
         p_met = evaluate_model_predictions(y_test, primary_pred.values)
 
         return {
-            "meta_accuracy": m_met["accuracy"], "meta_precision": m_met["precision"],
-            "meta_recall": m_met["recall"], "meta_f1": m_met["f1_score"],
-            "primary_accuracy": p_met["accuracy"], "primary_precision": p_met["precision"],
-            "primary_recall": p_met["recall"], "primary_f1": p_met["f1_score"],
+            "meta_accuracy": m_met["accuracy"],
+            "meta_precision": m_met["precision"],
+            "meta_recall": m_met["recall"],
+            "meta_f1": m_met["f1_score"],
+            "primary_accuracy": p_met["accuracy"],
+            "primary_precision": p_met["precision"],
+            "primary_recall": p_met["recall"],
+            "primary_f1": p_met["f1_score"],
             "improvement_precision": m_met["precision"] - p_met["precision"],
             "improvement_recall": m_met["recall"] - p_met["recall"],
             "improvement_f1": m_met["f1_score"] - p_met["f1_score"],

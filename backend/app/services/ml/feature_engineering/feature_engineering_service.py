@@ -27,6 +27,7 @@ from .multi_timeframe_features import MultiTimeframeFeatureCalculator
 from .oi_fr_interaction_features import OIFRInteractionFeatureCalculator
 from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
+from .time_anomaly_features import TimeAnomalyFeatures
 from .volume_profile_features import VolumeProfileFeatureCalculator
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,7 @@ class FeatureEngineeringService:
         self.oi_fr_interaction_calculator = OIFRInteractionFeatureCalculator()
         self.advanced_stats_calculator = AdvancedRollingStatsCalculator()
         self.multi_timeframe_calculator = MultiTimeframeFeatureCalculator()
+        self.time_anomaly_calculator = TimeAnomalyFeatures()
 
         # データ頻度統一マネージャー
         self.frequency_manager = DataFrequencyManager()
@@ -211,6 +213,7 @@ class FeatureEngineeringService:
             # (電卓, 引数リスト) の形式で定義
             additional_calculators = [
                 (self.volume_profile_calculator, [result_df]),
+                (self.time_anomaly_calculator, [result_df]),
                 (
                     self.oi_fr_interaction_calculator,
                     [result_df, open_interest_data, funding_rate_data],
