@@ -1,0 +1,66 @@
+{
+    "timestamp": "2025-12-23T02:46:38.784845",
+    "symbol": "BTC/USDT:USDT",
+    "timeframe": "1h",
+    "limit": 10000,
+    "total_valid_signals": 543,
+    "results": {
+        "all_features": {
+            "count": 160,
+            "balanced_accuracy": 0.48954500567658465,
+            "cv_scores": [
+                0.455026455026455,
+                0.4706477732793522,
+                0.48836032388663964,
+                0.41369047619047616,
+                0.62
+            ]
+        },
+        "elite_features": {
+            "count": 33,
+            "balanced_accuracy": 0.48916395690079895,
+            "cv_scores": [
+                0.43121693121693117,
+                0.5045546558704453,
+                0.5581983805668016,
+                0.4226190476190476,
+                0.5292307692307692
+            ],
+            "features_list": [
+                "Trend_strength_20",
+                "NATR",
+                "BB_Width",
+                "VWAP_Z_Score_20",
+                "RSI",
+                "ADX",
+                "POC_Distance_50",
+                "VAH_Distance_50",
+                "VAL_Distance_50",
+                "POC_Distance_100",
+                "VAH_Distance_100",
+                "VAL_Distance_100",
+                "POC_Distance_200",
+                "VAH_Distance_200",
+                "VAL_Distance_200",
+                "HVN_Distance",
+                "LVN_Distance",
+                "HTF_4h_RSI",
+                "Price_Distance_From_4h_SMA50",
+                "Price_Distance_From_1d_SMA50",
+                "Returns_Kurtosis_50",
+                "FR_Extremity_Zscore",
+                "LS_Sentiment_Elasticity",
+                "LS_Price_Incongruence",
+                "LS_FR_Stress_Index",
+                "FracDiff_Price_d0.3",
+                "FracDiff_Price_d0.4",
+                "FracDiff_Price_d0.5",
+                "FracDiff_Price_d0.6",
+                "Intraday_Volatility_Zscore",
+                "Intraday_Volume_Buy_Ratio",
+                "Intraday_Absorption",
+                "Intraday_Volume_Concentration"
+            ]
+        }
+    }
+}

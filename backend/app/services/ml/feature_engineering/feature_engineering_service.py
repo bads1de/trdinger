@@ -73,6 +73,7 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
+        long_short_ratio_data: Optional[pd.DataFrame] = None,  # Added
         lookback_periods: Optional[Dict[str, int]] = None,
         profile: Optional[str] = None,
     ) -> pd.DataFrame:
@@ -123,7 +124,8 @@ class FeatureEngineeringService:
                 ohlcv_data,
                 funding_rate_data,
                 open_interest_data,
-                extra_params=lookback_periods,
+                long_short_ratio_data,
+                lookback_periods,
             )
 
             # キャッシュから結果を取得
@@ -151,6 +153,12 @@ class FeatureEngineeringService:
                     ohlcv_data, funding_rate_data, open_interest_data, ohlcv_timeframe
                 )
             )
+
+            # LS Ratioの再配置
+            if long_short_ratio_data is not None and not long_short_ratio_data.empty:
+                long_short_ratio_data = (
+                    long_short_ratio_data.reindex(ohlcv_data.index).ffill().bfill()
+                )
 
             # デフォルトの計算期間
             if lookback_periods is None:
@@ -209,7 +217,15 @@ class FeatureEngineeringService:
                 ),
                 (self.advanced_stats_calculator, [result_df]),
                 (self.multi_timeframe_calculator, [result_df]),
-                (self.microstructure_calculator, [result_df]),
+                (
+                    self.microstructure_calculator,
+                    [
+                        result_df,
+                        funding_rate_data,
+                        open_interest_data,
+                        long_short_ratio_data,
+                    ],
+                ),
             ]
 
             for calc, args in additional_calculators:
@@ -277,11 +293,63 @@ class FeatureEngineeringService:
             # エラー時は元のDataFrameを返す（最低限の動作保証）
             return ohlcv_data
 
+    def aggregate_intraday_features(self, ohlcv_1m: pd.DataFrame) -> pd.DataFrame:
+        """
+        1分足データから1時間足用の統計量を算出する。
+        """
+        logger.info(f"1分足データから日中統計量を算出中... ({len(ohlcv_1m)} rows)")
+
+        # 1. 1分足レベルでの計算
+        returns_1m = ohlcv_1m["close"].pct_change()
+        is_up = (ohlcv_1m["close"] > ohlcv_1m["open"]).astype(int)
+        up_volume = ohlcv_1m["volume"] * is_up
+
+        # 2. 1時間ごとに集計
+        hour_labels = ohlcv_1m.index.floor("1h")
+
+        agg_features = pd.DataFrame(index=ohlcv_1m.resample("1h").last().index)
+
+        # ボラティリティとその相対化 (Z-Score)
+        vol_1h = returns_1m.groupby(hour_labels).std()
+        agg_features["Intraday_Volatility"] = vol_1h
+        agg_features["Intraday_Volatility_Zscore"] = (
+            vol_1h - vol_1h.rolling(24).mean()
+        ) / (vol_1h.rolling(24).std() + 1e-9)
+
+        # 出来高の質
+        agg_features["Intraday_Volume_Buy_Ratio"] = up_volume.groupby(
+            hour_labels
+        ).sum() / (ohlcv_1m["volume"].groupby(hour_labels).sum() + 1e-9)
+
+        # 吸収力 (Absorption): 1価格単位を動かすのに必要な出来高 (多いほど上値が重い)
+        price_range = (ohlcv_1m["high"] - ohlcv_1m["low"]).groupby(hour_labels).sum()
+        total_volume = ohlcv_1m["volume"].groupby(hour_labels).sum()
+        agg_features["Intraday_Absorption"] = total_volume / (price_range + 1e-9)
+
+        # 出来高の集中度 (CV): 特定の数分間に出来高が偏っているか
+        agg_features["Intraday_Volume_Concentration"] = ohlcv_1m["volume"].groupby(
+            hour_labels
+        ).std() / (ohlcv_1m["volume"].groupby(hour_labels).mean() + 1e-9)
+
+        # 最大逆行幅
+        def calc_mae(group):
+            if len(group) < 2:
+                return 0
+            drawdown = (group["low"] - group["high"].cummax()) / group["high"].cummax()
+            return drawdown.min()
+
+        agg_features["Intraday_Max_Pullback"] = ohlcv_1m.groupby(hour_labels).apply(
+            calc_mae
+        )
+
+        return agg_features
+
     def create_feature_superset(
         self,
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
+        long_short_ratio_data: Optional[pd.DataFrame] = None,  # Added
         frac_diff_d_values: Optional[List[float]] = None,
     ) -> pd.DataFrame:
         """
@@ -310,7 +378,7 @@ class FeatureEngineeringService:
         #    ただし、内部で生成される FracDiff_Price/FracDiff_OI は後で置換するため
         #    一旦そのまま生成
         result_df = self.calculate_advanced_features(
-            ohlcv_data, funding_rate_data, open_interest_data
+            ohlcv_data, funding_rate_data, open_interest_data, long_short_ratio_data
         )
 
         # 2. 既存の単一d値のFracDiff列を削除（後で複数d値で再生成）

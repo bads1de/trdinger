@@ -122,10 +122,11 @@ class OptimizationService:
         self,
         feature_superset: pd.DataFrame,
         labels: pd.Series,
-        ohlcv_data: pd.DataFrame,  # Added for dynamic label generation
+        ohlcv_data: pd.DataFrame,
         n_trials: int = 50,
         test_ratio: float = 0.2,
         frac_diff_d_values: Optional[list] = None,
+        fixed_label_params: Optional[Dict[str, Any]] = None,  # Added
     ) -> Dict[str, Any]:
         """
         特徴量エンジニアリング + 特徴量選択 + モデル学習の同時最適化（CASH）
@@ -139,6 +140,7 @@ class OptimizationService:
             n_trials: Optuna試行回数
             test_ratio: テストデータの割合（最終評価用）
             frac_diff_d_values: 探索する分数次差分のd値リスト
+            fixed_label_params: ラベル生成パラメータを固定する場合の辞書 (例: {"tbm_horizon": 24})
 
         Returns:
             ベストパラメータ、ベストスコア、比較結果などを含む辞書
@@ -147,7 +149,9 @@ class OptimizationService:
             FeatureEngineeringService,
         )
         from app.services.ml.feature_selection.feature_selector import FeatureSelector
-        from app.services.ml.label_generation.presets import triple_barrier_method_preset
+        from app.services.ml.label_generation.presets import (
+            triple_barrier_method_preset,
+        )
         from lightgbm import LGBMClassifier
         from sklearn.metrics import balanced_accuracy_score as sklearn_metric
 
@@ -164,48 +168,52 @@ class OptimizationService:
         logger.info(f"データ分割基準日: {split_date}")
 
         # パラメータ空間を定義
-        parameter_space = self._get_pipeline_parameter_space(frac_diff_d_values)
+        parameter_space = self._get_pipeline_parameter_space(
+            frac_diff_d_values, fixed_label_params
+        )
 
         # 目的関数を作成
         def objective_function(params: Dict[str, Any]) -> float:
             try:
                 # 0. ラベルの動的生成 (Triple Barrier Method)
-                # ohlcv_data が渡されていない場合は feature_superset から最低限のデータを復元（近似）
-                # ただし正確なHigh/Lowが必要なので、ohlcv_dataは必須推奨
-                
-                df_for_label = ohlcv_data if ohlcv_data is not None else feature_superset
-                
-                # feature_supersetにhigh/lowがない場合のフォールバックはpresets側でエラーになる可能性があるため
-                # ここではohlcv_dataがあることを前提とする（optimize_full_pipelineの引数で必須化した方が良いが）
-                
+                # 固定パラメータがある場合はそれを優先し、なければOptunaの提案値(params)を使用
+                label_params = params.copy()
+                if fixed_label_params:
+                    label_params.update(fixed_label_params)
+
+                df_for_label = (
+                    ohlcv_data if ohlcv_data is not None else feature_superset
+                )
+
                 current_labels = triple_barrier_method_preset(
                     df=df_for_label,
-                    timeframe="1h", # 仮固定。feature_supersetから推測できるとベスト
-                    horizon_n=params["tbm_horizon"],
-                    pt=params["tbm_pt"],
-                    sl=params["tbm_sl"],
+                    timeframe="1h",
+                    horizon_n=label_params.get("tbm_horizon", 24),
+                    pt=label_params.get("tbm_pt", 1.0),
+                    sl=label_params.get("tbm_sl", 1.0),
                     min_ret=0.001,
                     price_column="close",
-                    use_atr=True, # ATRベースのボラティリティを使用
+                    use_atr=True,
                 )
-                
+
                 if current_labels.empty:
                     return 0.0
-                
+
+                # ... (以下同様)
+
                 # 1. 特徴量とラベルのアラインメント
                 common_idx = feature_superset.index.intersection(current_labels.index)
                 if len(common_idx) < 100:
                     return 0.0
-                    
+
                 X_aligned = feature_superset.loc[common_idx]
                 y_aligned = current_labels.loc[common_idx]
 
                 # 2. TrainVal / Test 分割 (split_date基準)
-                # objective_function内では TrainVal のみをさらに Train/Val に分割して評価
                 mask_trainval = X_aligned.index < split_date
                 X_trainval_curr = X_aligned[mask_trainval]
                 y_trainval_curr = y_aligned[mask_trainval]
-                
+
                 if len(X_trainval_curr) < 50:
                     return 0.0
 
@@ -222,7 +230,7 @@ class OptimizationService:
 
                 # 4. 内部CV用分割 (時系列ホールドアウト 20%)
                 val_split_idx = int(len(X_features) * 0.8)
-                
+
                 X_train = X_features.iloc[:val_split_idx]
                 y_train = y_trainval_curr.iloc[:val_split_idx]
                 X_val = X_features.iloc[val_split_idx:]
@@ -274,26 +282,30 @@ class OptimizationService:
 
         # 最終評価: ベストパラメータでテストデータを評価
         logger.info("🔍 ベストパラメータでテストデータを評価中...")
-        
-        # ベストパラメータでラベル再生成
+
+        # 固定パラメータをマージ
+        final_params = best_params.copy()
+        if fixed_label_params:
+            final_params.update(fixed_label_params)
+
         df_for_label = ohlcv_data if ohlcv_data is not None else feature_superset
-        
+
         labels_best = triple_barrier_method_preset(
             df=df_for_label,
             timeframe="1h",
-            horizon_n=best_params["tbm_horizon"],
-            pt=best_params["tbm_pt"],
-            sl=best_params["tbm_sl"],
+            horizon_n=final_params.get("tbm_horizon", 24),
+            pt=final_params.get("tbm_pt", 1.0),
+            sl=final_params.get("tbm_sl", 1.0),
             min_ret=0.001,
             price_column="close",
             use_atr=True,
         )
-        
+
         # アラインメント
         common_idx = feature_superset.index.intersection(labels_best.index)
         X_aligned = feature_superset.loc[common_idx]
         y_aligned = labels_best.loc[common_idx]
-        
+
         # 分割
         mask_trainval = X_aligned.index < split_date
         X_trainval = X_aligned[mask_trainval]
@@ -339,17 +351,16 @@ class OptimizationService:
         y_pred_test = model.predict(X_test_selected)
         test_score = sklearn_metric(y_test, y_pred_test)
 
-        # ベースライン評価（デフォルトパラメータ）
-        # 注: ベースラインもラベル生成が必要だが、ここでは固定（trend_scanning_1h相当）で比較するのが妥当
-        # しかし実装が複雑になるため、ここでは「ベストパラメータでのTrainValスコア」と比較する形にするか、
-        # または固定パラメータで再計算する。
-        # 簡易的に0.0を返す（動的ラベルの場合、ベースラインとの直接比較は難しい）
-        baseline_score = 0.0 
-
+        baseline_score = 0.0
         self.optimizer.cleanup()
 
+        # 固定パラメータも結果に含める
+        result_params = best_params.copy()
+        if fixed_label_params:
+            result_params.update(fixed_label_params)
+
         return {
-            "best_params": best_params,
+            "best_params": result_params,
             "best_score": best_score,
             "test_score": test_score,
             "baseline_score": baseline_score,
@@ -359,11 +370,119 @@ class OptimizationService:
             "n_selected_features": X_train_selected.shape[1],
         }
 
+    def optimize_meta_model_with_oof(
+        self,
+        primary_pipeline: Any,
+        X_superset: pd.DataFrame,
+        y_true: pd.Series,
+        n_trials: int = 30,
+        cv_splits: int = 5
+    ) -> Dict[str, Any]:
+        """
+        OOF予測を用いたメタモデルの最適化
+        ...
+        """
+        import numpy as np
+        from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+        from sklearn.metrics import f1_score, precision_score
+        from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
+        from app.services.ml.feature_selection.feature_selector import FeatureSelector
+        from lightgbm import LGBMClassifier
+
+        logger.info("🚀 メタモデル最適化 (OOF) を開始")
+
+        # 1. 一次モデルの OOF 予測を生成
+        tscv = TimeSeriesSplit(n_splits=cv_splits)
+        oof_probs = pd.Series(np.nan, index=y_true.index)
+        
+        print(f"[*] Generating OOF predictions for primary model ({cv_splits} folds)...")
+        for train_idx, val_idx in tscv.split(X_superset, y_true):
+            X_train, X_val = X_superset.iloc[train_idx], X_superset.iloc[val_idx]
+            y_train, y_val = y_true.iloc[train_idx], y_true.iloc[val_idx]
+            
+            primary_pipeline.fit(X_train, y_train)
+            oof_probs.iloc[val_idx] = primary_pipeline.predict_proba(X_val)[:, 1]
+
+        # 予測が生成されたサンプルのみを対象にする (最初のFoldはnanになる)
+        valid_mask = oof_probs.notna()
+        X_meta_full = X_superset[valid_mask]
+        y_true_meta = y_true[valid_mask]
+        primary_probs = oof_probs[valid_mask]
+        
+        # メタラベルの生成: 一次モデルが「1」と予測し、かつ正解も「1」なら 1, 外れたら 0
+        # ここでは閾値 0.5 で「エントリー判断」をしたポイントのみを抽出
+        entry_mask = primary_probs >= 0.5
+        if entry_mask.sum() < 100:
+            return {"status": "skipped", "reason": "too few entries for meta-learning"}
+            
+        X_meta = X_meta_full[entry_mask]
+        # メタラベル: 1 = 成功(TP), 0 = 失敗(FP/ダマシ)
+        y_meta = (y_true_meta[entry_mask] == 1).astype(int)
+        
+        print(f"[*] Meta-dataset prepared: {len(y_meta)} samples (Win Rate: {y_meta.mean():.2%})")
+
+        # 2. メタモデルの最適化
+        # メタモデルには「マイクロストラクチャ系」などの特権特徴量を優先的に選ばせる
+        # また、一次モデルの予測確率自体も強力な特徴量になる
+        micro_keywords = ["LS_", "OI_", "VPIN", "Roll_", "Amihud_", "Kyles_", "Spread", "Volume_CV"]
+        meta_feature_cols = [c for c in X_meta.columns if any(k in c for k in micro_keywords)]
+        
+        X_meta_specialized = X_meta[meta_feature_cols].copy()
+        X_meta_specialized["primary_prob"] = primary_probs
+        
+        print(f"[*] Specialized meta-features: {len(meta_feature_cols)} microstructure cols + primary_prob")
+
+        frac_diff_d_values = [0.3, 0.4, 0.5]
+        parameter_space = self._get_pipeline_parameter_space(frac_diff_d_values)
+
+        def objective_function(params: Dict[str, Any]) -> float:
+            try:
+                # 特徴量フィルタリング (FracDiff適用済みのカラムから選択)
+                d_value = params["frac_diff_d"]
+                X_filt = FeatureEngineeringService.filter_superset_for_d(X_meta_specialized, d_value)
+                
+                # 特徴量選択
+                selector = FeatureSelector(
+                    method=params["selection_method"],
+                    min_features=params["min_features"],
+                    cv_strategy="timeseries"
+                )
+                X_sel = selector.fit_transform(X_filt, y_meta)
+                
+                # メタモデル (LightGBM)
+                model = LGBMClassifier(
+                    learning_rate=params["learning_rate"],
+                    num_leaves=params["num_leaves"],
+                    n_estimators=50, # 高速化のため少なめ
+                    class_weight="balanced",
+                    random_state=42,
+                    verbosity=-1
+                )
+                
+                # CV評価 (F1スコアを重視)
+                scores = cross_val_score(model, X_sel, y_meta, cv=TimeSeriesSplit(n_splits=3), scoring="f1")
+                return scores.mean()
+            except Exception as e:
+                return 0.0
+
+        result = self.optimizer.optimize(objective_function, parameter_space, n_calls=n_trials)
+        
+        return {
+            "best_params": result.best_params,
+            "best_f1": result.best_score,
+            "n_samples": len(y_meta),
+            "base_win_rate": y_meta.mean(),
+            "n_meta_features": X_meta_specialized.shape[1]
+        }
+
     def _get_pipeline_parameter_space(
-        self, frac_diff_d_values: list
+        self,
+        frac_diff_d_values: list,
+        fixed_label_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, ParameterSpace]:
         """パイプライン同時最適化用のパラメータ空間を定義"""
-        return {
+
+        space = {
             # Feature Engineering
             "frac_diff_d": ParameterSpace(
                 type="categorical", categories=frac_diff_d_values
@@ -377,11 +496,19 @@ class OptimizationService:
             # Model (LightGBM)
             "learning_rate": ParameterSpace(type="real", low=0.005, high=0.1),
             "num_leaves": ParameterSpace(type="integer", low=16, high=128),
-            # Label Generation (Triple Barrier)
-            "tbm_pt": ParameterSpace(type="real", low=0.5, high=3.0),
-            "tbm_sl": ParameterSpace(type="real", low=0.5, high=3.0),
-            "tbm_horizon": ParameterSpace(type="integer", low=4, high=48),
         }
+
+        # ラベル生成パラメータ（固定されていない場合のみ追加）
+        fixed_keys = fixed_label_params.keys() if fixed_label_params else []
+
+        if "tbm_pt" not in fixed_keys:
+            space["tbm_pt"] = ParameterSpace(type="real", low=0.5, high=3.0)
+        if "tbm_sl" not in fixed_keys:
+            space["tbm_sl"] = ParameterSpace(type="real", low=0.5, high=3.0)
+        if "tbm_horizon" not in fixed_keys:
+            space["tbm_horizon"] = ParameterSpace(type="integer", low=4, high=48)
+
+        return space
 
     def _evaluate_baseline(
         self,

@@ -48,6 +48,7 @@ def generate_cache_key(
     ohlcv_data: pd.DataFrame,
     funding_rate_data: Optional[pd.DataFrame] = None,
     open_interest_data: Optional[pd.DataFrame] = None,
+    long_short_ratio_data: Optional[pd.DataFrame] = None,  # Added
     extra_params: Optional[dict] = None,
 ) -> str:
     """
@@ -66,9 +67,10 @@ def generate_cache_key(
     h1 = _hash(ohlcv_data)
     h2 = _hash(funding_rate_data.shape if funding_rate_data is not None else None)
     h3 = _hash(open_interest_data.shape if open_interest_data is not None else None)
-    h4 = _hash(sorted(extra_params.items()) if extra_params else None)
+    h4 = _hash(long_short_ratio_data.shape if long_short_ratio_data is not None else None)  # Added
+    h5 = _hash(sorted(extra_params.items()) if extra_params else None)
 
-    return f"features_{h1}_{h2}_{h3}_{h4}"
+    return f"features_{h1}_{h2}_{h3}_{h4}_{h5}"
 
 
 def validate_training_inputs(
