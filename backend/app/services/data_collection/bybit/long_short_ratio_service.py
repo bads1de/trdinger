@@ -46,53 +46,48 @@ class BybitLongShortRatioService(BybitService):
         Returns:
             データリスト
         """
-        try:
-            # Bybitのシンボル形式に変換
-            market_symbol = self._convert_to_api_symbol(symbol)
+        # Bybitのシンボル形式に変換
+        market_symbol = self._convert_to_api_symbol(symbol)
 
-            params = {
-                "category": "linear",  # 基本的にUSDT無期限を想定
-                "symbol": market_symbol,
-                "period": period,
-                "limit": limit,
-            }
+        params = {
+            "category": "linear",  # 基本的にUSDT無期限を想定
+            "symbol": market_symbol,
+            "period": period,
+            "limit": limit,
+        }
 
-            if start_time:
-                params["startTime"] = start_time
-            if end_time:
-                params["endTime"] = end_time
+        if start_time:
+            params["startTime"] = start_time
+        if end_time:
+            params["endTime"] = end_time
 
-            # self._handle_ccxt_errors を経由してAPIを呼び出す
-            response = await self._handle_ccxt_errors(
-                "Bybit V5 Market Account Ratio",
-                self.exchange.publicGetV5MarketAccountRatio,
-                params=params,
+        # self._handle_ccxt_errors を経由してAPIを呼び出す
+        response = await self._handle_ccxt_errors(
+            "Bybit V5 Market Account Ratio",
+            self.exchange.publicGetV5MarketAccountRatio,
+            params=params,
+        )
+
+        if (
+            not response
+            or "result" not in response
+            or "list" not in response["result"]
+        ):
+            logger.warning(
+                f"ロング/ショート比率データの取得に失敗またはデータなし: {symbol}"
             )
-
-            if (
-                not response
-                or "result" not in response
-                or "list" not in response["result"]
-            ):
-                logger.warning(
-                    f"ロング/ショート比率データの取得に失敗またはデータなし: {symbol}"
-                )
-                return []
-
-            data_list = response["result"]["list"]
-
-            # APIは新しい順で返すことが多いが、念のため確認
-            # 呼び出し元で扱いやすいように、ここでperiod情報を付与しておく
-            for item in data_list:
-                item["period"] = period
-                # アプリケーション内での統一のため、シンボルはリクエスト時のCCXT形式（例: BTC/USDT:USDT）で上書きする
-                item["symbol"] = symbol
-
-            return data_list
-
-        except Exception as e:
-            ErrorHandler.handle_model_error(e, context="fetch_long_short_ratio_data")
             return []
+
+        data_list = response["result"]["list"]
+
+        # APIは新しい順で返すことが多いが、念のため確認
+        # 呼び出し元で扱いやすいように、ここでperiod情報を付与しておく
+        for item in data_list:
+            item["period"] = period
+            # アプリケーション内での統一のため、シンボルはリクエスト時のCCXT形式（例: BTC/USDT:USDT）で上書きする
+            item["symbol"] = symbol
+
+        return data_list
 
     async def fetch_incremental_long_short_ratio_data(
         self,
@@ -227,20 +222,25 @@ class BybitLongShortRatioService(BybitService):
             while current_cursor < current_end_ts:
                 next_cursor = min(current_cursor + chunk_ms, current_end_ts)
 
-                # データ取得
-                data_list = await self.fetch_long_short_ratio_data(
-                    symbol,
-                    period,
-                    limit=500,
-                    start_time=current_cursor,
-                    end_time=next_cursor,
-                )
+                try:
+                    # データ取得
+                    data_list = await self.fetch_long_short_ratio_data(
+                        symbol,
+                        period,
+                        limit=500,
+                        start_time=current_cursor,
+                        end_time=next_cursor,
+                    )
 
-                if data_list:
-                    saved = repository.insert_long_short_ratio_data(data_list)
-                    total_saved += saved
-                    logger.info(
-                        f"Chunk {current_cursor} - {next_cursor}: {len(data_list)} fetched, {saved} saved."
+                    if data_list:
+                        saved = repository.insert_long_short_ratio_data(data_list)
+                        total_saved += saved
+                        logger.info(
+                            f"Chunk {current_cursor} - {next_cursor}: {len(data_list)} fetched, {saved} saved."
+                        )
+                except Exception as chunk_error:
+                    logger.error(
+                        f"Chunk {current_cursor} - {next_cursor} failed: {chunk_error}"
                     )
 
                 current_cursor = next_cursor

@@ -209,11 +209,39 @@ class UniversalStrategy(Strategy):
                 )
                 account_balance = getattr(self, "equity", 100000.0)
 
+                # ATR Calculation for market_data
+                market_data = {}
+                try:
+                    lookback = getattr(
+                        self.gene.position_sizing_gene, "lookback_period", 14
+                    )
+                    # Need lookback + 1 for previous close
+                    if len(self.data) > lookback + 1:
+                        # TR = max(high-low, abs(high-prev_close), abs(low-prev_close))
+                        high = self.data.High[-lookback:]
+                        low = self.data.Low[-lookback:]
+                        prev_close = self.data.Close[-lookback - 1 : -1]
+
+                        import numpy as np
+
+                        tr1 = high - low
+                        tr2 = np.abs(high - prev_close)
+                        tr3 = np.abs(low - prev_close)
+                        tr = np.maximum(tr1, np.maximum(tr2, tr3))
+
+                        atr = np.mean(tr)
+                        if current_price > 0:
+                            market_data["atr_pct"] = atr / current_price
+                except Exception as e:
+                    # logger.warning(f"ATR calculation failed in position sizing: {e}")
+                    pass
+
                 position_size = (
                     self.position_sizing_service.calculate_position_size_fast(
                         gene=self.gene.position_sizing_gene,
                         account_balance=account_balance,
                         current_price=current_price,
+                        market_data=market_data,
                     )
                 )
                 return max(0.001, min(0.2, float(position_size)))

@@ -55,6 +55,7 @@ class BacktestConfig(BaseModel):
         default=unified_config.backtest.default_commission_rate, ge=0, le=1
     )
     slippage: float = Field(0.0, ge=0)
+    leverage: float = Field(1.0, ge=1.0)
     strategy_config: StrategyConfig
 
     @field_validator("start_date", "end_date", mode="before")

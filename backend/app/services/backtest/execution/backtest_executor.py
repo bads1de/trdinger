@@ -47,6 +47,8 @@ class BacktestExecutor:
         end_date: datetime,
         initial_capital: float,
         commission_rate: float,
+        slippage: float = 0.0,
+        leverage: float = 1.0,
         preloaded_data: Optional[pd.DataFrame] = None,
     ) -> Any:
         """
@@ -65,6 +67,8 @@ class BacktestExecutor:
             end_date: 検証終了日時
             initial_capital: 初期証拠金
             commission_rate: 手数料率（例: 0.0006 for 0.06%）
+            slippage: スリッページ率（例: 0.0001 for 0.01%）。簡易的に手数料に加算されます。
+            leverage: レバレッジ倍率（例: 1.0でレバレッジなし）。マージン率に変換されます。
             preloaded_data: 外部から提供されたOHLCVデータがある場合に使用
 
         Returns:
@@ -82,7 +86,13 @@ class BacktestExecutor:
 
             # バックテスト設定
             bt = self._create_backtest_instance(
-                data, strategy_class, initial_capital, commission_rate, symbol
+                data,
+                strategy_class,
+                initial_capital,
+                commission_rate,
+                slippage,
+                leverage,
+                symbol,
             )
 
             # バックテスト実行
@@ -125,6 +135,8 @@ class BacktestExecutor:
         strategy_class: Type[Strategy],
         initial_capital: float,
         commission_rate: float,
+        slippage: float,
+        leverage: float,
         symbol: str,
     ) -> Backtest:
         """バックテストインスタンスを作成"""
@@ -133,15 +145,22 @@ class BacktestExecutor:
             data = data.copy()
             data.columns = data.columns.str.capitalize()
 
+            # スリッページを簡易的に手数料に加算（backtesting.pyの標準機能でサポートが薄いため）
+            effective_commission = commission_rate + slippage
+
+            # レバレッジからマージン率を計算（例: レバレッジ10倍 -> マージン0.1）
+            # 0除算防止のためmax(1.0, ...)を使用
+            margin = 1.0 / max(1.0, leverage)
+
             bt = FractionalBacktest(
                 data,
                 strategy_class,
                 cash=initial_capital,
-                commission=commission_rate,
+                commission=effective_commission,
                 exclusive_orders=False,  # 複数ポジション許可（制約緩和）
                 trade_on_close=False,  # 現在価格で取引（制約緩和）
                 hedging=True,  # ヘッジング有効化（制約緩和）
-                margin=0.01,  # マージン要件を大幅に緩和（1%）
+                margin=margin,
             )
 
             return bt

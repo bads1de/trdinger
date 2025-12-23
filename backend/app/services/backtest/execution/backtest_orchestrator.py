@@ -97,6 +97,8 @@ class BacktestOrchestrator:
                 end_date=backtest_config.end_date,
                 initial_capital=backtest_config.initial_capital,
                 commission_rate=backtest_config.commission_rate,
+                slippage=backtest_config.slippage,
+                leverage=backtest_config.leverage,
                 preloaded_data=preloaded_data,
             )
 
@@ -104,6 +106,8 @@ class BacktestOrchestrator:
             config_json = {
                 "strategy_config": strategy_config_dict,
                 "commission_rate": backtest_config.commission_rate,
+                "slippage": backtest_config.slippage,
+                "leverage": backtest_config.leverage,
             }
 
             result = self._result_converter.convert_backtest_results(

@@ -150,7 +150,7 @@ class TrendIndicators:
     def dpo(
         data: pd.Series,
         length: int = 20,
-        centered: bool = True,
+        centered: bool = False,
         offset: int = 0,
     ) -> pd.Series:
         """Detrended Price Oscillator"""

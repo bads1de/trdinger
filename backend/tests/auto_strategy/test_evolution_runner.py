@@ -62,8 +62,10 @@ class TestEvolutionRunner:
                 x.fitness.values if x.fitness.valid else None
             )
         )
-        toolbox.mate = Mock()
-        toolbox.mutate = Mock()
+        # mate returns (child1, child2)
+        toolbox.mate = Mock(side_effect=lambda ind1, ind2: (_DummyIndividual(), _DummyIndividual()))
+        # mutate returns (mutant,)
+        toolbox.mutate = Mock(side_effect=lambda ind: (_DummyIndividual(),))
         toolbox.select = Mock(side_effect=lambda pop, k: pop[:k])
         toolbox.evaluate = Mock(return_value=(1.0,))
         return toolbox

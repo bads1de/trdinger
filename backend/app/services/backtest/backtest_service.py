@@ -160,6 +160,8 @@ class BacktestService:
                     "end_date": request["end_date"],
                     "initial_capital": request["initial_capital"],
                     "commission_rate": request["commission_rate"],
+                    "slippage": request.get("slippage", 0.0),
+                    "leverage": request.get("leverage", 1.0),
                     "strategy_config": request["strategy_config"],
                 }
             else:
@@ -172,6 +174,8 @@ class BacktestService:
                     "end_date": request.end_date,
                     "initial_capital": request.initial_capital,
                     "commission_rate": request.commission_rate,
+                    "slippage": getattr(request, "slippage", 0.0),
+                    "leverage": getattr(request, "leverage", 1.0),
                     "strategy_config": request.strategy_config.model_dump(),
                 }
 

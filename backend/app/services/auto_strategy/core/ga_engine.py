@@ -179,17 +179,30 @@ class EvolutionRunner:
             offspring = list(self.toolbox.map(self.toolbox.clone, population))
 
             # 交叉
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            # インデックスを使ってリストを直接更新する（mateが新しいオブジェクトを返すため）
+            for i in range(0, len(offspring) - 1, 2):
+                child1, child2 = offspring[i], offspring[i + 1]
                 if random.random() < config.crossover_rate:
-                    self.toolbox.mate(child1, child2)
-                    del child1.fitness.values
-                    del child2.fitness.values
+                    new_child1, new_child2 = self.toolbox.mate(child1, child2)
+                    offspring[i] = new_child1
+                    offspring[i + 1] = new_child2
+                    # フィットネスの削除（再評価のため）
+                    if hasattr(offspring[i].fitness, "values"):
+                        del offspring[i].fitness.values
+                    if hasattr(offspring[i + 1].fitness, "values"):
+                        del offspring[i + 1].fitness.values
 
             # 突然変異
-            for mutant in offspring:
+            # インデックスを使ってリストを直接更新する（mutateが新しいオブジェクトを返すため）
+            for i in range(len(offspring)):
+                mutant = offspring[i]
                 if random.random() < config.mutation_rate:
-                    self.toolbox.mutate(mutant)
-                    del mutant.fitness.values
+                    # mutateはタプル(ind,)を返す
+                    result = self.toolbox.mutate(mutant)
+                    new_mutant = result[0]
+                    offspring[i] = new_mutant
+                    if hasattr(offspring[i].fitness, "values"):
+                        del offspring[i].fitness.values
 
             # 未評価個体の評価（並列評価対応）
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]

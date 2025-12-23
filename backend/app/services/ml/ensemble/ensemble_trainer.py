@@ -473,14 +473,34 @@ class EnsembleTrainer(BaseMLTrainer):
                 if meta_model_path:
                     try:
                         from ..models.model_manager import model_manager
+                        import os
 
-                        # model_manager.load_model returns dict with 'model' key
-                        meta_data = model_manager.load_model(meta_model_path)
+                        meta_data = None
+
+                        # 1. 直接パス（絶対パス）でのロードを試行
+                        if os.path.exists(meta_model_path):
+                            try:
+                                meta_data = model_manager.load_model(meta_model_path)
+                            except Exception:
+                                logger.warning(
+                                    f"絶対パスでのロードに失敗、相対パスを試行します: {meta_model_path}"
+                                )
+
+                        # 2. メインモデルと同じディレクトリからのロードを試行（フォールバック）
+                        if not meta_data:
+                            model_dir = os.path.dirname(model_path)
+                            meta_filename = os.path.basename(meta_model_path)
+                            relative_path = os.path.join(model_dir, meta_filename)
+
+                            if os.path.exists(relative_path):
+                                logger.info(
+                                    f"メタラベリングモデルを相対パスからロード試行: {relative_path}"
+                                )
+                                meta_data = model_manager.load_model(relative_path)
+
                         if meta_data and meta_data.get("model"):
                             self.meta_labeling_service = meta_data.get("model")
-                            logger.info(
-                                f"メタラベリングモデルをロードしました: {meta_model_path}"
-                            )
+                            logger.info("メタラベリングモデルをロードしました")
                         else:
                             logger.warning(
                                 f"メタラベリングモデルのロードに失敗しました: {meta_model_path}"

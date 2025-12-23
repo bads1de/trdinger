@@ -70,27 +70,25 @@ class PurgedKFold(_BaseKFold):
             if len(test_idx) == 0:
                 continue
 
-            test_start_time_ns = int(x_index_ints[start])
-            # NumPyのmax()が不安定な環境のため、Python標準のmax()を使用
-            t1_subset = t1_values_ints[test_idx].tolist()
-            # NaTを除外
-            valid_t1 = [v for v in t1_subset if v > 0]
-            if not valid_t1:
-                test_max_t1_ns = max(t1_subset) if t1_subset else 0
-            else:
-                test_max_t1_ns = max(valid_t1)
+            test_start_time_ns = x_index_ints[start]
 
-            test_start_time = pd.Timestamp(test_start_time_ns)
-            test_max_t1 = pd.Timestamp(test_max_t1_ns)
+            # --- 高速化箇所: NumPyで最大値を取得 ---
+            t1_subset_ints = t1_values_ints[test_idx]
+            # NaT は負の値（通常 -9223372036854775808）なので、maxで正しく最新時刻が取れる
+            # すべてNaTの場合は 0 または負の値になる
+            test_max_t1_ns = np.max(t1_subset_ints)
 
-            # エンバーゴ期間計算
+            if test_max_t1_ns < 0:  # 全てNaTの場合
+                test_max_t1_ns = x_index_ints[end - 1]  # テストセットの末尾を使用
+
+            # エンバーゴ期間計算 (ベクトル化)
             embargo_sec = (
-                test_max_t1 - test_start_time
-            ).total_seconds() * self.pct_embargo
+                (test_max_t1_ns - test_start_time_ns) / 1e9
+            ) * self.pct_embargo
             embargo_end_ns = test_max_t1_ns + int(embargo_sec * 1e9)
 
             # パージングとエンバーゴ適用
-            # 整数レベルでマスク計算
+            # 整数レベルでマスク計算 (ベクトル化済み)
             train_mask = (t1_values_ints < test_start_time_ns) | (
                 x_index_ints > embargo_end_ns
             )

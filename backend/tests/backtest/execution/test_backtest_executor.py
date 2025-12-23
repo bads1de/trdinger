@@ -45,7 +45,7 @@ class TestBacktestExecutor:
         
         # FractionalBacktestの初期化をパッチ
         with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as MockBT:
-            bt = executor._create_backtest_instance(sample_data, mock_strategy, 10000, 0.001, "BTC/USDT")
+            bt = executor._create_backtest_instance(sample_data, mock_strategy, 10000, 0.001, 0.0005, 2.0, "BTC/USDT")
             
             assert bt is not None
             # カラム名が大文字になっているか確認
@@ -54,7 +54,8 @@ class TestBacktestExecutor:
             assert "Open" in df_passed.columns
             assert "Close" in df_passed.columns
             assert kwargs["cash"] == 10000
-            assert kwargs["commission"] == 0.001
+            assert kwargs["commission"] == 0.0015
+            assert kwargs["margin"] == 0.5
 
     def test_run_backtest(self, executor):
         mock_bt = MagicMock()
@@ -77,7 +78,8 @@ class TestBacktestExecutor:
             
             result = executor.execute_backtest(
                 mock_strategy, {"p1": 1}, "BTC/USDT", "1h", 
-                datetime(2023, 1, 1), datetime(2023, 1, 2), 10000, 0.001
+                datetime(2023, 1, 1), datetime(2023, 1, 2), 10000, 0.001,
+                0.0, 1.0
             )
             
             assert result == mock_stats
@@ -93,6 +95,7 @@ class TestBacktestExecutor:
             executor.execute_backtest(
                 mock_strategy, {}, "BTC/USDT", "1h", 
                 datetime(2023, 1, 1), datetime(2023, 1, 2), 10000, 0.001,
+                0.0, 1.0,
                 preloaded_data=sample_data
             )
             

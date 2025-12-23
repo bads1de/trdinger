@@ -350,6 +350,7 @@ class PositionSizingService:
         gene,
         account_balance: float,
         current_price: float,
+        market_data: Optional[Dict[str, Any]] = None,
     ) -> float:
         """
         高速ポジションサイズ計算（バックテスト用）
@@ -362,6 +363,7 @@ class PositionSizingService:
             gene: ポジションサイジング遺伝子
             account_balance: 口座残高
             current_price: 現在価格
+            market_data: 市場データ（ATRなど、事前計算済みの値を渡す）
 
         Returns:
             ポジションサイズ（数量）
@@ -380,7 +382,7 @@ class PositionSizingService:
                 gene,
                 account_balance,
                 current_price,
-                market_data={},  # 軽量化のため空
+                market_data=market_data or {},
                 trade_history=None,
             )
 
