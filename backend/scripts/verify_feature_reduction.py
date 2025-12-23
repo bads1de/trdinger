@@ -121,6 +121,11 @@ def run_analysis_pipeline(
 
     # 3. 統合
     X_full = X_raw.join(agg_1m, how="left").ffill().fillna(0)
+    
+    # 3.5 特徴量拡張 (ラグ、相互作用等)
+    print(f"[*] Expanding features (current: {len(X_full.columns)})...")
+    X_full = fe_service.expand_features(X_full)
+    print(f"[*] Expanded to {len(X_full.columns)} features.")
 
     y_raw = None
     w_model_all = None

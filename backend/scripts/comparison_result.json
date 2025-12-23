@@ -1,209 +1,249 @@
 {
-    "timestamp": "2025-12-24T01:45:01.329131",
+    "timestamp": "2025-12-24T03:07:13.585667",
     "symbol": "BTC/USDT:USDT",
     "trend_scanning": {
-        "timestamp": "2025-12-24T01:41:18.691280",
+        "timestamp": "2025-12-24T02:58:29.333474",
         "symbol": "BTC/USDT:USDT",
-        "timeframe": "4h",
+        "timeframe": "1h",
         "limit": 10000,
         "labeling_method": "trend_scanning",
-        "total_valid_signals": 513,
-        "elite_features_count": 11,
+        "total_valid_signals": 543,
+        "elite_features_count": 57,
         "elite_features": [
-            "Value_Area_Width_50",
-            "Value_Area_Width_100",
-            "VP_Skewness",
-            "ADX",
-            "Returns_Skewness_10",
-            "Volume_Kurtosis_20",
-            "Close_Position_Mean_20",
-            "LogReturns_Skewness_50",
-            "HTF_1d_Trend_Strength",
-            "Price_Distance_From_1d_SMA50",
-            "FracDiff_Price_d0.4"
-        ],
-        "primary_scores": [
-            {
-                "acc": 0.5343137254901961,
-                "prec": 0.6388888888888888,
-                "trades": 36,
-                "hits": 23
-            },
-            {
-                "acc": 0.4729654403567447,
-                "prec": 0.42424242424242425,
-                "trades": 33,
-                "hits": 14
-            },
-            {
-                "acc": 0.5027777777777778,
-                "prec": 0.5319148936170213,
-                "trades": 47,
-                "hits": 25
-            },
-            {
-                "acc": 0.5111111111111111,
-                "prec": 0.5384615384615384,
-                "trades": 52,
-                "hits": 28
-            },
-            {
-                "acc": 0.6117680180180181,
-                "prec": 0.6944444444444444,
-                "trades": 36,
-                "hits": 25
-            }
-        ],
-        "meta_scores": [
-            {
-                "acc": 0.5343137254901961,
-                "prec": 0.6388888888888888,
-                "trades": 36,
-                "hits": 23
-            },
-            {
-                "acc": 0.5125418060200668,
-                "prec": 0.48,
-                "trades": 25,
-                "hits": 12
-            },
-            {
-                "acc": 0.4819444444444444,
-                "prec": 0.5116279069767442,
-                "trades": 43,
-                "hits": 22
-            },
-            {
-                "acc": 0.49583333333333335,
-                "prec": 0.525,
-                "trades": 40,
-                "hits": 21
-            },
-            {
-                "acc": 0.6002252252252253,
-                "prec": 0.7142857142857143,
-                "trades": 28,
-                "hits": 20
-            }
-        ],
-        "final_primary_acc": 0.5265872145507695,
-        "final_meta_acc": 0.524971706902653,
-        "winner": "Meta Model"
-    },
-    "triple_barrier": {
-        "timestamp": "2025-12-24T01:45:01.297035",
-        "symbol": "BTC/USDT:USDT",
-        "timeframe": "4h",
-        "limit": 10000,
-        "labeling_method": "triple_barrier",
-        "total_valid_signals": 514,
-        "elite_features_count": 38,
-        "elite_features": [
-            "VAL_Distance_100",
-            "Value_Area_Width_100",
-            "VAH_Distance_200",
-            "Value_Area_Width_200",
-            "Price_Volume_Trend",
-            "Historical_Volatility_20",
-            "BB_Width",
-            "Volume_MA_20",
-            "VWAP_Deviation",
-            "MFI",
-            "Choppiness_Index_14",
-            "Amihud_Illiquidity",
-            "MACD_Histogram",
-            "ADX",
-            "price_vs_low_24h",
-            "time_interaction_vol_us",
-            "time_adaptive_vol_ratio",
-            "Returns_Kurtosis_5",
-            "Volume_Skewness_5",
-            "Close_Position_Mean_5",
-            "Close_Position_Std_5",
-            "Returns_Skewness_10",
-            "Volume_Skewness_10",
-            "Close_Position_Std_10",
-            "Volume_Kurtosis_20",
-            "Close_Position_Mean_20",
-            "LogReturns_Skewness_50",
-            "Price_Volume_Corr_10",
-            "Volume_Weighted_Returns_Skew_20",
+            "SMA_50_1h",
+            "Price_Skewness_20",
+            "time_hour_sin",
+            "time_micro_illiquidity",
+            "Volume_Kurtosis_5",
+            "Returns_Skewness_20",
+            "Price_Volume_Corr_20",
             "HTF_4h_RSI",
-            "HTF_1d_Trend_Strength",
-            "Price_Distance_From_4h_SMA50",
-            "Price_Distance_From_1d_SMA50",
-            "Returns_Kurtosis_50",
-            "FracDiff_Price_d0.3",
-            "Intraday_Volatility_Zscore",
-            "Intraday_Volume_Buy_Ratio",
-            "Intraday_Absorption"
+            "HVN_Distance_lag1",
+            "Price_Skewness_20_lag1",
+            "Market_Impact_lag1",
+            "RSI_lag1",
+            "time_since_ny_lag1",
+            "Returns_Kurtosis_50_lag1",
+            "POC_Distance_100_lag3",
+            "Price_Volume_Trend_lag3",
+            "Close_range_20_lag3",
+            "Volume_MA_20_lag3",
+            "Market_Efficiency_lag3",
+            "Choppiness_Index_14_lag3",
+            "price_vs_low_24h_lag3",
+            "Returns_Skewness_10_lag3",
+            "Volume_Skewness_10_lag3",
+            "Close_Position_Std_20_lag3",
+            "LogReturns_Skewness_50_lag3",
+            "Price_Volume_Corr_10_lag3",
+            "HTF_4h_RSI_lag3",
+            "LS_Price_Incongruence_lag3",
+            "ADOSC_lag5",
+            "Williams_R_lag5",
+            "ADX_lag5",
+            "time_since_tokyo_lag5",
+            "Close_Position_Mean_10_lag5",
+            "Hurst_Exponent_100_lag5",
+            "mult_SMA_50_1h_Value_Area_Width_50",
+            "ratio_SMA_50_1h_In_Value_Area_100",
+            "ratio_SMA_50_1h_In_Value_Area_200",
+            "ratio_SMA_50_1h_open",
+            "ratio_SMA_50_1h_high",
+            "ratio_SMA_50_1h_Historical_Volatility_20",
+            "ratio_trend_direction_1h_POC_Distance_100",
+            "ratio_trend_direction_1h_Value_Area_Width_100",
+            "ratio_trend_direction_1h_Value_Area_Width_200",
+            "mult_trend_direction_1h_Value_Area_Width_200",
+            "ratio_POC_Distance_50_VAL_Distance_50",
+            "ratio_VAH_Distance_50_VAL_Distance_100",
+            "mult_VAH_Distance_50_VP_Kurtosis",
+            "ratio_VAL_Distance_100_POC_Distance_200",
+            "ratio_VAL_Distance_100_Value_Area_Width_200",
+            "mult_Value_Area_Width_100_VAL_Distance_200",
+            "ratio_Value_Area_Width_100_In_Value_Area_200",
+            "ratio_Value_Area_Width_100_Value_Area_Width_200",
+            "ratio_Value_Area_Width_100_Historical_Volatility_20",
+            "ratio_VAH_Distance_200_LVN_Distance",
+            "mult_VAH_Distance_200_VP_Kurtosis",
+            "ratio_VAL_Distance_200_Historical_Volatility_20",
+            "ratio_Close_range_20_Historical_Volatility_20"
         ],
         "primary_scores": [
             {
-                "acc": 0.5245098039215685,
-                "prec": 0.65,
-                "trades": 20,
-                "hits": 13
-            },
-            {
-                "acc": 0.6067073170731707,
-                "prec": 0.6,
-                "trades": 55,
-                "hits": 33
-            },
-            {
-                "acc": 0.5888888888888889,
-                "prec": 0.5932203389830508,
-                "trades": 59,
-                "hits": 35
-            },
-            {
-                "acc": 0.4265873015873016,
-                "prec": 0.5303030303030303,
-                "trades": 66,
-                "hits": 35
-            },
-            {
-                "acc": 0.5202702702702703,
-                "prec": 0.5853658536585366,
-                "trades": 41,
-                "hits": 24
-            }
-        ],
-        "meta_scores": [
-            {
-                "acc": 0.5245098039215685,
-                "prec": 0.65,
-                "trades": 20,
-                "hits": 13
-            },
-            {
-                "acc": 0.5515521064301552,
-                "prec": 0.5652173913043478,
-                "trades": 46,
+                "acc": 0.5823792931806869,
+                "prec": 0.5306122448979592,
+                "trades": 49,
                 "hits": 26
             },
             {
-                "acc": 0.5888888888888889,
-                "prec": 0.5932203389830508,
-                "trades": 59,
-                "hits": 35
+                "acc": 0.6353754940711462,
+                "prec": 0.6756756756756757,
+                "trades": 37,
+                "hits": 25
             },
             {
-                "acc": 0.4265873015873016,
-                "prec": 0.5303030303030303,
-                "trades": 66,
-                "hits": 35
+                "acc": 0.5963821368004523,
+                "prec": 0.7551020408163265,
+                "trades": 49,
+                "hits": 37
             },
             {
-                "acc": 0.5202702702702703,
-                "prec": 0.5853658536585366,
-                "trades": 41,
-                "hits": 24
+                "acc": 0.5776843146956951,
+                "prec": 0.5735294117647058,
+                "trades": 68,
+                "hits": 39
+            },
+            {
+                "acc": 0.5921052631578947,
+                "prec": 0.5,
+                "trades": 52,
+                "hits": 26
             }
         ],
-        "final_primary_acc": 0.53339271634824,
-        "final_meta_acc": 0.5223616742196369,
+        "meta_scores": [
+            {
+                "acc": 0.5037332005973121,
+                "prec": 0.4666666666666667,
+                "trades": 15,
+                "hits": 7
+            },
+            {
+                "acc": 0.6274703557312253,
+                "prec": 0.75,
+                "trades": 24,
+                "hits": 18
+            },
+            {
+                "acc": 0.5251554550593556,
+                "prec": 0.7096774193548387,
+                "trades": 31,
+                "hits": 22
+            },
+            {
+                "acc": 0.5729836714497774,
+                "prec": 0.5818181818181818,
+                "trades": 55,
+                "hits": 32
+            },
+            {
+                "acc": 0.5910931174089069,
+                "prec": 0.5111111111111111,
+                "trades": 45,
+                "hits": 23
+            }
+        ],
+        "final_primary_acc": 0.596785300381175,
+        "final_meta_acc": 0.5640871600493155,
+        "winner": "Primary Model"
+    },
+    "triple_barrier": {
+        "timestamp": "2025-12-24T03:07:13.531974",
+        "symbol": "BTC/USDT:USDT",
+        "timeframe": "1h",
+        "limit": 10000,
+        "labeling_method": "triple_barrier",
+        "total_valid_signals": 543,
+        "elite_features_count": 32,
+        "elite_features": [
+            "Value_Area_Width_100",
+            "Returns_Kurtosis_5",
+            "Close_Position_Mean_5",
+            "Volume_Skewness_50",
+            "Price_Volume_Corr_20",
+            "HTF_4h_Trend_Strength",
+            "Price_Skewness_20_lag1",
+            "Market_Efficiency_lag1",
+            "Market_Impact_lag1",
+            "Williams_R_lag1",
+            "Volume_Kurtosis_10_lag1",
+            "Price_Volume_Corr_10_lag1",
+            "VP_Kurtosis_lag3",
+            "Price_Volume_Trend_lag3",
+            "time_hour_sin_lag3",
+            "POC_Distance_100_lag5",
+            "LVN_Distance_lag5",
+            "time_since_tokyo_lag5",
+            "Close_Position_Mean_20_lag5",
+            "Price_Volume_Corr_20_lag5",
+            "mult_SMA_50_1h_Value_Area_Width_100",
+            "mult_trend_direction_1h_VP_Skewness",
+            "ratio_POC_Distance_50_VAL_Distance_50",
+            "ratio_POC_Distance_50_VAL_Distance_100",
+            "ratio_VAH_Distance_50_POC_Distance_100",
+            "ratio_POC_Distance_100_HVN_Distance",
+            "ratio_VAL_Distance_100_HVN_Distance",
+            "ratio_VAH_Distance_200_LVN_Distance",
+            "ratio_VAL_Distance_200_Historical_Volatility_20",
+            "mult_Value_Area_Width_200_volume",
+            "mult_VP_Skewness_VP_Kurtosis",
+            "ratio_Close_range_20_Historical_Volatility_20"
+        ],
+        "primary_scores": [
+            {
+                "acc": 0.5364372469635628,
+                "prec": 0.48148148148148145,
+                "trades": 27,
+                "hits": 13
+            },
+            {
+                "acc": 0.6264225630875804,
+                "prec": 0.6756756756756757,
+                "trades": 37,
+                "hits": 25
+            },
+            {
+                "acc": 0.5727272727272728,
+                "prec": 0.6818181818181818,
+                "trades": 44,
+                "hits": 30
+            },
+            {
+                "acc": 0.5092592592592593,
+                "prec": 0.6056338028169014,
+                "trades": 71,
+                "hits": 43
+            },
+            {
+                "acc": 0.5708502024291497,
+                "prec": 0.5,
+                "trades": 40,
+                "hits": 20
+            }
+        ],
+        "meta_scores": [
+            {
+                "acc": 0.5364372469635628,
+                "prec": 0.48148148148148145,
+                "trades": 27,
+                "hits": 13
+            },
+            {
+                "acc": 0.5549233052944087,
+                "prec": 0.625,
+                "trades": 24,
+                "hits": 15
+            },
+            {
+                "acc": 0.5324675324675324,
+                "prec": 0.6486486486486487,
+                "trades": 37,
+                "hits": 24
+            },
+            {
+                "acc": 0.5092592592592593,
+                "prec": 0.6056338028169014,
+                "trades": 71,
+                "hits": 43
+            },
+            {
+                "acc": 0.5708502024291497,
+                "prec": 0.5,
+                "trades": 40,
+                "hits": 20
+            }
+        ],
+        "final_primary_acc": 0.563139308893365,
+        "final_meta_acc": 0.5407875092827826,
         "winner": "Primary Model"
     }
 }

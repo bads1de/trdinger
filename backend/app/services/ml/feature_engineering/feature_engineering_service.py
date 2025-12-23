@@ -489,6 +489,55 @@ class FeatureEngineeringService:
 
         return df[non_frac_cols + target_frac_cols]
 
+    def expand_features(self, df: pd.DataFrame, top_n_for_interaction: int = 30) -> pd.DataFrame:
+        """
+        特徴量セットを全方位に爆発させる (v4: 1,500個規模)
+        """
+        logger.info(f"特徴量全方位拡張(v4)を開始: 初期カラム数 = {len(df.columns)}")
+        expanded_df = df.copy()
+        
+        # --- 1. 全特徴量に対する多重ラグ (Global Lagging) ---
+        # ほぼ全ての特徴量に対して過去の動きを注入
+        lag_dfs = []
+        for lag in [1, 3, 5]: # 計算コストを考慮し、重要度の高い3点に絞る
+            lag_df = df.shift(lag).add_suffix(f"_lag{lag}")
+            lag_dfs.append(lag_df)
+            
+        # --- 2. 高度な加速度 & 統計的変化 ---
+        for col in ["close", "volume", "RSI", "ATR", "ADX", "Intraday_Volatility"]:
+            if col in df.columns:
+                vel = df[col].diff(1)
+                expanded_df[f"{col}_Accel"] = vel.diff(1)
+                expanded_df[f"{col}_Zscore_20"] = (df[col] - df[col].rolling(20).mean()) / (df[col].rolling(20).std() + 1e-9)
+        
+        # --- 3. 大規模相互作用 (Massive Interaction) ---
+        # 重要指標の上位30個をピックアップ
+        interactors = df.columns[:top_n_for_interaction].tolist()
+        if "primary_proba" in df.columns and "primary_proba" not in interactors:
+            interactors.append("primary_proba")
+            
+        interaction_list = []
+        for i in range(len(interactors)):
+            for j in range(i + 1, len(interactors)):
+                col1, col2 = interactors[i], interactors[j]
+                # 比率
+                interaction_list.append((df[col1] / (df[col2] + 1e-9)).rename(f"ratio_{col1}_{col2}"))
+                # 積
+                interaction_list.append((df[col1] * df[col2]).rename(f"mult_{col1}_{col2}"))
+        
+        # --- 4. 統合 ---
+        if interaction_list:
+            interaction_df = pd.concat(interaction_list, axis=1)
+            expanded_df = pd.concat([expanded_df] + lag_dfs + [interaction_df], axis=1)
+            
+        # クリーンアップ
+        expanded_df = expanded_df.replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
+        # 重複削除
+        expanded_df = expanded_df.loc[:, ~expanded_df.columns.duplicated()]
+        
+        logger.info(f"特徴量全方位拡張(v4)完了: 最終カラム数 = {len(expanded_df.columns)}")
+        return expanded_df
+
     def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
         """キャッシュからデータを取得"""
         if key in self.feature_cache:
