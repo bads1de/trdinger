@@ -1,0 +1,195 @@
+{
+    "timestamp": "2025-12-23T22:46:48.846426",
+    "symbol": "BTC/USDT:USDT",
+    "trend_scanning": {
+        "timestamp": "2025-12-23T22:44:29.755081",
+        "symbol": "BTC/USDT:USDT",
+        "timeframe": "15m",
+        "limit": 10000,
+        "labeling_method": "trend_scanning",
+        "total_valid_signals": 441,
+        "elite_features_count": 14,
+        "elite_features": [
+            "Value_Area_Width_100",
+            "VP_Kurtosis",
+            "Price_Skewness_20",
+            "VWAP_Deviation",
+            "AD",
+            "time_since_tokyo",
+            "Returns_Skewness_5",
+            "Volume_Kurtosis_5",
+            "Close_Position_Std_50",
+            "Volume_Weighted_Returns_Skew_20",
+            "Returns_Kurtosis_50",
+            "Intraday_Volatility_Zscore",
+            "Intraday_Volume_Buy_Ratio",
+            "Intraday_Volume_Concentration"
+        ],
+        "primary_scores": [
+            {
+                "acc": 0.5136363636363637,
+                "prec": 0.5714285714285714,
+                "trades": 21,
+                "hits": 12
+            },
+            {
+                "acc": 0.5165056360708534,
+                "prec": 0.4166666666666667,
+                "trades": 12,
+                "hits": 5
+            },
+            {
+                "acc": 0.6861702127659575,
+                "prec": 0.6842105263157895,
+                "trades": 19,
+                "hits": 13
+            },
+            {
+                "acc": 0.5567460317460318,
+                "prec": 0.4411764705882353,
+                "trades": 34,
+                "hits": 15
+            },
+            {
+                "acc": 0.6295652173913043,
+                "prec": 0.4146341463414634,
+                "trades": 41,
+                "hits": 17
+            }
+        ],
+        "meta_scores": [
+            {
+                "acc": 0.5136363636363637,
+                "prec": 0.5714285714285714,
+                "trades": 21,
+                "hits": 12
+            },
+            {
+                "acc": 0.5523349436392915,
+                "prec": 0.6666666666666666,
+                "trades": 6,
+                "hits": 4
+            },
+            {
+                "acc": 0.6583469721767594,
+                "prec": 0.6875,
+                "trades": 16,
+                "hits": 11
+            },
+            {
+                "acc": 0.5297619047619048,
+                "prec": 0.4230769230769231,
+                "trades": 26,
+                "hits": 11
+            },
+            {
+                "acc": 0.6243478260869566,
+                "prec": 0.4375,
+                "trades": 32,
+                "hits": 14
+            }
+        ],
+        "final_primary_acc": 0.5805246923221021,
+        "final_meta_acc": 0.5756856020602552,
+        "winner": "Meta Model"
+    },
+    "triple_barrier": {
+        "timestamp": "2025-12-23T22:46:48.810329",
+        "symbol": "BTC/USDT:USDT",
+        "timeframe": "15m",
+        "limit": 10000,
+        "labeling_method": "triple_barrier",
+        "total_valid_signals": 435,
+        "elite_features_count": 21,
+        "elite_features": [
+            "SMA_50_1h",
+            "VAH_Distance_200",
+            "VAL_Distance_200",
+            "Price_Skewness_20",
+            "BB_Width",
+            "MFI",
+            "AD",
+            "Market_Impact",
+            "Williams_R",
+            "ADX",
+            "time_hour_cos",
+            "time_adaptive_vol_ratio",
+            "Volume_Kurtosis_5",
+            "Volume_Skewness_20",
+            "Close_Position_Mean_20",
+            "Close_Position_Std_50",
+            "Price_Volume_Corr_20",
+            "Hurst_Exponent_100",
+            "Intraday_Volatility_Zscore",
+            "Intraday_Volume_Buy_Ratio",
+            "Intraday_Absorption"
+        ],
+        "primary_scores": [
+            {
+                "acc": 0.4861111111111111,
+                "prec": 0.47619047619047616,
+                "trades": 21,
+                "hits": 10
+            },
+            {
+                "acc": 0.6772253408179632,
+                "prec": 0.6818181818181818,
+                "trades": 22,
+                "hits": 15
+            },
+            {
+                "acc": 0.6404761904761904,
+                "prec": 0.7058823529411765,
+                "trades": 17,
+                "hits": 12
+            },
+            {
+                "acc": 0.6245819397993311,
+                "prec": 0.5789473684210527,
+                "trades": 19,
+                "hits": 11
+            },
+            {
+                "acc": 0.6583801122694466,
+                "prec": 0.5365853658536586,
+                "trades": 41,
+                "hits": 22
+            }
+        ],
+        "meta_scores": [
+            {
+                "acc": 0.4861111111111111,
+                "prec": 0.47619047619047616,
+                "trades": 21,
+                "hits": 10
+            },
+            {
+                "acc": 0.6772253408179632,
+                "prec": 0.6818181818181818,
+                "trades": 22,
+                "hits": 15
+            },
+            {
+                "acc": 0.6523809523809524,
+                "prec": 0.75,
+                "trades": 16,
+                "hits": 12
+            },
+            {
+                "acc": 0.5167224080267558,
+                "prec": 0.5,
+                "trades": 4,
+                "hits": 2
+            },
+            {
+                "acc": 0.6182838813151563,
+                "prec": 0.5135135135135135,
+                "trades": 37,
+                "hits": 19
+            }
+        ],
+        "final_primary_acc": 0.6173549388948084,
+        "final_meta_acc": 0.5901447387303878,
+        "winner": "Primary Model"
+    }
+}

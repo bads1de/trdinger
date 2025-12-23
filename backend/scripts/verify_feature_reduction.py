@@ -99,7 +99,9 @@ def fetch_all_data(symbol, timeframe, limit):
         db.close()
 
 
-def run_verify_mode(symbol, timeframe, limit):
+def run_analysis_pipeline(
+    symbol, timeframe, limit, labeling_method="trend_scanning", save_json=True
+):
     print(f"\n{'='*60}\n VERIFY MODE: Full Microstructure Power\n{'='*60}")
 
     ohlcv_df, fr_df, ls_df, oi_df, ohlcv_1m = fetch_all_data(symbol, timeframe, limit)
@@ -120,17 +122,55 @@ def run_verify_mode(symbol, timeframe, limit):
     # 3. 統合
     X_full = X_raw.join(agg_1m, how="left").ffill().fillna(0)
 
-    # 4. ラベル (TBM with Dynamic ATR Threshold)
-    # 検証済み: Precision ~53% を達成した設定
-    y_raw = triple_barrier_method_preset(
-        ohlcv_df,
-        timeframe="1h",
-        horizon_n=24,
-        pt=3.0,
-        sl=1.0,
-        use_atr=True,
-        atr_period=14,
-    )
+    y_raw = None
+    if labeling_method == "trend_scanning":
+        # 4. ラベル (Trend Scanning)
+        print("[*] Generating labels using Trend Scanning...")
+        from app.services.ml.label_generation.trend_scanning import TrendScanning
+
+        # Trend Scanningの初期化
+        # 少し長めのトレンドも捉えられるように max_window を調整
+        ts_scanner = TrendScanning(
+            min_window=5,
+            max_window=20,  # 1時間足 x 120 = 5日分 (スイング気味のトレンドまで探索)
+            step=1,
+            min_t_value=2.0,  # t値 > 2.0 (有意水準 約5%) を採用
+        )
+
+        # ラベル生成 (timeframe="1h" 前提)
+        # Refactored: 対数価格を使用 (use_log_price=True)
+        labels = ts_scanner.get_labels(ohlcv_df["close"], use_log_price=True)
+
+        # Trend Scanningは {bin: 1, 0, -1} を返す
+        y_raw = labels["bin"]
+
+        # 検証用：バイナリ分類 (1 [トレンド順張り勝ち] vs 0 [それ以外]) に変換
+        # Trend Scanningは -1 も「下落トレンド」として検出するが、
+        # 既存のロジックがロング目線(y_pred=1で買い)の場合、1のみをターゲットにするのが自然
+        y_raw = (y_raw == 1).astype(int)
+
+    elif labeling_method == "triple_barrier":
+        # 4. ラベル (Triple Barrier)
+        print("[*] Generating labels using Triple Barrier Method...")
+        # プリセット関数を利用 (デフォルト設定: 1h, Horizon=24h, PT=1.0, SL=1.0)
+        # ユーザーの実装に合わせてカスタマイズ可能
+        y_raw = triple_barrier_method_preset(
+            ohlcv_df,
+            timeframe=timeframe,
+            horizon_n=24,  # 24時間後をターゲット
+            pt=1.0,
+            sl=1.0,
+            min_ret=0.001,
+            use_atr=True,  # ATRを使用
+            atr_period=14,
+        )
+        # triple_barrier_method_presetは既に0/1のSeriesを返す(binary_label=Trueの場合)
+        # 念のためdropna
+        y_raw = y_raw.dropna().astype(int)
+
+    else:
+        print(f"Error: Unknown labeling method '{labeling_method}'")
+        return
 
     rolling_high = ohlcv_df["high"].rolling(window=20).max().shift(1)
     trigger_mask = ohlcv_df["close"] > rolling_high
@@ -321,6 +361,7 @@ def run_verify_mode(symbol, timeframe, limit):
         "symbol": symbol,
         "timeframe": timeframe,
         "limit": limit,
+        "labeling_method": labeling_method,
         "total_valid_signals": len(X_model_all),
         "elite_features_count": len(elite_cols),
         "elite_features": elite_cols,
@@ -331,20 +372,115 @@ def run_verify_mode(symbol, timeframe, limit):
         "winner": winner,
     }
 
-    output_path = Path(__file__).parent / "verify_feature_reduction_result.json"
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(result_data, f, indent=4, ensure_ascii=False)
+    if save_json:
+        output_path = Path(__file__).parent / f"verify_result_{labeling_method}.json"
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(result_data, f, indent=4, ensure_ascii=False)
+        print(f"[*] Results saved to {output_path}")
 
-    print(f"[*] Results saved to {output_path}")
+    return result_data
+
+
+def run_verify_mode(symbol, timeframe, limit, labeling_method):
+    run_analysis_pipeline(symbol, timeframe, limit, labeling_method, save_json=True)
+
+
+def run_compare_mode(symbol, timeframe, limit):
+    print(f"\n{'#'*80}\n COMPARISON MODE: Trend Scanning vs Triple Barrier\n{'#'*80}")
+
+    # 1. Trend Scanning
+    print("\n>>> [1/2] Running Trend Scanning Pipeline...")
+    res_ts = run_analysis_pipeline(
+        symbol, timeframe, limit, "trend_scanning", save_json=False
+    )
+
+    # 2. Triple Barrier
+    print("\n>>> [2/2] Running Triple Barrier Pipeline...")
+    res_tb = run_analysis_pipeline(
+        symbol, timeframe, limit, "triple_barrier", save_json=False
+    )
+
+    print(f"\n{'='*60}")
+    print(f" FINAL COMPARISON: {symbol} ({timeframe})")
+    print(f"{'='*60}")
+
+    # ヘッダー
+    print(
+        f"{'Metric':<20} | {'Trend Scanning':<20} | {'Triple Barrier':<20} | {'Diff (TS - TB)':<15}"
+    )
+    print("-" * 85)
+
+    metrics = [
+        ("Meta Model Acc", "final_meta_acc", "{:.4f}"),
+        ("Primary Model Acc", "final_primary_acc", "{:.4f}"),
+        ("Elite Features", "elite_features_count", "{}"),
+        ("Valid Signals", "total_valid_signals", "{}"),
+    ]
+
+    for label, key, fmt in metrics:
+        val_ts = res_ts[key]
+        val_tb = res_tb[key]
+
+        diff_str = "-"
+        if isinstance(val_ts, (int, float)) and isinstance(val_tb, (int, float)):
+            diff = val_ts - val_tb
+            diff_str = f"{diff:+.4f}" if isinstance(val_ts, float) else f"{diff:+d}"
+
+        # フォーマット
+        v_ts_str = fmt.format(val_ts)
+        v_tb_str = fmt.format(val_tb)
+
+        print(f"{label:<20} | {v_ts_str:<20} | {v_tb_str:<20} | {diff_str:<15}")
+
+    # トレード数合計の計算
+    ts_trades = sum(s["trades"] for s in res_ts["meta_scores"])
+    tb_trades = sum(s["trades"] for s in res_tb["meta_scores"])
+    print(
+        f"{'Meta Total Trades':<20} | {ts_trades:<20} | {tb_trades:<20} | {ts_trades - tb_trades:<+15}"
+    )
+
+    # 平均Precision
+    ts_prec = np.mean([s["prec"] for s in res_ts["meta_scores"]])
+    tb_prec = np.mean([s["prec"] for s in res_tb["meta_scores"]])
+    print(
+        f"{'Meta Avg Precision':<20} | {ts_prec:<20.4f} | {tb_prec:<20.4f} | {ts_prec - tb_prec:+.4f}"
+    )
+
+    print("-" * 85)
+    print("Top 3 Features (Trend Scanning):", res_ts["elite_features"][:3])
+    print("Top 3 Features (Triple Barrier):", res_tb["elite_features"][:3])
+    print("=" * 60)
+
+    # 比較結果保存
+    cmp_result = {
+        "timestamp": datetime.now().isoformat(),
+        "symbol": symbol,
+        "trend_scanning": res_ts,
+        "triple_barrier": res_tb,
+    }
+    output_path = Path(__file__).parent / "comparison_result.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(cmp_result, f, indent=4, ensure_ascii=False)
+    print(f"[*] Comparison results saved to {output_path}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["verify", "optimize"], default="verify")
+    parser.add_argument(
+        "--mode", choices=["verify", "optimize", "compare"], default="verify"
+    )
     parser.add_argument("--symbol", default="BTC/USDT:USDT")
     parser.add_argument("--timeframe", default="1h")
     parser.add_argument("--limit", type=int, default=10000)
+    parser.add_argument(
+        "--labeling-method",
+        choices=["trend_scanning", "triple_barrier"],
+        default="trend_scanning",
+        help="Choose labeling method: trend_scanning or triple_barrier",
+    )
     args = parser.parse_args()
 
     if args.mode == "verify":
-        run_verify_mode(args.symbol, args.timeframe, args.limit)
+        run_verify_mode(args.symbol, args.timeframe, args.limit, args.labeling_method)
+    elif args.mode == "compare":
+        run_compare_mode(args.symbol, args.timeframe, args.limit)

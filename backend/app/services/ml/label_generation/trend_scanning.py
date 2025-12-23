@@ -151,46 +151,81 @@ class TrendScanning:
         self,
         close: pd.Series,
         t_events: Optional[pd.DatetimeIndex] = None,
+        use_log_price: bool = True,  # 対数価格を使用するオプション
+        return_t_value: bool = False,  # t値をそのまま返すオプション(回帰用)
     ) -> pd.DataFrame:
-        """トレンドスキャンを使用してラベルを生成"""
+        """
+        トレンドスキャンを使用してラベルを生成
+
+        Args:
+            return_t_value (bool): Trueの場合、bin列に離散ラベルではなくt値(連続値)を格納します。
+
+        Returns:
+            pd.DataFrame: columns=["t1", "t_value", "bin", "ret"]
+                          binは離散ラベル(1, 0, -1) または t値そのもの
+        """
         t_events = t_events if t_events is not None else close.index
         t_events = t_events[t_events.isin(close.index)]
         if t_events.empty:
             return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
 
-        close_np = close.values.astype(np.float64)
+        # 対数価格の使用 (トレンド強度の一貫性向上のため推奨)
+        if use_log_price:
+            close_values = np.log(close.values.astype(np.float64))
+        else:
+            close_values = close.values.astype(np.float64)
+
         idxs = close.index.get_indexer(t_events)
-        
+
         results = []
         for i, t0_idx in enumerate(idxs):
             if t0_idx == -1:
                 continue
-            
+
             best_L, best_t, best_slope = _find_best_window_numba(
-                close_np, t0_idx, self.min_window, self.max_window, self.step
+                close_values, t0_idx, self.min_window, self.max_window, self.step
             )
             if best_L == 0:
                 continue
 
-            label = 1 if best_t > self.min_t_value else (-1 if best_t < -self.min_t_value else 0)
+            # ラベル生成
+            if return_t_value:
+                # 回帰問題やウェイト付け用にt値をそのまま使う
+                label = best_t
+            else:
+                # 従来の3値分類
+                label = (
+                    1
+                    if best_t > self.min_t_value
+                    else (-1 if best_t < -self.min_t_value else 0)
+                )
+
             t1_idx = t0_idx + int(best_L)
-            
-            results.append({
-                "t0": t_events[i], "t1": close.index[t1_idx],
-                "t_value": best_t, "bin": label,
-                "ret": (close_np[t1_idx] / close_np[t0_idx]) - 1
-            })
+
+            # リターン計算 (これは常に対数ではなく元の価格の実リターンが良いことが多いが、
+            # 分析の一貫性のためにここも対数差分にする手もある。
+            # ここでは実務的な分かりやすさ優先で、元の価格の単純リターンを計算する)
+            t1_price = close.values[t1_idx]
+            t0_price = close.values[t0_idx]
+            actual_ret = (t1_price / t0_price) - 1.0
+
+            results.append(
+                {
+                    "t0": t_events[i],
+                    "t1": close.index[t1_idx],
+                    "t_value": best_t,
+                    "bin": label,
+                    "ret": actual_ret,
+                }
+            )
 
         if not results:
             return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
-            
+
         # resultsからインデックス(t0)とデータを分離
         t0_list = [r["t0"] for r in results]
         data_list = [{k: v for k, v in r.items() if k != "t0"} for r in results]
-        
+
         out = pd.DataFrame(data_list, index=t0_list)
         out.index.name = None
         return out
-
-
-
