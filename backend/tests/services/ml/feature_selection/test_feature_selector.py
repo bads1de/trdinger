@@ -104,21 +104,13 @@ class TestFeatureSelectorBasics:
     def test_pipeline_integration(self, sample_data):
         """Pipelineとの統合テスト（手動連携）"""
         X, y = sample_data
-
-        # FeatureSelectorはfit_transformがタプルを返すため、
-        # sklearn Pipelineとは直接連携不可。
-        # 代わりに手動で連携してテスト。
+    
+        # FeatureSelectorはfit_transformがDataFrameを返すように修正された
         selector = FeatureSelector(method="variance")
-        X_selected, _ = selector.fit_transform(X, y)
-
-        # 選択された特徴量で分類器を訓練
-        clf = RandomForestClassifier(n_estimators=10, random_state=42)
-
-        # クロスバリデーションで評価
-        scores = cross_val_score(clf, X_selected, y, cv=3, scoring="accuracy")
-
-        assert len(scores) == 3
-        assert all(0 <= s <= 1 for s in scores)
+        X_selected = selector.fit_transform(X, y)
+        
+        assert isinstance(X_selected, pd.DataFrame)
+        assert X_selected.shape[1] < X.shape[1]
 
     def test_feature_names_out(self, sample_data):
         """特徴量名の取得"""

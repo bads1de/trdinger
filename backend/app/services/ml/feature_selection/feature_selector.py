@@ -124,6 +124,7 @@ class FeatureSelectionConfig:
     # --- Wrapper/Embedded設定 ---
     target_k: Optional[int] = None  # None = 自動決定 (RFECV)
     min_features: int = 5  # 最小特徴量数
+    max_features: Optional[int] = None  # 最大特徴量数 (追加)
 
     # --- 質による選別 ---
     cumulative_importance: float = 0.95  # 累積重要度閾値
@@ -176,6 +177,22 @@ class BaseSelectionStrategy(ABC):
         """
         pass
 
+    def _limit_features(self, mask: np.ndarray, scores: np.ndarray, config: FeatureSelectionConfig) -> np.ndarray:
+        """最大個数制限を適用するヘルパー"""
+        if config.max_features is None or mask.sum() <= config.max_features:
+            return mask
+            
+        # マスクがTrueかつスコアが高い上位max_features個を選択
+        support_indices = np.where(mask)[0]
+        support_scores = scores[support_indices]
+        
+        # スコアでソートして上位を選択
+        top_k_indices = support_indices[np.argsort(support_scores)[-config.max_features:]]
+        
+        new_mask = np.zeros_like(mask, dtype=bool)
+        new_mask[top_k_indices] = True
+        return new_mask
+
 
 class VarianceStrategy(BaseSelectionStrategy):
     """分散に基づくフィルタ（定数・準定数の削除）"""
@@ -215,7 +232,8 @@ class UnivariateStrategy(BaseSelectionStrategy):
         feature_names: List[str],
         config: FeatureSelectionConfig,
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        k = config.target_k or max(config.min_features, int(len(feature_names) * 0.5))
+        # target_kがあればそれ、なければmax_featuresがあればそれ、なければ半分
+        k = config.target_k or config.max_features or max(config.min_features, int(len(feature_names) * 0.5))
         k = min(k, len(feature_names))
 
         score_func = self.score_funcs.get(self.score_func_name, f_classif)
@@ -271,10 +289,19 @@ class RFECVStrategy(BaseSelectionStrategy):
             n_jobs=config.n_jobs,
         )
         rfecv.fit(X, y)
+        
+        mask = rfecv.support_
+        # max_features制限（RFECVの結果からさらに上位を絞る）
+        if config.max_features and mask.sum() > config.max_features:
+            # ranking_ を使って上位を選択
+            ranking = rfecv.ranking_
+            # ranking=1が選択されているもの。その中で重要度（あれば）で絞るのが理想だが
+            # ranking自体が1〜Nなので、上位のものを選ぶ
+            mask = ranking <= config.max_features
 
-        return rfecv.support_, {
+        return mask, {
             "method": "rfecv",
-            "n_features": rfecv.n_features_,
+            "n_features": int(mask.sum()),
             "ranking": rfecv.ranking_.tolist(),
             "cv_results": rfecv.cv_results_ if hasattr(rfecv, "cv_results_") else None,
         }
@@ -342,6 +369,10 @@ class TreeBasedStrategy(BaseSelectionStrategy):
         )
         mask = selector.get_support()
 
+        # max_features制限
+        if config.max_features and mask.sum() > config.max_features:
+            mask = self._limit_features(mask, model.feature_importances_, config)
+
         # 最低限の特徴量を確保
         if mask.sum() < config.min_features:
             top_k = np.argsort(model.feature_importances_)[-config.min_features :]
@@ -386,6 +417,10 @@ class PermutationStrategy(BaseSelectionStrategy):
 
         importances = result.importances_mean
         mask = importances > config.importance_threshold
+
+        # max_features制限
+        if config.max_features and mask.sum() > config.max_features:
+            mask = self._limit_features(mask, importances, config)
 
         # 最低限の特徴量を確保
         if mask.sum() < config.min_features:
@@ -586,11 +621,12 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         correlation_threshold: float = 0.90,
         target_k: Optional[int] = None,
         min_features: int = 5,
+        max_features: Optional[int] = None,  # Added
         cumulative_importance: float = 0.95,
         min_relative_importance: float = 0.01,
         importance_threshold: float = 0.001,
         cv_folds: int = 5,
-        cv_strategy: str = "stratified",  # Added
+        cv_strategy: str = "stratified",
         random_state: int = 42,
         n_jobs: int = 1,
         shadow_iterations: int = 20,
@@ -605,6 +641,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             correlation_threshold: 相関閾値（これ以上は片方削除）
             target_k: 目標特徴量数（Noneで自動決定）
             min_features: 最低保証する特徴量数
+            max_features: 最大特徴量数 (追加)
             cv_folds: クロスバリデーションのフォールド数
             cv_strategy: "stratified" (default) or "timeseries"
             random_state: 乱数シード
@@ -617,11 +654,12 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         self.correlation_threshold = correlation_threshold
         self.target_k = target_k
         self.min_features = min_features
+        self.max_features = max_features  # Added
         self.cumulative_importance = cumulative_importance
         self.min_relative_importance = min_relative_importance
         self.importance_threshold = importance_threshold
         self.cv_folds = cv_folds
-        self.cv_strategy = cv_strategy  # Added
+        self.cv_strategy = cv_strategy
         self.random_state = random_state
         self.n_jobs = n_jobs
         self.shadow_iterations = shadow_iterations
@@ -703,7 +741,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         # 親クラス(SelectorMixin)のtransformを呼び出し（マスク適用）
         X_selected = super().transform(X)
 
-        # 入力がDataFrameの場合、DataFrameとして返す（カラム名付与）
+        # 入力が DataFrame の場合、カラム名を付与して返す
         if isinstance(X, pd.DataFrame):
             selected_features = self.get_feature_names_out()
             return pd.DataFrame(X_selected, columns=selected_features, index=X.index)
@@ -772,11 +810,12 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             correlation_threshold=self.correlation_threshold,
             target_k=self.target_k,
             min_features=self.min_features,
+            max_features=self.max_features,  # Added
             cumulative_importance=self.cumulative_importance,
             min_relative_importance=self.min_relative_importance,
             importance_threshold=self.importance_threshold,
             cv_folds=self.cv_folds,
-            cv_strategy=self.cv_strategy,  # Added
+            cv_strategy=self.cv_strategy,
             random_state=self.random_state,
             n_jobs=self.n_jobs,
             shadow_iterations=self.shadow_iterations,

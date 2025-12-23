@@ -240,7 +240,7 @@ class AdvancedFeatures:
         時系列の長期記憶性を測定。
         H < 0.5: 平均回帰的（レンジ）
         H = 0.5: ランダムウォーク
-        H > 0.5: トレンド持続的
+        H > 0.5: トレンド持続적
         
         注意: 計算コストが高いため、ローリング適用にはNumba等の最適化が望ましいが、
         ここではPandasのrolling.applyを使用（やや遅い）。
@@ -256,6 +256,146 @@ class AdvancedFeatures:
         )
         
         return hurst.fillna(0.5)
+
+    @staticmethod
+    def _calculate_sample_entropy(L: np.ndarray, m: int = 2, r: float = 0.2) -> float:
+        """サンプル・エントロピーの計算（ヘルパー）"""
+        N = len(L)
+        if N <= m:
+            return 0.0
+            
+        # 標準偏差でスケーリングされた閾値
+        r_thresh = r * np.std(L)
+        if r_thresh == 0:
+            return 0.0
+
+        def count_matches(m_len):
+            count = 0
+            # テンプレートベクトルの作成
+            X = np.array([L[i : i + m_len] for i in range(N - m_len + 1)])
+            # すべてのペア間の距離（無限遠ノルム）を計算
+            for i in range(len(X)):
+                # 自分自身を除外した距離
+                dist = np.max(np.abs(X - X[i]), axis=1)
+                count += np.sum(dist <= r_thresh) - 1
+            return count
+
+        A = count_matches(m + 1)
+        B = count_matches(m)
+        
+        if A == 0 or B == 0:
+            return 0.0
+            
+        return -np.log(A / B)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def sample_entropy(
+        close: pd.Series,
+        window: int = 50,
+        m: int = 2,
+        r: float = 0.2
+    ) -> pd.Series:
+        """
+        サンプル・エントロピー (Sample Entropy)
+        
+        時系列の複雑さと規則性を測定。低いほど規則的（トレンドの可能性）、高いほどランダム。
+        """
+        validation = validate_series_params(close, window)
+        if validation is not None:
+            return validation
+            
+        # 計算コストが高いため、小さな窓幅を推奨
+        entropy = close.rolling(window=window).apply(
+            lambda x: AdvancedFeatures._calculate_sample_entropy(x, m, r),
+            raw=True
+        )
+        return entropy.fillna(0.0)
+
+    @staticmethod
+    def _calculate_katz_fd(x: np.ndarray) -> float:
+        """Katzのフラクタル次元計算（ヘルパー）"""
+        n = len(x) - 1
+        if n <= 0:
+            return 1.0
+            
+        # 総経路長 (Total path length)
+        dists = np.abs(np.diff(x))
+        L = np.sum(dists)
+        
+        # 平均ステップ長
+        a = L / n
+        
+        # 平面距離 (Planar distance between first point and the farthest point)
+        d = np.max(np.abs(x - x[0]))
+        
+        if L == 0 or d == 0 or a == 0:
+            return 1.0
+            
+        # Katz formula: D = log10(n) / (log10(d/L) + log10(n))
+        # ここでは log10(L/a) = log10(n) を利用
+        return np.log10(n) / (np.log10(d / L) + np.log10(n))
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def fractal_dimension(
+        close: pd.Series,
+        window: int = 30
+    ) -> pd.Series:
+        """
+        Katzのフラクタル次元 (Fractal Dimension)
+        
+        チャートの「粗さ」を測定。1.0（直線）〜 2.0（平面を埋め尽くすほど複雑）。
+        トレンドが発生すると次元が低下する傾向がある。
+        """
+        validation = validate_series_params(close, window)
+        if validation is not None:
+            return validation
+            
+        fd = close.rolling(window=window).apply(
+            AdvancedFeatures._calculate_katz_fd, raw=True
+        )
+        # 理論上の範囲 [1.0, 2.0] にクリップして安定させる
+        return fd.clip(lower=1.0, upper=2.0).fillna(1.0)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vpin_approximation(
+        close: pd.Series,
+        volume: pd.Series,
+        window: int = 20
+    ) -> pd.Series:
+        """
+        近似VPIN (Volume-Induced Probability of Informed Trading)
+        
+        出来高の不均衡から「情報に基づいた取引」の確率を推定。
+        高いほど需給が偏っており、急変動の前兆となる。
+        """
+        validation = validate_multi_series_params({"close": close, "volume": volume}, window)
+        if validation is not None:
+            return validation
+
+        # 価格変化の方向
+        delta_p = close.diff().fillna(0)
+        
+        # 簡易的なバイ/セル分割
+        # CDF(標準正規分布)を用いて、価格変化の大きさに応じて出来高を按分
+        # 面倒なCDF計算の代わりに、シグモイド関数や単純な符号付き割合で近似
+        vol_std = delta_p.rolling(window=window).std() + 1e-9
+        z_score = delta_p / vol_std
+        
+        # 買い出来高の割合 (0.0 to 1.0)
+        buy_ratio = 1 / (1 + np.exp(-z_score))
+        
+        buy_vol = volume * buy_ratio
+        sell_vol = volume * (1 - buy_ratio)
+        
+        # VPIN = sum(|V_buy - V_sell|) / sum(V_total)
+        abs_imbalance = np.abs(buy_vol - sell_vol)
+        
+        vpin = abs_imbalance.rolling(window=window).sum() / (volume.rolling(window=window).sum() + 1e-9)
+        
+        return vpin.fillna(0.0)
 
     @staticmethod
     @handle_pandas_ta_errors

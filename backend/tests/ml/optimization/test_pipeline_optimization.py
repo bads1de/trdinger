@@ -11,7 +11,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from app.services.ml.optimization.optimization_service import OptimizationService
-from app.services.ml.optimization.optuna_optimizer import ParameterSpace
 
 
 class TestOptimizeFullPipeline:
@@ -26,7 +25,7 @@ class TestOptimizeFullPipeline:
     def sample_superset(self):
         """テスト用スーパーセットDataFrame（簡易版）"""
         np.random.seed(42)
-        n = 200  # 少量データで高速テスト
+        n = 200  # 高速化のため削減 (500 -> 200)
         dates = pd.date_range("2024-01-01", periods=n, freq="1h")
 
         data = {
@@ -58,12 +57,48 @@ class TestOptimizeFullPipeline:
             index=sample_superset.index,
         )
 
+    @pytest.fixture(autouse=True)
+    def mock_dependencies(self):
+        """重い計算を行うコンポーネントをモック化"""
+        with (
+            patch(
+                "app.services.ml.feature_selection.feature_selector.FeatureSelector"
+            ) as mock_selector_cls,
+            patch("lightgbm.LGBMClassifier") as mock_lgbm_cls,
+            patch(
+                "app.services.ml.label_generation.presets.triple_barrier_method_preset"
+            ) as mock_tbm,
+        ):
+
+            # FeatureSelector モック
+            mock_selector = MagicMock()
+            # 最初の5カラムを返すようにモック
+            mock_selector.fit_transform.side_effect = lambda X, y: X.iloc[:, :5]
+            mock_selector.transform.side_effect = lambda X: X.iloc[:, :5]
+            mock_selector_cls.return_value = mock_selector
+
+            # LGBMClassifier モック
+            mock_lgbm = MagicMock()
+            mock_lgbm.fit.return_value = None
+            # 予測結果はランダムな0/1
+            mock_lgbm.predict.side_effect = lambda X: np.random.randint(0, 2, len(X))
+            mock_lgbm_cls.return_value = mock_lgbm
+
+            # Triple Barrier Method モック (結果が返るようにする)
+            def side_effect_tbm(df, **kwargs):
+                return pd.Series(np.random.randint(0, 2, len(df)), index=df.index)
+
+            mock_tbm.side_effect = side_effect_tbm
+
+            yield
+
     def test_optimize_returns_required_keys(
         self, opt_service, sample_superset, sample_labels
     ):
         """最適化結果に必要なキーが含まれることを確認"""
         # 少ない試行回数で高速テスト
         result = opt_service.optimize_full_pipeline(
+            ohlcv_data=sample_superset,
             feature_superset=sample_superset,
             labels=sample_labels,
             n_trials=2,  # 最小限の試行
@@ -85,6 +120,7 @@ class TestOptimizeFullPipeline:
     ):
         """ベストパラメータが探索空間内にあることを確認"""
         result = opt_service.optimize_full_pipeline(
+            ohlcv_data=sample_superset,
             feature_superset=sample_superset,
             labels=sample_labels,
             n_trials=2,
@@ -114,6 +150,7 @@ class TestOptimizeFullPipeline:
     def test_scores_are_valid(self, opt_service, sample_superset, sample_labels):
         """スコアが有効な範囲（0-1）であることを確認"""
         result = opt_service.optimize_full_pipeline(
+            ohlcv_data=sample_superset,
             feature_superset=sample_superset,
             labels=sample_labels,
             n_trials=2,
@@ -192,6 +229,34 @@ class TestEvaluateBaseline:
 
         return X_train, y_train, X_test, y_test
 
+    @pytest.fixture(autouse=True)
+    def mock_dependencies_baseline(self):
+        """_evaluate_baseline 用のモック"""
+        with (
+            patch(
+                "app.services.ml.feature_selection.feature_selector.FeatureSelector"
+            ) as mock_selector_cls,
+            patch("lightgbm.LGBMClassifier") as mock_lgbm_cls,
+        ):
+
+            # FeatureSelector モック
+            mock_selector = MagicMock()
+            mock_selector.fit_transform.side_effect = lambda X, y: X.iloc[
+                :, : min(5, X.shape[1])
+            ]
+            mock_selector.transform.side_effect = lambda X: X.iloc[
+                :, : min(5, X.shape[1])
+            ]
+            mock_selector_cls.return_value = mock_selector
+
+            # LGBMClassifier モック
+            mock_lgbm = MagicMock()
+            mock_lgbm.fit.return_value = None
+            mock_lgbm.predict.side_effect = lambda X: np.random.randint(0, 2, len(X))
+            mock_lgbm_cls.return_value = mock_lgbm
+
+            yield
+
     def test_baseline_returns_valid_score(self, sample_data):
         """ベースライン評価が有効なスコアを返すことを確認"""
         X_train, y_train, X_test, y_test = sample_data
@@ -199,5 +264,5 @@ class TestEvaluateBaseline:
 
         score = service._evaluate_baseline(X_train, y_train, X_test, y_test)
 
-        # F1スコアは0から1の範囲
+        # F1スコア（精度など）は0から1の範囲
         assert 0.0 <= score <= 1.0

@@ -109,6 +109,43 @@ def test_absorption_score(sample_data):
     )
     assert isinstance(score, pd.Series)
 
+def test_sample_entropy(sample_data):
+    entropy = AdvancedFeatures.sample_entropy(
+        sample_data["close"],
+        window=20,
+        m=2,
+        r=0.2
+    )
+    assert isinstance(entropy, pd.Series)
+    assert len(entropy) == len(sample_data["close"])
+    # 最初のwindow期間はNaN（または0）
+    assert entropy.iloc[:19].sum() == 0
+
+def test_fractal_dimension(sample_data):
+    fd = AdvancedFeatures.fractal_dimension(
+        sample_data["close"],
+        window=20
+    )
+    assert isinstance(fd, pd.Series)
+    assert len(fd) == len(sample_data["close"])
+    # 1.0 to 2.0 (平面の埋め尽くし) の範囲にクリップされていることを確認
+    valid_vals = fd.iloc[20:]
+    assert (valid_vals >= 1.0).all(), f"FD below 1.0: {valid_vals.min()}"
+    assert (valid_vals <= 2.0).all(), f"FD above 2.0: {valid_vals.max()}"
+
+
+def test_vpin_approximation(sample_data):
+    vpin = AdvancedFeatures.vpin_approximation(
+        sample_data["close"],
+        sample_data["volume"],
+        window=20
+    )
+    assert isinstance(vpin, pd.Series)
+    assert len(vpin) == len(sample_data["close"])
+    # 0.0 to 1.0 の範囲
+    assert (vpin >= 0.0).all()
+    assert (vpin <= 1.0).all()
+
 
 
 

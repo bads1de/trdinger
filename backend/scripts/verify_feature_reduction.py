@@ -189,7 +189,7 @@ def run_analysis_pipeline(
         w_model_all = None
 
     # 自動特徴量選択 (FeatureSelector利用)
-    print("[*] Running Automatic Feature Selection (Staged Strategy)...")
+    print("[*] Running Strict Feature Selection (Elite 30-50 Strategy)...")
     from app.services.ml.feature_selection.feature_selector import FeatureSelector
 
     selector = FeatureSelector(
@@ -197,9 +197,10 @@ def run_analysis_pipeline(
         cv_folds=5,
         cv_strategy="timeseries",
         n_jobs=-1,  # 並列処理
-        variance_threshold=0.0001,
-        correlation_threshold=0.95,
+        variance_threshold=0.001,  # 少し上げる
+        correlation_threshold=0.80, # 0.95から大幅に下げて重複を排除
         min_features=10,
+        max_features=50, # 上限を設定
         random_state=42,
     )
 
@@ -217,9 +218,10 @@ def run_analysis_pipeline(
     tscv = TimeSeriesSplit(n_splits=5)
     model = LGBMClassifier(
         n_estimators=100,
-        learning_rate=0.03,
-        num_leaves=15,
+        learning_rate=0.02, # 学習率を少し下げて慎重に
+        num_leaves=10,      # 複雑さを抑えて過学習防止
         class_weight="balanced",
+        importance_type="gain", # 常にgainを使用
         random_state=42,
         verbosity=-1,
     )
@@ -229,7 +231,9 @@ def run_analysis_pipeline(
         use_feature_selection=True,
         feature_selection_params={
             "method": "staged",
-            "min_features": 10,  # 情報を保持
+            "min_features": 5,
+            "max_features": 20, # メタモデルも絞り込む
+            "correlation_threshold": 0.75,
             "random_state": 42,
         },
     )

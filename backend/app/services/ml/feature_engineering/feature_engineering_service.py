@@ -29,6 +29,7 @@ from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .time_anomaly_features import TimeAnomalyFeatures
 from .volume_profile_features import VolumeProfileFeatureCalculator
+from .complexity_features import ComplexityFeatureCalculator
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ class FeatureEngineeringService:
         self.advanced_stats_calculator = AdvancedRollingStatsCalculator()
         self.multi_timeframe_calculator = MultiTimeframeFeatureCalculator()
         self.time_anomaly_calculator = TimeAnomalyFeatures()
+        self.complexity_calculator = ComplexityFeatureCalculator()
 
         # データ頻度統一マネージャー
         self.frequency_manager = DataFrequencyManager()
@@ -220,6 +222,7 @@ class FeatureEngineeringService:
                 ),
                 (self.advanced_stats_calculator, [result_df]),
                 (self.multi_timeframe_calculator, [result_df]),
+                (self.complexity_calculator, [result_df]),
                 (
                     self.microstructure_calculator,
                     [
