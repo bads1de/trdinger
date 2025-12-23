@@ -177,13 +177,14 @@ class MetaLabelingService:
 
         # 自動特徴量選択
         if self.use_feature_selection:
-            from ..feature_selection.feature_selector import FeatureSelector
+            from ..feature_selection.dynamic_meta_selector import DynamicMetaSelector
 
-            self.selector = FeatureSelector(**self.feature_selection_params)
+            # メタラベル専用の自律型動的セレクターを使用
+            self.selector = DynamicMetaSelector(**(self.feature_selection_params or {}))
             X_meta = self.selector.fit_transform(X_meta, y_meta)
             self.selected_features = X_meta.columns.tolist()
             logger.info(
-                f"Meta-labeling feature selection: {len(self.selector.feature_names_in_)} -> {len(self.selected_features)} features selected."
+                f"Meta-labeling dynamic feature selection: {len(self.selector.feature_names_in_)} -> {len(self.selected_features)} features selected."
             )
 
         self.model = self._init_model()

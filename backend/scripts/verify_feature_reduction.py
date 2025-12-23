@@ -123,50 +123,44 @@ def run_analysis_pipeline(
     X_full = X_raw.join(agg_1m, how="left").ffill().fillna(0)
 
     y_raw = None
+    w_model_all = None
+
     if labeling_method == "trend_scanning":
         # 4. ラベル (Trend Scanning)
-        print("[*] Generating labels using Trend Scanning...")
+        print("[*] Generating labels using Trend Scanning with t-values as weights...")
         from app.services.ml.label_generation.trend_scanning import TrendScanning
 
-        # Trend Scanningの初期化
-        # 少し長めのトレンドも捉えられるように max_window を調整
         ts_scanner = TrendScanning(
             min_window=5,
-            max_window=20,  # 1時間足 x 120 = 5日分 (スイング気味のトレンドまで探索)
+            max_window=20,
             step=1,
-            min_t_value=2.0,  # t値 > 2.0 (有意水準 約5%) を採用
+            min_t_value=2.0,
         )
 
-        # ラベル生成 (timeframe="1h" 前提)
-        # Refactored: 対数価格を使用 (use_log_price=True)
         labels = ts_scanner.get_labels(ohlcv_df["close"], use_log_price=True)
-
-        # Trend Scanningは {bin: 1, 0, -1} を返す
         y_raw = labels["bin"]
-
-        # 検証用：バイナリ分類 (1 [トレンド順張り勝ち] vs 0 [それ以外]) に変換
-        # Trend Scanningは -1 も「下落トレンド」として検出するが、
-        # 既存のロジックがロング目線(y_pred=1で買い)の場合、1のみをターゲットにするのが自然
+        # トレンドスキャンニングのみ、t値をウェイトとして使用
+        raw_weights = labels["t_value"].abs()
+        
+        # 検証用：バイナリ分類
         y_raw = (y_raw == 1).astype(int)
 
     elif labeling_method == "triple_barrier":
         # 4. ラベル (Triple Barrier)
         print("[*] Generating labels using Triple Barrier Method...")
-        # プリセット関数を利用 (デフォルト設定: 1h, Horizon=24h, PT=1.0, SL=1.0)
-        # ユーザーの実装に合わせてカスタマイズ可能
         y_raw = triple_barrier_method_preset(
             ohlcv_df,
             timeframe=timeframe,
-            horizon_n=24,  # 24時間後をターゲット
+            horizon_n=24,
             pt=1.0,
             sl=1.0,
             min_ret=0.001,
-            use_atr=True,  # ATRを使用
+            use_atr=True,
             atr_period=14,
         )
-        # triple_barrier_method_presetは既に0/1のSeriesを返す(binary_label=Trueの場合)
-        # 念のためdropna
         y_raw = y_raw.dropna().astype(int)
+        # TBMはウェイトなし (None)
+        raw_weights = None
 
     else:
         print(f"Error: Unknown labeling method '{labeling_method}'")
@@ -184,9 +178,14 @@ def run_analysis_pipeline(
 
     X_model_all = X_full.loc[valid_idx]
     y_model_all = y_raw.loc[valid_idx]
+    if raw_weights is not None:
+        w_model_all = raw_weights.loc[valid_idx]
+    else:
+        w_model_all = None
 
     # 自動特徴量選択 (FeatureSelector利用)
     print("[*] Running Automatic Feature Selection (Staged Strategy)...")
+    from app.services.ml.feature_selection.feature_selector import FeatureSelector
 
     selector = FeatureSelector(
         method="staged",
@@ -221,14 +220,11 @@ def run_analysis_pipeline(
     )
 
     # Meta-Labeling Service
-    # from app.services.ml.ensemble.meta_labeling import MetaLabelingService (Moved to top)
-
-    # 自動特徴量選択を有効化
     meta_service = MetaLabelingService(
         use_feature_selection=True,
         feature_selection_params={
             "method": "staged",
-            "min_features": 3,  # 少数精鋭にする
+            "min_features": 10,  # 情報を保持
             "random_state": 42,
         },
     )
@@ -242,9 +238,12 @@ def run_analysis_pipeline(
         # --- Training Data ---
         X_train, y_train = X_elite.iloc[train_idx], y_model_all.iloc[train_idx]
         X_test, y_test = X_elite.iloc[test_idx], y_model_all.iloc[test_idx]
+        
+        # ウェイトの抽出 (TSの場合はt値、TBMの場合はNone)
+        w_train = w_model_all.iloc[train_idx] if w_model_all is not None else None
 
         # 1. Train Primary Model
-        model.fit(X_train, y_train)
+        model.fit(X_train, y_train, sample_weight=w_train)
 
         # Predictions
         primary_proba_train = pd.Series(
@@ -258,10 +257,9 @@ def run_analysis_pipeline(
         y_pred = (primary_proba_test >= 0.5).astype(int)
 
         p_acc = balanced_accuracy_score(y_test, y_pred)
-
         p_prec = precision_score(y_test, y_pred, zero_division=0)
 
-        # Count primary trades here
+        # Count primary trades
         n_primary_trades = int(y_pred.sum())
         y_test_np = y_test.values.astype(int)
         y_pred_np = (
@@ -279,11 +277,10 @@ def run_analysis_pipeline(
         )
 
         # 2. Train Meta Model
-        # Base probs are empty for single model case
         base_probs_train = pd.DataFrame(index=X_train.index)
         base_probs_test = pd.DataFrame(index=X_test.index)
 
-        # train (using X_elite as features for meta as well, selector will pick subset)
+        # train (Using the improved MetaLabelingService with DynamicMetaSelector)
         meta_res = meta_service.train(
             X_train, y_train, primary_proba_train, base_probs_train, threshold=0.5
         )
