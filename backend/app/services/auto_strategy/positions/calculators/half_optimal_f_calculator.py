@@ -44,12 +44,12 @@ class HalfOptimalFCalculator(BaseCalculator):
         if not trade_history or len(trade_history) < 10:
             # データ不足時は簡易版オプティマルF計算を試行
             result = self._calculate_simplified_optimal_f(
-                gene, account_balance, current_price, trade_history, warnings, details
+                gene, account_balance, current_price, warnings, details, **kwargs
             )
         else:
             # 過去データの分析
             result = self._calculate_with_trade_history(
-                gene, account_balance, current_price, trade_history, warnings, details
+                gene, account_balance, current_price, warnings, details, **kwargs
             )
 
         # 統一された最終処理（重複コード除去）
@@ -62,11 +62,12 @@ class HalfOptimalFCalculator(BaseCalculator):
         gene,
         account_balance: float,
         current_price: float,
-        trade_history: Optional[List[Dict[str, Any]]],
         warnings: List[str],
         details: Dict[str, Any],
+        **kwargs,
     ) -> Dict[str, Any]:
         """簡易オプティマルF計算"""
+        trade_history = kwargs.get("trade_history")
 
         @safe_operation(
             context="簡易オプティマルF計算",
@@ -89,9 +90,14 @@ class HalfOptimalFCalculator(BaseCalculator):
             ) / assumed_avg_win
             half_optimal_f = max(0, min(0.1, optimal_f * gene.optimal_f_multiplier))
 
-            position_amount = account_balance * half_optimal_f
+            # 修正ポイント: リスクベースの計算
+            risk_amount = account_balance * half_optimal_f
+            
+            # 簡易計算時はデフォルトのATR(2%) * 2倍 = 4%幅を仮定
+            stop_loss_pct = 0.04
+            
             position_size = self._safe_calculate_with_price_check(
-                lambda: position_amount / current_price,
+                lambda: risk_amount / (current_price * stop_loss_pct),
                 current_price,
                 0,
                 "現在価格が無効",
@@ -108,6 +114,8 @@ class HalfOptimalFCalculator(BaseCalculator):
                     "assumed_avg_loss": assumed_avg_loss,
                     "calculated_optimal_f": optimal_f,
                     "half_optimal_f": half_optimal_f,
+                    "risk_amount": risk_amount,
+                    "assumed_stop_loss_pct": stop_loss_pct,
                 },
             }
 
@@ -140,11 +148,12 @@ class HalfOptimalFCalculator(BaseCalculator):
         gene,
         account_balance: float,
         current_price: float,
-        trade_history: List[Dict[str, Any]],
         warnings: List[str],
         details: Dict[str, Any],
+        **kwargs,
     ) -> Dict[str, Any]:
         """取引履歴を使用した計算"""
+        trade_history = kwargs.get("trade_history", [])
         recent_trades = trade_history[-gene.lookback_period :]
 
         wins = [t for t in recent_trades if t.get("pnl", 0) > 0]
@@ -176,10 +185,21 @@ class HalfOptimalFCalculator(BaseCalculator):
             optimal_f = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
             half_optimal_f = max(0, optimal_f * gene.optimal_f_multiplier)
 
-            # 口座残高に対する比率として適用
-            position_amount = account_balance * half_optimal_f
+            # 修正ポイント: half_optimal_f を「リスク額（損失許容額）」として扱う
+            # ポジション全体の金額 = リスク額 / ストップロス幅(%)
+            risk_amount = account_balance * half_optimal_f
+
+            # ストップロス幅の決定: market_dataのATRを使用するか、デフォルト設定を使用
+            market_data = kwargs.get("market_data", {})
+            atr_pct = market_data.get("atr_pct", 0.02)  # デフォルト2%
+            atr_multiplier = getattr(gene, "atr_multiplier", 2.0)  # 遺伝子設定の倍率
+            
+            # 想定損切り幅（%）
+            stop_loss_pct = max(atr_pct * atr_multiplier, 0.01)  # 最低1%で制限
+
+            # ポジションサイズ（数量）の計算
             position_size = self._safe_calculate_with_price_check(
-                lambda: position_amount / current_price,
+                lambda: risk_amount / (current_price * stop_loss_pct),
                 current_price,
                 0,
                 "現在価格が無効",
@@ -193,6 +213,8 @@ class HalfOptimalFCalculator(BaseCalculator):
                     "avg_loss": avg_loss,
                     "optimal_f": optimal_f,
                     "half_optimal_f": half_optimal_f,
+                    "risk_amount": risk_amount,
+                    "assumed_stop_loss_pct": stop_loss_pct,
                     "trade_count": len(recent_trades),
                     "lookback_period": gene.lookback_period,
                 }

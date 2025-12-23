@@ -298,6 +298,8 @@ class TestBacktestInstanceCreation:
                 strategy_class=sample_strategy_class,
                 initial_capital=10000.0,
                 commission_rate=0.001,
+                slippage=0.0,
+                leverage=1.0,
                 symbol="BTC/USDT:USDT",
             )
 
@@ -332,6 +334,8 @@ class TestBacktestInstanceCreation:
                 strategy_class=sample_strategy_class,
                 initial_capital=10000.0,
                 commission_rate=0.001,
+                slippage=0.0,
+                leverage=1.0,
                 symbol="BTC/USDT:USDT",
             )
 
@@ -359,17 +363,19 @@ class TestBacktestInstanceCreation:
                 strategy_class=sample_strategy_class,
                 initial_capital=50000.0,
                 commission_rate=0.002,
+                slippage=0.0001,
+                leverage=10.0,
                 symbol="ETH/USDT",
             )
 
             # FractionalBacktestが適切なパラメータで呼ばれたことを確認
             call_kwargs = mock_bt_class.call_args[1]
             assert call_kwargs["cash"] == 50000.0
-            assert call_kwargs["commission"] == 0.002
+            assert call_kwargs["commission"] == 0.0021
             assert call_kwargs["exclusive_orders"] is False
             assert call_kwargs["trade_on_close"] is False
             assert call_kwargs["hedging"] is True
-            assert call_kwargs["margin"] == 0.01
+            assert call_kwargs["margin"] == 0.1
 
     def test_create_backtest_instance_error(
         self, backtest_executor, sample_backtest_data, sample_strategy_class
@@ -388,6 +394,8 @@ class TestBacktestInstanceCreation:
                     strategy_class=sample_strategy_class,
                     initial_capital=10000.0,
                     commission_rate=0.001,
+                    slippage=0.0,
+                    leverage=1.0,
                     symbol="BTC/USDT:USDT",
                 )
 
@@ -744,7 +752,3 @@ class TestErrorHandling:
                     initial_capital=-1000.0,  # 負の値
                     commission_rate=0.001,
                 )
-
-
-
-

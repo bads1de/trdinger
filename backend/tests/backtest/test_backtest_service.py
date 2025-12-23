@@ -71,6 +71,8 @@ def sample_config():
         "end_date": "2023-01-31",
         "initial_capital": 10000,
         "commission_rate": 0.001,
+        "slippage": 0.0,
+        "leverage": 1.0,
         "strategy_config": {
             "strategy_type": "GENERATED_GA",
             "parameters": {
@@ -304,7 +306,3 @@ def test_execute_and_save_backtest_save_error(
             assert result["success"] is False
             assert "Save failed" in result["error"]
             assert result["status_code"] == 500
-
-
-
-

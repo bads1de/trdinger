@@ -31,11 +31,15 @@ class RiskRewardCalculator(BaseTPSLCalculator):
     ) -> Tuple[float, float, float, Dict[str, Any]]:
         # 1. パラメータ取得
         if tpsl_gene:
-            sl_pct = tpsl_gene.base_stop_loss or tpsl_gene.stop_loss_pct
-            rr_ratio = tpsl_gene.risk_reward_ratio
+            sl_pct = tpsl_gene.base_stop_loss or tpsl_gene.stop_loss_pct or 0.03
+            rr_ratio = tpsl_gene.risk_reward_ratio or 2.0
         else:
             sl_pct = kwargs.get("stop_loss_pct", kwargs.get("base_stop_loss", 0.03))
             rr_ratio = kwargs.get("target_ratio", kwargs.get("risk_reward_ratio", 2.0))
+            
+        # 安全策: sl_pctが0またはNoneの場合の強制フォールバック
+        if not sl_pct or sl_pct <= 0:
+            sl_pct = 0.03
 
         # 2. RR比に基づいてTPを計算
         tp_pct = sl_pct * rr_ratio

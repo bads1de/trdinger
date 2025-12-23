@@ -37,7 +37,7 @@ def crossover_strategy_genes(parent1, parent2, config):
     Returns:
         交叉後の個体（タプル形式、(child1, child2)）
     """
-    return StrategyGene.crossover(parent1, parent2, config)
+    return type(parent1).crossover(parent1, parent2, config)
 
 
 def mutate_strategy_gene(gene, config, mutation_rate=0.1):

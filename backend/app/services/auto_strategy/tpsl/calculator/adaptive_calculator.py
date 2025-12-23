@@ -66,6 +66,24 @@ class AdaptiveCalculator(BaseTPSLCalculator):
     ) -> str:
         """最適な計算方式を選択"""
         try:
+            # 遺伝子での明示的な指定がある場合（ADAPTIVE以外）
+            if tpsl_gene and tpsl_gene.method and tpsl_gene.method != "adaptive":
+                # Enum または文字列からのマッピング
+                method_name = (
+                    tpsl_gene.method.value
+                    if hasattr(tpsl_gene.method, "value")
+                    else tpsl_gene.method
+                )
+
+                # 名称のゆらぎ吸収
+                if method_name == "risk_reward_ratio":
+                    method_name = "risk_reward"
+                elif method_name == "volatility_based":
+                    method_name = "volatility"
+
+                if method_name in self.calculators:
+                    return method_name
+
             if not market_data:
                 return "fixed_percentage"
 
@@ -83,20 +101,6 @@ class AdaptiveCalculator(BaseTPSLCalculator):
             if market_data.get("historical_data_available", False):
                 if len(market_data.get("historical_prices", [])) > 100:
                     return "statistical"
-
-            # TPSL遺伝子がある場合、そのmethodを尊重
-            if tpsl_gene and hasattr(tpsl_gene, "method") and tpsl_gene.method:
-                # Enumオブジェクトの場合は .value または直接文字列として取得
-                method_val = tpsl_gene.method
-                if hasattr(method_val, "value"):
-                    method_name = method_val.value.lower()
-                elif isinstance(method_val, str):
-                    method_name = method_val.lower()
-                else:
-                    method_name = str(method_val).lower()
-
-                if method_name in self.calculators:
-                    return method_name
 
             # デフォルトは固定パーセンテージ
             return "fixed_percentage"

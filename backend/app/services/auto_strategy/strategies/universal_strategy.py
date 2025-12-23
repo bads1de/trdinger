@@ -131,6 +131,9 @@ class UniversalStrategy(Strategy):
         # ML フィルター閾値（エントリー許可のための方向スコア差分）
         self.ml_filter_threshold = params.get("ml_filter_threshold", 0.5)
 
+        # ベクトル化評価結果のキャッシュ
+        self._precomputed_signals = {}
+
     def _has_mtf_indicators(self) -> bool:
         """MTF指標が存在するかチェック"""
         if not self.gene or not self.gene.indicators:
@@ -182,6 +185,16 @@ class UniversalStrategy(Strategy):
 
     def _check_entry_conditions(self, direction: float) -> bool:
         """指定された方向のエントリー条件をチェック"""
+        # ベクトル化済みのシグナルがあればそれを使用 (O(1))
+        if direction in self._precomputed_signals:
+            signals = self._precomputed_signals[direction]
+            if signals is not None:
+                # len(self.data) - 1 が現在の足のインデックス
+                idx = len(self.data) - 1
+                # 配列範囲外アクセスのガード
+                if 0 <= idx < len(signals):
+                    return bool(signals[idx])
+
         field_name = (
             "long_entry_conditions" if direction > 0 else "short_entry_conditions"
         )
@@ -223,6 +236,11 @@ class UniversalStrategy(Strategy):
                         prev_close = self.data.Close[-lookback - 1 : -1]
 
                         import numpy as np
+
+                        # backtesting.pyのデータオブジェクトをnumpy配列に変換して安全に計算
+                        high = np.array(self.data.High[-lookback:])
+                        low = np.array(self.data.Low[-lookback:])
+                        prev_close = np.array(self.data.Close[-lookback - 1 : -1])
 
                         tr1 = high - low
                         tr2 = np.abs(high - prev_close)
@@ -266,6 +284,29 @@ class UniversalStrategy(Strategy):
             if self.ml_predictor:
                 self._precompute_ml_features()
 
+            # 3. エントリー条件のベクトル化事前計算
+            try:
+                # Long
+                long_conds = getattr(self.gene, "long_entry_conditions", [])
+                if long_conds:
+                    self._precomputed_signals[1.0] = (
+                        self.condition_evaluator.calculate_conditions_vectorized(
+                            long_conds, self
+                        )
+                    )
+
+                # Short
+                short_conds = getattr(self.gene, "short_entry_conditions", [])
+                if short_conds:
+                    self._precomputed_signals[-1.0] = (
+                        self.condition_evaluator.calculate_conditions_vectorized(
+                            short_conds, self
+                        )
+                    )
+            except Exception as e:
+                # 失敗してもフォールバックするのでログのみ
+                logger.debug(f"ベクトル化事前計算失敗（フォールバック使用）: {e}")
+
         except Exception as e:
             logger.error(f"戦略初期化エラー: {e}", exc_info=True)
             raise
@@ -274,7 +315,7 @@ class UniversalStrategy(Strategy):
         """ML予測に必要な全期間の特徴量を一括計算してキャッシュする"""
         try:
             from ..core.hybrid_feature_adapter import HybridFeatureAdapter
-            
+
             # アダプターの初期化
             self.feature_adapter = HybridFeatureAdapter()
 
@@ -284,9 +325,7 @@ class UniversalStrategy(Strategy):
 
             # 一括変換実行
             self._precomputed_features = self.feature_adapter.gene_to_features(
-                gene=self.gene,
-                ohlcv_data=full_ohlcv,
-                apply_preprocessing=False
+                gene=self.gene, ohlcv_data=full_ohlcv, apply_preprocessing=False
             )
             # logger.info(f"ML特徴量の一括計算完了: {len(self._precomputed_features)}行")
         except Exception as e:
@@ -701,8 +740,11 @@ class UniversalStrategy(Strategy):
             # 1. 事前計算済みの特徴量から現在の行を取得
             current_time = self.data.index[-1]
             features = None
-            
-            if hasattr(self, "_precomputed_features") and self._precomputed_features is not None:
+
+            if (
+                hasattr(self, "_precomputed_features")
+                and self._precomputed_features is not None
+            ):
                 if current_time in self._precomputed_features.index:
                     # インデックスで高速検索
                     features = self._precomputed_features.loc[[current_time]]
@@ -806,7 +848,7 @@ class UniversalStrategy(Strategy):
         """
         try:
             from ..core.hybrid_feature_adapter import HybridFeatureAdapter
-            
+
             # アダプターの初期化（まだ存在しない場合）
             if not hasattr(self, "feature_adapter"):
                 self.feature_adapter = HybridFeatureAdapter()

@@ -37,7 +37,7 @@ class ConditionEvaluator:
             "high": "High",
             "low": "Low",
             "close": "Close",
-            "volume": "Volume"
+            "volume": "Volume",
         }
 
     @safe_operation(context="条件評価（AND）", is_api_call=False, default_return=False)
@@ -66,7 +66,10 @@ class ConditionEvaluator:
         # strategy_instance がキャッシュを持っているか確認（高速化のため）
         # Mockオブジェクトの場合はキャッシュ作成をスキップ
         from unittest.mock import Mock
-        if not isinstance(strategy_instance, Mock) and not hasattr(strategy_instance, "_val_accessor_cache"):
+
+        if not isinstance(strategy_instance, Mock) and not hasattr(
+            strategy_instance, "_val_accessor_cache"
+        ):
             strategy_instance._val_accessor_cache = {}
 
         if not isinstance(conditions, list):
@@ -77,6 +80,181 @@ class ConditionEvaluator:
             if not self._evaluate_recursive_item(cond, strategy_instance):
                 return False
         return True
+
+    def calculate_conditions_vectorized(
+        self, conditions: List[Union[Condition, ConditionGroup]], strategy_instance
+    ) -> Union[pd.Series, np.ndarray, None]:
+        """
+        条件リストの全体評価をベクトル化して実行（論理積：AND）
+
+        Args:
+            conditions: 評価対象の条件リスト
+            strategy_instance: 戦略インスタンス
+
+        Returns:
+            全期間の評価結果を含むBoolean Series/Array。計算不可能な場合はNone。
+        """
+        if not conditions:
+            # 条件がない場合は常にTrue
+            if hasattr(strategy_instance, "data") and hasattr(
+                strategy_instance.data, "index"
+            ):
+                # backtesting.pyのデータ構造に対応
+                idx = strategy_instance.data.index
+                return pd.Series(True, index=idx)
+            return None
+
+        final_mask = None
+
+        for cond in conditions:
+            result = self._evaluate_recursive_item_vectorized(cond, strategy_instance)
+            if result is None:
+                return None  # ベクトル化不可能
+
+            if final_mask is None:
+                final_mask = result
+            else:
+                final_mask = final_mask & result
+
+        return final_mask
+
+    def _evaluate_recursive_item_vectorized(
+        self, item: Union[Condition, ConditionGroup], strategy_instance
+    ) -> Union[pd.Series, np.ndarray, None]:
+        """再帰的なベクトル化評価"""
+        if isinstance(item, ConditionGroup):
+            return self._evaluate_condition_group_vectorized(item, strategy_instance)
+        elif isinstance(item, Condition):
+            return self.evaluate_single_condition_vectorized(item, strategy_instance)
+        return None
+
+    def _evaluate_condition_group_vectorized(
+        self, group: ConditionGroup, strategy_instance
+    ) -> Union[pd.Series, np.ndarray, None]:
+        """条件グループのベクトル化評価"""
+        if not group or group.is_empty():
+            return None
+
+        results = []
+        for c in group.conditions:
+            res = self._evaluate_recursive_item_vectorized(c, strategy_instance)
+            if res is None:
+                return None
+            results.append(res)
+
+        if not results:
+            return None
+
+        # Combine
+        combined = results[0]
+        is_and = getattr(group, "operator", "OR") == "AND"
+
+        for r in results[1:]:
+            if is_and:
+                combined = combined & r
+            else:
+                combined = combined | r
+
+        return combined
+
+    def evaluate_single_condition_vectorized(
+        self, condition: Condition, strategy_instance
+    ) -> Union[pd.Series, np.ndarray, None]:
+        """単一条件のベクトル化評価"""
+        try:
+            left_val = self.get_condition_vector(
+                condition.left_operand, strategy_instance
+            )
+            right_val = self.get_condition_vector(
+                condition.right_operand, strategy_instance
+            )
+
+            if left_val is None or right_val is None:
+                return None
+
+            # 比較実行 (pandas/numpyのオーバーロード演算子を利用)
+            # 値の長さが違う場合のブロードキャストはライブラリ任せ
+            op = condition.operator
+            if op == ">":
+                return left_val > right_val
+            if op == "<":
+                return left_val < right_val
+            if op == ">=":
+                return left_val >= right_val
+            if op == "<=":
+                return left_val <= right_val
+            if op == "==":
+                return left_val == right_val
+            if op == "!=":
+                return left_val != right_val
+
+            return None
+        except Exception:
+            return None
+
+    def get_condition_vector(
+        self, operand: Union[Dict[str, Any], str, int, float], strategy_instance
+    ) -> Union[pd.Series, np.ndarray, float, None]:
+        """オペランドからベクトル（またはスカラー）を取得"""
+        # 1. スカラー
+        if isinstance(operand, (int, float, np.number)):
+            return float(operand)
+
+        # 2. 識別子解決
+        operand_str = (
+            operand.get("indicator") if isinstance(operand, dict) else str(operand)
+        )
+
+        # OHLCV
+        val = self._get_ohlcv_vector(operand_str, strategy_instance)
+        if val is not None:
+            return val
+
+        # Indicators
+        if hasattr(strategy_instance, "indicators") and isinstance(
+            strategy_instance.indicators, dict
+        ):
+            if operand_str in strategy_instance.indicators:
+                return strategy_instance.indicators[operand_str]
+
+        # Attributes
+        # strategy.sma_20 のように直接属性として持っている場合も考慮
+        if hasattr(strategy_instance, operand_str):
+            val = getattr(strategy_instance, operand_str)
+            if isinstance(val, (pd.Series, np.ndarray, int, float)):
+                return val
+
+        # Try float conversion
+        try:
+            return float(operand_str)
+        except (ValueError, TypeError):
+            return None
+
+    def _get_ohlcv_vector(
+        self, operand: str, strategy_instance
+    ) -> Union[pd.Series, np.ndarray, None]:
+        """OHLCVの全データを取得"""
+        search_key = operand.lower()
+        if search_key not in self._ohlcv_map:
+            return None
+
+        if not hasattr(strategy_instance, "data"):
+            return None
+
+        attr_name = self._ohlcv_map[search_key]
+        data = strategy_instance.data
+
+        if hasattr(data, attr_name):
+            # backtesting.pyの_Arrayはnumpy array互換
+            return getattr(data, attr_name)
+
+        if isinstance(data, pd.DataFrame):
+            if attr_name in data.columns:
+                return data[attr_name]
+            if search_key in data.columns:
+                return data[search_key]
+
+        return None
 
     def _evaluate_recursive_item(
         self, item: Union[Condition, ConditionGroup], strategy_instance
@@ -289,7 +467,9 @@ class ConditionEvaluator:
         # 2. 戦略インスタンスからの取得（キャッシュと辞書を活用）
         # まずは indicators 辞書を確認（属性アクセスより速い）
         # Mockの場合を考慮して isinstance チェックを追加
-        if hasattr(strategy_instance, "indicators") and isinstance(strategy_instance.indicators, dict):
+        if hasattr(strategy_instance, "indicators") and isinstance(
+            strategy_instance.indicators, dict
+        ):
             if operand_str in strategy_instance.indicators:
                 return self._get_final_value(strategy_instance.indicators[operand_str])
 

@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 
 import ccxt.async_support as ccxt
 
-from app.utils.error_handler import ErrorHandler
 from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 
 from .bybit_service import BybitService
@@ -62,17 +61,19 @@ class BybitLongShortRatioService(BybitService):
             params["endTime"] = end_time
 
         # self._handle_ccxt_errors を経由してAPIを呼び出す
-        response = await self._handle_ccxt_errors(
-            "Bybit V5 Market Account Ratio",
-            self.exchange.publicGetV5MarketAccountRatio,
-            params=params,
-        )
+        try:
+            response = await self._handle_ccxt_errors(
+                "Bybit V5 Market Account Ratio",
+                self.exchange.publicGetV5MarketAccountRatio,
+                params=params,
+            )
+        except Exception as e:
+            logger.error(
+                f"ロング/ショート比率データの取得中にエラーが発生しました: {e}"
+            )
+            return []
 
-        if (
-            not response
-            or "result" not in response
-            or "list" not in response["result"]
-        ):
+        if not response or "result" not in response or "list" not in response["result"]:
             logger.warning(
                 f"ロング/ショート比率データの取得に失敗またはデータなし: {symbol}"
             )
@@ -252,6 +253,3 @@ class BybitLongShortRatioService(BybitService):
         except Exception as e:
             logger.error(f"LS比率履歴データ収集エラー: {e}")
             return total_saved
-
-
-

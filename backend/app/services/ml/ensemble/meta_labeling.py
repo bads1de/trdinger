@@ -1,9 +1,12 @@
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
+
 import lightgbm as lgb
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,33 +50,15 @@ class MetaLabelingService:
         if base_probs_filtered.empty:
             return X_meta
 
-        # Pandasの統計メソッドがNumPy不具合で失敗するため、値を一度リスト化して計算
-        probs_values = base_probs_filtered.values
+        # NumPyでベクトル化して計算
+        # 以前は不具合回避のためループ処理していたが、現在はNumPy標準機能で問題なし
+        vals = base_probs_filtered.values
 
-        # 行ごとの統計量を計算 (NumPyの不具合を避けるため、可能な限りPythonレベルで)
-        means = []
-        stds = []
-        mins = []
-        maxs = []
-
-        for i in range(len(probs_values)):
-            row = probs_values[i].tolist()
-            means.append(sum(row) / len(row) if row else 0.0)
-            mins.append(min(row) if row else 0.0)
-            maxs.append(max(row) if row else 0.0)
-
-            # 標準偏差
-            if len(row) > 1:
-                m = sum(row) / len(row)
-                variance = sum((x - m) ** 2 for x in row) / len(row)
-                stds.append(variance**0.5)
-            else:
-                stds.append(0.0)
-
-        X_meta["base_prob_mean"] = means
-        X_meta["base_prob_std"] = stds
-        X_meta["base_prob_min"] = mins
-        X_meta["base_prob_max"] = maxs
+        X_meta["base_prob_mean"] = np.mean(vals, axis=1)
+        X_meta["base_prob_min"] = np.min(vals, axis=1)
+        X_meta["base_prob_max"] = np.max(vals, axis=1)
+        # ddof=0 for population std (matches original implementation)
+        X_meta["base_prob_std"] = np.std(vals, axis=1, ddof=0)
 
         return X_meta
 

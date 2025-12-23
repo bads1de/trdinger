@@ -462,6 +462,19 @@ class StrategyGene:
         else:
             return None, None
 
+    @staticmethod
+    def _crossover_entry_genes(
+        parent1_entry: Optional[EntryGene], parent2_entry: Optional[EntryGene]
+    ) -> Tuple[Optional[EntryGene], Optional[EntryGene]]:
+        if parent1_entry and parent2_entry:
+            return EntryGene.crossover(parent1_entry, parent2_entry)
+        elif parent1_entry:
+            return parent1_entry, copy.deepcopy(parent1_entry)
+        elif parent2_entry:
+            return parent2_entry, copy.deepcopy(parent2_entry)
+        else:
+            return None, None
+
     @classmethod
     def _uniform_crossover(
         cls, parent1: StrategyGene, parent2: StrategyGene, config: Any
@@ -477,11 +490,15 @@ class StrategyGene:
             "indicators",
             "long_entry_conditions",
             "short_entry_conditions",
+            "stateful_conditions",
             "risk_management",
             "tpsl_gene",
             "long_tpsl_gene",
             "short_tpsl_gene",
             "position_sizing_gene",
+            "entry_gene",
+            "long_entry_gene",
+            "short_entry_gene",
             "tool_genes",
         ]
 
@@ -554,6 +571,15 @@ class StrategyGene:
         c1_ps, c2_ps = cls._crossover_position_sizing_genes(
             parent1.position_sizing_gene, parent2.position_sizing_gene
         )
+        c1_entry, c2_entry = cls._crossover_entry_genes(
+            parent1.entry_gene, parent2.entry_gene
+        )
+        c1_long_entry, c2_long_entry = cls._crossover_entry_genes(
+            parent1.long_entry_gene, parent2.long_entry_gene
+        )
+        c1_short_entry, c2_short_entry = cls._crossover_entry_genes(
+            parent1.short_entry_gene, parent2.short_entry_gene
+        )
 
         from .genetic_utils import GeneticUtils
 
@@ -573,6 +599,13 @@ class StrategyGene:
             c1_short_cond = parent2.short_entry_conditions.copy()
             c2_short_cond = parent1.short_entry_conditions.copy()
 
+        if random.random() < 0.5:
+            c1_stateful = parent1.stateful_conditions.copy()
+            c2_stateful = parent2.stateful_conditions.copy()
+        else:
+            c1_stateful = parent2.stateful_conditions.copy()
+            c2_stateful = parent1.stateful_conditions.copy()
+
         c1_tool = (
             copy.deepcopy(parent1.tool_genes)
             if random.random() < 0.5
@@ -589,11 +622,15 @@ class StrategyGene:
             indicators=c1_ind,
             long_entry_conditions=c1_long_cond,
             short_entry_conditions=c1_short_cond,
+            stateful_conditions=c1_stateful,
             risk_management=c1_risk,
             tpsl_gene=c1_tpsl,
             long_tpsl_gene=c1_long_tpsl,
             short_tpsl_gene=c1_short_tpsl,
             position_sizing_gene=c1_ps,
+            entry_gene=c1_entry,
+            long_entry_gene=c1_long_entry,
+            short_entry_gene=c1_short_entry,
             tool_genes=c1_tool,
             metadata=c1_meta,
         )
@@ -602,11 +639,15 @@ class StrategyGene:
             indicators=c2_ind,
             long_entry_conditions=c2_long_cond,
             short_entry_conditions=c2_short_cond,
+            stateful_conditions=c2_stateful,
             risk_management=c2_risk,
             tpsl_gene=c2_tpsl,
             long_tpsl_gene=c2_long_tpsl,
             short_tpsl_gene=c2_short_tpsl,
             position_sizing_gene=c2_ps,
+            entry_gene=c2_entry,
+            long_entry_gene=c2_long_entry,
+            short_entry_gene=c2_short_entry,
             tool_genes=c2_tool,
             metadata=c2_meta,
         )

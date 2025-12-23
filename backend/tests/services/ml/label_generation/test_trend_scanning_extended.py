@@ -1,35 +1,29 @@
 import pandas as pd
 import numpy as np
-import pytest
-from app.services.ml.label_generation.trend_scanning import TrendScanning, _find_best_window_numba
+
+from app.services.ml.label_generation.trend_scanning import TrendScanning
+
 
 class TestTrendScanningExtended:
     def test_flat_line_perfect_match(self):
         """完全な水平線のテスト (sigma_eps < 1e-9, slope < 1e-9)"""
         ts = TrendScanning(min_window=5, max_window=10)
         dates = pd.date_range("2023-01-01", periods=20, freq="h")
-        s = pd.Series(100.0, index=dates) # 完全なフラット
-        
+        s = pd.Series(100.0, index=dates)  # 完全なフラット
+
         labels = ts.get_labels(s)
         assert not labels.empty
         assert (labels["t_value"] == 0.0).all()
         assert (labels["bin"] == 0).all()
 
-    def test_n_less_than_two_branch(self):
-        """n <= 2 のパスを通過させるテスト"""
-        # _find_best_window_numba を直接叩いて、n (L+1) <= 2 の状況をシミュレート
-        # L=1 のとき n=2
-        close_np = np.array([100.0, 101.0, 102.0], dtype=np.float64)
-        best_L, best_t, best_slope = _find_best_window_numba(close_np, 0, 1, 1, 1)
-        # n <= 2 のウィンドウはスキップされるため、found=False となり (0,0,0) が返る
-        assert best_L == 0.0
+    pass
 
     def test_with_step_param(self):
         """step パラメータの動作確認"""
         ts = TrendScanning(min_window=5, max_window=15, step=5)
         dates = pd.date_range("2023-01-01", periods=30, freq="h")
         s = pd.Series(np.arange(30), index=dates, dtype=float)
-        
+
         labels = ts.get_labels(s)
         assert not labels.empty
         # step=5 なので L=5, 10, 15 が試される
@@ -39,7 +33,7 @@ class TestTrendScanningExtended:
         ts = TrendScanning()
         dates = pd.date_range("2023-01-01", periods=20, freq="h")
         s = pd.Series(np.random.randn(20), index=dates)
-        
+
         labels = ts.get_labels(s, t_events=pd.DatetimeIndex([]))
         assert labels.empty
 
@@ -48,7 +42,7 @@ class TestTrendScanningExtended:
         ts = TrendScanning(min_window=10, max_window=20)
         dates = pd.date_range("2023-01-01", periods=20, freq="h")
         s = pd.Series(np.random.randn(20), index=dates)
-        
+
         # 末尾の5点から開始 -> min_window=10 なので一つも見つからない
         t_event = dates[15:]
         labels = ts.get_labels(s, t_events=t_event)

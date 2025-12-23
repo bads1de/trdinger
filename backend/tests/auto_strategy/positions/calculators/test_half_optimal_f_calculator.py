@@ -3,7 +3,7 @@ HalfOptimalFCalculator のテスト
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from app.services.auto_strategy.positions.calculators.half_optimal_f_calculator import (
     HalfOptimalFCalculator,
@@ -55,7 +55,13 @@ class TestHalfOptimalFCalculator:
         assert pytest.approx(details["optimal_f"]) == 0.25
         assert pytest.approx(details["half_optimal_f"]) == 0.125
 
-        expected_position_size = (account_balance * 0.125) / current_price
+        # 現在の実装では、ハーフオプティマルF比率をリスク額（損失許容額）として扱い、
+        # 想定損切り幅（デフォルト4%=ATR2%*2.0）で割ってポジションサイズを出す
+        expected_risk_amount = account_balance * 0.125
+        expected_stop_loss_pct = 0.04
+        expected_position_size = expected_risk_amount / (
+            current_price * expected_stop_loss_pct
+        )
         assert pytest.approx(result["position_size"]) == expected_position_size
 
     def test_calculate_insufficient_history(self, calculator, sample_gene):
