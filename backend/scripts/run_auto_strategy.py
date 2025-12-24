@@ -438,6 +438,44 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
         # 可読形式の戦略辞書を作成
         if isinstance(best_gene, StrategyGene):
             strategy_dict = strategy_gene_to_readable_dict(best_gene, serializer)
+            
+            # === 最良戦略の詳細バックテスト結果を別途保存 ===
+            try:
+                logger.info("最良戦略の詳細バックテストを実行して保存中...")
+                # 辞書形式に変換して渡す
+                gene_dict = serializer.strategy_gene_to_dict(best_gene)
+                full_bt_config = {
+                    "strategy_name": "universal_strategy",
+                    "symbol": backtest_config["symbol"],
+                    "timeframe": backtest_config["timeframe"],
+                    "start_date": backtest_config["start_date"],
+                    "end_date": backtest_config["end_date"],
+                    "initial_capital": backtest_config["initial_capital"],
+                    "strategy_config": {
+                        "strategy_type": "GENERATED_GA",
+                        "parameters": {"strategy_gene": gene_dict}
+                    },
+                    "commission_rate": 0.0004,
+                    "slippage": 0.0001
+                }
+                full_result = backtest_service.run_backtest(full_bt_config)
+                
+                # 保存ディレクトリの準備
+                bt_results_dir = project_root / "results" / "backtest"
+                bt_results_dir.mkdir(parents=True, exist_ok=True)
+                
+                # ファイル名の生成（戦略IDやタイムスタンプを含む）
+                bt_filename = f"backtest_result_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.json"
+                bt_path = bt_results_dir / bt_filename
+                
+                with open(bt_path, "w", encoding="utf-8") as f:
+                    # datetimeなどを文字列化するために default=str を指定
+                    json.dump(full_result, f, indent=2, ensure_ascii=False, default=str)
+                
+                logger.info(f"詳細バックテスト結果を保存しました: {bt_path}")
+                output["backtest_result_file"] = str(bt_path)
+            except Exception as bt_err:
+                logger.warning(f"詳細バックテストの保存に失敗しました: {bt_err}")
         else:
             strategy_dict = {"raw": str(best_gene)}
 

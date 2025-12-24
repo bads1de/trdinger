@@ -126,6 +126,82 @@ class EntryGene:
             priority=data.get("priority", 1.0),
         )
 
+    def clone(self) -> EntryGene:
+        """軽量コピーを作成"""
+        return EntryGene(
+            entry_type=self.entry_type,
+            limit_offset_pct=self.limit_offset_pct,
+            stop_offset_pct=self.stop_offset_pct,
+            order_validity_bars=self.order_validity_bars,
+            enabled=self.enabled,
+            priority=self.priority,
+        )
+
+    def mutate(self, mutation_rate: float = 0.1) -> "EntryGene":
+        """突然変異"""
+        import random
+
+        gene = self.clone()
+
+        if random.random() < mutation_rate:
+            # タイプの変更
+            if random.random() < 0.3:
+                gene.entry_type = random.choice(list(EntryType))
+
+            # パラメータの摂動
+            if random.random() < 0.5:
+                gene.limit_offset_pct = max(
+                    0.0, min(0.1, gene.limit_offset_pct * random.uniform(0.8, 1.2))
+                )
+                gene.stop_offset_pct = max(
+                    0.0, min(0.1, gene.stop_offset_pct * random.uniform(0.8, 1.2))
+                )
+
+            # 有効期限の変更
+            if random.random() < 0.3:
+                gene.order_validity_bars = max(
+                    1,
+                    min(
+                        100,
+                        int(gene.order_validity_bars * random.uniform(0.8, 1.2)),
+                    ),
+                )
+
+        return gene
+
+    @classmethod
+    def crossover(
+        cls, parent1: "EntryGene", parent2: "EntryGene"
+    ) -> Tuple["EntryGene", "EntryGene"]:
+        """エントリー遺伝子の交叉"""
+        import random
+
+        # 単純なフィールドごとのユニフォーム交叉
+        c1_params = {}
+        c2_params = {}
+
+        fields = [
+            "entry_type",
+            "limit_offset_pct",
+            "stop_offset_pct",
+            "order_validity_bars",
+            "enabled",
+            "priority",
+        ]
+
+        for field in fields:
+            val1 = getattr(parent1, field)
+            val2 = getattr(parent2, field)
+
+            if random.random() < 0.5:
+                c1_params[field] = val1
+                c2_params[field] = val2
+            else:
+                c1_params[field] = val2
+                c2_params[field] = val1
+
+        return cls(**c1_params), cls(**c2_params)
+
 
 def create_random_entry_gene(config: Any = None) -> EntryGene:
     """

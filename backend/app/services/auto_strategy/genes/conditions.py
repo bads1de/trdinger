@@ -54,6 +54,26 @@ class Condition:
         validator = GeneValidator()
         return validator.validate_condition(self)[0]
 
+    def clone(self) -> Condition:
+        """軽量コピーを作成"""
+        left = (
+            self.left_operand.copy()
+            if isinstance(self.left_operand, dict)
+            else self.left_operand
+        )
+        right = (
+            self.right_operand.copy()
+            if isinstance(self.right_operand, dict)
+            else self.right_operand
+        )
+
+        return Condition(
+            left_operand=left,
+            operator=self.operator,
+            right_operand=right,
+            direction=self.direction,
+        )
+
 
 @dataclass
 class ConditionGroup:
@@ -97,6 +117,13 @@ class ConditionGroup:
             else:
                 return False
         return True
+
+    def clone(self) -> ConditionGroup:
+        """軽量コピーを作成（再帰的）"""
+        return ConditionGroup(
+            operator=self.operator,
+            conditions=[c.clone() for c in self.conditions],
+        )
 
 
 class StateTracker:
@@ -252,4 +279,15 @@ class StatefulCondition:
             f"follow={self.follow_condition}, "
             f"lookback={self.lookback_bars}, "
             f"cooldown={self.cooldown_bars})"
+        )
+
+    def clone(self) -> StatefulCondition:
+        """軽量コピーを作成"""
+        return StatefulCondition(
+            trigger_condition=self.trigger_condition.clone(),
+            follow_condition=self.follow_condition.clone(),
+            lookback_bars=self.lookback_bars,
+            cooldown_bars=self.cooldown_bars,
+            direction=self.direction,
+            enabled=self.enabled,
         )

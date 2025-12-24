@@ -236,3 +236,40 @@ class TestParallelEvaluator:
 
                 # ユーザー指定のinitializerが呼ばれたか
                 initializer_mock.assert_called_once_with("arg1", 123)
+
+    def test_persistent_executor_lifecycle(self):
+        """永続的なExecutorのライフサイクル管理ができること"""
+        evaluator = ParallelEvaluator(
+            evaluate_func=lambda x: (1.0,),
+            max_workers=2,
+        )
+        assert evaluator._executor is None
+
+        evaluator.start()
+        assert evaluator._executor is not None
+
+        # 2回呼んでも問題ない（同じインスタンスが維持される）
+        old_executor = evaluator._executor
+        evaluator.start()
+        assert evaluator._executor is old_executor
+
+        evaluator.shutdown()
+        assert evaluator._executor is None
+
+    def test_context_manager(self):
+        """コンテキストマネージャとして使用できること"""
+        evaluator = ParallelEvaluator(
+            evaluate_func=lambda x: (1.0,),
+            max_workers=2,
+        )
+        assert evaluator._executor is None
+
+        with evaluator:
+            assert evaluator._executor is not None
+            # 評価実行
+            mock_ind = MagicMock()
+            mock_ind.id = "test"
+            result = evaluator.evaluate_population([mock_ind])
+            assert len(result) == 1
+
+        assert evaluator._executor is None

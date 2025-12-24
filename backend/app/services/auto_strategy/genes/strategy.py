@@ -159,6 +159,53 @@ class StrategyGene:
         is_valid, errors = validator.validate_strategy_gene(self)
         return is_valid, errors
 
+    @staticmethod
+    def _smart_copy(value: Any) -> Any:
+        """値をスマートにコピー（cloneメソッドがあれば使用）"""
+        if hasattr(value, "clone"):
+            return value.clone()
+        if isinstance(value, list):
+            return [StrategyGene._smart_copy(item) for item in value]
+        if isinstance(value, dict):
+            return value.copy()
+        return value
+
+    def clone(self) -> StrategyGene:
+        """軽量コピーを作成"""
+        return StrategyGene(
+            id=str(uuid.uuid4()),
+            indicators=[ind.clone() for ind in self.indicators],
+            long_entry_conditions=[
+                self._smart_copy(c) for c in self.long_entry_conditions
+            ],
+            short_entry_conditions=[
+                self._smart_copy(c) for c in self.short_entry_conditions
+            ],
+            stateful_conditions=[c.clone() for c in self.stateful_conditions],
+            risk_management=self.risk_management.copy(),
+            tpsl_gene=self.tpsl_gene.clone() if self.tpsl_gene else None,
+            long_tpsl_gene=(
+                self.long_tpsl_gene.clone() if self.long_tpsl_gene else None
+            ),
+            short_tpsl_gene=(
+                self.short_tpsl_gene.clone() if self.short_tpsl_gene else None
+            ),
+            position_sizing_gene=(
+                self.position_sizing_gene.clone()
+                if self.position_sizing_gene
+                else None
+            ),
+            entry_gene=self.entry_gene.clone() if self.entry_gene else None,
+            long_entry_gene=(
+                self.long_entry_gene.clone() if self.long_entry_gene else None
+            ),
+            short_entry_gene=(
+                self.short_entry_gene.clone() if self.short_entry_gene else None
+            ),
+            tool_genes=[t.clone() for t in self.tool_genes],
+            metadata=self.metadata.copy(),
+        )
+
     def mutate(self, config: Any, mutation_rate: float = 0.1) -> StrategyGene:
         """
         戦略遺伝子の突然変異を実行します。
@@ -175,7 +222,7 @@ class StrategyGene:
         """
         try:
             # 深いコピーを作成
-            mutated = copy.deepcopy(self)
+            mutated = self.clone()
 
             # 指標遺伝子の突然変異
             self._mutate_indicators(mutated, mutation_rate, config)
@@ -442,9 +489,9 @@ class StrategyGene:
         if parent1_tpsl and parent2_tpsl:
             return TPSLGene.crossover(parent1_tpsl, parent2_tpsl)
         elif parent1_tpsl:
-            return parent1_tpsl, copy.deepcopy(parent1_tpsl)
+            return parent1_tpsl, parent1_tpsl.clone()
         elif parent2_tpsl:
-            return parent2_tpsl, copy.deepcopy(parent2_tpsl)
+            return parent2_tpsl, parent2_tpsl.clone()
         else:
             return None, None
 
@@ -456,9 +503,9 @@ class StrategyGene:
         if parent1_ps and parent2_ps:
             return PositionSizingGene.crossover(parent1_ps, parent2_ps)
         elif parent1_ps:
-            return parent1_ps, copy.deepcopy(parent1_ps)
+            return parent1_ps, parent1_ps.clone()
         elif parent2_ps:
-            return parent2_ps, copy.deepcopy(parent2_ps)
+            return parent2_ps, parent2_ps.clone()
         else:
             return None, None
 
@@ -469,9 +516,9 @@ class StrategyGene:
         if parent1_entry and parent2_entry:
             return EntryGene.crossover(parent1_entry, parent2_entry)
         elif parent1_entry:
-            return parent1_entry, copy.deepcopy(parent1_entry)
+            return parent1_entry, parent1_entry.clone()
         elif parent2_entry:
-            return parent2_entry, copy.deepcopy(parent2_entry)
+            return parent2_entry, parent2_entry.clone()
         else:
             return None, None
 
@@ -507,11 +554,11 @@ class StrategyGene:
             val2 = getattr(parent2, field_name)
 
             if random.random() < selection_prob:
-                child1_params[field_name] = copy.deepcopy(val1)
-                child2_params[field_name] = copy.deepcopy(val2)
+                child1_params[field_name] = cls._smart_copy(val1)
+                child2_params[field_name] = cls._smart_copy(val2)
             else:
-                child1_params[field_name] = copy.deepcopy(val2)
-                child2_params[field_name] = copy.deepcopy(val1)
+                child1_params[field_name] = cls._smart_copy(val2)
+                child2_params[field_name] = cls._smart_copy(val1)
 
         from .genetic_utils import GeneticUtils
 
@@ -532,12 +579,12 @@ class StrategyGene:
             0 if min_indicators <= 1 else random.randint(1, min_indicators)
         )
 
-        c1_ind = (
-            parent1.indicators[:crossover_point] + parent2.indicators[crossover_point:]
-        )
-        c2_ind = (
-            parent2.indicators[:crossover_point] + parent1.indicators[crossover_point:]
-        )
+        c1_ind = [ind.clone() for ind in parent1.indicators[:crossover_point]] + [
+            ind.clone() for ind in parent2.indicators[crossover_point:]
+        ]
+        c2_ind = [ind.clone() for ind in parent2.indicators[:crossover_point]] + [
+            ind.clone() for ind in parent1.indicators[crossover_point:]
+        ]
 
         max_indicators = config.max_indicators
         c1_ind = c1_ind[:max_indicators]
@@ -585,36 +632,45 @@ class StrategyGene:
 
         c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
 
-        if random.random() < 0.5:
-            c1_long_cond = parent1.long_entry_conditions.copy()
-            c2_long_cond = parent2.long_entry_conditions.copy()
-        else:
-            c1_long_cond = parent2.long_entry_conditions.copy()
-            c2_long_cond = parent1.long_entry_conditions.copy()
+        def copy_conditions(conds):
+            return [cls._smart_copy(c) for c in conds]
 
         if random.random() < 0.5:
-            c1_short_cond = parent1.short_entry_conditions.copy()
-            c2_short_cond = parent2.short_entry_conditions.copy()
+            c1_long_cond = copy_conditions(parent1.long_entry_conditions)
+            c2_long_cond = copy_conditions(parent2.long_entry_conditions)
         else:
-            c1_short_cond = parent2.short_entry_conditions.copy()
-            c2_short_cond = parent1.short_entry_conditions.copy()
+            c1_long_cond = copy_conditions(parent2.long_entry_conditions)
+            c2_long_cond = copy_conditions(parent1.long_entry_conditions)
 
         if random.random() < 0.5:
-            c1_stateful = parent1.stateful_conditions.copy()
-            c2_stateful = parent2.stateful_conditions.copy()
+            c1_short_cond = copy_conditions(parent1.short_entry_conditions)
+            c2_short_cond = copy_conditions(parent2.short_entry_conditions)
         else:
-            c1_stateful = parent2.stateful_conditions.copy()
-            c2_stateful = parent1.stateful_conditions.copy()
+            c1_short_cond = copy_conditions(parent2.short_entry_conditions)
+            c2_short_cond = copy_conditions(parent1.short_entry_conditions)
+
+        def copy_stateful(conds):
+            return [c.clone() for c in conds]
+
+        if random.random() < 0.5:
+            c1_stateful = copy_stateful(parent1.stateful_conditions)
+            c2_stateful = copy_stateful(parent2.stateful_conditions)
+        else:
+            c1_stateful = copy_stateful(parent2.stateful_conditions)
+            c2_stateful = copy_stateful(parent1.stateful_conditions)
+
+        def copy_tools(tools):
+            return [t.clone() for t in tools]
 
         c1_tool = (
-            copy.deepcopy(parent1.tool_genes)
+            copy_tools(parent1.tool_genes)
             if random.random() < 0.5
-            else copy.deepcopy(parent2.tool_genes)
+            else copy_tools(parent2.tool_genes)
         )
         c2_tool = (
-            copy.deepcopy(parent2.tool_genes)
+            copy_tools(parent2.tool_genes)
             if random.random() < 0.5
-            else copy.deepcopy(parent1.tool_genes)
+            else copy_tools(parent1.tool_genes)
         )
 
         child1 = cls(

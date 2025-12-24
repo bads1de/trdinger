@@ -74,6 +74,17 @@ class IndicatorGene:
         except ImportError:
             return {"indicator": self.type, "parameters": self.parameters}
 
+    def clone(self) -> IndicatorGene:
+        """軽量コピーを作成"""
+        return IndicatorGene(
+            type=self.type,
+            parameters=self.parameters.copy(),
+            enabled=self.enabled,
+            timeframe=self.timeframe,
+            id=self.id,
+            json_config=self.json_config.copy(),
+        )
+
 
 @safe_operation(
     default_return=IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True),

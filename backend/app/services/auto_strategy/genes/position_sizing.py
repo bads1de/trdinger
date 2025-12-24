@@ -133,6 +133,27 @@ class PositionSizingGene(BaseGene):
             if not (20 <= self.var_lookback <= 1000):
                 errors.append("var_lookbackは20-1000の範囲である必要があります")
 
+    def clone(self) -> PositionSizingGene:
+        """軽量コピーを作成"""
+        return PositionSizingGene(
+            method=self.method,
+            lookback_period=self.lookback_period,
+            optimal_f_multiplier=self.optimal_f_multiplier,
+            atr_period=self.atr_period,
+            atr_multiplier=self.atr_multiplier,
+            risk_per_trade=self.risk_per_trade,
+            fixed_ratio=self.fixed_ratio,
+            fixed_quantity=self.fixed_quantity,
+            min_position_size=self.min_position_size,
+            max_position_size=self.max_position_size,
+            var_confidence=self.var_confidence,
+            max_var_ratio=self.max_var_ratio,
+            max_expected_shortfall_ratio=self.max_expected_shortfall_ratio,
+            var_lookback=self.var_lookback,
+            enabled=self.enabled,
+            priority=self.priority,
+        )
+
 
 def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
     """ランダムなポジションサイジング遺伝子を生成"""

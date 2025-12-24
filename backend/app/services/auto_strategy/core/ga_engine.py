@@ -620,23 +620,37 @@ class GeneticAlgorithmEngine:
             toolbox.register("mutate", mutate_wrapper)
 
             # 独立したEvolutionRunnerの作成（並列評価対応）
-            runner = self._create_evolution_runner(toolbox, stats, population, config)
+            parallel_evaluator = self._create_parallel_evaluator(config)
+            
+            # 並列評価器の起動
+            if parallel_evaluator:
+                parallel_evaluator.start()
+            
+            try:
+                runner = self._create_evolution_runner(
+                    toolbox, stats, population, config, parallel_evaluator
+                )
 
-            # 初期個体群の評価（並列評価対応）
-            runner._evaluate_population(population)
+                # 初期個体群の評価（並列評価対応）
+                runner._evaluate_population(population)
 
-            # 最適化アルゴリズムの実行
-            population, logbook, halloffame = self._run_optimization(
-                runner, population, config
-            )
+                # 最適化アルゴリズムの実行
+                population, logbook, halloffame = self._run_optimization(
+                    runner, population, config
+                )
 
-            # 最良個体の処理と結果生成
-            result = self._process_results(
-                population, config, logbook, start_time, halloffame
-            )
+                # 最良個体の処理と結果生成
+                result = self._process_results(
+                    population, config, logbook, start_time, halloffame
+                )
 
-            logger.info(f"進化完了 - 実行時間: {result['execution_time']:.2f}秒")
-            return result
+                logger.info(f"進化完了 - 実行時間: {result['execution_time']:.2f}秒")
+                return result
+                
+            finally:
+                # 並列評価器の停止（確実にリソース解放）
+                if parallel_evaluator:
+                    parallel_evaluator.shutdown()
 
         except Exception as e:
             logger.error(f"進化実行エラー: {e}")
@@ -677,7 +691,72 @@ class GeneticAlgorithmEngine:
         stats.register("max", np.max)
         return stats
 
-    def _create_evolution_runner(self, toolbox, stats, population=None, config=None):
+    def _create_parallel_evaluator(self, config: GAConfig):
+        """並列評価器を作成します。
+
+        Args:
+            config (GAConfig): GA設定。
+
+        Returns:
+            ParallelEvaluator: 並列評価器インスタンス、またはNone。
+        """
+        if not getattr(config, "enable_parallel_evaluation", False):
+            return None
+
+        # 並列ワーカー用のデータ準備
+        worker_initializer = None
+        worker_initargs = ()
+
+        try:
+            # バックテスト設定が存在する場合のみデータを準備
+            if (
+                hasattr(self.individual_evaluator, "_fixed_backtest_config")
+                and self.individual_evaluator._fixed_backtest_config
+            ):
+                bc = self.individual_evaluator._fixed_backtest_config
+
+                # メインデータを取得（キャッシュになければロードされる）
+                main_data = self.individual_evaluator._get_cached_data(bc)
+
+                # 1分足データを取得（存在する場合）
+                minute_data = self.individual_evaluator._get_cached_minute_data(bc)
+
+                data_context = {"main_data": main_data}
+                if minute_data is not None:
+                    data_context["minute_data"] = minute_data
+
+                from .parallel_evaluator import initialize_worker
+
+                worker_initializer = initialize_worker
+                worker_initargs = (data_context,)
+
+                logger.info("並列ワーカー用の共有データを準備しました")
+        except Exception as e:
+            logger.warning(
+                f"並列ワーカー用データ準備中にエラーが発生しました（データ共有なしで続行）: {e}"
+            )
+
+        parallel_evaluator = ParallelEvaluator(
+            evaluate_func=EvaluatorWrapper(self.individual_evaluator, config),
+            max_workers=getattr(config, "max_evaluation_workers", None),
+            timeout_per_individual=getattr(config, "evaluation_timeout", 300.0),
+            worker_initializer=worker_initializer,
+            worker_initargs=worker_initargs,
+            use_process_pool=True,  # 常にProcessPoolを使用
+        )
+        logger.info(
+            f"⚡ 並列評価有効: max_workers={parallel_evaluator.max_workers}"
+        )
+        return parallel_evaluator
+
+    def _create_evolution_runner(
+        self,
+        toolbox,
+        stats,
+        population=None,
+        config=None,
+        parallel_evaluator=None,
+    ):
         """独立したEvolutionRunnerインスタンスを作成します。
 
         Args:
@@ -685,6 +764,7 @@ class GeneticAlgorithmEngine:
             stats: 統計情報オブジェクト。
             population: 初期個体群（オプション）。
             config: GA設定（並列評価用）。
+            parallel_evaluator: 事前に作成された並列評価器。
 
         Returns:
             EvolutionRunner: EvolutionRunnerインスタンス。
@@ -694,53 +774,6 @@ class GeneticAlgorithmEngine:
             if hasattr(self, "fitness_sharing") and self.fitness_sharing
             else None
         )
-
-        # 並列評価器の作成（設定で有効な場合）
-        parallel_evaluator = None
-        if config and getattr(config, "enable_parallel_evaluation", False):
-            # 並列ワーカー用のデータ準備
-            worker_initializer = None
-            worker_initargs = ()
-
-            try:
-                # バックテスト設定が存在する場合のみデータを準備
-                if (
-                    hasattr(self.individual_evaluator, "_fixed_backtest_config")
-                    and self.individual_evaluator._fixed_backtest_config
-                ):
-                    bc = self.individual_evaluator._fixed_backtest_config
-
-                    # メインデータを取得（キャッシュになければロードされる）
-                    main_data = self.individual_evaluator._get_cached_data(bc)
-
-                    # 1分足データを取得（存在する場合）
-                    minute_data = self.individual_evaluator._get_cached_minute_data(bc)
-
-                    data_context = {"main_data": main_data}
-                    if minute_data is not None:
-                        data_context["minute_data"] = minute_data
-
-                    from .parallel_evaluator import initialize_worker
-
-                    worker_initializer = initialize_worker
-                    worker_initargs = (data_context,)
-
-                    logger.info("並列ワーカー用の共有データを準備しました")
-            except Exception as e:
-                logger.warning(
-                    f"並列ワーカー用データ準備中にエラーが発生しました（データ共有なしで続行）: {e}"
-                )
-
-            parallel_evaluator = ParallelEvaluator(
-                evaluate_func=EvaluatorWrapper(self.individual_evaluator, config),
-                max_workers=getattr(config, "max_evaluation_workers", None),
-                timeout_per_individual=getattr(config, "evaluation_timeout", 300.0),
-                worker_initializer=worker_initializer,
-                worker_initargs=worker_initargs,
-            )
-            logger.info(
-                f"⚡ 並列評価有効: max_workers={parallel_evaluator.max_workers}"
-            )
 
         return EvolutionRunner(
             toolbox, stats, fitness_sharing, population, parallel_evaluator
@@ -798,6 +831,7 @@ class GeneticAlgorithmEngine:
 
         execution_time = time.time() - start_time
 
+        # 最終的な結果の構築
         result = {
             "best_strategy": best_gene,
             "best_fitness": (

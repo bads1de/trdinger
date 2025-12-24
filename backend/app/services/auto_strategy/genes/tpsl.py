@@ -236,6 +236,30 @@ class TPSLGene(BaseGene):
 
         return child1, child2
 
+    def clone(self) -> TPSLGene:
+        """軽量コピーを作成"""
+        # 辞書の shallow copy
+        new_weights = self.method_weights.copy()
+
+        return TPSLGene(
+            method=self.method,
+            stop_loss_pct=self.stop_loss_pct,
+            take_profit_pct=self.take_profit_pct,
+            risk_reward_ratio=self.risk_reward_ratio,
+            base_stop_loss=self.base_stop_loss,
+            atr_multiplier_sl=self.atr_multiplier_sl,
+            atr_multiplier_tp=self.atr_multiplier_tp,
+            atr_period=self.atr_period,
+            lookback_period=self.lookback_period,
+            confidence_threshold=self.confidence_threshold,
+            method_weights=new_weights,
+            enabled=self.enabled,
+            priority=self.priority,
+            trailing_stop=self.trailing_stop,
+            trailing_step_pct=self.trailing_step_pct,
+            trailing_take_profit=self.trailing_take_profit,
+        )
+
 
 @dataclass
 class TPSLResult:

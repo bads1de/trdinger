@@ -4,6 +4,8 @@
 ツールの設定を遺伝子として保持し、GAで進化させることができます。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
@@ -54,6 +56,14 @@ class ToolGene:
             tool_name=data.get("tool_name", ""),
             enabled=data.get("enabled", True),
             params=data.get("params", {}).copy(),
+        )
+
+    def clone(self) -> ToolGene:
+        """軽量コピーを作成"""
+        return ToolGene(
+            tool_name=self.tool_name,
+            enabled=self.enabled,
+            params=self.params.copy(),
         )
 
 

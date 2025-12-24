@@ -216,9 +216,14 @@ class TestGeneticAlgorithmEngine:
 
         # ParallelEvaluatorが初期化されたことを確認
         mock_parallel_evaluator_cls.assert_called_once()
-    
+
+        # start()とshutdown()が呼ばれたことを確認
+        mock_instance = mock_parallel_evaluator_cls.return_value
+        mock_instance.start.assert_called_once()
+        mock_instance.shutdown.assert_called_once()
+
         # RunnerにParallelEvaluatorが渡されたか確認
         # EvolutionRunner(toolbox, stats, fitness_sharing, population, parallel_evaluator)
         runner_pos_args = mock_runner_cls.call_args[0]
         # 5番目の引数 (インデックス4) が parallel_evaluator
-        assert runner_pos_args[4] == mock_parallel_evaluator_cls.return_value
+        assert runner_pos_args[4] == mock_instance
