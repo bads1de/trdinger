@@ -6,7 +6,7 @@ module.exports = {
     "\\.(css|less|sass|scss)$": "identity-obj-proxy",
   },
   transform: {
-    "^.+\\.(t|j)sx?$": ["babel-jest", { configFile: "./babel.config.js" }],
+    "^.+\\.(t|j)sx?$": ["babel-jest", { configFile: "./babel.config.jest.js" }],
   },
   transformIgnorePatterns: [
     "/node_modules/",

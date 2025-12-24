@@ -16,12 +16,14 @@ const useCollection = <T>() => {
     async (
       endpoint: string,
       confirmMessage: string,
+      successMessage: string | undefined,
       onSuccess?: (data: T) => void,
       onError?: (error: string) => void
     ) => {
       await execute(endpoint, {
         method: "POST",
         confirmMessage,
+        successMessage,
         onSuccess,
         onError: (error) => {
           onError?.(error || "データ収集に失敗しました");
@@ -63,9 +65,9 @@ const useCollection = <T>() => {
  * ```
  *
  * @returns {{
- *   ohlcv: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void) => void },
- *   fundingRate: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void) => void },
- *   openInterest: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void) => void },
+ *   ohlcv: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void, successMessage?: string) => void },
+ *   fundingRate: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void, successMessage?: string) => void },
+ *   openInterest: { loading: boolean, error: string | null, collect: (onSuccess?: (data: any) => void, onError?: (error: string) => void, successMessage?: string) => void },
  *   isAnyLoading: boolean,
  *   hasAnyError: boolean
  * }} データ収集関連の状態と操作関数
@@ -76,10 +78,15 @@ export const useDataCollection = () => {
   const openInterest = useCollection();
 
   const collectOHLCVData = useCallback(
-    (onSuccess?: (data: any) => void, onError?: (error: string) => void) => {
+    (
+      onSuccess?: (data: any) => void,
+      onError?: (error: string) => void,
+      successMessage?: string
+    ) => {
       ohlcv.collect(
         "/api/data-collection/bulk-historical",
         "全ペア・全時間軸でOHLCVデータを収集しますか？",
+        successMessage,
         onSuccess,
         onError
       );
@@ -88,10 +95,15 @@ export const useDataCollection = () => {
   );
 
   const collectFundingRateData = useCallback(
-    (onSuccess?: (data: any) => void, onError?: (error: string) => void) => {
+    (
+      onSuccess?: (data: any) => void,
+      onError?: (error: string) => void,
+      successMessage?: string
+    ) => {
       fundingRate.collect(
         "/api/funding-rates/bulk-collect",
         "FRデータを収集しますか？",
+        successMessage,
         onSuccess,
         onError
       );
@@ -100,10 +112,15 @@ export const useDataCollection = () => {
   );
 
   const collectOpenInterestData = useCallback(
-    (onSuccess?: (data: any) => void, onError?: (error: string) => void) => {
+    (
+      onSuccess?: (data: any) => void,
+      onError?: (error: string) => void,
+      successMessage?: string
+    ) => {
       openInterest.collect(
         "/api/open-interest/bulk-collect",
         "OIデータを収集しますか？",
+        successMessage,
         onSuccess,
         onError
       );

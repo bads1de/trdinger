@@ -11,6 +11,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/navigation/Navbar";
 import MainContent from "@/components/navigation/MainContent";
+import { Toaster } from "@/components/ui/sonner";
 
 // Google Fontsからインポートしたフォント設定
 // ラテン文字セットのみを読み込んでパフォーマンスを最適化
@@ -39,6 +40,7 @@ export default function RootLayout({
         <Navbar>
           <MainContent>{children}</MainContent>
         </Navbar>
+        <Toaster />
       </body>
     </html>
   );

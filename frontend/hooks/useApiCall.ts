@@ -8,6 +8,7 @@
 
 import { useState, useCallback } from "react";
 import { BACKEND_API_URL } from "@/constants";
+import { toast } from "sonner";
 
 /**
  * API呼び出しの設定オプション
@@ -17,6 +18,7 @@ export interface ApiCallOptions {
   headers?: Record<string, string>;
   body?: any;
   confirmMessage?: string;
+  successMessage?: string;
   onSuccess?: (data: any) => void;
   onError?: (error: string) => void;
   onFinally?: () => void;
@@ -46,6 +48,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
         headers = { "Content-Type": "application/json" },
         body,
         confirmMessage,
+        successMessage,
         onSuccess,
         onError,
         onFinally,
@@ -83,22 +86,20 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
         } catch (parseError) {
           console.error("JSON Parse Error:", parseError);
           console.error("Response was not valid JSON:", responseText);
-          setError(
-            `レスポンスが無効なJSON形式です: ${responseText.substring(
-              0,
-              100
-            )}...`
-          );
-          onError?.(
-            `レスポンスが無効なJSON形式です: ${responseText.substring(
-              0,
-              100
-            )}...`
-          );
+          const jsonErrorMsg = `レスポンスが無効なJSON形式です: ${responseText.substring(
+            0,
+            100
+          )}...`;
+          setError(jsonErrorMsg);
+          toast.error(jsonErrorMsg);
+          onError?.(jsonErrorMsg);
           return null;
         }
 
         if (response.ok && (method === "GET" || result.success)) {
+          if (successMessage) {
+            toast.success(successMessage);
+          }
           onSuccess?.(result);
           return result;
         } else {
@@ -129,6 +130,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
           }
 
           setError(errorMessage);
+          toast.error(errorMessage);
           onError?.(errorMessage);
           return null;
         }
@@ -139,6 +141,7 @@ export const useApiCall = <T = any>(): ApiCallResult<T> => {
             : "API呼び出し中にエラーが発生しました";
 
         setError(errorMessage);
+        toast.error(errorMessage);
         onError?.(errorMessage);
 
         return null;

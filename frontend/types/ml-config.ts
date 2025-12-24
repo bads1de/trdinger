@@ -148,6 +148,16 @@ export interface FeatureEngineeringConfig {
    * @default null
    */
   featureAllowlist: string[] | null;
+
+  /**
+   * 特徴量プロファイル（互換性のため維持）
+   */
+  profile?: string;
+
+  /**
+   * カスタムallowlist（互換性のため維持）
+   */
+  customAllowlist?: string[] | null;
 }
 
 /**

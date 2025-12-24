@@ -28,6 +28,8 @@ export interface DataCollectionConfig {
   variant: ButtonVariant;
   /** 確認メッセージ（オプション） */
   confirmMessage?: string;
+  /** 成功時のメッセージ（オプション） */
+  successMessage?: string;
   /** ローディング中のテキスト */
   loadingText?: string;
   /** useDataCollection を使用するかどうか */
@@ -49,6 +51,7 @@ export const allDataCollectionConfig: DataCollectionConfig = {
     "全データ（OHLCV・FR・OI）を一括取得します。\n\n" +
     "この処理には数分から十数分かかる場合があります。\n" +
     "テクニカル指標も自動計算されます。続行しますか？",
+  successMessage: "全データの収集を開始しました",
   loadingText: "収集中...",
 };
 
@@ -60,6 +63,7 @@ export const ohlcvCollectionConfig: DataCollectionConfig = {
   variant: "primary",
   useDataCollection: true,
   dataCollectionMethod: "ohlcv.collect",
+  successMessage: "OHLCVデータの収集を開始しました",
   loadingText: "収集中...",
 };
 
@@ -71,6 +75,7 @@ export const fundingRateCollectionConfig: DataCollectionConfig = {
   variant: "success",
   useDataCollection: true,
   dataCollectionMethod: "fundingRate.collect",
+  successMessage: "Funding Rateデータの収集を開始しました",
   loadingText: "収集中...",
 };
 
@@ -84,6 +89,7 @@ export const openInterestCollectionConfig: DataCollectionConfig = {
   confirmMessage:
     "BTCの全期間OIデータを取得します。\n\n" +
     "この処理には数分かかる場合があります。続行しますか？",
+  successMessage: "Open Interestデータの収集を開始しました",
   loadingText: "収集中...",
 };
 
@@ -100,6 +106,7 @@ export const createSingleOpenInterestConfig = (
     symbol: symbol,
     fetch_all: "true",
   },
+  successMessage: `Open Interestデータ (${symbol}) の収集を開始しました`,
   loadingText: "収集中...",
 });
 
@@ -191,6 +198,7 @@ const DataCollectionButton: React.FC<DataCollectionButtonProps> = ({
 
     await execute(url, {
       method: "POST",
+      successMessage: config.successMessage,
       onSuccess: (data) => {
         onCollectionStart?.(data);
       },
@@ -217,7 +225,11 @@ const DataCollectionButton: React.FC<DataCollectionButtonProps> = ({
       );
     }
 
-    await categoryObject[method](onCollectionStart, onCollectionError);
+    await categoryObject[method](
+      onCollectionStart,
+      onCollectionError,
+      config.successMessage
+    );
   };
 
   const getLoadingState = () => {

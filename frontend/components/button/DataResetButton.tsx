@@ -107,6 +107,10 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
     await execute(endpoint, {
       method: "DELETE",
       confirmMessage,
+      successMessage:
+        resetType === "symbol" && symbol
+          ? `${symbol} のデータリセットが完了しました`
+          : "データリセットが完了しました",
       onSuccess: (data) => {
         onResetComplete?.(data);
       },

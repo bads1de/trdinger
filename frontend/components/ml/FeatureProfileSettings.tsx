@@ -12,7 +12,7 @@ import {
   FEATURE_PROFILE_LABELS,
   FEATURE_PROFILE_DESCRIPTIONS,
 } from "@/constants/ml-config-constants";
-import type { FeatureEngineeringConfig } from "@/types/ml-config";
+import type { FeatureEngineeringConfig, FeatureProfile } from "@/types/ml-config";
 
 interface FeatureProfileSettingsProps {
   config: FeatureEngineeringConfig;
@@ -126,7 +126,7 @@ export const FeatureProfileSettings: React.FC<FeatureProfileSettingsProps> = ({
           <AlertDescription className="text-blue-300">
             <div className="space-y-2 text-sm">
               <p>
-                <strong>選択中:</strong> {FEATURE_PROFILE_LABELS[config.profile]}
+                <strong>選択中:</strong> {FEATURE_PROFILE_LABELS[(config.profile as FeatureProfile) || "production"]}
               </p>
               {config.profile === "research" && (
                 <p>
