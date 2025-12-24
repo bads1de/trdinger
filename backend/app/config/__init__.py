@@ -11,7 +11,6 @@ from .unified_config import (
     DatabaseConfig,
     DataCollectionConfig,
     EnsembleConfig,
-    GAConfig,
     LabelGenerationConfig,
     LoggingConfig,
     MarketConfig,
@@ -20,7 +19,6 @@ from .unified_config import (
     MLModelConfig,
     MLPredictionConfig,
     MLTrainingConfig,
-    RetrainingConfig,
     UnifiedConfig,
     unified_config,
 )
@@ -39,7 +37,6 @@ __all__ = [
     # バックテスト・戦略設定
     "BacktestConfig",
     "AutoStrategyConfig",
-    "GAConfig",
     # ML設定
     "MLConfig",
     "MLDataProcessingConfig",

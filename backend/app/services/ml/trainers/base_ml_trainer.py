@@ -372,7 +372,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
-        t1_horizon_n = self.config.training.prediction_horizon
+        t1_horizon_n = self.config.training.label_generation.horizon_n
 
         t1 = get_t1_series(
             X.index,

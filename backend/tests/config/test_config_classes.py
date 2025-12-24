@@ -14,7 +14,6 @@ from app.config.unified_config import (
     AutoStrategyConfig,
     BacktestConfig,
     DatabaseConfig,
-    GAConfig,
     LoggingConfig,
     MarketConfig,
     MLConfig,
@@ -40,7 +39,6 @@ class TestUnifiedConfig:
         assert config.data_collection is not None
         assert config.backtest is not None
         assert config.auto_strategy is not None
-        assert config.ga is not None
         assert config.ml is not None
 
     def test_singleton_instance_access(self):
@@ -114,7 +112,7 @@ class TestUnifiedConfig:
         {
             "MARKET_DATA_SANDBOX": "true",
             "MARKET_DEFAULT_SYMBOL": "ETH/USDT:USDT",
-            "GA_POPULATION_SIZE": "100",
+            "AUTO_STRATEGY_POPULATION_SIZE": "100",
         },
     )
     def test_nested_environment_variables(self):
@@ -123,7 +121,7 @@ class TestUnifiedConfig:
 
         assert config.market.sandbox is True
         assert config.market.default_symbol == "ETH/USDT:USDT"
-        assert config.ga.population_size == 100
+        assert config.auto_strategy.population_size == 100
 
 
 class TestAppConfig:
@@ -241,32 +239,27 @@ class TestAutoStrategyConfig:
         assert config.max_indicators == 5
         assert config.min_indicators == 2
 
-
-class TestGAConfig:
-    """GAConfigクラスのテスト（unified_config版）"""
-
-    def test_initialization_with_defaults(self):
-        """デフォルト値での初期化テスト"""
-        config = GAConfig()
+    def test_new_fields_integration(self):
+        """GAConfigから移行されたフィールドのテスト"""
+        config = AutoStrategyConfig()
         assert config.fallback_symbol == "BTC/USDT:USDT"
-        assert config.fallback_timeframe == "1d"
-        assert config.population_size == 50
-        assert config.generations == 20
         assert config.crossover_rate == 0.8
-        assert config.mutation_rate == 0.1
+        assert config.elite_size == 5
+        assert config.enable_multi_objective is False
+        assert config.objectives == ["total_return"]
 
     def test_multi_objective_settings(self):
         """多目的最適化設定のテスト"""
-        config = GAConfig()
+        config = AutoStrategyConfig()
         assert config.enable_multi_objective is False
         assert config.objectives == ["total_return"]
         assert config.objective_weights == [1.0]
 
     def test_fitness_sharing_settings(self):
         """フィットネス共有設定のテスト"""
-        config = GAConfig()
+        config = AutoStrategyConfig()
         assert config.enable_fitness_sharing is False
-        assert config.sharing_radius == 0.1
+        assert config.fitness_sharing_radius == 0.1
         assert config.sharing_alpha == 1.0
 
 
@@ -289,7 +282,6 @@ class TestMLConfig:
         )
         assert config.data_processing.max_ohlcv_rows == 1000000
         assert config.data_processing.feature_calculation_timeout == 3600
-        assert config.data_processing.debug_mode is False
 
     def test_model_config(self):
         """モデル設定のテスト"""
@@ -335,26 +327,11 @@ class TestConfigIntegration:
             "data_collection",
             "backtest",
             "auto_strategy",
-            "ga",
             "ml",
         ]
         for config_name in required_configs:
             assert hasattr(config, config_name)
             assert getattr(config, config_name) is not None
-
-    def test_config_consistency_between_auto_strategy_and_ga(self):
-        """AutoStrategyConfigとGAConfig間の設定一貫性テスト"""
-        config = UnifiedConfig()
-        # 両方のpopulation_sizeが一致することを確認
-        assert config.auto_strategy.population_size == config.ga.population_size
-        assert config.auto_strategy.generations == config.ga.generations
-
-    def test_market_and_data_collection_integration(self):
-        """MarketConfigとDataCollectionConfig間の統合テスト"""
-        config = UnifiedConfig()
-        # MarketConfigのデフォルト値がDataCollectionConfigと互換性があることを確認
-        assert config.data_collection.default_limit <= config.market.max_limit
-        assert config.data_collection.max_limit <= config.market.max_limit
 
     def test_backtest_uses_market_defaults(self):
         """BacktestConfigがMarketConfigのデフォルト値を使用できるテスト"""
@@ -432,11 +409,11 @@ class TestEnvironmentVariableSupport:
 
     @patch.dict(
         os.environ,
-        {"GA_POPULATION_SIZE": "200", "GA_GENERATIONS": "100"},
+        {"AUTO_STRATEGY_POPULATION_SIZE": "200", "AUTO_STRATEGY_GENERATIONS": "100"},
     )
-    def test_ga_env_vars_loading(self):
-        """GA環境変数の読み込みテスト"""
-        config = GAConfig()
+    def test_auto_strategy_env_vars_loading(self):
+        """AutoStrategy環境変数の読み込みテスト"""
+        config = AutoStrategyConfig()
         assert config.population_size == 200
         assert config.generations == 100
 

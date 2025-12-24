@@ -64,27 +64,6 @@ class EnsembleConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ML_ENSEMBLE_", extra="ignore")
 
 
-class RetrainingConfig(BaseSettings):
-    """再学習設定。
-
-    モデルの再学習スケジュール、データ保持期間、性能監視閾値などを管理します。
-    """
-
-    check_interval_seconds: int = Field(default=3600, alias="CHECK_INTERVAL_SECONDS")
-    max_concurrent_jobs: int = Field(default=2, alias="MAX_CONCURRENT_JOBS")
-    job_timeout_seconds: int = Field(default=7200, alias="JOB_TIMEOUT_SECONDS")
-    data_retention_days: int = Field(default=90, alias="DATA_RETENTION_DAYS")
-    incremental_training_enabled: bool = Field(
-        default=True, alias="INCREMENTAL_TRAINING_ENABLED"
-    )
-    performance_degradation_threshold: float = Field(
-        default=0.05, alias="PERFORMANCE_DEGRADATION_THRESHOLD"
-    )
-    data_drift_threshold: float = Field(default=0.1, alias="DATA_DRIFT_THRESHOLD")
-
-    model_config = SettingsConfigDict(env_prefix="ML_RETRAINING_", extra="ignore")
-
-
 class AppConfig(BaseSettings):
     """アプリケーション基本設定。
 
@@ -179,12 +158,6 @@ class MarketConfig(BaseSettings):
     default_exchange: str = Field(default="bybit")
     default_symbol: str = Field(default="BTC/USDT:USDT")
     default_timeframe: str = Field(default="1h")
-    default_limit: int = Field(default=100)
-
-    # 制限値
-    min_limit: int = Field(default=1)
-    max_limit: int = Field(default=1000)
-
     # Bybit固有の設定
     bybit_config: Dict[str, Any] = Field(
         default={
@@ -254,20 +227,53 @@ class AutoStrategyConfig(BaseSettings):
     遺伝的アルゴリズムによる自動戦略生成の各種パラメータを設定します。
     """
 
-    # 遺伝的アルゴリズム設定
+    # 遺伝的アルゴリズム基本設定
     population_size: int = Field(default=50, description="個体数")
     generations: int = Field(default=20, description="世代数")
     tournament_size: int = Field(default=3, description="トーナメントサイズ")
+    crossover_rate: float = Field(default=0.8, description="交叉率")
     mutation_rate: float = Field(default=0.1, description="突然変異率")
+    elite_size: int = Field(default=5, description="エリート保存数")
 
-    # 戦略生成設定
+    # 戦略生成制約
     max_indicators: int = Field(default=5, description="最大指標数")
     min_indicators: int = Field(default=2, description="最小指標数")
     max_conditions: int = Field(default=5, description="最大条件数")
     min_conditions: int = Field(default=2, description="最小条件数")
 
+    # 多目的最適化設定
+    enable_multi_objective: bool = Field(
+        default=False, description="多目的最適化を有効にするか"
+    )
+    objectives: List[str] = Field(
+        default=["total_return"], description="最適化対象の指標"
+    )
+    objective_weights: List[float] = Field(default=[1.0], description="各指標の重み")
+
     # フィットネス共有設定
+    enable_fitness_sharing: bool = Field(
+        default=False, description="フィットネス共有を有効にするか"
+    )
     fitness_sharing_radius: float = Field(default=0.1, description="共有半径")
+    sharing_alpha: float = Field(default=1.0, description="共有アルファ")
+
+    # フォールバック設定（GA実行時のデフォルト値）
+    fallback_symbol: str = Field(
+        default="BTC/USDT:USDT", description="フォールバックシンボル"
+    )
+    fallback_timeframe: str = Field(default="1d", description="フォールバック時間足")
+    fallback_start_date: str = Field(
+        default="2024-01-01", description="フォールバック開始日"
+    )
+    fallback_end_date: str = Field(
+        default="2024-04-09", description="フォールバック終了日"
+    )
+    fallback_initial_capital: float = Field(
+        default=100000.0, description="フォールバック初期資金"
+    )
+    fallback_commission_rate: float = Field(
+        default=0.001, description="フォールバック手数料率"
+    )
 
     # 戦略API設定
     default_strategies_limit: int = Field(
@@ -276,51 +282,6 @@ class AutoStrategyConfig(BaseSettings):
     max_strategies_limit: int = Field(default=100, description="戦略取得最大件数")
 
     model_config = SettingsConfigDict(env_prefix="AUTO_STRATEGY_", extra="ignore")
-
-
-class GAConfig(BaseSettings):
-    """遺伝的アルゴリズム設定。
-
-    遺伝的アルゴリズムの基本パラメータとバックテスト設定を管理します。
-    """
-
-    # 基本設定
-    fallback_symbol: str = Field(default="BTC/USDT:USDT", alias="GA_FALLBACK_SYMBOL")
-    fallback_timeframe: str = Field(default="1d", alias="GA_FALLBACK_TIMEFRAME")
-    fallback_start_date: str = Field(
-        default="2024-01-01", alias="GA_FALLBACK_START_DATE"
-    )
-    fallback_end_date: str = Field(default="2024-04-09", alias="GA_FALLBACK_END_DATE")
-    fallback_initial_capital: float = Field(
-        default=100000.0, alias="GA_FALLBACK_INITIAL_CAPITAL"
-    )
-    fallback_commission_rate: float = Field(
-        default=0.001, alias="GA_FALLBACK_COMMISSION_RATE"
-    )
-
-    # GAパラメータ
-    population_size: int = Field(default=50, alias="GA_POPULATION_SIZE")
-    generations: int = Field(default=20, alias="GA_GENERATIONS")
-    crossover_rate: float = Field(default=0.8, alias="GA_CROSSOVER_RATE")
-    mutation_rate: float = Field(default=0.1, alias="GA_MUTATION_RATE")
-    elite_size: int = Field(default=5, alias="GA_ELITE_SIZE")
-
-    # 多目的最適化
-    enable_multi_objective: bool = Field(
-        default=False, alias="GA_ENABLE_MULTI_OBJECTIVE"
-    )
-    objectives: List[str] = Field(default=["total_return"], alias="GA_OBJECTIVES")
-    objective_weights: List[float] = Field(default=[1.0], alias="GA_OBJECTIVE_WEIGHTS")
-
-    # その他設定
-    max_indicators: int = Field(default=5, alias="GA_MAX_INDICATORS")
-    enable_fitness_sharing: bool = Field(
-        default=False, alias="GA_ENABLE_FITNESS_SHARING"
-    )
-    sharing_radius: float = Field(default=0.1, alias="GA_SHARING_RADIUS")
-    sharing_alpha: float = Field(default=1.0, alias="GA_SHARING_ALPHA")
-
-    model_config = SettingsConfigDict(env_prefix="GA_", extra="ignore")
 
 
 class MLDataProcessingConfig(BaseSettings):
@@ -342,12 +303,6 @@ class MLDataProcessingConfig(BaseSettings):
         default=7200, description="2時間", alias="MODEL_TRAINING_TIMEOUT"
     )
     model_prediction_timeout: int = Field(default=10, alias="MODEL_PREDICTION_TIMEOUT")
-    memory_warning_threshold: int = Field(
-        default=8000, alias="MEMORY_WARNING_THRESHOLD"
-    )
-    memory_limit_threshold: int = Field(default=10000, alias="MEMORY_LIMIT_THRESHOLD")
-    debug_mode: bool = Field(default=False, alias="DEBUG_MODE")
-    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     model_config = SettingsConfigDict(env_prefix="ML_DATA_PROCESSING_", extra="ignore")
 
@@ -536,28 +491,6 @@ class MLTrainingConfig(BaseSettings):
     # データ分割
     train_test_split: float = Field(default=0.8, alias="TRAIN_TEST_SPLIT")
 
-    # ターゲット作成
-    prediction_horizon: int = Field(default=24, alias="PREDICTION_HORIZON")
-
-    # ラベル生成設定（動的閾値を使用）
-    label_method: str = Field(
-        default="triple_barrier", description="ラベル生成方法", alias="LABEL_METHOD"
-    )
-    volatility_window: int = Field(
-        default=24,
-        description="ボラティリティ計算ウィンドウ",
-        alias="VOLATILITY_WINDOW",
-    )
-    threshold_multiplier: float = Field(
-        default=0.5, description="閾値乗数", alias="THRESHOLD_MULTIPLIER"
-    )
-    min_threshold: float = Field(
-        default=0.005, description="最小閾値", alias="MIN_THRESHOLD"
-    )
-    max_threshold: float = Field(
-        default=0.05, description="最大閾値", alias="MAX_THRESHOLD"
-    )
-
     # PurgedKFold設定
     pct_embargo: float = Field(
         default=0.01,
@@ -565,16 +498,11 @@ class MLTrainingConfig(BaseSettings):
         alias="PCT_EMBARGO",
     )
 
-    # 従来の固定閾値（後方互換性のため保持）
-    threshold_up: float = Field(default=0.02, alias="THRESHOLD_UP")
-    threshold_down: float = Field(default=-0.02, alias="THRESHOLD_DOWN")
-
     # 学習制御
     min_training_samples: int = Field(
         default=10, description="最小限に緩和", alias="MIN_TRAINING_SAMPLES"
     )
 
-    # 評価設定
     performance_threshold: float = Field(default=0.05, alias="PERFORMANCE_THRESHOLD")
     validation_split: float = Field(default=0.2, alias="VALIDATION_SPLIT")
 
@@ -639,7 +567,6 @@ class MLConfig(BaseSettings):
     prediction: MLPredictionConfig = Field(default_factory=MLPredictionConfig)
     training: MLTrainingConfig = Field(default_factory=MLTrainingConfig)
     ensemble: EnsembleConfig = Field(default_factory=EnsembleConfig)
-    retraining: RetrainingConfig = Field(default_factory=RetrainingConfig)
 
     def get_model_search_paths(self) -> List[str]:
         """モデル検索パスのリストを取得"""
@@ -681,7 +608,6 @@ class UnifiedConfig(BaseSettings):
     data_collection: DataCollectionConfig = Field(default_factory=DataCollectionConfig)
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)
     auto_strategy: AutoStrategyConfig = Field(default_factory=AutoStrategyConfig)
-    ga: GAConfig = Field(default_factory=GAConfig)
     ml: MLConfig = Field(default_factory=MLConfig)
 
     model_config = SettingsConfigDict(

@@ -235,7 +235,7 @@ class StackingEnsemble(BaseEnsemble):
             return StratifiedKFold(n_splits=self.cv_folds, shuffle=False)
         else:
             # デフォルト: PurgedKFold
-            t1_horizon_n = unified_config.ml.training.prediction_horizon
+            t1_horizon_n = unified_config.ml.training.label_generation.horizon_n
             t1 = get_t1_series(X_train.index, t1_horizon_n)
             pct_embargo = getattr(unified_config.ml.training, "pct_embargo", 0.01)
             return PurgedKFold(n_splits=self.cv_folds, t1=t1, pct_embargo=pct_embargo)
