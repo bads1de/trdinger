@@ -1,10 +1,8 @@
 import pytest
-import json
-import os
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from app.services.ml.common.config import MLConfigManager
-from app.config.unified_config import MLConfig, unified_config
+from app.config.unified_config import unified_config
+
 
 class TestMLConfigManager:
     @pytest.fixture
@@ -26,31 +24,31 @@ class TestMLConfigManager:
         success = manager.save_config()
         assert success is True
         assert config_file.exists()
-        
+
         # 2. 読み込み
         success_load = manager.load_config()
         assert success_load is True
 
     def test_update_config(self, manager):
         """設定の更新"""
-        # 特徴量エンジニアリングのプロファイルを変えてみる
-        update = {"feature_engineering": {"profile": "custom"}}
+        # 学習設定の推定器数を変えてみる
+        update = {"training": {"lgb_n_estimators": 999}}
         success = manager.update_config(update)
-        
+
         assert success is True
-        assert unified_config.ml.feature_engineering.profile == "custom"
+        assert unified_config.ml.training.lgb_n_estimators == 999
 
     def test_reset_config(self, manager):
         """設定のリセット"""
         # 一旦変更
-        manager.update_config({"feature_engineering": {"profile": "custom"}})
-        assert unified_config.ml.feature_engineering.profile == "custom"
-        
+        manager.update_config({"training": {"lgb_n_estimators": 999}})
+        assert unified_config.ml.training.lgb_n_estimators == 999
+
         # リセット
         success = manager.reset_config()
         assert success is True
-        # デフォルトは 'standard' または MLConfig のデフォルト値
-        assert unified_config.ml.feature_engineering.profile != "custom"
+        # デフォルト値に戻っていることを確認
+        assert unified_config.ml.training.lgb_n_estimators != 999
 
     def test_load_config_not_found(self, tmp_path):
         """設定ファイルがない場合の読み込み"""

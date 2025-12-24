@@ -15,8 +15,7 @@ import matplotlib.pyplot as plt
 import lightgbm as lgb
 import xgboost as xgb
 import catboost as cb
-from sklearn.metrics import classification_report, f1_score
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 from sklearn.preprocessing import StandardScaler
 
 # Add project root to path
@@ -30,7 +29,6 @@ if sys.platform == "win32":
 
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
-    FAKEOUT_DETECTION_ALLOWLIST,
 )
 from app.services.ml.label_cache import LabelCache
 from app.services.ml.label_generation import LabelGenerationService
@@ -38,9 +36,7 @@ from app.services.ml.ensemble.meta_labeling import MetaLabelingService
 from app.services.ml.models.gru_model import GRUModel
 from app.services.ml.models.lstm_model import LSTMModel
 from app.services.ml.cross_validation.purged_kfold import PurgedKFold
-from app.config.unified_config import unified_config
 from database.connection import SessionLocal
-from database.repositories.ohlcv_repository import OHLCVRepository
 from scripts.feature_evaluation.common_feature_evaluator import (
     CommonFeatureEvaluator,
 )
@@ -183,26 +179,15 @@ class MLPipeline:
                 symbol=self.symbol, timeframe=self.timeframe, limit=limit
             )
 
-        # メタラベリング有効時は特徴量リストを上書きしてダマシ検知用特徴量を使用
-        original_allowlist = unified_config.ml.feature_engineering.feature_allowlist
-        if self.enable_meta_labeling:
-            unified_config.ml.feature_engineering.feature_allowlist = (
-                FAKEOUT_DETECTION_ALLOWLIST
-            )
-            logger.info("🚀 Applying FAKEOUT_DETECTION_ALLOWLIST for Meta-Labeling")
-
         try:
             features_df = self.feature_service.calculate_advanced_features(
                 ohlcv_data=data.ohlcv,
                 funding_rate_data=data.fr,
                 open_interest_data=data.oi,
             )
-        finally:
-            # 設定を元に戻す
-            if self.enable_meta_labeling:
-                unified_config.ml.feature_engineering.feature_allowlist = (
-                    original_allowlist
-                )
+        except Exception as e:
+            logger.error(f"Feature calculation failed: {e}")
+            raise
 
         feature_cols = [
             col
@@ -239,7 +224,6 @@ class MLPipeline:
             )  # t-value threshold (Distributed around 10.0 for 50% split)
 
             # Fixed Parameters
-            use_atr = False
             threshold_method = "TREND_SCANNING"
 
             try:
@@ -526,9 +510,6 @@ class MLPipeline:
         window_step = best_params.get("window_step", 1)
         min_t_value = best_params.get("min_t_value", 2.0)
         threshold_method = "TREND_SCANNING"
-
-        # Fixed parameters
-        use_atr = False
 
         try:
             # Scientific Meta-Labeling: CUSUM Filter
@@ -1105,6 +1086,3 @@ if __name__ == "__main__":
         enable_meta_labeling=True,  # Meta-Labeling有効化
     )
     pipeline.run()
-
-
-

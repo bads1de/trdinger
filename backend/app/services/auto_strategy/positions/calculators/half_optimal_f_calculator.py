@@ -3,11 +3,11 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 
-from app.config.unified_config import unified_config
+from ...config.constants import AUTO_STRATEGY_DEFAULTS
 from app.utils.error_handler import safe_operation
 
 from .base_calculator import BaseCalculator
@@ -80,9 +80,9 @@ class HalfOptimalFCalculator(BaseCalculator):
         )
         def _simplified_optimal_f():
             # 統計的仮定値を使用した簡易計算
-            assumed_win_rate = unified_config.auto_strategy.assumed_win_rate
-            assumed_avg_win = unified_config.auto_strategy.assumed_avg_win
-            assumed_avg_loss = unified_config.auto_strategy.assumed_avg_loss
+            assumed_win_rate = AUTO_STRATEGY_DEFAULTS["assumed_win_rate"]
+            assumed_avg_win = AUTO_STRATEGY_DEFAULTS["assumed_avg_win"]
+            assumed_avg_loss = AUTO_STRATEGY_DEFAULTS["assumed_avg_loss"]
 
             optimal_f = (
                 assumed_win_rate * assumed_avg_win
@@ -92,10 +92,10 @@ class HalfOptimalFCalculator(BaseCalculator):
 
             # 修正ポイント: リスクベースの計算
             risk_amount = account_balance * half_optimal_f
-            
+
             # 簡易計算時はデフォルトのATR(2%) * 2倍 = 4%幅を仮定
             stop_loss_pct = 0.04
-            
+
             position_size = self._safe_calculate_with_price_check(
                 lambda: risk_amount / (current_price * stop_loss_pct),
                 current_price,
@@ -193,7 +193,7 @@ class HalfOptimalFCalculator(BaseCalculator):
             market_data = kwargs.get("market_data", {})
             atr_pct = market_data.get("atr_pct", 0.02)  # デフォルト2%
             atr_multiplier = getattr(gene, "atr_multiplier", 2.0)  # 遺伝子設定の倍率
-            
+
             # 想定損切り幅（%）
             stop_loss_pct = max(atr_pct * atr_multiplier, 0.01)  # 最低1%で制限
 
@@ -254,9 +254,7 @@ class HalfOptimalFCalculator(BaseCalculator):
             },
         )
         def _fallback():
-            fallback_atr_multiplier = (
-                unified_config.auto_strategy.fallback_atr_multiplier
-            )
+            fallback_atr_multiplier = AUTO_STRATEGY_DEFAULTS["fallback_atr_multiplier"]
             # 簡易ボラティリティ計算
             atr_value = current_price * fallback_atr_multiplier
             risk_amount = account_balance * gene.risk_per_trade

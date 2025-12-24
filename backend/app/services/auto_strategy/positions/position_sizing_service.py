@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from app.config.unified_config import unified_config
+from ..config.constants import AUTO_STRATEGY_DEFAULTS
 from app.utils.error_handler import safe_operation
 
 from .calculators.calculator_factory import CalculatorFactory
@@ -292,7 +292,7 @@ class PositionSizingService:
         self, account_balance: float, current_price: float
     ) -> PositionSizingResult:
         """フォールバック計算（固定比率）"""
-        default_ratio = unified_config.auto_strategy.default_position_ratio
+        default_ratio = AUTO_STRATEGY_DEFAULTS["default_position_ratio"]
         position_amount = account_balance * default_ratio
         position_size = position_amount / current_price if current_price > 0 else 0.001
 

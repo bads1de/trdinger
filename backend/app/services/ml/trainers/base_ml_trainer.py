@@ -156,20 +156,19 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             try:
                 # fitは学習データのみで行う（これが重要）
                 self.feature_selector.fit(X_tr, y_tr)
-                selection_results = getattr(self.feature_selector, "selection_details_", {})
-                
+
                 # transformは学習・テスト両方に適用
                 X_tr = pd.DataFrame(
                     self.feature_selector.transform(X_tr),
                     columns=self.feature_selector.get_feature_names_out(),
-                    index=X_tr.index
+                    index=X_tr.index,
                 )
                 X_te = pd.DataFrame(
                     self.feature_selector.transform(X_te),
                     columns=self.feature_selector.get_feature_names_out(),
-                    index=X_te.index
+                    index=X_te.index,
                 )
-                
+
                 self.feature_columns = X_tr.columns.tolist()
                 logger.info(f"✅ 特徴量選択完了: {len(self.feature_columns)}個を採用")
             except Exception as e:
@@ -184,7 +183,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             if training_params.get("use_cross_validation", False):
                 # CVは学習セット(X_tr)内で行う
                 cv_res = self._time_series_cross_validate(X_tr, y_tr, **training_params)
-                
+
                 # 全学習データで最終モデル学習
                 X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
                 res = self._train_model_impl(
@@ -227,7 +226,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             try:
                 X_final = pd.concat([X_tr, X_te]).sort_index()
                 y_final = pd.concat([y_tr, y_te]).sort_index()
-            except:
+            except Exception:
                 X_final = X_tr
                 y_final = y_tr
 
@@ -319,14 +318,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             if ohlcv_data is None or ohlcv_data.empty:
                 raise ValueError("OHLCVデータが空です")
 
-            profile = unified_config.ml.feature_engineering.profile
-            logger.info(f"📊 特徴量計算を実行中（profile: {profile}）...")
-
+            logger.info("📊 特徴量計算を実行中...")
             basic_features = self.feature_service.calculate_advanced_features(
                 ohlcv_data=ohlcv_data,
                 funding_rate_data=funding_rate_data,
                 open_interest_data=open_interest_data,
-                profile=profile,
             )
 
             logger.info(f"✅ 特徴量生成完了: {len(basic_features.columns)}個の特徴量")

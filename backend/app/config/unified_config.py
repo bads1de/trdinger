@@ -275,38 +275,6 @@ class AutoStrategyConfig(BaseSettings):
     )
     max_strategies_limit: int = Field(default=100, description="戦略取得最大件数")
 
-    # ボラティリティTP/SL設定
-    atr_period: int = Field(default=14, description="ATR計算期間")
-    atr_multiplier_sl: float = Field(default=2.0, description="SL用ATR倍率")
-    atr_multiplier_tp: float = Field(default=3.0, description="TP用ATR倍率")
-    min_sl_pct: float = Field(default=0.005, description="最小SLパーセンテージ")
-    max_sl_pct: float = Field(default=0.1, description="最大SLパーセンテージ")
-    min_tp_pct: float = Field(default=0.01, description="最小TPパーセンテージ")
-    max_tp_pct: float = Field(default=0.2, description="最大TPパーセンテージ")
-    regime_lookback: int = Field(
-        default=50, description="ボラティリティレジーム判定期間"
-    )
-    estimated_atr_pct: float = Field(default=0.02, description="推定ATRパーセンテージ")
-    default_atr_mean: float = Field(default=0.02, description="デフォルトATR平均")
-    default_atr_std: float = Field(default=0.01, description="デフォルトATR標準偏差")
-
-    # ポジションサイジング設定
-    default_atr_multiplier: float = Field(default=0.02, description="デフォルトATR倍率")
-    fallback_atr_multiplier: float = Field(
-        default=0.04, description="フォールバックATR倍率"
-    )
-    assumed_win_rate: float = Field(default=0.55, description="想定勝率")
-    assumed_avg_win: float = Field(default=0.02, description="想定平均勝ち額")
-    assumed_avg_loss: float = Field(default=0.015, description="想定平均負け額")
-    default_position_ratio: float = Field(
-        default=0.1, description="デフォルトポジション比率"
-    )
-
-    # ボラティリティレジーム閾値
-    very_low_threshold: float = Field(default=-1.5, description="非常に低い閾値")
-    low_threshold: float = Field(default=-0.5, description="低い閾値")
-    high_threshold: float = Field(default=1.5, description="高い閾値")
-
     model_config = SettingsConfigDict(env_prefix="AUTO_STRATEGY_", extra="ignore")
 
 
@@ -554,16 +522,6 @@ class MLTrainingConfig(BaseSettings):
     xgb_learning_rate: float = Field(default=0.1, description="学習率")
     xgb_max_depth: int = Field(default=6, description="最大深度")
 
-    # RandomForest デフォルトパラメータ
-    rf_n_estimators: int = Field(default=100, description="推定器数")
-    rf_max_depth: int = Field(default=10, description="最大深度")
-
-    # GradientBoosting デフォルトパラメータ
-    gb_n_estimators: int = Field(default=50, description="推定器数")
-    gb_learning_rate: float = Field(default=0.2, description="学習率")
-    gb_max_depth: int = Field(default=3, description="最大深度")
-    gb_subsample: float = Field(default=0.8, description="サブサンプル比率")
-
     # LogisticRegression デフォルトパラメータ
     lr_max_iter: int = Field(default=1000, description="最大イテレーション数")
 
@@ -665,55 +623,7 @@ class MLTrainingConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ML_TRAINING_", extra="ignore")
 
 
-class FeatureEngineeringConfig(BaseSettings):
-    """特徴量エンジニアリング設定。
-
-    研究目的専用のため、プロファイル機能は簡素化されています。
-    """
-
-    # 特徴量プロファイル設定
-    profile: str = Field(
-        default="research",
-        alias="profile",
-        description="特徴量プロファイル ('research' または 'production')",
-    )
-
-    # 計算期間のデフォルト値
-    default_lookback_periods: Optional[Dict[str, int]] = Field(
-        default_factory=lambda: {
-            "short_ma": 10,
-            "long_ma": 50,
-            "volatility": 20,
-            "momentum": 14,
-            "volume": 20,
-        },
-        alias="DEFAULT_LOOKBACK_PERIODS",
-    )
-
-    # キャッシュ設定
-    cache_enabled: bool = Field(default=True, alias="CACHE_ENABLED")
-    max_cache_size: int = Field(default=10, alias="MAX_CACHE_SIZE")
-    cache_ttl_seconds: int = Field(default=3600, alias="CACHE_TTL_SECONDS")
-
-    # 特徴量計算設定
-    price_feature_periods: Optional[List[int]] = Field(
-        default_factory=lambda: [5, 10, 20, 50], alias="PRICE_FEATURE_PERIODS"
-    )
-    volatility_periods: Optional[List[int]] = Field(
-        default_factory=lambda: [10, 20, 30], alias="VOLATILITY_PERIODS"
-    )
-    volume_periods: Optional[List[int]] = Field(
-        default_factory=lambda: [10, 20, 30], alias="VOLUME_PERIODS"
-    )
-
-    feature_allowlist: Optional[List[str]] = Field(
-        default=None,
-        description="使用する特徴量のリスト（Noneの場合は全特徴量を使用）",
-    )
-
-    model_config = SettingsConfigDict(
-        env_prefix="ML_FEATURE_ENGINEERING_", extra="ignore"
-    )
+# --- 機械学習設定 ---
 
 
 class MLConfig(BaseSettings):
@@ -728,9 +638,6 @@ class MLConfig(BaseSettings):
     model: MLModelConfig = Field(default_factory=MLModelConfig)
     prediction: MLPredictionConfig = Field(default_factory=MLPredictionConfig)
     training: MLTrainingConfig = Field(default_factory=MLTrainingConfig)
-    feature_engineering: FeatureEngineeringConfig = Field(
-        default_factory=FeatureEngineeringConfig
-    )
     ensemble: EnsembleConfig = Field(default_factory=EnsembleConfig)
     retraining: RetrainingConfig = Field(default_factory=RetrainingConfig)
 

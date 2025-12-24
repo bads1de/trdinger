@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
-from app.config.unified_config import unified_config
+from ..config.constants import AUTO_STRATEGY_DEFAULTS
 
 
 @dataclass
@@ -70,7 +70,7 @@ class MarketDataHandler:
 
         # 2. ATR値の保証
         if "atr" not in enhanced and "atr_pct" not in enhanced:
-            default_atr_pct = unified_config.auto_strategy.default_atr_multiplier
+            default_atr_pct = AUTO_STRATEGY_DEFAULTS["default_atr_multiplier"]
             enhanced.update(
                 {
                     "atr": current_price * default_atr_pct,

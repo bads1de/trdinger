@@ -241,23 +241,6 @@ class TestAutoStrategyConfig:
         assert config.max_indicators == 5
         assert config.min_indicators == 2
 
-    def test_tpsl_settings(self):
-        """TPSL設定のテスト"""
-        config = AutoStrategyConfig()
-        assert config.atr_period == 14
-        assert config.atr_multiplier_sl == 2.0
-        assert config.atr_multiplier_tp == 3.0
-        assert config.min_sl_pct == 0.005
-        assert config.max_tp_pct == 0.2
-
-    def test_volatility_regime_settings(self):
-        """ボラティリティレジーム設定のテスト"""
-        config = AutoStrategyConfig()
-        assert config.regime_lookback == 50
-        assert config.very_low_threshold == -1.5
-        assert config.low_threshold == -0.5
-        assert config.high_threshold == 1.5
-
 
 class TestGAConfig:
     """GAConfigクラスのテスト（unified_config版）"""
@@ -335,7 +318,6 @@ class TestMLConfig:
         config = MLConfig()
         assert config.training.lgb_n_estimators == 100
         assert config.training.xgb_learning_rate == 0.1
-        assert config.training.rf_max_depth == 10
         assert config.training.cv_folds == 5
 
 

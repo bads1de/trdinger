@@ -11,7 +11,6 @@ from .unified_config import (
     DatabaseConfig,
     DataCollectionConfig,
     EnsembleConfig,
-    FeatureEngineeringConfig,
     GAConfig,
     LabelGenerationConfig,
     LoggingConfig,
@@ -47,11 +46,7 @@ __all__ = [
     "MLModelConfig",
     "MLPredictionConfig",
     "MLTrainingConfig",
-    "FeatureEngineeringConfig",
     "LabelGenerationConfig",
     "EnsembleConfig",
     "RetrainingConfig",
 ]
-
-
-

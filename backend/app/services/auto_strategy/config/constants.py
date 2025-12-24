@@ -164,6 +164,25 @@ GA_DEFAULT_CONFIG = {
     "constraint_violation_penalty": 0.0,
 }
 
+# === 自動戦略デフォルト値 (フォールバック用) ===
+AUTO_STRATEGY_DEFAULTS = {
+    # ボラティリティTP/SL
+    "atr_period": 14,
+    "atr_multiplier_sl": 2.0,
+    "atr_multiplier_tp": 3.0,
+    "min_sl_pct": 0.005,
+    "max_sl_pct": 0.1,
+    "min_tp_pct": 0.01,
+    "max_tp_pct": 0.2,
+    # ポジションサイジング
+    "default_atr_multiplier": 0.02,
+    "fallback_atr_multiplier": 0.04,
+    "assumed_win_rate": 0.55,
+    "assumed_avg_win": 0.02,
+    "assumed_avg_loss": 0.015,
+    "default_position_ratio": 0.1,
+}
+
 # === フィットネス重み設定 ===
 FITNESS_WEIGHT_PROFILES = {
     "balanced": {
