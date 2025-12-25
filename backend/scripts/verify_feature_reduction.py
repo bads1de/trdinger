@@ -38,6 +38,7 @@ from app.services.ml.label_generation.presets import (  # noqa: E402
     triple_barrier_method_preset,
 )
 from app.services.ml.ensemble.meta_labeling import MetaLabelingService  # noqa: E402
+from app.services.ml.models.model_manager import model_manager  # noqa: E402
 
 # ロガー設定
 logging.basicConfig(
@@ -99,19 +100,16 @@ def fetch_all_data(symbol, timeframe, limit):
         db.close()
 
 
-def run_analysis_pipeline(
-    symbol, timeframe, limit, labeling_method="trend_scanning", save_json=True
-):
-    print(f"\n{'='*60}\n VERIFY MODE: Full Microstructure Power\n{'='*60}")
-
+def prepare_model_data(symbol, timeframe, limit, labeling_method):
+    """データ取得、特徴量生成、ラベル生成、特徴量選択までを行う共通処理"""
     ohlcv_df, fr_df, ls_df, oi_df, ohlcv_1m = fetch_all_data(symbol, timeframe, limit)
     if ohlcv_df is None:
         print("Error: No data found.")
-        return
+        return None
 
     fe_service = FeatureEngineeringService()
 
-    # 1. スーパーセット生成 (魔改造LS含む)
+    # 1. スーパーセット生成
     print("[*] Generating feature superset (including Advanced Sentiment)...")
     X_raw = fe_service.create_feature_superset(ohlcv_df, fr_df, oi_df, ls_df)
 
@@ -121,17 +119,16 @@ def run_analysis_pipeline(
 
     # 3. 統合
     X_full = X_raw.join(agg_1m, how="left").ffill().fillna(0)
-    
-    # 3.5 特徴量拡張 (ラグ、相互作用等)
+
+    # 3.5 特徴量拡張
     print(f"[*] Expanding features (current: {len(X_full.columns)})...")
     X_full = fe_service.expand_features(X_full)
     print(f"[*] Expanded to {len(X_full.columns)} features.")
 
     y_raw = None
-    w_model_all = None
+    raw_weights = None
 
     if labeling_method == "trend_scanning":
-        # 4. ラベル (Trend Scanning)
         print("[*] Generating labels using Trend Scanning with t-values as weights...")
         from app.services.ml.label_generation.trend_scanning import TrendScanning
 
@@ -144,14 +141,10 @@ def run_analysis_pipeline(
 
         labels = ts_scanner.get_labels(ohlcv_df["close"], use_log_price=True)
         y_raw = labels["bin"]
-        # トレンドスキャンニングのみ、t値をウェイトとして使用
         raw_weights = labels["t_value"].abs()
-        
-        # 検証用：バイナリ分類
         y_raw = (y_raw == 1).astype(int)
 
     elif labeling_method == "triple_barrier":
-        # 4. ラベル (Triple Barrier)
         print("[*] Generating labels using Triple Barrier Method...")
         y_raw = triple_barrier_method_preset(
             ohlcv_df,
@@ -164,17 +157,15 @@ def run_analysis_pipeline(
             atr_period=14,
         )
         y_raw = y_raw.dropna().astype(int)
-        # TBMはウェイトなし (None)
         raw_weights = None
 
     else:
         print(f"Error: Unknown labeling method '{labeling_method}'")
-        return
+        return None
 
     rolling_high = ohlcv_df["high"].rolling(window=20).max().shift(1)
     trigger_mask = ohlcv_df["close"] > rolling_high
 
-    # 助走期間を避けて有効なインデックスを抽出
     warmup_period = 200
     valid_idx = X_full.index.intersection(y_raw.index).intersection(
         trigger_mask[trigger_mask].index
@@ -183,12 +174,9 @@ def run_analysis_pipeline(
 
     X_model_all = X_full.loc[valid_idx]
     y_model_all = y_raw.loc[valid_idx]
-    if raw_weights is not None:
-        w_model_all = raw_weights.loc[valid_idx]
-    else:
-        w_model_all = None
+    w_model_all = raw_weights.loc[valid_idx] if raw_weights is not None else None
 
-    # 自動特徴量選択 (FeatureSelector利用)
+    # 自動特徴量選択
     print("[*] Running Strict Feature Selection (Elite 30-50 Strategy)...")
     from app.services.ml.feature_selection.feature_selector import FeatureSelector
 
@@ -196,15 +184,14 @@ def run_analysis_pipeline(
         method="staged",
         cv_folds=5,
         cv_strategy="timeseries",
-        n_jobs=-1,  # 並列処理
-        variance_threshold=0.001,  # 少し上げる
-        correlation_threshold=0.80, # 0.95から大幅に下げて重複を排除
+        n_jobs=-1,
+        variance_threshold=0.001,
+        correlation_threshold=0.80,
         min_features=10,
-        max_features=50, # 上限を設定
+        max_features=50,
         random_state=42,
     )
 
-    # 学習と変換
     X_elite = selector.fit_transform(X_model_all, y_model_all)
     elite_cols = X_elite.columns.tolist()
 
@@ -214,14 +201,39 @@ def run_analysis_pipeline(
     )
     print(f"[*] Top 10 Features: {elite_cols[:10]}")
 
+    return {
+        "X_elite": X_elite,
+        "y_model_all": y_model_all,
+        "w_model_all": w_model_all,
+        "elite_cols": elite_cols,
+        "X_model_all": X_model_all, # Needed for debug or info
+        "ohlcv_df": ohlcv_df # Needed for visualization if any
+    }
+
+
+def run_analysis_pipeline(
+    symbol, timeframe, limit, labeling_method="trend_scanning", save_json=True
+):
+    print(f"\n{'='*60}\n VERIFY MODE: Full Microstructure Power\n{'='*60}")
+
+    data = prepare_model_data(symbol, timeframe, limit, labeling_method)
+    if data is None:
+        return
+
+    X_elite = data["X_elite"]
+    y_model_all = data["y_model_all"]
+    w_model_all = data["w_model_all"]
+    elite_cols = data["elite_cols"]
+    X_model_all = data["X_model_all"]
+
     # 評価 (TimeSeriesSplit)
     tscv = TimeSeriesSplit(n_splits=5)
     model = LGBMClassifier(
         n_estimators=100,
-        learning_rate=0.02, # 学習率を少し下げて慎重に
-        num_leaves=10,      # 複雑さを抑えて過学習防止
+        learning_rate=0.02,
+        num_leaves=10,
         class_weight="balanced",
-        importance_type="gain", # 常にgainを使用
+        importance_type="gain",
         random_state=42,
         verbosity=-1,
     )
@@ -232,7 +244,7 @@ def run_analysis_pipeline(
         feature_selection_params={
             "method": "staged",
             "min_features": 5,
-            "max_features": 20, # メタモデルも絞り込む
+            "max_features": 20,
             "correlation_threshold": 0.75,
             "random_state": 42,
         },
@@ -248,7 +260,6 @@ def run_analysis_pipeline(
         X_train, y_train = X_elite.iloc[train_idx], y_model_all.iloc[train_idx]
         X_test, y_test = X_elite.iloc[test_idx], y_model_all.iloc[test_idx]
         
-        # ウェイトの抽出 (TSの場合はt値、TBMの場合はNone)
         w_train = w_model_all.iloc[train_idx] if w_model_all is not None else None
 
         # 1. Train Primary Model
@@ -268,7 +279,6 @@ def run_analysis_pipeline(
         p_acc = balanced_accuracy_score(y_test, y_pred)
         p_prec = precision_score(y_test, y_pred, zero_division=0)
 
-        # Count primary trades
         n_primary_trades = int(y_pred.sum())
         y_test_np = y_test.values.astype(int)
         y_pred_np = (
@@ -289,7 +299,6 @@ def run_analysis_pipeline(
         base_probs_train = pd.DataFrame(index=X_train.index)
         base_probs_test = pd.DataFrame(index=X_test.index)
 
-        # train (Using the improved MetaLabelingService with DynamicMetaSelector)
         meta_res = meta_service.train(
             X_train, y_train, primary_proba_train, base_probs_train, threshold=0.5
         )
@@ -298,7 +307,6 @@ def run_analysis_pipeline(
             print(
                 f"Fold {fold+1}: Primary Acc={p_acc:.4f} | Meta SKIPPED ({meta_res['reason']})"
             )
-            # Fallback stats (same as primary)
             meta_scores.append(
                 {
                     "acc": p_acc,
@@ -312,11 +320,9 @@ def run_analysis_pipeline(
                 X_test, primary_proba_test, base_probs_test, threshold=0.5
             )
 
-            # Calculate Metrics
             m_acc = balanced_accuracy_score(y_test, meta_pred)
             m_prec = precision_score(y_test, meta_pred, zero_division=0)
 
-            # Count trades
             n_meta_trades = int(meta_pred.sum())
             meta_pred_np = (
                 meta_pred
@@ -385,6 +391,70 @@ def run_analysis_pipeline(
         print(f"[*] Results saved to {output_path}")
 
     return result_data
+
+
+def run_training_mode(symbol, timeframe, limit, labeling_method):
+    print(f"\n{'='*60}\n TRAINING MODE: Train & Save Model\n{'='*60}")
+    
+    # 1. データ準備
+    data = prepare_model_data(symbol, timeframe, limit, labeling_method)
+    if data is None:
+        return
+
+    X_elite = data["X_elite"]
+    y_model_all = data["y_model_all"]
+    w_model_all = data["w_model_all"]
+    elite_cols = data["elite_cols"]
+
+    # 2. 全データでモデル学習
+    print("[*] Training Final Model on ALL data...")
+    model = LGBMClassifier(
+        n_estimators=100,
+        learning_rate=0.02,
+        num_leaves=10,
+        class_weight="balanced",
+        importance_type="gain",
+        random_state=42,
+        verbosity=-1,
+    )
+    
+    model.fit(X_elite, y_model_all, sample_weight=w_model_all)
+    
+    # 3. 保存
+    print("[*] Saving Model via ModelManager...")
+    
+    metadata = {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "limit": limit,
+        "labeling_method": labeling_method,
+        "feature_count": len(elite_cols),
+        "training_samples": len(X_elite),
+        # 簡易的なスコア（トレーニングデータに対するスコア）
+        # ※本来はCVスコアなどを記録すべきだが、ここでは簡易化
+        "train_accuracy": float(model.score(X_elite, y_model_all)),
+        "description": "Trained via verify_feature_reduction.py"
+    }
+    
+    # スケーラーはここでは明示的に使用していない（LightGBM生）のでNone
+    # 必要ならPipelineにして保存するか、StandardScalerを適用するように変更する必要があるが
+    # 現状のverifyロジックに従う
+    
+    try:
+        model_path = model_manager.save_model(
+            model=model,
+            model_name=f"verify_{labeling_method}",
+            metadata=metadata,
+            scaler=None, # LightGBM handles scaling? No, but trees are invariant. 
+                         # If features were scaled in preparation, we need that scaler.
+                         # In fetch_all_data/FeatureEngineeringService, scaling might happen.
+                         # FeatureEngineeringService usually returns raw-ish features (pct_change etc).
+                         # We are not explicitly scaling X_elite here.
+            feature_columns=elite_cols
+        )
+        print(f"✅ Model saved successfully at: {model_path}")
+    except Exception as e:
+        print(f"❌ Failed to save model: {e}")
 
 
 def run_verify_mode(symbol, timeframe, limit, labeling_method):
@@ -473,7 +543,7 @@ def run_compare_mode(symbol, timeframe, limit):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--mode", choices=["verify", "optimize", "compare"], default="verify"
+        "--mode", choices=["verify", "optimize", "compare", "train"], default="verify"
     )
     parser.add_argument("--symbol", default="BTC/USDT:USDT")
     parser.add_argument("--timeframe", default="1h")
@@ -490,3 +560,5 @@ if __name__ == "__main__":
         run_verify_mode(args.symbol, args.timeframe, args.limit, args.labeling_method)
     elif args.mode == "compare":
         run_compare_mode(args.symbol, args.timeframe, args.limit)
+    elif args.mode == "train":
+        run_training_mode(args.symbol, args.timeframe, args.limit, args.labeling_method)
