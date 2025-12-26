@@ -310,6 +310,13 @@ class DynamicIndicatorDiscovery:
                 aliases.update(config.aliases)
             config.aliases = list(aliases)
 
+        # 3. 特殊なパラメータ制約の付与
+        if name_upper == "FRAMA":
+            if "length" in config.parameters:
+                config.parameters["length"].even_only = True
+            elif "len" in config.parameters:
+                config.parameters["len"].even_only = True
+
     @classmethod
     def _discover_pandas_ta(cls) -> List[IndicatorConfig]:
         """pandas-taの関数をスキャン"""

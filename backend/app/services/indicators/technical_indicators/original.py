@@ -49,11 +49,13 @@ class OriginalIndicators:
     def frama(close: pd.Series, length: int = 16, slow: int = 200) -> pd.Series:
         """Fractal Adaptive Moving Average (FRAMA)"""
         if length < 4:
-            raise ValueError("length must be >= 4")
+            length = 4
         if length % 2 != 0:
-            raise ValueError("length must be an even number")
+            # 奇数の場合は偶数に調整（バックテスト中断を防ぐため）
+            length += 1
+            
         if slow < 1:
-            raise ValueError("slow must be >= 1")
+            slow = 1
 
         validation = validate_series_params(close, length, min_data_length=length)
         if validation is not None:
@@ -622,15 +624,22 @@ class OriginalIndicators:
         data, cycle_periods: list[int] = None, fib_ratios: list[float] = None
     ):
         """Fibonacci Cycle Indicator計算のラッパーメソッド"""
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError("data must be pandas DataFrame")
+        # SeriesとDataFrameの両方に対応
+        if isinstance(data, pd.Series):
+            close = data
+        elif isinstance(data, pd.DataFrame):
+            required_columns = ["close"]
+            for col in required_columns:
+                if col not in data.columns:
+                    # カラム名が大文字の場合も考慮
+                    if col.capitalize() in data.columns:
+                        col = col.capitalize()
+                    else:
+                        raise ValueError(f"Missing required column: {col}")
+            close = data[col]
+        else:
+            raise TypeError("data must be pandas Series or DataFrame")
 
-        required_columns = ["close"]
-        for col in required_columns:
-            if col not in data.columns:
-                raise ValueError(f"Missing required column: {col}")
-
-        close = data["close"]
         cycle, signal = OriginalIndicators.fibonacci_cycle(
             close, cycle_periods, fib_ratios
         )
@@ -640,7 +649,7 @@ class OriginalIndicators:
                 cycle.name: cycle,
                 signal.name: signal,
             },
-            index=data.index,
+            index=close.index,
         )
 
         return result

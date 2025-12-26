@@ -51,6 +51,8 @@ OPERATORS = [
     "<=",
     "==",
     "!=",
+    "CROSS_UP",
+    "CROSS_DOWN",
 ]
 
 # === データソース定数 ===
@@ -260,7 +262,15 @@ GA_MUTATION_SETTINGS = {
     "adaptive_mutation_variance_threshold": 0.1,
     "adaptive_mutation_rate_decrease_multiplier": 0.5,
     "adaptive_mutation_rate_increase_multiplier": 2.0,
-    "valid_condition_operators": [">", "<", ">=", "<=", "=="],
+    "valid_condition_operators": [
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "==",
+        "CROSS_UP",
+        "CROSS_DOWN",
+    ],
     "numeric_threshold_probability": 0.3,
     "min_compatibility_score": 0.5,
     "strict_compatibility_score": 0.7,

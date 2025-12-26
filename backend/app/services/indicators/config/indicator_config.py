@@ -46,6 +46,7 @@ class ParameterConfig:
     min_value: Optional[Union[int, float]] = None  # 最小値
     max_value: Optional[Union[int, float]] = None  # 最大値
     description: Optional[str] = None  # パラメータの説明
+    even_only: bool = False  # 偶数のみを許可するか（FRAMA等用）
     # 探索プリセット: 用途に応じた探索範囲（例: short_term, mid_term, long_term）
     presets: Optional[Dict[str, tuple]] = None
 
@@ -58,6 +59,9 @@ class ParameterConfig:
         if self.min_value is not None and value < self.min_value:
             return False
         if self.max_value is not None and value > self.max_value:
+            return False
+        
+        if self.even_only and int(value) % 2 != 0:
             return False
 
         return True
@@ -314,6 +318,13 @@ class IndicatorConfig:
                 ):
                     if value > param_config.max_value:
                         normalized[param_name] = param_config.max_value
+                
+                # 偶数制約の適用
+                if param_config.even_only and isinstance(normalized[param_name], (int, float)):
+                    val = int(normalized[param_name])
+                    if val % 2 != 0:
+                        # 偶数に調整
+                        normalized[param_name] = val + 1 if val < (param_config.max_value or float('inf')) else val - 1
 
         return normalized
 
@@ -350,7 +361,11 @@ class IndicatorConfig:
                     max_val = max_val[0]
 
                 if isinstance(param_config.default_value, int):
-                    params[param_name] = random.randint(int(min_val), int(max_val))
+                    val = random.randint(int(min_val), int(max_val))
+                    # 偶数制約
+                    if param_config.even_only and val % 2 != 0:
+                        val = val + 1 if val < max_val else val - 1
+                    params[param_name] = val
                 else:
                     params[param_name] = random.uniform(float(min_val), float(max_val))
             else:

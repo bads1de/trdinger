@@ -100,10 +100,8 @@ class ComplexConditionsStrategy:
         elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
             th_long = 0
             th_short = 0
-        elif scale_type == IndicatorScaleType.PRICE:
+        elif scale_type in (IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE):
             # 価格スケールの場合は閾値ではなく、Close自体と比較させる
-            # ただしここでは right_operand に数値を期待している箇所もあるため
-            # 文字列 "close" を許容するようにシステム全体が作られている前提
             th_long = "close"
             th_short = "close"
         else:

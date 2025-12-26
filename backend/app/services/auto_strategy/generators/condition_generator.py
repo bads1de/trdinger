@@ -259,21 +259,27 @@ class ConditionGenerator:
     ) -> List[Condition]:
         """統合されたサイド別条件生成ロジック"""
         target_name = name or indicator.type
-        config = indicator_registry.get_indicator_config(indicator.type)
+        
+        # オブジェクトではなく、ユーティリティ経由で辞書形式の設定を取得（後方互換性とget()メソッド確保のため）
+        config_dict = IndicatorCharacteristics.get_indicator_config(
+            self.indicator_config, indicator.type
+        )
+        # 内部処理用のクラスオブジェクトも取得
+        config_obj = indicator_registry.get_indicator_config(indicator.type)
 
         threshold: Union[float, str] = 0.0
         
         # 設定から閾値を取得を試みる
-        if config:
+        if config_dict:
             val = IndicatorCharacteristics.get_threshold_from_config(
-                self.indicator_config, config, side, self.context
+                self.indicator_config, config_dict, side, self.context
             )
             if val is not None:
                 threshold = val
-            else:
+            elif config_obj:
                 # 設定から取得できない場合のスマートなデフォルト値
-                scale_type = config.scale_type
-                if scale_type == IndicatorScaleType.PRICE:
+                scale_type = config_obj.scale_type
+                if scale_type in (IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE):
                     # 価格スケールなら0ではなくCloseと比較
                     threshold = "close"
                 elif scale_type == IndicatorScaleType.OSCILLATOR_0_100:
@@ -289,9 +295,7 @@ class ConditionGenerator:
                     # 比率なら1.0
                     threshold = 1.0
                 elif scale_type == IndicatorScaleType.VOLUME:
-                    # 出来高なら平均出来高と比較したいが、簡易的に0より大きいとするか、移動平均と比較
-                    # ここでは無難に過去の自分と比較するロジックは組めないので、
-                    # 少なくとも0比較は意味がないため、適当な正の値にするか、'SMA'などと比較させる
+                    # 出来高
                     threshold = "SMA" 
 
         return [
@@ -345,6 +349,9 @@ class ConditionGenerator:
                 "trend": IndicatorType.TREND,
                 "volatility": IndicatorType.VOLATILITY,
                 "volume": IndicatorType.MOMENTUM,
+                "statistic": IndicatorType.VOLATILITY,  # 統計系はボラティリティとして扱う
+                "candles": IndicatorType.TREND,        # ローソク足パターンはトレンド判断に含める
+                "cycle": IndicatorType.MOMENTUM,       # サイクル系はモメンタムとして扱う
             }
             if config["type"] in type_map:
                 return type_map[config["type"]]
@@ -353,11 +360,11 @@ class ConditionGenerator:
         cfg = indicator_registry.get_indicator_config(indicator_name)
         if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
             cat = str(getattr(cfg, "category", "")).lower()
-            if any(k in cat for k in ["momentum", "oscillator", "technical", "custom"]):
+            if any(k in cat for k in ["momentum", "oscillator", "technical", "custom", "cycle"]):
                 return IndicatorType.MOMENTUM
-            elif any(k in cat for k in ["trend", "overlap", "moving average"]):
+            elif any(k in cat for k in ["trend", "overlap", "moving average", "candles"]):
                 return IndicatorType.TREND
-            elif any(k in cat for k in ["volatility", "cycle", "statistics"]):
+            elif any(k in cat for k in ["volatility", "statistics"]):
                 return IndicatorType.VOLATILITY
 
         # 3. Characteristicsをチェック

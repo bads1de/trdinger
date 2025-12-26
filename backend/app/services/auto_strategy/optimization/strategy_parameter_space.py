@@ -162,10 +162,25 @@ class StrategyParameterSpace:
                     continue
 
                 param_key = f"{prefix}_{param_name}"
+                
+                # 特殊な制約の取得（偶数制約など）
+                step = 1
+                low = range_info.get("low", 2)
+                high = range_info.get("high", 100)
+                
+                if config and param_name in config.parameters:
+                    param_cfg = config.parameters[param_name]
+                    if getattr(param_cfg, "even_only", False):
+                        step = 2
+                        # 最小値が奇数なら偶数に調整
+                        if low % 2 != 0:
+                            low += 1
+
                 params[param_key] = ParameterSpace(
                     type=range_info.get("type", "integer"),
-                    low=range_info.get("low", 2),
-                    high=range_info.get("high", 100),
+                    low=low,
+                    high=high,
+                    step=step
                 )
 
         return params

@@ -34,6 +34,7 @@ class ParameterSpace:
     type: str  # "real", "integer", "categorical"
     low: Optional[float] = None
     high: Optional[float] = None
+    step: Optional[float] = None
     categories: Optional[list] = None
 
 
@@ -180,9 +181,9 @@ class OptunaOptimizer:
                         f"Bounds (low, high) required for {cfg.type} parameter: {name}"
                     )
                 if cfg.type == "real":
-                    params[name] = trial.suggest_float(name, cfg.low, cfg.high)
+                    params[name] = trial.suggest_float(name, cfg.low, cfg.high, step=cfg.step)
                 else:
-                    params[name] = trial.suggest_int(name, int(cfg.low), int(cfg.high))
+                    params[name] = trial.suggest_int(name, int(cfg.low), int(cfg.high), step=int(cfg.step) if cfg.step else 1)
             elif cfg.type == "categorical":
                 if not cfg.categories:
                     raise AssertionError(
