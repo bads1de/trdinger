@@ -76,7 +76,7 @@ class OptunaOptimizer:
         Raises:
             RuntimeError: 最適化が実行されなかった場合や結果が得られなかった場合
         """
-        logger.info(f"🚀 Optuna最適化を開始: 試行回数={n_calls}")
+        logger.info(f"[Optimization] Optuna最適化を開始: 試行回数={n_calls}")
         start_time = datetime.now()
 
         # Optunaスタディを作成
@@ -123,7 +123,7 @@ class OptunaOptimizer:
         )
 
         logger.info(
-            f"✅ Optuna最適化完了: ベストスコア={result.best_score:.4f}, 時間={optimization_time:.2f}秒"
+            f"[Done] Optuna最適化完了: ベストスコア={result.best_score:.4f}, 時間={optimization_time:.2f}秒"
         )
         return result
 

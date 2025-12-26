@@ -71,7 +71,7 @@ class StrategyParameterTuner:
         Returns:
             最適化されたパラメータを適用した新しいStrategyGene
         """
-        logger.info("🔧 戦略パラメータチューニングを開始")
+        logger.info("[Tuning] 戦略パラメータチューニングを開始")
 
         parameter_space = self.parameter_space_builder.build_parameter_space(
             gene, self.include_indicators, self.include_tpsl, self.include_thresholds

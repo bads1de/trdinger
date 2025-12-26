@@ -21,6 +21,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 
+def _combined_initializer(init_func, init_args):
+    """内部初期化関数とユーザー指定初期化関数を組み合わせる（Pickle対応用トップレベル関数）"""
+    if init_func:
+        init_func(*init_args)
+
+
 class ParallelEvaluator:
     """
     並列評価クラス
@@ -94,11 +100,6 @@ class ParallelEvaluator:
         logger.info(f"並列評価Executorを起動します (max_workers={self.max_workers})")
 
         if self.use_process_pool:
-            # 内部初期化関数とユーザー指定初期化関数を組み合わせる
-            def _combined_initializer(init_func, init_args):
-                if init_func:
-                    init_func(*init_args)
-
             self._executor = ProcessPoolExecutor(
                 max_workers=self.max_workers,
                 initializer=_combined_initializer,

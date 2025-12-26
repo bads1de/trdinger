@@ -212,6 +212,9 @@ class DataIntegrationService:
             "funding_rate",
         ]
 
+        # 0. データのソート（重要：インジケーター計算のために時系列順にする）
+        df = df.sort_index()
+
         # データクリーニングと検証
         df = data_processor.clean_and_validate_data(
             df,

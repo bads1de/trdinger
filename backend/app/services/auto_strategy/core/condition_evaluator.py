@@ -187,6 +187,35 @@ class ConditionEvaluator:
                 return left_val == right_val
             if op == "!=":
                 return left_val != right_val
+            
+            # クロス判定 (pandas Seriesを想定)
+            if op == "CROSS_UP":
+                # (今回 > 今回) かつ (前回 <= 前回)
+                # left_val, right_valがSeriesであることを期待
+                try:
+                    # shift(1)するために Series であるか確認。スカラーならそのまま
+                    l_curr = left_val
+                    r_curr = right_val
+                    
+                    l_prev = l_curr.shift(1) if hasattr(l_curr, "shift") else l_curr
+                    r_prev = r_curr.shift(1) if hasattr(r_curr, "shift") else r_curr
+                    
+                    return (l_curr > r_curr) & (l_prev <= r_prev)
+                except Exception:
+                    return None
+            
+            if op == "CROSS_DOWN":
+                # (今回 < 今回) かつ (前回 >= 前回)
+                try:
+                    l_curr = left_val
+                    r_curr = right_val
+                    
+                    l_prev = l_curr.shift(1) if hasattr(l_curr, "shift") else l_curr
+                    r_prev = r_curr.shift(1) if hasattr(r_curr, "shift") else r_curr
+                    
+                    return (l_curr < r_curr) & (l_prev >= r_prev)
+                except Exception:
+                    return None
 
             return None
         except Exception:
@@ -327,8 +356,73 @@ class ConditionEvaluator:
             self._log_comparison_warning(condition, left_val, right_val)
             return False
 
-        # 2. 比較演算の実行
+        # 2. クロス判定の特別処理
+        if condition.operator in ["CROSS_UP", "CROSS_DOWN"]:
+            # 前回値の取得
+            prev_left = self._get_previous_value(
+                condition.left_operand, strategy_instance
+            )
+            prev_right = self._get_previous_value(
+                condition.right_operand, strategy_instance
+            )
+
+            # 前回値が取得できない、または数値でない場合はFalse
+            if not self._is_comparable(prev_left, prev_right):
+                return False
+
+            if condition.operator == "CROSS_UP":
+                # (今回 > 今回) かつ (前回 <= 前回)
+                return (left_val > right_val) and (prev_left <= prev_right)
+            elif condition.operator == "CROSS_DOWN":
+                # (今回 < 今回) かつ (前回 >= 前回)
+                return (left_val < right_val) and (prev_left >= prev_right)
+
+        # 3. 通常の比較演算の実行
         return self._compare_values(left_val, right_val, condition.operator)
+
+    def _get_previous_value(self, operand, strategy_instance) -> float:
+        """オペランドの1つ前の値を取得（可能な場合）"""
+        # 数値リテラルの場合は変わらない
+        if isinstance(operand, (int, float, np.number)):
+            return float(operand)
+
+        operand_str = (
+            operand.get("indicator") if isinstance(operand, dict) else str(operand)
+        )
+
+        val = None
+        # 1. OHLCVデータ
+        temp_val = self._get_ohlcv_vector(operand_str, strategy_instance)
+        if temp_val is not None:
+            val = temp_val
+        
+        # 2. Indicators
+        elif hasattr(strategy_instance, "indicators") and isinstance(strategy_instance.indicators, dict):
+            if operand_str in strategy_instance.indicators:
+                val = strategy_instance.indicators[operand_str]
+
+        # 3. Attributes
+        elif hasattr(strategy_instance, operand_str):
+            val = getattr(strategy_instance, operand_str)
+        
+        # 値取得成功した場合、前回値の抽出を試みる
+        if val is not None:
+            try:
+                # pandas Series / DataFrame
+                if hasattr(val, "iloc"):
+                    if len(val) >= 2:
+                        return float(val.iloc[-2])
+                
+                # numpy array / list / backtesting._Array
+                # __getitem__ を持つものを汎用的に扱う
+                elif hasattr(val, "__getitem__"):
+                    if len(val) >= 2:
+                        return float(val[-2])
+            except (IndexError, ValueError, TypeError):
+                pass
+        
+        # 取得できない場合はNaNを返す（_is_comparableで弾かれる）
+        return float("nan")
 
     def _is_comparable(self, v1: Any, v2: Any) -> bool:
         """

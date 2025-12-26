@@ -503,7 +503,7 @@ class GeneticAlgorithmEngine:
 
         # ハイブリッドモードに応じてEvaluatorを選択
         if hybrid_mode:
-            logger.info("🔬 ハイブリッドGA+MLモードで起動")
+            logger.info("[Hybrid] ハイブリッドGA+MLモードで起動")
             from .hybrid_individual_evaluator import HybridIndividualEvaluator
 
             self.individual_evaluator = HybridIndividualEvaluator(
@@ -512,7 +512,7 @@ class GeneticAlgorithmEngine:
                 feature_adapter=hybrid_feature_adapter,
             )
         else:
-            logger.info("🧬 標準GAモードで起動")
+            logger.info("[Standard] 標準GAモードで起動")
             self.individual_evaluator = IndividualEvaluator(backtest_service)
 
         self.individual_class = None  # setup_deap時に設定
@@ -703,49 +703,50 @@ class GeneticAlgorithmEngine:
         if not getattr(config, "enable_parallel_evaluation", False):
             return None
 
+        from .evaluation_worker import initialize_worker_process, worker_evaluate_individual
+
         # 並列ワーカー用のデータ準備
-        worker_initializer = None
         worker_initargs = ()
-
+        
         try:
-            # バックテスト設定が存在する場合のみデータを準備
-            if (
-                hasattr(self.individual_evaluator, "_fixed_backtest_config")
-                and self.individual_evaluator._fixed_backtest_config
-            ):
-                bc = self.individual_evaluator._fixed_backtest_config
+            # バックテスト設定の取得
+            backtest_config = getattr(self.individual_evaluator, "_fixed_backtest_config", {})
+            if not backtest_config:
+                logger.warning("バックテスト設定が見つかりません。並列評価をスキップします。")
+                return None
 
-                # メインデータを取得（キャッシュになければロードされる）
-                main_data = self.individual_evaluator._get_cached_data(bc)
+            shared_data = {}
+            # メインデータを取得（キャッシュになければロードされる）
+            main_data = self.individual_evaluator._get_cached_data(backtest_config)
+            if main_data is not None and not main_data.empty:
+                shared_data["main_data"] = main_data
 
-                # 1分足データを取得（存在する場合）
-                minute_data = self.individual_evaluator._get_cached_minute_data(bc)
+            # 1分足データを取得（存在する場合）
+            minute_data = self.individual_evaluator._get_cached_minute_data(backtest_config)
+            if minute_data is not None:
+                shared_data["minute_data"] = minute_data
 
-                data_context = {"main_data": main_data}
-                if minute_data is not None:
-                    data_context["minute_data"] = minute_data
+            # 初期化引数: (backtest_config, ga_config, shared_data)
+            worker_initargs = (backtest_config, config, shared_data)
+            
+            logger.info("並列ワーカー用の初期化パラメータを準備しました")
 
-                from .parallel_evaluator import initialize_worker
-
-                worker_initializer = initialize_worker
-                worker_initargs = (data_context,)
-
-                logger.info("並列ワーカー用の共有データを準備しました")
         except Exception as e:
             logger.warning(
-                f"並列ワーカー用データ準備中にエラーが発生しました（データ共有なしで続行）: {e}"
+                f"並列ワーカー用データ準備中にエラーが発生しました: {e}"
             )
+            return None
 
         parallel_evaluator = ParallelEvaluator(
-            evaluate_func=EvaluatorWrapper(self.individual_evaluator, config),
+            evaluate_func=worker_evaluate_individual, # トップレベル関数を指定
             max_workers=getattr(config, "max_evaluation_workers", None),
             timeout_per_individual=getattr(config, "evaluation_timeout", 300.0),
-            worker_initializer=worker_initializer,
+            worker_initializer=initialize_worker_process, # トップレベル関数を指定
             worker_initargs=worker_initargs,
-            use_process_pool=True,  # 常にProcessPoolを使用
+            use_process_pool=True,
         )
         logger.info(
-            f"⚡ 並列評価有効: max_workers={parallel_evaluator.max_workers}"
+            f"[Parallel] 並列評価有効: max_workers={parallel_evaluator.max_workers}"
         )
         return parallel_evaluator
 
@@ -961,7 +962,7 @@ class GeneticAlgorithmEngine:
         try:
             from ..optimization import StrategyParameterTuner
 
-            logger.info("🔧 エリート個体のパラメータチューニングを開始")
+            logger.info("[Tuning] エリート個体のパラメータチューニングを開始")
 
             tuner = StrategyParameterTuner(
                 evaluator=self.individual_evaluator,
@@ -975,7 +976,7 @@ class GeneticAlgorithmEngine:
 
             tuned_gene = tuner.tune(best_gene)
 
-            logger.info("✅ パラメータチューニング完了")
+            logger.info("[Done] パラメータチューニング完了")
             return tuned_gene
 
         except Exception as e:

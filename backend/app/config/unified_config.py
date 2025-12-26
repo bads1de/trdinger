@@ -158,6 +158,10 @@ class MarketConfig(BaseSettings):
     default_exchange: str = Field(default="bybit")
     default_symbol: str = Field(default="BTC/USDT:USDT")
     default_timeframe: str = Field(default="1h")
+    default_limit: int = Field(default=100, description="デフォルト取得件数")
+    max_limit: int = Field(default=1000, description="最大取得件数")
+    min_limit: int = Field(default=1, description="最小取得件数")
+
     # Bybit固有の設定
     bybit_config: Dict[str, Any] = Field(
         default={
@@ -618,3 +622,6 @@ class UnifiedConfig(BaseSettings):
 
 # 統一設定のシングルトンインスタンス
 unified_config = UnifiedConfig()
+
+# 互換性のためのエイリアス
+GAConfig = AutoStrategyConfig

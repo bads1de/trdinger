@@ -435,6 +435,8 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
         # シリアライザの作成
         serializer = GeneSerializer()
 
+        saved_backtest_path = None
+
         # 可読形式の戦略辞書を作成
         if isinstance(best_gene, StrategyGene):
             strategy_dict = strategy_gene_to_readable_dict(best_gene, serializer)
@@ -473,7 +475,7 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
                     json.dump(full_result, f, indent=2, ensure_ascii=False, default=str)
                 
                 logger.info(f"詳細バックテスト結果を保存しました: {bt_path}")
-                output["backtest_result_file"] = str(bt_path)
+                saved_backtest_path = str(bt_path)
             except Exception as bt_err:
                 logger.warning(f"詳細バックテストの保存に失敗しました: {bt_err}")
         else:
@@ -500,6 +502,9 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
             "backtest_config": backtest_config,
             "best_strategy": strategy_dict,
         }
+        
+        if saved_backtest_path:
+            output["backtest_result_file"] = saved_backtest_path
 
         # パレート最適解がある場合
         if "pareto_front" in result:

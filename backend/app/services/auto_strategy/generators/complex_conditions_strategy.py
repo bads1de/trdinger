@@ -100,31 +100,54 @@ class ComplexConditionsStrategy:
         elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
             th_long = 0
             th_short = 0
+        elif scale_type == IndicatorScaleType.PRICE:
+            # 価格スケールの場合は閾値ではなく、Close自体と比較させる
+            # ただしここでは right_operand に数値を期待している箇所もあるため
+            # 文字列 "close" を許容するようにシステム全体が作られている前提
+            th_long = "close"
+            th_short = "close"
         else:
-            # 不明な場合はデフォルト（価格比率などはここでは扱わない）
-            th_long = 0
-            th_short = 0
+            # 不明な場合やその他のスケール
+            if scale_type == IndicatorScaleType.PRICE_RATIO:
+                th_long = 1.01
+                th_short = 0.99
+            else:
+                th_long = 0
+                th_short = 0
 
         # ロング: Close > Trend AND Momentum > High
+        long_conds = [
+            Condition(left_operand="Close", operator=">", right_operand=t_name),
+        ]
+        # Momentumの比較対象が "close" の場合は、Momentum > Close (または < Close) になる
+        # もしMomentumがRSI(0-100)なら、RSI > 60 となる
+        
+        # operatorの決定: 
+        # オシレーターなら > th_long
+        # もし th_long が "close" なら、Momentum > Close (トレンドフォローならこれで良いか？)
+        # SUPERTREND > Close は上昇トレンドを示すのでOK
+        op_long = ">"
+        op_short = "<"
+        
+        long_conds.append(Condition(left_operand=m_name, operator=op_long, right_operand=th_long))
+
         longs.append(
             ConditionGroup(
                 operator="AND",
-                conditions=[
-                    Condition(left_operand="Close", operator=">", right_operand=t_name),
-                    Condition(left_operand=m_name, operator=">", right_operand=th_long),
-                ],
+                conditions=long_conds,
             )
         )
+        
         # ショート: Close < Trend AND Momentum < Low
+        short_conds = [
+            Condition(left_operand="Close", operator="<", right_operand=t_name),
+        ]
+        short_conds.append(Condition(left_operand=m_name, operator=op_short, right_operand=th_short))
+
         shorts.append(
             ConditionGroup(
                 operator="AND",
-                conditions=[
-                    Condition(left_operand="Close", operator="<", right_operand=t_name),
-                    Condition(
-                        left_operand=m_name, operator="<", right_operand=th_short
-                    ),
-                ],
+                conditions=short_conds,
             )
         )
         return longs, shorts

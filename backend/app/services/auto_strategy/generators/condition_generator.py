@@ -259,17 +259,40 @@ class ConditionGenerator:
     ) -> List[Condition]:
         """統合されたサイド別条件生成ロジック"""
         target_name = name or indicator.type
-        config = IndicatorCharacteristics.get_indicator_config(
-            self.indicator_config, indicator.type
-        )
+        config = indicator_registry.get_indicator_config(indicator.type)
 
-        threshold = 0
+        threshold: Union[float, str] = 0.0
+        
+        # 設定から閾値を取得を試みる
         if config:
             val = IndicatorCharacteristics.get_threshold_from_config(
                 self.indicator_config, config, side, self.context
             )
             if val is not None:
                 threshold = val
+            else:
+                # 設定から取得できない場合のスマートなデフォルト値
+                scale_type = config.scale_type
+                if scale_type == IndicatorScaleType.PRICE:
+                    # 価格スケールなら0ではなくCloseと比較
+                    threshold = "close"
+                elif scale_type == IndicatorScaleType.OSCILLATOR_0_100:
+                    # 0-100オシレーターなら50を基準
+                    threshold = 50.0
+                elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+                    # ±100なら0でOK
+                    threshold = 0.0
+                elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+                    # 0中心なら0でOK
+                    threshold = 0.0
+                elif scale_type == IndicatorScaleType.PRICE_RATIO:
+                    # 比率なら1.0
+                    threshold = 1.0
+                elif scale_type == IndicatorScaleType.VOLUME:
+                    # 出来高なら平均出来高と比較したいが、簡易的に0より大きいとするか、移動平均と比較
+                    # ここでは無難に過去の自分と比較するロジックは組めないので、
+                    # 少なくとも0比較は意味がないため、適当な正の値にするか、'SMA'などと比較させる
+                    threshold = "SMA" 
 
         return [
             Condition(

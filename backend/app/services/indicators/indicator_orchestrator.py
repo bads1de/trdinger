@@ -299,6 +299,16 @@ class TechnicalIndicatorService:
                 if target_arg in call_params:
                     del call_params[target_arg]
 
+                # 追加対策: 関数の第一引数名を取得して、それがparamsに含まれていれば削除
+                # 例: signed_series(series, ...) に対して params={'series': ...} があると重複エラーになる
+                try:
+                    sig = inspect.signature(func)
+                    first_param_name = list(sig.parameters.keys())[0]
+                    if first_param_name in call_params:
+                        del call_params[first_param_name]
+                except Exception:
+                    pass
+
                 return func(df[col_name], **call_params)
 
         except Exception as e:
