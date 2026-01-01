@@ -158,6 +158,7 @@ class TestDataLeakPrevention:
             # label_generation属性を適切に設定
             label_gen_mock = MagicMock()
             label_gen_mock.timeframe = "1h"
+            label_gen_mock.horizon_n = 24
             mock_ml_training_config.label_generation = label_gen_mock
 
             # その他の必要な設定

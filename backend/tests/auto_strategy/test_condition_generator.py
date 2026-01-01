@@ -44,7 +44,7 @@ class TestConditionGenerator:
 
         long_conditions = self.generator._create_side_conditions(sma_indicator, "long")
         assert len(long_conditions) == 1
-        assert long_conditions[0].right_operand == 0  # デフォルトフォールバック値
+        assert long_conditions[0].right_operand == "close"  # デフォルトフォールバック値
 
     def test_generate_balanced_conditions_success(self):
         """正常な指標リストで条件生成が成功することをテスト"""

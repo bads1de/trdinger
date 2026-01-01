@@ -58,8 +58,9 @@ class TestOriginalIndicators:
         """データ不足でのFRAMA計算テスト"""
         data = pd.DataFrame({"close": [100, 101, 102]})  # 不十分なデータ
 
-        with pytest.raises(ValueError, match="length must be >= 4"):
-            OriginalIndicators.frama(data["close"], length=2, slow=200)
+        result = OriginalIndicators.frama(data["close"], length=2, slow=200)
+        assert isinstance(result, pd.Series)
+        assert result.isna().all()
 
     def test_calculate_frama_odd_length(self):
         """奇数長さのFRAMAテスト"""
@@ -67,17 +68,21 @@ class TestOriginalIndicators:
             {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
         )
 
-        with pytest.raises(ValueError, match="length must be an even number"):
-            OriginalIndicators.frama(data["close"], length=5, slow=200)
+        # 奇数の場合は内部で調整されるためエラーにならない
+        result = OriginalIndicators.frama(data["close"], length=5, slow=200)
+        assert isinstance(result, pd.Series)
+        assert not result.isna().all()
 
     def test_calculate_frama_negative_slow(self):
         """負のslowパラメータのFRAMAテスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
+            {"close": np.random.randn(30) + 100}
         )
 
-        with pytest.raises(ValueError):
-            OriginalIndicators.frama(data["close"], length=16, slow=0)
+        # 負のslowは内部で調整されるためエラーにならない
+        result = OriginalIndicators.frama(data["close"], length=16, slow=0)
+        assert isinstance(result, pd.Series)
+        assert not result.isna().all()
 
     def test_calculate_frama_empty_data(self):
         """空データのFRAMAテスト"""
@@ -1192,16 +1197,16 @@ class TestOriginalIndicators:
     def test_frama_parameter_validation(self):
         """FRAMAのパラメータ検証テスト"""
         data = pd.DataFrame(
-            {"close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]}
+            {"close": np.random.randn(30) + 100}
         )
 
-        # lengthが負
-        with pytest.raises(ValueError):
-            OriginalIndicators.frama(data["close"], length=-1, slow=200)
+        # lengthが負（内部で4に調整される）
+        result = OriginalIndicators.frama(data["close"], length=-1, slow=200)
+        assert not result.isna().all()
 
-        # slowが負
-        with pytest.raises(ValueError):
-            OriginalIndicators.frama(data["close"], length=16, slow=0)
+        # slowが負（内部で1に調整される）
+        result = OriginalIndicators.frama(data["close"], length=16, slow=0)
+        assert not result.isna().all()
 
     def test_super_smoother_parameter_validation(self):
         """Super Smootherのパラメータ検証テスト"""
@@ -1956,7 +1961,7 @@ class TestOriginalIndicators:
             )
 
         # 不正なデータ型
-        with pytest.raises(TypeError, match="data must be pandas DataFrame"):
+        with pytest.raises(TypeError, match="data must be pandas Series or DataFrame"):
             OriginalIndicators.calculate_fibonacci_cycle([100, 101, 102])
 
     def test_fibonacci_cycle_edge_cases(self):

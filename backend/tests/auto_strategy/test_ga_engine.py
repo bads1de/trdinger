@@ -4,6 +4,7 @@ GA Engineのテストモジュール
 
 from unittest.mock import Mock, patch
 
+import pandas as pd
 import pytest
 
 from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
@@ -211,8 +212,12 @@ class TestGeneticAlgorithmEngine:
         mock_config.enable_multi_objective = False
         mock_config.mutation_rate = 0.1
 
+        # モックデータ返却設定
+        engine.individual_evaluator._get_cached_data = Mock(return_value=pd.DataFrame({"close": [1, 2]}))
+        engine.individual_evaluator._get_cached_minute_data = Mock(return_value=None)
+
         # 実行
-        engine.run_evolution(mock_config, {})
+        engine.run_evolution(mock_config, {"symbol": "BTC/USDT", "timeframe": "1h"})
 
         # ParallelEvaluatorが初期化されたことを確認
         mock_parallel_evaluator_cls.assert_called_once()

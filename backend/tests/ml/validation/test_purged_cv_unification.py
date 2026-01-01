@@ -18,9 +18,9 @@ class TestPurgedCVUnification:
     def setup_method(self):
         # ML設定のモックを設定
         with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
-            # label_generation属性を適切に設定
             label_gen_mock = MagicMock()
             label_gen_mock.timeframe = "1h"
+            label_gen_mock.horizon_n = 4
             mock_ml_training_config.label_generation = label_gen_mock
             mock_ml_training_config.prediction_horizon = 4
             mock_ml_training_config.pct_embargo = 0.01
@@ -43,6 +43,7 @@ class TestPurgedCVUnification:
         with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             label_gen_mock = MagicMock()
             label_gen_mock.timeframe = "1h"
+            label_gen_mock.horizon_n = 4
             mock_ml_training_config.label_generation = label_gen_mock
             mock_ml_training_config.prediction_horizon = 4
             mock_ml_training_config.pct_embargo = 0.01
@@ -63,6 +64,7 @@ class TestPurgedCVUnification:
         with patch("app.config.unified_config.unified_config.ml.training") as mock_ml_training_config:
             label_gen_mock = MagicMock()
             label_gen_mock.timeframe = "1h"
+            label_gen_mock.horizon_n = 4
             mock_ml_training_config.label_generation = label_gen_mock
             mock_ml_training_config.prediction_horizon = 4
             mock_ml_training_config.pct_embargo = 0.01

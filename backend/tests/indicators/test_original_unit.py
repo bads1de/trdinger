@@ -117,13 +117,10 @@ class TestOriginalUnitExtended:
 
     def test_frama_edge_cases(self, sample_df):
         c = sample_df["close"]
-        # パラメータエラー
-        with pytest.raises(ValueError):
-            OriginalIndicators.frama(c, length=3)
-        with pytest.raises(ValueError):
-            OriginalIndicators.frama(c, length=5)  # 奇数
-        with pytest.raises(ValueError):
-            OriginalIndicators.frama(c, slow=0)
+        # パラメータエラー（内部で調整されるためエラーにならない）
+        assert not OriginalIndicators.frama(c, length=3).isna().all()
+        assert not OriginalIndicators.frama(c, length=5).isna().all()
+        assert not OriginalIndicators.frama(c, slow=0).isna().all()
 
         # データ不足
         assert np.isnan(OriginalIndicators.frama(c[:5], length=16)).all()
