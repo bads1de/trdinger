@@ -63,7 +63,7 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """平均真の値幅"""
         validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+            {"high": high, "low": low, "close": close}, length, length
         )
         if validation is not None:
             return validation
@@ -88,7 +88,7 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """Normalized Average True Range"""
         validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+            {"high": high, "low": low, "close": close}, length, length
         )
         if validation is not None:
             return validation

@@ -40,6 +40,14 @@ class ConditionEvaluator:
             "volume": "Volume",
         }
 
+    def _extract_operand_str(self, operand: Any) -> str:
+        """オペランドから文字列識別子を抽出"""
+        if isinstance(operand, dict):
+            # indicator(旧), name(新) の順で検索
+            val = operand.get("indicator") or operand.get("name")
+            return str(val) if val is not None else ""
+        return str(operand)
+
     @safe_operation(context="条件評価（AND）", is_api_call=False, default_return=False)
     def evaluate_conditions(
         self, conditions: List[Union[Condition, ConditionGroup]], strategy_instance
@@ -187,7 +195,7 @@ class ConditionEvaluator:
                 return left_val == right_val
             if op == "!=":
                 return left_val != right_val
-            
+
             # クロス判定 (pandas Seriesを想定)
             if op == "CROSS_UP":
                 # (今回 > 今回) かつ (前回 <= 前回)
@@ -196,23 +204,23 @@ class ConditionEvaluator:
                     # shift(1)するために Series であるか確認。スカラーならそのまま
                     l_curr = left_val
                     r_curr = right_val
-                    
+
                     l_prev = l_curr.shift(1) if hasattr(l_curr, "shift") else l_curr
                     r_prev = r_curr.shift(1) if hasattr(r_curr, "shift") else r_curr
-                    
+
                     return (l_curr > r_curr) & (l_prev <= r_prev)
                 except Exception:
                     return None
-            
+
             if op == "CROSS_DOWN":
                 # (今回 < 今回) かつ (前回 >= 前回)
                 try:
                     l_curr = left_val
                     r_curr = right_val
-                    
+
                     l_prev = l_curr.shift(1) if hasattr(l_curr, "shift") else l_curr
                     r_prev = r_curr.shift(1) if hasattr(r_curr, "shift") else r_curr
-                    
+
                     return (l_curr < r_curr) & (l_prev >= r_prev)
                 except Exception:
                     return None
@@ -230,9 +238,7 @@ class ConditionEvaluator:
             return float(operand)
 
         # 2. 識別子解決
-        operand_str = (
-            operand.get("indicator") if isinstance(operand, dict) else str(operand)
-        )
+        operand_str = self._extract_operand_str(operand)
 
         # OHLCV
         val = self._get_ohlcv_vector(operand_str, strategy_instance)
@@ -386,25 +392,25 @@ class ConditionEvaluator:
         if isinstance(operand, (int, float, np.number)):
             return float(operand)
 
-        operand_str = (
-            operand.get("indicator") if isinstance(operand, dict) else str(operand)
-        )
+        operand_str = self._extract_operand_str(operand)
 
         val = None
         # 1. OHLCVデータ
         temp_val = self._get_ohlcv_vector(operand_str, strategy_instance)
         if temp_val is not None:
             val = temp_val
-        
+
         # 2. Indicators
-        elif hasattr(strategy_instance, "indicators") and isinstance(strategy_instance.indicators, dict):
+        elif hasattr(strategy_instance, "indicators") and isinstance(
+            strategy_instance.indicators, dict
+        ):
             if operand_str in strategy_instance.indicators:
                 val = strategy_instance.indicators[operand_str]
 
         # 3. Attributes
         elif hasattr(strategy_instance, operand_str):
             val = getattr(strategy_instance, operand_str)
-        
+
         # 値取得成功した場合、前回値の抽出を試みる
         if val is not None:
             try:
@@ -412,7 +418,7 @@ class ConditionEvaluator:
                 if hasattr(val, "iloc"):
                     if len(val) >= 2:
                         return float(val.iloc[-2])
-                
+
                 # numpy array / list / backtesting._Array
                 # __getitem__ を持つものを汎用的に扱う
                 elif hasattr(val, "__getitem__"):
@@ -420,7 +426,7 @@ class ConditionEvaluator:
                         return float(val[-2])
             except (IndexError, ValueError, TypeError):
                 pass
-        
+
         # 取得できない場合はNaNを返す（_is_comparableで弾かれる）
         return float("nan")
 
@@ -547,10 +553,8 @@ class ConditionEvaluator:
         if isinstance(operand, (int, float, np.number)):
             return float(operand)
 
-        # 辞書形式（{"indicator": "NAME", ...}）の場合は indicator キーを使用
-        operand_str = (
-            operand.get("indicator") if isinstance(operand, dict) else str(operand)
-        )
+        # 辞書形式の場合は helper で抽出
+        operand_str = self._extract_operand_str(operand)
 
         # 1. OHLCVデータ（文字列の場合、大文字小文字を問わずチェック）
         if isinstance(operand, str):

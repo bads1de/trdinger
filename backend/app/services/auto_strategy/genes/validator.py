@@ -179,7 +179,27 @@ class GeneValidator:
         if not name:
             return False
         clean_name = name.strip()
-        
+
+        # 一般的なインジケータ出力接頭辞を明示的に許可
+        # これらはインジケータ名そのものではないが、その構成要素として有効
+        allowed_prefixes = [
+            "DMP",
+            "DMN",
+            "BBU",
+            "BBL",
+            "MACDS",
+            "MACDH",
+            "KAMA",
+            "T3",
+            "RSI",
+            "ADX",
+            "ATR",  # これらはインジケータ名でもあるが念のため
+        ]
+        upper_name = clean_name.upper()
+        for prefix in allowed_prefixes:
+            if upper_name.startswith(prefix):
+                return True
+
         # 1. 完全一致
         if clean_name in self.valid_indicator_types:
             return True
@@ -196,7 +216,7 @@ class GeneValidator:
         upper_types = [t.upper() for t in self.valid_indicator_types]
         if clean_name.upper() in upper_types:
             return True
-            
+
         upper_parts = clean_name.upper().split("_")
         for i in range(len(upper_parts), 0, -1):
             prefix = "_".join(upper_parts[:i])
@@ -209,23 +229,31 @@ class GeneValidator:
     def clean_condition(self, condition) -> bool:
         """条件をクリーニングして修正可能な問題を自動修正"""
         from .conditions import ConditionGroup
-        
+
         # ConditionGroup の場合はスキップ（内部の条件は _validate_all_conditions で再帰的に処理される）
         if isinstance(condition, ConditionGroup):
             return True
 
-        if hasattr(condition, "left_operand") and isinstance(condition.left_operand, str):
+        if hasattr(condition, "left_operand") and isinstance(
+            condition.left_operand, str
+        ):
             condition.left_operand = condition.left_operand.strip()
 
-        if hasattr(condition, "right_operand") and isinstance(condition.right_operand, str):
+        if hasattr(condition, "right_operand") and isinstance(
+            condition.right_operand, str
+        ):
             condition.right_operand = condition.right_operand.strip()
 
-        if hasattr(condition, "left_operand") and isinstance(condition.left_operand, dict):
+        if hasattr(condition, "left_operand") and isinstance(
+            condition.left_operand, dict
+        ):
             condition.left_operand = self._extract_operand_from_dict(
                 condition.left_operand
             )
 
-        if hasattr(condition, "right_operand") and isinstance(condition.right_operand, dict):
+        if hasattr(condition, "right_operand") and isinstance(
+            condition.right_operand, dict
+        ):
             condition.right_operand = self._extract_operand_from_dict(
                 condition.right_operand
             )

@@ -116,29 +116,30 @@ class ConditionGenerator:
             return [fallback]
 
         # 平坦化（既に OR グループがある場合は中身だけ取り出す）
-        flat: List[Condition] = []
+        flat = []
         for c in conds:
-            if isinstance(c, ConditionGroup):
+            if isinstance(c, ConditionGroup) and c.operator == "OR":
                 flat.extend(c.conditions)
             else:
                 flat.append(c)
 
-        # フォールバックの重複チェック
+        # フォールバックの重複チェック（Condition型のみ対象）
         exists = any(
-            x.left_operand == fallback.left_operand
+            isinstance(x, Condition)
+            and x.left_operand == fallback.left_operand
             and x.operator == fallback.operator
             and x.right_operand == fallback.right_operand
             for x in flat
         )
 
-        if len(flat) == 1:
+        if len(flat) == 1 and isinstance(flat[0], Condition):
             return cast(
                 List[Union[Condition, ConditionGroup]],
                 flat if exists else flat + [fallback],
             )
 
         top_level: List[Union[Condition, ConditionGroup]] = [
-            ConditionGroup(conditions=flat)
+            ConditionGroup(operator="OR", conditions=flat)
         ]
         # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
         top_level.append(fallback)
@@ -259,7 +260,7 @@ class ConditionGenerator:
     ) -> List[Condition]:
         """統合されたサイド別条件生成ロジック"""
         target_name = name or indicator.type
-        
+
         # オブジェクトではなく、ユーティリティ経由で辞書形式の設定を取得（後方互換性とget()メソッド確保のため）
         config_dict = IndicatorCharacteristics.get_indicator_config(
             self.indicator_config, indicator.type
@@ -268,7 +269,7 @@ class ConditionGenerator:
         config_obj = indicator_registry.get_indicator_config(indicator.type)
 
         threshold: Union[float, str] = 0.0
-        
+
         # 設定から閾値を取得を試みる
         if config_dict:
             val = IndicatorCharacteristics.get_threshold_from_config(
@@ -279,7 +280,10 @@ class ConditionGenerator:
             elif config_obj:
                 # 設定から取得できない場合のスマートなデフォルト値
                 scale_type = config_obj.scale_type
-                if scale_type in (IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE):
+                if scale_type in (
+                    IndicatorScaleType.PRICE_RATIO,
+                    IndicatorScaleType.PRICE_ABSOLUTE,
+                ):
                     # 価格スケールなら0ではなくCloseと比較
                     threshold = "close"
                 elif scale_type == IndicatorScaleType.OSCILLATOR_0_100:
@@ -296,7 +300,7 @@ class ConditionGenerator:
                     threshold = 1.0
                 elif scale_type == IndicatorScaleType.VOLUME:
                     # 出来高
-                    threshold = "SMA" 
+                    threshold = "SMA"
 
         return [
             Condition(
@@ -350,8 +354,8 @@ class ConditionGenerator:
                 "volatility": IndicatorType.VOLATILITY,
                 "volume": IndicatorType.MOMENTUM,
                 "statistic": IndicatorType.VOLATILITY,  # 統計系はボラティリティとして扱う
-                "candles": IndicatorType.TREND,        # ローソク足パターンはトレンド判断に含める
-                "cycle": IndicatorType.MOMENTUM,       # サイクル系はモメンタムとして扱う
+                "candles": IndicatorType.TREND,  # ローソク足パターンはトレンド判断に含める
+                "cycle": IndicatorType.MOMENTUM,  # サイクル系はモメンタムとして扱う
             }
             if config["type"] in type_map:
                 return type_map[config["type"]]
@@ -360,9 +364,14 @@ class ConditionGenerator:
         cfg = indicator_registry.get_indicator_config(indicator_name)
         if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
             cat = str(getattr(cfg, "category", "")).lower()
-            if any(k in cat for k in ["momentum", "oscillator", "technical", "custom", "cycle"]):
+            if any(
+                k in cat
+                for k in ["momentum", "oscillator", "technical", "custom", "cycle"]
+            ):
                 return IndicatorType.MOMENTUM
-            elif any(k in cat for k in ["trend", "overlap", "moving average", "candles"]):
+            elif any(
+                k in cat for k in ["trend", "overlap", "moving average", "candles"]
+            ):
                 return IndicatorType.TREND
             elif any(k in cat for k in ["volatility", "statistics"]):
                 return IndicatorType.VOLATILITY

@@ -53,7 +53,7 @@ class OriginalIndicators:
         if length % 2 != 0:
             # 奇数の場合は偶数に調整（バックテスト中断を防ぐため）
             length += 1
-            
+
         if slow < 1:
             slow = 1
 
@@ -155,6 +155,8 @@ class OriginalIndicators:
         ema_length: int = 16,
     ) -> Tuple[pd.Series, pd.Series]:
         """Elder Ray Index"""
+        length = int(length)
+        ema_length = int(ema_length)
         if length <= 0:
             raise ValueError("length must be positive")
         if ema_length <= 0:
@@ -181,6 +183,8 @@ class OriginalIndicators:
     @staticmethod
     def calculate_elder_ray(data, length=13, ema_length=16):
         """Elder Ray Index計算のラッパーメソッド"""
+        length = int(length)
+        ema_length = int(ema_length)
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be pandas DataFrame")
 
@@ -261,6 +265,7 @@ class OriginalIndicators:
     @staticmethod
     def _simple_wavelet_transform(data: np.ndarray, scale: int) -> np.ndarray:
         """簡単なウェーブレット変換の近似"""
+        scale = int(scale)
         if len(data) < scale:
             return np.full_like(data, np.nan)
 
@@ -771,6 +776,8 @@ class OriginalIndicators:
         flow_length: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """Quantum Flow Analysis (量子インスパイアード・フローアナリシス)"""
+        length = int(length)
+        flow_length = int(flow_length)
         if length < 5:
             raise ValueError("length must be >= 5")
         if flow_length < 3:
@@ -858,6 +865,8 @@ class OriginalIndicators:
     @handle_pandas_ta_errors
     def calculate_quantum_flow(data, length=14, flow_length=9):
         """Quantum Flow Analysis計算のラッパーメソッド"""
+        length = int(length)
+        flow_length = int(flow_length)
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be pandas DataFrame")
 

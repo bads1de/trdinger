@@ -612,6 +612,49 @@ class GeneticAlgorithmEngine:
             # 初期個体群の生成（評価なし）
             population = toolbox.population(n=config.population_size)
 
+            # シード戦略の注入（ハイブリッド初期化）
+            if getattr(config, "use_seed_strategies", True):
+                from ..generators.seed_strategy_factory import (
+                    SeedStrategyFactory,
+                )
+
+                seeds = SeedStrategyFactory.get_all_seeds()
+                num_to_inject = min(
+                    int(len(population) * getattr(config, "seed_injection_rate", 0.1)),
+                    len(seeds),
+                )
+                if num_to_inject > 0:
+                    individual_class = self.deap_setup.get_individual_class()
+                    for i in range(num_to_inject):
+                        seed = seeds[i % len(seeds)]
+                        # DEAP Individual クラスにラップ
+                        individual = individual_class()
+                        # StrategyGeneの属性をコピー
+                        for attr in [
+                            "id",
+                            "indicators",
+                            "long_entry_conditions",
+                            "short_entry_conditions",
+                            "stateful_conditions",
+                            "risk_management",
+                            "tpsl_gene",
+                            "long_tpsl_gene",
+                            "short_tpsl_gene",
+                            "position_sizing_gene",
+                            "entry_gene",
+                            "long_entry_gene",
+                            "short_entry_gene",
+                            "tool_genes",
+                            "metadata",
+                        ]:
+                            if hasattr(seed, attr):
+                                setattr(individual, attr, getattr(seed, attr))
+                        population[i] = individual
+                    logger.info(
+                        f"シード戦略を {num_to_inject} 個注入しました "
+                        f"(注入率: {config.seed_injection_rate * 100:.1f}%)"
+                    )
+
             # 適応的突然変異用mutate_wrapperの設定
             individual_class = self.deap_setup.get_individual_class()
             mutate_wrapper = create_deap_mutate_wrapper(
@@ -621,11 +664,11 @@ class GeneticAlgorithmEngine:
 
             # 独立したEvolutionRunnerの作成（並列評価対応）
             parallel_evaluator = self._create_parallel_evaluator(config)
-            
+
             # 並列評価器の起動
             if parallel_evaluator:
                 parallel_evaluator.start()
-            
+
             try:
                 runner = self._create_evolution_runner(
                     toolbox, stats, population, config, parallel_evaluator
@@ -646,7 +689,7 @@ class GeneticAlgorithmEngine:
 
                 logger.info(f"進化完了 - 実行時間: {result['execution_time']:.2f}秒")
                 return result
-                
+
             finally:
                 # 並列評価器の停止（確実にリソース解放）
                 if parallel_evaluator:
@@ -703,16 +746,23 @@ class GeneticAlgorithmEngine:
         if not getattr(config, "enable_parallel_evaluation", False):
             return None
 
-        from .evaluation_worker import initialize_worker_process, worker_evaluate_individual
+        from .evaluation_worker import (
+            initialize_worker_process,
+            worker_evaluate_individual,
+        )
 
         # 並列ワーカー用のデータ準備
         worker_initargs = ()
-        
+
         try:
             # バックテスト設定の取得
-            backtest_config = getattr(self.individual_evaluator, "_fixed_backtest_config", {})
+            backtest_config = getattr(
+                self.individual_evaluator, "_fixed_backtest_config", {}
+            )
             if not backtest_config:
-                logger.warning("バックテスト設定が見つかりません。並列評価をスキップします。")
+                logger.warning(
+                    "バックテスト設定が見つかりません。並列評価をスキップします。"
+                )
                 return None
 
             shared_data = {}
@@ -722,26 +772,26 @@ class GeneticAlgorithmEngine:
                 shared_data["main_data"] = main_data
 
             # 1分足データを取得（存在する場合）
-            minute_data = self.individual_evaluator._get_cached_minute_data(backtest_config)
+            minute_data = self.individual_evaluator._get_cached_minute_data(
+                backtest_config
+            )
             if minute_data is not None:
                 shared_data["minute_data"] = minute_data
 
             # 初期化引数: (backtest_config, ga_config, shared_data)
             worker_initargs = (backtest_config, config, shared_data)
-            
+
             logger.info("並列ワーカー用の初期化パラメータを準備しました")
 
         except Exception as e:
-            logger.warning(
-                f"並列ワーカー用データ準備中にエラーが発生しました: {e}"
-            )
+            logger.warning(f"並列ワーカー用データ準備中にエラーが発生しました: {e}")
             return None
 
         parallel_evaluator = ParallelEvaluator(
-            evaluate_func=worker_evaluate_individual, # トップレベル関数を指定
+            evaluate_func=worker_evaluate_individual,  # トップレベル関数を指定
             max_workers=getattr(config, "max_evaluation_workers", None),
             timeout_per_individual=getattr(config, "evaluation_timeout", 300.0),
-            worker_initializer=initialize_worker_process, # トップレベル関数を指定
+            worker_initializer=initialize_worker_process,  # トップレベル関数を指定
             worker_initargs=worker_initargs,
             use_process_pool=True,
         )
