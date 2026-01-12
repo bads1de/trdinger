@@ -35,6 +35,9 @@ def parse_timestamp_safe(value: Any) -> Optional[datetime]:
         elif isinstance(value, str):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         elif isinstance(value, (int, float)):
+            # 負の値は無効として扱う（Windows/Linux間の挙動差異を吸収）
+            if value < 0:
+                return None
             return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
         else:
             logger.warning(f"不明なタイムスタンプ型: {type(value)}")
@@ -229,6 +232,3 @@ class OpenInterestDataConverter:
             db_records.append(db_record)
 
         return db_records
-
-
-
