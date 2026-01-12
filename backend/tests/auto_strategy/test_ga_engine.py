@@ -160,6 +160,10 @@ class TestGeneticAlgorithmEngine:
         mock_config.enable_fitness_sharing = False
         mock_config.enable_multi_objective = False
         mock_config.mutation_rate = 0.1
+        mock_config.use_seed_strategies = False
+        mock_config.seed_injection_rate = 0.1
+        mock_config.fallback_start_date = "2024-01-01"
+        mock_config.fallback_end_date = "2024-01-02"
 
         backtest_config = {"symbol": "BTCUSDT", "timeframe": "1h"}
 
@@ -211,6 +215,10 @@ class TestGeneticAlgorithmEngine:
         mock_config.enable_fitness_sharing = False
         mock_config.enable_multi_objective = False
         mock_config.mutation_rate = 0.1
+        mock_config.use_seed_strategies = False
+        mock_config.seed_injection_rate = 0.1
+        mock_config.fallback_start_date = "2024-01-01"
+        mock_config.fallback_end_date = "2024-01-02"
 
         # モックデータ返却設定
         engine.individual_evaluator._get_cached_data = Mock(return_value=pd.DataFrame({"close": [1, 2]}))

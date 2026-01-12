@@ -8,6 +8,9 @@ import time
 import logging
 from typing import Dict, Any
 
+# 警告を抑制
+import warnings
+
 # ログ設定（INFOのみ表示）
 logging.basicConfig(
     level=logging.WARNING,
@@ -18,8 +21,6 @@ logging.getLogger("app.services.auto_strategy.core.ga_engine").setLevel(logging.
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# 警告を抑制
-import warnings
 
 warnings.filterwarnings("ignore")
 

@@ -241,16 +241,23 @@ class ParallelEvaluator:
                     results[index] = default_fitness
                     self._failed_evaluations += 1
         except FuturesTimeoutError:
-            logger.warning("全体タイムアウト: 処理を中断します")
+            logger.warning("全体タイムアウト: 処理を中断し、Executorを強制停止します")
+            
             # タイムアウト時の処理:
-            # ProcessPoolExecutorの場合、シャットダウンしないとゾンビプロセスが残る可能性があるが、
-            # ここでシャットダウンすると永続Executorも死んでしまう。
-            # 永続Executorの場合は、future.cancel() を試みるしかない。
+            # ProcessPoolExecutorの場合、タスクをキャンセルしてもプロセスは終了しないため、
+            # Executorごとシャットダウンしてゾンビプロセスを防ぐ。
+            # wait=False にすることで、実行中のタスクを待たずに即座に停止指示を送る。
+            executor.shutdown(wait=False)
+            
+            # もし永続的なExecutorを使用していた場合、次回再生成させるためにNoneにする
+            if self._executor == executor:
+                self._executor = None
+
             timeout_count = sum(1 for r in results if r is None)
             self._timeout_evaluations += timeout_count
             self._error_categories["timeout"] += timeout_count
             
-            # 未完了のタスクをキャンセル
+            # 未完了のタスクをキャンセル（shutdown済みだが念のため）
             for future in future_to_index:
                 future.cancel()
 

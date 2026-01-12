@@ -71,29 +71,24 @@ def create_deap_mutate_wrapper(individual_class, population, config):
     """
 
     def mutate_wrapper(individual):
-        try:
-            # 適応的突然変異を使用
-            if population is not None:
-                # individual自体がStrategyGeneのインスタンス
-                mutated_strategy = individual.adaptive_mutate(
-                    population, config, base_mutation_rate=config.mutation_rate
-                )
-            else:
-                mutated_strategy = individual.mutate(
-                    config, mutation_rate=config.mutation_rate
-                )
+        # 適応的突然変異を使用
+        if population is not None:
+            # individual自体がStrategyGeneのインスタンス
+            mutated_strategy = individual.adaptive_mutate(
+                population, config, base_mutation_rate=config.mutation_rate
+            )
+        else:
+            mutated_strategy = individual.mutate(
+                config, mutation_rate=config.mutation_rate
+            )
 
-            # StrategyGeneをIndividualに変換
-            # StrategyGeneを継承しているため、フィールドを展開して初期化
-            gene_dict = {
-                f.name: getattr(mutated_strategy, f.name)
-                for f in fields(mutated_strategy)
-            }
-            return (individual_class(**gene_dict),)
-
-        except Exception as e:
-            logger.error(f"DEAP突然変異ラッパーエラー: {e}")
-            return (individual,)
+        # StrategyGeneをIndividualに変換
+        # StrategyGeneを継承しているため、フィールドを展開して初期化
+        gene_dict = {
+            f.name: getattr(mutated_strategy, f.name)
+            for f in fields(mutated_strategy)
+        }
+        return (individual_class(**gene_dict),)
 
     return mutate_wrapper
 
@@ -613,14 +608,14 @@ class GeneticAlgorithmEngine:
             population = toolbox.population(n=config.population_size)
 
             # シード戦略の注入（ハイブリッド初期化）
-            if getattr(config, "use_seed_strategies", True):
+            if config.use_seed_strategies:
                 from ..generators.seed_strategy_factory import (
                     SeedStrategyFactory,
                 )
 
                 seeds = SeedStrategyFactory.get_all_seeds()
                 num_to_inject = min(
-                    int(len(population) * getattr(config, "seed_injection_rate", 0.1)),
+                    int(len(population) * config.seed_injection_rate),
                     len(seeds),
                 )
                 if num_to_inject > 0:

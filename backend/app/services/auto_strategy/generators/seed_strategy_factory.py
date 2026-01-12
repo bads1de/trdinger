@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from ..genes.conditions import Condition, ConditionGroup
 from ..genes.indicator import IndicatorGene
