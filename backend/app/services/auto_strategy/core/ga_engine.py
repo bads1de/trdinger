@@ -158,64 +158,84 @@ class EvolutionRunner:
 
         logbook = tools.Logbook()
 
+        import gc
+
         # 世代ループ
         for gen in range(config.generations):
-            logger.debug(f"世代 {gen + 1}/{config.generations} を開始")
+            # GC制御: 世代の変わり目でまとめて回収し、計算中の停止を防ぐ
+            gc.collect()
+            gc.disable()
 
-            # 適応度共有の適用（有効な場合、世代毎）
-            if (
-                getattr(config, "enable_fitness_sharing", False)
-                and self.fitness_sharing
-            ):
-                population = self.fitness_sharing.apply_fitness_sharing(population)
+            try:
+                logger.debug("世代 %s/%s を開始", gen + 1, config.generations)
 
-            # 選択（親個体の選択）
-            # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
-            offspring = list(self.toolbox.map(self.toolbox.clone, population))
+                # 適応度共有の適用（有効な場合、世代毎）
+                if (
+                    getattr(config, "enable_fitness_sharing", False)
+                    and self.fitness_sharing
+                ):
+                    population = self.fitness_sharing.apply_fitness_sharing(population)
 
-            # 交叉
-            # インデックスを使ってリストを直接更新する（mateが新しいオブジェクトを返すため）
-            for i in range(0, len(offspring) - 1, 2):
-                child1, child2 = offspring[i], offspring[i + 1]
-                if random.random() < config.crossover_rate:
-                    new_child1, new_child2 = self.toolbox.mate(child1, child2)
-                    offspring[i] = new_child1
-                    offspring[i + 1] = new_child2
-                    # フィットネスの削除（再評価のため）
-                    if hasattr(offspring[i].fitness, "values"):
-                        del offspring[i].fitness.values
-                    if hasattr(offspring[i + 1].fitness, "values"):
-                        del offspring[i + 1].fitness.values
+                # 選択（親個体の選択）
+                # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
+                offspring = list(self.toolbox.map(self.toolbox.clone, population))
 
-            # 突然変異
-            # インデックスを使ってリストを直接更新する（mutateが新しいオブジェクトを返すため）
-            for i in range(len(offspring)):
-                mutant = offspring[i]
-                if random.random() < config.mutation_rate:
-                    # mutateはタプル(ind,)を返す
-                    result = self.toolbox.mutate(mutant)
-                    new_mutant = result[0]
-                    offspring[i] = new_mutant
-                    if hasattr(offspring[i].fitness, "values"):
-                        del offspring[i].fitness.values
+                # 交叉
+                # インデックスを使ってリストを直接更新する（mateが新しいオブジェクトを返すため）
+                for i in range(0, len(offspring) - 1, 2):
+                    child1, child2 = offspring[i], offspring[i + 1]
+                    if random.random() < config.crossover_rate:
+                        new_child1, new_child2 = self.toolbox.mate(child1, child2)
+                        offspring[i] = new_child1
+                        offspring[i + 1] = new_child2
+                        # フィットネスの削除（再評価のため）
+                        if hasattr(offspring[i].fitness, "values"):
+                            del offspring[i].fitness.values
+                        if hasattr(offspring[i + 1].fitness, "values"):
+                            del offspring[i + 1].fitness.values
+                        
+                        # 特徴ベクトルキャッシュの削除
+                        if hasattr(offspring[i], "_feature_vector"):
+                            del offspring[i]._feature_vector
+                        if hasattr(offspring[i + 1], "_feature_vector"):
+                            del offspring[i + 1]._feature_vector
 
-            # 未評価個体の評価（並列評価対応）
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            self._evaluate_invalid_individuals(invalid_ind)
+                # 突然変異
+                # インデックスを使ってリストを直接更新する（mutateが新しいオブジェクトを返すため）
+                for i in range(len(offspring)):
+                    mutant = offspring[i]
+                    if random.random() < config.mutation_rate:
+                        # mutateはタプル(ind,)を返す
+                        result = self.toolbox.mutate(mutant)
+                        new_mutant = result[0]
+                        offspring[i] = new_mutant
+                        if hasattr(offspring[i].fitness, "values"):
+                            del offspring[i].fitness.values
+                        
+                        # 特徴ベクトルキャッシュの削除
+                        if hasattr(offspring[i], "_feature_vector"):
+                            del offspring[i]._feature_vector
 
-            # 次世代の選択 (mu+lambda)
-            # toolbox.select は DEAPSetup で NSGA-II などが登録されている
-            population[:] = self.toolbox.select(offspring + population, len(population))
+                # 未評価個体の評価（並列評価対応）
+                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+                self._evaluate_invalid_individuals(invalid_ind)
 
-            self._update_dynamic_objective_scalars(population, config)
+                # 次世代の選択 (mu+lambda)
+                # toolbox.select は DEAPSetup で NSGA-II などが登録されている
+                population[:] = self.toolbox.select(offspring + population, len(population))
 
-            # 統計の記録
-            record = self.stats.compile(population) if self.stats else {}
-            logbook.record(gen=gen, **record)
+                self._update_dynamic_objective_scalars(population, config)
 
-            # Hall of Fame / Pareto Front の更新
-            if halloffame is not None:
-                halloffame.update(population)
+                # 統計の記録
+                record = self.stats.compile(population) if self.stats else {}
+                logbook.record(gen=gen, **record)
+
+                # Hall of Fame / Pareto Front の更新
+                if halloffame is not None:
+                    halloffame.update(population)
+            finally:
+                # ループ終了時にGCを有効化（エラー時も含む）
+                gc.enable()
 
         logger.info("進化アルゴリズム完了")
         return population, logbook

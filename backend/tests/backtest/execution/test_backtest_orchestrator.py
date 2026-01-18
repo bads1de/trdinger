@@ -121,6 +121,26 @@ def test_run_date_normalization(orchestrator, sample_config):
     assert isinstance(call_args["start_date"], datetime)
     assert isinstance(call_args["end_date"], datetime)
 
+def test_run_skip_validation(orchestrator, sample_config):
+    """バリデーションスキップが機能することのテスト"""
+    # 設定にフラグを追加
+    sample_config["_skip_validation"] = True
+    
+    # モック設定
+    orchestrator._executor.execute_backtest = MagicMock()
+    orchestrator._result_converter.convert_backtest_results = MagicMock(return_value={})
+
+    # BacktestConfigをパッチ
+    with patch("app.services.backtest.execution.backtest_orchestrator.BacktestConfig") as MockConfig:
+        orchestrator.run(sample_config)
+        
+        # バリデーション（BacktestConfigの初期化）が行われていないことを確認
+        MockConfig.assert_not_called()
+    
+    # それでもバックテストは実行されることを確認
+    orchestrator._executor.execute_backtest.assert_called_once()
+
+
 
 
 

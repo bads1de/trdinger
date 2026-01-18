@@ -62,6 +62,31 @@ class GeneticUtils:
         )
 
     @staticmethod
+    def _extract_gene_params(gene) -> Dict[str, Any]:
+        """
+        遺伝子オブジェクトからパラメータを抽出（slots/dict両対応）
+        
+        Args:
+            gene: 遺伝子オブジェクト
+            
+        Returns:
+            パラメータ辞書
+        """
+        params = {}
+        # 1. __slots__ から取得
+        if hasattr(gene, "__slots__"):
+            for k in gene.__slots__:
+                if not k.startswith("_"):
+                    params[k] = getattr(gene, k)
+        # 2. __dict__ から取得 (fallback)
+        elif hasattr(gene, "__dict__"):
+            # プライベート属性を除外してコピー
+            for k, v in gene.__dict__.items():
+                if not k.startswith("_"):
+                    params[k] = v
+        return params
+
+    @staticmethod
     def crossover_generic_genes(
         parent1_gene,
         parent2_gene,
@@ -95,15 +120,14 @@ class GeneticUtils:
             choice_fields = []
 
         # 共通のフィールド処理
-        parent1_dict = parent1_gene.__dict__.copy()
-        parent2_dict = parent2_gene.__dict__.copy()
+        parent1_dict = GeneticUtils._extract_gene_params(parent1_gene)
+        parent2_dict = GeneticUtils._extract_gene_params(parent2_gene)
 
         child1_params = {}
         child2_params = {}
 
         # 全フィールドを取得
         all_fields = set(parent1_dict.keys()) & set(parent2_dict.keys())
-        all_fields.discard("_")  # プライベート属性を除外
 
         for field in all_fields:
             if field in choice_fields:
@@ -183,7 +207,7 @@ class GeneticUtils:
             numeric_ranges = {}
 
         # 遺伝子のコピーを作成
-        mutated_params = gene.__dict__.copy()
+        mutated_params = GeneticUtils._extract_gene_params(gene)
 
         # 数値フィールドの突然変異
         for field in numeric_fields:

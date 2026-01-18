@@ -59,7 +59,7 @@ def test_fixed_ratio_respects_risk_percentage_and_balance(
 ) -> None:
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.FIXED_RATIO,
             "fixed_ratio": fixed_ratio,
         }
@@ -81,7 +81,7 @@ def test_fixed_ratio_invalid_price_uses_safe_minimum(
 ) -> None:
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.FIXED_RATIO,
             "fixed_ratio": 0.1,
         }
@@ -103,7 +103,7 @@ def test_fixed_quantity_returns_constant_size_for_any_input(
     fixed_qty = 3.0
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.FIXED_QUANTITY,
             "fixed_quantity": fixed_qty,
         }
@@ -132,7 +132,7 @@ def test_volatility_based_size_decreases_when_volatility_increases(
     price = 100.0
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.VOLATILITY_BASED,
             "risk_per_trade": 0.02,
             "atr_multiplier": 2.0,
@@ -165,7 +165,7 @@ def test_volatility_based_respects_max_position_size(
     max_size = 1.0
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.VOLATILITY_BASED,
             "risk_per_trade": 0.5,
             "atr_multiplier": 0.1,
@@ -188,7 +188,7 @@ def test_half_optimal_f_fallback_to_simplified_when_trade_history_insufficient(
     price = 100.0
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.HALF_OPTIMAL_F,
             "optimal_f_multiplier": 0.5,
             "fixed_ratio": 0.02,
@@ -215,7 +215,7 @@ def test_half_optimal_f_uses_trade_history_when_sufficient(
     price = 100.0
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.HALF_OPTIMAL_F,
             "optimal_f_multiplier": 0.5,
             "lookback_period": 20,
@@ -269,7 +269,7 @@ def test_position_sizing_service_integration_fixed_ratio(
     # サービス経由で FixedRatioCalculator が正しく利用されることを確認
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.FIXED_RATIO,
             "fixed_ratio": 0.1,
         }
@@ -326,7 +326,7 @@ def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
     service = PositionSizingService()
     gene = PositionSizingGene(
         **{
-            **base_gene.__dict__,
+            **base_gene.to_dict(),
             "method": PositionSizingMethod.FIXED_RATIO,
             "fixed_ratio": 0.1,
         }

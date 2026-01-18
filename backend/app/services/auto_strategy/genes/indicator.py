@@ -17,7 +17,7 @@ from app.utils.error_handler import safe_operation
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class IndicatorGene:
     """
     指標遺伝子

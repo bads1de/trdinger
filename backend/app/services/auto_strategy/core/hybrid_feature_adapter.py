@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from cachetools import LRUCache
 
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.ml.common.exceptions import MLFeatureError
@@ -24,6 +25,10 @@ class HybridFeatureAdapter:
 
     GAで生成された戦略遺伝子をMLモデルで評価可能な特徴量に変換します。
     """
+
+    # 派生特徴量のキャッシュ（クラスレベル）
+    # (data_hash, wavelet_config_hash) -> derived_features_df
+    _derived_cache = LRUCache(maxsize=20)
 
     def __init__(
         self,
@@ -45,6 +50,9 @@ class HybridFeatureAdapter:
         self._preprocess_handler = preprocess_handler
         self._preprocess_trainer = None
         self._wavelet_transformer: Optional["WaveletFeatureTransformer"] = None
+        
+        # 設定のハッシュ化（キャッシュキー用）
+        self._config_hash = self._compute_config_hash(wavelet_config, use_derived_features)
 
         if isinstance(wavelet_config, dict) and wavelet_config.get("enabled", False):
             try:
@@ -52,6 +60,32 @@ class HybridFeatureAdapter:
             except Exception as exc:
                 logger.warning("WaveletFeatureTransformer初期化に失敗しました: %s", exc)
                 self._wavelet_transformer = None
+
+    def _compute_config_hash(self, wavelet_config, use_derived):
+        """設定の一意なハッシュを計算"""
+        content = f"{str(wavelet_config)}{use_derived}"
+        return hashlib.md5(content.encode()).hexdigest()
+
+    def _get_cached_derived_features(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """キャッシュされた派生特徴量を取得"""
+        if hasattr(df, "_cached_hash"):
+            data_hash = df._cached_hash
+        else:
+            # ハッシュ計算（初回のみ）
+            try:
+                data_hash = pd.util.hash_pandas_object(df).sum()
+                df._cached_hash = data_hash
+            except Exception:
+                return None
+        
+        key = (data_hash, self._config_hash)
+        return self._derived_cache.get(key)
+
+    def _cache_derived_features(self, df: pd.DataFrame, features: pd.DataFrame):
+        """派生特徴量をキャッシュに保存"""
+        if hasattr(df, "_cached_hash"):
+            key = (df._cached_hash, self._config_hash)
+            self._derived_cache[key] = features
 
     def gene_to_features(
         self,
@@ -135,12 +169,29 @@ class HybridFeatureAdapter:
             else:
                 features_df["sentiment_smoothed"] = 0.0
 
-            # 4. 拡張特徴量（Wavelet / 派生）
-            if self._wavelet_transformer:
-                features_df = self._wavelet_transformer.append_features(features_df)
+            # 4. 拡張特徴量（Wavelet / 派生） - キャッシュ対応
+            derived_features = self._get_cached_derived_features(ohlcv_data)
+            
+            if derived_features is None:
+                # キャッシュミス：計算を実行
+                temp_df = ohlcv_data.copy()
+                
+                if self._wavelet_transformer:
+                    temp_df = self._wavelet_transformer.append_features(temp_df)
 
-            if self._use_derived_features:
-                features_df = self._augment_with_derived_features(features_df)
+                if self._use_derived_features:
+                    temp_df = self._augment_with_derived_features(temp_df)
+                
+                # 新しく追加されたカラムのみを抽出
+                new_cols = temp_df.columns.difference(ohlcv_data.columns)
+                derived_features = temp_df[new_cols]
+                
+                # キャッシュ保存
+                self._cache_derived_features(ohlcv_data, derived_features)
+            
+            # 派生特徴量を結合
+            if not derived_features.empty:
+                features_df = pd.concat([features_df, derived_features], axis=1)
 
             # 5. 前処理
             features_df = (

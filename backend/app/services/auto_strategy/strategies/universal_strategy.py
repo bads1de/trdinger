@@ -813,9 +813,11 @@ class UniversalStrategy(Strategy):
                 hasattr(self, "_precomputed_features")
                 and self._precomputed_features is not None
             ):
-                if current_time in self._precomputed_features.index:
-                    # インデックスで高速検索
-                    features = self._precomputed_features.loc[[current_time]]
+                # 高速化: タイムスタンプ検索(loc)ではなく整数インデックス(iloc)を使用
+                # len(self.data) - 1 が現在の足のインデックスに対応
+                idx = len(self.data) - 1
+                if 0 <= idx < len(self._precomputed_features):
+                    features = self._precomputed_features.iloc[[idx]]
 
             # 2. キャッシュがない場合はフォールバック（低速）
             if features is None:

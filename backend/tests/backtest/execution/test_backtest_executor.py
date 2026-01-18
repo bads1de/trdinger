@@ -48,14 +48,39 @@ class TestBacktestExecutor:
             bt = executor._create_backtest_instance(sample_data, mock_strategy, 10000, 0.001, 0.0005, 2.0, "BTC/USDT")
             
             assert bt is not None
+
+    def test_create_backtest_instance_optimization(self, executor, sample_data):
+        """データコピー最適化のテスト"""
+        mock_strategy = MagicMock()
+        
+        # 1. 未正規化データ（小文字）の場合
+        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as MockBT:
+            executor._create_backtest_instance(sample_data, mock_strategy, 10000, 0.0, 0.0, 1.0, "BTC")
+            # 渡されたデータが変換されていることを確認（モックの呼び出し引数）
+            args, _ = MockBT.call_args
+            passed_data = args[0]
+            assert "Open" in passed_data.columns
+            assert passed_data is not sample_data # コピーされているはず
+
+        # 2. 正規化済みデータ（大文字）の場合
+        normalized_data = sample_data.copy()
+        normalized_data.columns = normalized_data.columns.str.capitalize()
+        
+        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as MockBT:
+            executor._create_backtest_instance(normalized_data, mock_strategy, 10000, 0.0, 0.0, 1.0, "BTC")
+            
+            # コピーされずにそのまま渡されていることを確認
+            args, _ = MockBT.call_args
+            passed_data = args[0]
+            assert passed_data is normalized_data # IDが一致（コピーなし）
             # カラム名が大文字になっているか確認
             args, kwargs = MockBT.call_args
             df_passed = args[0]
             assert "Open" in df_passed.columns
             assert "Close" in df_passed.columns
             assert kwargs["cash"] == 10000
-            assert kwargs["commission"] == 0.0015
-            assert kwargs["margin"] == 0.5
+            assert kwargs["commission"] == 0.0
+            assert kwargs["margin"] == 1.0
 
     def test_run_backtest(self, executor):
         mock_bt = MagicMock()

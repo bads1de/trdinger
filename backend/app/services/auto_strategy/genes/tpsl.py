@@ -14,7 +14,7 @@ from ..config.constants import TPSLMethod
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class TPSLGene(BaseGene):
     """
     TP/SL遺伝子
@@ -79,7 +79,8 @@ class TPSLGene(BaseGene):
                         init_params[param_name] = value
 
         # TPSLGene固有のフィールドを明示的に処理
-        for param_name in TPSLGene().__dict__.keys():
+        # slots=True対応: __dict__の代わりに__dataclass_fields__を使用
+        for param_name in cls.__dataclass_fields__.keys():
             if param_name not in init_params and param_name in data:
                 init_params[param_name] = data[param_name]
 
@@ -170,9 +171,17 @@ class TPSLGene(BaseGene):
     def mutate(self, mutation_rate: float = 0.1) -> "TPSLGene":
         """TP/SL遺伝子の突然変異"""
         import random
+        from .genetic_utils import GeneticUtils
 
-        # ジェネリック突然変異を実行（基底クラスのメソッド呼び出し）
-        mutated_gene = super().mutate(mutation_rate)
+        # ジェネリック突然変異を実行（直接呼び出し）
+        mutated_gene = GeneticUtils.mutate_generic_gene(
+            gene=self,
+            gene_class=self.__class__,
+            mutation_rate=mutation_rate,
+            numeric_fields=self.NUMERIC_FIELDS,
+            enum_fields=self.ENUM_FIELDS,
+            numeric_ranges=self.NUMERIC_RANGES,
+        )
 
         # method_weightsの突然変異（辞書フィールドの特殊処理）
         if random.random() < mutation_rate:
@@ -197,9 +206,17 @@ class TPSLGene(BaseGene):
         cls, parent1: "TPSLGene", parent2: "TPSLGene"
     ) -> tuple["TPSLGene", "TPSLGene"]:
         """TP/SL遺伝子の交叉"""
+        from .genetic_utils import GeneticUtils
 
-        # ジェネリック交叉を実行（基底クラスのメソッド呼び出し）
-        child1, child2 = super().crossover(parent1, parent2)
+        # ジェネリック交叉を実行（直接呼び出し）
+        child1, child2 = GeneticUtils.crossover_generic_genes(
+            parent1_gene=parent1,
+            parent2_gene=parent2,
+            gene_class=cls,
+            numeric_fields=cls.NUMERIC_FIELDS,
+            enum_fields=cls.ENUM_FIELDS,
+            choice_fields=cls.CHOICE_FIELDS,
+        )
 
         # 共有参照を防ぐため、method_weightsをコピー
         if hasattr(child1, "method_weights") and isinstance(

@@ -110,15 +110,35 @@ class FitnessSharing:
 
             for i, individual in enumerate(population):
                 try:
-                    gene = self.gene_serializer.from_list(individual, StrategyGene)
+                    # 高速化: キャッシュがあれば使用
+                    if hasattr(individual, "_feature_vector"):
+                        vector = individual._feature_vector
+                        genes.append(individual) # geneとしてindividual自身を使用（近似）
+                        vectors.append(vector)
+                        valid_indices.append(i)
+                        continue
+
+                    # 遺伝子の取得（デシリアライズ回避）
+                    if isinstance(individual, StrategyGene):
+                        gene = individual
+                    else:
+                        gene = self.gene_serializer.from_list(individual, StrategyGene)
+                    
                     if gene is not None:
                         genes.append(gene)
-                        vectors.append(self._vectorize_gene(gene))
+                        vector = self._vectorize_gene(gene)
+                        vectors.append(vector)
                         valid_indices.append(i)
+                        
+                        # キャッシュ保存
+                        try:
+                            individual._feature_vector = vector
+                        except AttributeError:
+                            pass # 属性設定できないオブジェクトの場合はスキップ
                     else:
                         genes.append(None)
                 except Exception as e:
-                    logger.warning(f"個体のデコードに失敗: {e}")
+                    logger.warning(f"個体の処理に失敗: {e}")
                     genes.append(None)
 
             if len(vectors) < 2:
@@ -546,8 +566,8 @@ class FitnessSharing:
             vectors = np.array(vectors)
             n_clusters = min(len(vectors), 3)  # 最大3クラスタ
 
-            # KMeansクラスタリング
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            # KMeansクラスタリング（高速化のためn_init=1に変更）
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=1)
             labels = kmeans.fit_predict(vectors)
 
             # シルエットスコア計算

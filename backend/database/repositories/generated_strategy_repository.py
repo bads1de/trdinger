@@ -119,8 +119,9 @@ class GeneratedStrategyRepository(BaseRepository):
             self.db.add_all(strategies)
             self.db.commit()
 
-            for strategy in strategies:
-                self.db.refresh(strategy)
+            # 高速化のためrefreshはスキップ（IDはcommit時点で設定されている）
+            # for strategy in strategies:
+            #     self.db.refresh(strategy)
 
             logger.info(f"戦略を一括保存しました: {len(strategies)} 件")
             return strategies

@@ -142,8 +142,10 @@ class BacktestExecutor:
         """バックテストインスタンスを作成"""
         try:
             # backtesting.pyライブラリが大文字のカラム名を期待するため変換
-            data = data.copy()
-            data.columns = data.columns.str.capitalize()
+            # 最適化: 既にOpenカラムがあればコピーと変換をスキップ
+            if "Open" not in data.columns:
+                data = data.copy()
+                data.columns = data.columns.str.capitalize()
 
             # スリッページを簡易的に手数料に加算（backtesting.pyの標準機能でサポートが薄いため）
             effective_commission = commission_rate + slippage

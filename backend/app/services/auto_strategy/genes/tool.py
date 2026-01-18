@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict
 
 
-@dataclass
+@dataclass(slots=True)
 class ToolGene:
     """
     ツール遺伝子

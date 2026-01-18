@@ -11,7 +11,7 @@ from .base_gene import BaseGene
 from ..config.constants import PositionSizingMethod
 
 
-@dataclass
+@dataclass(slots=True)
 class PositionSizingGene(BaseGene):
     """
     ポジションサイジング遺伝子

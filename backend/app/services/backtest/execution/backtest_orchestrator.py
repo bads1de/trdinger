@@ -63,16 +63,32 @@ class BacktestOrchestrator:
             バックテスト結果の辞書
         """
         try:
-            # 1. 設定の検証とモデル変換 (Pydantic)
-            try:
-                backtest_config = BacktestConfig(**config)
-            except ValidationError as e:
-                raise BacktestConfigValidationError(f"設定が無効です: {e}")
+            # 高速化フラグの確認
+            skip_validation = config.pop("_skip_validation", False)
 
-            # 2. 戦略クラス取得または生成
-            # StrategyClassFactoryはまだ辞書を期待しているため、一部辞書に戻す
-            # strategy_configオブジェクトを辞書に変換
-            strategy_config_dict = backtest_config.strategy_config.model_dump()
+            if skip_validation:
+                # バリデーションスキップ（GAなど信頼できる内部呼び出し用）
+                from types import SimpleNamespace
+                # configは辞書なので、SimpleNamespaceに変換して属性アクセス可能にする
+                backtest_config = SimpleNamespace(**config)
+                # strategy_config は辞書のまま扱われる
+                strategy_config_dict = config["strategy_config"]
+                # 必要な属性が欠けている場合のデフォルト値を補完（最低限）
+                if not hasattr(backtest_config, "slippage"):
+                    backtest_config.slippage = 0.0
+                if not hasattr(backtest_config, "leverage"):
+                    backtest_config.leverage = 1.0
+            else:
+                # 1. 設定の検証とモデル変換 (Pydantic)
+                try:
+                    backtest_config = BacktestConfig(**config)
+                except ValidationError as e:
+                    raise BacktestConfigValidationError(f"設定が無効です: {e}")
+
+                # 2. 戦略クラス取得または生成
+                # StrategyClassFactoryはまだ辞書を期待しているため、一部辞書に戻す
+                # strategy_configオブジェクトを辞書に変換
+                strategy_config_dict = backtest_config.strategy_config.model_dump()
 
             # strategy_class が config に直接含まれている場合の対応（GAエンジンからの直接渡しなど）
             # Pydanticモデルには含まれていないため、元のconfig辞書を確認

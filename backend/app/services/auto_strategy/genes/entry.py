@@ -12,7 +12,7 @@ from typing import Any, List, Tuple
 from ..config.constants import EntryType
 
 
-@dataclass
+@dataclass(slots=True)
 class EntryGene:
     """
     エントリー注文遺伝子

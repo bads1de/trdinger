@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 EntryDirection = Literal["long", "short"]
 
 
-@dataclass
+@dataclass(slots=True)
 class Condition:
     """
     条件
@@ -75,7 +75,7 @@ class Condition:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class ConditionGroup:
     """
     条件グループ
@@ -194,7 +194,7 @@ class StateTracker:
         return self._events.copy()
 
 
-@dataclass
+@dataclass(slots=True)
 class StatefulCondition:
     """
     ステートフル条件

@@ -167,8 +167,8 @@ class TestSaveStrategiesBatch:
         repository.db.add_all.assert_called_once()
         repository.db.commit.assert_called_once()
 
-        # refresh が各戦略に対して呼ばれる
-        assert repository.db.refresh.call_count == 2
+        # refresh はスキップされる（最適化）
+        assert repository.db.refresh.call_count == 0
 
 
 class TestGetStrategiesByExperiment:

@@ -62,25 +62,35 @@ class DataConversionService:
         if not ohlcv_data:
             return pd.DataFrame()
 
-        # 効率的にDataFrameを作成
-        data = {
-            "timestamp": [r.timestamp for r in ohlcv_data],
-            "open": [float(r.open) for r in ohlcv_data],
-            "high": [float(r.high) for r in ohlcv_data],
-            "low": [float(r.low) for r in ohlcv_data],
-            "close": [float(r.close) for r in ohlcv_data],
-            "volume": [float(r.volume) for r in ohlcv_data],
-        }
+        try:
+            # 高速化: タプルのリストを作成してDataFrameを一括生成
+            # イテレーションを1回に削減
+            records = [
+                (
+                    r.timestamp,
+                    float(r.open),
+                    float(r.high),
+                    float(r.low),
+                    float(r.close),
+                    float(r.volume),
+                )
+                for r in ohlcv_data
+            ]
 
-        df = pd.DataFrame(data)
+            df = pd.DataFrame(
+                records,
+                columns=["timestamp", "open", "high", "low", "close", "volume"],
+            )
 
-        # インデックスをdatetimeに設定
-        df.index = pd.DatetimeIndex([r.timestamp for r in ohlcv_data])
+            # インデックスをdatetimeに設定
+            df.set_index("timestamp", inplace=True)
 
-        # データ型を最適化
-        df = self._optimize_ohlcv_dtypes(df)
+            # データ型を最適化
+            df = self._optimize_ohlcv_dtypes(df)
 
-        return df
+            return df
+        except Exception as e:
+            raise DataConversionError(f"DataFrame変換エラー: {e}", e)
 
     @safe_operation(context="OHLCVデータ型最適化", is_api_call=False)
     def _optimize_ohlcv_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:

@@ -4,6 +4,7 @@
 遺伝的アルゴリズムの個体評価を担当します。
 """
 
+import functools
 import logging
 import math
 import threading
@@ -28,6 +29,8 @@ from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.models.model_manager import model_manager
 
 from ..config import GAConfig
+from ..genes import StrategyGene
+from ..serializers.serialization import GeneSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +39,9 @@ logger = logging.getLogger(__name__)
 REFERENCE_TRADES_PER_DAY = 8.0
 
 
+@functools.lru_cache(maxsize=1024)
 def _ensure_datetime(value: Optional[object]) -> Optional[datetime]:
-    """値をdatetimeオブジェクトに変換します。"""
+    """値をdatetimeオブジェクトに変換します（キャッシュ付き）。"""
     if isinstance(value, datetime):
         return value
     if isinstance(value, str):
@@ -59,37 +63,42 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
     Returns:
         ドローダウン率の二乗平均平方根（小数値）。
     """
-
     if not equity_curve:
         return 0.0
 
-    squared_drawdowns: MutableSequence[float] = []
-    for point in equity_curve:
-        raw_drawdown: Any = (
-            point.get("drawdown") if isinstance(point, Mapping) else None
-        )
-        if raw_drawdown is None:
-            continue
-        try:
-            drawdown = float(raw_drawdown)
-        except (TypeError, ValueError):
-            continue
+    try:
+        import numpy as np
 
-        if math.isnan(drawdown):
-            continue
+        # ドローダウン値の抽出（Noneは0.0として扱う）
+        drawdowns = [
+            float(p.get("drawdown", 0.0) or 0.0) 
+            if isinstance(p, Mapping) else 0.0 
+            for p in equity_curve
+        ]
+        
+        if not drawdowns:
+            return 0.0
 
-        drawdown = abs(drawdown)
+        dd_array = np.array(drawdowns)
+        
+        # NaN除去
+        dd_array = dd_array[~np.isnan(dd_array)]
+        
+        if len(dd_array) == 0:
+            return 0.0
+
+        dd_array = np.abs(dd_array)
+        
         # ドローダウンがパーセンテージ（>1.0）の場合、小数（0.0-1.0）に変換
-        if drawdown > 1.0:
-            drawdown /= 100.0
+        # バックテストエンジンの出力形式に依存するが、安全のため閾値を設けて変換
+        dd_array = np.where(dd_array > 1.0, dd_array / 100.0, dd_array)
 
-        squared_drawdowns.append(drawdown * drawdown)
+        # 二乗平均平方根 (RMS)
+        return float(np.sqrt(np.mean(dd_array ** 2)))
 
-    if not squared_drawdowns:
+    except Exception as e:
+        logger.warning(f"Ulcer Index計算エラー: {e}")
         return 0.0
-
-    mean_square = sum(squared_drawdowns) / float(len(squared_drawdowns))
-    return math.sqrt(mean_square)
 
 
 def calculate_trade_frequency_penalty(
@@ -277,9 +286,6 @@ class IndividualEvaluator:
         """
         try:
             # 遺伝子デコード
-
-            from ..genes import StrategyGene
-            from ..serializers.serialization import GeneSerializer
 
             if isinstance(individual, StrategyGene):
                 gene = individual
@@ -511,14 +517,14 @@ class IndividualEvaluator:
                 # トレーニング期間が短すぎる場合はスキップ
                 if (train_end - fold_train_start).days < 7:
                     logger.debug(
-                        f"WFA Fold {fold_idx}: トレーニング期間が短すぎるためスキップ"
+                        "WFA Fold %s: トレーニング期間が短すぎるためスキップ", fold_idx
                     )
                     continue
 
                 # テスト期間が短すぎる場合はスキップ
                 if (test_end - test_start).days < 1:
                     logger.debug(
-                        f"WFA Fold {fold_idx}: テスト期間が短すぎるためスキップ"
+                        "WFA Fold %s: テスト期間が短すぎるためスキップ", fold_idx
                     )
                     continue
 
@@ -529,9 +535,12 @@ class IndividualEvaluator:
                 test_end_str = test_end.strftime("%Y-%m-%d %H:%M:%S")
 
                 logger.debug(
-                    f"WFA Fold {fold_idx}: "
-                    f"Train={train_start_str} to {train_end_str}, "
-                    f"Test={test_start_str} to {test_end_str}"
+                    "WFA Fold %s: Train=%s to %s, Test=%s to %s",
+                    fold_idx,
+                    train_start_str,
+                    train_end_str,
+                    test_start_str,
+                    test_end_str,
                 )
 
                 # テスト期間で評価（WFAではOOSスコアのみを使用）
@@ -722,16 +731,15 @@ class IndividualEvaluator:
     def _prepare_run_config(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Optional[Dict[str, Any]]:
-        """バックテスト実行用設定の構築"""
+        """バックテスト実行用設定の構築（高速化版）"""
         try:
-            from ..serializers.serialization import GeneSerializer
-
-            serializer = GeneSerializer()
-
+            # 高速化: シリアライザーとPydanticバリデーションをスキップ
+            # geneオブジェクトをそのまま渡すことでシリアライズコストを削減
+            
             config_dict = backtest_config.copy()
 
             strategy_parameters = {
-                "strategy_gene": serializer.strategy_gene_to_dict(gene),
+                "strategy_gene": gene,
                 "ml_filter_enabled": config.ml_filter_enabled,
                 "ml_model_path": config.ml_model_path,
             }
@@ -743,12 +751,14 @@ class IndividualEvaluator:
             # gene.id があれば使う
             gene_id = getattr(gene, "id", "unknown")[:8]
             config_dict["strategy_name"] = f"GA_Individual_{gene_id}"
+            
+            # 高速化フラグ: BacktestOrchestratorでのバリデーションをスキップ
+            config_dict["_skip_validation"] = True
 
-            # バリデーション
-            backtest_config_model = BacktestConfig(**config_dict)
-            return backtest_config_model.model_dump()
-        except ValidationError as e:
-            logger.error(f"バックテスト設定モデル生成エラー: {e}")
+            # 辞書をそのまま返す（バリデーションは初期設定時に済ませている前提）
+            return config_dict
+        except Exception as e:
+            logger.error(f"バックテスト設定生成エラー: {e}")
             return None
 
     def _inject_external_objects(

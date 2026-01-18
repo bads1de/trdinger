@@ -149,7 +149,7 @@ describe("GAConfigForm", () => {
     );
 
     // レジーム適応チェックボックスを取得
-    const regimeCheckbox = screen.getByLabelText("レジーム適応を有効化");
+    const regimeCheckbox = screen.getByLabelText("動的重み付け (レジーム適応)");
 
     // デフォルトで未チェックであることを確認
     expect(regimeCheckbox).not.toBeChecked();
@@ -165,7 +165,7 @@ describe("GAConfigForm", () => {
     );
 
     // レジーム適応チェックボックスを取得
-    const regimeCheckbox = screen.getByLabelText("レジーム適応を有効化");
+    const regimeCheckbox = screen.getByLabelText("動的重み付け (レジーム適応)");
 
     // チェックボックスをクリック
     fireEvent.click(regimeCheckbox);
@@ -179,7 +179,7 @@ describe("GAConfigForm", () => {
 
     // onSubmitが正しい値で呼び出されたことを確認
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
-    expect(submittedConfig.ga_config.regime_adaptation_enabled).toBe(true);
+    expect(submittedConfig.ga_config.dynamic_objective_reweighting).toBe(true);
   });
 
   test("レジーム適応チェックボックスがtrueで初期化されるとチェックされること", () => {
@@ -187,7 +187,7 @@ describe("GAConfigForm", () => {
       ...initialConfig,
       ga_config: {
         ...initialConfig.ga_config,
-        regime_adaptation_enabled: true,
+        dynamic_objective_reweighting: true,
       },
     };
 
@@ -200,7 +200,7 @@ describe("GAConfigForm", () => {
     );
 
     // レジーム適応チェックボックスを取得
-    const regimeCheckbox = screen.getByLabelText("レジーム適応を有効化");
+    const regimeCheckbox = screen.getByLabelText("動的重み付け (レジーム適応)");
 
     // チェックされていることを確認
     expect(regimeCheckbox).toBeChecked();

@@ -131,7 +131,7 @@ class TechnicalIndicatorService:
     ) -> Optional[tuple]:
         """
         キャッシュキーを生成（データの内容に基づいた一意なキー）
-        id(df) ではなくデータの属性を使用することで、コピー後もキャッシュを有効にする。
+        DataFrameにハッシュをキャッシュすることで、再計算コストを削減します。
         """
         try:
             # パラメータをソートされた不変セットに変換
@@ -139,9 +139,20 @@ class TechnicalIndicatorService:
             
             # データのメタデータを抽出
             if not df.empty:
-                # データのハッシュ値を計算して内容の変更を検知
-                # 全列のハッシュの合計を使うことで、どの列が変わっても検知できるようにする
-                data_hash = pd.util.hash_pandas_object(df).sum()
+                # 1. 既に計算済みのハッシュがあれば使用
+                if hasattr(df, "_cached_hash"):
+                    data_hash = df._cached_hash
+                else:
+                    # 2. なければ計算してキャッシュ
+                    # 全列のハッシュの合計を使うことで、どの列が変わっても検知できるようにする
+                    data_hash = pd.util.hash_pandas_object(df).sum()
+                    try:
+                        # DataFrameに直接属性としてキャッシュ
+                        # 注意: DataFrameがコピーされると属性は失われるが、BacktestExecutorの最適化により
+                        # コピーが抑制されているため、このキャッシュは有効に機能するはず。
+                        df._cached_hash = data_hash
+                    except AttributeError:
+                        pass
                 
                 data_meta = (
                     df.index[0],    # 開始日

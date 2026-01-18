@@ -6,6 +6,7 @@ UniversalStrategyから注文管理の責務を分離するためのクラスで
 """
 
 import logging
+import weakref
 from typing import List, Optional
 
 import pandas as pd
@@ -32,10 +33,16 @@ class OrderManager:
             strategy: UniversalStrategyのインスタンス（buy/sell実行用）
             lower_tf_simulator: 1分足シミュレーター
         """
-        self.strategy = strategy
+        # 循環参照を防ぐため弱参照を使用
+        self._strategy_ref = weakref.ref(strategy)
         self.lower_tf_simulator = lower_tf_simulator
         self.pending_orders: List[PendingOrder] = []
         self.bar_duration = self._get_bar_duration()  # 初期化時にキャッシュ
+
+    @property
+    def strategy(self):
+        """戦略インスタンスへのアクセス（弱参照解決）"""
+        return self._strategy_ref()
 
     def check_pending_order_fills(
         self, minute_data: pd.DataFrame, current_bar_time, current_bar_index: int

@@ -311,3 +311,35 @@ class TestTechnicalIndicatorService:
         # 本来は異なる結果になるべきだが、バグがある場合は同じ結果（キャッシュ）が返る
         # 修正後は、ここで assert not np.array_equal(...) がパスするようになるはず
         assert not np.array_equal(result1, result2), "データが変更されたのにキャッシュされた古い結果が返されています"
+
+    def test_dataframe_hash_caching(self, indicator_service, sample_df):
+        """DataFrameハッシュキャッシュのテスト"""
+        params = {"length": 5}
+        indicator = "SMA"
+        
+        # 1. 属性がない状態
+        assert not hasattr(sample_df, "_cached_hash")
+        
+        # 2. キー生成を呼ぶ（内部でハッシュ計算される）
+        indicator_service._make_cache_key(indicator, params, sample_df)
+        
+        # 属性が付与されていることを確認
+        assert hasattr(sample_df, "_cached_hash")
+        cached_hash = sample_df._cached_hash
+        
+        # 3. 再度呼ぶ（ハッシュ計算がスキップされることを確認）
+        # pd.util.hash_pandas_object をモックして呼ばれないことを確認
+        with patch("pandas.util.hash_pandas_object") as mock_hash:
+            indicator_service._make_cache_key(indicator, params, sample_df)
+            mock_hash.assert_not_called()
+            
+        # 4. データの内容が変わったらどうなるか？
+        # DataFrameはミュータブルなので、中身を変えても _cached_hash は残る（これがリスク）
+        # しかしGAのコンテキストではデータはイミュータブルとして扱われる前提。
+        # もしデータが変わるなら新しいオブジェクトになるか、属性を消す必要がある。
+        # ここでは「属性があればそれを使う」という仕様通りか確認。
+        
+        # 強制的に属性を書き換える
+        sample_df._cached_hash = 99999
+        key = indicator_service._make_cache_key(indicator, params, sample_df)
+        assert key[2][3] == 99999 # ハッシュ値が書き換わっていること

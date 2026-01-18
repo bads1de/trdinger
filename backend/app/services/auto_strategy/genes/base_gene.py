@@ -20,6 +20,8 @@ class BaseGene(ABC):
     to_dict(), from_dict(), validate() の共通実装を提供します。
     また、遺伝的操作（交叉・突然変異）のための共通インターフェースとデフォルト実装を提供します。
     """
+    
+    __slots__ = ()
 
     # 遺伝的操作のための設定（サブクラスでオーバーライド）
     NUMERIC_FIELDS: List[str] = []
@@ -30,9 +32,21 @@ class BaseGene(ABC):
     def to_dict(self) -> Dict[str, Any]:
         """オブジェクトを辞書形式に変換"""
         result = {}
-        for key, value in self.__dict__.items():
+        
+        # 属性名のリストを取得（dataclass, slots, dictの順で優先）
+        keys = []
+        if hasattr(self, "__dataclass_fields__"):
+            keys = list(self.__dataclass_fields__.keys())
+        elif hasattr(self, "__slots__"):
+            keys = list(self.__slots__)
+        elif hasattr(self, "__dict__"):
+            keys = list(self.__dict__.keys())
+
+        for key in keys:
             if key.startswith("_"):  # プライベート属性は除外
                 continue
+
+            value = getattr(self, key, None)
 
             # Enumの処理
             if hasattr(value, "value"):

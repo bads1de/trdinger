@@ -46,10 +46,9 @@ def initialize_worker_process(
         
         # 4. 共有データの適用（DBアクセス削減のため）
         if shared_data:
-            if "main_data" in shared_data:
-                evaluator._cached_data = shared_data["main_data"]
-            if "minute_data" in shared_data:
-                evaluator._cached_minute_data = shared_data["minute_data"]
+            # ワーカーコンテキストに共有データを登録
+            from .parallel_evaluator import initialize_worker
+            initialize_worker(shared_data)
         
         _WORKER_EVALUATOR = evaluator
         _WORKER_CONFIG = ga_config

@@ -32,6 +32,37 @@ class TestIndividualEvaluator:
         assert self.evaluator.backtest_service == self.mock_backtest_service
         assert self.evaluator._fixed_backtest_config is None
 
+    def test_prepare_run_config_optimization(self):
+        """バックテスト設定生成の最適化検証"""
+        gene = self._create_mock_gene()
+        base_config = {
+            "symbol": "BTC/USDT",
+            "timeframe": "1h",
+            "strategy_name": "Test",
+            "initial_capital": 10000,
+            "commission_rate": 0.001,
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-02",
+        }
+        ga_config = GAConfig()
+        
+        # モックのGeneSerializerがインポートされないことを確認するために、
+        # sys.modulesから削除したりパッチを当てたりするのは過剰だが、
+        # 返り値の中身をチェックすれば十分
+        
+        result = self.evaluator._prepare_run_config(gene, base_config, ga_config)
+        
+        assert result is not None
+        # 1. バリデーションスキップフラグがあるか
+        assert result.get("_skip_validation") is True
+        
+        # 2. strategy_gene が辞書ではなくオブジェクトそのものであるか
+        # Pydanticモデルを通すと辞書になるが、今回は辞書のまま操作しているはず
+        strategy_config = result["strategy_config"]
+        parameters = strategy_config["parameters"]
+        assert parameters["strategy_gene"] is gene
+        assert not isinstance(parameters["strategy_gene"], dict)
+
     def test_set_backtest_config(self):
         """バックテスト設定のテスト"""
         config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}

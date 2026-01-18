@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-import copy
+
 import logging
 import random
 import uuid
@@ -31,7 +31,7 @@ from .tpsl import (
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class StrategyGene:
     """
     戦略遺伝子
@@ -170,10 +170,10 @@ class StrategyGene:
             return value.copy()
         return value
 
-    def clone(self) -> StrategyGene:
+    def clone(self, keep_id: bool = False) -> StrategyGene:
         """軽量コピーを作成"""
         return StrategyGene(
-            id=str(uuid.uuid4()),
+            id=self.id if keep_id else str(uuid.uuid4()),
             indicators=[ind.clone() for ind in self.indicators],
             long_entry_conditions=[
                 self._smart_copy(c) for c in self.long_entry_conditions
@@ -191,9 +191,7 @@ class StrategyGene:
                 self.short_tpsl_gene.clone() if self.short_tpsl_gene else None
             ),
             position_sizing_gene=(
-                self.position_sizing_gene.clone()
-                if self.position_sizing_gene
-                else None
+                self.position_sizing_gene.clone() if self.position_sizing_gene else None
             ),
             entry_gene=self.entry_gene.clone() if self.entry_gene else None,
             long_entry_gene=(
