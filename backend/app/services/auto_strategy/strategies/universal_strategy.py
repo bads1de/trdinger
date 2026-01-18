@@ -329,13 +329,40 @@ class UniversalStrategy(Strategy):
                         self.gene.position_sizing_gene, "lookback_period", 14
                     )
                     # pandas-taを使って一括計算
-                    # self.data.df は全期間のデータフレーム
-                    if hasattr(self.data, "df"):
+                    # self.data.df がない場合でも一時的にDFを作成して計算
+                    try:
+                        import pandas as pd
                         import pandas_ta as ta
-                        high = self.data.df["High"]
-                        low = self.data.df["Low"]
-                        close = self.data.df["Close"]
-                        self._precomputed_atr = ta.atr(high, low, close, length=lookback).values
+                        
+                        # 高速化のため必要なカラムのみでDataFrameを構築
+                        # backtesting.pyのデータ配列はnumpy array
+                        high = self.data.High
+                        low = self.data.Low
+                        close = self.data.Close
+                        
+                        # pandas-taはSeriesを期待するためDF化
+                        temp_df = pd.DataFrame({
+                            "high": high,
+                            "low": low,
+                            "close": close
+                        })
+                        
+                        # pandas-taで計算
+                        self._precomputed_atr = ta.atr(
+                            temp_df["high"], 
+                            temp_df["low"], 
+                            temp_df["close"], 
+                            length=lookback
+                        ).values
+                        
+                        logger.debug("ATR事前計算完了")
+                        
+                    except ImportError:
+                        # pandas-taがない場合などはフォールバック
+                        logger.warning("pandas-taが見つからないためATR事前計算をスキップ")
+                        pass
+                    except Exception as e:
+                        logger.debug(f"ATR事前計算中のエラー（フォールバック使用）: {e}")
                 except Exception as e:
                     logger.debug(f"ATR事前計算失敗: {e}")
 

@@ -34,7 +34,8 @@ class TechnicalIndicatorService:
     """
 
     # 計算結果キャッシュ（クラスレベル）
-    _calculation_cache: LRUCache = LRUCache(maxsize=1000)
+    # GA実行時は多数の個体が生成されるため、キャッシュサイズを拡大
+    _calculation_cache: LRUCache = LRUCache(maxsize=5000)
 
     def __init__(self):
         """サービスを初期化"""

@@ -186,14 +186,35 @@ class IndicatorCalculator:
                 if raw_result is not None:
                     base_index = strategy_instance.data.df.index
                     
-                    def _align_to_base(series: pd.Series) -> pd.Series:
+                    def _align_to_base(series: Union[pd.Series, np.ndarray]) -> pd.Series:
+                        # NumPy配列の場合はSeriesに変換
+                        if isinstance(series, np.ndarray):
+                            # mtf_dfのインデックスを使用（長さが一致することを前提）
+                            if len(series) == len(mtf_df):
+                                series = pd.Series(series, index=mtf_df.index)
+                            else:
+                                # 長さが合わない場合のフォールバック（通常発生しないはず）
+                                logger.warning(
+                                    f"MTF指標の長さ不一致: data={len(mtf_df)}, result={len(series)}"
+                                )
+                                # 末尾を合わせるか、先頭を合わせるか...ここでは安全にNoneを返すか、
+                                # あるいは直近のデータに合わせてSeries化を試みる
+                                series = pd.Series(
+                                    series, index=mtf_df.index[-len(series) :]
+                                )
+
                         # 上位足の時点で1つシフト（未来予知防止）
+                        # 確定した足の値のみを使用するため
                         shifted = series.shift(1)
                         
                         # タイムゾーン情報を合わせる（必要な場合）
-                        if shifted.index.tz != base_index.tz:
-                            shifted.index = shifted.index.tz_convert(base_index.tz)
-                        
+                        if hasattr(shifted.index, "tz") and hasattr(base_index, "tz"):
+                            if shifted.index.tz != base_index.tz:
+                                try:
+                                    shifted.index = shifted.index.tz_convert(base_index.tz)
+                                except Exception as e:
+                                    logger.warning(f"タイムゾーン変換失敗: {e}")
+
                         return shifted.reindex(base_index, method="ffill")
 
                     if isinstance(raw_result, tuple):
