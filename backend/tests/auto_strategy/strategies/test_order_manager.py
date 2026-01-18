@@ -105,3 +105,25 @@ class TestOrderManager:
         assert mock_strategy._sl_price == 90.0
         assert mock_strategy._tp_price == 120.0
         assert mock_strategy._position_direction == 1.0
+
+    def test_bar_duration_caching(self, mock_strategy, mock_simulator):
+        """バー期間のキャッシュ機能テスト"""
+        # OrderManagerの初期化時に_get_bar_durationが呼ばれる
+        # 呼び出し回数をカウントするためにラップする
+        
+        # まず通常の初期化
+        manager = OrderManager(mock_strategy, mock_simulator)
+        assert manager.bar_duration == pd.Timedelta(hours=1)
+        
+        # _get_bar_duration をスパイ
+        manager._get_bar_duration = Mock(wraps=manager._get_bar_duration)
+        
+        # check_pending_order_fills を呼び出す
+        # minute_data が None でない場合のみ duration チェックまで進む
+        minute_data = pd.DataFrame()
+        manager.pending_orders.append(Mock()) # 注文あり
+        
+        manager.check_pending_order_fills(minute_data, pd.Timestamp.now(), 100)
+        
+        # _get_bar_duration は呼ばれていないはず（キャッシュ使用）
+        manager._get_bar_duration.assert_not_called()

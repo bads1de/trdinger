@@ -10,6 +10,7 @@ from app.services.auto_strategy.genes import (
     IndicatorGene,
     TPSLGene,
     TPSLMethod,
+    PositionSizingGene,
 )
 from app.services.auto_strategy.genes.conditions import Condition
 
@@ -348,3 +349,56 @@ class TestUniversalStrategy:
                     # スライスサイズは atr_period + 1 (True Range 計算用のバッファ)
                     expected_slice_size = tpsl_gene.atr_period + 1
                     assert len(market_data["ohlc_data"]) == expected_slice_size
+
+    def test_atr_precomputation(self, mock_broker, mock_data, valid_gene):
+        """ATRの事前計算が正しく行われるかテスト"""
+        # ATRを使用する遺伝子設定
+        ps_gene = PositionSizingGene(enabled=True, lookback_period=14)
+        tpsl_gene = TPSLGene(
+            enabled=True, method=TPSLMethod.VOLATILITY_BASED, atr_period=20
+        )
+        valid_gene.position_sizing_gene = ps_gene
+        valid_gene.tpsl_gene = tpsl_gene
+        params = {"strategy_gene": valid_gene}
+
+        # データフレームをモックに設定
+        # mock_dataはMagicMockなので、df属性と必要なカラムを追加
+        import pandas as pd
+        import numpy as np
+        import pandas_ta as ta
+
+        # テストデータの作成
+        periods = 50
+        df = pd.DataFrame({
+            "High": np.random.uniform(105, 115, periods),
+            "Low": np.random.uniform(95, 105, periods),
+            "Close": np.random.uniform(100, 110, periods),
+        }, index=pd.date_range("2023-01-01", periods=periods, freq="h"))
+        
+        mock_data.df = df
+        mock_data.High = df["High"].values
+        mock_data.Low = df["Low"].values
+        mock_data.Close = df["Close"].values
+        mock_data.__len__.return_value = periods
+
+        strategy = UniversalStrategy(mock_broker, mock_data, params)
+        
+        # 初期化実行
+        strategy.init()
+
+        # 1. ポジションサイジング用ATRの検証
+        assert hasattr(strategy, "_precomputed_atr")
+        assert strategy._precomputed_atr is not None
+        
+        expected_ps_atr = ta.atr(df["High"], df["Low"], df["Close"], length=14).values
+        # NaNは比較できないのでfillnaするか、インデックスをずらす
+        # numpy.testing.assert_array_almost_equal は NaN の扱いが難しい場合がある
+        # ここでは末尾の値で比較
+        assert np.isclose(strategy._precomputed_atr[-1], expected_ps_atr[-1])
+
+        # 2. TP/SL用ATRの検証
+        assert hasattr(strategy, "_precomputed_tpsl_atr")
+        assert 20 in strategy._precomputed_tpsl_atr
+        
+        expected_tpsl_atr = ta.atr(df["High"], df["Low"], df["Close"], length=20).values
+        assert np.isclose(strategy._precomputed_tpsl_atr[20][-1], expected_tpsl_atr[-1])

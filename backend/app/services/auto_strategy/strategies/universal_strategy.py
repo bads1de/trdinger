@@ -225,31 +225,42 @@ class UniversalStrategy(Strategy):
                 # ATR Calculation for market_data
                 market_data = {}
                 try:
-                    lookback = getattr(
-                        self.gene.position_sizing_gene, "lookback_period", 14
-                    )
-                    # Need lookback + 1 for previous close
-                    if len(self.data) > lookback + 1:
-                        # TR = max(high-low, abs(high-prev_close), abs(low-prev_close))
-                        high = self.data.High[-lookback:]
-                        low = self.data.Low[-lookback:]
-                        prev_close = self.data.Close[-lookback - 1 : -1]
+                    # ベクトル化されたATRを使用（高速）
+                    if hasattr(self, "_precomputed_atr") and self._precomputed_atr is not None:
+                        idx = len(self.data) - 1
+                        if 0 <= idx < len(self._precomputed_atr):
+                            atr = self._precomputed_atr[idx]
+                            import numpy as np
+                            if not np.isnan(atr) and current_price > 0:
+                                market_data["atr_pct"] = atr / current_price
+                    
+                    # フォールバック（低速）
+                    if "atr_pct" not in market_data:
+                        lookback = getattr(
+                            self.gene.position_sizing_gene, "lookback_period", 14
+                        )
+                        # Need lookback + 1 for previous close
+                        if len(self.data) > lookback + 1:
+                            # TR = max(high-low, abs(high-prev_close), abs(low-prev_close))
+                            high = self.data.High[-lookback:]
+                            low = self.data.Low[-lookback:]
+                            prev_close = self.data.Close[-lookback - 1 : -1]
 
-                        import numpy as np
+                            import numpy as np
 
-                        # backtesting.pyのデータオブジェクトをnumpy配列に変換して安全に計算
-                        high = np.array(self.data.High[-lookback:])
-                        low = np.array(self.data.Low[-lookback:])
-                        prev_close = np.array(self.data.Close[-lookback - 1 : -1])
+                            # backtesting.pyのデータオブジェクトをnumpy配列に変換して安全に計算
+                            high = np.array(self.data.High[-lookback:])
+                            low = np.array(self.data.Low[-lookback:])
+                            prev_close = np.array(self.data.Close[-lookback - 1 : -1])
 
-                        tr1 = high - low
-                        tr2 = np.abs(high - prev_close)
-                        tr3 = np.abs(low - prev_close)
-                        tr = np.maximum(tr1, np.maximum(tr2, tr3))
+                            tr1 = high - low
+                            tr2 = np.abs(high - prev_close)
+                            tr3 = np.abs(low - prev_close)
+                            tr = np.maximum(tr1, np.maximum(tr2, tr3))
 
-                        atr = np.mean(tr)
-                        if current_price > 0:
-                            market_data["atr_pct"] = atr / current_price
+                            atr = np.mean(tr)
+                            if current_price > 0:
+                                market_data["atr_pct"] = atr / current_price
                 except Exception as e:
                     # logger.warning(f"ATR calculation failed in position sizing: {e}")
                     pass
@@ -307,6 +318,51 @@ class UniversalStrategy(Strategy):
                 # 失敗してもフォールバックするのでログのみ
                 logger.debug(f"ベクトル化事前計算失敗（フォールバック使用）: {e}")
 
+            # 4. ポジションサイジング用のATR事前計算
+            self._precomputed_atr = None
+            if (
+                self.gene.position_sizing_gene
+                and self.gene.position_sizing_gene.enabled
+            ):
+                try:
+                    lookback = getattr(
+                        self.gene.position_sizing_gene, "lookback_period", 14
+                    )
+                    # pandas-taを使って一括計算
+                    # self.data.df は全期間のデータフレーム
+                    if hasattr(self.data, "df"):
+                        import pandas_ta as ta
+                        high = self.data.df["High"]
+                        low = self.data.df["Low"]
+                        close = self.data.df["Close"]
+                        self._precomputed_atr = ta.atr(high, low, close, length=lookback).values
+                except Exception as e:
+                    logger.debug(f"ATR事前計算失敗: {e}")
+
+            # 5. TP/SL用のATR事前計算（Long/Shortで異なる場合がある）
+            self._precomputed_tpsl_atr = {}
+            for direction in [1.0, -1.0]:
+                tpsl_gene = self._get_effective_tpsl_gene(direction)
+                if tpsl_gene and tpsl_gene.method in (
+                    TPSLMethod.VOLATILITY_BASED,
+                    TPSLMethod.ADAPTIVE,
+                    TPSLMethod.STATISTICAL,
+                ):
+                    try:
+                        atr_period = getattr(tpsl_gene, "atr_period", 14)
+                        # 同じ期間の計算は一度だけ行う
+                        if atr_period not in self._precomputed_tpsl_atr:
+                             if hasattr(self.data, "df"):
+                                import pandas_ta as ta
+                                high = self.data.df["High"]
+                                low = self.data.df["Low"]
+                                close = self.data.df["Close"]
+                                # pandas-taのATR計算
+                                atr_values = ta.atr(high, low, close, length=atr_period).values
+                                self._precomputed_tpsl_atr[atr_period] = atr_values
+                    except Exception as e:
+                        logger.debug(f"TP/SL ATR事前計算失敗: {e}")
+
         except Exception as e:
             logger.error(f"戦略初期化エラー: {e}", exc_info=True)
             raise
@@ -359,16 +415,28 @@ class UniversalStrategy(Strategy):
             TPSLMethod.STATISTICAL,
         ):
             atr_period = getattr(active_tpsl_gene, "atr_period", 14)
-            required_slice_size = atr_period + 1
+            
+            # 1. 事前計算されたATRを使用（高速）
+            if hasattr(self, "_precomputed_tpsl_atr") and atr_period in self._precomputed_tpsl_atr:
+                idx = len(self.data) - 1
+                atr_array = self._precomputed_tpsl_atr[atr_period]
+                if 0 <= idx < len(atr_array):
+                    val = atr_array[idx]
+                    import numpy as np
+                    if not np.isnan(val):
+                        market_data["atr"] = val
 
-            if len(self.data) > required_slice_size:
-                highs = self.data.High[-required_slice_size:]
-                lows = self.data.Low[-required_slice_size:]
-                closes = self.data.Close[-required_slice_size:]
-                market_data["ohlc_data"] = [
-                    {"high": h, "low": low_val, "close": c}
-                    for h, low_val, c in zip(highs, lows, closes)
-                ]
+            # 2. フォールバック（事前計算がない場合のみ従来の重い処理）
+            if "atr" not in market_data:
+                required_slice_size = atr_period + 1
+                if len(self.data) > required_slice_size:
+                    highs = self.data.High[-required_slice_size:]
+                    lows = self.data.Low[-required_slice_size:]
+                    closes = self.data.Close[-required_slice_size:]
+                    market_data["ohlc_data"] = [
+                        {"high": h, "low": low_val, "close": c}
+                        for h, low_val, c in zip(highs, lows, closes)
+                    ]
 
         return self.tpsl_service.calculate_tpsl_prices(
             current_price=current_price,

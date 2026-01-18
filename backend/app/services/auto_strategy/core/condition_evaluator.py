@@ -522,7 +522,7 @@ class ConditionEvaluator:
             if isinstance(value, pd.Series):
                 if value.empty:
                     return 0.0
-                return float(value.iloc[-1])
+                return float(value.values[-1])
 
             # 3. リスト、タプル、ndarray などのコレクションの場合
             if hasattr(value, "__getitem__") and not isinstance(value, (str, bytes)):
@@ -625,7 +625,7 @@ class ConditionEvaluator:
                 val = getattr(data, attr_name)
                 # 高速化のため、Seriesなら直接 iloc[-1]
                 if isinstance(val, pd.Series):
-                    return float(val.iloc[-1])
+                    return float(val.values[-1])
                 # ndarrayなら [-1]
                 if isinstance(val, np.ndarray):
                     return float(val[-1])
@@ -635,9 +635,9 @@ class ConditionEvaluator:
             # DataFrameとしてのアクセス
             if isinstance(data, pd.DataFrame):
                 if attr_name in data.columns:
-                    return float(data[attr_name].iloc[-1])
+                    return float(data[attr_name].values[-1])
                 if search_key in data.columns:
-                    return float(data[search_key].iloc[-1])
+                    return float(data[search_key].values[-1])
 
         except Exception:
             pass

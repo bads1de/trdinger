@@ -35,6 +35,7 @@ class OrderManager:
         self.strategy = strategy
         self.lower_tf_simulator = lower_tf_simulator
         self.pending_orders: List[PendingOrder] = []
+        self.bar_duration = self._get_bar_duration()  # 初期化時にキャッシュ
 
     def check_pending_order_fills(
         self, minute_data: pd.DataFrame, current_bar_time, current_bar_index: int
@@ -55,7 +56,7 @@ class OrderManager:
             self.pending_orders.clear()
             return
 
-        bar_duration = self._get_bar_duration()
+        bar_duration = self.bar_duration
         if bar_duration is None:
             return
 
