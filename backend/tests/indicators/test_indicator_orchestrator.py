@@ -290,3 +290,24 @@ class TestTechnicalIndicatorService:
         assert cache_key is not None
         assert len(cache_key) == 3
         assert cache_key[0] == "SMA"
+
+    def test_cache_invalidation_bug(self, indicator_service, sample_df):
+        """キャッシュ無効化バグの再現テスト
+        データの中身が変わっても、インデックスと長さが同じならキャッシュヒットしてしまう問題
+        """
+        params = {"length": 5}
+        indicator = "SMA"
+
+        # 1回目の計算
+        result1 = indicator_service.calculate_indicator(sample_df, indicator, params)
+
+        # データを変更（インデックスと長さは維持）
+        sample_df_changed = sample_df.copy()
+        sample_df_changed["close"] = sample_df_changed["close"] * 2  # 値を2倍にする
+
+        # 2回目の計算
+        result2 = indicator_service.calculate_indicator(sample_df_changed, indicator, params)
+
+        # 本来は異なる結果になるべきだが、バグがある場合は同じ結果（キャッシュ）が返る
+        # 修正後は、ここで assert not np.array_equal(...) がパスするようになるはず
+        assert not np.array_equal(result1, result2), "データが変更されたのにキャッシュされた古い結果が返されています"

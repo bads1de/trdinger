@@ -139,10 +139,15 @@ class TechnicalIndicatorService:
             
             # データのメタデータを抽出
             if not df.empty:
+                # データのハッシュ値を計算して内容の変更を検知
+                # 全列のハッシュの合計を使うことで、どの列が変わっても検知できるようにする
+                data_hash = pd.util.hash_pandas_object(df).sum()
+                
                 data_meta = (
                     df.index[0],    # 開始日
                     df.index[-1],   # 終了日
-                    len(df)         # データ長
+                    len(df),        # データ長
+                    data_hash       # データ内容のハッシュ
                 )
             else:
                 data_meta = ("empty",)
