@@ -9,7 +9,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109%2B-009688)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
 
-Trdingerは、仮想通貨市場における取引戦略の**科学的な研究、バックテスト、そして自動生成**を行うためのエンタープライズグレードのプラットフォームです。
+Trdingerは、仮想通貨市場における取引戦略の**科学的な研究、バックテスト、そして自動生成**を行うためのプラットフォームです。
 単なる自動売買ボットではなく、遺伝的アルゴリズムによる戦略探索や、高度な機械学習モデルを用いた市場予測を統合した**「戦略の研究開発ラボ」**として設計されています。
 
 ## 🚀 Key Features
