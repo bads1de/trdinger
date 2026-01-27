@@ -55,6 +55,16 @@ class AutoStrategyLoader:
                 "オートストラテジーの設定に戦略遺伝子 (strategy_gene) が含まれていません。"
             )
 
+        if isinstance(gene_data, StrategyGene):
+            return gene_data
+
+        # DEAP の Individual は StrategyGene を継承していることがある
+        # 属性ベースで判定して対応
+        if hasattr(gene_data, "indicators") and hasattr(
+            gene_data, "long_entry_conditions"
+        ):
+            return gene_data
+
         try:
             # 戦略遺伝子を復元
             serializer = GeneSerializer()
@@ -94,9 +104,7 @@ class AutoStrategyLoader:
         # 遺伝子のバリデーション実行
         is_valid, errors = gene.validate()
         if not is_valid:
-            raise AutoStrategyLoaderError(
-                f"無効な戦略遺伝子です: {', '.join(errors)}"
-            )
+            raise AutoStrategyLoaderError(f"無効な戦略遺伝子です: {', '.join(errors)}")
 
         # UniversalStrategyクラスを返す
         return UniversalStrategy
@@ -113,6 +121,3 @@ class AutoStrategyLoader:
             return parameters["strategy_gene"]
 
         return {}
-
-
-

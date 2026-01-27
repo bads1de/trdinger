@@ -364,7 +364,7 @@ class DictConverter:
 
         return clean_risk_management
 
-    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class: Any):
+    def dict_to_strategy_gene(self, data: Any, strategy_gene_class: Any):
         """
         辞書形式のデータから戦略遺伝子オブジェクトを復元
 
@@ -373,13 +373,29 @@ class DictConverter:
         サブ遺伝子クラスを適切にインスタンス化して再構築します。
 
         Args:
-            data: シリアライズされた戦略データ
+            data: シリアライズされた戦略データ（辞書、StrategyGene、またはIndividual）
             strategy_gene_class: インスタンス化する StrategyGene クラス
 
         Returns:
             復元された StrategyGene オブジェクト
         """
         try:
+            # 既にStrategyGeneのインスタンスである場合はそのまま返す
+            if isinstance(data, strategy_gene_class):
+                return data
+
+            # StrategyGene（またはその継承クラス）かどうかを属性で判定
+            # DEAP の Individual は StrategyGene を継承している場合がある
+            if hasattr(data, "indicators") and hasattr(data, "long_entry_conditions"):
+                return data
+
+            # 辞書でない場合はエラー
+            if not isinstance(data, dict):
+                logger.error(
+                    f"dict_to_strategy_gene に渡されたデータの型が不正です: {type(data).__name__}"
+                )
+                return strategy_gene_class.create_default()
+
             # 入力データがNoneまたは空でないことを確認
             if not data:
                 logger.warning(

@@ -92,9 +92,15 @@ describe("GAConfigForm", () => {
 
     // デフォルト値の確認
     const popInput = screen.getByTestId(
-      "input-個体数 (population_size)"
+      "input-個体数 (population_size)",
     ) as HTMLInputElement;
     expect(popInput.value).toBe("10"); // デフォルト値
+
+    // max_evaluation_workersのデフォルト値確認
+    const workerInput = screen.getByTestId(
+      "input-最大ワーカー数",
+    ) as HTMLInputElement;
+    expect(workerInput.value).toBe("4");
   });
 
   it("基本設定の変更が反映されること（モック経由のため間接的検証）", () => {
@@ -114,7 +120,7 @@ describe("GAConfigForm", () => {
         ga_config: expect.objectContaining({
           generations: 50,
         }),
-      })
+      }),
     );
   });
 
@@ -151,7 +157,7 @@ describe("GAConfigForm", () => {
     // 設定項目が消えることを確認 (max_evaluation_workersInputなど)
     // 存在しないことを確認するにはqueryByを使用
     expect(
-      screen.queryByTestId("input-最大ワーカー数")
+      screen.queryByTestId("input-最大ワーカー数"),
     ).not.toBeInTheDocument();
   });
 

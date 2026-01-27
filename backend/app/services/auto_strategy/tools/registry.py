@@ -41,7 +41,6 @@ class ToolRegistry:
                 f"ツール '{tool.name}' は既に登録されています。上書きします。"
             )
         self._tools[tool.name] = tool
-        logger.debug(f"ツール '{tool.name}' を登録しました")
 
     def get(self, name: str) -> Optional[BaseTool]:
         """
@@ -94,8 +93,3 @@ def register_tool(tool: BaseTool) -> BaseTool:
     """
     tool_registry.register(tool)
     return tool
-
-
-
-
-

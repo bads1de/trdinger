@@ -13,6 +13,7 @@ pandas-taと独自実装のテクニカル指標を統一的に管理し、
 
 import inspect
 import logging
+import warnings
 from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
@@ -22,6 +23,15 @@ from cachetools import LRUCache
 
 from .config import IndicatorConfig, IndicatorResultType, indicator_registry
 from .data_validation import create_nan_result, validate_data_length_with_fallback
+
+# pandas-ta および pandas, numpy 内部で発生する警告を抑制
+# これらはライブラリ内部の問題であり、アプリケーションの動作に影響しない
+warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
+warnings.filterwarnings("ignore", category=FutureWarning, module="pandas")
+warnings.filterwarnings("ignore", category=FutureWarning, module="pandas_ta")
+warnings.filterwarnings("ignore", category=FutureWarning, module="numpy")
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="numpy")
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="pandas_ta")
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +147,7 @@ class TechnicalIndicatorService:
         try:
             # パラメータをソートされた不変セットに変換
             cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
-            
+
             # データのメタデータを抽出
             if not df.empty:
                 # 1. 既に計算済みのハッシュがあれば使用
@@ -154,12 +164,12 @@ class TechnicalIndicatorService:
                         df._cached_hash = data_hash
                     except AttributeError:
                         pass
-                
+
                 data_meta = (
-                    df.index[0],    # 開始日
-                    df.index[-1],   # 終了日
-                    len(df),        # データ長
-                    data_hash       # データ内容のハッシュ
+                    df.index[0],  # 開始日
+                    df.index[-1],  # 終了日
+                    len(df),  # データ長
+                    data_hash,  # データ内容のハッシュ
                 )
             else:
                 data_meta = ("empty",)
@@ -543,9 +553,7 @@ class TechnicalIndicatorService:
                     arr.values
                     if isinstance(arr, pd.Series)
                     else (
-                        arr.values
-                        if isinstance(arr, pd.DataFrame)
-                        else np.asarray(arr)
+                        arr.values if isinstance(arr, pd.DataFrame) else np.asarray(arr)
                     )
                 )
                 for arr in result

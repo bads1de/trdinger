@@ -101,7 +101,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         // 並列評価設定
         enable_parallel_evaluation:
           initialGAConfig.enable_parallel_evaluation ?? true,
-        max_evaluation_workers: initialGAConfig.max_evaluation_workers ?? null,
+        max_evaluation_workers: initialGAConfig.max_evaluation_workers ?? 4,
         evaluation_timeout: initialGAConfig.evaluation_timeout ?? 300,
 
         // 制限設定
@@ -200,7 +200,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   };
 
   const handleGAConfigChange = (
-    updates: Partial<GAConfigType["ga_config"]>
+    updates: Partial<GAConfigType["ga_config"]>,
   ) => {
     setConfig((prev) => ({
       ...prev,

@@ -48,6 +48,9 @@ warnings.filterwarnings(
     category=FutureWarning,
 )
 
+# pandas-ta 内部で発生する FutureWarning を抑制
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 
 class OverlapIndicators:
     """

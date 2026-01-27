@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple, Any
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 
@@ -284,14 +284,18 @@ class GeneValidator:
         is_api_call=False,
         default_return=(False, ["バリデーションエラー"]),
     )
-    def validate_strategy_gene(self, strategy_gene) -> Tuple[bool, List[str]]:
+    def validate_strategy_gene(
+        self, strategy_gene, config: Optional[Any] = None
+    ) -> Tuple[bool, List[str]]:
         """戦略遺伝子の妥当性を検証"""
         errors: List[str] = []
 
         # 1. 指標数の制約チェック
         from ..config import GAConfig
 
-        max_indicators = GAConfig().max_indicators
+        # 設定が渡されている場合はその設定を使用、そうでなければデフォルト設定を使用
+        effective_config = config if config is not None else GAConfig()
+        max_indicators = effective_config.max_indicators
         if len(strategy_gene.indicators) > max_indicators:
             errors.append(
                 f"指標数が上限({max_indicators})を超えています: {len(strategy_gene.indicators)}"

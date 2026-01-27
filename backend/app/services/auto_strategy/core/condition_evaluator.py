@@ -5,7 +5,6 @@
 """
 
 import logging
-from numbers import Real
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -45,7 +44,7 @@ class ConditionEvaluator:
 
         # 属性アクセサのキャッシュ: "sma_20" -> operator.attrgetter("sma_20")
         self._accessor_cache: Dict[str, Any] = {}
-        
+
         # OHLCV名のマッピング
         self._ohlcv_map = {
             "open": "Open",
@@ -59,6 +58,7 @@ class ConditionEvaluator:
         """属性アクセサを取得または作成"""
         if attr_name not in self._accessor_cache:
             import operator
+
             self._accessor_cache[attr_name] = operator.attrgetter(attr_name)
         return self._accessor_cache[attr_name]
 
@@ -176,7 +176,7 @@ class ConditionEvaluator:
                 return None
 
             op = condition.operator
-            
+
             # 高速な辞書ルックアップ
             func = self._ops.get(op)
             if func:
@@ -226,7 +226,10 @@ class ConditionEvaluator:
             return val
 
         # Indicators (辞書検索は高速)
-        if hasattr(strategy_instance, "indicators") and operand_str in strategy_instance.indicators:
+        if (
+            hasattr(strategy_instance, "indicators")
+            and operand_str in strategy_instance.indicators
+        ):
             return strategy_instance.indicators[operand_str]
 
         # Attributes (アクセサキャッシュ利用)
@@ -292,7 +295,7 @@ class ConditionEvaluator:
         # getattrの代わりに直接属性アクセスを試みる（slots=Trueなので高速）
         # ただし互換性のためgetattrも残す
         op = getattr(group, "operator", "OR")
-        
+
         # リスト内包表記よりジェネレータ式の方がメモリ効率が良いが、
         # all/any はジェネレータを受け取るので遅延評価される
         if op == "AND":
@@ -321,10 +324,10 @@ class ConditionEvaluator:
         # NaNチェック (インライン化)
         # np.isnanはオーバーヘッドがあるため、まずは単純な数値比較でフィルタ
         # ほとんどの場合は有限の数値であるはず
-        
+
         # 演算子の取得
         op = condition.operator
-        
+
         # 1. キャッシュされた演算子関数の直接実行（高速パス）
         func = self._ops.get(op)
         if func:
@@ -337,8 +340,12 @@ class ConditionEvaluator:
         # 2. クロス判定（低速パス）
         if op in ("CROSS_UP", "CROSS_DOWN"):
             # 前回値の取得
-            prev_left = self._get_previous_value(condition.left_operand, strategy_instance)
-            prev_right = self._get_previous_value(condition.right_operand, strategy_instance)
+            prev_left = self._get_previous_value(
+                condition.left_operand, strategy_instance
+            )
+            prev_right = self._get_previous_value(
+                condition.right_operand, strategy_instance
+            )
 
             # NaNチェック
             if np.isnan(prev_left) or np.isnan(prev_right):
@@ -365,10 +372,13 @@ class ConditionEvaluator:
         # ここでは再取得コストを避けるため、get_condition_vectorのようなロジックが必要だが
         # 簡易化のため再取得する（頻度は低いと想定）
         val = self._get_ohlcv_vector(operand_str, strategy_instance)
-        
+
         if val is None:
             # 2. Indicators (辞書アクセス)
-            if hasattr(strategy_instance, "indicators") and operand_str in strategy_instance.indicators:
+            if (
+                hasattr(strategy_instance, "indicators")
+                and operand_str in strategy_instance.indicators
+            ):
                 val = strategy_instance.indicators[operand_str]
             # 3. Attributes
             elif hasattr(strategy_instance, operand_str):
@@ -382,6 +392,9 @@ class ConditionEvaluator:
                         return float(val.iloc[-2])
                 # numpy array / list
                 elif hasattr(val, "__getitem__"):
+                    # 0次元配列（スカラー）の場合は len() がエラーになるためチェック
+                    if hasattr(val, "ndim") and val.ndim == 0:
+                        return float("nan")
                     if len(val) >= 2:
                         return float(val[-2])
             except Exception:
@@ -407,6 +420,8 @@ class ConditionEvaluator:
 
         # 2. Numpy Array (バックテストで最も多いパターン)
         if isinstance(value, np.ndarray):
+            if value.ndim == 0:
+                return float(value)
             if value.size > 0:
                 return float(value[-1])
             return 0.0
@@ -414,7 +429,7 @@ class ConditionEvaluator:
         # 3. Pandas Series
         if isinstance(value, pd.Series):
             if not value.empty:
-                return float(value.values[-1]) # .iloc[-1]よりvalues[-1]が速い
+                return float(value.values[-1])  # .iloc[-1]よりvalues[-1]が速い
             return 0.0
 
         # 4. リスト等
@@ -440,11 +455,14 @@ class ConditionEvaluator:
         # backtesting.pyの構造上、data.Close[-1] へのアクセスが最も頻出
         if hasattr(strategy_instance, "data"):
             data = strategy_instance.data
-            
+
             # ヘルパー関数: 安全に最後の値を取得
             def _safe_get_last(obj):
                 if isinstance(obj, (pd.Series, pd.DataFrame)):
                     return float(obj.values[-1])
+                # 0次元配列（スカラー）の対応
+                if isinstance(obj, np.ndarray) and obj.ndim == 0:
+                    return float(obj)
                 try:
                     return float(obj[-1])
                 except (TypeError, KeyError, IndexError):
@@ -465,7 +483,7 @@ class ConditionEvaluator:
                     return _safe_get_last(data.Open)
                 elif operand_str == "volume":
                     return _safe_get_last(data.Volume)
-                
+
                 # マッピングを使った汎用チェック
                 key_lower = operand_str.lower()
                 if key_lower in self._ohlcv_map:
@@ -486,12 +504,15 @@ class ConditionEvaluator:
         try:
             # キャッシュされたアクセサを試す
             if operand_str in self._accessor_cache:
-                return self._get_final_value(self._accessor_cache[operand_str](strategy_instance))
-            
+                return self._get_final_value(
+                    self._accessor_cache[operand_str](strategy_instance)
+                )
+
             # なければgetattrで取得し、キャッシュする
             val = getattr(strategy_instance, operand_str)
             # 成功したらアクセサをキャッシュ
             import operator
+
             self._accessor_cache[operand_str] = operator.attrgetter(operand_str)
             return self._get_final_value(val)
         except AttributeError:
@@ -504,7 +525,7 @@ class ConditionEvaluator:
             return 0.0
 
     # StatefulCondition関連は変更なしのため省略（old_stringでマッチさせるため、既存コードを維持する形で記述）
-    
+
     def evaluate_stateful_condition(
         self,
         stateful_condition,

@@ -8,14 +8,14 @@ pandas-ta および独自実装のテクニカル指標を動的にスキャン�
 
 import inspect
 import logging
+import warnings
 from typing import Any, List, Optional, Type
 
-import pandas_ta as ta
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 import pkgutil
 import importlib
-
 
 from .indicator_config import (
     IndicatorConfig,
@@ -29,6 +29,12 @@ from .pandas_ta_introspection import (
     get_return_column_names,
     is_multi_column_indicator,
 )
+
+# pandas-ta および pandas, numpy 内部で発生する FutureWarning を抑制
+# これらはライブラリ内部の問題であり、アプリケーションの動作に影響しない
+warnings.filterwarnings("ignore", category=FutureWarning, module="pandas")
+warnings.filterwarnings("ignore", category=FutureWarning, module="pandas_ta")
+warnings.filterwarnings("ignore", category=FutureWarning, module="numpy")
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +170,7 @@ class DynamicIndicatorDiscovery:
                     "high": close + 1,
                     "low": close - 1,
                     "close": close,
-                    "volume": np.random.randint(100, 1000, 200),
+                    "volume": np.random.randint(100, 1000, 200).astype(float),
                 }
             )
 
@@ -188,8 +194,10 @@ class DynamicIndicatorDiscovery:
                 elif p_name in default_params:
                     call_params[p_name] = default_params[p_name]
 
-            # 実行
-            result = func(**call_params)
+            # 実行（FutureWarningを抑制）
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                result = func(**call_params)
 
             # 結果の取り出し
             if isinstance(result, pd.DataFrame):
@@ -395,11 +403,29 @@ class DynamicIndicatorDiscovery:
 
             # 3. ユーティリティ関数およびデータ整合性チェック関数の除外
             utility_names = {
-                "above", "above_value", "below", "below_value", "cross", "cross_value",
-                "df_dates", "df_error_analysis", "df_month_to_date", "df_quarter_to_date",
-                "df_year_to_date", "downside_deviation", "is_datetime_ordered",
-                "jensens_alpha", "linear_regression", "mtd", "qtd", "total_time",
-                "to_utc", "ytd", "verify_series", "short_run", "long_run"
+                "above",
+                "above_value",
+                "below",
+                "below_value",
+                "cross",
+                "cross_value",
+                "df_dates",
+                "df_error_analysis",
+                "df_month_to_date",
+                "df_quarter_to_date",
+                "df_year_to_date",
+                "downside_deviation",
+                "is_datetime_ordered",
+                "jensens_alpha",
+                "linear_regression",
+                "mtd",
+                "qtd",
+                "total_time",
+                "to_utc",
+                "ytd",
+                "verify_series",
+                "short_run",
+                "long_run",
             }
             if name_lower in utility_names:
                 return None

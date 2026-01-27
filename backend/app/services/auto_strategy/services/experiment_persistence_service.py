@@ -148,7 +148,7 @@ class ExperimentPersistenceService:
             fitness_score,
         )
         backtest_result_repo.save_backtest_result(result_data)
-        logger.info(f"最良戦略のバックテスト結果を保存しました。")
+        logger.info("最良戦略のバックテスト結果を保存しました。")
 
     def _prepare_detailed_backtest_config(
         self,
@@ -193,7 +193,7 @@ class ExperimentPersistenceService:
 
         config["strategy_name"] = strategy_name
         config["strategy_config"] = {
-            "strategy_type": "GENERATED_AUTO",
+            "strategy_type": "GENERATED_GA",
             "parameters": {
                 "strategy_gene": serializer.strategy_gene_to_dict(best_strategy)
             },
