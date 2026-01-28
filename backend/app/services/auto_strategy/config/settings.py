@@ -8,7 +8,8 @@ TradingSettings, IndicatorSettings, TPSLSettings, PositionSizingSettings を提�
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from ..utils.indicator_utils import get_valid_indicator_types, IndicatorCharacteristics
+from ..utils.indicator_utils import get_valid_indicator_types
+from app.services.indicators.config.indicator_config import indicator_registry
 from .base import BaseConfig
 from .constants import (
     CONSTRAINTS,
@@ -75,7 +76,13 @@ class IndicatorSettings(BaseConfig):
 
     # 指標特性データベース
     indicator_characteristics: Dict[str, Any] = field(
-        default_factory=lambda: IndicatorCharacteristics.get_characteristics().copy()
+        default_factory=lambda: {
+            name: {
+                "type": cfg.category or "technical",
+                "scale_type": cfg.scale_type.value,
+            }
+            for name, cfg in indicator_registry.get_all_indicators().items()
+        }
     )
 
     # 演算子とデータソース

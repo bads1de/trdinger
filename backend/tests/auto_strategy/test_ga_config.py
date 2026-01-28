@@ -1,12 +1,12 @@
-from app.services.auto_strategy.config import GASettings
+from app.services.auto_strategy.config import GAConfig
 
 
 class TestGAConfig:
-    """GASettings（旧GAConfig）のテスト"""
+    """GAConfigのテスト"""
 
     def test_default_values(self):
         """デフォルト値が正しく設定されることを確認"""
-        config = GASettings()
+        config = GAConfig()
         assert config.population_size > 0
         assert config.generations > 0
         assert config.crossover_rate > 0
@@ -14,7 +14,7 @@ class TestGAConfig:
 
     def test_custom_values(self):
         """カスタム値を設定できることを確認"""
-        config = GASettings(
+        config = GAConfig(
             population_size=200, generations=100, crossover_rate=0.9, mutation_rate=0.2
         )
         assert config.population_size == 200
@@ -24,18 +24,18 @@ class TestGAConfig:
 
     def test_serialize_deserialize(self):
         """シリアライズとデシリアライズが正しく動作することを確認"""
-        original = GASettings(population_size=150, generations=75)
+        original = GAConfig(population_size=150, generations=75)
         data = original.to_dict()
         assert data["population_size"] == 150
         assert data["generations"] == 75
 
-        restored = GASettings(**data)
+        restored = GAConfig(**data)
         assert restored.population_size == 150
         assert restored.generations == 75
 
     def test_mutation_settings_defaults(self):
         """突然変異関連のデフォルト設定が正しいことを確認"""
-        config = GASettings()
+        config = GAConfig()
         # GAConfig uses List instead of Tuple
         assert config.indicator_param_mutation_range == [0.8, 1.2]
         assert config.indicator_add_delete_probability == 0.3
@@ -67,7 +67,7 @@ class TestGAConfig:
         """突然変異関連のカスタム設定が正しく適用されることを確認"""
         custom_range = [0.9, 1.1]  # List for GAConfig
         custom_prob = 0.4
-        config = GASettings(
+        config = GAConfig(
             indicator_param_mutation_range=custom_range,
             indicator_add_delete_probability=custom_prob,
             indicator_add_vs_delete_probability=0.3,

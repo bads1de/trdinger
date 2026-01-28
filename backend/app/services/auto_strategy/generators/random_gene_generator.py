@@ -143,7 +143,7 @@ class RandomGeneGenerator:
             short_entry_conditions, "short", indicators
         )
 
-        # リスク管理設定（従来方式、後方互換性のため保持）
+        # リスク管理設定（従来方式）
         risk_management = {
             "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
         }

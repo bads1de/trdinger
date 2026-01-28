@@ -305,9 +305,7 @@ class ExperimentPersistenceService:
                         "experiment_id": db_experiment_id,
                         "gene_data": serializer.strategy_gene_to_dict(strategy),
                         "generation": ga_config.generations,
-                        "fitness_score": (
-                            fitness_values[0] if fitness_values else 0.0
-                        ),  # 後方互換性
+                        "fitness_score": (fitness_values[0] if fitness_values else 0.0),
                         "fitness_values": fitness_values,
                     }
                 )

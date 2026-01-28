@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from ..config.constants import PositionSizingMethod
+
 from .conditions import Condition, ConditionGroup, StatefulCondition
 from .entry import EntryGene
 from .indicator import IndicatorGene
@@ -142,14 +142,6 @@ class StrategyGene:
     def has_long_short_separation(self) -> bool:
         """ロング・ショート条件が分離されているかチェック（常にTrue）"""
         return True
-
-    @property
-    def method(self):
-        """ポジションサイジングメソッドを取得（後方互換性のため）"""
-        if self.position_sizing_gene and hasattr(self.position_sizing_gene, "method"):
-            return self.position_sizing_gene.method
-        else:
-            return PositionSizingMethod.FIXED_RATIO
 
     def validate(self) -> Tuple[bool, List[str]]:
         """戦略遺伝子の妥当性を検証し、(is_valid, errors) を返す"""

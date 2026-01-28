@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pandas as pd
 
-from app.services.auto_strategy.config import GASettings
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -81,7 +81,7 @@ def test_backtest_data_service_event_labels(monkeypatch):
 
 
 def test_random_gene_generator_context_injects_regime_thresholds():
-    config = GASettings()
+    config = GAConfig()
     context = {
         "timeframe": "1h",
         "symbol": "BTCUSDT",

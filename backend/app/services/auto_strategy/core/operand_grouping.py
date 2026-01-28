@@ -158,10 +158,6 @@ class OperandGroupingSystem:
 
         return OperandGroup.PRICE_BASED
 
-    def _classify_by_pattern(self, operand: str) -> OperandGroup:
-        """後方互換性のためのエイリアス"""
-        return self.get_operand_group(operand)
-
     def get_compatibility_score(self, operand1: str, operand2: str) -> float:
         """2つのオペランド間の互換性スコアを取得
 
@@ -264,19 +260,6 @@ def get_operand_group(operand: str) -> OperandGroup:
         オペランドのグループ
     """
     return operand_grouping_system.get_operand_group(operand)
-
-
-def _classify_by_pattern(operand: str) -> OperandGroup:
-    """
-    パターンマッチングによるオペランド分類（グローバルインターフェース）
-
-    Args:
-        operand: オペランド名
-
-    Returns:
-        推定されるグループ
-    """
-    return operand_grouping_system._classify_by_pattern(operand)
 
 
 def get_compatibility_score(operand1: str, operand2: str) -> float:

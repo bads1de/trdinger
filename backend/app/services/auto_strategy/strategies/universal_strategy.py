@@ -176,11 +176,11 @@ class UniversalStrategy(Strategy):
         return None
 
     def _get_effective_tpsl_gene(self, direction: float) -> Union[None, object]:
-        """旧互換用: 有効なTPSL遺伝子を取得"""
+        """有効なTPSL遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         return self._get_effective_sub_gene(direction, "tpsl")
 
     def _get_effective_entry_gene(self, direction: float) -> Union[None, EntryGene]:
-        """旧互換用: 有効なエントリー遺伝子を取得"""
+        """有効なエントリー遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         return self._get_effective_sub_gene(direction, "entry")
 
     def _check_entry_conditions(self, direction: float) -> bool:
@@ -226,14 +226,18 @@ class UniversalStrategy(Strategy):
                 market_data = {}
                 try:
                     # ベクトル化されたATRを使用（高速）
-                    if hasattr(self, "_precomputed_atr") and self._precomputed_atr is not None:
+                    if (
+                        hasattr(self, "_precomputed_atr")
+                        and self._precomputed_atr is not None
+                    ):
                         idx = len(self.data) - 1
                         if 0 <= idx < len(self._precomputed_atr):
                             atr = self._precomputed_atr[idx]
                             import numpy as np
+
                             if not np.isnan(atr) and current_price > 0:
                                 market_data["atr_pct"] = atr / current_price
-                    
+
                     # フォールバック（低速）
                     if "atr_pct" not in market_data:
                         lookback = getattr(
@@ -333,36 +337,38 @@ class UniversalStrategy(Strategy):
                     try:
                         import pandas as pd
                         import pandas_ta as ta
-                        
+
                         # 高速化のため必要なカラムのみでDataFrameを構築
                         # backtesting.pyのデータ配列はnumpy array
                         high = self.data.High
                         low = self.data.Low
                         close = self.data.Close
-                        
+
                         # pandas-taはSeriesを期待するためDF化
-                        temp_df = pd.DataFrame({
-                            "high": high,
-                            "low": low,
-                            "close": close
-                        })
-                        
+                        temp_df = pd.DataFrame(
+                            {"high": high, "low": low, "close": close}
+                        )
+
                         # pandas-taで計算
                         self._precomputed_atr = ta.atr(
-                            temp_df["high"], 
-                            temp_df["low"], 
-                            temp_df["close"], 
-                            length=lookback
+                            temp_df["high"],
+                            temp_df["low"],
+                            temp_df["close"],
+                            length=lookback,
                         ).values
-                        
+
                         logger.debug("ATR事前計算完了")
-                        
+
                     except ImportError:
                         # pandas-taがない場合などはフォールバック
-                        logger.warning("pandas-taが見つからないためATR事前計算をスキップ")
+                        logger.warning(
+                            "pandas-taが見つからないためATR事前計算をスキップ"
+                        )
                         pass
                     except Exception as e:
-                        logger.debug(f"ATR事前計算中のエラー（フォールバック使用）: {e}")
+                        logger.debug(
+                            f"ATR事前計算中のエラー（フォールバック使用）: {e}"
+                        )
                 except Exception as e:
                     logger.debug(f"ATR事前計算失敗: {e}")
 
@@ -379,13 +385,16 @@ class UniversalStrategy(Strategy):
                         atr_period = getattr(tpsl_gene, "atr_period", 14)
                         # 同じ期間の計算は一度だけ行う
                         if atr_period not in self._precomputed_tpsl_atr:
-                             if hasattr(self.data, "df"):
+                            if hasattr(self.data, "df"):
                                 import pandas_ta as ta
+
                                 high = self.data.df["High"]
                                 low = self.data.df["Low"]
                                 close = self.data.df["Close"]
                                 # pandas-taのATR計算
-                                atr_values = ta.atr(high, low, close, length=atr_period).values
+                                atr_values = ta.atr(
+                                    high, low, close, length=atr_period
+                                ).values
                                 self._precomputed_tpsl_atr[atr_period] = atr_values
                     except Exception as e:
                         logger.debug(f"TP/SL ATR事前計算失敗: {e}")
@@ -442,14 +451,18 @@ class UniversalStrategy(Strategy):
             TPSLMethod.STATISTICAL,
         ):
             atr_period = getattr(active_tpsl_gene, "atr_period", 14)
-            
+
             # 1. 事前計算されたATRを使用（高速）
-            if hasattr(self, "_precomputed_tpsl_atr") and atr_period in self._precomputed_tpsl_atr:
+            if (
+                hasattr(self, "_precomputed_tpsl_atr")
+                and atr_period in self._precomputed_tpsl_atr
+            ):
                 idx = len(self.data) - 1
                 atr_array = self._precomputed_tpsl_atr[atr_period]
                 if 0 <= idx < len(atr_array):
                     val = atr_array[idx]
                     import numpy as np
+
                     if not np.isnan(val):
                         market_data["atr"] = val
 

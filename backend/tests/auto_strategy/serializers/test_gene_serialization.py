@@ -16,8 +16,8 @@ class TestGeneSerializerInit:
         with patch(
             "app.services.auto_strategy.serializers.serialization.DictConverter"
         ) as mock_dict:
-            serializer = GeneSerializer(enable_smart_generation=True)
-            mock_dict.assert_called_once_with(True)
+            serializer = GeneSerializer()
+            mock_dict.assert_called_once_with()
 
 
 class TestDelegation:
@@ -41,7 +41,7 @@ class TestDelegation:
         gene = Mock()
         expected_dict = {"id": "test"}
         serializer.dict_converter.strategy_gene_to_dict.return_value = expected_dict
-        
+
         # JSON変換
         json_str = serializer.strategy_gene_to_json(gene)
         assert json.loads(json_str) == expected_dict
@@ -50,4 +50,6 @@ class TestDelegation:
         # JSON復元
         cls = Mock()
         serializer.json_to_strategy_gene(json_str, cls)
-        serializer.dict_converter.dict_to_strategy_gene.assert_called_once_with(expected_dict, cls)
+        serializer.dict_converter.dict_to_strategy_gene.assert_called_once_with(
+            expected_dict, cls
+        )

@@ -1,4 +1,4 @@
-from app.services.auto_strategy.config import GASettings
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -15,7 +15,7 @@ class TestAutoStrategyFlow:
         """
         遺伝子生成 -> 検証 -> 交叉 -> 変異 -> 検証 のサイクルが正常に動作することを確認
         """
-        config = GASettings()
+        config = GAConfig()
 
         # 1. 遺伝子生成
         generator = RandomGeneGenerator(config)

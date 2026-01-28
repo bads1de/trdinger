@@ -83,7 +83,7 @@ def test_hierarchical_validation():
         cond_c = Condition("C", ">", 100)
 
         group_and = ConditionGroup(operator="AND", conditions=[cond_a, cond_b])
-        group_or = ConditionGroup(operator="OR", conditions=[group_and, cond_c])
+        _ = ConditionGroup(operator="OR", conditions=[group_and, cond_c])
 
         strategy = StrategyGene(
             indicators=[IndicatorGene(type="A", enabled=True, parameters={})],
@@ -121,9 +121,9 @@ def test_hierarchical_mutation_safety():
 
     for _ in range(30):
         # mutation_rate 1.0 ensures mutation attempt if logic allows
-        from app.services.auto_strategy.config import GASettings
+        from app.services.auto_strategy.config import GAConfig
 
-        config = GASettings()  # 設定オブジェクトを作成
+        config = GAConfig()  # 設定オブジェクトを作成
         mutated = strategy.mutate(config, mutation_rate=1.0)
 
         # Check if long_entry_conditions[0] is still a ConditionGroup and operator is valid

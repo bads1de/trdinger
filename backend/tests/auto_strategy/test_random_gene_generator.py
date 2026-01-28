@@ -1,4 +1,4 @@
-from app.services.auto_strategy.config import GASettings
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
@@ -6,7 +6,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
 
 class TestRandomGeneGenerator:
     def setup_method(self):
-        self.config = GASettings()
+        self.config = GAConfig()
         self.generator = RandomGeneGenerator(self.config)
 
     def test_initialization(self):

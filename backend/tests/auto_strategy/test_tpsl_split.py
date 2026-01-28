@@ -1,11 +1,8 @@
-import pytest
-from unittest.mock import MagicMock, patch
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 from app.services.auto_strategy.config.constants import TPSLMethod
-from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 
-from app.services.auto_strategy.config import GASettings
+from app.services.auto_strategy.config import GAConfig
 
 
 class TestTPSLSplit:
@@ -15,7 +12,7 @@ class TestTPSLSplit:
 
     def test_crossover_handles_split_tpsl(self):
         """交叉時に分離されたTPSL遺伝子が適切に処理されることを確認"""
-        config = GASettings()  # 設定オブジェクトを作成
+        config = GAConfig()  # 設定オブジェクトを作成
         long_tpsl1 = TPSLGene(
             method=TPSLMethod.FIXED_PERCENTAGE, take_profit_pct=0.1, enabled=True
         )
@@ -49,7 +46,7 @@ class TestTPSLSplit:
 
     def test_mutation_affects_split_tpsl(self):
         """突然変異時に分離されたTPSL遺伝子も変異することを確認"""
-        config = GASettings()  # 設定オブジェクトを作成
+        config = GAConfig()  # 設定オブジェクトを作成
         # 変異率1.0で確実に変異させる
         original_tp = 0.1
         long_tpsl = TPSLGene(
@@ -65,9 +62,7 @@ class TestTPSLSplit:
 
         gene = StrategyGene(long_tpsl_gene=long_tpsl, short_tpsl_gene=short_tpsl)
 
-        mutated = gene.mutate(
-            config, mutation_rate=1.0
-        )  # configを渡す
+        mutated = gene.mutate(config, mutation_rate=1.0)  # configを渡す
 
         # 変異しているか確認（値が変わっているか、あるいはオブジェクトが変わっているか）
         # TPSL変異は値を変更するので、元の値と異なるかチェック

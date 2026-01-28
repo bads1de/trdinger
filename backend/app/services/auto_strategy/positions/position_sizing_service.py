@@ -310,41 +310,6 @@ class PositionSizingService:
             timestamp=datetime.now(),
         )
 
-    def calculate_position_size_simple(
-        self,
-        method: str = "volatility_based",
-        account_balance: float = 100000.0,
-        current_price: float = 50000.0,
-        **kwargs,
-    ) -> float:
-        """
-        簡易ポジションサイズ計算（後方互換性用）
-
-        Args:
-            method: 計算方式
-            account_balance: 口座残高
-            current_price: 現在価格
-            **kwargs: その他のパラメータ
-
-        Returns:
-            ポジションサイズ（数量）
-        """
-
-        @safe_operation(
-            context="簡易ポジションサイズ計算", is_api_call=False, default_return=0.0
-        )
-        def _calculate_position_size_simple():
-            gene = self._create_default_gene(method=method, **kwargs)
-            result = self.calculate_position_size(
-                gene=gene,
-                account_balance=account_balance,
-                current_price=current_price,
-                **kwargs,
-            )
-            return result.position_size
-
-        return _calculate_position_size_simple()
-
     def calculate_position_size_fast(
         self,
         gene,

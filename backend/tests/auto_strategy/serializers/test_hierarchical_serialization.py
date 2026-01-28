@@ -3,7 +3,7 @@ from app.services.auto_strategy.serializers.serialization import DictConverter
 
 
 def test_hierarchical_serialization():
-    converter = DictConverter(enable_smart_generation=False)
+    converter = DictConverter()
 
     cond_a = Condition(left_operand="A", operator=">", right_operand=10)
     cond_b = Condition(left_operand="B", operator="<", right_operand=5)

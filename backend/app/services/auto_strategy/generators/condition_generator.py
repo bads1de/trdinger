@@ -9,7 +9,6 @@ from ..config.constants import (
     IndicatorType,
 )
 from ..genes import Condition, ConditionGroup, IndicatorGene
-from ..utils.indicator_utils import IndicatorCharacteristics
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
 
@@ -37,9 +36,6 @@ class ConditionGenerator:
         """
         self.logger = logger
         self.ga_config_obj = ga_config  # GAConfigオブジェクトを保持
-
-        # 設定を読み込み
-        self.indicator_config = IndicatorCharacteristics.load_indicator_config()
 
         self.context = {
             "timeframe": None,
@@ -257,23 +253,28 @@ class ConditionGenerator:
         """統合されたサイド別条件生成ロジック"""
         target_name = name or indicator.type
 
-        # オブジェクトではなく、ユーティリティ経由で辞書形式の設定を取得（後方互換性とget()メソッド確保のため）
-        config_dict = IndicatorCharacteristics.get_indicator_config(
-            self.indicator_config, indicator.type
-        )
-        # 内部処理用のクラスオブジェクトも取得
+        # 直接レジストリから設定オブジェクトを取得
         config_obj = indicator_registry.get_indicator_config(indicator.type)
-
         threshold: Union[float, str] = 0.0
 
-        # 設定から閾値を取得を試みる
-        if config_dict:
-            val = IndicatorCharacteristics.get_threshold_from_config(
-                self.indicator_config, config_dict, side, self.context
-            )
+        if config_obj:
+            # 設定から閾値を取得を試みる
+            profile = self.context.get("threshold_profile", "normal")
+            thresholds = config_obj.thresholds or {}
+
+            val = None
+            if profile in thresholds and thresholds[profile]:
+                profile_config = thresholds[profile]
+                if side == "long":
+                    val = profile_config.get("long_gt") or profile_config.get("long_lt")
+                elif side == "short":
+                    val = profile_config.get("short_lt") or profile_config.get(
+                        "short_gt"
+                    )
+
             if val is not None:
                 threshold = val
-            elif config_obj:
+            else:
                 # 設定から取得できない場合のスマートなデフォルト値
                 scale_type = config_obj.scale_type
                 if scale_type in (
@@ -333,49 +334,32 @@ class ConditionGenerator:
     ) -> IndicatorType:
         """
         指標のタイプを取得（統合版）
-        優先順位: YAML設定 > indicator_registry > Characteristics
+        優先順位: indicator_registry
         """
         raw_name = indicator.type if isinstance(indicator, IndicatorGene) else indicator
         # レジストリがエイリアス解決を自動で行う
         indicator_name = raw_name.upper()
 
-        # 1. 設定をチェック
-        config = IndicatorCharacteristics.get_indicator_config(
-            self.indicator_config, indicator_name
-        )
-        if config and "type" in config:
-            type_map = {
-                "momentum": IndicatorType.MOMENTUM,
-                "trend": IndicatorType.TREND,
-                "volatility": IndicatorType.VOLATILITY,
-                "volume": IndicatorType.MOMENTUM,
-                "statistic": IndicatorType.VOLATILITY,  # 統計系はボラティリティとして扱う
-                "candles": IndicatorType.TREND,  # ローソク足パターンはトレンド判断に含める
-                "cycle": IndicatorType.MOMENTUM,  # サイクル系はモメンタムとして扱う
-            }
-            if config["type"] in type_map:
-                return type_map[config["type"]]
-
-        # 2. indicator_registryをチェック
+        # indicator_registryをチェック
         cfg = indicator_registry.get_indicator_config(indicator_name)
-        if cfg and hasattr(cfg, "category") and getattr(cfg, "category", None):
-            cat = str(getattr(cfg, "category", "")).lower()
-            if any(
-                k in cat
-                for k in ["momentum", "oscillator", "technical", "custom", "cycle"]
-            ):
-                return IndicatorType.MOMENTUM
-            elif any(
-                k in cat for k in ["trend", "overlap", "moving average", "candles"]
-            ):
-                return IndicatorType.TREND
-            elif any(k in cat for k in ["volatility", "statistics"]):
-                return IndicatorType.VOLATILITY
 
-        # 3. Characteristicsをチェック
-        characteristics = IndicatorCharacteristics.get_characteristics()
-        if indicator_name in characteristics:
-            return characteristics[indicator_name]["type"]
+        if cfg:
+            # 設定内のカテゴリー情報を使用
+            if getattr(cfg, "category", None):
+                cat = str(getattr(cfg, "category", "")).lower()
+
+                # 部分一致による推定
+                if any(
+                    k in cat
+                    for k in ["momentum", "oscillator", "technical", "custom", "cycle"]
+                ):
+                    return IndicatorType.MOMENTUM
+                elif any(
+                    k in cat for k in ["trend", "overlap", "moving average", "candles"]
+                ):
+                    return IndicatorType.TREND
+                elif any(k in cat for k in ["volatility", "statistics"]):
+                    return IndicatorType.VOLATILITY
 
         # デフォルト
         return IndicatorType.TREND

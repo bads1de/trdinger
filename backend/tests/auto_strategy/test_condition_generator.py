@@ -1,7 +1,3 @@
-from unittest.mock import patch
-
-import pytest
-
 from app.services.auto_strategy.generators.condition_generator import (
     ConditionGenerator,
 )
@@ -58,15 +54,3 @@ class TestConditionGenerator:
         assert isinstance(long_conditions, list)
         assert isinstance(short_conditions, list)
         assert isinstance(exit_conditions, list)
-
-    def test_generate_balanced_conditions_raises_exception_on_error(self):
-        """YAML設定読み込みでエラーが発生した場合に例外を投げることをテスト"""
-
-        with patch(
-            "app.services.auto_strategy.generators.condition_generator.IndicatorCharacteristics.load_indicator_config"
-        ) as mock_load:
-            mock_load.side_effect = Exception("YAML読み込みエラー")
-
-            # コンストラクタで失敗するので新しいインスタンスを作成
-            with pytest.raises(Exception):
-                ConditionGenerator()

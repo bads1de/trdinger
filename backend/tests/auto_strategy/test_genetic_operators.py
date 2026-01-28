@@ -2,25 +2,26 @@
 遺伝的演算子のテスト
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 import pytest
 import copy
 
 from app.services.auto_strategy.genes import (
-    Condition,
     IndicatorGene,
     PositionSizingGene,
     StrategyGene,
     TPSLGene,
 )
 
+
 class TestGeneticOperators:
     """遺伝的演算子のテスト"""
 
     @pytest.fixture
     def ga_config(self):
-        from app.services.auto_strategy.config import GASettings
-        return GASettings()
+        from app.services.auto_strategy.config import GAConfig
+
+        return GAConfig()
 
     @pytest.fixture
     def sample_strategy_gene(self):
@@ -59,6 +60,7 @@ class TestGeneticOperators:
 
     def test_adaptive_mutate(self, sample_strategy_gene, ga_config):
         """適応的突然変異率調整のテスト"""
+
         # 個体を作成（DEAP形式を模倣）
         class MockIndividual:
             def __init__(self, fitness_values):
@@ -125,23 +127,30 @@ class TestGeneticOperators:
         children = []
         for _ in range(50):
             child1, child2 = StrategyGene.crossover(
-                copy.deepcopy(parent1), copy.deepcopy(parent2), ga_config, crossover_type="uniform"
+                copy.deepcopy(parent1),
+                copy.deepcopy(parent2),
+                ga_config,
+                crossover_type="uniform",
             )
             children.extend([child1, child2])
 
         diverse = False
         for child in children:
             # 親と完全に同じでない子がいればOK
-            if (len(child.indicators) > 0 and 
-                (child.indicators[0].type != parent1.indicators[0].type or 
-                 child.risk_management["position_size"] != parent1.risk_management["position_size"])):
-                 # parent1と違う
-                 if (len(child.indicators) > 0 and 
-                    (child.indicators[0].type != parent2.indicators[0].type or 
-                     child.risk_management["position_size"] != parent2.risk_management["position_size"])):
-                     # parent2とも違う -> 混ざっている
-                     diverse = True
-                     break
-        
+            if len(child.indicators) > 0 and (
+                child.indicators[0].type != parent1.indicators[0].type
+                or child.risk_management["position_size"]
+                != parent1.risk_management["position_size"]
+            ):
+                # parent1と違う
+                if len(child.indicators) > 0 and (
+                    child.indicators[0].type != parent2.indicators[0].type
+                    or child.risk_management["position_size"]
+                    != parent2.risk_management["position_size"]
+                ):
+                    # parent2とも違う -> 混ざっている
+                    diverse = True
+                    break
+
         # 確率的なので失敗する可能性もゼロではないが、50回ならほぼ確実に混ざる
         assert diverse, "Uniform crossover should generate diverse offspring"

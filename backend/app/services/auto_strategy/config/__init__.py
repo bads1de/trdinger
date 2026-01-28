@@ -18,8 +18,6 @@ from .settings import (
     TradingSettings,
 )
 
-# 後方互換性のためのエイリアス
-GASettings = GAConfig
 
 # __all__ で公開するクラスを定義
 __all__ = [
@@ -28,7 +26,6 @@ __all__ = [
     # 個別設定クラス
     "TradingSettings",
     "IndicatorSettings",
-    "GASettings",  # 後方互換性（GAConfigのエイリアス）
     "GAConfig",
     "TPSLSettings",
     "PositionSizingSettings",
