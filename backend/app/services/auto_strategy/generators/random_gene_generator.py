@@ -42,7 +42,6 @@ class RandomGeneGenerator:
     def __init__(
         self,
         config: Any,
-        enable_smart_generation: bool = True,
         smart_context: dict | None = None,
     ):
         """
@@ -50,16 +49,13 @@ class RandomGeneGenerator:
 
         Args:
             config: GA設定オブジェクト
-            enable_smart_generation: ConditionGeneratorを使用するか
             smart_context: スマート条件生成のコンテキスト（timeframe/symbol/threshold_profile/regime_gating）
         """
         self.config = config
-        self.enable_smart_generation = enable_smart_generation
         self.smart_context = smart_context or {}
 
-        self.smart_condition_generator = ConditionGenerator(
-            enable_smart_generation, ga_config=config
-        )
+        # 常にスマート生成を使用
+        self.smart_condition_generator = ConditionGenerator(ga_config=config)
         # コンテキストがあれば適用
         try:
             smart_context = smart_context or {}

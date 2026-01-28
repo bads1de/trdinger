@@ -29,22 +29,12 @@ class StrategyConfig(BaseModel):
     strategy_type: Literal["GENERATED_GA", "MANUAL"]
     parameters: Union[GeneratedGAParameters, Dict[str, Any]]
 
-    @field_validator("strategy_type", mode="before")
-    @classmethod
-    def normalize_strategy_type(cls, v):
-        """後方互換性のため、古い戦略タイプ名を新しい名前にマッピング"""
-        if v == "GENERATED_AUTO":
-            return "GENERATED_GA"
-        return v
-
     @field_validator("parameters", mode="before")
     @classmethod
     def validate_parameters(cls, v, info):
         """strategy_typeに基づいてパラメータを適切なモデルに変換"""
         strategy_type = info.data.get("strategy_type")
-        # 正規化後の値を使用（GENERATED_AUTO -> GENERATED_GA）
-        if strategy_type == "GENERATED_AUTO":
-            strategy_type = "GENERATED_GA"
+
         if isinstance(v, dict) and strategy_type == "GENERATED_GA":
             return GeneratedGAParameters(**v)
         return v

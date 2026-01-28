@@ -28,17 +28,13 @@ class ConditionGenerator:
     """
 
     @safe_operation(context="ConditionGenerator初期化", is_api_call=False)
-    def __init__(
-        self, enable_smart_generation: bool = True, ga_config: Optional[Any] = None
-    ):
+    def __init__(self, ga_config: Optional[Any] = None):
         """
         初期化（統合後）
 
         Args:
-            enable_smart_generation: 新しいスマート生成を有効にするか
             ga_config: GAConfigオブジェクト (オプション)
         """
-        self.enable_smart_generation = enable_smart_generation
         self.logger = logger
         self.ga_config_obj = ga_config  # GAConfigオブジェクトを保持
 
@@ -154,7 +150,7 @@ class ConditionGenerator:
         """
         バランスの取れたロング・ショート条件を生成
         """
-        if not self.enable_smart_generation or not indicators:
+        if not indicators:
             return self.generate_fallback_conditions(indicators)
 
         # 統合された戦略パターン（Complex & MTF）

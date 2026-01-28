@@ -171,7 +171,8 @@ class DynamicIndicatorDiscovery:
                     "low": close - 1,
                     "close": close,
                     "volume": np.random.randint(100, 1000, 200).astype(float),
-                }
+                },
+                index=pd.date_range("2024-01-01", periods=200, freq="h"),
             )
 
             # パラメータの準備（データ引数を注入）

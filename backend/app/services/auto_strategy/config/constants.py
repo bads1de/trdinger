@@ -29,18 +29,18 @@ class TPSLMethod(str, Enum):
 class EntryType(str, Enum):
     """エントリー注文タイプ"""
 
-    MARKET = "market"  # 成行注文（現行デフォルト）
-    LIMIT = "limit"  # 指値注文（有利な価格での約定を狙う）
-    STOP = "stop"  # 逆指値注文（ブレイクアウト戦略向け）
-    STOP_LIMIT = "stop_limit"  # 逆指値指値注文（より精密な制御）
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+    STOP_LIMIT = "stop_limit"
 
 
 class IndicatorType(str, Enum):
     """指標分類"""
 
-    MOMENTUM = "momentum"  # モメンタム系
-    TREND = "trend"  # トレンド系
-    VOLATILITY = "volatility"  # ボラティリティ系
+    MOMENTUM = "momentum"
+    TREND = "trend"
+    VOLATILITY = "volatility"
 
 
 # === 演算子定数 ===
@@ -88,8 +88,8 @@ DEFAULT_TIMEFRAME = "1h"
 
 # 複合指標
 COMPOSITE_INDICATORS = [
-    "ICHIMOKU",  # 一目均衡表 (Ichimoku Kinko Hyo)
-    "UI",  # Ulcer指数 (Ulcer Index)
+    "ICHIMOKU",
+    "UI",
 ]
 
 

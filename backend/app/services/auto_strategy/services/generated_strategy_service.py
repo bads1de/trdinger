@@ -165,16 +165,9 @@ class GeneratedStrategyService:
         indicator_names = []
 
         # リスト形式の場合
-        if isinstance(indicators, list):
-            for indicator in indicators:
-                if indicator.get("enabled", False):
-                    indicator_names.append(indicator.get("type", "").upper())
-
-        # 辞書形式の場合（後方互換性）
-        elif isinstance(indicators, dict):
-            for indicator_type, indicator_config in indicators.items():
-                if indicator_config.get("enabled", False):
-                    indicator_names.append(indicator_type.upper())
+        for indicator in indicators:
+            if indicator.get("enabled", False):
+                indicator_names.append(indicator.get("type", "").upper())
 
         if indicator_names:
             return f"GA生成戦略_{'+'.join(indicator_names[:3])}"
@@ -187,20 +180,11 @@ class GeneratedStrategyService:
         enabled_indicators = []
 
         # リスト形式の場合
-        if isinstance(indicators, list):
-            enabled_indicators = [
-                indicator.get("type", "").upper()
-                for indicator in indicators
-                if indicator.get("enabled", False)
-            ]
-
-        # 辞書形式の場合（後方互換性）
-        elif isinstance(indicators, dict):
-            enabled_indicators = [
-                name.upper()
-                for name, config in indicators.items()
-                if config.get("enabled", False)
-            ]
+        enabled_indicators = [
+            indicator.get("type", "").upper()
+            for indicator in indicators
+            if indicator.get("enabled", False)
+        ]
 
         if enabled_indicators:
             return (
@@ -214,20 +198,11 @@ class GeneratedStrategyService:
         indicators = gene_data.get("indicators", [])
 
         # リスト形式の場合
-        if isinstance(indicators, list):
-            return [
-                indicator.get("type", "").upper()
-                for indicator in indicators
-                if indicator.get("enabled", False)
-            ]
-
-        # 辞書形式の場合（後方互換性）
-        elif isinstance(indicators, dict):
-            return [
-                name.upper()
-                for name, config in indicators.items()
-                if config.get("enabled", False)
-            ]
+        return [
+            indicator.get("type", "").upper()
+            for indicator in indicators
+            if indicator.get("enabled", False)
+        ]
 
         return []
 

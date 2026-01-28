@@ -7,7 +7,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
 class TestRandomGeneGenerator:
     def setup_method(self):
         self.config = GASettings()
-        self.generator = RandomGeneGenerator(self.config, enable_smart_generation=True)
+        self.generator = RandomGeneGenerator(self.config)
 
     def test_initialization(self):
         assert self.generator.config == self.config

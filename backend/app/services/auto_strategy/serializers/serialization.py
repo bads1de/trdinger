@@ -32,14 +32,11 @@ class DictConverter:
     再帰的な変換を管理します。
     """
 
-    def __init__(self, enable_smart_generation: bool = True):
+    def __init__(self):
         """
         初期化
-
-        Args:
-            enable_smart_generation: ConditionGeneratorを使用するか（現在このパラメータは未使用だが後方互換性のため保持）
         """
-        self.enable_smart_generation = enable_smart_generation
+        pass
 
     def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """
@@ -430,15 +427,11 @@ class DictConverter:
 
             long_entry_conditions = [
                 parse_condition_or_group(c)
-                for c in data.get(
-                    "long_entry_conditions", data.get("entry_conditions", [])
-                )
+                for c in data.get("long_entry_conditions", [])
             ]
             short_entry_conditions = [
                 parse_condition_or_group(c)
-                for c in data.get(
-                    "short_entry_conditions", data.get("entry_conditions", [])
-                )
+                for c in data.get("short_entry_conditions", [])
             ]
 
             # サブ遺伝子の復元
@@ -585,15 +578,11 @@ class GeneSerializer:
     辞書形式、または JSON 文字列との間の相互変換インターフェースを提供します。
     """
 
-    def __init__(self, enable_smart_generation: bool = True):
+    def __init__(self):
         """
         初期化
-
-        Args:
-            enable_smart_generation: ConditionGeneratorを使用するか
         """
-        self.dict_converter = DictConverter(enable_smart_generation)
-        self.enable_smart_generation = enable_smart_generation
+        self.dict_converter = DictConverter()
 
     def strategy_gene_to_dict(self, strategy_gene) -> Dict[str, Any]:
         """

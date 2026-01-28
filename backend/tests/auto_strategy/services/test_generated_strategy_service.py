@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -140,39 +140,6 @@ class TestGeneratedStrategyService:
             sort_order="asc",
         )
 
-    def test_convert_strategy_legacy_dict_format(self, service):
-        # gene_dataのindicatorsが辞書形式（旧形式）の場合のテスト
-        strategy = GeneratedStrategy(
-            id=2,
-            experiment_id=101,
-            generation=5,
-            fitness_score=1.2,
-            gene_data={
-                "indicators": {
-                    "rsi": {"enabled": True},
-                    "ema": {"enabled": True},
-                    "adx": {"enabled": False},
-                },
-                "timeframe": "1h",
-            },
-            created_at=datetime.now(),
-        )
-        strategy.backtest_result = None
-
-        converted = service._convert_generated_strategy_to_display_format(strategy)
-
-        assert converted is not None
-        assert "RSI" in converted["name"]
-        assert "EMA" in converted["name"]
-        assert "ADX" not in converted["name"]
-        assert "RSI" in converted["indicators"]
-        assert "EMA" in converted["indicators"]
-
-        # バックテスト結果がない場合のデフォルト値確認
-        assert converted["expected_return"] == 0.0
-        assert converted["max_drawdown"] == 0.0
-        assert converted["risk_level"] == "low"  # 0.0 <= 0.05 -> low
-
     def test_convert_strategy_error_handling(self, service):
         # 変換中にエラーが発生するケース（例: gene_dataがNoneでアクセス時にエラーなど）
         # ここではgene_dataがNoneだと仮定して、_extract_strategy_nameなどでエラーになるか、
@@ -258,6 +225,3 @@ class TestGeneratedStrategyService:
         with pytest.raises(Exception) as excinfo:
             service.get_strategies()
         assert "DB Error" in str(excinfo.value)
-
-
-from unittest.mock import PropertyMock

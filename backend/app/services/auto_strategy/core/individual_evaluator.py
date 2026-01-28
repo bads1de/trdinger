@@ -14,7 +14,6 @@ from typing import (
     Dict,
     Iterable,
     Mapping,
-    MutableSequence,
     Optional,
     Sequence,
     Tuple,
@@ -71,30 +70,29 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
 
         # ドローダウン値の抽出（Noneは0.0として扱う）
         drawdowns = [
-            float(p.get("drawdown", 0.0) or 0.0) 
-            if isinstance(p, Mapping) else 0.0 
+            float(p.get("drawdown", 0.0) or 0.0) if isinstance(p, Mapping) else 0.0
             for p in equity_curve
         ]
-        
+
         if not drawdowns:
             return 0.0
 
         dd_array = np.array(drawdowns)
-        
+
         # NaN除去
         dd_array = dd_array[~np.isnan(dd_array)]
-        
+
         if len(dd_array) == 0:
             return 0.0
 
         dd_array = np.abs(dd_array)
-        
+
         # ドローダウンがパーセンテージ（>1.0）の場合、小数（0.0-1.0）に変換
         # バックテストエンジンの出力形式に依存するが、安全のため閾値を設けて変換
         dd_array = np.where(dd_array > 1.0, dd_array / 100.0, dd_array)
 
         # 二乗平均平方根 (RMS)
-        return float(np.sqrt(np.mean(dd_array ** 2)))
+        return float(np.sqrt(np.mean(dd_array**2)))
 
     except Exception as e:
         logger.warning(f"Ulcer Index計算エラー: {e}")
@@ -193,7 +191,9 @@ class IndividualEvaluator:
         # バリデーションのためPydanticモデルを通す
         # strategy_configは個体ごとに生成されるため、ここではダミーを入れておく
         temp_config = backtest_config.copy()
-        if "strategy_config" not in temp_config:
+        if "strategy_config" not in temp_config or not temp_config.get(
+            "strategy_config", {}
+        ).get("strategy_type"):
             temp_config["strategy_config"] = {
                 "strategy_type": "GENERATED_GA",
                 "parameters": {"strategy_gene": {}},  # ダミー
@@ -280,7 +280,9 @@ class IndividualEvaluator:
         """
         return self.evaluate_individual(individual, config)
 
-    def evaluate_individual(self, individual: Any, config: GAConfig) -> Tuple[float, ...]:
+    def evaluate_individual(
+        self, individual: Any, config: GAConfig
+    ) -> Tuple[float, ...]:
         """
         個体を評価し、適応度（Fitness）のタプルを返す（実体）
         """
@@ -735,7 +737,7 @@ class IndividualEvaluator:
         try:
             # 高速化: シリアライザーとPydanticバリデーションをスキップ
             # geneオブジェクトをそのまま渡すことでシリアライズコストを削減
-            
+
             config_dict = backtest_config.copy()
 
             strategy_parameters = {
@@ -751,7 +753,7 @@ class IndividualEvaluator:
             # gene.id があれば使う
             gene_id = getattr(gene, "id", "unknown")[:8]
             config_dict["strategy_name"] = f"GA_Individual_{gene_id}"
-            
+
             # 高速化フラグ: BacktestOrchestratorでのバリデーションをスキップ
             config_dict["_skip_validation"] = True
 

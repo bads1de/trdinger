@@ -20,7 +20,7 @@ from app.services.auto_strategy.serializers.serialization import (
 @pytest.fixture
 def serializer() -> GeneSerializer:
     # enable_smart_generation=True がデフォルト挙動のため、それに従う
-    return GeneSerializer(enable_smart_generation=True)
+    return GeneSerializer()
 
 
 @pytest.fixture
@@ -104,12 +104,19 @@ def test_strategy_gene_round_trip_dict(
     assert restored.tpsl_gene.enabled is True
     # Enum の値（文字列）が正しく保持されていることを確認
     assert restored.tpsl_gene.method == base_strategy_gene.tpsl_gene.method.value
-    assert restored.tpsl_gene.stop_loss_pct == pytest.approx(base_strategy_gene.tpsl_gene.stop_loss_pct)
+    assert restored.tpsl_gene.stop_loss_pct == pytest.approx(
+        base_strategy_gene.tpsl_gene.stop_loss_pct
+    )
 
     # PositionSizingGene
     assert isinstance(restored.position_sizing_gene, PositionSizingGene)
-    assert restored.position_sizing_gene.method == base_strategy_gene.position_sizing_gene.method.value
-    assert restored.position_sizing_gene.fixed_quantity == pytest.approx(base_strategy_gene.position_sizing_gene.fixed_quantity)
+    assert (
+        restored.position_sizing_gene.method
+        == base_strategy_gene.position_sizing_gene.method.value
+    )
+    assert restored.position_sizing_gene.fixed_quantity == pytest.approx(
+        base_strategy_gene.position_sizing_gene.fixed_quantity
+    )
     # risk_management は DictConverter._clean_risk_management により加工される仕様
     assert "position_size" in data["risk_management"]
     assert data["risk_management"]["position_size"] == pytest.approx(0.123457, rel=1e-6)

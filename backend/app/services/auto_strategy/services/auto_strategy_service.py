@@ -28,16 +28,12 @@ class AutoStrategyService:
     GA実行、進捗管理、結果保存、戦略テストを統合的に管理します。
     """
 
-    def __init__(self, enable_smart_generation: bool = True):
+    def __init__(self):
         """
         初期化
-
-        Args:
-            enable_smart_generation: ConditionGeneratorを使用するか
         """
         # データベースセッションファクトリ
         self.db_session_factory = SessionLocal
-        self.enable_smart_generation = enable_smart_generation
 
         # サービスの初期化
         self.backtest_service: BacktestService
