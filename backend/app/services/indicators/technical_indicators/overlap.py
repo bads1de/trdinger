@@ -248,58 +248,49 @@ class OverlapIndicators:
         scalar: float = 1.0,
         intercept: bool = False,
     ) -> pd.Series:
-        """線形回帰 (pandas-ta)"""
+        """線形回帰 (pandas-ta ベクトル化版)"""
         validation = validate_series_params(data, length, min_data_length=length)
         if validation is not None:
             return validation
 
-        values = [np.nan] * (length - 1)
+        # pandas-ta の linreg を使用 (内部でベクトル化されている)
+        # intercept=True の場合は y切片そのものを返す
+        # intercept=False の場合はその時点での回帰線の値を返す
+        # offset は 0 固定 (デフォルト)
+        # tsf (Time Series Forecast) は linreg と同様
+        result = ta.linreg(data, length=length, offset=0)
 
-        for i in range(length - 1, len(data)):
-            window = data[i - length + 1 : i + 1]
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
-            # 欠損値が含まれる場合は計算をスキップ
-            if window.isna().any():
-                values.append(np.nan)
-                continue
+        # interceptが必要な場合（あまり一般的ではないが元のコードにあるためサポート）
+        if intercept:
+            # intercept = y - slope * x
+            # pandas-taには直接interceptを出すフラグがないため、slopeを取得して逆算
+            slope = ta.linreg(data, length=length, slope=True)
+            # xの中心を (length-1) と想定
+            intercept_val = result - slope * (length - 1)
+            return intercept_val * scalar
 
-            x = np.arange(length)
-            coeffs = np.polyfit(x, window, 1)  # [slope, intercept]
-            if intercept:
-                value = coeffs[1]  # y切片
-            else:
-                # 中心点の値を計算
-                mid_x = (length - 1) / 2
-                value = coeffs[0] * mid_x + coeffs[1]
-            values.append(value * scalar)
-
-        return pd.Series(values, index=data.index)
+        return result * scalar
 
     @staticmethod
     @handle_pandas_ta_errors
     def linregslope(
         data: pd.Series, length: int = 14, scalar: float = 1.0
     ) -> pd.Series:
-        """線形回帰スロープ"""
+        """線形回帰スロープ (pandas-ta ベクトル化版)"""
         validation = validate_series_params(data, length, min_data_length=length)
         if validation is not None:
             return validation
 
-        slopes = [np.nan] * (length - 1)
+        # pandas-ta の linreg に slope=True を指定
+        result = ta.linreg(data, length=length, slope=True)
 
-        for i in range(length - 1, len(data)):
-            window = data[i - length + 1 : i + 1]
+        if result is None:
+            return pd.Series(np.full(len(data), np.nan), index=data.index)
 
-            # 欠損値が含まれる場合は計算をスキップ
-            if window.isna().any():
-                slopes.append(np.nan)
-                continue
-
-            x = np.arange(length)
-            slope = np.polyfit(x, window, 1)[0]  # 1次多項式の係数（スロープ）
-            slopes.append(slope * scalar)  # scalarを適用
-
-        return pd.Series(slopes, index=data.index)
+        return result * scalar
 
     @staticmethod
     @handle_pandas_ta_errors

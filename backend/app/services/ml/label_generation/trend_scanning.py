@@ -19,7 +19,7 @@ def _trend_scanning_loop_numba(
     return_t_value_as_label: bool,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    トレンドスキャンのメインループ（Numba最適化）
+    トレンドスキャンのメインループ（Numba最適化 O(N*W)版）
 
     Returns:
         out_t_vals (np.ndarray): t値
@@ -29,9 +29,18 @@ def _trend_scanning_loop_numba(
     n_events = len(t0_indices)
     max_len = len(close_vals)
 
+    # 累計和の事前計算 (O(L))
+    cumsum_y = np.zeros(max_len + 1)
+    cumsum_xy = np.zeros(max_len + 1)
+    cumsum_yy = np.zeros(max_len + 1)
+    for i in range(max_len):
+        val = close_vals[i]
+        cumsum_y[i + 1] = cumsum_y[i] + val
+        cumsum_xy[i + 1] = cumsum_xy[i] + i * val
+        cumsum_yy[i + 1] = cumsum_yy[i] + val * val
+
     out_t_vals = np.zeros(n_events, dtype=np.float64)
     out_bins = np.zeros(n_events, dtype=np.float64)
-    # -1で初期化
     out_t1_idxs = np.full(n_events, -1, dtype=np.int64)
 
     for i in range(n_events):
@@ -39,73 +48,72 @@ def _trend_scanning_loop_numba(
         if t0_idx == -1:
             continue
 
-        # 最適化ロジック (Inline _find_best_window_numba)
         best_t_val = 0.0
         best_L = 0.0
         max_abs_t = -1.0
         found = False
 
-        # Window Loop
+        # Window Loop (O(W))
         for L in range(min_window, max_window + 1, step):
-            if t0_idx + L >= max_len:
+            t1_idx = t0_idx + L
+            if t1_idx >= max_len:
                 break
 
-            n = L + 1
+            n_val = float(L + 1)
 
-            # Regression: Y = alpha + beta * X
-            # X = 0, 1, ..., L
+            # 区間統計量を累計和から取得 (O(1))
+            sum_y = cumsum_y[t1_idx + 1] - cumsum_y[t0_idx]
+            sum_yy = cumsum_yy[t1_idx + 1] - cumsum_yy[t0_idx]
+            sum_ty = cumsum_xy[t1_idx + 1] - cumsum_xy[t0_idx]
+            sum_xy = sum_ty - t0_idx * sum_y
 
-            # Sum X, Sum XX
+            # X = 0, 1, ..., L の統計量 (定数)
             sum_x = L * (L + 1) * 0.5
             sum_xx = L * (L + 1) * (2 * L + 1) / 6.0
 
-            sum_y = 0.0
-            sum_xy = 0.0
-
-            # Data Loop (Calculate Sum Y, Sum XY)
-            for k in range(n):
-                val = close_vals[t0_idx + k]
-                sum_y += val
-                sum_xy += k * val
-
-            denominator = n * sum_xx - sum_x * sum_x
-
-            # 分母がほぼ0の場合、回帰不能
-            if abs(denominator) < 1e-9:
+            denominator = n_val * sum_xx - sum_x * sum_x
+            if abs(denominator) < 1e-12:
                 continue
 
-            slope = (n * sum_xy - sum_x * sum_y) / denominator
-            intercept = (sum_y - slope * sum_x) / n
+            # 区間の偏差平方和 (ss_y) で価格が一定かチェック
+            ss_y = sum_yy - (sum_y * sum_y) / n_val
+            if ss_y < 1e-12:
+                slope = 0.0
+                intercept = sum_y / n_val
+                sum_res_sq = 0.0
+            else:
+                # 回帰係数
+                slope = (n_val * sum_xy - sum_x * sum_y) / denominator
+                intercept = (sum_y - slope * sum_x) / n_val
+                # 残差平方和 (RSS)
+                sum_res_sq = max(0.0, sum_yy - intercept * sum_y - slope * sum_xy)
 
-            # Calculate Residuals & t-value
-            sum_res_sq = 0.0
-            for k in range(n):
-                val = close_vals[t0_idx + k]
-                pred = slope * k + intercept
-                res = val - pred
-                sum_res_sq += res * res
-
-            if n <= 2:
+            if n_val <= 2:
                 continue
 
-            sigma_eps_sq = sum_res_sq / (n - 2)
-            sigma_eps = np.sqrt(sigma_eps_sq) if sigma_eps_sq > 0 else 0.0
+            sigma_eps_sq = sum_res_sq / (n_val - 2)
+            sigma_eps = np.sqrt(max(0.0, sigma_eps_sq))
 
-            ss_x = sum_xx - (sum_x * sum_x) / n
+            ss_x = sum_xx - (sum_x * sum_x) / n_val
 
             t_val = 0.0
-            # 標準誤差の計算
-            if ss_x > 1e-9 and sigma_eps > 1e-9:
+            # 傾きがほぼ0、または残差がほぼ0（完全一致）の場合はガード
+            if abs(slope) < 1e-11 or sum_res_sq < 1e-11:
+                if abs(slope) < 1e-14:
+                    t_val = 0.0
+                else:
+                    t_val = 100.0 if slope > 0 else -100.0
+            elif ss_x > 1e-12 and sigma_eps > 1e-12:
                 se_slope = sigma_eps / np.sqrt(ss_x)
                 t_val = slope / se_slope
-                # t値をクリップ
                 if t_val > 100.0:
                     t_val = 100.0
                 if t_val < -100.0:
                     t_val = -100.0
-            elif abs(slope) > 1e-9:
-                # 完全一致直線の場合など
+            elif abs(slope) > 1e-12:
                 t_val = 100.0 if slope > 0 else -100.0
+            else:
+                t_val = 0.0
 
             abs_t = abs(t_val)
             if abs_t > max_abs_t:
@@ -113,8 +121,6 @@ def _trend_scanning_loop_numba(
                 best_t_val = t_val
                 best_L = float(L)
                 found = True
-
-        # End Window Loop
 
         if found:
             out_t_vals[i] = best_t_val
@@ -181,7 +187,6 @@ class TrendScanning:
         """
         t_events = t_events if t_events is not None else close.index
         # t_eventsがclose.indexに含まれるものだけにフィルタ
-        # NOTE: isinは遅い場合があるが、ここでは安全性優先
         t_events = t_events[t_events.isin(close.index)]
         if t_events.empty:
             return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
@@ -195,7 +200,6 @@ class TrendScanning:
         idxs = close.index.get_indexer(t_events)
 
         # Numbaで一括計算
-        # min_window, max_window, stepはクラスメンバだが、Numbaに渡すためローカル変数化または直接渡す
         t_vals, bins, t1_idxs = _trend_scanning_loop_numba(
             close_values,
             idxs,
@@ -207,7 +211,6 @@ class TrendScanning:
         )
 
         # 結果構築（有効な結果のみ抽出）
-        # t1_idxs != -1 の要素のみ
         valid_mask = t1_idxs != -1
 
         if not np.any(valid_mask):
@@ -223,8 +226,6 @@ class TrendScanning:
         valid_t1 = close.index[valid_t1_idxs]
 
         # return計算 (元の価格ベース)
-        # 対数価格を渡した場合でも、ここでのretは実価格の変動率として出すのが一般的
-        # close.values は元の価格
         p1 = close.values[valid_t1_idxs]
         p0 = close.values[valid_t0_idxs]
         returns = (p1 / p0) - 1.0

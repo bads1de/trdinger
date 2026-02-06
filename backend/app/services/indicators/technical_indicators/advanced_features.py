@@ -25,16 +25,24 @@ class AdvancedFeatures:
     @staticmethod
     def get_weights_ffd(d: float, thres: float, lim: int) -> np.ndarray:
         """
-        分数微分（固定ウィンドウ）の重みを計算します。
+        分数微分（固定ウィンドウ）の重みを計算します (ベクトル化版)。
         """
-        w, k = [1.0], 1
-        while True:
-            w_k = -w[-1] / k * (d - k + 1)
-            if abs(w_k) < thres or len(w) >= lim:
-                break
-            w.append(w_k)
-            k += 1
-        return np.array(w[::-1]).reshape(-1, 1)
+        if lim <= 1:
+            return np.array([1.0])
+
+        # k = 1, 2, ..., lim-1
+        k = np.arange(1, lim)
+        # 係数ベクトル: -(d - k + 1) / k
+        multipliers = -(d - k + 1) / k
+        # w_k = w_{k-1} * multipliers[k-1]
+        # w_0 = 1.0 なので、cumprodで計算可能
+        weights = np.concatenate(([1.0], np.cumprod(multipliers)))
+
+        # 閾値による切り捨て
+        mask = np.abs(weights) >= thres
+        weights = weights[mask]
+
+        return weights.reshape(-1, 1)
 
     @staticmethod
     def z_score(series: pd.Series, window: int = 20) -> pd.Series:
@@ -514,9 +522,12 @@ class AdvancedFeatures:
             # 過去の実装に合わせてすべてNaNを返す
             return pd.Series(np.nan, index=series.index, name=series.name)
 
-        # np.convolveを使って高速計算
-        # mode='valid' で重みが完全に重なる部分のみ計算
-        diff_vals = np.convolve(series_vals, w[::-1], mode="valid")
+        # np.convolve(x, w, mode='valid') で
+        # y[n] = sum_{k=0}^{M-1} x[n-k] * w[k] を計算
+        # mode='valid' の場合、長さ L と M の配列から L-M+1 の結果が返る
+        # np.convolve は内部で第2引数(w)を反転させてスライドさせるため、
+        # [w0, w1, ..., wM-1] をそのまま渡せば y[t] = x[t]w0 + x[t-1]w1 + ... となる
+        diff_vals = np.convolve(series_vals, w, mode="valid")
 
         # 結果の配列をNaNで初期化し、計算結果を埋める
         result = np.full(len(series), np.nan)

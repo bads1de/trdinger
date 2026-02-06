@@ -188,39 +188,40 @@ class VolumeProfileFeatureCalculator:
                 high_arr, low_arr, close_arr, volume_arr, period, self.num_bins
             )
 
-            # 手動でNaN埋め
+            # 手動でのNaN埋めをベクトル化 (Forward fill)
             def safe_fill(arr):
-                res = np.copy(arr)
-                last_val = 0.0
-                for i in range(len(res)):
-                    if np.isnan(res[i]):
-                        res[i] = last_val
-                    else:
-                        last_val = res[i]
-                return res
+                return pd.Series(arr).ffill().fillna(0.0).values
 
             poc_f, vah_f, val_f = safe_fill(poc), safe_fill(vah), safe_fill(val)
 
-            # 距離計算 (NumPy不具合を避けるためプリミティブ操作)
-            features_dict[f"POC_Distance_{period}"] = [
-                (close_arr[i] - poc_f[i]) / poc_f[i] if poc_f[i] != 0 else 0.0
-                for i in range(n)
-            ]
-            features_dict[f"VAH_Distance_{period}"] = [
-                (close_arr[i] - vah_f[i]) / vah_f[i] if vah_f[i] != 0 else 0.0
-                for i in range(n)
-            ]
-            features_dict[f"VAL_Distance_{period}"] = [
-                (close_arr[i] - val_f[i]) / val_f[i] if val_f[i] != 0 else 0.0
-                for i in range(n)
-            ]
-            features_dict[f"In_Value_Area_{period}"] = [
-                1.0 if val_f[i] <= close_arr[i] <= vah_f[i] else 0.0 for i in range(n)
-            ]
-            features_dict[f"Value_Area_Width_{period}"] = [
-                (vah_f[i] - val_f[i]) / poc_f[i] if poc_f[i] != 0 else 0.0
-                for i in range(n)
-            ]
+            # 距離計算 (ベクトル化)
+            features_dict[f"POC_Distance_{period}"] = np.divide(
+                (close_arr - poc_f),
+                poc_f,
+                out=np.zeros_like(poc_f),
+                where=poc_f != 0,
+            )
+            features_dict[f"VAH_Distance_{period}"] = np.divide(
+                (close_arr - vah_f),
+                vah_f,
+                out=np.zeros_like(vah_f),
+                where=vah_f != 0,
+            )
+            features_dict[f"VAL_Distance_{period}"] = np.divide(
+                (close_arr - val_f),
+                val_f,
+                out=np.zeros_like(val_f),
+                where=val_f != 0,
+            )
+            features_dict[f"In_Value_Area_{period}"] = (
+                (val_f <= close_arr) & (close_arr <= vah_f)
+            ).astype(np.float64)
+            features_dict[f"Value_Area_Width_{period}"] = np.divide(
+                (vah_f - val_f),
+                poc_f,
+                out=np.zeros_like(poc_f),
+                where=poc_f != 0,
+            )
 
         hvn, lvn = _numba_detect_volume_nodes_signed(
             high_arr,

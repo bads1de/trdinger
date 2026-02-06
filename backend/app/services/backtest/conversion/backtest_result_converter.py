@@ -334,21 +334,19 @@ class BacktestResultConverter:
         total_trades: int,
     ) -> None:
         """個別の取引データから指標を計算してstatisticsを更新"""
-        wins = 0
-        winning_pnl = 0.0
-        losing_pnl = 0.0
-        win_count = 0
-        loss_count = 0
+        # PnL列を数値に変換し、NaNを0で埋める
+        pnl_series = pd.to_numeric(trades_df[pnl_col], errors="coerce").fillna(0.0)
 
-        for _, trade in trades_df.iterrows():
-            pnl_value = self._safe_float_conversion(trade.get(pnl_col, 0))
-            if pnl_value > 0:
-                wins += 1
-                winning_pnl += pnl_value
-                win_count += 1
-            elif pnl_value < 0:
-                losing_pnl += pnl_value
-                loss_count += 1
+        # 勝ちトレードと負けトレードのマスク作成
+        wins_mask = pnl_series > 0
+        losses_mask = pnl_series < 0
+
+        # カウントと合計を計算
+        win_count = int(wins_mask.sum())
+        loss_count = int(losses_mask.sum())
+        winning_pnl = float(pnl_series[wins_mask].sum())
+        losing_pnl = float(pnl_series[losses_mask].sum())
+        wins = win_count
 
         # 詳細指標を計算
         calculated_win_rate = (
@@ -460,23 +458,71 @@ class BacktestResultConverter:
                 logger.debug("バックテストで取引が発生しませんでした")
                 return []
 
-            trades = []
-            for _, trade in trades_df.iterrows():
-                trade_dict = {
-                    "entry_time": self._safe_timestamp_conversion(
-                        trade.get("EntryTime")
-                    ),
-                    "exit_time": self._safe_timestamp_conversion(trade.get("ExitTime")),
-                    "entry_price": self._safe_float_conversion(trade.get("EntryPrice")),
-                    "exit_price": self._safe_float_conversion(trade.get("ExitPrice")),
-                    "size": self._safe_float_conversion(trade.get("Size")),
-                    "pnl": self._safe_float_conversion(trade.get("PnL")),
-                    "return_pct": self._safe_float_conversion(trade.get("ReturnPct")),
-                    "duration": self._safe_int_conversion(trade.get("Duration")),
-                }
-                trades.append(trade_dict)
+            # ベクトル化された変換 (破損データへの耐性を持たせる)
+            df = trades_df.copy()
 
-            return trades
+            # 期待されるカラムのリストと、変換設定
+            conversions = [
+                (
+                    "entry_time",
+                    "EntryTime",
+                    lambda s: pd.to_datetime(s, errors="coerce").dt.to_pydatetime(),
+                ),
+                (
+                    "exit_time",
+                    "ExitTime",
+                    lambda s: pd.to_datetime(s, errors="coerce").dt.to_pydatetime(),
+                ),
+                (
+                    "entry_price",
+                    "EntryPrice",
+                    lambda s: pd.to_numeric(s, errors="coerce"),
+                ),
+                (
+                    "exit_price",
+                    "ExitPrice",
+                    lambda s: pd.to_numeric(s, errors="coerce"),
+                ),
+                ("size", "Size", lambda s: pd.to_numeric(s, errors="coerce")),
+                ("pnl", "PnL", lambda s: pd.to_numeric(s, errors="coerce")),
+                (
+                    "return_pct",
+                    "ReturnPct",
+                    lambda s: pd.to_numeric(s, errors="coerce"),
+                ),
+                (
+                    "duration",
+                    "Duration",
+                    lambda s: pd.to_numeric(s, errors="coerce").fillna(0).astype(int),
+                ),
+            ]
+
+            for target_col, source_col, func in conversions:
+                if source_col in df.columns:
+                    try:
+                        df[target_col] = func(df[source_col])
+                    except Exception:
+                        df[target_col] = None if "time" in target_col else 0.0
+                else:
+                    df[target_col] = None if "time" in target_col else 0.0
+
+            # 数値列のNaNを0.0で埋める
+            num_cols = ["entry_price", "exit_price", "size", "pnl", "return_pct"]
+            for col in num_cols:
+                df[col] = df[col].fillna(0.0)
+
+            # 必要なカラムのみ抽出してリストに変換
+            result_cols = [
+                "entry_time",
+                "exit_time",
+                "entry_price",
+                "exit_price",
+                "size",
+                "pnl",
+                "return_pct",
+                "duration",
+            ]
+            return df[result_cols].to_dict("records")
 
         except Exception as e:
             logger.warning(f"取引履歴の変換中にエラー: {e}")
@@ -493,20 +539,23 @@ class BacktestResultConverter:
                 return []
 
             # データ量を制限（最大1000ポイント）
-            if len(equity_df) > 1000:
-                step = len(equity_df) // 1000
-                equity_df = equity_df.iloc[::step]
+            df = equity_df.copy()
+            if len(df) > 1000:
+                step = len(df) // 1000
+                df = df.iloc[::step]
 
-            equity_curve = []
-            for timestamp, row in equity_df.iterrows():
-                equity_point = {
-                    "timestamp": self._safe_timestamp_conversion(timestamp),
-                    "equity": self._safe_float_conversion(row.get("Equity")),
-                    "drawdown": self._safe_float_conversion(row.get("DrawdownPct", 0)),
-                }
-                equity_curve.append(equity_point)
+            # インデックス（タイムスタンプ）の処理
+            df["timestamp"] = [self._safe_timestamp_conversion(t) for t in df.index]
 
-            return equity_curve
+            # カラムの数値変換
+            df["equity"] = pd.to_numeric(df["Equity"], errors="coerce").fillna(0.0)
+            df["drawdown"] = pd.to_numeric(
+                df.get("DrawdownPct", 0), errors="coerce"
+            ).fillna(0.0)
+
+            # 必要なカラムのみ抽出してリストに変換
+            result_cols = ["timestamp", "equity", "drawdown"]
+            return df[result_cols].to_dict("records")
 
         except Exception as e:
             logger.warning(f"エクイティカーブの変換中にエラー: {e}")
@@ -552,6 +601,3 @@ class BacktestResultConverter:
                 return pd.to_datetime(value).to_pydatetime()
         except Exception:
             return None
-
-
-

@@ -9,6 +9,7 @@ import logging
 import math
 from typing import Any, Dict
 
+import numpy as np
 import pandas as pd
 
 from .base_feature_calculator import BaseFeatureCalculator
@@ -63,29 +64,42 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         if target_col is None:
             return df, None
 
-        # データの抽出 (NumPy不具合を避けるため、一度値をプリミティブ化)
-        data_ts = [
-            pd.Timestamp(t).tz_localize(None)
-            for t in (
-                data["timestamp"].tolist()
-                if "timestamp" in data.columns
-                else data.index.tolist()
-            )
-        ]
-        data_vals = [float(x) for x in data[target_col].tolist()]
-        df_ts = [pd.Timestamp(t).tz_localize(None) for t in df.index.tolist()]
-
-        merged_vals = []
-        for t in df_ts:
-            match_val = 0.0  # Default
-            for i in range(len(data_ts) - 1, -1, -1):
-                if data_ts[i] <= t:
-                    match_val = data_vals[i]
-                    break
-            merged_vals.append(match_val)
-
+        # データの準備 (タイムゾーンを考慮しつつベクトル化)
+        # 元のDFのインデックスを保持
         res = df.copy()
-        res[target_col + suffix] = merged_vals
+
+        # 結合用の一時的なDFを作成
+        df_temp = pd.DataFrame(index=df.index)
+        df_temp["__orig_index__"] = df.index
+        # タイムゾーンを排除して正規化（結合のため）
+        df_temp.index = df_temp.index.tz_localize(None)
+
+        data_temp = data.copy()
+        if "timestamp" in data_temp.columns:
+            data_temp["timestamp"] = pd.to_datetime(
+                data_temp["timestamp"]
+            ).dt.tz_localize(None)
+            data_temp = data_temp.sort_values("timestamp")
+            on_col = "timestamp"
+        else:
+            data_temp.index = data_temp.index.tz_localize(None)
+            data_temp = data_temp.sort_index()
+            on_col = None
+
+        # pd.merge_asof を使用して高速に結合
+        merged = pd.merge_asof(
+            df_temp,
+            data_temp[[target_col, on_col] if on_col else [target_col]],
+            left_index=True,
+            right_on=on_col if on_col else None,
+            right_index=True if on_col is None else False,
+            direction="backward",
+        )
+
+        # 元のインデックスに戻す
+        merged.index = merged["__orig_index__"]
+        res[target_col + suffix] = merged[target_col].fillna(0.0)
+
         return res, target_col + suffix
 
     def calculate_funding_rate_features(
@@ -100,40 +114,32 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             )
             if fr_col is None:
                 return df
-            fr_s = [float(x) for x in res[fr_col].tolist()]
-            n = len(fr_s)
 
-            # Z-Score
-            zscores = []
-            for i in range(n):
-                w = fr_s[max(0, i - 167) : i + 1]
-                m = sum(w) / len(w)
-                v = (sum((x - m) ** 2 for x in w) / len(w)) ** 0.5
-                zscores.append((fr_s[i] - m) / v if v > 1e-9 else 0.0)
+            # Seriesとして取得
+            fr_series = res[fr_col]
+
+            # Z-Score (ベクトル化)
+            roll = fr_series.rolling(window=168, min_periods=1)
+            m = roll.mean()
+            s = roll.std(ddof=0)  # 元の実装に合わせる
+            zscores = ((fr_series - m) / s).fillna(0.0).replace([np.inf, -np.inf], 0.0)
 
             # EMA
-            def get_ema(values, span):
-                if not values:
-                    return []
-                a = 2 / (span + 1)
-                e = [values[0]]
-                for j in range(1, len(values)):
-                    e.append(e[-1] + a * (values[j] - e[-1]))
-                return e
+            ema12 = fr_series.ewm(span=12, adjust=False).mean()
+            ema26 = fr_series.ewm(span=26, adjust=False).mean()
+            macd = ema12 - ema26
 
-            macd = [e1 - e2 for e1, e2 in zip(get_ema(fr_s, 12), get_ema(fr_s, 26))]
+            # 結果構築
+            res["FR_Extremity_Zscore"] = zscores
+            res["FR_MA_24"] = fr_series.rolling(window=24, min_periods=1).mean()
+            res["FR_MACD"] = macd
+            res["FR_Momentum"] = fr_series.diff().fillna(0.0)
 
-            # 結果構築 (辞書による再構築)
-            data = {c: df[c].tolist() for c in df.columns}
-            data.update(
-                {
-                    "FR_Extremity_Zscore": zscores,
-                    "FR_MA_24": [0.0] * n,
-                    "FR_MACD": macd,
-                    "FR_Momentum": 0.0,
-                }
-            )
-            return pd.DataFrame(data, index=df.index)
+            # 不要な中間カラムを削除
+            if fr_col in res.columns:
+                del res[fr_col]
+
+            return res
         except Exception as e:
             logger.error(f"FR特徴量計算エラー: {e}")
             return df
@@ -170,53 +176,44 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
     def _calculate_oi_derived_features(
         self, df: pd.DataFrame, oi_s: pd.Series
     ) -> pd.DataFrame:
-        import math
-
-        oi_vals = [float(x) for x in oi_s.tolist()]
-        n = len(oi_vals)
+        n = len(oi_s)
         if n == 0:
             return df
 
-        # RSI
-        diffs = [0.0] + [oi_vals[i] - oi_vals[i - 1] for i in range(1, n)]
-        rsi = []
-        for i in range(n):
-            w = diffs[max(0, i - 13) : i + 1]
-            up = sum(x for x in w if x > 0) / 14
-            down = sum(abs(x) for x in w if x < 0) / 14
-            rsi.append(100 - (100 / (1 + up / down)) if down != 0 else 50.0)
+        # RSI (ベクトル化)
+        delta = oi_s.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=1).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        rsi = rsi.fillna(50.0)
 
-        # MACD
-        def get_ema(values, span):
-            if not values:
-                return []
-            a = 2 / (span + 1)
-            e = [values[0]]
-            for j in range(1, len(values)):
-                e.append(e[-1] + a * (values[j] - e[-1]))
-            return e
-
-        macd = [e1 - e2 for e1, e2 in zip(get_ema(oi_vals, 12), get_ema(oi_vals, 26))]
+        # MACD (ベクトル化)
+        ema12 = oi_s.ewm(span=12, adjust=False).mean()
+        ema26 = oi_s.ewm(span=26, adjust=False).mean()
+        macd = ema12 - ema26
 
         # 結果構築
-        data = {c: df[c].tolist() for c in df.columns}
-        data.update(
-            {
-                "OI_RSI": rsi,
-                "OI_MACD": macd,
-                "OI_Change_Rate": [0.0] * n,
-                "OI_Trend_Strength": [0.0] * n,
-                "OI_Price_Divergence": [0.0] * n,
-                "Price_OI_Divergence": 0.0,
-            }
+        res = df.copy()
+        res["OI_RSI"] = rsi
+        res["OI_MACD"] = macd
+        res["OI_Change_Rate"] = oi_s.pct_change().fillna(0.0)
+        res["OI_Trend_Strength"] = (
+            oi_s.rolling(window=20)
+            .corr(pd.Series(range(n), index=oi_s.index))
+            .fillna(0.0)
         )
-        if "volume" in df.columns:
-            v_vals = [float(x) for x in df["volume"].tolist()]
-            data["Volume_OI_Ratio"] = [
-                math.log((v_vals[i] + 1) / (oi_vals[i] + 1)) for i in range(n)
-            ]
+        res["OI_Price_Divergence"] = (
+            df["close"].pct_change() - res["OI_Change_Rate"]
+        ).fillna(0.0)
+        res["Price_OI_Divergence"] = (
+            df["close"].rolling(window=20).corr(oi_s).fillna(0.0)
+        )
 
-        return pd.DataFrame(data, index=df.index)
+        if "volume" in df.columns:
+            res["Volume_OI_Ratio"] = np.log((df["volume"] + 1) / (oi_s + 1))
+
+        return res
 
     def calculate_composite_features(
         self,
@@ -232,35 +229,31 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             )
             if fr_col is None or oi_col is None:
                 return df
-            fr_vals = [float(x) for x in res[fr_col].tolist()]
-            oi_vals = [float(x) for x in res[oi_col].tolist()]
-            n = len(fr_vals)
 
-            stress = [
-                math.sqrt(
-                    (fr_vals[i] * 1000) ** 2
-                    + (
-                        oi_vals[i]
-                        / max(1, sum(oi_vals[: i + 1]) / len(oi_vals[: i + 1]))
-                        - 1
-                    )
-                    ** 2
-                )
-                for i in range(n)
-            ]
+            fr_vals = res[fr_col]
+            oi_vals = res[oi_col]
 
-            data = {
-                c: res[c].tolist() for c in res.columns if c not in [fr_col, oi_col]
-            }
-            data.update(
-                {
-                    "Market_Stress": stress,
-                    "FR_Cumulative_Trend": 0.0,
-                    "FR_OI_Sentiment": 0.0,
-                    "OI_Weighted_Price_Dev": 0.0,
-                }
+            # Stress (ベクトル化)
+            # OIの移動平均を計算
+            oi_mean = oi_vals.expanding(min_periods=1).mean()
+            stress = np.sqrt(
+                (fr_vals * 1000) ** 2 + (oi_vals / oi_mean.replace(0, 1) - 1) ** 2
             )
-            return pd.DataFrame(data, index=df.index)
+
+            res["Market_Stress"] = stress
+            res["FR_Cumulative_Trend"] = fr_vals.cumsum()
+            res["FR_OI_Sentiment"] = fr_vals * oi_vals.pct_change().fillna(0.0)
+            res["OI_Weighted_Price_Dev"] = (
+                oi_vals * (df["close"] - df["close"].rolling(window=24).mean())
+            ).fillna(0.0)
+
+            # 不要な中間カラムを削除
+            if fr_col in res.columns:
+                del res[fr_col]
+            if oi_col in res.columns:
+                del res[oi_col]
+
+            return res
         except Exception as e:
             logger.error(f"複合特徴量計算エラー: {e}")
             return df

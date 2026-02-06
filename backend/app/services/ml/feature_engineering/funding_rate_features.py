@@ -44,72 +44,97 @@ class FundingRateFeatureCalculator:
         """全特徴量を計算"""
         if f_df is None or f_df.empty:
             return df.copy()
-        
-        # 1. データ準備とマージ (pd.merge_asofを避ける)
+
+        # 1. データ準備とマージ (pd.merge_asofを使用)
         res = df.copy()
         if not isinstance(res.index, pd.DatetimeIndex):
-            res = res.set_index("timestamp") if "timestamp" in res.columns else res
-        
-        # 手動アソシエーション
-        f_sorted = f_df.sort_values("timestamp")
-        f_times = f_sorted["timestamp"].values
-        f_rates = f_sorted["funding_rate"].values
-        
-        # 各OHLCV行に対して、それ以前の最新のFRを紐付ける
-        target_rates = []
-        for t in res.index:
-            # t以前の最大インデックスを探す (Pythonの標準比較)
-            # 効率化のためbisectなどを使わず線形探索（小規模テストデータ前提）
-            match_rate = self.baseline_rate
-            for i in range(len(f_times) - 1, -1, -1):
-                if f_times[i] <= t:
-                    match_rate = f_rates[i]
-                    break
-            target_rates.append(match_rate)
-            
-        res["funding_rate"] = target_rates
+            if "timestamp" in res.columns:
+                res = res.set_index("timestamp")
+            else:
+                # インデックスが日付でない場合は何もしない（通常はDatetimeIndexを想定）
+                return df.copy()
 
-        # 2. 数値加工
+        # マージ用の一時的なデータフレームを作成
+        df_temp = pd.DataFrame(index=res.index)
+        df_temp["__orig_index__"] = res.index
+        df_temp.index = df_temp.index.tz_localize(None)
+
+        f_temp = f_df.sort_values("timestamp").copy()
+        f_temp["timestamp"] = pd.to_datetime(f_temp["timestamp"]).dt.tz_localize(None)
+
+        # 高速マージ
+        merged = pd.merge_asof(
+            df_temp,
+            f_temp[["timestamp", "funding_rate"]],
+            left_index=True,
+            right_on="timestamp",
+            direction="backward",
+        )
+        merged.index = merged["__orig_index__"]
+        res["funding_rate"] = merged["funding_rate"].fillna(self.baseline_rate)
+
+        # 2. 数値加工 (ベクトル化)
         res["fr_bps"] = res["funding_rate"] * 10000
         res["fr_dev"] = res["fr_bps"] - (self.baseline_rate * 10000)
 
-        # 3. 特徴量追加 (rolling/ewm/quantileを安全な方法に変更)
+        # 3. 特徴量追加
+        # ラグ
         res["fr_lag_3p"] = res["fr_bps"].shift(3 * self.settlement_interval)
-        
+
         # 周期
         h = res.index.hour % self.settlement_interval
         res["fr_cycle_sin"] = np.sin(2 * np.pi * h / self.settlement_interval)
         res["fr_cycle_cos"] = np.cos(2 * np.pi * h / self.settlement_interval)
-        
-        # EMA (Pythonレベルで再実装)
-        fr_dev_list = res["fr_dev"].values.tolist()
+
+        # EMA (ベクトル化)
         span = 3 * self.settlement_interval
-        alpha = 2 / (span + 1)
-        ema = [fr_dev_list[0] if fr_dev_list else 0.0]
-        for i in range(1, len(fr_dev_list)):
-            ema.append(ema[-1] + alpha * (fr_dev_list[i] - ema[-1]))
-        res["fr_ema_3p"] = ema
-        
-        # レジーム判定 (np.selectは比較的安定している)
-        res["fr_regime"] = np.select([
-            res["fr_bps"] < -1.0, res["fr_bps"] < 0.0, res["fr_bps"] <= 5.0, res["fr_bps"] <= 15.0
-        ], [-2, -1, 0, 1], default=2)
+        res["fr_ema_3p"] = res["fr_dev"].ewm(span=span, adjust=False).mean()
 
-        # 相関とZ-Score (テスト環境でのエラーを避けるため、一旦計算を単純化)
-        # 本来は rolling(w).corr だが、環境依存で死ぬため、ここではダミー値を設定
-        res["fr_price_corr"] = 0.0
+        # レジーム判定
+        res["fr_regime"] = np.select(
+            [
+                res["fr_bps"] < -1.0,
+                res["fr_bps"] < 0.0,
+                res["fr_bps"] <= 5.0,
+                res["fr_bps"] <= 15.0,
+            ],
+            [-2, -1, 0, 1],
+            default=2,
+        )
+
+        # 相関とZ-Score (ベクトル化)
+        close_series = res["close"] if "close" in res.columns else None
         for w in [72, 168]:
-            res[f"fr_zscore_{w}h"] = 0.0
+            roll = res["fr_bps"].rolling(window=w, min_periods=1)
+            # Z-Score
+            m = roll.mean()
+            s = roll.std(ddof=0)
+            res[f"fr_zscore_{w}h"] = (
+                ((res["fr_bps"] - m) / s).fillna(0.0).replace([np.inf, -np.inf], 0.0)
+            )
 
-        res["fr_extreme"] = 0
+            # 相関 (価格がある場合)
+            if close_series is not None:
+                res[f"fr_price_corr_{w}h"] = (
+                    res["fr_bps"]
+                    .rolling(window=w, min_periods=w // 2)
+                    .corr(close_series)
+                ).fillna(0.0)
+
+        # 元の実装にあるカラム名との互換性
+        if "fr_price_corr_72h" in res.columns:
+            res["fr_price_corr"] = res["fr_price_corr_72h"]
+        else:
+            res["fr_price_corr"] = 0.0
+
+        res["fr_extreme"] = np.where(res["fr_bps"].abs() > 10.0, 1, 0)
         res["fr_direction"] = np.sign(res["fr_dev"].diff()).fillna(0)
 
-        # カラム削除 (dropを使わず再構築)
-        all_cols = res.columns.tolist()
-        keep_cols = [c for c in all_cols if c != "funding_rate"]
-        data_dict = {c: res[c].values for c in keep_cols}
-        
-        return pd.DataFrame(data_dict, index=res.index)
+        # 不要なカラムを削除して返す
+        if "funding_rate" in res.columns:
+            res = res.drop(columns=["funding_rate"])
+
+        return res
 
 
 def validate_funding_rate_data(df: pd.DataFrame) -> bool:
@@ -132,6 +157,3 @@ def validate_funding_rate_data(df: pd.DataFrame) -> bool:
             raise ValueError("タイムスタンプがソートされていません")
 
     return True
-
-
-

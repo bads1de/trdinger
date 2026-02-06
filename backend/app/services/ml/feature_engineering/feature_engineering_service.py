@@ -9,15 +9,17 @@ OHLCV、ファンディングレート（FR）、建玉残高（OI）データ�
 
 import logging
 from datetime import datetime
+from itertools import combinations
 from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
 from app.services.ml.common.utils import generate_cache_key, optimize_dtypes
-from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
 
+from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
 from .advanced_rolling_stats import AdvancedRollingStatsCalculator
+from .complexity_features import ComplexityFeatureCalculator
 from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
 from .interaction_features import InteractionFeatureCalculator
@@ -29,7 +31,6 @@ from .price_features import PriceFeatureCalculator
 from .technical_features import TechnicalFeatureCalculator
 from .time_anomaly_features import TimeAnomalyFeatures
 from .volume_profile_features import VolumeProfileFeatureCalculator
-from .complexity_features import ComplexityFeatureCalculator
 
 logger = logging.getLogger(__name__)
 
@@ -301,7 +302,7 @@ class FeatureEngineeringService:
 
     def aggregate_intraday_features(self, ohlcv_1m: pd.DataFrame) -> pd.DataFrame:
         """
-        1分足データから1時間足用の統計量を算出する。
+        1分足データから1時間足用の統計量を算出する (高速ベクトル化版)。
         """
         logger.info(f"1分足データから日中統計量を算出中... ({len(ohlcv_1m)} rows)")
 
@@ -310,12 +311,14 @@ class FeatureEngineeringService:
         is_up = (ohlcv_1m["close"] > ohlcv_1m["open"]).astype(int)
         up_volume = ohlcv_1m["volume"] * is_up
 
-        # 2. 1時間ごとに集計
+        # 2. 1時間ごとに集計用のラベル
         hour_labels = ohlcv_1m.index.floor("1h")
+        resampler = ohlcv_1m.resample("1h")
 
-        agg_features = pd.DataFrame(index=ohlcv_1m.resample("1h").last().index)
+        agg_features = pd.DataFrame(index=resampler.last().index)
 
         # ボラティリティとその相対化 (Z-Score)
+        # resample.std() は内部的に最適化されている
         vol_1h = returns_1m.groupby(hour_labels).std()
         agg_features["Intraday_Volatility"] = vol_1h
         agg_features["Intraday_Volatility_Zscore"] = (
@@ -323,30 +326,27 @@ class FeatureEngineeringService:
         ) / (vol_1h.rolling(24).std() + 1e-9)
 
         # 出来高の質
+        hour_grouped_vol = ohlcv_1m["volume"].groupby(hour_labels)
         agg_features["Intraday_Volume_Buy_Ratio"] = up_volume.groupby(
             hour_labels
-        ).sum() / (ohlcv_1m["volume"].groupby(hour_labels).sum() + 1e-9)
+        ).sum() / (hour_grouped_vol.sum() + 1e-9)
 
-        # 吸収力 (Absorption): 1価格単位を動かすのに必要な出来高 (多いほど上値が重い)
+        # 吸収力 (Absorption): 1価格単位を動かすのに必要な出来高
         price_range = (ohlcv_1m["high"] - ohlcv_1m["low"]).groupby(hour_labels).sum()
-        total_volume = ohlcv_1m["volume"].groupby(hour_labels).sum()
-        agg_features["Intraday_Absorption"] = total_volume / (price_range + 1e-9)
-
-        # 出来高の集中度 (CV): 特定の数分間に出来高が偏っているか
-        agg_features["Intraday_Volume_Concentration"] = ohlcv_1m["volume"].groupby(
-            hour_labels
-        ).std() / (ohlcv_1m["volume"].groupby(hour_labels).mean() + 1e-9)
-
-        # 最大逆行幅
-        def calc_mae(group):
-            if len(group) < 2:
-                return 0
-            drawdown = (group["low"] - group["high"].cummax()) / group["high"].cummax()
-            return drawdown.min()
-
-        agg_features["Intraday_Max_Pullback"] = ohlcv_1m.groupby(hour_labels).apply(
-            calc_mae
+        agg_features["Intraday_Absorption"] = hour_grouped_vol.sum() / (
+            price_range + 1e-9
         )
+
+        # 出来高の集中度 (CV)
+        agg_features["Intraday_Volume_Concentration"] = hour_grouped_vol.std() / (
+            hour_grouped_vol.mean() + 1e-9
+        )
+
+        # 最大逆行幅 (Intraday Max Pullback) - ベクトル化
+        # 1時間ごとの区切りで最高値を更新しつつ、安値との乖離を計算
+        hour_cummax_high = ohlcv_1m["high"].groupby(hour_labels).cummax()
+        drawdown_1m = (ohlcv_1m["low"] - hour_cummax_high) / (hour_cummax_high + 1e-9)
+        agg_features["Intraday_Max_Pullback"] = drawdown_1m.groupby(hour_labels).min()
 
         return agg_features
 
@@ -492,53 +492,58 @@ class FeatureEngineeringService:
 
         return df[non_frac_cols + target_frac_cols]
 
-    def expand_features(self, df: pd.DataFrame, top_n_for_interaction: int = 30) -> pd.DataFrame:
+    def expand_features(
+        self, df: pd.DataFrame, top_n_for_interaction: int = 30
+    ) -> pd.DataFrame:
         """
         特徴量セットを全方位に爆発させる (v4: 1,500個規模)
         """
         logger.info(f"特徴量全方位拡張(v4)を開始: 初期カラム数 = {len(df.columns)}")
         expanded_df = df.copy()
-        
+
         # --- 1. 全特徴量に対する多重ラグ (Global Lagging) ---
         # ほぼ全ての特徴量に対して過去の動きを注入
         lag_dfs = []
-        for lag in [1, 3, 5]: # 計算コストを考慮し、重要度の高い3点に絞る
+        for lag in [1, 3, 5]:  # 計算コストを考慮し、重要度の高い3点に絞る
             lag_df = df.shift(lag).add_suffix(f"_lag{lag}")
             lag_dfs.append(lag_df)
-            
+
         # --- 2. 高度な加速度 & 統計的変化 ---
         for col in ["close", "volume", "RSI", "ATR", "ADX", "Intraday_Volatility"]:
             if col in df.columns:
                 vel = df[col].diff(1)
                 expanded_df[f"{col}_Accel"] = vel.diff(1)
-                expanded_df[f"{col}_Zscore_20"] = (df[col] - df[col].rolling(20).mean()) / (df[col].rolling(20).std() + 1e-9)
-        
+                expanded_df[f"{col}_Zscore_20"] = (
+                    df[col] - df[col].rolling(20).mean()
+                ) / (df[col].rolling(20).std() + 1e-9)
+
         # --- 3. 大規模相互作用 (Massive Interaction) ---
         # 重要指標の上位30個をピックアップ
         interactors = df.columns[:top_n_for_interaction].tolist()
         if "primary_proba" in df.columns and "primary_proba" not in interactors:
             interactors.append("primary_proba")
-            
-        interaction_list = []
-        for i in range(len(interactors)):
-            for j in range(i + 1, len(interactors)):
-                col1, col2 = interactors[i], interactors[j]
-                # 比率
-                interaction_list.append((df[col1] / (df[col2] + 1e-9)).rename(f"ratio_{col1}_{col2}"))
-                # 積
-                interaction_list.append((df[col1] * df[col2]).rename(f"mult_{col1}_{col2}"))
-        
+
+        interaction_dict = {}
+        for col1, col2 in combinations(interactors, 2):
+            v1, v2 = df[col1].values, df[col2].values
+            # 比率
+            interaction_dict[f"ratio_{col1}_{col2}"] = v1 / (v2 + 1e-9)
+            # 積
+            interaction_dict[f"mult_{col1}_{col2}"] = v1 * v2
+
         # --- 4. 統合 ---
-        if interaction_list:
-            interaction_df = pd.concat(interaction_list, axis=1)
+        if interaction_dict:
+            interaction_df = pd.DataFrame(interaction_dict, index=df.index)
             expanded_df = pd.concat([expanded_df] + lag_dfs + [interaction_df], axis=1)
-            
+
         # クリーンアップ
         expanded_df = expanded_df.replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
         # 重複削除
         expanded_df = expanded_df.loc[:, ~expanded_df.columns.duplicated()]
-        
-        logger.info(f"特徴量全方位拡張(v4)完了: 最終カラム数 = {len(expanded_df.columns)}")
+
+        logger.info(
+            f"特徴量全方位拡張(v4)完了: 最終カラム数 = {len(expanded_df.columns)}"
+        )
         return expanded_df
 
     def _get_from_cache(self, key: str) -> Optional[pd.DataFrame]:
