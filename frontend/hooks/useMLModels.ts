@@ -129,7 +129,6 @@ export const useMLModels = (limit?: number) => {
     async (modelId: string) => {
       await execute(`/api/ml/models/${modelId}`, {
         method: "DELETE",
-        confirmMessage: "このモデルを削除しますか？この操作は取り消せません。",
         onSuccess: () => {
           fetchModels();
         },
@@ -142,7 +141,6 @@ export const useMLModels = (limit?: number) => {
     async () => {
       await execute(`/api/ml/models/all`, {
         method: "DELETE",
-        confirmMessage: "すべてのモデルを削除しますか？この操作は取り消せません。",
         onSuccess: () => {
           fetchModels();
         },

@@ -23,6 +23,7 @@ import BacktestResultsTable from "@/components/backtest/BacktestResultsTable";
 import PerformanceMetrics from "@/components/backtest/PerformanceMetrics";
 import AutoStrategyModal from "@/components/backtest/AutoStrategyModal";
 import AutoStrategyExplanationModal from "@/components/backtest/AutoStrategyExplanationModal";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
@@ -34,6 +35,7 @@ import MLOverviewDashboard from "@/components/ml/MLOverviewDashboard";
 
 import { useBacktestResults } from "@/hooks/useBacktestResults";
 import { useAutoStrategy } from "@/hooks/useAutoStrategy";
+import { BacktestResult } from "@/types/backtest";
 
 type BacktestTab = "backtest" | "ml";
 
@@ -190,6 +192,9 @@ function BacktestPageContent() {
   } = useAutoStrategy(loadResults);
 
   const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleteAllConfirmOpen, setIsDeleteAllConfirmOpen] = useState(false);
+  const [resultToDelete, setResultToDelete] = useState<BacktestResult | null>(null);
 
   useEffect(() => {
     const currentTab = getInitialTab(searchParams);
@@ -216,6 +221,15 @@ function BacktestPageContent() {
     router.replace(query ? `${pathname}?${query}` : pathname, {
       scroll: false,
     });
+  };
+
+  const onDeleteClick = (result: BacktestResult) => {
+    setResultToDelete(result);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const onDeleteAllClick = () => {
+    setIsDeleteAllConfirmOpen(true);
   };
 
   return (
@@ -280,7 +294,7 @@ function BacktestPageContent() {
                       更新
                     </ActionButton>
                     <ActionButton
-                      onClick={handleDeleteAllResults}
+                      onClick={onDeleteAllClick}
                       disabled={deleteAllLoading || results.length === 0}
                       loading={deleteAllLoading}
                       loadingText="削除中..."
@@ -294,7 +308,7 @@ function BacktestPageContent() {
                   results={results}
                   loading={resultsLoading}
                   onResultSelect={handleResultSelect}
-                  onDelete={handleDeleteResult}
+                  onDelete={onDeleteClick}
                 />
               </div>
 
@@ -329,6 +343,30 @@ function BacktestPageContent() {
             <AutoStrategyExplanationModal
               isOpen={isExplanationModalOpen}
               onClose={() => setIsExplanationModalOpen(false)}
+            />
+
+            {/* 削除確認ダイアログ */}
+            <ConfirmDialog
+              open={isDeleteConfirmOpen}
+              onOpenChange={setIsDeleteConfirmOpen}
+              title="結果削除の確認"
+              description={`バックテスト結果「${resultToDelete?.strategy_name}」を削除しますか？この操作は取り消せません。`}
+              confirmText="削除"
+              cancelText="キャンセル"
+              variant="destructive"
+              onConfirm={() => resultToDelete && handleDeleteResult(resultToDelete)}
+            />
+
+            {/* すべて削除確認ダイアログ */}
+            <ConfirmDialog
+              open={isDeleteAllConfirmOpen}
+              onOpenChange={setIsDeleteAllConfirmOpen}
+              title="すべての結果を削除"
+              description={`すべてのバックテスト結果を削除しますか？現在${results.length}件の結果があります。この操作は取り消せません。`}
+              confirmText="すべて削除"
+              cancelText="キャンセル"
+              variant="destructive"
+              onConfirm={handleDeleteAllResults}
             />
           </>
         ) : (

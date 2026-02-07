@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useMLModels, MLModel } from "@/hooks/useMLModels";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   Trash2,
   Eye,
@@ -40,6 +41,10 @@ export default function MLModelList({
   showActions = true,
 }: MLModelListProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleteAllConfirmOpen, setIsDeleteAllConfirmOpen] = useState(false);
+  const [modelToDelete, setModelToDelete] = useState<{id: string, name: string} | null>(null);
+
   const { models, isLoading, error, fetchModels, deleteModel, deleteAllModels } =
     useMLModels(limit);
 
@@ -60,6 +65,20 @@ export default function MLModelList({
     }
     return <Badge variant="secondary">待機中</Badge>;
   };
+
+  const handleDeleteClick = (id: string, name: string) => {
+    setModelToDelete({ id, name });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteAllClick = () => {
+    setIsDeleteAllConfirmOpen(true);
+  };
+
+  // hook側の内部confirmをバイパスするために、confirmMessageなしで実行したいが
+  // useMLModels内のdeleteModelはconfirmMessageがハードコードされている。
+  // そのため、hookを修正するか、ここではそのままで二重確認になるのを許容するか。
+  // 安全性のためにhook側のconfirmMessageも消すべき。
 
   if (isLoading) {
     return <LoadingSpinner text="モデル一覧を読み込んでいます..." />;
@@ -87,7 +106,7 @@ export default function MLModelList({
           <ActionButton
             variant="danger"
             size="sm"
-            onClick={deleteAllModels}
+            onClick={handleDeleteAllClick}
             loading={isLoading}
             icon={<Trash2 className="h-4 w-4" />}
           >
@@ -180,7 +199,7 @@ export default function MLModelList({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => deleteModel(model.id)}
+                        onClick={() => handleDeleteClick(model.id, model.name)}
                         className="text-red-500 hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -206,6 +225,31 @@ export default function MLModelList({
           </ActionButton>
         </div>
       )}
+
+      {/* 削除確認ダイアログ */}
+      <ConfirmDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+        title="モデル削除の確認"
+        description={`モデル「${modelToDelete?.name}」を削除しますか？この操作は取り消せません。`}
+        confirmText="削除"
+        cancelText="キャンセル"
+        variant="destructive"
+        onConfirm={() => modelToDelete && deleteModel(modelToDelete.id)}
+      />
+
+      {/* 全削除確認ダイアログ */}
+      <ConfirmDialog
+        open={isDeleteAllConfirmOpen}
+        onOpenChange={setIsDeleteAllConfirmOpen}
+        title="すべてのモデルを削除"
+        description="保存されているすべての学習済みモデルを削除しますか？この操作は取り消せません。"
+        confirmText="すべて削除"
+        cancelText="キャンセル"
+        variant="destructive"
+        onConfirm={deleteAllModels}
+      />
     </div>
   );
 }
+

@@ -103,7 +103,6 @@ export const useBacktestResults = () => {
   const handleDeleteResult = async (result: BacktestResult) => {
     await deleteResultApi(`/api/backtest/results/${result.id}/`, {
       method: "DELETE",
-      confirmMessage: `バックテスト結果「${result.strategy_name}」を削除しますか？\nこの操作は取り消せません。`,
       onSuccess: () => {
         loadResults();
         if (selectedResult?.id === result.id) {
@@ -119,7 +118,6 @@ export const useBacktestResults = () => {
   const handleDeleteAllResults = async () => {
     await deleteAllResultsApi("/api/backtest/results-all", {
       method: "DELETE",
-      confirmMessage: `すべてのバックテスト結果を削除しますか？\n現在${results.length}件の結果があります。\nこの操作は取り消せません。`,
       onSuccess: () => {
         loadResults();
         setSelectedResult(null);

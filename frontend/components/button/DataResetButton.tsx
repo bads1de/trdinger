@@ -11,6 +11,7 @@ import React, { useState } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import ApiButton from "./ApiButton";
 import { RESET_CONFIGS } from "@/constants/data-reset-constants";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 /**
  * データリセットの種類
@@ -76,37 +77,40 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
   size = "sm",
   variant,
 }) => {
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { execute, loading: isLoading } = useApiCall<DataResetResult>();
 
   const config = RESET_CONFIGS[resetType];
   const buttonVariant = variant || config.variant;
 
-  const handleReset = async () => {
+  // エンドポイントと確認メッセージの構築
+  let endpoint = config.endpoint;
+  let confirmDescription = config.confirmMessage;
+
+  if (resetType === "symbol" && symbol) {
+    endpoint = `${endpoint}/${encodeURIComponent(symbol)}`;
+    confirmDescription = confirmDescription.replace(
+      "指定されたシンボル",
+      `シンボル「${symbol}」`
+    );
+  }
+
+  // 確認メッセージをカスタマイズ
+  if (resetType === "symbol" && symbol) {
+    confirmDescription =
+      `シンボル「${symbol}」の全データ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n` +
+      "この操作は取り消すことができません。";
+  }
+
+  const handleResetClick = () => {
     if (isLoading) return;
+    setIsConfirmOpen(true);
+  };
 
-    // エンドポイントURLを構築
-    let endpoint = config.endpoint;
-    let confirmMessage = config.confirmMessage;
-
-    if (resetType === "symbol" && symbol) {
-      endpoint = `${endpoint}/${encodeURIComponent(symbol)}`;
-      confirmMessage = confirmMessage.replace(
-        "指定されたシンボル",
-        `シンボル「${symbol}」`
-      );
-    }
-
-    // 確認メッセージをカスタマイズ
-    if (resetType === "symbol" && symbol) {
-      confirmMessage =
-        `⚠️ シンボル「${symbol}」の全データ（OHLCV・ファンディングレート・オープンインタレスト）を削除します。\n\n` +
-        "この操作は取り消すことができません。\n" +
-        "本当に実行しますか？";
-    }
-
+  const handleConfirmReset = async () => {
     await execute(endpoint, {
       method: "DELETE",
-      confirmMessage,
+      // confirmMessage: confirmDescription, // useApiCallの内部confirmは使用せず、独自ダイアログを使用
       successMessage:
         resetType === "symbol" && symbol
           ? `${symbol} のデータリセットが完了しました`
@@ -130,19 +134,34 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
   };
 
   return (
-    <ApiButton
-      onClick={handleReset}
-      loading={isLoading}
-      disabled={disabled || isLoading}
-      variant={buttonVariant}
-      size={size}
-      loadingText="削除中..."
-      className={className}
-      icon={<span>{config.icon}</span>}
-    >
-      {getButtonLabel()}
-    </ApiButton>
+    <>
+      <ApiButton
+        onClick={handleResetClick}
+        loading={isLoading}
+        disabled={disabled || isLoading}
+        variant={buttonVariant}
+        size={size}
+        loadingText="削除中..."
+        className={className}
+        icon={<span>{config.icon}</span>}
+      >
+        {getButtonLabel()}
+      </ApiButton>
+
+      <ConfirmDialog
+        open={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        title={`${getButtonLabel()}の確認`}
+        description={confirmDescription}
+        confirmText="削除を実行"
+        cancelText="キャンセル"
+        variant="destructive"
+        onConfirm={handleConfirmReset}
+      />
+    </>
   );
 };
+
+export default DataResetButton;
 
 export default DataResetButton;
