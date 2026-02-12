@@ -66,7 +66,7 @@ interface BacktestResultsParams {
  */
 export const useBacktestResults = () => {
   const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(
-    null
+    null,
   );
   const [total, setTotal] = useState(0);
 
@@ -89,7 +89,7 @@ export const useBacktestResults = () => {
         return data?.results || [];
       },
       errorMessage: "バックテスト結果の取得に失敗しました",
-    }
+    },
   );
 
   const { execute: deleteResultApi, loading: deleteLoading } = useApiCall();
@@ -103,6 +103,7 @@ export const useBacktestResults = () => {
   const handleDeleteResult = async (result: BacktestResult) => {
     await deleteResultApi(`/api/backtest/results/${result.id}/`, {
       method: "DELETE",
+      confirmMessage: `「${result.strategy_name}」を削除しますか？`,
       onSuccess: () => {
         loadResults();
         if (selectedResult?.id === result.id) {

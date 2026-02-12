@@ -32,10 +32,8 @@ def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
         # int64を条件付きでint32に変換
         for col in df.columns:
             if df[col].dtype == "int64" and col != "timestamp":
-                vals = df[col].values.tolist()
-                if not vals:
-                    continue
-                c_min, c_max = min(vals), max(vals)
+                c_min = df[col].min()
+                c_max = df[col].max()
                 if c_min >= -2147483648 and c_max <= 2147483647:
                     df[col] = df[col].astype("int32")
         return df
@@ -58,16 +56,21 @@ def generate_cache_key(
     def _hash(obj: Any) -> str:
         try:
             if isinstance(obj, pd.DataFrame):
-                summary = f"{obj.shape}_{obj.iloc[0].values.tolist() if len(obj) > 0 else ''}_{obj.iloc[-1].values.tolist() if len(obj) > 1 else ''}"
-                return hashlib.md5(summary.encode()).hexdigest()[:8]
+                # 1. データ内容とインデックスのハッシュ
+                data_hash = pd.util.hash_pandas_object(obj, index=True).values.tobytes()
+                # 2. カラム名のハッシュ（カラム名が変われば結果も変わる可能性があるため）
+                col_hash = str(list(obj.columns)).encode()
+                
+                combined = data_hash + col_hash
+                return hashlib.md5(combined).hexdigest()[:8]
             return hashlib.md5(str(obj).encode()).hexdigest()[:8]
         except Exception:
             return "hash_error"
 
     h1 = _hash(ohlcv_data)
-    h2 = _hash(funding_rate_data.shape if funding_rate_data is not None else None)
-    h3 = _hash(open_interest_data.shape if open_interest_data is not None else None)
-    h4 = _hash(long_short_ratio_data.shape if long_short_ratio_data is not None else None)  # Added
+    h2 = _hash(funding_rate_data)  # 直接渡してハッシュ化
+    h3 = _hash(open_interest_data)  # 直接渡してハッシュ化
+    h4 = _hash(long_short_ratio_data)  # 直接渡してハッシュ化
     h5 = _hash(sorted(extra_params.items()) if extra_params else None)
 
     return f"features_{h1}_{h2}_{h3}_{h4}_{h5}"
