@@ -49,15 +49,15 @@ class EndOfMonthFilter(BaseTool):
         year = ts.year
         month = ts.month
         day = ts.day
-        
+
         # その月の日数（最終日）を取得
         _, last_day = calendar.monthrange(year, month)
-        
+
         days_before = params.get("days_before_end", 0)
-        
+
         # 月末までの残り日数
         days_left = last_day - day
-        
+
         # 残り日数が指定範囲内ならスキップ
         # days_left == 0 (最終日) <= 0 -> True
         return days_left <= days_before
@@ -69,10 +69,7 @@ class EndOfMonthFilter(BaseTool):
         Returns:
             enabled=True, days_before_end=0 (最終日のみ)
         """
-        return {
-            "enabled": True,
-            "days_before_end": 0
-        }
+        return {"enabled": True, "days_before_end": 0}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -84,12 +81,8 @@ class EndOfMonthFilter(BaseTool):
         Returns:
             変異後のパラメータ
         """
-        new_params = params.copy()
+        new_params = super().mutate_params(params)
 
-        # 20%の確率で有効/無効を反転
-        if random.random() < 0.2:
-            new_params["enabled"] = not new_params.get("enabled", True)
-            
         # 20%の確率で対象期間を変更
         if random.random() < 0.2:
             current = new_params.get("days_before_end", 0)

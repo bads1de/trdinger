@@ -45,10 +45,10 @@ class SpecificDayFilter(BaseTool):
 
         # 現在の曜日を取得
         current_day = context.timestamp.dayofweek
-        
+
         # スキップ対象リストを取得 (デフォルトは空)
         skip_days = params.get("skip_days", [])
-        
+
         return current_day in skip_days
 
     def get_default_params(self) -> Dict[str, Any]:
@@ -58,10 +58,7 @@ class SpecificDayFilter(BaseTool):
         Returns:
             enabled=True, skip_days=[]
         """
-        return {
-            "enabled": True,
-            "skip_days": []
-        }
+        return {"enabled": True, "skip_days": []}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -73,23 +70,19 @@ class SpecificDayFilter(BaseTool):
         Returns:
             変異後のパラメータ
         """
-        new_params = params.copy()
+        new_params = super().mutate_params(params)
         skip_days = set(new_params.get("skip_days", []))
 
-        # 20%の確率で有効/無効を反転
-        if random.random() < 0.2:
-            new_params["enabled"] = not new_params.get("enabled", True)
-            
         # 30%の確率で曜日リストを変更
         if random.random() < 0.3:
             # ランダムな曜日 (0-6) を選ぶ
             day = random.randint(0, 6)
-            
+
             if day in skip_days:
                 skip_days.remove(day)  # 既に含まれていれば削除
             else:
-                skip_days.add(day)     # 含まれていなければ追加
-                
+                skip_days.add(day)  # 含まれていなければ追加
+
             new_params["skip_days"] = list(skip_days)
 
         return new_params

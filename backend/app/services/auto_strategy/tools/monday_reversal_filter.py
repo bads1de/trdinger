@@ -63,10 +63,7 @@ class MondayReversalFilter(BaseTool):
         Returns:
             enabled=True, skip_hours=12
         """
-        return {
-            "enabled": True,
-            "skip_hours": 12
-        }
+        return {"enabled": True, "skip_hours": 12}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -78,12 +75,8 @@ class MondayReversalFilter(BaseTool):
         Returns:
             変異後のパラメータ
         """
-        new_params = params.copy()
+        new_params = super().mutate_params(params)
 
-        # 20%の確率で有効/無効を反転
-        if random.random() < 0.2:
-            new_params["enabled"] = not new_params.get("enabled", True)
-            
         # 20%の確率でスキップ時間を変更 (4時間〜20時間)
         if random.random() < 0.2:
             current_hours = new_params.get("skip_hours", 12)

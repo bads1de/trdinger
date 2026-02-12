@@ -49,25 +49,25 @@ class LondonFixFilter(BaseTool):
         # ロンドンフィックスは 16:00 London Time
         # Winter: UTC 16:00
         # Summer: UTC 15:00
-        
+
         # 時間と分を取得
         hour = context.timestamp.hour
         minute = context.timestamp.minute
-        
+
         window = params.get("window_minutes", 15)
 
         # ターゲット時間を分単位で計算
         current_minutes = hour * 60 + minute
-        
+
         # 冬時間ターゲット (16:00 UTC) = 960分
         winter_target = 16 * 60
         # 夏時間ターゲット (15:00 UTC) = 900分
         summer_target = 15 * 60
-        
+
         # 範囲内かチェック
         in_winter_fix = abs(current_minutes - winter_target) <= window
         in_summer_fix = abs(current_minutes - summer_target) <= window
-        
+
         # どちらかの時間帯に入っていればスキップ
         return in_winter_fix or in_summer_fix
 
@@ -78,10 +78,7 @@ class LondonFixFilter(BaseTool):
         Returns:
             enabled=True, window_minutes=15
         """
-        return {
-            "enabled": True,
-            "window_minutes": 15
-        }
+        return {"enabled": True, "window_minutes": 15}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -93,12 +90,8 @@ class LondonFixFilter(BaseTool):
         Returns:
             変異後のパラメータ
         """
-        new_params = params.copy()
+        new_params = super().mutate_params(params)
 
-        # 20%の確率で有効/無効を反転
-        if random.random() < 0.2:
-            new_params["enabled"] = not new_params.get("enabled", True)
-            
         # 20%の確率でウィンドウサイズを変更 (5分〜30分)
         if random.random() < 0.2:
             current_window = new_params.get("window_minutes", 15)

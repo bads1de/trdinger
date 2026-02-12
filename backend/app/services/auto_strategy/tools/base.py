@@ -4,6 +4,7 @@
 すべてのエントリーフィルターツールが継承する抽象クラスを定義します。
 """
 
+import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
@@ -101,16 +102,20 @@ class BaseTool(ABC):
         """
         パラメータを突然変異させる（GAで使用）
 
+        デフォルト実装では、20%の確率で enabled を反転させます。
+        サブクラスで固有パラメータの変異を追加する場合は、
+        super().mutate_params(params) を呼んでから固有の変異を適用してください。
+
         Args:
             params: 元のパラメータ
 
         Returns:
             変異後のパラメータ
         """
-        # デフォルトは変異なし
-        return params.copy()
+        new_params = params.copy()
 
+        # 20%の確率で有効/無効を反転
+        if random.random() < 0.2:
+            new_params["enabled"] = not new_params.get("enabled", True)
 
-
-
-
+        return new_params

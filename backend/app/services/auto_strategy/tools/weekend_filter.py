@@ -5,7 +5,6 @@
 クリプト市場の週末は流動性が低く、ノイズが増える傾向があるため有効です。
 """
 
-import random
 from typing import Any, Dict
 
 from .base import BaseTool, ToolContext
@@ -50,32 +49,7 @@ class WeekendFilter(BaseTool):
         """
         return {"enabled": True}
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        パラメータを突然変異させる
-
-        20%の確率で enabled を反転
-
-        Args:
-            params: 元のパラメータ
-
-        Returns:
-            変異後のパラメータ
-        """
-        new_params = params.copy()
-
-        # 20%の確率で有効/無効を反転
-        if random.random() < 0.2:
-            new_params["enabled"] = not new_params.get("enabled", True)
-
-        return new_params
-
 
 # グローバルインスタンスを作成してレジストリに登録
 weekend_filter = WeekendFilter()
 register_tool(weekend_filter)
-
-
-
-
-
