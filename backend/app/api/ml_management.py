@@ -8,19 +8,13 @@ import logging
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_ml_management_orchestration_service
-from app.services.backtest.backtest_data_service import BacktestDataService
 from app.services.ml.orchestration.ml_management_orchestration_service import (
     MLManagementOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response, error_response
-from database.connection import get_db
-from database.repositories.funding_rate_repository import FundingRateRepository
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
 
 logger = logging.getLogger(__name__)
 
@@ -272,14 +266,3 @@ async def cleanup_old_models(
         return await ml_service.cleanup_old_models()
 
     return await ErrorHandler.safe_execute_async(_cleanup_old_models)
-
-
-def get_data_service(db: Session = Depends(get_db)) -> BacktestDataService:
-    """データサービスの依存性注入"""
-    ohlcv_repo = OHLCVRepository(db)
-    oi_repo = OpenInterestRepository(db)
-    fr_repo = FundingRateRepository(db)
-    return BacktestDataService(ohlcv_repo, oi_repo, fr_repo)
-
-
-

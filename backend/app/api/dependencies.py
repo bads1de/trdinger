@@ -12,8 +12,7 @@ from app.services.auto_strategy import AutoStrategyService
 from app.services.auto_strategy.services.generated_strategy_service import (
     GeneratedStrategyService,
 )
-from app.services.backtest.backtest_data_service import BacktestDataService
-from app.services.backtest.backtest_service import BacktestService
+
 from app.services.data_collection.bybit.long_short_ratio_service import (
     BybitLongShortRatioService,
 )
@@ -21,31 +20,7 @@ from app.services.data_collection.orchestration.market_data_orchestration_servic
     MarketDataOrchestrationService,
 )
 from database.connection import get_db
-from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.long_short_ratio_repository import LongShortRatioRepository
-from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
-
-
-def get_backtest_service(db: Session = Depends(get_db)) -> BacktestService:
-    """
-    BacktestServiceのインスタンスを取得
-
-    Args:
-        db: データベースセッション（依存性注入）
-
-    Returns:
-        BacktestServiceインスタンス
-    """
-    ohlcv_repo = OHLCVRepository(db)
-    oi_repo = OpenInterestRepository(db)
-    fr_repo = FundingRateRepository(db)
-
-    data_service = BacktestDataService(
-        ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
-    )
-
-    return BacktestService(data_service)
 
 
 def get_market_data_orchestration_service(

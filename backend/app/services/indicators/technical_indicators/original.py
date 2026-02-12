@@ -63,7 +63,7 @@ class OriginalIndicators:
                 np.full(len(close), np.nan), index=close.index, name="FRAMA"
             )
 
-        prices = close.astype(float).to_numpy(copy=True)
+        prices = close.astype(float).to_numpy()
         result = np.empty_like(prices)
         result[:] = np.nan
 
@@ -116,7 +116,7 @@ class OriginalIndicators:
                 np.full(len(close), np.nan), index=close.index, name="SUPER_SMOOTHER"
             )
 
-        prices = close.astype(float).to_numpy(copy=True)
+        prices = close.astype(float).to_numpy()
         result = np.empty_like(prices)
         result[:] = np.nan
 
@@ -895,34 +895,6 @@ class OriginalIndicators:
         return result
 
     @staticmethod
-    def _find_dominant_frequencies(
-        prices: np.ndarray, max_freq: int = 50
-    ) -> np.ndarray:
-        """主要周波数を検出するヘルパー関数"""
-        n = len(prices)
-        if n < 4:
-            return np.array([])
-
-        window = scipy_signal.windows.hamming(n)
-        windowed_prices = prices * window
-
-        fft_result = fft(windowed_prices)
-        frequencies = np.fft.fftfreq(n)[: n // 2]
-        magnitude = np.abs(fft_result[: n // 2])
-
-        peaks, _ = scipy_signal.find_peaks(
-            magnitude[:max_freq], height=np.mean(magnitude[:max_freq])
-        )
-
-        if len(peaks) == 0:
-            return np.array([0.1, 0.2, 0.3])
-
-        peak_magnitudes = magnitude[peaks]
-        sorted_indices = np.argsort(peak_magnitudes)[-3:][::-1]
-
-        return frequencies[peaks[sorted_indices]]
-
-    @staticmethod
     @handle_pandas_ta_errors
     def harmonic_resonance(
         close: pd.Series,
@@ -1056,67 +1028,6 @@ class OriginalIndicators:
         )
 
         return result
-
-    @staticmethod
-    def _calculate_correlation_dimension(
-        prices: np.ndarray, embedding_dim: int = 3, time_delay: int = 1
-    ) -> float:
-        """相関次元の近似計算"""
-        if len(prices) < embedding_dim * 2:
-            return 1.0
-
-        # タイムディレイ埋め込み
-        try:
-            n_points = len(prices) - (embedding_dim - 1) * time_delay
-            if n_points <= 0:
-                return 1.0
-
-            # 埋め込みベクトルの作成
-            embedded = np.zeros((n_points, embedding_dim))
-            for i in range(embedding_dim):
-                start_idx = i * time_delay
-                embedded[:, i] = prices[start_idx : start_idx + n_points]
-
-            # 相関積分の計算
-            distances = []
-            for i in range(n_points):
-                for j in range(i + 1, n_points):
-                    dist = np.linalg.norm(embedded[i] - embedded[j])
-                    distances.append(dist)
-
-            if not distances:
-                return 1.0
-
-            # 距離の分布を分析
-            distances = np.array(distances)
-            sorted_distances = np.sort(distances)
-
-            # 相関次元の推定 (簡易版)
-            # log(C(r)) ≈ D * log(r) の関係を利用
-            if len(sorted_distances) > 10:
-                # 上位50%と下位50%の距離で回帰
-                mid_point = len(sorted_distances) // 2
-                if mid_point > 1:
-                    low_distances = sorted_distances[1:mid_point]
-                    high_distances = sorted_distances[mid_point:]
-
-                    if len(low_distances) > 1 and len(high_distances) > 1:
-                        low_mean = np.mean(np.log(low_distances))
-                        high_mean = np.mean(np.log(high_distances))
-
-                        low_log_c = np.log(mid_point / len(sorted_distances))
-                        high_log_c = np.log(0.5)
-
-                        if high_mean != low_mean:
-                            dimension = (high_log_c - low_log_c) / (
-                                high_mean - low_mean
-                            )
-                            return max(1.0, min(5.0, dimension))  # 制限範囲
-
-            return 1.0
-
-        except Exception:
-            return 1.0
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1276,7 +1187,7 @@ class OriginalIndicators:
         if k <= 0:
             raise ValueError("k must be > 0")
 
-        prices = close.astype(float).to_numpy(copy=True)
+        prices = close.astype(float).to_numpy()
         result = np.empty_like(prices)
         result[:] = np.nan
 
