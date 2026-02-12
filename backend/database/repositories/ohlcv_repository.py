@@ -327,17 +327,5 @@ class OHLCVRepository(BaseRepository):
             )
             raise
 
-    def get_available_symbols(self, symbol_column: str = "symbol") -> List[str]:
-        """
-        利用可能なシンボルのリストを取得（BaseRepositoryのメソッドをオーバーライド）
-
-        Args:
-            symbol_column: シンボルカラム名
-
-        Returns:
-            利用可能なシンボルのリスト
-        """
-        return super().get_available_symbols(symbol_column)
-
 
 
