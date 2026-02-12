@@ -48,40 +48,6 @@ def get_backtest_service(db: Session = Depends(get_db)) -> BacktestService:
     return BacktestService(data_service)
 
 
-def get_backtest_service_with_db(db: Session) -> BacktestService:
-    """
-    データベースセッション付きのBacktestServiceを取得
-
-    Args:
-        db: データベースセッション
-
-    Returns:
-        BacktestServiceインスタンス
-    """
-    ohlcv_repo = OHLCVRepository(db)
-    oi_repo = OpenInterestRepository(db)
-    fr_repo = FundingRateRepository(db)
-
-    data_service = BacktestDataService(
-        ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
-    )
-
-    return BacktestService(data_service)
-
-
-def get_generated_strategy_service(db: Session) -> GeneratedStrategyService:
-    """
-    GeneratedStrategyServiceのインスタンスを取得
-
-    Args:
-        db: データベースセッション
-
-    Returns:
-        GeneratedStrategyServiceインスタンス
-    """
-    return GeneratedStrategyService(db)
-
-
 def get_market_data_orchestration_service(
     db: Session = Depends(get_db),
 ) -> MarketDataOrchestrationService:
