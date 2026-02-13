@@ -26,7 +26,36 @@ from .data_validation import create_nan_result, validate_data_length_with_fallba
 
 # pandas-ta および pandas, numpy 内部で発生する警告を抑制
 # これらはライブラリ内部の問題であり、アプリケーションの動作に影響しない
-warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
+
+
+# SettingWithCopyWarning の場所が pandas のバージョンによって異なる場合があるため、
+# 安全に取得して抑制します。
+def _get_setting_with_copy_warning():
+    # 1. pandas.errors から取得を試みる
+    try:
+        from pandas.errors import SettingWithCopyWarning
+
+        return SettingWithCopyWarning
+    except (ImportError, AttributeError):
+        pass
+
+    # 2. pandas.core.common から取得を試みる
+    try:
+        from pandas.core.common import SettingWithCopyWarning
+
+        return SettingWithCopyWarning
+    except (ImportError, AttributeError):
+        pass
+
+    # 3. pd.SettingWithCopyWarning から取得を試みる
+    try:
+        return getattr(pd, "SettingWithCopyWarning", UserWarning)
+    except Exception:
+        return UserWarning
+
+
+SettingWithCopyWarning = _get_setting_with_copy_warning()
+warnings.filterwarnings("ignore", category=SettingWithCopyWarning)
 warnings.filterwarnings("ignore", category=FutureWarning, module="pandas")
 warnings.filterwarnings("ignore", category=FutureWarning, module="pandas_ta")
 warnings.filterwarnings("ignore", category=FutureWarning, module="numpy")
