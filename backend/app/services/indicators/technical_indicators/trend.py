@@ -21,7 +21,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+import pandas_ta_classic as ta
 
 from ..data_validation import (
     handle_pandas_ta_errors,

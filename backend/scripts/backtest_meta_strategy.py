@@ -4,7 +4,7 @@ import numpy as np
 import joblib
 import json
 import logging
-import pandas_ta as ta
+import pandas_ta_classic as ta
 
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
@@ -263,6 +263,3 @@ def run_backtest():
 
 if __name__ == "__main__":
     run_backtest()
-
-
-

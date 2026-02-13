@@ -11,7 +11,7 @@ import re
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-import pandas_ta as ta
+import pandas_ta_classic as ta
 
 logger = logging.getLogger(__name__)
 

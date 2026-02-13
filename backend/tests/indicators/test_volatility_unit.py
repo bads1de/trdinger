@@ -26,19 +26,19 @@ class TestVolatilityUnitExtended:
     def test_atr_natr_comprehensive(self, sample_df):
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         # ATR 失敗
-        with patch("pandas_ta.atr", return_value=None):
+        with patch("pandas_ta_classic.atr", return_value=None):
             res = VolatilityIndicators.atr(h, l, c)
             assert np.isnan(res).all()
         # NATR 正常
         assert isinstance(VolatilityIndicators.natr(h, l, c), pd.Series)
         # NATR 異常
-        with patch("pandas_ta.natr", return_value=None):
+        with patch("pandas_ta_classic.natr", return_value=None):
             assert np.isnan(VolatilityIndicators.natr(h, l, c)).all()
 
     def test_keltner_error_handling(self, sample_df):
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         # kc 失敗
-        with patch("pandas_ta.kc", return_value=None):
+        with patch("pandas_ta_classic.kc", return_value=None):
             res = VolatilityIndicators.keltner(h, l, c)
             assert all(np.isnan(s).all() for s in res)
         # データ不足
@@ -48,7 +48,7 @@ class TestVolatilityUnitExtended:
     def test_donchian_comprehensive(self, sample_df):
         h, l = sample_df["high"], sample_df["low"]
         assert len(VolatilityIndicators.donchian(h, l)) == 3
-        with patch("pandas_ta.donchian", return_value=None):
+        with patch("pandas_ta_classic.donchian", return_value=None):
             res = VolatilityIndicators.donchian(h, l)
             assert all(np.isnan(s).all() for s in res)
 
@@ -74,7 +74,7 @@ class TestVolatilityUnitExtended:
         res = OverlapIndicators.supertrend(h, l, c)
         assert len(res) == 3
         # 2. 失敗 (df is None)
-        with patch("pandas_ta.supertrend", return_value=None):
+        with patch("pandas_ta_classic.supertrend", return_value=None):
             res = OverlapIndicators.supertrend(h, l, c)
             assert len(res) == 3
 

@@ -173,18 +173,18 @@ class TestUniversalStrategy:
         """sub-gene選択のフォールバックテスト"""
         common_tpsl = TPSLGene(stop_loss_pct=0.02, enabled=True)
         long_tpsl = TPSLGene(stop_loss_pct=0.05, enabled=True)
-        
+
         gene = StrategyGene(
             tpsl_gene=common_tpsl,
             long_tpsl_gene=long_tpsl,
-            short_tpsl_gene=None # ショートは共通にフォールバック
+            short_tpsl_gene=None,  # ショートは共通にフォールバック
         )
         strategy = UniversalStrategy(mock_broker, mock_data, {"strategy_gene": gene})
-        
+
         # 1. ロング時は専用設定が優先される
         res_long = strategy._get_effective_sub_gene(1.0, "tpsl")
         assert res_long.stop_loss_pct == 0.05
-        
+
         # 2. ショート時は共通設定にフォールバックされる
         res_short = strategy._get_effective_sub_gene(-1.0, "tpsl")
         assert res_short.stop_loss_pct == 0.02
@@ -365,16 +365,19 @@ class TestUniversalStrategy:
         # mock_dataはMagicMockなので、df属性と必要なカラムを追加
         import pandas as pd
         import numpy as np
-        import pandas_ta as ta
+        import pandas_ta_classic as ta
 
         # テストデータの作成
         periods = 50
-        df = pd.DataFrame({
-            "High": np.random.uniform(105, 115, periods),
-            "Low": np.random.uniform(95, 105, periods),
-            "Close": np.random.uniform(100, 110, periods),
-        }, index=pd.date_range("2023-01-01", periods=periods, freq="h"))
-        
+        df = pd.DataFrame(
+            {
+                "High": np.random.uniform(105, 115, periods),
+                "Low": np.random.uniform(95, 105, periods),
+                "Close": np.random.uniform(100, 110, periods),
+            },
+            index=pd.date_range("2023-01-01", periods=periods, freq="h"),
+        )
+
         mock_data.df = df
         mock_data.High = df["High"].values
         mock_data.Low = df["Low"].values
@@ -382,14 +385,14 @@ class TestUniversalStrategy:
         mock_data.__len__.return_value = periods
 
         strategy = UniversalStrategy(mock_broker, mock_data, params)
-        
+
         # 初期化実行
         strategy.init()
 
         # 1. ポジションサイジング用ATRの検証
         assert hasattr(strategy, "_precomputed_atr")
         assert strategy._precomputed_atr is not None
-        
+
         expected_ps_atr = ta.atr(df["High"], df["Low"], df["Close"], length=14).values
         # NaNは比較できないのでfillnaするか、インデックスをずらす
         # numpy.testing.assert_array_almost_equal は NaN の扱いが難しい場合がある
@@ -399,6 +402,6 @@ class TestUniversalStrategy:
         # 2. TP/SL用ATRの検証
         assert hasattr(strategy, "_precomputed_tpsl_atr")
         assert 20 in strategy._precomputed_tpsl_atr
-        
+
         expected_tpsl_atr = ta.atr(df["High"], df["Low"], df["Close"], length=20).values
         assert np.isclose(strategy._precomputed_tpsl_atr[20][-1], expected_tpsl_atr[-1])

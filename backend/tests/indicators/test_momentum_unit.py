@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
 from app.services.indicators.technical_indicators.overlap import OverlapIndicators
 
@@ -34,7 +34,7 @@ class TestMomentumUnitExtended:
         # 2. データ不足
         assert np.isnan(MomentumIndicators.rsi(sample_data[:5], 14)).all()
         # 3. pandas-ta 失敗
-        with patch("pandas_ta.rsi", return_value=None):
+        with patch("pandas_ta_classic.rsi", return_value=None):
             assert np.isnan(MomentumIndicators.rsi(sample_data, 14)).all()
 
     def test_macd_comprehensive(self, sample_data):
@@ -45,10 +45,10 @@ class TestMomentumUnitExtended:
         res = MomentumIndicators.macd(sample_data[:2])
         assert all(np.isnan(s).all() for s in res)
         # 3. pandas-ta 失敗 (None)
-        with patch("pandas_ta.macd", return_value=None):
+        with patch("pandas_ta_classic.macd", return_value=None):
             assert len(MomentumIndicators.macd(sample_data)) == 3
         # 4. pandas-ta 失敗 (Empty)
-        with patch("pandas_ta.macd", return_value=pd.DataFrame()):
+        with patch("pandas_ta_classic.macd", return_value=pd.DataFrame()):
             assert len(MomentumIndicators.macd(sample_data)) == 3
 
     def test_ppo_comprehensive(self, sample_data):
@@ -56,7 +56,7 @@ class TestMomentumUnitExtended:
         res = MomentumIndicators.ppo(sample_data)
         assert len(res) == 3
         # 2. 異常 (None)
-        with patch("pandas_ta.ppo", return_value=None):
+        with patch("pandas_ta_classic.ppo", return_value=None):
             res = MomentumIndicators.ppo(sample_data)
             assert all(np.isnan(s).all() for s in res)
 
@@ -65,7 +65,7 @@ class TestMomentumUnitExtended:
         res = MomentumIndicators.trix(sample_data)
         assert len(res) == 3
         # 2. 異常 (Empty)
-        with patch("pandas_ta.trix", return_value=pd.DataFrame()):
+        with patch("pandas_ta_classic.trix", return_value=pd.DataFrame()):
             res = MomentumIndicators.trix(sample_data)
             assert all(np.isnan(s).all() for s in res)
 
@@ -81,7 +81,7 @@ class TestMomentumUnitExtended:
         with pytest.raises(ValueError):
             MomentumIndicators.stoch(h, l, c, k=0)
         # 4. pandas-ta 失敗
-        with patch("pandas_ta.stoch", return_value=None):
+        with patch("pandas_ta_classic.stoch", return_value=None):
             res = MomentumIndicators.stoch(h, l, c)
             assert all(np.isnan(s).all() for s in res)
 
@@ -95,7 +95,7 @@ class TestMomentumUnitExtended:
         res = MomentumIndicators.stochrsi(sample_data[:5])
         assert all(np.isnan(s).all() for s in res)
         # 4. pandas-ta 失敗
-        with patch("pandas_ta.stochrsi", return_value=None):
+        with patch("pandas_ta_classic.stochrsi", return_value=None):
             res = MomentumIndicators.stochrsi(sample_data)
             assert all(np.isnan(s).all() for s in res)
 
@@ -106,44 +106,44 @@ class TestMomentumUnitExtended:
         # 1. 正常
         assert isinstance(MomentumIndicators.willr(h, l, c), pd.Series)
         # 2. pandas-ta例外時はPandasTAError
-        with patch("pandas_ta.willr", side_effect=Exception("API Error")):
+        with patch("pandas_ta_classic.willr", side_effect=Exception("API Error")):
             with pytest.raises(PandasTAError):
                 MomentumIndicators.willr(h, l, c)
         # 3. pandas-taがNone返却時
-        with patch("pandas_ta.willr", return_value=None):
+        with patch("pandas_ta_classic.willr", return_value=None):
             res = MomentumIndicators.willr(h, l, c)
             assert isinstance(res, pd.Series)
 
     def test_cci_comprehensive(self, sample_df):
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         assert isinstance(MomentumIndicators.cci(h, l, c), pd.Series)
-        with patch("pandas_ta.cci", return_value=None):
+        with patch("pandas_ta_classic.cci", return_value=None):
             assert np.isnan(MomentumIndicators.cci(h, l, c)).all()
 
     def test_cmo_comprehensive(self, sample_data):
         assert isinstance(MomentumIndicators.cmo(sample_data), pd.Series)
-        with patch("pandas_ta.cmo", return_value=None):
+        with patch("pandas_ta_classic.cmo", return_value=None):
             assert np.isnan(MomentumIndicators.cmo(sample_data)).all()
 
     def test_stc_comprehensive(self, sample_data):
         assert isinstance(MomentumIndicators.stc(sample_data), pd.Series)
         # DataFrameを返す場合
-        with patch("pandas_ta.stc", return_value=pd.DataFrame({"0": [1, 2]})):
+        with patch("pandas_ta_classic.stc", return_value=pd.DataFrame({"0": [1, 2]})):
             assert isinstance(MomentumIndicators.stc(sample_data), pd.Series)
         # 失敗
-        with patch("pandas_ta.stc", return_value=None):
+        with patch("pandas_ta_classic.stc", return_value=None):
             assert np.isnan(MomentumIndicators.stc(sample_data)).all()
 
     def test_fisher_comprehensive(self, sample_df):
         h, l = sample_df["high"], sample_df["low"]
         assert len(MomentumIndicators.fisher(h, l)) == 2
-        with patch("pandas_ta.fisher", return_value=None):
+        with patch("pandas_ta_classic.fisher", return_value=None):
             res = MomentumIndicators.fisher(h, l)
             assert all(np.isnan(s).all() for s in res)
 
     def test_kst_comprehensive(self, sample_data):
         assert len(MomentumIndicators.kst(sample_data)) == 2
-        with patch("pandas_ta.kst", return_value=None):
+        with patch("pandas_ta_classic.kst", return_value=None):
             res = MomentumIndicators.kst(sample_data)
             assert all(np.isnan(s).all() for s in res)
 
@@ -151,13 +151,13 @@ class TestMomentumUnitExtended:
         # 1. 正常
         assert isinstance(MomentumIndicators.qqe(sample_data), pd.Series)
         # 2. 失敗時のフォールバック (RSI)
-        with patch("pandas_ta.qqe", return_value=None):
+        with patch("pandas_ta_classic.qqe", return_value=None):
             res = MomentumIndicators.qqe(sample_data)
             assert isinstance(res, pd.Series)
         # 3. RSIも失敗
         with (
-            patch("pandas_ta.qqe", return_value=None),
-            patch("pandas_ta.rsi", return_value=None),
+            patch("pandas_ta_classic.qqe", return_value=None),
+            patch("pandas_ta_classic.rsi", return_value=None),
         ):
             res = MomentumIndicators.qqe(sample_data)
             assert np.isnan(res).all()
@@ -173,12 +173,12 @@ class TestMomentumUnitExtended:
             MomentumIndicators.apo(sample_data, fast=20, slow=10)
         with pytest.raises(ValueError, match="positive"):
             MomentumIndicators.apo(sample_data, fast=0)
-        with patch("pandas_ta.apo", return_value=None):
+        with patch("pandas_ta_classic.apo", return_value=None):
             assert np.isnan(MomentumIndicators.apo(sample_data)).all()
 
     def test_tsi_comprehensive(self, sample_data):
         assert len(MomentumIndicators.tsi(sample_data)) == 2
-        with patch("pandas_ta.tsi", return_value=None):
+        with patch("pandas_ta_classic.tsi", return_value=None):
             res = MomentumIndicators.tsi(sample_data)
             assert all(np.isnan(s).all() for s in res)
 
@@ -191,7 +191,7 @@ class TestMomentumUnitExtended:
         except Exception:
             pass
         # 失敗
-        with patch("pandas_ta.pgo", return_value=None):
+        with patch("pandas_ta_classic.pgo", return_value=None):
             assert np.isnan(MomentumIndicators.pgo(h, l, c)).all()
 
     def test_psl_comprehensive(self, sample_df):
@@ -200,14 +200,14 @@ class TestMomentumUnitExtended:
         c = sample_df["close"]
         assert isinstance(MomentumIndicators.psl(c), pd.Series)
         # pandas-ta例外時はPandasTAError
-        with patch("pandas_ta.psl", side_effect=Exception()):
+        with patch("pandas_ta_classic.psl", side_effect=Exception()):
             with pytest.raises(PandasTAError):
                 MomentumIndicators.psl(c)
 
     def test_squeeze_comprehensive(self, sample_df):
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         assert isinstance(MomentumIndicators.squeeze(h, l, c), pd.DataFrame)
-        with patch("pandas_ta.squeeze", return_value=None):
+        with patch("pandas_ta_classic.squeeze", return_value=None):
             assert np.isnan(MomentumIndicators.squeeze(h, l, c)).all().all()
 
     def test_ao_bop_cg_coppock(self, sample_df):
@@ -236,13 +236,15 @@ class TestMomentumUnitExtended:
         assert isinstance(res["tenkan_sen"], pd.Series)
 
         # 2. pandas-taが失敗した場合はNaNを返す（フォールバックは廃止）
-        with patch("pandas_ta.ichimoku", return_value=None):
+        with patch("pandas_ta_classic.ichimoku", return_value=None):
             res = OverlapIndicators.ichimoku(h, l, c)
             assert "tenkan_sen" in res
             assert res["tenkan_sen"].isna().all()
 
         # 3. 例外発生時もNaNを返す
-        with patch("pandas_ta.ichimoku", side_effect=Exception("Internal Error")):
+        with patch(
+            "pandas_ta_classic.ichimoku", side_effect=Exception("Internal Error")
+        ):
             res = OverlapIndicators.ichimoku(h, l, c)
             assert "tenkan_sen" in res
             assert res["tenkan_sen"].isna().all()

@@ -32,11 +32,11 @@ class TestVolumeUnitExtended:
         assert isinstance(VolumeIndicators.adosc(h, l, c, v), pd.Series)
         assert isinstance(VolumeIndicators.obv(c, v), pd.Series)
         # 2. 失敗フォールバック
-        with patch("pandas_ta.ad", return_value=None):
+        with patch("pandas_ta_classic.ad", return_value=None):
             assert (
                 len(VolumeIndicators.ad(h, l, c, v)) == 0
             )  # or NaN Series depending on implementation
-        with patch("pandas_ta.adosc", return_value=None):
+        with patch("pandas_ta_classic.adosc", return_value=None):
             assert len(VolumeIndicators.adosc(h, l, c, v)) == 0
 
     def test_eom_comprehensive(self, sample_df):
@@ -49,7 +49,7 @@ class TestVolumeUnitExtended:
         # 1. 正常
         assert isinstance(VolumeIndicators.eom(h, l, c, v), pd.Series)
         # 2. 失敗時 (None or Empty)
-        with patch("pandas_ta.eom", return_value=None):
+        with patch("pandas_ta_classic.eom", return_value=None):
             res = VolumeIndicators.eom(h, l, c, v)
             assert np.isnan(res).all()
 
@@ -97,7 +97,7 @@ class TestVolumeUnitExtended:
         res = VolumeIndicators.pvo(v)
         assert len(res) == 3
         # 2. 失敗
-        with patch("pandas_ta.pvo", return_value=None):
+        with patch("pandas_ta_classic.pvo", return_value=None):
             res = VolumeIndicators.pvo(v)
             assert all(np.isnan(s).all() for s in res)
 
@@ -106,11 +106,11 @@ class TestVolumeUnitExtended:
 
         c, v = sample_df["close"], sample_df["volume"]
         # PVT 失敗 (全NaNはエラーになる)
-        with patch("pandas_ta.pvt", return_value=None):
+        with patch("pandas_ta_classic.pvt", return_value=None):
             with pytest.raises(PandasTAError):
                 VolumeIndicators.pvt(c, v)
         # NVI 失敗
-        with patch("pandas_ta.nvi", return_value=None):
+        with patch("pandas_ta_classic.nvi", return_value=None):
             with pytest.raises(PandasTAError):
                 VolumeIndicators.nvi(c, v)
 

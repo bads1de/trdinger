@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-import pandas_ta as ta
+import pandas_ta_classic as ta
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
 from app.services.indicators.technical_indicators.trend import TrendIndicators
 from app.services.indicators.technical_indicators.volatility import VolatilityIndicators

@@ -13,7 +13,7 @@ from typing import Any, List, Optional, Type
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+import pandas_ta_classic as ta
 import pkgutil
 import importlib
 

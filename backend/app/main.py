@@ -71,10 +71,6 @@ def create_app() -> FastAPI:
         FastAPI: 設定済みのFastAPIアプリケーションインスタンス。
     """
 
-    from app.utils.pandas_patch import patch_pandas_append
-
-    patch_pandas_append()
-
     # ログ設定
     setup_logging()
     logger = logging.getLogger(__name__)

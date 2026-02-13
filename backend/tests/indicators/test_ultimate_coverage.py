@@ -33,12 +33,12 @@ class TestUltimateCoverage:
 
         # すべての計算がNoneを返す状況をMockで作り、フォールバック（NaN返却）を網羅
         with (
-            patch("pandas_ta.ad", return_value=None),
-            patch("pandas_ta.adosc", return_value=None),
-            patch("pandas_ta.obv", return_value=None),
-            patch("pandas_ta.eom", return_value=None),
-            patch("pandas_ta.cmf", return_value=None),
-            patch("pandas_ta.pvo", return_value=None),
+            patch("pandas_ta_classic.ad", return_value=None),
+            patch("pandas_ta_classic.adosc", return_value=None),
+            patch("pandas_ta_classic.obv", return_value=None),
+            patch("pandas_ta_classic.eom", return_value=None),
+            patch("pandas_ta_classic.cmf", return_value=None),
+            patch("pandas_ta_classic.pvo", return_value=None),
         ):
 
             assert np.isnan(VolumeIndicators.ad(h, l, c, v)).all()
@@ -78,7 +78,7 @@ class TestUltimateCoverage:
             assert isinstance(MomentumIndicators.bias(c, ma_type=ma), pd.Series)
 
         # 2. ACCBANDS / KELTNER の計算失敗
-        with patch("pandas_ta.accbands", return_value=None):
+        with patch("pandas_ta_classic.accbands", return_value=None):
             res = VolatilityIndicators.accbands(h, l, c)
             assert all(np.isnan(s).all() for s in res)
 
@@ -89,7 +89,7 @@ class TestUltimateCoverage:
 
     def test_handle_pandas_ta_errors_deep(self, sample_df):
         # ValueError はデコレーターでそのまま再発生することを確認
-        with patch("pandas_ta.rsi", side_effect=ValueError("Test")):
+        with patch("pandas_ta_classic.rsi", side_effect=ValueError("Test")):
             with pytest.raises(ValueError):
                 MomentumIndicators.rsi(sample_df["close"], 14)
 
@@ -110,6 +110,6 @@ class TestUltimateCoverage:
         res = MomentumIndicators.stoch(h, l, c, d=3, d_length=10)
         assert len(res) == 2
         # すべて NaN の場合の戻り値形式
-        with patch("pandas_ta.stoch", return_value=pd.DataFrame()):
+        with patch("pandas_ta_classic.stoch", return_value=pd.DataFrame()):
             res = MomentumIndicators.stoch(h, l, c)
             assert len(res) == 2

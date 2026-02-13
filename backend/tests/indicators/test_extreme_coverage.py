@@ -2,11 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from unittest.mock import patch
-import app.services.indicators.technical_indicators.momentum as momentum_mod
-import app.services.indicators.technical_indicators.volume as volume_mod
-import app.services.indicators.technical_indicators.trend as trend_mod
-import app.services.indicators.technical_indicators.volatility as volatility_mod
-import app.services.indicators.technical_indicators.overlap as overlap_mod
+
 
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
 from app.services.indicators.technical_indicators.volume import VolumeIndicators
@@ -31,18 +27,18 @@ class TestExtremeCoverage:
         )
 
     def test_momentum_missing_lines(self, sample_df):
-        c, h, l = sample_df["close"], sample_df["high"], sample_df["low"]
+        c = sample_df["close"]
 
         # 1. CMO with talib=True/False
         MomentumIndicators.cmo(c, talib=True)
         MomentumIndicators.cmo(c, talib=False)
 
         # 2. STC with different result types
-        with patch("pandas_ta.stc", return_value=pd.Series([1, 2, 3])):
+        with patch("pandas_ta_classic.stc", return_value=pd.Series([1, 2, 3])):
             MomentumIndicators.stc(c)
 
         # 3. QQE fallback RSI
-        with patch("pandas_ta.qqe", return_value=None):
+        with patch("pandas_ta_classic.qqe", return_value=None):
             MomentumIndicators.qqe(c)
 
         # 4. KST with different parameters
@@ -66,29 +62,30 @@ class TestExtremeCoverage:
         VolumeIndicators.mfi(h, l, c, bad_v)
 
         # 2. AD/ADOSC/OBV fallback
-        with patch("pandas_ta.ad", return_value=None):
+        with patch("pandas_ta_classic.ad", return_value=None):
             VolumeIndicators.ad(h, l, c, v)
-        with patch("pandas_ta.adosc", return_value=None):
+        with patch("pandas_ta_classic.adosc", return_value=None):
             VolumeIndicators.adosc(h, l, c, v)
-        with patch("pandas_ta.obv", return_value=None):
+        with patch("pandas_ta_classic.obv", return_value=None):
             VolumeIndicators.obv(c, v)
 
         # 3. EFI with extreme values
         VolumeIndicators.efi(c * 1000, v)
 
     def test_trend_missing_lines(self, sample_df):
-        c, h, l, v = (
+        c, h, l = (
             sample_df["close"],
             sample_df["high"],
             sample_df["low"],
-            sample_df["volume"],
         )
 
         # 1. SAR stable implementation logic
         TrendIndicators.sar(h, l)
 
         # 2. AMAT result shape logic
-        with patch("pandas_ta.amat", return_value=pd.DataFrame({"A": [1], "B": [2]})):
+        with patch(
+            "pandas_ta_classic.amat", return_value=pd.DataFrame({"A": [1], "B": [2]})
+        ):
             TrendIndicators.amat(c)
 
         # 3. VHF (moved from volatility)
@@ -99,7 +96,7 @@ class TestExtremeCoverage:
 
         # 1. Keltner with fallback search for column names
         mock_kc = pd.DataFrame({"WrongName": [1] * 150})
-        with patch("pandas_ta.kc", return_value=mock_kc):
+        with patch("pandas_ta_classic.kc", return_value=mock_kc):
             VolatilityIndicators.keltner(h, l, c)
 
     def test_overlap_missing_lines(self, sample_df):
@@ -111,7 +108,7 @@ class TestExtremeCoverage:
 
         # 2. Supertrend column name fallback
         mock_st = pd.DataFrame({"SUPERT_7_3.0": [1] * 150, "SUPERTd_7_3.0": [1] * 150})
-        with patch("pandas_ta.supertrend", return_value=mock_st):
+        with patch("pandas_ta_classic.supertrend", return_value=mock_st):
             OverlapIndicators.supertrend(h, l, c)
 
         # 3. ZLMA with ema mode only (sma mode has pandas-ta bug)

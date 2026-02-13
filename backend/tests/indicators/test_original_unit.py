@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from app.services.indicators.technical_indicators.original import OriginalIndicators
 
 
@@ -147,7 +147,8 @@ class TestOriginalUnitExtended:
         h, l, c = sample_df["high"], sample_df["low"], sample_df["close"]
         # pandas-taが例外を投げる状況をシミュレート
         with patch(
-            "pandas_ta.ichimoku", side_effect=RuntimeError("Internal Ta-Lib Error")
+            "pandas_ta_classic.ichimoku",
+            side_effect=RuntimeError("Internal Ta-Lib Error"),
         ):
             res = OverlapIndicators.ichimoku(h, l, c)
             assert "tenkan_sen" in res

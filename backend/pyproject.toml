@@ -24,8 +24,8 @@ classifiers = [
 dependencies = [
     # データ分析・数値計算
     "pandas",
-    "ft-pandas-ta>=0.3.16",
-    "numpy>=1.24.0,<2.0.0",  # pandas_ta互換性のため2.0未満に固定
+    "pandas-ta-classic>=0.3.59",
+    "numpy>=1.24.0",
     "psutil",
     "pandera",
 

@@ -336,7 +336,7 @@ class UniversalStrategy(Strategy):
                     # self.data.df がない場合でも一時的にDFを作成して計算
                     try:
                         import pandas as pd
-                        import pandas_ta as ta
+                        import pandas_ta_classic as ta
 
                         # 高速化のため必要なカラムのみでDataFrameを構築
                         # backtesting.pyのデータ配列はnumpy array
@@ -386,7 +386,7 @@ class UniversalStrategy(Strategy):
                         # 同じ期間の計算は一度だけ行う
                         if atr_period not in self._precomputed_tpsl_atr:
                             if hasattr(self.data, "df"):
-                                import pandas_ta as ta
+                                import pandas_ta_classic as ta
 
                                 high = self.data.df["High"]
                                 low = self.data.df["Low"]

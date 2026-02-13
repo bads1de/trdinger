@@ -1,14 +1,9 @@
-import pytest
+"""
+グローバルテスト設定
+"""
+
 import sys
 import os
 
 # Ensure backend path is in sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app.utils.pandas_patch import patch_pandas_append
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_pandas_patch():
-    """Apply pandas patches for all tests."""
-    patch_pandas_append()
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

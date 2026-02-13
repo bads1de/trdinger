@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 import json
 import pandas as pd
-import pandas_ta as ta
+import pandas_ta_classic as ta
 import optuna
 from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
@@ -280,6 +280,3 @@ if __name__ == "__main__":
 
     except Exception as e:
         logger.error(f"Optimization failed: {e}", exc_info=True)
-
-
-

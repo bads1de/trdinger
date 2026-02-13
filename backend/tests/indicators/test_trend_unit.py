@@ -41,7 +41,7 @@ class TestTrendUnitExtended:
         c, v = sample_df["close"], sample_df["volume"]
         # ZLMA - OverlapIndicatorsから
         assert isinstance(OverlapIndicators.zlma(c, 10), pd.Series)
-        with patch("pandas_ta.zlma", return_value=None):
+        with patch("pandas_ta_classic.zlma", return_value=None):
             assert np.isnan(OverlapIndicators.zlma(c, 10)).all()
         # ALMA - OverlapIndicatorsから
         assert isinstance(OverlapIndicators.alma(c), pd.Series)
