@@ -129,17 +129,16 @@ class BaseRepository(Generic[T]):
 
         sql = f"INSERT OR IGNORE INTO {table_name} ({columns_str}) VALUES ({placeholders})"
 
-        inserted_count = 0
-        for record in records:
-            try:
-                result = self.db.execute(text(sql), record)
-                if getattr(result, "rowcount", 0) > 0:
-                    inserted_count += 1
-            except Exception as e:
-                logger.debug(f"レコード挿入エラー（無視）: {e}")
-                continue
-
-        return inserted_count
+        try:
+            # executemanyを一括実行
+            result = self.db.execute(text(sql), records)
+            return getattr(result, "rowcount", 0)
+        except Exception as e:
+            logger.warning(
+                f"一括挿入エラー（SQLite）: {e}、個別挿入にフォールバックします"
+            )
+            # 失敗した場合は既存の個別挿入ロジックを使用
+            return self._bulk_insert_individual(records)
 
     def _bulk_insert_postgresql_ignore(
         self, records: List[Dict[str, Any]], conflict_columns: List[str]
@@ -727,6 +726,3 @@ class BaseRepository(Generic[T]):
         except Exception as e:
             logger.error(f"レコード検証エラー ({self.model_class.__name__}): {e}")
             return False
-
-
-

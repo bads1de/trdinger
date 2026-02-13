@@ -7,7 +7,7 @@ APIルーター内に散在していたデータ削除・管理関連のビジ�
 
 import logging
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -116,7 +116,7 @@ class DataManagementOrchestrationService:
                 "deleted_counts": deleted_counts,
                 "total_deleted": total_deleted,
                 "errors": errors,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             message = (
@@ -165,7 +165,7 @@ class DataManagementOrchestrationService:
             response_data = {
                 "deleted_count": deleted_count,
                 "data_type": "ohlcv",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             message = f"OHLCVデータを{deleted_count}件削除しました"
@@ -210,7 +210,7 @@ class DataManagementOrchestrationService:
             response_data = {
                 "deleted_count": deleted_count,
                 "data_type": "funding_rates",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             message = f"ファンディングレートデータを{deleted_count}件削除しました"
@@ -257,7 +257,7 @@ class DataManagementOrchestrationService:
             response_data = {
                 "deleted_count": deleted_count,
                 "data_type": "open_interest",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             message = f"オープンインタレストデータを{deleted_count}件削除しました"
@@ -465,6 +465,3 @@ class DataManagementOrchestrationService:
                 message=f"データステータス取得中にエラーが発生しました: {str(e)}",
                 details={"error": str(e)},
             )
-
-
-

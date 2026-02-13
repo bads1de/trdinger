@@ -177,9 +177,7 @@ def get_ml_training_service():
         )
 
 
-def get_backtest_orchestration_service(
-    db: Session = Depends(get_db),
-):
+def get_backtest_orchestration_service():
     """
     BacktestOrchestrationService のインスタンスを取得（依存性注入用）
     """
