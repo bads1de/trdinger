@@ -144,13 +144,17 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             )
 
             # その他指標
-            df["MFI"] = VolumeIndicators.mfi(
-                high=df["high"],
-                low=df["low"],
-                close=df["close"],
-                volume=df["volume"],
-                length=14,
-            ).fillna(50.0)
+            try:
+                df["MFI"] = VolumeIndicators.mfi(
+                    high=df["high"],
+                    low=df["low"],
+                    close=df["close"],
+                    volume=df["volume"],
+                    length=14,
+                ).fillna(50.0)
+            except Exception:
+                df["MFI"] = 50.0
+
             df["OBV"] = VolumeIndicators.obv(
                 close=df["close"], volume=df["volume"]
             ).fillna(0.0)

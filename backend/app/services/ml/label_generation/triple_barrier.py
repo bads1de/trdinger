@@ -150,8 +150,8 @@ class TripleBarrier:
 
         # 1. 価格データと時刻
         close_vals = close.values.astype(np.float64)
-        # 時刻はint64(ns)として扱う
-        close_times = close.index.values.astype(np.int64)
+        # 時刻はint64(ns)として扱う (明示的にns解像度に変換)
+        close_times = close.index.astype("datetime64[ns]").astype(np.int64).values
 
         # 2. イベント開始位置のインデックス
         # get_indexer は見つからない場合 -1 を返す
@@ -173,7 +173,7 @@ class TripleBarrier:
             v_bar_idxs[valid_v_mask] = found_idxs
 
         # 4. 垂直バリアの時刻 (int64)
-        v_bar_times_int = v_bar.values.astype(np.int64)
+        v_bar_times_int = v_bar.astype("datetime64[ns]").astype(np.int64).values
 
         # 5. その他パラメータ配列
         target_vals = target.values.astype(np.float64)
