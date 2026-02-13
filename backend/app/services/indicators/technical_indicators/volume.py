@@ -304,7 +304,19 @@ class VolumeIndicators:
         if validation is not None:
             return validation
 
-        result = ta.mfi(high=high, low=low, close=close, volume=volume, length=length)
+        try:
+            result = ta.mfi(
+                high=high, low=low, close=close, volume=volume, length=length
+            )
+        except TypeError:
+            # Fallback for strict environments where volume must be int
+            result = ta.mfi(
+                high=high,
+                low=low,
+                close=close,
+                volume=volume.astype(int),
+                length=length,
+            )
 
         if result is None or (hasattr(result, "empty") and result.empty):
             return pd.Series(np.full(len(high), np.nan), index=high.index)

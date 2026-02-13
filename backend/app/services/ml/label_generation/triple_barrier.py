@@ -198,7 +198,7 @@ class TripleBarrier:
         # int64 -> datetime64[ns]
         # pandas.to_datetime may return an immutable DatetimeIndex or a read-only array.
         # We explicitly convert to a numpy array and ensure it is a writable copy.
-        out_t1 = pd.to_datetime(out_t1_int).to_numpy(copy=True)
+        out_t1 = pd.to_datetime(out_t1_int, unit="ns").to_numpy(copy=True)
 
         # NaT (int64 min) は pd.to_datetime で NaT に変換されるはずだが、
         # 明示的に min value を NaT に置換念のため

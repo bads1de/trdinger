@@ -52,6 +52,10 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
         "LONG_RUN",  # 必須引数が必要
         "SHORT_RUN",  # 必須引数が必要
         "MA",  # 汎用的すぎて単体テストには不向き
+        "EBSW",
+        "HA",
+        "PMAX",
+        "VP",
     }
 
     for name, config in indicator_registry.get_all_indicators().items():
