@@ -23,7 +23,7 @@ class TestHybridFeatureAdapter:
 
     @pytest.fixture
     def sample_ohlcv(self):
-        idx = pd.date_range("2024-01-01", periods=100, freq="1H")
+        idx = pd.date_range("2024-01-01", periods=100, freq="1h")
         data = {
             "open": np.random.rand(100) * 100,
             "high": np.random.rand(100) * 105,
@@ -79,9 +79,10 @@ class TestHybridFeatureAdapter:
             """入力検証エラー"""
             with pytest.raises(MLFeatureError, match="変換失敗"):
                 adapter.gene_to_features(None, pd.DataFrame())
-        
+
             with pytest.raises(MLFeatureError, match="変換失敗"):
                 adapter.gene_to_features(Mock(), pd.DataFrame())
+
     def test_augment_derived_features(self, adapter, sample_ohlcv):
         """派生特徴量生成"""
         df = adapter._augment_with_derived_features(sample_ohlcv)

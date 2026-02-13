@@ -10,7 +10,7 @@ from app.services.indicators.indicator_orchestrator import TechnicalIndicatorSer
 def sample_ohlcv() -> pd.DataFrame:
     """テスト用のサンプルOHLCVデータを作成"""
     size = 256
-    dates = pd.date_range("2023-01-01", periods=size, freq="1H")
+    dates = pd.date_range("2023-01-01", periods=size, freq="1h")
     data = {
         "open": np.random.uniform(100, 200, size),
         "high": np.random.uniform(200, 300, size),

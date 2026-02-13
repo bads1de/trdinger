@@ -194,13 +194,16 @@ class TripleBarrier:
 
         # 結果の構築
         # int64 -> datetime64[ns]
-        out_t1 = pd.to_datetime(out_t1_int)
+        # pandas.to_datetime may return an immutable DatetimeIndex or a read-only array.
+        # We explicitly convert to a numpy array and ensure it is a writable copy.
+        out_t1 = pd.to_datetime(out_t1_int).to_numpy(copy=True)
+
         # NaT (int64 min) は pd.to_datetime で NaT に変換されるはずだが、
         # 明示的に min value を NaT に置換念のため
         # pandasの仕様では int64の最小値を渡すとNaTになることが多いが、
         # ここでは mask で処理するのが確実
         is_nat = out_t1_int == np.iinfo(np.int64).min
-        out_t1.values[is_nat] = np.datetime64("NaT")
+        out_t1[is_nat] = np.datetime64("NaT")
 
         # sideの数値マッピングを文字列に戻す
         # 0: None, 1: pt, 2: sl, 3: vertical
