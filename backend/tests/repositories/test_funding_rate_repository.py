@@ -130,7 +130,7 @@ class TestInsertFundingRateData:
     ) -> None:
         """ファンディングレートデータが正常に挿入される"""
         mock_result = MagicMock()
-        mock_result.rowcount = 1
+        mock_result.rowcount = 2
         repository.db.execute.return_value = mock_result
 
         count = repository.insert_funding_rate_data(sample_funding_rate_records)
@@ -461,7 +461,3 @@ class TestErrorHandling:
 
         # safe_operationによりエラー時は0が返される
         assert result == 0
-
-
-
-

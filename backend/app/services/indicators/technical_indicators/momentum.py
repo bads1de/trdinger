@@ -330,6 +330,7 @@ class MomentumIndicators:
         return result
 
     @staticmethod
+    @handle_pandas_ta_errors
     def stc(
         data: pd.Series,
         fast: int = 23,

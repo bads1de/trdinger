@@ -74,7 +74,8 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
 
         for i in range(self.n_shadow_iterations):
             # シャドウ特徴量の生成（各列を独立にシャッフル）
-            X_shadow = X.copy().values
+            # Ensure a writable copy of values is created
+            X_shadow = np.array(X.values, copy=True)
             for col in range(n_features):
                 rng.shuffle(X_shadow[:, col])
 

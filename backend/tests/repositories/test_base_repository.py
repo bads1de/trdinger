@@ -168,13 +168,14 @@ class TestBulkInsertMethods:
     ) -> None:
         """SQLite用の一括挿入が成功する"""
         mock_result = MagicMock()
-        mock_result.rowcount = 1
+        mock_result.rowcount = 2
         repository.db.execute.return_value = mock_result
 
         count = repository._bulk_insert_sqlite_ignore(sample_records)
 
         assert count == 2
-        assert repository.db.execute.call_count == 2
+        # SQLAlchemy 2.0 executes as a single batch
+        assert repository.db.execute.call_count == 1
 
     def test_bulk_insert_sqlite_empty_records(self, repository: BaseRepository) -> None:
         """空のレコードリストで0が返される"""
@@ -188,7 +189,7 @@ class TestBulkInsertMethods:
     ) -> None:
         """重複処理付き一括挿入がSQLiteで動作する"""
         mock_result = MagicMock()
-        mock_result.rowcount = 1
+        mock_result.rowcount = 2
         repository.db.execute.return_value = mock_result
 
         count = repository.bulk_insert_with_conflict_handling(
@@ -215,7 +216,9 @@ class TestTimestampMethods:
         expected_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
 
-        result = repository.get_latest_timestamp("timestamp", {"symbol": "BTC/USDT:USDT"})
+        result = repository.get_latest_timestamp(
+            "timestamp", {"symbol": "BTC/USDT:USDT"}
+        )
 
         assert result == expected_time
 
@@ -232,7 +235,9 @@ class TestTimestampMethods:
         expected_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         repository.db.scalar.return_value = expected_time
 
-        result = repository.get_oldest_timestamp("timestamp", {"symbol": "BTC/USDT:USDT"})
+        result = repository.get_oldest_timestamp(
+            "timestamp", {"symbol": "BTC/USDT:USDT"}
+        )
 
         assert result == expected_time
 
@@ -523,7 +528,3 @@ class TestErrorHandling:
             repository._delete_all_records()
 
         repository.db.rollback.assert_called()
-
-
-
-

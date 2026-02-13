@@ -167,7 +167,9 @@ class TripleBarrier:
         if valid_v_mask.any():
             # 有効な垂直バリア時刻のみインデックス検索
             valid_times = v_bar[valid_v_mask]
-            found_idxs = close.index.get_indexer(valid_times)
+            # get_indexer requires exact match which can fail. Use searchsorted to find position.
+            found_idxs = close.index.searchsorted(valid_times, side="left")
+            found_idxs = np.clip(found_idxs, 0, len(close))
             v_bar_idxs[valid_v_mask] = found_idxs
 
         # 4. 垂直バリアの時刻 (int64)

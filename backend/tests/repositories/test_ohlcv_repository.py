@@ -111,7 +111,7 @@ class TestInsertOHLCVData:
         """OHLCVデータが正常に挿入される"""
         mock_validator.validate_ohlcv_records_simple.return_value = True
         mock_result = MagicMock()
-        mock_result.rowcount = 1
+        mock_result.rowcount = 2
         repository.db.execute.return_value = mock_result
 
         count = repository.insert_ohlcv_data(sample_ohlcv_records)
@@ -380,7 +380,3 @@ class TestErrorHandling:
             repository.clear_ohlcv_data_by_symbol_and_timeframe("BTC/USDT:USDT", "1h")
 
         repository.db.rollback.assert_called()
-
-
-
-

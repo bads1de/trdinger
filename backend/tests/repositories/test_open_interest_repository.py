@@ -112,7 +112,7 @@ class TestInsertOpenInterestData:
     ) -> None:
         """オープンインタレストデータが正常に挿入される"""
         mock_result = MagicMock()
-        mock_result.rowcount = 1
+        mock_result.rowcount = 2
         repository.db.execute.return_value = mock_result
 
         count = repository.insert_open_interest_data(sample_open_interest_records)
@@ -260,7 +260,3 @@ class TestErrorHandling:
             repository.clear_all_open_interest_data()
 
         repository.db.rollback.assert_called()
-
-
-
-
