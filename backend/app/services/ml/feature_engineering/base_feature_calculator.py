@@ -42,8 +42,8 @@ class BaseFeatureCalculator(ABC):
             df_cols = {c.lower() for c in df.columns}
             missing = [c for c in required_columns if c.lower() not in df_cols]
             if missing:
-                print(
-                    f"DEBUG: Missing columns in validation: {missing}, Present: {df.columns.tolist()}"
+                logger.debug(
+                    f"Missing columns in validation: {missing}, Present: {df.columns.tolist()}"
                 )
                 logger.warning(f"Missing columns: {missing}")
                 return False

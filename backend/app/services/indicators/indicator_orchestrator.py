@@ -25,40 +25,16 @@ from .config import IndicatorConfig, IndicatorResultType, indicator_registry
 from .data_validation import create_nan_result, validate_data_length_with_fallback
 
 # pandas-ta および pandas, numpy 内部で発生する警告を抑制
-# これらはライブラリ内部の問題であり、アプリケーションの動作に影響しない
-
-
-# SettingWithCopyWarning の場所が pandas のバージョンによって異なる場合があるため、
-# 安全に取得して抑制します。
-def _get_setting_with_copy_warning():
-    # 1. pandas.errors から取得を試みる
-    try:
-        from pandas.errors import SettingWithCopyWarning
-
-        return SettingWithCopyWarning
-    except (ImportError, AttributeError):
-        pass
-
-    # 2. pandas.core.common から取得を試みる
+# SettingWithCopyWarning の抑制
+try:
+    from pandas.errors import SettingWithCopyWarning
+except ImportError:
     try:
         from pandas.core.common import SettingWithCopyWarning
+    except ImportError:
+        SettingWithCopyWarning = UserWarning
 
-        return SettingWithCopyWarning
-    except (ImportError, AttributeError):
-        pass
-
-    # 3. pd.SettingWithCopyWarning から取得を試みる
-    try:
-        return getattr(pd, "SettingWithCopyWarning", UserWarning)
-    except Exception:
-        return UserWarning
-
-
-SettingWithCopyWarning = _get_setting_with_copy_warning()
 warnings.filterwarnings("ignore", category=SettingWithCopyWarning)
-warnings.filterwarnings("ignore", category=FutureWarning, module="pandas")
-warnings.filterwarnings("ignore", category=FutureWarning, module="pandas_ta")
-warnings.filterwarnings("ignore", category=FutureWarning, module="numpy")
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="numpy")
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="pandas_ta")
 
@@ -290,7 +266,7 @@ class TechnicalIndicatorService:
                     if callable(min_length_func):
                         min_length = min_length_func({param_name: value})
                         if isinstance(value, (int, float)) and value < min_length:
-                            logger.warning(
+                            logger.debug(
                                 f"パラメータ {param_name}={value} が最小値 {min_length} 未満のため調整"
                             )
                             value = min_length

@@ -376,7 +376,7 @@ class OptimizationService:
         X_superset: pd.DataFrame,
         y_true: pd.Series,
         n_trials: int = 30,
-        cv_splits: int = 5
+        cv_splits: int = 5,
     ) -> Dict[str, Any]:
         """
         OOF予測を用いたメタモデルの最適化
@@ -384,8 +384,9 @@ class OptimizationService:
         """
         import numpy as np
         from sklearn.model_selection import TimeSeriesSplit, cross_val_score
-        from sklearn.metrics import f1_score, precision_score
-        from app.services.ml.feature_engineering.feature_engineering_service import FeatureEngineeringService
+        from app.services.ml.feature_engineering.feature_engineering_service import (
+            FeatureEngineeringService,
+        )
         from app.services.ml.feature_selection.feature_selector import FeatureSelector
         from lightgbm import LGBMClassifier
 
@@ -394,12 +395,14 @@ class OptimizationService:
         # 1. 一次モデルの OOF 予測を生成
         tscv = TimeSeriesSplit(n_splits=cv_splits)
         oof_probs = pd.Series(np.nan, index=y_true.index)
-        
-        print(f"[*] Generating OOF predictions for primary model ({cv_splits} folds)...")
+
+        logger.info(
+            f"[*] Generating OOF predictions for primary model ({cv_splits} folds)..."
+        )
         for train_idx, val_idx in tscv.split(X_superset, y_true):
             X_train, X_val = X_superset.iloc[train_idx], X_superset.iloc[val_idx]
-            y_train, y_val = y_true.iloc[train_idx], y_true.iloc[val_idx]
-            
+            y_train = y_true.iloc[train_idx]
+
             primary_pipeline.fit(X_train, y_train)
             oof_probs.iloc[val_idx] = primary_pipeline.predict_proba(X_val)[:, 1]
 
@@ -408,29 +411,44 @@ class OptimizationService:
         X_meta_full = X_superset[valid_mask]
         y_true_meta = y_true[valid_mask]
         primary_probs = oof_probs[valid_mask]
-        
+
         # メタラベルの生成: 一次モデルが「1」と予測し、かつ正解も「1」なら 1, 外れたら 0
         # ここでは閾値 0.5 で「エントリー判断」をしたポイントのみを抽出
         entry_mask = primary_probs >= 0.5
         if entry_mask.sum() < 100:
             return {"status": "skipped", "reason": "too few entries for meta-learning"}
-            
+
         X_meta = X_meta_full[entry_mask]
         # メタラベル: 1 = 成功(TP), 0 = 失敗(FP/ダマシ)
         y_meta = (y_true_meta[entry_mask] == 1).astype(int)
-        
-        print(f"[*] Meta-dataset prepared: {len(y_meta)} samples (Win Rate: {y_meta.mean():.2%})")
+
+        logger.info(
+            f"[*] Meta-dataset prepared: {len(y_meta)} samples (Win Rate: {y_meta.mean():.2%})"
+        )
 
         # 2. メタモデルの最適化
         # メタモデルには「マイクロストラクチャ系」などの特権特徴量を優先的に選ばせる
         # また、一次モデルの予測確率自体も強力な特徴量になる
-        micro_keywords = ["LS_", "OI_", "VPIN", "Roll_", "Amihud_", "Kyles_", "Spread", "Volume_CV"]
-        meta_feature_cols = [c for c in X_meta.columns if any(k in c for k in micro_keywords)]
-        
+        micro_keywords = [
+            "LS_",
+            "OI_",
+            "VPIN",
+            "Roll_",
+            "Amihud_",
+            "Kyles_",
+            "Spread",
+            "Volume_CV",
+        ]
+        meta_feature_cols = [
+            c for c in X_meta.columns if any(k in c for k in micro_keywords)
+        ]
+
         X_meta_specialized = X_meta[meta_feature_cols].copy()
         X_meta_specialized["primary_prob"] = primary_probs
-        
-        print(f"[*] Specialized meta-features: {len(meta_feature_cols)} microstructure cols + primary_prob")
+
+        logger.info(
+            f"[*] Specialized meta-features: {len(meta_feature_cols)} microstructure cols + primary_prob"
+        )
 
         frac_diff_d_values = [0.3, 0.4, 0.5]
         parameter_space = self._get_pipeline_parameter_space(frac_diff_d_values)
@@ -439,40 +457,46 @@ class OptimizationService:
             try:
                 # 特徴量フィルタリング (FracDiff適用済みのカラムから選択)
                 d_value = params["frac_diff_d"]
-                X_filt = FeatureEngineeringService.filter_superset_for_d(X_meta_specialized, d_value)
-                
+                X_filt = FeatureEngineeringService.filter_superset_for_d(
+                    X_meta_specialized, d_value
+                )
+
                 # 特徴量選択
                 selector = FeatureSelector(
                     method=params["selection_method"],
                     min_features=params["min_features"],
-                    cv_strategy="timeseries"
+                    cv_strategy="timeseries",
                 )
                 X_sel = selector.fit_transform(X_filt, y_meta)
-                
+
                 # メタモデル (LightGBM)
                 model = LGBMClassifier(
                     learning_rate=params["learning_rate"],
                     num_leaves=params["num_leaves"],
-                    n_estimators=50, # 高速化のため少なめ
+                    n_estimators=50,  # 高速化のため少なめ
                     class_weight="balanced",
                     random_state=42,
-                    verbosity=-1
+                    verbosity=-1,
                 )
-                
+
                 # CV評価 (F1スコアを重視)
-                scores = cross_val_score(model, X_sel, y_meta, cv=TimeSeriesSplit(n_splits=3), scoring="f1")
+                scores = cross_val_score(
+                    model, X_sel, y_meta, cv=TimeSeriesSplit(n_splits=3), scoring="f1"
+                )
                 return scores.mean()
-            except Exception as e:
+            except Exception:
                 return 0.0
 
-        result = self.optimizer.optimize(objective_function, parameter_space, n_calls=n_trials)
-        
+        result = self.optimizer.optimize(
+            objective_function, parameter_space, n_calls=n_trials
+        )
+
         return {
             "best_params": result.best_params,
             "best_f1": result.best_score,
             "n_samples": len(y_meta),
             "base_win_rate": y_meta.mean(),
-            "n_meta_features": X_meta_specialized.shape[1]
+            "n_meta_features": X_meta_specialized.shape[1],
         }
 
     def _get_pipeline_parameter_space(

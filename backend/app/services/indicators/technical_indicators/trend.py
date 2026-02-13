@@ -16,7 +16,6 @@ pandas-ta の trend カテゴリに対応。
 """
 
 import logging
-import warnings
 from typing import Tuple
 
 import numpy as np
@@ -30,14 +29,6 @@ from ..data_validation import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-# PandasのSeries位置アクセス警告を抑制 (pandas-taとの互換性のため)
-warnings.filterwarnings(
-    "ignore",
-    message="Series.__getitem__ treating keys as positions is deprecated",
-    category=FutureWarning,
-)
 
 
 class TrendIndicators:

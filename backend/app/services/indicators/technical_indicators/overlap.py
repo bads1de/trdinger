@@ -25,7 +25,6 @@ pandas-ta の overlap カテゴリに対応。
 """
 
 import logging
-import warnings
 from typing import Dict, Tuple
 
 import numpy as np
@@ -39,17 +38,6 @@ from ..data_validation import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-# PandasのSeries位置アクセス警告を抑制 (pandas-taとの互換性のため)
-warnings.filterwarnings(
-    "ignore",
-    message="Series.__getitem__ treating keys as positions is deprecated",
-    category=FutureWarning,
-)
-
-# pandas-ta 内部で発生する FutureWarning を抑制
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 class OverlapIndicators:

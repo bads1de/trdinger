@@ -16,7 +16,6 @@
 """
 
 import logging
-import warnings
 from typing import Tuple
 
 import numpy as np
@@ -29,8 +28,6 @@ from ..data_validation import (
     validate_series_params,
 )
 
-# pandas-ta 内部で発生する FutureWarning を抑制
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 logger = logging.getLogger(__name__)
 
