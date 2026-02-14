@@ -640,6 +640,15 @@ class IndividualEvaluator:
                     start_date=pd.to_datetime(start_date),
                     end_date=pd.to_datetime(end_date),
                 )
+
+                # 最適化: backtesting.py用に事前にカラム名を大文字化してキャッシュ
+                # これによりBacktestExecutorでの毎回コピーとリネームを回避
+                if not data.empty and "Open" not in data.columns:
+                    # dataはここでしか使われないので直接書き換えても良いが
+                    # 安全のためコピーしておく（get_data_for_backtestの実装次第では参照返しもありうる）
+                    data = data.copy()
+                    data.columns = data.columns.str.capitalize()
+
                 self._data_cache[key] = data
                 logger.debug(f"バックテストデータをキャッシュしました: {key}")
 
@@ -692,6 +701,11 @@ class IndividualEvaluator:
                         end_date=pd.to_datetime(end_date),
                     )
                     if not data.empty:
+                        # 最適化: カラム名を大文字化してキャッシュ
+                        if "Open" not in data.columns:
+                            data = data.copy()
+                            data.columns = data.columns.str.capitalize()
+
                         self._data_cache[key] = data
                         logger.debug(f"1分足データをキャッシュしました: {key}")
                     else:
