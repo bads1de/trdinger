@@ -4,6 +4,7 @@ IndividualEvaluatorのテスト
 
 from unittest.mock import Mock
 import pytest
+import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
@@ -22,9 +23,15 @@ class TestIndividualEvaluator:
         """テスト用のStrategyGeneを作成するヘルパー"""
         return StrategyGene(
             id=gene_id,
-            indicators=[IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)],
-            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="SMA_20")],
-            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="SMA_20")],
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA_20")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="SMA_20")
+            ],
         )
 
     def test_init(self):
@@ -45,17 +52,17 @@ class TestIndividualEvaluator:
             "end_date": "2024-01-02",
         }
         ga_config = GAConfig()
-        
+
         # モックのGeneSerializerがインポートされないことを確認するために、
         # sys.modulesから削除したりパッチを当てたりするのは過剰だが、
         # 返り値の中身をチェックすれば十分
-        
+
         result = self.evaluator._prepare_run_config(gene, base_config, ga_config)
-        
+
         assert result is not None
         # 1. バリデーションスキップフラグがあるか
         assert result.get("_skip_validation") is True
-        
+
         # 2. strategy_gene が辞書ではなくオブジェクトそのものであるか
         # Pydanticモデルを通すと辞書になるが、今回は辞書のまま操作しているはず
         strategy_config = result["strategy_config"]
@@ -457,33 +464,29 @@ class TestIndividualEvaluator:
 
         # backtest_service.run_backtestがGAconfigの内容に応じて異なる結果を返すようにモックを設定
         def run_backtest_side_effect(**kwargs):
-            backtest_config = kwargs.get(
-                "config", {}
-            )  # configをkwargsから取得
+            backtest_config = kwargs.get("config", {})  # configをkwargsから取得
             strategy_config = backtest_config.get(
                 "strategy_config", {}
             )  # strategy_configはbacktest_configの中にある
-            
+
             # Pydanticモデル経由の場合、strategy_configは辞書化されているか確認
             if hasattr(strategy_config, "model_dump"):
-                 strategy_config = strategy_config.model_dump()
-                 
+                strategy_config = strategy_config.model_dump()
+
             # GeneratedGAParametersの場合
             if "parameters" in strategy_config:
-                 params = strategy_config["parameters"]
-                 if params.get("ml_filter_enabled"):
-                     return mock_result_with_ml_filter
-            elif strategy_config.get("ml_filter_enabled"): # 旧構造互換
+                params = strategy_config["parameters"]
+                if params.get("ml_filter_enabled"):
+                    return mock_result_with_ml_filter
+            elif strategy_config.get("ml_filter_enabled"):  # 旧構造互換
                 return mock_result_with_ml_filter
-                
+
             return mock_result_no_ml_filter
 
         self.mock_backtest_service.run_backtest.side_effect = run_backtest_side_effect
 
         # 1. MLフィルター無効で評価
-        result_no_ml = self.evaluator.evaluate(
-            mock_individual, ga_config_no_ml
-        )
+        result_no_ml = self.evaluator.evaluate(mock_individual, ga_config_no_ml)
         # run_backtestがMLフィルターなしの引数で呼ばれたことを検証
         # call_args.kwargsからbacktest_configを取り出し、その中のstrategy_configをチェック
         call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
@@ -502,9 +505,7 @@ class TestIndividualEvaluator:
         assert result_no_ml[0] == expected_fitness_no_ml
 
         # 2. MLフィルター有効で評価
-        result_with_ml = self.evaluator.evaluate(
-            mock_individual, ga_config_with_ml
-        )
+        result_with_ml = self.evaluator.evaluate(mock_individual, ga_config_with_ml)
         # run_backtestがMLフィルターありの引数で呼ばれたことを検証
         call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
         backtest_config_passed = call_kwargs["config"]
@@ -625,6 +626,8 @@ class TestIndividualEvaluator:
         # モックデータ（DataFrameをシミュレート）
         mock_data = Mock(name="MockDataFrame")
         mock_data.empty = False  # DataFrameの empty 属性をシミュレート
+        mock_data.columns = pd.Index(["open", "high", "low", "close", "volume"])
+        mock_data.copy.return_value = mock_data
         # data_serviceプロパティをモック化
         message_mock = Mock()
         message_mock.get_data_for_backtest.return_value = mock_data
@@ -707,9 +710,14 @@ class TestIndividualEvaluator:
         # モックデータ1 (In-Sample用)
         mock_data_is = Mock(name="MockDataFrameIS")
         mock_data_is.empty = False  # DataFrameの empty 属性をシミュレート
+        mock_data_is.columns = pd.Index(["open", "high", "low", "close", "volume"])
+        mock_data_is.copy.return_value = mock_data_is
+
         # モックデータ2 (Out-of-Sample用)
         mock_data_oos = Mock(name="MockDataFrameOOS")
         mock_data_oos.empty = False  # DataFrameの empty 属性をシミュレート
+        mock_data_oos.columns = pd.Index(["open", "high", "low", "close", "volume"])
+        mock_data_oos.copy.return_value = mock_data_oos
 
         # data_serviceプロパティをモック化
         message_mock = Mock()
@@ -758,7 +766,9 @@ class TestIndividualEvaluator:
         ga_config.oos_fitness_weight = 0.5
         # 重み設定必須
         ga_config.fitness_weights = {"total_return": 1.0}
+        ga_config.fitness_weights = {"total_return": 1.0}
         ga_config.fitness_constraints = {}
+        ga_config.objectives = ["weighted_score"]
 
         # 1. 初回実行（キャッシュなし）
         self.evaluator.evaluate(mock_individual, ga_config)
@@ -811,9 +821,15 @@ class TestUnifiedEvaluationLogic:
         """テスト用のStrategyGeneを作成するヘルパー"""
         return StrategyGene(
             id=gene_id,
-            indicators=[IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)],
-            long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="SMA_20")],
-            short_entry_conditions=[Condition(left_operand="close", operator="<", right_operand="SMA_20")],
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA_20")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="SMA_20")
+            ],
         )
 
     def test_weighted_score_objective(self):
@@ -990,6 +1006,3 @@ class TestUnifiedEvaluationLogic:
         # balance_score (trade_history から計算) は別途
         # 合計 ≈ 0.03 + 0.4 + 0.16 + 0.05 = 0.64 前後（balance_scoreの影響あり）
         assert result[0] > 0.5
-
-
-

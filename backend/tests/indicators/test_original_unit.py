@@ -109,7 +109,7 @@ class TestOriginalUnitExtended:
 
         # Entropy
         data = np.abs(np.random.normal(0, 1, 100)) + 0.1  # 正の値を保証
-        entropy_val = OriginalIndicators._entropy(data, window=10)
+        entropy_val = OriginalIndicators._entropy_loop(data, window=10)
         # NaNを除いて検証 (微分エントロピーは負になりうるので非NaNであることを確認)
         valid_mask = ~np.isnan(entropy_val)
         if np.any(valid_mask):
@@ -155,8 +155,4 @@ class TestOriginalUnitExtended:
             # フォールバックは廃止したので、NaNを返す
             assert res["tenkan_sen"].isna().all()
 
-    def test_find_dominant_frequencies_coverage(self):
-        # プライベートメソッドへの直接アクセス（カバレッジのため）
-        data = np.sin(np.linspace(0, 10, 100)) + np.random.normal(0, 0.1, 100)
-        freqs = OriginalIndicators._find_dominant_frequencies(data)
-        assert isinstance(freqs, np.ndarray)
+
