@@ -15,6 +15,7 @@ pandas-ta の trend カテゴリに対応。
 - VHF (Vertical Horizontal Filter)
 """
 
+from numba import njit
 import logging
 from typing import Tuple
 
@@ -40,6 +41,77 @@ class TrendIndicators:
     """
 
     @staticmethod
+    @njit(cache=True)
+    def _sar_loop(high_arr, low_arr, af, max_af):
+        n = len(high_arr)
+        sar = np.zeros(n)
+
+        # 初期状態の設定
+        # 最初のトレンドを決定するために2本目の足を使用
+        is_long = high_arr[1] > high_arr[0]
+        af_val = af
+
+        if is_long:
+            sar[1] = low_arr[0]
+            ep = high_arr[1]
+        else:
+            sar[1] = high_arr[0]
+            ep = low_arr[1]
+
+        for i in range(2, n):
+            # 前回のSARを計算
+            prev_sar = sar[i - 1]
+
+            if is_long:
+                # sar[i] = prev_sar + af_val * (ep - prev_sar)
+                val = prev_sar + af_val * (ep - prev_sar)
+                # SARは直近2期間の安値を超えてはならない
+                m1 = low_arr[i - 1]
+                m2 = low_arr[i - 2]
+                if val > m1:
+                    val = m1
+                if val > m2:
+                    val = m2
+                sar[i] = val
+
+                if low_arr[i] < sar[i]:
+                    # トレンド転換 (Long -> Short)
+                    is_long = False
+                    sar[i] = ep
+                    ep = low_arr[i]
+                    af_val = af
+                else:
+                    # トレンド継続
+                    if high_arr[i] > ep:
+                        ep = high_arr[i]
+                        af_val = min(af_val + af, max_af)
+            else:
+                # sar[i] = prev_sar + af_val * (ep - prev_sar)
+                val = prev_sar + af_val * (ep - prev_sar)
+                # SARは直近2期間の高値を超えてはならない
+                m1 = high_arr[i - 1]
+                m2 = high_arr[i - 2]
+                if val < m1:
+                    val = m1
+                if val < m2:
+                    val = m2
+                sar[i] = val
+
+                if high_arr[i] > sar[i]:
+                    # トレンド転換 (Short -> Long)
+                    is_long = True
+                    sar[i] = ep
+                    ep = high_arr[i]
+                    af_val = af
+                else:
+                    # トレンド継続
+                    if low_arr[i] < ep:
+                        ep = low_arr[i]
+                        af_val = min(af_val + af, max_af)
+
+        return sar
+
+    @staticmethod
     @handle_pandas_ta_errors
     def sar(
         high: pd.Series,
@@ -61,60 +133,12 @@ class TrendIndicators:
         if n < 2:
             return pd.Series(np.nan, index=high.index)
 
-        high_arr = high.values
-        low_arr = low.values
-        sar = np.zeros(n)
+        high_arr = high.values.astype(np.float64)
+        low_arr = low.values.astype(np.float64)
 
-        # 初期状態の設定
-        # 最初のトレンドを決定するために2本目の足を使用
-        is_long = high_arr[1] > high_arr[0]
-        af_val = af
+        sar_res = TrendIndicators._sar_loop(high_arr, low_arr, af, max_af)
 
-        if is_long:
-            sar[1] = low_arr[0]
-            ep = high_arr[1]
-        else:
-            sar[1] = high_arr[0]
-            ep = low_arr[1]
-
-        for i in range(2, n):
-            # 前回のSARを計算
-            prev_sar = sar[i - 1]
-
-            if is_long:
-                sar[i] = prev_sar + af_val * (ep - prev_sar)
-                # SARは直近2期間の安値を超えてはならない
-                sar[i] = min(sar[i], low_arr[i - 1], low_arr[i - 2])
-
-                if low_arr[i] < sar[i]:
-                    # トレンド転換 (Long -> Short)
-                    is_long = False
-                    sar[i] = ep
-                    ep = low_arr[i]
-                    af_val = af
-                else:
-                    # トレンド継続
-                    if high_arr[i] > ep:
-                        ep = high_arr[i]
-                        af_val = min(af_val + af, max_af)
-            else:
-                sar[i] = prev_sar + af_val * (ep - prev_sar)
-                # SARは直近2期間の高値を超えてはならない
-                sar[i] = max(sar[i], high_arr[i - 1], high_arr[i - 2])
-
-                if high_arr[i] > sar[i]:
-                    # トレンド転換 (Short -> Long)
-                    is_long = True
-                    sar[i] = ep
-                    ep = high_arr[i]
-                    af_val = af
-                else:
-                    # トレンド継続
-                    if low_arr[i] < ep:
-                        ep = low_arr[i]
-                        af_val = min(af_val + af, max_af)
-
-        return pd.Series(sar, index=high.index).replace(0, np.nan)
+        return pd.Series(sar_res, index=high.index).replace(0, np.nan)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -188,7 +212,6 @@ class TrendIndicators:
             drift=drift,
             offset=offset,
         )
-
         if result is None or result.empty:
             nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
             return nan_series, nan_series

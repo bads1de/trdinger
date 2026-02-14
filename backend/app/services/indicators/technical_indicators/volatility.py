@@ -20,6 +20,7 @@ pandas-ta の volatility カテゴリに対応。
 - Mass Index (MASSI)
 """
 
+from numba import njit, prange
 import logging
 from typing import Tuple
 
@@ -42,7 +43,107 @@ except ImportError:
     TA_LIB_AVAILABLE = False
 
 
+@njit(parallel=True, cache=True)
+def _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length):
+    n = len(open_arr)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < length + 1:
+        return result
+
+    # Standard Yang-Zhang uses rolling variance of log returns
+    # We can pre-calculate the log returns
+    log_oc = np.zeros(n)
+    log_co = np.zeros(n)
+    rs_term = np.zeros(n)
+
+    for i in prange(1, n):
+        log_oc[i] = np.log(open_arr[i] / close_arr[i - 1])
+        log_co[i] = np.log(close_arr[i] / open_arr[i])
+        rs_term[i] = (
+            np.log(high_arr[i] / close_arr[i]) * np.log(high_arr[i] / open_arr[i])
+        ) + (np.log(low_arr[i] / close_arr[i]) * np.log(low_arr[i] / open_arr[i]))
+
+    k = 0.34 / (1.34 + (length + 1) / (length - 1))
+
+    # Rolling calculations
+    for i in prange(length, n):
+        # Rolling variance (unbiased) of log_oc and log_co
+        # Rolling mean of rs_term
+        s_oc1, s_oc2 = 0.0, 0.0
+        s_co1, s_co2 = 0.0, 0.0
+        s_rs = 0.0
+
+        for j in range(i - length + 1, i + 1):
+            v_oc = log_oc[j]
+            v_co = log_co[j]
+            s_oc1 += v_oc
+            s_oc2 += v_oc * v_oc
+            s_co1 += v_co
+            s_co2 += v_co * v_co
+            s_rs += rs_term[j]
+
+        v_oc_final = (s_oc2 - (s_oc1 * s_oc1) / length) / (length - 1)
+        v_co_final = (s_co2 - (s_co1 * s_co1) / length) / (length - 1)
+        m_rs = s_rs / length
+
+        yz_variance = v_oc_final + k * v_co_final + (1.0 - k) * m_rs
+        if yz_variance > 0:
+            result[i] = np.sqrt(yz_variance)
+        else:
+            result[i] = 0.0
+
+    return result
+
+
 logger = logging.getLogger(__name__)
+
+
+@njit(parallel=True, cache=True)
+def _njit_parkinson_loop(high_arr, low_arr, length):
+    n = len(high_arr)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < length:
+        return result
+
+    const = 1.0 / (4.0 * np.log(2.0))
+    log_hl_sq = np.zeros(n)
+    for i in prange(n):
+        if low_arr[i] > 0:
+            log_hl_sq[i] = np.log(high_arr[i] / low_arr[i]) ** 2
+
+    for i in prange(length - 1, n):
+        s = 0.0
+        for j in range(i - length + 1, i + 1):
+            s += log_hl_sq[j]
+
+        result[i] = np.sqrt(const * (s / length))
+
+    return result
+
+
+@njit(parallel=True, cache=True)
+def _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length):
+    n = len(open_arr)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < length:
+        return result
+
+    const = 2.0 * np.log(2.0) - 1.0
+    inst_var = np.zeros(n)
+    for i in prange(n):
+        if low_arr[i] > 0 and open_arr[i] > 0:
+            v1 = 0.5 * (np.log(high_arr[i] / low_arr[i]) ** 2)
+            v2 = const * (np.log(close_arr[i] / open_arr[i]) ** 2)
+            val = v1 - v2
+            inst_var[i] = val if val > 0 else 0.0
+
+    for i in prange(length - 1, n):
+        s = 0.0
+        for j in range(i - length + 1, i + 1):
+            s += inst_var[j]
+        result[i] = np.sqrt(s / length)
+
+    return result
 
 
 class VolatilityIndicators:
@@ -340,7 +441,7 @@ class VolatilityIndicators:
         length: int = 20,
     ) -> pd.Series:
         """
-        Yang-Zhang Volatility Estimator
+        Yang-Zhang Volatility Estimator - Numba Optimized Version
         """
         validation = validate_multi_series_params(
             {"open_": open_, "high": high, "low": low, "close": close}, length
@@ -348,39 +449,14 @@ class VolatilityIndicators:
         if validation is not None:
             return validation
 
-        N = length
+        open_arr = open_.values.astype(np.float64)
+        high_arr = high.values.astype(np.float64)
+        low_arr = low.values.astype(np.float64)
+        close_arr = close.values.astype(np.float64)
 
-        # 1. Overnight Volatility (Close[t-1] to Open[t])
-        # log(O_t / C_{t-1})
-        log_oc = np.log(open_ / close.shift(1))
-        # sum(log_oc - mean(log_oc))^2 / (N - 1)
-        # pandas rolling().var() calculates unbiased variance (/(N-1)) by default
-        vol_overnight = log_oc.rolling(window=N).var()
+        yz_vol = _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length)
 
-        # 2. Open-to-Close Volatility (Open[t] to Close[t])
-        # log(C_t / O_t)
-        log_co = np.log(close / open_)
-        vol_open_to_close = log_co.rolling(window=N).var()
-
-        # 3. Rogers-Satchell Volatility
-        # log(H/C) * log(H/O) + log(L/C) * log(L/O)
-        rs_term = (np.log(high / close) * np.log(high / open_)) + (
-            np.log(low / close) * np.log(low / open_)
-        )
-
-        vol_rs = rs_term.rolling(window=N).mean()
-
-        # Yang-Zhang Weights
-        k = 0.34 / (1.34 + (N + 1) / (N - 1))
-
-        # Combine
-        # YZ^2 = Vol_Overnight + k * Vol_OpenClose + (1-k) * Vol_RS
-        yz_variance = vol_overnight + k * vol_open_to_close + (1 - k) * vol_rs
-
-        # Return volatility (std dev), annualized if needed but here just raw
-        # Usually multiplied by sqrt(periods_per_year) for annualized,
-        # but we keep it as raw volatility per bar
-        return np.sqrt(yz_variance)
+        return pd.Series(yz_vol, index=close.index, name=f"YZVOL_{length}")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -390,33 +466,18 @@ class VolatilityIndicators:
         length: int = 20,
     ) -> pd.Series:
         """
-        Parkinson Volatility Estimator
+        Parkinson Volatility Estimator - Numba Optimized Version
         """
         validation = validate_multi_series_params({"high": high, "low": low}, length)
         if validation is not None:
             return validation
 
-        # Prevent division by zero or log of zero/negative
-        # Assuming High >= Low > 0
-        hl_ratio = high / low
+        high_arr = high.values.astype(np.float64)
+        low_arr = low.values.astype(np.float64)
 
-        # Replace any potential invalid values (though theoretically shouldn't exist in valid OHLC)
-        hl_ratio = hl_ratio.replace([np.inf, -np.inf], np.nan)
+        p_vol = _njit_parkinson_loop(high_arr, low_arr, length)
 
-        # (ln(H/L))^2
-        log_hl_sq = np.log(hl_ratio) ** 2
-
-        # Constant: 1 / (4 * ln(2))
-        const = 1.0 / (4.0 * np.log(2.0))
-
-        # Instantaneous variance estimate
-        inst_var = const * log_hl_sq
-
-        # Rolling mean of variance
-        rolling_var = inst_var.rolling(window=length).mean()
-
-        # Return volatility (std dev)
-        return np.sqrt(rolling_var)
+        return pd.Series(p_vol, index=high.index, name=f"PARKVOL_{length}")
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -428,7 +489,7 @@ class VolatilityIndicators:
         length: int = 20,
     ) -> pd.Series:
         """
-        Garman-Klass Volatility Estimator
+        Garman-Klass Volatility Estimator - Numba Optimized Version
         """
         validation = validate_multi_series_params(
             {"open_": open_, "high": high, "low": low, "close": close}, length
@@ -436,26 +497,14 @@ class VolatilityIndicators:
         if validation is not None:
             return validation
 
-        # 1. (ln(H/L))^2
-        log_hl_sq = np.log(high / low) ** 2
+        open_arr = open_.values.astype(np.float64)
+        high_arr = high.values.astype(np.float64)
+        low_arr = low.values.astype(np.float64)
+        close_arr = close.values.astype(np.float64)
 
-        # 2. (ln(C/O))^2
-        log_co_sq = np.log(close / open_) ** 2
+        gk_vol = _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length)
 
-        # Constant: 2*ln(2) - 1
-        const = 2.0 * np.log(2.0) - 1.0
-
-        # Instantaneous variance estimate
-        inst_var = 0.5 * log_hl_sq - const * log_co_sq
-
-        # Ensure non-negative (theoretical variance should be positive, but numerical issues can occur)
-        inst_var = inst_var.clip(lower=0.0)
-
-        # Rolling mean of variance
-        rolling_var = inst_var.rolling(window=length).mean()
-
-        # Return volatility (std dev)
-        return np.sqrt(rolling_var)
+        return pd.Series(gk_vol, index=close.index, name=f"GKVOL_{length}")
 
     @staticmethod
     def massi(

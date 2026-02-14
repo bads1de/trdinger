@@ -7,6 +7,7 @@ import logging
 
 import numpy as np
 import pandas as pd
+from numba import njit, prange
 
 from ..data_validation import (
     handle_pandas_ta_errors,
@@ -15,6 +16,137 @@ from ..data_validation import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@njit(parallel=True, cache=True)
+def _njit_hurst_loop(data: np.ndarray, win: int) -> np.ndarray:
+    n = len(data)
+    res = np.full(n, 0.5)
+    for i in prange(win - 1, n):
+        chunk = data[i - win + 1 : i + 1]
+        incs = chunk[1:] - chunk[:-1]
+
+        # Standard deviation
+        mean_inc = 0.0
+        for val in incs:
+            mean_inc += val
+        mean_inc /= len(incs)
+
+        sq_diff_sum = 0.0
+        for val in incs:
+            sq_diff_sum += (val - mean_inc) ** 2
+        s = np.sqrt(sq_diff_sum / len(incs))
+
+        if s < 1e-12:
+            res[i] = 0.5
+            continue
+
+        # Range
+        centered_sum = 0.0
+        max_z = 0.0
+        min_z = 0.0
+        for val in incs:
+            centered_sum += val - mean_inc
+            if centered_sum > max_z:
+                max_z = centered_sum
+            if centered_sum < min_z:
+                min_z = centered_sum
+
+        r = max_z - min_z
+        rs = r / s
+
+        nn = len(incs)
+        if rs > 0 and nn > 1:
+            h = np.log(rs) / np.log(nn / 2.0)
+            if h < 0:
+                h = 0.0
+            if h > 1:
+                h = 1.0
+            res[i] = h
+    return res
+
+
+@njit(cache=True)
+def _njit_count_matches(data: np.ndarray, m_len: int, threshold: float) -> int:
+    n = len(data)
+    count = 0
+    for i in range(n - m_len):
+        for j in range(i + 1, n - m_len):
+            match = True
+            for k in range(m_len):
+                if abs(data[i + k] - data[j + k]) > threshold:
+                    match = False
+                    break
+            if match:
+                count += 1
+    return count
+
+
+@njit(parallel=True, cache=True)
+def _njit_sample_entropy_loop(
+    data: np.ndarray, win: int, m_val: int, r_val: int
+) -> np.ndarray:
+    n = len(data)
+    res = np.zeros(n)
+    for i in prange(win - 1, n):
+        chunk = data[i - win + 1 : i + 1]
+
+        # Std dev
+        m_c = 0.0
+        for val in chunk:
+            m_c += val
+        m_c /= len(chunk)
+
+        v_c = 0.0
+        for val in chunk:
+            v_c += (val - m_c) ** 2
+        std = np.sqrt(v_c / len(chunk))
+
+        if std == 0:
+            res[i] = 0.0
+            continue
+
+        thresh = r_val * std
+        # _njit_count_matches is called sequentially within prange for the chunk
+        a_count = _njit_count_matches(chunk, m_val + 1, thresh)
+        b_count = _njit_count_matches(chunk, m_val, thresh)
+
+        if a_count > 0 and b_count > 0:
+            res[i] = -np.log(a_count / b_count)
+        else:
+            res[i] = 0.0
+    return res
+
+
+@njit(parallel=True, cache=True)
+def _njit_katz_loop(data: np.ndarray, win: int) -> np.ndarray:
+    n_obs = len(data)
+    res = np.full(n_obs, 1.0)
+    for i in prange(win - 1, n_obs):
+        x = data[i - win + 1 : i + 1]
+        n = len(x) - 1
+        if n <= 0:
+            continue
+
+        l_val = 0.0
+        for j in range(n):
+            l_val += abs(x[j + 1] - x[j])
+
+        max_dist = 0.0
+        x0 = x[0]
+        for val in x:
+            dist = abs(val - x0)
+            if dist > max_dist:
+                max_dist = dist
+
+        if l_val > 0 and max_dist > 0:
+            fd = np.log10(n) / (np.log10(max_dist / l_val) + np.log10(n))
+            if fd < 1.0:
+                fd = 1.0
+            if fd > 2.0:
+                fd = 2.0
+            res[i] = fd
+    return res
 
 
 class AdvancedFeatures:
@@ -257,41 +389,7 @@ class AdvancedFeatures:
             return validation
 
         vals = close.values.astype(np.float64)
-        n = len(vals)
-        result = np.full(n, 0.5)
-
-        # Numbaで最適化された内部ループを呼び出す
-        from numba import jit
-
-        @jit(nopython=True)
-        def _hurst_loop(data, win):
-            res = np.full(len(data), 0.5)
-            for i in range(win - 1, len(data)):
-                chunk = data[i - win + 1 : i + 1]
-                # _calculate_rs_hurst のロジックをインライン化
-                incs = chunk[1:] - chunk[:-1]
-                s = np.std(incs)
-                if s < 1e-12:
-                    res[i] = 0.5
-                    continue
-
-                mean_inc = np.mean(incs)
-                centered = incs - mean_inc
-                z = np.cumsum(centered)
-                r = np.max(z) - np.min(z)
-                rs = r / s
-
-                nn = len(incs)
-                if rs > 0 and nn > 1:
-                    h = np.log(rs) / np.log(nn / 2)
-                    if h < 0:
-                        h = 0.0
-                    if h > 1:
-                        h = 1.0
-                    res[i] = h
-            return res
-
-        result = _hurst_loop(vals, window)
+        result = _njit_hurst_loop(vals, window)
         return pd.Series(result, index=close.index).fillna(0.5)
 
     @staticmethod
@@ -340,46 +438,8 @@ class AdvancedFeatures:
         if validation is not None:
             return validation
 
-        from numba import jit
-
-        @jit(nopython=True)
-        def _count_matches(data, m_len, threshold):
-            n = len(data)
-            count = 0
-            for i in range(n - m_len):
-                for j in range(i + 1, n - m_len):
-                    match = True
-                    for k in range(m_len):
-                        if abs(data[i + k] - data[j + k]) > threshold:
-                            match = False
-                            break
-                    if match:
-                        count += 1
-            return count
-
-        @jit(nopython=True)
-        def _sample_entropy_loop(data, win, m_val, r_val):
-            n = len(data)
-            res = np.zeros(n)
-            for i in range(win - 1, n):
-                chunk = data[i - win + 1 : i + 1]
-                std = np.std(chunk)
-                if std == 0:
-                    res[i] = 0.0
-                    continue
-
-                thresh = r_val * std
-                A = _count_matches(chunk, m_val + 1, thresh)
-                B = _count_matches(chunk, m_val, thresh)
-
-                if A > 0 and B > 0:
-                    res[i] = -np.log(A / B)
-                else:
-                    res[i] = 0.0
-            return res
-
         vals = close.values.astype(np.float64)
-        result = _sample_entropy_loop(vals, window, m, r)
+        result = _njit_sample_entropy_loop(vals, window, m, r)
         return pd.Series(result, index=close.index).fillna(0.0)
 
     @staticmethod
@@ -419,33 +479,8 @@ class AdvancedFeatures:
         if validation is not None:
             return validation
 
-        from numba import jit
-
-        @jit(nopython=True)
-        def _katz_loop(data, win):
-            n_obs = len(data)
-            res = np.full(n_obs, 1.0)
-            for i in range(win - 1, n_obs):
-                x = data[i - win + 1 : i + 1]
-                n = len(x) - 1
-                if n <= 0:
-                    continue
-
-                dists = np.abs(x[1:] - x[:-1])
-                L = np.sum(dists)
-                d = np.max(np.abs(x - x[0]))
-
-                if L > 0 and d > 0:
-                    fd = np.log10(n) / (np.log10(d / L) + np.log10(n))
-                    if fd < 1.0:
-                        fd = 1.0
-                    if fd > 2.0:
-                        fd = 2.0
-                    res[i] = fd
-            return res
-
         vals = close.values.astype(np.float64)
-        result = _katz_loop(vals, window)
+        result = _njit_katz_loop(vals, window)
         return pd.Series(result, index=close.index).fillna(1.0)
 
     @staticmethod

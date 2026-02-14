@@ -19,7 +19,10 @@ from typing import (
     Tuple,
 )
 
+import numpy as np
 import pandas as pd
+from numba import njit
+
 from cachetools import LRUCache
 from pydantic import ValidationError
 
@@ -51,6 +54,38 @@ def _ensure_datetime(value: Optional[object]) -> Optional[datetime]:
     return None
 
 
+@njit(cache=True)
+def _calculate_ulcer_index_numba(dd_array: np.ndarray) -> float:
+    """
+    NumbaでUlcer Indexの数値計算を高速化
+    """
+    if len(dd_array) == 0:
+        return 0.0
+
+    # 二乗和を計算
+    squared_sum = 0.0
+    count = 0
+    for i in range(len(dd_array)):
+        val = dd_array[i]
+        if np.isnan(val):
+            continue
+
+        # 絶対値化
+        val = abs(val)
+
+        # 1.0より大きい場合はパーセンテージ(0-100)とみなして小数(0-1.0)に正規化
+        if val > 1.0:
+            val /= 100.0
+
+        squared_sum += val * val
+        count += 1
+
+    if count == 0:
+        return 0.0
+
+    return np.sqrt(squared_sum / count)
+
+
 def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
     """
     Ulcer Index（ドローダウンの二乗平均平方根）を計算します。
@@ -66,33 +101,19 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
         return 0.0
 
     try:
-        import numpy as np
+        # ドローダウン値の抽出
+        # 大規模データの場合、リスト内包表記 + np.array が一般的
+        # カラムが多い場合は pd.DataFrame(equity_curve)['drawdown'] も速いが、メモリ消費を考慮
+        dd_array = np.array(
+            [
+                float(p.get("drawdown", 0.0) or 0.0) if isinstance(p, Mapping) else 0.0
+                for p in equity_curve
+            ],
+            dtype=np.float64,
+        )
 
-        # ドローダウン値の抽出（Noneは0.0として扱う）
-        drawdowns = [
-            float(p.get("drawdown", 0.0) or 0.0) if isinstance(p, Mapping) else 0.0
-            for p in equity_curve
-        ]
-
-        if not drawdowns:
-            return 0.0
-
-        dd_array = np.array(drawdowns)
-
-        # NaN除去
-        dd_array = dd_array[~np.isnan(dd_array)]
-
-        if len(dd_array) == 0:
-            return 0.0
-
-        dd_array = np.abs(dd_array)
-
-        # ドローダウンがパーセンテージ（>1.0）の場合、小数（0.0-1.0）に変換
-        # バックテストエンジンの出力形式に依存するが、安全のため閾値を設けて変換
-        dd_array = np.where(dd_array > 1.0, dd_array / 100.0, dd_array)
-
-        # 二乗平均平方根 (RMS)
-        return float(np.sqrt(np.mean(dd_array**2)))
+        # Numbaで高速計算
+        return _calculate_ulcer_index_numba(dd_array)
 
     except Exception as e:
         logger.warning(f"Ulcer Index計算エラー: {e}")

@@ -41,38 +41,59 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         テクニカル特徴量を計算
         """
         lookback_periods = config.get("lookback_periods", {})
-        result_df = self.create_result_dataframe(df)
 
-        # 各カテゴリの計算（result_dfを直接更新）
-        result_df = self.calculate_volatility_features(result_df, lookback_periods)
-        result_df = self.calculate_volume_features(result_df, lookback_periods)
-        result_df = self.calculate_market_regime_features(result_df, lookback_periods)
-        result_df = self.calculate_momentum_features(result_df, lookback_periods)
-        result_df = self.calculate_trend_features(result_df, lookback_periods)
+        # 特徴量を一時的に保持する辞書
+        new_features = {}
+
+        # 内部メソッド（Dictを返す）を呼び出して収集
+        new_features.update(
+            self._calculate_volatility_features_internal(df, lookback_periods)
+        )
+        new_features.update(
+            self._calculate_volume_features_internal(df, lookback_periods)
+        )
+        new_features.update(
+            self._calculate_market_regime_features_internal(df, lookback_periods)
+        )
+        new_features.update(
+            self._calculate_momentum_features_internal(df, lookback_periods)
+        )
+        new_features.update(
+            self._calculate_trend_features_internal(df, lookback_periods)
+        )
 
         # Fractional Differencing
         try:
             log_close = np.log(df["close"])
-            result_df["FracDiff_04"] = AdvancedFeatures.frac_diff_ffd(
+            new_features["FracDiff_04"] = AdvancedFeatures.frac_diff_ffd(
                 log_close, d=0.4
             ).fillna(0.0)
         except Exception as e:
             logger.warning(f"FracDiff計算失敗: {e}")
-            result_df["FracDiff_04"] = 0.0
+            new_features["FracDiff_04"] = pd.Series(0.0, index=df.index)
 
-        return result_df
+        # 一括結合（BaseFeatureCalculatorの高速化メソッドを利用）
+        return self.create_result_dataframe_efficient(df, new_features)
 
     def calculate_volatility_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """ボラティリティ特徴量を計算"""
+        """ボラティリティ特徴量を計算 (公開API: DataFrameを返す)"""
+        features = self._calculate_volatility_features_internal(df, lookback_periods)
+        return self.create_result_dataframe_efficient(df, features)
+
+    def _calculate_volatility_features_internal(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> Dict[str, pd.Series]:
+        """ボラティリティ特徴量を計算 (内部用: Dictを返す)"""
+        features = {}
         try:
             if not self.validate_input_data(df, ["close", "high", "low"]):
-                return df
+                return {}
 
             vol_p = lookback_periods.get("volatility", 20)
             # NATR
-            df["NATR"] = VolatilityIndicators.natr(
+            features["NATR"] = VolatilityIndicators.natr(
                 high=df["high"], low=df["low"], close=df["close"], length=vol_p
             ).fillna(0.0)
 
@@ -80,54 +101,65 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             upper, middle, lower = VolatilityIndicators.bbands(
                 df["close"], length=vol_p
             )
-            df["BB_Width"] = (
-                ((upper - lower) / middle)
+            features["BB_Width"] = (
+                ((upper - lower) / (middle.replace(0, np.nan)))
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )
 
             # Yang-Zhang, Parkinson, Garman-Klass
             if "open" in df.columns:
-                df["Yang_Zhang_Vol_20"] = VolatilityIndicators.yang_zhang(
+                features["Yang_Zhang_Vol_20"] = VolatilityIndicators.yang_zhang(
                     open_=df["open"],
                     high=df["high"],
                     low=df["low"],
                     close=df["close"],
                     length=vol_p,
                 ).fillna(0.0)
-                df[f"Garman_Klass_Vol_{vol_p}"] = VolatilityIndicators.garman_klass(
-                    open_=df["open"],
-                    high=df["high"],
-                    low=df["low"],
-                    close=df["close"],
-                    length=vol_p,
-                ).fillna(0.0)
+                features[f"Garman_Klass_Vol_{vol_p}"] = (
+                    VolatilityIndicators.garman_klass(
+                        open_=df["open"],
+                        high=df["high"],
+                        low=df["low"],
+                        close=df["close"],
+                        length=vol_p,
+                    ).fillna(0.0)
+                )
 
-            df[f"Parkinson_Vol_{vol_p}"] = VolatilityIndicators.parkinson(
+            features[f"Parkinson_Vol_{vol_p}"] = VolatilityIndicators.parkinson(
                 high=df["high"], low=df["low"], length=vol_p
             ).fillna(0.0)
 
-            return df
+            return features
         except Exception as e:
-            return self.handle_calculation_error(e, "ボラティリティ計算", df)
+            logger.error(f"ボラティリティ特徴量計算エラー: {e}")
+            return {}
 
-    @safe_ml_operation(
-        default_return=None, context="出来高特徴量計算でエラーが発生しました"
-    )
     def calculate_volume_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
-        """出来高特徴量を計算"""
+        """出来高特徴量を計算 (公開API)"""
+        features = self._calculate_volume_features_internal(df, lookback_periods)
+        return self.create_result_dataframe_efficient(df, features)
+
+    @safe_ml_operation(
+        default_return={}, context="出来高特徴量計算でエラーが発生しました"
+    )
+    def _calculate_volume_features_internal(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+    ) -> Dict[str, pd.Series]:
+        """出来高特徴量を計算 (内部用)"""
+        features = {}
         try:
             if not self.validate_input_data(df, ["volume", "close", "high", "low"]):
-                return df
+                return {}
 
             vol_p = lookback_periods.get("volume", 20)
 
             # 出来高MA
             v_ma = TrendIndicators.sma(df["volume"], length=vol_p).fillna(df["volume"])
             v_max = df["volume"].quantile(0.99) * 10
-            df[f"Volume_MA_{vol_p}"] = np.clip(v_ma, 0, v_max)
+            features[f"Volume_MA_{vol_p}"] = np.clip(v_ma, 0, v_max)
 
             # VWAP & Deviation
             vwap = VolumeIndicators.vwap(
@@ -137,15 +169,15 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 volume=df["volume"],
                 period=vol_p,
             ).fillna(df["close"])
-            df["VWAP_Deviation"] = (
-                ((df["close"] - vwap) / vwap)
+            features["VWAP_Deviation"] = (
+                ((df["close"] - vwap) / (vwap.replace(0, np.nan)))
                 .replace([np.inf, -np.inf], np.nan)
                 .fillna(0.0)
             )
 
             # その他指標
             try:
-                df["MFI"] = VolumeIndicators.mfi(
+                features["MFI"] = VolumeIndicators.mfi(
                     high=df["high"],
                     low=df["low"],
                     close=df["close"],
@@ -153,45 +185,53 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                     length=14,
                 ).fillna(50.0)
             except Exception:
-                df["MFI"] = 50.0
+                features["MFI"] = pd.Series(50.0, index=df.index)
 
-            df["OBV"] = VolumeIndicators.obv(
+            features["OBV"] = VolumeIndicators.obv(
                 close=df["close"], volume=df["volume"]
             ).fillna(0.0)
-            df["AD"] = VolumeIndicators.ad(
+            features["AD"] = VolumeIndicators.ad(
                 high=df["high"], low=df["low"], close=df["close"], volume=df["volume"]
             ).fillna(0.0)
-            df["ADOSC"] = VolumeIndicators.adosc(
+            features["ADOSC"] = VolumeIndicators.adosc(
                 high=df["high"], low=df["low"], close=df["close"], volume=df["volume"]
             ).fillna(0.0)
-            df[f"VWAP_Z_Score_{vol_p}"] = VolumeIndicators.vwap_z_score(
+            features[f"VWAP_Z_Score_{vol_p}"] = VolumeIndicators.vwap_z_score(
                 high=df["high"],
                 low=df["low"],
                 close=df["close"],
                 volume=df["volume"],
                 period=vol_p,
             ).fillna(0.0)
-            df[f"RVOL_{vol_p}"] = VolumeIndicators.rvol(
+            features[f"RVOL_{vol_p}"] = VolumeIndicators.rvol(
                 df["volume"], window=vol_p
             ).fillna(0.0)
-            df[f"Absorption_Score_{vol_p}"] = VolumeIndicators.absorption_score(
+            features[f"Absorption_Score_{vol_p}"] = VolumeIndicators.absorption_score(
                 high=df["high"], low=df["low"], volume=df["volume"], window=vol_p
             ).fillna(0.0)
 
-            return df
+            return features
         except Exception as e:
-            return self.handle_calculation_error(e, "出来高計算", df)
+            logger.error(f"出来高特徴量計算エラー: {e}")
+            return {}
 
     def calculate_market_regime_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
     ) -> pd.DataFrame:
-        """市場レジーム特徴量を計算"""
+        """市場レジーム特徴量を計算 (公開API)"""
+        features = self._calculate_market_regime_features_internal(df, lookback_periods)
+        return self.create_result_dataframe_efficient(df, features)
+
+    def _calculate_market_regime_features_internal(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
+    ) -> Dict[str, pd.Series]:
+        """市場レジーム特徴量を計算 (内部用)"""
         if lookback_periods is None:
             lookback_periods = {"volatility": 20}
 
         try:
             if not self.validate_input_data(df, ["close", "high", "low"]):
-                return df
+                return {}
 
             vol_p = lookback_periods.get("volatility", 20)
             rets = df["close"].pct_change(fill_method=None).fillna(0)
@@ -215,17 +255,25 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 ).fillna(0.0),
             }
 
-            return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+            return new_features
         except Exception as e:
-            return self.handle_calculation_error(e, "市場レジーム計算", df)
+            logger.error(f"市場レジーム特徴量計算エラー: {e}")
+            return {}
 
     def calculate_momentum_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
     ) -> pd.DataFrame:
-        """モメンタム特徴量を計算"""
+        """モメンタム特徴量を計算 (公開API)"""
+        features = self._calculate_momentum_features_internal(df, lookback_periods)
+        return self.create_result_dataframe_efficient(df, features)
+
+    def _calculate_momentum_features_internal(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
+    ) -> Dict[str, pd.Series]:
+        """モメンタム特徴量を計算 (内部用)"""
         try:
             if not self.validate_input_data(df, ["close", "high", "low"]):
-                return df
+                return {}
 
             _, _, hist = MomentumIndicators.macd(df["close"])
             new_features = {
@@ -235,18 +283,26 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                     high=df["high"], low=df["low"], close=df["close"]
                 ).fillna(-50.0),
             }
-            return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+            return new_features
         except Exception as e:
-            return self.handle_calculation_error(e, "モメンタム計算", df)
+            logger.error(f"モメンタム特徴量計算エラー: {e}")
+            return {}
 
     def calculate_trend_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
     ) -> pd.DataFrame:
-        """トレンド特徴量を計算"""
+        """トレンド特徴量を計算 (公開API)"""
+        features = self._calculate_trend_features_internal(df, lookback_periods)
+        return self.create_result_dataframe_efficient(df, features)
+
+    def _calculate_trend_features_internal(
+        self, df: pd.DataFrame, lookback_periods: Dict[str, int] = None
+    ) -> Dict[str, pd.Series]:
+        """トレンド特徴量を計算 (内部用)"""
         lookback_periods = lookback_periods or {"long_ma": 50}
         try:
             if not self.validate_input_data(df, ["close", "high", "low"]):
-                return df
+                return {}
 
             adx, _, _ = TrendIndicators.adx(
                 high=df["high"], low=df["low"], close=df["close"]
@@ -275,22 +331,27 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 "MA_Long": TrendIndicators.sma(
                     df["close"], length=lookback_periods.get("long_ma", 50)
                 ).fillna(df["close"]),
-                "Ichimoku_TK_Dist": ((tenkan - kijun) / df["close"]).fillna(0.0),
-                "Ichimoku_Kijun_Dist": ((df["close"] - kijun) / df["close"]).fillna(
-                    0.0
-                ),
-                "PSAR_Trend": ((df["close"] - psar) / df["close"]).fillna(0.0),
+                "Ichimoku_TK_Dist": (
+                    (tenkan - kijun) / (df["close"].replace(0, np.nan))
+                ).fillna(0.0),
+                "Ichimoku_Kijun_Dist": (
+                    (df["close"] - kijun) / (df["close"].replace(0, np.nan))
+                ).fillna(0.0),
+                "PSAR_Trend": (
+                    (df["close"] - psar) / (df["close"].replace(0, np.nan))
+                ).fillna(0.0),
                 "SMA_Cross_50_200": (
                     (
                         TrendIndicators.sma(df["close"], 50)
                         - TrendIndicators.sma(df["close"], 200)
                     )
-                    / df["close"]
+                    / (df["close"].replace(0, np.nan))
                 ).fillna(0.0),
             }
-            return pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+            return new_features
         except Exception as e:
-            return self.handle_calculation_error(e, "トレンド計算", df)
+            logger.error(f"トレンド特徴量計算エラー: {e}")
+            return {}
 
     def get_feature_names(self) -> list:
         """

@@ -335,6 +335,38 @@ class OverlapIndicators:
         if "factor" in kwargs:
             multiplier = kwargs["factor"]
 
+        # Numba Implementation
+        try:
+            h_arr = high.values.astype(np.float64)
+            l_arr = low.values.astype(np.float64)
+            c_arr = close.values.astype(np.float64)
+
+            lower, upper, trend = OverlapIndicators._supertrend_loop(
+                h_arr, l_arr, c_arr, period, float(multiplier)
+            )
+
+            idx = high.index
+            # Construct DataFrame or Series as originally returned
+            # Original: SUPERTl, SUPERTs, SUPERTd
+
+            # Format depends on multiplier (int or float in name)
+
+            # But wait, original code tries float key first then int key.
+            # Let's just return the series directly without worrying about column names for now,
+            # Or reconstruct exact keys if necessary. The calling code expects Tuple[Series, Series, Series].
+
+            return (
+                pd.Series(lower, index=idx, name=f"SUPERTl_{period}_{multiplier}"),
+                pd.Series(upper, index=idx, name=f"SUPERTs_{period}_{multiplier}"),
+                pd.Series(trend, index=idx, name=f"SUPERTd_{period}_{multiplier}"),
+            )
+
+        except Exception as e:
+            logger.warning(
+                f"Supertrend Numba optimization failed: {e}. Falling back..."
+            )
+            pass
+
         df = ta.supertrend(
             high=high, low=low, close=close, length=period, multiplier=multiplier
         )

@@ -20,6 +20,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+from numba import njit
 import pandas_ta_classic as ta
 
 from ..data_validation import (
@@ -30,6 +31,50 @@ from ..data_validation import (
 
 
 logger = logging.getLogger(__name__)
+
+
+@njit(cache=True)
+def _njit_rvol_loop(
+    volumes: np.ndarray, time_indices: np.ndarray, window: int
+) -> np.ndarray:
+    """
+    Numba-optimized single-pass calculation of Relative Volume (RVOL).
+    Uses running sums and circular buffers for each time-of-day bucket.
+    """
+    n = len(volumes)
+    result = np.full(n, np.nan, dtype=np.float64)
+
+    # Max seconds in a day = 86400. This covers up to 1-second resolution.
+    max_buckets = 86401
+    running_sums = np.zeros(max_buckets, dtype=np.float64)
+    buffers = np.zeros((max_buckets, window), dtype=np.float64)
+    counts = np.zeros(max_buckets, dtype=np.int32)
+    write_indices = np.zeros(max_buckets, dtype=np.int32)
+
+    for i in range(n):
+        m = time_indices[i]
+        vol = volumes[i]
+
+        if np.isnan(vol) or m < 0 or m >= max_buckets:
+            continue
+
+        # Update circular buffer and running sum
+        idx = write_indices[m]
+        old_val = buffers[m, idx]
+        running_sums[m] = running_sums[m] - old_val + vol
+        buffers[m, idx] = vol
+
+        # Update pointers and counts
+        write_indices[m] = (idx + 1) % window
+        counts[m] = min(counts[m] + 1, window)
+
+        # Calculate average and RVOL
+        if counts[m] > 0:
+            avg = running_sums[m] / counts[m]
+            if avg > 0:
+                result[i] = vol / avg
+
+    return result
 
 
 class VolumeIndicators:
@@ -465,30 +510,32 @@ class VolumeIndicators:
         window: int = 20,
     ) -> pd.Series:
         """
-        Relative Volume (RVOL)
+        Relative Volume (RVOL) - Numba Optimized Version
         """
         validation = validate_series_params(volume, window)
         if validation is not None:
             return validation
 
-        # Check for DatetimeIndex
+        # DatetimeIndexがある場合、時間帯別の平均出来高を考慮したRVOLを計算
         if isinstance(volume.index, pd.DatetimeIndex):
             try:
-                # Group by time of day and calculate rolling mean for each time bucket
-                avg_vol = volume.groupby(volume.index.time).transform(
-                    lambda x: x.rolling(window=window, min_periods=1).mean()
-                )
+                # 時間情報を秒単位のインデックスに変換 (0 - 86400)
+                idx = volume.index
+                time_indices = (
+                    idx.hour * 3600 + idx.minute * 60 + idx.second
+                ).values.astype(np.int32)
+                vol_arr = volume.values.astype(np.float64)
 
-                # If grouping failed or returned empty (e.g. unique times), fallback
-                if avg_vol.isna().all():
-                    avg_vol = volume.rolling(window=window).mean()
-            except Exception:
-                # Fallback on error
-                avg_vol = volume.rolling(window=window).mean()
-        else:
-            # Fallback
-            avg_vol = volume.rolling(window=window).mean()
+                res_arr = _njit_rvol_loop(vol_arr, time_indices, window)
+                rvol_series = pd.Series(res_arr, index=volume.index)
 
+                if not rvol_series.isna().all():
+                    return rvol_series.replace([np.inf, -np.inf], np.nan)
+            except Exception as e:
+                logger.warning(f"RVOL Numba optimization failed: {e}. Falling back...")
+
+        # フォールバック: 標準的なローリング平均
+        avg_vol = volume.rolling(window=window, min_periods=1).mean()
         rvol = volume / avg_vol
         return rvol.replace([np.inf, -np.inf], np.nan)
 
