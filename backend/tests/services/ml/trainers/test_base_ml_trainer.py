@@ -87,6 +87,26 @@ class TestBaseMLTrainer:
             assert "is_valid" in result
             assert result["is_valid"] == 0.7  # MockTrainerのpredictが返す値
 
+    def test_predict_signal_uses_latest_1d_prediction(self, trainer, sample_data):
+        """1次元の予測配列でも最新値を使うことを確認"""
+        trainer.is_trained = True
+        trainer.feature_columns = ["feat1", "feat2"]
+        trainer.predict = MagicMock(return_value=np.array([0, 0, 1]))
+
+        features = pd.DataFrame(
+            np.random.randn(3, 2),
+            columns=["feat1", "feat2"],
+            index=sample_data.index[:3],
+        )
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction",
+            return_value=features,
+        ):
+            result = trainer.predict_signal(features)
+
+        assert result["is_valid"] == 1.0
+
     def test_load_model_failure(self, trainer):
         """モデル読み込み失敗"""
         with patch('app.services.ml.trainers.base_ml_trainer.model_manager.load_model', return_value=None):
@@ -134,6 +154,98 @@ class TestBaseMLTrainer:
             assert "cv_scores" in result
             assert len(result["cv_scores"]) == 2
             assert result["mean_score"] == 0.8
+
+    def test_cross_validation_uses_training_params_for_t1(self, trainer, sample_data):
+        """CV用のt1計算が学習パラメータを使うことを確認"""
+        X = pd.DataFrame(np.random.randn(150, 5), index=sample_data.index)
+        y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
+
+        with patch("app.services.ml.trainers.base_ml_trainer.get_t1_series") as mock_t1:
+            mock_t1.return_value = pd.Series(X.index, index=X.index)
+            with patch("app.services.ml.trainers.base_ml_trainer.PurgedKFold") as mock_kfold:
+                mock_kfold.return_value.split.return_value = [
+                    (np.arange(100), np.arange(100, 120)),
+                ]
+                trainer._train_model_impl = MagicMock(return_value={"accuracy": 0.8})
+
+                result = trainer._time_series_cross_validate(
+                    X, y, cv_splits=2, horizon_n=12, timeframe="1h"
+                )
+
+        mock_t1.assert_called_once_with(X.index, 12, timeframe="1h")
+        assert "cv_scores" in result
+        assert len(result["cv_scores"]) == 1
+
+    def test_train_model_runs_cv_before_feature_selection(self, trainer, sample_data):
+        """CVが特徴量選択より先に実行され、学習データだけを使うことを確認"""
+        X_all = pd.DataFrame(
+            np.arange(150 * 4, dtype=float).reshape(150, 4),
+            columns=["feat1", "feat2", "feat3", "feat4"],
+            index=sample_data.index,
+        )
+        y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
+
+        X_tr = X_all.iloc[:120].copy()
+        X_te = X_all.iloc[120:].copy()
+        y_tr = y.iloc[:120].copy()
+        y_te = y.iloc[120:].copy()
+
+        feature_selector = MagicMock()
+        feature_selector.get_feature_names_out.return_value = ["feat1", "feat2"]
+        feature_selector.transform.side_effect = lambda X: X[["feat1", "feat2"]].to_numpy()
+        trainer.feature_selector = feature_selector
+
+        call_order = []
+
+        def cv_side_effect(X_cv, y_cv, **kwargs):
+            call_order.append("cv")
+            pd.testing.assert_frame_equal(X_cv, X_tr)
+            pd.testing.assert_series_equal(y_cv, y_tr)
+            return {"cv_scores": [0.8], "mean_score": 0.8}
+
+        def fit_side_effect(X_fit, y_fit):
+            call_order.append("fit")
+            pd.testing.assert_frame_equal(X_fit, X_tr)
+            pd.testing.assert_series_equal(y_fit, y_tr)
+            return feature_selector
+
+        feature_selector.fit.side_effect = fit_side_effect
+
+        with patch.object(trainer, "_calculate_features", return_value=X_all):
+            with patch.object(
+                trainer,
+                "_prepare_training_data",
+                return_value=(X_all, y),
+            ):
+                with patch.object(
+                    trainer,
+                    "_split_data",
+                    return_value=(X_tr, X_te, y_tr, y_te),
+                ):
+                    with patch.object(
+                        trainer,
+                        "_time_series_cross_validate",
+                        side_effect=cv_side_effect,
+                    ) as mock_cv:
+                        with patch.object(
+                            trainer,
+                            "_train_model_impl",
+                            return_value={"accuracy": 0.8},
+                        ):
+                            with patch(
+                                "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
+                                return_value="/path/to/model",
+                            ):
+                                result = trainer.train_model(
+                                    sample_data,
+                                    save_model=True,
+                                    use_cross_validation=True,
+                                )
+
+        assert call_order == ["cv", "fit"]
+        mock_cv.assert_called_once()
+        assert result["success"] is True
+        assert result["model_path"] == "/path/to/model"
 
     def test_cleanup_resources(self, trainer):
         """リソースクリーンアップのテスト"""

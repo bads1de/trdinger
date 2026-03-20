@@ -86,32 +86,108 @@ class BaseEnsemble(ABC):
             予測確率の配列
         """
 
-    def _create_base_model(self, model_type: str) -> Any:
+    def _create_base_model(
+        self, model_type: str, model_params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """ベースモデルを作成"""
         mt = model_type.lower()
-        seed = unified_config.ml.training.random_state
+        params = {k: v for k, v in (model_params or {}).items() if v is not None}
+        seed = params.pop(
+            "random_state",
+            params.pop(
+                "random_seed",
+                self.config.get("random_state", unified_config.ml.training.random_state),
+            ),
+        )
+        n_jobs = params.pop("n_jobs", self.config.get("n_jobs", 1))
+
+        # 学習フロー側の制御パラメータはモデルコンストラクタに渡さない
+        for key in (
+            "early_stopping_rounds",
+            "num_boost_round",
+            "test_size",
+            "cv_splits",
+            "cross_validation_folds",
+            "use_cross_validation",
+            "horizon_n",
+            "prediction_horizon",
+            "threshold_method",
+            "threshold",
+            "threshold_up",
+            "threshold_down",
+            "quantile_threshold",
+            "train_test_split",
+            "validation_split",
+            "optimization_settings",
+            "save_model",
+            "symbol",
+            "timeframe",
+            "start_date",
+            "end_date",
+            "ensemble_config",
+            "single_model_config",
+            "base_model_params",
+            "meta_model_params",
+            "models",
+            "base_models",
+            "model_type",
+            "method",
+        ):
+            params.pop(key, None)
 
         if mt == "lightgbm":
             import lightgbm as lgb
 
-            return lgb.LGBMClassifier(n_jobs=1, random_state=seed)
+            return lgb.LGBMClassifier(
+                n_estimators=params.pop("n_estimators", 100),
+                learning_rate=params.pop("learning_rate", 0.1),
+                max_depth=params.pop("max_depth", -1),
+                random_state=seed,
+                n_jobs=n_jobs,
+                **params,
+            )
         if mt == "xgboost":
             import xgboost as xgb
 
-            return xgb.XGBClassifier(n_jobs=1, random_state=seed, eval_metric="logloss")
+            return xgb.XGBClassifier(
+                n_estimators=params.pop("n_estimators", 100),
+                learning_rate=params.pop("learning_rate", 0.1),
+                max_depth=params.pop("max_depth", 6),
+                subsample=params.pop("subsample", 0.8),
+                colsample_bytree=params.pop("colsample_bytree", 0.8),
+                random_state=seed,
+                n_jobs=n_jobs,
+                eval_metric=params.pop("eval_metric", "logloss"),
+                verbosity=params.pop("verbosity", 0),
+                **params,
+            )
         if mt == "catboost":
             import catboost as cb
 
             return cb.CatBoostClassifier(
-                thread_count=1, random_seed=seed, verbose=0, allow_writing_files=False
+                iterations=params.pop("iterations", params.pop("n_estimators", 100)),
+                learning_rate=params.pop("learning_rate", 0.1),
+                depth=params.pop("depth", params.pop("max_depth", 6)),
+                random_seed=seed,
+                thread_count=params.pop(
+                    "thread_count", n_jobs if isinstance(n_jobs, int) and n_jobs > 0 else 1
+                ),
+                verbose=params.pop("verbose", 0),
+                allow_writing_files=params.pop("allow_writing_files", False),
+                **params,
             )
         if mt == "logistic_regression":
             from sklearn.linear_model import LogisticRegression
 
             return LogisticRegression(
                 random_state=seed,
-                max_iter=unified_config.ml.training.lr_max_iter,
-                solver="lbfgs",
+                max_iter=params.pop("max_iter", unified_config.ml.training.lr_max_iter),
+                solver=params.pop("solver", "lbfgs"),
+                C=params.pop("C", 1.0),
+                penalty=params.pop("penalty", "l2"),
+                l1_ratio=params.pop("l1_ratio", None),
+                n_jobs=params.pop("n_jobs", None),
+                **params,
             )
 
         raise MLModelError(f"Unsupported model type: {model_type}")

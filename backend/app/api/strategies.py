@@ -5,6 +5,7 @@
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -86,7 +87,7 @@ async def get_strategies(
     """
 
     async def _get_strategies():
-        return strategy_service.get_strategies_with_response(
+        result = strategy_service.get_strategies_with_response(
             limit=limit,
             offset=offset,
             risk_level=risk_level,
@@ -94,6 +95,24 @@ async def get_strategies(
             min_fitness=min_fitness,
             sort_by=sort_by,
             sort_order=sort_order,
+        )
+
+        if not isinstance(result, dict):
+            if hasattr(result, "model_dump"):
+                result = result.model_dump()
+            elif hasattr(result, "dict"):
+                result = result.dict()
+            else:
+                result = {}
+
+        payload = result.get("data") if isinstance(result.get("data"), dict) else {}
+        return StrategiesResponse(
+            success=result.get("success", False),
+            strategies=result.get("strategies") or payload.get("strategies", []),
+            total_count=result.get("total_count", payload.get("total_count", 0)),
+            has_more=result.get("has_more", payload.get("has_more", False)),
+            message=result.get("message", "戦略が正常に取得されました"),
+            timestamp=result.get("timestamp", datetime.now().isoformat()),
         )
 
     return await ErrorHandler.safe_execute_async(_get_strategies)

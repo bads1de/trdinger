@@ -139,67 +139,21 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 raise DataError("学習データが空です")
 
             # 2. データ分割（時系列ホールドアウト）
-            # 特徴量選択の前にデータを分割し、テストデータへのリークを完全に防ぐ
+            X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
+
+            # 3. クロスバリデーション（特徴量選択の前に実行してリークを防ぐ）
+            cv_res = None
             if training_params.get("use_cross_validation", False):
-                # CVの場合でも、最終テストセット(Hold-out)は分離しておくのがベストプラクティス
-                # ここではX_all全体を学習に使う場合でも、特徴量選択は「学習データの範囲内」で行う必要がある
-                # 簡易化のため、CVの場合も一度ホールドアウト分割を行い、
-                # 「学習セット」に対して特徴量選択 -> CV -> 最終学習を行うフローにする
-                X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
-            else:
-                X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
-
-            # 3. 動的な特徴量選択（学習データのみを使用）
-            logger.info(
-                f"🎯 動的な特徴量選択を実行中... (学習データ: {len(X_tr)}サンプル, 候補数: {len(X_tr.columns)})"
-            )
-            try:
-                # fitは学習データのみで行う（これが重要）
-                self.feature_selector.fit(X_tr, y_tr)
-
-                # transformは学習・テスト両方に適用
-                X_tr = pd.DataFrame(
-                    self.feature_selector.transform(X_tr),
-                    columns=self.feature_selector.get_feature_names_out(),
-                    index=X_tr.index,
-                )
-                X_te = pd.DataFrame(
-                    self.feature_selector.transform(X_te),
-                    columns=self.feature_selector.get_feature_names_out(),
-                    index=X_te.index,
-                )
-
-                self.feature_columns = X_tr.columns.tolist()
-                logger.info(f"✅ 特徴量選択完了: {len(self.feature_columns)}個を採用")
-            except Exception as e:
-                logger.warning(
-                    f"特徴量選択中にエラーが発生しました。全特徴量を使用します: {e}"
-                )
-                self.feature_columns = X_all.columns.tolist()
-                # 選択失敗時は元の分割データを使用（カラム名はX_allから）
-                pass
-
-            # 4. 学習実行
-            if training_params.get("use_cross_validation", False):
-                # CVは学習セット(X_tr)内で行う
                 cv_res = self._time_series_cross_validate(X_tr, y_tr, **training_params)
 
-                # 全学習データで最終モデル学習
-                X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
-                res = self._train_model_impl(
-                    X_tr_s,
-                    X_te_s,
-                    y_tr,
-                    y_te,
-                    **training_params,
-                )
+            # 4. 動的な特徴量選択（学習データのみを使用）
+            X_tr, X_te = self._apply_feature_selection(X_tr, X_te, y_tr)
+
+            # 5. 学習実行
+            X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
+            res = self._train_model_impl(X_tr_s, X_te_s, y_tr, y_te, **training_params)
+            if cv_res is not None:
                 res.update(cv_res)
-            else:
-                # シングル分割学習
-                X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
-                res = self._train_model_impl(
-                    X_tr_s, X_te_s, y_tr, y_te, **training_params
-                )
 
             self.is_trained = True
 
@@ -271,24 +225,31 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             )
 
             # 2. 予測実行（サブクラスのpredictを呼び出し）
-            # predictは確率配列を返すことを期待
-            predictions = self.predict(processed_features)
+            # predictは確率配列またはクラス配列を返すことを期待
+            predictions = np.asarray(self.predict(processed_features))
 
             # 3. 最新の予測結果を取得（時系列データの場合は最後の行）
-            if predictions.ndim == 2:
+            if predictions.ndim == 0:
+                latest_pred = predictions.item()
+            elif predictions.ndim == 1:
                 latest_pred = predictions[-1]
             else:
-                latest_pred = predictions
+                latest_pred = predictions[-1]
+
+            latest_pred_array = np.asarray(latest_pred)
 
             # 4. 結果の整形（二値分類専用）
-            if latest_pred.shape[0] >= 2:
+            if latest_pred_array.ndim == 0:
+                is_valid = float(latest_pred_array)
+            elif latest_pred_array.shape[0] >= 2:
                 # 2クラス分類
-                return {
-                    "is_valid": float(latest_pred[1]),
-                }
+                is_valid = float(latest_pred_array[1])
             else:
-                logger.error(f"予期しないクラス数: {latest_pred.shape[0]}")
-                return self.config.prediction.get_default_predictions()
+                is_valid = float(latest_pred_array[0])
+
+            return {
+                "is_valid": is_valid,
+            }
 
         except Exception as e:
             logger.error(f"シグナル予測エラー: {e}")
@@ -348,11 +309,48 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.error(f"学習データ準備エラー: {e}")
             raise DataError(f"学習データの準備に失敗しました: {e}")
 
+    def _apply_feature_selection(
+        self, X_tr: pd.DataFrame, X_te: pd.DataFrame, y_tr: pd.Series
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """学習用データのみに対して特徴量選択を適用する"""
+        logger.info(
+            f"🎯 動的な特徴量選択を実行中... (学習データ: {len(X_tr)}サンプル, 候補数: {len(X_tr.columns)})"
+        )
+        try:
+            # fitは学習データのみで行う（これが重要）
+            self.feature_selector.fit(X_tr, y_tr)
+
+            selected_columns = list(self.feature_selector.get_feature_names_out())
+
+            # transformは学習・テスト両方に適用
+            X_tr_selected = pd.DataFrame(
+                self.feature_selector.transform(X_tr),
+                columns=selected_columns,
+                index=X_tr.index,
+            )
+            X_te_selected = pd.DataFrame(
+                self.feature_selector.transform(X_te),
+                columns=selected_columns,
+                index=X_te.index,
+            )
+
+            self.feature_columns = selected_columns
+            logger.info(f"✅ 特徴量選択完了: {len(self.feature_columns)}個を採用")
+            return X_tr_selected, X_te_selected
+        except Exception as e:
+            logger.warning(
+                f"特徴量選択中にエラーが発生しました。全特徴量を使用します: {e}"
+            )
+            self.feature_columns = X_tr.columns.tolist()
+            return X_tr, X_te
+
     def _split_data(
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """データを分割（常に時系列分割）"""
-        test_size = training_params.get("test_size", 0.2)
+        test_size = training_params.get(
+            "test_size", training_params.get("validation_split", 0.2)
+        )
 
         logger.info("🕒 時系列分割を使用")
         n_samples = len(X)
@@ -372,12 +370,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
-        t1_horizon_n = self.config.training.label_generation.horizon_n
+        t1_horizon_n = training_params.get(
+            "horizon_n", self.config.training.label_generation.horizon_n
+        )
+        timeframe = training_params.get(
+            "timeframe", self.config.training.label_generation.timeframe
+        )
 
         t1 = get_t1_series(
             X.index,
             t1_horizon_n,
-            timeframe=self.config.training.label_generation.timeframe,
+            timeframe=timeframe,
         )
 
         pct_embargo = getattr(self.config.training, "pct_embargo", 0.01)

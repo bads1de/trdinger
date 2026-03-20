@@ -5,6 +5,7 @@ MLトレーニングAPI
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends
@@ -163,6 +164,7 @@ class MLTrainingResponse(BaseModel):
     success: bool
     message: str
     training_id: Optional[str] = None
+    timestamp: Optional[str] = None
 
 
 class MLStatusResponse(BaseModel):
@@ -205,8 +207,24 @@ async def start_ml_training(
     """
 
     async def _start_training():
-        return await ml_service.start_training(
+        result = await ml_service.start_training(
             config=config, background_tasks=background_tasks, db=db
+        )
+
+        if not isinstance(result, dict):
+            if hasattr(result, "model_dump"):
+                result = result.model_dump()
+            elif hasattr(result, "dict"):
+                result = result.dict()
+            else:
+                result = {}
+
+        payload = result.get("data") if isinstance(result.get("data"), dict) else {}
+        return MLTrainingResponse(
+            success=result.get("success", False),
+            message=result.get("message", ""),
+            training_id=result.get("training_id") or payload.get("training_id"),
+            timestamp=result.get("timestamp", datetime.now().isoformat()),
         )
 
     return await ErrorHandler.safe_execute_async(_start_training)

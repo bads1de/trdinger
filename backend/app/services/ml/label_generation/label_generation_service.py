@@ -77,13 +77,14 @@ class LabelGenerationService:
                 )
 
             # ラベル生成
+            timeframe = training_params.get("timeframe", label_config.timeframe)
             labels = label_cache.get_labels(
                 horizon_n=training_params.get("horizon_n", label_config.horizon_n),
                 threshold_method=training_params.get(
                     "threshold_method", label_config.threshold_method
                 ),
                 threshold=training_params.get("threshold", label_config.threshold),
-                timeframe=label_config.timeframe,
+                timeframe=timeframe,
                 price_column=label_config.price_column,
                 pt_factor=training_params.get("pt_factor", 1.0),
                 sl_factor=training_params.get("sl_factor", 1.0),

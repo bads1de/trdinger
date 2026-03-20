@@ -117,7 +117,7 @@ class StackingEnsemble(BaseEnsemble):
             logger.info("スタッキング学習開始（計算コスト最適化版）")
             validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
             self.feature_columns = X_train.columns.tolist()
-            estimators = self._create_base_estimators()
+            estimators = self._create_base_estimators(base_model_params)
             cv = self._create_cv_splitter(X_train)
 
             # ステップ1: OOF予測計算
@@ -128,8 +128,12 @@ class StackingEnsemble(BaseEnsemble):
 
             # ステップ2: メタモデル学習
             logger.info("[Step 2/3] メタモデルを学習中...")
+            meta_model_params = self.config.get("meta_model_params", {})
             meta_oof_pred = self._train_meta_model(
-                oof_base_model_preds, X_train, y_train
+                oof_base_model_preds,
+                X_train,
+                y_train,
+                meta_model_params=meta_model_params,
             )
 
             # ステップ3: ベースモデル最終フィット
@@ -183,17 +187,25 @@ class StackingEnsemble(BaseEnsemble):
         return oof_preds
 
     def _train_meta_model(
-        self, oof_preds: pd.DataFrame, X: pd.DataFrame, y: pd.Series
+        self,
+        oof_preds: pd.DataFrame,
+        X: pd.DataFrame,
+        y: pd.Series,
+        meta_model_params: Optional[Dict[str, Any]] = None,
     ) -> np.ndarray:
         """メタモデルを学習"""
         meta_features = (
             pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
         )
-        self._fitted_meta_model = self._create_base_model(self._meta_model_type)
+        self._fitted_meta_model = self._create_base_model(
+            self._meta_model_type, meta_model_params
+        )
         self._fitted_meta_model.fit(meta_features, y)
 
         return cross_val_predict(
-            clone(self._create_base_model(self._meta_model_type)),
+            clone(
+                self._create_base_model(self._meta_model_type, meta_model_params)
+            ),
             meta_features,
             y,
             cv=self.cv_folds,
@@ -278,7 +290,9 @@ class StackingEnsemble(BaseEnsemble):
         )
         return self._fitted_meta_model.predict_proba(meta_features)
 
-    def _create_base_estimators(self) -> List[Tuple[str, Any]]:
+    def _create_base_estimators(
+        self, base_model_params: Optional[Dict[str, Dict[str, Any]]] = None
+    ) -> List[Tuple[str, Any]]:
         """
         ベースモデルのリストを作成（StackingClassifier用）
 
@@ -289,7 +303,10 @@ class StackingEnsemble(BaseEnsemble):
 
         for model_type in self.base_models:
             try:
-                model = self._create_base_model(model_type)
+                params = {}
+                if base_model_params:
+                    params = base_model_params.get(model_type, base_model_params.get(model_type.lower(), {})) or {}
+                model = self._create_base_model(model_type, params)
                 estimators.append((model_type, model))
                 logger.info(f"ベースモデル追加: {model_type}")
             except Exception as e:

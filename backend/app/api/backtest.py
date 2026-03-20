@@ -6,6 +6,7 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 """
 
 from typing import Any, Dict, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -28,6 +29,7 @@ class BacktestResponse(BaseModel):
     success: bool
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    timestamp: Optional[str] = None
 
 
 class BacktestResultsResponse(BaseModel):
@@ -142,7 +144,13 @@ async def get_backtest_result_by_id(
                 detail=result.get("error", "Unknown error"),
             )
 
-        return result
+        payload = result.get("data") if isinstance(result.get("data"), dict) else {}
+        return BacktestResponse(
+            success=result.get("success", False),
+            result=result.get("result") or payload or None,
+            error=result.get("error"),
+            timestamp=result.get("timestamp", datetime.now().isoformat()),
+        )
 
     return await ErrorHandler.safe_execute_async(_get_by_id)
 

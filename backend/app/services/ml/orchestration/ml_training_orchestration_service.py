@@ -7,6 +7,7 @@ MLモデルのトレーニングフローを制御し、
 """
 
 import logging
+import threading
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
@@ -110,7 +111,10 @@ training_status = {
     "end_time": None,
     "model_info": None,
     "error": None,
+    "training_id": None,
+    "task_id": None,
 }
+training_status_lock = threading.Lock()
 
 
 class MLTrainingService(BaseResourceManager):
@@ -179,14 +183,53 @@ class MLTrainingService(BaseResourceManager):
             # 設定の検証
             self._validate_training_config(config)
 
-            # バックグラウンドタスクを追加
-            background_tasks.add_task(self._train_in_background, config, db)
+            training_id = f"training_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+
+            # 実行開始前に状態を確保して、連打による二重起動を防ぐ
+            with training_status_lock:
+                if training_status["is_training"]:
+                    raise ValueError("既にトレーニングが実行中です")
+
+                training_status.update(
+                    {
+                        "is_training": True,
+                        "progress": 0,
+                        "status": "starting",
+                        "message": "トレーニングを開始しています...",
+                        "start_time": datetime.now().isoformat(),
+                        "end_time": None,
+                        "error": None,
+                        "training_id": training_id,
+                        "task_id": None,
+                    }
+                )
+
+            try:
+                # バックグラウンドタスクを追加
+                background_tasks.add_task(self._train_in_background, config, training_id)
+            except Exception:
+                # タスク登録に失敗した場合は状態を元に戻す
+                with training_status_lock:
+                    training_status.update(
+                        {
+                            "is_training": False,
+                            "progress": 0,
+                            "status": "idle",
+                            "message": "待機中",
+                            "start_time": None,
+                            "end_time": None,
+                            "error": None,
+                            "training_id": None,
+                            "task_id": None,
+                        }
+                    )
+                raise
 
             return api_response(
                 success=True,
                 message="MLトレーニングを開始しました",
                 data={
-                    "training_id": f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    "training_id": training_id
                 },
             )
         except Exception as e:
@@ -195,19 +238,33 @@ class MLTrainingService(BaseResourceManager):
 
     def _validate_training_config(self, config) -> None:
         """トレーニング設定の検証"""
-        if training_status["is_training"]:
-            raise ValueError("既にトレーニングが実行中です")
-
         start_date = datetime.fromisoformat(config.start_date)
         end_date = datetime.fromisoformat(config.end_date)
         if start_date >= end_date:
             raise ValueError("開始日は終了日より前である必要があります")
         if (end_date - start_date).days < 7:
             raise ValueError("トレーニング期間は最低7日間必要です")
+        if not 0 < config.train_test_split < 1:
+            raise ValueError(
+                "train_test_split は 0 より大きく 1 未満である必要があります"
+            )
+        if not 0 < config.validation_split < 1:
+            raise ValueError(
+                "validation_split は 0 より大きく 1 未満である必要があります"
+            )
+        if config.prediction_horizon < 1:
+            raise ValueError("prediction_horizon は 1 以上である必要があります")
+        if config.cross_validation_folds < 1:
+            raise ValueError(
+                "cross_validation_folds は 1 以上である必要があります"
+            )
+        if config.threshold_method not in {"TREND_SCANNING", "TRIPLE_BARRIER"}:
+            raise ValueError("無効なthreshold_methodです")
 
     async def get_training_status(self) -> Dict[str, Any]:
         """トレーニング状態を取得"""
-        return dict(training_status)
+        with training_status_lock:
+            return dict(training_status)
 
     async def get_model_info(self) -> Dict[str, Any]:
         """現在のモデル情報を取得"""
@@ -236,86 +293,130 @@ class MLTrainingService(BaseResourceManager):
 
     async def stop_training(self) -> Dict[str, Any]:
         """トレーニングを停止"""
-        if not training_status["is_training"]:
-            raise ValueError("実行中のトレーニングがありません")
+        with training_status_lock:
+            if not training_status["is_training"]:
+                raise ValueError("実行中のトレーニングがありません")
+
+            training_status.update(
+                {
+                    "is_training": False,
+                    "status": "stopped",
+                    "message": "トレーニングが停止されました",
+                    "end_time": datetime.now().isoformat(),
+                    "training_id": None,
+                    "task_id": None,
+                }
+            )
 
         background_task_manager.cleanup_all_tasks()
-        training_status.update(
-            {
-                "is_training": False,
-                "status": "stopped",
-                "message": "トレーニングが停止されました",
-                "end_time": datetime.now().isoformat(),
-            }
-        )
         return api_response(success=True, message="MLトレーニングを停止しました")
 
-    async def _train_in_background(self, config, db: Session):
+    async def _train_in_background(self, config, training_id: str):
         """バックグラウンドトレーニング実行"""
-        with background_task_manager.managed_task(
-            task_name=f"MLトレーニング_{config.symbol}_{config.timeframe}",
-        ) as task_id:
+        from database.connection import get_session
+
+        db = get_session()
+        try:
+            with background_task_manager.managed_task(
+                task_name=f"MLトレーニング_{training_id}_{config.symbol}_{config.timeframe}",
+            ) as task_id:
+                try:
+                    with training_status_lock:
+                        if not training_status["is_training"]:
+                            logger.info(
+                                "トレーニング停止済みのため、バックグラウンド処理を中断します"
+                            )
+                            return
+
+                        training_status.update(
+                            {
+                                "progress": 0,
+                                "status": "starting",
+                                "message": "トレーニングを開始しています...",
+                                "end_time": None,
+                                "error": None,
+                                "training_id": training_id,
+                                "task_id": task_id,
+                            }
+                        )
+
+                    # データ準備
+                    from app.services.backtest.backtest_data_service import (
+                        BacktestDataService,
+                    )
+
+                    data_service = BacktestDataService(
+                        OHLCVRepository(db),
+                        OpenInterestRepository(db),
+                        FundingRateRepository(db),
+                    )
+
+                    with training_status_lock:
+                        if not training_status["is_training"]:
+                            logger.info(
+                                "トレーニング停止済みのため、データ読み込み後の更新を中断します"
+                            )
+                            return
+
+                        training_status.update(
+                            {
+                                "progress": 10,
+                                "status": "loading_data",
+                                "message": "データを読み込み中...",
+                            }
+                        )
+                    training_data = data_service.get_ml_training_data(
+                        symbol=config.symbol,
+                        timeframe=config.timeframe,
+                        start_date=datetime.fromisoformat(config.start_date),
+                        end_date=datetime.fromisoformat(config.end_date),
+                    )
+
+                    # トレーナー設定の決定
+                    trainer_type, ensemble_cfg, single_cfg = self._determine_trainer_config(
+                        config
+                    )
+
+                    # 自分自身のインスタンスまたは新しいインスタンスで学習実行
+                    # ここでは設定が異なる可能性があるため、新しいパラメータで自分を再初期化するか、
+                    # 別のメソッドで実行する。
+                    training_params = self._build_training_params(config)
+                    self._execute_actual_training(
+                        trainer_type,
+                        ensemble_cfg,
+                        single_cfg,
+                        config,
+                        training_data,
+                        training_params,
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        f"バックグラウンドトレーニングエラー: {e}", exc_info=True
+                    )
+                    with training_status_lock:
+                        if training_status["status"] == "stopped":
+                            logger.info(
+                                "停止済みのため、エラー状態への更新をスキップします"
+                            )
+                            return
+
+                        training_status.update(
+                            {
+                                "is_training": False,
+                                "status": "error",
+                                "message": f"エラー: {e}",
+                                "end_time": datetime.now().isoformat(),
+                                "error": str(e),
+                                "training_id": training_id,
+                            }
+                        )
+        finally:
             try:
-                training_status.update(
-                    {
-                        "is_training": True,
-                        "progress": 0,
-                        "status": "starting",
-                        "message": "トレーニングを開始しています...",
-                        "start_time": datetime.now().isoformat(),
-                        "end_time": None,
-                        "error": None,
-                        "task_id": task_id,
-                    }
-                )
-
-                # データ準備
-                from app.services.backtest.backtest_data_service import (
-                    BacktestDataService,
-                )
-
-                data_service = BacktestDataService(
-                    OHLCVRepository(db),
-                    OpenInterestRepository(db),
-                    FundingRateRepository(db),
-                )
-
-                training_status.update(
-                    {
-                        "progress": 10,
-                        "status": "loading_data",
-                        "message": "データを読み込み中...",
-                    }
-                )
-                training_data = data_service.get_ml_training_data(
-                    symbol=config.symbol,
-                    timeframe=config.timeframe,
-                    start_date=datetime.fromisoformat(config.start_date),
-                    end_date=datetime.fromisoformat(config.end_date),
-                )
-
-                # トレーナー設定の決定
-                trainer_type, ensemble_cfg, single_cfg = self._determine_trainer_config(
-                    config
-                )
-
-                # 自分自身のインスタンスまたは新しいインスタンスで学習実行
-                # ここでは設定が異なる可能性があるため、新しいパラメータで自分を再初期化するか、
-                # 別のメソッドで実行する。
-                self._execute_actual_training(
-                    trainer_type, ensemble_cfg, single_cfg, config, training_data
-                )
-
-            except Exception as e:
-                logger.error(f"バックグラウンドトレーニングエラー: {e}", exc_info=True)
-                training_status.update(
-                    {
-                        "is_training": False,
-                        "status": "error",
-                        "message": f"エラー: {e}",
-                        "end_time": datetime.now().isoformat(),
-                        "error": str(e),
-                    }
+                db.close()
+            except Exception as close_error:
+                logger.warning(
+                    f"バックグラウンド用DBセッションのクローズに失敗しました: {close_error}"
                 )
 
     def _determine_trainer_config(
@@ -342,7 +443,13 @@ class MLTrainingService(BaseResourceManager):
         return trainer_type, ensemble_cfg, single_cfg
 
     def _execute_actual_training(
-        self, trainer_type, ensemble_cfg, single_cfg, config, training_data
+        self,
+        trainer_type,
+        ensemble_cfg,
+        single_cfg,
+        config,
+        training_data,
+        training_params,
     ):
         """実際の学習処理"""
         # 現在のインスタンスを更新
@@ -350,38 +457,124 @@ class MLTrainingService(BaseResourceManager):
         cfg = self._create_unified_config(trainer_type, ensemble_cfg, single_cfg)
         self.trainer = EnsembleTrainer(ensemble_config=cfg)
 
-        training_status.update(
-            {
-                "progress": 50,
-                "status": "training",
-                "message": "モデルをトレーニング中...",
-            }
-        )
-
         opt_settings = (
             config.optimization_settings
             if config.optimization_settings and config.optimization_settings.enabled
             else None
         )
 
+        with training_status_lock:
+            if not training_status["is_training"]:
+                logger.info("トレーニング停止済みのため学習を開始しません")
+                return
+
+            training_status.update(
+                {
+                    "progress": 50,
+                    "status": "training",
+                    "message": "モデルをトレーニング中...",
+                }
+            )
+
         result = self.train_model(
             training_data=training_data,
             save_model=config.save_model,
             optimization_settings=opt_settings,
-            test_size=1 - config.train_test_split,
-            random_state=config.random_state,
+            **training_params,
         )
 
-        training_status.update(
-            {
-                "is_training": False,
-                "progress": 100,
-                "status": "completed",
-                "message": "トレーニングが完了しました",
-                "end_time": datetime.now().isoformat(),
-                "model_info": result,
+        if not isinstance(result, dict):
+            result = {
+                "success": False,
+                "message": "学習結果の取得に失敗しました",
             }
-        )
+
+        if not result.get("success", True):
+            error_message = (
+                result.get("message")
+                or result.get("error")
+                or "モデル学習に失敗しました"
+            )
+            with training_status_lock:
+                if (
+                    not training_status["is_training"]
+                    and training_status["status"] == "stopped"
+                ):
+                    logger.info(
+                        "トレーニング停止済みのため失敗状態への更新をスキップします"
+                    )
+                    return
+
+                training_status.update(
+                    {
+                        "is_training": False,
+                        "progress": 100,
+                        "status": "error",
+                        "message": error_message,
+                        "end_time": datetime.now().isoformat(),
+                        "error": error_message,
+                        "model_info": result,
+                    }
+                )
+            logger.error(f"MLトレーニング失敗: {error_message}")
+            return
+
+        with training_status_lock:
+            if not training_status["is_training"] and training_status["status"] == "stopped":
+                logger.info("トレーニング停止済みのため完了状態への更新をスキップします")
+                return
+
+            training_status.update(
+                {
+                    "is_training": False,
+                    "progress": 100,
+                    "status": "completed",
+                    "message": "トレーニングが完了しました",
+                    "end_time": datetime.now().isoformat(),
+                    "model_info": result,
+                }
+            )
+
+    def _resolve_test_size(self, config: Any) -> float:
+        """ホールドアウト分割比率を決定する"""
+        default_train_split = 0.8
+        default_validation_split = 0.2
+
+        train_test_split = getattr(config, "train_test_split", default_train_split)
+        validation_split = getattr(config, "validation_split", default_validation_split)
+
+        # 既存の train_test_split を優先し、未変更なら validation_split を使う
+        if train_test_split != default_train_split:
+            return 1 - train_test_split
+        if validation_split != default_validation_split:
+            return validation_split
+        return 1 - train_test_split
+
+    def _build_training_params(self, config: Any) -> Dict[str, Any]:
+        """APIリクエスト設定を学習用パラメータに変換する"""
+        test_size = self._resolve_test_size(config)
+        cross_validation_folds = config.cross_validation_folds
+
+        return {
+            "test_size": test_size,
+            "timeframe": config.timeframe,
+            "train_test_split": config.train_test_split,
+            "validation_split": config.validation_split,
+            "prediction_horizon": config.prediction_horizon,
+            "horizon_n": config.prediction_horizon,
+            "threshold_method": config.threshold_method,
+            "threshold_up": config.threshold_up,
+            "threshold_down": config.threshold_down,
+            "quantile_threshold": config.quantile_threshold,
+            "use_cross_validation": cross_validation_folds > 1,
+            "cv_splits": cross_validation_folds,
+            "cross_validation_folds": cross_validation_folds,
+            "random_state": config.random_state,
+            "early_stopping_rounds": config.early_stopping_rounds,
+            "max_depth": config.max_depth,
+            "n_estimators": config.n_estimators,
+            "learning_rate": config.learning_rate,
+        }
 
     # --- コア学習機能 ---
 

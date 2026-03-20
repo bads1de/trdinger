@@ -114,6 +114,55 @@ class EnsembleTrainer(BaseMLTrainer):
 
         return optimized_params
 
+    def _build_base_model_params(
+        self, training_params: Dict[str, Any]
+    ) -> Dict[str, Dict[str, Any]]:
+        """APIや共通学習設定からベースモデル用パラメータを組み立てる"""
+        random_state = training_params.get("random_state", 42)
+        n_jobs = training_params.get("n_jobs", -1)
+        n_estimators = training_params.get("n_estimators")
+        learning_rate = training_params.get("learning_rate")
+        max_depth = training_params.get("max_depth")
+        early_stopping_rounds = training_params.get("early_stopping_rounds")
+
+        base_model_params: Dict[str, Dict[str, Any]] = {
+            "lightgbm": {
+                "random_state": random_state,
+                "n_jobs": n_jobs,
+            },
+            "xgboost": {
+                "random_state": random_state,
+                "n_jobs": n_jobs,
+            },
+            "catboost": {
+                "random_seed": random_state,
+                "thread_count": n_jobs if isinstance(n_jobs, int) and n_jobs > 0 else 1,
+            },
+        }
+
+        if n_estimators is not None:
+            base_model_params["lightgbm"]["n_estimators"] = n_estimators
+            base_model_params["xgboost"]["n_estimators"] = n_estimators
+            base_model_params["catboost"]["iterations"] = n_estimators
+        if learning_rate is not None:
+            base_model_params["lightgbm"]["learning_rate"] = learning_rate
+            base_model_params["xgboost"]["learning_rate"] = learning_rate
+            base_model_params["catboost"]["learning_rate"] = learning_rate
+        if max_depth is not None:
+            base_model_params["lightgbm"]["max_depth"] = max_depth
+            base_model_params["xgboost"]["max_depth"] = max_depth
+            base_model_params["catboost"]["depth"] = max_depth
+        if early_stopping_rounds is not None:
+            for params in base_model_params.values():
+                params["early_stopping_rounds"] = early_stopping_rounds
+
+        return {
+            model_name: {
+                key: value for key, value in params.items() if value is not None
+            }
+            for model_name, params in base_model_params.items()
+        }
+
     def predict_proba(self, features_df: pd.DataFrame) -> np.ndarray:
         """
         アンサンブルモデルで予測確率を取得（フィルタリングなし）
@@ -245,6 +294,9 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # ハイパーパラメータ最適化からのパラメータを分離
             optimized_params = self._extract_optimized_parameters(training_params)
+            base_model_params = self._build_base_model_params(training_params)
+            for model_name, params in optimized_params.get("base_models", {}).items():
+                base_model_params.setdefault(model_name, {}).update(params)
 
             # スタッキングアンサンブルモデルを作成
             if self.ensemble_method.lower() == "stacking":
@@ -268,9 +320,6 @@ class EnsembleTrainer(BaseMLTrainer):
                 raise ModelError(
                     f"サポートされていないアンサンブル手法: {self.ensemble_method}"
                 )
-
-            # 最適化されたベースモデルパラメータをアンサンブルモデルに渡す
-            base_model_params = optimized_params.get("base_models", {})
 
             # アンサンブルモデルを学習
             try:
