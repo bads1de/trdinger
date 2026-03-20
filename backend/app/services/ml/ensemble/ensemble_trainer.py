@@ -13,6 +13,7 @@ import pandas as pd
 from ....utils.error_handler import ModelError
 from ..trainers.base_ml_trainer import BaseMLTrainer
 from ..common.evaluation import evaluate_model_predictions
+from ..common.registry import algorithm_registry
 from ..common.utils import predict_class_from_proba, validate_training_inputs
 from .meta_labeling import MetaLabelingService
 from .stacking import StackingEnsemble
@@ -463,7 +464,11 @@ class EnsembleTrainer(BaseMLTrainer):
         if self.ensemble_model is None:
             return {}
 
-        algorithm_name = getattr(self.ensemble_model, "best_algorithm", "unknown")
+        algorithm_name = algorithm_registry.get_algorithm_name(
+            type(self.ensemble_model).__name__
+        )
+        if algorithm_name == "unknown":
+            algorithm_name = (self.ensemble_method or "stacking").lower()
 
         metadata = {
             "model_type": algorithm_name,
@@ -513,49 +518,50 @@ class EnsembleTrainer(BaseMLTrainer):
             self.ensemble_model = self._model
 
             # メタデータから設定を復元
-            if hasattr(self, "metadata"):
-                self.ensemble_config = self.metadata.get("ensemble_config", {})
-                self.ensemble_method = self.metadata.get("ensemble_method", "stacking")
+            metadata = self.current_model_metadata or getattr(self, "metadata", {}) or {}
+            self.metadata = metadata
+            self.ensemble_config = metadata.get("ensemble_config", {})
+            self.ensemble_method = metadata.get("ensemble_method", "stacking")
 
-                # メタラベリングモデルのロード
-                meta_model_path = self.metadata.get("meta_model_path")
-                if meta_model_path:
-                    try:
-                        from ..models.model_manager import model_manager
-                        import os
+            # メタラベリングモデルのロード
+            meta_model_path = metadata.get("meta_model_path")
+            if meta_model_path:
+                try:
+                    from ..models.model_manager import model_manager
+                    import os
 
-                        meta_data = None
+                    meta_data = None
 
-                        # 1. 直接パス（絶対パス）でのロードを試行
-                        if os.path.exists(meta_model_path):
-                            try:
-                                meta_data = model_manager.load_model(meta_model_path)
-                            except Exception:
-                                logger.warning(
-                                    f"絶対パスでのロードに失敗、相対パスを試行します: {meta_model_path}"
-                                )
-
-                        # 2. メインモデルと同じディレクトリからのロードを試行（フォールバック）
-                        if not meta_data:
-                            model_dir = os.path.dirname(model_path)
-                            meta_filename = os.path.basename(meta_model_path)
-                            relative_path = os.path.join(model_dir, meta_filename)
-
-                            if os.path.exists(relative_path):
-                                logger.info(
-                                    f"メタラベリングモデルを相対パスからロード試行: {relative_path}"
-                                )
-                                meta_data = model_manager.load_model(relative_path)
-
-                        if meta_data and meta_data.get("model"):
-                            self.meta_labeling_service = meta_data.get("model")
-                            logger.info("メタラベリングモデルをロードしました")
-                        else:
+                    # 1. 直接パス（絶対パス）でのロードを試行
+                    if os.path.exists(meta_model_path):
+                        try:
+                            meta_data = model_manager.load_model(meta_model_path)
+                        except Exception:
                             logger.warning(
-                                f"メタラベリングモデルのロードに失敗しました: {meta_model_path}"
+                                f"絶対パスでのロードに失敗、相対パスを試行します: {meta_model_path}"
                             )
-                    except Exception as e:
-                        logger.error(f"メタラベリングモデルのロードエラー: {e}")
+
+                    # 2. メインモデルと同じディレクトリからのロードを試行（フォールバック）
+                    if not meta_data:
+                        model_dir = os.path.dirname(model_path)
+                        meta_filename = os.path.basename(meta_model_path)
+                        relative_path = os.path.join(model_dir, meta_filename)
+
+                        if os.path.exists(relative_path):
+                            logger.info(
+                                f"メタラベリングモデルを相対パスからロード試行: {relative_path}"
+                            )
+                            meta_data = model_manager.load_model(relative_path)
+
+                    if meta_data and meta_data.get("model"):
+                        self.meta_labeling_service = meta_data.get("model")
+                        logger.info("メタラベリングモデルをロードしました")
+                    else:
+                        logger.warning(
+                            f"メタラベリングモデルのロードに失敗しました: {meta_model_path}"
+                        )
+                except Exception as e:
+                    logger.error(f"メタラベリングモデルのロードエラー: {e}")
 
             logger.info(
                 f"アンサンブルモデル読み込み完了: method={self.ensemble_method}"

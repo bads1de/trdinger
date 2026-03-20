@@ -204,18 +204,19 @@ class DataFrequencyManager:
             fr_data_indexed.index = pd.to_datetime(fr_data_indexed.index)
 
             # 8時間間隔から目標timeframeへの再サンプリング
+            resample_tf = self._normalize_timeframe(target_timeframe)
             if target_timeframe in ["1m", "5m", "15m", "30m", "1h"]:
                 # より細かい間隔への補間（前方補完）
-                resampled = fr_data_indexed.resample(target_timeframe).ffill()
+                resampled = fr_data_indexed.resample(resample_tf).ffill()
             elif target_timeframe in ["4h"]:
                 # 4時間間隔への集約（平均値）
-                resampled = fr_data_indexed.resample(target_timeframe).mean()
+                resampled = fr_data_indexed.resample(resample_tf).mean()
             elif target_timeframe == "1d":
                 # 日次への集約（平均値）
-                resampled = fr_data_indexed.resample(target_timeframe).mean()
+                resampled = fr_data_indexed.resample(resample_tf).mean()
             else:
                 # デフォルトは前方補完
-                resampled = fr_data_indexed.resample(target_timeframe).ffill()
+                resampled = fr_data_indexed.resample(resample_tf).ffill()
 
             # timestampカラムを復元
             resampled = resampled.reset_index()
@@ -256,18 +257,19 @@ class DataFrequencyManager:
             oi_data_indexed.index = pd.to_datetime(oi_data_indexed.index)
 
             # 1時間間隔から目標timeframeへの再サンプリング
+            resample_tf = self._normalize_timeframe(target_timeframe)
             if target_timeframe in ["1m", "5m", "15m", "30m"]:
                 # より細かい間隔への補間（前方補完）
-                resampled = oi_data_indexed.resample(target_timeframe).ffill()
+                resampled = oi_data_indexed.resample(resample_tf).ffill()
             elif target_timeframe == "1h":
                 # 同じ間隔なのでそのまま
                 resampled = oi_data_indexed
             elif target_timeframe in ["4h", "1d"]:
                 # より粗い間隔への集約（平均値）
-                resampled = oi_data_indexed.resample(target_timeframe).mean()
+                resampled = oi_data_indexed.resample(resample_tf).mean()
             else:
                 # デフォルトは前方補完
-                resampled = oi_data_indexed.resample(target_timeframe).ffill()
+                resampled = oi_data_indexed.resample(resample_tf).ffill()
 
             # timestampカラムを復元
             resampled = resampled.reset_index()

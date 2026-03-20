@@ -99,6 +99,18 @@ class TestModelManagerUnit:
     def test_extract_algorithm_name_variants(self, manager):
         assert manager._extract_algorithm_name(None, {"best_algorithm": "XGB"}) == "xgb"
         assert (
+            manager._extract_algorithm_name(
+                None, {"best_algorithm": "unknown", "model_type": "StackingEnsemble"}
+            )
+            == "stacking"
+        )
+        assert (
+            manager._extract_algorithm_name(
+                {"fitted_base_models": {"lgb": object()}}, {}
+            )
+            == "stacking"
+        )
+        assert (
             manager._extract_algorithm_name(None, {"model_type": "Ensemble"})
             == "ensemble"
         )

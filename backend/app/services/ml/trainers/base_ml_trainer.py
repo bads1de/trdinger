@@ -94,6 +94,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self._model = None
         self.current_model_path = None
         self.current_model_metadata = None
+        self.metadata = None
 
     @property
     def config(self):
@@ -174,6 +175,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 )
                 res["model_path"] = self.current_model_path = path
                 self.current_model_metadata = meta.to_dict()
+                self.metadata = self.current_model_metadata
 
             # 元のX, yを返す必要がある場合は、選択後の特徴量を持つ全データを再構築
             # （レポート出力用など）
@@ -544,6 +546,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.is_trained = True
         self.current_model_path = model_path
         self.current_model_metadata = model_data.get("metadata", {})
+        self.metadata = self.current_model_metadata
         return True
 
     def _cleanup_temporary_files(self, level: CleanupLevel):
@@ -564,6 +567,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.is_trained = False
             self.current_model_path = None
             self.current_model_metadata = None
+            self.metadata = None
         except Exception as e:
             logger.warning(f"モデルクリーンアップ警告: {e}")
             self._model = None
@@ -572,6 +576,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.is_trained = False
             self.current_model_path = None
             self.current_model_metadata = None
+            self.metadata = None
 
     @safe_ml_operation(
         default_return={

@@ -202,13 +202,14 @@ class StackingEnsemble(BaseEnsemble):
         )
         self._fitted_meta_model.fit(meta_features, y)
 
+        meta_cv = self._create_cv_splitter(X)
         return cross_val_predict(
             clone(
                 self._create_base_model(self._meta_model_type, meta_model_params)
             ),
             meta_features,
             y,
-            cv=self.cv_folds,
+            cv=meta_cv,
             method="predict_proba",
             n_jobs=self.n_jobs,
         )
@@ -438,37 +439,114 @@ class StackingEnsemble(BaseEnsemble):
 
             import joblib
 
-            # 新形式: 自前実装のモデルファイルを探す
-            pattern = f"{base_path}_stacking_ensemble_*.pkl"
-            model_files = glob.glob(pattern)
+            # 新形式とレガシー形式の両方を探索する
+            search_patterns = [
+                f"{base_path}_stacking_ensemble_*.pkl",
+                f"{base_path}_stacking_*.pkl",
+                f"{base_path}_*.pkl",
+                os.path.join(unified_config.ml.model.model_save_path, "stacking_*.pkl"),
+                os.path.join(
+                    unified_config.ml.model.model_save_path,
+                    "stacking_ensemble_*.pkl",
+                ),
+            ]
+
+            model_files = []
+            seen_files = set()
+            for pattern in search_patterns:
+                for model_file in glob.glob(pattern):
+                    normalized_path = os.path.abspath(model_file)
+                    if normalized_path in seen_files:
+                        continue
+                    seen_files.add(normalized_path)
+                    model_files.append(model_file)
 
             if not model_files:
-                logger.warning(f"モデルファイルが見つかりません: {pattern}")
+                logger.warning(
+                    f"モデルファイルが見つかりません: {', '.join(search_patterns)}"
+                )
                 return False
 
-            model_path = sorted(model_files)[-1]  # 最新のファイルを選択
+            def _latest_model_key(path: str) -> tuple[float, str]:
+                try:
+                    return (os.path.getmtime(path), path)
+                except OSError:
+                    return (0.0, path)
+
+            model_path = max(model_files, key=_latest_model_key)
 
             # モデルを読み込み
             model_data = joblib.load(model_path)
 
+            payload = model_data
+            sidecar_metadata = {}
             if isinstance(model_data, dict):
-                # 新形式: 自前実装
-                if "fitted_base_models" in model_data:
-                    self._fitted_base_models = model_data["fitted_base_models"]
-                    self._fitted_meta_model = model_data["fitted_meta_model"]
-                    self._base_model_types = model_data.get(
-                        "base_model_types", list(self._fitted_base_models.keys())
-                    )
-                    self._meta_model_type = model_data.get(
-                        "meta_model_type", "logistic_regression"
-                    )
-                    self.feature_columns = model_data.get("feature_columns", None)
-                    self.config = model_data.get("config", self.config)
-                    self.passthrough = model_data.get("passthrough", False)
-                    logger.info("自前実装のスタッキングモデルを読み込み完了")
-                else:
+                sidecar_metadata = model_data.get("metadata", {}) or {}
+                if "model" in model_data:
+                    payload = model_data["model"]
+
+            if isinstance(payload, dict):
+                fitted_base_models = payload.get("fitted_base_models")
+                fitted_meta_model = payload.get("fitted_meta_model")
+                if not fitted_base_models or fitted_meta_model is None:
                     logger.warning("不明なモデル形式です")
                     return False
+
+                self._fitted_base_models = dict(fitted_base_models)
+                self._fitted_meta_model = fitted_meta_model
+                self._base_model_types = list(
+                    payload.get(
+                        "base_model_types", list(self._fitted_base_models.keys())
+                    )
+                )
+                self._meta_model_type = payload.get(
+                    "meta_model_type", "logistic_regression"
+                )
+                self.feature_columns = payload.get(
+                    "feature_columns", model_data.get("feature_columns", None)
+                )
+                self.config = payload.get("config", self.config)
+                self.passthrough = payload.get("passthrough", False)
+                self.cv_folds = payload.get("cv_folds", self.cv_folds)
+                self.stack_method = payload.get("stack_method", self.stack_method)
+                self.oof_predictions = payload.get("oof_predictions", None)
+                self.oof_base_model_predictions = payload.get(
+                    "oof_base_model_predictions", None
+                )
+                self.X_train_original = payload.get("X_train_original", None)
+                self.y_train_original = payload.get("y_train_original", None)
+                self.is_fitted = bool(payload.get("is_fitted", True))
+                logger.info("自前実装のスタッキングモデルを読み込み完了")
+            elif hasattr(payload, "_fitted_base_models"):
+                self._fitted_base_models = dict(
+                    getattr(payload, "_fitted_base_models", {})
+                )
+                self._fitted_meta_model = getattr(payload, "_fitted_meta_model", None)
+                self._base_model_types = list(
+                    getattr(
+                        payload,
+                        "_base_model_types",
+                        list(self._fitted_base_models.keys()),
+                    )
+                )
+                self._meta_model_type = getattr(
+                    payload, "_meta_model_type", "logistic_regression"
+                )
+                self.feature_columns = getattr(
+                    payload, "feature_columns", None
+                ) or model_data.get("feature_columns", None)
+                self.config = getattr(payload, "config", self.config)
+                self.passthrough = getattr(payload, "passthrough", False)
+                self.cv_folds = getattr(payload, "cv_folds", self.cv_folds)
+                self.stack_method = getattr(payload, "stack_method", self.stack_method)
+                self.oof_predictions = getattr(payload, "oof_predictions", None)
+                self.oof_base_model_predictions = getattr(
+                    payload, "oof_base_model_predictions", None
+                )
+                self.X_train_original = getattr(payload, "X_train_original", None)
+                self.y_train_original = getattr(payload, "y_train_original", None)
+                self.is_fitted = bool(getattr(payload, "is_fitted", True))
+                logger.info("スタッキングモデルオブジェクトを読み込み完了")
             else:
                 logger.warning("不明なモデル形式です")
                 return False
@@ -489,8 +567,23 @@ class StackingEnsemble(BaseEnsemble):
                 self.stack_method = metadata.get("stack_method", self.stack_method)
                 if "feature_columns" in metadata:
                     self.feature_columns = metadata["feature_columns"]
+            elif sidecar_metadata:
+                self._base_model_types = sidecar_metadata.get(
+                    "base_models", self._base_model_types
+                )
+                self._meta_model_type = sidecar_metadata.get(
+                    "meta_model", self._meta_model_type
+                )
+                self.cv_folds = sidecar_metadata.get("cv_folds", self.cv_folds)
+                self.stack_method = sidecar_metadata.get(
+                    "stack_method", self.stack_method
+                )
+                if "feature_columns" in sidecar_metadata:
+                    self.feature_columns = sidecar_metadata["feature_columns"]
+                if "passthrough" in sidecar_metadata:
+                    self.passthrough = sidecar_metadata["passthrough"]
 
-            self.is_fitted = True
+            self.is_fitted = bool(self._fitted_base_models) and self._fitted_meta_model is not None
             logger.info(f"スタッキングアンサンブルモデルを読み込みました: {model_path}")
             return True
 

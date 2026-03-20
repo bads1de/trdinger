@@ -188,10 +188,26 @@ class TestStackingEnsemble:
         Path(mock_file).touch()
 
         model_data = {
-            "fitted_base_models": {"lgb": MagicMock()},
-            "fitted_meta_model": MagicMock(),
-            "base_model_types": ["lgb"],
-            "meta_model_type": "logistic_regression",
+            "model": {
+                "fitted_base_models": {"lgb": MagicMock()},
+                "fitted_meta_model": MagicMock(),
+                "base_model_types": ["lgb"],
+                "meta_model_type": "logistic_regression",
+                "config": config,
+                "feature_columns": ["f1", "f2"],
+                "passthrough": False,
+                "cv_folds": 2,
+                "stack_method": "predict_proba",
+                "is_fitted": True,
+            },
+            "metadata": {
+                "base_models": ["lgb"],
+                "meta_model": "logistic_regression",
+                "cv_folds": 2,
+                "stack_method": "predict_proba",
+                "feature_columns": ["f1", "f2"],
+            },
+            "feature_columns": ["f1", "f2"],
         }
 
         with patch("joblib.load", return_value=model_data):
@@ -200,6 +216,45 @@ class TestStackingEnsemble:
                 assert success is True
                 assert ensemble.is_fitted is True
                 assert "lgb" in ensemble._fitted_base_models
+
+    def test_train_meta_model_uses_time_series_cv(self, sample_data):
+        """メタモデル学習時に時系列CVが使われることを検証"""
+        from sklearn.linear_model import LogisticRegression
+        from app.services.ml.cross_validation.purged_kfold import PurgedKFold
+
+        X, y = sample_data
+        config = {
+            "base_models": ["lightgbm"],
+            "meta_model": "logistic_regression",
+            "cv_folds": 2,
+            "cv_strategy": "purged_kfold",
+            "passthrough": False,
+        }
+        ensemble = StackingEnsemble(config)
+        oof_preds = pd.DataFrame({"lightgbm": np.linspace(0.1, 0.9, len(X))}, index=X.index)
+
+        captured = {}
+
+        with patch.object(
+            ensemble, "_create_base_model", return_value=LogisticRegression(max_iter=20)
+        ):
+            def fake_cross_val_predict(estimator, X_arg, y_arg, cv, method, n_jobs):
+                captured["cv"] = cv
+                return np.column_stack(
+                    [
+                        np.full(len(X_arg), 0.4, dtype=float),
+                        np.full(len(X_arg), 0.6, dtype=float),
+                    ]
+                )
+
+            with patch(
+                "app.services.ml.ensemble.stacking.cross_val_predict",
+                side_effect=fake_cross_val_predict,
+            ):
+                result = ensemble._train_meta_model(oof_preds, X, y)
+
+        assert isinstance(captured["cv"], PurgedKFold)
+        assert result.shape == (len(X), 2)
 
     def test_evaluate_ensemble(self, config, sample_data):
         """評価メトリクス生成のテスト"""

@@ -118,9 +118,12 @@ class TestEnsembleTrainer:
         """モデル読み込みのテスト"""
         with patch('app.services.ml.trainers.base_ml_trainer.BaseMLTrainer.load_model', return_value=True):
             trainer._model = MagicMock()
-            trainer.metadata = {
+            trainer.current_model_metadata = {
                 "ensemble_config": {"method": "stacking"},
+                "ensemble_method": "stacking",
                 "meta_model_path": None
             }
             assert trainer.load_model("/path") is True
             assert trainer.ensemble_model is not None
+            assert trainer.ensemble_config == {"method": "stacking"}
+            assert trainer.ensemble_method == "stacking"

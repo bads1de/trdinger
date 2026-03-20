@@ -290,6 +290,7 @@ class BaseEnsemble(ABC):
             }
             meta = {
                 "ensemble_type": "StackingEnsemble",
+                "best_algorithm": "stacking",
                 "feature_count": len(self.feature_columns or []),
                 "fitted_base_models": list(self._fitted_base_models.keys()),
             }

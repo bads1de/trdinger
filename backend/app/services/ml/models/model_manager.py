@@ -70,18 +70,34 @@ class ModelManager:
 
         # 1. メタデータから best_algorithm を取得
         best_algo = metadata.get("best_algorithm")
-        if best_algo:
-            return best_algo.lower()
+        if best_algo and str(best_algo).lower() != "unknown":
+            return str(best_algo).lower()
+
+        # 1.5. 構造化されたアンサンブル情報を優先して判定
+        ensemble_type = metadata.get("ensemble_type")
+        if ensemble_type:
+            ensemble_type_lower = str(ensemble_type).lower()
+            if "stacking" in ensemble_type_lower:
+                return "stacking"
+            if "ensemble" in ensemble_type_lower:
+                return "ensemble"
 
         # 2. メタデータから model_type を取得
         model_type = metadata.get("model_type")
         if model_type and model_type != "unknown":
             model_type_lower = model_type.lower()
+            if "stacking" in model_type_lower:
+                return "stacking"
             if "ensemble" in model_type_lower:
                 return "ensemble"
             if "single" in model_type_lower:
                 return "single"
             return model_type_lower
+
+        # 2.5. 直接保存されたスタッキング用辞書構造を判定
+        if isinstance(model, dict):
+            if "fitted_base_models" in model or "fitted_meta_model" in model:
+                return "stacking"
 
         # 3. モデルオブジェクトのクラス名から AlgorithmRegistry を使用
         try:
