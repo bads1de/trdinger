@@ -422,6 +422,9 @@ class DynamicIndicatorDiscovery:
                 "verify_series",
                 "short_run",
                 "long_run",
+                "recent_maximum_index",
+                "recent_minimum_index",
+                "signals",
             }
             if name_lower in utility_names:
                 return None

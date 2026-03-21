@@ -56,6 +56,9 @@ def test_all_pandas_ta_indicators_execute_without_adapter(
         "HA",
         "PMAX",
         "VP",
+        "RECENT_MAXIMUM_INDEX",
+        "RECENT_MINIMUM_INDEX",
+        "SIGNALS",
     }
 
     for name, config in indicator_registry.get_all_indicators().items():
