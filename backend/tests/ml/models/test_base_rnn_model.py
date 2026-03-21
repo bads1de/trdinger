@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from app.services.ml.models.base_rnn_model import BaseRNNModel
 
 
@@ -89,7 +89,3 @@ class TestBaseRNNModel:
         preds = model.predict(X, threshold=0.5)
 
         assert np.array_equal(preds, np.array([0, 1, 0, 1]))
-
-
-
-

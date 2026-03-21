@@ -1,8 +1,7 @@
-from unittest.mock import MagicMock
 from app.services.auto_strategy.generators.complex_conditions_strategy import (
     ComplexConditionsStrategy,
 )
-from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
+from app.services.auto_strategy.genes.conditions import ConditionGroup
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 
 
@@ -18,7 +17,12 @@ class MockConditionGenerator:
     def _classify_indicators(self, indicators):
         # 簡易分類
         from app.services.auto_strategy.config.constants import IndicatorType
-        res = {IndicatorType.TREND: [], IndicatorType.MOMENTUM: [], IndicatorType.VOLATILITY: []}
+
+        res = {
+            IndicatorType.TREND: [],
+            IndicatorType.MOMENTUM: [],
+            IndicatorType.VOLATILITY: [],
+        }
         for ind in indicators:
             if "rsi" in ind.type.lower() or "macd" in ind.type.lower():
                 res[IndicatorType.MOMENTUM].append(ind)

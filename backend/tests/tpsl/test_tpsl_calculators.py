@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import pytest
 
@@ -33,8 +33,12 @@ class _TestableBaseCalculator(BaseTPSLCalculator):
         super().__init__(method_name)
 
     def _do_calculate(
-        self, current_price: float, tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]], position_direction: float, **kwargs
+        self,
+        current_price: float,
+        tpsl_gene: Optional[TPSLGene],
+        market_data: Optional[Dict[str, Any]],
+        position_direction: float,
+        **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
         # テスト用の固定値を返す
         return 0.03, 0.06, 0.9, {"test": True}
@@ -377,14 +381,14 @@ class TestAdaptiveCalculator:
         calc = AdaptiveCalculator()
         current_price = 100.0
         market_data = {"volatility": "high"}
-    
+
         result = calc.calculate(
             current_price=current_price,
             tpsl_gene=None,
             market_data=market_data,
             position_direction=1.0,
         )
-    
+
         # high ボラティリティでは VolatilityCalculator を選択する仕様
         assert result.expected_performance.get("adaptive_selection") == "volatility"
         assert result.method_used == "adaptive"
@@ -393,14 +397,14 @@ class TestAdaptiveCalculator:
         calc = AdaptiveCalculator()
         current_price = 100.0
         market_data = {"trend": "strong_up"}
-    
+
         result = calc.calculate(
             current_price=current_price,
             tpsl_gene=None,
             market_data=market_data,
             position_direction=1.0,
         )
-    
+
         assert result.expected_performance.get("adaptive_selection") == "risk_reward"
         assert result.method_used == "adaptive"
 
@@ -422,22 +426,23 @@ class TestAdaptiveCalculator:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calc = AdaptiveCalculator()
-    
+
         def broken_select(*_: Any, **__: Any) -> str:
             raise RuntimeError("boom")
-    
+
         monkeypatch.setattr(calc, "_select_best_method", broken_select)
-    
+
         result = calc.calculate(
             current_price=100.0,
             tpsl_gene=None,
             market_data=None,
             position_direction=1.0,
         )
-        
+
         # エラー時も method_used は 'adaptive' だが、fallback フラグが立つ
         assert result.method_used == "adaptive"
         assert result.expected_performance.get("fallback") is True
+
 
 class TestTPSLService:
     def test_calculate_tpsl_prices_prefers_gene(self) -> None:

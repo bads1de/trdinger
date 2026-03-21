@@ -40,14 +40,23 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
         # DatetimeIndexの確認
         if not isinstance(df.index, pd.DatetimeIndex):
             if "timestamp" in df.columns:
-                temp_df = df.set_index("timestamp")
+                temp_df = df.copy()
+                converted_timestamp = pd.to_datetime(
+                    temp_df["timestamp"], errors="coerce"
+                )
+                if converted_timestamp.isna().any():
+                    logger.warning(
+                        "timestampカラムに無効な日時が含まれています。時間特徴量を計算できません。"
+                    )
+                    return df
+                temp_df["timestamp"] = converted_timestamp
+                temp_df = temp_df.set_index("timestamp")
+                df = temp_df
             else:
                 logger.warning("DatetimeIndexが見つかりません。時間特徴量を計算できません。")
                 return df
-        else:
-            temp_df = df
 
-        index = temp_df.index
+        index = df.index
         new_features = {}
 
         # 1. 周期性特徴量 (Cyclical Encoding)
@@ -76,9 +85,10 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
         new_features["time_is_weekend"] = (index.dayofweek >= 5).astype(int)
         
         # 月末フラグ (最後の3日間)
-        # 明日の月が変わる、あるいは明後日の月が変わる...
-        next_day = index + pd.Timedelta(days=1)
-        new_features["time_is_month_end"] = (index.month != next_day.month).astype(int)
+        # カレンダー上の最後の3日間をフラグ化
+        new_features["time_is_month_end"] = (
+            index.day >= (index.days_in_month - 2)
+        ).astype(int)
         
         # 週初め・週末の特定の動き (月曜の窓埋め、金曜の手仕舞い)
         new_features["time_is_monday"] = (index.dayofweek == 0).astype(int)

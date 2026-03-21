@@ -1,7 +1,6 @@
 import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import MagicMock, patch
 from app.services.ml.feature_engineering.crypto_features import (
     CryptoFeatureCalculator,
 )
@@ -41,7 +40,3 @@ class TestCryptoFeatureCalculator:
     def test_calculate_features_integration(self, calculator, sample_ohlcv_data):
         result = calculator.calculate_features(sample_ohlcv_data, config={})
         assert "price_vs_low_24h" in result.columns
-
-
-
-

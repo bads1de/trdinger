@@ -4,8 +4,6 @@
 ParameterConfig, IndicatorConfig, IndicatorConfigRegistry のテスト
 """
 
-import pytest
-
 from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
     IndicatorConfigRegistry,

@@ -180,7 +180,6 @@ class ModelManager:
             model_data["metadata"].update(
                 {
                     "created_at": datetime.now().isoformat(),
-                    "file_size_bytes": 0,  # 後で更新
                     "python_version": f"{__import__('sys').version_info.major}.{__import__('sys').version_info.minor}",
                     "model_type": type(model).__name__,
                 }
@@ -189,10 +188,9 @@ class ModelManager:
             # モデルを保存
             joblib.dump(model_data, model_path)
 
-            # ファイルサイズを更新
+            # 保存済みファイルの実サイズを記録（joblib本体は再書き込みしない）
             file_size = os.path.getsize(model_path)
             model_data["metadata"]["file_size_bytes"] = file_size
-            joblib.dump(model_data, model_path)
 
             # サイドカーJSONファイルにメタデータを保存（軽量読み込み用）
             self._save_metadata_sidecar(model_path, model_data)
@@ -202,7 +200,7 @@ class ModelManager:
             )
 
             # 古いモデルのクリーンアップ
-            self._cleanup_old_models(model_name)
+            self._cleanup_old_models(algorithm_name)
 
             return model_path
 

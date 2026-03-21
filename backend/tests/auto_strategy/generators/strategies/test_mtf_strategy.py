@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes import Condition, ConditionGroup
 from app.services.auto_strategy.generators.mtf_strategy import (
@@ -17,11 +17,18 @@ class TestMTFStrategy:
 
         # 指標タイプの分類モック
         def _classify(indicators):
-            res = {IndicatorType.TREND: [], IndicatorType.MOMENTUM: [], IndicatorType.VOLATILITY: []}
+            res = {
+                IndicatorType.TREND: [],
+                IndicatorType.MOMENTUM: [],
+                IndicatorType.VOLATILITY: [],
+            }
             for ind in indicators:
-                if ind.type in ["SMA", "EMA"]: res[IndicatorType.TREND].append(ind)
-                else: res[IndicatorType.MOMENTUM].append(ind)
+                if ind.type in ["SMA", "EMA"]:
+                    res[IndicatorType.TREND].append(ind)
+                else:
+                    res[IndicatorType.MOMENTUM].append(ind)
             return res
+
         generator._classify_indicators.side_effect = _classify
 
         # 名称解決モック
@@ -29,7 +36,8 @@ class TestMTFStrategy:
 
         # 条件生成のモック
         def _create_side(ind, side, name=None):
-            return Condition(name or ind.type, ">" if side=="long" else "<", 0)
+            return Condition(name or ind.type, ">" if side == "long" else "<", 0)
+
         generator._create_side_condition.side_effect = _create_side
 
         return generator
@@ -67,7 +75,6 @@ class TestMTFStrategy:
         assert len(first_long.conditions) >= 2
 
         # 上位足の指標が含まれているか確認
-        has_mtf_condition = False
         for cond in first_long.conditions:
             if isinstance(cond, Condition):
                 # 条件の左辺か右辺に指標名が含まれているはず

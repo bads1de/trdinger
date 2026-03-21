@@ -4,13 +4,17 @@ TPSLGene Factory Function Tests
 Test logic for create_random_tpsl_gene with constraints
 """
 
-import pytest
-from unittest.mock import Mock
-from app.services.auto_strategy.genes import TPSLGene, TPSLMethod, create_random_tpsl_gene
+from app.services.auto_strategy.genes import (
+    TPSLGene,
+    TPSLMethod,
+    create_random_tpsl_gene,
+)
+
 
 # テスト用の単純なConfigクラス
 class Config:
     pass
+
 
 class TestCreateRandomTPSLGene:
     """create_random_tpsl_geneのテスト"""
@@ -24,7 +28,7 @@ class TestCreateRandomTPSLGene:
         """メソッド制約を適用"""
         config = Config()
         config.tpsl_method_constraints = ["risk_reward_ratio", "volatility_based"]
-        
+
         # 複数回実行して制約が適用されることを確認
         methods_used = set()
         for _ in range(50):
@@ -39,7 +43,7 @@ class TestCreateRandomTPSLGene:
         """SL範囲制約を適用"""
         config = Config()
         config.tpsl_sl_range = (0.01, 0.02)
-        
+
         result = create_random_tpsl_gene(config)
 
         # SL値が範囲内であることを確認
@@ -50,7 +54,7 @@ class TestCreateRandomTPSLGene:
         """TP範囲制約を適用"""
         config = Config()
         config.tpsl_tp_range = (0.03, 0.05)
-        
+
         result = create_random_tpsl_gene(config)
 
         # TP値が範囲内であることを確認
@@ -60,7 +64,7 @@ class TestCreateRandomTPSLGene:
         """リスクリワード比範囲制約を適用"""
         config = Config()
         config.tpsl_rr_range = (1.5, 3.0)
-        
+
         result = create_random_tpsl_gene(config)
 
         # RR値が範囲内であることを確認
@@ -70,7 +74,7 @@ class TestCreateRandomTPSLGene:
         """ATR倍率範囲制約を適用"""
         config = Config()
         config.tpsl_atr_multiplier_range = (1.0, 2.0)
-        
+
         result = create_random_tpsl_gene(config)
 
         # ATR倍率SLが範囲内であることを確認
@@ -106,7 +110,7 @@ class TestCreateRandomTPSLGene:
         """属性が存在しない場合のhasattrチェック"""
         config = Config()
         # 属性を設定しない
-        
+
         # 属性がなくてもエラーにならないことを確認
         result = create_random_tpsl_gene(config)
         assert result is not None

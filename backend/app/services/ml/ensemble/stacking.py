@@ -439,31 +439,51 @@ class StackingEnsemble(BaseEnsemble):
 
             import joblib
 
-            # 新形式とレガシー形式の両方を探索する
-            search_patterns = [
+            def _collect_model_files(patterns: List[str]) -> List[str]:
+                files: List[str] = []
+                seen_files = set()
+                for pattern in patterns:
+                    for model_file in glob.glob(pattern):
+                        normalized_path = os.path.abspath(model_file)
+                        if normalized_path in seen_files:
+                            continue
+                        seen_files.add(normalized_path)
+                        files.append(model_file)
+                return files
+
+            # base_path に紐づくファイルを優先し、見つからない場合のみ保存ディレクトリ全体を探す
+            local_patterns = [
+                f"{base_path}_stacking_ensemble_*.joblib",
                 f"{base_path}_stacking_ensemble_*.pkl",
+                f"{base_path}_stacking_*.joblib",
                 f"{base_path}_stacking_*.pkl",
+                f"{base_path}_*.joblib",
                 f"{base_path}_*.pkl",
-                os.path.join(unified_config.ml.model.model_save_path, "stacking_*.pkl"),
+            ]
+            fallback_patterns = [
+                os.path.join(
+                    unified_config.ml.model.model_save_path, "stacking_*.joblib"
+                ),
+                os.path.join(
+                    unified_config.ml.model.model_save_path, "stacking_*.pkl"
+                ),
+                os.path.join(
+                    unified_config.ml.model.model_save_path,
+                    "stacking_ensemble_*.joblib",
+                ),
                 os.path.join(
                     unified_config.ml.model.model_save_path,
                     "stacking_ensemble_*.pkl",
                 ),
             ]
 
-            model_files = []
-            seen_files = set()
-            for pattern in search_patterns:
-                for model_file in glob.glob(pattern):
-                    normalized_path = os.path.abspath(model_file)
-                    if normalized_path in seen_files:
-                        continue
-                    seen_files.add(normalized_path)
-                    model_files.append(model_file)
+            model_files = _collect_model_files(local_patterns)
+            if not model_files:
+                model_files = _collect_model_files(fallback_patterns)
 
             if not model_files:
                 logger.warning(
-                    f"モデルファイルが見つかりません: {', '.join(search_patterns)}"
+                    f"モデルファイルが見つかりません: {', '.join(local_patterns + fallback_patterns)}"
                 )
                 return False
 
@@ -552,11 +572,33 @@ class StackingEnsemble(BaseEnsemble):
                 return False
 
             # メタデータを読み込み（存在する場合）
-            metadata_path = model_path.replace(".pkl", "_metadata.json")
-            if os.path.exists(metadata_path):
-                with open(metadata_path, "r", encoding="utf-8") as f:
-                    metadata = json.load(f)
+            metadata_candidates = []
+            if model_path.endswith(".joblib"):
+                metadata_candidates.extend(
+                    [
+                        model_path.replace(".joblib", ".meta.json"),
+                        model_path.replace(".joblib", "_metadata.json"),
+                    ]
+                )
+            elif model_path.endswith(".pkl"):
+                metadata_candidates.extend(
+                    [
+                        model_path.replace(".pkl", ".meta.json"),
+                        model_path.replace(".pkl", "_metadata.json"),
+                    ]
+                )
+            else:
+                metadata_candidates.extend(
+                    [model_path + ".meta.json", model_path + "_metadata.json"]
+                )
+            metadata = None
+            for metadata_path in metadata_candidates:
+                if os.path.exists(metadata_path):
+                    with open(metadata_path, "r", encoding="utf-8") as f:
+                        metadata = json.load(f)
+                    break
 
+            if metadata:
                 self._base_model_types = metadata.get(
                     "base_models", self._base_model_types
                 )
@@ -567,6 +609,8 @@ class StackingEnsemble(BaseEnsemble):
                 self.stack_method = metadata.get("stack_method", self.stack_method)
                 if "feature_columns" in metadata:
                     self.feature_columns = metadata["feature_columns"]
+                if "passthrough" in metadata:
+                    self.passthrough = metadata["passthrough"]
             elif sidecar_metadata:
                 self._base_model_types = sidecar_metadata.get(
                     "base_models", self._base_model_types

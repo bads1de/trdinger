@@ -3,7 +3,7 @@ IndicatorCompositionService Tests
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 from app.services.auto_strategy.generators.indicator_composition_service import (
     IndicatorCompositionService,
@@ -187,7 +187,3 @@ class TestIndicatorCompositionService:
                 ["SMA", "EMA"], existing_periods
             )
             assert result is not None
-
-
-
-

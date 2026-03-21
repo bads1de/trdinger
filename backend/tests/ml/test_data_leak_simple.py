@@ -6,7 +6,6 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
 
 class TestCriticalDataLeaks:
@@ -60,7 +59,7 @@ class TestCriticalDataLeaks:
             f"Train/Testで{len(overlap)}個のインデックスが重複しています"
         )
 
-        print(f"✅ インデックス重複なし")
+        print("✅ インデックス重複なし")
 
     def test_rolling_calculation_causality(self):
         """
@@ -119,7 +118,7 @@ class TestCriticalDataLeaks:
             err_msg="❌ データリーク検出! 特徴量計算が未来のデータに依存しています",
         )
 
-        print(f"✅ 特徴量独立性OK: 全データと部分データで同じ値")
+        print("✅ 特徴量独立性OK: 全データと部分データで同じ値")
 
     def test_label_uses_future_only(self):
         """
@@ -150,7 +149,7 @@ class TestCriticalDataLeaks:
             return_rate = (prices.iloc[i + horizon] - prices.iloc[i]) / prices.iloc[i]
             labels.iloc[i] = return_rate
 
-        print(f"✅ ラベル生成OK: 未来の価格のみを使用")
+        print("✅ ラベル生成OK: 未来の価格のみを使用")
 
 
 if __name__ == "__main__":
@@ -187,7 +186,3 @@ if __name__ == "__main__":
         print(f"❌ テスト失敗: {e}")
         print("=" * 60)
         raise
-
-
-
-

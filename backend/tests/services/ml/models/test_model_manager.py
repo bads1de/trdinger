@@ -1,6 +1,7 @@
 import pytest
 import os
 import joblib
+import json
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -30,15 +31,25 @@ class TestModelManager:
         metadata = {"accuracy": 0.9}
         
         # AlgorithmRegistryのパッチ
-        with patch('app.services.ml.models.model_manager.ModelManager._extract_algorithm_name', return_value="mock_algo"):
-            path = manager.save_model(mock_model, model_name, metadata=metadata)
+        with patch(
+            "app.services.ml.models.model_manager.ModelManager._extract_algorithm_name",
+            return_value="mock_algo",
+        ):
+            with patch.object(manager, "_cleanup_old_models") as mock_cleanup:
+                path = manager.save_model(mock_model, model_name, metadata=metadata)
             
-            assert path is not None
-            assert os.path.exists(path)
-            assert "mock_algo" in path
-            # サイドカーも存在するか
-            sidecar = path.replace(".joblib", ".meta.json")
-            assert os.path.exists(sidecar)
+                assert path is not None
+                assert os.path.exists(path)
+                assert "mock_algo" in path
+                mock_cleanup.assert_called_once_with("mock_algo")
+                # サイドカーも存在するか
+                sidecar = path.replace(".joblib", ".meta.json")
+                assert os.path.exists(sidecar)
+                with open(sidecar, "r", encoding="utf-8") as f:
+                    sidecar_data = json.load(f)
+                assert sidecar_data["metadata"]["file_size_bytes"] == os.path.getsize(
+                    path
+                )
 
     def test_save_model_none_fail(self, manager):
         """Noneモデル保存時のエラー（safe_ml_operationによりNoneが返る）"""

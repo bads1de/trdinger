@@ -70,7 +70,7 @@ class TestOOFDataLeakValidation:
         mean_diff = diff.mean()
         max_diff = diff.max()
 
-        print(f"\nOOF vs In-Fold 予測の差分:")
+        print("\nOOF vs In-Fold 予測の差分:")
         print(f"  平均差分: {mean_diff:.6f}")
         print(f"  最大差分: {max_diff:.6f}")
         print(f"  標準偏差: {diff.std():.6f}")
@@ -129,7 +129,7 @@ class TestOOFDataLeakValidation:
 
             if diff <= 0.005:
                 all_valid = False
-                print(f"    ⚠️ 差が小さすぎます（データリークの可能性）")
+                print("    ⚠️ 差が小さすぎます（データリークの可能性）")
 
         assert all_valid, "一部のベースモデルでOOF予測が正しく生成されていません"
         print("✅ 全ベースモデルのOOF予測が正しく生成されています")
@@ -194,7 +194,7 @@ class TestOOFDataLeakValidation:
         assert np.all(oof_predictions >= 0), "OOF予測に負の値が含まれています"
         assert np.all(oof_predictions <= 1), "OOF予測に1を超える値が含まれています"
 
-        print(f"✅ OOF予測が確率の範囲[0, 1]内にあります")
+        print("✅ OOF予測が確率の範囲[0, 1]内にあります")
         print(f"  最小値: {oof_predictions.min():.6f}")
         print(f"  最大値: {oof_predictions.max():.6f}")
         print(f"  平均値: {oof_predictions.mean():.6f}")
@@ -265,11 +265,13 @@ class TestOOFPredictionQuality:
         y_binary = (y == 1).astype(int)
 
         try:
-            print(f"OOF shape: {getattr(oof_predictions, 'shape', 'unknown')}, type: {type(oof_predictions)}")
+            print(
+                f"OOF shape: {getattr(oof_predictions, 'shape', 'unknown')}, type: {type(oof_predictions)}"
+            )
             oof_auc = roc_auc_score(y_binary, oof_predictions)
             in_fold_auc = roc_auc_score(y_binary, in_fold_proba[:, 1])
 
-            print(f"\nROC-AUC比較:")
+            print("\nROC-AUC比較:")
             print(f"  OOF予測: {oof_auc:.4f}")
             print(f"  In-Fold予測: {in_fold_auc:.4f}")
             print(f"  差分: {in_fold_auc - oof_auc:.4f}")
@@ -295,7 +297,3 @@ class TestOOFPredictionQuality:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])
-
-
-
-

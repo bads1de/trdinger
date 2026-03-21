@@ -56,7 +56,7 @@ class TestBacktestDataService:
 
     def test_get_ml_training_data(self, service):
         mock_df = pd.DataFrame({"close": [100]})
-        with patch.object(service._integration_service, 'create_ml_training_dataframe', return_value=mock_df) as mock_method:
+        with patch.object(service._integration_service, 'create_ml_training_dataframe', return_value=mock_df) as _:
             result = service.get_ml_training_data("BTC", "1h", datetime.now(), datetime.now())
             assert result is mock_df
 

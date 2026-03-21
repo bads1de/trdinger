@@ -95,7 +95,7 @@ class TestRealImplementationDataLeaks:
             f"❌ BaseMLTrainerでインデックス重複を検出!\n" f"  重複数: {len(overlap)}"
         )
 
-        print(f"✅ BaseMLTrainerの時系列分割: データリークなし")
+        print("✅ BaseMLTrainerの時系列分割: データリークなし")
         print(f"   学習期間: {X_train.index.min()} ～ {X_train.index.max()}")
         print(f"   テスト期間: {X_test.index.min()} ～ {X_test.index.max()}")
 
@@ -127,7 +127,7 @@ class TestRealImplementationDataLeaks:
         common_index = partial_features.index.intersection(full_features.index)
         common_columns = partial_features.columns.intersection(full_features.columns)
 
-        print(f"\n検証対象:")
+        print("\n検証対象:")
         print(f"  共通インデックス数: {len(common_index)}")
         print(f"  共通特徴量数: {len(common_columns)}")
 
@@ -168,7 +168,7 @@ class TestRealImplementationDataLeaks:
                 f"  → これらの特徴量が未来のデータを使用している可能性があります"
             )
 
-        print(f"\n✅ FeatureEngineeringService: データリークなし")
+        print("\n✅ FeatureEngineeringService: データリークなし")
         print(f"   検証した特徴量数: {len(common_columns)}")
 
     def test_scaler_fit_on_train_only(self, mock_trainer):
@@ -215,7 +215,7 @@ class TestRealImplementationDataLeaks:
             f"  → 0に近すぎます（期待値: 平均50のオフセットが反映されるべき）"
         )
 
-        print(f"✅ スケーラー: 学習データのみでfit")
+        print("✅ スケーラー: 学習データのみでfit")
         print(f"   学習データ平均: {train_mean[:3]}...")
         print(f"   スケーラー平均: {scaler_mean[:3]}...")
         print(

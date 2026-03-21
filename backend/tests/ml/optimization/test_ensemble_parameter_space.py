@@ -6,9 +6,6 @@ EnsembleParameterSpaceのテストモジュール
 
 from typing import Any, Dict
 
-import optuna
-import pytest
-
 from app.services.ml.optimization.ensemble_parameter_space import EnsembleParameterSpace
 
 

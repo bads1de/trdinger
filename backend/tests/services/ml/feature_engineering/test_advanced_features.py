@@ -87,11 +87,16 @@ class TestAdvancedFeatures:
             p_chg = row["close_change"]
             oi_chg = row["oi_change"]
             
-            if p_chg > 0 and oi_chg > 0: r = 0
-            elif p_chg > 0 and oi_chg < 0: r = 1
-            elif p_chg < 0 and oi_chg > 0: r = 2
-            elif p_chg < 0 and oi_chg < 0: r = 3
-            else: r = -1
+            if p_chg > 0 and oi_chg > 0:
+                r = 0
+            elif p_chg > 0 and oi_chg < 0:
+                r = 1
+            elif p_chg < 0 and oi_chg > 0:
+                r = 2
+            elif p_chg < 0 and oi_chg < 0:
+                r = 3
+            else:
+                r = -1
             regime.append(r)
             
         assert regime == expected

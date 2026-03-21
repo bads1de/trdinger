@@ -70,31 +70,6 @@ class TestStackingEnsemble:
         assert probs.shape == (1, 2)
         assert probs[0, 1] == 0.8
 
-        def test_get_feature_importance(self, config):
-            """重要度取得のテスト"""
-            ensemble = StackingEnsemble(config)
-            ensemble.is_fitted = True
-            # 順番を明示的に指定してモックを作成
-            from collections import OrderedDict
-
-            ensemble._fitted_base_models = OrderedDict(
-                [("lightgbm", MagicMock()), ("xgboost", MagicMock())]
-            )
-
-            mock_meta = MagicMock()
-            # ロジスティック回帰のように coef_ を持つ場合
-            mock_meta.coef_ = np.array([[0.5, 1.5]])
-            ensemble._fitted_meta_model = mock_meta
-
-            importance = ensemble.get_feature_importance()
-            # デバッグ用
-            print(f"Importance keys: {list(importance.keys())}")
-
-            assert "lightgbm" in importance
-            assert "xgboost" in importance
-            assert importance["lightgbm"] == 0.5
-            assert importance["xgboost"] == 1.5
-
     def test_get_feature_importance(self, config):
         """重要度取得のテスト"""
         ensemble = StackingEnsemble(config)
@@ -184,7 +159,7 @@ class TestStackingEnsemble:
         """新形式（自前実装）のモデル読み込み"""
         ensemble = StackingEnsemble(config)
         base_path = str(tmp_path / "model")
-        mock_file = f"{base_path}_stacking_ensemble_latest.pkl"
+        mock_file = f"{base_path}_stacking_ensemble_latest.joblib"
         Path(mock_file).touch()
 
         model_data = {
@@ -206,6 +181,7 @@ class TestStackingEnsemble:
                 "cv_folds": 2,
                 "stack_method": "predict_proba",
                 "feature_columns": ["f1", "f2"],
+                "passthrough": True,
             },
             "feature_columns": ["f1", "f2"],
         }
@@ -216,6 +192,7 @@ class TestStackingEnsemble:
                 assert success is True
                 assert ensemble.is_fitted is True
                 assert "lgb" in ensemble._fitted_base_models
+                assert ensemble.passthrough is True
 
     def test_train_meta_model_uses_time_series_cv(self, sample_data):
         """メタモデル学習時に時系列CVが使われることを検証"""

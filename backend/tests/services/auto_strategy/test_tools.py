@@ -3,7 +3,6 @@
 """
 
 import pytest
-from datetime import datetime
 import pandas as pd
 
 from app.services.auto_strategy.tools.weekend_filter import WeekendFilter
@@ -23,7 +22,7 @@ class TestWeekendFilter:
         # 土曜日: 2024-01-06
         sat_ctx = ToolContext(timestamp=pd.Timestamp("2024-01-06"))
         assert filter_tool.should_skip_entry(sat_ctx, {"enabled": True}) is True
-        
+
         # 日曜日: 2024-01-07
         sun_ctx = ToolContext(timestamp=pd.Timestamp("2024-01-07"))
         assert filter_tool.should_skip_entry(sun_ctx, {"enabled": True}) is True
@@ -49,6 +48,6 @@ class TestToolRegistry:
         registry = ToolRegistry()
         filter_tool = WeekendFilter()
         registry.register(filter_tool)
-        
+
         assert registry.get("weekend_filter") is not None
         assert any(t.name == "weekend_filter" for t in registry.get_all())

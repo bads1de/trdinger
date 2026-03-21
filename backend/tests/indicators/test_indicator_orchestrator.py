@@ -325,7 +325,6 @@ class TestTechnicalIndicatorService:
         
         # 属性が付与されていることを確認
         assert hasattr(sample_df, "_cached_hash")
-        cached_hash = sample_df._cached_hash
         
         # 3. 再度呼ぶ（ハッシュ計算がスキップされることを確認）
         # pd.util.hash_pandas_object をモックして呼ばれないことを確認

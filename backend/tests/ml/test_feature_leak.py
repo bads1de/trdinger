@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import pytest
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
@@ -64,7 +63,3 @@ class TestFeatureLeak:
         assert (
             imputed_value < 100
         ), f"Imputed value {imputed_value} is too high, suggesting leakage from future data (global median imputation)"
-
-
-
-

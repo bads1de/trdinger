@@ -44,7 +44,7 @@ class TestBacktestExecutor:
         mock_strategy = MagicMock()
         
         # FractionalBacktestの初期化をパッチ
-        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as MockBT:
+        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as _:
             bt = executor._create_backtest_instance(sample_data, mock_strategy, 10000, 0.001, 0.0005, 2.0, "BTC/USDT")
             
             assert bt is not None
@@ -118,7 +118,7 @@ class TestBacktestExecutor:
              patch.object(executor, '_run_backtest') as mock_run:
             
             executor.execute_backtest(
-                mock_strategy, {}, "BTC/USDT", "1h", 
+                mock_strategy, {}, "BTC/USDT", "1h",
                 datetime(2023, 1, 1), datetime(2023, 1, 2), 10000, 0.001,
                 0.0, 1.0,
                 preloaded_data=sample_data
@@ -127,6 +127,7 @@ class TestBacktestExecutor:
             # 内部のデータ取得が呼ばれないことを確認（data_serviceが呼ばれない）
             executor.data_service.get_data_for_backtest.assert_not_called()
             mock_create.assert_called_once()
+            mock_run.assert_called_once()
 
     def test_get_supported_strategies(self, executor):
         strategies = executor.get_supported_strategies()

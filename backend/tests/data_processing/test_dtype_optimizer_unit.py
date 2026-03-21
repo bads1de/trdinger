@@ -1,6 +1,5 @@
-import pytest
 import pandas as pd
-import numpy as np
+
 from app.utils.data_processing.transformers.dtype_optimizer import DtypeOptimizer
 
 

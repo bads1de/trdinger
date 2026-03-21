@@ -15,6 +15,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from ..common.exceptions import MLFeatureError
 from app.services.ml.common.utils import generate_cache_key, optimize_dtypes
 
 from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
@@ -102,25 +103,32 @@ class FeatureEngineeringService:
         """
         try:
             if ohlcv_data.empty:
-                raise ValueError("OHLCVデータが空です")
+                raise MLFeatureError("OHLCVデータが空です")
 
             # DataFrameのインデックスをDatetimeIndexに変換
             if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
                 if "timestamp" in ohlcv_data.columns:
-                    ohlcv_data = ohlcv_data.set_index("timestamp")
-                    logger.info("timestampカラムをインデックスに設定しました")
-                else:
-                    # timestampカラムがない場合は、現在の時刻から生成
-                    logger.warning(
-                        "timestampカラムが見つからないため、仮のDatetimeIndexを生成します"
+                    ohlcv_data = ohlcv_data.copy()
+                    timestamp = pd.to_datetime(
+                        ohlcv_data["timestamp"], errors="coerce"
                     )
-                    ohlcv_data.index = pd.date_range(
-                        start="2024-01-01", periods=len(ohlcv_data), freq="1h"
+                    if timestamp.isna().any():
+                        raise MLFeatureError(
+                            "timestampカラムに無効な日時が含まれています"
+                        )
+                    ohlcv_data["timestamp"] = timestamp
+                    ohlcv_data = ohlcv_data.set_index("timestamp")
+                    logger.info(
+                        "timestampカラムをDatetimeIndexに変換してインデックスに設定しました"
+                    )
+                else:
+                    raise MLFeatureError(
+                        "OHLCVデータにはDatetimeIndexまたはtimestampカラムが必要です"
                     )
 
             # インデックスがDatetimeIndexであることを確認
             if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
-                raise ValueError(
+                raise MLFeatureError(
                     "DataFrameのインデックスはDatetimeIndexである必要があります"
                 )
 
@@ -295,6 +303,8 @@ class FeatureEngineeringService:
 
             return result_df
 
+        except MLFeatureError:
+            raise
         except Exception as e:
             logger.error(f"高度な特徴量計算中にエラーが発生: {e}")
             # エラー時は元のDataFrameを返す（最低限の動作保証）

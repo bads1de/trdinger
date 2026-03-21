@@ -89,3 +89,23 @@ def test_time_anomaly_features_do_not_use_future_values():
         rtol=1e-5,
         err_msg="time_adaptive_vol_ratio differs when future rows are removed",
     )
+
+
+def test_time_anomaly_features_accepts_string_timestamp_and_flags_month_end():
+    dates = pd.date_range("2024-01-28", periods=4, freq="D")
+    df = pd.DataFrame(
+        {
+            "timestamp": dates.astype(str),
+            "open": np.linspace(100, 103, len(dates)),
+            "high": np.linspace(101, 104, len(dates)),
+            "low": np.linspace(99, 102, len(dates)),
+            "close": np.linspace(100, 103, len(dates)),
+            "volume": np.linspace(1000, 1300, len(dates)),
+        }
+    )
+
+    calculator = TimeAnomalyFeatures()
+    result = calculator.calculate_features(df)
+
+    assert isinstance(result.index, pd.DatetimeIndex)
+    assert list(result["time_is_month_end"].values) == [0, 1, 1, 1]

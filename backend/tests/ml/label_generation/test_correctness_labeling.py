@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 from scipy import stats
 from app.services.ml.label_generation.triple_barrier import TripleBarrier
 from app.services.ml.label_generation.trend_scanning import TrendScanning

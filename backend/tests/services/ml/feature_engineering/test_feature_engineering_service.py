@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 import time
 
+from app.services.ml.common.exceptions import MLFeatureError
+
 
 class TestFeatureEngineeringServicePerformance:
     """FeatureEngineeringService のパフォーマンステスト"""
@@ -104,6 +106,27 @@ class TestFeatureEngineeringServicePerformance:
 
         # 500行で30秒以内（余裕を持たせた値）
         assert duration < 30.0, f"Processing took too long: {duration:.2f}s"
+
+    def test_calculate_advanced_features_requires_datetime_index_or_timestamp(self):
+        """DatetimeIndexもtimestamp列も無い入力は例外にする"""
+        from app.services.ml.feature_engineering.feature_engineering_service import (
+            FeatureEngineeringService,
+        )
+
+        df = pd.DataFrame(
+            {
+                "open": [1.0, 2.0, 3.0],
+                "high": [1.1, 2.1, 3.1],
+                "low": [0.9, 1.9, 2.9],
+                "close": [1.05, 2.05, 3.05],
+                "volume": [100, 110, 120],
+            }
+        )
+
+        service = FeatureEngineeringService()
+
+        with pytest.raises(MLFeatureError, match="DatetimeIndexまたはtimestamp"):
+            service.calculate_advanced_features(df)
 
 
 

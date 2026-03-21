@@ -62,7 +62,7 @@ class TestOrchestrationServices:
         """OpenInterestOrchestrationServiceのテスト"""
         
         # リポジトリのモック
-        with patch("app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository") as MockRepo:
+        with patch("app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"):
             
             service = OpenInterestOrchestrationService(bybit_service=mock_open_interest_service)
             
@@ -82,7 +82,7 @@ class TestOrchestrationServices:
     async def test_long_short_ratio_collection(self, mock_db_session, mock_long_short_service):
         """LongShortRatioOrchestrationServiceのテスト"""
         
-        with patch("app.services.data_collection.orchestration.long_short_ratio_orchestration_service.LongShortRatioRepository") as MockRepo:
+        with patch("app.services.data_collection.orchestration.long_short_ratio_orchestration_service.LongShortRatioRepository"):
             
             service = LongShortRatioOrchestrationService(bybit_service=mock_long_short_service)
             

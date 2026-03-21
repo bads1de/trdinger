@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
@@ -168,6 +168,3 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any("並列プロセス数は32以下" in e for e in errors)
-
-
-from unittest.mock import PropertyMock

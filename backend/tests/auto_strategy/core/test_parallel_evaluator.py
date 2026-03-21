@@ -5,8 +5,6 @@ ParallelEvaluatorのユニットテスト
 import time
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.services.auto_strategy.core.parallel_evaluator import (
     ParallelEvaluator,
 )

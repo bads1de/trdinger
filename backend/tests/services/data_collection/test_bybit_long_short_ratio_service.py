@@ -3,7 +3,7 @@ BybitLongShortRatioServiceのテスト
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timezone
 
 from app.services.data_collection.bybit.long_short_ratio_service import (
@@ -344,6 +344,8 @@ class TestCollectHistoricalLongShortRatioData:
 
         # 正常に完了すること
         assert mock_exchange.publicGetV5MarketAccountRatio.called
+        assert count >= 0
+        assert isinstance(count, int)
 
     @pytest.mark.asyncio
     async def test_exception_during_collection(
@@ -391,7 +393,3 @@ class TestSymbolConversion:
         call_kwargs = mock_exchange.publicGetV5MarketAccountRatio.call_args.kwargs
         params = call_kwargs.get("params")
         assert params["symbol"] == "BTCUSDT"
-
-
-
-

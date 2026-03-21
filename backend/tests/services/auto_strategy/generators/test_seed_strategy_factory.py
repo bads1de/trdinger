@@ -5,14 +5,14 @@ SeedStrategyFactory のユニットテスト
 """
 
 import pytest
-from typing import List
+
 
 from app.services.auto_strategy.generators.seed_strategy_factory import (
     SeedStrategyFactory,
     inject_seeds_into_population,
 )
 from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.auto_strategy.genes.indicator import IndicatorGene
+
 from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 

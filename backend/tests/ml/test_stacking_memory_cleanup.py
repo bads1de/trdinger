@@ -44,6 +44,28 @@ class TestStackingMemoryCleanup:
             ) as mock_cv_predict,
             patch.object(model, "_create_base_model") as mock_create_meta,
         ):
+            # モックの設定
+            mock_est = MagicMock()
+            mock_est.fit.return_value = mock_est
+            mock_est.predict_proba.return_value = np.zeros((len(X), 2))
+            # (name, estimator) のリストを返す
+            mock_create_estimators.return_value = [("lightgbm", mock_est)]
+
+            # CVの結果 (OOF予測)
+            # cross_val_predictは (n_samples, n_classes) または (n_samples,) を返す
+            mock_cv_predict.return_value = np.zeros((len(X), 2))
+
+            # メタモデル
+            mock_meta = MagicMock()
+            mock_meta.fit.return_value = mock_meta
+            mock_meta.predict_proba.return_value = np.zeros((len(X), 2))
+            mock_create_meta.return_value = mock_meta
+
+            # 実際にfitを実行
+            model.fit(X, y)
+
+            # _create_cv_splitterが呼ばれたことを確認
+            mock_create_cv.assert_called_once()
 
             # モックの設定
             mock_est = MagicMock()

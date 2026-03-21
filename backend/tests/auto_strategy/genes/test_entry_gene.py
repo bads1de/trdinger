@@ -129,6 +129,3 @@ class TestEntryGene:
         # フォールバックして MARKET になっているはず
         assert gene.entry_type == EntryType.MARKET
         assert gene.limit_offset_pct == 0.005
-
-
-from unittest.mock import PropertyMock

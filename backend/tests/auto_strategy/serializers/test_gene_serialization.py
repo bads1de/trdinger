@@ -16,7 +16,7 @@ class TestGeneSerializerInit:
         with patch(
             "app.services.auto_strategy.serializers.serialization.DictConverter"
         ) as mock_dict:
-            serializer = GeneSerializer()
+
             mock_dict.assert_called_once_with()
 
 

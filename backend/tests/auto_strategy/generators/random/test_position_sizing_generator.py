@@ -4,9 +4,13 @@ PositionSizingGene Factory Function Tests
 Test logic for create_random_position_sizing_gene
 """
 
-import pytest
 from unittest.mock import Mock
-from app.services.auto_strategy.genes import PositionSizingGene, PositionSizingMethod, create_random_position_sizing_gene
+from app.services.auto_strategy.genes import (
+    PositionSizingGene,
+    PositionSizingMethod,
+    create_random_position_sizing_gene,
+)
+
 
 class TestCreateRandomPositionSizingGene:
     """create_random_position_sizing_geneのテスト"""

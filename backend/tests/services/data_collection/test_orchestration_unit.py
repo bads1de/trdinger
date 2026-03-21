@@ -103,6 +103,7 @@ class TestDataCollectionOrchestrationUnit:
                     with patch.object(service, "start_historical_data_collection", new_callable=AsyncMock) as mock_start:
                         resp_auto = await service.get_collection_status("BTC/USDT:USDT", "1h", mock_bg_tasks, True, mock_db)
                         assert resp_auto["status"] == "auto_fetch_started"
+                        mock_start.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_start_bulk_collections(self, service, mock_db, mock_bg_tasks):

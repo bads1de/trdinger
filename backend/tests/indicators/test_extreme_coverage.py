@@ -49,7 +49,7 @@ class TestExtremeCoverage:
             MomentumIndicators.bias(c, ma_type=ma)
 
     def test_volume_missing_lines(self, sample_df):
-        c, h, l, v = (
+        c, h, low, v = (
             sample_df["close"],
             sample_df["high"],
             sample_df["low"],
@@ -60,15 +60,15 @@ class TestExtremeCoverage:
         bad_v = v.copy()
         bad_v.iloc[0] = 0
         try:
-            VolumeIndicators.mfi(h, l, c, bad_v)
+            VolumeIndicators.mfi(h, low, c, bad_v)
         except (TypeError, Exception):
             pass
 
         # 2. AD/ADOSC/OBV fallback
         with patch("pandas_ta_classic.ad", return_value=None):
-            VolumeIndicators.ad(h, l, c, v)
+            VolumeIndicators.ad(h, low, c, v)
         with patch("pandas_ta_classic.adosc", return_value=None):
-            VolumeIndicators.adosc(h, l, c, v)
+            VolumeIndicators.adosc(h, low, c, v)
         with patch("pandas_ta_classic.obv", return_value=None):
             VolumeIndicators.obv(c, v)
 
@@ -76,14 +76,14 @@ class TestExtremeCoverage:
         VolumeIndicators.efi(c * 1000, v)
 
     def test_trend_missing_lines(self, sample_df):
-        c, h, l = (
+        c, h, low = (
             sample_df["close"],
             sample_df["high"],
             sample_df["low"],
         )
 
         # 1. SAR stable implementation logic
-        TrendIndicators.sar(h, l)
+        TrendIndicators.sar(h, low)
 
         # 2. AMAT result shape logic
         with patch(
@@ -95,24 +95,24 @@ class TestExtremeCoverage:
         TrendIndicators.vhf(c)
 
     def test_volatility_missing_lines(self, sample_df):
-        c, h, l = sample_df["close"], sample_df["high"], sample_df["low"]
+        c, h, low = sample_df["close"], sample_df["high"], sample_df["low"]
 
         # 1. Keltner with fallback search for column names
         mock_kc = pd.DataFrame({"WrongName": [1] * 150})
         with patch("pandas_ta_classic.kc", return_value=mock_kc):
-            VolatilityIndicators.keltner(h, l, c)
+            VolatilityIndicators.keltner(h, low, c)
 
     def test_overlap_missing_lines(self, sample_df):
         """Overlap 指標のテスト (supertrend, zlma)"""
-        c, h, l = sample_df["close"], sample_df["high"], sample_df["low"]
+        c, h, low = sample_df["close"], sample_df["high"], sample_df["low"]
 
         # 1. Supertrend factor alias
-        OverlapIndicators.supertrend(h, l, c, factor=4.0)
+        OverlapIndicators.supertrend(h, low, c, factor=4.0)
 
         # 2. Supertrend column name fallback
         mock_st = pd.DataFrame({"SUPERT_7_3.0": [1] * 150, "SUPERTd_7_3.0": [1] * 150})
         with patch("pandas_ta_classic.supertrend", return_value=mock_st):
-            OverlapIndicators.supertrend(h, l, c)
+            OverlapIndicators.supertrend(h, low, c)
 
         # 3. ZLMA with ema mode only (sma mode has pandas-ta bug)
         OverlapIndicators.zlma(c, mamode="ema")
