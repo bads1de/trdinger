@@ -122,7 +122,10 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
             historical_vol = (
                 current_vol.shift(24) + current_vol.shift(48) + current_vol.shift(72)
             ) / 3
-            historical_vol = historical_vol.bfill().fillna(0) # ゼロ除算回避のため
+            fallback_historical_vol = current_vol.rolling(
+                window=24, min_periods=1
+            ).mean()
+            historical_vol = historical_vol.fillna(fallback_historical_vol).fillna(0)
             
             # 相対ボラティリティ比 (Relative Volatility Ratio)
             # 1.0 > : 普段より動いている（異常検知）

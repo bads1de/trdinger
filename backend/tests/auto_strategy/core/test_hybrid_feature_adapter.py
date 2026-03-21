@@ -108,6 +108,34 @@ class TestHybridFeatureAdapter:
         assert not np.isinf(processed.iloc[0, 0])
         assert not processed.isnull().values.any()
 
+    def test_fallback_preprocess_does_not_backfill_future_values(self, adapter):
+        """フォールバック前処理が未来値で埋めないことを確認"""
+        df = pd.DataFrame(
+            {
+                "a": [np.nan, 1.0],
+                "b": [np.nan, 2.0],
+            }
+        )
+
+        processed = adapter._fallback_preprocess(df)
+
+        assert processed.iloc[0]["a"] == 0
+        assert processed.iloc[0]["b"] == 0
+
+    def test_augment_derived_features_does_not_backfill_lagged_values(self, adapter):
+        """派生特徴量のラグ列が未来値で埋まらないことを確認"""
+        df = pd.DataFrame(
+            {
+                "close": [100.0, 101.0, 102.0],
+                "volume": [10.0, 11.0, 12.0],
+            }
+        )
+
+        result = adapter._augment_with_derived_features(df)
+
+        assert result["close_lag1"].iloc[0] == 0
+        assert result["volume_lag1"].iloc[0] == 0
+
     @patch("app.services.ml.trainers.base_ml_trainer.BaseMLTrainer")
     def test_apply_preprocessing_with_trainer(self, MockTrainer, adapter, sample_ohlcv):
         """BaseMLTrainerを使用した前処理"""

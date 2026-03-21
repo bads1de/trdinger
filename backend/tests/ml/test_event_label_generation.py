@@ -120,8 +120,11 @@ def test_hybrid_feature_adapter_label_features():
         sentiment_scores=sentiment,
     )
 
-    assert "label_hrhp_signal" in features_df.columns
+    assert "market_regime" in features_df.columns
+    assert "label_hrhp_signal" not in features_df.columns
+    assert "label_lrlp_signal" not in features_df.columns
     assert "oi_pct_change" in features_df.columns
     assert "funding_rate_change" in features_df.columns
     assert "sentiment_smoothed" in features_df.columns
     assert not features_df["sentiment_smoothed"].isna().any()
+    assert features_df["market_regime"].iloc[-1] == 2

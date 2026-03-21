@@ -74,11 +74,10 @@ class TestDataFrequencyManager:
         )
         
         assert len(aligned_oi) == 2
-        # ダウンサンプリング時は平均値などで集約されるはず
-        # 1日目の平均が最初の行にくる
+        # ダウンサンプリング時は区間完了後の足に集約値が乗る
         expected_mean = oi_df["open_interest"].iloc[:24].mean()
-        # 実装では resample().mean() を使っている
-        assert np.isclose(aligned_oi["open_interest"].iloc[0], expected_mean)
+        assert aligned_oi["open_interest"].iloc[0] == 0
+        assert np.isclose(aligned_oi["open_interest"].iloc[1], expected_mean)
 
     def test_normalize_timeframe(self, manager):
         """タイムフレーム文字列の正規化テスト"""

@@ -74,8 +74,9 @@ class TestDataFrequencyManagerUnit:
         
         aligned_fr, _ = manager.align_data_frequencies(ohlcv, funding_rate_data=fr, ohlcv_timeframe="4h")
         assert len(aligned_fr) == 2
-        # 平均値が計算されていること (0.01 と 0.02)
-        assert aligned_fr.iloc[0]["funding_rate"] == 0.01
+        # 平均値は区間完了後の足に乗る
+        assert aligned_fr.iloc[0]["funding_rate"] == 0
+        assert np.isclose(aligned_fr.iloc[1]["funding_rate"], 0.01)
 
     def test_resample_internal_methods(self, manager):
         # _resample_funding_rate の各分岐
@@ -157,6 +158,5 @@ class TestDataFrequencyManagerUnit:
         aligned_fr, _ = manager.align_data_frequencies(ohlcv, funding_rate_data=fr)
         assert len(aligned_fr) == 2
         assert "funding_rate" in aligned_fr.columns
-
 
 

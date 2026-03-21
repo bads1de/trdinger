@@ -137,9 +137,10 @@ class DataFrequencyManager:
                 # リサンプリング
                 if ohlcv_timeframe in ["4h", "1d"]:
                     # ダウンサンプリング
+                    # 区間平均は区間完了後にしか分からないため、1本遅らせる
                     resampled_fr = fr_work.resample(
                         resample_timeframe, label="left"
-                    ).mean()
+                    ).mean().shift(1)
                 else:
                     # アップサンプリングまたは同等
                     resampled_fr = fr_work.resample(resample_timeframe).ffill()
@@ -147,7 +148,7 @@ class DataFrequencyManager:
                 # OHLCVのインデックスに合わせる
                 aligned_fr_data = resampled_fr.reindex(
                     target_index, method="ffill"
-                ).reset_index()
+                ).fillna(0).reset_index()
 
             # 建玉残高データの処理
             aligned_oi_data = None
@@ -161,15 +162,16 @@ class DataFrequencyManager:
 
                 # リサンプリング
                 if ohlcv_timeframe in ["4h", "1d"]:
+                    # 区間平均は区間完了後にしか分からないため、1本遅らせる
                     resampled_oi = oi_work.resample(
                         resample_timeframe, label="left"
-                    ).mean()
+                    ).mean().shift(1)
                 else:
                     resampled_oi = oi_work.resample(resample_timeframe).ffill()
 
                 aligned_oi_data = resampled_oi.reindex(
                     target_index, method="ffill"
-                ).reset_index()
+                ).fillna(0).reset_index()
 
             return aligned_fr_data, aligned_oi_data
 
@@ -210,16 +212,16 @@ class DataFrequencyManager:
                 resampled = fr_data_indexed.resample(resample_tf).ffill()
             elif target_timeframe in ["4h"]:
                 # 4時間間隔への集約（平均値）
-                resampled = fr_data_indexed.resample(resample_tf).mean()
+                resampled = fr_data_indexed.resample(resample_tf).mean().shift(1)
             elif target_timeframe == "1d":
                 # 日次への集約（平均値）
-                resampled = fr_data_indexed.resample(resample_tf).mean()
+                resampled = fr_data_indexed.resample(resample_tf).mean().shift(1)
             else:
                 # デフォルトは前方補完
                 resampled = fr_data_indexed.resample(resample_tf).ffill()
 
             # timestampカラムを復元
-            resampled = resampled.reset_index()
+            resampled = resampled.reset_index().fillna(0)
 
             logger.info(
                 f"ファンディングレート再サンプリング完了: {len(fr_data)} → {len(resampled)}行"
@@ -266,13 +268,13 @@ class DataFrequencyManager:
                 resampled = oi_data_indexed
             elif target_timeframe in ["4h", "1d"]:
                 # より粗い間隔への集約（平均値）
-                resampled = oi_data_indexed.resample(resample_tf).mean()
+                resampled = oi_data_indexed.resample(resample_tf).mean().shift(1)
             else:
                 # デフォルトは前方補完
                 resampled = oi_data_indexed.resample(resample_tf).ffill()
 
             # timestampカラムを復元
-            resampled = resampled.reset_index()
+            resampled = resampled.reset_index().fillna(0)
 
             logger.info(
                 f"建玉残高再サンプリング完了: {len(oi_data)} → {len(resampled)}行"

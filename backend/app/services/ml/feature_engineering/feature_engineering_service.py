@@ -162,7 +162,7 @@ class FeatureEngineeringService:
             # LS Ratioの再配置
             if long_short_ratio_data is not None and not long_short_ratio_data.empty:
                 long_short_ratio_data = (
-                    long_short_ratio_data.reindex(ohlcv_data.index).ffill().bfill()
+                    long_short_ratio_data.reindex(ohlcv_data.index).ffill().fillna(0)
                 )
 
             # デフォルトの計算期間

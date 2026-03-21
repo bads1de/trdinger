@@ -125,17 +125,20 @@ class HybridFeatureAdapter:
             for key, value in self._extract_gene_features(gene).items():
                 features_df[key] = value
 
-            # 2. イベントラベル特徴量（整列して統合）
-            label_cols = ["label_hrhp", "label_lrlp", "market_regime"]
+            # 2. イベントラベル特徴量（ラベル由来の列は除外して統合）
             if label_data is not None and not label_data.empty:
-                aligned = label_data.reindex(features_df.index).ffill().fillna(0)
-                for col in label_cols:
-                    features_df[f"{col}_signal" if "label" in col else col] = (
-                        aligned.get(col, 0.0)
-                    )
+                safe_columns = [
+                    col for col in label_data.columns if not str(col).lower().startswith("label_")
+                ]
+                safe_label_data = label_data.loc[:, safe_columns].copy()
+                if "market_regime" not in safe_label_data.columns:
+                    safe_label_data["market_regime"] = 0.0
+
+                aligned = safe_label_data.reindex(features_df.index).ffill().fillna(0)
+                for col in aligned.columns:
+                    features_df[col] = aligned[col]
             else:
-                for col in label_cols:
-                    features_df[f"{col}_signal" if "label" in col else col] = 0.0
+                features_df["market_regime"] = 0.0
 
             # 3. マーケット特性（OI/FR/Sentiment）
             # OI変化率
@@ -273,7 +276,7 @@ class HybridFeatureAdapter:
             前処理後のDataFrame
         """
         processed = features_df.replace([np.inf, -np.inf], np.nan)
-        processed = processed.ffill().bfill().fillna(0)
+        processed = processed.ffill().fillna(0)
         return processed
 
     def _apply_preprocessing(self, features_df: pd.DataFrame) -> pd.DataFrame:
@@ -360,7 +363,7 @@ class HybridFeatureAdapter:
             shifted = augmented[numeric_cols].shift(1).add_suffix("_lag1")
             augmented = pd.concat([augmented, shifted], axis=1)
 
-        augmented = augmented.ffill().bfill().fillna(0)
+        augmented = augmented.ffill().fillna(0)
         return augmented
 
 

@@ -29,7 +29,8 @@ class MicrostructureFeatureCalculator:
 
         # 3. Funding Rate (NaN対策を強化)
         if fr_df is not None and not fr_df.empty:
-            fr_aligned = fr_df.reindex(ohlcv.index).ffill().bfill()
+            # 未来値で埋める backfill は使わず、開始直後は 0 埋めにする
+            fr_aligned = fr_df.reindex(ohlcv.index).ffill().fillna(0)
             col = "funding_rate" if "funding_rate" in fr_aligned.columns else fr_aligned.columns[0]
             fr = fr_aligned[col]
             mean_fr = fr.rolling(168).mean()
@@ -40,7 +41,8 @@ class MicrostructureFeatureCalculator:
 
         # 4. Long/Short Ratio (NaN対策を強化)
         if ls_df is not None and not ls_df.empty:
-            ls_aligned = ls_df.reindex(ohlcv.index).ffill().bfill()
+            # 未来値で埋める backfill は使わず、開始直後は 0 埋めにする
+            ls_aligned = ls_df.reindex(ohlcv.index).ffill().fillna(0)
             ls_col = "long_short_ratio" if "long_short_ratio" in ls_aligned.columns else ls_aligned.columns[0]
             ls = ls_aligned[ls_col]
 
