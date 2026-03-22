@@ -18,24 +18,6 @@ from app.services.indicators.indicator_orchestrator import (
 class TestTechnicalIndicatorService:
     """TechnicalIndicatorServiceクラスのテスト"""
 
-    @pytest.fixture
-    def indicator_service(self):
-        """TechnicalIndicatorServiceインスタンス"""
-        return TechnicalIndicatorService()
-
-    @pytest.fixture
-    def sample_df(self):
-        """サンプルOHLCVデータ"""
-        return pd.DataFrame(
-            {
-                "open": [100, 101, 102, 103, 104] * 20,
-                "high": [105, 106, 107, 108, 109] * 20,
-                "low": [95, 96, 97, 98, 99] * 20,
-                "close": [102, 103, 104, 105, 106] * 20,
-                "volume": [1000, 1100, 1200, 1300, 1400] * 20,
-            }
-        )
-
     def test_initialization(self, indicator_service):
         """初期化テスト"""
         assert indicator_service.registry is not None
@@ -246,18 +228,6 @@ class TestTechnicalIndicatorService:
         assert "min" in sma_config["parameters"]["length"]
         assert "max" in sma_config["parameters"]["length"]
 
-    def test_validate_data_length_with_fallback(self, sample_df):
-        """データ長検証テスト"""
-        from app.services.indicators.data_validation import (
-            validate_data_length_with_fallback,
-        )
-
-        result = validate_data_length_with_fallback(sample_df, "SMA", {"length": 10})
-        assert isinstance(result, tuple)
-        assert len(result) == 2
-        assert isinstance(result[0], bool)
-        assert isinstance(result[1], int)
-
     def test_clear_cache(self, indicator_service, sample_df):
         """キャッシュクリアのテスト"""
         # 一度計算してキャッシュさせる
@@ -342,3 +312,54 @@ class TestTechnicalIndicatorService:
         sample_df._cached_hash = 99999
         key = indicator_service._make_cache_key(indicator, params, sample_df)
         assert key[2][3] == 99999 # ハッシュ値が書き換わっていること
+
+    def test_registry_has_indicators(self, indicator_service):
+        """レジストリに指標が登録されているか確認"""
+        assert indicator_service.registry is not None
+        # レジストリから設定を取得できることを確認
+        sma_config = indicator_service.registry.get_indicator_config("SMA")
+        assert sma_config is not None
+
+    def test_calculate_single_indicator_invalid_data(self, indicator_service):
+        """無効なデータでの指標計算テスト"""
+        data = pd.DataFrame()  # 空のデータ
+
+        # 空データはNaN結果を返す（例外は投げない）
+        result = indicator_service.calculate_indicator(data, "SMA", {"length": 5})
+        assert result is not None
+        # 空の結果またはNaNで埋められた結果が返される
+        assert isinstance(result, (np.ndarray, pd.Series, tuple))
+
+    def test_calculate_rsi(self, indicator_service):
+        """RSI指標計算のテスト"""
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109] * 2,
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
+                * 2,
+            }
+        )
+
+        result = indicator_service.calculate_indicator(data, "RSI", {"length": 14})
+
+        assert result is not None
+        assert isinstance(result, (np.ndarray, pd.Series))
+
+    def test_calculate_macd(self, indicator_service):
+        """MACD指標計算のテスト"""
+        data = pd.DataFrame(
+            {
+                "close": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109] * 3,
+                "volume": [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
+                * 3,
+            }
+        )
+
+        result = indicator_service.calculate_indicator(
+            data, "MACD", {"fast": 12, "slow": 26, "signal": 9}
+        )
+
+        # MACDは複数の値を返す（tuple）
+        assert result is not None
+        assert isinstance(result, tuple)
+

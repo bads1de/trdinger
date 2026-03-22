@@ -199,6 +199,30 @@ class TestOOFDataLeakValidation:
         print(f"  最大値: {oof_predictions.max():.6f}")
         print(f"  平均値: {oof_predictions.mean():.6f}")
 
+    def test_stacking_ensemble_exposes_original_training_data(self, sample_data):
+        """学習済みデータが保持されていることを確認"""
+        from app.services.ml.ensemble.stacking import StackingEnsemble
+
+        X, y = sample_data
+        config = {
+            "base_models": ["lightgbm", "xgboost"],
+            "meta_model": "logistic_regression",
+            "cv_folds": 3,
+            "stack_method": "predict_proba",
+            "n_jobs": 1,
+            "passthrough": False,
+            "cv_strategy": "kfold",
+        }
+
+        ensemble = StackingEnsemble(config)
+        ensemble.fit(X, y)
+
+        X_original = ensemble.get_X_train_original()
+        y_original = ensemble.get_y_train_original()
+
+        assert X_original.equals(X)
+        assert y_original.equals(y)
+
 
 class TestOOFPredictionQuality:
     """OOF予測の品質検証"""

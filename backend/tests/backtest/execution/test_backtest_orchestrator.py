@@ -4,18 +4,11 @@ BacktestOrchestratorの単体テスト
 
 from unittest.mock import MagicMock, patch
 
-import pandas as pd
+
 import pytest
 
 from app.services.backtest.backtest_data_service import BacktestDataService
-from app.services.backtest.conversion.backtest_result_converter import (
-    BacktestResultConverter,
-)
-from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from app.services.backtest.execution.backtest_orchestrator import BacktestOrchestrator
-from app.services.backtest.factories.strategy_class_factory import (
-    StrategyClassFactory,
-)
 
 
 @pytest.fixture
@@ -26,12 +19,14 @@ def mock_data_service():
 @pytest.fixture
 def orchestrator(mock_data_service):
     # コンストラクタ内でのインスタンス化をモック
-    with patch(
-        "app.services.backtest.execution.backtest_orchestrator.StrategyClassFactory"
-    ), patch(
-        "app.services.backtest.execution.backtest_orchestrator.BacktestResultConverter"
-    ), patch(
-        "app.services.backtest.execution.backtest_orchestrator.BacktestExecutor"
+    with (
+        patch(
+            "app.services.backtest.execution.backtest_orchestrator.StrategyClassFactory"
+        ),
+        patch(
+            "app.services.backtest.execution.backtest_orchestrator.BacktestResultConverter"
+        ),
+        patch("app.services.backtest.execution.backtest_orchestrator.BacktestExecutor"),
     ):
         return BacktestOrchestrator(mock_data_service)
 
@@ -62,7 +57,7 @@ def test_initialization_requires_data_service():
 def test_run_orchestration_flow(orchestrator, sample_config):
     """
     runメソッドの実行フローテスト
-    
+
     各コンポーネント（Validator, Factory, Executor, Converter）が
     正しい順序と引数で呼び出されることを確認
     """
@@ -105,9 +100,7 @@ def test_run_date_normalization(orchestrator, sample_config):
     """日付文字列がdatetimeオブジェクトに正規化されることのテスト"""
     # モック設定
     orchestrator._executor.execute_backtest = MagicMock()
-    orchestrator._result_converter.convert_backtest_results = MagicMock(
-        return_value={}
-    )
+    orchestrator._result_converter.convert_backtest_results = MagicMock(return_value={})
 
     # 実行
     orchestrator.run(sample_config)
@@ -116,31 +109,29 @@ def test_run_date_normalization(orchestrator, sample_config):
     from datetime import datetime
 
     call_args = orchestrator._executor.execute_backtest.call_args[1]
-    
+
     # _normalize_dateはdatetime.fromisoformatを使用するため、標準のdatetimeオブジェクトを返す
     assert isinstance(call_args["start_date"], datetime)
     assert isinstance(call_args["end_date"], datetime)
+
 
 def test_run_skip_validation(orchestrator, sample_config):
     """バリデーションスキップが機能することのテスト"""
     # 設定にフラグを追加
     sample_config["_skip_validation"] = True
-    
+
     # モック設定
     orchestrator._executor.execute_backtest = MagicMock()
     orchestrator._result_converter.convert_backtest_results = MagicMock(return_value={})
 
     # BacktestConfigをパッチ
-    with patch("app.services.backtest.execution.backtest_orchestrator.BacktestConfig") as MockConfig:
+    with patch(
+        "app.services.backtest.execution.backtest_orchestrator.BacktestConfig"
+    ) as MockConfig:
         orchestrator.run(sample_config)
-        
+
         # バリデーション（BacktestConfigの初期化）が行われていないことを確認
         MockConfig.assert_not_called()
-    
+
     # それでもバックテストは実行されることを確認
     orchestrator._executor.execute_backtest.assert_called_once()
-
-
-
-
-

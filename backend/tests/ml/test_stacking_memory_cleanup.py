@@ -64,8 +64,8 @@ class TestStackingMemoryCleanup:
             # 実際にfitを実行
             model.fit(X, y)
 
-            # _create_cv_splitterが呼ばれたことを確認
-            mock_create_cv.assert_called_once()
+            # 実際にはfit()内と_train_meta_model()内で呼ばれるため2回
+            assert mock_create_cv.call_count == 2
 
             # モックの設定
             mock_est = MagicMock()

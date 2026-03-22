@@ -55,15 +55,26 @@ def sample_data() -> pd.Series:
 def sample_df() -> pd.DataFrame:
     """テスト用のOHLCVデータフレームを生成"""
     rows = 100
+    dates = pd.date_range("2023-01-01", periods=rows, freq="1h")
+    close = pd.Series(np.linspace(100, 110, rows) + np.random.normal(0, 1, rows), index=dates)
+    high = close + 1
+    low = close - 1
+    open_ = close.shift(1).fillna(100)
+    volume = pd.Series(np.random.randint(100, 1000, rows), index=dates)
+    open_interest = pd.Series(np.linspace(1000, 2000, rows) + np.random.normal(0, 10, rows), index=dates)
+    funding_rate = pd.Series(np.random.normal(0.0001, 0.00005, rows), index=dates)
+    
     return pd.DataFrame(
         {
-            "open": np.random.normal(100, 5, rows),
-            "high": np.random.normal(105, 5, rows),
-            "low": np.random.normal(95, 5, rows),
-            "close": np.random.normal(100, 5, rows),
-            "volume": np.random.normal(1000, 100, rows),
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+            "open_interest": open_interest,
+            "funding_rate": funding_rate,
         },
-        index=pd.date_range("2023-01-01", periods=rows),
+        index=dates,
     )
 
 
@@ -133,3 +144,16 @@ class IndicatorTestHelper:
 def test_helper():
     """テストヘルパーを提供"""
     return IndicatorTestHelper()
+
+
+@pytest.fixture
+def sample_ohlcv_dict() -> dict:
+    """テスト用のOHLCVデータを辞書形式で生成"""
+    rows = 100
+    return {
+        "close": pd.Series(np.random.normal(100, 1, rows)),
+        "high": pd.Series(np.random.normal(101, 1, rows)),
+        "low": pd.Series(np.random.normal(99, 1, rows)),
+        "open": pd.Series(np.random.normal(100, 1, rows)),
+        "volume": pd.Series(np.random.normal(1000, 10, rows)),
+    }

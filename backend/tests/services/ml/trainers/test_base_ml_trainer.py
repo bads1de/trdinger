@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 from unittest.mock import MagicMock, patch
 from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
-from app.utils.error_handler import DataError
-from app.services.ml.common.exceptions import MLModelError
+
 
 # テスト用の具象クラス
 class MockTrainer(BaseMLTrainer):
@@ -31,6 +30,7 @@ class MockTrainer(BaseMLTrainer):
             "f1_score": 0.78,
         }
 
+
 class TestBaseMLTrainer:
     @pytest.fixture
     def trainer(self):
@@ -39,29 +39,50 @@ class TestBaseMLTrainer:
     @pytest.fixture
     def sample_data(self):
         dates = pd.date_range(start="2023-01-01", periods=150, freq="h")
-        df = pd.DataFrame({
-            "open": np.random.randn(150) + 100,
-            "high": np.random.randn(150) + 101,
-            "low": np.random.randn(150) + 99,
-            "close": np.random.randn(150) + 100,
-            "volume": np.random.rand(150) * 1000
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "open": np.random.randn(150) + 100,
+                "high": np.random.randn(150) + 101,
+                "low": np.random.randn(150) + 99,
+                "close": np.random.randn(150) + 100,
+                "volume": np.random.rand(150) * 1000,
+            },
+            index=dates,
+        )
         return df
 
     def test_train_model_insufficient_data(self, trainer):
         """データ不足の場合のテスト"""
-        short_data = pd.DataFrame(np.random.randn(50, 5), columns=["open", "high", "low", "close", "volume"])
+        short_data = pd.DataFrame(
+            np.random.randn(50, 5), columns=["open", "high", "low", "close", "volume"]
+        )
         # @safe_ml_operation によって例外はキャッチされ、デフォルト値が返される
         result = trainer.train_model(short_data)
         assert result["success"] is False
 
     def test_train_model_success(self, trainer, sample_data):
         """正常な学習フローのテスト"""
-        with patch.object(trainer.feature_service, 'calculate_advanced_features', return_value=pd.DataFrame(np.random.randn(150, 10), index=sample_data.index)):
-            with patch.object(trainer.label_service, 'prepare_labels', return_value=(pd.DataFrame(np.random.randn(140, 10)), pd.Series(np.random.randint(0, 2, 140)))):
-                with patch('app.services.ml.trainers.base_ml_trainer.model_manager.save_model', return_value="/path/to/model"):
+        with patch.object(
+            trainer.feature_service,
+            "calculate_advanced_features",
+            return_value=pd.DataFrame(
+                np.random.randn(150, 10), index=sample_data.index
+            ),
+        ):
+            with patch.object(
+                trainer.label_service,
+                "prepare_labels",
+                return_value=(
+                    pd.DataFrame(np.random.randn(140, 10)),
+                    pd.Series(np.random.randint(0, 2, 140)),
+                ),
+            ):
+                with patch(
+                    "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
+                    return_value="/path/to/model",
+                ):
                     result = trainer.train_model(sample_data, save_model=True)
-                    
+
                     assert result["success"] is True
                     assert trainer.is_trained is True
                     assert "accuracy" in result
@@ -79,10 +100,17 @@ class TestBaseMLTrainer:
         trainer.is_trained = True
         trainer.feature_columns = ["feat1", "feat2"]
         trainer._model = MagicMock()
-        
-        features = pd.DataFrame(np.random.randn(10, 2), columns=["feat1", "feat2"], index=sample_data.index[:10])
-        
-        with patch('app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction', return_value=features):
+
+        features = pd.DataFrame(
+            np.random.randn(10, 2),
+            columns=["feat1", "feat2"],
+            index=sample_data.index[:10],
+        )
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction",
+            return_value=features,
+        ):
             result = trainer.predict_signal(features)
             assert "is_valid" in result
             assert result["is_valid"] == 0.7  # MockTrainerのpredictが返す値
@@ -109,7 +137,10 @@ class TestBaseMLTrainer:
 
     def test_load_model_failure(self, trainer):
         """モデル読み込み失敗"""
-        with patch('app.services.ml.trainers.base_ml_trainer.model_manager.load_model', return_value=None):
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.model_manager.load_model",
+            return_value=None,
+        ):
             result = trainer.load_model("/invalid/path")
             assert result is False
             assert trainer.is_trained is False
@@ -120,9 +151,12 @@ class TestBaseMLTrainer:
             "model": MagicMock(),
             "scaler": MagicMock(),
             "feature_columns": ["f1", "f2"],
-            "metadata": {"type": "test"}
+            "metadata": {"type": "test"},
         }
-        with patch('app.services.ml.trainers.base_ml_trainer.model_manager.load_model', return_value=model_data):
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.model_manager.load_model",
+            return_value=model_data,
+        ):
             result = trainer.load_model("/path/to/model")
             assert result is True
             assert trainer.is_trained is True
@@ -130,7 +164,11 @@ class TestBaseMLTrainer:
 
     def test_calculate_features_fallback(self, trainer, sample_data):
         """特徴量計算エラー時のフォールバック"""
-        with patch.object(trainer.feature_service, 'calculate_advanced_features', side_effect=Exception("Calc error")):
+        with patch.object(
+            trainer.feature_service,
+            "calculate_advanced_features",
+            side_effect=Exception("Calc error"),
+        ):
             # エラー時は元のデータをコピーして返すべき
             result = trainer._calculate_features(sample_data)
             pd.testing.assert_frame_equal(result, sample_data)
@@ -139,18 +177,20 @@ class TestBaseMLTrainer:
         """クロスバリデーションのフロー確認"""
         X = pd.DataFrame(np.random.randn(150, 5), index=sample_data.index)
         y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
-        
-        with patch('app.services.ml.trainers.base_ml_trainer.PurgedKFold') as mock_kfold:
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.PurgedKFold"
+        ) as mock_kfold:
             mock_kfold.return_value.split.return_value = [
                 (np.arange(100), np.arange(100, 120)),
-                (np.arange(20, 120), np.arange(120, 140))
+                (np.arange(20, 120), np.arange(120, 140)),
             ]
-            
+
             # 各フォールドの結果をシミュレート
             trainer._train_model_impl = MagicMock(return_value={"accuracy": 0.8})
-            
+
             result = trainer._time_series_cross_validate(X, y, cv_splits=2)
-            
+
             assert "cv_scores" in result
             assert len(result["cv_scores"]) == 2
             assert result["mean_score"] == 0.8
@@ -162,7 +202,9 @@ class TestBaseMLTrainer:
 
         with patch("app.services.ml.trainers.base_ml_trainer.get_t1_series") as mock_t1:
             mock_t1.return_value = pd.Series(X.index, index=X.index)
-            with patch("app.services.ml.trainers.base_ml_trainer.PurgedKFold") as mock_kfold:
+            with patch(
+                "app.services.ml.trainers.base_ml_trainer.PurgedKFold"
+            ) as mock_kfold:
                 mock_kfold.return_value.split.return_value = [
                     (np.arange(100), np.arange(100, 120)),
                 ]
@@ -192,7 +234,9 @@ class TestBaseMLTrainer:
 
         feature_selector = MagicMock()
         feature_selector.get_feature_names_out.return_value = ["feat1", "feat2"]
-        feature_selector.transform.side_effect = lambda X: X[["feat1", "feat2"]].to_numpy()
+        feature_selector.transform.side_effect = lambda X: X[
+            ["feat1", "feat2"]
+        ].to_numpy()
         trainer.feature_selector = feature_selector
 
         call_order = []
@@ -251,8 +295,8 @@ class TestBaseMLTrainer:
         """リソースクリーンアップのテスト"""
         trainer.is_trained = True
         trainer._model = MagicMock()
-        
+
         trainer.cleanup_resources()
-        
+
         assert trainer._model is None
         assert trainer.is_trained is False

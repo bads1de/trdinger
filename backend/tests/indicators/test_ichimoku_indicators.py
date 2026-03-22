@@ -12,33 +12,10 @@ from app.services.indicators.technical_indicators.overlap import OverlapIndicato
 class TestIchimokuIndicators:
     """Ichimoku Cloudインジケーターのテストクラス"""
 
-    @pytest.fixture
-    def sample_data(self):
-        """テスト用のサンプルデータを生成"""
-        # 簡単なテストデータを生成
-        np.random.seed(42)
-        dates = pd.date_range("2023-01-01", periods=100, freq="D")
-
-        # トレンドのあるデータを生成
-        base_price = 100
-        trend = np.linspace(0, 10, 100)
-        noise = np.random.normal(0, 2, 100)
-        close_prices = base_price + trend + noise
-
-        # HighとLowはCloseから適当にずらす
-        high_prices = close_prices + np.random.normal(1, 0.5, 100)
-        low_prices = close_prices - np.random.normal(1, 0.5, 100)
-
-        df = pd.DataFrame(
-            {"high": high_prices, "low": low_prices, "close": close_prices}, index=dates
-        )
-
-        return df
-
-    def test_ichimoku_basic_calculation(self, sample_data):
+    def test_ichimoku_basic_calculation(self, sample_df):
         """Ichimoku Cloudの基本計算をテスト"""
         result = OverlapIndicators.ichimoku(
-            high=sample_data["high"], low=sample_data["low"], close=sample_data["close"]
+            high=sample_df["high"], low=sample_df["low"], close=sample_df["close"]
         )
 
         # 結果が辞書形式であることを確認
@@ -56,14 +33,14 @@ class TestIchimokuIndicators:
         for component in expected_components:
             assert component in result
             assert isinstance(result[component], pd.Series)
-            assert len(result[component]) == len(sample_data)
+            assert len(result[component]) == len(sample_df)
 
-    def test_ichimoku_with_custom_parameters(self, sample_data):
+    def test_ichimoku_with_custom_parameters(self, sample_df):
         """カスタムパラメータでのIchimoku Cloud計算をテスト"""
         result = OverlapIndicators.ichimoku(
-            high=sample_data["high"],
-            low=sample_data["low"],
-            close=sample_data["close"],
+            high=sample_df["high"],
+            low=sample_df["low"],
+            close=sample_df["close"],
             tenkan_period=10,
             kijun_period=30,
             senkou_span_b_period=60,
@@ -153,10 +130,10 @@ class TestIchimokuIndicators:
         with pytest.raises(ValueError):
             OverlapIndicators.ichimoku(high=high, low=low, close=close)
 
-    def test_ichimoku_component_properties(self, sample_data):
+    def test_ichimoku_component_properties(self, sample_df):
         """各コンポーネントの特性をテスト"""
         result = OverlapIndicators.ichimoku(
-            high=sample_data["high"], low=sample_data["low"], close=sample_data["close"]
+            high=sample_df["high"], low=sample_df["low"], close=sample_df["close"]
         )
 
         # tenkan_sen (転換線) は短期の平均
@@ -181,11 +158,11 @@ class TestIchimokuIndicators:
         chikou = result["chikou_span"]
         assert isinstance(chikou, pd.Series)
 
-    def test_ichimoku_parameter_ranges(self, sample_data):
+    def test_ichimoku_parameter_ranges(self, sample_df):
         """パラメータ範囲のテスト"""
-        high = sample_data["high"]
-        low = sample_data["low"]
-        close = sample_data["close"]
+        high = sample_df["high"]
+        low = sample_df["low"]
+        close = sample_df["close"]
 
         # 正常な範囲のパラメータ
         result1 = OverlapIndicators.ichimoku(
@@ -220,12 +197,12 @@ class TestIchimokuIndicators:
         )
         assert isinstance(result3, dict)
 
-    def test_ichimoku_nan_handling(self, sample_data):
+    def test_ichimoku_nan_handling(self, sample_df):
         """NaN値の処理をテスト"""
         # NaNを含むデータ
-        high_with_nan = sample_data["high"].copy()
-        low_with_nan = sample_data["low"].copy()
-        close_with_nan = sample_data["close"].copy()
+        high_with_nan = sample_df["high"].copy()
+        low_with_nan = sample_df["low"].copy()
+        close_with_nan = sample_df["close"].copy()
 
         high_with_nan.iloc[10:15] = np.nan
         low_with_nan.iloc[20:25] = np.nan
@@ -246,4 +223,4 @@ class TestIchimokuIndicators:
             assert component in result
             assert isinstance(result[component], pd.Series)
             # NaNが適切に処理されていることを確認
-            assert len(result[component]) == len(sample_data)
+            assert len(result[component]) == len(sample_df)

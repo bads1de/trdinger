@@ -6,6 +6,7 @@ from app.services.indicators.data_validation import (
     handle_pandas_ta_errors,
     validate_series_params,
     validate_multi_series_params,
+    validate_data_length_with_fallback,
     PandasTAError,
 )
 
@@ -143,3 +144,20 @@ class TestIndicatorUtils:
             )
             is None
         )
+
+    def test_validate_data_length_with_fallback(self, sample_df):
+        result = validate_data_length_with_fallback(sample_df, "SMA", {"length": 10})
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert isinstance(result[0], bool)
+        assert isinstance(result[1], int)
+
+    def test_validate_data_length_with_fallback_insufficient(self):
+        data = pd.DataFrame({"close": [100, 101, 102], "volume": [1000, 1100, 1200]})
+
+        is_valid, min_length = validate_data_length_with_fallback(
+            data, "SMA", {"length": 14}
+        )
+
+        assert isinstance(is_valid, bool)
+        assert isinstance(min_length, int)

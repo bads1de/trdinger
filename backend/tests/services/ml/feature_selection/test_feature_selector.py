@@ -10,8 +10,7 @@ scikit-learn互換の特徴量選択器をテストします。
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score
+
 
 from app.services.ml.feature_selection.feature_selector import (
     FeatureSelector,
@@ -104,11 +103,11 @@ class TestFeatureSelectorBasics:
     def test_pipeline_integration(self, sample_data):
         """Pipelineとの統合テスト（手動連携）"""
         X, y = sample_data
-    
+
         # FeatureSelectorはfit_transformがDataFrameを返すように修正された
         selector = FeatureSelector(method="variance")
         X_selected = selector.fit_transform(X, y)
-        
+
         assert isinstance(X_selected, pd.DataFrame)
         assert X_selected.shape[1] < X.shape[1]
 

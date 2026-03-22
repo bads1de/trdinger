@@ -7,7 +7,7 @@ SignalGenerator を使ってイベントに基づいたラベリングをテス�
 import pandas as pd
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from app.services.ml.label_generation.label_generation_service import (
     LabelGenerationService,
@@ -255,5 +255,49 @@ class TestLabelGenerationServiceWithEvents:
         assert len(labels_clean) == 3
 
 
+class TestTrendScanningIntegration:
+    @pytest.fixture
+    def trend_sample_ohlcv(self):
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="h")
+        np.random.seed(42)
+        close_prices = np.linspace(100, 110, 100) + np.random.normal(0, 0.1, 100)
 
+        return pd.DataFrame(
+            {
+                "open": close_prices,
+                "high": close_prices + 0.1,
+                "low": close_prices - 0.1,
+                "close": close_prices,
+                "volume": 1000,
+            },
+            index=dates,
+        )
 
+    @pytest.fixture
+    def trend_sample_features(self, trend_sample_ohlcv):
+        df = trend_sample_ohlcv.copy()
+        df["feature_1"] = df["close"].pct_change().fillna(0)
+        return df[["feature_1"]]
+
+    def test_trend_scanning_integration(self, trend_sample_features, trend_sample_ohlcv):
+        service = LabelGenerationService()
+
+        with patch("app.config.unified_config.unified_config") as mock_config:
+            mock_config.ml.training.label_generation.threshold_method = "TREND_SCANNING"
+            mock_config.ml.training.label_generation.horizon_n = 20
+            mock_config.ml.training.label_generation.threshold = 2.0
+            mock_config.ml.training.label_generation.timeframe = "1h"
+            mock_config.ml.training.label_generation.price_column = "close"
+
+            features, labels = service.prepare_labels(
+                features_df=trend_sample_features,
+                ohlcv_df=trend_sample_ohlcv,
+                min_window=5,
+                window_step=1,
+                use_signal_generator=False,
+            )
+
+        assert len(features) > 0
+        assert len(labels) == len(features)
+        assert labels.sum() > 0
+        assert labels.isin([0, 1]).all()

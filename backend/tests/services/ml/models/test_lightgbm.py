@@ -20,7 +20,7 @@ class TestLightGBMModel:
         model = LightGBMModel(n_estimators=10)
         
         # 1. 学習
-        result = model.fit(X, y)
+        model.fit(X, y)
         assert model.is_trained is True
         assert model.model is not None
         assert model.classes_ is not None

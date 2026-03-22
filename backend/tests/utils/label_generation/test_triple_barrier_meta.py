@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pytest
 import sys
@@ -88,3 +89,39 @@ class TestTripleBarrierMetaLabeling:
 
         # ケース3: 時間切れ -> 0
         assert labels.loc[self.close.index[20], "bin"] == 0.0
+
+    def test_binary_labels_correlate_with_future_profitability(self):
+        """binary_label=True の出力がトレンド方向の収益性と整合することを確認"""
+        np.random.seed(42)
+        dates = pd.date_range(start="2024-01-01", periods=1000, freq="1h")
+
+        returns = np.random.normal(0, 0.01, 1000)
+        returns[200:300] += 0.02
+        returns[600:700] -= 0.02
+        price = 100 * np.exp(np.cumsum(returns))
+
+        close = pd.Series(price, index=dates)
+        volatility = close.pct_change().rolling(window=20).std().fillna(0.005)
+
+        tb = TripleBarrier(pt=1.0, sl=1.0, min_ret=0.005, num_threads=1)
+        vertical_barrier = pd.Series(
+            close.index + pd.Timedelta(hours=24), index=close.index
+        )
+
+        events = tb.get_events(
+            close=close,
+            t_events=close.index,
+            pt_sl=[1.0, 1.0],
+            target=volatility,
+            min_ret=0.005,
+            vertical_barrier_times=vertical_barrier,
+        )
+
+        labels = tb.get_bins(events, close, binary_label=True)
+        returns_1 = labels[labels["bin"] == 1]["ret"]
+        returns_0 = labels[labels["bin"] == 0]["ret"]
+
+        assert not labels.empty
+        assert len(returns_1) > 10
+        assert returns_1.mean() > 0
+        assert returns_1.mean() > returns_0.mean()

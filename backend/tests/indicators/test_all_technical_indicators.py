@@ -15,47 +15,6 @@ import pytest
 from app.services.indicators import TechnicalIndicatorService
 
 
-@pytest.fixture
-def sample_ohlcv() -> pd.DataFrame:
-    """テスト用のOHLCVデータを生成"""
-    periods = 500  # 十分な長さを確保
-    index = pd.date_range("2022-01-01", periods=periods, freq="h")
-
-    # ランダム性とトレンドを含むデータ
-    base = np.linspace(10000, 15000, periods)
-    noise = np.random.normal(0, 100, periods)
-    close = base + noise
-
-    df = pd.DataFrame(
-        {
-            "Open": close * np.random.uniform(0.99, 1.01, periods),
-            "High": close * np.random.uniform(1.01, 1.03, periods),
-            "Low": close * np.random.uniform(0.97, 0.99, periods),
-            "Close": close,
-            "Volume": np.random.uniform(1000, 5000, periods),
-        },
-        index=index,
-    )
-
-    # ボラティリティを追加
-    df["High"] = np.maximum(
-        df["High"],
-        df[["Open", "Close"]].max(axis=1) * np.random.uniform(1.0, 1.05, periods),
-    )
-    df["Low"] = np.minimum(
-        df["Low"],
-        df[["Open", "Close"]].min(axis=1) * np.random.uniform(0.95, 1.0, periods),
-    )
-
-    return df
-
-
-@pytest.fixture
-def indicator_service() -> TechnicalIndicatorService:
-    """テクニカルインジケーターサービスを提供"""
-    return TechnicalIndicatorService()
-
-
 class TestAllTechnicalIndicators:
     """全テクニカル指標の網羅的テストクラス"""
 
@@ -68,8 +27,7 @@ class TestAllTechnicalIndicators:
         # フォールバック
         INDICATORS = ["RSI", "SMA", "EMA", "MACD", "BBANDS"]
 
-    @pytest.fixture(autouse=True)
-    def setup_method(self, indicator_service):
+    def test_all_indicators_initializable(self, indicator_service):
         """すべてのインジケーターが初期化可能か確認"""
         for indicator in self.INDICATORS:
             try:

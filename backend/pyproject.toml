@@ -99,6 +99,7 @@ test = [
     "pytest==7.4.3",
     "pytest-asyncio==0.21.1",
     "pytest-cov",
+    "pytest-env",
     "httpx",
 ]
 dev = [
@@ -167,6 +168,9 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+env = [
+    "DEBUG=False",
 ]
 
 [tool.flake8]

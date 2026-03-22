@@ -5,8 +5,8 @@ from app.services.ml.label_generation.presets import (
     triple_barrier_method_preset,
     trend_scanning_preset,
     apply_preset_by_name,
-    get_common_presets
 )
+
 
 class TestLabelPresets:
     @pytest.fixture
@@ -14,12 +14,15 @@ class TestLabelPresets:
         n = 200
         # 緩やかなトレンドにノイズを加えてボラティリティを発生させる
         prices = np.linspace(100, 110, n) + np.random.normal(0, 0.5, n)
-        df = pd.DataFrame({
-            "high": prices + 0.5,
-            "low": prices - 0.5,
-            "close": prices,
-            "volume": [100]*n
-        }, index=pd.date_range("2023-01-01", periods=n, freq="h"))
+        df = pd.DataFrame(
+            {
+                "high": prices + 0.5,
+                "low": prices - 0.5,
+                "close": prices,
+                "volume": [100] * n,
+            },
+            index=pd.date_range("2023-01-01", periods=n, freq="h"),
+        )
         return df
 
     def test_triple_barrier_method_preset(self, sample_df):

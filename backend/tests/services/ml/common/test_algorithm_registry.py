@@ -1,5 +1,5 @@
-import pytest
 from app.services.ml.common.registry import AlgorithmRegistry
+
 
 class TestAlgorithmRegistry:
     def test_get_algorithm_name_mapping(self):

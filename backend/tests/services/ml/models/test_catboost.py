@@ -1,8 +1,9 @@
 import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from app.services.ml.models.catboost import CatBoostModel
+
 
 class TestCatBoostModel:
     @pytest.fixture
@@ -17,7 +18,7 @@ class TestCatBoostModel:
         # 1. Balanced
         res = model._handle_class_weight_for_catboost("balanced", {})
         assert res["auto_class_weights"] == "Balanced"
-        
+
         # 2. Dict
         res = model._handle_class_weight_for_catboost({0: 1, 1: 5}, {})
         assert res["class_weights"] == [1, 5]
@@ -26,7 +27,7 @@ class TestCatBoostModel:
         """データセット作成のテスト"""
         X, y = sample_data
         model = CatBoostModel()
-        
+
         # CatBoostは (X_values, y_values) のタプルを返す
         ds = model._create_dataset(X, y)
         assert isinstance(ds, tuple)
@@ -37,20 +38,20 @@ class TestCatBoostModel:
         """CatBoostの学習と予測（内部をモック化）"""
         X, y = sample_data
         model = CatBoostModel(iterations=10)
-        
+
         # cb.CatBoostClassifier をモック化
-        with patch('app.services.ml.models.catboost.cb.CatBoostClassifier') as mock_cb:
+        with patch("app.services.ml.models.catboost.cb.CatBoostClassifier") as mock_cb:
             mock_instance = mock_cb.return_value
             mock_instance.predict_proba.return_value = np.array([[0.2, 0.8]])
-            
+
             # 学習実行
             model.fit(X, y)
-            
+
             assert model.is_trained is True
             # パラメータが正しく渡されたか
             args, kwargs = mock_cb.call_args
             assert kwargs["iterations"] == 10
-            
+
             # 予測
             probs = model.predict_proba(X.iloc[:1])
             assert probs[0, 1] == 0.8

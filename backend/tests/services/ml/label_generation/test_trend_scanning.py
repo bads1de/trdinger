@@ -1,6 +1,9 @@
-import pandas as pd
+import time
+
 import numpy as np
+import pandas as pd
 import pytest
+from scipy import stats
 from app.services.ml.label_generation.trend_scanning import TrendScanning
 
 
@@ -213,6 +216,89 @@ class TestTrendScanning:
         # ウィンドウサイズが確保できればラベルは生成される
         assert not labels.empty
         assert labels.index[0] == t_event
+
+    def test_with_step_param(self):
+        """step パラメータ付きでもラベル生成できること"""
+        ts = TrendScanning(min_window=5, max_window=15, step=5)
+        dates = pd.date_range(start="2023-01-01", periods=30, freq="h")
+        s = pd.Series(np.arange(30), index=dates, dtype=float)
+
+        labels = ts.get_labels(s)
+        assert not labels.empty
+
+    def test_empty_t_events_explicit(self):
+        """空の t_events を明示的に渡した場合"""
+        ts = TrendScanning()
+        dates = pd.date_range("2023-01-01", periods=20, freq="h")
+        s = pd.Series(np.random.randn(20), index=dates)
+
+        labels = ts.get_labels(s, t_events=pd.DatetimeIndex([]))
+        assert labels.empty
+
+    def test_no_valid_windows_at_end_of_series(self):
+        """系列末尾で有効な窓が見つからない場合"""
+        ts = TrendScanning(min_window=10, max_window=20)
+        dates = pd.date_range("2023-01-01", periods=20, freq="h")
+        s = pd.Series(np.random.randn(20), index=dates)
+
+        labels = ts.get_labels(s, t_events=dates[15:])
+        assert labels.empty
+
+    def test_matches_scipy_linear_regression(self):
+        """Trend Scanning の t 値が SciPy の線形回帰と一致することを確認"""
+        np.random.seed(42)
+        n = 100
+        close = pd.Series(np.cumprod(1 + np.random.randn(n) * 0.01) * 100)
+
+        ts = TrendScanning(min_window=10, max_window=30, step=1)
+        df_res = ts.get_labels(close, return_t_value=True)
+
+        assert not df_res.empty
+
+        check_indices = np.random.choice(
+            df_res.index, size=min(5, len(df_res)), replace=False
+        )
+
+        for t0 in check_indices:
+            row = df_res.loc[t0]
+            if pd.isna(row["t1"]):
+                continue
+
+            t1 = row["t1"]
+            t0_idx = close.index.get_loc(t0)
+            t1_idx = close.index.get_loc(t1)
+
+            y = np.log(close.iloc[t0_idx : t1_idx + 1].values)
+            x = np.arange(len(y))
+            slope, _, _, _, std_err = stats.linregress(x, y)
+            t_value_scipy = slope / std_err if std_err > 0 else 0.0
+
+            if abs(t_value_scipy) > 100:
+                expected = 100.0 * np.sign(t_value_scipy)
+            else:
+                expected = t_value_scipy
+
+            assert np.isclose(row["t_value"], expected, atol=1e-4)
+            assert np.isclose(row["bin"], expected, atol=1e-4)
+
+    def test_trend_scanning_performance(self):
+        """Trend Scanning のパフォーマンスを簡易確認する"""
+        np.random.seed(42)
+        n = 10000
+        close = pd.Series(np.cumprod(1 + np.random.randn(n) * 0.01) * 100)
+        t_events = close.index
+
+        ts = TrendScanning(min_window=5, max_window=20, step=1)
+
+        # JIT warmup
+        _ = ts.get_labels(close.iloc[:100], t_events[:100])
+
+        start_time = time.time()
+        labels = ts.get_labels(close, t_events)
+        duration = time.time() - start_time
+
+        print(f"\nTrend Scanning (n={len(close)}): {duration:.4f} seconds")
+        assert not labels.empty
 
 
 

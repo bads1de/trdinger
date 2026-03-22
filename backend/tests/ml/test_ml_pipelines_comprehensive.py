@@ -67,6 +67,8 @@ class TestMLPipelinesComprehensive:
         step_names = [step[0] for step in pipeline.steps]
         assert "preprocessing" in step_names
         assert "feature_selection" in step_names
+        selector = dict(pipeline.steps)["feature_selection"]
+        assert selector.k == 2
 
     def test_create_ml_pipeline_with_scaling(self):
         """スケーリング付きMLパイプラインのテスト"""
@@ -83,6 +85,7 @@ class TestMLPipelinesComprehensive:
         assert isinstance(pipeline, Pipeline)
         step_names = [step[0] for step in pipeline.steps]
         assert "preprocessing" in step_names
+        assert "scaler" in step_names
 
     def test_create_classification_pipeline_with_selection(self):
         """特徴量選択付き分類パイプラインのテスト"""
@@ -92,6 +95,7 @@ class TestMLPipelinesComprehensive:
 
         step_names = [step[0] for step in pipeline.steps]
         assert "feature_selection" in step_names
+        assert "scaler" in step_names
 
     def test_create_regression_pipeline_basic(self):
         """基本的な回帰パイプラインのテスト"""
@@ -118,6 +122,10 @@ class TestMLPipelinesComprehensive:
         assert "has_preprocessing" in info
         assert "has_feature_selection" in info
         assert "has_scaling" in info
+        assert info["pipeline_type"] == "ml"
+        assert info["has_feature_selection"] is True
+        assert info["has_scaling"] is True
+        assert "preprocessing" in info["step_names"]
 
     def test_optimize_regression_pipeline(self, sample_data):
         """回帰パイプライン最適化のテスト"""
@@ -184,6 +192,16 @@ class TestMLPipelinesComprehensive:
         # 自動調整が働く
         info = get_ml_pipeline_info(pipeline)
         assert info["has_preprocessing"]
+
+    def test_optimize_pipeline_respects_max_features(self, sample_data):
+        """max_features がそのまま反映されることを確認"""
+        X = sample_data[["feature1", "feature2", "feature3"]]
+        y = sample_data["target"]
+
+        pipeline = optimize_ml_pipeline(X, y, task_type="classification", max_features=4)
+
+        selector = dict(pipeline.steps)["feature_selection"]
+        assert selector.k == 4
 
     def test_preprocessing_pipeline_integration(self):
         """前処理パイプライン統合のテスト"""

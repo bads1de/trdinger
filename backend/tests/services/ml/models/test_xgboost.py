@@ -1,6 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
+from unittest.mock import patch
 from app.services.ml.models.xgboost import XGBoostModel
 
 class TestXGBoostModel:
@@ -17,9 +18,8 @@ class TestXGBoostModel:
         X, y = sample_data
         model = XGBoostModel(n_estimators=10)
         
-        from unittest.mock import MagicMock, patch
         with patch('app.services.ml.models.xgboost.xgb.train') as mock_train:
-            with patch('app.services.ml.models.xgboost.xgb.DMatrix') as mock_dmatrix:
+            with patch('app.services.ml.models.xgboost.xgb.DMatrix'):
                 mock_booster = mock_train.return_value
                 mock_booster.predict.return_value = np.array([0.8])
                 
@@ -34,7 +34,6 @@ class TestXGBoostModel:
         X, y = sample_data
         model = XGBoostModel(n_estimators=50)
         
-        from unittest.mock import MagicMock, patch
         with patch('app.services.ml.models.xgboost.xgb.train') as mock_train:
             with patch('app.services.ml.models.xgboost.xgb.DMatrix'):
                 mock_booster = mock_train.return_value
@@ -54,7 +53,6 @@ class TestXGBoostModel:
         y = np.random.randint(0, 3, 60)
         model = XGBoostModel(n_estimators=5)
         
-        from unittest.mock import MagicMock, patch
         with patch('app.services.ml.models.xgboost.xgb.train'):
             with patch('app.services.ml.models.xgboost.xgb.DMatrix'):
                 model.fit(X, y)
