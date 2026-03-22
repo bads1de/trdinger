@@ -127,11 +127,14 @@ class MetaLabelingService:
         primary_proba: pd.Series,
         base_probs: pd.DataFrame,
         mask: pd.Series,
+        X_meta_specific: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
         """メタ特徴量を準備"""
         X_meta = X.loc[mask].copy()
         X_meta["primary_proba"] = primary_proba.loc[mask]
         X_meta = pd.concat([X_meta, base_probs.loc[mask]], axis=1)
+        if X_meta_specific is not None:
+            X_meta = pd.concat([X_meta, X_meta_specific.loc[mask]], axis=1)
         return self._add_base_model_statistics(X_meta, base_probs.loc[mask])
 
     def train(
@@ -153,12 +156,12 @@ class MetaLabelingService:
             return {"status": "skipped", "reason": "insufficient_data"}
 
         X_meta = self._prepare_meta_features(
-            X_train, primary_proba_train, base_model_probs_df, trend_mask
+            X_train,
+            primary_proba_train,
+            base_model_probs_df,
+            trend_mask,
+            X_meta_specific=X_meta_specific,
         )
-
-        # メタモデル専用特徴量があれば追加
-        if X_meta_specific is not None:
-            X_meta = pd.concat([X_meta, X_meta_specific.loc[trend_mask]], axis=1)
 
         # 自動特徴量選択
         if self.use_feature_selection:
@@ -199,12 +202,12 @@ class MetaLabelingService:
             return final_pred
 
         X_meta = self._prepare_meta_features(
-            X, primary_proba, base_model_probs_df, trend_mask
+            X,
+            primary_proba,
+            base_model_probs_df,
+            trend_mask,
+            X_meta_specific=X_meta_specific,
         )
-
-        # メタモデル専用特徴量があれば追加
-        if X_meta_specific is not None:
-            X_meta = pd.concat([X_meta, X_meta_specific.loc[trend_mask]], axis=1)
 
         # 特徴量選択の適用
         if self.selector:
@@ -226,8 +229,7 @@ class MetaLabelingService:
         X_meta_specific: Optional[pd.DataFrame] = None,
     ) -> pd.Series:
         """Cross-Validationを実行"""
-        from sklearn.model_selection import KFold
-        from ..cross_validation.purged_kfold import PurgedKFold
+        from app.services.ml.common.utils import create_temporal_cv_splitter
 
         trend_mask = primary_proba >= threshold
         oof_preds = pd.Series(0, index=X.index, dtype=int)
@@ -236,22 +238,22 @@ class MetaLabelingService:
 
         target_idx = X.index[trend_mask]
         X_meta_all = self._prepare_meta_features(
-            X, primary_proba, base_model_probs_df, trend_mask
+            X,
+            primary_proba,
+            base_model_probs_df,
+            trend_mask,
+            X_meta_specific=X_meta_specific,
         )
-
-        if X_meta_specific is not None:
-            X_meta_all = pd.concat(
-                [X_meta_all, X_meta_specific.loc[trend_mask]], axis=1
-            )
 
         y_target = y.loc[target_idx]
 
-        cv = (
-            PurgedKFold(
-                n_splits=n_splits, t1=t1.loc[target_idx], pct_embargo=pct_embargo
-            )
-            if t1 is not None
-            else KFold(n_splits=n_splits, shuffle=False)
+        cv_strategy = "purged_kfold" if t1 is not None else "kfold"
+        cv = create_temporal_cv_splitter(
+            cv_strategy=cv_strategy,
+            n_splits=n_splits,
+            index=X_meta_all.index,
+            t1=t1.loc[target_idx] if t1 is not None else None,
+            pct_embargo=pct_embargo,
         )
 
         for tr_idx, val_idx in cv.split(X_meta_all, y_target):

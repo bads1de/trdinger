@@ -11,14 +11,12 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.model_selection import KFold, StratifiedKFold, cross_val_predict
+from sklearn.model_selection import cross_val_predict
 
 from app.config.unified_config import unified_config
 
 from ....utils.error_handler import ModelError
-from ..common.utils import validate_training_inputs
-from ..common.utils import get_t1_series
-from ..cross_validation.purged_kfold import PurgedKFold
+from ..common.utils import create_temporal_cv_splitter, validate_training_inputs
 from .base_ensemble import BaseEnsemble
 
 logger = logging.getLogger(__name__)
@@ -241,17 +239,15 @@ class StackingEnsemble(BaseEnsemble):
             CVスプリッター
         """
         cv_strategy = self.config.get("cv_strategy", "purged_kfold")
-
-        if cv_strategy == "kfold":
-            return KFold(n_splits=self.cv_folds, shuffle=False)
-        elif cv_strategy == "stratified_kfold":
-            return StratifiedKFold(n_splits=self.cv_folds, shuffle=False)
-        else:
-            # デフォルト: PurgedKFold
-            t1_horizon_n = unified_config.ml.training.label_generation.horizon_n
-            t1 = get_t1_series(X_train.index, t1_horizon_n)
-            pct_embargo = getattr(unified_config.ml.training, "pct_embargo", 0.01)
-            return PurgedKFold(n_splits=self.cv_folds, t1=t1, pct_embargo=pct_embargo)
+        t1_horizon_n = unified_config.ml.training.label_generation.horizon_n
+        pct_embargo = getattr(unified_config.ml.training, "pct_embargo", 0.01)
+        return create_temporal_cv_splitter(
+            cv_strategy=cv_strategy,
+            n_splits=self.cv_folds,
+            index=X_train.index,
+            pct_embargo=pct_embargo,
+            horizon_n=t1_horizon_n,
+        )
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """

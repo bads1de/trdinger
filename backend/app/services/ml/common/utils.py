@@ -11,6 +11,9 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import KFold, StratifiedKFold
+
+from ..cross_validation.purged_kfold import PurgedKFold
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +256,36 @@ def get_t1_series(
         delta = pd.Timedelta(hours=horizon_n)
 
     return pd.Series(indices + delta, index=indices)
+
+
+def create_temporal_cv_splitter(
+    cv_strategy: str,
+    n_splits: int,
+    index: pd.DatetimeIndex,
+    *,
+    t1: Optional[pd.Series] = None,
+    pct_embargo: float = 0.01,
+    horizon_n: Optional[int] = None,
+    timeframe: Optional[str] = None,
+):
+    """時系列向けの CV splitter を一元生成する"""
+    strategy = (cv_strategy or "purged_kfold").lower()
+
+    if strategy == "kfold":
+        return KFold(n_splits=n_splits, shuffle=False)
+
+    if strategy == "stratified_kfold":
+        return StratifiedKFold(n_splits=n_splits, shuffle=False)
+
+    if strategy != "purged_kfold":
+        raise ValueError(f"Unsupported cv_strategy: {cv_strategy}")
+
+    if t1 is None:
+        if horizon_n is None:
+            raise ValueError("horizon_n is required when t1 is not provided")
+        t1 = get_t1_series(index, horizon_n, timeframe=timeframe)
+
+    return PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=pct_embargo)
 
 
 # --- 価格計算・ボラティリティ ---

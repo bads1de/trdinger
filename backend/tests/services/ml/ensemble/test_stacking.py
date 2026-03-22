@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch, mock_open
 import pytest
 
 from app.services.ml.ensemble.stacking import StackingEnsemble
+from app.services.ml.cross_validation.purged_kfold import PurgedKFold
+from sklearn.model_selection import KFold, StratifiedKFold
 
 
 class TestStackingEnsemble:
@@ -109,26 +111,18 @@ class TestStackingEnsemble:
 
         # 1. KFold
         ensemble.config["cv_strategy"] = "kfold"
-        with patch("app.services.ml.ensemble.stacking.KFold") as mock_cv:
-            ensemble._create_cv_splitter(X)
-            assert mock_cv.called
+        splitter = ensemble._create_cv_splitter(X)
+        assert isinstance(splitter, KFold)
 
         # 2. StratifiedKFold
         ensemble.config["cv_strategy"] = "stratified_kfold"
-        with patch("app.services.ml.ensemble.stacking.StratifiedKFold") as mock_cv:
-            ensemble._create_cv_splitter(X)
-            assert mock_cv.called
+        splitter = ensemble._create_cv_splitter(X)
+        assert isinstance(splitter, StratifiedKFold)
 
         # 3. PurgedKFold
         ensemble.config["cv_strategy"] = "purged_kfold"
-        with patch(
-            "app.services.ml.ensemble.stacking.get_t1_series", return_value=pd.Series()
-        ):
-            with patch(
-                "app.services.ml.ensemble.stacking.PurgedKFold"
-            ) as mock_cv:
-                ensemble._create_cv_splitter(X)
-                assert mock_cv.called
+        splitter = ensemble._create_cv_splitter(X)
+        assert isinstance(splitter, PurgedKFold)
 
     def test_load_models_new_format(self, config):
         """新形式モデル読み込み (完全モック)"""

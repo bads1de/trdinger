@@ -1,5 +1,12 @@
 import pandas as pd
-from app.services.ml.common.utils import infer_timeframe, get_t1_series
+from sklearn.model_selection import KFold, StratifiedKFold
+
+from app.services.ml.common.utils import (
+    create_temporal_cv_splitter,
+    get_t1_series,
+    infer_timeframe,
+)
+from app.services.ml.cross_validation.purged_kfold import PurgedKFold
 
 
 class TestTimeSeriesUtils:
@@ -47,3 +54,47 @@ class TestTimeSeriesUtils:
         res = get_t1_series(idx, horizon_n=1, timeframe="xyz")
         # 1h とみなされる
         assert res.iloc[0] == pd.Timestamp("2023-01-01 01:00:00")
+
+    def test_create_temporal_cv_splitter_kfold(self):
+        """KFold splitter を返すことを確認"""
+        idx = pd.date_range("2023-01-01", periods=6, freq="h")
+
+        splitter = create_temporal_cv_splitter(
+            cv_strategy="kfold",
+            n_splits=3,
+            index=idx,
+        )
+
+        assert isinstance(splitter, KFold)
+        assert splitter.n_splits == 3
+
+    def test_create_temporal_cv_splitter_stratified_kfold(self):
+        """StratifiedKFold splitter を返すことを確認"""
+        idx = pd.date_range("2023-01-01", periods=6, freq="h")
+
+        splitter = create_temporal_cv_splitter(
+            cv_strategy="stratified_kfold",
+            n_splits=4,
+            index=idx,
+        )
+
+        assert isinstance(splitter, StratifiedKFold)
+        assert splitter.n_splits == 4
+
+    def test_create_temporal_cv_splitter_purged_kfold(self):
+        """PurgedKFold splitter を返し、t1 を自動生成することを確認"""
+        idx = pd.date_range("2023-01-01", periods=4, freq="h")
+
+        splitter = create_temporal_cv_splitter(
+            cv_strategy="purged_kfold",
+            n_splits=2,
+            index=idx,
+            horizon_n=2,
+            timeframe="1h",
+            pct_embargo=0.05,
+        )
+
+        assert isinstance(splitter, PurgedKFold)
+        assert splitter.n_splits == 2
+        assert splitter.pct_embargo == 0.05
+        assert splitter.t1.iloc[0] == pd.Timestamp("2023-01-01 02:00:00")

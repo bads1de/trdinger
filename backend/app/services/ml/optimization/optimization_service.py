@@ -145,16 +145,6 @@ class OptimizationService:
         Returns:
             ベストパラメータ、ベストスコア、比較結果などを含む辞書
         """
-        from app.services.ml.feature_engineering.feature_engineering_service import (
-            FeatureEngineeringService,
-        )
-        from app.services.ml.feature_selection.feature_selector import FeatureSelector
-        from app.services.ml.label_generation.presets import (
-            triple_barrier_method_preset,
-        )
-        from lightgbm import LGBMClassifier
-        from sklearn.metrics import balanced_accuracy_score as sklearn_metric
-
         if frac_diff_d_values is None:
             frac_diff_d_values = [0.3, 0.4, 0.5, 0.6]
 
@@ -185,15 +175,8 @@ class OptimizationService:
                     ohlcv_data if ohlcv_data is not None else feature_superset
                 )
 
-                current_labels = triple_barrier_method_preset(
-                    df=df_for_label,
-                    timeframe="1h",
-                    horizon_n=label_params.get("tbm_horizon", 24),
-                    pt=label_params.get("tbm_pt", 1.0),
-                    sl=label_params.get("tbm_sl", 1.0),
-                    min_ret=0.001,
-                    price_column="close",
-                    use_atr=True,
+                current_labels = self._generate_pipeline_labels(
+                    df_for_label, label_params
                 )
 
                 if current_labels.empty:
@@ -219,51 +202,28 @@ class OptimizationService:
 
                 # 3. FracDiff d値でフィルタ
                 d_value = params["frac_diff_d"]
-                X_filtered = FeatureEngineeringService.filter_superset_for_d(
-                    X_trainval_curr, d_value
-                )
-
-                # 除外カラム
-                exclude_cols = ["open", "high", "low", "close", "volume"]
-                feature_cols = [c for c in X_filtered.columns if c not in exclude_cols]
-                X_features = X_filtered[feature_cols]
 
                 # 4. 内部CV用分割 (時系列ホールドアウト 20%)
-                val_split_idx = int(len(X_features) * 0.8)
+                val_split_idx = int(len(X_trainval_curr) * 0.8)
 
-                X_train = X_features.iloc[:val_split_idx]
+                X_train = X_trainval_curr.iloc[:val_split_idx]
                 y_train = y_trainval_curr.iloc[:val_split_idx]
-                X_val = X_features.iloc[val_split_idx:]
+                X_val = X_trainval_curr.iloc[val_split_idx:]
                 y_val = y_trainval_curr.iloc[val_split_idx:]
 
-                # 5. 特徴量選択
-                selector = FeatureSelector(
-                    method=params["selection_method"],
+                # 5. 特徴量選択 + モデル学習 + 評価
+                score, _ = self._evaluate_selected_model_pipeline(
+                    X_train=X_train,
+                    y_train=y_train,
+                    X_eval=X_val,
+                    y_eval=y_val,
+                    d_value=d_value,
+                    selection_method=params["selection_method"],
                     correlation_threshold=params["correlation_threshold"],
                     min_features=params["min_features"],
-                    cv_folds=3,
-                    cv_strategy="timeseries",
-                    n_jobs=-1,
-                )
-
-                X_train_selected = selector.fit_transform(X_train, y_train)
-                X_val_selected = selector.transform(X_val)
-
-                # 6. モデル学習
-                model = LGBMClassifier(
                     learning_rate=params["learning_rate"],
                     num_leaves=params["num_leaves"],
-                    n_estimators=100,
-                    random_state=42,
-                    verbosity=-1,
-                    force_col_wise=True,
                 )
-
-                model.fit(X_train_selected, y_train)
-                y_pred = model.predict(X_val_selected)
-
-                # Balanced Accuracy
-                score = sklearn_metric(y_val, y_pred)
                 return score
 
             except Exception as e:
@@ -290,16 +250,7 @@ class OptimizationService:
 
         df_for_label = ohlcv_data if ohlcv_data is not None else feature_superset
 
-        labels_best = triple_barrier_method_preset(
-            df=df_for_label,
-            timeframe="1h",
-            horizon_n=final_params.get("tbm_horizon", 24),
-            pt=final_params.get("tbm_pt", 1.0),
-            sl=final_params.get("tbm_sl", 1.0),
-            min_ret=0.001,
-            price_column="close",
-            use_atr=True,
-        )
+        labels_best = self._generate_pipeline_labels(df_for_label, final_params)
 
         # アラインメント
         common_idx = feature_superset.index.intersection(labels_best.index)
@@ -314,42 +265,21 @@ class OptimizationService:
         y_test = y_aligned[~mask_trainval]
 
         # ベストパラメータでフルTrainValデータで再学習
-        d_value = best_params["frac_diff_d"]
-        X_filtered = FeatureEngineeringService.filter_superset_for_d(
-            X_trainval, d_value
-        )
-        X_test_filtered = FeatureEngineeringService.filter_superset_for_d(
-            X_test, d_value
-        )
-
-        exclude_cols = ["open", "high", "low", "close", "volume"]
-        feature_cols = [c for c in X_filtered.columns if c not in exclude_cols]
-        X_features = X_filtered[feature_cols]
-        X_test_features = X_test_filtered[feature_cols]
-
-        selector = FeatureSelector(
-            method=best_params["selection_method"],
+        test_score, n_selected_features = self._evaluate_selected_model_pipeline(
+            X_train=X_trainval,
+            y_train=y_trainval,
+            X_eval=X_test,
+            y_eval=y_test,
+            d_value=best_params["frac_diff_d"],
+            selection_method=best_params["selection_method"],
             correlation_threshold=best_params["correlation_threshold"],
             min_features=best_params["min_features"],
-            cv_folds=3,
-            n_jobs=-1,
-        )
-
-        X_train_selected = selector.fit_transform(X_features, y_trainval)
-        X_test_selected = selector.transform(X_test_features)
-
-        model = LGBMClassifier(
             learning_rate=best_params["learning_rate"],
             num_leaves=best_params["num_leaves"],
-            n_estimators=100,
-            random_state=42,
-            verbosity=-1,
-            force_col_wise=True,
+            cv_folds=3,
+            cv_strategy="timeseries",
+            n_jobs=-1,
         )
-
-        model.fit(X_train_selected, y_trainval)
-        y_pred_test = model.predict(X_test_selected)
-        test_score = sklearn_metric(y_test, y_pred_test)
 
         baseline_score = 0.0
         self.optimizer.cleanup()
@@ -367,8 +297,94 @@ class OptimizationService:
             "improvement": test_score - baseline_score,
             "total_evaluations": result.total_evaluations,
             "optimization_time": result.optimization_time,
-            "n_selected_features": X_train_selected.shape[1],
+            "n_selected_features": n_selected_features,
         }
+
+    def _generate_pipeline_labels(
+        self, df_for_label: pd.DataFrame, label_params: Dict[str, Any]
+    ) -> pd.Series:
+        """パイプライン最適化向けに triple barrier ラベルを一元生成する"""
+        from app.services.ml.label_generation.presets import (
+            triple_barrier_method_preset,
+        )
+
+        return triple_barrier_method_preset(
+            df=df_for_label,
+            timeframe="1h",
+            horizon_n=label_params.get("tbm_horizon", 24),
+            pt=label_params.get("tbm_pt", 1.0),
+            sl=label_params.get("tbm_sl", 1.0),
+            min_ret=0.001,
+            price_column="close",
+            use_atr=True,
+        )
+
+    def _evaluate_selected_model_pipeline(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_eval: pd.DataFrame,
+        y_eval: pd.Series,
+        *,
+        d_value: float,
+        selection_method: str,
+        correlation_threshold: float,
+        min_features: int,
+        learning_rate: float,
+        num_leaves: int,
+        cv_folds: int = 3,
+        cv_strategy: str = "timeseries",
+        n_jobs: int = -1,
+        n_estimators: int = 100,
+        random_state: int = 42,
+        verbosity: int = -1,
+        force_col_wise: bool = True,
+    ) -> tuple[float, int]:
+        """FracDiff フィルタ、特徴量選択、学習、評価を 1 箇所にまとめる"""
+        from app.services.ml.feature_engineering.feature_engineering_service import (
+            FeatureEngineeringService,
+        )
+        from app.services.ml.feature_selection.feature_selector import FeatureSelector
+        from lightgbm import LGBMClassifier
+        from sklearn.metrics import balanced_accuracy_score as sklearn_metric
+
+        X_train_filtered = FeatureEngineeringService.filter_superset_for_d(
+            X_train, d_value
+        )
+        X_eval_filtered = FeatureEngineeringService.filter_superset_for_d(
+            X_eval, d_value
+        )
+
+        exclude_cols = ["open", "high", "low", "close", "volume"]
+        feature_cols = [c for c in X_train_filtered.columns if c not in exclude_cols]
+        X_train_features = X_train_filtered[feature_cols]
+        X_eval_features = X_eval_filtered[feature_cols]
+
+        selector = FeatureSelector(
+            method=selection_method,
+            correlation_threshold=correlation_threshold,
+            min_features=min_features,
+            cv_folds=cv_folds,
+            cv_strategy=cv_strategy,
+            n_jobs=n_jobs,
+        )
+
+        X_train_selected = selector.fit_transform(X_train_features, y_train)
+        X_eval_selected = selector.transform(X_eval_features)
+
+        model = LGBMClassifier(
+            learning_rate=learning_rate,
+            num_leaves=num_leaves,
+            n_estimators=n_estimators,
+            random_state=random_state,
+            verbosity=verbosity,
+            force_col_wise=force_col_wise,
+        )
+
+        model.fit(X_train_selected, y_train)
+        y_pred = model.predict(X_eval_selected)
+        score = sklearn_metric(y_eval, y_pred)
+        return score, int(X_train_selected.shape[1])
 
     def optimize_meta_model_with_oof(
         self,
@@ -542,56 +558,23 @@ class OptimizationService:
         y_test: pd.Series,
     ) -> float:
         """ベースライン（デフォルトパラメータ）での評価"""
-        from app.services.ml.feature_engineering.feature_engineering_service import (
-            FeatureEngineeringService,
-        )
-        from app.services.ml.feature_selection.feature_selector import FeatureSelector
-        from lightgbm import LGBMClassifier
-        from sklearn.metrics import balanced_accuracy_score as sklearn_metric
-
         try:
-            # デフォルト d=0.4 でフィルタ
-            X_train_filtered = FeatureEngineeringService.filter_superset_for_d(
-                X_train, 0.4
-            )
-            X_test_filtered = FeatureEngineeringService.filter_superset_for_d(
-                X_test, 0.4
-            )
-
-            exclude_cols = ["open", "high", "low", "close", "volume"]
-            feature_cols = [
-                c for c in X_train_filtered.columns if c not in exclude_cols
-            ]
-            X_features = X_train_filtered[feature_cols]
-            X_test_features = X_test_filtered[feature_cols]
-
-            # デフォルト特徴量選択
-            selector = FeatureSelector(
-                method="staged",
+            score, _ = self._evaluate_selected_model_pipeline(
+                X_train=X_train,
+                y_train=y_train,
+                X_eval=X_test,
+                y_eval=y_test,
+                d_value=0.4,
+                selection_method="staged",
                 correlation_threshold=0.90,
                 min_features=10,
+                learning_rate=0.05,
+                num_leaves=31,
                 cv_folds=3,
                 cv_strategy="timeseries",
                 n_jobs=-1,
             )
-
-            X_train_selected = selector.fit_transform(X_features, y_train)
-            X_test_selected = selector.transform(X_test_features)
-
-            # デフォルトモデル
-            model = LGBMClassifier(
-                learning_rate=0.05,
-                num_leaves=31,
-                n_estimators=100,
-                random_state=42,
-                verbosity=-1,
-                force_col_wise=True,
-            )
-
-            model.fit(X_train_selected, y_train)
-            y_pred = model.predict(X_test_selected)
-
-            return sklearn_metric(y_test, y_pred)
+            return score
 
         except Exception as e:
             logger.warning(f"ベースライン評価エラー: {e}")

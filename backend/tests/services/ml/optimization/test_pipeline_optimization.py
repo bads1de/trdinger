@@ -346,3 +346,108 @@ class TestOptimizationService:
 
             assert score == 0.75
             mock_temp_trainer.train_model.assert_called_once()
+
+
+class TestOptimizationPipelineHelpers:
+    """OptimizationService のパイプライン共通化ヘルパーのテスト"""
+
+    @pytest.fixture
+    def service(self):
+        return OptimizationService()
+
+    @pytest.fixture
+    def sample_frame(self):
+        index = pd.date_range("2024-01-01", periods=6, freq="1h")
+        return pd.DataFrame(
+            {
+                "open": [100, 101, 102, 103, 104, 105],
+                "high": [101, 102, 103, 104, 105, 106],
+                "low": [99, 100, 101, 102, 103, 104],
+                "close": [100, 101, 102, 103, 104, 105],
+                "volume": [10, 11, 12, 13, 14, 15],
+                "RSI_14": [30, 35, 40, 45, 50, 55],
+                "FracDiff_Price_d0.3": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+                "FracDiff_Price_d0.4": [0.6, 0.5, 0.4, 0.3, 0.2, 0.1],
+            },
+            index=index,
+        )
+
+    def test_generate_pipeline_labels_uses_single_labeling_entrypoint(
+        self, service, sample_frame
+    ):
+        label_params = {
+            "tbm_horizon": 12,
+            "tbm_pt": 1.5,
+            "tbm_sl": 0.8,
+        }
+
+        expected_labels = pd.Series([1, 0, 1, 0, 1, 0], index=sample_frame.index)
+
+        with patch(
+            "app.services.ml.label_generation.presets.triple_barrier_method_preset"
+        ) as mock_tbm:
+            mock_tbm.return_value = expected_labels
+
+            labels = service._generate_pipeline_labels(sample_frame, label_params)
+
+        assert labels.equals(expected_labels)
+        mock_tbm.assert_called_once_with(
+            df=sample_frame,
+            timeframe="1h",
+            horizon_n=12,
+            pt=1.5,
+            sl=0.8,
+            min_ret=0.001,
+            price_column="close",
+            use_atr=True,
+        )
+
+    def test_evaluate_selected_model_pipeline_filters_and_scores(
+        self, service, sample_frame
+    ):
+        X_train = sample_frame.iloc[:4]
+        y_train = pd.Series([0, 1, 0, 1], index=X_train.index)
+        X_eval = sample_frame.iloc[4:]
+        y_eval = pd.Series([0, 1], index=X_eval.index)
+
+        with (
+            patch(
+                "app.services.ml.feature_selection.feature_selector.FeatureSelector"
+            ) as mock_selector_cls,
+            patch("lightgbm.LGBMClassifier") as mock_lgbm_cls,
+        ):
+            mock_selector = MagicMock()
+            mock_selector.fit_transform.side_effect = lambda X, y: X.iloc[:, :2]
+            mock_selector.transform.side_effect = lambda X: X.iloc[:, :2]
+            mock_selector_cls.return_value = mock_selector
+
+            mock_lgbm = MagicMock()
+            mock_lgbm.fit.return_value = None
+            mock_lgbm.predict.side_effect = lambda X: np.array([0, 1][: len(X)])
+            mock_lgbm_cls.return_value = mock_lgbm
+
+            score, selected_count = service._evaluate_selected_model_pipeline(
+                X_train=X_train,
+                y_train=y_train,
+                X_eval=X_eval,
+                y_eval=y_eval,
+                d_value=0.3,
+                selection_method="staged",
+                correlation_threshold=0.9,
+                min_features=5,
+                learning_rate=0.1,
+                num_leaves=16,
+            )
+
+        assert score == 1.0
+        assert selected_count == 2
+
+        fit_input_columns = mock_selector.fit_transform.call_args[0][0].columns
+        assert "open" not in fit_input_columns
+        assert "high" not in fit_input_columns
+        assert "low" not in fit_input_columns
+        assert "close" not in fit_input_columns
+        assert "volume" not in fit_input_columns
+        assert "FracDiff_Price_d0.4" not in fit_input_columns
+        assert "FracDiff_Price_d0.3" in fit_input_columns
+        assert "RSI_14" in fit_input_columns
