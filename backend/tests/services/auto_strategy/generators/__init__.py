@@ -1,1 +1,5 @@
-# Tests for auto_strategy generators
+"""Generators tests package."""
+
+
+
+
