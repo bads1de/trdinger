@@ -5,20 +5,18 @@
 責務の分離により、ビジネスロジックはサービス層に委譲されています。
 """
 
-import logging
 from typing import Dict, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
+from app.api.common import ensure_db_initialized
 from app.api.dependencies import get_data_collection_orchestration_service
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
-from database.connection import get_db, init_db
-
-logger = logging.getLogger(__name__)
+from database.connection import get_db
 
 router = APIRouter(prefix="/api/data-collection", tags=["data-collection"])
 
@@ -50,14 +48,7 @@ async def collect_historical_data(
     """
 
     async def _execute():
-        # データベース初期化確認
-        if not init_db():
-            logger.error("データベースの初期化に失敗しました")
-            from fastapi import HTTPException
-
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+        ensure_db_initialized()
 
         return await orchestration_service.start_historical_data_collection(
             symbol, timeframe, background_tasks, db, force_update, start_date
@@ -117,12 +108,7 @@ async def collect_bulk_historical_data(
     """
 
     async def _execute():
-        # データベース初期化確認
-        if not init_db():
-            logger.error("データベースの初期化に失敗しました")
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+        ensure_db_initialized()
 
         return await orchestration_service.start_bulk_historical_data_collection(
             background_tasks, db, force_update, start_date
@@ -157,12 +143,7 @@ async def get_collection_status(
     """
 
     async def _get_collection_status():
-        # データベース初期化確認
-        if not init_db():
-            logger.error("データベースの初期化に失敗しました", exc_info=True)
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+        ensure_db_initialized()
 
         return await orchestration_service.get_collection_status(
             symbol=symbol,
@@ -199,12 +180,7 @@ async def collect_all_data_bulk(
     """
 
     async def _execute():
-        # データベース初期化確認
-        if not init_db():
-            logger.error("データベースの初期化に失敗しました")
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+        ensure_db_initialized()
 
         # 全データ一括収集サービスにも上書きオプションを追加する必要があるため、
         # 一旦はbulk-historicalを使用する
@@ -242,12 +218,7 @@ async def collect_historical_oi_data(
     """
 
     async def _execute():
-        # データベース初期化確認
-        if not init_db():
-            logger.error("データベースの初期化に失敗しました")
-            raise HTTPException(
-                status_code=500, detail="データベースの初期化に失敗しました"
-            )
+        ensure_db_initialized()
 
         return await orchestration_service.start_historical_oi_collection(
             symbol, interval, background_tasks, db

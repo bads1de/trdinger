@@ -22,7 +22,7 @@ from app.services.ml.orchestration.bg_task_orchestration_service import (
     background_task_manager,
 )
 from app.utils.error_handler import safe_ml_operation
-from app.utils.response import api_response
+from app.utils.response import api_response, ensure_response_dict
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -483,7 +483,8 @@ class MLTrainingService(BaseResourceManager):
             **training_params,
         )
 
-        if not isinstance(result, dict):
+        result = ensure_response_dict(result)
+        if not result:
             result = {
                 "success": False,
                 "message": "学習結果の取得に失敗しました",

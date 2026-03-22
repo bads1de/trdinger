@@ -5,7 +5,6 @@ MLトレーニングAPI
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends
@@ -17,6 +16,7 @@ from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingService,
 )
 from app.utils.error_handler import ErrorHandler
+from app.utils.response import ensure_response_dict, extract_response_data, now_iso
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -207,24 +207,18 @@ async def start_ml_training(
     """
 
     async def _start_training():
-        result = await ml_service.start_training(
-            config=config, background_tasks=background_tasks, db=db
+        result = ensure_response_dict(
+            await ml_service.start_training(
+                config=config, background_tasks=background_tasks, db=db
+            )
         )
 
-        if not isinstance(result, dict):
-            if hasattr(result, "model_dump"):
-                result = result.model_dump()
-            elif hasattr(result, "dict"):
-                result = result.dict()
-            else:
-                result = {}
-
-        payload = result.get("data") if isinstance(result.get("data"), dict) else {}
+        payload = extract_response_data(result)
         return MLTrainingResponse(
             success=result.get("success", False),
             message=result.get("message", ""),
             training_id=result.get("training_id") or payload.get("training_id"),
-            timestamp=result.get("timestamp", datetime.now().isoformat()),
+            timestamp=result.get("timestamp", now_iso()),
         )
 
     return await ErrorHandler.safe_execute_async(_start_training)

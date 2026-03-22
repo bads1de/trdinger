@@ -1,9 +1,38 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 
 def now_iso() -> str:
     return datetime.now().isoformat()
+
+
+def ensure_response_dict(result: Any) -> Dict[str, Any]:
+    """辞書互換のレスポンス値を dict に正規化する。"""
+    if isinstance(result, dict):
+        return result
+
+    model_dump = getattr(result, "model_dump", None)
+    if callable(model_dump):
+        dumped = model_dump()
+        if isinstance(dumped, dict):
+            return dumped
+
+    dict_method = getattr(result, "dict", None)
+    if callable(dict_method):
+        dumped = dict_method()
+        if isinstance(dumped, dict):
+            return dumped
+
+    return {}
+
+
+def extract_response_data(
+    result: Mapping[str, Any],
+    key: str = "data",
+) -> Dict[str, Any]:
+    """レスポンスのネストされた dict ペイロードを取り出す。"""
+    payload = result.get(key)
+    return payload if isinstance(payload, dict) else {}
 
 
 def _build_response(

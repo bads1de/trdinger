@@ -1,8 +1,15 @@
 import pytest
 import pandas as pd
 from fastapi import HTTPException
-from app.utils.response import api_response, error_response
+
+from app.api.common import ensure_db_initialized
 from app.utils.error_handler import ErrorHandler, safe_operation
+from app.utils.response import (
+    api_response,
+    ensure_response_dict,
+    error_response,
+    extract_response_data,
+)
 
 
 class TestUtilsExtra:
@@ -19,6 +26,46 @@ class TestUtilsExtra:
         assert resp["success"] is False
         assert resp["message"] == "Failed"
         assert resp["error_code"] == "ERR001"
+
+    def test_ensure_response_dict(self):
+        class ModelDumpResult:
+            def model_dump(self):
+                return {"success": True, "data": {"key": "value"}}
+
+        class DictResult:
+            def dict(self):
+                return {"success": False, "message": "fallback"}
+
+        assert ensure_response_dict({"success": True}) == {"success": True}
+        assert ensure_response_dict(ModelDumpResult()) == {
+            "success": True,
+            "data": {"key": "value"},
+        }
+        assert ensure_response_dict(DictResult()) == {
+            "success": False,
+            "message": "fallback",
+        }
+        assert ensure_response_dict(object()) == {}
+
+    def test_extract_response_data(self):
+        assert extract_response_data({"data": {"key": "value"}}) == {
+            "key": "value"
+        }
+        assert extract_response_data({"data": None}) == {}
+
+    def test_ensure_db_initialized_success(self, monkeypatch):
+        monkeypatch.setattr("app.api.common.init_db", lambda: True)
+
+        ensure_db_initialized()
+
+    def test_ensure_db_initialized_failure(self, monkeypatch):
+        monkeypatch.setattr("app.api.common.init_db", lambda: False)
+
+        with pytest.raises(HTTPException) as exc_info:
+            ensure_db_initialized()
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "データベースの初期化に失敗しました"
 
     def test_error_handler_api(self):
         # APIエラーハンドリングの検証

@@ -5,7 +5,6 @@
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -17,6 +16,7 @@ from app.services.auto_strategy.services.generated_strategy_service import (
     GeneratedStrategyService,
 )
 from app.utils.error_handler import ErrorHandler
+from app.utils.response import ensure_response_dict, extract_response_data, now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +32,7 @@ class StrategiesResponse(BaseModel):
     total_count: int = 0
     has_more: bool = False
     message: str = "戦略が正常に取得されました"
-    timestamp: str = Field(
-        default_factory=lambda: __import__("datetime").datetime.now().isoformat()
-    )
+    timestamp: str = Field(default_factory=now_iso)
 
 
 class StrategyStatsResponse(BaseModel):
@@ -43,9 +41,7 @@ class StrategyStatsResponse(BaseModel):
     success: bool = True
     stats: Dict[str, Any] = Field(default_factory=dict)
     message: str = "戦略統計が正常に取得されました"
-    timestamp: str = Field(
-        default_factory=lambda: __import__("datetime").datetime.now().isoformat()
-    )
+    timestamp: str = Field(default_factory=now_iso)
 
 
 @router.get("/", response_model=StrategiesResponse)
@@ -87,32 +83,26 @@ async def get_strategies(
     """
 
     async def _get_strategies():
-        result = strategy_service.get_strategies_with_response(
-            limit=limit,
-            offset=offset,
-            risk_level=risk_level,
-            experiment_id=experiment_id,
-            min_fitness=min_fitness,
-            sort_by=sort_by,
-            sort_order=sort_order,
+        result = ensure_response_dict(
+            strategy_service.get_strategies_with_response(
+                limit=limit,
+                offset=offset,
+                risk_level=risk_level,
+                experiment_id=experiment_id,
+                min_fitness=min_fitness,
+                sort_by=sort_by,
+                sort_order=sort_order,
+            )
         )
 
-        if not isinstance(result, dict):
-            if hasattr(result, "model_dump"):
-                result = result.model_dump()
-            elif hasattr(result, "dict"):
-                result = result.dict()
-            else:
-                result = {}
-
-        payload = result.get("data") if isinstance(result.get("data"), dict) else {}
+        payload = extract_response_data(result)
         return StrategiesResponse(
             success=result.get("success", False),
             strategies=result.get("strategies") or payload.get("strategies", []),
             total_count=result.get("total_count", payload.get("total_count", 0)),
             has_more=result.get("has_more", payload.get("has_more", False)),
             message=result.get("message", "戦略が正常に取得されました"),
-            timestamp=result.get("timestamp", datetime.now().isoformat()),
+            timestamp=result.get("timestamp", now_iso()),
         )
 
     return await ErrorHandler.safe_execute_async(_get_strategies)

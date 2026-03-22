@@ -6,7 +6,6 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 """
 
 from typing import Any, Dict, Optional
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -18,6 +17,7 @@ from app.services.backtest.orchestration.backtest_orchestration_service import (
     BacktestOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
+from app.utils.response import ensure_response_dict, extract_response_data, now_iso
 from database.connection import get_db
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
@@ -133,23 +133,25 @@ async def get_backtest_result_by_id(
     """
 
     async def _get_by_id():
-        result = await orchestration_service.get_backtest_result_by_id(
-            db=db, result_id=result_id
+        result = ensure_response_dict(
+            await orchestration_service.get_backtest_result_by_id(
+                db=db, result_id=result_id
+            )
         )
 
         # エラーハンドリング
-        if not result["success"]:
+        if not result.get("success", False):
             raise HTTPException(
                 status_code=result.get("status_code", 500),
                 detail=result.get("error", "Unknown error"),
             )
 
-        payload = result.get("data") if isinstance(result.get("data"), dict) else {}
+        payload = extract_response_data(result)
         return BacktestResponse(
             success=result.get("success", False),
             result=result.get("result") or payload or None,
             error=result.get("error"),
-            timestamp=result.get("timestamp", datetime.now().isoformat()),
+            timestamp=result.get("timestamp", now_iso()),
         )
 
     return await ErrorHandler.safe_execute_async(_get_by_id)
