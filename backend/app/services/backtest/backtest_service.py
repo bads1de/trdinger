@@ -134,6 +134,38 @@ class BacktestService:
             self._db_session = None
             logger.info("DBセッションをクリーンアップしました")
 
+    def _build_execution_config(self, request: Any) -> Dict[str, Any]:
+        """dict / Pydantic モデルどちらからでもバックテスト設定を組み立てる。"""
+        if isinstance(request, dict):
+            strategy_config = request["strategy_config"]
+            if hasattr(strategy_config, "model_dump"):
+                strategy_config = strategy_config.model_dump()
+            return {
+                "strategy_name": request["strategy_name"],
+                "symbol": request["symbol"],
+                "timeframe": request["timeframe"],
+                "start_date": request["start_date"],
+                "end_date": request["end_date"],
+                "initial_capital": request["initial_capital"],
+                "commission_rate": request["commission_rate"],
+                "slippage": request.get("slippage", 0.0),
+                "leverage": request.get("leverage", 1.0),
+                "strategy_config": strategy_config,
+            }
+
+        return {
+            "strategy_name": request.strategy_name,
+            "symbol": request.symbol,
+            "timeframe": request.timeframe,
+            "start_date": request.start_date,
+            "end_date": request.end_date,
+            "initial_capital": request.initial_capital,
+            "commission_rate": request.commission_rate,
+            "slippage": getattr(request, "slippage", 0.0),
+            "leverage": getattr(request, "leverage", 1.0),
+            "strategy_config": request.strategy_config.model_dump(),
+        }
+
     def execute_and_save_backtest(self, request, db_session: Session) -> Dict[str, Any]:
         """
         バックテストを実行し、結果を永続化（Web API向け）
@@ -149,35 +181,7 @@ class BacktestService:
             {'success': bool, 'result': saved_model_data} 形式の辞書
         """
         try:
-            # リクエストから設定を作成（辞書とPydanticモデルの両方に対応）
-            if isinstance(request, dict):
-                # 辞書の場合
-                config = {
-                    "strategy_name": request["strategy_name"],
-                    "symbol": request["symbol"],
-                    "timeframe": request["timeframe"],
-                    "start_date": request["start_date"],
-                    "end_date": request["end_date"],
-                    "initial_capital": request["initial_capital"],
-                    "commission_rate": request["commission_rate"],
-                    "slippage": request.get("slippage", 0.0),
-                    "leverage": request.get("leverage", 1.0),
-                    "strategy_config": request["strategy_config"],
-                }
-            else:
-                # Pydanticモデルの場合
-                config = {
-                    "strategy_name": request.strategy_name,
-                    "symbol": request.symbol,
-                    "timeframe": request.timeframe,
-                    "start_date": request.start_date,
-                    "end_date": request.end_date,
-                    "initial_capital": request.initial_capital,
-                    "commission_rate": request.commission_rate,
-                    "slippage": getattr(request, "slippage", 0.0),
-                    "leverage": getattr(request, "leverage", 1.0),
-                    "strategy_config": request.strategy_config.model_dump(),
-                }
+            config = self._build_execution_config(request)
 
             # バックテストを実行
             result = self.run_backtest(config)

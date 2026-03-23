@@ -46,7 +46,7 @@ class BybitFundingRateService(BybitService):
         Returns:
             現在のファンディングレートデータ
         """
-        normalized_symbol = symbol
+        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
         return await self._handle_ccxt_errors(
             f"現在のファンディングレート取得: {normalized_symbol}",
             self.exchange.fetch_funding_rate,
@@ -68,7 +68,7 @@ class BybitFundingRateService(BybitService):
             ファンディングレート履歴データのリスト
         """
         self._validate_parameters(symbol, limit)
-        normalized_symbol = symbol
+        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
         return await self._handle_ccxt_errors(
             f"ファンディングレート履歴取得: {normalized_symbol}, limit={limit}",
             self.exchange.fetch_funding_rate_history,
@@ -87,7 +87,7 @@ class BybitFundingRateService(BybitService):
         Returns:
             全期間のファンディングレート履歴データのリスト
         """
-        normalized_symbol = symbol
+        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
         latest_timestamp = await self._get_latest_timestamp_from_db(
             repository_class=self.config.repository_class,
             get_timestamp_method_name=self.config.get_timestamp_method_name,

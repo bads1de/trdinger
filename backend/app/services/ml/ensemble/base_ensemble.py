@@ -326,14 +326,16 @@ class BaseEnsemble(ABC):
 
     def load_models(self, base_path: str) -> bool:
         """アンサンブルモデルを読み込み"""
-        import glob
         import joblib
         from sklearn.exceptions import InconsistentVersionWarning
         import warnings
 
+        from ..common.utils import collect_unique_files
+
         try:
             # 1. StackingClassifier ファイル検索
-            f_list = sorted(glob.glob(f"{base_path}_stacking_classifier_*.pkl"))
+            f_list = collect_unique_files([f"{base_path}_stacking_classifier_*.pkl"])
+            f_list.sort()
             if f_list:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
@@ -348,13 +350,11 @@ class BaseEnsemble(ABC):
                     return True
 
             # 2. 統合モデルファイル検索
-            f_list = sorted(
-                [
-                    f
-                    for f in glob.glob(f"{base_path}_*_*.pkl")
-                    if not f.endswith(("_config.pkl", "_meta_model.pkl"))
-                ]
-            )
+            f_list = collect_unique_files([f"{base_path}_*_*.pkl"])
+            f_list = [
+                f for f in f_list if not f.endswith(("_config.pkl", "_meta_model.pkl"))
+            ]
+            f_list.sort()
             if f_list:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", InconsistentVersionWarning)

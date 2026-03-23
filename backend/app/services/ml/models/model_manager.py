@@ -17,6 +17,7 @@ import joblib
 from ....config.unified_config import unified_config
 from ....utils.error_handler import safe_ml_operation
 from ..common.exceptions import MLModelError
+from ..common.utils import collect_unique_files
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,44 @@ class ModelManager:
         テスト容易性のためにメソッド化
         """
         return unified_config.ml.get_model_search_paths()
+
+    def _collect_model_files(self, model_name_pattern: str = "*") -> List[str]:
+        """検索パスからモデルファイルを重複なく収集する"""
+        patterns: List[str] = []
+
+        for search_path in self._get_model_search_paths():
+            if not os.path.exists(search_path):
+                continue
+
+            for extension in (".pkl", ".joblib"):
+                patterns.append(
+                    os.path.join(search_path, f"{model_name_pattern}*{extension}")
+                )
+
+        return collect_unique_files(patterns)
+
+    def _delete_model_artifacts(self, model_path: str) -> None:
+        """モデル本体とサイドカーを削除する"""
+        os.remove(model_path)
+        logger.info(f"モデルを削除: {os.path.basename(model_path)}")
+
+        sidecar_path = self._get_sidecar_path(model_path)
+        if os.path.exists(sidecar_path):
+            os.remove(sidecar_path)
+            logger.info(
+                f"モデルのサイドカーを削除: {os.path.basename(sidecar_path)}"
+            )
+
+    def _build_model_info(self, model_path: str) -> Dict[str, Any]:
+        """モデルファイルの一覧表示用情報を構築する"""
+        stat = os.stat(model_path)
+        return {
+            "path": model_path,
+            "name": os.path.basename(model_path),
+            "size_mb": stat.st_size / 1024 / 1024,
+            "modified_at": datetime.fromtimestamp(stat.st_mtime),
+            "directory": os.path.dirname(model_path),
+        }
 
     # ========================================
     # 既存API（互換性維持）
@@ -274,22 +313,7 @@ class ModelManager:
             最新モデルのファイルパス
         """
         try:
-            # 複数の検索パスから最新モデルを検索
-            all_model_files = []
-
-            for search_path in self._get_model_search_paths():
-                if os.path.exists(search_path):
-                    # .pkl と .joblib ファイルを検索
-                    pattern_pkl = os.path.join(
-                        search_path, f"{model_name_pattern}*.pkl"
-                    )
-                    pattern_joblib = os.path.join(
-                        search_path, f"{model_name_pattern}*.joblib"
-                    )
-
-                    pkl_files = glob.glob(pattern_pkl)
-                    joblib_files = glob.glob(pattern_joblib)
-                    all_model_files.extend(pkl_files + joblib_files)
+            all_model_files = self._collect_model_files(model_name_pattern)
 
             if not all_model_files:
                 return None
@@ -315,42 +339,12 @@ class ModelManager:
         """
         try:
             models = []
-            seen_files = set()  # 重複を防ぐためのセット
 
-            for search_path in self._get_model_search_paths():
-                if not os.path.exists(search_path):
-                    continue
-
-                pattern_pkl = os.path.join(search_path, f"{model_name_pattern}*.pkl")
-                pattern_joblib = os.path.join(
-                    search_path, f"{model_name_pattern}*.joblib"
-                )
-
-                for pattern in [pattern_pkl, pattern_joblib]:
-                    for model_path in glob.glob(pattern):
-                        try:
-                            # 絶対パスで正規化して重複チェック
-                            normalized_path = os.path.abspath(model_path)
-                            if normalized_path in seen_files:
-                                continue
-                            seen_files.add(normalized_path)
-
-                            stat = os.stat(model_path)
-                            models.append(
-                                {
-                                    "path": model_path,
-                                    "name": os.path.basename(model_path),
-                                    "size_mb": stat.st_size / 1024 / 1024,
-                                    "modified_at": datetime.fromtimestamp(
-                                        stat.st_mtime
-                                    ),
-                                    "directory": os.path.dirname(model_path),
-                                }
-                            )
-                        except Exception as e:
-                            logger.warning(
-                                f"モデルファイル情報取得エラー {model_path}: {e}"
-                            )
+            for model_path in self._collect_model_files(model_name_pattern):
+                try:
+                    models.append(self._build_model_info(model_path))
+                except Exception as e:
+                    logger.warning(f"モデルファイル情報取得エラー {model_path}: {e}")
 
             # 更新時刻でソート（新しい順）
             models.sort(key=lambda x: x["modified_at"], reverse=True)
@@ -368,29 +362,22 @@ class ModelManager:
                 days=self.config.model_retention_days
             )
 
+            patterns: List[str] = []
             for search_path in self._get_model_search_paths():
                 if not os.path.exists(search_path):
                     continue
 
-                for model_file in glob.glob(
+                patterns.append(
                     os.path.join(search_path, f"*{self.config.model_file_extension}")
-                ):
-                    try:
-                        file_time = datetime.fromtimestamp(os.path.getmtime(model_file))
-                        if file_time < cutoff_date:
-                            os.remove(model_file)
-                            logger.info(
-                                f"期限切れモデルを削除: {os.path.basename(model_file)}"
-                            )
-                            # サイドカーファイルも削除
-                            sidecar_path = self._get_sidecar_path(model_file)
-                            if os.path.exists(sidecar_path):
-                                os.remove(sidecar_path)
-                                logger.info(
-                                    f"期限切れモデルのサイドカーを削除: {os.path.basename(sidecar_path)}"
-                                )
-                    except Exception as e:
-                        logger.warning(f"期限切れモデル削除エラー {model_file}: {e}")
+                )
+
+            for model_file in collect_unique_files(patterns):
+                try:
+                    file_time = datetime.fromtimestamp(os.path.getmtime(model_file))
+                    if file_time < cutoff_date:
+                        self._delete_model_artifacts(model_file)
+                except Exception as e:
+                    logger.warning(f"期限切れモデル削除エラー {model_file}: {e}")
 
         except Exception as e:
             logger.error(f"期限切れモデルクリーンアップエラー: {e}")
@@ -403,7 +390,7 @@ class ModelManager:
                 self.config.model_save_path,
                 f"{model_name}_*{self.config.model_file_extension}",
             )
-            model_files = glob.glob(pattern)
+            model_files = collect_unique_files([pattern])
 
             if len(model_files) <= self.config.max_model_versions:
                 return
@@ -416,17 +403,7 @@ class ModelManager:
 
             for file_path in files_to_delete:
                 try:
-                    os.remove(file_path)
-                    logger.info(
-                        f"古いモデルファイルを削除: {os.path.basename(file_path)}"
-                    )
-                    # サイドカーファイルも削除
-                    sidecar_path = self._get_sidecar_path(file_path)
-                    if os.path.exists(sidecar_path):
-                        os.remove(sidecar_path)
-                        logger.info(
-                            f"古いモデルのサイドカーを削除: {os.path.basename(sidecar_path)}"
-                        )
+                    self._delete_model_artifacts(file_path)
                 except Exception as e:
                     logger.warning(f"モデルファイル削除エラー {file_path}: {e}")
 

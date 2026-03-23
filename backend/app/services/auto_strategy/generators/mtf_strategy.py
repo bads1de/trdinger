@@ -75,12 +75,24 @@ class MTFStrategy:
                 m_long = self.gen._create_side_condition(trig_ind, "long", m_name)
                 m_short = self.gen._create_side_condition(trig_ind, "short", m_name)
 
-                long_conds.append(
-                    ConditionGroup(operator="AND", conditions=[t_long, m_long])
-                )
-                short_conds.append(
-                    ConditionGroup(operator="AND", conditions=[t_short, m_short])
-                )
+                build_and_groups = getattr(type(self.gen), "_build_and_groups", None)
+                if build_and_groups is None:
+                    long_group = ConditionGroup(
+                        operator="AND",
+                        conditions=[t_long, m_long],
+                    )
+                    short_group = ConditionGroup(
+                        operator="AND",
+                        conditions=[t_short, m_short],
+                    )
+                else:
+                    long_group, short_group = build_and_groups(
+                        self.gen,
+                        [t_long, m_long],
+                        [t_short, m_short],
+                    )
+                long_conds.append(long_group)
+                short_conds.append(short_group)
 
         # 多すぎる場合は間引く
         def _sample(lst):

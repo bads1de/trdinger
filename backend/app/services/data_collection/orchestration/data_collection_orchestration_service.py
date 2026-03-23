@@ -324,17 +324,7 @@ class DataCollectionOrchestrationService:
         Returns:
             データ収集状況
         """
-        from app.config.unified_config import unified_config
-
-        # シンボルと時間軸のバリデーション
-        # シンボル正規化
-        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
-        if normalized_symbol not in unified_config.market.supported_symbols:
-            raise ValueError(f"サポートされていないシンボル: {symbol}")
-
-        # 時間軸検証
-        if timeframe not in unified_config.market.supported_timeframes:
-            raise ValueError(f"無効な時間軸: {timeframe}")
+        normalized_symbol = self.validate_symbol_and_timeframe(symbol, timeframe)
 
         repository = OHLCVRepository(db)
 

@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 
+from .base_feature_calculator import sanitize_numeric_dataframe
+
 
 class MicrostructureFeatureCalculator:
     """
@@ -30,7 +32,9 @@ class MicrostructureFeatureCalculator:
         # 3. Funding Rate (NaN対策を強化)
         if fr_df is not None and not fr_df.empty:
             # 未来値で埋める backfill は使わず、開始直後は 0 埋めにする
-            fr_aligned = fr_df.reindex(ohlcv.index).ffill().fillna(0)
+            fr_aligned = sanitize_numeric_dataframe(
+                fr_df.reindex(ohlcv.index), fill_value=0.0, forward_fill=True
+            )
             col = "funding_rate" if "funding_rate" in fr_aligned.columns else fr_aligned.columns[0]
             fr = fr_aligned[col]
             mean_fr = fr.rolling(168).mean()
@@ -42,7 +46,9 @@ class MicrostructureFeatureCalculator:
         # 4. Long/Short Ratio (NaN対策を強化)
         if ls_df is not None and not ls_df.empty:
             # 未来値で埋める backfill は使わず、開始直後は 0 埋めにする
-            ls_aligned = ls_df.reindex(ohlcv.index).ffill().fillna(0)
+            ls_aligned = sanitize_numeric_dataframe(
+                ls_df.reindex(ohlcv.index), fill_value=0.0, forward_fill=True
+            )
             ls_col = "long_short_ratio" if "long_short_ratio" in ls_aligned.columns else ls_aligned.columns[0]
             ls = ls_aligned[ls_col]
 
@@ -65,7 +71,7 @@ class MicrostructureFeatureCalculator:
                 df["LS_FR_Stress_Index"] = df["FR_Extremity_Zscore"] * ls_z
 
         # 5. 全てのNaNを0で埋めて、特徴量が消えるのを防ぐ
-        df = df.ffill().fillna(0)
+        df = sanitize_numeric_dataframe(df, fill_value=0.0, forward_fill=True)
 
         return df
 

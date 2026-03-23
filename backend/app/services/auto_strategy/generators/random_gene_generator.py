@@ -75,6 +75,13 @@ class RandomGeneGenerator:
         self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
 
+    @staticmethod
+    def _create_enabled_tpsl_gene(config: Any) -> TPSLGene:
+        """ランダム生成したTP/SL遺伝子を有効化して返す"""
+        gene = create_random_tpsl_gene(config)
+        gene.enabled = True
+        return gene
+
     @safe_operation(
         context="ランダム戦略遺伝子生成",
         is_api_call=False,
@@ -109,21 +116,11 @@ class RandomGeneGenerator:
         indicators = generate_random_indicators(self.config)
 
         # TP/SL遺伝子を生成
-        tpsl_gene = create_random_tpsl_gene(self.config)
-
-        # Auto-StrategyではTP/SLを常に有効化
-        if tpsl_gene:
-            tpsl_gene.enabled = True
+        tpsl_gene = self._create_enabled_tpsl_gene(self.config)
 
         # Long/Short TP/SL遺伝子も個別に生成
-        long_tpsl_gene = create_random_tpsl_gene(self.config)
-        if long_tpsl_gene:
-            long_tpsl_gene.enabled = True
-
-        xtpsl_gene = create_random_tpsl_gene(self.config)
-        if xtpsl_gene:
-            xtpsl_gene.enabled = True
-        short_tpsl_gene = xtpsl_gene
+        long_tpsl_gene = self._create_enabled_tpsl_gene(self.config)
+        short_tpsl_gene = self._create_enabled_tpsl_gene(self.config)
 
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化

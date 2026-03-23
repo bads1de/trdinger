@@ -38,6 +38,7 @@ class ExperimentPersistenceService:
         """
         self.db_session_factory = db_session_factory
         self.backtest_service = backtest_service
+        self.serializer = GeneSerializer()
 
     def create_experiment(
         self,
@@ -120,10 +121,9 @@ class ExperimentPersistenceService:
                 best_fitness if isinstance(best_fitness, (int, float)) else 0.0
             )
 
-        serializer = GeneSerializer()
         best_strategy_record = generated_strategy_repo.save_strategy(
             experiment_id=db_experiment_id,
-            gene_data=serializer.strategy_gene_to_dict(best_strategy),
+            gene_data=self.serializer.strategy_gene_to_dict(best_strategy),
             generation=ga_config.generations,
             fitness_score=fitness_score,
             fitness_values=fitness_values,
@@ -170,7 +170,6 @@ class ExperimentPersistenceService:
         Returns:
             詳細バックテスト実行用の設定辞書
         """
-        serializer = GeneSerializer()
         config = backtest_config.copy()
 
         # 元の実験名から不要な部分を削除し、日付を整形
@@ -195,7 +194,7 @@ class ExperimentPersistenceService:
         config["strategy_config"] = {
             "strategy_type": "GENERATED_GA",
             "parameters": {
-                "strategy_gene": serializer.strategy_gene_to_dict(best_strategy)
+                "strategy_gene": self.serializer.strategy_gene_to_dict(best_strategy)
             },
         }
         return config
@@ -250,7 +249,6 @@ class ExperimentPersistenceService:
         ga_config: GAConfig,
     ):
         """最良戦略以外の戦略をバッチ保存する"""
-        serializer = GeneSerializer()
         all_strategies = result.get("all_strategies", [])
         if not all_strategies or len(all_strategies) <= 1:
             return
@@ -268,7 +266,7 @@ class ExperimentPersistenceService:
                 strategies_data.append(
                     {
                         "experiment_id": db_experiment_id,
-                        "gene_data": serializer.strategy_gene_to_dict(strategy),
+                        "gene_data": self.serializer.strategy_gene_to_dict(strategy),
                         "generation": ga_config.generations,
                         "fitness_score": fitness_score,
                     }
@@ -286,7 +284,6 @@ class ExperimentPersistenceService:
         ga_config: GAConfig,
     ):
         """パレート最適解を保存する"""
-        serializer = GeneSerializer()
         pareto_front = result.get("pareto_front", [])
         if not pareto_front:
             return
@@ -303,7 +300,7 @@ class ExperimentPersistenceService:
                 strategies_data.append(
                     {
                         "experiment_id": db_experiment_id,
-                        "gene_data": serializer.strategy_gene_to_dict(strategy),
+                        "gene_data": self.serializer.strategy_gene_to_dict(strategy),
                         "generation": ga_config.generations,
                         "fitness_score": (fitness_values[0] if fitness_values else 0.0),
                         "fitness_values": fitness_values,

@@ -185,17 +185,16 @@ class OptimizationService:
                 # ... (以下同様)
 
                 # 1. 特徴量とラベルのアラインメント
-                common_idx = feature_superset.index.intersection(current_labels.index)
-                if len(common_idx) < 100:
+                X_aligned, y_aligned = self._align_feature_superset_and_labels(
+                    feature_superset, current_labels
+                )
+                if len(X_aligned) < 100:
                     return 0.0
 
-                X_aligned = feature_superset.loc[common_idx]
-                y_aligned = current_labels.loc[common_idx]
-
                 # 2. TrainVal / Test 分割 (split_date基準)
-                mask_trainval = X_aligned.index < split_date
-                X_trainval_curr = X_aligned[mask_trainval]
-                y_trainval_curr = y_aligned[mask_trainval]
+                X_trainval_curr, y_trainval_curr, _, _ = self._split_by_date(
+                    X_aligned, y_aligned, split_date
+                )
 
                 if len(X_trainval_curr) < 50:
                     return 0.0
@@ -253,16 +252,14 @@ class OptimizationService:
         labels_best = self._generate_pipeline_labels(df_for_label, final_params)
 
         # アラインメント
-        common_idx = feature_superset.index.intersection(labels_best.index)
-        X_aligned = feature_superset.loc[common_idx]
-        y_aligned = labels_best.loc[common_idx]
+        X_aligned, y_aligned = self._align_feature_superset_and_labels(
+            feature_superset, labels_best
+        )
 
         # 分割
-        mask_trainval = X_aligned.index < split_date
-        X_trainval = X_aligned[mask_trainval]
-        y_trainval = y_aligned[mask_trainval]
-        X_test = X_aligned[~mask_trainval]
-        y_test = y_aligned[~mask_trainval]
+        X_trainval, y_trainval, X_test, y_test = self._split_by_date(
+            X_aligned, y_aligned, split_date
+        )
 
         # ベストパラメータでフルTrainValデータで再学習
         test_score, n_selected_features = self._evaluate_selected_model_pipeline(
@@ -318,6 +315,28 @@ class OptimizationService:
             price_column="close",
             use_atr=True,
         )
+
+    @staticmethod
+    def _align_feature_superset_and_labels(
+        feature_superset: pd.DataFrame, labels: pd.Series
+    ) -> tuple[pd.DataFrame, pd.Series]:
+        """特徴量スーパーセットとラベルを共通インデックスで揃える。"""
+        common_idx = feature_superset.index.intersection(labels.index)
+        return feature_superset.loc[common_idx], labels.loc[common_idx]
+
+    @staticmethod
+    def _split_by_date(
+        X_aligned: pd.DataFrame,
+        y_aligned: pd.Series,
+        split_date: pd.Timestamp,
+    ) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+        """時系列順に TrainVal / Test を分割する。"""
+        mask_trainval = X_aligned.index < split_date
+        X_trainval = X_aligned[mask_trainval]
+        y_trainval = y_aligned[mask_trainval]
+        X_test = X_aligned[~mask_trainval]
+        y_test = y_aligned[~mask_trainval]
+        return X_trainval, y_trainval, X_test, y_test
 
     def _evaluate_selected_model_pipeline(
         self,

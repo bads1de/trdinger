@@ -429,23 +429,11 @@ class StackingEnsemble(BaseEnsemble):
             読み込み成功フラグ
         """
         try:
-            import glob
             import json
             import os
 
             import joblib
-
-            def _collect_model_files(patterns: List[str]) -> List[str]:
-                files: List[str] = []
-                seen_files = set()
-                for pattern in patterns:
-                    for model_file in glob.glob(pattern):
-                        normalized_path = os.path.abspath(model_file)
-                        if normalized_path in seen_files:
-                            continue
-                        seen_files.add(normalized_path)
-                        files.append(model_file)
-                return files
+            from ..common.utils import collect_unique_files
 
             # base_path に紐づくファイルを優先し、見つからない場合のみ保存ディレクトリ全体を探す
             local_patterns = [
@@ -473,9 +461,9 @@ class StackingEnsemble(BaseEnsemble):
                 ),
             ]
 
-            model_files = _collect_model_files(local_patterns)
+            model_files = collect_unique_files(local_patterns)
             if not model_files:
-                model_files = _collect_model_files(fallback_patterns)
+                model_files = collect_unique_files(fallback_patterns)
 
             if not model_files:
                 logger.warning(

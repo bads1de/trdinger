@@ -10,6 +10,7 @@ from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
+from ..common.utils import get_t1_series
 from .enums import ThresholdMethod
 from .presets import (
     trend_scanning_preset,
@@ -124,14 +125,7 @@ class LabelCache:
         self, indices: pd.DatetimeIndex, horizon_n: int, timeframe: str = "1h"
     ) -> pd.Series:
         """各観測点のラベル終了時刻 (t1) を取得"""
-        deltas = {
-            "1h": pd.Timedelta(hours=horizon_n),
-            "4h": pd.Timedelta(hours=4 * horizon_n),
-            "1d": pd.Timedelta(days=horizon_n),
-            "15m": pd.Timedelta(minutes=15 * horizon_n),
-        }
-        delta = deltas.get(timeframe, pd.Timedelta(hours=horizon_n))
-        return pd.Series(indices + delta, index=indices)
+        return get_t1_series(indices, horizon_n, timeframe=timeframe)
 
     def get_hit_rate(self) -> float:
         """キャッシュヒット率を取得

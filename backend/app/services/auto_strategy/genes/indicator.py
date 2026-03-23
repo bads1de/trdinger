@@ -59,19 +59,15 @@ class IndicatorGene:
         Returns:
             JSON互換の設定辞書 {"indicator": str, "parameters": dict}
         """
-        try:
-            from app.services.indicators.config import indicator_registry
-
-            config = indicator_registry.get_indicator_config(self.type)
-            if config:
-                resolved_params = {}
-                for param_name, param_config in config.parameters.items():
-                    resolved_params[param_name] = self.parameters.get(
-                        param_name, param_config.default_value
-                    )
-                return {"indicator": self.type, "parameters": resolved_params}
-            return {"indicator": self.type, "parameters": self.parameters}
-        except ImportError:
+        config = indicator_registry.get_indicator_config(self.type)
+        if config:
+            resolved_params = {}
+            for param_name, param_config in config.parameters.items():
+                resolved_params[param_name] = self.parameters.get(
+                    param_name, param_config.default_value
+                )
+            return {"indicator": self.type, "parameters": resolved_params}
+        else:
             return {"indicator": self.type, "parameters": self.parameters}
 
     def clone(self) -> IndicatorGene:

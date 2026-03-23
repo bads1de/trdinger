@@ -9,10 +9,9 @@ OHLCV、OI、FR、FGデータの期間不一致を適切に処理し、
 import logging
 from typing import Any, Dict, Optional
 
-import numpy as np
 import pandas as pd
 
-from .base_feature_calculator import BaseFeatureCalculator
+from .base_feature_calculator import BaseFeatureCalculator, sanitize_numeric_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         result_df["price_vs_low_24h"] = df["close"] / df["low"].rolling(24).min().fillna(df["low"])
         
         # クリーニング (inf除外)
-        result_df = result_df.replace([np.inf, -np.inf], np.nan)
+        result_df = sanitize_numeric_dataframe(
+            result_df, fill_value=None, forward_fill=False
+        )
         
         logger.info("暗号通貨特化特徴量を追加: 1個")
         return result_df

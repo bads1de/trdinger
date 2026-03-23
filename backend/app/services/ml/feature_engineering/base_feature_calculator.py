@@ -15,6 +15,49 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+def _replace_inf_with_nan(series: pd.Series) -> pd.Series:
+    """Series 内の inf を NaN に揃える。"""
+    return series.replace([np.inf, -np.inf], np.nan)
+
+
+def sanitize_numeric_dataframe(
+    df: pd.DataFrame,
+    fill_value: Optional[float] = 0.0,
+    forward_fill: bool = False,
+) -> pd.DataFrame:
+    """
+    数値カラムの inf / NaN を整形する共通処理
+
+    Args:
+        df: 対象のDataFrame
+        fill_value: 最終的にNaNを埋める値。Noneならそのまま残す
+        forward_fill: 直前値で前方補完するか
+    """
+    result_df = df.copy()
+
+    numeric_positions = [
+        idx
+        for idx, dtype in enumerate(result_df.dtypes)
+        if pd.api.types.is_numeric_dtype(dtype)
+    ]
+
+    if not numeric_positions:
+        return result_df.fillna(fill_value) if fill_value is not None else result_df
+
+    for position in numeric_positions:
+        series = _replace_inf_with_nan(result_df.iloc[:, position])
+
+        if forward_fill:
+            series = series.ffill()
+
+        if fill_value is not None:
+            series = series.fillna(fill_value)
+
+        result_df.iloc[:, position] = series
+
+    return result_df
+
+
 class BaseFeatureCalculator(ABC):
     """
     特徴量計算の抽象基底クラス
@@ -93,6 +136,17 @@ class BaseFeatureCalculator(ABC):
             クリッピングされたSeries
         """
         return series.clip(lower=lower_bound, upper=upper_bound)
+
+    def sanitize_numeric_dataframe(
+        self,
+        df: pd.DataFrame,
+        fill_value: Optional[float] = 0.0,
+        forward_fill: bool = False,
+    ) -> pd.DataFrame:
+        """数値カラムの inf / NaN を整形する"""
+        return sanitize_numeric_dataframe(
+            df, fill_value=fill_value, forward_fill=forward_fill
+        )
 
     @abstractmethod
     def calculate_features(
@@ -191,7 +245,7 @@ class BaseFeatureCalculator(ABC):
             )
 
         return (
-            (numerator / denominator.replace(0, np.nan))
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(fill_value)
+            _replace_inf_with_nan(numerator / denominator.replace(0, np.nan)).fillna(
+                fill_value
+            )
         )

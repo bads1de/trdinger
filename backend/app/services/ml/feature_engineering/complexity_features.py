@@ -8,11 +8,10 @@ Sample Entropy, Fractal Dimension, VPIN Approximation など、
 import logging
 from typing import Any, Dict
 
-import numpy as np
 import pandas as pd
 
 from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
-from .base_feature_calculator import BaseFeatureCalculator
+from .base_feature_calculator import BaseFeatureCalculator, sanitize_numeric_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +78,11 @@ class ComplexityFeatureCalculator(BaseFeatureCalculator):
 
         # DataFrameとして統合
         result_df = pd.DataFrame(new_features, index=df.index)
-        
+
         # クリーニング
-        result_df = result_df.replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
+        result_df = sanitize_numeric_dataframe(
+            result_df, fill_value=0.0, forward_fill=True
+        )
         
         logger.info(f"複雑性特徴量を追加: {len(result_df.columns)}個")
         return result_df

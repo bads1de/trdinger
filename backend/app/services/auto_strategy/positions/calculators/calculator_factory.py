@@ -4,8 +4,9 @@
 手法に応じた計算機インスタンスを生成します。
 """
 
-from typing import Dict
+from typing import Any, Dict
 
+from ...utils.gene_utils import normalize_enum_name
 from .base_calculator import BaseCalculator
 from .fixed_quantity_calculator import FixedQuantityCalculator
 from .fixed_ratio_calculator import FixedRatioCalculator
@@ -17,7 +18,7 @@ class CalculatorFactory:
     """計算機ファクトリ"""
 
     @staticmethod
-    def create_calculator(method: str) -> BaseCalculator:
+    def create_calculator(method: Any) -> BaseCalculator:
         """
         手法名に対応したポジションサイズ計算機インスタンスを生成
 
@@ -35,10 +36,7 @@ class CalculatorFactory:
         }
 
         # enumからの変換
-        if hasattr(method, "value"):
-            method_str = method.value
-        else:
-            method_str = method
+        method_str = normalize_enum_name(method)
 
         calculator_class = method_map.get(method_str, FixedRatioCalculator)
         return calculator_class()

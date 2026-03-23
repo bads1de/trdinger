@@ -55,62 +55,14 @@ class HistoricalDataService:
 
         try:
             logger.info(f"履歴データ収集開始: {symbol} {timeframe}")
-            total_saved = 0
-            total_fetched = 0
-            max_limit = 1000
-            end_timestamp = None
-
-            for i in range(100):  # 安全のためのループ回数制限
-                await asyncio.sleep(self.request_delay)
-
-                params = {}
-                if end_timestamp:
-                    params["end"] = end_timestamp
-
-                historical_data = await self.market_service.fetch_ohlcv_data(
-                    symbol, timeframe, limit=max_limit, params=params
-                )
-
-                if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i + 1}でデータ終了")
-                    break
-
-                # 最初のデータは重複している可能性があるので、最新のタイムスタンプと比較
-                latest_db_ts = repository.get_latest_timestamp(
-                    timestamp_column="timestamp",
-                    filter_conditions={"symbol": symbol, "timeframe": timeframe},
-                )
-                if latest_db_ts:
-                    historical_data = [
-                        d
-                        for d in historical_data
-                        if d[0] < latest_db_ts.timestamp() * 1000
-                    ]
-
-                if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i + 1}で重複データのみ")
-                    break
-
-                saved_count = await self.market_service._save_ohlcv_to_database(
-                    historical_data, symbol, timeframe, repository
-                )
-                total_saved += saved_count
-                total_fetched += len(historical_data)
-
-                end_timestamp = historical_data[0][0]
-
-                logger.info(
-                    f"バッチ {i + 1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
-                )
-
-                if len(historical_data) < max_limit:
-                    logger.info("全期間データ取得完了: 最終バッチ")
-                    break
-
-            logger.info(
-                f"履歴データ収集完了: 取得{total_fetched}件, 保存{total_saved}件"
+            return await self._collect_historical_batches(
+                symbol=symbol,
+                timeframe=timeframe,
+                repository=repository,
+                max_iterations=100,
+                end_timestamp_offset=0,
+                completion_label="履歴データ収集",
             )
-            return total_saved
 
         except ccxt.BadSymbol as e:
             logger.error(f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}")
@@ -158,66 +110,14 @@ class HistoricalDataService:
 
         try:
             logger.info(f"ページネーションで全期間データ収集開始: {symbol} {timeframe}")
-
-            total_saved = 0
-            total_fetched = 0
-            max_limit = 1000
-            end_timestamp = None
-
-            # ページネーションで全期間データを取得
-            for i in range(500):  # 最大500ページまで（設定で拡張済み）
-                await asyncio.sleep(self.request_delay)
-
-                params = {}
-                if end_timestamp:
-                    params["end"] = end_timestamp
-
-                historical_data = await self.market_service.fetch_ohlcv_data(
-                    symbol, timeframe, limit=max_limit, params=params
-                )
-
-                if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i + 1}でデータ終了")
-                    break
-
-                # データベースの最新データと比較して重複を避ける
-                latest_db_ts = repository.get_latest_timestamp(
-                    timestamp_column="timestamp",
-                    filter_conditions={"symbol": symbol, "timeframe": timeframe},
-                )
-                if latest_db_ts:
-                    historical_data = [
-                        d
-                        for d in historical_data
-                        if d[0] < latest_db_ts.timestamp() * 1000
-                    ]
-
-                if not historical_data:
-                    logger.info(f"全期間データ取得完了: バッチ{i + 1}で重複データのみ")
-                    break
-
-                saved_count = await self.market_service._save_ohlcv_to_database(
-                    historical_data, symbol, timeframe, repository
-                )
-                total_saved += saved_count
-                total_fetched += len(historical_data)
-
-                # 次のページの開始位置を設定（最も古いデータのタイムスタンプ）
-                end_timestamp = historical_data[0][0] - 1
-
-                logger.info(
-                    f"バッチ {i + 1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
-                )
-
-                # 取得件数が最大件数未満の場合は最後のページ
-                if len(historical_data) < max_limit:
-                    logger.info("全期間データ取得完了: 最終バッチ")
-                    break
-
-            logger.info(
-                f"ページネーション全期間データ収集完了: 取得{total_fetched}件, 保存{total_saved}件"
+            return await self._collect_historical_batches(
+                symbol=symbol,
+                timeframe=timeframe,
+                repository=repository,
+                max_iterations=500,
+                end_timestamp_offset=1,
+                completion_label="ページネーション全期間データ収集",
             )
-            return total_saved
 
         except ccxt.BadSymbol as e:
             logger.error(f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}")
@@ -234,6 +134,72 @@ class HistoricalDataService:
         except Exception as e:
             ErrorHandler.handle_model_error(e, context="fetch_historical_data")
             return 0
+
+    async def _collect_historical_batches(
+        self,
+        *,
+        symbol: str,
+        timeframe: str,
+        repository: OHLCVRepository,
+        max_iterations: int,
+        end_timestamp_offset: int,
+        completion_label: str,
+    ) -> int:
+        """OHLCV 履歴データのバッチ収集処理を共通化する。"""
+        total_saved = 0
+        total_fetched = 0
+        max_limit = 1000
+        end_timestamp = None
+
+        for i in range(max_iterations):
+            await asyncio.sleep(self.request_delay)
+
+            params = {}
+            if end_timestamp:
+                params["end"] = end_timestamp
+
+            historical_data = await self.market_service.fetch_ohlcv_data(
+                symbol, timeframe, limit=max_limit, params=params
+            )
+
+            if not historical_data:
+                logger.info(f"全期間データ取得完了: バッチ{i + 1}でデータ終了")
+                break
+
+            # 最初のデータは重複している可能性があるので、最新のタイムスタンプと比較
+            latest_db_ts = repository.get_latest_timestamp(
+                timestamp_column="timestamp",
+                filter_conditions={"symbol": symbol, "timeframe": timeframe},
+            )
+            if latest_db_ts:
+                historical_data = [
+                    d for d in historical_data if d[0] < latest_db_ts.timestamp() * 1000
+                ]
+
+            if not historical_data:
+                logger.info(f"全期間データ取得完了: バッチ{i + 1}で重複データのみ")
+                break
+
+            saved_count = await self.market_service._save_ohlcv_to_database(
+                historical_data, symbol, timeframe, repository
+            )
+            total_saved += saved_count
+            total_fetched += len(historical_data)
+
+            end_timestamp = historical_data[0][0] - end_timestamp_offset
+
+            logger.info(
+                f"バッチ {i + 1}: {len(historical_data)}件取得 (次のend: {end_timestamp})"
+            )
+
+            if len(historical_data) < max_limit:
+                logger.info("全期間データ取得完了: 最終バッチ")
+                break
+
+        logger.info(
+            f"{completion_label}完了: 取得{total_fetched}件, 保存{total_saved}件"
+        )
+        return total_saved
 
     async def collect_bulk_incremental_data(
         self,

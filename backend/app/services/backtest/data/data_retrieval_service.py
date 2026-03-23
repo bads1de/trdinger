@@ -5,7 +5,7 @@
 
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Callable, List, Optional
 
 from database.models import (
     FundingRateData,
@@ -48,6 +48,44 @@ class DataRetrievalService:
         self.oi_repo = oi_repo
         self.fr_repo = fr_repo
 
+    def _fetch_with_safe_operation(
+        self,
+        *,
+        context: str,
+        default_return: list[Any],
+        query: Callable[[], Any],
+        raise_on_empty: bool = False,
+        empty_error_message: Optional[str] = None,
+    ) -> list[Any]:
+        """repository 呼び出しを安全に実行する共通ラッパー。"""
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context=context,
+            is_api_call=False,
+            default_return=default_return,
+        )
+        def _run_query() -> list[Any]:
+            data = query()
+            if data is None:
+                if raise_on_empty:
+                    logger.error(
+                        empty_error_message or f"{context}のデータが見つかりませんでした"
+                    )
+                    raise DataRetrievalError(
+                        empty_error_message
+                        or f"{context}のデータが見つかりませんでした"
+                    )
+                return default_return
+            if raise_on_empty and not data:
+                logger.error(empty_error_message or f"{context}のデータが見つかりませんでした")
+                raise DataRetrievalError(
+                    empty_error_message or f"{context}のデータが見つかりませんでした"
+                )
+            return data
+
+        return _run_query()
+
     def get_ohlcv_data(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> List[OHLCVData]:
@@ -67,35 +105,24 @@ class DataRetrievalService:
             logger.warning("OHLCVRepositoryが初期化されていません")
             return []
 
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="OHLCVデータ取得",
-            is_api_call=False,
-            default_return=[],  # Return empty list instead of exception for consistency
-        )
-        def _get_ohlcv_data():
+        def query() -> List[OHLCVData]:
             # Type assertion to help type checker understand ohlcv_repo is not None
             assert self.ohlcv_repo is not None, "OHLCVRepositoryが初期化されていません"
 
-            data = self.ohlcv_repo.get_ohlcv_data(
+            return self.ohlcv_repo.get_ohlcv_data(
                 symbol=symbol,
                 timeframe=timeframe,
                 start_time=start_date,
                 end_time=end_date,
             )
 
-            if not data:
-                logger.error(
-                    f"DataRetrievalService - No OHLCV data found for {symbol} {timeframe}"
-                )
-                raise DataRetrievalError(
-                    f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした"
-                )
-
-            return data
-
-        return _get_ohlcv_data()
+        return self._fetch_with_safe_operation(
+            context="OHLCVデータ取得",
+            default_return=[],
+            query=query,
+            raise_on_empty=True,
+            empty_error_message=f"{symbol} {timeframe}のOHLCVデータが見つかりませんでした",
+        )
 
     def get_open_interest_data(
         self, symbol: str, start_date: datetime, end_date: datetime
@@ -115,27 +142,25 @@ class DataRetrievalService:
             logger.warning("Open InterestRepositoryが初期化されていません")
             return []
 
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="Open Interestデータ取得", is_api_call=False, default_return=[]
-        )
-        def _get_open_interest_data():
+        def query() -> List[OpenInterestData]:
             # Type assertion to help type checker understand oi_repo is not None
             assert (
                 self.oi_repo is not None
             ), "Open InterestRepositoryが初期化されていません"
 
-            data = self.oi_repo.get_open_interest_data(
+            return self.oi_repo.get_open_interest_data(
                 symbol=symbol,
                 start_time=start_date,
                 end_time=end_date,
             )
 
-            logger.debug(f"Open Interestデータ取得完了: {len(data)}件")
-            return data
-
-        return _get_open_interest_data()
+        data = self._fetch_with_safe_operation(
+            context="Open Interestデータ取得",
+            default_return=[],
+            query=query,
+        )
+        logger.debug(f"Open Interestデータ取得完了: {len(data)}件")
+        return data
 
     def get_funding_rate_data(
         self, symbol: str, start_date: datetime, end_date: datetime
@@ -155,27 +180,25 @@ class DataRetrievalService:
             logger.warning("Funding RateRepositoryが初期化されていません")
             return []
 
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="Funding Rateデータ取得", is_api_call=False, default_return=[]
-        )
-        def _get_funding_rate_data():
+        def query() -> List[FundingRateData]:
             # Type assertion to help type checker understand fr_repo is not None
             assert (
                 self.fr_repo is not None
             ), "Funding RateRepositoryが初期化されていません"
 
-            data = self.fr_repo.get_funding_rate_data(
+            return self.fr_repo.get_funding_rate_data(
                 symbol=symbol,
                 start_time=start_date,
                 end_time=end_date,
             )
 
-            logger.debug(f"Funding Rateデータ取得完了: {len(data)}件")
-            return data
-
-        return _get_funding_rate_data()
+        data = self._fetch_with_safe_operation(
+            context="Funding Rateデータ取得",
+            default_return=[],
+            query=query,
+        )
+        logger.debug(f"Funding Rateデータ取得完了: {len(data)}件")
+        return data
 
 
 

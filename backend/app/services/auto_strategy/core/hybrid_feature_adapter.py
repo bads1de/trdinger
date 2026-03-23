@@ -15,6 +15,9 @@ from cachetools import LRUCache
 
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.ml.common.exceptions import MLFeatureError
+from app.services.ml.feature_engineering.base_feature_calculator import (
+    sanitize_numeric_dataframe,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +90,14 @@ class HybridFeatureAdapter:
             key = (df._cached_hash, self._config_hash)
             self._derived_cache[key] = features
 
+    @staticmethod
+    def _sanitize_feature_frame(features_df: pd.DataFrame) -> pd.DataFrame:
+        """特徴量フレームの数値クリーニングを共通化する。"""
+        sanitized = sanitize_numeric_dataframe(
+            features_df, fill_value=None, forward_fill=True
+        )
+        return sanitized.ffill().fillna(0.0)
+
     def gene_to_features(
         self,
         gene: StrategyGene,
@@ -134,7 +145,9 @@ class HybridFeatureAdapter:
                 if "market_regime" not in safe_label_data.columns:
                     safe_label_data["market_regime"] = 0.0
 
-                aligned = safe_label_data.reindex(features_df.index).ffill().fillna(0)
+                aligned = self._sanitize_feature_frame(
+                    safe_label_data.reindex(features_df.index)
+                )
                 for col in aligned.columns:
                     features_df[col] = aligned[col]
             else:
@@ -275,9 +288,7 @@ class HybridFeatureAdapter:
         Returns:
             前処理後のDataFrame
         """
-        processed = features_df.replace([np.inf, -np.inf], np.nan)
-        processed = processed.ffill().fillna(0)
-        return processed
+        return self._sanitize_feature_frame(features_df)
 
     def _apply_preprocessing(self, features_df: pd.DataFrame) -> pd.DataFrame:
         """BaseMLTrainerの前処理ロジックを活用してスケーリングを行う"""
@@ -363,8 +374,7 @@ class HybridFeatureAdapter:
             shifted = augmented[numeric_cols].shift(1).add_suffix("_lag1")
             augmented = pd.concat([augmented, shifted], axis=1)
 
-        augmented = augmented.ffill().fillna(0)
-        return augmented
+        return self._sanitize_feature_frame(augmented)
 
 
 class WaveletFeatureTransformer:

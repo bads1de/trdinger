@@ -450,27 +450,21 @@ class StrategyGene:
             else:
                 condition.operator = random.choice(config.valid_condition_operators)
 
-        if (
-            random.random()
-            < mutation_rate * config.condition_change_probability_multiplier
-        ):
-            if (
-                mutated.long_entry_conditions
-                and random.random() < config.condition_selection_probability
-            ):
-                idx = random.randint(0, len(mutated.long_entry_conditions) - 1)
-                mutate_item(mutated.long_entry_conditions[idx])
+        mutation_threshold = (
+            mutation_rate * config.condition_change_probability_multiplier
+        )
 
-        if (
-            random.random()
-            < mutation_rate * config.condition_change_probability_multiplier
+        def maybe_mutate_branch(conditions):
+            if conditions and random.random() < config.condition_selection_probability:
+                idx = random.randint(0, len(conditions) - 1)
+                mutate_item(conditions[idx])
+
+        for conditions in (
+            mutated.long_entry_conditions,
+            mutated.short_entry_conditions,
         ):
-            if (
-                mutated.short_entry_conditions
-                and random.random() < config.condition_selection_probability
-            ):
-                idx = random.randint(0, len(mutated.short_entry_conditions) - 1)
-                mutate_item(mutated.short_entry_conditions[idx])
+            if random.random() < mutation_threshold:
+                maybe_mutate_branch(conditions)
 
     @staticmethod
     def _crossover_tpsl_genes(

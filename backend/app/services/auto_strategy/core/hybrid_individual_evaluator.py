@@ -137,19 +137,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
         # ML予測スコアを追加（predictorが設定され、予測が成功した場合）
         if prediction_signals:
-            # prediction_score計算
-            if "is_valid" in prediction_signals:
-                # ダマシ予測の場合: 有効確率 - 0.5 (中心化)
-                prediction_score = prediction_signals["is_valid"] - 0.5
-            elif "trend" in prediction_signals:
-                # ボラティリティ予測の場合: トレンド確率 - 0.5 (中心化)
-                prediction_score = prediction_signals["trend"] - 0.5
-            else:
-                # 方向予測の場合: up確率 - down確率
-                prediction_score = prediction_signals.get(
-                    "up", 0.0
-                ) - prediction_signals.get("down", 0.0)
-
+            prediction_score = self._extract_prediction_score(prediction_signals)
             # 予測重みを取得（デフォルト0.1）
             prediction_weight = config.fitness_weights.get("prediction_score", 0.1)
 
@@ -195,20 +183,25 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             pred_score_index = config.objectives.index("prediction_score")
 
             if prediction_signals:
-                if "is_valid" in prediction_signals:
-                    # ダマシ予測の場合: 有効確率 - 0.5 (中心化)
-                    prediction_score = prediction_signals["is_valid"] - 0.5
-                elif "trend" in prediction_signals:
-                    prediction_score = prediction_signals["trend"] - 0.5
-                else:
-                    prediction_score = prediction_signals.get(
-                        "up", 0.0
-                    ) - prediction_signals.get("down", 0.0)
-                fitness_list[pred_score_index] = prediction_score
+                fitness_list[pred_score_index] = self._extract_prediction_score(
+                    prediction_signals
+                )
             else:
                 fitness_list[pred_score_index] = 0.0
 
         return tuple(fitness_list)
+
+    @staticmethod
+    def _extract_prediction_score(prediction_signals: Dict[str, Any]) -> float:
+        """予測シグナルから中心化されたスコアを抽出"""
+        if "is_valid" in prediction_signals:
+            # ダマシ予測の場合: 有効確率 - 0.5 (中心化)
+            return prediction_signals["is_valid"] - 0.5
+        if "trend" in prediction_signals:
+            # ボラティリティ予測の場合: トレンド確率 - 0.5 (中心化)
+            return prediction_signals["trend"] - 0.5
+        # 方向予測の場合: up確率 - down確率
+        return prediction_signals.get("up", 0.0) - prediction_signals.get("down", 0.0)
 
     def _create_feature_adapter(
         self,

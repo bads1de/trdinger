@@ -161,13 +161,7 @@ class GeneratedStrategyService:
 
     def _extract_strategy_name(self, gene_data: Dict[str, Any]) -> str:
         """戦略名を抽出"""
-        indicators = gene_data.get("indicators", [])
-        indicator_names = []
-
-        # リスト形式の場合
-        for indicator in indicators:
-            if indicator.get("enabled", False):
-                indicator_names.append(indicator.get("type", "").upper())
+        indicator_names = self._extract_enabled_indicator_names(gene_data)
 
         if indicator_names:
             return f"GA生成戦略_{'+'.join(indicator_names[:3])}"
@@ -176,15 +170,7 @@ class GeneratedStrategyService:
 
     def _generate_strategy_description(self, gene_data: Dict[str, Any]) -> str:
         """戦略の説明を生成"""
-        indicators = gene_data.get("indicators", [])
-        enabled_indicators = []
-
-        # リスト形式の場合
-        enabled_indicators = [
-            indicator.get("type", "").upper()
-            for indicator in indicators
-            if indicator.get("enabled", False)
-        ]
+        enabled_indicators = self._extract_enabled_indicator_names(gene_data)
 
         if enabled_indicators:
             return (
@@ -195,16 +181,16 @@ class GeneratedStrategyService:
 
     def _extract_indicators(self, gene_data: Dict[str, Any]) -> List[str]:
         """使用指標を抽出"""
-        indicators = gene_data.get("indicators", [])
+        return self._extract_enabled_indicator_names(gene_data)
 
-        # リスト形式の場合
+    def _extract_enabled_indicator_names(self, gene_data: Dict[str, Any]) -> List[str]:
+        """有効な指標名を抽出"""
+        indicators = gene_data.get("indicators", [])
         return [
             indicator.get("type", "").upper()
             for indicator in indicators
             if indicator.get("enabled", False)
         ]
-
-        return []
 
     def _extract_parameters(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
         """パラメータを抽出"""

@@ -122,7 +122,11 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             roll = fr_series.rolling(window=168, min_periods=1)
             m = roll.mean()
             s = roll.std(ddof=0)  # 元の実装に合わせる
-            zscores = ((fr_series - m) / s).fillna(0.0).replace([np.inf, -np.inf], 0.0)
+            zscores = self.safe_ratio_calculation(
+                fr_series - m,
+                s,
+                fill_value=0.0,
+            )
 
             # EMA
             ema12 = fr_series.ewm(span=12, adjust=False).mean()

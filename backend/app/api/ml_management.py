@@ -14,7 +14,7 @@ from app.services.ml.orchestration.ml_management_orchestration_service import (
     MLManagementOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
-from app.utils.response import api_response, error_response
+from app.utils.response import result_response
 
 logger = logging.getLogger(__name__)
 
@@ -210,14 +210,11 @@ async def update_ml_config(
         logger.info(f"ML設定更新要求: {config_data}")
         result = await ml_service.update_ml_config(config_data)
 
-        if result["success"]:
-            return api_response(
-                success=True,
-                message=result["message"],
-                data=result.get("updated_config"),
-            )
-        else:
-            return error_response(message=result["message"])
+        return result_response(
+            success=result["success"],
+            message=result["message"],
+            data=result.get("updated_config"),
+        )
 
     return await ErrorHandler.safe_execute_async(_update_ml_config)
 
@@ -239,12 +236,11 @@ async def reset_ml_config(
         logger.info("ML設定リセット要求")
         result = await ml_service.reset_ml_config()
 
-        if result["success"]:
-            return api_response(
-                success=True, message=result["message"], data=result.get("config")
-            )
-        else:
-            return error_response(message=result["message"])
+        return result_response(
+            success=result["success"],
+            message=result["message"],
+            data=result.get("config"),
+        )
 
     return await ErrorHandler.safe_execute_async(_reset_ml_config)
 

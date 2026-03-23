@@ -32,6 +32,23 @@ class SeedStrategyFactory:
     GA初期集団に注入するための実戦的な戦略テンプレートを生成します。
     """
 
+    @staticmethod
+    def _create_indicator_gene(
+        indicator_type: str, parameters: dict[str, Any]
+    ) -> IndicatorGene:
+        """シード用の指標遺伝子を生成"""
+        return IndicatorGene(
+            type=indicator_type,
+            parameters=parameters,
+            enabled=True,
+            id=str(uuid.uuid4()),
+        )
+
+    @staticmethod
+    def _seed_metadata(seed_name: str) -> dict[str, str]:
+        """シード戦略の共通メタデータを生成"""
+        return {"seed_strategy": seed_name, "version": "1.0"}
+
     @classmethod
     def get_all_seeds(cls) -> List[StrategyGene]:
         """
@@ -91,12 +108,7 @@ class SeedStrategyFactory:
         """
         # 指標: ADX (DMP, DMN, ADX を返す)
         indicators = [
-            IndicatorGene(
-                type="ADX",
-                parameters={"length": 14},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
+            cls._create_indicator_gene("ADX", {"length": 14}),
         ]
 
         # Long: DMP > 45 AND ADX > 45
@@ -157,7 +169,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
-            metadata={"seed_strategy": "dmi_extreme_trend", "version": "1.0"},
+            metadata=cls._seed_metadata("dmi_extreme_trend"),
         )
 
     # =========================================================================
@@ -175,12 +187,7 @@ class SeedStrategyFactory:
             StrategyGene
         """
         indicators = [
-            IndicatorGene(
-                type="RSI",
-                parameters={"period": 14},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
+            cls._create_indicator_gene("RSI", {"period": 14}),
         ]
 
         # Long: RSI > 75 (強い上昇モメンタム)
@@ -216,7 +223,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
-            metadata={"seed_strategy": "rsi_momentum", "version": "1.0"},
+            metadata=cls._seed_metadata("rsi_momentum"),
         )
 
     # =========================================================================
@@ -234,12 +241,7 @@ class SeedStrategyFactory:
             StrategyGene
         """
         indicators = [
-            IndicatorGene(
-                type="BBANDS",
-                parameters={"length": 20, "std": 2.0},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
+            cls._create_indicator_gene("BBANDS", {"length": 20, "std": 2.0}),
         ]
 
         # Long: Close > BBU (Upper Band)
@@ -275,7 +277,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
-            metadata={"seed_strategy": "bollinger_breakout", "version": "1.0"},
+            metadata=cls._seed_metadata("bollinger_breakout"),
         )
 
     # =========================================================================
@@ -293,18 +295,8 @@ class SeedStrategyFactory:
             StrategyGene
         """
         indicators = [
-            IndicatorGene(
-                type="KAMA",
-                parameters={"length": 30},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
-            IndicatorGene(
-                type="ADX",
-                parameters={"length": 13},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
+            cls._create_indicator_gene("KAMA", {"length": 30}),
+            cls._create_indicator_gene("ADX", {"length": 13}),
         ]
 
         # Long: Close > KAMA AND DMP > 40 AND ADX > 20
@@ -374,7 +366,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
-            metadata={"seed_strategy": "kama_adx_hybrid", "version": "1.0"},
+            metadata=cls._seed_metadata("kama_adx_hybrid"),
         )
 
     # =========================================================================
@@ -396,24 +388,9 @@ class SeedStrategyFactory:
             StrategyGene
         """
         indicators = [
-            IndicatorGene(
-                type="MACD",
-                parameters={"fast": 12, "slow": 26, "signal": 9},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
-            IndicatorGene(
-                type="BBANDS",
-                parameters={"length": 20, "std": 2.0},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
-            IndicatorGene(
-                type="ATR",
-                parameters={"length": 100},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
+            cls._create_indicator_gene("MACD", {"fast": 12, "slow": 26, "signal": 9}),
+            cls._create_indicator_gene("BBANDS", {"length": 20, "std": 2.0}),
+            cls._create_indicator_gene("ATR", {"length": 100}),
         ]
 
         # 簡易版WAE Long: MACD > Signal AND MACD > 0
@@ -474,7 +451,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
-            metadata={"seed_strategy": "wae", "version": "1.0"},
+            metadata=cls._seed_metadata("wae"),
         )
 
     # =========================================================================
@@ -495,18 +472,8 @@ class SeedStrategyFactory:
             StrategyGene
         """
         indicators = [
-            IndicatorGene(
-                type="T3",
-                parameters={"length": 200, "a": 0.7},  # 少し短めに調整
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
-            IndicatorGene(
-                type="ADX",
-                parameters={"length": 14},
-                enabled=True,
-                id=str(uuid.uuid4()),
-            ),
+            cls._create_indicator_gene("T3", {"length": 200, "a": 0.7}),
+            cls._create_indicator_gene("ADX", {"length": 14}),
         ]
 
         # Long: Close > T3 AND ADX > 20
@@ -566,7 +533,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
-            metadata={"seed_strategy": "trendilo", "version": "1.0"},
+            metadata=cls._seed_metadata("trendilo"),
         )
 
 

@@ -9,6 +9,7 @@ from app.utils.response import (
     ensure_response_dict,
     error_response,
     extract_response_data,
+    result_response,
 )
 
 
@@ -26,6 +27,26 @@ class TestUtilsExtra:
         assert resp["success"] is False
         assert resp["message"] == "Failed"
         assert resp["error_code"] == "ERR001"
+
+    def test_result_response(self):
+        success_resp = result_response(
+            success=True,
+            message="OK",
+            data={"key": "value"},
+        )
+        error_resp = result_response(
+            success=False,
+            message="Failed",
+            error_code="ERR001",
+            details={"reason": "bad"},
+            data={},
+        )
+
+        assert success_resp["success"] is True
+        assert success_resp["data"] == {"key": "value"}
+        assert error_resp["success"] is False
+        assert error_resp["error_code"] == "ERR001"
+        assert error_resp["details"] == {"reason": "bad"}
 
     def test_ensure_response_dict(self):
         class ModelDumpResult:

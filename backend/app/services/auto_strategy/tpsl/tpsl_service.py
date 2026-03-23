@@ -125,7 +125,7 @@ class TPSLService:
                 )
 
                 # TPSLResultから価格を抽出
-                sl_price, tp_price = calculator._make_prices(
+                sl_price, tp_price = self._build_price_pair(
                     current_price,
                     result.stop_loss_pct,
                     result.take_profit_pct,
@@ -149,11 +149,8 @@ class TPSLService:
         default_sl_pct = 0.03  # 3%
         default_tp_pct = 0.06  # 6%
 
-        return self.fixed_percentage_calculator._make_prices(
-            current_price,
-            default_sl_pct,
-            default_tp_pct,
-            position_direction,
+        return self._build_price_pair(
+            current_price, default_sl_pct, default_tp_pct, position_direction
         )
 
     def _calculate_basic_tpsl_prices(
@@ -232,7 +229,7 @@ class TPSLService:
                 else:
                     logger.warning(f"不正なTP割合: {take_profit_pct}")
 
-            return self.fixed_percentage_calculator._make_prices(
+            return self._build_price_pair(
                 current_price, valid_sl_pct, valid_tp_pct, position_direction
             )
 
@@ -267,7 +264,7 @@ class TPSLService:
             strategy_used = risk_management.get("_tpsl_strategy", "unknown")
 
             # 基本的な価格計算（ポジション方向を考慮）
-            sl_price, tp_price = self.fixed_percentage_calculator._make_prices(
+            sl_price, tp_price = self._build_price_pair(
                 current_price, stop_loss_pct, take_profit_pct, position_direction
             )
 
@@ -291,6 +288,21 @@ class TPSLService:
             return self._calculate_simple_tpsl_prices(
                 current_price, stop_loss_pct, take_profit_pct, position_direction
             )
+
+    def _build_price_pair(
+        self,
+        current_price: float,
+        stop_loss_pct: Optional[float],
+        take_profit_pct: Optional[float],
+        position_direction: float,
+    ) -> Tuple[Optional[float], Optional[float]]:
+        """割合からSL/TP価格を生成する共通処理"""
+        return self.fixed_percentage_calculator._make_prices(
+            current_price,
+            stop_loss_pct,
+            take_profit_pct,
+            position_direction,
+        )
 
     def _apply_volatility_adjustments(
         self,

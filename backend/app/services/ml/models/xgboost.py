@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -47,8 +47,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         """XGBoost固有のデータセットを作成"""
         # 基底クラスで既にDataFrame化されているはずだが、念のため
         if not isinstance(X, pd.DataFrame):
-            cols = self.feature_columns or [f"feature_{i}" for i in range(X.shape[1])]
-            X = pd.DataFrame(X, columns=cast(Any, cols))
+            X = self._coerce_feature_frame(X, self.feature_columns)
 
         self.feature_names = X.columns.tolist()
         return xgb.DMatrix(X, label=y, feature_names=self.feature_names, weight=sample_weight)

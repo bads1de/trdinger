@@ -87,6 +87,11 @@ class GeneticUtils:
         return params
 
     @staticmethod
+    def extract_gene_params(gene) -> Dict[str, Any]:
+        """遺伝子オブジェクトから公開フィールドを抽出"""
+        return GeneticUtils._extract_gene_params(gene)
+
+    @staticmethod
     def crossover_generic_genes(
         parent1_gene,
         parent2_gene,
@@ -240,3 +245,6 @@ class GeneticUtils:
                     mutated_params[field] = random.choice(list(enum_class))
 
         return gene_class(**mutated_params)
+
+
+extract_gene_params = GeneticUtils.extract_gene_params

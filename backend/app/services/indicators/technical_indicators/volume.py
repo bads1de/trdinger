@@ -33,6 +33,11 @@ from ..data_validation import (
 logger = logging.getLogger(__name__)
 
 
+def _replace_inf_with_nan(series: pd.Series) -> pd.Series:
+    """Series 内の inf を NaN に揃える。"""
+    return series.replace([np.inf, -np.inf], np.nan)
+
+
 @njit(cache=True)
 def _njit_rvol_loop(
     volumes: np.ndarray, time_indices: np.ndarray, window: int
@@ -530,14 +535,14 @@ class VolumeIndicators:
                 rvol_series = pd.Series(res_arr, index=volume.index)
 
                 if not rvol_series.isna().all():
-                    return rvol_series.replace([np.inf, -np.inf], np.nan)
+                    return _replace_inf_with_nan(rvol_series)
             except Exception as e:
                 logger.warning(f"RVOL Numba optimization failed: {e}. Falling back...")
 
         # フォールバック: 標準的なローリング平均
         avg_vol = volume.rolling(window=window, min_periods=1).mean()
         rvol = volume / avg_vol
-        return rvol.replace([np.inf, -np.inf], np.nan)
+        return _replace_inf_with_nan(rvol)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -567,7 +572,7 @@ class VolumeIndicators:
 
         score = rvol_series / price_range
 
-        return score.replace([np.inf, -np.inf], np.nan)
+        return _replace_inf_with_nan(score)
 
     @staticmethod
     @handle_pandas_ta_errors

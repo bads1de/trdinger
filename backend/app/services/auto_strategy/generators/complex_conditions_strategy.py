@@ -126,28 +126,30 @@ class ComplexConditionsStrategy:
         # SUPERTREND > Close は上昇トレンドを示すのでOK
         op_long = ">"
         op_short = "<"
-        
-        long_conds.append(Condition(left_operand=m_name, operator=op_long, right_operand=th_long))
-
-        longs.append(
-            ConditionGroup(
-                operator="AND",
-                conditions=long_conds,
-            )
+        long_conds.append(
+            Condition(left_operand=m_name, operator=op_long, right_operand=th_long)
         )
-        
+
         # ショート: Close < Trend AND Momentum < Low
         short_conds = [
             Condition(left_operand="Close", operator="<", right_operand=t_name),
         ]
-        short_conds.append(Condition(left_operand=m_name, operator=op_short, right_operand=th_short))
-
-        shorts.append(
-            ConditionGroup(
-                operator="AND",
-                conditions=short_conds,
-            )
+        short_conds.append(
+            Condition(left_operand=m_name, operator=op_short, right_operand=th_short)
         )
+
+        build_and_groups = getattr(type(self.gen), "_build_and_groups", None)
+        if build_and_groups is None:
+            long_group = ConditionGroup(operator="AND", conditions=long_conds)
+            short_group = ConditionGroup(operator="AND", conditions=short_conds)
+        else:
+            long_group, short_group = build_and_groups(
+                self.gen,
+                long_conds,
+                short_conds,
+            )
+        longs.append(long_group)
+        shorts.append(short_group)
         return longs, shorts
 
     def _create_cross(self, indicators):

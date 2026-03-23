@@ -458,6 +458,27 @@ class BybitService(ABC):
             api_symbol = api_symbol.split(":")[0]
         return api_symbol
 
+    def _normalize_symbol_for_ccxt(self, symbol: str) -> str:
+        """
+        シンボルをCCXT/Bybit用の形式に正規化する
+
+        Args:
+            symbol: 取引ペアシンボル
+
+        Returns:
+            CCXT/Bybit用のシンボル
+        """
+        if not isinstance(symbol, str):
+            symbol = str(symbol)
+
+        if ":" in symbol:
+            return symbol
+        if symbol.endswith("/USDT"):
+            return f"{symbol}:USDT"
+        if symbol.endswith("/USD"):
+            return f"{symbol}:USD"
+        return f"{symbol}:USDT"
+
     async def _execute_with_db_session(self, func: Callable, **kwargs) -> Any:
         """
         データベースセッションを使用して関数を実行
@@ -539,15 +560,7 @@ class BybitService(ABC):
 
         # 履歴取得メソッドを取得
         # シンボルを正規化
-        normalized_symbol = (
-            symbol
-            if ":" in symbol
-            else (
-                f"{symbol}:USDT"
-                if symbol.endswith("/USDT")
-                else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
-            )
-        )
+        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
         fetch_history_method = getattr(self.exchange, config.fetch_history_method_name)
 
         if latest_timestamp:
@@ -604,13 +617,11 @@ class BybitService(ABC):
                     kwargs,
                 )
 
-        # データベースに保存
-        async def save_with_db(db, repository):
-            repo = repository or config.repository_class(db)
-            return await self._save_data_to_database(history_data, symbol, repo, config)
-
-        saved_count = await self._execute_with_db_session(
-            func=save_with_db, repository=repository
+        saved_count = await self._persist_history_data(
+            history_data=history_data,
+            symbol=symbol,
+            config=config,
+            repository=repository,
         )
 
         logger.info(f"{config.log_prefix}差分データ収集完了: {saved_count}件保存")
@@ -646,15 +657,7 @@ class BybitService(ABC):
             取得・保存結果を含む辞書
         """
         # シンボルを正規化
-        normalized_symbol = (
-            symbol
-            if ":" in symbol
-            else (
-                f"{symbol}:USDT"
-                if symbol.endswith("/USDT")
-                else f"{symbol}:USD" if symbol.endswith("/USD") else f"{symbol}:USDT"
-            )
-        )
+        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
         if fetch_all:
             # 全期間データを取得
             latest_timestamp = await self._get_latest_timestamp_from_db(
@@ -703,13 +706,11 @@ class BybitService(ABC):
                     kwargs,
                 )
 
-        # データベースに保存
-        async def save_with_db(db, repository):
-            repo = repository or config.repository_class(db)
-            return await self._save_data_to_database(history_data, symbol, repo, config)
-
-        saved_count = await self._execute_with_db_session(
-            func=save_with_db, repository=repository
+        saved_count = await self._persist_history_data(
+            history_data=history_data,
+            symbol=symbol,
+            config=config,
+            repository=repository,
         )
 
         return {
@@ -761,6 +762,24 @@ class BybitService(ABC):
         except Exception as e:
             logger.error(f"{config.log_prefix}データのDB保存エラー: {e}")
             raise
+
+    async def _persist_history_data(
+        self,
+        *,
+        history_data: List[Dict[str, Any]],
+        symbol: str,
+        config: Any,
+        repository: Optional[Any] = None,
+    ) -> int:
+        """履歴データの保存処理を共通化する。"""
+
+        async def save_with_db(db, repository):
+            repo = repository or config.repository_class(db)
+            return await self._save_data_to_database(history_data, symbol, repo, config)
+
+        return await self._execute_with_db_session(
+            func=save_with_db, repository=repository
+        )
 
 
 

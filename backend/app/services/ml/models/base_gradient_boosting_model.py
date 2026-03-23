@@ -35,6 +35,24 @@ class BaseGradientBoostingModel(ABC):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    @staticmethod
+    def _coerce_feature_frame(
+        X: Union[pd.DataFrame, np.ndarray],
+        feature_columns: Optional[List[str]] = None,
+    ) -> pd.DataFrame:
+        """特徴量入力をDataFrameに正規化する。"""
+        if isinstance(X, pd.DataFrame):
+            return X
+        cols = feature_columns or [f"feature_{i}" for i in range(X.shape[1])]
+        return pd.DataFrame(X, columns=cast(Any, cols))
+
+    @staticmethod
+    def _coerce_target_series(y: Union[pd.Series, np.ndarray]) -> pd.Series:
+        """ターゲット入力をSeriesに正規化する。"""
+        if isinstance(y, pd.Series):
+            return y
+        return pd.Series(y)
+
     def fit(
         self,
         X: Union[pd.DataFrame, np.ndarray],
@@ -46,11 +64,8 @@ class BaseGradientBoostingModel(ABC):
         """
         try:
             # 入力整形
-            if not isinstance(X, pd.DataFrame):
-                cols = self.feature_columns or [f"feature_{i}" for i in range(X.shape[1])]
-                X = pd.DataFrame(X, columns=cast(Any, cols))
-            if not isinstance(y, pd.Series):
-                y = pd.Series(y)
+            X = self._coerce_feature_frame(X, self.feature_columns)
+            y = self._coerce_target_series(y)
 
             # 検証データ準備
             eval_set = kwargs.get("eval_set")
@@ -249,7 +264,7 @@ class BaseGradientBoostingModel(ABC):
             raise ModelError("学習済みモデルがありません")
 
         if self.feature_columns and not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
+            X = self._coerce_feature_frame(X, self.feature_columns)
 
         return predict_class_from_proba(self.predict_proba(X))
 
@@ -262,7 +277,7 @@ class BaseGradientBoostingModel(ABC):
 
         # feature_columnsを使用してDataFrameを整形
         if self.feature_columns and not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=cast(Any, self.feature_columns))
+            X = self._coerce_feature_frame(X, self.feature_columns)
 
         # モデル固有の入力データ準備
         data = self._prepare_input_for_prediction(X)

@@ -130,23 +130,56 @@ class BacktestConfigValidator:
         """数値フィールドの検証"""
         errors = []
 
-        # 初期資金の検証
-        try:
-            initial_capital = float(config["initial_capital"])
-            if initial_capital <= 0:
-                errors.append("initial_capitalは正の数値である必要があります")
-        except (ValueError, TypeError):
-            errors.append("initial_capitalは数値である必要があります")
-
-        # 手数料率の検証
-        try:
-            commission_rate = float(config["commission_rate"])
-            if not 0 <= commission_rate <= 1:
-                errors.append("commission_rateは0から1の間である必要があります")
-        except (ValueError, TypeError):
-            errors.append("commission_rateは数値である必要があります")
+        errors.extend(
+            self._validate_positive_numeric_field(
+                config,
+                "initial_capital",
+                "initial_capitalは正の数値である必要があります",
+            )
+        )
+        errors.extend(
+            self._validate_bounded_numeric_field(
+                config,
+                "commission_rate",
+                lower_bound=0.0,
+                upper_bound=1.0,
+                error_message="commission_rateは0から1の間である必要があります",
+            )
+        )
 
         return errors
+
+    def _validate_positive_numeric_field(
+        self,
+        config: Dict[str, Any],
+        field_name: str,
+        error_message: str,
+    ) -> List[str]:
+        """正の数値フィールドを検証"""
+        try:
+            value = float(config[field_name])
+            if value <= 0:
+                return [error_message]
+            return []
+        except (ValueError, TypeError, KeyError):
+            return [f"{field_name}は数値である必要があります"]
+
+    def _validate_bounded_numeric_field(
+        self,
+        config: Dict[str, Any],
+        field_name: str,
+        lower_bound: float,
+        upper_bound: float,
+        error_message: str,
+    ) -> List[str]:
+        """範囲付き数値フィールドを検証"""
+        try:
+            value = float(config[field_name])
+            if not lower_bound <= value <= upper_bound:
+                return [error_message]
+            return []
+        except (ValueError, TypeError, KeyError):
+            return [f"{field_name}は数値である必要があります"]
 
     def _validate_strategy_config(self, config: Dict[str, Any]) -> List[str]:
         """戦略設定の検証"""

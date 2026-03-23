@@ -6,7 +6,9 @@ ML処理で頻繁に使用される共通ロジックを提供します。
 """
 
 import hashlib
+import glob
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -77,6 +79,22 @@ def generate_cache_key(
     h5 = _hash(sorted(extra_params.items()) if extra_params else None)
 
     return f"features_{h1}_{h2}_{h3}_{h4}_{h5}"
+
+
+def collect_unique_files(patterns: List[str]) -> List[str]:
+    """複数パターンに一致するファイルを重複なく収集する。"""
+    files: List[str] = []
+    seen_files = set()
+
+    for pattern in patterns:
+        for file_path in glob.glob(pattern):
+            normalized_path = os.path.abspath(file_path)
+            if normalized_path in seen_files:
+                continue
+            seen_files.add(normalized_path)
+            files.append(file_path)
+
+    return files
 
 
 def validate_training_inputs(

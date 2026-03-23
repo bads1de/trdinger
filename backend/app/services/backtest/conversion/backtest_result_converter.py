@@ -5,7 +5,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
@@ -138,68 +138,8 @@ class BacktestResultConverter:
 
     def _extract_metrics_from_series(self, stats: Any) -> Dict[str, Any]:
         """pandas.Seriesから基本統計情報を抽出"""
-        statistics = {}
-
-        # 基本指標
-        statistics["total_return"] = self._safe_float_conversion(
-            stats.get("Return [%]", 0.0)
-        )
+        statistics = self._extract_common_metrics(stats.get)
         statistics["total_trades"] = self._safe_int_conversion(stats.get("# Trades", 0))
-        statistics["win_rate"] = self._safe_float_conversion(
-            stats.get("Win Rate [%]", 0.0)
-        )
-        statistics["profit_factor"] = self._safe_float_conversion(
-            stats.get("Profit Factor", 0.0)
-        )
-
-        # 追加の指標
-        statistics["best_trade"] = self._safe_float_conversion(
-            stats.get("Best Trade [%]", 0.0)
-        )
-        statistics["worst_trade"] = self._safe_float_conversion(
-            stats.get("Worst Trade [%]", 0.0)
-        )
-        statistics["avg_trade"] = self._safe_float_conversion(
-            stats.get("Avg. Trade [%]", 0.0)
-        )
-        statistics["max_drawdown"] = self._safe_float_conversion(
-            stats.get("Max. Drawdown [%]", 0.0)
-        )
-        statistics["avg_drawdown"] = self._safe_float_conversion(
-            stats.get("Avg. Drawdown [%]", 0.0)
-        )
-
-        # 期間関連
-        statistics["max_drawdown_duration"] = self._safe_int_conversion(
-            stats.get("Max. Drawdown Duration", 0)
-        )
-        statistics["avg_drawdown_duration"] = self._safe_float_conversion(
-            stats.get("Avg. Drawdown Duration", 0)
-        )
-
-        # リスク指標
-        statistics["sharpe_ratio"] = self._safe_float_conversion(
-            stats.get("Sharpe Ratio", 0.0)
-        )
-        statistics["sortino_ratio"] = self._safe_float_conversion(
-            stats.get("Sortino Ratio", 0.0)
-        )
-        statistics["calmar_ratio"] = self._safe_float_conversion(
-            stats.get("Calmar Ratio", 0.0)
-        )
-
-        # 資産関連
-        statistics["final_equity"] = self._safe_float_conversion(
-            stats.get("Equity Final [$]", 0.0)
-        )
-        statistics["equity_peak"] = self._safe_float_conversion(
-            stats.get("Equity Peak [$]", 0.0)
-        )
-        statistics["buy_hold_return"] = self._safe_float_conversion(
-            stats.get("Buy & Hold Return [%]", 0.0)
-        )
-
-        # 平均利益・平均損失（初期化）
         statistics["avg_win"] = 0.0
         statistics["avg_loss"] = 0.0
 
@@ -207,72 +147,76 @@ class BacktestResultConverter:
 
     def _extract_metrics_from_dict(self, stats: Any) -> Dict[str, Any]:
         """辞書ライクなオブジェクトから基本統計情報を抽出"""
+        statistics = self._extract_common_metrics(stats.get)
+        statistics["total_trades"] = self._safe_int_conversion(stats.get("# Trades", 0))
+        statistics["avg_win"] = 0.0
+        statistics["avg_loss"] = 0.0
+
+        return statistics
+
+    def _extract_common_metrics(
+        self, getter: Callable[[str, Any], Any]
+    ) -> Dict[str, Any]:
+        """Series/Dict 共通の統計指標を抽出"""
         statistics = {}
 
-        # 基本的なパフォーマンス指標
+        # 基本指標
         statistics["total_return"] = self._safe_float_conversion(
-            stats.get("Return [%]", 0.0)
+            getter("Return [%]", 0.0)
         )
-        statistics["total_trades"] = int(stats.get("# Trades", 0))
         statistics["win_rate"] = self._safe_float_conversion(
-            stats.get("Win Rate [%]", 0.0)
+            getter("Win Rate [%]", 0.0)
+        )
+        statistics["profit_factor"] = self._safe_float_conversion(
+            getter("Profit Factor", 0.0)
         )
 
         # 追加の指標
         statistics["best_trade"] = self._safe_float_conversion(
-            stats.get("Best Trade [%]", 0.0)
+            getter("Best Trade [%]", 0.0)
         )
         statistics["worst_trade"] = self._safe_float_conversion(
-            stats.get("Worst Trade [%]", 0.0)
+            getter("Worst Trade [%]", 0.0)
         )
         statistics["avg_trade"] = self._safe_float_conversion(
-            stats.get("Avg. Trade [%]", 0.0)
+            getter("Avg. Trade [%]", 0.0)
         )
         statistics["max_drawdown"] = self._safe_float_conversion(
-            stats.get("Max. Drawdown [%]", 0.0)
+            getter("Max. Drawdown [%]", 0.0)
         )
         statistics["avg_drawdown"] = self._safe_float_conversion(
-            stats.get("Avg. Drawdown [%]", 0.0)
+            getter("Avg. Drawdown [%]", 0.0)
         )
 
         # 期間関連
         statistics["max_drawdown_duration"] = self._safe_int_conversion(
-            stats.get("Max. Drawdown Duration", 0)
+            getter("Max. Drawdown Duration", 0)
         )
         statistics["avg_drawdown_duration"] = self._safe_float_conversion(
-            stats.get("Avg. Drawdown Duration", 0)
+            getter("Avg. Drawdown Duration", 0)
         )
 
         # リスク指標
         statistics["sharpe_ratio"] = self._safe_float_conversion(
-            stats.get("Sharpe Ratio", 0.0)
+            getter("Sharpe Ratio", 0.0)
         )
         statistics["sortino_ratio"] = self._safe_float_conversion(
-            stats.get("Sortino Ratio", 0.0)
+            getter("Sortino Ratio", 0.0)
         )
         statistics["calmar_ratio"] = self._safe_float_conversion(
-            stats.get("Calmar Ratio", 0.0)
+            getter("Calmar Ratio", 0.0)
         )
 
         # 資産関連
         statistics["final_equity"] = self._safe_float_conversion(
-            stats.get("Equity Final [$]", 0.0)
+            getter("Equity Final [$]", 0.0)
         )
         statistics["equity_peak"] = self._safe_float_conversion(
-            stats.get("Equity Peak [$]", 0.0)
+            getter("Equity Peak [$]", 0.0)
         )
         statistics["buy_hold_return"] = self._safe_float_conversion(
-            stats.get("Buy & Hold Return [%]", 0.0)
+            getter("Buy & Hold Return [%]", 0.0)
         )
-
-        # Profit Factor
-        statistics["profit_factor"] = self._safe_float_conversion(
-            stats.get("Profit Factor", 0.0)
-        )
-
-        # 平均利益・平均損失（初期化）
-        statistics["avg_win"] = 0.0
-        statistics["avg_loss"] = 0.0
 
         return statistics
 

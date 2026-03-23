@@ -101,10 +101,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             upper, middle, lower = VolatilityIndicators.bbands(
                 df["close"], length=vol_p
             )
-            features["BB_Width"] = (
-                ((upper - lower) / (middle.replace(0, np.nan)))
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
+            features["BB_Width"] = self.safe_ratio_calculation(
+                upper - lower,
+                middle,
+                fill_value=0.0,
             )
 
             # Yang-Zhang, Parkinson, Garman-Klass
@@ -169,10 +169,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 volume=df["volume"],
                 period=vol_p,
             ).fillna(df["close"])
-            features["VWAP_Deviation"] = (
-                ((df["close"] - vwap) / (vwap.replace(0, np.nan)))
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
+            features["VWAP_Deviation"] = self.safe_ratio_calculation(
+                df["close"] - vwap,
+                vwap,
+                fill_value=0.0,
             )
 
             # その他指標
@@ -331,22 +331,27 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 "MA_Long": TrendIndicators.sma(
                     df["close"], length=lookback_periods.get("long_ma", 50)
                 ).fillna(df["close"]),
-                "Ichimoku_TK_Dist": (
-                    (tenkan - kijun) / (df["close"].replace(0, np.nan))
-                ).fillna(0.0),
-                "Ichimoku_Kijun_Dist": (
-                    (df["close"] - kijun) / (df["close"].replace(0, np.nan))
-                ).fillna(0.0),
-                "PSAR_Trend": (
-                    (df["close"] - psar) / (df["close"].replace(0, np.nan))
-                ).fillna(0.0),
-                "SMA_Cross_50_200": (
-                    (
-                        TrendIndicators.sma(df["close"], 50)
-                        - TrendIndicators.sma(df["close"], 200)
-                    )
-                    / (df["close"].replace(0, np.nan))
-                ).fillna(0.0),
+                "Ichimoku_TK_Dist": self.safe_ratio_calculation(
+                    tenkan - kijun,
+                    df["close"],
+                    fill_value=0.0,
+                ),
+                "Ichimoku_Kijun_Dist": self.safe_ratio_calculation(
+                    df["close"] - kijun,
+                    df["close"],
+                    fill_value=0.0,
+                ),
+                "PSAR_Trend": self.safe_ratio_calculation(
+                    df["close"] - psar,
+                    df["close"],
+                    fill_value=0.0,
+                ),
+                "SMA_Cross_50_200": self.safe_ratio_calculation(
+                    TrendIndicators.sma(df["close"], 50)
+                    - TrendIndicators.sma(df["close"], 200),
+                    df["close"],
+                    fill_value=0.0,
+                ),
             }
             return new_features
         except Exception as e:

@@ -10,6 +10,8 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
+from .base_feature_calculator import sanitize_numeric_dataframe
+
 
 class MultiTimeframeFeatureCalculator:
     """
@@ -162,8 +164,7 @@ class MultiTimeframeFeatureCalculator:
         ) / df_1d_expanded["SMA_50"]
 
         # 欠損値・inf値の処理
-        result = result.replace([np.inf, -np.inf], np.nan)
-        result = result.fillna(0)
+        result = sanitize_numeric_dataframe(result, fill_value=0.0, forward_fill=False)
 
         return result
 

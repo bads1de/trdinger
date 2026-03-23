@@ -19,6 +19,13 @@ from database.repositories.generated_strategy_repository import (
 logger = logging.getLogger(__name__)
 
 
+def _safe_backtest_api_operation(context: str):
+    """API向けの safe_operation 設定を共通化する。"""
+    from app.utils.error_handler import safe_operation
+
+    return safe_operation(context=context, is_api_call=True)
+
+
 class BacktestOrchestrationService:
     """
     バックテスト統合管理サービス
@@ -51,17 +58,7 @@ class BacktestOrchestrationService:
         Returns:
             バックテスト結果一覧
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="バックテスト結果取得",
-            is_api_call=True,
-            default_return=api_response(
-                success=False,
-                error="バックテスト結果取得でエラーが発生しました",
-                status_code=500,
-            ),
-        )
+        @_safe_backtest_api_operation("バックテスト結果取得")
         def _get_backtest_results():
             backtest_repo = BacktestResultRepository(db)
 
@@ -94,17 +91,7 @@ class BacktestOrchestrationService:
         Returns:
             バックテスト結果
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context=f"バックテスト結果取得 (ID: {result_id})",
-            is_api_call=True,
-            default_return=api_response(
-                success=False,
-                error="バックテスト結果取得でエラーが発生しました",
-                status_code=500,
-            ),
-        )
+        @_safe_backtest_api_operation(f"バックテスト結果取得 (ID: {result_id})")
         def _get_backtest_result_by_id():
             backtest_repo = BacktestResultRepository(db)
             result = backtest_repo.get_backtest_result_by_id(result_id)
@@ -131,17 +118,7 @@ class BacktestOrchestrationService:
         Returns:
             削除結果
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context=f"バックテスト結果削除 (ID: {result_id})",
-            is_api_call=True,
-            default_return=api_response(
-                success=False,
-                error="バックテスト結果削除でエラーが発生しました",
-                status_code=500,
-            ),
-        )
+        @_safe_backtest_api_operation(f"バックテスト結果削除 (ID: {result_id})")
         def _delete_backtest_result():
             # 関連する戦略のリンクを解除
             strategy_repo = GeneratedStrategyRepository(db)
@@ -169,17 +146,7 @@ class BacktestOrchestrationService:
         Returns:
             削除結果
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="全バックテスト結果削除",
-            is_api_call=True,
-            default_return=api_response(
-                success=False,
-                error="全バックテスト結果削除でエラーが発生しました",
-                status_code=500,
-            ),
-        )
+        @_safe_backtest_api_operation("全バックテスト結果削除")
         def _delete_all_backtest_results():
             backtest_repo = BacktestResultRepository(db)
             ga_experiment_repo = GAExperimentRepository(db)
@@ -214,17 +181,7 @@ class BacktestOrchestrationService:
         Returns:
             戦略一覧
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="サポート戦略取得",
-            is_api_call=True,
-            default_return=api_response(
-                success=False,
-                error="サポート戦略取得でエラーが発生しました",
-                status_code=500,
-            ),
-        )
+        @_safe_backtest_api_operation("サポート戦略取得")
         def _get_supported_strategies():
             backtest_service = BacktestService()
             try:

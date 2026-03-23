@@ -206,9 +206,11 @@ class TestExperimentPersistenceService:
                 patch(
                     "app.services.auto_strategy.services.experiment_persistence_service.BacktestResultRepository"
                 ) as mock_bt_repo_cls,
-                patch(
-                    "app.services.auto_strategy.services.experiment_persistence_service.GeneSerializer"
-                ) as mock_serializer_cls,
+                patch.object(
+                    self.persistence_service.serializer,
+                    "strategy_gene_to_dict",
+                    return_value={"serialized": True},
+                ) as mock_strategy_to_dict,
             ):
 
                 mock_strat_repo = mock_strat_repo_cls.return_value
@@ -230,6 +232,7 @@ class TestExperimentPersistenceService:
 
                 # 最良戦略が保存されたか確認
                 mock_strat_repo.save_strategy.assert_called()
+                assert mock_strategy_to_dict.call_count == 2
 
                 # 詳細バックテストが実行されたか確認
                 self.mock_backtest_service.run_backtest.assert_called_once()

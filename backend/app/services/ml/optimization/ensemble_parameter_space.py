@@ -7,7 +7,7 @@
 
 from typing import Dict
 
-from .optuna_optimizer import ParameterSpace
+from .optuna_optimizer import ParameterSpace, build_lightgbm_parameter_space
 
 
 class EnsembleParameterSpace:
@@ -16,16 +16,14 @@ class EnsembleParameterSpace:
     @staticmethod
     def get_lightgbm_parameter_space() -> Dict[str, ParameterSpace]:
         """LightGBMのパラメータ空間"""
-        return {
-            "lgb_num_leaves": ParameterSpace(type="integer", low=10, high=100),
-            "lgb_learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
-            "lgb_feature_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
-            "lgb_bagging_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
-            "lgb_min_data_in_leaf": ParameterSpace(type="integer", low=5, high=50),
-            "lgb_max_depth": ParameterSpace(type="integer", low=3, high=15),
-            "lgb_reg_alpha": ParameterSpace(type="real", low=0.0, high=1.0),
-            "lgb_reg_lambda": ParameterSpace(type="real", low=0.0, high=1.0),
-        }
+        params = build_lightgbm_parameter_space(prefix="lgb_")
+        params.update(
+            {
+                "lgb_reg_alpha": ParameterSpace(type="real", low=0.0, high=1.0),
+                "lgb_reg_lambda": ParameterSpace(type="real", low=0.0, high=1.0),
+            }
+        )
+        return params
 
     @staticmethod
     def get_xgboost_parameter_space() -> Dict[str, ParameterSpace]:

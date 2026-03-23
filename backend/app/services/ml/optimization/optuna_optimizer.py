@@ -38,6 +38,24 @@ class ParameterSpace:
     categories: Optional[list] = None
 
 
+def build_lightgbm_parameter_space(prefix: str = "") -> Dict[str, ParameterSpace]:
+    """LightGBM のパラメータ空間を構築する。"""
+    return {
+        f"{prefix}num_leaves": ParameterSpace(type="integer", low=10, high=100),
+        f"{prefix}learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
+        f"{prefix}feature_fraction": ParameterSpace(
+            type="real", low=0.5, high=1.0
+        ),
+        f"{prefix}bagging_fraction": ParameterSpace(
+            type="real", low=0.5, high=1.0
+        ),
+        f"{prefix}min_data_in_leaf": ParameterSpace(
+            type="integer", low=5, high=50
+        ),
+        f"{prefix}max_depth": ParameterSpace(type="integer", low=3, high=15),
+    }
+
+
 class OptunaOptimizer:
     """
     Optuna を活用したハイパーパラメータ最適化エンジン
@@ -195,14 +213,7 @@ class OptunaOptimizer:
     @staticmethod
     def get_default_parameter_space() -> Dict[str, ParameterSpace]:
         """LightGBMのデフォルトパラメータ空間（後方互換性のため）"""
-        return {
-            "num_leaves": ParameterSpace(type="integer", low=10, high=100),
-            "learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
-            "feature_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
-            "bagging_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
-            "min_data_in_leaf": ParameterSpace(type="integer", low=5, high=50),
-            "max_depth": ParameterSpace(type="integer", low=3, high=15),
-        }
+        return build_lightgbm_parameter_space()
 
     @staticmethod
     @safe_operation(context="アンサンブルパラメータ空間取得", is_api_call=False)

@@ -8,6 +8,7 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
+from ...utils.gene_utils import normalize_enum_name
 from .base_calculator import BaseTPSLCalculator
 from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator
@@ -67,14 +68,11 @@ class AdaptiveCalculator(BaseTPSLCalculator):
         """最適な計算方式を選択"""
         try:
             # 遺伝子での明示的な指定がある場合（ADAPTIVE以外）
-            if tpsl_gene and tpsl_gene.method and tpsl_gene.method != "adaptive":
+            method_name = ""
+            if tpsl_gene:
+                method_name = normalize_enum_name(tpsl_gene.method)
+            if tpsl_gene and method_name != "adaptive":
                 # Enum または文字列からのマッピング
-                method_name = (
-                    tpsl_gene.method.value
-                    if hasattr(tpsl_gene.method, "value")
-                    else tpsl_gene.method
-                )
-
                 # 名称のゆらぎ吸収
                 if method_name == "risk_reward_ratio":
                     method_name = "risk_reward"

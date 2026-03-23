@@ -85,14 +85,10 @@ class CatBoostModel(BaseGradientBoostingModel):
         CatBoost固有のデータセットオブジェクトを作成します。
         CatBoostはnumpy配列を直接受け取ります。
         """
-        # CatBoostはnumpy配列を直接受け取る
-        if isinstance(X, pd.DataFrame):
-            X_data = X.values
-        else:
-            X_data = X
+        X_data = self._coerce_feature_frame(X, self.feature_columns).values
 
         if y is not None:
-            y_data = y.values if isinstance(y, pd.Series) else y
+            y_data = self._coerce_target_series(y).values
             return (X_data, y_data)
         return X_data
 

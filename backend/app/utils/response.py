@@ -88,6 +88,35 @@ def error_response(
     return _build_response(success=False, fields=fields)
 
 
+def result_response(
+    success: bool,
+    message: str,
+    data: Optional[Dict[str, Any]] = None,
+    error_code: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+    context: Optional[str] = None,
+    status: Optional[str] = None,
+    status_code: Optional[int] = None,
+) -> Dict[str, Any]:
+    """成功/失敗どちらのレスポンスもまとめて返す。"""
+    if success:
+        return api_response(
+            success=True,
+            message=message,
+            status=status,
+            data=data,
+            status_code=status_code,
+        )
+
+    return error_response(
+        message=message,
+        error_code=error_code,
+        details=details,
+        context=context,
+        data=data,
+    )
+
+
 def api_response(
     success: bool,
     message: str = "",

@@ -68,35 +68,28 @@ class IndicatorCalculator:
             # backtesting.pyのデータオブジェクトをDataFrameに変換
             if data is None:
                 raise ValueError(f"データオブジェクトがNoneです: {indicator_type}")
-            df = data.df
-
-            # データの基本検証
-            if df.empty:
-                raise ValueError(f"データが空です: {indicator_type}")
-
-            required_columns = ["Open", "High", "Low", "Close", "Volume"]
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                # logger.warning(f"不足しているカラム: {missing_columns}")
-                pass
-
-            # logger.warning(f"指標計算開始: {indicator_type}, パラメータ: {parameters}")
-
-            # パラメータマッピング
-            # ここで mapped_parameters を確実に定義する
-            mapped_parameters = parameters.copy()
-
-            # TechnicalIndicatorServiceを使用して計算
-            result = self.technical_indicator_service.calculate_indicator(
-                df, indicator_type, mapped_parameters
+            return self._calculate_indicator_from_dataframe(
+                data.df, indicator_type, parameters
             )
 
-            # logger.warning(
-            #     f"指標計算成功: {indicator_type}, 結果タイプ: {type(result)}"
-            # )
-            return result
-
         return _calculate_indicator()
+
+    def _calculate_indicator_from_dataframe(
+        self, df: pd.DataFrame, indicator_type: str, parameters: Dict[str, Any]
+    ) -> Union[
+        np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+    ]:
+        """DataFrameを受けてインジケータを計算する共通処理"""
+        if df is None:
+            raise ValueError(f"データフレームがNoneです: {indicator_type}")
+
+        if df.empty:
+            raise ValueError(f"データが空です: {indicator_type}")
+
+        # TechnicalIndicatorServiceを使用して計算
+        return self.technical_indicator_service.calculate_indicator(
+            df, indicator_type, parameters.copy()
+        )
 
     def _calculate_indicator_from_df(
         self, df: pd.DataFrame, indicator_type: str, parameters: Dict[str, Any]
@@ -118,20 +111,9 @@ class IndicatorCalculator:
             計算された指標値（単一または複数のSeries/NDArray）
         """
         try:
-            if df is None or df.empty:
-                raise ValueError(f"データが空です: {indicator_type}")
-
-            # logger.debug(f"MTF指標計算開始: {indicator_type}, パラメータ: {parameters}")
-
-            # TechnicalIndicatorServiceを使用して計算
-            result = self.technical_indicator_service.calculate_indicator(
-                df, indicator_type, parameters.copy()
+            return self._calculate_indicator_from_dataframe(
+                df, indicator_type, parameters
             )
-
-            # logger.debug(
-            #     f"MTF指標計算成功: {indicator_type}, 結果タイプ: {type(result)}"
-            # )
-            return result
 
         except Exception as e:
             logger.error(f"MTF指標計算エラー ({indicator_type}): {e}", exc_info=True)

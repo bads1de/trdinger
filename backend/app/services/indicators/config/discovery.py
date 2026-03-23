@@ -11,7 +11,6 @@ import logging
 import warnings
 from typing import Any, List, Optional, Type
 
-import numpy as np
 import pandas as pd
 import pandas_ta_classic as ta
 import pkgutil
@@ -24,6 +23,8 @@ from .indicator_config import (
     ParameterConfig,
 )
 from .pandas_ta_introspection import (
+    _build_indicator_call_kwargs,
+    _build_sample_ohlcv_frame,
     calculate_min_length,
     get_indicator_category,
     get_return_column_names,
@@ -157,38 +158,18 @@ class DynamicIndicatorDiscovery:
         """サンプルデータを用いて指標のスケールタイプを推測"""
         try:
             # 判定用のサンプルデータを生成 (200本)
-            np.random.seed(42)
-            close = np.random.randn(200).cumsum() + 100
-            df = pd.DataFrame(
-                {
-                    "open": close - 1,
-                    "high": close + 1,
-                    "low": close - 1,
-                    "close": close,
-                    "volume": np.random.randint(100, 1000, 200).astype(float),
-                },
-                index=pd.date_range("2024-01-01", periods=200, freq="h"),
+            df = _build_sample_ohlcv_frame(
+                200,
+                walk_close=True,
+                with_datetime_index=True,
             )
 
             # パラメータの準備（データ引数を注入）
-            sig = inspect.signature(func)
-            call_params = {}
-            for p_name in sig.parameters:
-                p_lower = p_name.lower()
-                if p_lower == "close":
-                    call_params[p_name] = df["close"]
-                elif p_lower == "high":
-                    call_params[p_name] = df["high"]
-                elif p_lower == "low":
-                    call_params[p_name] = df["low"]
-                elif p_lower == "open":
-                    call_params[p_name] = df["open"]
-                elif p_lower == "volume":
-                    call_params[p_name] = df["volume"]
-                elif p_lower in ["data", "series"]:
-                    call_params[p_name] = df["close"]
-                elif p_name in default_params:
-                    call_params[p_name] = default_params[p_name]
+            call_params = _build_indicator_call_kwargs(
+                func,
+                df,
+                default_params,
+            )
 
             # 実行（FutureWarningを抑制）
             with warnings.catch_warnings():

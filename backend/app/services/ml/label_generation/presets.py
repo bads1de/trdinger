@@ -20,6 +20,12 @@ logger = logging.getLogger(__name__)
 SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 
 
+def _validate_supported_timeframe(timeframe: str) -> None:
+    """プリセットで使える時間足かを検証する。"""
+    if timeframe not in SUPPORTED_TIMEFRAMES:
+        raise ValueError(f"Unsupported timeframe: {timeframe}")
+
+
 def _log_distribution(name: str, labels: pd.Series) -> None:
     """ラベルの分布をログ出力"""
     counts = labels.value_counts()
@@ -47,8 +53,7 @@ def triple_barrier_method_preset(
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
     """TBM ラベル生成プリセット"""
-    if timeframe not in SUPPORTED_TIMEFRAMES:
-        raise ValueError(f"Unsupported timeframe: {timeframe}")
+    _validate_supported_timeframe(timeframe)
 
     logger.info(f"TBMラベル生成開始: {timeframe}, horizon={horizon_n}")
     try:
@@ -85,8 +90,7 @@ def trend_scanning_preset(
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
     """Trend Scanning ラベル生成プリセット"""
-    if timeframe not in SUPPORTED_TIMEFRAMES:
-        raise ValueError(f"Unsupported timeframe: {timeframe}")
+    _validate_supported_timeframe(timeframe)
 
     logger.info(f"TSラベル生成開始: {timeframe}, threshold={threshold}")
     try:

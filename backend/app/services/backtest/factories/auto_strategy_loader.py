@@ -24,6 +24,33 @@ class AutoStrategyLoader:
     遅延インポートを用いて循環参照を回避します。
     """
 
+    def _import_strategy_gene_components(self) -> tuple[Any, Any]:
+        """StrategyGene と GeneSerializer を遅延インポートする"""
+        try:
+            from app.services.auto_strategy.genes import StrategyGene
+            from app.services.auto_strategy.serializers.serialization import (
+                GeneSerializer,
+            )
+
+            return StrategyGene, GeneSerializer
+        except ImportError as e:
+            raise AutoStrategyLoaderError(
+                f"オートストラテジーモジュールのインポートに失敗しました: {e}"
+            )
+
+    def _import_universal_strategy(self) -> Type[Strategy]:
+        """UniversalStrategy を遅延インポートする"""
+        try:
+            from app.services.auto_strategy.strategies.universal_strategy import (
+                UniversalStrategy,
+            )
+
+            return UniversalStrategy
+        except ImportError as e:
+            raise AutoStrategyLoaderError(
+                f"オートストラテジーモジュールのインポートに失敗しました: {e}"
+            )
+
     def load_strategy_gene(self, strategy_config: Dict[str, Any]) -> Any:
         """
         戦略設定から戦略遺伝子オブジェクトをロード・復元
@@ -37,16 +64,7 @@ class AutoStrategyLoader:
         Raises:
             AutoStrategyLoaderError: ロードに失敗した場合
         """
-        try:
-            # 遅延インポート
-            from app.services.auto_strategy.genes import StrategyGene
-            from app.services.auto_strategy.serializers.serialization import (
-                GeneSerializer,
-            )
-        except ImportError as e:
-            raise AutoStrategyLoaderError(
-                f"オートストラテジーモジュールのインポートに失敗しました: {e}"
-            )
+        StrategyGene, GeneSerializer = self._import_strategy_gene_components()
 
         # 戦略遺伝子データを抽出
         gene_data = self._extract_strategy_gene(strategy_config)
@@ -88,15 +106,7 @@ class AutoStrategyLoader:
         Raises:
             AutoStrategyLoaderError: クラス生成に失敗した場合
         """
-        # 遅延インポートで循環参照を回避
-        try:
-            from app.services.auto_strategy.strategies.universal_strategy import (
-                UniversalStrategy,
-            )
-        except ImportError as e:
-            raise AutoStrategyLoaderError(
-                f"オートストラテジーモジュールのインポートに失敗しました: {e}"
-            )
+        UniversalStrategy = self._import_universal_strategy()
 
         # 遺伝子をロードして検証（整合性チェックのため）
         gene = self.load_strategy_gene(strategy_config)

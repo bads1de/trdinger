@@ -16,6 +16,83 @@ import pandas_ta_classic as ta
 logger = logging.getLogger(__name__)
 
 
+def _build_sample_ohlcv_frame(
+    rows: int,
+    *,
+    walk_close: bool = False,
+    with_datetime_index: bool = False,
+) -> Any:
+    """pandas-ta の検証用サンプル OHLCV DataFrame を作る。"""
+    import numpy as np
+    import pandas as pd
+
+    np.random.seed(42)
+
+    if walk_close:
+        close = np.random.randn(rows).cumsum() + 100
+        open_ = close - 1
+        high = close + 1
+        low = close - 1
+        volume = np.random.randint(100, 1000, rows).astype(float)
+    else:
+        open_ = np.random.uniform(100, 110, rows)
+        high = np.random.uniform(105, 115, rows)
+        low = np.random.uniform(95, 105, rows)
+        close = np.random.uniform(100, 110, rows)
+        volume = np.random.uniform(1000, 5000, rows)
+
+    frame = pd.DataFrame(
+        {
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+        }
+    )
+
+    if not walk_close:
+        # 高値/安値の関係を安定させる
+        frame["high"] = np.maximum(frame["high"], frame["low"] + 1)
+
+    if with_datetime_index:
+        frame.index = pd.date_range("2024-01-01", periods=rows, freq="h")
+
+    return frame
+
+
+def _build_indicator_call_kwargs(
+    func: Any,
+    frame: Any,
+    default_params: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """検証用の DataFrame から、関数呼び出し用 kwargs を作る。"""
+    sig = inspect.signature(func)
+    kwargs: Dict[str, Any] = {}
+    default_params = default_params or {}
+
+    for p_name in sig.parameters:
+        p_lower = p_name.lower()
+        if p_lower == "close":
+            kwargs[p_name] = frame["close"]
+        elif p_lower == "high":
+            kwargs[p_name] = frame["high"]
+        elif p_lower == "low":
+            kwargs[p_name] = frame["low"]
+        elif p_lower == "open":
+            kwargs[p_name] = frame["open"]
+        elif p_lower == "open_":
+            kwargs[p_name] = frame["open"]
+        elif p_lower == "volume":
+            kwargs[p_name] = frame["volume"]
+        elif p_lower in ["data", "series"]:
+            kwargs[p_name] = frame["close"]
+        elif p_name in default_params:
+            kwargs[p_name] = default_params[p_name]
+
+    return kwargs
+
+
 # =============================================================================
 # min_length 抽出
 # =============================================================================
@@ -233,31 +310,8 @@ def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
 
     try:
         # サンプルデータでの実行により実際のカラム名を特定
-        np.random.seed(42)
-        n = 100
-
-        df = pd.DataFrame(
-            {
-                "open": np.random.uniform(100, 110, n),
-                "high": np.random.uniform(105, 115, n),
-                "low": np.random.uniform(95, 105, n),
-                "close": np.random.uniform(100, 110, n),
-                "volume": np.random.uniform(1000, 5000, n),
-            }
-        )
-
-        # high > low を保証
-        df["high"] = np.maximum(df["high"], df["low"] + 1)
-
-        # 指標関数のシグネチャを確認して引数を準備
-        sig = inspect.signature(func)
-        kwargs = {}
-
-        for p in sig.parameters.keys():
-            if p in df.columns:
-                kwargs[p] = df[p]
-            elif p == "open_":
-                kwargs[p] = df["open"]
+        df = _build_sample_ohlcv_frame(100)
+        kwargs = _build_indicator_call_kwargs(func, df)
 
         # 実際に実行
         result = func(**kwargs)

@@ -246,6 +246,17 @@ class ConditionGenerator:
             res.left_operand = name
         return res
 
+    def _build_and_groups(
+        self,
+        long_conditions: List[Union[Condition, ConditionGroup]],
+        short_conditions: List[Union[Condition, ConditionGroup]],
+    ) -> Tuple[ConditionGroup, ConditionGroup]:
+        """ロング/ショートの条件リストを同じ構造の AND グループにする。"""
+        return (
+            ConditionGroup(operator="AND", conditions=long_conditions),
+            ConditionGroup(operator="AND", conditions=short_conditions),
+        )
+
     @safe_operation(context="サイド別条件生成", is_api_call=False)
     def _create_side_conditions(
         self, indicator: IndicatorGene, side: str, name: Optional[str] = None

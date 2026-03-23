@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from ..config.constants import AUTO_STRATEGY_DEFAULTS
+from ..utils.gene_utils import normalize_enum_name
 from app.utils.error_handler import safe_operation
 
 from .calculators.calculator_factory import CalculatorFactory
@@ -49,6 +50,27 @@ class PositionSizingService:
         self._calculator_factory = CalculatorFactory()
         self._calculation_history: List[PositionSizingResult] = []
 
+    def _calculate_with_calculator(
+        self,
+        *,
+        gene,
+        account_balance: float,
+        current_price: float,
+        market_data: Optional[Dict[str, Any]],
+        trade_history: Optional[List[Dict[str, Any]]],
+    ) -> tuple[str, Dict[str, Any]]:
+        """遺伝子の手法に対応する計算機を実行する"""
+        method_val = normalize_enum_name(gene.method)
+        calculator = self._calculator_factory.create_calculator(method_val)
+        result = calculator.calculate(
+            gene,
+            account_balance,
+            current_price,
+            market_data=market_data or {},
+            trade_history=trade_history,
+        )
+        return method_val, result
+
     @safe_operation(context="ポジションサイズ計算", is_api_call=False)
     def calculate_position_size(
         self,
@@ -71,11 +93,7 @@ class PositionSizingService:
         if not validation_result["valid"]:
             method_name = "unknown"
             if gene and hasattr(gene, "method"):
-                method_name = (
-                    gene.method.value
-                    if hasattr(gene.method, "value")
-                    else str(gene.method)
-                )
+                method_name = normalize_enum_name(gene.method, default="unknown")
             return self._create_error_result(validation_result["error"], method_name)
 
         # 2. 市場データの準備
@@ -84,14 +102,10 @@ class PositionSizingService:
         )
 
         # 3. 計算機の実行
-        method_val = (
-            gene.method.value if hasattr(gene.method, "value") else str(gene.method)
-        )
-        calculator = self._calculator_factory.create_calculator(method_val)
-        result = calculator.calculate(
-            gene,
-            account_balance,
-            current_price,
+        method_val, result = self._calculate_with_calculator(
+            gene=gene,
+            account_balance=account_balance,
+            current_price=current_price,
             market_data=enhanced_market_data,
             trade_history=trade_history,
         )
@@ -267,13 +281,10 @@ class PositionSizingService:
 
         # 文字列からenumに変換
         if isinstance(method, str):
-            method_map = {
-                "half_optimal_f": PositionSizingMethod.HALF_OPTIMAL_F,
-                "volatility_based": PositionSizingMethod.VOLATILITY_BASED,
-                "fixed_ratio": PositionSizingMethod.FIXED_RATIO,
-                "fixed_quantity": PositionSizingMethod.FIXED_QUANTITY,
-            }
-            method = method_map.get(method, PositionSizingMethod.VOLATILITY_BASED)
+            try:
+                method = PositionSizingMethod(method)
+            except ValueError:
+                method = PositionSizingMethod.VOLATILITY_BASED
 
         return PositionSizingGene(
             method=method,
@@ -339,15 +350,11 @@ class PositionSizingService:
                 return 0.01  # デフォルトサイズ
 
             # 計算機の選択と実行（市場データなしで高速実行）
-            method_val = (
-                gene.method.value if hasattr(gene.method, "value") else str(gene.method)
-            )
-            calculator = self._calculator_factory.create_calculator(method_val)
-            result = calculator.calculate(
-                gene,
-                account_balance,
-                current_price,
-                market_data=market_data or {},
+            _, result = self._calculate_with_calculator(
+                gene=gene,
+                account_balance=account_balance,
+                current_price=current_price,
+                market_data=market_data,
                 trade_history=None,
             )
 

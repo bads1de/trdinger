@@ -20,6 +20,7 @@ from app.services.ml.common.utils import generate_cache_key, optimize_dtypes
 
 from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
 from .advanced_rolling_stats import AdvancedRollingStatsCalculator
+from .base_feature_calculator import sanitize_numeric_dataframe
 from .complexity_features import ComplexityFeatureCalculator
 from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
@@ -169,8 +170,10 @@ class FeatureEngineeringService:
 
             # LS Ratioの再配置
             if long_short_ratio_data is not None and not long_short_ratio_data.empty:
-                long_short_ratio_data = (
-                    long_short_ratio_data.reindex(ohlcv_data.index).ffill().fillna(0)
+                long_short_ratio_data = sanitize_numeric_dataframe(
+                    long_short_ratio_data.reindex(ohlcv_data.index),
+                    fill_value=0.0,
+                    forward_fill=True,
                 )
 
             # デフォルトの計算期間
@@ -285,13 +288,8 @@ class FeatureEngineeringService:
             # データ前処理
             logger.info("統計的手法による特徴量前処理を実行中...")
             try:
-                # 数値列の一括処理
-                num_cols = result_df.select_dtypes(include=[np.number]).columns
-                result_df[num_cols] = (
-                    result_df[num_cols]
-                    .replace([np.inf, -np.inf], np.nan)
-                    .ffill()
-                    .fillna(0.0)
+                result_df = sanitize_numeric_dataframe(
+                    result_df, fill_value=0.0, forward_fill=True
                 )
                 logger.info("データ前処理完了")
             except Exception as e:
@@ -445,9 +443,8 @@ class FeatureEngineeringService:
         # 5. 重複カラムの削除と欠損値処理
         result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
 
-        num_cols = result_df.select_dtypes(include=[np.number]).columns
-        result_df[num_cols] = (
-            result_df[num_cols].replace([np.inf, -np.inf], np.nan).ffill().fillna(0.0)
+        result_df = sanitize_numeric_dataframe(
+            result_df, fill_value=0.0, forward_fill=True
         )
 
         logger.info(
@@ -547,7 +544,9 @@ class FeatureEngineeringService:
             expanded_df = pd.concat([expanded_df] + lag_dfs + [interaction_df], axis=1)
 
         # クリーンアップ
-        expanded_df = expanded_df.replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
+        expanded_df = sanitize_numeric_dataframe(
+            expanded_df, fill_value=0.0, forward_fill=True
+        )
         # 重複削除
         expanded_df = expanded_df.loc[:, ~expanded_df.columns.duplicated()]
 

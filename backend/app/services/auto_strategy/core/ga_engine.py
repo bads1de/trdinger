@@ -7,7 +7,6 @@ DEAPライブラリを使用したGA実装。
 import logging
 import random
 import time
-from dataclasses import fields
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -16,11 +15,12 @@ from deap import base, creator, tools
 from app.services.backtest.backtest_service import BacktestService
 
 from ..config.ga import GAConfig
+from ..genes import StrategyGene
+from ..genes.genetic_utils import GeneticUtils
 from ..generators.random_gene_generator import RandomGeneGenerator
 from .fitness_sharing import FitnessSharing
 from .individual_evaluator import IndividualEvaluator
 from .parallel_evaluator import ParallelEvaluator
-from ..genes import StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,25 @@ def mutate_strategy_gene(gene, config, mutation_rate=0.1):
     return gene.mutate(config, mutation_rate)
 
 
+def _gene_kwargs(gene) -> Dict[str, Any]:
+    """StrategyGene系オブジェクトをコンストラクタ用のkwargsに変換"""
+    return GeneticUtils.extract_gene_params(gene)
+
+
+def _invalidate_individual_cache(individual) -> None:
+    """評価済み個体のキャッシュを無効化"""
+    if hasattr(individual, "fitness") and hasattr(individual.fitness, "values"):
+        del individual.fitness.values
+    if hasattr(individual, "_feature_vector"):
+        del individual._feature_vector
+
+
+def _set_fitness_values(individuals, fitnesses) -> None:
+    """個体列に fitness.values をまとめて設定"""
+    for ind, fit in zip(individuals, fitnesses):
+        ind.fitness.values = fit
+
+
 def create_deap_mutate_wrapper(individual_class, population, config):
     """
     DEAP用の突然変異ラッパー関数を作成します。
@@ -84,11 +103,7 @@ def create_deap_mutate_wrapper(individual_class, population, config):
 
         # StrategyGeneをIndividualに変換
         # StrategyGeneを継承しているため、フィールドを展開して初期化
-        gene_dict = {
-            f.name: getattr(mutated_strategy, f.name)
-            for f in fields(mutated_strategy)
-        }
-        return (individual_class(**gene_dict),)
+        return (individual_class(**_gene_kwargs(mutated_strategy)),)
 
     return mutate_wrapper
 
@@ -188,17 +203,8 @@ class EvolutionRunner:
                         new_child1, new_child2 = self.toolbox.mate(child1, child2)
                         offspring[i] = new_child1
                         offspring[i + 1] = new_child2
-                        # フィットネスの削除（再評価のため）
-                        if hasattr(offspring[i].fitness, "values"):
-                            del offspring[i].fitness.values
-                        if hasattr(offspring[i + 1].fitness, "values"):
-                            del offspring[i + 1].fitness.values
-                        
-                        # 特徴ベクトルキャッシュの削除
-                        if hasattr(offspring[i], "_feature_vector"):
-                            del offspring[i]._feature_vector
-                        if hasattr(offspring[i + 1], "_feature_vector"):
-                            del offspring[i + 1]._feature_vector
+                        _invalidate_individual_cache(offspring[i])
+                        _invalidate_individual_cache(offspring[i + 1])
 
                 # 突然変異
                 # インデックスを使ってリストを直接更新する（mutateが新しいオブジェクトを返すため）
@@ -209,12 +215,7 @@ class EvolutionRunner:
                         result = self.toolbox.mutate(mutant)
                         new_mutant = result[0]
                         offspring[i] = new_mutant
-                        if hasattr(offspring[i].fitness, "values"):
-                            del offspring[i].fitness.values
-                        
-                        # 特徴ベクトルキャッシュの削除
-                        if hasattr(offspring[i], "_feature_vector"):
-                            del offspring[i]._feature_vector
+                        _invalidate_individual_cache(offspring[i])
 
                 # 未評価個体の評価（並列評価対応）
                 invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
@@ -257,13 +258,11 @@ class EvolutionRunner:
         if self.parallel_evaluator:
             # 並列評価
             fitnesses = self.parallel_evaluator.evaluate_population(population)
-            for ind, fit in zip(population, fitnesses):
-                ind.fitness.values = fit
+            _set_fitness_values(population, fitnesses)
         else:
             # シーケンシャル評価（フォールバック）
             fitnesses = list(self.toolbox.map(self.toolbox.evaluate, population))
-            for ind, fit in zip(population, fitnesses):
-                ind.fitness.values = fit
+            _set_fitness_values(population, fitnesses)
 
         return population
 
@@ -280,13 +279,11 @@ class EvolutionRunner:
         if self.parallel_evaluator:
             # 並列評価
             fitnesses = self.parallel_evaluator.evaluate_population(invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
+            _set_fitness_values(invalid_ind, fitnesses)
         else:
             # シーケンシャル評価（フォールバック）
             fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
+            _set_fitness_values(invalid_ind, fitnesses)
 
     def _update_dynamic_objective_scalars(
         self, population: List[Any], config: Any
@@ -642,29 +639,7 @@ class GeneticAlgorithmEngine:
                     individual_class = self.deap_setup.get_individual_class()
                     for i in range(num_to_inject):
                         seed = seeds[i % len(seeds)]
-                        # DEAP Individual クラスにラップ
-                        individual = individual_class()
-                        # StrategyGeneの属性をコピー
-                        for attr in [
-                            "id",
-                            "indicators",
-                            "long_entry_conditions",
-                            "short_entry_conditions",
-                            "stateful_conditions",
-                            "risk_management",
-                            "tpsl_gene",
-                            "long_tpsl_gene",
-                            "short_tpsl_gene",
-                            "position_sizing_gene",
-                            "entry_gene",
-                            "long_entry_gene",
-                            "short_entry_gene",
-                            "tool_genes",
-                            "metadata",
-                        ]:
-                            if hasattr(seed, attr):
-                                setattr(individual, attr, getattr(seed, attr))
-                        population[i] = individual
+                        population[i] = individual_class(**_gene_kwargs(seed))
                     logger.info(
                         f"シード戦略を {num_to_inject} 個注入しました "
                         f"(注入率: {config.seed_injection_rate * 100:.1f}%)"
@@ -1006,8 +981,7 @@ class GeneticAlgorithmEngine:
             # StrategyGeneのフィールドを使ってIndividualインスタンスを作成
             # IndividualはStrategyGeneを継承しているため、キーワード引数で初期化可能
             # asdictは再帰的に辞書化してしまうため使用しない
-            gene_dict = {f.name: getattr(gene, f.name) for f in fields(gene)}
-            return self.individual_class(**gene_dict)
+            return self.individual_class(**_gene_kwargs(gene))
 
         except Exception as e:
             logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")
