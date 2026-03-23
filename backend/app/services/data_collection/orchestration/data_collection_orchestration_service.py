@@ -19,6 +19,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..historical.historical_data_service import HistoricalDataService
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +202,7 @@ class DataCollectionOrchestrationService:
 
             for timeframe in timeframes:
                 background_tasks.add_task(
-                    self._collect_historical_background, "BTC/USDT:USDT", timeframe, db
+                    self._collect_historical_background, DEFAULT_MARKET_SYMBOL, timeframe, db
                 )
 
             return api_response(
@@ -243,7 +244,7 @@ class DataCollectionOrchestrationService:
         try:
             # 取引ペアと時間軸の定義
             symbols = [
-                "BTC/USDT:USDT",
+                DEFAULT_MARKET_SYMBOL,
             ]
             timeframes = unified_config.market.supported_timeframes
 
@@ -413,7 +414,7 @@ class DataCollectionOrchestrationService:
         try:
             # 取引ペアと時間軸の定義
             symbols = [
-                "BTC/USDT:USDT",
+                DEFAULT_MARKET_SYMBOL,
             ]
             timeframes = unified_config.market.supported_timeframes
 

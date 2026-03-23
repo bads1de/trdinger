@@ -16,6 +16,7 @@ from app.api.dependencies import (
 from app.services.auto_strategy import AutoStrategyService
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import result_response
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class GAGenerationRequest(BaseModel):
             "example": {
                 "experiment_name": "BTC_Strategy_Gen_001",
                 "base_config": {
-                    "symbol": "BTC/USDT:USDT",
+                    "symbol": DEFAULT_MARKET_SYMBOL,
                     "timeframe": "1h",
                     "start_date": "2024-01-01",
                     "end_date": "2024-12-19",

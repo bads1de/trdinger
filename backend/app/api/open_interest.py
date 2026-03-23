@@ -15,13 +15,19 @@ from app.api.dependencies import get_open_interest_orchestration_service
 from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
-from app.utils.error_handler import ErrorHandler
+from app.utils.error_handler import api_safe_execute
 from database.connection import get_db
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
-router = APIRouter(prefix="/api/open-interest", tags=["open-interest"])
+router = APIRouter(
+    prefix="/api/open-interest", 
+    tags=["open-interest"],
+    dependencies=[Depends(ensure_db_initialized)]
+)
 
 
 @router.get("/")
+@api_safe_execute(message="オープンインタレストデータ取得エラー")
 async def get_open_interest_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
@@ -35,22 +41,17 @@ async def get_open_interest_data(
     """
     オープンインタレストデータを取得します
     """
-
-    async def _get_data():
-        return await orchestration_service.get_open_interest_data(
-            symbol=symbol,
-            start_date=start_date,
-            end_date=end_date,
-            limit=limit,
-            db_session=db,
-        )
-
-    return await ErrorHandler.safe_execute_async(
-        _get_data, message="オープンインタレストデータ取得エラー"
+    return await orchestration_service.get_open_interest_data(
+        symbol=symbol,
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit,
+        db_session=db,
     )
 
 
 @router.post("/collect")
+@api_safe_execute(message="オープンインタレストデータ収集エラー")
 async def collect_open_interest_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
     limit: Optional[int] = Query(
@@ -79,23 +80,16 @@ async def collect_open_interest_data(
     Raises:
         HTTPException: パラメータが無効な場合やAPI/データベースエラーが発生した場合
     """
-
-    async def _collect_open_interest():
-        ensure_db_initialized()
-
-        return await orchestration_service.collect_open_interest_data(
-            symbol=symbol,
-            limit=limit,
-            fetch_all=fetch_all,
-            db_session=db,
-        )
-
-    return await ErrorHandler.safe_execute_async(
-        _collect_open_interest, message="オープンインタレストデータ収集エラー"
+    return await orchestration_service.collect_open_interest_data(
+        symbol=symbol,
+        limit=limit,
+        fetch_all=fetch_all,
+        db_session=db,
     )
 
 
 @router.post("/bulk-collect")
+@api_safe_execute(message="オープンインタレスト一括収集エラー")
 async def bulk_collect_open_interest(
     orchestration_service: OpenInterestOrchestrationService = Depends(
         get_open_interest_orchestration_service
@@ -117,20 +111,12 @@ async def bulk_collect_open_interest(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
+    symbols = [
+        DEFAULT_MARKET_SYMBOL,
+    ]
 
-    async def _bulk_collect():
-        ensure_db_initialized()
-
-        symbols = [
-            "BTC/USDT:USDT",
-        ]
-
-        return await orchestration_service.collect_bulk_open_interest_data(
-            symbols=symbols, db_session=db
-        )
-
-    return await ErrorHandler.safe_execute_async(
-        _bulk_collect, message="オープンインタレスト一括収集エラー"
+    return await orchestration_service.collect_bulk_open_interest_data(
+        symbols=symbols, db_session=db
     )
 
 

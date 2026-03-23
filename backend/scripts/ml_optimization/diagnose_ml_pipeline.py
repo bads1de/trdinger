@@ -4,24 +4,28 @@ ML Pipeline 診断スクリプト
 現在のMLパイプラインの問題点を特定するための包括的な診断を実行します。
 """
 
-import logging
-import sys
+# プロジェクトルートをパスに追加（最初に配置）
 from pathlib import Path
-import pandas as pd
-import numpy as np
-from datetime import datetime
-
-# プロジェクトルートをパスに追加
 project_root = Path(__file__).resolve().parents[2]
+import sys
 sys.path.insert(0, str(project_root))
 
+# 標準ライブラリのインポート
+import logging
+from datetime import datetime
+
+# サードパーティライブラリのインポート
+import numpy as np
+import pandas as pd
+
+# プロジェクト内のモジュールのインポート
 from app.services.ml.common.common_data import CommonData
+from app.services.ml.feature_engineering.feature_engineering_service import (
+    DEFAULT_FEATURE_ALLOWLIST,
+    FeatureEngineeringService,
+)
 from app.services.ml.label_generation.label_generation_service import (
     LabelGenerationService,
-)
-from app.services.ml.feature_engineering.feature_engineering_service import (
-    FeatureEngineeringService,
-    DEFAULT_FEATURE_ALLOWLIST,
 )
 
 logging.basicConfig(

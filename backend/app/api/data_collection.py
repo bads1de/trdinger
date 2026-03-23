@@ -15,16 +15,22 @@ from app.api.dependencies import get_data_collection_orchestration_service
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
-from app.utils.error_handler import ErrorHandler
+from app.utils.error_handler import api_safe_execute
 from database.connection import get_db
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
-router = APIRouter(prefix="/api/data-collection", tags=["data-collection"])
+router = APIRouter(
+    prefix="/api/data-collection", 
+    tags=["data-collection"],
+    dependencies=[Depends(ensure_db_initialized)]
+)
 
 
 @router.post("/historical")
+@api_safe_execute(message="履歴データ収集操作エラー")
 async def collect_historical_data(
     background_tasks: BackgroundTasks,
-    symbol: str = "BTC/USDT:USDT",
+    symbol: str = DEFAULT_MARKET_SYMBOL,
     timeframe: str = "1h",
     force_update: bool = False,
     start_date: Optional[str] = None,
@@ -35,31 +41,16 @@ async def collect_historical_data(
 ) -> Dict:
     """
     履歴データを包括的に収集
-
-    Args:
-        symbol: 取引ペア（デフォルト: BTC/USDT:USDT）
-        timeframe: 時間軸（デフォルト: 1h）
-        force_update: 強制更新（データが存在しても上書き）
-        start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
-        db: データベースセッション
-
-    Returns:
-        収集開始レスポンスまたは既存データ情報
     """
-
-    async def _execute():
-        ensure_db_initialized()
-
-        return await orchestration_service.start_historical_data_collection(
-            symbol, timeframe, background_tasks, db, force_update, start_date
-        )
-
-    return await ErrorHandler.safe_execute_async(_execute)
+    return await orchestration_service.start_historical_data_collection(
+        symbol, timeframe, background_tasks, db, force_update, start_date
+    )
 
 
 @router.post("/bulk-incremental-update")
+@api_safe_execute(message="一括差分データ更新エラー")
 async def update_bulk_incremental_data(
-    symbol: str = "BTC/USDT:USDT",
+    symbol: str = DEFAULT_MARKET_SYMBOL,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
@@ -67,24 +58,12 @@ async def update_bulk_incremental_data(
 ) -> Dict:
     """
     一括差分データを更新（OHLCV、FR、OI）
-
-    OHLCVは全時間足（15m, 30m, 1h, 4h, 1d）を自動的に処理します。
-
-    Args:
-        symbol: 取引ペア（デフォルト: BTC/USDT:USDT）
-        db: データベースセッション
-
-    Returns:
-        一括差分更新結果
     """
-
-    async def _execute():
-        return await orchestration_service.execute_bulk_incremental_update(symbol, db)
-
-    return await ErrorHandler.safe_execute_async(_execute)
+    return await orchestration_service.execute_bulk_incremental_update(symbol, db)
 
 
 @router.post("/bulk-historical")
+@api_safe_execute(message="一括履歴データ収集エラー")
 async def collect_bulk_historical_data(
     background_tasks: BackgroundTasks,
     force_update: bool = True,
@@ -96,28 +75,14 @@ async def collect_bulk_historical_data(
 ) -> Dict:
     """
     全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
-
-    Args:
-        background_tasks: バックグラウンドタスク
-        force_update: 強制更新（データが存在しても上書き）
-        start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
-        db: データベースセッション
-
-    Returns:
-        一括収集開始レスポンス
     """
-
-    async def _execute():
-        ensure_db_initialized()
-
-        return await orchestration_service.start_bulk_historical_data_collection(
-            background_tasks, db, force_update, start_date
-        )
-
-    return await ErrorHandler.safe_execute_async(_execute)
+    return await orchestration_service.start_bulk_historical_data_collection(
+        background_tasks, db, force_update, start_date
+    )
 
 
 @router.get("/status/{symbol:path}/{timeframe}")
+@api_safe_execute(message="データ収集状況確認エラー")
 async def get_collection_status(
     symbol: str,
     timeframe: str,
@@ -130,33 +95,18 @@ async def get_collection_status(
 ) -> Dict:
     """
     データ収集状況を確認
-
-    Args:
-        symbol: 取引ペア
-        timeframe: 時間軸
-        auto_fetch: データが存在しない場合に自動フェッチを開始するか
-        background_tasks: バックグラウンドタスク
-        db: データベースセッション
-
-    Returns:
-        データ収集状況
     """
-
-    async def _get_collection_status():
-        ensure_db_initialized()
-
-        return await orchestration_service.get_collection_status(
-            symbol=symbol,
-            timeframe=timeframe,
-            background_tasks=background_tasks,
-            auto_fetch=auto_fetch,
-            db=db,
-        )
-
-    return await ErrorHandler.safe_execute_async(_get_collection_status)
+    return await orchestration_service.get_collection_status(
+        symbol=symbol,
+        timeframe=timeframe,
+        background_tasks=background_tasks,
+        auto_fetch=auto_fetch,
+        db=db,
+    )
 
 
 @router.post("/all/bulk-collect")
+@api_safe_execute(message="全データ一括収集エラー")
 async def collect_all_data_bulk(
     background_tasks: BackgroundTasks,
     force_update: bool = False,
@@ -168,33 +118,19 @@ async def collect_all_data_bulk(
 ) -> Dict:
     """
     全データ（OHLCV・Funding Rate・Open Interest）を一括収集
-
-    Args:
-        background_tasks: バックグラウンドタスク
-        force_update: 強制更新（データが存在しても上書き）
-        start_date: 開始日付（YYYY-MM-DD形式、指定しない場合は2020-03-25）
-        db: データベースセッション
-
-    Returns:
-        全データ一括収集開始レスポンス
     """
-
-    async def _execute():
-        ensure_db_initialized()
-
-        # 全データ一括収集サービスにも上書きオプションを追加する必要があるため、
-        # 一旦はbulk-historicalを使用する
-        return await orchestration_service.start_bulk_historical_data_collection(
-            background_tasks, db, force_update, start_date
-        )
-
-    return await ErrorHandler.safe_execute_async(_execute)
+    # 全データ一括収集サービスにも上書きオプションを追加する必要があるため、
+    # 一旦はbulk-historicalを使用する
+    return await orchestration_service.start_bulk_historical_data_collection(
+        background_tasks, db, force_update, start_date
+    )
 
 
 @router.post("/historical-oi")
+@api_safe_execute(message="OIデータ履歴収集エラー")
 async def collect_historical_oi_data(
     background_tasks: BackgroundTasks,
-    symbol: str = "BTC/USDT:USDT",
+    symbol: str = DEFAULT_MARKET_SYMBOL,
     interval: str = "1h",
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
@@ -203,28 +139,10 @@ async def collect_historical_oi_data(
 ) -> Dict:
     """
     OI（Open Interest）履歴データを収集
-
-    2020年以降の全OIデータを収集します。
-    既存のデータは削除され、再取得されます。
-
-    Args:
-        background_tasks: バックグラウンドタスク
-        symbol: 取引ペア（デフォルト: BTC/USDT:USDT）
-        interval: 時間軸（デフォルト: 1h）
-        db: データベースセッション
-
-    Returns:
-        収集開始レスポンス
     """
-
-    async def _execute():
-        ensure_db_initialized()
-
-        return await orchestration_service.start_historical_oi_collection(
-            symbol, interval, background_tasks, db
-        )
-
-    return await ErrorHandler.safe_execute_async(_execute)
+    return await orchestration_service.start_historical_oi_collection(
+        symbol, interval, background_tasks, db
+    )
 
 
 

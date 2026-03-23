@@ -1,3 +1,4 @@
+from app.config.unified_config import SUPPORTED_TIMEFRAMES
 """
 Settings クラス群
 
@@ -40,7 +41,7 @@ from .constants import (
     POSITION_SIZING_LIMITS,
     POSITION_SIZING_METHODS,
     SUPPORTED_SYMBOLS,
-    SUPPORTED_TIMEFRAMES,
+    
     TPSL_LIMITS,
     TPSL_METHODS,
 )

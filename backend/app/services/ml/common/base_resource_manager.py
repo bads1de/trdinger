@@ -95,16 +95,8 @@ class BaseResourceManager(ABC):
 
     def _get_memory_usage(self) -> float:
         """現在のメモリ使用量を取得（MB単位）"""
-        try:
-            import psutil
-
-            process = psutil.Process()
-            return process.memory_info().rss / 1024 / 1024
-        except ImportError:
-            return 0.0
-        except Exception as e:
-            logger.warning(f"メモリ使用量取得エラー: {e}")
-            return 0.0
+        from app.utils.system import get_memory_usage_mb
+        return get_memory_usage_mb()
 
 
 

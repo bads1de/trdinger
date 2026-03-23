@@ -167,7 +167,7 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
                 trend_indicators.append(name)
 
     # MTF設定の準備
-    from ..config.constants import SUPPORTED_TIMEFRAMES
+    from app.config.unified_config import SUPPORTED_TIMEFRAMES
 
     available_timeframes = config.available_timeframes or SUPPORTED_TIMEFRAMES
 

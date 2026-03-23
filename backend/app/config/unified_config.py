@@ -8,9 +8,18 @@ SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
-from app.services.auto_strategy.config.constants import SUPPORTED_TIMEFRAMES
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+SUPPORTED_TIMEFRAMES = [
+    "1m",
+    "5m",
+    "15m",
+    "30m",
+    "1h",
+    "4h",
+    "1d",
+]
 
 DEFAULT_ENSEMBLE_ALGORITHMS = ("lightgbm", "xgboost", "catboost")
 DEFAULT_MARKET_EXCHANGE = "bybit"

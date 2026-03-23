@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
-from app.services.auto_strategy.config.constants import SUPPORTED_TIMEFRAMES
+from app.config.unified_config import SUPPORTED_TIMEFRAMES
 from ..common.utils import calculate_volatility_atr, calculate_volatility_std
 from .trend_scanning import TrendScanning
 from .triple_barrier import TripleBarrier

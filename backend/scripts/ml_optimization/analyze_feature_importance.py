@@ -44,13 +44,13 @@ def analyze_feature_importance(results_dir: str):
     # 特徴量重要度を取得
     if hasattr(model, "feature_importances_"):
         importances = model.feature_importances_
-        if loaded_feature_names: # 読み込んだ特徴量名を優先
+        if loaded_feature_names:  # 読み込んだ特徴量名を優先
             feature_names = loaded_feature_names
-        elif hasattr(model, "feature_names_"): # CatBoostなど
+        elif hasattr(model, "feature_names_"):  # CatBoostなど
             feature_names = model.feature_names_
-        elif hasattr(model, "feature_name_") and model.feature_name_: # LightGBMなど
+        elif hasattr(model, "feature_name_") and model.feature_name_:  # LightGBMなど
             feature_names = model.feature_name_
-        else: # どちらもなければGeneric名
+        else:  # どちらもなければGeneric名
             feature_names = [f"Feature_{i}" for i in range(len(importances))]
     else:
         print("このモデルには feature_importances_ がありません")
@@ -62,7 +62,7 @@ def analyze_feature_importance(results_dir: str):
     ).sort_values("importance", ascending=False)
 
     # 統計情報
-    print(f"\n=== 特徴量重要度統計 ===")
+    print("\n=== 特徴量重要度統計 ===")
     print(f"総特徴量数: {len(importance_df)}")
     print(f"平均重要度: {importance_df['importance'].mean():.6f}")
     print(f"中央値重要度: {importance_df['importance'].median():.6f}")
@@ -71,25 +71,25 @@ def analyze_feature_importance(results_dir: str):
 
     # パーセンタイル
     percentiles = [10, 25, 50, 75, 90]
-    print(f"\nパーセンタイル:")
+    print("\nパーセンタイル:")
     for p in percentiles:
         val = np.percentile(importance_df["importance"], p)
         print(f"  {p}%ile: {val:.6f}")
 
     # 上位30特徴量
-    print(f"\n=== 上位30特徴量（最も重要） ===")
+    print("\n=== 上位30特徴量（最も重要） ===")
     top_30 = importance_df.head(30)
     for idx, row in top_30.iterrows():
         print(f"{row['feature']:45s} | {row['importance']:.6f}")
 
     # 下位30特徴量
-    print(f"\n=== 下位30特徴量（削除候補） ===")
+    print("\n=== 下位30特徴量（削除候補） ===")
     bottom_30 = importance_df.tail(30)
     for idx, row in bottom_30.iterrows():
         print(f"{row['feature']:45s} | {row['importance']:.6f}")
 
     # 新規追加した特徴量の分析
-    print(f"\n=== 新規追加特徴量の重要度 ===")
+    print("\n=== 新規追加特徴量の重要度 ===")
 
     new_features_keywords = [
         "POC_Distance",
@@ -137,8 +137,8 @@ def analyze_feature_importance(results_dir: str):
         print("新規特徴量が検出されませんでした")
 
     # 削除推奨特徴量（複数の基準で判定）
-    print(f"\n=== 削除推奨分析 ===")
-    
+    print("\n=== 削除推奨分析 ===")
+
     # 基準1: 平均の10%未満
     threshold_10 = importance_df["importance"].mean() * 0.1
     low_importance_10 = importance_df[importance_df["importance"] < threshold_10]
@@ -151,8 +151,12 @@ def analyze_feature_importance(results_dir: str):
 
     # 基準3: 中央値の50%未満
     threshold_median_50 = importance_df["importance"].median() * 0.5
-    low_importance_median = importance_df[importance_df["importance"] < threshold_median_50]
-    print(f"基準3 (中央値の50%未満 < {threshold_median_50:.6f}): {len(low_importance_median)}件")
+    low_importance_median = importance_df[
+        importance_df["importance"] < threshold_median_50
+    ]
+    print(
+        f"基準3 (中央値の50%未満 < {threshold_median_50:.6f}): {len(low_importance_median)}件"
+    )
 
     print("\n削除候補詳細 (基準2: 平均の20%未満):")
     for idx, row in low_importance_20.iterrows():
@@ -189,13 +193,13 @@ def analyze_feature_importance(results_dir: str):
 if __name__ == "__main__":
     # 最新の結果ディレクトリを自動検出
     results_base = Path(__file__).parent.parent.parent / "results" / "ml_pipeline"
-    
+
     # ディレクトリが存在するか確認
     if not results_base.exists():
         print(f"ディレクトリが見つかりません: {results_base}")
         # テスト用のダミー実行を避けるため、ここで終了
         sys.exit(0)
-        
+
     runs = list(results_base.glob("run_*"))
     if not runs:
         print(f"実行結果が見つかりません: {results_base}")
@@ -205,6 +209,3 @@ if __name__ == "__main__":
 
     print(f"最新の実行結果: {latest_dir}")
     analyze_feature_importance(str(latest_dir))
-
-
-

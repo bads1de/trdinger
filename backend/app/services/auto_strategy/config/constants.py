@@ -68,22 +68,15 @@ DATA_SOURCES = [
 ]
 
 # === 取引ペア定数 ===
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL, SUPPORTED_TIMEFRAMES  # noqa: F401
+
 SUPPORTED_SYMBOLS = [
-    "BTC/USDT:USDT",
+    DEFAULT_MARKET_SYMBOL,
 ]
 
-DEFAULT_SYMBOL = "BTC/USDT:USDT"
+DEFAULT_SYMBOL = DEFAULT_MARKET_SYMBOL
 
 # === 時間軸定数 ===
-SUPPORTED_TIMEFRAMES = [
-    "1m",
-    "5m",
-    "15m",
-    "30m",
-    "1h",
-    "4h",
-    "1d",
-]
 
 DEFAULT_TIMEFRAME = "1h"
 

@@ -223,6 +223,33 @@ class ErrorHandler:
             logger.error(f"API例外処理: {message} - {e}", exc_info=True)
             raise HTTPException(status_code=status_code, detail=message)
 
+    @staticmethod
+    def api_safe_execute(
+        message: str = "Internal Server Error",
+        status_code: int = 500,
+    ):
+        """
+        APIエンドポイント用の安全な実行デコレータ
+
+        Args:
+            message: エラーメッセージ
+            status_code: エラー時のHTTPステータスコード
+        """
+        def decorator(func: Callable[..., Awaitable[Any]]):
+            import functools
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                try:
+                    return await func(*args, **kwargs)
+                except HTTPException as e:
+                    logger.error(f"API例外処理: {message} - {e.detail}", exc_info=True)
+                    raise e
+                except Exception as e:
+                    logger.error(f"API例外処理: {message} - {e}", exc_info=True)
+                    raise HTTPException(status_code=status_code, detail=message)
+            return wrapper
+        return decorator
+
     # --- タイムアウト処理 ---
 
     @staticmethod
@@ -495,6 +522,7 @@ def operation_context(operation_name: str, log_memory: bool = False):
 # 標準的なエイリアス
 handle_api_exception = ErrorHandler.safe_execute_async
 safe_execute = ErrorHandler.safe_execute
+api_safe_execute = ErrorHandler.api_safe_execute
 safe_ml_operation = safe_operation
 ml_operation_context = operation_context
 

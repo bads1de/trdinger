@@ -12,12 +12,9 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
+from app.utils.data_processing.data_processor import _replace_inf_with_nan
+
 logger = logging.getLogger(__name__)
-
-
-def _replace_inf_with_nan(series: pd.Series) -> pd.Series:
-    """Series 内の inf を NaN に揃える。"""
-    return series.replace([np.inf, -np.inf], np.nan)
 
 
 def sanitize_numeric_dataframe(

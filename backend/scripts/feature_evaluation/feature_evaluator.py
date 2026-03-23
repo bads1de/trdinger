@@ -62,7 +62,6 @@ from scripts.feature_evaluation.common_feature_evaluator import (
 )
 from app.services.ml.optimization.optuna_optimizer import (
     OptunaOptimizer,
-    ParameterSpace,
 )
 from app.services.ml.optimization.ensemble_parameter_space import EnsembleParameterSpace
 
@@ -1214,6 +1213,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-

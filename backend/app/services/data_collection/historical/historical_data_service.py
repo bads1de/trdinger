@@ -16,6 +16,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..bybit.market_data_service import BybitMarketDataService
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class HistoricalDataService:
 
     async def collect_historical_data(
         self,
-        symbol: str = "BTC/USDT:USDT",
+        symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
     ) -> int:
@@ -82,7 +83,7 @@ class HistoricalDataService:
 
     async def collect_historical_data_with_start_date(
         self,
-        symbol: str = "BTC/USDT:USDT",
+        symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
         since_timestamp: Optional[int] = None,
@@ -203,7 +204,7 @@ class HistoricalDataService:
 
     async def collect_bulk_incremental_data(
         self,
-        symbol: str = "BTC/USDT:USDT",
+        symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
         ohlcv_repository: Optional[OHLCVRepository] = None,
         funding_rate_repository: Optional[FundingRateRepository] = None,

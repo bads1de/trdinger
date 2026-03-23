@@ -14,13 +14,19 @@ from app.api.dependencies import get_funding_rate_orchestration_service
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
-from app.utils.error_handler import ErrorHandler
+from app.utils.error_handler import api_safe_execute
 from database.connection import get_db
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
-router = APIRouter(prefix="/api/funding-rates", tags=["funding-rates"])
+router = APIRouter(
+    prefix="/api/funding-rates", 
+    tags=["funding-rates"],
+    dependencies=[Depends(ensure_db_initialized)]
+)
 
 
 @router.get("/")
+@api_safe_execute(message="ファンディングレートデータ取得エラー")
 async def get_funding_rates(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
     limit: Optional[int] = Query(100, description="取得するデータ数（1-1000）"),
@@ -50,30 +56,25 @@ async def get_funding_rates(
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-
-    async def _get_funding_rates_data():
-        funding_rates = await orchestration_service.get_funding_rate_data(
-            symbol=symbol,
-            limit=limit or 100,
-            start_date=start_date,
-            end_date=end_date,
-            db_session=db,
-        )
-        return {
-            "success": True,
-            "data": {
-                "symbol": symbol,
-                "count": len(funding_rates),
-                "funding_rates": funding_rates,
-            },
-        }
-
-    return await ErrorHandler.safe_execute_async(
-        _get_funding_rates_data, message="ファンディングレートデータ取得エラー"
+    funding_rates = await orchestration_service.get_funding_rate_data(
+        symbol=symbol,
+        limit=limit or 100,
+        start_date=start_date,
+        end_date=end_date,
+        db_session=db,
     )
+    return {
+        "success": True,
+        "data": {
+            "symbol": symbol,
+            "count": len(funding_rates),
+            "funding_rates": funding_rates,
+        },
+    }
 
 
 @router.post("/collect")
+@api_safe_execute(message="ファンディングレートデータ収集エラー")
 async def collect_funding_rate_data(
     symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
     limit: Optional[int] = Query(
@@ -102,23 +103,16 @@ async def collect_funding_rate_data(
     Raises:
         HTTPException: パラメータが無効な場合やAPI/データベースエラーが発生した場合
     """
-
-    async def _collect_rates():
-        ensure_db_initialized()
-
-        return await orchestration_service.collect_funding_rate_data(
-            symbol=symbol,
-            limit=limit or 100,
-            fetch_all=fetch_all,
-            db_session=db,
-        )
-
-    return await ErrorHandler.safe_execute_async(
-        _collect_rates, message="ファンディングレートデータ収集エラー"
+    return await orchestration_service.collect_funding_rate_data(
+        symbol=symbol,
+        limit=limit or 100,
+        fetch_all=fetch_all,
+        db_session=db,
     )
 
 
 @router.post("/bulk-collect")
+@api_safe_execute(message="ファンディングレート一括収集エラー")
 async def bulk_collect_funding_rates(
     orchestration_service: FundingRateOrchestrationService = Depends(
         get_funding_rate_orchestration_service
@@ -140,20 +134,12 @@ async def bulk_collect_funding_rates(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
+    symbols = [
+        DEFAULT_MARKET_SYMBOL,
+    ]
 
-    async def _bulk_collect():
-        ensure_db_initialized()
-
-        symbols = [
-            "BTC/USDT:USDT",
-        ]
-
-        return await orchestration_service.collect_bulk_funding_rate_data(
-            symbols=symbols, db_session=db
-        )
-
-    return await ErrorHandler.safe_execute_async(
-        _bulk_collect, message="ファンディングレート一括収集エラー"
+    return await orchestration_service.collect_bulk_funding_rate_data(
+        symbols=symbols, db_session=db
     )
 
 

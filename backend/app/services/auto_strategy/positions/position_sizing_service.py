@@ -18,6 +18,7 @@ from app.utils.error_handler import safe_operation
 from .calculators.calculator_factory import CalculatorFactory
 from .market_data_handler import MarketDataHandler
 from .risk_metrics import calculate_expected_shortfall, calculate_historical_var
+from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class PositionSizingService:
         gene,
         account_balance: float,
         current_price: float,
-        symbol: str = "BTC/USDT:USDT",
+        symbol: str = DEFAULT_MARKET_SYMBOL,
         market_data: Optional[Dict[str, Any]] = None,
         trade_history: Optional[List[Dict[str, Any]]] = None,
         use_cache: bool = True,
