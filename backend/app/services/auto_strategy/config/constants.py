@@ -4,6 +4,7 @@ Auto Strategy 共通定数とEnum定義
 
 from enum import Enum
 
+
 # === 列挙型定義 ===
 
 

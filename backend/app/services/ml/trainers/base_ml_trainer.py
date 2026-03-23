@@ -46,16 +46,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def __init__(
         self,
         trainer_config: Optional[Dict[str, Any]] = None,
-        trainer_type: Optional[str] = None,
-        model_type: Optional[str] = None,
     ):
         """
         初期化
 
         Args:
             trainer_config: トレーナー設定
-            trainer_type: トレーナータイプ（互換性のため維持）
-            model_type: モデルタイプ（互換性のため維持）
         """
         # BaseResourceManagerの初期化
         super().__init__()
@@ -81,12 +77,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         )
 
         self.trainer_config = trainer_config or {}
-
-        # 以下のプロパティはサブクラスで使用される可能性があるため保持（互換性）
-        self.trainer_type = trainer_type or self.trainer_config.get("type", "single")
-        self.model_type = model_type or self.trainer_config.get(
-            "model_type", "lightgbm"
-        )
 
         self.scaler = StandardScaler()
         self.feature_columns = None

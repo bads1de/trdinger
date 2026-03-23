@@ -39,6 +39,19 @@ class TestParameterConfig:
         assert config.get_range_for_preset("long") == (20, 50)
         assert config.get_range_for_preset("unknown") == (1, 100)
 
+    def test_validate_value_even_only(self):
+        """even_only 制約が検証に反映されること"""
+        config = ParameterConfig(
+            name="test",
+            default_value=10,
+            min_value=2,
+            max_value=20,
+            even_only=True,
+        )
+
+        assert config.validate_value(10) is True
+        assert config.validate_value(11) is False
+
 
 class TestIndicatorConfig:
     """IndicatorConfig のテスト"""
@@ -103,6 +116,24 @@ class TestIndicatorConfig:
         norm = config.normalize_params({"period": 200})
         assert norm["period"] == 100
 
+    def test_normalize_params_even_only(self):
+        """偶数制約が正規化にも反映されること"""
+        parameters = {
+            "period": ParameterConfig(
+                name="period",
+                default_value=14,
+                min_value=2,
+                max_value=20,
+                even_only=True,
+            )
+        }
+        config = IndicatorConfig(indicator_name="TEST", parameters=parameters)
+
+        norm = config.normalize_params({"period": 9})
+        assert norm["period"] == 10
+        norm = config.normalize_params({"period": 20})
+        assert norm["period"] == 20
+
     def test_generate_random_parameters(self):
         """ランダムパラメータ生成テスト"""
         parameters = {
@@ -117,6 +148,24 @@ class TestIndicatorConfig:
             params = config.generate_random_parameters()
             assert "length" in params
             assert 5 <= params["length"] <= 50
+
+    def test_generate_random_parameters_even_only(self, monkeypatch):
+        """偶数制約がランダム生成にも適用されること"""
+        parameters = {
+            "period": ParameterConfig(
+                name="period",
+                default_value=14,
+                min_value=2,
+                max_value=10,
+                even_only=True,
+            )
+        }
+        config = IndicatorConfig(indicator_name="TEST", parameters=parameters)
+
+        monkeypatch.setattr("random.randint", lambda a, b: 7)
+
+        params = config.generate_random_parameters()
+        assert params["period"] == 8
 
     def test_generate_random_parameters_with_preset(self):
         """プリセット付きランダムパラメータ生成テスト"""

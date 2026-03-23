@@ -56,15 +56,7 @@ class ParameterConfig:
             # 数値でない場合は検証スキップ
             return True
 
-        if self.min_value is not None and value < self.min_value:
-            return False
-        if self.max_value is not None and value > self.max_value:
-            return False
-        
-        if self.even_only and int(value) % 2 != 0:
-            return False
-
-        return True
+        return self._normalize_numeric_value(value) == value
 
     def get_range_for_preset(self, preset_name: str) -> tuple:
         """
@@ -81,6 +73,25 @@ class ParameterConfig:
 
         # フォールバック：デフォルトの min/max 範囲を使用
         return (self.min_value, self.max_value)
+
+    def _apply_even_constraint(self, value: Union[int, float]) -> Union[int, float]:
+        """even_only 制約を満たすように値を調整する。"""
+        if not self.even_only or int(value) % 2 == 0:
+            return value
+
+        upper_bound = self.max_value if self.max_value is not None else float("inf")
+        return value + 1 if value < upper_bound else value - 1
+
+    def _normalize_numeric_value(self, value: Union[int, float]) -> Union[int, float]:
+        """min/max と even_only をまとめて適用する。"""
+        normalized = value
+
+        if self.min_value is not None and normalized < self.min_value:
+            normalized = self.min_value
+        if self.max_value is not None and normalized > self.max_value:
+            normalized = self.max_value
+
+        return self._apply_even_constraint(normalized)
 
 
 @dataclass
@@ -307,24 +318,10 @@ class IndicatorConfig:
         for param_name, param_config in self.parameters.items():
             if param_name in normalized and isinstance(param_config, ParameterConfig):
                 value = normalized[param_name]
-
-                if param_config.min_value is not None and isinstance(
-                    value, (int, float)
-                ):
-                    if value < param_config.min_value:
-                        normalized[param_name] = param_config.min_value
-                if param_config.max_value is not None and isinstance(
-                    value, (int, float)
-                ):
-                    if value > param_config.max_value:
-                        normalized[param_name] = param_config.max_value
-                
-                # 偶数制約の適用
-                if param_config.even_only and isinstance(normalized[param_name], (int, float)):
-                    val = int(normalized[param_name])
-                    if val % 2 != 0:
-                        # 偶数に調整
-                        normalized[param_name] = val + 1 if val < (param_config.max_value or float('inf')) else val - 1
+                if isinstance(value, (int, float)):
+                    normalized[param_name] = param_config._normalize_numeric_value(
+                        value
+                    )
 
         return normalized
 
@@ -362,10 +359,7 @@ class IndicatorConfig:
 
                 if isinstance(param_config.default_value, int):
                     val = random.randint(int(min_val), int(max_val))
-                    # 偶数制約
-                    if param_config.even_only and val % 2 != 0:
-                        val = val + 1 if val < max_val else val - 1
-                    params[param_name] = val
+                    params[param_name] = param_config._apply_even_constraint(val)
                 else:
                     params[param_name] = random.uniform(float(min_val), float(max_val))
             else:

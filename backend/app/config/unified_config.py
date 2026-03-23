@@ -8,8 +8,17 @@ SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
+from app.services.auto_strategy.config.constants import SUPPORTED_TIMEFRAMES
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEFAULT_ENSEMBLE_ALGORITHMS = ("lightgbm", "xgboost", "catboost")
+DEFAULT_MARKET_EXCHANGE = "bybit"
+DEFAULT_MARKET_SYMBOL = "BTC/USDT:USDT"
+DEFAULT_MARKET_TIMEFRAME = "1h"
+DEFAULT_DATA_LIMIT = 100
+MAX_DATA_LIMIT = 1000
+MIN_DATA_LIMIT = 1
 
 
 class EnsembleConfig(BaseSettings):
@@ -22,7 +31,7 @@ class EnsembleConfig(BaseSettings):
         default=True, alias="ENABLED", description="アンサンブル学習を有効にするか"
     )
     algorithms: List[str] = Field(
-        default=["lightgbm", "xgboost", "catboost"],
+        default_factory=lambda: list(DEFAULT_ENSEMBLE_ALGORITHMS),
         alias="ALGORITHMS",
         description="使用するアルゴリズム",
     )
@@ -37,7 +46,8 @@ class EnsembleConfig(BaseSettings):
 
     # スタッキング設定
     stacking_base_models: List[str] = Field(
-        default=["lightgbm", "xgboost", "catboost"], alias="STACKING_BASE_MODELS"
+        default_factory=lambda: list(DEFAULT_ENSEMBLE_ALGORITHMS),
+        alias="STACKING_BASE_MODELS",
     )
     stacking_meta_model: str = Field(
         default="logistic_regression",
@@ -141,26 +151,30 @@ class MarketConfig(BaseSettings):
     # 基本設定
     sandbox: bool = Field(default=False, alias="MARKET_DATA_SANDBOX")
     enable_cache: bool = Field(default=True, alias="ENABLE_CACHE")
-    max_cache_size: int = Field(default=1000, alias="MAX_CACHE_SIZE")
+    max_cache_size: int = Field(default=MAX_DATA_LIMIT, alias="MAX_CACHE_SIZE")
 
     # サポートされている取引所
-    supported_exchanges: List[str] = Field(default=["bybit"])
+    supported_exchanges: List[str] = Field(
+        default_factory=lambda: [DEFAULT_MARKET_EXCHANGE]
+    )
 
     # サポートされているシンボル（Bybit形式）
-    supported_symbols: List[str] = Field(default=["BTC/USDT:USDT"])
+    supported_symbols: List[str] = Field(
+        default_factory=lambda: [DEFAULT_MARKET_SYMBOL]
+    )
 
     # サポートされている時間軸
     supported_timeframes: List[str] = Field(
-        default=["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        default_factory=lambda: list(SUPPORTED_TIMEFRAMES)
     )
 
     # デフォルト設定
-    default_exchange: str = Field(default="bybit")
-    default_symbol: str = Field(default="BTC/USDT:USDT")
-    default_timeframe: str = Field(default="1h")
-    default_limit: int = Field(default=100, description="デフォルト取得件数")
-    max_limit: int = Field(default=1000, description="最大取得件数")
-    min_limit: int = Field(default=1, description="最小取得件数")
+    default_exchange: str = Field(default=DEFAULT_MARKET_EXCHANGE)
+    default_symbol: str = Field(default=DEFAULT_MARKET_SYMBOL)
+    default_timeframe: str = Field(default=DEFAULT_MARKET_TIMEFRAME)
+    default_limit: int = Field(default=DEFAULT_DATA_LIMIT, description="デフォルト取得件数")
+    max_limit: int = Field(default=MAX_DATA_LIMIT, description="最大取得件数")
+    min_limit: int = Field(default=MIN_DATA_LIMIT, description="最小取得件数")
 
     # Bybit固有の設定
     bybit_config: Dict[str, Any] = Field(
@@ -190,9 +204,9 @@ class DataCollectionConfig(BaseSettings):
     """
 
     # API制限設定
-    default_limit: int = Field(default=100, description="デフォルト取得件数")
-    max_limit: int = Field(default=1000, description="最大取得件数")
-    min_limit: int = Field(default=1, description="最小取得件数")
+    default_limit: int = Field(default=DEFAULT_DATA_LIMIT, description="デフォルト取得件数")
+    max_limit: int = Field(default=MAX_DATA_LIMIT, description="最大取得件数")
+    min_limit: int = Field(default=MIN_DATA_LIMIT, description="最小取得件数")
 
     # Bybit API設定
     bybit_timeout: int = Field(default=30, description="APIタイムアウト（秒）")
@@ -422,7 +436,7 @@ class LabelGenerationConfig:
         from app.services.ml.label_generation.presets import get_common_presets
 
         # timeframeの検証
-        valid_timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        valid_timeframes = list(SUPPORTED_TIMEFRAMES)
         if self.timeframe not in valid_timeframes:
             raise ValueError(
                 f"無効な時間足です: {self.timeframe}. "

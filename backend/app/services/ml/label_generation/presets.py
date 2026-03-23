@@ -10,14 +10,12 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
+from app.services.auto_strategy.config.constants import SUPPORTED_TIMEFRAMES
 from ..common.utils import calculate_volatility_atr, calculate_volatility_std
 from .trend_scanning import TrendScanning
 from .triple_barrier import TripleBarrier
 
 logger = logging.getLogger(__name__)
-
-# サポートする時間足の定義
-SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 
 
 def _validate_supported_timeframe(timeframe: str) -> None:
