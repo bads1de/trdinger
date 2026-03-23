@@ -30,6 +30,7 @@ from numba import njit, prange
 
 
 from ..data_validation import (
+    create_nan_series_bundle,
     handle_pandas_ta_errors,
     validate_multi_series_params,
     validate_series_params,
@@ -845,8 +846,7 @@ class OriginalIndicators:
             {"high": high, "low": low, "close": close}, ema_length
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         # EMAを計算
         ema = close.ewm(span=ema_length, adjust=False).mean()
@@ -1019,8 +1019,7 @@ class OriginalIndicators:
         # 指定期間内の素数列を生成
         primes = OriginalIndicators._get_prime_sequence(length)
         if not primes:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         # Prime Oscillatorの計算をNumbaで実行
         primes_array = np.array(primes, dtype=np.int64)

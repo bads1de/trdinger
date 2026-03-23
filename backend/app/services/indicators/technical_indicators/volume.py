@@ -24,18 +24,16 @@ from numba import njit
 import pandas_ta_classic as ta
 
 from ..data_validation import (
+    create_nan_series_bundle,
+    create_nan_series_like,
     handle_pandas_ta_errors,
+    normalize_non_finite,
     validate_multi_series_params,
     validate_series_params,
 )
 
 
 logger = logging.getLogger(__name__)
-
-
-def _replace_inf_with_nan(series: pd.Series) -> pd.Series:
-    """Series 内の inf を NaN に揃える。"""
-    return series.replace([np.inf, -np.inf], np.nan)
 
 
 @njit(cache=True)
@@ -199,7 +197,7 @@ class VolumeIndicators:
         )
 
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         return result
 
@@ -278,7 +276,7 @@ class VolumeIndicators:
         result = ta.cmf(high=high, low=low, close=close, volume=volume, length=length)
 
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         return result
 
@@ -319,7 +317,7 @@ class VolumeIndicators:
         )
 
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
 
         return result
 
@@ -366,7 +364,7 @@ class VolumeIndicators:
             )
 
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         return result
 
@@ -382,8 +380,7 @@ class VolumeIndicators:
         """Percentage Volume Oscillator"""
         validation = validate_series_params(volume, slow)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(volume), np.nan), index=volume.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(volume, 3)
 
         if fast <= 0 or signal <= 0:
             raise ValueError("fast and signal must be positive")
@@ -397,8 +394,7 @@ class VolumeIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(volume), np.nan), index=volume.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(volume, 3)
 
         return (
             result.iloc[:, 0].to_numpy(),
@@ -441,8 +437,7 @@ class VolumeIndicators:
             max(fast, slow),
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(high, 2)
 
         result = ta.kvo(
             high=high,
@@ -458,8 +453,7 @@ class VolumeIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(high, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -535,14 +529,14 @@ class VolumeIndicators:
                 rvol_series = pd.Series(res_arr, index=volume.index)
 
                 if not rvol_series.isna().all():
-                    return _replace_inf_with_nan(rvol_series)
+                    return normalize_non_finite(rvol_series)
             except Exception as e:
                 logger.warning(f"RVOL Numba optimization failed: {e}. Falling back...")
 
         # フォールバック: 標準的なローリング平均
         avg_vol = volume.rolling(window=window, min_periods=1).mean()
         rvol = volume / avg_vol
-        return _replace_inf_with_nan(rvol)
+        return normalize_non_finite(rvol)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -572,7 +566,7 @@ class VolumeIndicators:
 
         score = rvol_series / price_range
 
-        return _replace_inf_with_nan(score)
+        return normalize_non_finite(score)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -593,11 +587,9 @@ class VolumeIndicators:
             {"close": close, "volume": volume}, slow
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
             # AOBV returns 7 columns typically: OBV, MA_OBV, OBV_min_2, OBV_max_2, OBV_min_5, OBV_max_5, AOBV_LR_2
             # We conform to return all if possible, or key ones.
-            # Let's return tuple of 7 NaNs to be safe as per type hint or simplified representation.
-            return (nan_series,) * 7
+            return create_nan_series_bundle(close, 7)
 
         result = ta.aobv(
             close=close,
@@ -610,8 +602,7 @@ class VolumeIndicators:
             scalar=scalar,
         )
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return (nan_series,) * 7
+            return create_nan_series_bundle(close, 7)
 
         # Ensure we return valid series tuple
         return tuple(result.iloc[:, i] for i in range(result.shape[1]))
@@ -626,7 +617,7 @@ class VolumeIndicators:
 
         result = ta.pvi(close=close, volume=volume, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -639,7 +630,7 @@ class VolumeIndicators:
 
         result = ta.pvol(close=close, volume=volume)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -652,5 +643,5 @@ class VolumeIndicators:
 
         result = ta.pvr(close=close, volume=volume)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result

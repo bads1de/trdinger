@@ -29,6 +29,78 @@ class PandasTAError(Exception):
     """pandas-ta関連のエラー"""
 
 
+def _get_indicator_config(indicator_type: str):
+    """indicator_registry から設定を取得する共通 helper."""
+    from .config.indicator_config import indicator_registry
+
+    return indicator_registry.get_indicator_config(indicator_type.upper())
+
+
+def _validate_positive_length(length: Optional[int]) -> None:
+    """length 引数の正当性を共通チェックする。"""
+    if length is not None and length <= 0:
+        raise ValueError(f"length must be positive: {length}")
+
+
+def _nan_series_like(series: pd.Series) -> pd.Series:
+    """入力 Series と同じ index の NaN Series を作る。"""
+    return pd.Series(np.full(len(series), np.nan), index=series.index)
+
+
+def _return_nan_series_if_needed(
+    series: pd.Series,
+    min_data_length: int,
+) -> Optional[pd.Series]:
+    """空系列または最小長不足の場合に NaN Series を返す。"""
+    if len(series) == 0:
+        return _nan_series_like(series)
+
+    if min_data_length > 0 and len(series) < min_data_length:
+        return _nan_series_like(series)
+
+    return None
+
+
+def normalize_non_finite(series: pd.Series, fill_value: Any = np.nan) -> pd.Series:
+    """inf/-inf を NaN 経由で指定値に揃える。"""
+    return series.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
+
+
+def create_nan_series_like(
+    reference: pd.Series,
+    fill_value: Any = np.nan,
+    name: Optional[str] = None,
+) -> pd.Series:
+    """参照 Series と同じ index を持つ定数 Series を作る。"""
+    return pd.Series(
+        np.full(len(reference), fill_value),
+        index=reference.index,
+        name=name if name is not None else reference.name,
+    )
+
+
+def create_nan_series_bundle(
+    reference: pd.Series,
+    count: int,
+    fill_value: Any = np.nan,
+) -> tuple[pd.Series, ...]:
+    """同じ形の Series を複数個まとめて作る。"""
+    base = create_nan_series_like(reference, fill_value=fill_value)
+    return tuple(base.copy() for _ in range(count))
+
+
+def create_nan_series_map(
+    reference: pd.Series,
+    keys: list[str],
+    fill_value: Any = np.nan,
+) -> Dict[str, pd.Series]:
+    """指定キーに対応する NaN Series の辞書を作る。"""
+    return {
+        key: create_nan_series_like(reference, fill_value=fill_value, name=key)
+        for key in keys
+    }
+
+
 # =============================================================================
 # データ長検証
 # =============================================================================
@@ -53,9 +125,7 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
     Returns:
         最小必要データ長
     """
-    from .config.indicator_config import indicator_registry
-
-    config = indicator_registry.get_indicator_config(indicator_type.upper())
+    config = _get_indicator_config(indicator_type)
     if config and config.min_length_func:
         return config.min_length_func(params)
 
@@ -71,9 +141,7 @@ def get_absolute_minimum_length(indicator_type: str) -> int:
     """
     各指標の絶対的最小データ長を取得
     """
-    from .config.indicator_config import indicator_registry
-
-    config = indicator_registry.get_indicator_config(indicator_type.upper())
+    config = _get_indicator_config(indicator_type)
     if (
         config
         and hasattr(config, "absolute_min_length")
@@ -143,9 +211,7 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
     Returns:
         NaN配列
     """
-    from .config.indicator_config import indicator_registry
-
-    config = indicator_registry.get_indicator_config(indicator_type.upper())
+    config = _get_indicator_config(indicator_type)
     data_length = len(df)
 
     if not config:
@@ -221,14 +287,11 @@ def validate_series_params(
     if not isinstance(data, pd.Series):
         raise TypeError("data must be pandas Series")
 
-    if length is not None and length <= 0:
-        raise ValueError(f"length must be positive: {length}")
+    _validate_positive_length(length)
 
-    if len(data) == 0:
-        return pd.Series(np.full(0, np.nan), index=data.index)
-
-    if min_data_length > 0 and len(data) < min_data_length:
-        return pd.Series(np.full(len(data), np.nan), index=data.index)
+    nan_series = _return_nan_series_if_needed(data, min_data_length)
+    if nan_series is not None:
+        return nan_series
 
     return None
 
@@ -273,18 +336,12 @@ def validate_multi_series_params(
                 f"{first_name}={len(first_series)}, {name}={len(series)}"
             )
 
-    if length is not None and length <= 0:
-        raise ValueError(f"length must be positive: {length}")
+    _validate_positive_length(length)
 
-    if first_series is not None and len(first_series) == 0:
-        return pd.Series(np.full(0, np.nan), index=first_series.index)
-
-    if (
-        min_data_length > 0
-        and first_series is not None
-        and len(first_series) < min_data_length
-    ):
-        return pd.Series(np.full(len(first_series), np.nan), index=first_series.index)
+    if first_series is not None:
+        nan_series = _return_nan_series_if_needed(first_series, min_data_length)
+        if nan_series is not None:
+            return nan_series
 
     return None
 

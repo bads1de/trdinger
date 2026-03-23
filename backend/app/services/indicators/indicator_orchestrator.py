@@ -537,12 +537,10 @@ class TechnicalIndicatorService:
 
         if result is None:
             input_ref = all_args.get("data", all_args.get("close"))
-            data_len = len(input_ref) if input_ref is not None else 0
-            if config.result_type == IndicatorResultType.SINGLE:
-                return np.full(data_len, np.nan)
-            else:
-                num_cols = len(config.return_cols) if config.return_cols else 1
-                return tuple(np.full(data_len, np.nan) for _ in range(num_cols))
+            fallback_input = input_ref if input_ref is not None else pd.DataFrame()
+            return self._create_nan_result(
+                fallback_input, {"function": indicator_type}
+            )
 
         # 結果の後処理
         if isinstance(result, pd.Series):

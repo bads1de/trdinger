@@ -30,6 +30,8 @@ import pandas_ta_classic as ta
 
 from ..data_validation import (
     handle_pandas_ta_errors,
+    create_nan_series_bundle,
+    create_nan_series_like,
     validate_multi_series_params,
     validate_series_params,
 )
@@ -175,7 +177,7 @@ class VolatilityIndicators:
 
         if result is None:
             logger.error("ATR: Calculation returned None - returning NaN series")
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         return result
 
@@ -196,7 +198,7 @@ class VolatilityIndicators:
 
         result = ta.natr(high=high, low=low, close=close, length=length)
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -207,15 +209,13 @@ class VolatilityIndicators:
         """ボリンジャーバンド"""
         validation = validate_series_params(data, length)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return (nan_series, nan_series, nan_series)
+            return create_nan_series_bundle(data, 3)
 
         result = ta.bbands(data, length=length, std=std)
 
         if result is None:
             logger.error("BBands: Calculation returned None - returning NaN series")
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return (nan_series, nan_series, nan_series)
+            return create_nan_series_bundle(data, 3)
 
         # 列名を動的に取得（pandas-taのバージョンによって異なる可能性がある）
         columns = result.columns.tolist()
@@ -248,8 +248,7 @@ class VolatilityIndicators:
         )
 
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series.copy(), nan_series.copy()
+            return create_nan_series_bundle(close, 3)
 
         if validation is not None:
             return nan_result()
@@ -299,8 +298,7 @@ class VolatilityIndicators:
         validation = validate_multi_series_params({"high": high, "low": low}, length)
 
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series.copy(), nan_series.copy()
+            return create_nan_series_bundle(high, 3)
 
         if validation is not None:
             return nan_result()
@@ -334,8 +332,7 @@ class VolatilityIndicators:
         )
 
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series.copy(), nan_series.copy()
+            return create_nan_series_bundle(close, 3)
 
         if validation is not None:
             return nan_result()
@@ -366,7 +363,7 @@ class VolatilityIndicators:
         length = period
         result = ta.ui(data, window=length)
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -405,7 +402,7 @@ class VolatilityIndicators:
         )
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
 
         return result
 
@@ -427,7 +424,7 @@ class VolatilityIndicators:
         result = ta.true_range(high=high, low=low, close=close, drift=drift)
 
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         return result
 
@@ -536,7 +533,7 @@ class VolatilityIndicators:
 
         result = ta.massi(high=high, low=low, fast=fast, slow=slow)
         if result is None or result.empty:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -553,15 +550,13 @@ class VolatilityIndicators:
             {"high": high, "low": low, "close": close}, max(length, atr_length)
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 4)
 
         result = ta.aberration(
             high=high, low=low, close=close, length=length, atr_length=atr_length
         )
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 4)
 
         # Returns multiple columns. Usually ZG, SG, XG, ATR
         return (
@@ -582,13 +577,11 @@ class VolatilityIndicators:
         """Holt-Winter Channel"""
         validation = validate_series_params(close, max(na, nb, nc))
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         result = ta.hwc(close=close, na=na, nb=nb, nc=nc)
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
@@ -609,7 +602,7 @@ class VolatilityIndicators:
 
         result = ta.pdist(open_=open_, high=high, low=low, close=close)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -626,8 +619,7 @@ class VolatilityIndicators:
         """Thermo"""
         validation = validate_multi_series_params({"high": high, "low": low}, length)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series, nan_series
+            return create_nan_series_bundle(high, 4)
 
         result = ta.thermo(
             high=high,
@@ -639,8 +631,7 @@ class VolatilityIndicators:
             drift=drift,
         )
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series, nan_series, nan_series
+            return create_nan_series_bundle(high, 4)
 
         # Returns Thermo, ThermoMa, ThermoLa, ThermoSa
         return (

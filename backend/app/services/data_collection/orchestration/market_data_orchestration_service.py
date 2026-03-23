@@ -9,13 +9,14 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.utils.data_conversion import OHLCVDataConverter
-from app.utils.response import api_response
 from database.repositories.ohlcv_repository import OHLCVRepository
+
+from .base_orchestration_service import BaseDataCollectionOrchestrationService
 
 logger = logging.getLogger(__name__)
 
 
-class MarketDataOrchestrationService:
+class MarketDataOrchestrationService(BaseDataCollectionOrchestrationService):
     def __init__(self, db_session: Session):
         self.db_session = db_session
         self.repository = OHLCVRepository(db_session)
@@ -55,8 +56,7 @@ class MarketDataOrchestrationService:
 
         logger.debug(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
-        return api_response(
-            success=True,
+        return self._create_success_response(
             data={"ohlcv_data": ohlcv_data, "symbol": symbol, "timeframe": timeframe},
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
         )

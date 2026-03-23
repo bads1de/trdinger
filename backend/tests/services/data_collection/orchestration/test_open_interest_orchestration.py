@@ -270,6 +270,35 @@ class TestGetOpenInterestData:
             assert result["success"] is True
             assert result["data"]["count"] == 0
 
+    @pytest.mark.asyncio
+    async def test_get_open_interest_data_normalizes_symbol(
+        self,
+        orchestration_service: OpenInterestOrchestrationService,
+        mock_db_session: MagicMock,
+    ):
+        """
+        正常系: デリバティブ記法のないシンボルを正規化して取得できる
+        """
+        with patch(
+            "app.services.data_collection.orchestration.open_interest_orchestration_service.OpenInterestRepository"
+        ) as mock_repo_class:
+            mock_repo = MagicMock()
+            mock_repo.get_open_interest_data.return_value = []
+            mock_repo_class.return_value = mock_repo
+
+            result = await orchestration_service.get_open_interest_data(
+                symbol="BTC/USDT",
+                limit=100,
+                db_session=mock_db_session,
+            )
+
+            assert result["success"] is True
+            mock_repo.get_open_interest_data.assert_called_once()
+            assert (
+                mock_repo.get_open_interest_data.call_args.kwargs["symbol"]
+                == "BTC/USDT:USDT"
+            )
+
 
 class TestCollectBulkOpenInterestData:
     """正常系: 一括データ収集のテスト"""

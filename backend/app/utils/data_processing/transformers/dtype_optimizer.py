@@ -1,5 +1,105 @@
+from typing import Dict, Mapping, Optional
+
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
+
+
+def _infer_integer_dtype(
+    col_min: int,
+    col_max: int,
+    prefer_unsigned_integers: bool,
+) -> Optional[str]:
+    """整数列に対して、より省メモリな dtype 名を推定する。"""
+    if prefer_unsigned_integers and col_min >= 0:
+        if col_max < 255:
+            return "uint8"
+        if col_max < 65535:
+            return "uint16"
+        if col_max < 4294967295:
+            return "uint32"
+
+    if col_min > -128 and col_max < 127:
+        return "int8"
+    if col_min > -32768 and col_max < 32767:
+        return "int16"
+    if col_min > -2147483648 and col_max < 2147483647:
+        return "int32"
+    return None
+
+
+def _get_column_series(df: pd.DataFrame, col: str) -> pd.Series:
+    """重複列を含む場合は先頭列を使って dtype を判定する。"""
+    col_data = df[col]
+    if isinstance(col_data, pd.DataFrame):
+        return col_data.iloc[:, 0]
+    return col_data
+
+
+def build_optimized_dtype_map(
+    df: pd.DataFrame,
+    *,
+    prefer_unsigned_integers: bool = False,
+    optimize_all_numeric: bool = False,
+) -> Dict[str, str]:
+    """DataFrame から最適化後の dtype マップを構築する。
+
+    optimize_all_numeric=False は既存の DtypeOptimizer と同等の挙動、
+    True は preprocessing pipeline 側のより積極的な最適化に合わせる。
+    """
+    dtypes: Dict[str, str] = {}
+
+    for col in df.columns:
+        col_series = _get_column_series(df, col)
+
+        if col_series.dtype == "float64" or (
+            optimize_all_numeric and pd.api.types.is_float_dtype(col_series)
+        ):
+            optimized = pd.to_numeric(col_series, downcast="float")
+            if optimized.dtype != col_series.dtype:
+                dtypes[col] = str(optimized.dtype)
+            continue
+
+        if col_series.dtype == "int64" or (
+            optimize_all_numeric and pd.api.types.is_integer_dtype(col_series)
+        ):
+            col_min = int(col_series.min())
+            col_max = int(col_series.max())
+            optimized_dtype = _infer_integer_dtype(
+                col_min,
+                col_max,
+                prefer_unsigned_integers=prefer_unsigned_integers,
+            )
+            if optimized_dtype is not None:
+                dtypes[col] = optimized_dtype
+
+    return dtypes
+
+
+def apply_optimized_dtypes(
+    df: pd.DataFrame,
+    dtype_map: Mapping[str, str],
+) -> pd.DataFrame:
+    """dtype マップを DataFrame に適用する。"""
+    result_df = df.copy()
+    for col, dtype_name in dtype_map.items():
+        if col in result_df.columns:
+            result_df[col] = result_df[col].astype(dtype_name)
+    return result_df
+
+
+def optimize_dataframe_dtypes(
+    df: pd.DataFrame,
+    *,
+    prefer_unsigned_integers: bool = False,
+    optimize_all_numeric: bool = False,
+) -> pd.DataFrame:
+    """DataFrame をその場で最適化した dtype に変換する。"""
+    dtype_map = build_optimized_dtype_map(
+        df,
+        prefer_unsigned_integers=prefer_unsigned_integers,
+        optimize_all_numeric=optimize_all_numeric,
+    )
+    return apply_optimized_dtypes(df, dtype_map)
 
 
 class DtypeOptimizer(BaseEstimator, TransformerMixin):
@@ -34,41 +134,7 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
 
-        self.dtypes_ = {}
-
-        for col in X.columns:
-            # 単一カラムのSeriesとして取得
-            col_series = X[col]
-
-            # DataFrameではなくSeriesであることを確認
-            if isinstance(col_series, pd.DataFrame):
-                # 複数カラムが返された場合、最初のカラムを使用
-                col_series = col_series.iloc[:, 0]
-
-            dtype = col_series.dtype
-
-            # float64をfloat32に最適化
-            if dtype == "float64":
-                self.dtypes_[col] = "float32"
-
-            # データ範囲に基づいてint64を最適化
-            elif dtype == "int64":
-                # Pandas Series比較を安全に行う - スカラー値として評価
-                min_val = int(col_series.min())
-                max_val = int(col_series.max())
-
-                if min_val >= -128 and max_val <= 127:
-                    self.dtypes_[col] = "int8"
-                elif min_val >= -32768 and max_val <= 32767:
-                    self.dtypes_[col] = "int16"
-                elif min_val >= -2147483648 and max_val <= 2147483647:
-                    self.dtypes_[col] = "int32"
-                # 値が大きすぎる場合はint64を保持
-
-            # その他のdtypeは変更なし
-            else:
-                pass
-
+        self.dtypes_ = build_optimized_dtype_map(X)
         return self
 
     def transform(self, X):
@@ -88,14 +154,7 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X)
 
-        X_optimized = X.copy()
-
-        # 最適化されたdtypeを適用
-        for col in self.dtypes_:
-            if col in X_optimized.columns:
-                X_optimized[col] = X_optimized[col].astype(self.dtypes_[col])
-
-        return X_optimized
+        return apply_optimized_dtypes(X, self.dtypes_)
 
 
 

@@ -21,8 +21,6 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
-from .preprocessing_pipeline import create_preprocessing_pipeline
-
 logger = logging.getLogger(__name__)
 
 
@@ -105,9 +103,6 @@ def create_comprehensive_pipeline(
             "optimize_dtypes": optimize_dtypes,
         }
     )
-
-    # Create base preprocessing pipeline
-    create_preprocessing_pipeline(**preprocessing_params)
 
     # Build ML pipeline parameters
     if ml_params is None:

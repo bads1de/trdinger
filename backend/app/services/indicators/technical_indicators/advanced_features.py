@@ -11,6 +11,7 @@ from numba import njit, prange
 
 from ..data_validation import (
     handle_pandas_ta_errors,
+    normalize_non_finite,
     validate_multi_series_params,
     validate_series_params,
 )
@@ -749,10 +750,9 @@ class AdvancedFeatures:
         if validation is not None:
             return validation
 
-        return (
-            (ls_ratio_positions / ls_ratio_accounts)
-            .replace([np.inf, -np.inf], 1.0)
-            .fillna(1.0)
+        return normalize_non_finite(
+            ls_ratio_positions / ls_ratio_accounts,
+            fill_value=1.0,
         )
 
     @staticmethod
@@ -791,7 +791,7 @@ class AdvancedFeatures:
         if validation is not None:
             return validation
 
-        return (open_interest / volume).replace([np.inf, -np.inf], 0).fillna(0)
+        return normalize_non_finite(open_interest / volume, fill_value=0)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -805,4 +805,4 @@ class AdvancedFeatures:
         if validation is not None:
             return validation
 
-        return (open_interest / market_cap).replace([np.inf, -np.inf], 0).fillna(0)
+        return normalize_non_finite(open_interest / market_cap, fill_value=0)

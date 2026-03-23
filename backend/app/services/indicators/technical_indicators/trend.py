@@ -25,6 +25,8 @@ import pandas_ta_classic as ta
 
 from ..data_validation import (
     handle_pandas_ta_errors,
+    create_nan_series_bundle,
+    create_nan_series_like,
     validate_multi_series_params,
     validate_series_params,
 )
@@ -131,7 +133,7 @@ class TrendIndicators:
 
         n = len(high)
         if n < 2:
-            return pd.Series(np.nan, index=high.index)
+            return create_nan_series_like(high)
 
         high_arr = high.values.astype(np.float64)
         low_arr = low.values.astype(np.float64)
@@ -154,7 +156,7 @@ class TrendIndicators:
 
         result = ta.amat(data, fast=fast, slow=slow, signal=signal)
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         # AMAT returns DataFrame, get the main series
         if hasattr(result, "iloc"):
             return result.iloc[:, 0] if len(result.shape) > 1 else result
@@ -180,7 +182,7 @@ class TrendIndicators:
             offset=offset,
         )
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -198,8 +200,7 @@ class TrendIndicators:
             {"high": high, "low": low, "close": close}, length
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(high, 2)
 
         if drift <= 0:
             raise ValueError(f"drift must be positive: {drift}")
@@ -213,8 +214,7 @@ class TrendIndicators:
             offset=offset,
         )
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(high, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -235,8 +235,7 @@ class TrendIndicators:
         )
 
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series.copy(), nan_series.copy()
+            return create_nan_series_bundle(high, 3)
 
         if validation is not None:
             return nan_result()
@@ -276,8 +275,7 @@ class TrendIndicators:
         validation = validate_multi_series_params({"high": high, "low": low}, length)
 
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series.copy(), nan_series.copy()
+            return create_nan_series_bundle(high, 3)
 
         if validation is not None:
             return nan_result()
@@ -326,7 +324,7 @@ class TrendIndicators:
         )
 
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         return result
 
@@ -355,7 +353,7 @@ class TrendIndicators:
         )
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
 
         return result
 
@@ -374,13 +372,11 @@ class TrendIndicators:
             {"high": high, "low": low, "close": close}, p
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         result = ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q)
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -398,7 +394,7 @@ class TrendIndicators:
 
         result = ta.decay(close=close, length=length, mode=mode)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -417,7 +413,7 @@ class TrendIndicators:
 
         result = ta.qstick(open_=open_, close=close, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -437,7 +433,7 @@ class TrendIndicators:
 
         result = ta.ttm_trend(high=high, low=low, close=close, length=length)
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
 
         if isinstance(result, pd.DataFrame):
             return result.iloc[:, 0]
@@ -458,7 +454,7 @@ class TrendIndicators:
 
         result = ta.decreasing(close=close, length=length, strict=strict, asint=as_int)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -475,7 +471,7 @@ class TrendIndicators:
 
         result = ta.increasing(close=close, length=length, strict=strict, asint=as_int)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -493,7 +489,7 @@ class TrendIndicators:
 
         result = ta.long_run(fast=fast, slow=slow, length=length)
         if result is None:
-            return pd.Series(np.full(len(fast), np.nan), index=fast.index)
+            return create_nan_series_like(fast)
         return result
 
     @staticmethod
@@ -510,7 +506,7 @@ class TrendIndicators:
 
         result = ta.short_run(fast=fast, slow=slow, length=length)
         if result is None:
-            return pd.Series(np.full(len(fast), np.nan), index=fast.index)
+            return create_nan_series_like(fast)
         return result
 
     @staticmethod
@@ -528,7 +524,7 @@ class TrendIndicators:
         result = ta.slope(close=close, length=length)
 
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -592,5 +588,5 @@ class TrendIndicators:
         result = ta.sma(close=close, length=length)
 
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result

@@ -20,6 +20,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 
+from ..transformers.dtype_optimizer import optimize_dataframe_dtypes
+
 
 class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
     """IsolationForestを使用した外れ値除去トランスフォーマー。"""
@@ -112,36 +114,12 @@ class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         if isinstance(X, pd.DataFrame):
-            return self._optimize_dtypes(X)
+            return optimize_dataframe_dtypes(
+                X,
+                prefer_unsigned_integers=True,
+                optimize_all_numeric=True,
+            )
         return X
-
-    def _optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
-        """メモリ効率のためにデータ型を最適化。"""
-        result_df = df.copy()
-        for col in result_df.columns:
-            if result_df[col].dtype == "object":
-                continue
-            if pd.api.types.is_numeric_dtype(result_df[col]):
-                if pd.api.types.is_integer_dtype(result_df[col]):
-                    col_min = result_df[col].min()
-                    col_max = result_df[col].max()
-                    if col_min >= 0:
-                        if col_max < 255:
-                            result_df[col] = result_df[col].astype("uint8")
-                        elif col_max < 65535:
-                            result_df[col] = result_df[col].astype("uint16")
-                        elif col_max < 4294967295:
-                            result_df[col] = result_df[col].astype("uint32")
-                    else:
-                        if col_min > -128 and col_max < 127:
-                            result_df[col] = result_df[col].astype("int8")
-                        elif col_min > -32768 and col_max < 32767:
-                            result_df[col] = result_df[col].astype("int16")
-                        elif col_min > -2147483648 and col_max < 2147483647:
-                            result_df[col] = result_df[col].astype("int32")
-                elif pd.api.types.is_float_dtype(result_df[col]):
-                    result_df[col] = pd.to_numeric(result_df[col], downcast="float")
-        return result_df
 
     def get_feature_names_out(self, input_features=None):
         """変換の出力特徴名を取得。"""

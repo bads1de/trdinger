@@ -295,7 +295,6 @@ def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
     """
     指標が返すカラム名のリストを取得します。
     """
-    import numpy as np
     import pandas as pd
 
     name_lower = indicator_name.lower()

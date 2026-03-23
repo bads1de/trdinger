@@ -39,3 +39,14 @@ class TestDtypeOptimizerUnit:
         result = optimizer.transform(data)
         assert isinstance(result, pd.DataFrame)
         assert result.iloc[:, 0].dtype == "float32"
+
+    def test_duplicate_column_names(self):
+        optimizer = DtypeOptimizer()
+        df = pd.DataFrame([[1.0, 2.0], [3.0, 4.0]], columns=["dup", "dup"])
+
+        optimizer.fit(df)
+        result = optimizer.transform(df)
+
+        assert list(result.columns) == ["dup", "dup"]
+        assert result.iloc[:, 0].dtype == "float32"
+        assert result.iloc[:, 1].dtype == "float32"

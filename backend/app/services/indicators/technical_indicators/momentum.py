@@ -39,7 +39,10 @@ import pandas as pd
 import pandas_ta_classic as ta
 
 from ..data_validation import (
+    create_nan_series_bundle,
+    create_nan_series_like,
     handle_pandas_ta_errors,
+    normalize_non_finite,
     validate_multi_series_params,
     validate_series_params,
 )
@@ -64,7 +67,7 @@ class MomentumIndicators:
 
         result = ta.rsi(data, window=period)
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -77,15 +80,13 @@ class MomentumIndicators:
         """MACD"""
         validation = validate_series_params(data)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return (nan_series, nan_series, nan_series)
+            return create_nan_series_bundle(data, 3)
 
         result = ta.macd(data, fast=fast, slow=slow, signal=signal)
 
         if result is None or result.empty:
             # フォールバック: NaN配列を返す
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return (nan_series, nan_series, nan_series)
+            return create_nan_series_bundle(data, 3)
 
         return (
             result.iloc[:, 0],  # MACD
@@ -103,14 +104,12 @@ class MomentumIndicators:
         """Percentage Price Oscillator"""
         validation = validate_series_params(data)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(data, 3)
 
         result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(data, 3)
 
         return (
             result.iloc[:, 0].to_numpy(),
@@ -192,8 +191,7 @@ class MomentumIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(high, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -227,8 +225,7 @@ class MomentumIndicators:
             data, rsi_length, min_data_length=min_required_length
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(data, 2)
 
         if stoch_length <= 0 or k <= 0 or d <= 0:
             raise ValueError("stoch_length, k, and d must be positive")
@@ -242,8 +239,7 @@ class MomentumIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(data, 2)
 
         # pandas-taの返り値は通常 STOCHRSIk_*, STOCHRSId_* の2列
         return (result.iloc[:, 0], result.iloc[:, 1])
@@ -276,7 +272,7 @@ class MomentumIndicators:
         result = ta.willr(high=high, low=low, close=close, length=length, **kwargs)
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
 
         return result
 
@@ -309,7 +305,7 @@ class MomentumIndicators:
         result = ta.cci(high=high, low=low, close=close, length=length)
 
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         return result
 
@@ -326,7 +322,7 @@ class MomentumIndicators:
 
         result = ta.cmo(data, length=length, talib=talib)
         if result is None or result.empty:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -358,7 +354,7 @@ class MomentumIndicators:
             factor=factor,
         )
         if result is None or result.empty:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
 
         if isinstance(result, pd.DataFrame):
             series = result.iloc[:, 0]
@@ -377,16 +373,14 @@ class MomentumIndicators:
         """フィッシャー変換"""
         validation = validate_multi_series_params({"high": high, "low": low}, length)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(high, 2)
 
         if signal <= 0:
             raise ValueError(f"signal must be positive: {signal}")
 
         result = ta.fisher(high=high, low=low, length=length, signal=signal)
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(high, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -407,8 +401,7 @@ class MomentumIndicators:
         max_period = max(roc1, roc2, roc3, roc4, sma1, sma2, sma3, sma4, signal)
         validation = validate_series_params(data, max_period)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(data, 2)
 
         result = ta.kst(
             data,
@@ -424,8 +417,7 @@ class MomentumIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(data, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -449,7 +441,7 @@ class MomentumIndicators:
 
         result = ta.roc(data, window=length)
         if result is None or result.empty:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -461,7 +453,7 @@ class MomentumIndicators:
 
         result = ta.mom(data, length=length)
         if result is None or result.empty:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -479,7 +471,7 @@ class MomentumIndicators:
             return (
                 rsi_result
                 if rsi_result is not None
-                else pd.Series(np.full(len(data), np.nan), index=data.index)
+                else create_nan_series_like(data)
             )
 
         # QQEの主要な列を返す（通常はRSIMA列）
@@ -526,7 +518,7 @@ class MomentumIndicators:
         )
 
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
 
         # Squeeze Pro typically returns SQZ_PRO_ON, SQZ_PRO_OFF, SQZ_PRO_NO, SQZ_PRO_W, SQZ_PRO_N, SQZ_PRO_S
         # Returning the DataFrame as is, or specific column depending on requirement.
@@ -560,7 +552,7 @@ class MomentumIndicators:
         result = ta.cti(data, length=length)
 
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -583,7 +575,7 @@ class MomentumIndicators:
         result = ta.apo(data, fast=fast, slow=slow, ma_mode=ma_mode)
 
         if result is None or result.empty:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -600,8 +592,7 @@ class MomentumIndicators:
         max_period = max(fast, slow, signal)
         validation = validate_series_params(data, max_period)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(data, 2)
 
         if drift <= 0:
             raise ValueError("drift must be positive")
@@ -617,8 +608,7 @@ class MomentumIndicators:
         )
 
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(data), np.nan), index=data.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(data, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -639,7 +629,7 @@ class MomentumIndicators:
         result = ta.pgo(high=high, low=low, close=close, length=length)
 
         if result is None or result.empty:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -673,7 +663,7 @@ class MomentumIndicators:
         )
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
 
         return result
 
@@ -711,7 +701,7 @@ class MomentumIndicators:
         )
 
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -735,7 +725,7 @@ class MomentumIndicators:
         )
 
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -747,7 +737,7 @@ class MomentumIndicators:
 
         result = ta.ao(high=high, low=low, fast=fast, slow=slow)
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -763,7 +753,7 @@ class MomentumIndicators:
 
         result = ta.bop(open_=open_, high=high, low=low, close=close)
         if result is None:
-            return pd.Series(np.full(len(open_), np.nan), index=open_.index)
+            return create_nan_series_like(open_)
         return result
 
     @staticmethod
@@ -776,7 +766,7 @@ class MomentumIndicators:
 
         result = ta.cg(data, length=length)
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -791,7 +781,7 @@ class MomentumIndicators:
 
         result = ta.coppock(close=close, length=length, fast=fast, slow=slow)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -829,13 +819,13 @@ class MomentumIndicators:
 
             ma_result = ma_func(data, length=length)
             if ma_result is None or ma_result.isna().all():
-                return pd.Series(np.full(len(data), np.nan), index=data.index)
+                return create_nan_series_like(data)
 
             # BIAS = (close - ma) / ma * 100
             result = ((data - ma_result) / ma_result) * 100
 
         if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
 
         return result
 
@@ -856,7 +846,7 @@ class MomentumIndicators:
         volatility = data.diff(1).abs().rolling(window=length).sum()
 
         er = change / volatility
-        return er.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+        return normalize_non_finite(er, fill_value=0.0)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -872,13 +862,11 @@ class MomentumIndicators:
             {"open_": open_, "high": high, "low": low, "close": close}, length
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         result = ta.brar(open_=open_, high=high, low=low, close=close, length=length)
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -892,7 +880,7 @@ class MomentumIndicators:
 
         result = ta.cfo(close=close, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -908,13 +896,11 @@ class MomentumIndicators:
             {"high": high, "low": low, "close": close}, length
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         result = ta.eri(high=high, low=low, close=close, length=length)
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -949,7 +935,7 @@ class MomentumIndicators:
             mamode=mamode,
         )
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -966,13 +952,11 @@ class MomentumIndicators:
             {"high": high, "low": low, "close": close}, length
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         result = ta.kdj(high=high, low=low, close=close, length=length, signal=signal)
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
@@ -986,7 +970,7 @@ class MomentumIndicators:
 
         result = ta.rsx(close=close, length=length, drift=drift)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -1004,8 +988,7 @@ class MomentumIndicators:
             {"open_": open_, "high": high, "low": low, "close": close}, length
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         result = ta.rvgi(
             open_=open_,
@@ -1016,8 +999,7 @@ class MomentumIndicators:
             swma_length=swma_length,
         )
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series
+            return create_nan_series_bundle(close, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -1031,7 +1013,7 @@ class MomentumIndicators:
 
         result = ta.slope(close=close, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -1046,13 +1028,11 @@ class MomentumIndicators:
         """SMI Ergodic"""
         validation = validate_series_params(close, slow)
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         result = ta.smi(close=close, fast=fast, slow=slow, signal=signal, scalar=scalar)
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
@@ -1067,13 +1047,12 @@ class MomentumIndicators:
         if validation is not None:
             if show_all:
                 # Return DataFrame-like structure if expected
-                nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-                return nan_series  # Simplified fallback
+                return create_nan_series_like(close)
             return validation
 
         result = ta.td_seq(close=close, asbool=as_bool, show_all=show_all)
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
 
         # If returning DataFrame, caller handles it. If Series (usually TD Seq Number), return it.
         # td_seq usually returns DataFrame with multiple columns. We return as is.

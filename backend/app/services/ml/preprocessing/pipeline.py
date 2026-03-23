@@ -10,7 +10,6 @@ MLアルゴリズムに最適化された機械学習中心のパイプライン
 import logging
 from typing import Any, Dict, Optional
 
-import numpy as np
 import pandas as pd
 from sklearn.feature_selection import SelectKBest
 from sklearn.pipeline import Pipeline
@@ -25,15 +24,6 @@ from app.utils.data_processing.pipelines.preprocessing_pipeline import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _dataframe_to_array(X: Any) -> np.ndarray:
-    """DataFrameをnumpy配列に変換"""
-    if not isinstance(X, pd.DataFrame):
-        return X
-    if X.empty:
-        return np.array([]).reshape(0, 0)
-    return X.fillna(0.0).values
 
 
 def create_ml_pipeline(

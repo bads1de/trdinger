@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.response import api_response
+from app.utils.response import api_response, error_response
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -75,6 +75,34 @@ class BaseDataCollectionOrchestrationService:
             APIレスポンス辞書
         """
         return api_response(success=True, message=message, data=data)
+
+    def _create_error_response(
+        self,
+        message: str,
+        *,
+        details: Optional[dict] = None,
+        error_code: Optional[str] = None,
+        context: Optional[str] = None,
+        data: Optional[dict] = None,
+    ) -> dict:
+        """標準化されたエラーレスポンスを作成する。"""
+        return error_response(
+            message=message,
+            error_code=error_code,
+            details=details,
+            context=context,
+            data=data,
+        )
+
+    def _normalize_derivative_symbol(self, symbol: str) -> str:
+        """永続化済みのデリバティブシンボル形式に正規化する。"""
+        if ":" in symbol:
+            return symbol
+        if symbol.endswith("/USDT"):
+            return f"{symbol}:USDT"
+        if symbol.endswith("/USD"):
+            return f"{symbol}:USD"
+        return f"{symbol}:USDT"
 
 
 

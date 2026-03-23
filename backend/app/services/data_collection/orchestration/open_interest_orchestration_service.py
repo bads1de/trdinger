@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.base_orchestration_service import (
     BaseDataCollectionOrchestrationService,
 )
-from app.utils.response import error_response
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..bybit.open_interest_service import BybitOpenInterestService
@@ -92,7 +91,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                     },
                 )
             else:
-                return error_response(
+                return self._create_error_response(
                     message=f"オープンインタレストデータ収集に失敗しました: {result.get('error', 'Unknown error')}",
                     details={
                         "saved_count": result.get("saved_count", 0),
@@ -103,7 +102,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
 
         except Exception as e:
             logger.error(f"オープンインタレストデータ収集エラー: {e}", exc_info=True)
-            return error_response(
+            return self._create_error_response(
                 message=f"オープンインタレストデータ収集中にエラーが発生しました: {str(e)}",
                 details={
                     "saved_count": 0,
@@ -134,19 +133,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 start_time = self._parse_datetime(start_date)
                 end_time = self._parse_datetime(end_date)
 
-                normalized_symbol = (
-                    symbol
-                    if ":" in symbol
-                    else (
-                        f"{symbol}:USDT"
-                        if symbol.endswith("/USDT")
-                        else (
-                            f"{symbol}:USD"
-                            if symbol.endswith("/USD")
-                            else f"{symbol}:USDT"
-                        )
-                    )
-                )
+                normalized_symbol = self._normalize_derivative_symbol(symbol)
 
                 records = repository.get_open_interest_data(
                     symbol=normalized_symbol,
@@ -177,7 +164,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 )
         except Exception as e:
             logger.error(f"オープンインタレストデータ取得エラー: {e}", exc_info=True)
-            return error_response(
+            return self._create_error_response(
                 message=f"オープンインタレストデータ取得中にエラーが発生しました: {str(e)}",
                 details={
                     "symbol": symbol,
@@ -253,7 +240,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
 
         except Exception as e:
             logger.error(f"オープンインタレスト一括収集エラー: {e}", exc_info=True)
-            return error_response(
+            return self._create_error_response(
                 message=f"一括収集中にエラーが発生しました: {str(e)}",
                 details={
                     "total_saved": 0,

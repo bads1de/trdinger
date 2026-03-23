@@ -32,6 +32,9 @@ import pandas as pd
 import pandas_ta_classic as ta
 
 from ..data_validation import (
+    create_nan_series_bundle,
+    create_nan_series_like,
+    create_nan_series_map,
     handle_pandas_ta_errors,
     validate_multi_series_params,
     validate_series_params,
@@ -100,7 +103,7 @@ class OverlapIndicators:
 
         result = ta.trima(data, length=length, talib=talib)
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -118,7 +121,7 @@ class OverlapIndicators:
 
         result = ta.zlma(data, length=length, mamode=mamode, offset=offset)
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -149,7 +152,7 @@ class OverlapIndicators:
             offset=offset,
         )
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -184,7 +187,7 @@ class OverlapIndicators:
         # Use pandas-ta directly
         result = ta.t3(data, window=length, a=a)
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -206,7 +209,7 @@ class OverlapIndicators:
 
         result = ta.hma(data, length=length)
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -225,7 +228,7 @@ class OverlapIndicators:
 
         result = ta.vwma(close=close, volume=volume, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -249,7 +252,7 @@ class OverlapIndicators:
         result = ta.linreg(data, length=length, offset=0)
 
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
 
         # interceptが必要な場合（あまり一般的ではないが元のコードにあるためサポート）
         if intercept:
@@ -276,7 +279,7 @@ class OverlapIndicators:
         result = ta.linreg(data, length=length, slope=True)
 
         if result is None:
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
 
         return result * scalar
 
@@ -290,7 +293,7 @@ class OverlapIndicators:
 
         result = ta.rma(data, length=length)
         if result is None or (hasattr(result, "empty") and result.empty):
-            return pd.Series(np.full(len(data), np.nan), index=data.index)
+            return create_nan_series_like(data)
         return result
 
     @staticmethod
@@ -325,8 +328,7 @@ class OverlapIndicators:
         )
 
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return nan_series, nan_series.copy(), nan_series.copy()
+            return create_nan_series_bundle(high, 3)
 
         if validation is not None:
             return nan_result()
@@ -421,14 +423,16 @@ class OverlapIndicators:
         )
 
         def nan_result() -> Dict[str, pd.Series]:
-            nan_series = pd.Series(np.full(len(high), np.nan), index=high.index)
-            return {
-                "tenkan_sen": nan_series.copy(),
-                "kijun_sen": nan_series.copy(),
-                "senkou_span_a": nan_series.copy(),
-                "senkou_span_b": nan_series.copy(),
-                "chikou_span": nan_series.copy(),
-            }
+            return create_nan_series_map(
+                high,
+                [
+                    "tenkan_sen",
+                    "kijun_sen",
+                    "senkou_span_a",
+                    "senkou_span_b",
+                    "chikou_span",
+                ],
+            )
 
         if validation is not None:
             return nan_result()
@@ -485,8 +489,7 @@ class OverlapIndicators:
             {"high": high, "low": low, "close": close}, max(high_length, low_length)
         )
         if validation is not None:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         result = ta.hilo(
             high=high,
@@ -498,8 +501,7 @@ class OverlapIndicators:
             offset=offset,
         )
         if result is None or result.empty:
-            nan_series = pd.Series(np.full(len(close), np.nan), index=close.index)
-            return nan_series, nan_series, nan_series
+            return create_nan_series_bundle(close, 3)
 
         # Returns HILO, HILOl, HILOs
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
@@ -514,7 +516,7 @@ class OverlapIndicators:
 
         result = ta.hl2(high=high, low=low)
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -529,7 +531,7 @@ class OverlapIndicators:
 
         result = ta.hlc3(high=high, low=low, close=close)
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -546,7 +548,7 @@ class OverlapIndicators:
 
         result = ta.ohlc4(open_=open_, high=high, low=low, close=close)
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -559,7 +561,7 @@ class OverlapIndicators:
 
         result = ta.midpoint(close=close, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -572,7 +574,7 @@ class OverlapIndicators:
 
         result = ta.midprice(high=high, low=low, length=length)
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -587,7 +589,7 @@ class OverlapIndicators:
 
         result = ta.vidya(close=close, length=length, drift=drift, offset=offset)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -602,7 +604,7 @@ class OverlapIndicators:
 
         result = ta.wcp(high=high, low=low, close=close)
         if result is None:
-            return pd.Series(np.full(len(high), np.nan), index=high.index)
+            return create_nan_series_like(high)
         return result
 
     @staticmethod
@@ -615,7 +617,7 @@ class OverlapIndicators:
 
         result = ta.mcgd(close=close, length=length, offset=offset)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -630,7 +632,7 @@ class OverlapIndicators:
 
         result = ta.jma(close=close, length=length, phase=phase, offset=offset)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -643,7 +645,7 @@ class OverlapIndicators:
 
         result = ta.fwma(close=close, length=length, asc=asc)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -656,7 +658,7 @@ class OverlapIndicators:
 
         result = ta.pwma(close=close, length=length, asc=asc)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -669,7 +671,7 @@ class OverlapIndicators:
 
         result = ta.sinwma(close=close, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -682,7 +684,7 @@ class OverlapIndicators:
 
         result = ta.ssf(close=close, length=length, poles=poles)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
 
     @staticmethod
@@ -695,5 +697,5 @@ class OverlapIndicators:
 
         result = ta.swma(close=close, length=length)
         if result is None:
-            return pd.Series(np.full(len(close), np.nan), index=close.index)
+            return create_nan_series_like(close)
         return result
