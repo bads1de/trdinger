@@ -437,23 +437,13 @@ class StackingEnsemble(BaseEnsemble):
 
             # base_path に紐づくファイルを優先し、見つからない場合のみ保存ディレクトリ全体を探す
             local_patterns = [
-                f"{base_path}_stacking_ensemble_*.joblib",
                 f"{base_path}_stacking_ensemble_*.pkl",
-                f"{base_path}_stacking_*.joblib",
                 f"{base_path}_stacking_*.pkl",
-                f"{base_path}_*.joblib",
                 f"{base_path}_*.pkl",
             ]
             fallback_patterns = [
                 os.path.join(
-                    unified_config.ml.model.model_save_path, "stacking_*.joblib"
-                ),
-                os.path.join(
                     unified_config.ml.model.model_save_path, "stacking_*.pkl"
-                ),
-                os.path.join(
-                    unified_config.ml.model.model_save_path,
-                    "stacking_ensemble_*.joblib",
                 ),
                 os.path.join(
                     unified_config.ml.model.model_save_path,
@@ -557,14 +547,7 @@ class StackingEnsemble(BaseEnsemble):
 
             # メタデータを読み込み（存在する場合）
             metadata_candidates = []
-            if model_path.endswith(".joblib"):
-                metadata_candidates.extend(
-                    [
-                        model_path.replace(".joblib", ".meta.json"),
-                        model_path.replace(".joblib", "_metadata.json"),
-                    ]
-                )
-            elif model_path.endswith(".pkl"):
+            if model_path.endswith(".pkl"):
                 metadata_candidates.extend(
                     [
                         model_path.replace(".pkl", ".meta.json"),

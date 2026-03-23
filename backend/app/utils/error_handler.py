@@ -5,17 +5,12 @@ APIErrorHandler と MLErrorHandler の重複機能を統合し、
 一貫性のあるエラー処理とログ出力を提供します。
 """
 
-import concurrent.futures
 import functools
 import logging
-import platform
-import signal
 import time
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar
 
-import numpy as np
-import pandas as pd
 from fastapi import HTTPException
 
 from .response import error_response
@@ -236,7 +231,6 @@ class ErrorHandler:
             status_code: エラー時のHTTPステータスコード
         """
         def decorator(func: Callable[..., Awaitable[Any]]):
-            import functools
             @functools.wraps(func)
             async def wrapper(*args, **kwargs):
                 try:
@@ -250,200 +244,7 @@ class ErrorHandler:
             return wrapper
         return decorator
 
-    # --- タイムアウト処理 ---
-
-    @staticmethod
-    def handle_timeout(func: Callable, timeout_seconds: int, *args, **kwargs) -> Any:
-        """
-        プラットフォーム対応のタイムアウト処理
-
-        Args:
-            func: 実行する関数
-            timeout_seconds: タイムアウト時間（秒）
-            *args: 関数の引数
-            **kwargs: 関数のキーワード引数
-
-        Returns:
-            関数の実行結果
-
-        Raises:
-            TimeoutError: タイムアウト時
-        """
-        try:
-            if platform.system() == "Windows":
-                return ErrorHandler._handle_timeout_windows(
-                    func, timeout_seconds, *args, **kwargs
-                )
-            else:
-                return ErrorHandler._handle_timeout_unix(
-                    func, timeout_seconds, *args, **kwargs
-                )
-        except Exception as e:
-            if "timeout" in str(e).lower():
-                raise TimeoutError(
-                    f"処理がタイムアウトしました（{timeout_seconds}秒）: {e}"
-                )
-            raise
-
-    @staticmethod
-    def _handle_timeout_windows(
-        func: Callable, timeout_seconds: int, *args, **kwargs
-    ) -> Any:
-        """Windows環境でのタイムアウト処理"""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(func, *args, **kwargs)
-            try:
-                return future.result(timeout=timeout_seconds)
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(
-                    f"Windows環境でのタイムアウト（{timeout_seconds}秒）"
-                )
-
-    @staticmethod
-    def _handle_timeout_unix(
-        func: Callable, timeout_seconds: int, *args, **kwargs
-    ) -> Any:
-        """Unix系環境でのタイムアウト処理"""
-
-        def timeout_handler(signum, frame):
-            _ = signum, frame  # 未使用パラメータ
-            raise TimeoutError(f"Unix環境でのタイムアウト（{timeout_seconds}秒）")
-
-        # 既存のシグナルハンドラーを保存
-        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(timeout_seconds)
-
-        try:
-            result = func(*args, **kwargs)
-            signal.alarm(0)  # タイムアウトをクリア
-            return result
-        finally:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, old_handler)  # 元のハンドラーを復元
-
-    # --- バリデーション機能 ---
-
-    @staticmethod
-    def validate_predictions(
-        predictions: Dict[str, float], context: str = "統一予測値検証"
-    ) -> bool:
-        """
-        予測値の統一バリデーション
-
-        Args:
-            predictions: 予測値の辞書
-            context: バリデーションコンテキスト
-
-        Returns:
-            バリデーション結果
-        """
-        try:
-            if predictions is None:
-                logger.warning(f"{context}: predictions が None です")
-                return False
-
-            # 必要なキーの存在確認
-            required_keys = ["up", "down", "range"]
-            if not all(key in predictions for key in required_keys):
-                logger.warning(f"{context}: 必須キー {required_keys} が不足しています")
-                return False
-
-            # 値の範囲確認（0-1の範囲）および NaN/Inf チェック
-            for key, value in predictions.items():
-                if not isinstance(value, (int, float)):
-                    logger.warning(f"{context}: {key} が数値ではありません")
-                    return False
-                if not (0.0 <= value <= 1.0):
-                    logger.warning(f"{context}: {key} が範囲外です: {value}")
-                    return False
-                if np.isnan(value) or np.isinf(value):
-                    logger.warning(f"{context}: {key} に無効な値が含まれています")
-                    return False
-
-            # 合計値の確認（0.8-1.2の範囲）
-            total = sum(predictions.values())
-            if not (0.8 <= total <= 1.2):
-                logger.warning(f"{context}: 合計値が範囲外です: {total}")
-                return False
-
-            return True
-
-        except Exception as e:
-            ErrorHandler.handle_model_error(
-                e, context, operation="validate_predictions"
-            )
-            return False
-
-    @staticmethod
-    def validate_dataframe(
-        df: pd.DataFrame,
-        required_columns: Optional[list] = None,
-        min_rows: int = 1,
-        context: str = "統一データフレーム検証",
-    ) -> bool:
-        """
-        データフレームの統一バリデーション
-
-        Args:
-            df: 検証するデータフレーム
-            required_columns: 必須カラムのリスト
-            min_rows: 最小行数
-            context: バリデーションコンテキスト
-
-        Returns:
-            バリデーション結果
-        """
-        try:
-            if df is None or df.empty:
-                logger.warning(f"{context}: データフレームが空です")
-                return False
-
-            if len(df) < min_rows:
-                logger.warning(
-                    f"{context}: データ行数が不足しています ({len(df)} < {min_rows})"
-                )
-                return False
-
-            if required_columns:
-                missing_columns = [
-                    col for col in required_columns if col not in df.columns
-                ]
-                if missing_columns:
-                    logger.warning(
-                        f"{context}: 必須カラムが不足しています: {missing_columns}"
-                    )
-                    return False
-
-            return True
-        except Exception as e:
-            ErrorHandler.handle_model_error(e, context, operation="validate_dataframe")
-            return False
-
-
 # --- デコレータとコンテキストマネージャー ---
-
-
-def timeout_decorator(timeout_seconds: int):
-    """
-    タイムアウトデコレータ
-
-    指定された秒数で関数の実行をタイムアウトさせるデコレータ
-
-    Args:
-        timeout_seconds: タイムアウト秒数
-
-    Returns:
-        デコレータ関数
-    """
-
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            return ErrorHandler.handle_timeout(func, timeout_seconds, *args, **kwargs)
-
-        return wrapper
-
-    return decorator
 
 
 def safe_operation(
@@ -485,21 +286,16 @@ def safe_operation(
 
 
 @contextmanager
-def operation_context(operation_name: str, log_memory: bool = False):
+def operation_context(operation_name: str):
     """
     統一操作のコンテキストマネージャー
 
-    操作の実行時間とメモリ使用量を計測するコンテキストマネージャー
+    操作の実行時間計測を行うコンテキストマネージャー
 
     Args:
         operation_name: 操作名
-        log_memory: メモリ使用量を記録するかどうか
     """
     start_time = time.time()
-
-    if log_memory:
-        # メモリ使用量のログ（必要に応じて実装）
-        pass
 
     logger.info(f"{operation_name} を開始")
 
@@ -513,14 +309,23 @@ def operation_context(operation_name: str, log_memory: bool = False):
             f"{operation_name} でエラーが発生しました（{duration:.2f}秒）: {e}"
         )
         raise
-    finally:
-        if log_memory:
-            # メモリ使用量のログ（必要に応じて実装）
-            pass
+
+
+def get_memory_usage_mb() -> float:
+    """現在のプロセスのメモリ使用量を取得（MB単位）"""
+    try:
+        import psutil
+
+        process = psutil.Process()
+        return process.memory_info().rss / 1024 / 1024
+    except ImportError:
+        return 0.0
+    except Exception as e:
+        logger.warning(f"メモリ使用量取得エラー: {e}")
+        return 0.0
 
 
 # 標準的なエイリアス
-handle_api_exception = ErrorHandler.safe_execute_async
 safe_execute = ErrorHandler.safe_execute
 api_safe_execute = ErrorHandler.api_safe_execute
 safe_ml_operation = safe_operation

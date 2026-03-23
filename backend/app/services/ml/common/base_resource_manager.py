@@ -95,7 +95,7 @@ class BaseResourceManager(ABC):
 
     def _get_memory_usage(self) -> float:
         """現在のメモリ使用量を取得（MB単位）"""
-        from app.utils.system import get_memory_usage_mb
+        from app.utils.error_handler import get_memory_usage_mb
         return get_memory_usage_mb()
 
 

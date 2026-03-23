@@ -587,6 +587,7 @@ class MLTrainingService(BaseResourceManager):
         optimization_settings: Optional[OptimizationSettings] = None,
         test_size: float = 0.2,
         random_state: int = 42,
+        **kwargs,
     ) -> Dict[str, Any]:
         """モデルの学習を実行"""
         data_dict = (
@@ -618,6 +619,7 @@ class MLTrainingService(BaseResourceManager):
             "random_state": random_state,
             "optimize_hyperparameters": False,
             **best_params,
+            **kwargs,
         }
         result = self.trainer.train_model(
             ohlcv,
@@ -633,13 +635,7 @@ class MLTrainingService(BaseResourceManager):
                 result["optimization_result"] = opt_result
         return result
 
-    def predict(self, features_df: pd.DataFrame) -> Dict[str, Any]:
-        """予測を実行"""
-        return {
-            "predictions": self.trainer.predict(features_df),
-            "model_type": self.trainer_type,
-            "feature_count": len(features_df.columns),
-        }
+
 
     def generate_signals(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """シグナル生成"""

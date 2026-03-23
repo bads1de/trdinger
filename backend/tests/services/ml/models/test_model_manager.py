@@ -14,7 +14,7 @@ class TestModelManager:
         m = ModelManager()
         m.config = MagicMock()
         m.config.model_save_path = "/mock/models"
-        m.config.model_file_extension = ".joblib"
+        m.config.model_file_extension = ".pkl"
         m.config.max_model_versions = 2
         m.config.model_retention_days = 7
         m._get_model_search_paths = MagicMock(return_value=["/mock/models"])
@@ -46,12 +46,12 @@ class TestModelManager:
 
                 assert path is not None
                 assert "mock_algo" in path
-                assert path.endswith(".joblib")
+                assert path.endswith(".pkl")
 
                 mock_dump.assert_called_once()
                 mock_cleanup.assert_called_once_with("mock_algo")
                 mock_file.assert_called_once_with(
-                    path.replace(".joblib", ".meta.json"), "w", encoding="utf-8"
+                    path.replace(".pkl", ".meta.json"), "w", encoding="utf-8"
                 )
 
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=True)
@@ -59,7 +59,7 @@ class TestModelManager:
     def test_load_model_success(self, mock_load, mock_exists, manager):
         """モデル読み込みの正常系テスト"""
         mock_load.return_value = {"model": {"coef": [1]}, "metadata": {"acc": 0.9}}
-        res = manager.load_model("/mock/models/mock_algo_20230101.joblib")
+        res = manager.load_model("/mock/models/mock_algo_20230101.pkl")
         assert res is not None
         assert res["model"] == {"coef": [1]}
         assert res["metadata"]["acc"] == 0.9
@@ -69,7 +69,7 @@ class TestModelManager:
     def test_load_model_old_format(self, mock_load, mock_exists, manager):
         """古い形式（辞書でない）モデルの読み込み"""
         mock_load.return_value = ["my", "old", "model"]
-        res = manager.load_model("/mock/models/old_model.joblib")
+        res = manager.load_model("/mock/models/old_model.pkl")
         assert res is not None
         assert res["model"] == ["my", "old", "model"]
         assert "scaler" in res
@@ -78,7 +78,7 @@ class TestModelManager:
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=False)
     def test_load_model_not_found(self, mock_exists, manager):
         """存在しないファイルの読み込み"""
-        res = manager.load_model("/mock/models/ghost.joblib")
+        res = manager.load_model("/mock/models/ghost.pkl")
         assert res is None
 
     # ---------------------------------------------------------------------------
@@ -91,25 +91,23 @@ class TestModelManager:
     def test_get_latest_model(self, mock_getmtime, mock_glob, mock_exists, manager):
         """最新モデルのファイルパス取得"""
         mock_glob.side_effect = [
-            ["/mock/models/model1.joblib", "/mock/models/model2.joblib"],
-            [],  # .pkl
+            ["/mock/models/model1.pkl", "/mock/models/model2.pkl"],
         ]
         # model2 の方が新しいとする
         mock_getmtime.side_effect = lambda f: 200 if "model2" in f else 100
 
         latest = manager.get_latest_model()
-        assert latest == "/mock/models/model2.joblib"
+        assert latest == "/mock/models/model2.pkl"
 
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=True)
     @patch("app.services.ml.models.model_manager.glob.glob")
     @patch("app.services.ml.models.model_manager.os.stat")
     def test_list_models(self, mock_stat, mock_glob, mock_exists, manager):
         """保存されているモデルの一覧取得"""
-        # _get_model_search_paths から返るパス分、.pklと.joblibの検索でglobが呼ばれる
+        # _get_model_search_paths から返るパス分、globが呼ばれる
         mock_glob.side_effect = [
-            ["/mock/models/model1.joblib", "/mock/models/model2.joblib"],
-            [],  # .pkl
-        ] * 2
+            ["/mock/models/model1.pkl", "/mock/models/model2.pkl"],
+        ] * 1
 
         # モックの os.stat 返り値
         stat_mock = MagicMock()
@@ -139,7 +137,7 @@ class TestModelManager:
         self, mock_remove, mock_getmtime, mock_glob, mock_exists, manager
     ):
         """期限切れモデルのクリーンアップ"""
-        mock_glob.return_value = ["/mock/models/old.joblib", "/mock/models/new.joblib"]
+        mock_glob.return_value = ["/mock/models/old.pkl", "/mock/models/new.pkl"]
 
         # old は10日前のタイムスタンプ、new は現在のタイムスタンプ
         now_ts = datetime.now().timestamp()
@@ -151,7 +149,7 @@ class TestModelManager:
 
         # removeが古いモデルとサイドカーに対して呼ばれる
         assert mock_remove.call_count == 2
-        mock_remove.assert_any_call("/mock/models/old.joblib")
+        mock_remove.assert_any_call("/mock/models/old.pkl")
         mock_remove.assert_any_call("/mock/models/old.meta.json")
 
     @patch("app.services.ml.models.model_manager.glob.glob")
@@ -164,9 +162,9 @@ class TestModelManager:
         """世代管理でのクリーンアップ"""
         # 3つのファイルがある (max_versions = 2 なので一番古い1つ消える)
         mock_glob.return_value = [
-            "/mock/models/model_1.joblib",
-            "/mock/models/model_2.joblib",
-            "/mock/models/model_3.joblib",
+            "/mock/models/model_1.pkl",
+            "/mock/models/model_2.pkl",
+            "/mock/models/model_3.pkl",
         ]
 
         # 1が一番古いとする
@@ -184,7 +182,7 @@ class TestModelManager:
         manager._cleanup_old_models("model")
 
         # 1が消される
-        mock_remove.assert_any_call("/mock/models/model_1.joblib")
+        mock_remove.assert_any_call("/mock/models/model_1.pkl")
         mock_remove.assert_any_call("/mock/models/model_1.meta.json")
         assert mock_remove.call_count == 2
 

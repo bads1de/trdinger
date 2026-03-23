@@ -149,9 +149,9 @@ class TestStackingEnsemble:
         # 内部で使われる glob, os.path, joblib をグローバルにパッチ
         # 関数内での import joblib に対応するため
         with patch("joblib.load", return_value=model_data), \
-             patch("glob.glob", return_value=["/mock/model.joblib"]), \
+             patch("glob.glob", return_value=["/mock/model.pkl"]), \
              patch("os.path.exists", return_value=True), \
-             patch("os.path.abspath", return_value="/mock/model.joblib"), \
+             patch("os.path.abspath", return_value="/mock/model.pkl"), \
              patch("os.path.getmtime", return_value=123.4), \
              patch("builtins.open", mock_open(read_data='{}')):
             

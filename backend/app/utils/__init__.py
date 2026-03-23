@@ -6,8 +6,7 @@
 主な機能:
 - data_processing: データの前処理、変換、検証
 - response: APIレスポンスの標準化
-- error_handler: エラーハンドリング
-- duplicate_filter_handler: 重複データのフィルタリング
+- error_handler: エラーハンドリング・モニタリング
 - data_conversion: データ形式の変換
 
 各モジュールは特定の責務を持ち、再利用可能な形で実装されています。
@@ -21,17 +20,16 @@ from .data_conversion import (
     OpenInterestDataConverter,
     parse_timestamp_safe,
 )
-from .duplicate_filter_handler import DuplicateFilter
 from .error_handler import (
     DataError,
     ErrorHandler,
     ModelError,
     TimeoutError,
     ValidationError,
+    get_memory_usage_mb,
     operation_context,
     safe_execute,
     safe_operation,
-    timeout_decorator,
 )
 from .response import api_response, error_response
 
@@ -39,12 +37,12 @@ __all__ = [
     # レスポンスユーティリティ
     "api_response",
     "error_response",
-    # エラーハンドリング
+    # エラーハンドリング・モニタリング
     "ErrorHandler",
     "safe_execute",
     "safe_operation",
-    "timeout_decorator",
     "operation_context",
+    "get_memory_usage_mb",
     # カスタム例外
     "TimeoutError",
     "ValidationError",
@@ -56,8 +54,6 @@ __all__ = [
     "OpenInterestDataConverter",
     "DataConversionError",
     "parse_timestamp_safe",
-    # ログフィルター
-    "DuplicateFilter",
 ]
 
 

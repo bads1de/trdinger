@@ -5,7 +5,6 @@
 既存のAPIとの互換性を保持し、効率的なモデル管理を提供します。
 """
 
-import glob
 import logging
 import os
 import warnings
@@ -57,7 +56,7 @@ class ModelManager:
             if not os.path.exists(search_path):
                 continue
 
-            for extension in (".pkl", ".joblib"):
+            for extension in (".pkl",):
                 patterns.append(
                     os.path.join(search_path, f"{model_name_pattern}*{extension}")
                 )
@@ -72,9 +71,7 @@ class ModelManager:
         sidecar_path = self._get_sidecar_path(model_path)
         if os.path.exists(sidecar_path):
             os.remove(sidecar_path)
-            logger.info(
-                f"モデルのサイドカーを削除: {os.path.basename(sidecar_path)}"
-            )
+            logger.info(f"モデルのサイドカーを削除: {os.path.basename(sidecar_path)}")
 
     def _build_model_info(self, model_path: str) -> Dict[str, Any]:
         """モデルファイルの一覧表示用情報を構築する"""
@@ -464,10 +461,8 @@ class ModelManager:
         Returns:
             サイドカーJSONファイルパス
         """
-        # .joblib または .pkl を .meta.json に置換
-        if model_path.endswith(".joblib"):
-            return model_path.replace(".joblib", ".meta.json")
-        elif model_path.endswith(".pkl"):
+        # .pkl を .meta.json に置換
+        if model_path.endswith(".pkl"):
             return model_path.replace(".pkl", ".meta.json")
         else:
             return model_path + ".meta.json"
