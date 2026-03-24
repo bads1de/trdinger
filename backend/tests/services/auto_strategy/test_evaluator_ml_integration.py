@@ -1,7 +1,7 @@
 """
-IndividualEvaluator ML統合テスト
+HybridIndividualEvaluator ML統合テスト
 
-IndividualEvaluatorがMLモデルを正しくロードし、
+HybridIndividualEvaluatorがMLモデルを正しくロードし、
 BacktestServiceを通じてUniversalStrategyに渡しているかを検証します。
 """
 
@@ -9,7 +9,9 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+    HybridIndividualEvaluator,
+)
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.backtest.backtest_service import BacktestService
 
@@ -18,7 +20,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
     def setUp(self):
         # モックの準備
         self.mock_backtest_service = MagicMock(spec=BacktestService)
-        self.evaluator = IndividualEvaluator(self.mock_backtest_service)
+        self.evaluator = HybridIndividualEvaluator(self.mock_backtest_service)
 
         # テスト用バックテスト設定
         self.backtest_config = {
@@ -41,7 +43,9 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         # ダミー遺伝子
         self.gene = StrategyGene()
 
-    @patch("app.services.auto_strategy.core.individual_evaluator.model_manager")
+    @patch(
+        "app.services.auto_strategy.core.hybrid_individual_evaluator.model_manager"
+    )
     def test_evaluate_individual_passes_ml_model(self, mock_model_manager):
         """
         evaluate_individualがMLモデルをロードし、
@@ -50,10 +54,6 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         # MLモデルのロードをモック
         mock_model = MagicMock()
         mock_model_manager.load_model.return_value = mock_model
-
-        # _perform_single_evaluation は evaluate_individual から呼ばれるが、
-        # 今回は evaluate_individual 全体のフローを通して確認する
-        # ただし、データキャッシュ部分はモックが必要
 
         with (
             patch.object(self.evaluator, "_get_cached_data", return_value=MagicMock()),
@@ -91,7 +91,9 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         self.assertIn("ml_filter_threshold", parameters)
         self.assertEqual(parameters["ml_filter_threshold"], 0.5)
 
-    @patch("app.services.auto_strategy.core.individual_evaluator.model_manager")
+    @patch(
+        "app.services.auto_strategy.core.hybrid_individual_evaluator.model_manager"
+    )
     def test_evaluate_individual_handles_load_error(self, mock_model_manager):
         """モデルロードエラー時にMLフィルターが無効化されることをテスト"""
         # ロードで例外発生
@@ -118,7 +120,3 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         self.assertFalse(parameters["ml_filter_enabled"])
         # ml_predictor が設定されていないこと（またはNone）
         self.assertIsNone(parameters.get("ml_predictor"))
-
-
-
-

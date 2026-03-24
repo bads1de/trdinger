@@ -200,7 +200,10 @@ class TestFetchOhlcvData:
         )
 
         assert result is not None
-        pd.testing.assert_frame_equal(result, db_df)
+        # _get_cached_ohlcv_data はカラム名を大文字化してキャッシュする
+        expected_df = db_df.copy()
+        expected_df.columns = expected_df.columns.str.capitalize()
+        pd.testing.assert_frame_equal(result, expected_df)
         # キャッシュに保存されていることを確認
         cache_key = ("ohlcv", "BTCUSDT", "1h", "2023-01-01", "2023-12-31")
         assert cache_key in evaluator_with_data_service._data_cache

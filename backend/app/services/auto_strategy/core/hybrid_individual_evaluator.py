@@ -4,13 +4,12 @@ import importlib
 import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
-import pandas as pd
-
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
 from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
 from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.common.exceptions import MLPredictionError, MLTrainingError
+from app.services.ml.models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             準備された実行設定辞書
         """
-        # バックテスト設定の補完
         ensured_config = self._ensure_backtest_defaults(backtest_config, config)
         return super()._prepare_run_config(gene, ensured_config, config)
 
@@ -85,7 +83,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             return {}
 
         try:
-            # Gene → 特徴量変換
             ohlcv_data = self._fetch_ohlcv_data(backtest_config, config)
             if ohlcv_data is not None and not ohlcv_data.empty:
                 features_df = self.feature_adapter.gene_to_features(
@@ -119,13 +116,12 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             フィットネス値
         """
-        # 基底クラスのフィットネス計算を呼び出し
-        base_fitness = super()._calculate_fitness(backtest_result, config, **kwargs)
+        base_fitness = super()._calculate_fitness(
+            backtest_result, config, **kwargs
+        )
 
-        # 予測信号を取得
         prediction_signals = kwargs.get("prediction_signals")
 
-        # 取引が発生していない場合はMLスコアを統合しない
         try:
             metrics = self._extract_performance_metrics(backtest_result)
             total_trades = metrics.get("total_trades", 0)
@@ -135,13 +131,10 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         if total_trades == 0:
             return max(0.0, base_fitness)
 
-        # ML予測スコアを追加（predictorが設定され、予測が成功した場合）
         if prediction_signals:
             prediction_score = self._extract_prediction_score(prediction_signals)
-            # 予測重みを取得（デフォルト0.1）
             prediction_weight = config.fitness_weights.get("prediction_score", 0.1)
 
-            # フィットネスに予測スコアを加算
             fitness = base_fitness + prediction_weight * prediction_score
 
             logger.debug(
@@ -152,7 +145,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
             return max(0.0, fitness)
 
-        # 予測がない場合はベースフィットネスのみ
         return base_fitness
 
     def _calculate_multi_objective_fitness(
@@ -169,8 +161,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             各目的の評価値のタプル
         """
-        # 基底クラスの多目的フィットネス計算を呼び出し
-        # kwargsにはprediction_signalsが含まれており、self._calculate_fitness(Hybrid)に正しく伝播する
         base_fitness_values = super()._calculate_multi_objective_fitness(
             backtest_result, config, **kwargs
         )
@@ -178,7 +168,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         fitness_list = list(base_fitness_values)
         prediction_signals = kwargs.get("prediction_signals")
 
-        # prediction_scoreが独立した目的として含まれている場合
         if "prediction_score" in config.objectives:
             pred_score_index = config.objectives.index("prediction_score")
 
@@ -191,16 +180,39 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
         return tuple(fitness_list)
 
+    def _inject_external_objects(
+        self,
+        run_config: Dict[str, Any],
+        backtest_config: Dict[str, Any],
+        config: GAConfig,
+    ) -> None:
+        """実行設定への外部オブジェクト注入（1分足データ、MLモデル）"""
+        # 基底クラスの処理（1分足データ注入）
+        super()._inject_external_objects(run_config, backtest_config, config)
+
+        # MLフィルター設定
+        if config.ml_filter_enabled and config.ml_model_path:
+            try:
+                ml_filter_model = model_manager.load_model(config.ml_model_path)
+                if ml_filter_model:
+                    run_config["strategy_config"]["parameters"][
+                        "ml_predictor"
+                    ] = ml_filter_model
+                    run_config["strategy_config"]["parameters"][
+                        "ml_filter_threshold"
+                    ] = 0.5
+            except Exception:
+                run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
+        elif config.ml_filter_enabled:
+            run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
+
     @staticmethod
     def _extract_prediction_score(prediction_signals: Dict[str, Any]) -> float:
         """予測シグナルから中心化されたスコアを抽出"""
         if "is_valid" in prediction_signals:
-            # ダマシ予測の場合: 有効確率 - 0.5 (中心化)
             return prediction_signals["is_valid"] - 0.5
         if "trend" in prediction_signals:
-            # ボラティリティ予測の場合: トレンド確率 - 0.5 (中心化)
             return prediction_signals["trend"] - 0.5
-        # 方向予測の場合: up確率 - down確率
         return prediction_signals.get("up", 0.0) - prediction_signals.get("down", 0.0)
 
     def _create_feature_adapter(
@@ -254,75 +266,22 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""
-        # GAConfigの設定に従う（デフォルトはTrue）
         return getattr(ga_config, "preprocess_features", True)
 
     def _fetch_ohlcv_data(
         self,
         backtest_config: Dict[str, Any],
         ga_config: GAConfig,
-    ) -> Optional[pd.DataFrame]:
+    ):
         """
         バックテスト設定に基づきOHLCVデータを取得（キャッシュ対応）
 
-        親クラスの _data_cache（LRUCache）を活用して DB アクセスを最小化します。
-        データ取得に失敗した場合は None を返し、ML 予測をスキップします。
-        これにより偽データによる学習汚染を防止します。
+        基底クラスの _get_cached_ohlcv_data を使用して DB アクセスを最小化します。
         """
-        symbol = backtest_config.get("symbol")
-        timeframe = backtest_config.get("timeframe")
-        start_date = backtest_config.get("start_date")
-        end_date = backtest_config.get("end_date")
-
-        # 必須パラメータのチェック
-        if not all([symbol, timeframe, start_date, end_date]):
-            logger.warning(
-                "ML予測用OHLCVデータ取得: 必須パラメータが不足しています "
-                f"(symbol={symbol}, timeframe={timeframe}, "
-                f"start_date={start_date}, end_date={end_date})"
-            )
-            return None
-
-        # キャッシュキーを作成（"ohlcv:" プレフィックスで基底クラスのキーと区別）
-        cache_key = ("ohlcv", symbol, timeframe, str(start_date), str(end_date))
-
-        # 親クラスのキャッシュを確認（LRUCache）
-        with self._lock:
-            if cache_key in self._data_cache:
-                cached_data = self._data_cache[cache_key]
-                if isinstance(cached_data, pd.DataFrame) and not cached_data.empty:
-                    logger.debug(f"OHLCVデータ: キャッシュヒット (key={cache_key})")
-                    return cached_data
-
-        # キャッシュミス: DB からデータを取得
-        data_service = getattr(self.backtest_service, "data_service", None)
-        if data_service is None:
-            logger.warning("data_service が利用できません。ML予測をスキップします。")
-            return None
-
-        try:
-            if hasattr(self.backtest_service, "ensure_data_service_initialized"):
-                self.backtest_service.ensure_data_service_initialized()
-
-            ohlcv_data = data_service.get_ohlcv_data(
-                symbol, timeframe, start_date, end_date
-            )
-
-            if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
-                # キャッシュに保存
-                with self._lock:
-                    self._data_cache[cache_key] = ohlcv_data
-                logger.debug(
-                    f"OHLCVデータ: DB から取得・キャッシュ保存 (key={cache_key})"
-                )
-                return ohlcv_data
-            else:
-                logger.warning(
-                    f"OHLCVデータが空または無効です: symbol={symbol}, "
-                    f"timeframe={timeframe}"
-                )
-                return None
-
-        except Exception as exc:
-            logger.warning(f"OHLCVデータ取得エラー: {exc}")
-            return None
+        return self._get_cached_ohlcv_data(
+            symbol=backtest_config.get("symbol"),
+            timeframe=backtest_config.get("timeframe"),
+            start_date=backtest_config.get("start_date"),
+            end_date=backtest_config.get("end_date"),
+            cache_prefix="ohlcv",
+        )

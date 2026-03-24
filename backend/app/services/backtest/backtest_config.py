@@ -9,10 +9,10 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.config.unified_config import unified_config
+from app.config.unified_config import SUPPORTED_TIMEFRAMES, unified_config
 
 
-VALID_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+VALID_TIMEFRAMES = SUPPORTED_TIMEFRAMES
 
 
 class BacktestConfigValidationError(Exception):

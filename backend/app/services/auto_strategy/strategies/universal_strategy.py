@@ -28,7 +28,10 @@ from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.position_sizing_service import PositionSizingService
 from ..services.indicator_service import IndicatorCalculator
 from ..tpsl.tpsl_service import TPSLService
+from .ml_filter import MLFilter
 from .order_manager import OrderManager
+from .position_manager import PositionManager
+from .stateful_conditions import StatefulConditionsEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +74,11 @@ class UniversalStrategy(Strategy):
 
         # 注文管理マネージャーの初期化
         self.order_manager = OrderManager(self, self.lower_tf_simulator)
+
+        # ヘルパークラスの初期化
+        self.position_manager = PositionManager(self)
+        self.stateful_conditions_evaluator = StatefulConditionsEvaluator(self)
+        self.ml_filter = MLFilter(self)
 
         self._minute_data = None  # 1分足DataFrame（パラメータから取得）
 
@@ -297,7 +305,7 @@ class UniversalStrategy(Strategy):
 
             # 2. MLフィルター用の特徴量事前計算
             if self.ml_predictor:
-                self._precompute_ml_features()
+                self.ml_filter.precompute_ml_features()
 
             # 3. エントリー条件のベクトル化事前計算
             try:
@@ -335,7 +343,6 @@ class UniversalStrategy(Strategy):
                     # pandas-taを使って一括計算
                     # self.data.df がない場合でも一時的にDFを作成して計算
                     try:
-                        import pandas as pd
                         import pandas_ta_classic as ta
 
                         # 高速化のため必要なカラムのみでDataFrameを構築
@@ -402,27 +409,6 @@ class UniversalStrategy(Strategy):
         except Exception as e:
             logger.error(f"戦略初期化エラー: {e}", exc_info=True)
             raise
-
-    def _precompute_ml_features(self):
-        """ML予測に必要な全期間の特徴量を一括計算してキャッシュする"""
-        try:
-            from ..core.hybrid_feature_adapter import HybridFeatureAdapter
-
-            # アダプターの初期化
-            self.feature_adapter = HybridFeatureAdapter()
-
-            # 全期間のデータを準備
-            full_ohlcv = self.data.df.copy()
-            full_ohlcv.columns = [c.lower() for c in full_ohlcv.columns]
-
-            # 一括変換実行
-            self._precomputed_features = self.feature_adapter.gene_to_features(
-                gene=self.gene, ohlcv_data=full_ohlcv, apply_preprocessing=False
-            )
-            # logger.info(f"ML特徴量の一括計算完了: {len(self._precomputed_features)}行")
-        except Exception as e:
-            logger.error(f"ML特徴量事前計算エラー: {e}")
-            self._precomputed_features = None
 
     def _init_indicator(self, indicator_gene: IndicatorGene):
         """単一指標の初期化"""
@@ -495,11 +481,11 @@ class UniversalStrategy(Strategy):
                 self._minute_data, self.data.index[-1], self._current_bar_index
             )
             self.order_manager.expire_pending_orders(self._current_bar_index)
-            self._process_stateful_triggers()
+            self.stateful_conditions_evaluator.process_stateful_triggers()
 
             # 2. 既存ポジションの悲観的決済チェック
             if self.position and self._sl_price is not None:
-                if self._check_pessimistic_exit():
+                if self.position_manager.check_pessimistic_exit():
                     return
 
             # 3. 新規エントリー判定（ノーポジション時）
@@ -514,7 +500,9 @@ class UniversalStrategy(Strategy):
                 elif self._check_entry_conditions(-1.0):
                     direction = -1.0
                 else:
-                    stateful_dir = self._get_stateful_entry_direction()
+                    stateful_dir = (
+                        self.stateful_conditions_evaluator.get_stateful_entry_direction()
+                    )
                     if stateful_dir is not None:
                         direction = stateful_dir
 
@@ -522,7 +510,7 @@ class UniversalStrategy(Strategy):
                     return
 
                 # 4. MLフィルター判定
-                if self.ml_predictor and not self._ml_allows_entry(direction):
+                if self.ml_predictor and not self.ml_filter.ml_allows_entry(direction):
                     return
 
                 # 5. TP/SLおよびエントリーパラメータの計算
@@ -569,322 +557,7 @@ class UniversalStrategy(Strategy):
         except Exception as e:
             logger.error(f"戦略実行エラー: {e}")
 
-    def _check_pessimistic_exit(self) -> bool:
-        """
-        悲観的約定ロジックによるSL/TP判定
-
-        同一足内でSLとTPの両方に達した場合、SLを優先して決済します。
-        これにより「幻の利益」を防ぎ、バックテスト結果を安全側に倒します。
-
-        Returns:
-            True: 決済が実行された場合
-            False: 決済が実行されなかった場合
-        """
-        if self._sl_price is None:
-            return False
-
-        current_low = self.data.Low[-1]
-        current_high = self.data.High[-1]
-
-        # ロングポジションの場合
-        if self._position_direction > 0:
-            # トレーリングTP到達後モード: 利益確保ラインで決済判定
-            if self._tp_reached and self._trailing_tp_sl is not None:
-                if current_low <= self._trailing_tp_sl:
-                    self.position.close()
-                    self._reset_position_state()
-                    return True
-                # 利益確保ラインを更新（さらに上昇した場合）
-                self._update_trailing_tp_sl()
-                return False
-
-            # 1. SL判定 [最優先]: Low <= SL価格
-            if current_low <= self._sl_price:
-                self.position.close()
-                self._reset_position_state()
-                return True
-
-            # 2. TP判定 [次点]: High >= TP価格
-            if self._tp_price is not None and current_high >= self._tp_price:
-                # トレーリングTPが有効な場合は即時決済せず、利益確保モードへ
-                if self._is_trailing_tp_enabled():
-                    self._tp_reached = True
-                    # 初期利益確保ライン = TP価格（ここから追従開始）
-                    self._trailing_tp_sl = self._tp_price
-                    self._update_trailing_tp_sl()
-                    return False
-                else:
-                    self.position.close()
-                    self._reset_position_state()
-                    return True
-
-        # ショートポジションの場合
-        elif self._position_direction < 0:
-            # トレーリングTP到達後モード: 利益確保ラインで決済判定
-            if self._tp_reached and self._trailing_tp_sl is not None:
-                if current_high >= self._trailing_tp_sl:
-                    self.position.close()
-                    self._reset_position_state()
-                    return True
-                # 利益確保ラインを更新（さらに下落した場合）
-                self._update_trailing_tp_sl()
-                return False
-
-            # 1. SL判定 [最優先]: High >= SL価格 (ショートはSLが上側)
-            if current_high >= self._sl_price:
-                self.position.close()
-                self._reset_position_state()
-                return True
-
-            # 2. TP判定 [次点]: Low <= TP価格 (ショートはTPが下側)
-            if self._tp_price is not None and current_low <= self._tp_price:
-                # トレーリングTPが有効な場合は即時決済せず、利益確保モードへ
-                if self._is_trailing_tp_enabled():
-                    self._tp_reached = True
-                    # 初期利益確保ライン = TP価格（ここから追従開始）
-                    self._trailing_tp_sl = self._tp_price
-                    self._update_trailing_tp_sl()
-                    return False
-                else:
-                    self.position.close()
-                    self._reset_position_state()
-                    return True
-
-        # === トレーリングストップ更新 ===
-        # 決済条件に達しなかった場合、トレーリングが有効ならSLを更新
-        self._update_trailing_stop()
-
-        return False
-
-    def _reset_position_state(self) -> None:
-        """ポジション決済後に内部状態をリセット"""
-        self._sl_price = None
-        self._tp_price = None
-        self._entry_price = None
-        self._position_direction = 0.0
-        self._tp_reached = False
-        self._trailing_tp_sl = None
-
-    def _is_trailing_tp_enabled(self) -> bool:
-        """トレーリングTPが有効かどうかを確認"""
-        active_tpsl_gene = self._get_effective_tpsl_gene(self._position_direction)
-        if not active_tpsl_gene:
-            return False
-        return getattr(active_tpsl_gene, "trailing_take_profit", False)
-
-    def _update_trailing_tp_sl(self) -> None:
-        """
-        トレーリングTP用の利益確保ラインを更新
-
-        TP到達後、価格がさらに有利な方向に動いた場合、
-        利益確保ライン（実質的なSL）を追従させます。
-        """
-        if not self._tp_reached or self._trailing_tp_sl is None:
-            return
-
-        active_tpsl_gene = self._get_effective_tpsl_gene(self._position_direction)
-        if not active_tpsl_gene:
-            return
-
-        trailing_step = getattr(active_tpsl_gene, "trailing_step_pct", 0.01)
-        current_close = self.data.Close[-1]
-
-        # ロングポジションの場合: 終値ベースで新しい利益確保ラインを計算
-        if self._position_direction > 0:
-            new_trailing_sl = current_close * (1.0 - trailing_step)
-            if new_trailing_sl > self._trailing_tp_sl:
-                self._trailing_tp_sl = new_trailing_sl
-                # logger.debug(
-                #     f"トレーリングTP利益確保ライン更新 (Long): {self._trailing_tp_sl:.2f}"
-                # )
-
-        # ショートポジションの場合
-        elif self._position_direction < 0:
-            new_trailing_sl = current_close * (1.0 + trailing_step)
-            if new_trailing_sl < self._trailing_tp_sl:
-                self._trailing_tp_sl = new_trailing_sl
-                # logger.debug(
-                #     f"トレーリングTP利益確保ライン更新 (Short): {self._trailing_tp_sl:.2f}"
-                # )
-
-    def _update_trailing_stop(self) -> None:
-        """
-        トレーリングストップの更新
-
-        価格が有利な方向に動いた場合、SLを追従させます。
-        SLは有利な方向にのみ移動し、不利な方向には絶対に戻しません。
-        """
-        # トレーリングが有効か確認
-        active_tpsl_gene = self._get_effective_tpsl_gene(self._position_direction)
-        if not active_tpsl_gene:
-            return
-        if not getattr(active_tpsl_gene, "trailing_stop", False):
-            return
-        if self._sl_price is None:
-            return
-
-        trailing_step = getattr(active_tpsl_gene, "trailing_step_pct", 0.01)
-        current_close = self.data.Close[-1]
-
-        # ロングポジションの場合: 終値ベースで新SLを計算し、現在SLより高ければ更新
-        if self._position_direction > 0:
-            new_sl = current_close * (1.0 - trailing_step)
-            if new_sl > self._sl_price:
-                self._sl_price = new_sl
-                # logger.debug(f"トレーリングSL更新 (Long): {self._sl_price:.2f}")
-
-        # ショートポジションの場合: 終値ベースで新SLを計算し、現在SLより低ければ更新
-        elif self._position_direction < 0:
-            new_sl = current_close * (1.0 + trailing_step)
-            if new_sl < self._sl_price:
-                self._sl_price = new_sl
-                # logger.debug(f"トレーリングSL更新 (Short): {self._sl_price:.2f}")
-
-    def _process_stateful_triggers(self) -> None:
-        """
-        ステートフル条件のトリガーをチェックし、StateTrackerに記録
-
-        各バーで呼ばれ、すべてのStatefulConditionのトリガー条件を評価します。
-        成立していれば、StateTrackerにイベントとして記録します。
-        """
-        if not self.gene or not hasattr(self.gene, "stateful_conditions"):
-            return
-
-        for stateful_cond in self.gene.stateful_conditions:
-            if stateful_cond.enabled:
-                self.condition_evaluator.check_and_record_trigger(
-                    stateful_cond,
-                    self,
-                    self.state_tracker,
-                    self._current_bar_index,
-                )
-
-    def _check_stateful_conditions(self) -> bool:
-        """
-        ステートフル条件を評価
-
-        いずれかのステートフル条件が成立していればTrueを返します。
-
-        Returns:
-            ステートフル条件成立ならTrue
-        """
-        if not self.gene or not hasattr(self.gene, "stateful_conditions"):
-            return False
-
-        for stateful_cond in self.gene.stateful_conditions:
-            if stateful_cond.enabled:
-                result = self.condition_evaluator.evaluate_stateful_condition(
-                    stateful_cond,
-                    self,
-                    self.state_tracker,
-                    self._current_bar_index,
-                )
-                if result:
-                    return True
-
-        return False
-
-    def _get_stateful_entry_direction(self) -> "float | None":
-        """
-        成立したステートフル条件からエントリー方向を取得
-
-        いずれかのステートフル条件が成立していれば、その条件に設定された
-        direction を元にエントリー方向を返します。
-
-        Returns:
-            1.0 (Long), -1.0 (Short), または None（条件不成立時）
-        """
-        if not self.gene or not hasattr(self.gene, "stateful_conditions"):
-            return None
-
-        for stateful_cond in self.gene.stateful_conditions:
-            if stateful_cond.enabled:
-                result = self.condition_evaluator.evaluate_stateful_condition(
-                    stateful_cond,
-                    self,
-                    self.state_tracker,
-                    self._current_bar_index,
-                )
-                if result:
-                    # direction フィールドに基づいてエントリー方向を返す
-                    direction = getattr(stateful_cond, "direction", "long")
-                    return 1.0 if direction == "long" else -1.0
-
-        return None
-
     # ===== ML フィルターメソッド =====
-
-    def _ml_allows_entry(self, direction: float) -> bool:
-        """
-        MLがエントリーを許可するかチェック
-
-        MLフィルター（ダマシ予測モデル）が設定されている場合、
-        予測結果に基づいてエントリーの可否を判断します。
-
-        ダマシ予測モデルは「このエントリーシグナルが有効かどうか」を
-        0-1の確率で出力します。is_valid が閾値以上であればエントリーを許可。
-
-        Args:
-            direction: 取引方向 (1.0=Long, -1.0=Short) ※現在は方向に関係なく判定
-
-        Returns:
-            True: エントリー許可, False: エントリー拒否
-        """
-        # ML予測器が設定されていない場合はエントリーを許可
-        if self.ml_predictor is None:
-            return True
-
-        # ML予測器が学習済みでない場合はエントリーを許可
-        try:
-            if hasattr(self.ml_predictor, "is_trained"):
-                if not self.ml_predictor.is_trained():
-                    logger.debug("ML予測器未学習: エントリー許可")
-                    return True
-        except Exception as e:
-            logger.warning(f"ML学習状態チェックエラー: {e}")
-            return True
-
-        try:
-            # 1. 事前計算済みの特徴量から現在の行を取得
-            current_time = self.data.index[-1]
-            features = None
-
-            if (
-                hasattr(self, "_precomputed_features")
-                and self._precomputed_features is not None
-            ):
-                # 高速化: タイムスタンプ検索(loc)ではなく整数インデックス(iloc)を使用
-                # len(self.data) - 1 が現在の足のインデックスに対応
-                idx = len(self.data) - 1
-                if 0 <= idx < len(self._precomputed_features):
-                    features = self._precomputed_features.iloc[[idx]]
-
-            # 2. キャッシュがない場合はフォールバック（低速）
-            if features is None:
-                features = self._prepare_current_features()
-
-            # 3. ML予測を実行
-            prediction = self.ml_predictor.predict(features)
-
-            # ダマシ予測モデルの判定
-            # is_valid: エントリーが有効である確率 (0.0-1.0)
-            # 閾値以上であればエントリーを許可
-            is_valid = prediction.get("is_valid", 0.5)
-            allowed = is_valid >= self.ml_filter_threshold
-
-            if not allowed:
-                # logger.debug(
-                #     f"MLフィルター拒否: direction={direction}, "
-                #     f"is_valid={is_valid:.3f}, threshold={self.ml_filter_threshold}"
-                # )
-                pass
-
-            return allowed
-
-        except Exception as e:
-            # 予測エラー時はエントリーを許可（フェイルセーフ）
-            logger.warning(f"ML予測エラー（フェイルセーフ適用）: {e}")
-            return True
 
     # ===== ツールフィルターメソッド =====
 
@@ -950,42 +623,3 @@ class UniversalStrategy(Strategy):
             # エラー時はエントリーを許可（フェイルセーフ）
             logger.warning(f"ツールフィルターエラー（フェイルセーフ適用）: {e}")
             return False
-
-    def _prepare_current_features(self) -> pd.DataFrame:
-        """
-        現在のバーからML用特徴量を準備
-        HybridFeatureAdapterに委譲して一貫性を確保します。
-        """
-        try:
-            from ..core.hybrid_feature_adapter import HybridFeatureAdapter
-
-            # アダプターの初期化（まだ存在しない場合）
-            if not hasattr(self, "feature_adapter"):
-                self.feature_adapter = HybridFeatureAdapter()
-
-            # 現在のバーのOHLCVデータを取得
-            # backtesting.pyのdataオブジェクトをDataFrameに変換（直近のみ）
-            lookback = 30  # 特徴量計算に必要な最低限のルックバック
-            data_len = len(self.data)
-            actual_lookback = min(lookback, data_len)
-
-            # 効率のため必要な分だけスライス
-            subset = self.data.df.iloc[-actual_lookback:].copy()
-
-            # 既存のカラム名を小文字に統一（アダプタの期待に合わせる）
-            subset.columns = [c.lower() for c in subset.columns]
-
-            # アダプタを使用して特徴量変換
-            features_df = self.feature_adapter.gene_to_features(
-                gene=self.gene,
-                ohlcv_data=subset,
-                apply_preprocessing=False,  # 推論時は基本的なクリーニングのみ
-            )
-
-            # 直近の1行のみを返す
-            return features_df.iloc[[-1]]
-
-        except Exception as e:
-            logger.error(f"特徴量準備エラー (Adapter使用): {e}")
-            # フォールバック（最小限の構造を持つDataFrame）
-            return pd.DataFrame([{"close": self.data.Close[-1], "indicator_count": 1}])

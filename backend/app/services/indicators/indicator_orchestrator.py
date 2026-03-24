@@ -368,7 +368,6 @@ class TechnicalIndicatorService:
                     pass
             # 安易な0埋めを廃止し、NaNを維持する
             # result = result.bfill().fillna(0)
-            pass
 
         # 戻り値変換
         if config["returns"] == "single":
