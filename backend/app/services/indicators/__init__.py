@@ -14,6 +14,7 @@ from .data_validation import (
     handle_pandas_ta_errors,
 )
 from .indicator_orchestrator import TechnicalIndicatorService
+from .technical_indicators.original import OriginalIndicators
 from .technical_indicators.momentum import MomentumIndicators
 from .technical_indicators.trend import TrendIndicators
 from .technical_indicators.volatility import VolatilityIndicators
@@ -25,6 +26,7 @@ __all__ = [
     "MomentumIndicators",
     "VolatilityIndicators",
     "VolumeIndicators",
+    "OriginalIndicators",
     "PandasTAError",
     "validate_input",
     "validate_data_length_with_fallback",
