@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import pandas as pd
 from pydantic import ValidationError
 
-from app.services.backtest.backtest_config import BacktestConfig
+from app.services.backtest.backtest_config import BacktestConfig, BacktestConfigValidationError
 from ..backtest_data_service import BacktestDataService
 from ..conversion.backtest_result_converter import (
     BacktestResultConversionError,
@@ -20,9 +20,6 @@ from ..conversion.backtest_result_converter import (
 from ..factories.strategy_class_factory import (
     StrategyClassCreationError,
     StrategyClassFactory,
-)
-from ..validation.backtest_config_validator import (
-    BacktestConfigValidationError,
 )
 from .backtest_executor import BacktestExecutionError, BacktestExecutor
 

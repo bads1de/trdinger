@@ -14,9 +14,6 @@ from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
-from app.services.backtest.validation.backtest_config_validator import (
-    BacktestConfigValidator,
-)
 from database.repositories.backtest_result_repository import BacktestResultRepository
 
 
@@ -33,12 +30,6 @@ def mock_executor():
 
 
 @pytest.fixture
-def mock_validator():
-    """BacktestConfigValidatorのモック"""
-    return MagicMock(spec=BacktestConfigValidator)
-
-
-@pytest.fixture
 def mock_converter():
     """BacktestResultConverterのモック"""
     return MagicMock(spec=BacktestResultConverter)
@@ -51,11 +42,10 @@ def mock_backtest_repo():
 
 
 @pytest.fixture
-def backtest_service(mock_data_service, mock_executor, mock_validator, mock_converter):
+def backtest_service(mock_data_service, mock_executor, mock_converter):
     """BacktestServiceのインスタンス"""
     service = BacktestService(data_service=mock_data_service)
     service._executor = mock_executor
-    service._validator = mock_validator
     service._converter = mock_converter
     return service
 

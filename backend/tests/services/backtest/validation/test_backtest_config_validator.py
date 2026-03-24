@@ -1,78 +1,70 @@
 import pytest
 from datetime import datetime, timedelta
-from app.services.backtest.validation.backtest_config_validator import BacktestConfigValidator, BacktestConfigValidationError
+from pydantic import ValidationError
+from app.services.backtest.backtest_config import BacktestConfig, BacktestConfigValidationError
 
-class TestBacktestConfigValidator:
-    @pytest.fixture
-    def validator(self):
-        return BacktestConfigValidator()
 
+class TestBacktestConfig:
     @pytest.fixture
     def valid_config(self):
         return {
             "strategy_name": "SMA",
             "symbol": "BTC/USDT",
             "timeframe": "1h",
-            "start_date": "2023-01-01",
-            "end_date": "2023-01-02",
+            "start_date": datetime(2023, 1, 1),
+            "end_date": datetime(2023, 1, 2),
             "initial_capital": 10000,
-            "commission_rate": 0.001
+            "commission_rate": 0.001,
+            "strategy_config": {
+                "strategy_type": "MANUAL",
+                "parameters": {},
+            },
         }
 
-    def test_validate_config_success(self, validator, valid_config):
+    def test_validate_config_success(self, valid_config):
         # 例外が発生しないこと
-        validator.validate_config(valid_config)
+        config = BacktestConfig(**valid_config)
+        assert config.strategy_name == "SMA"
 
-    def test_validate_required_fields_missing(self, validator):
+    def test_validate_missing_required_fields(self):
         config = {"symbol": "BTC/USDT"}
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(config)
-        assert "必須フィールド" in str(excinfo.value)
+        with pytest.raises(ValidationError):
+            BacktestConfig(**config)
 
-    def test_validate_field_values_invalid(self, validator, valid_config):
-        # シンボル空
-        valid_config["symbol"] = " "
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(valid_config)
-        assert "symbol" in str(excinfo.value)
+    def test_validate_empty_strategy_name(self, valid_config):
+        valid_config["strategy_name"] = ""
+        with pytest.raises(ValidationError):
+            BacktestConfig(**valid_config)
 
-        # 無効なタイムフレーム
-        valid_config["symbol"] = "BTC/USDT" # 戻す
+    def test_validate_invalid_timeframe(self, valid_config):
         valid_config["timeframe"] = "invalid"
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(valid_config)
-        assert "timeframe" in str(excinfo.value)
+        with pytest.raises(ValidationError, match="timeframe"):
+            BacktestConfig(**valid_config)
 
-    def test_validate_dates_reversed(self, validator, valid_config):
-        valid_config["start_date"] = "2023-01-02"
-        valid_config["end_date"] = "2023-01-01"
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(valid_config)
-        assert "start_dateはend_dateより前" in str(excinfo.value)
+    def test_validate_dates_reversed(self, valid_config):
+        valid_config["start_date"] = datetime(2023, 1, 2)
+        valid_config["end_date"] = datetime(2023, 1, 1)
+        with pytest.raises(BacktestConfigValidationError, match="start_dateはend_dateより前"):
+            BacktestConfig(**valid_config)
 
-    def test_validate_dates_future(self, validator, valid_config):
-        future_date = (datetime.now() + timedelta(days=10)).isoformat()
+    def test_validate_dates_future(self, valid_config):
+        future_date = datetime.now() + timedelta(days=10)
         valid_config["end_date"] = future_date
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(valid_config)
-        assert "現在時刻より前" in str(excinfo.value)
+        with pytest.raises(BacktestConfigValidationError, match="現在時刻より前"):
+            BacktestConfig(**valid_config)
 
-    def test_validate_numeric_fields_invalid(self, validator, valid_config):
-        # 資金0
+    def test_validate_zero_initial_capital(self, valid_config):
         valid_config["initial_capital"] = 0
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(valid_config)
-        assert "initial_capital" in str(excinfo.value)
+        with pytest.raises(ValidationError):
+            BacktestConfig(**valid_config)
 
-        # 手数料マイナス
-        valid_config["initial_capital"] = 1000
+    def test_validate_negative_commission_rate(self, valid_config):
         valid_config["commission_rate"] = -0.1
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(valid_config)
-        assert "commission_rate" in str(excinfo.value)
+        with pytest.raises(ValidationError):
+            BacktestConfig(**valid_config)
 
-    def test_validate_strategy_config(self, validator, valid_config):
-        valid_config["strategy_config"] = "not_a_dict"
-        with pytest.raises(BacktestConfigValidationError) as excinfo:
-            validator.validate_config(valid_config)
-        assert "辞書である必要があります" in str(excinfo.value)
+    def test_validate_string_dates(self, valid_config):
+        valid_config["start_date"] = "2023-01-01"
+        valid_config["end_date"] = "2023-01-02"
+        config = BacktestConfig(**valid_config)
+        assert isinstance(config.start_date, datetime)

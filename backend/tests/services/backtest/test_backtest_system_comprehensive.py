@@ -15,10 +15,8 @@ from app.services.backtest.backtest_service import BacktestService
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
+from app.services.backtest.backtest_config import BacktestConfig, BacktestConfigValidationError
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
-from app.services.backtest.validation.backtest_config_validator import (
-    BacktestConfigValidator,
-)
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -168,19 +166,15 @@ class TestBacktestSystemComprehensive:
 
     def test_config_validation_success(self, sample_config):
         """設定検証成功のテスト"""
-        validator = BacktestConfigValidator()
-
         # 有効な設定
         try:
-            validator.validate_config(sample_config)
+            BacktestConfig(**sample_config)
             assert True  # 検証成功
         except Exception:
             assert False  # 検証失敗
 
     def test_config_validation_invalid_dates(self):
         """無効な日付設定検証のテスト"""
-        validator = BacktestConfigValidator()
-
         invalid_config = {
             "strategy_name": "invalid_date_test",
             "start_date": "2023-12-31",
@@ -189,26 +183,24 @@ class TestBacktestSystemComprehensive:
             "timeframe": "1d",
             "initial_capital": 10000,
             "commission_rate": 0.001,
-            "strategy_config": {},
+            "strategy_config": {"strategy_type": "MANUAL", "parameters": {}},
         }
 
         try:
-            validator.validate_config(invalid_config)
+            BacktestConfig(**invalid_config)
             assert False  # 例外が発生すべき
         except Exception:
             assert True  # 期待通りエラー
 
     def test_config_validation_missing_required_fields(self):
         """必須フィールド欠損検証のテスト"""
-        validator = BacktestConfigValidator()
-
         incomplete_config = {
             "timeframe": "1d"
             # strategy_name, symbol, start_date, end_dateが欠損
         }
 
         try:
-            validator.validate_config(incomplete_config)
+            BacktestConfig(**incomplete_config)
             assert False  # 例外が発生すべき
         except Exception:
             assert True  # 期待通りエラー
@@ -401,8 +393,6 @@ class TestBacktestSystemComprehensive:
 
     def test_strategy_configuration_validation(self):
         """戦略設定検証のテスト"""
-        validator = BacktestConfigValidator()
-
         valid_strategy_config = {
             "strategy_name": "strategy_config_test",
             "symbol": "BTC/USDT:USDT",
@@ -412,15 +402,18 @@ class TestBacktestSystemComprehensive:
             "initial_capital": 10000,
             "commission_rate": 0.001,
             "strategy_config": {
-                "sma_period": 20,
-                "rsi_period": 14,
-                "take_profit": 0.02,
-                "stop_loss": 0.01,
+                "strategy_type": "MANUAL",
+                "parameters": {
+                    "sma_period": 20,
+                    "rsi_period": 14,
+                    "take_profit": 0.02,
+                    "stop_loss": 0.01,
+                },
             },
         }
 
         try:
-            validator.validate_config(valid_strategy_config)
+            BacktestConfig(**valid_strategy_config)
             assert True  # 検証成功
         except Exception:
             assert False  # 検証失敗

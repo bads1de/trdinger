@@ -5,11 +5,22 @@
 """
 
 from datetime import datetime
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config.unified_config import unified_config
+
+
+VALID_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+
+
+class BacktestConfigValidationError(Exception):
+    """バックテスト設定検証エラー"""
+
+    def __init__(self, message: str, errors: Optional[List[str]] = None):
+        super().__init__(message)
+        self.errors = errors or []
 
 
 class GeneratedGAParameters(BaseModel):
@@ -60,6 +71,16 @@ class BacktestConfig(BaseModel):
     leverage: float = Field(1.0, ge=1.0)
     strategy_config: StrategyConfig
 
+    @field_validator("timeframe")
+    @classmethod
+    def validate_timeframe(cls, v: str) -> str:
+        """timeframeの値を検証"""
+        if v not in VALID_TIMEFRAMES:
+            raise ValueError(
+                f"timeframeは {VALID_TIMEFRAMES} のいずれかである必要があります"
+            )
+        return v
+
     @field_validator("start_date", "end_date", mode="before")
     @classmethod
     def parse_datetime(cls, v):
@@ -74,3 +95,22 @@ class BacktestConfig(BaseModel):
 
                 return pd.to_datetime(v).to_pydatetime()
         return v
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "BacktestConfig":
+        """日付の整合性を検証"""
+        errors: List[str] = []
+
+        if self.start_date >= self.end_date:
+            errors.append("start_dateはend_dateより前である必要があります")
+
+        now = datetime.now()
+        if self.end_date > now:
+            errors.append("end_dateは現在時刻より前である必要があります")
+
+        if errors:
+            raise BacktestConfigValidationError(
+                f"バックテスト設定が無効です: {', '.join(errors)}", errors
+            )
+
+        return self
