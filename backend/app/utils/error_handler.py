@@ -11,7 +11,7 @@ import time
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from .response import error_response
 
@@ -330,6 +330,25 @@ safe_execute = ErrorHandler.safe_execute
 api_safe_execute = ErrorHandler.api_safe_execute
 safe_ml_operation = safe_operation
 ml_operation_context = operation_context
+ 
+# API用 DB初期化確認ヘルパー
+DEFAULT_DB_INIT_ERROR_MESSAGE = "データベースの初期化に失敗しました"
+ 
+ 
+def ensure_db_initialized(
+    error_message: str = DEFAULT_DB_INIT_ERROR_MESSAGE,
+) -> None:
+    """DB が利用可能でなければ 500 を返す。"""
+    from database.connection import init_db
+ 
+    if init_db():
+        return
+ 
+    logger.error(error_message)
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=error_message,
+    )
 
 
 

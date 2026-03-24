@@ -10,12 +10,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.api.common import ensure_db_initialized
 from app.api.dependencies import get_open_interest_orchestration_service
 from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
-from app.utils.error_handler import api_safe_execute
+from app.utils.error_handler import api_safe_execute, ensure_db_initialized
 from database.connection import get_db
 from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 

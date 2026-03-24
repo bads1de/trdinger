@@ -5,7 +5,6 @@ from .crypto_features import CryptoFeatureCalculator
 from .data_frequency_manager import DataFrequencyManager
 from .feature_engineering_service import FeatureEngineeringService
 from .funding_rate_features import FundingRateFeatureCalculator
-from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .microstructure_features import MicrostructureFeatureCalculator
 from .multi_timeframe_features import MultiTimeframeFeatureCalculator
@@ -23,7 +22,6 @@ __all__ = [
     "DataFrequencyManager",
     "FeatureEngineeringService",
     "FundingRateFeatureCalculator",
-    "InteractionFeatureCalculator",
     "MarketDataFeatureCalculator",
     "MicrostructureFeatureCalculator",
     "MultiTimeframeFeatureCalculator",

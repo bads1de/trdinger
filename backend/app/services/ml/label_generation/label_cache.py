@@ -10,8 +10,8 @@ from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
+from enum import Enum
 from ..common.utils import get_t1_series
-from .enums import ThresholdMethod
 from .presets import (
     trend_scanning_preset,
     triple_barrier_method_preset,
@@ -20,6 +20,13 @@ from .presets import (
 logger = logging.getLogger(__name__)
 
 
+class ThresholdMethod(Enum):
+    """閾値計算方法"""
+ 
+    TRIPLE_BARRIER = "triple_barrier"  # Triple Barrier Method (利確/損切り/時間切れ)
+    TREND_SCANNING = "trend_scanning"  # Trend Scanning Method (t値によるトレンド判定)
+ 
+ 
 class LabelCache:
     """ラベル生成結果をメモ化するキャッシュ
 

@@ -441,7 +441,7 @@ class LabelGenerationConfig:
     def __post_init__(self) -> None:
         """初期化後のバリデーション。"""
         # 循環依存を避けるための遅延インポート
-        from app.services.ml.label_generation.enums import ThresholdMethod
+        from app.services.ml.label_generation.label_cache import ThresholdMethod
         from app.services.ml.label_generation.presets import get_common_presets
 
         # timeframeの検証

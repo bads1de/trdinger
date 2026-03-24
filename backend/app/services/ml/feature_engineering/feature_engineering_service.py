@@ -24,7 +24,6 @@ from .base_feature_calculator import sanitize_numeric_dataframe
 from .complexity_features import ComplexityFeatureCalculator
 from .crypto_features import CryptoFeatures
 from .data_frequency_manager import DataFrequencyManager
-from .interaction_features import InteractionFeatureCalculator
 from .market_data_features import MarketDataFeatureCalculator
 from .microstructure_features import MicrostructureFeatureCalculator
 from .multi_timeframe_features import MultiTimeframeFeatureCalculator
@@ -57,7 +56,6 @@ class FeatureEngineeringService:
         self.price_calculator = PriceFeatureCalculator()
         self.market_data_calculator = MarketDataFeatureCalculator()
         self.technical_calculator = TechnicalFeatureCalculator()
-        self.interaction_calculator = InteractionFeatureCalculator()
         self.microstructure_calculator = MicrostructureFeatureCalculator()
 
         # 新規追加: 学術的に検証された強力な特徴量計算クラス
@@ -215,10 +213,6 @@ class FeatureEngineeringService:
                 result_df = self.crypto_features.create_crypto_features(
                     result_df, funding_rate_data, open_interest_data
                 )
-
-            result_df = self.interaction_calculator.calculate_interaction_features(
-                result_df
-            )
 
             # 3. 追加の特徴量計算（追加のDataFrameを返し、最後にconcatするタイプ）
             logger.info("学術論文・Kaggle実証済み特徴量を計算中...")
