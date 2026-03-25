@@ -125,5 +125,26 @@ def test_vpin_approximation(sample_df):
     assert (vpin <= 1.0).all()
 
 
+def test_regime_quadrant(sample_df):
+    close = pd.Series([100.0, 101.0, 102.0, 101.0, 100.0], index=sample_df.index[:5])
+    open_interest = pd.Series([10.0, 11.0, 10.0, 11.0, 10.0], index=sample_df.index[:5])
+
+    regime = AdvancedFeatures.regime_quadrant(close, open_interest)
+
+    assert isinstance(regime, pd.Series)
+    assert regime.iloc[1:].tolist() == [0, 1, 2, 3]
+
+
+def test_whale_divergence_fill_value():
+    positions = pd.Series([2.0, 0.0])
+    accounts = pd.Series([1.0, 0.0])
+
+    divergence = AdvancedFeatures.whale_divergence(positions, accounts)
+
+    assert isinstance(divergence, pd.Series)
+    assert divergence.iloc[0] == 2.0
+    assert divergence.iloc[1] == 1.0
+
+
 
 

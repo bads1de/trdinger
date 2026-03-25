@@ -12,6 +12,7 @@ from app.services.indicators.technical_indicators.trend import TrendIndicators
 from app.services.indicators.technical_indicators.volatility import (
     VolatilityIndicators,
 )
+from app.services.indicators.technical_indicators.volume import VolumeIndicators
 
 
 class TestOverlapIndicatorsLogic:
@@ -57,7 +58,11 @@ class TestOverlapIndicatorsLogic:
 
     def test_supertrend_shape(self, sample_df):
         trend, up, down = OverlapIndicators.supertrend(
-            sample_df["high"], sample_df["low"], sample_df["close"], period=7, multiplier=3.0
+            sample_df["high"],
+            sample_df["low"],
+            sample_df["close"],
+            period=7,
+            multiplier=3.0,
         )
 
         assert all(isinstance(series, pd.Series) for series in (trend, up, down))
@@ -154,3 +159,29 @@ class TestVolatilityIndicatorsLogic:
                 pd.Series([1, 2, 3]),
                 pd.Series([1, 2]),
             )
+
+
+class TestVolumeIndicatorsLogic:
+    def test_tuple_and_series_outputs(self, sample_df):
+        high = sample_df["high"]
+        low = sample_df["low"]
+        close = sample_df["close"]
+        volume = sample_df["volume"]
+
+        pvo = VolumeIndicators.pvo(volume)
+        assert isinstance(pvo, tuple)
+        assert len(pvo) == 3
+        assert all(isinstance(series, pd.Series) for series in pvo)
+
+        kvo = VolumeIndicators.kvo(high, low, close, volume)
+        assert isinstance(kvo, tuple)
+        assert len(kvo) == 2
+        assert all(isinstance(series, pd.Series) for series in kvo)
+
+        aobv = VolumeIndicators.aobv(close, volume)
+        assert isinstance(aobv, tuple)
+        assert len(aobv) == 7
+        assert all(isinstance(series, pd.Series) for series in aobv)
+
+        assert isinstance(VolumeIndicators.pvt(close, volume), pd.Series)
+        assert isinstance(VolumeIndicators.nvi(close, volume), pd.Series)

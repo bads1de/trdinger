@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from ..config.constants import AUTO_STRATEGY_DEFAULTS
-from ..utils.gene_utils import normalize_enum_name
+from ..utils.normalization import normalize_enum_name
 from app.utils.error_handler import safe_operation
 
 from .calculators.calculator_factory import CalculatorFactory

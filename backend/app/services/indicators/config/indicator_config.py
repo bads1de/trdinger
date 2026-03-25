@@ -378,6 +378,7 @@ class IndicatorConfigRegistry:
     def __init__(self):
         self._configs: Dict[str, IndicatorConfig] = {}
         self._initialized: bool = False
+        self._auto_initialize_on_access: bool = True
 
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
@@ -391,19 +392,41 @@ class IndicatorConfigRegistry:
         """レジストリをクリア（テスト用）"""
         self._configs.clear()
         self._initialized = False
+        self._auto_initialize_on_access = False
 
     def get_indicator_config(self, indicator_name: str) -> Optional[IndicatorConfig]:
         """設定を取得"""
+        if (
+            self is indicator_registry
+            and not self._initialized
+            and self._auto_initialize_on_access
+        ):
+            self.ensure_initialized()
+
         return self._configs.get(indicator_name.upper()) or self._configs.get(
             indicator_name
         )
 
     def list_indicators(self) -> List[str]:
         """登録されているインジケーター名のリストを取得"""
+        if (
+            self is indicator_registry
+            and not self._initialized
+            and self._auto_initialize_on_access
+        ):
+            self.ensure_initialized()
+
         return list(self._configs.keys())
 
     def get_all_indicators(self) -> Dict[str, IndicatorConfig]:
         """登録済みインジケーターの辞書を取得"""
+        if (
+            self is indicator_registry
+            and not self._initialized
+            and self._auto_initialize_on_access
+        ):
+            self.ensure_initialized()
+
         return dict(self._configs)
 
     def generate_parameters_for_indicator(
@@ -431,6 +454,7 @@ class IndicatorConfigRegistry:
         if not self._initialized:
             _initialize_registry(self)
             self._initialized = True
+        self._auto_initialize_on_access = True
 
 
 # グローバルレジストリインスタンス
@@ -458,7 +482,3 @@ def _initialize_registry(registry: IndicatorConfigRegistry) -> None:
 def initialize_all_indicators() -> None:
     """全インジケーターの設定を初期化（後方互換性用）"""
     indicator_registry.ensure_initialized()
-
-
-# モジュールロード時に自動初期化
-initialize_all_indicators()

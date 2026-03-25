@@ -20,20 +20,27 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
-from numba import njit
 import pandas_ta_classic as ta
+from numba import njit
 
 from ..data_validation import (
     create_nan_series_bundle,
-    create_nan_series_like,
     handle_pandas_ta_errors,
     normalize_non_finite,
-    validate_multi_series_params,
-    validate_series_params,
+    run_multi_series_indicator,
+    run_series_indicator,
 )
 
-
 logger = logging.getLogger(__name__)
+
+
+def _dataframe_to_series_tuple(
+    result: pd.DataFrame | None,
+) -> Tuple[pd.Series, ...] | None:
+    """pandas-ta の DataFrame 結果を Series のタプルに変換する。"""
+    if result is None or result.empty:
+        return None
+    return tuple(result.iloc[:, i] for i in range(result.shape[1]))
 
 
 @njit(cache=True)
@@ -97,19 +104,16 @@ class VolumeIndicators:
         volume: pd.Series,
     ) -> pd.Series:
         """チャイキンA/Dライン"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close, "volume": volume}
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            None,
+            lambda: ta.ad(
+                high=high,
+                low=low,
+                close=close,
+                volume=volume,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.ad(
-            high=high,
-            low=low,
-            close=close,
-            volume=volume,
-        )
-        return result if result is not None else pd.Series([], dtype=float)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -122,37 +126,31 @@ class VolumeIndicators:
         slow: int = 10,
     ) -> pd.Series:
         """チャイキンA/Dオシレーター"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close, "volume": volume}
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            slow,
+            lambda: ta.adosc(
+                high=high,
+                low=low,
+                close=close,
+                volume=volume,
+                fast=fast,
+                slow=slow,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.adosc(
-            high=high,
-            low=low,
-            close=close,
-            volume=volume,
-            fast=fast,
-            slow=slow,
-        )
-        return result if result is not None else pd.Series([], dtype=float)
 
     @staticmethod
     @handle_pandas_ta_errors
     def obv(close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
         """オンバランスボリューム"""
-        validation = validate_multi_series_params(
-            {"close": close, "volume": volume}, length=period
-        )
-        if validation is not None:
-            return validation
-
         # ゼロボリュームの処理: ゼロボリュームをNaNに変換
         volume_clean = volume.replace(0, np.nan)
 
-        result = ta.obv(close=close, volume=volume_clean, length=period)
-        return result if result is not None else pd.Series([], dtype=float)
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            period,
+            lambda: ta.obv(close=close, volume=volume_clean, length=period),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -179,27 +177,20 @@ class VolumeIndicators:
         Returns:
             EOM の値
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close, "volume": volume}, length
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            length,
+            lambda: ta.eom(
+                high=high,
+                low=low,
+                close=close,
+                volume=volume,
+                length=length,
+                divisor=divisor,
+                drift=drift,
+                offset=offset,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.eom(
-            high=high,
-            low=low,
-            close=close,
-            volume=volume,
-            length=length,
-            divisor=divisor,
-            drift=drift,
-            offset=offset,
-        )
-
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(high)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -227,23 +218,20 @@ class VolumeIndicators:
         Returns:
             VWAP (累積ベース)
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close, "volume": volume}
+
+        def _calculate_vwap() -> pd.Series:
+            typical_price = (high + low + close) / 3
+            cumulative_pv = (typical_price * volume).cumsum()
+            cumulative_volume = volume.cumsum()
+            return (cumulative_pv / cumulative_volume.replace(0, np.nan)).fillna(
+                typical_price
+            )
+
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            None,
+            _calculate_vwap,
         )
-        if validation is not None:
-            return validation
-
-        # 典型価格 = (H + L + C) / 3
-        typical_price = (high + low + close) / 3
-
-        # VWAP = Σ(典型価格 × 出来高) / Σ(出来高)
-        cumulative_pv = (typical_price * volume).cumsum()
-        cumulative_volume = volume.cumsum()
-
-        # ゼロ除算を避ける
-        vwap = cumulative_pv / cumulative_volume.replace(0, np.nan)
-
-        return vwap.fillna(typical_price)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -267,18 +255,13 @@ class VolumeIndicators:
         Returns:
             CMF の値
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close, "volume": volume}, length
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            length,
+            lambda: ta.cmf(
+                high=high, low=low, close=close, volume=volume, length=length
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.cmf(high=high, low=low, close=close, volume=volume, length=length)
-
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(high)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -302,24 +285,17 @@ class VolumeIndicators:
         Returns:
             Elder's Force Index の値
         """
-        validation = validate_multi_series_params(
-            {"close": close, "volume": volume}, period
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            period,
+            lambda: ta.efi(
+                close=close,
+                volume=volume,
+                length=period,
+                mamode=mamode,
+                drift=drift,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.efi(
-            close=close,
-            volume=volume,
-            length=period,
-            mamode=mamode,
-            drift=drift,
-        )
-
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(close)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -343,30 +319,27 @@ class VolumeIndicators:
         Returns:
             MFI の値（0-100 の範囲）
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close, "volume": volume}, length
+
+        def _calculate_mfi() -> pd.Series:
+            try:
+                return ta.mfi(
+                    high=high, low=low, close=close, volume=volume, length=length
+                )
+            except TypeError:
+                # Fallback for strict environments where volume must be int
+                return ta.mfi(
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume.astype(int),
+                    length=length,
+                )
+
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            length,
+            _calculate_mfi,
         )
-        if validation is not None:
-            return validation
-
-        try:
-            result = ta.mfi(
-                high=high, low=low, close=close, volume=volume, length=length
-            )
-        except TypeError:
-            # Fallback for strict environments where volume must be int
-            result = ta.mfi(
-                high=high,
-                low=low,
-                close=close,
-                volume=volume.astype(int),
-                length=length,
-            )
-
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(high)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -378,42 +351,33 @@ class VolumeIndicators:
         scalar: float = 100.0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Volume Oscillator"""
-        validation = validate_series_params(volume, slow)
-        if validation is not None:
-            return create_nan_series_bundle(volume, 3)
-
         if fast <= 0 or signal <= 0:
             raise ValueError("fast and signal must be positive")
 
-        result = ta.pvo(
-            volume=volume,
-            fast=fast,
-            slow=slow,
-            signal=signal,
-            scalar=scalar,
-        )
-
-        if result is None or result.empty:
-            return create_nan_series_bundle(volume, 3)
-
-        return (
-            result.iloc[:, 0].to_numpy(),
-            result.iloc[:, 1].to_numpy(),
-            result.iloc[:, 2].to_numpy(),
+        return run_series_indicator(
+            volume,
+            slow,
+            lambda: _dataframe_to_series_tuple(
+                ta.pvo(
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                    signal=signal,
+                    scalar=scalar,
+                )
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(volume, 3),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvt(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Price Volume Trend"""
-        validation = validate_multi_series_params({"close": close, "volume": volume})
-        if validation is not None:
-            return validation
-
-        result = ta.pvt(close=close, volume=volume)
-        if result is None:
-            return None
-        return result.to_numpy()
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            None,
+            lambda: ta.pvt(close=close, volume=volume),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -432,43 +396,35 @@ class VolumeIndicators:
         """
         Klinger Volume Oscillator（クリンガー出来高オシレーター）
         """
-        validation = validate_multi_series_params(
+        return run_multi_series_indicator(
             {"high": high, "low": low, "close": close, "volume": volume},
             max(fast, slow),
+            lambda: _dataframe_to_series_tuple(
+                ta.kvo(
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                    signal=signal,
+                    scalar=scalar,
+                    mamode=mamode,
+                    drift=drift,
+                )
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(high, 2),
         )
-        if validation is not None:
-            return create_nan_series_bundle(high, 2)
-
-        result = ta.kvo(
-            high=high,
-            low=low,
-            close=close,
-            volume=volume,
-            fast=fast,
-            slow=slow,
-            signal=signal,
-            scalar=scalar,
-            mamode=mamode,
-            drift=drift,
-        )
-
-        if result is None or result.empty:
-            return create_nan_series_bundle(high, 2)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
     def nvi(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Negative Volume Index"""
-        validation = validate_multi_series_params({"close": close, "volume": volume})
-        if validation is not None:
-            return validation
-
-        result = ta.nvi(close=close, volume=volume)
-        if result is None or result.empty:
-            return None
-        return result.to_numpy()
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            None,
+            lambda: ta.nvi(close=close, volume=volume),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -482,25 +438,18 @@ class VolumeIndicators:
         """
         VWAP Z-Score (VWAP Divergence)
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close, "volume": volume}, period
+
+        def _calculate_vwap_z_score() -> pd.Series:
+            vwap_series = VolumeIndicators.vwap(high, low, close, volume, period=period)
+            deviation = close - vwap_series
+            sigma = deviation.rolling(window=period).std()
+            return deviation / sigma
+
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close, "volume": volume},
+            period,
+            _calculate_vwap_z_score,
         )
-        if validation is not None:
-            return validation
-
-        # Calculate VWAP first
-        vwap_series = VolumeIndicators.vwap(high, low, close, volume, period=period)
-
-        # Calculate deviation
-        deviation = close - vwap_series
-
-        # Calculate standard deviation of the deviation
-        sigma = deviation.rolling(window=period).std()
-
-        # Z-score
-        z_score = deviation / sigma
-
-        return z_score
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -511,32 +460,34 @@ class VolumeIndicators:
         """
         Relative Volume (RVOL) - Numba Optimized Version
         """
-        validation = validate_series_params(volume, window)
-        if validation is not None:
-            return validation
 
-        # DatetimeIndexがある場合、時間帯別の平均出来高を考慮したRVOLを計算
-        if isinstance(volume.index, pd.DatetimeIndex):
-            try:
-                # 時間情報を秒単位のインデックスに変換 (0 - 86400)
-                idx = volume.index
-                time_indices = (
-                    idx.hour * 3600 + idx.minute * 60 + idx.second
-                ).values.astype(np.int32)
-                vol_arr = volume.values.astype(np.float64)
+        def _calculate_rvol() -> pd.Series:
+            # DatetimeIndexがある場合、時間帯別の平均出来高を考慮したRVOLを計算
+            if isinstance(volume.index, pd.DatetimeIndex):
+                try:
+                    # 時間情報を秒単位のインデックスに変換 (0 - 86400)
+                    idx = volume.index
+                    time_indices = (
+                        idx.hour * 3600 + idx.minute * 60 + idx.second
+                    ).values.astype(np.int32)
+                    vol_arr = volume.values.astype(np.float64)
 
-                res_arr = _njit_rvol_loop(vol_arr, time_indices, window)
-                rvol_series = pd.Series(res_arr, index=volume.index)
+                    res_arr = _njit_rvol_loop(vol_arr, time_indices, window)
+                    rvol_series = pd.Series(res_arr, index=volume.index)
 
-                if not rvol_series.isna().all():
-                    return normalize_non_finite(rvol_series)
-            except Exception as e:
-                logger.warning(f"RVOL Numba optimization failed: {e}. Falling back...")
+                    if not rvol_series.isna().all():
+                        return normalize_non_finite(rvol_series)
+                except Exception as e:
+                    logger.warning(
+                        f"RVOL Numba optimization failed: {e}. Falling back..."
+                    )
 
-        # フォールバック: 標準的なローリング平均
-        avg_vol = volume.rolling(window=window, min_periods=1).mean()
-        rvol = volume / avg_vol
-        return normalize_non_finite(rvol)
+            # フォールバック: 標準的なローリング平均
+            avg_vol = volume.rolling(window=window, min_periods=1).mean()
+            rvol = volume / avg_vol
+            return normalize_non_finite(rvol)
+
+        return run_series_indicator(volume, window, _calculate_rvol)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -549,24 +500,14 @@ class VolumeIndicators:
         """
         Absorption Score = RVOL / Range
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "volume": volume}, window
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "volume": volume},
+            window,
+            lambda: normalize_non_finite(
+                VolumeIndicators.rvol(volume, window=window)
+                / (high - low).replace(0, 1e-9)
+            ),
         )
-        if validation is not None:
-            return validation
-
-        # Calculate RVOL
-        rvol_series = VolumeIndicators.rvol(volume, window=window)
-
-        # Calculate Range
-        price_range = high - low
-
-        # Avoid division by zero
-        price_range = price_range.replace(0, 1e-9)  # Epsilon
-
-        score = rvol_series / price_range
-
-        return normalize_non_finite(score)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -583,65 +524,50 @@ class VolumeIndicators:
         pd.Series, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series
     ]:
         """Archer On-Balance Volume"""
-        validation = validate_multi_series_params(
-            {"close": close, "volume": volume}, slow
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            slow,
+            lambda: _dataframe_to_series_tuple(
+                ta.aobv(
+                    close=close,
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                    max_lookback=max_lookback,
+                    min_lookback=min_lookback,
+                    mamode=mamode,
+                    scalar=scalar,
+                )
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(close, 7),
         )
-        if validation is not None:
-            # AOBV returns 7 columns typically: OBV, MA_OBV, OBV_min_2, OBV_max_2, OBV_min_5, OBV_max_5, AOBV_LR_2
-            # We conform to return all if possible, or key ones.
-            return create_nan_series_bundle(close, 7)
-
-        result = ta.aobv(
-            close=close,
-            volume=volume,
-            fast=fast,
-            slow=slow,
-            max_lookback=max_lookback,
-            min_lookback=min_lookback,
-            mamode=mamode,
-            scalar=scalar,
-        )
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 7)
-
-        # Ensure we return valid series tuple
-        return tuple(result.iloc[:, i] for i in range(result.shape[1]))
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvi(close: pd.Series, volume: pd.Series, length: int = 13) -> pd.Series:
         """Positive Volume Index"""
-        validation = validate_multi_series_params({"close": close, "volume": volume})
-        if validation is not None:
-            return validation
-
-        result = ta.pvi(close=close, volume=volume, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            None,
+            lambda: ta.pvi(close=close, volume=volume, length=length),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvol(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Price-Volume"""
-        validation = validate_multi_series_params({"close": close, "volume": volume})
-        if validation is not None:
-            return validation
-
-        result = ta.pvol(close=close, volume=volume)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            None,
+            lambda: ta.pvol(close=close, volume=volume),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvr(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Price Volume Rank"""
-        validation = validate_multi_series_params({"close": close, "volume": volume})
-        if validation is not None:
-            return validation
-
-        result = ta.pvr(close=close, volume=volume)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            None,
+            lambda: ta.pvr(close=close, volume=volume),
+        )

@@ -16,7 +16,7 @@ from sklearn.metrics import silhouette_samples
 from ..config.constants import OPERATORS
 from ..genes import ConditionGroup, StrategyGene
 from ..serializers.serialization import GeneSerializer
-from ..utils.indicator_utils import get_valid_indicator_types
+from ..utils.indicators import get_valid_indicator_types
 
 logger = logging.getLogger(__name__)
 

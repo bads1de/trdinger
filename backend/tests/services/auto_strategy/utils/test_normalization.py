@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
-from app.services.auto_strategy.utils.gene_utils import GeneUtils, normalize_parameter, create_default_strategy_gene
+from app.services.auto_strategy.utils.normalization import NormalizationUtils, normalize_parameter, create_default_strategy_gene
 
-class TestGeneUtilsEnhancement:
+class TestNormalizationUtils:
     def test_normalize_parameter_basic(self):
         # 範囲内: 100 in [1, 200] -> 約0.5
         assert normalize_parameter(100, 1, 200) == pytest.approx(0.497, 0.01)
@@ -38,5 +38,5 @@ class TestGeneUtilsEnhancement:
         mock_class.create_default.assert_called_once()
 
     def test_class_method_access(self):
-        # GeneUtilsクラス経由でのアクセスも確認
-        assert GeneUtils.normalize_parameter(50, 0, 100) == 0.5
+        # NormalizationUtilsクラス経由でのアクセスも確認
+        assert NormalizationUtils.normalize_parameter(50, 0, 100) == 0.5

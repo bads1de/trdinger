@@ -12,7 +12,7 @@
 
 import logging
 from functools import wraps
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Mapping, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -42,23 +42,145 @@ def _validate_positive_length(length: Optional[int]) -> None:
         raise ValueError(f"length must be positive: {length}")
 
 
-def _nan_series_like(series: pd.Series) -> pd.Series:
-    """入力 Series と同じ index の NaN Series を作る。"""
-    return pd.Series(np.full(len(series), np.nan), index=series.index)
-
-
 def _return_nan_series_if_needed(
     series: pd.Series,
     min_data_length: int,
 ) -> Optional[pd.Series]:
     """空系列または最小長不足の場合に NaN Series を返す。"""
     if len(series) == 0:
-        return _nan_series_like(series)
+        return create_nan_series_like(series)
 
     if min_data_length > 0 and len(series) < min_data_length:
-        return _nan_series_like(series)
+        return create_nan_series_like(series)
 
     return None
+
+
+def _validate_series_collection(
+    series_items: Mapping[str, pd.Series],
+    *,
+    length: Optional[int] = None,
+    min_data_length: int = 0,
+) -> Optional[pd.Series]:
+    """単一/複数 Series の共通検証を行う。"""
+    if not series_items:
+        raise ValueError("series_dict cannot be empty")
+
+    reference_series: Optional[pd.Series] = None
+    reference_name: Optional[str] = None
+
+    for name, series in series_items.items():
+        if not isinstance(series, pd.Series):
+            raise TypeError(f"{name} must be pandas Series")
+
+        if reference_series is None:
+            reference_series = series
+            reference_name = name
+            continue
+
+        if len(series) != len(reference_series):
+            raise ValueError(
+                f"All series must have the same length. "
+                f"{reference_name}={len(reference_series)}, {name}={len(series)}"
+            )
+
+    _validate_positive_length(length)
+
+    if reference_series is not None:
+        return _return_nan_series_if_needed(reference_series, min_data_length)
+
+    return None
+
+
+def _create_nan_array(length: int, width: int = 1) -> np.ndarray:
+    """NaN で埋まった 1D/2D 配列を作る。"""
+    return np.full((length,) if width == 1 else (length, width), np.nan)
+
+
+def _is_missing_indicator_result(result: Any) -> bool:
+    """pandas-ta の失敗結果や空結果を判定する。"""
+    if result is None:
+        return True
+
+    if isinstance(result, pd.Series):
+        return result.empty or bool(result.isna().all())
+
+    if isinstance(result, pd.DataFrame):
+        return result.empty or bool(result.isna().all().all())
+
+    if isinstance(result, np.ndarray):
+        if result.size == 0:
+            return True
+        try:
+            return bool(np.isnan(result).all())
+        except (TypeError, ValueError):
+            return False
+
+    if isinstance(result, tuple):
+        return len(result) == 0 or all(item is None for item in result)
+
+    return False
+
+
+def _run_indicator_with_validation(
+    validation: Optional[pd.Series],
+    result_factory: Callable[[], Any],
+    *,
+    fallback_factory: Optional[Callable[[], Any]] = None,
+    reference_series: Optional[pd.Series] = None,
+) -> Any:
+    """検証と NaN フォールバックをまとめて扱う。"""
+    if validation is not None:
+        return fallback_factory() if fallback_factory is not None else validation
+
+    result = result_factory()
+    if _is_missing_indicator_result(result):
+        if fallback_factory is not None:
+            return fallback_factory()
+        if reference_series is not None:
+            return create_nan_series_like(reference_series)
+    return result
+
+
+def run_series_indicator(
+    data: pd.Series,
+    length: Optional[int],
+    result_factory: Callable[[], Any],
+    *,
+    min_data_length: int = 0,
+    fallback_factory: Optional[Callable[[], Any]] = None,
+) -> Any:
+    """単一 Series 入力の指標計算を検証付きで実行する。"""
+    validation = validate_series_params(
+        data, length, min_data_length=min_data_length
+    )
+    return _run_indicator_with_validation(
+        validation,
+        result_factory,
+        fallback_factory=fallback_factory,
+        reference_series=data,
+    )
+
+
+def run_multi_series_indicator(
+    series_dict: Mapping[str, pd.Series],
+    length: Optional[int],
+    result_factory: Callable[[], Any],
+    *,
+    min_data_length: int = 0,
+    fallback_factory: Optional[Callable[[], Any]] = None,
+) -> Any:
+    """複数 Series 入力の指標計算を検証付きで実行する。"""
+    validation = validate_multi_series_params(
+        dict(series_dict), length, min_data_length=min_data_length
+    )
+    reference_series = next(iter(series_dict.values()))
+    return _run_indicator_with_validation(
+        validation,
+        result_factory,
+        fallback_factory=fallback_factory,
+        reference_series=reference_series,
+    )
 
 
 def normalize_non_finite(series: pd.Series, fill_value: Any = np.nan) -> pd.Series:
@@ -215,14 +337,13 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
     data_length = len(df)
 
     if not config:
-        return np.full(data_length, np.nan)
+        return _create_nan_array(data_length)
 
     if config.returns == "single":
-        return np.full(data_length, np.nan)
-    else:
-        return_cols = config.return_cols or ["Result"]
-        nan_result = np.full((data_length, len(return_cols)), np.nan)
-        return nan_result
+        return _create_nan_array(data_length)
+
+    return_cols = config.return_cols or ["Result"]
+    return _create_nan_array(data_length, len(return_cols))
 
 
 # =============================================================================
@@ -284,16 +405,9 @@ def validate_series_params(
         TypeError: データ型が無効な場合
         ValueError: 期間が無効な場合
     """
-    if not isinstance(data, pd.Series):
-        raise TypeError("data must be pandas Series")
-
-    _validate_positive_length(length)
-
-    nan_series = _return_nan_series_if_needed(data, min_data_length)
-    if nan_series is not None:
-        return nan_series
-
-    return None
+    return _validate_series_collection(
+        {"data": data}, length=length, min_data_length=min_data_length
+    )
 
 
 def validate_multi_series_params(
@@ -317,33 +431,9 @@ def validate_multi_series_params(
         TypeError: データ型が無効な場合
         ValueError: 期間が無効な場合、またはシリーズ長が不一致な場合
     """
-    if not series_dict:
-        raise ValueError("series_dict cannot be empty")
-
-    first_series = None
-    first_name = None
-
-    for name, series in series_dict.items():
-        if not isinstance(series, pd.Series):
-            raise TypeError(f"{name} must be pandas Series")
-
-        if first_series is None:
-            first_series = series
-            first_name = name
-        elif len(series) != len(first_series):
-            raise ValueError(
-                f"All series must have the same length. "
-                f"{first_name}={len(first_series)}, {name}={len(series)}"
-            )
-
-    _validate_positive_length(length)
-
-    if first_series is not None:
-        nan_series = _return_nan_series_if_needed(first_series, min_data_length)
-        if nan_series is not None:
-            return nan_series
-
-    return None
+    return _validate_series_collection(
+        series_dict, length=length, min_data_length=min_data_length
+    )
 
 
 # =============================================================================

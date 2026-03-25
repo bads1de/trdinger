@@ -1,7 +1,15 @@
+from unittest.mock import patch
+
 import pytest
 import numpy as np
 import pandas as pd
 from app.services.indicators.data_validation import (
+    create_nan_result,
+    create_nan_series_bundle,
+    create_nan_series_like,
+    create_nan_series_map,
+    run_multi_series_indicator,
+    run_series_indicator,
     validate_input,
     handle_pandas_ta_errors,
     validate_series_params,
@@ -31,9 +39,7 @@ class TestIndicatorUtils:
             validate_input(pd.Series([1, 2, 3]), 0)
 
     def test_validate_input_length_short(self):
-        with pytest.raises(
-            PandasTAError, match="データ長\(3\)が期間\(10\)より短いです"
-        ):
+        with pytest.raises(PandasTAError, match=r"データ長\(3\)が期間\(10\)より短いです"):
             validate_input(pd.Series([1, 2, 3]), 10)
 
     def test_validate_input_inf(self):
@@ -75,7 +81,7 @@ class TestIndicatorUtils:
         def mock_func():
             return (np.array([1, 2]), None)
 
-        with pytest.raises(PandasTAError, match="mock_func: 結果\[1\]が無効です"):
+        with pytest.raises(PandasTAError, match=r"mock_func: 結果\[1\]が無効です"):
             mock_func()
 
     def test_handle_pandas_ta_errors_general_exception(self):
@@ -144,6 +150,102 @@ class TestIndicatorUtils:
             )
             is None
         )
+
+    def test_create_nan_series_like(self):
+        series = pd.Series([1, 2, 3], name="close")
+
+        result = create_nan_series_like(series, fill_value=0.0, name="fallback")
+
+        assert isinstance(result, pd.Series)
+        assert result.name == "fallback"
+        assert result.index.equals(series.index)
+        assert (result == 0.0).all()
+
+    def test_create_nan_series_bundle(self):
+        series = pd.Series([1, 2, 3], name="close")
+
+        result = create_nan_series_bundle(series, 3)
+
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+        for item in result:
+            assert isinstance(item, pd.Series)
+            assert item.index.equals(series.index)
+            assert np.isnan(item).all()
+
+    def test_create_nan_series_map(self):
+        series = pd.Series([1, 2, 3], name="close")
+
+        result = create_nan_series_map(series, ["a", "b"])
+
+        assert set(result.keys()) == {"a", "b"}
+        assert all(isinstance(item, pd.Series) for item in result.values())
+        assert result["a"].name == "a"
+        assert result["b"].name == "b"
+        assert all(np.isnan(item).all() for item in result.values())
+
+    @patch("app.services.indicators.data_validation._get_indicator_config")
+    def test_create_nan_result_single(self, mock_get_config):
+        mock_get_config.return_value = None
+
+        result = create_nan_result(pd.DataFrame({"close": [1, 2, 3]}), "UNKNOWN")
+
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (3,)
+        assert np.isnan(result).all()
+
+    @patch("app.services.indicators.data_validation._get_indicator_config")
+    def test_create_nan_result_multiple(self, mock_get_config):
+        mock_config = type(
+            "MockConfig",
+            (),
+            {"returns": "multiple", "return_cols": ["a", "b"]},
+        )()
+        mock_get_config.return_value = mock_config
+
+        result = create_nan_result(pd.DataFrame({"close": [1, 2, 3]}), "TEST")
+
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (3, 2)
+        assert np.isnan(result).all()
+
+    def test_run_series_indicator_validation_fallback(self):
+        series = pd.Series([1, 2, 3], name="close")
+
+        result = run_series_indicator(
+            series,
+            None,
+            lambda: pd.Series([9, 9, 9], index=series.index),
+            min_data_length=5,
+        )
+
+        assert isinstance(result, pd.Series)
+        assert result.index.equals(series.index)
+        assert np.isnan(result).all()
+
+    def test_run_series_indicator_result_fallback(self):
+        series = pd.Series([1, 2, 3], name="close")
+
+        result = run_series_indicator(series, None, lambda: None)
+
+        assert isinstance(result, pd.Series)
+        assert result.index.equals(series.index)
+        assert np.isnan(result).all()
+
+    def test_run_multi_series_indicator_bundle_fallback(self):
+        series = pd.Series([1, 2, 3], name="close")
+
+        result = run_multi_series_indicator(
+            {"high": series, "low": series},
+            None,
+            lambda: None,
+            fallback_factory=lambda: create_nan_series_bundle(series, 2),
+        )
+
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert all(isinstance(item, pd.Series) for item in result)
+        assert all(np.isnan(item).all() for item in result)
 
     def test_validate_data_length_with_fallback(self, sample_df):
         result = validate_data_length_with_fallback(sample_df, "SMA", {"length": 10})

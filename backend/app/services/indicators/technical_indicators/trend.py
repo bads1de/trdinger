@@ -24,11 +24,11 @@ import pandas as pd
 import pandas_ta_classic as ta
 
 from ..data_validation import (
-    handle_pandas_ta_errors,
     create_nan_series_bundle,
     create_nan_series_like,
-    validate_multi_series_params,
-    validate_series_params,
+    handle_pandas_ta_errors,
+    run_multi_series_indicator,
+    run_series_indicator,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,20 +127,19 @@ class TrendIndicators:
         pandas_taのデフォルト実装はデータの全長に依存して初期化されるため、
         未来データのリークを防ぐためにカスタム実装を使用します。
         """
-        validation = validate_multi_series_params({"high": high, "low": low})
-        if validation is not None:
-            return validation
+        def compute() -> pd.Series:
+            n = len(high)
+            if n < 2:
+                return create_nan_series_like(high)
 
-        n = len(high)
-        if n < 2:
-            return create_nan_series_like(high)
+            high_arr = high.values.astype(np.float64)
+            low_arr = low.values.astype(np.float64)
 
-        high_arr = high.values.astype(np.float64)
-        low_arr = low.values.astype(np.float64)
+            sar_res = TrendIndicators._sar_loop(high_arr, low_arr, af, max_af)
 
-        sar_res = TrendIndicators._sar_loop(high_arr, low_arr, af, max_af)
+            return pd.Series(sar_res, index=high.index).replace(0, np.nan)
 
-        return pd.Series(sar_res, index=high.index).replace(0, np.nan)
+        return run_multi_series_indicator({"high": high, "low": low}, None, compute)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -150,13 +149,12 @@ class TrendIndicators:
         """Archer Moving Averages Trends"""
         # AMAT特有のデータ検証
         min_length = max(fast, slow, signal) + 10
-        validation = validate_series_params(data, min_data_length=min_length)
-        if validation is not None:
-            return validation
-
-        result = ta.amat(data, fast=fast, slow=slow, signal=signal)
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(data)
+        result = run_series_indicator(
+            data,
+            None,
+            lambda: ta.amat(data, fast=fast, slow=slow, signal=signal),
+            min_data_length=min_length,
+        )
         # AMAT returns DataFrame, get the main series
         if hasattr(result, "iloc"):
             return result.iloc[:, 0] if len(result.shape) > 1 else result
@@ -171,19 +169,16 @@ class TrendIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Detrended Price Oscillator"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.dpo(
-            close=data,
-            length=length,
-            centered=centered,
-            offset=offset,
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.dpo(
+                close=data,
+                length=length,
+                centered=centered,
+                offset=offset,
+            ),
         )
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(data)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -196,25 +191,24 @@ class TrendIndicators:
         offset: int = 0,
     ) -> Tuple[pd.Series, pd.Series]:
         """Vortex Indicator"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
-        )
-        if validation is not None:
-            return create_nan_series_bundle(high, 2)
-
         if drift <= 0:
             raise ValueError(f"drift must be positive: {drift}")
 
-        result = ta.vortex(
-            high=high,
-            low=low,
-            close=close,
-            length=length,
-            drift=drift,
-            offset=offset,
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.vortex(
+                high=high,
+                low=low,
+                close=close,
+                length=length,
+                drift=drift,
+                offset=offset,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(high, 2),
         )
-        if result is None or result.empty:
-            return create_nan_series_bundle(high, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -230,27 +224,28 @@ class TrendIndicators:
         mamode: str = "rma",
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """ADX: returns (adx, dmp, dmn)"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
-        )
-
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             return create_nan_series_bundle(high, 3)
 
-        if validation is not None:
-            return nan_result()
-
-        result = ta.adx(
-            high=high,
-            low=low,
-            close=close,
-            length=length,
-            lensig=lensig,
-            scalar=scalar,
-            mamode=mamode,
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.adx(
+                high=high,
+                low=low,
+                close=close,
+                length=length,
+                lensig=lensig,
+                scalar=scalar,
+                mamode=mamode,
+            ),
+            fallback_factory=nan_result,
         )
 
-        if result is None or result.empty:
+        if isinstance(result, tuple):
+            return result
+
+        if result.empty:
             return nan_result()
 
         # カラム名: ADX_{length}, DMP_{length}, DMN_{length}
@@ -272,17 +267,20 @@ class TrendIndicators:
         scalar: float = 100.0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
-        validation = validate_multi_series_params({"high": high, "low": low}, length)
-
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             return create_nan_series_bundle(high, 3)
 
-        if validation is not None:
-            return nan_result()
+        result = run_multi_series_indicator(
+            {"high": high, "low": low},
+            length,
+            lambda: ta.aroon(high=high, low=low, length=length, scalar=scalar),
+            fallback_factory=nan_result,
+        )
 
-        result = ta.aroon(high=high, low=low, length=length, scalar=scalar)
+        if isinstance(result, tuple):
+            return result
 
-        if result is None or result.empty:
+        if result.empty:
             return nan_result()
 
         # カラム名: AROONU_{length}, AROOND_{length}, AROONOSC_{length}
@@ -307,26 +305,19 @@ class TrendIndicators:
         drift: int = 1,
     ) -> pd.Series:
         """Choppiness Index"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.chop(
+                high=high,
+                low=low,
+                close=close,
+                length=length,
+                atr_length=atr_length,
+                scalar=scalar,
+                drift=drift,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.chop(
-            high=high,
-            low=low,
-            close=close,
-            length=length,
-            atr_length=atr_length,
-            scalar=scalar,
-            drift=drift,
-        )
-
-        if result is None:
-            return create_nan_series_like(high)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -340,22 +331,18 @@ class TrendIndicators:
         """Vertical Horizontal Filter"""
         # VHF requires sufficient data length
         min_length = length * 2
-        validation = validate_series_params(data, length, min_data_length=min_length)
-        if validation is not None:
-            return validation
-
-        result = ta.vhf(
-            close=data,
-            length=length,
-            scalar=scalar,
-            drift=drift,
-            offset=offset,
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.vhf(
+                close=data,
+                length=length,
+                scalar=scalar,
+                drift=drift,
+                offset=offset,
+            ),
+            min_data_length=min_length,
         )
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return create_nan_series_like(data)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -368,15 +355,15 @@ class TrendIndicators:
         q: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """Chande Kroll Stop"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, p
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            p,
+            lambda: ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q),
+            fallback_factory=lambda: create_nan_series_bundle(close, 2),
         )
-        if validation is not None:
-            return create_nan_series_bundle(close, 2)
 
-        result = ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q)
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -388,14 +375,9 @@ class TrendIndicators:
         mode: str = "linear",
     ) -> pd.Series:
         """Decay"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.decay(close=close, length=length, mode=mode)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.decay(close=close, length=length, mode=mode)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -405,16 +387,11 @@ class TrendIndicators:
         length: int = 8,
     ) -> pd.Series:
         """QStick"""
-        validation = validate_multi_series_params(
-            {"open_": open_, "close": close}, length
+        return run_multi_series_indicator(
+            {"open_": open_, "close": close},
+            length,
+            lambda: ta.qstick(open_=open_, close=close, length=length),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.qstick(open_=open_, close=close, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -425,14 +402,13 @@ class TrendIndicators:
         length: int = 6,
     ) -> pd.Series:
         """TTM Trend"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.ttm_trend(high=high, low=low, close=close, length=length),
         )
-        if validation is not None:
-            return validation
 
-        result = ta.ttm_trend(high=high, low=low, close=close, length=length)
-        if result is None or (hasattr(result, "empty") and result.empty):
+        if hasattr(result, "empty") and result.empty:
             return create_nan_series_like(close)
 
         if isinstance(result, pd.DataFrame):
@@ -483,14 +459,11 @@ class TrendIndicators:
     ) -> pd.Series:
         """Long Run"""
         # Requires len(fast) >= length
-        validation = validate_multi_series_params({"fast": fast, "slow": slow}, length)
-        if validation is not None:
-            return validation
-
-        result = ta.long_run(fast=fast, slow=slow, length=length)
-        if result is None:
-            return create_nan_series_like(fast)
-        return result
+        return run_multi_series_indicator(
+            {"fast": fast, "slow": slow},
+            length,
+            lambda: ta.long_run(fast=fast, slow=slow, length=length),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -500,14 +473,11 @@ class TrendIndicators:
         length: int = 2,
     ) -> pd.Series:
         """Short Run"""
-        validation = validate_multi_series_params({"fast": fast, "slow": slow}, length)
-        if validation is not None:
-            return validation
-
-        result = ta.short_run(fast=fast, slow=slow, length=length)
-        if result is None:
-            return create_nan_series_like(fast)
-        return result
+        return run_multi_series_indicator(
+            {"fast": fast, "slow": slow},
+            length,
+            lambda: ta.short_run(fast=fast, slow=slow, length=length),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -516,16 +486,9 @@ class TrendIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Linear Regression Slope"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        # pandas-ta uses 'slope'
-        result = ta.slope(close=close, length=length)
-
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.slope(close=close, length=length)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -540,39 +503,40 @@ class TrendIndicators:
         offset: int = 26,
     ) -> pd.DataFrame:
         """Ichimoku Kinko Hyo"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, senkou
-        )
-        if validation is not None:
-            return pd.DataFrame()
-
         try:
-            result, span = ta.ichimoku(
-                high=high,
-                low=low,
-                close=close,
-                tenkan=tenkan,
-                kijun=kijun,
-                senkou=senkou,
-                include_chikou=include_chikou,
-                offset=offset,
+            result = run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                senkou,
+                lambda: ta.ichimoku(
+                    high=high,
+                    low=low,
+                    close=close,
+                    tenkan=tenkan,
+                    kijun=kijun,
+                    senkou=senkou,
+                    include_chikou=include_chikou,
+                    offset=offset,
+                ),
             )
+
+            if isinstance(result, pd.Series):
+                return pd.DataFrame()
+
+            if result is None or result.empty:
+                return pd.DataFrame()
+
+            rename_map = {
+                f"ITS_{tenkan}_{kijun}_{senkou}": "tenkan_sen",
+                f"IKS_{tenkan}_{kijun}_{senkou}": "kijun_sen",
+                f"ISA_{tenkan}_{kijun}_{senkou}": "senkou_span_a",
+                f"ISB_{tenkan}_{kijun}_{senkou}": "senkou_span_b",
+                f"ICS_{tenkan}_{kijun}_{senkou}": "chikou_span",
+            }
+
+            result = result.rename(columns=rename_map)
+            return result
         except Exception:
             return pd.DataFrame()
-
-        if result is None or result.empty:
-            return pd.DataFrame()
-
-        rename_map = {
-            f"ITS_{tenkan}_{kijun}_{senkou}": "tenkan_sen",
-            f"IKS_{tenkan}_{kijun}_{senkou}": "kijun_sen",
-            f"ISA_{tenkan}_{kijun}_{senkou}": "senkou_span_a",
-            f"ISB_{tenkan}_{kijun}_{senkou}": "senkou_span_b",
-            f"ICS_{tenkan}_{kijun}_{senkou}": "chikou_span",
-        }
-
-        result = result.rename(columns=rename_map)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -581,12 +545,6 @@ class TrendIndicators:
         length: int = 10,
     ) -> pd.Series:
         """Simple Moving Average"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.sma(close=close, length=length)
-
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.sma(close=close, length=length)
+        )

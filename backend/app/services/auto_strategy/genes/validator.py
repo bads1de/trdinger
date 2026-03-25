@@ -15,7 +15,7 @@ from ..config.constants import (
     DATA_SOURCES,
     OPERATORS,
 )
-from ..utils.indicator_utils import get_all_indicators
+from ..utils.indicators import get_all_indicators
 
 logger = logging.getLogger(__name__)
 

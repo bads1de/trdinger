@@ -6,7 +6,7 @@
 
 from typing import Any, Dict
 
-from ...utils.gene_utils import normalize_enum_name
+from ...utils.normalization import normalize_enum_name
 from .base_calculator import BaseCalculator
 from .fixed_quantity_calculator import FixedQuantityCalculator
 from .fixed_ratio_calculator import FixedRatioCalculator

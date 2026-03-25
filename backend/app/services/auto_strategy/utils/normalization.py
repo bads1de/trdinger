@@ -1,7 +1,7 @@
 """
-遺伝子関連ユーティリティ関数
+正規化ユーティリティ関数
 
-auto_strategy全体で使用される遺伝子関連の共通機能を提供します。
+auto_strategy全体で使用されるパラメータ正規化・Enum正規化の共通機能を提供します。
 """
 
 import logging
@@ -12,8 +12,8 @@ from typing import Any, Union
 logger = logging.getLogger(__name__)
 
 
-class GeneUtils:
-    """遺伝子関連ユーティリティ"""
+class NormalizationUtils:
+    """正規化ユーティリティ"""
 
     @staticmethod
     def normalize_parameter(
@@ -60,6 +60,6 @@ class GeneUtils:
 
 
 # 外部で使用可能な便利関数
-create_default_strategy_gene = GeneUtils.create_default_strategy_gene
-normalize_parameter = GeneUtils.normalize_parameter
-normalize_enum_name = GeneUtils.normalize_enum_name
+create_default_strategy_gene = NormalizationUtils.create_default_strategy_gene
+normalize_parameter = NormalizationUtils.normalize_parameter
+normalize_enum_name = NormalizationUtils.normalize_enum_name

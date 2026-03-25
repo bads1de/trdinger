@@ -7,7 +7,7 @@ Indicator Utils Tests
 import pytest
 from unittest.mock import patch
 
-from app.services.auto_strategy.utils.indicator_utils import (
+from app.services.auto_strategy.utils.indicators import (
     indicators_by_category,
     get_all_indicators,
     get_all_indicator_ids,
@@ -36,7 +36,7 @@ class TestIndicatorUtils:
         assert "RSI" in all_inds
         assert "SMA" in all_inds
 
-    @patch("app.services.auto_strategy.utils.indicator_utils.TechnicalIndicatorService")
+    @patch("app.services.auto_strategy.utils.indicators.TechnicalIndicatorService")
     def test_get_all_indicator_ids(self, MockService):
         """指標IDマッピング取得"""
         service = MockService.return_value

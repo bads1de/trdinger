@@ -24,10 +24,8 @@ pandas-ta の overlap カテゴリに対応。
 - Ichimoku Cloud (一目均衡表)
 """
 
-import logging
 from typing import Dict, Tuple
 
-import numpy as np
 import pandas as pd
 import pandas_ta_classic as ta
 
@@ -36,12 +34,10 @@ from ..data_validation import (
     create_nan_series_like,
     create_nan_series_map,
     handle_pandas_ta_errors,
+    run_multi_series_indicator,
+    run_series_indicator,
     validate_multi_series_params,
-    validate_series_params,
 )
-
-logger = logging.getLogger(__name__)
-
 
 class OverlapIndicators:
     """
@@ -54,20 +50,17 @@ class OverlapIndicators:
     @handle_pandas_ta_errors
     def sma(data: pd.Series, length: int) -> pd.Series:
         """単純移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        return ta.sma(data, length=length)
+        return run_series_indicator(data, length, lambda: ta.sma(data, length=length))
 
     @staticmethod
     @handle_pandas_ta_errors
     def ema(data: pd.Series, length: int) -> pd.Series:
         """指数移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-        return ta.ema(data, window=length, adjust=False, sma=True)
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.ema(data, window=length, adjust=False, sma=True),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -86,10 +79,9 @@ class OverlapIndicators:
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-        return ta.wma(data, window=length)
+        return run_series_indicator(
+            data, length, lambda: ta.wma(data, window=length)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -97,14 +89,11 @@ class OverlapIndicators:
         data: pd.Series, length: int = 10, talib: bool | None = None
     ) -> pd.Series:
         """三角移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.trima(data, length=length, talib=talib)
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.trima(data, length=length, talib=talib),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -115,14 +104,11 @@ class OverlapIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Zero Lag移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.zlma(data, length=length, mamode=mamode, offset=offset)
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.zlma(data, length=length, mamode=mamode, offset=offset),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -134,9 +120,6 @@ class OverlapIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Arnaud Legoux Moving Average"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
         if sigma <= 0:
             raise ValueError(f"sigma must be positive: {sigma}")
         if not 0.0 <= distribution_offset <= 1.0:
@@ -144,73 +127,62 @@ class OverlapIndicators:
                 f"distribution_offset must be between 0.0 and 1.0: {distribution_offset}"
             )
 
-        result = ta.alma(
+        return run_series_indicator(
             data,
-            length=length,
-            sigma=sigma,
-            distribution_offset=distribution_offset,
-            offset=offset,
+            length,
+            lambda: ta.alma(
+                data,
+                length=length,
+                sigma=sigma,
+                distribution_offset=distribution_offset,
+                offset=offset,
+            ),
         )
-        if result is None:
-            return create_nan_series_like(data)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
     def dema(data: pd.Series, length: int) -> pd.Series:
         """二重指数移動平均"""
-        validation = validate_series_params(data, length, min_data_length=length * 2)
-        if validation is not None:
-            return validation
-
-        result = ta.dema(data, window=length)
-        return result
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.dema(data, window=length),
+            min_data_length=length * 2,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def tema(data: pd.Series, length: int) -> pd.Series:
         """三重指数移動平均"""
-        validation = validate_series_params(data, length, min_data_length=length * 3)
-        if validation is not None:
-            return validation
-
-        return ta.tema(data, window=length)
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.tema(data, window=length),
+            min_data_length=length * 3,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def t3(data: pd.Series, length: int, a: float = 0.7) -> pd.Series:
         """T3移動平均"""
-        validation = validate_series_params(data, length, min_data_length=length * 6)
-        if validation is not None:
-            return validation
-
-        # Use pandas-ta directly
-        result = ta.t3(data, window=length, a=a)
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.t3(data, window=length, a=a),
+            min_data_length=length * 6,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def kama(data: pd.Series, length: int = 30) -> pd.Series:
         """カウフマン適応移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-        return ta.kama(data, window=length)
+        return run_series_indicator(data, length, lambda: ta.kama(data, window=length))
 
     @staticmethod
     @handle_pandas_ta_errors
     def hma(data: pd.Series, length: int = 20) -> pd.Series:
         """Hull移動平均"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.hma(data, length=length)
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(data, length, lambda: ta.hma(data, length=length))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -220,16 +192,11 @@ class OverlapIndicators:
         length: int = 20,
     ) -> pd.Series:
         """出来高加重移動平均"""
-        validation = validate_multi_series_params(
-            {"close": close, "volume": volume}, length
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            length,
+            lambda: ta.vwma(close=close, volume=volume, length=length),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.vwma(close=close, volume=volume, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -240,26 +207,26 @@ class OverlapIndicators:
         intercept: bool = False,
     ) -> pd.Series:
         """線形回帰 (pandas-ta ベクトル化版)"""
-        validation = validate_series_params(data, length, min_data_length=length)
-        if validation is not None:
-            return validation
-
-        # pandas-ta の linreg を使用 (内部でベクトル化されている)
-        # intercept=True の場合は y切片そのものを返す
-        # intercept=False の場合はその時点での回帰線の値を返す
-        # offset は 0 固定 (デフォルト)
-        # tsf (Time Series Forecast) は linreg と同様
-        result = ta.linreg(data, length=length, offset=0)
-
-        if result is None:
-            return create_nan_series_like(data)
-
+        result = run_series_indicator(
+            data,
+            length,
+            lambda: ta.linreg(data, length=length, offset=0),
+            min_data_length=length,
+        )
         # interceptが必要な場合（あまり一般的ではないが元のコードにあるためサポート）
         if intercept:
-            # intercept = y - slope * x
-            # pandas-taには直接interceptを出すフラグがないため、slopeを取得して逆算
-            slope = ta.linreg(data, length=length, slope=True)
-            # xの中心を (length-1) と想定
+            if isinstance(result, pd.Series) and result.isna().all():
+                return result * scalar
+
+            slope = run_series_indicator(
+                data,
+                length,
+                lambda: ta.linreg(data, length=length, slope=True),
+                min_data_length=length,
+            )
+            if isinstance(slope, pd.Series) and slope.isna().all():
+                return create_nan_series_like(data)
+
             intercept_val = result - slope * (length - 1)
             return intercept_val * scalar
 
@@ -271,30 +238,19 @@ class OverlapIndicators:
         data: pd.Series, length: int = 14, scalar: float = 1.0
     ) -> pd.Series:
         """線形回帰スロープ (pandas-ta ベクトル化版)"""
-        validation = validate_series_params(data, length, min_data_length=length)
-        if validation is not None:
-            return validation
-
-        # pandas-ta の linreg に slope=True を指定
-        result = ta.linreg(data, length=length, slope=True)
-
-        if result is None:
-            return create_nan_series_like(data)
-
+        result = run_series_indicator(
+            data,
+            length,
+            lambda: ta.linreg(data, length=length, slope=True),
+            min_data_length=length,
+        )
         return result * scalar
 
     @staticmethod
     @handle_pandas_ta_errors
     def rma(data: pd.Series, length: int = 10) -> pd.Series:
         """Wilde's Moving Average"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.rma(data, length=length)
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(data, length, lambda: ta.rma(data, length=length))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -323,77 +279,40 @@ class OverlapIndicators:
                 - upper: 上側バンド (SUPERTs)
                 - direction: 方向 (1=強気, -1=弱気)
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, period
-        )
-
-        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            return create_nan_series_bundle(high, 3)
-
-        if validation is not None:
-            return nan_result()
-
         # 'factor' を 'multiplier' のエイリアスとしてサポート
         if "factor" in kwargs:
             multiplier = kwargs["factor"]
 
-        # Numba Implementation
-        try:
-            h_arr = high.values.astype(np.float64)
-            l_arr = low.values.astype(np.float64)
-            c_arr = close.values.astype(np.float64)
-
-            lower, upper, trend = OverlapIndicators._supertrend_loop(
-                h_arr, l_arr, c_arr, period, float(multiplier)
-            )
-
-            idx = high.index
-            # Construct DataFrame or Series as originally returned
-            # Original: SUPERTl, SUPERTs, SUPERTd
-
-            # Format depends on multiplier (int or float in name)
-
-            # But wait, original code tries float key first then int key.
-            # Let's just return the series directly without worrying about column names for now,
-            # Or reconstruct exact keys if necessary. The calling code expects Tuple[Series, Series, Series].
-
-            return (
-                pd.Series(lower, index=idx, name=f"SUPERTl_{period}_{multiplier}"),
-                pd.Series(upper, index=idx, name=f"SUPERTs_{period}_{multiplier}"),
-                pd.Series(trend, index=idx, name=f"SUPERTd_{period}_{multiplier}"),
-            )
-
-        except Exception as e:
-            logger.warning(
-                f"Supertrend Numba optimization failed: {e}. Falling back..."
-            )
-            pass
-
-        df = ta.supertrend(
-            high=high, low=low, close=close, length=period, multiplier=multiplier
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            period,
+            lambda: ta.supertrend(
+                high=high, low=low, close=close, length=period, multiplier=multiplier
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(high, 3),
         )
 
-        if df is None or df.empty:
-            return nan_result()
+        if isinstance(result, tuple):
+            return result
 
         # カラム名: SUPERTl_{length}_{multiplier}, SUPERTs_{length}_{multiplier}, SUPERTd_{length}_{multiplier}
         try:
             # 浮動小数点形式 (例: 3.0)
             return (
-                df[f"SUPERTl_{period}_{float(multiplier)}"],
-                df[f"SUPERTs_{period}_{float(multiplier)}"],
-                df[f"SUPERTd_{period}_{float(multiplier)}"],
+                result[f"SUPERTl_{period}_{float(multiplier)}"],
+                result[f"SUPERTs_{period}_{float(multiplier)}"],
+                result[f"SUPERTd_{period}_{float(multiplier)}"],
             )
         except KeyError:
             try:
                 # 整数形式 (例: 3)
                 return (
-                    df[f"SUPERTl_{period}_{int(multiplier)}"],
-                    df[f"SUPERTs_{period}_{int(multiplier)}"],
-                    df[f"SUPERTd_{period}_{int(multiplier)}"],
+                    result[f"SUPERTl_{period}_{int(multiplier)}"],
+                    result[f"SUPERTs_{period}_{int(multiplier)}"],
+                    result[f"SUPERTd_{period}_{int(multiplier)}"],
                 )
             except (KeyError, Exception):
-                return nan_result()
+                return create_nan_series_bundle(high, 3)
 
     @staticmethod
     def ichimoku(
@@ -418,8 +337,11 @@ class OverlapIndicators:
             Dict with keys: tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span
         """
         max_period = max(tenkan_period, kijun_period, senkou_span_b_period)
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, max_period
+
+        # 長さ不一致は既存仕様どおり ValueError にする
+        validate_multi_series_params(
+            {"high": high, "low": low, "close": close},
+            max_period,
         )
 
         def nan_result() -> Dict[str, pd.Series]:
@@ -434,40 +356,37 @@ class OverlapIndicators:
                 ],
             )
 
-        if validation is not None:
-            return nan_result()
-
-        # pandas-ta はタプル (ichimoku_df, span_df) を返す
         try:
-            result = ta.ichimoku(
-                high=high,
-                low=low,
-                close=close,
-                tenkan=tenkan_period,
-                kijun=kijun_period,
-                senkou=senkou_span_b_period,
+            result = run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                max_period,
+                lambda: ta.ichimoku(
+                    high=high,
+                    low=low,
+                    close=close,
+                    tenkan=tenkan_period,
+                    kijun=kijun_period,
+                    senkou=senkou_span_b_period,
+                ),
+                fallback_factory=nan_result,
             )
 
-            # resultがNone、またはタプルで最初の要素がNone/空の場合
-            if result is None:
-                return nan_result()
+            if isinstance(result, dict):
+                return result
 
             if isinstance(result, tuple):
-                if result[0] is None or result[0].empty:
-                    return nan_result()
-                df = result[0]
-            else:
-                if result.empty:
-                    return nan_result()
-                df = result
+                result = result[0]
+
+            if result is None or (hasattr(result, "empty") and result.empty):
+                return nan_result()
 
             # カラム名パターン: ITS_{tenkan}, IKS_{kijun}, ISA_{tenkan}, ISB_{kijun}, ICS_{kijun}
             return {
-                "tenkan_sen": df[f"ITS_{tenkan_period}"],
-                "kijun_sen": df[f"IKS_{kijun_period}"],
-                "senkou_span_a": df[f"ISA_{tenkan_period}"],
-                "senkou_span_b": df[f"ISB_{kijun_period}"],
-                "chikou_span": df[f"ICS_{kijun_period}"],
+                "tenkan_sen": result[f"ITS_{tenkan_period}"],
+                "kijun_sen": result[f"IKS_{kijun_period}"],
+                "senkou_span_a": result[f"ISA_{tenkan_period}"],
+                "senkou_span_b": result[f"ISB_{kijun_period}"],
+                "chikou_span": result[f"ICS_{kijun_period}"],
             }
         except (KeyError, Exception):
             # pandas-taが想定外の結果を返した場合
@@ -485,23 +404,23 @@ class OverlapIndicators:
         offset: int = 0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Gann HiLo"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, max(high_length, low_length)
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            max(high_length, low_length),
+            lambda: ta.hilo(
+                high=high,
+                low=low,
+                close=close,
+                high_length=high_length,
+                low_length=low_length,
+                mamode=mamode,
+                offset=offset,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(close, 3),
         )
-        if validation is not None:
-            return create_nan_series_bundle(close, 3)
 
-        result = ta.hilo(
-            high=high,
-            low=low,
-            close=close,
-            high_length=high_length,
-            low_length=low_length,
-            mamode=mamode,
-            offset=offset,
-        )
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 3)
+        if isinstance(result, tuple):
+            return result
 
         # Returns HILO, HILOl, HILOs
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
@@ -510,29 +429,19 @@ class OverlapIndicators:
     @handle_pandas_ta_errors
     def hl2(high: pd.Series, low: pd.Series) -> pd.Series:
         """High-Low Average"""
-        validation = validate_multi_series_params({"high": high, "low": low})
-        if validation is not None:
-            return validation  # Should return Series
-
-        result = ta.hl2(high=high, low=low)
-        if result is None:
-            return create_nan_series_like(high)
-        return result
+        return run_multi_series_indicator(
+            {"high": high, "low": low}, None, lambda: ta.hl2(high=high, low=low)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def hlc3(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
         """HLC Average"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            None,
+            lambda: ta.hlc3(high=high, low=low, close=close),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.hlc3(high=high, low=low, close=close)
-        if result is None:
-            return create_nan_series_like(high)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -540,42 +449,29 @@ class OverlapIndicators:
         open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
     ) -> pd.Series:
         """OHLC Average"""
-        validation = validate_multi_series_params(
-            {"open_": open_, "high": high, "low": low, "close": close}
+        return run_multi_series_indicator(
+            {"open_": open_, "high": high, "low": low, "close": close},
+            None,
+            lambda: ta.ohlc4(open_=open_, high=high, low=low, close=close),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.ohlc4(open_=open_, high=high, low=low, close=close)
-        if result is None:
-            return create_nan_series_like(high)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
     def midpoint(close: pd.Series, length: int = 2) -> pd.Series:
         """Midpoint"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.midpoint(close=close, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.midpoint(close=close, length=length)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def midprice(high: pd.Series, low: pd.Series, length: int = 2) -> pd.Series:
         """Midprice"""
-        validation = validate_multi_series_params({"high": high, "low": low}, length)
-        if validation is not None:
-            return validation
-
-        result = ta.midprice(high=high, low=low, length=length)
-        if result is None:
-            return create_nan_series_like(high)
-        return result
+        return run_multi_series_indicator(
+            {"high": high, "low": low},
+            length,
+            lambda: ta.midprice(high=high, low=low, length=length),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -583,42 +479,27 @@ class OverlapIndicators:
         close: pd.Series, length: int = 14, drift: int = 1, offset: int = 0
     ) -> pd.Series:
         """VIDYA"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.vidya(close=close, length=length, drift=drift, offset=offset)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.vidya(close=close, length=length, drift=drift, offset=offset),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def wcp(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
         """Weighted Close Price"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close}, None, lambda: ta.wcp(high=high, low=low, close=close)
         )
-        if validation is not None:
-            return validation
-
-        result = ta.wcp(high=high, low=low, close=close)
-        if result is None:
-            return create_nan_series_like(high)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
     def mcgd(close: pd.Series, length: int = 10, offset: int = 0) -> pd.Series:
         """McGinley Dynamic"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.mcgd(close=close, length=length, offset=offset)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.mcgd(close=close, length=length, offset=offset)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -626,76 +507,48 @@ class OverlapIndicators:
         close: pd.Series, length: int = 7, phase: int = 50, offset: int = 0
     ) -> pd.Series:
         """Jurik Moving Average"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.jma(close=close, length=length, phase=phase, offset=offset)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.jma(close=close, length=length, phase=phase, offset=offset),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def fwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
         """Fibonacci Weighted Moving Average"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.fwma(close=close, length=length, asc=asc)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.fwma(close=close, length=length, asc=asc)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
         """Pascal Weighted Moving Average"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.pwma(close=close, length=length, asc=asc)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.pwma(close=close, length=length, asc=asc)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def sinwma(close: pd.Series, length: int = 14) -> pd.Series:
         """Sine Weighted Moving Average"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.sinwma(close=close, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.sinwma(close=close, length=length)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def ssf(close: pd.Series, length: int = 10, poles: int = 2) -> pd.Series:
         """Ehlers Super Smoother Filter"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.ssf(close=close, length=length, poles=poles)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.ssf(close=close, length=length, poles=poles)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def swma(close: pd.Series, length: int = 10) -> pd.Series:
         """Symmetric Weighted Moving Average"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.swma(close=close, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.swma(close=close, length=length)
+        )

@@ -42,6 +42,10 @@ class TestAllTechnicalIndicators:
             except Exception as e:
                 pytest.fail(f"{indicator}の初期化に失敗: {e}")
 
+    def test_registry_does_not_include_calculate_wrappers(self):
+        """discovery が calculate_* ラッパーを実指標として登録しないこと"""
+        assert not any(name.startswith("CALCULATE_") for name in self.INDICATORS)
+
     @pytest.mark.parametrize("indicator", INDICATORS)
     def test_indicator_basic_calculation(
         self,

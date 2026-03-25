@@ -277,7 +277,7 @@ def test_decoder_ignores_unknown_fields_and_applies_defaults(
 
 
 def test_decoder_uses_default_when_data_empty(serializer: GeneSerializer) -> None:
-    """空dict入力時は GeneUtils.create_default_strategy_gene にフォールバックする仕様."""
+    """空dict入力時は NormalizationUtils.create_default_strategy_gene にフォールバックする仕様."""
     restored = serializer.dict_to_strategy_gene({}, StrategyGene)
     # 仕様上「デフォルトStrategyGene」を返す
     assert isinstance(restored, StrategyGene)

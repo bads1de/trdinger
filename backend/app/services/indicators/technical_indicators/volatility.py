@@ -29,11 +29,10 @@ import pandas as pd
 import pandas_ta_classic as ta
 
 from ..data_validation import (
-    handle_pandas_ta_errors,
     create_nan_series_bundle,
-    create_nan_series_like,
-    validate_multi_series_params,
-    validate_series_params,
+    handle_pandas_ta_errors,
+    run_multi_series_indicator,
+    run_series_indicator,
 )
 
 TA_LIB_AVAILABLE = False
@@ -165,21 +164,20 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> pd.Series:
         """平均真の値幅"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length, length
+        def compute():
+            result = ta.atr(
+                high=high.values, low=low.values, close=close.values, length=length
+            )
+            if result is None:
+                logger.error("ATR: Calculation returned None - returning NaN series")
+            return result
+
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            compute,
+            min_data_length=length,
         )
-        if validation is not None:
-            return validation
-
-        result = ta.atr(
-            high=high.values, low=low.values, close=close.values, length=length
-        )
-
-        if result is None:
-            logger.error("ATR: Calculation returned None - returning NaN series")
-            return create_nan_series_like(high)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -190,16 +188,12 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Normalized Average True Range"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length, length
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.natr(high=high, low=low, close=close, length=length),
+            min_data_length=length,
         )
-        if validation is not None:
-            return validation
-
-        result = ta.natr(high=high, low=low, close=close, length=length)
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(close)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -207,11 +201,15 @@ class VolatilityIndicators:
         data: pd.Series, length: int = 20, std: float = 2.0
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """ボリンジャーバンド"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return create_nan_series_bundle(data, 3)
+        result = run_series_indicator(
+            data,
+            length,
+            lambda: ta.bbands(data, length=length, std=std),
+            fallback_factory=lambda: create_nan_series_bundle(data, 3),
+        )
 
-        result = ta.bbands(data, length=length, std=std)
+        if isinstance(result, tuple):
+            return result
 
         if result is None:
             logger.error("BBands: Calculation returned None - returning NaN series")
@@ -243,27 +241,27 @@ class VolatilityIndicators:
         std_dev: bool = False,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Keltner Channels: returns (upper, middle, lower)"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, period
-        )
-
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             return create_nan_series_bundle(close, 3)
 
-        if validation is not None:
-            return nan_result()
-
-        # keltner (kc) を計算
-        df = ta.kc(
-            high=high,
-            low=low,
-            close=close,
-            length=period,
-            scalar=scalar,
-            mamode=mamode,
+        df = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            period,
+            lambda: ta.kc(
+                high=high,
+                low=low,
+                close=close,
+                length=period,
+                scalar=scalar,
+                mamode=mamode,
+            ),
+            fallback_factory=nan_result,
         )
 
-        if df is None or df.empty:
+        if isinstance(df, tuple):
+            return df
+
+        if df.empty:
             return nan_result()
 
         # カラム名: KC{mamode[0]}_{length}_{scalar}
@@ -295,17 +293,20 @@ class VolatilityIndicators:
         length: int = 20,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Donchian Channels: returns (upper, middle, lower)"""
-        validation = validate_multi_series_params({"high": high, "low": low}, length)
-
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             return create_nan_series_bundle(high, 3)
 
-        if validation is not None:
-            return nan_result()
+        df = run_multi_series_indicator(
+            {"high": high, "low": low},
+            length,
+            lambda: ta.donchian(high=high, low=low, length=length),
+            fallback_factory=nan_result,
+        )
 
-        df = ta.donchian(high=high, low=low, length=length)
+        if isinstance(df, tuple):
+            return df
 
-        if df is None or df.empty:
+        if df.empty:
             return nan_result()
 
         # カラム名: DCU_{length}_{length}, DCM_{length}_{length}, DCL_{length}_{length}
@@ -327,19 +328,20 @@ class VolatilityIndicators:
         period: int = 20,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Acceleration Bands: returns (upper, middle, lower)"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, period
-        )
-
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
             return create_nan_series_bundle(close, 3)
 
-        if validation is not None:
-            return nan_result()
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            period,
+            lambda: ta.accbands(high=high, low=low, close=close, length=period),
+            fallback_factory=nan_result,
+        )
 
-        result = ta.accbands(high=high, low=low, close=close, length=period)
+        if isinstance(result, tuple):
+            return result
 
-        if result is None or result.empty:
+        if result.empty:
             return nan_result()
 
         # カラム名: ACCBU_{length}, ACCBM_{length}, ACCBL_{length}
@@ -356,15 +358,7 @@ class VolatilityIndicators:
     @handle_pandas_ta_errors
     def ui(data: pd.Series, period: int = 14) -> pd.Series:
         """Ulcer Index"""
-        validation = validate_series_params(data)
-        if validation is not None:
-            return validation
-
-        length = period
-        result = ta.ui(data, window=length)
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(data, None, lambda: ta.ui(data, window=period))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -381,30 +375,22 @@ class VolatilityIndicators:
         offset: int | None = None,
     ) -> pd.Series:
         """Relative Volatility Index"""
-
-        validation = validate_multi_series_params(
-            {"close": close, "high": high, "low": low}, length
+        return run_multi_series_indicator(
+            {"close": close, "high": high, "low": low},
+            length,
+            lambda: ta.rvi(
+                close=close,
+                high=high,
+                low=low,
+                length=length,
+                scalar=scalar,
+                refined=refined,
+                thirds=thirds,
+                mamode=mamode,
+                drift=drift,
+                offset=offset,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.rvi(
-            close=close,
-            high=high,
-            low=low,
-            length=length,
-            scalar=scalar,
-            refined=refined,
-            thirds=thirds,
-            mamode=mamode,
-            drift=drift,
-            offset=offset,
-        )
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return create_nan_series_like(close)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -415,18 +401,11 @@ class VolatilityIndicators:
         drift: int = 1,
     ) -> pd.Series:
         """True Range"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            None,
+            lambda: ta.true_range(high=high, low=low, close=close, drift=drift),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.true_range(high=high, low=low, close=close, drift=drift)
-
-        if result is None:
-            return create_nan_series_like(high)
-
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -440,20 +419,22 @@ class VolatilityIndicators:
         """
         Yang-Zhang Volatility Estimator - Numba Optimized Version
         """
-        validation = validate_multi_series_params(
-            {"open_": open_, "high": high, "low": low, "close": close}, length
+        result = run_multi_series_indicator(
+            {"open_": open_, "high": high, "low": low, "close": close},
+            length,
+            lambda: pd.Series(
+                _njit_yang_zhang_loop(
+                    open_.values.astype(np.float64),
+                    high.values.astype(np.float64),
+                    low.values.astype(np.float64),
+                    close.values.astype(np.float64),
+                    length,
+                ),
+                index=close.index,
+                name=f"YZVOL_{length}",
+            ),
         )
-        if validation is not None:
-            return validation
-
-        open_arr = open_.values.astype(np.float64)
-        high_arr = high.values.astype(np.float64)
-        low_arr = low.values.astype(np.float64)
-        close_arr = close.values.astype(np.float64)
-
-        yz_vol = _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length)
-
-        return pd.Series(yz_vol, index=close.index, name=f"YZVOL_{length}")
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -465,16 +446,19 @@ class VolatilityIndicators:
         """
         Parkinson Volatility Estimator - Numba Optimized Version
         """
-        validation = validate_multi_series_params({"high": high, "low": low}, length)
-        if validation is not None:
-            return validation
-
-        high_arr = high.values.astype(np.float64)
-        low_arr = low.values.astype(np.float64)
-
-        p_vol = _njit_parkinson_loop(high_arr, low_arr, length)
-
-        return pd.Series(p_vol, index=high.index, name=f"PARKVOL_{length}")
+        return run_multi_series_indicator(
+            {"high": high, "low": low},
+            length,
+            lambda: pd.Series(
+                _njit_parkinson_loop(
+                    high.values.astype(np.float64),
+                    low.values.astype(np.float64),
+                    length,
+                ),
+                index=high.index,
+                name=f"PARKVOL_{length}",
+            ),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -488,20 +472,21 @@ class VolatilityIndicators:
         """
         Garman-Klass Volatility Estimator - Numba Optimized Version
         """
-        validation = validate_multi_series_params(
-            {"open_": open_, "high": high, "low": low, "close": close}, length
+        return run_multi_series_indicator(
+            {"open_": open_, "high": high, "low": low, "close": close},
+            length,
+            lambda: pd.Series(
+                _njit_garman_klass_loop(
+                    open_.values.astype(np.float64),
+                    high.values.astype(np.float64),
+                    low.values.astype(np.float64),
+                    close.values.astype(np.float64),
+                    length,
+                ),
+                index=close.index,
+                name=f"GKVOL_{length}",
+            ),
         )
-        if validation is not None:
-            return validation
-
-        open_arr = open_.values.astype(np.float64)
-        high_arr = high.values.astype(np.float64)
-        low_arr = low.values.astype(np.float64)
-        close_arr = close.values.astype(np.float64)
-
-        gk_vol = _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length)
-
-        return pd.Series(gk_vol, index=close.index, name=f"GKVOL_{length}")
 
     @staticmethod
     def massi(
@@ -524,17 +509,14 @@ class VolatilityIndicators:
         Returns:
             Mass Index
         """
-        validation = validate_multi_series_params({"high": high, "low": low}, slow)
-        if validation is not None:
-            return validation
-
         if fast <= 0:
             raise ValueError("fast must be positive")
 
-        result = ta.massi(high=high, low=low, fast=fast, slow=slow)
-        if result is None or result.empty:
-            return create_nan_series_like(high)
-        return result
+        return run_multi_series_indicator(
+            {"high": high, "low": low},
+            slow,
+            lambda: ta.massi(high=high, low=low, fast=fast, slow=slow),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -546,16 +528,19 @@ class VolatilityIndicators:
         atr_length: int = 15,
     ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """Aberration"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, max(length, atr_length)
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            max(length, atr_length),
+            lambda: ta.aberration(
+                high=high, low=low, close=close, length=length, atr_length=atr_length
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(close, 4),
         )
-        if validation is not None:
-            return create_nan_series_bundle(close, 4)
 
-        result = ta.aberration(
-            high=high, low=low, close=close, length=length, atr_length=atr_length
-        )
-        if result is None or result.empty:
+        if isinstance(result, tuple):
+            return result
+
+        if result.empty:
             return create_nan_series_bundle(close, 4)
 
         # Returns multiple columns. Usually ZG, SG, XG, ATR
@@ -575,12 +560,17 @@ class VolatilityIndicators:
         nc: int = 4,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Holt-Winter Channel"""
-        validation = validate_series_params(close, max(na, nb, nc))
-        if validation is not None:
-            return create_nan_series_bundle(close, 3)
+        result = run_series_indicator(
+            close,
+            max(na, nb, nc),
+            lambda: ta.hwc(close=close, na=na, nb=nb, nc=nc),
+            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+        )
 
-        result = ta.hwc(close=close, na=na, nb=nb, nc=nc)
-        if result is None or result.empty:
+        if isinstance(result, tuple):
+            return result
+
+        if result.empty:
             return create_nan_series_bundle(close, 3)
 
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
@@ -594,16 +584,11 @@ class VolatilityIndicators:
         close: pd.Series,
     ) -> pd.Series:
         """Price Distance"""
-        validation = validate_multi_series_params(
-            {"open_": open_, "high": high, "low": low, "close": close}
+        return run_multi_series_indicator(
+            {"open_": open_, "high": high, "low": low, "close": close},
+            None,
+            lambda: ta.pdist(open_=open_, high=high, low=low, close=close),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.pdist(open_=open_, high=high, low=low, close=close)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -617,20 +602,25 @@ class VolatilityIndicators:
         drift: int = 1,
     ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """Thermo"""
-        validation = validate_multi_series_params({"high": high, "low": low}, length)
-        if validation is not None:
-            return create_nan_series_bundle(high, 4)
-
-        result = ta.thermo(
-            high=high,
-            low=low,
-            length=length,
-            long=long_,
-            short=short,
-            mamode=mamode,
-            drift=drift,
+        result = run_multi_series_indicator(
+            {"high": high, "low": low},
+            length,
+            lambda: ta.thermo(
+                high=high,
+                low=low,
+                length=length,
+                long=long_,
+                short=short,
+                mamode=mamode,
+                drift=drift,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(high, 4),
         )
-        if result is None or result.empty:
+
+        if isinstance(result, tuple):
+            return result
+
+        if result.empty:
             return create_nan_series_bundle(high, 4)
 
         # Returns Thermo, ThermoMa, ThermoLa, ThermoSa

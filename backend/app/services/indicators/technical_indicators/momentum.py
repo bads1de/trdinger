@@ -31,7 +31,6 @@ pandas-ta の momentum カテゴリに対応。
 - ER (Efficiency Ratio)
 """
 
-import logging
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -43,11 +42,15 @@ from ..data_validation import (
     create_nan_series_like,
     handle_pandas_ta_errors,
     normalize_non_finite,
-    validate_multi_series_params,
-    validate_series_params,
+    run_multi_series_indicator,
+    run_series_indicator,
 )
 
-logger = logging.getLogger(__name__)
+
+def _create_nan_array_bundle(length: int, count: int) -> tuple[np.ndarray, ...]:
+    """同じ長さの NaN 配列を複数作る。"""
+    base = np.full(length, np.nan)
+    return tuple(base.copy() for _ in range(count))
 
 
 class MomentumIndicators:
@@ -61,14 +64,9 @@ class MomentumIndicators:
     @staticmethod
     def rsi(data: pd.Series, period: int = 14) -> pd.Series:
         """相対力指数"""
-        validation = validate_series_params(data, period)
-        if validation is not None:
-            return validation
-
-        result = ta.rsi(data, window=period)
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(
+            data, period, lambda: ta.rsi(data, window=period)
+        )
 
     @staticmethod
     def macd(
@@ -78,20 +76,20 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """MACD"""
-        validation = validate_series_params(data)
-        if validation is not None:
-            return create_nan_series_bundle(data, 3)
+        result = run_series_indicator(
+            data,
+            None,
+            lambda: ta.macd(data, fast=fast, slow=slow, signal=signal),
+            fallback_factory=lambda: create_nan_series_bundle(data, 3),
+        )
 
-        result = ta.macd(data, fast=fast, slow=slow, signal=signal)
-
-        if result is None or result.empty:
-            # フォールバック: NaN配列を返す
-            return create_nan_series_bundle(data, 3)
+        if isinstance(result, tuple):
+            return result
 
         return (
-            result.iloc[:, 0],  # MACD
-            result.iloc[:, 1],  # Signal
-            result.iloc[:, 2],  # Histogram
+            result.iloc[:, 0],
+            result.iloc[:, 1],
+            result.iloc[:, 2],
         )
 
     @staticmethod
@@ -102,14 +100,15 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Price Oscillator"""
-        validation = validate_series_params(data)
-        if validation is not None:
-            return create_nan_series_bundle(data, 3)
+        result = run_series_indicator(
+            data,
+            None,
+            lambda: ta.ppo(data, fast=fast, slow=slow, signal=signal),
+            fallback_factory=lambda: create_nan_series_bundle(data, 3),
+        )
 
-        result = ta.ppo(data, fast=fast, slow=slow, signal=signal)
-
-        if result is None or result.empty:
-            return create_nan_series_bundle(data, 3)
+        if isinstance(result, tuple):
+            return result
 
         return (
             result.iloc[:, 0].to_numpy(),
@@ -127,23 +126,22 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """TRIX (Triple Exponential Average)"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            nan_array = np.full(len(data), np.nan)
-            return nan_array, nan_array, nan_array
-
-        result = ta.trix(
-            close=data,
-            length=length,
-            signal=signal,
-            scalar=scalar,
-            drift=drift,
-            offset=offset,
+        result = run_series_indicator(
+            data,
+            length,
+            lambda: ta.trix(
+                close=data,
+                length=length,
+                signal=signal,
+                scalar=scalar,
+                drift=drift,
+                offset=offset,
+            ),
+            fallback_factory=lambda: _create_nan_array_bundle(len(data), 3),
         )
 
-        if result is None or result.empty:
-            nan_array = np.full(len(data), np.nan)
-            return nan_array, nan_array, nan_array
+        if isinstance(result, tuple):
+            return result
 
         trix_line = result.iloc[:, 0].to_numpy()
         signal_line = result.iloc[:, 1].to_numpy()
@@ -176,22 +174,21 @@ class MomentumIndicators:
         Returns:
             Tuple[%K, %D]
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, k
-        )
-        if validation is not None:
-            return validation, validation
-
         # d_lengthパラメータが指定された場合の処理（後方互換性）
         if d_length is not None and d == 3:
             d = d_length
 
-        result = ta.stoch(
-            high=high, low=low, close=close, length=k, smoothd=d, smoothk=smooth_k
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            k,
+            lambda: ta.stoch(
+                high=high, low=low, close=close, length=k, smoothd=d, smoothk=smooth_k
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(high, 2),
         )
 
-        if result is None or result.empty:
-            return create_nan_series_bundle(high, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -221,25 +218,25 @@ class MomentumIndicators:
         """
         # 最小必要データ長の確認
         min_required_length = rsi_length + stoch_length
-        validation = validate_series_params(
-            data, rsi_length, min_data_length=min_required_length
-        )
-        if validation is not None:
-            return create_nan_series_bundle(data, 2)
-
         if stoch_length <= 0 or k <= 0 or d <= 0:
             raise ValueError("stoch_length, k, and d must be positive")
 
-        result = ta.stochrsi(
-            close=data,
-            rsi_length=rsi_length,
-            stoch_length=stoch_length,
-            k=k,
-            d=d,
+        result = run_series_indicator(
+            data,
+            rsi_length,
+            lambda: ta.stochrsi(
+                close=data,
+                rsi_length=rsi_length,
+                stoch_length=stoch_length,
+                k=k,
+                d=d,
+            ),
+            min_data_length=min_required_length,
+            fallback_factory=lambda: create_nan_series_bundle(data, 2),
         )
 
-        if result is None or result.empty:
-            return create_nan_series_bundle(data, 2)
+        if isinstance(result, tuple):
+            return result
 
         # pandas-taの返り値は通常 STOCHRSIk_*, STOCHRSId_* の2列
         return (result.iloc[:, 0], result.iloc[:, 1])
@@ -265,16 +262,11 @@ class MomentumIndicators:
         Returns:
             Williams %R の値（-100 から 0 の範囲）
         """
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.willr(high=high, low=low, close=close, length=length, **kwargs)
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return create_nan_series_like(close)
-
-        return result
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.willr(high=high, low=low, close=close, length=length, **kwargs),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -296,18 +288,11 @@ class MomentumIndicators:
         Returns:
             CCI の値
         """
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.cci(high=high, low=low, close=close, length=length),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.cci(high=high, low=low, close=close, length=length)
-
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(high)
-
-        return result
 
     @staticmethod
     def cmo(
@@ -316,14 +301,9 @@ class MomentumIndicators:
         talib: bool | None = None,
     ) -> pd.Series:
         """チャンデ・モメンタム・オシレーター"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.cmo(data, length=length, talib=talib)
-        if result is None or result.empty:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(
+            data, length, lambda: ta.cmo(data, length=length, talib=talib)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -336,25 +316,23 @@ class MomentumIndicators:
         d2: int = 3,
     ) -> pd.Series:
         """Schaff Trend Cycle"""
-        validation = validate_series_params(data, cycle)
-        if validation is not None:
-            return validation
-
         if fast <= 0 or slow <= 0:
             raise ValueError("fast and slow must be positive")
 
         factor_base = max(d1, d2)
         factor = max(0.1, min(factor_base / max(cycle, 1), 0.9))
 
-        result = ta.stc(
+        result = run_series_indicator(
             data,
-            fast=fast,
-            slow=slow,
-            tclength=cycle,
-            factor=factor,
+            cycle,
+            lambda: ta.stc(
+                data,
+                fast=fast,
+                slow=slow,
+                tclength=cycle,
+                factor=factor,
+            ),
         )
-        if result is None or result.empty:
-            return create_nan_series_like(data)
 
         if isinstance(result, pd.DataFrame):
             series = result.iloc[:, 0]
@@ -371,16 +349,18 @@ class MomentumIndicators:
         signal: int = 1,
     ) -> Tuple[pd.Series, pd.Series]:
         """フィッシャー変換"""
-        validation = validate_multi_series_params({"high": high, "low": low}, length)
-        if validation is not None:
-            return create_nan_series_bundle(high, 2)
-
         if signal <= 0:
             raise ValueError(f"signal must be positive: {signal}")
 
-        result = ta.fisher(high=high, low=low, length=length, signal=signal)
-        if result is None or result.empty:
-            return create_nan_series_bundle(high, 2)
+        result = run_multi_series_indicator(
+            {"high": high, "low": low},
+            length,
+            lambda: ta.fisher(high=high, low=low, length=length, signal=signal),
+            fallback_factory=lambda: create_nan_series_bundle(high, 2),
+        )
+
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -399,25 +379,26 @@ class MomentumIndicators:
     ) -> Tuple[pd.Series, pd.Series]:
         """Know Sure Thing"""
         max_period = max(roc1, roc2, roc3, roc4, sma1, sma2, sma3, sma4, signal)
-        validation = validate_series_params(data, max_period)
-        if validation is not None:
-            return create_nan_series_bundle(data, 2)
-
-        result = ta.kst(
+        result = run_series_indicator(
             data,
-            roc1=roc1,
-            roc2=roc2,
-            roc3=roc3,
-            roc4=roc4,
-            sma1=sma1,
-            sma2=sma2,
-            sma3=sma3,
-            sma4=sma4,
-            signal=signal,
+            max_period,
+            lambda: ta.kst(
+                data,
+                roc1=roc1,
+                roc2=roc2,
+                roc3=roc3,
+                roc4=roc4,
+                sma1=sma1,
+                sma2=sma2,
+                sma3=sma3,
+                sma4=sma4,
+                signal=signal,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(data, 2),
         )
 
-        if result is None or result.empty:
-            return create_nan_series_bundle(data, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -435,47 +416,31 @@ class MomentumIndicators:
         elif data is None:
             raise ValueError("Either 'data' or 'close' must be provided")
 
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.roc(data, window=length)
-        if result is None or result.empty:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(data, length, lambda: ta.roc(data, window=length))
 
     @staticmethod
     def mom(data: pd.Series, length: int = 10) -> pd.Series:
         """モメンタム"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.mom(data, length=length)
-        if result is None or result.empty:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(data, length, lambda: ta.mom(data, length=length))
 
     @staticmethod
     def qqe(data: pd.Series, length: int = 14) -> pd.Series:
         """Qualitative Quantitative Estimation"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
+        def compute() -> pd.Series:
+            result = ta.qqe(data, length=length)
 
-        result = ta.qqe(data, length=length)
+            if isinstance(result, pd.DataFrame):
+                # QQEの主要な列を返す（通常はRSIMA列）
+                return result.iloc[:, 1] if result.shape[1] > 1 else result.iloc[:, 0]
 
-        if result is None or result.empty:
+            if result is not None:
+                return result
+
             # フォールバック: RSIを返す
             rsi_result = ta.rsi(data, length=length)
-            return (
-                rsi_result
-                if rsi_result is not None
-                else create_nan_series_like(data)
-            )
+            return rsi_result if rsi_result is not None else create_nan_series_like(data)
 
-        # QQEの主要な列を返す（通常はRSIMA列）
-        return result.iloc[:, 1] if result.shape[1] > 1 else result.iloc[:, 0]
+        return run_series_indicator(data, length, compute)
 
     @staticmethod
     def squeeze_pro(
@@ -493,67 +458,29 @@ class MomentumIndicators:
         use_tr: bool = True,
     ) -> pd.Series:
         """Squeeze Pro"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, max(bb_length, kc_length)
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            max(bb_length, kc_length),
+            lambda: ta.squeeze_pro(
+                high=high,
+                low=low,
+                close=close,
+                bb_length=bb_length,
+                bb_std=bb_std,
+                kc_length=kc_length,
+                kc_scalar_wide=kc_scalar_wide,
+                kc_scalar_normal=kc_scalar_normal,
+                kc_scalar_narrow=kc_scalar_narrow,
+                mom_length=mom_length,
+                mom_smooth=mom_smooth,
+                use_tr=use_tr,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        # Note: pandas-ta squeeze_pro might return multiple columns or DataFrame with details
-        # For uniformity, we often want the main squeeze value or a specific signal
-        # Use pandas-ta default returns for now
-        result = ta.squeeze_pro(
-            high=high,
-            low=low,
-            close=close,
-            bb_length=bb_length,
-            bb_std=bb_std,
-            kc_length=kc_length,
-            kc_scalar_wide=kc_scalar_wide,
-            kc_scalar_normal=kc_scalar_normal,
-            kc_scalar_narrow=kc_scalar_narrow,
-            mom_length=mom_length,
-            mom_smooth=mom_smooth,
-            use_tr=use_tr,
-        )
-
-        if result is None:
-            return create_nan_series_like(high)
-
-        # Squeeze Pro typically returns SQZ_PRO_ON, SQZ_PRO_OFF, SQZ_PRO_NO, SQZ_PRO_W, SQZ_PRO_N, SQZ_PRO_S
-        # Returning the DataFrame as is, or specific column depending on requirement.
-        # Strategy usually looks for compression states.
-        # Let's return the simplified main series if identifiable, or the whole DF if useful.
-
-        if isinstance(result, pd.DataFrame):
-            # If the user wants just one series, maybe the 'on/off' state or momentum?
-            # Standard squeeze returns momentum value. Squeeze Pro returns states mostly?
-            # Actually standard squeeze returns momentum bar.
-            # Let's check columns. Typical: SQZPRO_20_2.0_20_2_1.5_1
-            # We will return the full dataframe and let caller handle, or just the first column?
-            # To be safe and compliant with 'Series' return type if possible, or 'DataFrame'
-            # But the signature says pd.Series. Let's change return type to Union or just return DF masquerading.
-            # However, looking at standard Squeeze, it returns momentum.
-            # Squeeze Pro in pandas-ta likely returns a DataFrame with multiple boolean columns state.
-            pass
-
-        # For this specific indicator which is complex, returning the raw result (likely DF)
-        # but type hinting suggests Series. We should update type hint or wrapper if we want specific column.
-        # Let's trust pandas-ta return and just handle None/Empty.
-        return result
 
     @staticmethod
     def cti(data: pd.Series, length: int = 12) -> pd.Series:
         """Correlation Trend Indicator"""
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        result = ta.cti(data, length=length)
-
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(data, length, lambda: ta.cti(data, length=length))
 
     @staticmethod
     def apo(
@@ -563,20 +490,16 @@ class MomentumIndicators:
         ma_mode: str = "ema",
     ) -> pd.Series:
         """Absolute Price Oscillator"""
-        validation = validate_series_params(data, slow)
-        if validation is not None:
-            return validation
-
         if fast <= 0:
             raise ValueError("fast must be positive")
         if fast >= slow:
             raise ValueError("fast period must be less than slow period")
 
-        result = ta.apo(data, fast=fast, slow=slow, ma_mode=ma_mode)
-
-        if result is None or result.empty:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(
+            data,
+            slow,
+            lambda: ta.apo(data, fast=fast, slow=slow, ma_mode=ma_mode),
+        )
 
     @staticmethod
     def tsi(
@@ -590,25 +513,26 @@ class MomentumIndicators:
     ) -> Tuple[pd.Series, pd.Series]:
         """True Strength Index"""
         max_period = max(fast, slow, signal)
-        validation = validate_series_params(data, max_period)
-        if validation is not None:
-            return create_nan_series_bundle(data, 2)
-
         if drift <= 0:
             raise ValueError("drift must be positive")
 
-        result = ta.tsi(
+        result = run_series_indicator(
             data,
-            fast=fast,
-            slow=slow,
-            signal=signal,
-            scalar=scalar,
-            mamode=mamode,
-            drift=drift,
+            max_period,
+            lambda: ta.tsi(
+                data,
+                fast=fast,
+                slow=slow,
+                signal=signal,
+                scalar=scalar,
+                mamode=mamode,
+                drift=drift,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(data, 2),
         )
 
-        if result is None or result.empty:
-            return create_nan_series_bundle(data, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -620,17 +544,11 @@ class MomentumIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Pretty Good Oscillator"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.pgo(high=high, low=low, close=close, length=length),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.pgo(high=high, low=low, close=close, length=length)
-
-        if result is None or result.empty:
-            return create_nan_series_like(close)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -654,18 +572,13 @@ class MomentumIndicators:
         Returns:
             PSL の値
         """
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.psl(
-            close=close, open_=open_, length=length, scalar=scalar, drift=drift
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.psl(
+                close=close, open_=open_, length=length, scalar=scalar, drift=drift
+            ),
         )
-
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return create_nan_series_like(close)
-
-        return result
 
     @staticmethod
     def squeeze(
@@ -681,28 +594,22 @@ class MomentumIndicators:
         use_tr: bool = True,
     ) -> pd.Series:
         """Squeeze"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, max(bb_length, kc_length)
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            max(bb_length, kc_length),
+            lambda: ta.squeeze(
+                high=high,
+                low=low,
+                close=close,
+                bb_window=bb_length,
+                bb_std=bb_std,
+                kc_window=kc_length,
+                kc_scalar=kc_scalar,
+                mom_window=mom_length,
+                mom_smooth=mom_smooth,
+                use_tr=use_tr,
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.squeeze(
-            high=high,
-            low=low,
-            close=close,
-            bb_window=bb_length,
-            bb_std=bb_std,
-            kc_window=kc_length,
-            kc_scalar=kc_scalar,
-            mom_window=mom_length,
-            mom_smooth=mom_smooth,
-            use_tr=use_tr,
-        )
-
-        if result is None:
-            return create_nan_series_like(high)
-        return result
 
     @staticmethod
     def uo(
@@ -714,60 +621,43 @@ class MomentumIndicators:
         slow: int = 28,
     ) -> pd.Series:
         """Ultimate Oscillator"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, slow
+        return run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            slow,
+            lambda: ta.uo(
+                high=high, low=low, close=close, fast=fast, medium=medium, slow=slow
+            ),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.uo(
-            high=high, low=low, close=close, fast=fast, medium=medium, slow=slow
-        )
-
-        if result is None:
-            return create_nan_series_like(high)
-        return result
 
     @staticmethod
     def ao(high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34) -> pd.Series:
         """Awesome Oscillator"""
-        validation = validate_multi_series_params({"high": high, "low": low}, slow)
-        if validation is not None:
-            return validation
-
-        result = ta.ao(high=high, low=low, fast=fast, slow=slow)
-        if result is None:
-            return create_nan_series_like(high)
-        return result
+        return run_multi_series_indicator(
+            {"high": high, "low": low},
+            slow,
+            lambda: ta.ao(high=high, low=low, fast=fast, slow=slow),
+        )
 
     @staticmethod
     def bop(
         open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
     ) -> pd.Series:
         """Balance of Power"""
-        validation = validate_multi_series_params(
-            {"open_": open_, "high": high, "low": low, "close": close}
+        return run_multi_series_indicator(
+            {"open_": open_, "high": high, "low": low, "close": close},
+            None,
+            lambda: ta.bop(open_=open_, high=high, low=low, close=close),
         )
-        if validation is not None:
-            return validation
-
-        result = ta.bop(open_=open_, high=high, low=low, close=close)
-        if result is None:
-            return create_nan_series_like(open_)
-        return result
 
     @staticmethod
     def cg(data: pd.Series, length: int = 10) -> pd.Series:
         """Center of Gravity"""
-        # CG特有のデータ検証 (min_length = length + 2)
-        validation = validate_series_params(data, length, min_data_length=length + 2)
-        if validation is not None:
-            return validation
-
-        result = ta.cg(data, length=length)
-        if result is None:
-            return create_nan_series_like(data)
-        return result
+        return run_series_indicator(
+            data,
+            length,
+            lambda: ta.cg(data, length=length),
+            min_data_length=length + 2,
+        )
 
     @staticmethod
     def coppock(
@@ -775,14 +665,12 @@ class MomentumIndicators:
     ) -> pd.Series:
         """Coppock Curve"""
         min_length = slow + fast + 5
-        validation = validate_series_params(close, length, min_data_length=min_length)
-        if validation is not None:
-            return validation
-
-        result = ta.coppock(close=close, length=length, fast=fast, slow=slow)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.coppock(close=close, length=length, fast=fast, slow=slow),
+            min_data_length=min_length,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -793,41 +681,39 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Bias Indicator - 移動平均からの乖離率"""
-        # BIAS requires sufficient data length
         min_length = length * 2
-        validation = validate_series_params(data, length, min_data_length=min_length)
-        if validation is not None:
-            return validation
 
-        # pandas-taのbias関数を直接使用
-        try:
-            result = ta.bias(
-                close=data,
-                length=length,
-                ma_type=ma_type,
-                offset=offset,
-            )
-        except Exception:
-            # pandas-taのbiasが利用できない場合のフォールバック実装
-            ma_func = {
-                "sma": ta.sma,
-                "ema": ta.ema,
-                "wma": ta.wma,
-                "hma": ta.hma,
-                "zlma": ta.zlma,
-            }.get(ma_type, ta.sma)
+        def compute() -> pd.Series:
+            try:
+                result = ta.bias(
+                    close=data,
+                    length=length,
+                    ma_type=ma_type,
+                    offset=offset,
+                )
+            except Exception:
+                ma_func = {
+                    "sma": ta.sma,
+                    "ema": ta.ema,
+                    "wma": ta.wma,
+                    "hma": ta.hma,
+                    "zlma": ta.zlma,
+                }.get(ma_type, ta.sma)
 
-            ma_result = ma_func(data, length=length)
-            if ma_result is None or ma_result.isna().all():
-                return create_nan_series_like(data)
+                ma_result = ma_func(data, length=length)
+                if ma_result is None or ma_result.isna().all():
+                    return create_nan_series_like(data)
 
-            # BIAS = (close - ma) / ma * 100
-            result = ((data - ma_result) / ma_result) * 100
+                result = ((data - ma_result) / ma_result) * 100
 
-        if result is None or (hasattr(result, "isna") and result.isna().all()):
-            return create_nan_series_like(data)
+            return result if result is not None else create_nan_series_like(data)
 
-        return result
+        return run_series_indicator(
+            data,
+            length,
+            compute,
+            min_data_length=min_length,
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -838,15 +724,15 @@ class MomentumIndicators:
         ER = Change / Volatility
            = |Price[t] - Price[t-N]| / Sum(|Price[i] - Price[i-1]| for i in t..t-N)
         """
-        validation = validate_series_params(data, length)
-        if validation is not None:
-            return validation
-
-        change = data.diff(length).abs()
-        volatility = data.diff(1).abs().rolling(window=length).sum()
-
-        er = change / volatility
-        return normalize_non_finite(er, fill_value=0.0)
+        result = run_series_indicator(
+            data,
+            length,
+            lambda: normalize_non_finite(
+                data.diff(length).abs() / data.diff(1).abs().rolling(window=length).sum(),
+                fill_value=0.0,
+            ),
+        )
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -858,15 +744,15 @@ class MomentumIndicators:
         length: int = 26,
     ) -> Tuple[pd.Series, pd.Series]:
         """BRAR (Brayer)"""
-        validation = validate_multi_series_params(
-            {"open_": open_, "high": high, "low": low, "close": close}, length
+        result = run_multi_series_indicator(
+            {"open_": open_, "high": high, "low": low, "close": close},
+            length,
+            lambda: ta.brar(open_=open_, high=high, low=low, close=close, length=length),
+            fallback_factory=lambda: create_nan_series_bundle(close, 2),
         )
-        if validation is not None:
-            return create_nan_series_bundle(close, 2)
 
-        result = ta.brar(open_=open_, high=high, low=low, close=close, length=length)
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -874,14 +760,9 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def cfo(close: pd.Series, length: int = 9) -> pd.Series:
         """Chande Forecast Oscillator"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.cfo(close=close, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.cfo(close=close, length=length)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -892,15 +773,15 @@ class MomentumIndicators:
         length: int = 13,
     ) -> Tuple[pd.Series, pd.Series]:
         """Elder Ray Index"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.eri(high=high, low=low, close=close, length=length),
+            fallback_factory=lambda: create_nan_series_bundle(close, 2),
         )
-        if validation is not None:
-            return create_nan_series_bundle(close, 2)
 
-        result = ta.eri(high=high, low=low, close=close, length=length)
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -919,24 +800,21 @@ class MomentumIndicators:
     ) -> pd.Series:
         """Inertia"""
         # Inertia requires RVI params if high/low provided, otherwise just close/length check
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.inertia(
-            close=close,
-            high=high,
-            low=low,
-            length=length,
-            rvi_length=rvi_length,
-            scalar=scalar,
-            refined=refined,
-            thirds=thirds,
-            mamode=mamode,
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.inertia(
+                close=close,
+                high=high,
+                low=low,
+                length=length,
+                rvi_length=rvi_length,
+                scalar=scalar,
+                refined=refined,
+                thirds=thirds,
+                mamode=mamode,
+            ),
         )
-        if result is None:
-            return create_nan_series_like(close)
-        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -948,15 +826,15 @@ class MomentumIndicators:
         signal: int = 3,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """KDJ"""
-        validation = validate_multi_series_params(
-            {"high": high, "low": low, "close": close}, length
+        result = run_multi_series_indicator(
+            {"high": high, "low": low, "close": close},
+            length,
+            lambda: ta.kdj(high=high, low=low, close=close, length=length, signal=signal),
+            fallback_factory=lambda: create_nan_series_bundle(close, 3),
         )
-        if validation is not None:
-            return create_nan_series_bundle(close, 3)
 
-        result = ta.kdj(high=high, low=low, close=close, length=length, signal=signal)
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 3)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
@@ -964,14 +842,11 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def rsx(close: pd.Series, length: int = 14, drift: int = 1) -> pd.Series:
         """RSX"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.rsx(close=close, length=length, drift=drift)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.rsx(close=close, length=length, drift=drift),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -984,22 +859,22 @@ class MomentumIndicators:
         swma_length: int = 4,
     ) -> Tuple[pd.Series, pd.Series]:
         """Relative Vigor Index"""
-        validation = validate_multi_series_params(
-            {"open_": open_, "high": high, "low": low, "close": close}, length
+        result = run_multi_series_indicator(
+            {"open_": open_, "high": high, "low": low, "close": close},
+            length,
+            lambda: ta.rvgi(
+                open_=open_,
+                high=high,
+                low=low,
+                close=close,
+                length=length,
+                swma_length=swma_length,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(close, 2),
         )
-        if validation is not None:
-            return create_nan_series_bundle(close, 2)
 
-        result = ta.rvgi(
-            open_=open_,
-            high=high,
-            low=low,
-            close=close,
-            length=length,
-            swma_length=swma_length,
-        )
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 2)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -1007,14 +882,9 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def slope(close: pd.Series, length: int = 1) -> pd.Series:
         """Slope"""
-        validation = validate_series_params(close, length)
-        if validation is not None:
-            return validation
-
-        result = ta.slope(close=close, length=length)
-        if result is None:
-            return create_nan_series_like(close)
-        return result
+        return run_series_indicator(
+            close, length, lambda: ta.slope(close=close, length=length)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1026,13 +896,15 @@ class MomentumIndicators:
         scalar: float = 1.0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """SMI Ergodic"""
-        validation = validate_series_params(close, slow)
-        if validation is not None:
-            return create_nan_series_bundle(close, 3)
+        result = run_series_indicator(
+            close,
+            slow,
+            lambda: ta.smi(close=close, fast=fast, slow=slow, signal=signal, scalar=scalar),
+            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+        )
 
-        result = ta.smi(close=close, fast=fast, slow=slow, signal=signal, scalar=scalar)
-        if result is None or result.empty:
-            return create_nan_series_bundle(close, 3)
+        if isinstance(result, tuple):
+            return result
 
         return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
@@ -1042,18 +914,8 @@ class MomentumIndicators:
         close: pd.Series, as_bool: bool = False, show_all: bool = False
     ) -> Union[pd.Series, pd.DataFrame]:
         """TD Sequential"""
-        # Minimum requirement for TD Seq (usually 9 candles)
-        validation = validate_series_params(close, 13)
-        if validation is not None:
-            if show_all:
-                # Return DataFrame-like structure if expected
-                return create_nan_series_like(close)
-            return validation
-
-        result = ta.td_seq(close=close, asbool=as_bool, show_all=show_all)
-        if result is None or (hasattr(result, "empty") and result.empty):
-            return create_nan_series_like(close)
-
-        # If returning DataFrame, caller handles it. If Series (usually TD Seq Number), return it.
-        # td_seq usually returns DataFrame with multiple columns. We return as is.
-        return result
+        return run_series_indicator(
+            close,
+            13,
+            lambda: ta.td_seq(close=close, asbool=as_bool, show_all=show_all),
+        )

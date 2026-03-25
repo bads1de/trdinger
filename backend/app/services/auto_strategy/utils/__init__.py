@@ -10,15 +10,15 @@ from ..core.operand_grouping import (
     OperandGroupingSystem,
     operand_grouping_system,
 )
-from .gene_utils import (
-    GeneUtils,
+from .normalization import (
+    NormalizationUtils,
     create_default_strategy_gene,
 )
 
 
 __all__ = [
     # Core Utilities
-    "GeneUtils",
+    "NormalizationUtils",
     "OperandGroup",
     "OperandGroupingSystem",
     "operand_grouping_system",

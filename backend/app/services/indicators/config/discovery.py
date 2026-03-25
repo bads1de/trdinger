@@ -332,12 +332,8 @@ class DynamicIndicatorDiscovery:
         """独自実装クラスをスキャン"""
         configs = []
         for name, method in inspect.getmembers(klass, predicate=inspect.isfunction):
-            if name.startswith("_"):
+            if name.startswith("_") or name.startswith("calculate_"):
                 continue
-
-            # staticmethodの場合はラップを解除
-            if isinstance(method, staticmethod):
-                method = method.__func__
 
             config = cls._analyze_function(name, method, category="custom")
             if config:

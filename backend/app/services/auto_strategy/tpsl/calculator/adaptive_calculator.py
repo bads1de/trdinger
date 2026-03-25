@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 from ...genes import TPSLGene
-from ...utils.gene_utils import normalize_enum_name
+from ...utils.normalization import normalize_enum_name
 from .base_calculator import BaseTPSLCalculator
 from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator
